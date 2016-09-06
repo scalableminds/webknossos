@@ -27,6 +27,7 @@ describe("User List", function() {
     // create a new team for assignment
     const newTeamName = "test2"
     const payload = {"name": newTeamName,"parent":"Connectomics department","owner":"","roles":[{"name":"admin"},{"name":"user"}],"isEditable":"true"}
+
     return Request.json().upload("/api/teams", {"data" : payload}).then(
       async function(response) {
 
@@ -46,16 +47,23 @@ describe("User List", function() {
 
 
   it("should change roles of two teams", function() {
+
     return false
   })
 
 
-  it("should assign new experiences", function() {
-    return false
+  it("should assign new experiences", async function() {
+
+    const newExperience = {domain : "Testing", level : 42}
+
+    await page.selectUser("SCM Boy")
+    await page.setExperience(newExperience)
+
+    console.log("Getting experience")
+    const experience = await page.getExperienceForUser("SCM Boy")
+    console.log(experience)
+    expect(experience).toEqual(newExperience)
   })
-
-
-
 })
 
 

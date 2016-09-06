@@ -1,3 +1,5 @@
+import { map } from "lodash"
+
 export default class UserPage {
 
   userListElements = "tbody tr"
@@ -6,9 +8,16 @@ export default class UserPage {
   modal = ".modal-content"
   confirmButton = ".btn-primary"
 
+  inputExperienceDomain = "input[name='experience-domain']"
+  inputExperienceLevel = "input[name='experience-value']"
+  setExperienceButton = ".set-experience"
+  increaseExperienceButton = ".increase-experience"
+  deleteExperienceButton = ".delete-experience"
+
   get() {
     browser.url("/users")
   }
+
 
   getUserListEntries() {
 
@@ -38,7 +47,7 @@ export default class UserPage {
 
     return browser
       .waitForExist(this.changeTeamButton)
-      .pause(5000)
+      .pause(3000)
       .click(this.changeTeamButton)
       .waitForExist(this.modal)
       .waitForExist(".checkbox")
@@ -50,16 +59,49 @@ export default class UserPage {
             return browser
               .waitForExist(selector)
               .selectByValue(selector, "user")
-              .getValue(selector).then(function(val){console.log(val); return val})
+              .getValue(selector)
           })
         )
       })
   }
 
 
+  setExperience(experience) {
+
+    return browser
+      .waitForExist(this.changeExperienceButton)
+      .pause(1000)
+      .click(this.changeExperienceButton)
+      .pause(1000)
+      .waitForExist(this.modal)
+      .waitForExist(this.inputExperienceDomain)
+      .setValue(this.inputExperienceDomain, experience.domain)
+      .setValue(this.inputExperienceLevel, experience.level)
+      .click(this.setExperienceButton)
+  }
+
+  increase
+
   getTeamsForUser(userName) {
 
     const userRowSelector = `tbody tr[data-name='${userName}']`
     return browser.getText(`${userRowSelector} td:nth-child(6)`)
+  }
+
+
+  getExperienceForUser(userName) {
+
+    const userRowSelector = `tbody tr[data-name='${userName}']`
+    return browser
+      .pause(500)
+      .getText(`${userRowSelector} td:nth-child(5)`)
+      .then(function(text) {
+        console.log(text)
+        const [domain, level] = text.split(":")
+        return {
+          domain : domain.trim(),
+          level : parseInt(level)
+        }
+      })
   }
 }

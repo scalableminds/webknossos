@@ -64,7 +64,6 @@ describe("Dashboard", function() {
     })
 
     it("should display user's tasks", async function() {
-      browser.saveScreenshot("foo.png")
 
       const hasTaskButtonVisible = await browser.isExisting(page.newTaskButton)
       const hasDownloadButtonVisible = await browser.isExisting(page.downloadButton)

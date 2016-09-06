@@ -115,6 +115,9 @@ class ArbitraryController
         else if @mode == constants.MODE_ARBITRARY_PLANE
           f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
           @cam.move [delta.x * f, delta.y * f, 0]
+      rightClick : (pos, plane, event) =>
+        @createBranchMarker(pos)
+
       scroll : @scroll
     )
 
@@ -176,6 +179,9 @@ class ArbitraryController
       #Recenter active node
       "s" : => @centerActiveNode()
 
+      "." : => @nextNode(true)
+      "," : => @nextNode(false)
+
       #Rotate view by 180 deg
       "r" : => @cam.yaw(Math.PI)
     )
@@ -192,6 +198,32 @@ class ArbitraryController
     if record != @model.get("flightmodeRecording")
       @model.set("flightmodeRecording", record)
       @setWaypoint()
+
+
+  createBranchMarker : (pos) ->
+
+    return unless @isBranchpointvideoMode()
+    activeNode = @model.skeletonTracing.getActiveNode()
+    f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
+    @cam.move [-(pos.x - @arbitraryView.width / 2) * f, -(pos.y - @arbitraryView.width / 2) * f, 0]
+    position  = @cam.getPosition()
+    rotation = @cam.getRotation()
+    @model.skeletonTracing.createNewTree()
+    @addNode(position, rotation)
+    @model.skeletonTracing.setActiveTree(1)
+    @cam.move [(pos.x - @arbitraryView.width / 2) * f, (pos.y - @arbitraryView.width / 2) * f, 0]
+    @setActiveNode(activeNode.id, true)
+    console.log('DEBUG: about to move')
+    @move(3)
+
+
+  nextNode : (nextOne) ->
+
+    return unless @isBranchpointvideoMode()
+    activeNode = @model.skeletonTracing.getActiveNode()
+    if (nextOne && activeNode.id == @model.skeletonTracing.getActiveTree().nodes.length) || (!nextOne && activeNode.id == 1)
+      return
+    @setActiveNode((activeNode.id + 2 * nextOne - 1), true) #implicit cast from boolean to int
 
 
   getVoxelOffset : (timeFactor) ->
@@ -273,6 +305,7 @@ class ArbitraryController
 
   checkLength : =>
 
+    return if @isBranchpointvideoMode()
     anonUser = app.currentUser.isAnonymous
     return unless anonUser
 
@@ -439,6 +472,11 @@ class ArbitraryController
     if vectorLength > 10
       @setWaypoint()
       @lastNodeMatrix = matrix
+
+
+  isBranchpointvideoMode : ->
+
+    return @model.tracing.task?.type.summary == 'branchpointvideo'
 
 
 module.exports = ArbitraryController

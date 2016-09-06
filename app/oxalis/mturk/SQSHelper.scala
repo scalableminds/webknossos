@@ -36,7 +36,6 @@ class SQSHelper(sqsConfig: SQSConfiguration) extends LazyLogging {
 
   private val client = new AmazonSQSClient(new BasicAWSCredentials(sqsConfig.accessKey, sqsConfig.secretKey))
   client.setEndpoint(sqsConfig.endpoint)
-  client.
 
   def fetchMessages(queueUrl: String): List[Message] = {
     try {

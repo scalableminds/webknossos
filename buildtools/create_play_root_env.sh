@@ -16,3 +16,6 @@ chmod +x $APP_DIR/bin/${PROJECT}
 
 mkdir -p ${ROOT_ENV}${INSTALL_DIR}
 cp -r ${APP_DIR}/* ${ROOT_ENV}${INSTALL_DIR}
+
+export ROOT_ENV
+export INSTALL_DIR

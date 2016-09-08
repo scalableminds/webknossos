@@ -10,11 +10,12 @@ MODE=prod
 #VERSION=$BRAINGAMES_LIB_VERSION
 VERSION=10.0.0
 TEMPLATE_DIR=${WORKSPACE}/buildtools/templates
-INSTALL_DIR="/usr/lib/${NAME}"
 
 cd $WORKSPACE
 
 sbt clean compile stage
+
+buildtools/create_play_root_env.sh
 
 NEWRELIC_CONFIG_PATH="${ROOT_ENV}/${INSTALL_DIR}/conf/newrelic.yml"
 NEWRELIC_TEMPLATE=$(< ${TEMPLATE_DIR}/newrelic_template)
@@ -25,7 +26,6 @@ python2.7 -c "import jinja2; print jinja2.Template(\"\"\"$NEWRELIC_TEMPLATE\"\"\
 project=\"$PROJECT\", branch=\"$BRANCH\", newrelic_license_key=\"$NEWRELIC_LICENSE_KEY\", mode=\"$MODE\")" > $NEWRELIC_CONFIG_PATH
 
 
-buildtools/create_play_root_env.sh
 
 
 fpm -m thomas@scm.io -s dir -t rpm \

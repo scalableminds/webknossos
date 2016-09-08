@@ -21,15 +21,10 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
 
   initKeyboard : ->
 
-    getVoxelOffset  = (timeFactor) =>
-
-      return @model.user.get("moveValue3d") * timeFactor / app.scaleInfo.baseVoxel / Constants.FPS
-
     @input.keyboard = new Input.Keyboard(
 
       "space"         : (timeFactor) =>
-        @cam.move [0, 0, getVoxelOffset(timeFactor)]
-        @moved()
+        @move(timeFactor)
 
       #Zoom in/out
       "i"             : (timeFactor) => @cam.zoomIn()
@@ -47,6 +42,11 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch()
+
+      #Branchpointvideo
+      "." : => @nextNode(true)
+      "," : => @nextNode(false)
+
     )
 
     @input.keyboardOnce = new Input.Keyboard(
@@ -60,12 +60,16 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
 
   # make sure that it is not possible to keep nodes from being created
   setWaypoint : =>
+
+    return if @isBranchpointvideoMode()
     unless @model.get("flightmodeRecording")
       @model.set("flightmodeRecording", true)
     super
 
 
   deleteActiveNode : ->
+
+    return if @isBranchpointvideoMode()
     skeletonTracing = @model.skeletonTracing
     activeNode = skeletonTracing.getActiveNode()
     if activeNode.id == 1

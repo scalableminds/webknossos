@@ -71,12 +71,12 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
     for {
       _ <- SkeletonTracingDAO.insert(tracing)
       trees <- tracingLike.trees
-      - <- Fox.sequence(trees.map(tree => DBTreeService.insert(tracing._id, tree)))
+      - <- Fox.serialSequence(trees)(tree => DBTreeService.insert(tracing._id, tree))
     } yield tracing
   }
 
   def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
-    TemporarySkeletonTracingService.createFrom(nmls, boundingBox, settings).flatMap { temporary =>
+    TemporarySkeletonTracingService.createFrom(nmls, boundingBox, Some(settings)).flatMap { temporary =>
       createFrom(temporary)
     }
   }

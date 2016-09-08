@@ -1,6 +1,6 @@
 <configuration>
   <conversionRule conversionWord="coloredLevel" converterClass="play.api.Logger$ColoredLevel" />
-  
+
   <appender name="FILE" class="ch.qos.logback.core.FileAppender">
      <file>${application.home}/logs/application.log</file>
      <encoder>
@@ -20,8 +20,9 @@
   <logger name="reactivemongo" level="WARN" />
   <logger name="play" level="WARN" />
   <logger name="application" level="INFO" />
+  <logger name="oxalis" level="INFO" />
 
-  <root level="WARN">
+  <root level="INFO">
     <appender-ref ref="STDOUT" />
     <appender-ref ref="FILE" />
   </root>

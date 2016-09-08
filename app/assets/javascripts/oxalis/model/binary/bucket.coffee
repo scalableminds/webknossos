@@ -8,6 +8,8 @@ class Bucket
   STATE_REQUESTED : 1
   STATE_LOADED : 2
 
+  STATE_NAMES = ["unrequested", "requested", "loaded"]
+
   BUCKET_SIZE_P : 5
 
 
@@ -110,7 +112,7 @@ class Bucket
 
   unexpectedState : ->
 
-    throw new Error("Unexpected state: " + @state)
+    throw new Error("Unexpected state: " + @STATE_NAMES[@state])
 
 
   merge : (newData) ->
@@ -126,13 +128,25 @@ class Bucket
           @data[i * @BYTE_OFFSET + j] = newData[i * @BYTE_OFFSET + j]
 
 
-class NullBucket extends Bucket
+class NullBucket
 
-  constructor : ->
-    super(0)
-    @state = @STATE_LOADED
+  # A NullBucket represents a bucket that does not exist, e.g. because it's
+  # outside the dataset's bounding box. It supports only a small subset of
+  # Bucket's methods.
 
-  label : (_) ->  # Do nothing
+
+  TYPE_OUT_OF_BOUNDING_BOX : 1
+  TYPE_OTHER : 2
+
+
+  constructor : (type) ->
+
+    @isNullBucket = true
+    @isOutOfBoundingBox = type == @TYPE_OUT_OF_BOUNDING_BOX
+
+
+  hasData : -> return false
+  needsRequest : -> return false
 
 
 module.exports = {Bucket, NullBucket}

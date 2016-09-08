@@ -10,9 +10,12 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefin
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation._
 import models.basics._
+import models.mturk.{MTurkAssignmentConfig, MTurkAssignmentDAO}
+import models.project.{Project, ProjectDAO, WebknossosAssignmentConfig}
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
+import oxalis.mturk.MTurkService
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsNull, JsObject, Json}
 import reactivemongo.play.json.BSONFormats._
@@ -25,11 +28,9 @@ case class Task(
   @info("Reference to task type") _taskType: BSONObjectID,
   @info("Assigned name") team: String,
   @info("Required experience") neededExperience: Experience = Experience.empty,
-  @info("Importance of task") priority: Int = 100,
   @info("Number of required instances") instances: Int = 1,
   @info("Current tracing time") tracingTime: Option[Long] = None,
-  @info("Date of creation" )created: DateTime = DateTime.now(),
-  @info("Links for annonymous users") directLinks: List[String] = Nil,
+  @info("Date of creation") created: DateTime = DateTime.now(),
   @info("Flag indicating deletion") isActive: Boolean = true,
   @info("Reference to project") _project: String,
   @info("Unique ID") _id: BSONObjectID = BSONObjectID.generate
@@ -51,16 +52,46 @@ case class Task(
   def annotationBase(implicit ctx: DBAccessContext) =
     AnnotationService.baseFor(this)
 
-  def remainingInstances(implicit ctx: DBAccessContext) =
-    OpenAssignmentDAO.countFor(_id)
+  def remainingInstances(implicit ctx: DBAccessContext) = {
+    def calculateRemaining(project: Project) = {
+      project.assignmentConfiguration match {
+        case WebknossosAssignmentConfig =>
+          OpenAssignmentDAO.countFor(_id)
+        case _: MTurkAssignmentConfig   =>
+          MTurkAssignmentDAO.findOneByTask(_id).map(_.numberOfOpenAssignments)
+      }
+    }
 
-  def status(implicit ctx: DBAccessContext) = async {
-    val inProgress = await(AnnotationService.countUnfinishedAnnotationsFor(this) getOrElse 0)
-    val remaining = await(remainingInstances getOrElse 0)
-    CompletionStatus(
-      open = remaining,
-      inProgress = inProgress,
-      completed = instances - (inProgress + remaining))
+    for {
+      p <- project
+      result <- calculateRemaining(p)
+    } yield result
+  }
+
+  def inProgress(implicit ctx: DBAccessContext) = {
+    def calculateInProgress(project: Project) = {
+      project.assignmentConfiguration match {
+        case WebknossosAssignmentConfig =>
+          AnnotationService.countUnfinishedAnnotationsFor(this)
+        case _: MTurkAssignmentConfig   =>
+          MTurkAssignmentDAO.findOneByTask(_id).map(_.numberOfInProgressAssignments)
+      }
+    }
+
+    for {
+      p <- project
+      result <- calculateInProgress(p)
+    } yield result
+  }
+
+  def status(implicit ctx: DBAccessContext) = {
+    for {
+      inProgress <- inProgress.getOrElse(0)
+      remaining <- remainingInstances.getOrElse(0)
+    } yield CompletionStatus(
+        open = remaining,
+        inProgress = inProgress,
+        completed = instances - (inProgress + remaining))
   }
 
   def hasEnoughExperience(user: User) = {
@@ -78,9 +109,8 @@ object Task extends FoxImplicits {
       editPosition = annotationContent.map(_.editPosition).openOr(Point3D(0, 0, 0))
       editRotation = annotationContent.map(_.editRotation).openOr(Vector3D(0, 0, 0))
       boundingBox = annotationContent.flatMap(_.boundingBox).toOption
-      status <- task.status
+      status <- task.status.getOrElse(CompletionStatus(-1, -1, -1))
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
-      directLinks = if(forUser.exists(_.isAdminOf(task.team))) Json.toJson(task.directLinks) else JsNull
     } yield {
       Json.obj(
         "id" -> task.id,
@@ -91,11 +121,8 @@ object Task extends FoxImplicits {
         "dataSet" -> dataSetName,
         "editPosition" -> editPosition,
         "editRotation" -> editRotation,
-        "isForAnonymous" -> task.directLinks.nonEmpty,
         "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
-        "priority" -> task.priority,
-        "directLinks" -> directLinks,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
         "tracingTime" -> task.tracingTime
@@ -167,7 +194,6 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
 
   def update(_task: BSONObjectID, _taskType: BSONObjectID,
     neededExperience: Experience,
-    priority: Int,
     instances: Int,
     team: String,
     _project: Option[String]
@@ -177,14 +203,14 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       Json.obj("$set" ->
         Json.obj(
           "neededExperience" -> neededExperience,
-          "priority" -> priority,
           "instances" -> instances,
           "team" -> team,
           "_project" -> _project)),
       returnNew = true)
 
   def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Task]] = withExceptionCatcher {
-    find(q).cursor[Task]().collect[List](maxDocs = limit)
+    // Can't use local find, since it appends `isActive = true` to the query!
+    super.find(q).cursor[Task]().collect[List](maxDocs = limit)
   }
 }
 

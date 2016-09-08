@@ -54,6 +54,9 @@ GET           /api/users/:id/loggedTime                                         
 GET           /api/users/:id/annotations                                        controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int])
 GET           /api/users/:id/annotations/download                               controllers.NMLIOController.userDownload(id: String)
 
+# MTurk
+GET           /hits/:id                                                         controllers.MTurkController.startAssignment(id: String, workerId: String, assignmentId: String)
+
 # Team
 GET           /teams                                                            controllers.TeamController.empty
 GET           /api/teams                                                        controllers.TeamController.list
@@ -171,7 +174,7 @@ GET           /taskTypes/:id/edit                                               
 
 GET           /api/taskTypes                                                    controllers.TaskTypeController.list
 POST          /api/taskTypes                                                    controllers.TaskTypeController.create
-DELETE        /api/taskTypes/:id/delete                                         controllers.TaskTypeController.delete(id: String)
+DELETE        /api/taskTypes/:id                                                controllers.TaskTypeController.delete(id: String)
 GET           /api/taskTypes/:id/tasks                                          controllers.TaskController.listTasksForType(id: String)
 
 GET           /api/taskTypes/:id/download                                       controllers.NMLIOController.taskTypeDownload(id: String)
@@ -184,10 +187,14 @@ GET           /api/find                                                         
 
 # Projects
 GET           /projects                                                         controllers.ProjectController.empty(name: String = "")
+GET           /projects/create                                                  controllers.ProjectController.empty(name: String = "")
 GET           /projects/:name/tasks                                             controllers.ProjectController.empty(name: String)
+GET           /projects/:name/edit                                              controllers.ProjectController.empty(name: String)
 GET           /api/projects                                                     controllers.ProjectController.list
 POST          /api/projects                                                     controllers.ProjectController.create
+GET           /api/projects/:name                                               controllers.ProjectController.read(name: String)
 DELETE        /api/projects/:name                                               controllers.ProjectController.delete(name: String)
+PUT           /api/projects/:name                                               controllers.ProjectController.update(name: String)
 GET           /api/projects/:name/download                                      controllers.NMLIOController.projectDownload(name: String)
 GET           /api/projects/:name/tasks                                         controllers.ProjectController.tasksForProject(name: String)
 

@@ -1,0 +1,4 @@
+{% set name = project+"-"+branch %}
+
+:syslogtag, isequal, "{{name}}:"          {{log_file}}.log
+:syslogtag, isequal, "{{name}}:"          ~

@@ -2,8 +2,10 @@ package oxalis.user
 
 import akka.actor._
 import scala.concurrent.duration._
-import models.user.{UserService, User}
+
+import models.user.{User, UserService}
 import akka.agent.Agent
+import com.newrelic.api.agent.NewRelic
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
@@ -25,7 +27,11 @@ class ActivityMonitor extends Actor {
 
   def receive = {
     case UserActivity(user, time) =>
-      collectedActivities.send(_.updated(user._id, time))
+      collectedActivities.send { collected =>
+        val updated = collected.updated(user._id, time)
+        NewRelic.recordMetric("Custom/ActivityMonitor/active-users", updated.size)
+        updated
+      }
 
     case FlushActivities =>
       Logger.info("Flushing user activities.")

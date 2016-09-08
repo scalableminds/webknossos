@@ -10,9 +10,10 @@
   <logger name="reactivemongo" level="WARN" />
   <logger name="play" level="INFO" />
   <logger name="application" level="INFO" />
+  <logger name="oxalis" level="INFO" />
   <logger name="braingames.binary" level="DEBUG" />
 
-  <root level="ERROR">
+  <root level="INFO">
     <appender-ref ref="SYSLOG" />
   </root>
 

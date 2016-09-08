@@ -7,13 +7,13 @@ import javax.inject.Inject
 
 import scala.concurrent.Future
 
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import models.annotation.{AnnotationService, AnnotationDAO}
-import models.task.{TaskService, Project, TaskType}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.{AnnotationDAO, AnnotationService}
+import models.task.{TaskService, TaskType}
 import models.task.OpenAssignmentService
 import oxalis.security.Secured
 import models.user.time.{TimeSpan, TimeSpanService}
-import models.user.{UserService, User, UserDAO}
+import models.user.{User, UserDAO, UserService}
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -21,10 +21,12 @@ import play.api.libs.json._
 import play.api.libs.json.Json._
 import play.api.libs.functional.syntax._
 import play.twirl.api.Html
-import models.user.{UserService, User, UserDAO}
+import models.user.{User, UserDAO, UserService}
 import scala.concurrent.duration.Duration
+
 import models.tracing.skeleton.DBTreeDAO
 import models.binary.DataSetDAO
+import models.project.Project
 
 class StatisticsController @Inject()(val messagesApi: MessagesApi)
   extends Controller
@@ -78,12 +80,12 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     for {
       handler <- intervalHandler.get(interval) ?~> Messages("statistics.interval.invalid")
       users <- UserDAO.findAll
-      usersWithTimes <- Fox.combined(users.map(user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _)))
+      usersWithTimes <- Fox.serialCombined(users)(user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
     } yield {
       val data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
       val json = data.map {
         case (user, times) => Json.obj(
-          "user" -> User.userCompactWrites(request.user).writes(user),
+          "user" -> User.userCompactWrites.writes(user),
           "tracingTimes" -> intervalTracingTimeJson(times)
         )
       }
@@ -116,17 +118,17 @@ trait UserAssignments extends Secured with Dashboard with FoxImplicits { this: C
 
       val futureTaskTypeMap = for {
         futureTasks <- TaskService.simulateTaskAssignment(users)
-        futureTaskTypes <- Fox.sequenceOfFulls(futureTasks.map{
+        futureTaskTypes <- Fox.serialSequence(futureTasks.toList){
           case (user, task) => task.taskType.map(user -> _)
-        }.toList)
+        }.map(_.flatten)
       } yield futureTaskTypes.toMap
 
       Future.traverse(users){user =>
         for {
           annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
-          tasks <- Fox.sequenceOfFulls(annotations.map(_.task))
-          projects <- Fox.sequenceOfFulls(tasks.map(_.project))
-          taskTypes <- Fox.sequenceOfFulls(tasks.map(_.taskType))
+          tasks <- Fox.serialSequence(annotations)(_.task).map(_.flatten)
+          projects <- Fox.serialSequence(tasks)(_.project).map(_.flatten)
+          taskTypes <- Fox.serialSequence(tasks)(_.taskType).map(_.flatten)
           taskTypeMap <- futureTaskTypeMap.getOrElse(Map.empty)
           workingTime <- TimeSpanService.totalTimeOfUser(user, start, end).futureBox
         } yield {

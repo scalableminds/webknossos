@@ -53,20 +53,27 @@ class Controller
     @model.set("state", @urlManager.initialState)
 
     @model.fetch()
-      .then(
-        (error) => @modelFetchDone(error)
-      )
+        .then( => @modelFetchDone())
+        .catch( (error) =>
+          # Don't throw errors for errors already handled by the model.
+          unless error == @model.HANDLED_ERROR
+            throw error
+        )
 
 
-  modelFetchDone : (error) ->
-
-    # Do not continue, when there was an error and we got no settings from the server
-    if error
-      return
+  modelFetchDone : ->
 
     unless @model.tracing.restrictions.allowAccess
       Toast.Error "You are not allowed to access this tracing"
       return
+
+    app.router.on("beforeunload", =>
+      if (@model.get("controlMode") == constants.CONTROL_MODE_TRACE)
+        stateLogger = @model.annotationModel.stateLogger
+        if not stateLogger.stateSaved() and stateLogger.allowUpdate
+          stateLogger.pushNow()
+          return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
+    )
 
     @urlManager.startUrlUpdater()
 
@@ -190,7 +197,7 @@ class Controller
   initTimeLimit :  ->
 
     # only enable hard time limit for anonymous users so far
-    unless @model.tracing.task and @model.tracing.user is "Anonymous User"
+    unless @model.tracing.task and @model.tracing.user.isAnonymous
       return
 
     # TODO move that somehwere else

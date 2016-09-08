@@ -70,7 +70,7 @@ object BrainTracing {
   def logTime(user: User, time: Long, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Future[Boolean] = {
     import scala.async.Async._
     // TODO: fix, make team dynamic
-    if (isActive && user.teamNames.contains("Connectomics department")) {
+    if (isActive && !user.isAnonymous && user.teamNames.contains("Connectomics department")) {
       async {
         val task = await(annotation.toFox.flatMap(_.task).futureBox)
         val taskTypeFox = task.toFox.flatMap(_.taskType)

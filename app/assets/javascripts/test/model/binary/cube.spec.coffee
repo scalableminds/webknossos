@@ -26,8 +26,32 @@ describe "Cube", ->
 
   beforeEach ->
 
-    cube = new Cube([100, 100, 100], 3, 24)
+    cube = new Cube(null, [100, 100, 100], 3, 24)
     cube.initializeWithQueues(pullQueue, pushQueue)
+
+
+  describe "GetBucket", ->
+
+    it "should return a NullBucket on getBucket()", ->
+
+      bucket = cube.getBucket([0, 0, 0, 0])
+      expect(bucket.isNullBucket).toBe(true)
+      expect(cube.bucketCount).toBe(0)
+
+    it "should create a new bucket on getOrCreateBucket()", ->
+
+      expect(cube.bucketCount).toBe(0)
+
+      bucket = cube.getOrCreateBucket([0, 0, 0, 0])
+      expect(bucket.isNullBucket).toBe(undefined)
+      expect(cube.bucketCount).toBe(1)
+
+    it "should only create one bucket on getOrCreateBucket()", ->
+
+      bucket1 = cube.getOrCreateBucket([0, 0, 0, 0])
+      bucket2 = cube.getOrCreateBucket([0, 0, 0, 0])
+      expect(bucket1).toBe(bucket2)
+      expect(cube.bucketCount).toBe(1)
 
 
   describe "Volume Annotation Handling", ->
@@ -58,7 +82,7 @@ describe "Cube", ->
           ->
             expect(pushQueue.insert.called).toBe(false)
           ->
-            bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+            bucket = cube.getBucket([0, 0, 0, 0])
             bucket.pull()
             bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3))
           ->
@@ -70,7 +94,7 @@ describe "Cube", ->
 
       it "should push buckets immediately if they are pulled already", (done) ->
 
-        bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+        bucket = cube.getOrCreateBucket([0, 0, 0, 0])
         bucket.pull()
         bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3))
 
@@ -91,7 +115,7 @@ describe "Cube", ->
         # Uses existing temporal bucket
         cube.labelVoxel([1, 0, 0], 43)
 
-        data = cube.getBucketByZoomedAddress([0, 0, 0, 0]).getData()
+        data = cube.getBucket([0, 0, 0, 0]).getData()
 
         # Both values should be in the bucket, at positions 0 and 3 because of
         # the bit depth of 24.
@@ -100,7 +124,7 @@ describe "Cube", ->
 
       it "should merge incoming buckets", ->
 
-        bucket = cube.getBucketByZoomedAddress([0, 0, 0, 0])
+        bucket = cube.getOrCreateBucket([0, 0, 0, 0])
 
         oldData = new Uint8Array(32 * 32 * 32 * 3)
         # First voxel should be overwritten by new data
@@ -144,39 +168,39 @@ describe "Cube", ->
         expect(cube.getDataValue([0, 0, 0], mapping)).toBe(1)
         expect(cube.getDataValue([1, 1, 1], mapping)).toBe(43)
 
-    describe "Garbage Collection", ->
+  describe "Garbage Collection", ->
 
-      beforeEach ->
+    beforeEach ->
 
-        Cube::MAXIMUM_BUCKET_COUNT = 3
+      Cube::MAXIMUM_BUCKET_COUNT = 3
 
-      it "should only keep 3 buckets", ->
+    it "should only keep 3 buckets", ->
 
-        cube.getBucketByZoomedAddress([0, 0, 0, 0])
-        cube.getBucketByZoomedAddress([1, 1, 1, 0])
-        cube.getBucketByZoomedAddress([2, 2, 2, 0])
-        cube.getBucketByZoomedAddress([3, 3, 3, 0])
+      cube.getOrCreateBucket([0, 0, 0, 0])
+      cube.getOrCreateBucket([1, 1, 1, 0])
+      cube.getOrCreateBucket([2, 2, 2, 0])
+      cube.getOrCreateBucket([3, 3, 3, 0])
 
-        expect(cube.bucketCount).toBe(3)
+      expect(cube.bucketCount).toBe(3)
 
-      it "should not collect buckets with shouldCollect() == false", ->
+    it "should not collect buckets with shouldCollect() == false", ->
 
-        b1 = cube.getBucketByZoomedAddress([0, 0, 0, 0])
-        b1.pull()
-        b2 = cube.getBucketByZoomedAddress([1, 1, 1, 0])
-        b3 = cube.getBucketByZoomedAddress([2, 2, 2, 0])
-        b4 = cube.getBucketByZoomedAddress([3, 3, 3, 0])
+      b1 = cube.getOrCreateBucket([0, 0, 0, 0])
+      b1.pull()
+      b2 = cube.getOrCreateBucket([1, 1, 1, 0])
+      b3 = cube.getOrCreateBucket([2, 2, 2, 0])
+      b4 = cube.getOrCreateBucket([3, 3, 3, 0])
 
-        expect(b1.shouldCollect()).toBe(false)
+      expect(b1.shouldCollect()).toBe(false)
 
-        addresses = cube.buckets.map((b) -> b.zoomedAddress)
-        expect(addresses).toEqual([[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]])
+      addresses = cube.buckets.map((b) -> b.zoomedAddress)
+      expect(addresses).toEqual([[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]])
 
-      it "should throw an exception if no bucket is collectable", ->
+    it "should throw an exception if no bucket is collectable", ->
 
-        cube.getBucketByZoomedAddress([0, 0, 0, 0]).pull()
-        cube.getBucketByZoomedAddress([1, 1, 1, 0]).pull()
-        cube.getBucketByZoomedAddress([2, 2, 2, 0]).pull()
+      cube.getOrCreateBucket([0, 0, 0, 0]).pull()
+      cube.getOrCreateBucket([1, 1, 1, 0]).pull()
+      cube.getOrCreateBucket([2, 2, 2, 0]).pull()
 
-        expect(-> cube.getBucketByZoomedAddress([3, 3, 3, 0])).toThrow()
+      expect(-> cube.getOrCreateBucket([3, 3, 3, 0])).toThrow()
 

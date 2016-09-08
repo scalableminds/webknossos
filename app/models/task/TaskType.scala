@@ -37,15 +37,6 @@ case class TaskType(
   _id: BSONObjectID = BSONObjectID.generate) {
 
   val id = _id.stringify
-
-  def status(implicit ctx: DBAccessContext) = {
-    for {
-      tasks <- TaskDAO.findAllByTaskType(_id).getOrElse(List.empty)
-      taskStatus <- Future.sequence(tasks.map(_.status))
-    } yield {
-      taskStatus.fold(CompletionStatus(0, 0, 0))(CompletionStatus.combine)
-    }
-  }
 }
 
 object TaskType {
@@ -90,13 +81,6 @@ object TaskType {
       "expectedTime" -> tt.expectedTime
     )
   }
-
-  def transformToJsonWithStatus(tt: TaskType)(implicit ctx: DBAccessContext): Future[JsObject] = {
-      tt.status.map {
-        status =>
-          transformToJson(tt) + ("status" -> Json.toJson(status))
-      }
-    }
 }
 
 object TaskTypeDAO extends SecuredBaseDAO[TaskType] {

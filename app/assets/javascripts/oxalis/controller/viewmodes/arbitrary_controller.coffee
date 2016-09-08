@@ -28,6 +28,9 @@ class ArbitraryController
   TESTLENGTH : 2000
   FINISHLENGTH : 35000
 
+  BRANCHPOINTVIDEOCLIPPINGDISTANCE : 3
+  BRANCHPOINTVIDEOMICROMOVE : 7.5
+
   plane : null
   crosshair : null
   cam : null
@@ -182,8 +185,6 @@ class ArbitraryController
       "." : => @nextNode(true)
       "," : => @nextNode(false)
 
-      "delete" : => @removeBranchpointAnnotation()
-
       #Rotate view by 180 deg
       "r" : => @cam.yaw(Math.PI)
     )
@@ -216,7 +217,7 @@ class ArbitraryController
     @cam.move [(pos.x - @arbitraryView.width / 2) * f, (pos.y - @arbitraryView.width / 2) * f, 0]
     @setActiveNode(activeNode.id, true)
     console.log('DEBUG: about to move')
-    @cam.move [0, 0, 3]
+    @cam.move [0, 0, @BRANCHPOINTVIDEOMICROMOVE]
     @moved()
 
 
@@ -344,13 +345,6 @@ class ArbitraryController
       document.location = "http://share.mhlablog.com/kevin/info_annotators"
 
 
-  removeBranchpointAnnotation : =>
-
-    return unless @isBranchpointvideoMode()
-    return unless @model.skeletonTracing.activeTree.nodes.length == 1
-    _.defer => @model.skeletonTracing.deleteActiveNode()
-
-
   setWaypoint : =>
 
     unless @model.get("flightmodeRecording")
@@ -382,7 +376,10 @@ class ArbitraryController
 
   setClippingDistance : (value) ->
 
-    @arbitraryView.setClippingDistance(value)
+    if @isBranchpointvideoMode()
+      @arbitraryView.setClippingDistance(@BRANCHPOINTVIDEOCLIPPINGDISTANCE)
+    else
+      @arbitraryView.setClippingDistance(value)
 
 
   pushBranch : ->

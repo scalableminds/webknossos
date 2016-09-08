@@ -182,6 +182,8 @@ class ArbitraryController
       "." : => @nextNode(true)
       "," : => @nextNode(false)
 
+      "delete" : => @removeBranchpointAnnotation()
+
       #Rotate view by 180 deg
       "r" : => @cam.yaw(Math.PI)
     )
@@ -234,7 +236,7 @@ class ArbitraryController
 
   move : (timeFactor) ->
 
-    return if @isBranchpointvideoMode() 
+    return if @isBranchpointvideoMode()
     @cam.move [0, 0, @getVoxelOffset(timeFactor)]
     @moved()
 
@@ -340,6 +342,13 @@ class ArbitraryController
     return unless (xhttp.readyState == XMLHttpRequest.DONE && xhttp.status == 200)
     unless JSON.parse(xhttp.response).continueTracing
       document.location = "http://share.mhlablog.com/kevin/info_annotators"
+
+
+  removeBranchpointAnnotation : =>
+
+    return unless @isBranchpointvideoMode()
+    return unless @model.skeletonTracing.activeTree.nodes.length == 1
+    _.defer => @model.skeletonTracing.deleteActiveNode()
 
 
   setWaypoint : =>

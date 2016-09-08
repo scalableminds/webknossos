@@ -47,6 +47,8 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController
       "." : => @nextNode(true)
       "," : => @nextNode(false)
 
+      "delete" : => @removeBranchpointAnnotation()
+
     )
 
     @input.keyboardOnce = new Input.Keyboard(

@@ -87,12 +87,15 @@ Toast =
 
   highlight : (target) ->
 
-    for i in [0..5]
-      target.animate({right: "+=10px"}, 30).animate({right: "-=10px"}, 30)
-    setTimeout(
-      => @highlight(target)
+    interval = setInterval(
+      ->
+        for i in [0..5]
+          target.animate({right : "+=10px"}, 30).animate({right : "-=10px"}, 30)
+        return
       5000
     )
+    # clearInterval when the toast is removed
+    target.on("closed.bs.alert", -> clearInterval(interval))
 
 
   delete : (type, message) ->

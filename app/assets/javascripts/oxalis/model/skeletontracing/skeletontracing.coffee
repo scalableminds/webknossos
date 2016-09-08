@@ -358,12 +358,13 @@ class SkeletonTracing
 
   shuffleTreeColor : (tree) ->
 
-    return if @restrictionHandler.handleUpdate()
-
     tree = @activeTree unless tree
     tree.color = @getNewTreeColor()
 
-    @stateLogger.updateTree(tree)
+    # force the tree color change, although it may not be persisted if the user is in read-only mode
+    if @restrictionHandler.forceHandleUpdate()
+      @stateLogger.updateTree(tree)
+
     @trigger("newTreeColor", tree.treeId)
 
 

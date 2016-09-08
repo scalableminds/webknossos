@@ -298,6 +298,11 @@ class Model extends Backbone.Model
         @lowerBoundary[i] = Math.min @lowerBoundary[i], binary.lowerBoundary[i]
         @upperBoundary[i] = Math.max @upperBoundary[i], binary.upperBoundary[i]
 
+
+  finish : ->
+
+    Request.receiveJSON("/annotations/#{@get('tracingType')}/#{@get('tracingId')}/finish")
+
   # delegate save request to all submodules
   save : ->
 

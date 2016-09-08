@@ -69,6 +69,7 @@ class ProjectCreateView extends Marionette.LayoutView
                   <select class="form-control" name="assignmentConfiguration[requiredQualification]" disabled>
                     <option value="mt-everyone" selected>None</option>
                     <option value="mt-expert">Expert</option>
+                    <option value="mpi-branchpoint">MPI Branchpoint</option>
                     <option value="mt-max-10k-hits">Worker with less than 10k approved HITs</option>
                     <option value="mt-min-10k-hits">Worker with more than 10k approved HITs</option>
                   </select>

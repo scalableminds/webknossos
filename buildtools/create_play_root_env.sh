@@ -9,8 +9,8 @@ BRANCH=$(<${WORKSPACE}/.git/REAL_BRANCH)
 NAME=${PROJECT}-${BRANCH}
 
 APP_DIR=${APP_DIR_PREFIX}/target/universal/stage
-export ROOT_ENV="rootenv"
-export INSTALL_DIR="/usr/lib/${NAME}"
+ROOT_ENV="rootenv"
+INSTALL_DIR="/usr/lib/${NAME}"
 
 chmod +x $APP_DIR/bin/${PROJECT}
 

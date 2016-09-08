@@ -17,6 +17,9 @@ sbt clean compile stage
 
 buildtools/create_play_root_env.sh
 
+ROOT_ENV="rootenv"
+INSTALL_DIR="/usr/lib/${NAME}"
+
 NEWRELIC_CONFIG_PATH="${ROOT_ENV}/${INSTALL_DIR}/conf/newrelic.yml"
 NEWRELIC_TEMPLATE=$(< ${TEMPLATE_DIR}/newrelic_template)
 NEWRELIC_AGENT_VERSION=$(ls target/universal/stage/lib | python2.7 -c \

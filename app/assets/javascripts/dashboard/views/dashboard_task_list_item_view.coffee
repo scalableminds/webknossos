@@ -3,7 +3,7 @@ Marionette = require("backbone.marionette")
 Toast      = require("libs/toast")
 Request    = require("libs/request")
 
-class DashboardTaskListItemView extends Marionette.ItemView
+class DashboardTaskListItemView extends Marionette.View
 
   tagName : "tr"
 

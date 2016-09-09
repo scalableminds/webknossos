@@ -50,7 +50,7 @@ class DashboardTaskListView extends Marionette.CompositeView
     isAdminView : @options.isAdminView
 
 
-  templateHelpers : ->
+  templateContext : ->
     isAdminView : @options.isAdminView
     getFinishVerb : =>
       return if @showFinishedTasks then "unfinished" else "finished"

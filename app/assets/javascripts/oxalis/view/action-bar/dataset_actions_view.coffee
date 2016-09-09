@@ -7,7 +7,7 @@ MergeModalView = require("./merge_modal_view")
 ShareModalView = require("./share_modal_view")
 Constants      = require("oxalis/constants")
 
-class DatasetActionsView extends Marionette.ItemView
+class DatasetActionsView extends Marionette.View
 
   SAVED_POLLING_INTERVAL : 1000
 
@@ -39,7 +39,7 @@ class DatasetActionsView extends Marionette.ItemView
     <% } %>
   """)
 
-  templateHelpers : ->
+  templateContext : ->
 
     isSkeletonMode : @isSkeletonMode()
     getArchiveBtnText : -> return if @isTask then "Finish" else "Archive"

@@ -44,7 +44,7 @@ class ProjectListItemView extends Marionette.CompositeView
   events :
     "click .delete" : "deleteProject"
 
-  templateHelpers :
+  templateContext :
     TemplateHelpers : TemplateHelpers
 
   deleteProject : ->

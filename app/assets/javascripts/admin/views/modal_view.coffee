@@ -1,7 +1,7 @@
 _          = require("lodash")
 Marionette = require("backbone.marionette")
 
-class ModalView extends Marionette.LayoutView
+class ModalView extends Marionette.View
 
   className : "modal fade"
   attributes :

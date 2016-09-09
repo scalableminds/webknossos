@@ -8,7 +8,7 @@ SelectionView  = require("admin/views/selection_view")
 ProjectModel   = require("admin/models/project/project_model")
 Toast          = require("libs/toast")
 
-class ProjectCreateView extends Marionette.LayoutView
+class ProjectCreateView extends Marionette.View
 
   template : _.template("""
     <div class="row">
@@ -184,8 +184,8 @@ class ProjectCreateView extends Marionette.LayoutView
 
   onRender : ->
 
-    @owner.show(@userSelectionView)
-    @team.show(@teamSelectionView)
+    @showChildView("owner", @userSelectionView)
+    @showChildView("team", @teamSelectionView)
 
 
   createProject : (evt) ->

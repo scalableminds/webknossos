@@ -1,7 +1,7 @@
 Marionette = require("backbone.marionette")
 Constants  = require("../constants")
 
-class TracingView extends Marionette.LayoutView
+class TracingView extends Marionette.View
 
   id : "render"
   template : _.template("""

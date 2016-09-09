@@ -16,7 +16,7 @@ class WorkloadListItemView extends Marionette.CompositeView
     <td><%- availableTaskCount %></td>
   """)
 
-  templateHelpers:
+  templateContext:
     TemplateHelpers : TemplateHelpers
 
 module.exports = WorkloadListItemView

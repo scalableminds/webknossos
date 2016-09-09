@@ -4,7 +4,7 @@ routes     = require("routes")
 Toast      = require("libs/toast")
 Request    = require("libs/request")
 
-class TaskCreateBulkImportView extends Marionette.ItemView
+class TaskCreateBulkImportView extends Marionette.View
 
   id : "create-bulk-import"
 

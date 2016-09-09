@@ -11,7 +11,7 @@ TaskCreateFromNMLView   = require("./task_create_from_nml_view")
 Toast                   = require("libs/toast")
 Utils                   = require("libs/utils")
 
-class TaskCreateFromView extends Marionette.LayoutView
+class TaskCreateFromView extends Marionette.View
 
   # which type of form is created?
   # from_form/ from_nml
@@ -109,7 +109,7 @@ class TaskCreateFromView extends Marionette.LayoutView
   </div>
   """)
 
-  templateHelpers: ->
+  templateContext: ->
 
     type : @type
     isEditingMode : @isEditingMode
@@ -260,9 +260,9 @@ class TaskCreateFromView extends Marionette.LayoutView
     )
 
     # render subviews in defined regions
-    @taskType.show(@taskTypeSelectionView)
-    @team.show(@teamSelectionView)
-    @project.show(@projectSelectionView)
+    @showChildView("taskType", @taskTypeSelectionView)
+    @showChildView("team", @teamSelectionView)
+    @showChildView("project", @projectSelectionView)
 
     # get create-subview type
     if @type == "from_form"
@@ -273,7 +273,7 @@ class TaskCreateFromView extends Marionette.LayoutView
       throw Error("Type #{@type} is not defined. Choose between \"from_form\" and \"from_nml\".")
 
     # render the create-subview
-    @subview.show(@createSubview)
+    @showChildView("subview", @createSubview)
 
 
 module.exports = TaskCreateFromView

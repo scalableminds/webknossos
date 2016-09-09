@@ -2,7 +2,7 @@ _          = require("lodash")
 app        = require("app")
 Marionette = require("backbone.marionette")
 
-class PaginationView extends Marionette.ItemView
+class PaginationView extends Marionette.View
 
   pagingatorTemplate : _.template("""
     <li class="first <% if (Pagination.currentPage == 0) { %> disabled <% } %>">
@@ -52,7 +52,7 @@ class PaginationView extends Marionette.ItemView
   """)
 
   className : "container wide"
-  templateHelpers : ->
+  templateContext : ->
     paginationInfo = @collection.getPaginationInfo()
     pageRange : _.range(
       Math.max(paginationInfo.firstPage, paginationInfo.currentPage - 4),
@@ -121,7 +121,7 @@ class PaginationView extends Marionette.ItemView
     this._ensureViewIsIntact()
     this.triggerMethod('before:render', this)
 
-    obj = @templateHelpers()
+    obj = @templateContext()
     if not this.isRendered
       @$el.html(@template(obj))
       this.isRendered = true

@@ -3,7 +3,7 @@ Marionette  = require("backbone.marionette")
 moment      = require("moment")
 FormatUtils = require("libs/format_utils")
 
-class LoggedTimeListView extends Marionette.ItemView
+class LoggedTimeListView extends Marionette.View
 
   template : _.template("""
     <table class="table-striped table-hover table">
@@ -24,7 +24,7 @@ class LoggedTimeListView extends Marionette.ItemView
     </table>
   """)
 
-  templateHelpers :
+  templateContext :
     FormatUtils : FormatUtils
     moment : moment
 

@@ -7,7 +7,7 @@ ReactDOM               = require("react-dom")
 Utils                  = require("libs/utils")
 scrollIntoViewIfNeeded = require("scroll-into-view-if-needed")
 
-class CommentTabView extends Marionette.ItemView
+class CommentTabView extends Marionette.View
 
   className : "flex-column"
   template : _.template("""
@@ -30,7 +30,7 @@ class CommentTabView extends Marionette.ItemView
     <ul id="comment-list" class="flex-overflow"></ul>
   """)
 
-  templateHelpers : ->
+  templateContext : ->
     activeComment : @activeComment
     isSortedAscending : @isSortedAscending
 

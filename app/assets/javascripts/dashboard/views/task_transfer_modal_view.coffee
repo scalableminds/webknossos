@@ -45,7 +45,7 @@ class TaskTransferModalView extends ModalView
       childViewOptions :
         modelValue: -> return "#{@model.get("firstName")} #{@model.get("lastName")}"
     )
-    @datalist.show(selectionView)
+    @showChildView("datalist", selectionView)
 
     @$el.modal("show")
 

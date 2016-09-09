@@ -153,7 +153,14 @@ class ArbitraryPlane
 
   createMesh : ->
 
-    @textureMaterial = new ArbitraryPlaneMaterialFactory(@model, @width).getMaterial()
+    options =
+      polygonOffset : true
+      polygonOffsetFactor : 10.0
+      polygonOffsetUnits : 40.0
+
+    factory = new ArbitraryPlaneMaterialFactory(@model, @width)
+    factory.makeMaterial(options)
+    @textureMaterial = factory.getMaterial()
 
     # create mesh
     plane = new THREE.Mesh(

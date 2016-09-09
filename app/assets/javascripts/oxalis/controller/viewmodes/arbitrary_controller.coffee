@@ -217,7 +217,7 @@ class ArbitraryController
     @cam.move [(pos.x - @arbitraryView.width / 2) * f, (pos.y - @arbitraryView.width / 2) * f, 0]
     @setActiveNode(activeNode.id, true)
     console.log('DEBUG: about to move')
-    @cam.move [0, 0, @BRANCHPOINTVIDEOMICROMOVE]
+    # @cam.move [0, 0, @BRANCHPOINTVIDEOMICROMOVE]
     @moved()
 
 

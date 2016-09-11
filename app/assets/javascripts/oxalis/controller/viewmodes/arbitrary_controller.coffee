@@ -68,7 +68,7 @@ class ArbitraryController
     @cam = @model.flycam3d
     @arbitraryView = new ArbitraryView(canvas, @cam, @view, @WIDTH)
 
-    @plane = new ArbitraryPlane(@cam, @model, @WIDTH)
+    @plane = new ArbitraryPlane(@cam, @model, this, @WIDTH)
     @arbitraryView.addGeometry @plane
 
     # render HTML element to indicate recording status
@@ -227,7 +227,9 @@ class ArbitraryController
     activeNode = @model.skeletonTracing.getActiveNode()
     if (nextOne && activeNode.id == @model.skeletonTracing.getActiveTree().nodes.length) || (!nextOne && activeNode.id == 1)
       return
-    @setActiveNode((activeNode.id + 2 * nextOne - 1), true) #implicit cast from boolean to int
+    @setActiveNode((activeNode.id + 2 * nextOne - 1), true) # implicit cast from boolean to int
+    if (@view.theme is constants.THEME_BRIGHT) != nextOne # switch background to black for backwards move
+      @view.toggleTheme()
 
 
   getVoxelOffset : (timeFactor) ->

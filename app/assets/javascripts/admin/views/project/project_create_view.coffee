@@ -95,6 +95,16 @@ class ProjectCreateView extends Marionette.LayoutView
                 <div class="col-sm-9">
                   <input type="number" class="form-control" name="assignmentConfiguration[autoApprovalDelayInSeconds]" value="60000" disabled required>
                 </div>
+              </div>  
+
+              <div class="form-group">
+                <label class="col-sm-2 control-label" for="template">HIT Template</label>
+                <div class="col-sm-9">
+                  <select class="form-control" name="assignmentConfiguration[template]" disabled>
+                    <option value="default_template" selected>Default flight template</option>
+                    <option value="branchpoint_template">Branchpoint template</option>
+                  </select>
+                </div>
               </div>
 
               <div class="form-group">

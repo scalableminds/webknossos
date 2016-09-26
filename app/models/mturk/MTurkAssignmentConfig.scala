@@ -12,7 +12,7 @@ import play.api.libs.json._
   * @param assignmentDurationInSeconds the maximum time a worker has to complete an assignment before it will get
   *                                    closed automatically
   * @param rewardInDollar              amount of money the worker can earn by completing the task
-  * @param requiredQualification       Indentifier for one of the predefined webknossos qualifications.
+  * @param requiredQualification       Identifier for one of the predefined webknossos qualifications.
   *                                    Allows to restrict mturk workers to specific group (e.g. mturk masters, workers
   *                                    with high acceptance rate)
   * @param title                       Title to be displayed on mturk
@@ -26,6 +26,7 @@ case class MTurkAssignmentConfig(
   requiredQualification: MTurkAssignmentQualification,
   title: String,
   keywords: String,
+  template: Option[String],
   description: String) extends AssignmentConfig {
 
   def id = MTurkAssignmentConfig.id

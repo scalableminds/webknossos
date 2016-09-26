@@ -15,7 +15,7 @@ import com.scalableminds.util.mail.Mailer
 import play.api.libs.concurrent.Execution.Implicits._
 import com.typesafe.config.Config
 import models.annotation.AnnotationStore
-import oxalis.mturk.MTurkNotificationHandler
+import oxalis.mturk.MTurkNotificationReceiver
 import play.api.libs.json.Json
 import play.api.mvc._
 import scala.concurrent.duration._
@@ -41,7 +41,7 @@ object Global extends GlobalSettings {
       name = "mailActor")
 
     // We need to delay the start of the notification handle, since the database needs to be available first
-    MTurkNotificationHandler.startDelayed(app, 2.seconds)
+    MTurkNotificationReceiver.startDelayed(app, 2.seconds)
 
     if (conf.getBoolean("workload.active")) {
       Akka.system(app).actorOf(

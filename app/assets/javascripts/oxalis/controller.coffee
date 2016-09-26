@@ -68,10 +68,11 @@ class Controller
       return
 
     app.router.on("beforeunload", =>
-      stateLogger = @model.annotationModel.stateLogger
-      if not stateLogger.stateSaved() and stateLogger.allowUpdate
-        stateLogger.pushNow()
-        return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
+      if (@model.get("controlMode") == constants.CONTROL_MODE_TRACE)
+        stateLogger = @model.annotationModel.stateLogger
+        if not stateLogger.stateSaved() and stateLogger.allowUpdate
+          stateLogger.pushNow()
+          return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
     )
 
     @urlManager.startUrlUpdater()

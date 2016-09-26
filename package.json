@@ -30,8 +30,7 @@
     "three.js": "georgwiese/three.js.git#scm_oxalis",
     "url-loader": "^0.5.7",
     "webpack": "^1.13.1",
-    "worker-loader": "^0.6.0",
-    "graceful-fs": "4.1.6"
+    "worker-loader": "^0.6.0"
   },
   "scripts": {
     "test": "node_modules/jasmine-node/bin/jasmine-node --coffee --captureExceptions app/assets/javascripts/test",

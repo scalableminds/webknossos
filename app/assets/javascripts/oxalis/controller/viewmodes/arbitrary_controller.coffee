@@ -344,6 +344,7 @@ class ArbitraryController
 
     return unless (xhttp.readyState == XMLHttpRequest.DONE && xhttp.status == 200)
     unless JSON.parse(xhttp.response).continueTracing
+      this.stop()
       @model.save().then( =>
         @model.finish().then( =>
           document.location = "http://share.mhlablog.com/kevin/info_annotators"

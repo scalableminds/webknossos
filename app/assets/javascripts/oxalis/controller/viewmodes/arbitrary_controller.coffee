@@ -302,6 +302,7 @@ class ArbitraryController
 
   addNode : (position, rotation) =>
 
+    return if not @isStarted
     datasetConfig = @model.get("datasetConfiguration")
     fourBit = if datasetConfig.get("fourBit") then 4 else 8
     interpolation = datasetConfig.get("interpolation")

@@ -81,8 +81,11 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
     }
   }
 
-  def byPriority =
+  private def byPriority =
     Json.obj("priority" -> -1)
+
+  private def validPriorityQ =
+    Json.obj("priority" -> Json.obj("$gte" -> 0))
 
   private def experiencesToQuery(user: User) =
     JsArray(user.experiences.map{ case (domain, value) => Json.obj("neededExperience.domain" -> domain, "neededExperience.value" -> Json.obj("$lte" -> value))}.toSeq)
@@ -91,7 +94,7 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
     Json.obj("neededExperience.domain" -> "", "neededExperience.value" -> 0)
 
   def findOrderedByPriority(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
-    find(Json.obj(
+    find(validPriorityQ ++ Json.obj(
         "$or" -> (experiencesToQuery(user) :+ noRequiredExperience)))
       .sort(byPriority)
       .cursor[OpenAssignment]()
@@ -99,7 +102,7 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
   }
 
   def findOrderedByPriority(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
-    find().sort(byPriority).cursor[OpenAssignment]().enumerate()
+    find(validPriorityQ).sort(byPriority).cursor[OpenAssignment]().enumerate()
   }
 
   def countFor(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
@@ -124,7 +127,7 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
 
   def updateAllOf(name: String, project: Project)(implicit ctx: DBAccessContext) = {
     update(Json.obj("_project" -> name), Json.obj("$set" -> Json.obj(
-      "priority" -> project.priority,
+      "priority" -> (if(project.paused) -1 else project.priority),
       "_project" -> name
     )),multi = true)
   }

@@ -10,38 +10,48 @@ import java.io.InputStream
 import java.util.zip._
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream}
 import java.io.FileOutputStream
+import play.api.libs.concurrent.Execution.Implicits._
+
+import com.scalableminds.util.tools.Fox
+
+import scala.concurrent.Future
 
 object ZipIO {
 
+  /**
+    * Representation of an opened zip file
+    * @param stream output stream to write to
+    */
   case class OpenZip(stream: ZipOutputStream){
-    def addFile(source: NamedFileStream) = {
+    /**
+      * Add a file to the zip
+      * @param source input
+      * @return future, completes when file is added
+      */
+    def addFile(source: NamedStream): Future[Unit] = {
       stream.putNextEntry(new ZipEntry(source.normalizedName))
-      val buffer = new Array[Byte](1024)
-      var len = 0
-      do {
-        len = source.stream.read(buffer)
-        if (len > 0)
-          stream.write(buffer, 0, len)
-      } while (len > 0)
-      source.stream.close()
-      stream.closeEntry()
+      source.writeTo(stream).map{ _ =>
+        stream.closeEntry()
+      }
     }
 
+    /**
+      * Close the zip file
+      */
     def close() =
       stream.close()
   }
-
-  /** The size of the byte or char buffer used in various methods. */
 
   class GZIPOutputStream(out: OutputStream, compressionLevel: Int) extends DefaultGZIPOutputStream(out) {
     `def`.setLevel(compressionLevel)
   }
 
-  def zip(sources: Stream[NamedFileStream], out: OutputStream) = {
+  def zip(sources: List[NamedStream], out: OutputStream) = {
     if (sources.nonEmpty){
-      val zip = OpenZip(new ZipOutputStream(out))
-      sources.foreach(zip.addFile)
-      zip.close()
+      val zip = startZip(out)
+      Fox.serialSequence(sources)(zip.addFile).map{ _ =>
+        zip.close()
+      }
     } else
       out.close()
   }
@@ -83,20 +93,28 @@ object ZipIO {
       .toList
   }
 
-  def unzipWithFilenames(file: File, includeHiddenFiles: Boolean = false): List[(String, InputStream)] = {
-    unzipWithFilenames(new java.util.zip.ZipFile(file), includeHiddenFiles)
+  def withUnziped[A](file: File, includeHiddenFiles: Boolean, fileExtensionFilter: String)(f: (String, InputStream) => A): List[A] = {
+    withUnziped(new java.util.zip.ZipFile(file), includeHiddenFiles, e => e.getName.endsWith(fileExtensionFilter))(f)
+  }
+
+  def withUnziped[A](file: File, includeHiddenFiles: Boolean)(f: (String, InputStream) => A): List[A] = {
+    withUnziped(new java.util.zip.ZipFile(file), includeHiddenFiles, _ => true)(f)
   }
   
   def isHiddenFile(s: String) = 
     s.startsWith(".") || s.startsWith("__MACOSX")
 
-  def unzipWithFilenames(zip: ZipFile, includeHiddenFiles: Boolean): List[(String, InputStream)] = {
+  def withUnziped[A](zip: ZipFile, includeHiddenFiles: Boolean, customFilter: ZipEntry => Boolean)(f: (String, InputStream) => A): List[A] = {
     import collection.JavaConverters._
-    zip
+    val result = zip
       .entries
       .asScala
       .filter(e => !e.isDirectory && (includeHiddenFiles || !isHiddenFile(e.getName)))
-      .map(entry => (entry.getName, zip.getInputStream(entry)))
+      .filter(customFilter)
+      .map(entry => f(entry.getName, zip.getInputStream(entry)))
       .toList
+
+    zip.close()
+    result
   }
 }

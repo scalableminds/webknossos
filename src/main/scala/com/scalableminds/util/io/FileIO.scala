@@ -3,15 +3,52 @@
 */
 package com.scalableminds.util.io
 
-import java.io.{File, InputStream, PrintWriter}
+import java.io.{File, InputStream, OutputStream, PrintWriter}
 
-case class NamedFileStream(stream: InputStream, name: String) {
+import play.api.libs.iteratee.{Enumerator, Iteratee}
+
+import scala.concurrent.{Future, blocking}
+import play.api.libs.concurrent.Execution.Implicits._
+
+
+trait NamedStream {
+  def name: String
+
   def normalizedName: String = {
     val sep = File.separatorChar
     if (sep == '/')
       name
     else
       name.replace(sep, '/')
+  }
+
+  def writeTo(out: OutputStream): Future[Unit]
+}
+
+case class NamedEnumeratorStream(enumerator: Enumerator[Array[Byte]], name: String) extends NamedStream {
+  def writeTo(out: OutputStream) = {
+    val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
+      out.write(bytes)
+    }
+    enumerator |>>> iteratee
+  }
+}
+
+case class NamedFileStream(stream: () => InputStream, name: String) extends NamedStream{
+  def writeTo(out: OutputStream) = {
+    Future {
+      blocking {
+        val in = stream()
+        val buffer = new Array[Byte](1024)
+        var len = 0
+        do {
+          len = in.read(buffer)
+          if (len > 0)
+            out.write(buffer, 0, len)
+        } while (len > 0)
+        in.close()
+      }
+    }
   }
 }
 

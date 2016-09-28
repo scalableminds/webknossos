@@ -3,11 +3,20 @@
  */
 package com.scalableminds.util.tools
 
+import scala.concurrent.Future
+
 object TimeLogger {
   def logTime[A](caption: String, log: ( => String) => Unit)(op: => A): A = { 
     val t = System.currentTimeMillis()
     val result = op
     log(s"TIMELOG | $caption took ${System.currentTimeMillis-t} ms")
+    result
+  }
+
+  def logTimeF[A](caption: String, log: ( => String) => Unit)(op: => Future[A]): Future[A] = {
+    val t = System.currentTimeMillis()
+    val result = op
+    result.onComplete(_ => log(s"TIMELOG | $caption took ${System.currentTimeMillis-t} ms"))
     result
   }
 }

@@ -13,7 +13,7 @@ import models.project.{Project, ProjectDAO, ProjectService}
 import models.task._
 import models.user.User
 import net.liftweb.common.{Empty, Full}
-import oxalis.security.Secured
+import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsValue, Json}
@@ -41,7 +41,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         js <- Project.projectPublicWrites(project, request.user)
       } yield {
-        Ok(Json.toJson(js))
+        Ok(js)
       }
   }
 
@@ -84,6 +84,25 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
+  def pause(projectName: String) = Authenticated.async {
+    implicit request =>
+      updatePauseStatus(projectName, isPaused = true)
+  }
+
+  def resume(projectName: String) = Authenticated.async {
+    implicit request =>
+      updatePauseStatus(projectName, isPaused = false)
+  }
+
+  private def updatePauseStatus(projectName: String, isPaused: Boolean)(implicit request: AuthenticatedRequest[_]) = {
+    for {
+      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+      updatedProject <- ProjectService.updatePauseStatus(project, isPaused) ?~> Messages("project.update.failed", projectName)
+      js <- Project.projectPublicWrites(updatedProject, request.user)
+    } yield {
+      Ok(js)
+    }
+  }
 
   def tasksForProject(projectName: String) = Authenticated.async {
     implicit request =>

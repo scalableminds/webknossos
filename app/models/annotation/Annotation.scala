@@ -226,11 +226,11 @@ object AnnotationDAO
       Json.obj("$inc" -> Json.obj("version" -> 1)),
       returnNew = true)
 
-  def findByTaskIdAndUser(_user: BSONObjectID, _task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj(
+  def countByTaskIdAndUser(_user: BSONObjectID, _task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
+    count(Json.obj(
       "_task" -> _task,
       "typ" -> annotationType,
-      "_user" -> _user)).one[Annotation]
+      "_user" -> _user))
   }
 
   def findByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =

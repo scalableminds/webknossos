@@ -113,8 +113,8 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def findExploratoryOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, AnnotationType.Task :: AnnotationType.SystemTracings, limit)
 
-  def findTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findByTaskIdAndUser(user._id, _task, AnnotationType.Task)
+  def countTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.countByTaskIdAndUser(user._id, _task, AnnotationType.Task)
 
   def createAnnotationFor(user: User, task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) =

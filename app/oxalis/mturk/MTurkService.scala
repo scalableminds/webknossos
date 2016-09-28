@@ -340,6 +340,19 @@ trait MTurkNotificationHandlers extends LazyLogging {
     } yield true
   }
 
+  private def cancelIfAnnotationExists(assignmentId: String, hitId: String, assignment: MTurkAssignment) = {
+    assignment.annotations.find(_.assignmentId == assignmentId) match {
+      case Some(reference) =>
+        for {
+          annotation <- AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
+          _ <- annotation.muta.cancelTask()(GlobalAccessContext)
+        } yield true
+      case None            =>
+        logger.warn(s"Tried to cancel non existent annotation. Hit: $hitId Assignment: $assignmentId")
+        Fox.successful(true)
+    }
+  }
+
   /**
     * Mturker didn't finish his assignment of a HIT in time. Cancel annotation on WK and update counts.
     *
@@ -348,24 +361,27 @@ trait MTurkNotificationHandlers extends LazyLogging {
     * @return success indicator
     */
   def handleAbandonedAssignment(assignmentId: String, hitId: String) = {
-    def cancelIfAnnotationExists(assignment: MTurkAssignment) = {
-      assignment.annotations.find(_.assignmentId == assignmentId) match {
-        case Some(reference) =>
-          for {
-            annotation <- AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
-            _ <- annotation.muta.cancelTask()(GlobalAccessContext)
-          } yield true
-        case None            =>
-          logger.warn(s"Tried to cancel non existent annotation. Hit: $hitId Assignment: $assignmentId")
-          Fox.successful(true)
-      }
-    }
-
     for {
       assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
       _ <- MTurkAssignmentDAO.increaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
       _ <- MTurkAssignmentDAO.decreaseNumberInProgress(hitId, 1)(GlobalAccessContext)
-      result <- cancelIfAnnotationExists(assignment)
+      result <- cancelIfAnnotationExists(assignmentId, hitId, assignment)
+    } yield result
+  }
+
+  /**
+    * Mturker didn't finish his assignment of a HIT in time. Cancel annotation on WK and update counts.
+    *
+    * @param assignmentId mturk assignment
+    * @param hitId        mturk hit
+    * @return success indicator
+    */
+  def handleRejectedAssignment(assignmentId: String, hitId: String) = {
+    for {
+      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.increaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
+      _ <- MTurkProjectDAO.increaseNumberOfOpen(assignment._project, 1)(GlobalAccessContext)
+      result <- cancelIfAnnotationExists(assignmentId, hitId, assignment)
     } yield result
   }
 }

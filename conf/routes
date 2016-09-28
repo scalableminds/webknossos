@@ -197,6 +197,8 @@ DELETE        /api/projects/:name                                               
 PUT           /api/projects/:name                                               controllers.ProjectController.update(name: String)
 GET           /api/projects/:name/download                                      controllers.NMLIOController.projectDownload(name: String)
 GET           /api/projects/:name/tasks                                         controllers.ProjectController.tasksForProject(name: String)
+GET           /api/projects/:name/pause                                         controllers.ProjectController.pause(name: String)
+GET           /api/projects/:name/resume                                        controllers.ProjectController.resume(name: String)
 
 GET           /statistics                                                       controllers.StatisticsController.empty
 GET           /api/statistics/webknossos                                        controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])

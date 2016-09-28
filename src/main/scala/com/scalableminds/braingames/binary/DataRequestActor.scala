@@ -63,7 +63,7 @@ class DataRequester(
 
   lazy val dataStore: DataStore = new FileDataStore
 
-  def requestCollection(coll: DataRequestCollection): Fox[Array[Byte]] = {
+  def requestCollection(coll: DataRequestCollection[DataRequest]): Fox[Array[Byte]] = {
     val resultsPromise = Fox.combined(coll.requests.map(load))
     resultsPromise.map(_.appendArrays)
   }

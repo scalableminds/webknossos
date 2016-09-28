@@ -4,7 +4,8 @@
 package com.scalableminds.braingames.binary
 
 import scala.collection.JavaConversions._
-import java.io.{File, FileInputStream, OutputStream}
+import java.io.{ByteArrayInputStream, File, FileInputStream, OutputStream}
+import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 
 import org.apache.commons.io.FileUtils
@@ -19,10 +20,14 @@ trait DataDownloadHelper extends LazyLogging{
     try {
       val basePath = Paths.get(dataLayer.baseDir)
       val files = FileUtils.listFiles(new File(dataLayer.baseDir), new SuffixFileFilter(".raw"), TrueFileFilter.INSTANCE)
+
+
       ZipIO.zip(
-        files.toStream.map {
+        files.toList.map {
           file =>
-            new NamedFileStream(new FileInputStream(file), basePath.relativize(Paths.get(file.getAbsolutePath)).toString)
+            new NamedFileStream(
+              () => new FileInputStream(file),
+              basePath.relativize(Paths.get(file.getAbsolutePath)).toString)
         },
         outputStream)
     } catch {

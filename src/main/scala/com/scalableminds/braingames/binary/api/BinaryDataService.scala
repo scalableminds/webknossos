@@ -79,7 +79,7 @@ trait BinaryDataService
     repositoryWatchActor ! DirectoryWatcherActor.StartWatching
   }
 
-  def handleDataRequest(coll: DataRequestCollection): Fox[Array[Byte]] = {
+  def handleDataRequest(coll: DataRequestCollection[DataRequest]): Fox[Array[Byte]] = {
     dataRequester.requestCollection(coll)
   }
 

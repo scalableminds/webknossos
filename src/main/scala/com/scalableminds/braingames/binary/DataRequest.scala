@@ -39,9 +39,9 @@ case class DataWriteRequest(
   cuboid: Cuboid,
   data: Array[Byte]) extends DataRequest
 
-case class DataRequestCollection(requests: List[DataRequest]) extends AbstractDataRequest
+case class DataRequestCollection[+A <: DataRequest](requests: List[A]) extends AbstractDataRequest
 
 object DataRequestCollection {
-  def apply(dataRequest: DataRequest): DataRequestCollection =
+  def apply[A <: DataRequest](dataRequest: A): DataRequestCollection[A] =
     DataRequestCollection(List(dataRequest))
 }

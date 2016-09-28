@@ -5,34 +5,24 @@ package com.scalableminds.datastore.controllers
 
 import javax.inject.Inject
 
-import play.api._
-import play.api.Play.current
-import play.api.libs.concurrent._
 import play.api.libs.json._
 import com.scalableminds.util.geometry.Point3D
 import play.api.i18n.{I18nSupport, MessagesApi, Messages}
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.datastore.models._
 import com.scalableminds.braingames.binary._
-import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
-import play.api.libs.ws.WS
-import play.api.mvc.Action
 import com.scalableminds.braingames.binary.DataRequestSettings
 import com.scalableminds.braingames.binary.MappingRequest
 import scala.concurrent.Future
 import com.scalableminds.util.image.{JPEGWriter, ImageCreator, ImageCreatorParameters}
-import com.scalableminds.util.mvc.ExtendedController
-import com.scalableminds.datastore.services.{DataSetAccessService, UserDataLayerService, UserAccessService, BinaryDataService}
+import com.scalableminds.datastore.services.{DataSetAccessService, UserDataLayerService, UserAccessService}
 import com.scalableminds.datastore.models.DataSourceDAO
-import play.api.mvc.BodyParsers.parse
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.datastore.DataStorePlugin
 import java.io.File
 import org.apache.commons.io.FileUtils
-import org.apache.commons.io.IOUtils
 import org.apache.commons.codec.binary.Base64
-import java.io.{PipedInputStream, PipedOutputStream}
 import play.api.libs.iteratee.Enumerator
 import com.scalableminds.datastore.models.DataProtocol
 import net.liftweb.common._
@@ -170,7 +160,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
         for {
           image <- respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution, settings)
         } yield {
-          Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
+          Ok.sendFile(image, inline = true, fileName = _ => "test.jpg").withHeaders(
             CONTENT_TYPE -> contentTypeJpeg)
         }
       }
@@ -192,7 +182,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
         for {
           image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution, settings)
         } yield {
-          Ok.sendFile(image, true, _ => "test.jpg").withHeaders(
+          Ok.sendFile(image, inline = true, fileName = _ => "test.jpg").withHeaders(
             CONTENT_TYPE -> contentTypeJpeg)
         }
       }
@@ -227,7 +217,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
         for {
           thumbnail <- requestImageThumbnail(dataSetName, dataLayerName, width, height)
         } yield {
-          Ok.sendFile(thumbnail, true, _ => "thumbnail.jpg").withHeaders(
+          Ok.sendFile(thumbnail, inline = true, fileName = _ => "thumbnail.jpg").withHeaders(
             CONTENT_TYPE -> contentTypeJpeg)
         }
       }
@@ -370,7 +360,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
         case (Empty, _) | (_, Empty) => Empty
         case (Full(rs), Full(r)) =>
           val expectedDataSize = r.header.cubeSize * r.header.cubeSize * r.header.cubeSize * dataLayer.bytesPerElement
-          if(r.data.size == expectedDataSize)
+          if(r.data.length == expectedDataSize)
               Full(rs :+ r)
           else
               Failure("Wrong payload length.")
@@ -382,11 +372,11 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          if (dataLayer.isWritable)
+          _ <- dataLayer.isWritable ?~> "Can not write to data layer. Read only."
           // unpack parsed requests from their FileParts
           requests <- validateRequests(request.body.files.map(_.ref), dataLayer).toFox
           dataRequestCollection = createRequestCollection(dataSource, dataLayer, requests)
-          _ = dataRequestCollection.requests.map(VolumeUpdateService.store _)
+          _ <- Fox.combined(dataRequestCollection.requests.map(VolumeUpdateService.store))
           _ <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
         } yield Ok
       }
@@ -400,7 +390,7 @@ trait BinaryDataDownloadController extends BinaryDataCommonController {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          if (dataLayer.category == "segmentation")
+          _ <- (dataLayer.category == "segmentation") ?~> "Invalid layer type"
         } yield {
           val enumerator = Enumerator.outputStream { outputStream =>
             DataStorePlugin.binaryDataService.downloadDataLayer(dataLayer, outputStream)

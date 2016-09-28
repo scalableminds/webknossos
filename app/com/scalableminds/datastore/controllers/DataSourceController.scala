@@ -91,15 +91,13 @@ class DataSourceController @Inject()(val messagesApi: MessagesApi) extends Contr
   private def unzipDataSource(baseDir: Path, filePath: String): Box[Boolean] = {
     try {
       logger.warn(s"Unzipping uploaded dataset: $filePath")
-      ZipIO.unzipWithFilenames(new File(filePath)).foreach {
-        case (name, in) =>
-          val path = baseDir.resolve(Paths.get(name))
-          if (path.getParent != null)
-            PathUtils.ensureDirectory(path.getParent)
-          val out = new FileOutputStream(new File(path.toString))
-          IOUtils.copy(in, out)
-          in.close()
-          out.close()
+      ZipIO.withUnziped(new File(filePath), includeHiddenFiles = false){ (name, in) =>
+        val path = baseDir.resolve(Paths.get(name))
+        if (path.getParent != null)
+          PathUtils.ensureDirectory(path.getParent)
+        val out = new FileOutputStream(new File(path.toString))
+        IOUtils.copy(in, out)
+        out.close()
       }
       Full(true)
     } catch {

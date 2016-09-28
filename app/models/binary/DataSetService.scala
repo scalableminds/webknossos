@@ -3,13 +3,15 @@
  */
 package models.binary
 
-import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import play.api.Logger
 import play.api.libs.concurrent.Akka
 import net.liftweb.common.Full
 import scala.Some
+
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.braingames.binary.models._
+import com.scalableminds.util.geometry.Point3D
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.commands.WriteResult
@@ -26,6 +28,15 @@ object DataSetService extends FoxImplicits {
     DataSetDAO.update(dataSet.name, description, isPublic)
 
   def isProperDataSetName(name: String) = name.matches("[A-Za-z0-9_\\-]*")
+
+  def defaultDataSetPosition(dataSetName: String)(implicit ctx: DBAccessContext) = {
+    DataSetDAO.findOneBySourceName(dataSetName).futureBox.map {
+      case Full(dataSet) =>
+        dataSet.defaultStart
+      case _ =>
+        Point3D(0, 0, 0)
+    }
+  }
 
   def createDataSet(
                      name: String,

@@ -1,6 +1,6 @@
 package models.annotation
 
-import java.io.{BufferedOutputStream, FileOutputStream}
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 
 import com.scalableminds.util.io.ZipIO
 import models.user.{UsedAnnotationDAO, User}
@@ -227,7 +227,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createAnnotationFrom(user: User, nmls: List[NML], typ: AnnotationType, name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
+  def createAnnotationFrom(user: User, nmls: List[NML], typ: AnnotationType, f: File, name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     SkeletonTracingService.createFrom(nmls, None, AnnotationSettings.skeletonDefault).toFox.flatMap {
       content =>
         AnnotationService.createFrom(

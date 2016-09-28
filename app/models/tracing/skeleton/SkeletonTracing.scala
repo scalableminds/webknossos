@@ -5,7 +5,6 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationContent, AnnotationSettings}
 import models.basics._
-import models.tracing.CommonTracing
 import models.tracing.skeleton.temporary.TemporarySkeletonTracingService
 import oxalis.nml._
 import play.api.Logger
@@ -26,7 +25,7 @@ case class SkeletonTracing(
                             settings: AnnotationSettings = AnnotationSettings.skeletonDefault,
                             _id: BSONObjectID = BSONObjectID.generate
                           )
-  extends SkeletonTracingLike with AnnotationContent with CommonTracing with SkeletonManipulations {
+  extends SkeletonTracingLike with AnnotationContent with SkeletonManipulations {
 
   def id = _id.stringify
 

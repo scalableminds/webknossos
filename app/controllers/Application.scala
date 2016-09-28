@@ -24,10 +24,10 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller wit
         controllers.routes.javascript.AnnotationController.nameExplorativeAnnotation,
         controllers.routes.javascript.AnnotationController.createExplorational,
         controllers.routes.javascript.AnnotationController.download,
-        controllers.routes.javascript.NMLIOController.taskDownload,
-        controllers.routes.javascript.NMLIOController.projectDownload,
-        controllers.routes.javascript.NMLIOController.userDownload,
-        controllers.routes.javascript.NMLIOController.upload
+        controllers.routes.javascript.SkeletonIOController.taskDownload,
+        controllers.routes.javascript.SkeletonIOController.projectDownload,
+        controllers.routes.javascript.SkeletonIOController.userDownload,
+        controllers.routes.javascript.SkeletonIOController.upload
       )).as("text/javascript")
   }
 

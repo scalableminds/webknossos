@@ -52,13 +52,16 @@ object NMLParser {
           comments = parseComments(data \ "comments")
           branchPoints = parseBranchPoints(data \ "branchpoints", time)
           trees <- extractTrees(data \ "thing", branchPoints, comments)
+          volumes = extractVolumes(data \ "volume")
         } yield {
           val dataSetName = parseDataSetName(parameters \ "experiment")
           val activeNodeId = parseActiveNode(parameters \ "activeNode")
           val editPosition = parseEditPosition(parameters \ "editPosition") // STARTPOS
+          val editRotation = parseEditRotation(parameters \ "editRotation")
+          val zoomLevel = parseZoomLevel(parameters \ "zoomLevel")
 
           Logger.debug(s"Parsed NML file. Trees: ${trees.size}")
-          NML(dataSetName, trees.toList, time, activeNodeId, scale, editPosition)
+          NML(dataSetName, trees.toList, volumes.toList, time, activeNodeId, scale, editPosition, editRotation, zoomLevel)
         }
       } catch {
         case e: Exception =>
@@ -69,6 +72,10 @@ object NMLParser {
 
     def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
       validateTrees(parseTrees(treeNodes, branchPoints, comments)).map(transformTrees)
+    }
+
+    def extractVolumes(volumeNodes: NodeSeq) = {
+      volumeNodes.map(node => Volume((node \ "@location").text))
     }
 
     def validateTrees(trees: Seq[Tree]): Box[Seq[Tree]] = {
@@ -157,6 +164,14 @@ object NMLParser {
 
     private def parseEditPosition(node: NodeSeq) = {
       node.headOption.flatMap(parsePoint3D)
+    }
+
+    private def parseEditRotation(node: NodeSeq) = {
+      node.headOption.flatMap(parseRotation)
+    }
+
+    private def parseZoomLevel(node: NodeSeq) = {
+      (node \ "@zoom").text.toDoubleOpt
     }
 
     private def parseBranchPoints(branchPoints: NodeSeq, defaultTimestamp: Long) = {

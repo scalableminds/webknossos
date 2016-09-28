@@ -15,7 +15,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView
     <h3>Explorative Annotations</h3>
     <% if (!isAdminView) {%>
       <div>
-        <form action="<%- jsRoutes.controllers.NMLIOController.upload().url %>"
+        <form action="<%- jsRoutes.controllers.SkeletonIOController.upload().url %>"
           method="POST"
           enctype="multipart/form-data"
           id="upload-and-explore-form"

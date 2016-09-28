@@ -1,22 +1,33 @@
 package models.tracing.volume
 
-import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
-import models.annotation.{AnnotationLike, AnnotationContentService, AnnotationContent, AnnotationSettings}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import models.annotation.{AnnotationContent, AnnotationContentService, AnnotationLike, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary._
-import java.io.{PipedOutputStream, PipedInputStream, InputStream}
-import models.tracing.{CommonTracingService, CommonTracing}
+import java.io.{FileInputStream, InputStream, PipedInputStream, PipedOutputStream}
+import java.nio.file.Paths
+
+import scala.concurrent.Future
+
+import models.tracing.CommonTracingService
 import net.liftweb.common.{Failure, Full}
 import play.api.Logger
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import play.api.libs.json.{Json, JsValue}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import play.api.libs.json.{JsValue, Json}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, GlobalDBAccess}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.ws.WS
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.braingames.binary.models.{DataLayer, UserDataLayer, DataSource}
+import com.scalableminds.braingames.binary.models.{DataLayer, DataSource, UserDataLayer}
+import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFileStream, ZipIO}
+import com.scalableminds.util.xml.XMLWrites
+import models.tracing.skeleton.SkeletonTracing
+import models.tracing.volume.VolumeTracing.VolumeTracingXMLWrites
+import org.apache.commons.io.IOUtils
+import oxalis.nml.{NML, NMLService}
+import play.api.libs.concurrent.Execution.Implicits._
 
 /**
  * Company: scalableminds
@@ -30,12 +41,12 @@ case class VolumeTracing(
                           activeCellId: Option[Int] = None,
                           timestamp: Long = System.currentTimeMillis(),
                           editPosition: Point3D = Point3D(0, 0, 0),
-                          editRotation: Vector3D = Vector3D(0,0,0),
+                          editRotation: Vector3D = Vector3D(0, 0, 0),
                           zoomLevel: Double,
                           boundingBox: Option[BoundingBox] = None,
                           settings: AnnotationSettings = AnnotationSettings.volumeDefault,
                           _id: BSONObjectID = BSONObjectID.generate)
-  extends AnnotationContent with CommonTracing with FoxImplicits{
+  extends AnnotationContent with FoxImplicits{
 
   def id = _id.stringify
 
@@ -75,6 +86,14 @@ case class VolumeTracing(
 
   def contentType: String = VolumeTracing.contentType
 
+  private def enumeratorToIS(enumerator: Enumerator[Array[Byte]]): InputStream = {
+    val pos = new PipedOutputStream()
+    val pis = new PipedInputStream(pos)
+    val it = Iteratee.foreach{b: Array[Byte] => pos.write(b)}
+    enumerator.onDoneEnumerating(pos.close()) |>>> it
+    pis
+  }
+
   def toDownloadStream(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
     import play.api.Play.current
     def createStream(url: String): Fox[Enumerator[Array[Byte]]] = {
@@ -97,8 +116,15 @@ case class VolumeTracing(
       dataSource <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
       urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/datasets/$dataSetName/layers/$userDataLayerName/download"
       inputStream <- createStream(urlToVolumeData)
+      volumeNml <- NMLService.toNML(this)(VolumeTracingXMLWrites).map(data => Enumerator.fromStream(IOUtils.toInputStream(data)))
     } yield {
-      inputStream
+      Enumerator.outputStream{ outputStream =>
+        ZipIO.zip(
+          List(
+            new NamedEnumeratorStream(inputStream, s"volume_data.zip"),
+            new NamedEnumeratorStream(volumeNml, s"volume.nml")
+          ), outputStream)
+      }
     }
   }
 
@@ -136,6 +162,29 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
     }
   }
 
+  def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[VolumeTracing] = {
+    nmls.headOption.toFox.flatMap{ nml =>
+      val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
+
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(nml.dataSetName)
+        baseSource <- dataSet.dataSource.toFox
+        start <- nml.editPosition.toFox.orElse(DataSetService.defaultDataSetPosition(nml.dataSetName))
+        dataLayer <- DataStoreHandler.createUserDataLayer(dataSet.dataStoreInfo, baseSource)
+        volumeTracing = VolumeTracing(
+          dataSet.name,
+          dataLayer.dataLayer.name,
+          editPosition = start,
+          editRotation = nml.editRotation.getOrElse(Vector3D(0,0,0)),
+          zoomLevel = nml.zoomLevel.getOrElse(VolumeTracing.defaultZoomLevel))
+        _ <- UserDataLayerDAO.insert(dataLayer)
+        _ <- VolumeTracingDAO.insert(volumeTracing)
+      } yield {
+        volumeTracing
+      }
+    }
+  }
+
   def saveToDB(volume: VolumeTracing)(implicit ctx: DBAccessContext) = {
     VolumeTracingDAO.update(
       Json.obj("_id" -> volume._id),
@@ -149,12 +198,28 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
     ???
 }
 
-object VolumeTracing {
+object VolumeTracing extends FoxImplicits{
   implicit val volumeTracingFormat = Json.format[VolumeTracing]
 
   val contentType = "volumeTracing"
 
   val defaultZoomLevel = 0.0
+
+  implicit object VolumeTracingXMLWrites extends XMLWrites[VolumeTracing] with GlobalDBAccess {
+    def writes(e: VolumeTracing): Fox[scala.xml.Node] = {
+      for {
+        parameters <- AnnotationContent.writeParametersAsXML(e)
+      } yield {
+        <things>
+          <parameters>
+            {parameters}
+            {e.activeCellId.map(id => scala.xml.XML.loadString(s"""<activeNodeId id="$id"/>""")).getOrElse(scala.xml.Null)}
+          </parameters>
+          <volume location="volume_data.zip"></volume>
+        </things>
+      }
+    }
+  }
 }
 
 object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {

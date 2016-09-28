@@ -256,7 +256,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def tryToGetNextAssignmentFor(user: User, retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
     val s = System.currentTimeMillis()
-    TimeLogger.logTimeF("assignables", Logger.warn)(TaskService.findAssignableFor(user)).futureBox.flatMap {
+    TaskService.findAssignableFor(user).futureBox.flatMap {
       case Full(assignment) =>
         TimeLogger.logTimeF("task request", Logger.warn)(OpenAssignmentService.remove(assignment)).flatMap { removeResult =>
           if (removeResult.n >= 1)

@@ -2,10 +2,12 @@ package models.annotation
 
 import java.util.Date
 
+import scala.xml.NodeSeq
+
 import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, FallbackLayer}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataSet, DataSetDAO, DataStoreInfo}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -22,6 +24,8 @@ trait AnnotationContent {
   def editPosition: Point3D
 
   def editRotation: Vector3D
+
+  def zoomLevel: Double
 
   def boundingBox: Option[BoundingBox]
 
@@ -52,7 +56,7 @@ trait AnnotationContent {
   def dataSet(implicit ctx: DBAccessContext): Fox[DataSet] = DataSetDAO.findOneBySourceName(dataSetName)
 }
 
-object AnnotationContent {
+object AnnotationContent extends FoxImplicits {
 
   import AnnotationSettings._
 
@@ -63,14 +67,14 @@ object AnnotationContent {
       (__ \ 'resolutions).write[List[Int]] and
       (__ \ 'fallback).write[Option[FallbackLayer]] and
       (__ \ 'elementClass).write[String] and
-      (__ \ 'mappings).write[List[DataLayerMapping]])(l =>
+      (__ \ 'mappings).write[List[DataLayerMapping]]) (l =>
       (l.name, l.category, l.maxCoordinates, l.resolutions, l.fallback, l.elementClass, l.mappings))
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and
       (__ \ 'dataStore).write[DataStoreInfo] and
       (__ \ 'scale).write[Option[Scale]] and
-      (__ \ 'dataLayers).write[Option[List[DataLayer]]])(d =>
+      (__ \ 'dataLayers).write[Option[List[DataLayer]]]) (d =>
       (d.name, d.dataStoreInfo, d.dataSource.map(_.scale), d.dataSource.map(_.dataLayers)))
 
   def writeAsJson(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
@@ -86,6 +90,22 @@ object AnnotationContent {
         "editRotation" -> ac.editRotation,
         "boundingBox" -> ac.boundingBox,
         "contentType" -> ac.contentType)
+    }
+  }
+
+  def writeParametersAsXML(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
+    for {
+      dataSet <- DataSetDAO.findOneBySourceName(ac.dataSetName)
+      dataSource <- dataSet.dataSource.toFox
+    } yield {
+      NodeSeq.fromSeq(Seq(
+          <experiment name={dataSet.name}/>,
+          <scale x={dataSource.scale.x.toString} y={dataSource.scale.y.toString} z={dataSource.scale.z.toString}/>,
+          <offset x="0" y="0" z="0"/>,
+          <time ms={ac.timestamp.toString}/>,
+          <editPosition x={ac.editPosition.x.toString} y={ac.editPosition.y.toString} z={ac.editPosition.z.toString}/>,
+          <editRotation xRot={ac.editRotation.x.toString} yRot={ac.editRotation.y.toString} zRot={ac.editRotation.z.toString}/>,
+          <zoomLevel zoom={ac.zoomLevel.toString}/>))
     }
   }
 }

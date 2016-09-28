@@ -19,7 +19,7 @@ import scala.collection.JavaConverters._
 import com.scalableminds.util.tools.Fox
 import models.project.{Project, ProjectDAO}
 
-class NMLIOController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
+class SkeletonIOController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
   private def nameForNMLs(fileNames: Seq[String]) =
     if (fileNames.size == 1)
@@ -28,7 +28,7 @@ class NMLIOController @Inject()(val messagesApi: MessagesApi) extends Controller
       None
 
   def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
-    val parsedFiles = request.body.files.flatMap(f => f.contentType match {
+    val parsedFiles = request.body.files.map(f => f.contentType match {
       case Some("application/zip") => NMLService.extractFromZip(f.ref.file, Some(f.filename))
       case _                       => List(NMLService.extractFromNML(f.ref.file, Some(f.filename)))
     })

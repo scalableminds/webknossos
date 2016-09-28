@@ -7,26 +7,17 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationContentService, AnnotationSettings}
-import models.binary.{DataSet, DataSetDAO}
-import models.tracing.skeleton.{SkeletonTracingLike, SkeletonTracing, SkeletonTracingStatistics}
+import models.binary.{DataSet, DataSetDAO, DataSetService}
+import models.tracing.skeleton.{SkeletonTracing, SkeletonTracingLike, SkeletonTracingStatistics}
 import net.liftweb.common.Full
 import oxalis.nml.NML
 import play.api.libs.concurrent.Execution.Implicits._
 
 object TemporarySkeletonTracingService extends AnnotationContentService with FoxImplicits{
 
-  private def defaultDataSetPosition(dataSetName: String)(implicit ctx: DBAccessContext) = {
-    DataSetDAO.findOneBySourceName(dataSetName).futureBox.map {
-      case Full(dataSet) =>
-        dataSet.defaultStart
-      case _ =>
-        Point3D(0, 0, 0)
-    }
-  }
-
   def createFrom(nml: NML, id: String, boundingBox: Option[BoundingBox], settings: Option[AnnotationSettings] = None)(implicit ctx: DBAccessContext) = {
     val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
-    val start = nml.editPosition.toFox.orElse(defaultDataSetPosition(nml.dataSetName))
+    val start = nml.editPosition.toFox.orElse(DataSetService.defaultDataSetPosition(nml.dataSetName))
 
     start.map {
       TemporarySkeletonTracing(
@@ -36,8 +27,8 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
         System.currentTimeMillis(),
         nml.activeNodeId,
         _,
-        Vector3D(0,0,0),
-        SkeletonTracing.defaultZoomLevel,
+        nml.editRotation.getOrElse(Vector3D(0,0,0)),
+        nml.zoomLevel.getOrElse(SkeletonTracing.defaultZoomLevel),
         box,
         settings.getOrElse(AnnotationSettings.default))
     }

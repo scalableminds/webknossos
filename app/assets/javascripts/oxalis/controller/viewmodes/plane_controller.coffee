@@ -30,14 +30,14 @@ class PlaneController
     keyboardNoLoop : null
     keyboardLoopDelayed : null
 
-    unbind : ->
+    destroy : ->
 
       for mouse in @mouseControllers
-        mouse.unbind()
+        mouse.destroy()
       @mouseControllers = []
-      @keyboard?.unbind()
-      @keyboardNoLoop?.unbind()
-      @keyboardLoopDelayed?.unbind()
+      @keyboard?.destroy()
+      @keyboardNoLoop?.destroy()
+      @keyboardLoopDelayed?.destroy()
 
 
   constructor : (@model, @view, @sceneController) ->
@@ -249,7 +249,7 @@ class PlaneController
   stop : ->
 
     if @isStarted
-      @input.unbind()
+      @input.destroy()
 
     @sceneController.stop()
     @planeView.stop()

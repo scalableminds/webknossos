@@ -73,7 +73,7 @@ case class WebSocketRESTServer(out: Channel[Array[Byte]]) extends FoxImplicits{
       json.validate[RESTResponse] match {
         case JsSuccess(response, _) =>
           if(response.status != Status.OK.toString) {
-            val log = if(response.status != Status.NOT_FOUND.toString) Logger.warn(_) else Logger.debug(_)
+            val log: (=> String) => Unit = if(response.status != Status.NOT_FOUND.toString) Logger.warn else Logger.debug
             log(s"Failed (Code: ${response.status})  REST call to '${response.path}'(${response.uuid}). Result: '${response.body.toString().take(500)}'")
           }
           openCalls().get(response.uuid).foreach {

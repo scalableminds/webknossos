@@ -2,6 +2,7 @@ _          = require("lodash")
 Marionette = require("backbone.marionette")
 Toast      = require("libs/toast")
 Request    = require("libs/request")
+moment     = require("moment")
 
 class DashboardTaskListItemView extends Marionette.ItemView
 
@@ -13,6 +14,7 @@ class DashboardTaskListItemView extends Marionette.ItemView
         <%- id %>
       </div>
     </td>
+    <td><%- moment(created).format("YYYY-MM-DD HH:SS") %></td>
     <td><%- type.summary      %></td>
     <td><%- projectName       %></td>
     <td><%- type.description  %></td>
@@ -51,6 +53,9 @@ class DashboardTaskListItemView extends Marionette.ItemView
       <% } %>
     </td>
   """)
+
+  templateHelpers :
+    moment : moment
 
   events :
     "click #finish-task" : "finish"

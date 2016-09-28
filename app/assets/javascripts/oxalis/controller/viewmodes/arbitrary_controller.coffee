@@ -239,6 +239,7 @@ class ArbitraryController
 
   move : (timeFactor) ->
 
+    return if not @isStarted
     return if @isBranchpointvideoMode()
     @cam.move [0, 0, @getVoxelOffset(timeFactor)]
     @moved()

@@ -14,7 +14,6 @@ class DashboardTaskListItemView extends Marionette.ItemView
         <%- id %>
       </div>
     </td>
-    <td><%- moment(created).format("YYYY-MM-DD HH:SS") %></td>
     <td><%- type.summary      %></td>
     <td><%- projectName       %></td>
     <td><%- type.description  %></td>
@@ -25,6 +24,7 @@ class DashboardTaskListItemView extends Marionette.ItemView
         </span>
       <% }) %>
     </td>
+    <td><%- moment(created).format("YYYY-MM-DD HH:SS") %></td>
     <td class="nowrap">
       <% if (annotation.state.isFinished) { %>
         <i class="fa fa-check"></i><span> Finished</span><br />

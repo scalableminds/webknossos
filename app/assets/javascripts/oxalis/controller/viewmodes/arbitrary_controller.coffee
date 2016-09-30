@@ -23,7 +23,7 @@ class ArbitraryController
   WIDTH : 128
   TIMETOCENTER : 200
 
-  RESCOPURL : "https://braintracing.info:9000/api/services/score-nml/"
+  RESCOPURL : "https://wk2-brain.esc.rzg.mpg.de:9000/api/services/score-nml/"
 
   TESTLENGTH : 2000
   FINISHLENGTH : 35000

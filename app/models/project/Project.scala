@@ -79,10 +79,11 @@ object Project {
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, "project.name.invalidChars")) and
       (__ \ 'team).read[String] and
       (__ \ 'priority).read[Int] and
-      (__ \ 'paused).read[Boolean] and
+      (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'assignmentConfiguration).read[AssignmentConfig] and
       (__ \ 'owner).read[String](StringObjectIdReads("owner"))) (
-      (name, team, priority, paused, assignmentLocation, owner) => Project(name, team, BSONObjectID(owner), priority, paused, assignmentLocation))
+      (name, team, priority, paused, assignmentLocation, owner) =>
+        Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, assignmentLocation))
 }
 
 object ProjectService extends FoxImplicits {

@@ -332,7 +332,7 @@ class ArbitraryController
     scaledEdgeLength = scaledEdges.map(norm)
     totalLength = sum(scaledEdgeLength)
     if totalLength > @FINISHLENGTH
-      _.defer => new Promise (resolve, reject) =>  modal.show("You are an excellent annotator and may submit the HIT now", "Done")
+      _.defer => new Promise (resolve, reject) =>  modal.show("You may submit the HIT now", "Done")
     return if totalLength < @TESTLENGTH
     return if @checkedRESCOP
     @checkedRESCOP = true

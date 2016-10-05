@@ -21,17 +21,18 @@
               <li>You should start by watching the 3min video below <br />
                 (Even if you saw a similar video a couple of months ago, this has changed!)
               </li>
-              <li>
-                <div id="myelementLink" style="display: inline; font-family: Verdana;"><tt>URL not shown because there is an error with Javascript on your computer. To perform this HIT, you must have Javascript and cookies enabled on your browser.</tt></div>
-              </li>
+              
               <li><strong>Follow the cell by moving forward until the screen turns black or the time is over.</strong></li>
               <li>After you are done following the cell, please return and fill out the feedback question before submitting the HIT.</li>
               <li>You are free to do as many of our tasks as you like, they are all different.</li>
             </ul>
           </div>
           <div id="div-intro" style="padding-bottom: 15px;">
-            <iframe id="iframe-intro" allowfullscreen="" frameborder="0" height="500px" src="https://www.youtube.com/embed/xbVfx-OjS3w" width="600px"></iframe>
+            <iframe id="iframe-intro" allowfullscreen="" frameborder="0" height="500px" src="https://www.youtube.com/embed/d9Z1NW2JLuw?autoplay=1" width="600px"></iframe>
           </div>
+          <div id="myelementLink" style="display: inline; font-family: Verdana;"><tt>URL not shown because there is an error with Javascript on your computer. To perform this HIT, you must have Javascript and cookies enabled on your browser.</tt></div>
+          
+              
         </div>
         <!-- End Instructions --><!-- Content Body -->
         <div>&nbsp;</div>

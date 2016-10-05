@@ -26,7 +26,7 @@ class ArbitraryController
   RESCOPURL : "https://wk2-brain.esc.rzg.mpg.de:9000/api/services/score-nml/"
 
   TESTLENGTH : 2000
-  FINISHLENGTH : 35000
+  FINISHLENGTH : 50000
 
   BRANCHPOINTVIDEOCLIPPINGDISTANCE : 3
   BRANCHPOINTVIDEOMICROMOVE : 7.5

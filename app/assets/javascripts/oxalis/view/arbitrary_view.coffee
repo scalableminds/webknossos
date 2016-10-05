@@ -8,7 +8,7 @@ Constants = require("../constants")
 
 class ArbitraryView
 
-  DEFAULT_SCALE  : 2
+  DEFAULT_SCALE  : 1.35
   MAX_SCALE      : 3
   MIN_SCALE      : 1
 

@@ -23,13 +23,13 @@ object UserConfiguration extends BasicSettings {
   val default = UserConfiguration(
     Map(
       "moveValue" -> JsNumber(300),
-      "moveValue3d" -> JsNumber(56),
+      "moveValue3d" -> JsNumber(70),
       "rotateValue" -> JsNumber(0.01),
       "crosshairSize" -> JsNumber(0.1),
       "scaleValue" -> JsNumber(0.05),
       "mouseRotateValue" -> JsNumber(0.0005),
       "clippingDistance" -> JsNumber(50),
-      "clippingDistanceArbitrary" -> JsNumber(64),
+      "clippingDistanceArbitrary" -> JsNumber(10),
       "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),
       "zoom" -> JsNumber(2),

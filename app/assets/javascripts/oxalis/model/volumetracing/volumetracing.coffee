@@ -68,7 +68,7 @@ class VolumeTracing
   startEditing : (planeId) ->
     # Return, if layer was actually started
 
-    return false if @restrictionHandler.handleUpdate()
+    return false if not @restrictionHandler.updateAllowed()
 
     if currentLayer? or @flycam.getIntegerZoomStep() > 0
       return false
@@ -81,7 +81,7 @@ class VolumeTracing
 
   addToLayer : (pos) ->
 
-    return if @restrictionHandler.handleUpdate()
+    return if not @restrictionHandler.updateAllowed()
 
     unless @currentLayer?
       return
@@ -92,7 +92,7 @@ class VolumeTracing
 
   finishLayer : ->
 
-    return if @restrictionHandler.handleUpdate()
+    return if not @restrictionHandler.updateAllowed()
 
     if not @currentLayer? or @currentLayer.isEmpty()
       return

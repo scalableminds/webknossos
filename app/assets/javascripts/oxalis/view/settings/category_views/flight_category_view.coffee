@@ -19,7 +19,7 @@ class FlightCategoryView extends CategoryView
           options :
             name : "mouseRotateValue"
             displayName : "Mouse Rotation"
-            min : 0.001
+            min : 0.0001
             max : 0.02
             step : 0.001
         )

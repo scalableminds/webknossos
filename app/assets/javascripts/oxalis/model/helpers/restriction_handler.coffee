@@ -13,35 +13,23 @@ class RestrictionHandler
 
 
   # Should be called whenever the model is modified
-  # Returns whether the modification should be aborted
-  # ==> return if @restrictionHandler.handleUpdate()
-  handleUpdate : ->
-
-    if @restrictions.allowUpdate
-      return false
-
-    else
-      if not @issuedUpdateError
-        Toast.error(@UPDATE_ERROR)
-        @issuedUpdateError = true
-      return true
-
-
-  # Should be called whenever the model is modified
-  # but should be changed regardless of the restriction settings
-  # Returns whether the change should be persisted on the server
-  # ==> if @restrictionHandler.forceHandleUpdate()
-  #    @stateLogger.update...
-  forceHandleUpdate : ->
+  # Returns whether the modification is allowed
+  # ==> return if not @restrictionHandler.updateAllowed()
+  updateAllowed : (error=true) ->
 
     if @restrictions.allowUpdate
       return true
 
     else
-      # issue a non-persistence warning to the user
-      if not @issuedUpdateWarning
-        Toast.warning(@UPDATE_WARNING)
-        @issuedUpdateWarning = true
+      # Display error or warning if it wasn't displayed before
+      if error
+        if not @issuedUpdateError
+          Toast.error(@UPDATE_ERROR)
+          @issuedUpdateError = true
+      else
+        if not @issuedUpdateWarning
+          Toast.warning(@UPDATE_WARNING)
+          @issuedUpdateWarning = true
       return false
 
 

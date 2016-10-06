@@ -30,7 +30,6 @@ class TracingLayoutView extends Marionette.LayoutView
         <div id="settings-menu"></div>
       </div>
       <div id="tracing"></div>
-      <h2>...............................................Shift + Space for UNDO</h2>
       <div id="right-menu"></div>
     </div>
     <div class="modal-wrapper"></div>

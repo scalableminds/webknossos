@@ -32,7 +32,7 @@ class ArbitraryPlaneInfo extends Backbone.Marionette.ItemView
       offstyle : "success",
       on : "SHIFT-SPACE FOR UNDO",
       onstyle : "danger",
-      width : 240,
+      width : 140,
     })
     @updateCheckboxToggle()
 

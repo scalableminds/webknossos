@@ -30,7 +30,7 @@ class ArbitraryPlaneInfo extends Backbone.Marionette.ItemView
     @ui.checkbox.bootstrapToggle({
       off : "Watching",
       offstyle : "success",
-      on : "SHIFT-SPACE FOR UNDO",
+      on : "RECORDING",
       onstyle : "danger",
       width : 140,
     })

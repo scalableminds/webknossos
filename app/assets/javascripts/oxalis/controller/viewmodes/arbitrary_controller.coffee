@@ -205,7 +205,7 @@ class ArbitraryController
 
   createBranchMarker : (pos) ->
 
-    return unless @isBranchpointvideoMode()
+    return unless @isBranchpointvideoMode() || @isSynapseannotationMode()
     activeNode = @model.skeletonTracing.getActiveNode()
     f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
     @cam.move [-(pos.x - @arbitraryView.width / 2) * f, -(pos.y - @arbitraryView.width / 2) * f, 0]
@@ -213,11 +213,11 @@ class ArbitraryController
     rotation = @cam.getRotation()
     @model.skeletonTracing.createNewTree()
     @addNode(position, rotation)
-    @model.skeletonTracing.setActiveTree(1)
+    if @isBranchpointvideoMode()
+        @model.skeletonTracing.setActiveTree(1)
     @cam.move [(pos.x - @arbitraryView.width / 2) * f, (pos.y - @arbitraryView.width / 2) * f, 0]
-    @setActiveNode(activeNode.id, true)
-    console.log('DEBUG: about to move')
-    # @cam.move [0, 0, @BRANCHPOINTVIDEOMICROMOVE]
+    if @isBranchpointvideoMode()
+        @setActiveNode(activeNode.id, true)
     @moved()
 
 
@@ -494,6 +494,11 @@ class ArbitraryController
   isBranchpointvideoMode : ->
 
     return @model.tracing.task?.type.summary == 'branchpointvideo'
+
+
+  isSynapseannotationMode : ->
+
+    return @model.tracing.task?.type.summary == 'synapseannotation'
 
 
 module.exports = ArbitraryController

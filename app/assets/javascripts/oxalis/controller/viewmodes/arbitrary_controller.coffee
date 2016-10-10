@@ -207,6 +207,7 @@ class ArbitraryController
 
     return unless @isBranchpointvideoMode() || @isSynapseannotationMode()
     activeNode = @model.skeletonTracing.getActiveNode()
+    @model.setMode(2)
     f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
     @cam.move [-(pos.x - @arbitraryView.width / 2) * f, -(pos.y - @arbitraryView.width / 2) * f, 0]
     position  = @cam.getPosition()
@@ -218,6 +219,7 @@ class ArbitraryController
     @cam.move [(pos.x - @arbitraryView.width / 2) * f, (pos.y - @arbitraryView.width / 2) * f, 0]
     if @isBranchpointvideoMode()
         @setActiveNode(activeNode.id, true)
+    @model.setMode(1)
     @moved()
 
 

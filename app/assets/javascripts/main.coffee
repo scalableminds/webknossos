@@ -10,10 +10,7 @@ require("jasny-bootstrap")
 require("whatwg-fetch")
 require("es6-promise")
 require("libs/core_ext")
-
 require("backbone.marionette")
-patch = require("marionette-v3-compat")
-patch()
 
 require("../stylesheets/main.less")
 

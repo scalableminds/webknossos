@@ -38,7 +38,7 @@ class TaskTransferModalView extends ModalView
     @userCollection = new UserCollection()
 
 
-  onShow : ->
+  onRender : ->
 
     selectionView = new SelectionView(
       collection : @userCollection

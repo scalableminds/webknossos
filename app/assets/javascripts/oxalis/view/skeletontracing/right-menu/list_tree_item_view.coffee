@@ -40,7 +40,7 @@ class ListTreeItemView extends Marionette.View
     @parent.setActiveTree(id)
 
 
-  onShow : ->
+  onRender : ->
 
     # scroll to active tree
     if @model.get("treeId") == @activeTreeId

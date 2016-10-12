@@ -54,7 +54,7 @@ class DashboardTaskListItemView extends Marionette.View
     </td>
   """)
 
-  templateHelpers :
+  templateContext :
     moment : moment
 
   events :

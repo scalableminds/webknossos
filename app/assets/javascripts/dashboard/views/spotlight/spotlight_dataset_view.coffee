@@ -57,7 +57,8 @@ class SpotlightDatasetView extends Marionette.View
     form : "form"
     contentTypeInput : "#contentTypeInput"
 
-  onShow : ->
+
+  onRender : ->
 
     @$(".link-row > a").tooltip(placement : "bottom")
 

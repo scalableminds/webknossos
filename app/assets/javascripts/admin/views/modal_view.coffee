@@ -15,7 +15,7 @@ class ModalView extends Marionette.View
     footerTemplate = @footerTemplate || @genericFooterTemplate
 
     data = @serializeData()
-    data = @mixinTemplateHelpers(data)
+    data = @mixinTemplateContext(data)
 
     executeIfFunction = (template) -> return if _.isFunction(template) then template(data) else template
 

@@ -1,7 +1,7 @@
 require("babel-register")(
   {
     "presets": ["es2015", "stage-3"],
-    "plugins": ["transform-class-properties"]
+    "plugins": ["transform-class-properties", "transform-runtime"]
   }
 );
 require("babel-polyfill");

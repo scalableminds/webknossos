@@ -20,7 +20,7 @@ import play.api.libs.json._
   * its notifications to the persitant SQS service. After that, we can request the notifications from SQS and
   * delete them after we have processed them (this allows fail safty and ensures that we will never miss a notification)
   */
-object MTurkNotificationHandler extends LazyLogging with FoxImplicits {
+object MTurkNotificationReceiver extends LazyLogging with FoxImplicits {
 
   lazy val sqsConfiguration = SQSConfiguration.fromConfig(current.configuration)
 
@@ -30,7 +30,7 @@ object MTurkNotificationHandler extends LazyLogging with FoxImplicits {
       notificationUrl.map { url =>
         logger.info("Using Amazon SQS notification url: " + url)
         Akka.system(app).actorOf(
-          Props(classOf[MTurkNotificationReceiver], url),
+          Props(classOf[MTurkNotificationActor], url),
           name = "mturkNotificationReceiver")
       }.futureBox.map {
         case f: Failure =>
@@ -57,7 +57,7 @@ object MTurkNotificationHandler extends LazyLogging with FoxImplicits {
   /**
     * Actor which will periodically retrieve notifications from SQS
     */
-  class MTurkNotificationReceiver(queueUrl: String) extends Actor with LazyLogging with FoxImplicits {
+  class MTurkNotificationActor(queueUrl: String) extends Actor with LazyLogging with FoxImplicits {
 
     import MTurkNotifications._
 
@@ -121,9 +121,8 @@ object MTurkNotificationHandler extends LazyLogging with FoxImplicits {
         logger.info(s"handling mturk assignment RETURNED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
         MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
       case notif: MTurkAssignmentRejected  =>
-        // Let's treat it the same as an abandoned assignment
         logger.info(s"handling mturk assignment REJECTED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
-        MTurkService.handleAbandonedAssignment(notif.AssignmentId, notif.HITId)
+        MTurkService.handleRejectedAssignment(notif.AssignmentId, notif.HITId)
       case notif: MTurkAssignmentSubmitted =>
         logger.info(s"handling mturk assignment SUBMITTED request for assignment ${notif.AssignmentId} of hit ${notif.HITId}")
         MTurkService.handleSubmittedAssignment(notif.AssignmentId, notif.HITId)

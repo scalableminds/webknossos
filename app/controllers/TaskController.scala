@@ -1,5 +1,7 @@
 package controllers
 
+import java.util.UUID
+
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import models.binary.DataSetDAO
 import javax.inject.Inject
@@ -24,7 +26,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.{Messages, MessagesApi}
 import models.annotation.AnnotationService
 import play.api.Play.current
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.mvc.{AnyContent, Result}
@@ -229,12 +231,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def requestAssignmentFor(user: User)(implicit ctx: DBAccessContext) =
-    TaskService.findAssignableFor(user)
-
-  def getAvailableTasksFor(user: User)(implicit ctx: DBAccessContext): Fox[List[Task]] =
-    TaskService.allNextTasksForUser(user)
-
   def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
     Fox.serialSequence(tasks)(_.project).map(_.flatten).map(_.distinct)
 
@@ -260,9 +256,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def tryToGetNextAssignmentFor(user: User, retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
     val s = System.currentTimeMillis()
-    requestAssignmentFor(user).futureBox.flatMap {
+    TimeLogger.logTimeF("assignables", Logger.warn)(TaskService.findAssignableFor(user)).futureBox.flatMap {
       case Full(assignment) =>
-        OpenAssignmentService.remove(assignment).flatMap { removeResult =>
+        TimeLogger.logTimeF("task request", Logger.warn)(OpenAssignmentService.remove(assignment)).flatMap { removeResult =>
           if (removeResult.n >= 1)
             Fox.successful(assignment)
           else if (retryCount > 0)
@@ -289,16 +285,18 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def request = Authenticated.async { implicit request =>
     val user = request.user
-    for {
-      _ <- ensureMaxNumberOfOpenTasks(user)
+    val id = UUID.randomUUID().toString
+    Logger.warn(s"TIMELOG for $id - user: ${user.email}")
+    TimeLogger.logTimeF("TOTAL task request " + id, Logger.warn)(for {
+      _ <- TimeLogger.logTimeF("MAXOPEN task request " + id, Logger.warn)(ensureMaxNumberOfOpenTasks(user))
       _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
-      assignment <- tryToGetNextAssignmentFor(user)
-      task <- assignment.task
-      annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
+      assignment <- TimeLogger.logTimeF("GETNEXT task request " + id, Logger.warn)(tryToGetNextAssignmentFor(user))
+      task <- TimeLogger.logTimeF("TASK task request " + id, Logger.warn)(assignment.task)
+      annotation <- TimeLogger.logTimeF("CREATE task request " + id, Logger.warn)(AnnotationService.createAnnotationFor(user, task)) ?~> Messages("annotation.creationFailed")
+      annotationJSON <- TimeLogger.logTimeF("INFO task request " + id, Logger.warn)(AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions")))
     } yield {
       JsonOk(annotationJSON, Messages("task.assigned"))
-    }
+    })
   }
 
   def peekNext(limit: Int) = Authenticated.async { implicit request =>

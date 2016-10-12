@@ -22,7 +22,9 @@ class TaskCreateBulkImportView extends Marionette.ItemView
           </div>
           <div class="form-group">
             <div class="col-sm-offset-10 col-sm-2">
-              <button type="submit" class="form-control btn btn-primary">Import</button>
+              <button type="submit" class="form-control btn btn-primary">
+                <i class="fa fa-spinner fa-pulse fa-fw hide"></i>Import
+              </button>
             </div>
           </div>
         </form>
@@ -36,6 +38,8 @@ class TaskCreateBulkImportView extends Marionette.ItemView
 
   ui :
     "bulkText" : "textarea[name=data]"
+    "submitButton" : "button[type=submit]"
+    "submitSpinner" : ".fa-spinner"
 
   ###*
     * Submit form data as json.
@@ -58,6 +62,8 @@ class TaskCreateBulkImportView extends Marionette.ItemView
       @showSaveError
     )
 
+    @toggleSubmitButton(false)
+
     # prevent page reload
     return false
 
@@ -73,10 +79,14 @@ class TaskCreateBulkImportView extends Marionette.ItemView
       @ui.bulkText.val("")
       Toast.success("All tasks were successfully created")
 
+    @toggleSubmitButton(true)
+
 
   showSaveError : ->
 
     Toast.error("The tasks could not be created due to server errors.")
+
+    @toggleSubmitButton(true)
 
 
   showInvalidData : ->
@@ -103,6 +113,12 @@ class TaskCreateBulkImportView extends Marionette.ItemView
 
     @ui.bulkText.val(failedTasks.join("\n"))
     Toast.error(errorMessages.join("\n"))
+
+
+  toggleSubmitButton : (enabled) ->
+
+    @ui.submitButton.prop("disabled", not enabled)
+    @ui.submitSpinner.toggleClass("hide", enabled)
 
 
   splitToLines : (string) ->

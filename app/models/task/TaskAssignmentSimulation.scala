@@ -44,7 +44,7 @@ trait TaskAssignmentSimulation extends TaskAssignment with FoxImplicits {
         if(!assignment.hasEnoughExperience(first))
           firstUserThatCanTakeAssignment(tail, assignment)
         else
-          AnnotationService.findTaskOf(first, assignment._task).futureBox.map(_.isEmpty).flatMap{
+          AnnotationService.countTaskOf(first, assignment._task).futureBox.map(_.contains(0)).flatMap{
             case true  => Future.successful(Some(first))
             case false => firstUserThatCanTakeAssignment(tail, assignment)
           }

@@ -25,6 +25,7 @@ case class Project(
   team: String,
   _owner: BSONObjectID,
   priority: Int,
+  paused: Boolean,
   assignmentConfiguration: AssignmentConfig,
   _id: BSONObjectID = BSONObjectID.generate) {
 
@@ -51,6 +52,7 @@ object Project {
         "team" -> project.team,
         "owner" -> owner.toOption,
         "priority" -> project.priority,
+        "paused" -> project.paused,
         "assignmentConfiguration" -> project.assignmentConfiguration,
         "id" -> project.id
       )
@@ -77,9 +79,11 @@ object Project {
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, "project.name.invalidChars")) and
       (__ \ 'team).read[String] and
       (__ \ 'priority).read[Int] and
+      (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'assignmentConfiguration).read[AssignmentConfig] and
       (__ \ 'owner).read[String](StringObjectIdReads("owner"))) (
-      (name, team, priority, assignmentLocation, owner) => Project(name, team, BSONObjectID(owner), priority, assignmentLocation))
+      (name, team, priority, paused, assignmentLocation, owner) =>
+        Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, assignmentLocation))
 }
 
 object ProjectService extends FoxImplicits {
@@ -127,6 +131,22 @@ object ProjectService extends FoxImplicits {
     } yield updatedProject
 
   }
+
+  def updatePauseStatus(project: Project, isPaused: Boolean)(implicit ctx: DBAccessContext) = {
+    def updateTasksIfNecessary(updated: Project) = {
+      if(updated.paused == project.paused)
+        Fox.successful(true)
+      else
+        TaskService.handleProjectUpdate(updated.name, updated)
+    }
+
+    val updated = project.copy(paused = isPaused)
+
+    for {
+      updatedProject <- ProjectDAO.updatePausedFlag(updated._id, updated.paused)
+      _ <- updateTasksIfNecessary(updated)
+    } yield updatedProject
+  }
 }
 
 object ProjectDAO extends SecuredBaseDAO[Project] {
@@ -162,13 +182,18 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
     findOne("name", name)
   }
 
+  def updatePausedFlag(_id: BSONObjectID, isPaused: Boolean)(implicit ctx: DBAccessContext) = {
+    findAndModify(Json.obj("_id" -> _id), Json.obj("$set" -> Json.obj("paused" -> isPaused)), returnNew = true)
+  }
+
   def updateProject(_id: BSONObjectID, project: Project)(implicit ctx: DBAccessContext) = {
     findAndModify(Json.obj("_id" -> _id), Json.obj("$set" ->
       Json.obj(
         "name" -> project.name,
         "team" -> project.team,
         "_owner" -> project._owner,
-        "priority" -> project.priority)), returnNew = true)
+        "priority" -> project.priority,
+        "paused" -> project.paused)), returnNew = true)
 
   }
 }

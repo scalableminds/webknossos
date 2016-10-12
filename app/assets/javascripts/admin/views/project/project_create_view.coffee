@@ -23,7 +23,7 @@ class ProjectCreateView extends Marionette.View
               <label class="col-sm-2 control-label" for="name">Project Name</label>
               <div class="col-sm-9">
               <input type="text" id="name" name="name" value="" class="form-control"
-                 required pattern=".{3,50}" title="Please use at least 3 characters." autofocus>
+                 required pattern=".{3,100}" title="Please use at least 3 and max 100 characters ." autofocus>
               </div>
             </div>
 
@@ -94,6 +94,16 @@ class ProjectCreateView extends Marionette.View
                 <label class="col-sm-2 control-label" for="autoApprovalDelayInSeconds">Auto approval delay in seconds</label>
                 <div class="col-sm-9">
                   <input type="number" class="form-control" name="assignmentConfiguration[autoApprovalDelayInSeconds]" value="60000" disabled required>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="col-sm-2 control-label" for="template">HIT Template</label>
+                <div class="col-sm-9">
+                  <select class="form-control" name="assignmentConfiguration[template]" disabled>
+                    <option value="default_template" selected>Default flight template</option>
+                    <option value="branchpoint_template">Branchpoint template</option>
+                  </select>
                 </div>
               </div>
 

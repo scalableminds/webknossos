@@ -136,7 +136,7 @@ class CommentTabView extends Marionette.View
 
   handleInput : (evt) ->
 
-    return if @model.skeletonTracing.restrictionHandler.handleUpdate()
+    return if not @model.skeletonTracing.restrictionHandler.updateAllowed()
 
     # add, delete or update a comment
     nodeId = @getActiveNodeId()

@@ -1,5 +1,6 @@
 package oxalis.mturk
 
+import java.nio.file.Paths
 import java.util.UUID
 
 import scala.collection.JavaConversions._
@@ -23,22 +24,35 @@ import net.liftweb.common.{Empty, Failure, Full}
 import play.api.Play._
 import play.api.libs.concurrent.Execution.Implicits._
 
-object MTurkService extends LazyLogging with FoxImplicits {
+/**
+  * Service handling all the communication with the mturk api.
+  *
+  * This includes creating HITTypes for projects, HIT's for tasks and to act on notifications comming
+  * from the mturk API
+  */
+object MTurkService extends MTurkNotificationHandlers with LazyLogging with FoxImplicits {
 
   type HITTypeId = String
 
   val conf = current.configuration
 
+  // Underlying MTURK API implementation
   lazy val service = new RequesterService(loadConfig)
 
-  val questionFile = conf.getString("amazon.mturk.questionFile").get
+  // If no template of a HITType is specified on creation this will be the default HTML template for the HITs
+  val questionTemplateBaseDir = conf.getString("amazon.mturk.questionTemplateBaseDir").get
 
+  // Flag indicating the use of the mturk sandbox instead of the production environment
   val isSandboxed = conf.getBoolean("amazon.mturk.sandbox").get
 
-  val submissionUrl = if(isSandboxed) conf.getString("amazon.mturk.submissionUrl.sandbox").get
+  // HIT template contains a form, this is the submission url this form gets submitted to
+  val submissionUrl = if (isSandboxed) conf.getString("amazon.mturk.submissionUrl.sandbox").get
                       else conf.getString("amazon.mturk.submissionUrl.production").get
 
   val serverBaseUrl = conf.getString("http.uri").get
+
+  // Max lifetime of a HIT on mturk. After that time the hit gets closed even if it was not finished
+  val defaultHITLifetime = 7.days.toSeconds
 
   private def loadConfig = {
     val cfg = new ClientConfig()
@@ -47,14 +61,36 @@ object MTurkService extends LazyLogging with FoxImplicits {
     cfg.setRetriableErrors(conf.getStringList("amazon.mturk.retriableErrors").get.toSet.asJava)
     cfg.setRetryAttempts(conf.getInt("amazon.mturk.retryAttempts").get)
     cfg.setRetryDelayMillis(conf.getInt("amazon.mturk.retryDelayMillis").get)
-    if(isSandboxed)
+    if (isSandboxed)
       cfg.setServiceURL(conf.getString("amazon.mturk.serviceUrl.sandbox").get)
     else
       cfg.setServiceURL(conf.getString("amazon.mturk.serviceUrl.production").get)
     cfg
   }
 
-  def ensureEnoughFunds(neededFunds: Double): Future[Boolean] = Future {
+  /**
+    * HIT descriptions are based on file templates. Default template is 'default_template.question'
+    *
+    * @param templateNameOpt template to load
+    * @return HIT question
+    */
+  private def questionTemplateFromFile(templateNameOpt: Option[String]) = {
+    // Loading the question (QAP) file. HITQuestion is a helper class that
+    // contains the QAP of the HIT defined in the external file. This feature
+    // allows you to write the entire QAP externally as a file and be able to
+    // modify it without recompiling your code.
+    val templateName = templateNameOpt.getOrElse("default_template")
+    val templateFileName = Paths.get(questionTemplateBaseDir, templateName + ".question")
+    new HITQuestion(templateFileName.toString)
+  }
+
+  /**
+    * Request funds of account from amazon and compare to needed funds
+    *
+    * @param neededFunds required amount of money in account
+    * @return true if account has enough money
+    */
+  private def ensureEnoughFunds(neededFunds: Double): Future[Boolean] = Future {
     blocking {
       val balance = service.getAccountBalance
       logger.info("Got account balance: " + RequesterService.formatCurrency(balance))
@@ -62,81 +98,67 @@ object MTurkService extends LazyLogging with FoxImplicits {
     }
   }
 
-  def handleSubmittedAssignment(assignmentId: String, hitId: String) = {
-    def finishIfAnnotationExists(assignment: MTurkAssignment) = {
-      assignment.annotations.find(_.assignmentId == assignmentId) match {
-        case Some(reference) =>
-          for{
-            annotation <- AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
-            _ <- AnnotationService.finish(annotation)(GlobalAccessContext)
-          } yield true
-        case None            =>
-          logger.warn(s"Tried to finish non existent annotation. Hit: $hitId Assignment: $assignmentId")
-          Fox.successful(true)
-      }
-    }
-
-    for {
-      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
-      result <- finishIfAnnotationExists(assignment)
-      _ <- MTurkProjectDAO.decreaseNumberOfOpen(assignment._project, 1)(GlobalAccessContext)
-      _ <- MTurkAssignmentDAO.decreaseNumberInProgress(hitId, 1)(GlobalAccessContext)
-    } yield result
-  }
-
-  def handleAcceptedAssignment(assignmentId: String, hitId: String) = {
-    for {
-      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
-      _ <- MTurkAssignmentDAO.decreaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
-      _ <- MTurkAssignmentDAO.increaseNumberInProgress(hitId, 1)(GlobalAccessContext)
-    } yield true
-  }
-
-  def handleHITExpired(hitId: String) = {
-    for {
-      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
-      _ <- MTurkAssignmentDAO.decreaseNumberOfOpen(hitId,  assignment.numberOfUnfinished)(GlobalAccessContext)
-      _ <- MTurkProjectDAO.decreaseNumberOfOpen(hitId, assignment.numberOfUnfinished)(GlobalAccessContext)
-    } yield true
-  }
-
-  def handleAbandonedAssignment(assignmentId: String, hitId: String) = {
-    def cancelIfAnnotationExists(assignment: MTurkAssignment) = {
-      assignment.annotations.find(_.assignmentId == assignmentId) match {
-        case Some(reference) =>
-          for {
-            annotation <- AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
-            _ <- annotation.muta.cancelTask()(GlobalAccessContext)
-          } yield true
-        case None            =>
-          logger.warn(s"Tried to cancel non existent annotation. Hit: $hitId Assignment: $assignmentId")
-          Fox.successful(true)
-      }
-    }
-
-    for {
-      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
-      _ <- MTurkAssignmentDAO.increaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
-      _ <- MTurkAssignmentDAO.decreaseNumberInProgress(hitId, 1)(GlobalAccessContext)
-      result <- cancelIfAnnotationExists(assignment)
-    } yield result
-  }
-
+  /**
+    * Project on wk got created --> create HitType on mturk
+    *
+    * @param project wk project
+    * @param config  hit config
+    * @return success indicator
+    */
   def handleProjectCreation(project: Project, config: MTurkAssignmentConfig): Fox[Boolean] = {
     for {
       hitTypeId <- createHITType(config, Integer.toHexString(project.name.hashCode)).toFox
-      notificationUrl <- MTurkNotificationHandler.notificationUrl
+      notificationUrl <- MTurkNotificationReceiver.notificationUrl
       _ <- setupNotifications(hitTypeId, notificationUrl)
       _ <- MTurkProjectDAO.insert(MTurkProject(project.name, hitTypeId, project.team, 0))(GlobalAccessContext)
     } yield true
   }
 
+  /**
+    * Remove mturk HITs that belong to a certain wk task
+    *
+    * @param task wk task
+    * @return success indicator
+    */
+  def removeByTask(task: Task) = {
+    def disable(hitId: String): Fox[Boolean] = Future {
+      blocking {
+        try {
+          service.forceExpireHIT(hitId)
+          Full(true)
+        } catch {
+          case e: ObjectDoesNotExistException =>
+            // Task is not there any more, so lets assume it is already deleted. This mostly is only the case if
+            // one switches from sandbox to production and tries to delete tasks created in sandbox.
+            Full(true)
+          case e: Exception                   =>
+            logger.error("Failed to disable HIT. Error: " + e.getMessage, e)
+            Failure("Failed to disable HIT. Error: " + e.getMessage, Full(e), Empty)
+        }
+      }
+    }
+
+    MTurkAssignmentDAO.findOneByTask(task._id)(GlobalAccessContext).futureBox.flatMap {
+      case Full(mtAssignment) =>
+        disable(mtAssignment.hitId)
+      case _                  =>
+        Fox.successful(true)
+    }
+  }
+
+  /**
+    * Create HITs for a task
+    *
+    * @param project project of task
+    * @param task    task
+    * @return mturk assignments
+    */
   def createHITs(project: Project, task: Task): Fox[MTurkAssignment] = {
     for {
       mtProject <- MTurkProjectDAO.findByProject(project.name)(GlobalAccessContext)
       projectConfig <- project.assignmentConfiguration.asOpt[MTurkAssignmentConfig] ?~> "project.config.notMturk"
       _ <- ensureEnoughFunds(projectConfig.rewardInDollar) ?~> "mturk.notEnoughFunds"
-      (hitId, key) <- createHIT(mtProject.hitTypeId, task.instances)
+      (hitId, key) <- createHIT(mtProject.hitTypeId, projectConfig.template, task.instances)
       assignment = MTurkAssignment(task._id, task.team, mtProject._project, hitId, key, task.instances, 0)
       _ <- MTurkAssignmentDAO.insert(assignment)(GlobalAccessContext)
       _ <- MTurkProjectDAO.increaseNumberOfOpen(project.name, task.instances)(GlobalAccessContext)
@@ -146,13 +168,14 @@ object MTurkService extends LazyLogging with FoxImplicits {
   }
 
   private def setupNotifications(hITTypeId: HITTypeId, url: String): Fox[Boolean] = {
-    logger.info(s"Creating hit notifications for '$hITTypeId'. SQS: $url")
+    logger.debug(s"Creating hit notifications for '$hITTypeId'. SQS: $url")
+    // Need to specify all events we are going to handle here
     val eventTypes = Array[EventType](
       EventType.AssignmentAbandoned, EventType.AssignmentAccepted, EventType.AssignmentReturned,
       EventType.AssignmentSubmitted, EventType.AssignmentRejected, EventType.HITExpired)
     val notification = new NotificationSpecification(url, NotificationTransport.SQS, "2014-08-15", eventTypes)
 
-    Future(blocking{
+    Future(blocking {
       try {
         service.setHITTypeNotification(hITTypeId, notification, true)
         Full(true)
@@ -189,7 +212,7 @@ object MTurkService extends LazyLogging with FoxImplicits {
         qualificationRequirement.setComparator(Comparator.LessThanOrEqualTo)
         qualificationRequirement.setIntegerValue(Array(10000))
         Array(qualificationRequirement)
-      case MPIBranchPoint =>
+      case MPIBranchPoint             =>
         val qualificationRequirement = new QualificationRequirement
         qualificationRequirement.setQualificationTypeId(MPIBranchPoint.qualificationId)
         qualificationRequirement.setComparator(Comparator.GreaterThan)
@@ -213,23 +236,19 @@ object MTurkService extends LazyLogging with FoxImplicits {
           Full(id)
         } catch {
           case e: Exception =>
-            logger.error("Failed to create hittype. Eror: "+ e.getMessage, e)
-            Failure("Failed to create hittype. Eror: "+ e.getMessage, Full(e), Empty)
+            logger.error("Failed to create hittype. Eror: " + e.getMessage, e)
+            Failure("Failed to create hittype. Eror: " + e.getMessage, Full(e), Empty)
         }
       }
     }
   }
 
-  private def createHIT(hitType: String, numAssignments: Int): Fox[(String, String)] = {
-    // Loading the question (QAP) file. HITQuestion is a helper class that
-    // contains the QAP of the HIT defined in the external file. This feature
-    // allows you to write the entire QAP externally as a file and be able to
-    // modify it without recompiling your code.
-    val questionTemplate = new HITQuestion(questionFile)
+  private def createHIT(hitType: String, templateFile: Option[String], numAssignments: Int): Fox[(String, String)] = {
+    val questionTemplate = questionTemplateFromFile(templateFile)
 
     val requesterAnnotation = UUID.randomUUID().toString
 
-    val lifetimeInSeconds = 7.days.toSeconds
+    val lifetimeInSeconds = defaultHITLifetime
 
     val question = questionTemplate.getQuestion(Map(
       "webknossosUrl" -> s"$serverBaseUrl/hits/$requesterAnnotation?",
@@ -240,11 +259,9 @@ object MTurkService extends LazyLogging with FoxImplicits {
       Future {
         blocking {
           try {
-            val hit = service.createHIT(hitType,
-              null, null, null, question,
-              null, null, null, lifetimeInSeconds,
-              numAssignments, requesterAnnotation,
-              null, null)
+            val hit = service.createHIT(
+              hitType, null, null, null, question, null, null, null, lifetimeInSeconds,
+              numAssignments, requesterAnnotation, null, null)
             Full(hit)
           } catch {
             case e: Exception =>
@@ -255,38 +272,116 @@ object MTurkService extends LazyLogging with FoxImplicits {
       }
 
     hitF.map { hit =>
-
-      logger.debug("Created HIT: " + hit.getHITId)
-
-      logger.debug(service.getWebsiteURL + "/mturk/preview?groupId=" + hit.getHITTypeId)
-
+      logger.debug(s"Created HIT: ${hit.getHITId} ${service.getWebsiteURL}/mturk/preview?groupId=${hit.getHITTypeId}")
       hit.getHITId -> requesterAnnotation
     }
   }
+}
 
-  def removeByTask(task: Task) = {
-    def disable(hitId: String): Fox[Boolean] = Future{
-      blocking{
-        try {
-          service.forceExpireHIT(hitId)
-          Full(true)
-        } catch {
-          case e: ObjectDoesNotExistException =>
-            // Task is not there any more, so lets assume it is already deleted. This mostly is only the case if
-            // one switches from sandbox to production and tries to delete tasks created in sandbox.
-            Full(true)
-          case e: Exception =>
-            logger.error("Failed to disable HIT. Error: " + e.getMessage, e)
-            Failure("Failed to disable HIT. Error: " + e.getMessage, Full(e), Empty)
-        }
+/**
+  * Handle notifications from MTurk service
+  */
+trait MTurkNotificationHandlers extends LazyLogging {
+  /**
+    * HIT on mturk got submitted. Time to finish annotation and update counters.
+    *
+    * @param assignmentId mturk assignment
+    * @param hitId        mturk hit
+    * @return success indicator
+    */
+  def handleSubmittedAssignment(assignmentId: String, hitId: String) = {
+    def finishIfAnnotationExists(assignment: MTurkAssignment) = {
+      assignment.annotations.find(_.assignmentId == assignmentId) match {
+        case Some(reference) =>
+          for {
+            annotation <- AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
+            _ <- AnnotationService.finish(annotation)(GlobalAccessContext)
+          } yield true
+        case None            =>
+          logger.warn(s"Tried to finish non existent annotation. Hit: $hitId Assignment: $assignmentId")
+          Fox.successful(true)
       }
     }
 
-    MTurkAssignmentDAO.findOneByTask(task._id)(GlobalAccessContext).futureBox.flatMap{
-      case Full(mtAssignment ) =>
-        disable(mtAssignment.hitId)
-      case _ =>
+    for {
+      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
+      result <- finishIfAnnotationExists(assignment)
+      _ <- MTurkProjectDAO.decreaseNumberOfOpen(assignment._project, 1)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.decreaseNumberInProgress(hitId, 1)(GlobalAccessContext)
+    } yield result
+  }
+
+  /**
+    * HIT on mturk got accepted by mturker. Update counts
+    *
+    * @param assignmentId mturk assignment
+    * @param hitId        mturk hit
+    * @return success indicator
+    */
+  def handleAcceptedAssignment(assignmentId: String, hitId: String) = {
+    for {
+      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.decreaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.increaseNumberInProgress(hitId, 1)(GlobalAccessContext)
+    } yield true
+  }
+
+  /**
+    * HIT on mturk expired. Update counts
+    *
+    * @param hitId mturk hit
+    * @return success indicator
+    */
+  def handleHITExpired(hitId: String) = {
+    for {
+      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.decreaseNumberOfOpen(hitId, assignment.numberOfUnfinished)(GlobalAccessContext)
+      _ <- MTurkProjectDAO.decreaseNumberOfOpen(hitId, assignment.numberOfUnfinished)(GlobalAccessContext)
+    } yield true
+  }
+
+  private def cancelIfAnnotationExists(assignmentId: String, hitId: String, assignment: MTurkAssignment) = {
+    assignment.annotations.find(_.assignmentId == assignmentId) match {
+      case Some(reference) =>
+        for {
+          annotation <- AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
+          _ <- annotation.muta.cancelTask()(GlobalAccessContext)
+        } yield true
+      case None            =>
+        logger.warn(s"Tried to cancel non existent annotation. Hit: $hitId Assignment: $assignmentId")
         Fox.successful(true)
     }
+  }
+
+  /**
+    * Mturker didn't finish his assignment of a HIT in time. Cancel annotation on WK and update counts.
+    *
+    * @param assignmentId mturk assignment
+    * @param hitId        mturk hit
+    * @return success indicator
+    */
+  def handleAbandonedAssignment(assignmentId: String, hitId: String) = {
+    for {
+      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.increaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.decreaseNumberInProgress(hitId, 1)(GlobalAccessContext)
+      result <- cancelIfAnnotationExists(assignmentId, hitId, assignment)
+    } yield result
+  }
+
+  /**
+    * Mturker didn't finish his assignment of a HIT in time. Cancel annotation on WK and update counts.
+    *
+    * @param assignmentId mturk assignment
+    * @param hitId        mturk hit
+    * @return success indicator
+    */
+  def handleRejectedAssignment(assignmentId: String, hitId: String) = {
+    for {
+      assignment <- MTurkAssignmentDAO.findByHITId(hitId)(GlobalAccessContext)
+      _ <- MTurkAssignmentDAO.increaseNumberOfOpen(hitId, 1)(GlobalAccessContext)
+      _ <- MTurkProjectDAO.increaseNumberOfOpen(assignment._project, 1)(GlobalAccessContext)
+      result <- cancelIfAnnotationExists(assignmentId, hitId, assignment)
+    } yield result
   }
 }

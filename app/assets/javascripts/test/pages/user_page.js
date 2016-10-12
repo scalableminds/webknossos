@@ -36,7 +36,6 @@ export default class UserPage {
       .pause(1000)
       .waitForExist(userRowSelector)
       .click(`${userRowSelector} .select-row`)
-
   }
 
 

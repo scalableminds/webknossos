@@ -43,7 +43,7 @@ export default class TeamPage {
   }
 
 
-  async deleteProject(teamName) {
+  async deleteTeam(teamName) {
 
     // The deletion link can not be clicked directly, so find the corresponding
     // row index

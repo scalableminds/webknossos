@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<HTMLQuestion xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2011-11-11/HTMLQuestion.xsd">
+  <HTMLContent><![CDATA[
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>
+      <script type='text/javascript' src='https://s3.amazonaws.com/mturk-public/externalHIT_v1.js'></script>
+    </head>
+    <body>
+    <!-- Bootstrap v3.0.3 -->
+    <link href="https://s3.amazonaws.com/mturk-public/bs30/css/bootstrap.min.css" rel="stylesheet" />
+    <section class="container" id="Other" style="margin-bottom:15px; padding: 10px 10px; font-family: Verdana, Geneva, sans-serif; color:#333333; font-size:0.9em;">
+      <div class="row col-xs-12 col-md-12">
+        <!-- Instructions -->
+        <div class="panel panel-primary">
+          <div class="panel-heading"><strong>Instructions</strong></div>
+          <div class="panel-body">
+            <p>Hello dear annotator:</p>
+            <ul>
+              <li>You should start by watching the 3min video below <br />
+                (Even if you saw a similar video a couple of months ago, this has changed!)
+              </li>
+              <li>
+                <div id="myelementLink" style="display: inline; font-family: Verdana;"><tt>URL not shown because there is an error with Javascript on your computer. To perform this HIT, you must have Javascript and cookies enabled on your browser.</tt></div>
+              </li>
+              <li><strong>Follow the cell by moving forward until the screen turns black or the time is over.</strong></li>
+              <li>After you are done following the cell, please return and fill out the feedback question before submitting the HIT.</li>
+            </ul>
+          </div>
+          <div id="div-intro" style="padding-bottom: 15px;">
+            <iframe id="iframe-intro" allowfullscreen="" frameborder="0" height="500px" src="https://www.youtube.com/embed/xbVfx-OjS3w" width="600px"></iframe>
+          </div>
+        </div>
+        <!-- End Instructions --><!-- Content Body -->
+        <div>&nbsp;</div>
+        <section>
+          <form name='mturk_form' method='post' id='mturk_form' action='${mturkSubmissionUrl}'>
+            <input type='hidden' value='' name='assignmentId' id='assignmentId'/>
+            <fieldset><span style="font-weight: bold; font-size: 0.9em; line-height: 1.6em;">Feedback: What would help you to perform the assignment faster or what did you not understand about the assignment?</span></fieldset>
+            <fieldset><textarea class="form-control" cols="120" name="Q6MultiLineTextInput" rows="3"></textarea></fieldset>
+            <p><input type='submit' id='submitButton' value='Submit' /></p>
+          </form>
+        </section>
+        <script type="text/javascript" language="JavaScript">
+          var assignment_id_field = document.getElementById('myelementLink');
+          var paramstr = window.location.search.substring(1);
+          var parampairs = paramstr.split("&");
+          var mturkworkerID = "";
+          var assignmentID = "";
+          for (i in parampairs) {
+            var pair = parampairs[i].split("=");
+            if (pair[0] == "workerId")
+              mturkworkerID = pair[1];
+            if (pair[0] == "assignmentId")
+              assignmentID = pair[1];
+          }
+          if (mturkworkerID == "" ) {
+            assignment_id_field.innerHTML = 'We will provide you with a link to the assignment which looks like the one in the video after you have accepted the HIT.';
+          } else {
+            assignment_id_field.innerHTML = '<span style="font-family: Verdana, Geneva, sans-serif; font-size: 11.7px; line-height: 20.8px;">Use&nbsp;</span><a target="_blank" href="${webknossosUrl}workerId=' + mturkworkerID + '&assignmentId='+ assignmentID+'"><b>this Link</b></a> to start following your assigned cell.';
+          }
+
+          turkSetAssignmentID();
+        </script>
+        <!-- End Content Body -->
+      </div>
+    </section>
+    <!-- close container -->
+    <style type="text/css">
+      fieldset {
+        padding: 10px;
+        background: #fbfbfb;
+        border-radius: 5px;
+        margin-bottom: 5px;
+      }
+      #div-intro {
+        margin-bottom: 10px;
+        margin-top: -10px;
+        text-align: center;
+      }
+      #iframe-intro {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    </style>
+    </body>
+    </html>
+    ]]>
+  </HTMLContent>
+  <FrameHeight>960</FrameHeight>
+</HTMLQuestion>
+

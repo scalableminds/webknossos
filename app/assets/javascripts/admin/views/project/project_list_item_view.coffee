@@ -10,7 +10,7 @@ class ProjectListItemView extends Marionette.CompositeView
   template : _.template("""
     <td><%= name %></td>
     <td><%= team %></td>
-    <td><%= priority %></td>
+    <td><%= priority %><% if(paused) { %> (paused)<% } %></td>
     <td>
       <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(assignmentConfiguration.location) %>">
         <%= assignmentConfiguration.location %>

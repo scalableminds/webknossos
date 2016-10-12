@@ -62,7 +62,6 @@ describe("Project List", function() {
     await page.editFirstProject(newExperience)
 
     const allPriorities = await page.getAllPriorities()
-    console.log(allPriorities)
     expect(allPriorities).toContain(newExperience)
   })
 

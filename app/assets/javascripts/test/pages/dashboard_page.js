@@ -22,6 +22,7 @@ export default class DashboardPage {
   openExplorativeTab() {
 
     return browser
+      .waitForExist(this.explorativeTab)
       .click(this.explorativeTab)
       .click(this.explorativeTab)
       .waitForExist(this.explorativeTaskList)

@@ -1,3 +1,8 @@
+general:
+  branches:
+    ignore:
+      - review
+
 machine:
   environment:
     SBT_VERSION_TAG: sbt-0.13.9_mongo-3.2.1_node-4.x_jdk-8

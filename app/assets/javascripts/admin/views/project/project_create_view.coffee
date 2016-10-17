@@ -23,7 +23,7 @@ class ProjectCreateView extends Marionette.LayoutView
               <label class="col-sm-2 control-label" for="name">Project Name</label>
               <div class="col-sm-9">
               <input type="text" id="name" name="name" value="" class="form-control"
-                 required pattern=".{3,50}" title="Please use at least 3 characters." autofocus>
+                 required pattern=".{3,100}" title="Please use at least 3 and max 100 characters ." autofocus>
               </div>
             </div>
 
@@ -95,7 +95,7 @@ class ProjectCreateView extends Marionette.LayoutView
                 <div class="col-sm-9">
                   <input type="number" class="form-control" name="assignmentConfiguration[autoApprovalDelayInSeconds]" value="60000" disabled required>
                 </div>
-              </div>  
+              </div>
 
               <div class="form-group">
                 <label class="col-sm-2 control-label" for="template">HIT Template</label>

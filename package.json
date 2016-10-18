@@ -27,7 +27,7 @@
     "protractor": "^3.3.0",
     "sinon": "^1.17.3",
     "style-loader": "^0.13.1",
-    "three.js": "georgwiese/three.js.git#scm_oxalis",
+    "three.js": "georgwiese/three.js#scm_oxalis",
     "url-loader": "^0.5.7",
     "webpack": "^1.13.1",
     "worker-loader": "^0.6.0"

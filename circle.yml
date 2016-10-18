@@ -10,10 +10,12 @@ dependencies:
     - sudo chmod +x /usr/local/bin/docker-compose
     - sudo service docker start
     - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+    - sudo npm install -g yarn
   cache_directories:
     - "~/.m2"
     - "~/.ivy2"
     - "~/.sbt"
+    - "~/.yarn-cache"
     - "node_modules"
   override:
     - docker pull scalableminds/sbt:$SBT_VERSION_TAG

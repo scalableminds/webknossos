@@ -115,7 +115,6 @@ class Model extends Backbone.Model
     dataStore = tracing.content.dataSet.dataStore
     dataset = @get("dataset")
 
-    # TODO: Verify this is correct (also for user layers)
     LayerClass = if dataStore.typ == "webknossos-store" then WkLayer else NdStoreLayer
     layers = layerInfos.map((layerInfo) ->
       new LayerClass(layerInfo, dataset.get("name"), dataStore)

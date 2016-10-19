@@ -27,7 +27,7 @@
     "file-loader": "^0.9.0",
     "imports-loader": "^0.6.4",
     "isomorphic-fetch": "^2.2.0",
-    "jasmine-node": "^1.14.5",
+    "jasmine": "^2.5.2",
     "less": "^2.7.1",
     "less-loader": "^2.2.3",
     "mock-require": "^1.2.1",

@@ -22,7 +22,6 @@ class TaskModel extends NestedObjModel
     neededExperience :
       value : 0
       domain : ""
-    priority : 100
     created : FormatUtils.formatDate()
     status :
       open : 10

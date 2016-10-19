@@ -1,6 +1,7 @@
 _                     = require("lodash")
 Marionette            = require("backbone.marionette")
 Toast                 = require("libs/toast")
+TemplateHelpers       = require("libs/template_helpers")
 
 class ProjectListItemView extends Marionette.CompositeView
 
@@ -9,6 +10,12 @@ class ProjectListItemView extends Marionette.CompositeView
   template : _.template("""
     <td><%= name %></td>
     <td><%= team %></td>
+    <td><%= priority %><% if(paused) { %> (paused)<% } %></td>
+    <td>
+      <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(assignmentConfiguration.location) %>">
+        <%= assignmentConfiguration.location %>
+      </span>
+    </td>
     <% if(owner.email) { %>
       <td><%= owner.firstName %> <%= owner.lastName %> (<%= owner.email %>)</td>
     <% } else { %>
@@ -18,6 +25,9 @@ class ProjectListItemView extends Marionette.CompositeView
     <td class="nowrap">
       <a href="/annotations/CompoundProject/<%= name %>" title="View all finished tracings">
         <i class="fa fa-random"></i>view
+      </a><br/>
+      <a href="/projects/<%= name %>/edit" title="Edit Tasks">
+        <i class="fa fa-pencil"></i>edit
       </a><br/>
       <a href="/projects/<%= name %>/tasks" title="View Tasks">
         <i class="fa fa-tasks"></i>tasks
@@ -34,6 +44,8 @@ class ProjectListItemView extends Marionette.CompositeView
   events :
     "click .delete" : "deleteProject"
 
+  templateHelpers :
+    TemplateHelpers : TemplateHelpers
 
   deleteProject : ->
 

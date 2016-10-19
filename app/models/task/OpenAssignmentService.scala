@@ -4,7 +4,8 @@
 package models.task
 
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.project.Project
 import models.user.User
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
@@ -26,27 +27,30 @@ object OpenAssignmentService extends FoxImplicits{
   def removeByProject(project: Project)(implicit ctx: DBAccessContext) =
     OpenAssignmentDAO.removeByProject(project.name)
 
-
   def remove(assignment: OpenAssignment)(implicit ctx: DBAccessContext) =
     OpenAssignmentDAO.removeById(assignment._id)
 
-  def insertOneFor(task: Task)(implicit ctx: DBAccessContext) = {
-    OpenAssignmentDAO.insert(OpenAssignment.from(task))
+  def insertOneFor(task: Task, project: Project)(implicit ctx: DBAccessContext) = {
+    OpenAssignmentDAO.insert(OpenAssignment.from(task, project.priority))
   }
 
   def countOpenAssignments(implicit ctx: DBAccessContext) = {
     OpenAssignmentDAO.countOpenAssignments
   }
 
-  def insertInstancesFor(task: Task, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
-    val assignments = Array.fill(remainingInstances)(OpenAssignment.from(task))
-    Fox.sequenceOfFulls(assignments.map(a => OpenAssignmentDAO.insert(a)).toList)
+  def insertInstancesFor(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
+    val assignments = List.fill(remainingInstances)(OpenAssignment.from(task, project.priority))
+    Fox.serialSequence(assignments)(a => OpenAssignmentDAO.insert(a))
   }
 
-  def updateAllOf(task: Task, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
+  def updateAllOf(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
     for{
       _ <- removeByTask(task._id)
-      _ <- insertInstancesFor(task, remainingInstances).toFox
+      _ <- insertInstancesFor(task, project, remainingInstances).toFox
     } yield true
+  }
+
+  def updateAllOfProject(name: String, project: Project)(implicit ctx: DBAccessContext) = {
+    OpenAssignmentDAO.updateAllOf(name, project).toFox
   }
 }

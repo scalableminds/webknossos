@@ -38,12 +38,12 @@ class ArbitraryController
     keyboardNoLoop : null
     keyboardOnce : null
 
-    unbind : ->
+    destroy : ->
 
-      @mouse?.unbind()
-      @keyboard?.unbind()
-      @keyboardNoLoop?.unbind()
-      @keyboardOnce?.unbind()
+      @mouse?.destroy()
+      @keyboard?.destroy()
+      @keyboardNoLoop?.destroy()
+      @keyboardOnce?.destroy()
 
 
   constructor : (@model, @view, @sceneController, @skeletonTracingController) ->
@@ -87,7 +87,7 @@ class ArbitraryController
 
     matrix = @cam.getMatrix()
     for binary in @model.getColorBinaries()
-      binary.arbitraryPing(matrix)
+      binary.arbitraryPing(matrix, @model.datasetConfiguration.get("quality"))
 
 
   initMouse : ->
@@ -243,7 +243,7 @@ class ArbitraryController
   stop : ->
 
     if @isStarted
-      @input.unbind()
+      @input.destroy()
 
     @arbitraryView.stop()
 

@@ -36,6 +36,7 @@ class DashboardTaskListView extends Marionette.CompositeView
           <th data-sort="projectName">Project </th>
           <th data-sort="type.description">Description </th>
           <th>Modes </th>
+          <th data-sort="created">Created</th>
           <th></th>
         </tr>
       </thead>

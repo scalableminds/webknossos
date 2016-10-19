@@ -89,7 +89,7 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
   def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User], exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] = {
     JsonObjectWithFilter(exclude)(
       "version" +> a.version,
-      "user" +> a.user.map(u => JsString(u.name)).getOrElse(JsNull),
+      "user" +> a.user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull),
       "created" +> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(a.created),
       "stateLabel" +> stateLabel(a, user),
       "state" +> a.state,

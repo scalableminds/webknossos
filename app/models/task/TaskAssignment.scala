@@ -57,7 +57,7 @@ trait TaskAssignment extends FoxImplicits with LazyLogging{
 
   def findAssignable(user: User)(implicit ctx: DBAccessContext) = {
     val alreadyDoneFilter = filterM[OpenAssignment]{ assignment =>
-      AnnotationService.findTaskOf(user, assignment._task).futureBox.map(_.isEmpty)
+      AnnotationService.countTaskOf(user, assignment._task).futureBox.map(_.contains(0))
     }
 
     findNextAssignment(user)(ctx) &> alreadyDoneFilter
@@ -72,7 +72,7 @@ trait TaskAssignment extends FoxImplicits with LazyLogging{
   }
 
   def allNextTasksForUser(user: User)(implicit ctx: DBAccessContext): Fox[List[Task]] =
-    findAllAssignableFor(user).flatMap(assignments => Fox.sequenceOfFulls(assignments.map(_.task)))
+    findAllAssignableFor(user).flatMap(assignments => Fox.serialSequence(assignments)(_.task).map(_.flatten))
 
   def nextTaskForUser(user: User)(implicit ctx: DBAccessContext): Fox[Task] =
     findAssignableFor(user).flatMap(_.task)

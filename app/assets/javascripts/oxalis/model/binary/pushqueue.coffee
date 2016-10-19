@@ -18,6 +18,13 @@ class PushQueue
     @push = _.debounce @pushImpl, @DEBOUNCE_TIME
 
 
+  stateSaved : ->
+
+    return @queue.length == 0 and
+           @cube.temporalBucketManager.getCount() == 0 and
+           not @updatePipeline.isBusy()
+
+
   insert : (bucket) ->
 
     @queue.push( bucket )

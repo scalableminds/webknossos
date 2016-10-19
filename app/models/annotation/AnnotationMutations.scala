@@ -4,15 +4,9 @@ import com.scalableminds.util.io.NamedFileStream
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import oxalis.annotation.AnnotationIdentifier
+import models.project.{Project, WebknossosAssignmentConfig}
 import models.user.{UsedAnnotationDAO, User}
-import scala.concurrent.Future
-
-import net.liftweb.common.{Box, Failure}
-import scala.async.Async._
-
-import play.api.i18n.Messages
-import models.task.OpenAssignmentService
+import models.task.{OpenAssignmentService, Task}
 import models.tracing.skeleton.SkeletonTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.JsValue
@@ -49,31 +43,24 @@ class AnnotationMutations(val annotation: Annotation)
   type AType = Annotation
 
   def finishAnnotation(user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
-    def executeFinish(annotation: Annotation): Fox[(Annotation, String)] =
+    def executeFinish(annotation: Annotation): Fox[(Annotation, String)] = {
       for {
-        updated <- annotation.muta.finish()
+        updated <- AnnotationService.finish(annotation)
       } yield {
-        if(annotation._task.isEmpty)
+        if (annotation._task.isEmpty)
           updated -> "annotation.finished"
         else
           updated -> "task.finished"
       }
-
-    def tryToFinish(): Fox[(Annotation, String)] = {
-      if (annotation.restrictions.allowFinish(user)) {
-        if (annotation.state.isInProgress) {
-          executeFinish(annotation)
-        } else
-            Fox.failure("annotation.notInProgress")
-      } else
-          Fox.failure("annotation.notPossible")
     }
 
-    tryToFinish().map {
-      result =>
-        annotation.muta.writeAnnotationToFile()
-        UsedAnnotationDAO.removeAll(AnnotationIdentifier(annotation.typ, annotation.id))
-        result
+    if (annotation.restrictions.allowFinish(user)) {
+      if (annotation.state.isInProgress)
+        executeFinish(annotation)
+      else
+          Fox.failure("annotation.notInProgress")
+    } else {
+      Fox.failure("annotation.notPossible")
     }
   }
 
@@ -81,16 +68,24 @@ class AnnotationMutations(val annotation: Annotation)
     AnnotationDAO.reopen(annotation._id)
   }
 
-  def finish()(implicit ctx: DBAccessContext) =
-    AnnotationDAO.finish(annotation._id)
-
   def rename(name: String)(implicit ctx: DBAccessContext) =
     AnnotationDAO.rename(annotation._id, name)
 
   def cancelTask()(implicit ctx: DBAccessContext) = {
+    def insertReplacement(task: Task, project: Project) = {
+      project.assignmentConfiguration match {
+        case WebknossosAssignmentConfig =>
+          OpenAssignmentService.insertOneFor(task, project)
+        case _ =>
+          // If this is a project with its assignments on MTurk, they will handle the replacement generation
+          Fox.successful(true)
+      }
+    }
+
     for {
       task <- annotation.task
-      _ <- OpenAssignmentService.insertOneFor(task)
+      project <- task.project
+      _ <- insertReplacement(task, project)
       _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
     } yield annotation
   }

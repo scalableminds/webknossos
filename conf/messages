@@ -83,6 +83,7 @@ dataSet.type.invalid=External data set of type ''{0}'' is not supported
 dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
 dataSet.upload.success=Dataset successfully uploaded
+dataSet.create.success=Dataset successfully created
 dataSet.import.failedWithoutError=Import of dataset {0} failed
 dataSet.import.failedWithError=Import of the dataset failed with error: {0}
 dataSet.import.directoryEmpty=Import failed because the dataset directory is empty
@@ -151,6 +152,7 @@ project.remove.notAllowed=You are not allowed to remove this project. Talk to th
 project.remove.success=Project got removed
 project.remove.failure=Project couldn''t get removed
 project.notFound=Project {0} couldn''t be found
+project.update.failed=Project {0} update failed
 project.noAnnotations=We couldn''t find annotations for this project
 
 role.invalid=Invalid role
@@ -161,6 +163,7 @@ tracing=Annotation
 tracing.notFound=Tracing couldn''t be found
 
 annotation.creationFailed=Failed to create annotation
+annotation.transfered=Annotation got transfered
 annotation.notFound=Annotation couldn''t be found
 annotation.invalid=Invalid annotation
 annotation.finished=Annotation is archived
@@ -201,6 +204,7 @@ task.notFound=Task couldn''t be found
 task.removed=Task got removed
 task.editSuccess=Task successfully edited
 task.noAnnotation=We couldn''t find finished annotations for this task
+task.instances.changeImpossible=Due to the project settings it is not possible to change the number of instances of this task
 
 assignment.retrieval.failed=Failed to retrieve any assignment
 
@@ -216,3 +220,5 @@ taskType.noAnnotations=We couldn''t find finished annotations for this task type
 
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
+
+mturk.qualification.invalid=The entered qualification is unknown

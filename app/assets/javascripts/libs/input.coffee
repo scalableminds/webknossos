@@ -17,6 +17,17 @@ Input = {}
 # In most cases the heavy lifting is done by librarys in the background.
 
 
+# Workaround: KeyboardJS fires event for "C" even if you press
+# "Ctrl + C".
+shouldIgnore = (event, key) ->
+  bindingHasCtrl  = key.toLowerCase().indexOf("ctrl") != -1
+  bindingHasShift = key.toLowerCase().indexOf("shift") != -1
+  eventHasCtrl  = event.ctrlKey or event.metaKey
+  eventHasShift = event.shiftKey
+  return (eventHasCtrl and not bindingHasCtrl) or
+    (eventHasShift and not bindingHasShift)
+
+
 # This keyboard hook directly passes a keycombo and callback
 # to the underlying KeyboadJS library to do its dirty work.
 # Pressing a button will only fire an event once.
@@ -25,6 +36,7 @@ class Input.KeyboardNoLoop
   constructor : (initialBindings) ->
 
     @bindings = []
+    @isStarted = true
 
     for own key, callback of initialBindings
       @attach(key, callback)
@@ -32,19 +44,12 @@ class Input.KeyboardNoLoop
 
   attach : (key, callback) ->
 
-    # Workaround: KeyboardJS fires event for "C" even if you press
-    # "Ctrl + C".
-    shouldIgnore = (event) ->
-      bindingHasCtrl  = key.toLowerCase().indexOf("ctrl") != -1
-      bindingHasShift = key.toLowerCase().indexOf("shift") != -1
-      eventHasCtrl  = event.ctrlKey or event.metaKey
-      eventHasShift = event.shiftKey
-      return (eventHasCtrl and not bindingHasCtrl) or
-        (eventHasShift and not bindingHasShift)
-
     binding = [key,
       (event) =>
-        callback(event) unless $(":focus").length or shouldIgnore(event)
+        return if not @isStarted
+        return if $(":focus").length
+        return if shouldIgnore(event, key)
+        callback(event)
         return
     ]
 
@@ -53,8 +58,9 @@ class Input.KeyboardNoLoop
     @bindings.push(binding)
 
 
-  unbind : ->
+  destroy : ->
 
+    @isStarted = false
     KeyboardJS.unbind(binding...) for binding in @bindings
     return
 
@@ -71,23 +77,13 @@ class Input.Keyboard
     @keyCallbackMap = {}
     @keyPressedCount = 0
     @bindings = []
+    @isStarted = true
 
     for own key, callback of initialBindings
       @attach(key, callback)
 
 
   attach : (key, callback) ->
-
-    # Workaround: KeyboardJS fires event for "C" even if you press
-    # "Ctrl + C".
-    shouldIgnore = (event) ->
-      bindingHasCtrl  = key.toLowerCase().indexOf("ctrl") != -1
-      bindingHasShift = key.toLowerCase().indexOf("shift") != -1
-      eventHasCtrl  = event.ctrl or event.metaKey
-      eventHasShift = event.shiftKey
-      return (eventHasCtrl and not bindingHasCtrl) or
-        (eventHasShift and not bindingHasShift)
-
 
     binding = [key,
       (event) =>
@@ -101,16 +97,19 @@ class Input.Keyboard
 
         returnValue = undefined
 
-        unless @keyCallbackMap[key]? or $(":focus").length or shouldIgnore(event)
+        return if not @isStarted
+        return if @keyCallbackMap[key]?
+        return if $(":focus").length
+        return if shouldIgnore(event, key)
 
-          callback(1, true)
-          # reset lastTime
-          callback._lastTime   = null
-          callback._delayed    = true
-          @keyCallbackMap[key] = callback
+        callback(1, true)
+        # reset lastTime
+        callback._lastTime   = null
+        callback._delayed    = true
+        @keyCallbackMap[key] = callback
 
-          @keyPressedCount++
-          @buttonLoop() if @keyPressedCount == 1
+        @keyPressedCount++
+        @buttonLoop() if @keyPressedCount == 1
 
         if @delay >= 0
           setTimeout( (=>
@@ -121,6 +120,7 @@ class Input.Keyboard
 
       =>
 
+        return if not @isStarted
         if @keyCallbackMap[key]?
           @keyPressedCount--
           delete @keyCallbackMap[key]
@@ -137,6 +137,7 @@ class Input.Keyboard
   # through all the buttons that a marked as "pressed".
   buttonLoop : ->
 
+    return if not @isStarted
     if @keyPressedCount > 0
       for own key, callback of @keyCallbackMap
         if not callback._delayed
@@ -152,8 +153,9 @@ class Input.Keyboard
       setTimeout( (=> @buttonLoop()), @DELAY )
 
 
-  unbind : ->
+  destroy : ->
 
+    @isStarted = false
     KeyboardJS.unbind(binding...) for binding in @bindings
     return
 
@@ -207,31 +209,35 @@ class Input.Mouse
     @isMouseOver = false
     @lastPosition = null
 
-    $(document).on
+    $(document).on({
       "mousemove" : @mouseMove
       "mouseup"   : @mouseUp
+    })
 
-    @$target.on
+    @$target.on({
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "mouseleave" : @mouseLeave
       "wheel" : @mouseWheel
+    })
 
     @on(initialBindings)
     @attach = @on
 
 
-  unbind : ->
+  destroy : ->
 
-    $(document).off
+    $(document).off({
       "mousemove" : @mouseMove
       "mouseup" : @mouseUp
+    })
 
-    @$target.off
+    @$target.off({
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "mouseleave" : @mouseLeave
       "wheel" : @mouseWheel
+    })
 
 
   isHit : (event) ->
@@ -251,9 +257,10 @@ class Input.Mouse
 
     event.preventDefault()
 
-    @lastPosition =
+    @lastPosition = {
       x : event.pageX - @$target.offset().left
       y : event.pageY - @$target.offset().top
+    }
 
     @handle("MouseDown", event)
 
@@ -270,15 +277,17 @@ class Input.Mouse
 
   mouseMove : (event) =>
 
-    @position =
+    @position = {
       x : event.pageX - @$target.offset().left
       y : event.pageY - @$target.offset().top
+    }
 
     if @lastPosition?
 
-      delta =
+      delta = {
         x : (@position.x - @lastPosition.x)
         y : (@position.y - @lastPosition.y)
+      }
 
     if delta?.x != 0 or delta?.y != 0
 
@@ -317,7 +326,7 @@ class Input.Mouse
   mouseWheel : (event) =>
 
     event.preventDefault()
-    delta = event.originalEvent.wheelDeltaY
+    delta = -event.originalEvent.deltaY
     if event.shiftKey
       @trigger("scroll", delta, "shift")
     else if event.altKey
@@ -329,83 +338,5 @@ class Input.Mouse
 
     return
 
-
-# This module completly handles the device orientation /
-# tilting sensor (gyroscope).
-# Similarily to the keyboard it relies on looping over
-# all the "pressed" buttons. i.e. Once a certain threshold
-# for the sensor is met this axis is marked as "pressed" (fire).
-class Input.Deviceorientation
-
-  THRESHOLD = 10
-  SLOWDOWN_FACTOR = 500
-
-  keyPressedCallbacks : {}
-  keyBindings : {}
-  keyPressedCount : 0
-
-  delay : 1000 / 30
-
-  constructor : (bindings) ->
-
-    for own key, callback of bindings
-      @attach(key, callback)
-
-    $(window).on(
-      "deviceorientation",
-      @eventHandler = ({originalEvent : event}) =>
-
-        { gamma, beta } = event
-        if gamma < -THRESHOLD or gamma > THRESHOLD
-          @fire("x", -gamma)
-        else
-          @unfire("x")
-
-        if beta < -THRESHOLD or beta > THRESHOLD
-          @fire("y", beta)
-        else
-          @unfire("y")
-    )
-
-
-  attach : (key, callback) ->
-
-    @keyBindings[key] = callback
-
-
-  unbind : ->
-
-    $(window).off(
-      "deviceorientation",
-      @eventHandler
-      @unfire("x")
-      @unfire("y")
-    )
-
-
-  fire : (key, dist) ->
-
-    unless @keyPressedCallbacks[key]?
-      @keyPressedCount++
-      @keyPressedCallbacks[key] =
-        callback : @keyBindings[key]
-        distance : (dist - THRESHOLD) / SLOWDOWN_FACTOR
-      @buttonLoop() if @keyPressedCount == 1
-
-
-  unfire : (key) ->
-
-    if @keyPressedCallbacks[key]
-      @keyPressedCount--
-      delete @keyPressedCallbacks[key]
-    return
-
-  buttonLoop : ->
-
-    if @keyPressedCount > 0
-      for own key, { callback, distance } of @keyPressedCallbacks
-        callback?(distance)
-
-      setTimeout( (=> @buttonLoop()), @delay )
 
 module.exports = Input

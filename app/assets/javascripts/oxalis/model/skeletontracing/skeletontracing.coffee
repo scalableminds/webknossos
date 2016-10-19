@@ -83,15 +83,6 @@ class SkeletonTracing
         @flycam.setSpaceDirection(@firstEdgeDirection)
 
 
-    app.router.on("beforeunload", =>
-      if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
-        @stateLogger.pushNow(false)
-        return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
-      else
-        return
-    )
-
-
   benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
 
     console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"
@@ -121,7 +112,7 @@ class SkeletonTracing
 
   pushBranch : ->
 
-    return if @restrictionHandler.handleUpdate()
+    return if not @restrictionHandler.updateAllowed()
 
     if @branchPointsAllowed
       if @activeNode
@@ -135,7 +126,7 @@ class SkeletonTracing
 
   popBranch : ->
 
-    return if @restrictionHandler.handleUpdate()
+    return if not @restrictionHandler.updateAllowed()
 
     reallyPopBranch = (point, tree, resolve) =>
       tree.removeBranchWithNodeId(point.id)
@@ -180,7 +171,7 @@ class SkeletonTracing
 
   addNode : (position, rotation, viewport, resolution, bitDepth, interpolation) ->
 
-    return if @restrictionHandler.handleUpdate()
+    return if not @restrictionHandler.updateAllowed()
 
     if @ensureDirection(position)
 
@@ -317,7 +308,7 @@ class SkeletonTracing
 
   setActiveNodeRadius : (radius) ->
 
-    return if @restrictionHandler.handleUpdate()
+    return if not @restrictionHandler.updateAllowed()
 
     if @activeNode?
       @activeNode.radius = Math.min( @MAX_RADIUS,
@@ -367,12 +358,13 @@ class SkeletonTracing
 
   shuffleTreeColor : (tree) ->
 
-    return if @restrictionHandler.handleUpdate()
-
     tree = @activeTree unless tree
     tree.color = @getNewTreeColor()
 
-    @stateLogger.updateTree(tree)
+    # force the tree color change, although it may not be persisted if the user is in read-only mode
+    if @restrictionHandler.updateAllowed(false)
+      @stateLogger.updateTree(tree)
+
     @trigger("newTreeColor", tree.treeId)
 
 
@@ -384,7 +376,7 @@ class SkeletonTracing
 
   createNewTree : ->
 
-    return if @restrictionHandler.handleUpdate()
+    return if not @restrictionHandler.updateAllowed()
 
     tree = new TraceTree(
       @treeIdCount++,
@@ -402,7 +394,7 @@ class SkeletonTracing
 
   deleteActiveNode : ->
 
-    return if @restrictionHandler.handleUpdate()
+    return if not @restrictionHandler.updateAllowed()
 
     unless @activeNode
       return
@@ -460,7 +452,7 @@ class SkeletonTracing
 
   deleteTree : (notify, id, notifyServer) ->
 
-    return if @restrictionHandler.handleUpdate()
+    return if not @restrictionHandler.updateAllowed()
 
     if notify
       if confirm("Do you really want to delete the whole tree?")
@@ -473,7 +465,7 @@ class SkeletonTracing
 
   reallyDeleteTree : (id, notifyServer = true) ->
 
-    return if @restrictionHandler.handleUpdate()
+    return if not @restrictionHandler.updateAllowed()
 
     unless id
       id = @activeTree.treeId
@@ -500,7 +492,7 @@ class SkeletonTracing
 
   mergeTree : (lastNode, lastTree) ->
 
-    return if @restrictionHandler.handleUpdate()
+    return if not @restrictionHandler.updateAllowed()
 
     unless lastNode
       return

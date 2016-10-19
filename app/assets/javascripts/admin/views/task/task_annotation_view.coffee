@@ -12,7 +12,7 @@ class TaskAnnotationView extends Marionette.ItemView
     id : @model.get("id")
 
   template : _.template("""
-    <td><%- user %></td>
+    <td><%- user.firstName %> <%- user.lastName %> (<%- user.email %>)</td>
     <td><%- moment(created).format("YYYY-MM-DD HH:SS") %></td>
     <td><i class="fa fa-check-circle-o"></i><%- stateLabel %></td>
     <td class="nowrap">

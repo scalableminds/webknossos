@@ -24,6 +24,11 @@ class Pipeline
       retryTimeMs : 1000
 
 
+  isBusy : ->
+
+    return @actions.length != 0
+
+
   getLastActionPromise : ->
 
     if @actions.length == 0

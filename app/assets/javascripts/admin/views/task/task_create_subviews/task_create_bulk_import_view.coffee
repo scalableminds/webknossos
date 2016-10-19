@@ -13,8 +13,7 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     <div class="col-sm-12">
       <div class="well">
         One line for each task. The values are seperated by ','. Format: <br>
-	dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, priority, instances, team, minX, minY, minZ, maxX, maxY, maxZ, project<br><br>
-
+        dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project<br><br>
         <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
           <div class="form-group">
             <div class="col-sm-12">
@@ -23,7 +22,9 @@ class TaskCreateBulkImportView extends Marionette.ItemView
           </div>
           <div class="form-group">
             <div class="col-sm-offset-10 col-sm-2">
-              <button type="submit" class="form-control btn btn-primary">Import</button>
+              <button type="submit" class="form-control btn btn-primary">
+                <i class="fa fa-spinner fa-pulse fa-fw hide"></i>Import
+              </button>
             </div>
           </div>
         </form>
@@ -37,6 +38,8 @@ class TaskCreateBulkImportView extends Marionette.ItemView
 
   ui :
     "bulkText" : "textarea[name=data]"
+    "submitButton" : "button[type=submit]"
+    "submitSpinner" : ".fa-spinner"
 
   ###*
     * Submit form data as json.
@@ -59,6 +62,8 @@ class TaskCreateBulkImportView extends Marionette.ItemView
       @showSaveError
     )
 
+    @toggleSubmitButton(false)
+
     # prevent page reload
     return false
 
@@ -74,10 +79,14 @@ class TaskCreateBulkImportView extends Marionette.ItemView
       @ui.bulkText.val("")
       Toast.success("All tasks were successfully created")
 
+    @toggleSubmitButton(true)
+
 
   showSaveError : ->
 
     Toast.error("The tasks could not be created due to server errors.")
+
+    @toggleSubmitButton(true)
 
 
   showInvalidData : ->
@@ -104,6 +113,12 @@ class TaskCreateBulkImportView extends Marionette.ItemView
 
     @ui.bulkText.val(failedTasks.join("\n"))
     Toast.error(errorMessages.join("\n"))
+
+
+  toggleSubmitButton : (enabled) ->
+
+    @ui.submitButton.prop("disabled", not enabled)
+    @ui.submitSpinner.toggleClass("hide", enabled)
 
 
   splitToLines : (string) ->
@@ -167,19 +182,15 @@ class TaskCreateBulkImportView extends Marionette.ItemView
     rotX = parseInt(words[7])
     rotY = parseInt(words[8])
     rotZ = parseInt(words[9])
-    priority = parseInt(words[10])
-    instances = parseInt(words[11])
-    team = words[12]
-    minX = parseInt(words[13])
-    minY = parseInt(words[14])
-    minZ = parseInt(words[15])
-    maxX = parseInt(words[16])
-    maxY = parseInt(words[17])
-    maxZ = parseInt(words[18])
-
-    projectName = ""
-    if words[19]
-      projectName = words[19]
+    instances = parseInt(words[10])
+    team = words[11]
+    minX = parseInt(words[12])
+    minY = parseInt(words[13])
+    minZ = parseInt(words[14])
+    width = parseInt(words[15])
+    height = parseInt(words[16])
+    depth = parseInt(words[17])
+    projectName = words[18]
 
     return {
       dataSet,
@@ -192,14 +203,13 @@ class TaskCreateBulkImportView extends Marionette.ItemView
         open : instances
         inProgress : 0
         completed : 0
-      priority,
       editPosition : [x, y, z]
       editRotation : [rotX, rotY, rotZ]
       boundingBox :
         topLeft : [minX, minY, minZ]
-        width : maxX
-        height : maxY
-        depth : maxZ
+        width : width
+        height : height
+        depth : depth
       projectName,
       isForAnonymous : false
     }

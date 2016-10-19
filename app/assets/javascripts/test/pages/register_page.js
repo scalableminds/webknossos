@@ -25,7 +25,9 @@ export default class RegisterPage {
 
   signUpWithInclompleteForm() {
 
-    return browser.click(this.signupButton)
+    return browser
+      .waitForExist(this.signupButton)
+      .click(this.signupButton)
   }
 
 

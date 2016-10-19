@@ -10,6 +10,7 @@
     "url": "git://github.com/scalableminds/oxalis.git"
   },
   "devDependencies": {
+    "babel-cli": "^6.16.0",
     "babel-plugin-transform-class-properties": "^6.10.2",
     "babel-plugin-transform-runtime": "^6.15.0",
     "babel-polyfill": "^6.9.1",
@@ -41,7 +42,7 @@
     "worker-loader": "^0.6.0"
   },
   "scripts": {
-    "test": "node_modules/jasmine-node/bin/jasmine-node --coffee --captureExceptions app/assets/javascripts/test",
+    "test": "node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js"
   },
   "dependencies": {

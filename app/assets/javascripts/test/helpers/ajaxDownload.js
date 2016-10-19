@@ -1,5 +1,5 @@
-const _ = require("lodash")
-const fetch = require("isomorphic-fetch")
+import _ from "lodash"
+import fetch from "isomorphic-fetch"
 
 //  Request Helper Module
 //  Collection of static methods for up/downloading and content convertion.

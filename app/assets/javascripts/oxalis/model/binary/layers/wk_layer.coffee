@@ -2,6 +2,7 @@ Layer         = require("./layer")
 BucketBuilder = require("./bucket_builder")
 Request       = require("../../../../libs/request")
 MultipartData = require("../../../../libs/multipart_data")
+_             = require("lodash")
 
 
 class WkLayer extends Layer
@@ -14,9 +15,25 @@ class WkLayer extends Layer
     unless @dataStoreInfo.typ == "webknossos-store"
       throw new Error("WkLayer should only be instantiated with webknossos-store")
 
+    @fourBit = false
+
+
+  setFourBit : (newFourBit) ->
+
+    # No op if this is not a color layer
+    if @category == "color"
+      @fourBit = newFourBit
+
+
+  buildBuckets : (batch, options={}) ->
+
+    options = _.extend(options, { fourBit : @fourBit })
+    return super(batch, options)
+
 
   requestFromStoreImpl : (batch, token) ->
 
+    wasFourBit = @fourBit
     requestData = new MultipartData()
 
     for bucket in batch
@@ -37,9 +54,28 @@ class WkLayer extends Layer
             doNotCatch : true
           }
       )
-    ).then( (responseBuffer) ->
-      return new Uint8Array(responseBuffer)
+    ).then( (responseBuffer) =>
+      result = new Uint8Array(responseBuffer)
+      if wasFourBit
+        result = @decodeFourBit(result)
+      return result
     )
+
+
+  decodeFourBit : (bufferArray) ->
+
+    # Expand 4-bit data
+    newColors = new Uint8Array(bufferArray.length << 1)
+
+    index = 0
+    while index < newColors.length
+      value = bufferArray[index >> 1]
+      newColors[index] = value & 0b11110000
+      index++
+      newColors[index] = value << 4
+      index++
+
+    return newColors
 
 
   sendToStoreImpl : (batch, getBucketData, token) ->

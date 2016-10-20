@@ -119,7 +119,7 @@ describe "WkLayer", ->
 
       it "should pass the correct request parameters", (done) ->
 
-        options = {fourBit: true}
+        layer.setFourBit(true)
 
         expectedUrl = "url/data/datasets/dataSet/layers/layername/data?token=token"
         expectedOptions = {
@@ -140,7 +140,7 @@ describe "WkLayer", ->
           doNotCatch: true
         }
 
-        layer.requestFromStore(batch, options).then((result) ->
+        layer.requestFromStore(batch).then((result) ->
           expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(1)
 
           [url, options] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args
@@ -172,11 +172,11 @@ describe "WkLayer", ->
           method: "PUT"
           data: [
             '----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n',
-            'X-Bucket: {"position":[0,0,0],"zoomStep":0,"cubeSize":32}\r\n',
+            'X-Bucket: {"position":[0,0,0],"zoomStep":0,"cubeSize":32,"fourBit":false}\r\n',
             '\r\n',
             data,
             '\r\n----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n',
-            'X-Bucket: {"position":[64,64,64],"zoomStep":1,"cubeSize":32}\r\n',
+            'X-Bucket: {"position":[64,64,64],"zoomStep":1,"cubeSize":32,"fourBit":false}\r\n',
             '\r\n',
             data,
             '\r\n----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n'

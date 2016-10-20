@@ -22,7 +22,6 @@ class PullQueue
 
     @queue = []
     @BATCH_SIZE = if @isNDstore() then 1 else 3
-    @fourBit = false
 
     # Debug option.
     # If true, buckets of all 0 will be transformed to have 255 bytes everywhere.
@@ -59,22 +58,17 @@ class PullQueue
 
     # Loading a bunch of buckets
     @batchCount++
-    fourBit = @shouldRequestFourBit()
 
     # Measuring the time until response arrives to select appropriate preloading strategy
     roundTripBeginTime = new Date()
-    options = {fourBit : @shouldRequestFourBit()}
 
     Request.always(
-      @layer.requestFromStore(batch, options).then((responseBuffer) =>
+      @layer.requestFromStore(batch).then((responseBuffer) =>
         @connectionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
 
         offset = 0
         for bucket in batch
-          if fourBit
-            bucketData = @decodeFourBit(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
-          else
-            bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
+          bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
           @cube.boundingBox.removeOutsideArea(bucket, bucketData)
           @maybeWhitenEmptyBucket(bucketData)
           @cube.getBucket(bucket).receiveData(bucketData)
@@ -104,30 +98,6 @@ class PullQueue
   addAll : (items) ->
 
     @queue = @queue.concat(items)
-
-
-  decodeFourBit : (colors) ->
-
-    # Expand 4-bit data
-    newColors = new Uint8Array(colors.length << 1)
-
-    index = 0
-    while index < newColors.length
-      value = colors[index >> 1]
-      newColors[index] = value & 0b11110000
-      index++
-      newColors[index] = value << 4
-      index++
-
-    newColors
-
-
-  setFourBit : (@fourBit) ->
-
-
-  shouldRequestFourBit : ->
-
-    return @fourBit and @layer.category == "color" and not @isNDstore()
 
 
   isNDstore : ->

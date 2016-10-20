@@ -1,4 +1,5 @@
 Cube = require("../cube")
+_ = require("lodash")
 
 # Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
 # object as expected by the server on bucket request
@@ -16,8 +17,7 @@ BucketBuilder = {
       cubeSize : 1 << Cube::BUCKET_SIZE_P
     }
 
-    if options.fourBit?
-      bucket.fourBit = options.fourBit
+    bucket = _.extend(bucket, options)
 
     return bucket
 

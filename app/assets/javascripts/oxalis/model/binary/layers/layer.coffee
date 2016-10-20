@@ -58,7 +58,7 @@ class Layer
   requestFromStore : (batch, options) ->
 
     @doWithToken((token) =>
-      @requestFromStoreImpl(@buildBuckets(batch), token)
+      @requestFromStoreImpl(@buildBuckets(batch, options), token)
     )
 
 

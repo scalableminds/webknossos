@@ -8,7 +8,7 @@ class NdStoreLayer extends Layer
 
   constructor : ->
 
-    super(arguments...)
+    super
 
     unless @dataStoreInfo.typ == "ndstore"
       throw new Error("NdStoreLayer should only be instantiated with ndstore")

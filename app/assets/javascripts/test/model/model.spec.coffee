@@ -47,6 +47,7 @@ TRACING_OBJECT = {
       name : "DatasetName"
       dataStore :
         url : "dataStoreUrl"
+        typ : "webknossos-store"
       dataLayers : [
         name : "layer1"
         category : "color"

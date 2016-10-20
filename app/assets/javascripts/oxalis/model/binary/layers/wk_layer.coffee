@@ -9,7 +9,7 @@ class WkLayer extends Layer
 
   constructor : ->
 
-    super(arguments...)
+    super
 
     unless @dataStoreInfo.typ == "webknossos-store"
       throw new Error("WkLayer should only be instantiated with webknossos-store")

@@ -115,7 +115,11 @@ class Model extends Backbone.Model
     dataStore = tracing.content.dataSet.dataStore
     dataset = @get("dataset")
 
-    LayerClass = if dataStore.typ == "webknossos-store" then WkLayer else NdStoreLayer
+    LayerClass = switch dataStore.typ
+      when "webknossos-store" then WkLayer
+      when "ndstore" then NdStoreLayer
+      else throw new Error("Unknown datastore type: #{dataStore.typ}")
+
     layers = layerInfos.map((layerInfo) ->
       new LayerClass(layerInfo, dataset.get("name"), dataStore)
     )

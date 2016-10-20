@@ -119,14 +119,16 @@ describe "WkLayer", ->
 
       it "should pass the correct request parameters", (done) ->
 
+        options = {fourBit: true}
+
         expectedUrl = "url/data/datasets/dataSet/layers/layername/data?token=token"
         expectedOptions = {
           data: [
             '----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n',
-            'X-Bucket: {"position":[0,0,0],"zoomStep":0,"cubeSize":32}\r\n',
+            'X-Bucket: {"position":[0,0,0],"zoomStep":0,"cubeSize":32,"fourBit":true}\r\n',
             '\r\n',
             '\r\n----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n',
-            'X-Bucket: {"position":[64,64,64],"zoomStep":1,"cubeSize":32}\r\n',
+            'X-Bucket: {"position":[64,64,64],"zoomStep":1,"cubeSize":32,"fourBit":true}\r\n',
             '\r\n',
             '\r\n----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n'
           ]
@@ -138,7 +140,7 @@ describe "WkLayer", ->
           doNotCatch: true
         }
 
-        layer.requestFromStore(batch).then((result) ->
+        layer.requestFromStore(batch, options).then((result) ->
           expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(1)
 
           [url, options] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args

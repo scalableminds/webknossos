@@ -54,8 +54,9 @@ case class OpenAssignment(
 object OpenAssignment extends FoxImplicits {
   implicit val openAssignmentFormat = Json.format[OpenAssignment]
 
-  def from(task: Task, priority: Int): OpenAssignment =
-    OpenAssignment(task._id, task.team, task._project, task.neededExperience, priority)
+  def from(task: Task, project: Project): OpenAssignment =
+    OpenAssignment(task._id, task.team, task._project, task.neededExperience,
+      priority = if(project.paused) -1 else project.priority)
 }
 
 object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicits {

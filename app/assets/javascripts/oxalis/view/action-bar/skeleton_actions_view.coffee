@@ -2,7 +2,7 @@ _          = require("lodash")
 Marionette = require("backbone.marionette")
 Constants  = require("oxalis/constants")
 
-class SkeletonActionsView extends Marionette.ItemView
+class SkeletonActionsView extends Marionette.View
 
   template : _.template("""
     <% if(isTracingMode()) { %>
@@ -12,7 +12,7 @@ class SkeletonActionsView extends Marionette.ItemView
     <% } %>
   """)
 
-  templateHelpers :
+  templateContext :
     isTracingMode : ->
       return @mode == Constants.MODE_PLANE_TRACING
 

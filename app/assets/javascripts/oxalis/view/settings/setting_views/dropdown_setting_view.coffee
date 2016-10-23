@@ -22,7 +22,7 @@ class DropdownSettingView extends AbstractSettingView
   """)
 
 
-  templateHelpers :
+  templateContext :
     isSelected : (value, index) ->
       return if value == index then "selected" else ""
 

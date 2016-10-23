@@ -4,7 +4,7 @@ subviews            = require("backbone-subviews")
 _                   = require("lodash")
 CheckboxSettingView = require("oxalis/view/settings/setting_views/checkbox_setting_view")
 
-class MappingInfoView extends Marionette.CompositeView
+class MappingInfoView extends Marionette.View
 
   RENDER_DEBOUNCE_TIME : 200
 

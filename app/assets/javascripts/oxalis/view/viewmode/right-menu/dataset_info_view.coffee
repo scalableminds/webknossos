@@ -3,7 +3,7 @@ app                 = require("app")
 constants           = require("oxalis/constants")
 ArbitraryController = require("oxalis/controller/viewmodes/arbitrary_controller")
 
-class DatasetInfoView extends Marionette.ItemView
+class DatasetInfoView extends Marionette.View
 
   className : "col-sm-12 flex-column"
   id : "dataset"
@@ -18,7 +18,7 @@ class DatasetInfoView extends Marionette.ItemView
     </div>
   """)
 
-  templateHelpers :
+  templateContext :
     chooseUnit : ->
       if(@zoomLevel < 1000)
         return @zoomLevel.toFixed(0) + " nm"

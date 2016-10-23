@@ -1,7 +1,7 @@
 _          = require("lodash")
 Marionette = require("backbone.marionette")
 
-class StatisticListItemView extends Marionette.ItemView
+class StatisticListItemView extends Marionette.View
 
   tagName : "tr"
   template : _.template("""

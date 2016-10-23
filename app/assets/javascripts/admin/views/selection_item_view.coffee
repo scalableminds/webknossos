@@ -1,7 +1,7 @@
 _          = require("lodash")
 Marionette = require("backbone.marionette")
 
-class SelectionItemView extends Marionette.ItemView
+class SelectionItemView extends Marionette.View
 
   tagName : "option"
   attributes : ->

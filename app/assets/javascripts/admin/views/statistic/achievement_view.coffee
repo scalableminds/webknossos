@@ -1,7 +1,7 @@
 _          = require("lodash")
 Marionette = require("backbone.marionette")
 
-class AchievementView extends Marionette.ItemView
+class AchievementView extends Marionette.View
 
   template : _.template("""
     <h3>Achievements</h3>

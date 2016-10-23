@@ -91,7 +91,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView
     toggleViewSpinner : "#toggle-view-spinner-icon"
     archiveAllButton : "#archive-all"
 
-  templateHelpers : ->
+  templateContext : ->
     isAdminView : @options.isAdminView
     showArchivedAnnotations : @showArchivedAnnotations
 

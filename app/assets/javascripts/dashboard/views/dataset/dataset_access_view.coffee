@@ -1,7 +1,7 @@
 Marionette      = require("backbone.marionette")
 TemplateHelpers = require("libs/template_helpers")
 
-class DatasetAccessView extends Marionette.ItemView
+class DatasetAccessView extends Marionette.View
 
   tagName : "tr"
 
@@ -14,7 +14,7 @@ class DatasetAccessView extends Marionette.ItemView
     </td>
   """)
 
-  templateHelpers :
+  templateContext :
     TemplateHelpers : TemplateHelpers
 
 module.exports = DatasetAccessView

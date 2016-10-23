@@ -5,7 +5,7 @@ Request         = require("libs/request")
 SelectionView   = require("admin/views/selection_view")
 TeamCollection  = require("admin/models/team/team_collection")
 
-class DatasetUploadView extends Marionette.LayoutView
+class DatasetUploadView extends Marionette.View
 
   template : _.template("""
     <div class="row">
@@ -89,7 +89,7 @@ class DatasetUploadView extends Marionette.LayoutView
 
   onRender : ->
 
-    @team.show(@teamSelectionView)
+    @showChildView("team", @teamSelectionView)
 
 
   uploadDataset : (evt) ->

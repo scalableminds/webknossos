@@ -6,7 +6,7 @@ utils      = require("libs/utils")
 Toast      = require("libs/toast")
 {V3}       = require("libs/mjs")
 
-class DatasetPositionView extends Marionette.ItemView
+class DatasetPositionView extends Marionette.View
 
   tagName : "div"
   className : "form-inline dataset-position-view"
@@ -29,7 +29,7 @@ class DatasetPositionView extends Marionette.ItemView
     </div>
   """)
 
-  templateHelpers :
+  templateContext :
     position : ->
       V3.floor(@flycam.getPosition()).join(", ")
 

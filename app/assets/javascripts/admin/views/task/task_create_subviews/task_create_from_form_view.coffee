@@ -6,7 +6,7 @@ SelectionView     = require("admin/views/selection_view")
 Utils             = require("libs/utils")
 
 
-class TaskCreateFromFormView extends Marionette.LayoutView
+class TaskCreateFromFormView extends Marionette.View
 
   id : "create-from-form"
 
@@ -111,6 +111,6 @@ class TaskCreateFromFormView extends Marionette.LayoutView
       parentModel : @model
     )
 
-    @dataSet.show(@dataSetSelectionView)
+    @showChildView("dataSet", @dataSetSelectionView)
 
 module.exports = TaskCreateFromFormView

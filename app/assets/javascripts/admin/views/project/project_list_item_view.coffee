@@ -3,7 +3,7 @@ Marionette            = require("backbone.marionette")
 Toast                 = require("libs/toast")
 TemplateHelpers       = require("libs/template_helpers")
 
-class ProjectListItemView extends Marionette.CompositeView
+class ProjectListItemView extends Marionette.View
 
   tagName : "tr"
 
@@ -44,7 +44,7 @@ class ProjectListItemView extends Marionette.CompositeView
   events :
     "click .delete" : "deleteProject"
 
-  templateHelpers :
+  templateContext :
     TemplateHelpers : TemplateHelpers
 
   deleteProject : ->

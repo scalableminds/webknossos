@@ -7,7 +7,7 @@ VolumeActionsView   = require("./action-bar/volume_actions_view")
 SkeletonActionsView = require("./action-bar/skeleton_actions_view")
 Constants           = require("../constants")
 
-class ActionBarView extends Marionette.LayoutView
+class ActionBarView extends Marionette.View
 
   className : "container-fluid"
 
@@ -41,7 +41,7 @@ class ActionBarView extends Marionette.LayoutView
     <% } %>
   """)
 
-  templateHelpers : ->
+  templateContext : ->
 
     isTraceMode : @isTraceMode()
     isVolumeMode : @isVolumeMode()
@@ -76,17 +76,17 @@ class ActionBarView extends Marionette.LayoutView
   afterRender : ->
 
     if @hasAdvancedOptions()
-      @datasetPosition.show(@datasetPositionView)
+      @showChildView("datasetPosition", @datasetPositionView)
 
     if @isTraceMode()
-      @datasetActionButtons.show(@datasetActionsView)
+      @showChildView("datasetActionButtons", @datasetActionsView)
 
       if @hasAdvancedOptions()
         if @isVolumeMode()
-          @volumeActions.show(@volumeActionsView)
+          @showChildView("volumeActions", @volumeActionsView)
         else
-          @viewModes.show(@viewModesView)
-          @skeletonActions.show(@skeletonActionsView)
+          @showChildView("viewModes", @viewModesView)
+          @showChildView("skeletonActions", @skeletonActionsView)
 
 
   isTraceMode : ->

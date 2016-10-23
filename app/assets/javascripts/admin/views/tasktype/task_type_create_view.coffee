@@ -193,7 +193,7 @@ class TaskTypeCreateView extends Marionette.View
     @ui.multiselect.multiselect()
 
 
-  onDestroy : ->
+  onBeforeDestroy : ->
 
     @ui.multiselect.multiselect("destroy")
 

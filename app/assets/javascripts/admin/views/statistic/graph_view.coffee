@@ -14,7 +14,7 @@ class GraphView extends Marionette.View
 
   initialize : ->
 
-    @listenTo(@, "render", @addGraph)
+    @listenTo(@, "attach", @addGraph)
 
 
   addGraph : ->

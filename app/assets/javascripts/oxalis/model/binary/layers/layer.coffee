@@ -23,7 +23,7 @@ class Layer
     return @tokenRequestPromise if @tokenRequestPromise
 
     @tokenRequestPromise = Request.receiveJSON(
-        "/dataToken/generate?dataSetName=#{@dataSetName}&dataLayerName=#{@name}"
+      "/dataToken/generate?dataSetName=#{@dataSetName}&dataLayerName=#{@name}"
     ).then( (dataStore) =>
       @tokenRequestPromise = null
       return dataStore.token

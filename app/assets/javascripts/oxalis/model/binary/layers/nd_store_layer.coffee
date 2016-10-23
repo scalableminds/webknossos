@@ -1,6 +1,7 @@
 Layer         = require("./layer")
 Request       = require("../../../../libs/request")
 ErrorHandling = require("../../../../libs/error_handling")
+Cube          = require("../cube")
 
 
 class NdStoreLayer extends Layer
@@ -11,17 +12,23 @@ class NdStoreLayer extends Layer
     super
 
     unless @dataStoreInfo.typ == "ndstore"
-      throw new Error("NdStoreLayer should only be instantiated with ndstore")
+      throw new Error("NDstoreLayer should only be instantiated with ndstore")
 
 
   sendToStoreImpl : (batch, getBucketData, token) ->
 
-    throw new Error("ND-Store does not currently support sendToStore")
+    throw new Error("NDstore does not currently support sendToStore")
+
+
+  requestDataToken : ->
+
+    # ndstore uses its own token that is fixed
+    Promise.resolve(@dataStoreInfo.accessToken)
 
 
   requestFromStoreImpl : (batch, token) ->
 
-    ErrorHandling.assert(batch.length == 1, "Batch length should be 1 for NdStore Layers")
+    ErrorHandling.assert(batch.length == 1, "Batch length should be 1 for NDstore Layers")
 
     [bucket] = batch
     bucketSize = bucket.cubeSize
@@ -58,10 +65,10 @@ class NdStoreLayer extends Layer
 
   clampBucketToMaxCoordinates : ( {position, zoomStep} ) ->
 
-    min = @layer.lowerBoundary
-    max = @layer.upperBoundary
+    min = @lowerBoundary
+    max = @upperBoundary
 
-    cubeSize = 1 << @cube.BUCKET_SIZE_P + zoomStep
+    cubeSize = 1 << Cube::BUCKET_SIZE_P + zoomStep
 
     [ x, y, z ] = position
     return [
@@ -78,14 +85,14 @@ class NdStoreLayer extends Layer
 
     # transform bounds in zoom-step-0 voxels to bucket coordinates between 0 and BUCKET_SIZE_P
     bucketBounds = _.map(bounds, (coordinate) =>
-      cubeSize = 1 << @cube.BUCKET_SIZE_P + bucket.zoomStep
+      cubeSize = 1 << Cube::BUCKET_SIZE_P + bucket.zoomStep
       return (coordinate % cubeSize) >> bucket.zoomStep
     )
 
     # as the upper bound for bucket coordinates is exclusive, the % cubeSize of it is 0
-    # but we want it to be 1 << @cube.BUCKET_SIZE_P
+    # but we want it to be 1 << Cube::BUCKET_SIZE_P
     for i in [3..5]
-      bucketBounds[i] = bucketBounds[i] or 1 << @cube.BUCKET_SIZE_P
+      bucketBounds[i] = bucketBounds[i] or 1 << Cube::BUCKET_SIZE_P
 
     return bucketBounds
 

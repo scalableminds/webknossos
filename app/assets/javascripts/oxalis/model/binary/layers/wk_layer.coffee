@@ -44,15 +44,15 @@ class WkLayer extends Layer
 
     return requestData.dataPromise().then((data) =>
       Request.sendArraybufferReceiveArraybuffer(
-          "#{@dataStoreInfo.url}/data/datasets/#{@dataSetName}/layers/#{@name}/data?token=#{token}",
-          {
-            data : data
-            headers :
-              "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
-            timeout : @REQUEST_TIMEOUT
-            compress : true
-            doNotCatch : true
-          }
+        "#{@dataStoreInfo.url}/data/datasets/#{@dataSetName}/layers/#{@name}/data?token=#{token}",
+        {
+          data : data
+          headers :
+            "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
+          timeout : @REQUEST_TIMEOUT
+          compress : true
+          doNotCatch : true
+        }
       )
     ).then( (responseBuffer) =>
       result = new Uint8Array(responseBuffer)
@@ -85,8 +85,8 @@ class WkLayer extends Layer
     for bucket in batch
 
       transmitData.addPart(
-          {"X-Bucket": JSON.stringify(bucket)},
-          getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)))
+        {"X-Bucket" : JSON.stringify(bucket)},
+        getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)))
 
     return transmitData.dataPromise().then((data) =>
       return Request.sendArraybufferReceiveArraybuffer(

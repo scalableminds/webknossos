@@ -72,12 +72,14 @@ class PullQueue
           @cube.boundingBox.removeOutsideArea(bucket, bucketData)
           @maybeWhitenEmptyBucket(bucketData)
           @cube.getBucket(bucket).receiveData(bucketData)
-      ).catch(=>
+      ).catch( (error) =>
         for bucketAddress in batch
           bucket = @cube.getBucket(bucketAddress)
           bucket.pullFailed()
           if bucket.dirty
             @add({bucket : bucketAddress, priority : @PRIORITY_HIGHEST})
+
+        console.error(error)
       )
       =>
         @batchCount--

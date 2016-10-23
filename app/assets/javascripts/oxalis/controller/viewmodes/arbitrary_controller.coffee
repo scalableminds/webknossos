@@ -38,12 +38,12 @@ class ArbitraryController
     keyboardNoLoop : null
     keyboardOnce : null
 
-    unbind : ->
+    destroy : ->
 
-      @mouse?.unbind()
-      @keyboard?.unbind()
-      @keyboardNoLoop?.unbind()
-      @keyboardOnce?.unbind()
+      @mouse?.destroy()
+      @keyboard?.destroy()
+      @keyboardNoLoop?.destroy()
+      @keyboardOnce?.destroy()
 
 
   constructor : (@model, @view, @sceneController, @skeletonTracingController) ->
@@ -243,7 +243,7 @@ class ArbitraryController
   stop : ->
 
     if @isStarted
-      @input.unbind()
+      @input.destroy()
 
     @arbitraryView.stop()
 

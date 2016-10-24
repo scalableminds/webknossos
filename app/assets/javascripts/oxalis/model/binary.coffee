@@ -43,7 +43,7 @@ class Binary
 
     datasetName = @model.get("dataset").get("name")
     datastoreInfo = @model.get("dataset").get("dataStore")
-    @pullQueue = new PullQueue(datasetName, @cube, @layer, @connectionInfo, datastoreInfo)
+    @pullQueue = new PullQueue(@cube, @layer, @connectionInfo, datastoreInfo)
     @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
     @cube.initializeWithQueues(@pullQueue, @pushQueue)
     @mappings = new Mappings(datasetName, @layer)
@@ -62,8 +62,10 @@ class Binary
       @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth,
                                 32, @category == "segmentation") )
 
-    @pullQueue.setFourBit(@model.get("datasetConfiguration").get("fourBit"))
-    @listenTo(@model.get("datasetConfiguration"), "change:fourBit" , (model, fourBit) -> @pullQueue.setFourBit(fourBit) )
+    if @layer.dataStoreInfo.typ == "webknossos-store"
+      @layer.setFourBit(@model.get("datasetConfiguration").get("fourBit"))
+      @listenTo(@model.get("datasetConfiguration"), "change:fourBit",
+                (model, fourBit) -> @layer.setFourBit(fourBit) )
 
     @cube.on(
       newMapping : =>

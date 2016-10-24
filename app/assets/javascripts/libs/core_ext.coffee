@@ -4,15 +4,6 @@ _           = require("lodash")
 Request     = require("./request")
 Marionette  = require("backbone.marionette")
 
-# Make sure `$.Deferred`s are never used in Oxalis code, except for whitelisted methods.
-do ->
-
-  $_Deferred = $.Deferred
-  $.Deferred = ->
-
-    console.warn("$.Deferred is deprecated, use libs/deferred or Promise instead.")
-    return $_Deferred(arguments...)
-
 
 _.mixin(
 

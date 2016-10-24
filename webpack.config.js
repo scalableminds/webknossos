@@ -12,7 +12,6 @@ var scriptPaths = {
   "three.trackball"       : nodePath + "three.js/examples/js/controls/TrackballControls",
   "jasny-bootstrap"       : nodePath + "jasny-bootstrap/dist/js/jasny-bootstrap",
   "bootstrap-multiselect" : nodePath + "bootstrap-multiselect/dist/js/bootstrap-multiselect",
-  "jquery-migrate"        : nodePath + "jquery-migrate/dist/jquery-migrate"
 };
 
 
@@ -40,7 +39,6 @@ module.exports = {
       { test: scriptPaths["three.trackball"], loader: "imports?THREE=three" },
       { test: scriptPaths["three"], loader: "exports?THREE" },
       { test: scriptPaths["gzip"], loader: "exports?this.Zlib" },
-      { test: scriptPaths["jquery-migrate"], loader: "imports?jQuery=jquery" },
       {
         test: /\.less$/,
         loader: ExtractTextPlugin.extract('style-loader', 'css-loader!less-loader'),

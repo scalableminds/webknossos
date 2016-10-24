@@ -10,7 +10,6 @@ require("jasny-bootstrap")
 require("whatwg-fetch")
 require("es6-promise")
 require("libs/core_ext")
-require("jquery-migrate")
 require("backbone.marionette")
 
 require("../stylesheets/main.less")

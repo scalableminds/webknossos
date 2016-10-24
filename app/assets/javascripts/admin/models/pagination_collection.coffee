@@ -148,6 +148,9 @@ class PaginationCollection
     clonedCollection.setPageSize(@state.pageSize)
     return clonedCollection
 
+  map : (args...) ->
+    return _.map(args...)
+
 
   _lastPageIndex : ->
     return Math.ceil(@currentModels.length / @state.pageSize) - 1

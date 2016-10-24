@@ -24,7 +24,7 @@ class ShareModalView extends ModalView
   """)
 
 
-  templateHelpers :
+  templateContext :
     getUrl : -> return ShareModalView::getUrl()
 
 

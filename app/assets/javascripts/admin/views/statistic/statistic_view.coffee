@@ -6,7 +6,7 @@ StatisticListView  = require("./statistic_list_view")
 AchievementView    = require("./achievement_view")
 TimeStatisticModel = require("admin/models/statistic/time_statistic_model")
 
-class StatisticView extends Marionette.LayoutView
+class StatisticView extends Marionette.View
 
   className : "statistics container wide"
   template : _.template("""
@@ -43,13 +43,13 @@ class StatisticView extends Marionette.LayoutView
 
   showStatisticsListView : ->
 
-    @timings.show(@statisticListView)
+    @showChildView("timings", @statisticListView)
 
 
   showGraphView : ->
 
-    @graph.show(@graphView)
-    @achievements.show(@achievementView)
+    @showChildView("graph", @graphView)
+    @showChildView("achievements", @achievementView)
 
 
 module.exports = StatisticView

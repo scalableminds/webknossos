@@ -1,7 +1,7 @@
 _          = require("lodash")
 Marionette = require("backbone.marionette")
 
-class ModalView extends Marionette.LayoutView
+class ModalView extends Marionette.View
 
   className : "modal fade"
   attributes :
@@ -15,7 +15,7 @@ class ModalView extends Marionette.LayoutView
     footerTemplate = @footerTemplate || @genericFooterTemplate
 
     data = @serializeData()
-    data = @mixinTemplateHelpers(data)
+    data = @mixinTemplateContext(data)
 
     executeIfFunction = (template) -> return if _.isFunction(template) then template(data) else template
 

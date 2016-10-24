@@ -7,7 +7,7 @@ PaginationCollection        = require("admin/models/pagination_collection")
 PaginationView              = require("admin/views/pagination_view")
 Utils                       = require("libs/utils")
 
-class DatasetSwitchView extends Marionette.LayoutView
+class DatasetSwitchView extends Marionette.View
 
   template : _.template("""
     <div class="pull-right">
@@ -42,7 +42,7 @@ class DatasetSwitchView extends Marionette.LayoutView
     "pagination" : ".pagination-region"
 
 
-  templateHelpers : ->
+  templateContext : ->
     isAdmin : Utils.isUserAdmin(@model)
 
 
@@ -81,8 +81,8 @@ class DatasetSwitchView extends Marionette.LayoutView
   showPaginatedDatasetView : (DatasetView) ->
 
     collection = @collection.clone()
-    @datasetPane.show(new DatasetView(collection : collection))
-    @pagination.show(new PaginationView(collection : collection))
+    @showChildView("datasetPane", new DatasetView(collection : collection))
+    @showChildView("pagination", new PaginationView(collection : collection))
 
 
 

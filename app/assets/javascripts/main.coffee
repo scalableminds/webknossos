@@ -11,25 +11,31 @@ require("whatwg-fetch")
 require("es6-promise")
 require("libs/core_ext")
 require("jquery-migrate")
+require("backbone.marionette")
 
 require("../stylesheets/main.less")
 
-ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
+ErrorHandling.initialize( throwAssertions : false, sendLocalErrors : false )
 
 Router = require("./router")
 
-app.addInitializer( ->
+app.on("start", ->
   app.router = new Router()
   Backbone.history.start( pushState : true )
 )
 
-app.addInitializer( ->
+app.on("start", ->
   Request.receiveJSON("/api/user", doNotCatch : true)
     .then((user) ->
       app.currentUser = user
       ErrorHandling.setCurrentUser(user)
       return
     ).catch((error) -> return)
+)
+
+app.on("start", ->
+  # set app.vent to the global radio channel
+  app.vent = Backbone.Radio.channel('global')
 )
 
 

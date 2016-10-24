@@ -4,7 +4,7 @@ FormSyphon     = require("form-syphon")
 Marionette     = require("backbone.marionette")
 Toast          = require("libs/toast")
 
-class ProjectEditView extends Marionette.LayoutView
+class ProjectEditView extends Marionette.View
 
   template : _.template("""
     <div class="row">

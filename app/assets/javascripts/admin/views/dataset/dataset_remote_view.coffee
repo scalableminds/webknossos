@@ -6,7 +6,7 @@ FormSyphon      = require("form-syphon")
 SelectionView   = require("admin/views/selection_view")
 TeamCollection  = require("admin/models/team/team_collection")
 
-class DatasetRemoteView extends Marionette.LayoutView
+class DatasetRemoteView extends Marionette.View
 
   template : _.template("""
     <div class="row">
@@ -76,7 +76,7 @@ class DatasetRemoteView extends Marionette.LayoutView
 
   onRender : ->
 
-    @team.show(@teamSelectionView)
+    @showChildView("team", @teamSelectionView)
 
 
   addDataset : (evt) ->

@@ -1,7 +1,7 @@
 Marionette = require("backbone.marionette")
 _          = require("lodash")
 
-class AbstractTabView extends Marionette.LayoutView
+class AbstractTabView extends Marionette.View
 
   MARGIN : 40
 
@@ -57,7 +57,7 @@ class AbstractTabView extends Marionette.LayoutView
     @$(@ui.tabNavbarContainer.children()[@activeTabIndex]).addClass("active")
 
     @tabs.forEach (tab) =>
-      @[tab.id].show(tab.view)
+      @showChildView(tab.id, tab.view)
 
     @$('a[data-toggle="tab"]').on('shown.bs.tab', (e) =>
       tabId = $(e.target).data("tab-id")

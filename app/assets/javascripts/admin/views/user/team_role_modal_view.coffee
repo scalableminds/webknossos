@@ -41,7 +41,7 @@ class TeamRoleModalView extends ModalView
     </div>
   """)
 
-  templateHelpers : ->
+  templateContext : ->
     # If only one user is selected then prefill the modal with his current values
     isChecked: (teamName) =>
       users = @getSelectedUsers()

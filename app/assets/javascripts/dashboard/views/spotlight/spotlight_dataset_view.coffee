@@ -2,7 +2,7 @@ _                 = require("lodash")
 Marionette        = require("backbone.marionette")
 TemplateHelpers   = require("libs/template_helpers")
 
-class SpotlightDatasetView extends Marionette.ItemView
+class SpotlightDatasetView extends Marionette.View
 
   className : "dataset panel panel-default"
 
@@ -48,16 +48,17 @@ class SpotlightDatasetView extends Marionette.ItemView
     </div>
   """)
 
-  templateHelpers :
+  templateContext :
     TemplateHelpers : TemplateHelpers
 
-  ui:
+  ui :
     skeletonTraceLink : "#skeletonTraceLink"
     volumeTraceLink : "#volumeTraceLink"
     form : "form"
     contentTypeInput : "#contentTypeInput"
 
-  onShow : ->
+
+  onRender : ->
 
     @$(".link-row > a").tooltip(placement : "bottom")
 

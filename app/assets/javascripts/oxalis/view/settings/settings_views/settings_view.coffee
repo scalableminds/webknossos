@@ -3,7 +3,7 @@ Utils      = require("libs/utils")
 Marionette = require("backbone.marionette")
 Subviews   = require("backbone-subviews")
 
-class SettingsView extends Marionette.ItemView
+class SettingsView extends Marionette.View
 
 
   template : _.template("""

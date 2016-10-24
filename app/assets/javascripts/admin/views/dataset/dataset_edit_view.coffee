@@ -4,7 +4,7 @@ FormSyphon     = require("form-syphon")
 Marionette     = require("backbone.marionette")
 Toast          = require("libs/toast")
 
-class DatasetEditView extends Marionette.LayoutView
+class DatasetEditView extends Marionette.View
 
   template : _.template("""
     <div class="row">
@@ -46,7 +46,7 @@ class DatasetEditView extends Marionette.LayoutView
 
   className : "container wide dataset-administration"
 
-  templateHelpers : ->
+  templateContext : ->
     isChecked : (bool) -> return "checked" if bool
 
   events :

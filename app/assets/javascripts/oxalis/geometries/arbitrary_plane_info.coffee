@@ -1,7 +1,7 @@
 marionette    = require("backbone.marionette")
 ToggleButton  = require("bootstrap-toggle")
 
-class ArbitraryPlaneInfo extends Backbone.Marionette.ItemView
+class ArbitraryPlaneInfo extends Backbone.Marionette.View
 
   id : "arbitrary-info-canvas"
 
@@ -9,7 +9,7 @@ class ArbitraryPlaneInfo extends Backbone.Marionette.ItemView
     <input type="checkbox" <%= getCheckedStatus() %> >
   """)
 
-  templateHelpers :
+  templateContext :
     getCheckedStatus : ->
       return "checked" if @flightmodeRecording
 

@@ -133,8 +133,8 @@ class MergeModalView extends ModalView
           modelValue: -> return "#{@model.get("name")}"
       )
 
-      @tasktype.show(@taskTypeSelectionView)
-      @project.show(@projectSelectionView)
+      @showChildView("tasktype", @taskTypeSelectionView)
+      @showChildView("project", @projectSelectionView)
     )
 
   mergeTaskType : ->

@@ -34,7 +34,7 @@
     "mock-require": "^1.2.1",
     "sinon": "^1.17.3",
     "style-loader": "^0.13.1",
-    "three.js": "georgwiese/three.js.git#scm_oxalis",
+    "three.js": "georgwiese/three.js#scm_oxalis",
     "url-loader": "^0.5.7",
     "wdio-jasmine-framework": "^0.2.3",
     "wdio-selenium-standalone-service": "0.0.5",

@@ -6,7 +6,7 @@ LoggedTimeView             = require("./logged_time_view")
 DatasetSwitchView          = require("./dataset/dataset_switch_view")
 
 
-class DashboardView extends Marionette.LayoutView
+class DashboardView extends Marionette.View
 
   className : "container wide"
   id : "dashboard"
@@ -51,7 +51,7 @@ class DashboardView extends Marionette.LayoutView
     "click #tab-logged-time" : "showLoggedTime"
 
 
-  templateHelpers : ->
+  templateContext : ->
     isAdminView : @options.isAdminView
 
 
@@ -93,7 +93,7 @@ class DashboardView extends Marionette.LayoutView
 
     unless view = @viewCache[viewName]
       view = @viewCache[viewName] = new viewClass(@options)
-    @tabPane.show(view, preventDestroy : true)
+    @showChildView("tabPane", view, preventDestroy : true)
 
 
 module.exports = DashboardView

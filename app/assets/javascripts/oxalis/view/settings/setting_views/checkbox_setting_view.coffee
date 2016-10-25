@@ -22,7 +22,7 @@ class CheckboxSettingView extends AbstractSettingView
     checkbox : "input[type=checkbox]"
 
 
-  templateHelpers :
+  templateContext :
     boolToChecked : (bool) ->
       return if bool then "checked" else ""
 

@@ -10,7 +10,7 @@ TeamCollection   = require("admin/models/team/team_collection")
 SelectionView    = require("admin/views/selection_view")
 DateRangePicker  = require("bootstrap-daterangepicker")
 
-class TaskOverviewView extends Marionette.LayoutView
+class TaskOverviewView extends Marionette.View
 
   id : "task-overview"
   className : "container wide"
@@ -46,7 +46,7 @@ class TaskOverviewView extends Marionette.LayoutView
   """)
 
   regions :
-    "teamRegion" : ".team"
+    "team" : ".team"
 
   events :
     "change @ui.taskTypesCheckbox" : "selectionChanged"
@@ -188,7 +188,7 @@ class TaskOverviewView extends Marionette.LayoutView
         change: "teamChanged"
     )
 
-    @teamRegion.show(teamSelectionView)
+    @showChildView("team", teamSelectionView)
     @listenTo(teamSelectionView, "render", => @updateSelectedTeam())
 
 

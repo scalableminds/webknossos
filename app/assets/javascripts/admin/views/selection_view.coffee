@@ -18,7 +18,7 @@ class SelectionView extends Marionette.CollectionView
 
     # append an empty option if the emptyOption option was supplied
     if options.emptyOption
-      @listenTo(@, "show", @afterRender)
+      @listenTo(@, "render", @afterRender)
 
     @collection.fetch(
       data : options.data

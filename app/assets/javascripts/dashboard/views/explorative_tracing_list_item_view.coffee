@@ -6,7 +6,7 @@ HoverShowHide = require("libs/behaviors/hover_show_hide_behavior")
 Toast         = require("libs/toast")
 Request       = require("libs/request")
 
-class ExplorativeTracingListItemView extends Marionette.ItemView
+class ExplorativeTracingListItemView extends Marionette.View
 
   tagName : "tr"
   template : _.template("""

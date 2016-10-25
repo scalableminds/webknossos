@@ -3,7 +3,7 @@ Marionette                = require("backbone.marionette")
 DashboardTaskListItemView = require("./dashboard_task_list_item_view")
 routes                    = require("routes")
 
-class TrackedTimeView extends Marionette.CompositeView
+class TrackedTimeView extends Marionette.View
 
   template : _.template("""
     <h3>Tracked Time</h3>

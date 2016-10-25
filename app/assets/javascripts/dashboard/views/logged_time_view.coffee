@@ -5,7 +5,7 @@ LoggedTimeListView   = require("./logged_time_list_view")
 LoggedTimeCollection = require("../models/logged_time_collection")
 
 
-class LoggedTimeView extends Marionette.LayoutView
+class LoggedTimeView extends Marionette.View
 
   template : _.template("""
     <h3>Tracked Time</h3>
@@ -36,7 +36,7 @@ class LoggedTimeView extends Marionette.LayoutView
   onRender : ->
 
     if @collection.length > 0
-      @timeTable.show(new LoggedTimeListView({@collection}))
+      @showChildView("timeTable", new LoggedTimeListView({@collection}))
       _.defer( => @addGraph())
 
 

@@ -4,7 +4,7 @@ Marionette           = require("backbone.marionette")
 AbstractTreeRenderer = require("oxalis/view/skeletontracing/abstract_tree_renderer")
 
 
-class AbstractTreeView extends Marionette.ItemView
+class AbstractTreeView extends Marionette.View
 
   className : "flex-column"
   template : _.template("""

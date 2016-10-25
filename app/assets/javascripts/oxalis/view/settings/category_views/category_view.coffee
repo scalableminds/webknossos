@@ -2,7 +2,7 @@ _          = require("lodash")
 Marionette = require("backbone.marionette")
 Subviews   = require("backbone-subviews")
 
-class CategoryView extends Marionette.ItemView
+class CategoryView extends Marionette.View
   # Abstract class to create category views. Subclasses must specify
   # `subviewCreatorsList` like so:
   #

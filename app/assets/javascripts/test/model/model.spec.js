@@ -25,6 +25,8 @@ class Binary {
   upperBoundary = [4, 5, 6]
 }
 
+class Layer {}
+
 class Flycam2d {
   setPosition() {}
 }
@@ -41,13 +43,16 @@ mockRequire("../../oxalis/model/skeletontracing/skeletontracing", _.noop)
 mockRequire("../../oxalis/model/volumetracing/volumetracing", _.noop)
 mockRequire("../../oxalis/model/user", User)
 mockRequire("../../oxalis/model/dataset_configuration", DatasetConfiguration)
+mockRequire("../../oxalis/model/binary/layers/wk_layer", Layer)
+mockRequire("../../oxalis/model/binary/layers/nd_store_layer", Layer)
 
 const TRACING_OBJECT = {
   content : {
     dataSet : {
       name : "DatasetName",
       dataStore : {
-        url : "dataStoreUrl"
+        url : "dataStoreUrl",
+        typ : "webknossos-store"
       },
       dataLayers : [{
         name : "layer1",

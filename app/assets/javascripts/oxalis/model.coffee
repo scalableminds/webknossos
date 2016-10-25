@@ -14,6 +14,8 @@ constants            = require("./constants")
 Request              = require("../libs/request")
 Toast                = require("../libs/toast")
 ErrorHandling        = require("../libs/error_handling")
+WkLayer              = require("./model/binary/layers/wk_layer")
+NdStoreLayer         = require("./model/binary/layers/nd_store_layer")
 
 # This is THE model. It takes care of the data including the
 # communication with the server.
@@ -79,12 +81,8 @@ class Model extends Backbone.Model
 
     ).then( (tracing) =>
 
-      layers = @getLayers(tracing.content.contentData.customLayers)
-      return Promise.all(@getDataTokens(layers)).then(-> Promise.resolve([tracing, layers]))
-
-    ).then( ([tracing, layers]) =>
-
-      @initializeWithData(tracing, layers)
+      layerInfos = @getLayerInfos(tracing.content.contentData.customLayers)
+      @initializeWithData(tracing, layerInfos)
 
     )
 
@@ -112,9 +110,19 @@ class Model extends Backbone.Model
     return allowedModes
 
 
-  initializeWithData : (tracing, layers) ->
+  initializeWithData : (tracing, layerInfos) ->
 
+    dataStore = tracing.content.dataSet.dataStore
     dataset = @get("dataset")
+
+    LayerClass = switch dataStore.typ
+      when "webknossos-store" then WkLayer
+      when "ndstore" then NdStoreLayer
+      else throw new Error("Unknown datastore type: #{dataStore.typ}")
+
+    layers = layerInfos.map((layerInfo) ->
+      new LayerClass(layerInfo, dataset.get("name"), dataStore)
+    )
 
     ErrorHandling.assertExtendContext({
       task: @get("tracingId")
@@ -144,12 +152,11 @@ class Model extends Backbone.Model
     maxZoomStep = -Infinity
 
     for layer in layers
-      layer.bitDepth = parseInt(layer.elementClass.substring(4))
       maxLayerZoomStep = Math.log(Math.max(layer.resolutions...)) / Math.LN2
       @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @connectionInfo)
       maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep)
 
-    @buildMappingsObject(layers)
+    @buildMappingsObject()
 
     if @getColorBinaries().length == 0
       Toast.error("No data available! Something seems to be wrong with the dataset.")
@@ -206,7 +213,7 @@ class Model extends Backbone.Model
 
 
   # For now, since we have no UI for this
-  buildMappingsObject : (layers) ->
+  buildMappingsObject : ->
 
     segmentationBinary = @getSegmentationBinary()
 
@@ -216,37 +223,6 @@ class Model extends Backbone.Model
         getActive : => segmentationBinary.activeMapping
         activate : (mapping) => segmentationBinary.setActiveMapping(mapping)
       }
-
-
-  getDataTokens : (layers) ->
-
-    for layer in layers
-      # scope layer as otherwise layer would always end up to be the last layer
-      do (layer) =>
-        layer.renewToken = (oldToken) =>
-          @getDataToken(layer, oldToken)
-
-        layer.renewToken()
-
-
-  getDataToken : (layer, oldToken) ->
-
-    # do not request new token if token is already requested
-    return if layer.tokenPromisePending
-
-    # do not request new token if token was already renewed
-    # this can happen if the data request was sent before the token renewal
-    # and ended after the token renewal
-    return if oldToken and oldToken is not layer.token
-
-    dataStoreUrl = @get("dataset").get("dataStore").url
-
-    layer.tokenPromisePending = true
-    layer.tokenPromise = Request.receiveJSON("/dataToken/generate?dataSetName=#{@get("datasetName")}&dataLayerName=#{layer.name}").then( (dataStore) ->
-      layer.token = dataStore.token
-      layer.url = dataStoreUrl
-      layer.tokenPromisePending = false
-    )
 
 
   getColorBinaries : ->
@@ -263,7 +239,7 @@ class Model extends Backbone.Model
     )
 
 
-  getLayers : (userLayers) ->
+  getLayerInfos : (userLayers) ->
     # Overwrite or extend layers with userLayers
 
     layers = @get("dataset").get("dataLayers")

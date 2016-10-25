@@ -4,7 +4,7 @@ Subviews          = require("backbone-subviews")
 SliderSettingView = require("../setting_views/slider_setting_view")
 ColorSettingView  = require("../setting_views/color_setting_view")
 
-class LayerColorSettingsView extends Marionette.ItemView
+class LayerColorSettingsView extends Marionette.View
 
   template : _.template("""
     <p><%- displayName %></p>

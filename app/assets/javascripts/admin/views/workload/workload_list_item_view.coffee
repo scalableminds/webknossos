@@ -3,7 +3,8 @@ Marionette         = require("backbone.marionette")
 WorkloadCollection = require("admin/models/workload/workload_collection")
 TemplateHelpers      = require("libs/template_helpers")
 
-class WorkloadListItemView extends Marionette.CompositeView
+class WorkloadListItemView extends Marionette.View
+
   tagName : "tr"
   template : _.template("""
     <td><%- name %></td>
@@ -16,7 +17,7 @@ class WorkloadListItemView extends Marionette.CompositeView
     <td><%- availableTaskCount %></td>
   """)
 
-  templateHelpers:
+  templateContext:
     TemplateHelpers : TemplateHelpers
 
 module.exports = WorkloadListItemView

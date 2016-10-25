@@ -1,7 +1,7 @@
 _          = require("lodash")
 Marionette = require("backbone.marionette")
 
-class HelpLogoView extends Marionette.ItemView
+class HelpLogoView extends Marionette.View
 
   className : "help-logo-view flex-column"
   template : _.template("""

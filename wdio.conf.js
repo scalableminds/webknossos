@@ -139,7 +139,7 @@ exports.config = {
     jasmineNodeOpts: {
         //
         // Jasmine default timeout
-        defaultTimeoutInterval: 15000,
+        defaultTimeoutInterval: 25000,
 
         //
         // The Jasmine framework allows interception of each assertion in order to log the state of the application

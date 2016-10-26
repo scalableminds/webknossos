@@ -6,6 +6,7 @@ require("babel-register")(
 );
 require("babel-polyfill");
 const path = require('path');
+const child_process = require("child_process")
 
 exports.config = {
 
@@ -90,7 +91,7 @@ exports.config = {
     baseUrl: 'http://localhost:9000',
     //
     // Default timeout for all waitFor* commands.
-    waitforTimeout: 10000,
+    waitforTimeout: 25000,
     //
     // Default timeout in milliseconds for request
     // if Selenium Grid doesn't send response
@@ -172,6 +173,10 @@ exports.config = {
     // Gets executed before test execution begins. At this point you can access all global
     // variables, such as `browser`. It is the perfect place to define custom commands.
     before: function (capabilities, specs) {
+      console.log("Dropping DB!")
+      child_process.execFileSync("./tools/dropDB.sh", ["oxalis-testing", "localhost", "27017"], {stdio : "ignore"})
+      child_process.execFileSync("./tools/import_export/import.sh", ["oxalis-testing", "testdb", "localhost", "27017"], {stdio : "ignore"})
+
       browser.setViewportSize({
         width: 1024,
         height: 768

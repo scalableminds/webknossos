@@ -4,7 +4,7 @@ Marionette = require("backbone.marionette")
 c3         = require("c3")
 moment     = require("moment")
 
-class GraphView extends Marionette.ItemView
+class GraphView extends Marionette.View
 
   template : _.template("""
     <h3>Overall Weekly Tracing Time</h3>
@@ -14,7 +14,7 @@ class GraphView extends Marionette.ItemView
 
   initialize : ->
 
-    @listenTo(@, "show", @addGraph)
+    @listenTo(@, "attach", @addGraph)
 
 
   addGraph : ->

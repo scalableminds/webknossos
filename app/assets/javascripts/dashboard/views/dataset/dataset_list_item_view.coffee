@@ -106,7 +106,7 @@ class DatasetListItemView extends Marionette.CompositeView
   childView : DatasetAccessView
   childViewContainer : "tbody"
 
-  templateHelpers :
+  templateContext :
     TemplateHelpers : TemplateHelpers
 
   events :

@@ -3,7 +3,7 @@ Utils                  = require("libs/utils")
 ColorConverter         = require("three.color")
 scrollIntoViewIfNeeded = require("scroll-into-view-if-needed")
 
-class ListTreeItemView extends Marionette.ItemView
+class ListTreeItemView extends Marionette.View
 
   tagName : "li"
   template : _.template("""
@@ -18,7 +18,7 @@ class ListTreeItemView extends Marionette.ItemView
   events :
     "click a" : "setActive"
 
-  templateHelpers : ->
+  templateContext : ->
     getIcon : =>
       if @model.get("treeId") == @activeTreeId
         return "fa-angle-right"
@@ -40,7 +40,7 @@ class ListTreeItemView extends Marionette.ItemView
     @parent.setActiveTree(id)
 
 
-  onShow : ->
+  onRender : ->
 
     # scroll to active tree
     if @model.get("treeId") == @activeTreeId

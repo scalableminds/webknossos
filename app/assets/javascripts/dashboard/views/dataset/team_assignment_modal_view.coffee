@@ -28,7 +28,7 @@ class TeamAssignmentModalView extends ModalView
     <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
   """
 
-  templateHelpers : ->
+  templateContext : ->
     isChecked : (teamName) =>
       if _.includes(@dataset.get("allowedTeams"), teamName)
         return "checked"

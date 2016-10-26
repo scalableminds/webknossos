@@ -71,7 +71,7 @@ class CreateTeamModalView extends ModalView
 
   onRender : ->
 
-    @parentTeams.show(@teamSelectionView)
+    @showChildView("parentTeams", @teamSelectionView)
 
 
 module.exports = CreateTeamModalView

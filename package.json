@@ -40,10 +40,10 @@
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",
-    "backbone": "1.2.3",
+    "backbone": "1.3.3",
     "backbone-subviews": "^0.7.4",
-    "backbone.marionette": "^2.4.4",
-    "backbone.wreqr": "^1.3.5",
+    "backbone.marionette": "^3.0.0",
+    "backbone.radio": "^2.0.0",
     "bootstrap": "^3.3.6",
     "bootstrap-daterangepicker": "^2.1.17",
     "bootstrap-multiselect": "^0.9.13",

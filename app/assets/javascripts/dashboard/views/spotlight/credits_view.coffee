@@ -2,7 +2,7 @@ _          = require("lodash")
 Marionette = require("backbone.marionette")
 routes     = require("routes")
 
-class CreditsView extends Marionette.ItemView
+class CreditsView extends Marionette.View
 
   className : "well"
   id : "credits"

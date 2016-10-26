@@ -2,9 +2,9 @@ _          = require("lodash")
 app        = require("app")
 Marionette = require("backbone.marionette")
 
-class PaginationView extends Marionette.ItemView
+class PaginationView extends Marionette.View
 
-  pagingatorTemplate : _.template("""
+  paginatorTemplate : _.template("""
     <li class="first <% if (Pagination.currentPage == 0) { %> disabled <% } %>">
       <a><i class="fa fa-angle-double-left"></i></a>
     </li>
@@ -52,7 +52,8 @@ class PaginationView extends Marionette.ItemView
   """)
 
   className : "container wide"
-  templateHelpers : ->
+
+  templateContext : ->
     paginationInfo = @collection.getPaginationInfo()
     pageRange : _.range(
       Math.max(paginationInfo.firstPage, paginationInfo.currentPage - 4),
@@ -74,38 +75,46 @@ class PaginationView extends Marionette.ItemView
 
 
   initialize : (options) ->
+
     @options = options
     @listenToOnce(@collection, "reset", @searchByHash)
     @listenTo(@collection, "reset", @render)
 
 
   goFirst : (evt) ->
+
     evt?.preventDefault()
     @collection.getFirstPage()
 
   goLast : (evt) ->
+
     evt?.preventDefault()
     @collection.getLastPage()
 
   goBack : (evt) ->
+
     evt?.preventDefault()
     @collection.getPreviousPage()
 
   goNext : (evt) ->
+
     evt?.preventDefault()
     @collection.getNextPage()
 
 
   handleClickPage : (evt) ->
+
     evt?.preventDefault()
     page = $(evt.target).text()
     @collection.getPage(parseInt(page) - 1)
 
   goToPage : (page) ->
+
     @collection.getPage(page)
 
 
   addElement : ->
+
     app.vent.trigger("paginationView:addElement")
 
 
@@ -118,23 +127,19 @@ class PaginationView extends Marionette.ItemView
 
 
   render : ->
+
     this._ensureViewIsIntact()
     this.triggerMethod('before:render', this)
 
-    obj = @templateHelpers()
-    if not this.isRendered
+    obj = @templateContext()
+    if not this._isRendered
       @$el.html(@template(obj))
-      this.isRendered = true
+    this._isRendered = true
 
-    @$el.find("ul.pagination").html(@pagingatorTemplate(obj))
+    @$el.find("ul.pagination").html(@paginatorTemplate(obj))
     this.bindUIElements()
     this.triggerMethod('render', this)
     return this
-
-
-  # afterRender : ->
-
-  #   @ui.inputSearch.val(@collection.state.filterQuery)
 
 
   searchByHash : ->

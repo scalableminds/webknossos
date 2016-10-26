@@ -2,7 +2,7 @@ _          = require("lodash")
 Marionette = require("backbone.marionette")
 Request    = require("libs/request")
 
-class TaskQueryDocumentationModal extends Marionette.ItemView
+class TaskQueryDocumentationModal extends Marionette.View
 
   tagName : "div"
   className : "modal fade"

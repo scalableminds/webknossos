@@ -45,7 +45,7 @@ class TaskListView extends Marionette.CompositeView
     "click .modal .btn-primary" : "addNewTeam"
     "click @ui.detailsToggle" : "toggleAllDetails"
 
-  templateHelpers : ->
+  templateContext : ->
     getTitle : =>
       if name = @collection.fullCollection.projectName
         return "Tasks for Project #{name}"

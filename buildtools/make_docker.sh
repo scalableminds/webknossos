@@ -20,7 +20,7 @@ ITERATION=${4}
 pushd ${WORKSPACE}
 
 # PRE
-docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+docker login -u $DOCKER_USER -p $DOCKER_PASS
 docker pull scalableminds/sbt:$SBT_VERSION_TAG
 
 # BUILD

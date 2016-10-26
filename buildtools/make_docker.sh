@@ -32,7 +32,7 @@ docker-compose run oxalis-frontend-tests
 docker-compose run oxalis-e2e-tests
 
 # DOCKER SMOKE TEST
-DOCKER_TAG=$ITERATION docker-compose up -d oxalis &
+DOCKER_TAG=$ITERATION docker-compose up oxalis &
 DOCKER_COMPOSE_PID=$!
 sleep 10
 ./test/infrastructure/deployment.bash

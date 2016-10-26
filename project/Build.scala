@@ -110,8 +110,8 @@ object Resolvers {
 
 object AssetCompilation {
   object SettingsKeys{
-    val webpackPath = SettingKey[String]("webpack-path","where webpack is installed")
-    val npmPath = SettingKey[String]("npm-path","where npm is installed")
+    val webpackPath = SettingKey[String]("webpack-path", "where webpack is installed")
+    val npmPath = SettingKey[String]("npm-path", "where npm is installed")
   }
 
   import SettingsKeys._
@@ -138,7 +138,9 @@ object AssetCompilation {
 
   private def npmInstall: Def.Initialize[Task[Seq[File]]] = (npmPath, baseDirectory, streams) map { (npm, base, s) =>
     try{
-      startProcess(npm, "install", base ) ! s.log
+      val exitValue = startProcess(npm, "install", base) ! s.log
+      if(exitValue != 0)
+        throw new Error(s"Running npm failed with exit code: $exitValue")
     } catch {
       case e: java.io.IOException =>
         s.log.error("Npm couldn't be found. Please set the configuration key 'AssetCompilation.npmPath' properly. " + e.getMessage)

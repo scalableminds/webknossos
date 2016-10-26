@@ -57,13 +57,13 @@ export default class ProjectPage {
       .alertAccept()
   }
 
-  editFirstProject(newExperience) {
+  editFirstProject(newPriority) {
 
     return browser
       .waitForExist(this.firstEditLink)
       .click(this.firstEditLink)
       .waitForExist(this.projectPriorityInput)
-      .setValue(this.projectPriorityInput, newExperience)
+      .setValue(this.projectPriorityInput, newPriority)
       .click(this.confirmButton)
   }
 

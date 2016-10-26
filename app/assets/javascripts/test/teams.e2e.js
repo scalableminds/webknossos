@@ -66,6 +66,8 @@ describe("Team List", function() {
     const teamName = "TestTeam"
     await page.deleteTeam(teamName)
 
+    browser.pause(5000)
+
     const newRowCount = await page.getTeamListEntryCount()
     const newTeamCount = await page.getTeamCountFromServer()
 

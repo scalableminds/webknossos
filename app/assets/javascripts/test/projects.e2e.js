@@ -58,11 +58,11 @@ describe("Project List", function() {
 
   it("should edit a project's experience", async function() {
 
-    const newExperience = 42
-    await page.editFirstProject(newExperience)
+    const newPriority = 42
+    await page.editFirstProject(newPriority)
 
     const allPriorities = await page.getAllPriorities()
-    expect(allPriorities).toContain(newExperience)
+    expect(allPriorities).toContain(newPriority)
   })
 
 

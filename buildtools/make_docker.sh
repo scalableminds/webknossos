@@ -34,9 +34,9 @@ docker-compose run oxalis-e2e-tests
 # DOCKER SMOKE TEST
 DOCKER_TAG=$ITERATION docker-compose up oxalis &
 DOCKER_COMPOSE_PID=$!
+trap "kill $DOCKER_COMPOSE_PID" EXIT
 sleep 10
 ./test/infrastructure/deployment.bash
-false
 kill $DOCKER_COMPOSE_PID
 
 # PUBLISH

@@ -36,6 +36,7 @@ DOCKER_TAG=$ITERATION docker-compose up oxalis &
 DOCKER_COMPOSE_PID=$!
 sleep 10
 ./test/infrastructure/deployment.bash
+false
 kill $DOCKER_COMPOSE_PID
 
 # PUBLISH

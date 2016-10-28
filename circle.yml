@@ -14,7 +14,6 @@ dependencies:
     - "~/.m2"
     - "~/.ivy2"
     - "~/.sbt"
-    - "node_modules"
   override:
     - docker pull scalableminds/sbt:$SBT_VERSION_TAG
     - docker-compose run sbt clean compile stage

@@ -10,6 +10,8 @@ ENV NEWRELIC_AGENT_VERSION 3.31.1
 RUN mkdir -p "$INSTALL_DIR"
 WORKDIR "$INSTALL_DIR"
 
+VOLUME /srv/webknossos-datastore/binaryData /srv/webknossos-datastore/userBinaryData 
+
 COPY target/universal/stage .
 
 RUN groupadd -r app-user \

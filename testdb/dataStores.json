@@ -1,1 +1,1 @@
-{"_id":{"$oid":"570b9f4c4bb848d0885ee70d"},"name":"localhost","key":"something-secure"}
+{"_id":{"$oid":"570b9f4c4bb848d0885ee70d"},"name":"localhost","key":"something-secure","typ":"webknossos-store"}

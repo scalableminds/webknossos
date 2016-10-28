@@ -38,11 +38,11 @@ describe("Dashboard", function() {
     })
 
 
-    it("should have no available tasks", async function() {
+    it("should have one available task", async function() {
 
       await page.openTasksTab()
       return page.getTasks().then(function(tasks) {
-        expect(tasks.length).toBe(0)
+        expect(tasks.length).toBe(1)
       })
     })
 
@@ -51,13 +51,12 @@ describe("Dashboard", function() {
 
       await page.getNewTask()
       return page.getTasks()
-      // TODO
-      // expect(tasks.length).toBe(1)
+        .then((tasks) => expect(tasks.length).toBe(2))
     })
   })
 
 
-  describe("as another user", function() {
+  describe("As another user", function() {
 
     beforeEach(function() {
       page.openDashboardAsUser()

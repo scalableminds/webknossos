@@ -62,7 +62,7 @@ class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll
   }
 
   private def runWebdriverTests: Int = {
-    val result = "npm run test-e2e".run(getProcessIO(false)).exitValue()
+    val result = "npm run test-e2e".run().exitValue()
     result
   }
 

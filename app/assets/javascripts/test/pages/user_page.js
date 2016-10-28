@@ -1,4 +1,4 @@
-import { map } from "lodash"
+import { map, isArray } from "lodash"
 
 export default class UserPage {
 
@@ -120,18 +120,24 @@ export default class UserPage {
   }
 
 
-  getExperienceForUser(userName) {
+  getExperiencesForUser(userName) {
 
     const userRowSelector = `tbody tr[data-name='${userName}']`
     return browser
       .pause(500)
-      .getText(`${userRowSelector} td:nth-child(5)`)
-      .then(function(text) {
-        const [domain, level] = text.split(":")
-        return {
-          domain : domain.trim(),
-          level : parseInt(level)
+      .getText(`${userRowSelector} td:nth-child(5) .label`)
+      .then(function(labelStrings) {
+        if (!isArray(labelStrings)) {
+          labelStrings = [labelStrings];
         }
+
+        return labelStrings.map((labelString) => {
+          const [domain, level] = labelString.split(":")
+          return {
+            domain : domain.trim(),
+            level : parseInt(level)
+          }
+        });
       })
   }
 }

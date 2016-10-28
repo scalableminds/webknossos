@@ -64,8 +64,8 @@ describe("User List", function() {
     const newExperience = {domain : "Testing", level : 42}
     await page.setExperience("SCM Boy", newExperience)
 
-    const experience = await page.getExperienceForUser("SCM Boy")
-    expect(experience).toEqual(newExperience)
+    const experiences = await page.getExperiencesForUser("SCM Boy")
+    expect(experiences).toContain(newExperience)
   })
 
 
@@ -74,19 +74,18 @@ describe("User List", function() {
     const newExperience = {domain : "Testing", level : 23}
     await page.increaseExperience("SCM Boy", newExperience)
 
-    const experience = await page.getExperienceForUser("SCM Boy")
-    expect(experience).toEqual(newExperience)
+    const experiences = await page.getExperiencesForUser("SCM Boy")
+    expect(experiences).toContain(newExperience)
   })
 
 
   it("should delete an experience", async function() {
 
     const newExperience = {domain : "Testing", level : 23}
-    const deletedExperience = {domain : "", level : NaN}
     await page.deleteExperience("SCM Boy", newExperience)
 
-    const experience = await page.getExperienceForUser("SCM Boy")
-    expect(experience).toEqual(deletedExperience)
+    const experiences = await page.getExperiencesForUser("SCM Boy")
+    expect(experiences).not.toContain(newExperience)
   })
 })
 

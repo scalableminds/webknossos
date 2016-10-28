@@ -11,7 +11,7 @@ server {
   {% if mode == "dev" %}
 
   access_log  /var/log/nginx/{{name}}.access.log;
-  proxy_read_timeout 480s;
+  proxy_read_timeout 3600s;
 
   location / {
     {% if project != "director" and not (project == "oxalis" and branch == "dev") %}

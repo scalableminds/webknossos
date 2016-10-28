@@ -9,7 +9,7 @@ dependencies:
     - sudo mv docker-compose /usr/local/bin/docker-compose
     - sudo chmod +x /usr/local/bin/docker-compose
     - sudo service docker start
-    - docker login -u $DOCKER_USER -p $DOCKER_PASS
+    - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
   cache_directories:
     - "~/.m2"
     - "~/.ivy2"

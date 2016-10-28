@@ -16,7 +16,10 @@ export default class DashboardPage {
   timeGraphEntries = "circle"
 
   get() {
-    return browser.url("/dashboard")
+    // Waiting for all JS event handlers to be attached
+    return browser
+      .url("/dashboard")
+      .pause(500)
   }
 
   openExplorativeTab() {
@@ -32,7 +35,6 @@ export default class DashboardPage {
 
     return browser
       .click(this.tasksTab)
-      .click(this.tasksTab)
       .waitForExist(this.finishedTasksButton)
   }
 
@@ -40,8 +42,7 @@ export default class DashboardPage {
 
     return browser
       .click(this.trackedTimeTab)
-      .click(this.trackedTimeTab)
-      .waitForVisible("svg", 1000)
+      .waitForExist("svg")
   }
 
   getTasks() {
@@ -55,7 +56,10 @@ export default class DashboardPage {
   getNewTask() {
 
     return this.openTasksTab().then(() => {
-      return browser.click(this.newTaskButton)
+      return browser
+        .click(this.newTaskButton)
+        .alertAccept()
+        .pause(500) // Wait for DOM to refresh
     })
   }
 
@@ -69,7 +73,9 @@ export default class DashboardPage {
   openDashboardAsUser() {
 
     // Open as user 'SCM Boy'
-    return browser.url("/users/570b9f4d2a7c0e4d008da6ef/details")
+    return browser
+      .url("/users/570b9f4d2a7c0e4d008da6ef/details")
+      .pause(500) // Wait for DOM to refresh
   }
 
   getTimeTableEntries() {

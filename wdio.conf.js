@@ -174,8 +174,9 @@ exports.config = {
     // variables, such as `browser`. It is the perfect place to define custom commands.
     before: function (capabilities, specs) {
       console.log("Dropping DB!")
-      child_process.execFileSync("./tools/dropDB.sh", ["oxalis-testing", "localhost", "27017"], {stdio : "ignore"})
-      child_process.execFileSync("./tools/import_export/import.sh", ["oxalis-testing", "testdb", "localhost", "27017"], {stdio : "ignore"})
+      child_process.execFileSync("./tools/import_export/import.sh",
+                                 ["oxalis-testing", "testdb", "localhost", "27017"],
+                                 {stdio : "ignore"})
 
       browser.setViewportSize({
         width: 1024,

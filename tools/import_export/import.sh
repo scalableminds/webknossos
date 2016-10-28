@@ -23,5 +23,6 @@ dump_dir=$2
 for dump_file in `ls $dump_dir`
 do
   collection=${dump_file%.json}
+  mongo "$db" --host "$host" --port "$port" --eval "db.${collection}.drop()"
   mongoimport --db "$db" --host "$host" --port "$port" --collection "$collection" --file "$dump_dir/$dump_file"
 done

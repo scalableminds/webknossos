@@ -40,6 +40,7 @@ export default class TeamPage {
       .waitForExist(this.inputTeamName)
       .setValue(this.inputTeamName, teamName)
       .click(this.confirmButton)
+      .pause(500)  // Wait for DOM updates
   }
 
 

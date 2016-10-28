@@ -20,6 +20,9 @@ dependencies:
     - docker-compose run sbt clean compile stage
     - docker build -t scalableminds/webknossos-datastore:$CIRCLE_BUILD_NUM .
 
+test:
+  override:
+    - sleep 1
 
 deployment:
   hub:

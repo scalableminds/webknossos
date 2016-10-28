@@ -1,0 +1,33 @@
+machine:
+  environment:
+    SBT_VERSION_TAG: sbt-0.13.9_mongo-3.2.1_node-4.x_jdk-8
+
+dependencies:
+  pre:
+    - curl -sSL https://s3.amazonaws.com/circle-downloads/install-circleci-docker.sh | bash -s -- 1.10.0
+    - curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > docker-compose
+    - sudo mv docker-compose /usr/local/bin/docker-compose
+    - sudo chmod +x /usr/local/bin/docker-compose
+    - sudo service docker start
+    - docker login -u $DOCKER_USER -p $DOCKER_PASS
+  cache_directories:
+    - "~/.m2"
+    - "~/.ivy2"
+    - "~/.sbt"
+    - "node_modules"
+  override:
+    - docker pull scalableminds/sbt:$SBT_VERSION_TAG
+    - docker-compose run sbt clean compile stage
+    - docker build -t scalableminds/webknossos-datastore:$CIRCLE_BUILD_NUM .
+
+
+deployment:
+  hub:
+    branch: /.*/
+    commands:
+      - docker tag scalableminds/webknossos-datastore:$CIRCLE_BUILD_NUM scalableminds/webknossos-datastore:branch-$CIRCLE_BRANCH
+      - docker tag scalableminds/webknossos-datastore:$CIRCLE_BUILD_NUM scalableminds/webknossos-datastore:commit-$CIRCLE_SHA1
+      - docker push scalableminds/webknossos-datastore:$CIRCLE_BUILD_NUM
+      - docker push scalableminds/webknossos-datastore:branch-$CIRCLE_BRANCH
+      - docker push scalableminds/webknossos-datastore:commit-$CIRCLE_SHA1
+      - docker logout

@@ -1,0 +1,20 @@
+version: '2'
+
+services:
+
+  time-tracker:
+    image: scalableminds/webknossos-datastore:$DOCKER_TAG
+    ports:
+      - "9000:9000"
+    environment:
+      - PORT=9000
+      - MODE=$MODE
+      - FLAGS=$FLAGS
+
+  sbt:
+    image: scalableminds/sbt:$SBT_VERSION_TAG
+    volumes:
+      - ".:/project"
+      - "~/.m2:/root/.m2"
+      - "~/.ivy2:/root/.ivy2"
+      - "~/.sbt:/root/.sbt"

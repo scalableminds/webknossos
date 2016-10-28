@@ -42,7 +42,8 @@ export default class RegisterPage {
   getModalText() {
 
     return browser
-      .waitForVisible(this.modalDescription, 1000)
+      .waitForExist(this.modalDescription)
+      .waitForVisible(this.modalDescription, 2000)
       .getText(this.modalDescription)
   }
 

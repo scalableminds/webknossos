@@ -1,0 +1,1 @@
+{"_id":{"$oid":"58135bfd2faeb3190181c057"},"name":"Test_Project","team":"Connectomics department","_owner":{"$oid":"570b9f4d2a7c0e4d008da6ef"},"priority":100,"paused":false,"assignmentConfiguration":{"location":"webknossos"}}

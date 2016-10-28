@@ -1,12 +1,10 @@
 machine:
   environment:
     SBT_VERSION_TAG: sbt-0.13.9_mongo-3.2.1_node-4.x_jdk-8
-  services:
-    - docker
 
 dependencies:
   pre:
-    - docker version
+    - curl -sSL https://s3.amazonaws.com/circle-downloads/install-circleci-docker.sh | bash -s -- 1.10.0
     - curl -L https://github.com/docker/compose/releases/download/1.7.1/docker-compose-`uname -s`-`uname -m` > docker-compose
     - sudo mv docker-compose /usr/local/bin/docker-compose
     - sudo chmod +x /usr/local/bin/docker-compose

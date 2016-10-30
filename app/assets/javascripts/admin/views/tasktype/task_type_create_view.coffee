@@ -7,7 +7,7 @@ TeamCollection = require("admin/models/team/team_collection")
 SelectionView  = require("admin/views/selection_view")
 Toast          = require("libs/toast")
 
-class TaskTypeCreateView extends Marionette.LayoutView
+class TaskTypeCreateView extends Marionette.View
 
   template : _.template("""
     <div class="row">
@@ -128,7 +128,7 @@ class TaskTypeCreateView extends Marionette.LayoutView
   """)
   className : "container wide task-types-administration"
 
-  templateHelpers : ->
+  templateContext : ->
     getTitle : => if @isEditingMode then "Update" else "Create"
     isChecked : (bool) -> return "checked" if bool
     isSelected : (bool) -> return "selected" if bool
@@ -188,12 +188,12 @@ class TaskTypeCreateView extends Marionette.LayoutView
       name : "team"
       required : true
     )
-    @team.show(teamSelectionView)
+    @showChildView("team", teamSelectionView)
 
     @ui.multiselect.multiselect()
 
 
-  onDestroy : ->
+  onBeforeDestroy : ->
 
     @ui.multiselect.multiselect("destroy")
 

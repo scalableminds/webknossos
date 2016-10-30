@@ -31,7 +31,7 @@ object OpenAssignmentService extends FoxImplicits{
     OpenAssignmentDAO.removeById(assignment._id)
 
   def insertOneFor(task: Task, project: Project)(implicit ctx: DBAccessContext) = {
-    OpenAssignmentDAO.insert(OpenAssignment.from(task, project.priority))
+    OpenAssignmentDAO.insert(OpenAssignment.from(task, project))
   }
 
   def countOpenAssignments(implicit ctx: DBAccessContext) = {
@@ -39,7 +39,7 @@ object OpenAssignmentService extends FoxImplicits{
   }
 
   def insertInstancesFor(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
-    val assignments = List.fill(remainingInstances)(OpenAssignment.from(task, project.priority))
+    val assignments = List.fill(remainingInstances)(OpenAssignment.from(task, project))
     Fox.serialSequence(assignments)(a => OpenAssignmentDAO.insert(a))
   }
 

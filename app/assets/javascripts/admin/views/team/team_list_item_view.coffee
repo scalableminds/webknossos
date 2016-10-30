@@ -2,7 +2,7 @@ _               = require("lodash")
 Marionette      = require("backbone.marionette")
 TemplateHelpers = require("libs/template_helpers")
 
-class TeamListItemView extends Marionette.ItemView
+class TeamListItemView extends Marionette.View
 
   tagName : "tr"
   template : _.template("""
@@ -22,7 +22,7 @@ class TeamListItemView extends Marionette.ItemView
     </td>
   """)
 
-  templateHelpers :
+  templateContext :
     TemplateHelpers : TemplateHelpers
 
   events :

@@ -19,7 +19,7 @@ class ColorSettingView extends AbstractSettingView
   """)
 
 
-  templateHelpers :
+  templateContext :
     rgbToHex : Utils.rgbToHex
 
 

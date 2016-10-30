@@ -4,7 +4,7 @@ routes        = require("routes")
 Toast         = require("libs/toast")
 Request       = require("libs/request")
 
-class TaskCreateFromNMLView extends Marionette.LayoutView
+class TaskCreateFromNMLView extends Marionette.View
 
   id: "create-from-nml"
 

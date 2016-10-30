@@ -5,7 +5,7 @@ Request         = require("libs/request")
 Marionette      = require("backbone.marionette")
 AnnotationModel = require("admin/models/task/annotation_model")
 
-class TaskAnnotationView extends Marionette.ItemView
+class TaskAnnotationView extends Marionette.View
 
   tagName : "tr"
   attributes : ->
@@ -35,7 +35,7 @@ class TaskAnnotationView extends Marionette.ItemView
     </td>
   """)
 
-  templateHelpers :
+  templateContext :
     moment : moment
 
   events :

@@ -2,7 +2,7 @@ _                   = require("lodash")
 Marionette          = require("backbone.marionette")
 AbstractSettingView = require("./abstract_setting_view")
 
-class ButtonSettingView extends Marionette.ItemView
+class ButtonSettingView extends Marionette.View
 
 
   className : "button-setting-view row"

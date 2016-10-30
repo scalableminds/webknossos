@@ -2,7 +2,7 @@ _                  = require("lodash")
 Marionette         = require("backbone.marionette")
 Toast              = require("libs/toast")
 
-class TaskTypeItemView extends Marionette.CompositeView
+class TaskTypeItemView extends Marionette.View
 
   template : _.template("""
     <td class="monospace-id"><%- id %></td>
@@ -59,16 +59,13 @@ class TaskTypeItemView extends Marionette.CompositeView
   events :
     "click .delete" : "deleteTaskType"
 
-  initialize : ->
-
-
   deleteTaskType : (evt) ->
 
     evt.preventDefault()
 
     if window.confirm("Do you really want to delete this task type?")
       @model.destroy().then((response) =>
-      Toast.message(response.messages)
+        Toast.message(response.messages)
       )
 
 

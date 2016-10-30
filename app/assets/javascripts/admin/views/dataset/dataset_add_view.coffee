@@ -4,7 +4,7 @@ DatasetUploadView          = require("./dataset_upload_view")
 DatasetRemoteView          = require("./dataset_remote_view")
 
 
-class DatasetAddView extends Marionette.LayoutView
+class DatasetAddView extends Marionette.View
 
   className : "container"
   id : "dataset-add-view"
@@ -42,12 +42,12 @@ class DatasetAddView extends Marionette.LayoutView
 
   showUploadDataset : ->
 
-    @tabPane.show(new DatasetUploadView(@options))
+    @showChildView("tabPane", new DatasetUploadView(@options))
 
 
   showRemoteDataset : ->
 
-    @tabPane.show(new DatasetRemoteView(@options))
+    @showChildView("tabPane", new DatasetRemoteView(@options))
 
 
 module.exports = DatasetAddView

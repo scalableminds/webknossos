@@ -81,7 +81,7 @@ class TaskListItemView extends Marionette.CompositeView
     "detailsRow" : ".details-row"
     "detailsToggle" : ".details-toggle"
 
-  templateHelpers :
+  templateContext :
     TemplateHelpers : TemplateHelpers
 
 

@@ -12,7 +12,7 @@ require('brace/mode/javascript');
 require('brace/mode/json');
 require('brace/theme/clouds');
 
-class TaskQueryView extends Marionette.LayoutView
+class TaskQueryView extends Marionette.View
 
   template : _.template("""
     <div class="container wide">
@@ -46,8 +46,8 @@ class TaskQueryView extends Marionette.LayoutView
   """)
 
   regions :
-    "paginatorRegion" : ".paginator"
-    "taskListRegion" : ".taskList"
+    "paginator" : ".paginator"
+    "taskList" : ".taskList"
 
   ui :
     "taskList" : ".taskList"
@@ -68,8 +68,8 @@ class TaskQueryView extends Marionette.LayoutView
 
     paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : "Create New Task"})
 
-    @taskListRegion.show(@taskListView)
-    @paginatorRegion.show(paginationView)
+    @showChildView("taskList", @taskListView)
+    @showChildView("paginator", paginationView)
 
     @documentationModal = new TaskQueryDocumentationModal()
     @documentationModal.render()

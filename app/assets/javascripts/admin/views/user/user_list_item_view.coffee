@@ -3,7 +3,7 @@ Marionette        = require("backbone.marionette")
 TeamRoleModalView = require("admin/views/user/team_role_modal_view")
 TemplateHelpers   = require("libs/template_helpers")
 
-class UserListItemView extends Marionette.ItemView
+class UserListItemView extends Marionette.View
 
   tagName : "tr"
   attributes : ->
@@ -44,7 +44,7 @@ class UserListItemView extends Marionette.ItemView
     </td>
   """)
 
-  templateHelpers :
+  templateContext :
     TemplateHelpers : TemplateHelpers
 
   events :

@@ -201,10 +201,9 @@ class SceneController
     return result
 
 
-  setBoundingBox : (bbArray) ->
+  setBoundingBox : (bb) ->
 
-    @bb.setCorners([bbArray[0], bbArray[1], bbArray[2]],
-                    [bbArray[3], bbArray[4], bbArray[5]])
+    @bb.setCorners(bb.min, bb.max)
 
 
   setSegmentationAlpha : (alpha) ->

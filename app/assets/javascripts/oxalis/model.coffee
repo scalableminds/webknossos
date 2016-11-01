@@ -125,9 +125,8 @@ class Model extends Backbone.Model
     )
 
     ErrorHandling.assertExtendContext({
-      task: @get("tracingId")
-      dataSet: dataset.get("name")
-
+      task : @get("tracingId")
+      dataSet : dataset.get("name")
     })
 
     console.log "tracing", tracing
@@ -137,14 +136,7 @@ class Model extends Backbone.Model
     app.scaleInfo = new ScaleInfo(dataset.get("scale"))
 
     if (bb = tracing.content.boundingBox)?
-      @boundingBox = {
-        min : bb.topLeft
-        max : [
-          bb.topLeft[0] + bb.width
-          bb.topLeft[1] + bb.height
-          bb.topLeft[2] + bb.depth
-        ]
-      }
+      @setBoundingBox(bb.topLeft.concat([bb.width, bb.height, bb.depth]))
 
     @connectionInfo = new ConnectionInfo()
     @binary = {}
@@ -210,6 +202,24 @@ class Model extends Backbone.Model
 
     @set("mode", mode)
     @trigger("change:mode", mode)
+
+
+  setBoundingBox : (bb) ->
+
+    @boundingBox = {
+      min : [bb[0], bb[1], bb[2]]
+      max : [bb[0] + bb[3], bb[1] + bb[4], bb[2] + bb[5]]
+    }
+    @trigger("newBoundingBox", @boundingBox)
+
+
+  getBoundingBoxAsArray : ->
+
+    {min, max} = @boundingBox
+    return [
+      min[0], min[1], min[2],
+      max[0] - min[0], max[1] - min[1], max[2] - min[2]
+    ]
 
 
   # For now, since we have no UI for this

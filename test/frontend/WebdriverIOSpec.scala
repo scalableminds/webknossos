@@ -38,8 +38,8 @@ class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll
   def beforeAll = {
     try {
       logger.warn(s"About to drop database: $mongoDb")
-      s"./tools/dropDB.sh $mongoDb $mongoHost $mongoPort".run(getProcessIO(true)).exitValue()
-      s"./tools/import_export/import.sh $mongoDb testdb $mongoHost $mongoPort".run(getProcessIO(true)).exitValue()
+      s"./tools/dropDB.sh $mongoDb $mongoHost $mongoPort".run(getProcessIO).exitValue()
+      s"./tools/import_export/import.sh $mongoDb testdb $mongoHost $mongoPort".run(getProcessIO).exitValue()
       logger.info("Successfully dropped the database and imported testdb")
     } catch {
       case e: Exception =>
@@ -66,20 +66,10 @@ class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll
     result
   }
 
-  private def getProcessIO(useLogger: Boolean): ProcessIO = {
+  private def getProcessIO: ProcessIO = {
     new ProcessIO(_ => (),
-      stdout => Source.fromInputStream(stdout).getLines().foreach{l =>
-        if(useLogger)
-          logger.info(l)
-        else
-          println(l)
-      },
-      stderr => Source.fromInputStream(stderr).getLines().foreach{l =>
-        if(useLogger)
-          logger.error(l)
-        else
-          System.err.println(l)
-    })
+      stdout => Source.fromInputStream(stdout).getLines().foreach(l => logger.info(l)),
+      stderr => Source.fromInputStream(stderr).getLines().foreach(l => logger.error(l)))
   }
 
   private def parseCustomJavaArgs(arguments: Arguments) = {

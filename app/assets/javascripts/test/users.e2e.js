@@ -46,9 +46,6 @@ describe("User List", function() {
         // confirm that the user table updated
         const teams = await page.getTeamsForUser("SCM Boy")
         expect(teams).toContain(newTeamName)
-
-        // delete temporary team again
-        return Request.json().from(`/api/teams/${response.id}`, {"method" : "DELETE"})
     })
   })
 

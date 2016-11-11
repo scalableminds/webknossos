@@ -1,4 +1,4 @@
-import { map, isArray } from "lodash"
+import { map, isArray, flatten } from "lodash"
 
 export default class UserPage {
 
@@ -116,7 +116,18 @@ export default class UserPage {
   getTeamsForUser(userName) {
 
     const userRowSelector = `tbody tr[data-name='${userName}']`
-    return browser.getText(`${userRowSelector} td:nth-child(6)`)
+    return browser
+      .getText(`${userRowSelector} td:nth-child(6)`)
+      .then(function(teamStrings) {
+        if (!isArray(teamStrings)) {
+          teamStrings = [teamStrings];
+        }
+
+        return flatten(teamStrings.map((teamString) => {
+          return teamString.split("\n").map((teamRoleString) => teamRoleString.split(" ")[0])
+        }))
+      })
+
   }
 
 

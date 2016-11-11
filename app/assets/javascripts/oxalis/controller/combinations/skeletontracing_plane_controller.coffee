@@ -62,7 +62,8 @@ class SkeletonTracingPlaneController extends PlaneController
       "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
 
       #Delete active node
-      "delete" : => @model.skeletonTracing.deleteActiveNode()
+      "delete" : =>
+        _.defer => @model.skeletonTracing.deleteActiveNode()
       "c" : => @model.skeletonTracing.createNewTree()
 
       #Branches
@@ -175,7 +176,8 @@ class SkeletonTracingPlaneController extends PlaneController
       @activeViewport,
       @model.flycam.getIntegerZoomStep(),
       if datasetConfig.get("fourBit") then 4 else 8,
-      datasetConfig.get("interpolation")
+      datasetConfig.get("interpolation"),
+      @model.user.get("moveValue")
     )
 
     if centered

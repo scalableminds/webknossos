@@ -27,6 +27,7 @@ class ArbitraryPlane
 
   cam : null
   model : null
+  controller : null
 
   mesh : null
 
@@ -38,7 +39,7 @@ class ArbitraryPlane
   x : 0
 
 
-  constructor : (@cam, @model, @width = 128) ->
+  constructor : (@cam, @model, @controller, @width = 128) ->
 
     _.extend(@, Backbone.Events)
 
@@ -153,7 +154,20 @@ class ArbitraryPlane
 
   createMesh : ->
 
-    @textureMaterial = new ArbitraryPlaneMaterialFactory(@model, @width).getMaterial()
+    if @controller.isBranchpointvideoMode()
+
+      options =
+        polygonOffset : true
+        polygonOffsetFactor : 10.0
+        polygonOffsetUnits : 40.0
+
+      factory = new ArbitraryPlaneMaterialFactory(@model, @width)
+      factory.makeMaterial(options)
+      @textureMaterial = factory.getMaterial()
+
+    else
+
+      @textureMaterial = new ArbitraryPlaneMaterialFactory(@model, @width).getMaterial()
 
     # create mesh
     plane = new THREE.Mesh(

@@ -54,9 +54,9 @@ class DatasetInfoView extends Marionette.View
     name = tracing.name
 
     # In case we have a task display its id as well
-    if task then annotationType += " - #{task.formattedHash}"
+    if task then annotationType += ": #{task.id}"
     # Or display an explorative tracings name if there is one
-    if name then annotationType += " - #{name}"
+    if name then annotationType += ": #{name}"
 
     return {
       annotationType : annotationType

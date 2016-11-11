@@ -47,7 +47,7 @@ class SceneController
     if @model.boundingBox?
       @bb2 = new Cube(@model, {
         min : @model.boundingBox.min
-        max : _.map @model.boundingBox.max, (e) -> e + 1
+        max : @model.boundingBox.max
         color : 0x00ff00
         showCrossSections : true })
 

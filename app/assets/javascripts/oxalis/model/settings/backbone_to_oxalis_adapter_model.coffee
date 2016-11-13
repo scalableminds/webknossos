@@ -37,7 +37,6 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       @skeletonTracingAdapter.set("radius", @skeletonTracingModel.getActiveNodeRadius())
       @skeletonTracingAdapter.set("overrideNodeRadius", @oxalisModel.user.get("overrideNodeRadius"))
       @skeletonTracingAdapter.set("particleSize", @oxalisModel.user.get("particleSize"))
-      @skeletonTracingAdapter.set("boundingBox", @oxalisModel.getBoundingBoxAsArray())
       @skeletonTracingAdapter.deleteActiveNode = @skeletonTracingModel.deleteActiveNode.bind(@skeletonTracingModel)
 
       if @oxalisModel.settings.somaClickingAllowed
@@ -94,7 +93,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
 
       @listenTo(@skeletonTracingAdapter, "change:boundingBox", (model, string) ->
         bbArray = Utils.stringToNumberArray(string)
-        @oxalisModel.setBoundingBox(bbArray)
+        @oxalisModel.setUserBoundingBox(bbArray)
       )
 
     else if @oxalisModel.volumeTracing

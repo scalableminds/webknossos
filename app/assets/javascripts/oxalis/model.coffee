@@ -136,7 +136,7 @@ class Model extends Backbone.Model
     app.scaleInfo = new ScaleInfo(dataset.get("scale"))
 
     if (bb = tracing.content.boundingBox)?
-      @setBoundingBox(bb.topLeft.concat([bb.width, bb.height, bb.depth]))
+      @taskBoundingBox = @computeBoundingBoxFromArray(bb.topLeft.concat([bb.width, bb.height, bb.depth]))
 
     @connectionInfo = new ConnectionInfo()
     @binary = {}
@@ -158,8 +158,8 @@ class Model extends Backbone.Model
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
     @set("flycam", flycam)
     @set("flycam3d", flycam3d)
-    @listenTo(flycam3d, "changed", (matrix, zoomStep) => flycam.setPosition(matrix[12..14]))
-    @listenTo(flycam, "positionChanged" : (position) => flycam3d.setPositionSilent(position))
+    @listenTo(flycam3d, "changed", (matrix, zoomStep) -> flycam.setPosition(matrix[12..14]))
+    @listenTo(flycam, "positionChanged" : (position) -> flycam3d.setPositionSilent(position))
 
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
@@ -204,22 +204,20 @@ class Model extends Backbone.Model
     @trigger("change:mode", mode)
 
 
-  setBoundingBox : (bb) ->
+  setUserBoundingBox : (bb) ->
 
-    @boundingBox = {
-      min : [bb[0], bb[1], bb[2]]
-      max : [bb[0] + bb[3], bb[1] + bb[4], bb[2] + bb[5]]
+    @userBoundingBox = @computeBoundingBoxFromArray(bb)
+    @trigger("change:userBoundingBox", @userBoundingBox)
+
+
+  computeBoundingBoxFromArray : (bb) ->
+
+    [x, y, z, width, height, depth] = bb
+
+    return {
+      min : [x, y, z]
+      max : [x + width, y + height, z + depth]
     }
-    @trigger("newBoundingBox", @boundingBox)
-
-
-  getBoundingBoxAsArray : ->
-
-    {min, max} = @boundingBox
-    return [
-      min[0], min[1], min[2],
-      max[0] - min[0], max[1] - min[1], max[2] - min[2]
-    ]
 
 
   # For now, since we have no UI for this
@@ -229,9 +227,9 @@ class Model extends Backbone.Model
 
     if segmentationBinary?
       window.mappings = {
-        getAll : => segmentationBinary.mappings.getMappingNames()
-        getActive : => segmentationBinary.activeMapping
-        activate : (mapping) => segmentationBinary.setActiveMapping(mapping)
+        getAll : -> segmentationBinary.mappings.getMappingNames()
+        getActive : -> segmentationBinary.activeMapping
+        activate : (mapping) -> segmentationBinary.setActiveMapping(mapping)
       }
 
 

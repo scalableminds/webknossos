@@ -7,10 +7,17 @@ require("babel-register")(
 require("babel-polyfill");
 
 const path = require('path');
-const process = require('process');
 const child_process = require("child_process")
-const selenium = require('selenium-standalone');
 
+// Workaround until 'selenium-standalone' updates to include these versions by default
+const seleniumConfig = {
+  version: '3.0.0',
+  drivers: {
+    firefox: {
+      version: '0.11.1',
+    }
+  }
+};
 
 exports.config = {
 
@@ -124,7 +131,11 @@ exports.config = {
   // Services take over a specific job you don't want to take care of. They enhance
   // your test setup with almost no effort. Unlike plugins, they don't add new
   // commands. Instead, they hook themselves up into the test process.
-  // services: ['selenium-standalone'],
+  services: ["selenium-standalone"],
+  // Arguments to be passed along to 'selenium-standalone' as part of the
+  // 'selenium-standalone' service above
+  seleniumInstallArgs: seleniumConfig,
+  seleniumArgs: seleniumConfig,
   // Framework you want to run your specs with.
   // The following are supported: Mocha, Jasmine, and Cucumber
   // see also: http://webdriver.io/guide/testrunner/frameworks.html
@@ -169,34 +180,8 @@ exports.config = {
   // resolved to continue.
   //
   // Gets executed once before all workers get launched.
-  onPrepare: function (config, capabilities) {
-
-    const seleniumConfig = {
-      version: '3.0.0',
-      drivers: {
-        firefox: {
-          version: '0.11.1',
-        }
-      }
-    }
-
-    selenium.install(seleniumConfig, function(err) {
-      if (err) {
-        console.error(err)
-        process.exit(1)
-      }
-
-      selenium.start(seleniumConfig, function(err, child) {
-        if (err) {
-          console.error(err)
-          process.exit(1)
-        }
-
-        selenium.child = child;
-      })
-    })
-  },
-
+  // onPrepare: function (config, capabilities) {
+  // },
   //
   // Gets executed before test execution begins. At this point you can access all global
   // variables, such as `browser`. It is the perfect place to define custom commands.
@@ -252,7 +237,6 @@ exports.config = {
   //
   // Gets executed after all workers got shut down and the process is about to exit. It is not
   // possible to defer the end of the process using a promise.
-  onComplete: function(exitCode) {
-    selenium.child.kill()
-  }
+  // onComplete: function(exitCode) {
+  // }
 }

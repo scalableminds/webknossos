@@ -38,6 +38,7 @@
     "url-loader": "^0.5.7",
     "wdio-jasmine-framework": "^0.2.3",
     "wdio-selenium-standalone-service": "0.0.7",
+    "wdio-spec-reporter": "0.0.3",
     "webdriverio": "^4.2.1",
     "webpack": "^1.13.1",
     "worker-loader": "^0.6.0"

@@ -6,15 +6,15 @@ require("babel-register")(
 );
 require("babel-polyfill");
 
-const path = require('path');
+const path = require("path");
 const child_process = require("child_process")
 
-// Workaround until 'selenium-standalone' updates to include these versions by default
+// Workaround until "selenium-standalone" updates to include these versions by default
 const seleniumConfig = {
-  version: '3.0.0',
+  version: "3.0.0",
   drivers: {
     firefox: {
-      version: '0.11.1',
+      version: "0.11.1",
     }
   }
 };
@@ -32,11 +32,11 @@ exports.config = {
   // directory is where your package.json resides, so `wdio` will be called from there.
   //
   specs: [
-    'app/assets/javascripts/test/**/*.e2e.js',
+    "app/assets/javascripts/test/**/*.e2e.js",
   ],
   // Patterns to exclude.
   exclude: [
-    // 'path/to/excluded/files'
+    // "path/to/excluded/files"
   ],
   //
   // ============
@@ -47,7 +47,7 @@ exports.config = {
   // sessions. Within your capabilities you can overwrite the spec and exclude options in
   // order to group specific specs to a specific capability.
   //
-  // First, you can define how many instances should be started at the same time. Let's
+  // First, you can define how many instances should be started at the same time. Let"s
   // say you have 3 different capabilities (Chrome, Firefox, and Safari) and you have
   // set maxInstances to 1; wdio will spawn 3 processes. Therefore, if you have 10 spec
   // files and you set maxInstances to 10, all spec files will get tested at the same time
@@ -61,15 +61,15 @@ exports.config = {
   // https://docs.saucelabs.com/reference/platforms-configurator
   //
   capabilities: [{
-    browserName: 'firefox',
+    browserName: "firefox",
   },
   // {
-  //   browserName: 'chrome',
+  //   browserName: "chrome",
   //   chromeOptions: {
-  //     'args': ['--no-sandbox', '--test-type=browser', '--dns-prefetch-disable'],
-  //     'prefs': {
-  //       'download': {
-  //         'prompt_for_download': false,
+  //     "args": ["--no-sandbox", "--test-type=browser", "--dns-prefetch-disable"],
+  //     "prefs": {
+  //       "download": {
+  //         "prompt_for_download": false,
   //       }
   //     }
   //   }
@@ -87,23 +87,23 @@ exports.config = {
   sync: false,
   //
   // Level of logging verbosity: silent | verbose | command | data | result | error
-  logLevel: 'error',
+  logLevel: "error",
   //
   // Enables colors for log output.
   coloredLogs: true,
   //
   // Saves a screenshot to a given path if a command fails.
-  screenshotPath: './errorShots/',
+  screenshotPath: "./errorShots/",
   //
   // Set a base URL in order to shorten url command calls. If your url parameter starts
   // with "/", then the base url gets prepended.
-  baseUrl: 'http://localhost:9000',
+  baseUrl: "http://localhost:9000",
   //
   // Default timeout for all waitFor* commands.
   waitforTimeout: 25000,
   //
   // Default timeout in milliseconds for request
-  // if Selenium Grid doesn't send response
+  // if Selenium Grid doesn"t send response
   connectionRetryTimeout: 90000,
   //
   // Default request retries count
@@ -118,8 +118,8 @@ exports.config = {
   // Browserevent: https://github.com/webdriverio/browserevent
   // plugins: {
   //     webdrivercss: {
-  //         screenshotRoot: 'my-shots',
-  //         failedComparisonsRoot: 'diffs',
+  //         screenshotRoot: "my-shots",
+  //         failedComparisonsRoot: "diffs",
   //         misMatchTolerance: 0.05,
   //         screenWidth: [320,480,640,1024]
   //     },
@@ -128,12 +128,12 @@ exports.config = {
   // },
   //
   // Test runner services
-  // Services take over a specific job you don't want to take care of. They enhance
-  // your test setup with almost no effort. Unlike plugins, they don't add new
+  // Services take over a specific job you don"t want to take care of. They enhance
+  // your test setup with almost no effort. Unlike plugins, they don"t add new
   // commands. Instead, they hook themselves up into the test process.
   services: ["selenium-standalone"],
-  // Arguments to be passed along to 'selenium-standalone' as part of the
-  // 'selenium-standalone' service above
+  // Arguments to be passed along to "selenium-standalone" as part of the
+  // "selenium-standalone" service above
   seleniumInstallArgs: seleniumConfig,
   seleniumArgs: seleniumConfig,
   // Framework you want to run your specs with.
@@ -142,12 +142,12 @@ exports.config = {
   //
   // Make sure you have the wdio adapter package for the specific framework installed
   // before running any tests.
-  framework: 'jasmine',
+  framework: "jasmine",
   //
   // Test reporter for stdout.
-  // The only one supported by default is 'dot'
+  // The only one supported by default is "dot"
   // see also: http://webdriver.io/guide/testrunner/reporters.html
-  // reporters: ['dot'],
+  reporters: ["spec"],
   //
   // Options to be passed to Jasmine.
   jasmineNodeOpts: {
@@ -165,8 +165,8 @@ exports.config = {
        return;
       }
 
-      var title = assertion.message.replace(/\s/g, '-');
-      browser.saveScreenshot(path.join('errorShots', 'error_' + title + '.png'));
+      var title = assertion.message.replace(/\s/g, "-");
+      browser.saveScreenshot(path.join("errorShots", "error_" + title + ".png"));
     }
   },
 

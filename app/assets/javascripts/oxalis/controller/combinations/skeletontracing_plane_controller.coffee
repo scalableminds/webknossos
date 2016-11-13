@@ -161,7 +161,7 @@ class SkeletonTracingPlaneController extends PlaneController
 
   addNode : (position, rotation, centered) =>
 
-    if @model.user.get("newNodeNewTree") == true
+    if @model.settings.somaClickingAllowed and @model.user.get("newNodeNewTree")
       @model.skeletonTracing.createNewTree()
 
     if not @model.skeletonTracing.getActiveNode()?

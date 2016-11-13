@@ -16,6 +16,8 @@ class SkeletonTracingView extends View
       Toast.error("No more branchpoints", false))
     @listenTo(@model.skeletonTracing, "noBranchPoints", ->
       Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false))
+    @listenTo(@model.skeletonTracing, "noSomaClicking", ->
+      Toast.error("Soma clicking isn't necessary in this tracing mode.", false))
     @listenTo(@model.skeletonTracing, "wrongDirection", ->
       Toast.error("You're tracing in the wrong direction"))
 

@@ -187,10 +187,11 @@ exports.config = {
   // variables, such as `browser`. It is the perfect place to define custom commands.
   before: function (capabilities, specs) {
 
-    const mongoPort = process.env.CI ? "37017" : "27017";
+    const mongoURL = `${process.env.MONGO_HOST || "localhost"}:${process.env.MONGO_PORT || "27017"}`;
+    const mongoDB = process.env.MONGO_DB || "oxalis-testing";
 
     child_process.execFileSync("./tools/import_export/import.sh",
-                 ["oxalis-testing", "testdb", "localhost", mongoPort],
+                 [mongoDB, "testdb", mongoURL],
                  {stdio : "ignore"})
 
     // browser.setViewportSize({

@@ -37,16 +37,19 @@ services:
       -Djava.net.preferIPv4Stack=true
       -Dhttp.address=0.0.0.0
       -Dhttp.port=$${PORT}
-      -Dmongodb.db=oxalis-testing
-      -Dmongodb.url=mongo
-      -Dmongodb.port=27017
-      -Dmongodb.uri=mongodb://mongo:27017/oxalis-testing
+      -Dmongodb.db=$${MONGO_DB}
+      -Dmongodb.url=$${MONGO_HOST}:$${MONGO_PORT}
+      -Dmongodb.port=$${MONGO_PORT}
+      -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}
       \""
     ports:
       - "9000:9000"
     links:
       - mongo
     environment:
+      - MONGO_HOST=mongo
+      - MONGO_PORT=27017
+      - MONGO_DB=oxalis-testing
       - PORT=9000
       - MODE=dev
 

@@ -11,7 +11,7 @@ const child_process = require("child_process")
 
 // Workaround until "selenium-standalone" updates to include these versions by default
 const seleniumConfig = {
-  version: "3.0.0",
+  version: "3.0.1",
   drivers: {
     firefox: {
       version: "0.11.1",
@@ -186,8 +186,11 @@ exports.config = {
   // Gets executed before test execution begins. At this point you can access all global
   // variables, such as `browser`. It is the perfect place to define custom commands.
   before: function (capabilities, specs) {
+
+    const mongoPort = process.env.CI ? "37017" : "27017";
+
     child_process.execFileSync("./tools/import_export/import.sh",
-                 ["oxalis-testing", "testdb", "localhost", "27017"],
+                 ["oxalis-testing", "testdb", "localhost", mongoPort],
                  {stdio : "ignore"})
 
     // browser.setViewportSize({

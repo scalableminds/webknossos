@@ -57,5 +57,6 @@ export default class TeamPage {
     return browser
       .click(deletionSelector)
       .alertAccept()
+      .pause(1000) // Wait for DOM updates
   }
 }

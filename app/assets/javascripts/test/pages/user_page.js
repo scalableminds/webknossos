@@ -43,6 +43,7 @@ export default class UserPage {
     browser
       .waitForExist(this.confirmButton)
       .click(this.confirmButton)
+      .pause(500) // wait for DOM updates
   }
 
 
@@ -110,6 +111,7 @@ export default class UserPage {
       .waitForExist(this.inputExperienceDomain)
       .setValue(this.inputExperienceDomain, experience.domain)
       .click(this.deleteExperienceButton)
+      .pause(1000) // wait for DOM updates
   }
 
 

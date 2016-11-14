@@ -55,6 +55,7 @@ export default class ProjectPage {
       .waitForExist(this.firstDeleteLink)
       .click(this.firstDeleteLink)
       .alertAccept()
+      .pause(1000) // wait for DOM updates
   }
 
   editFirstProject(newPriority) {

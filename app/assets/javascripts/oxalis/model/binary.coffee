@@ -37,7 +37,7 @@ class Binary
     @lowerBoundary = @layer.lowerBoundary = topLeft
     @upperBoundary = @layer.upperBoundary = [ topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth ]
 
-    @cube = new Cube(@model.boundingBox, @upperBoundary, maxZoomStep + 1, @layer.bitDepth)
+    @cube = new Cube(@model.taskBoundingBox, @upperBoundary, maxZoomStep + 1, @layer.bitDepth)
 
     updatePipeline = new Pipeline([@tracing.version])
 

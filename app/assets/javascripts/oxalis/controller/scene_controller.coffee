@@ -39,15 +39,15 @@ class SceneController
       max : @upperBoundary
       color : @CUBE_COLOR
       showCrossSections : true })
-    @bb = new Cube(@model, {
+    @userBoundingBox = new Cube(@model, {
       max : [0, 0, 0]
       color : 0xffaa00
       showCrossSections : true })
 
-    if @model.boundingBox?
-      @bb2 = new Cube(@model, {
-        min : @model.boundingBox.min
-        max : _.map @model.boundingBox.max, (e) -> e + 1
+    if @model.taskBoundingBox?
+      @taskBoundingBox = new Cube(@model, {
+        min : @model.taskBoundingBox.min
+        max : @model.taskBoundingBox.max
         color : 0x00ff00
         showCrossSections : true })
 
@@ -109,8 +109,8 @@ class SceneController
     # things have to be changed for each cam.
 
     @cube.updateForCam(id)
-    @bb.updateForCam(id)
-    @bb2?.updateForCam(id)
+    @userBoundingBox.updateForCam(id)
+    @taskBoundingBox?.updateForCam(id)
     @skeleton?.updateForCam(id)
 
     if id in constants.ALL_PLANES
@@ -194,17 +194,16 @@ class SceneController
     for plane in @planes
       result = result.concat(plane.getMeshes())
 
-    for geometry in [@skeleton, @contour, @cube, @bb, @bb2]
+    for geometry in [@skeleton, @contour, @cube, @userBoundingBox, @taskBoundingBox]
       if geometry?
         result = result.concat geometry.getMeshes()
 
     return result
 
 
-  setBoundingBox : (bbArray) ->
+  setUserBoundingBox : (bb) ->
 
-    @bb.setCorners([bbArray[0], bbArray[1], bbArray[2]],
-                    [bbArray[3], bbArray[4], bbArray[5]])
+    @userBoundingBox.setCorners(bb.min, bb.max)
 
 
   setSegmentationAlpha : (alpha) ->
@@ -227,8 +226,8 @@ class SceneController
     for plane in @planes
       plane.setVisible(false)
     @cube.setVisibility(false)
-    @bb.setVisibility(false)
-    @bb2?.setVisibility(false)
+    @userBoundingBox.setVisibility(false)
+    @taskBoundingBox?.setVisibility(false)
 
     @skeleton?.restoreVisibility()
     @skeleton?.setSizeAttenuation(true)
@@ -239,8 +238,8 @@ class SceneController
     for plane in @planes
       plane.setVisible(true)
     @cube.setVisibility(true)
-    @bb.setVisibility(true)
-    @bb2?.setVisibility(true)
+    @userBoundingBox.setVisibility(true)
+    @taskBoundingBox?.setVisibility(true)
 
     @skeleton?.setSizeAttenuation(false)
 
@@ -248,7 +247,7 @@ class SceneController
   bindToEvents : ->
 
     user = @model.user
-    @listenTo(@model, "newBoundingBox", (bb) -> @setBoundingBox(bb))
+    @listenTo(@model, "change:userBoundingBox", (bb) -> @setUserBoundingBox(bb))
     @listenTo(user, "change:segmentationOpacity", (model, opacity) ->
       @setSegmentationAlpha(opacity)
     )

@@ -41,6 +41,8 @@ case class TemporaryAnnotation(
 
   lazy val content = _content()
 
+  def tracingTime = None    // We currently do not tracing time on temporary annotations
+
   def muta = new TemporaryAnnotationMutations(this)
 
   def actions(user: Option[User]) = ResourceActionCollection()

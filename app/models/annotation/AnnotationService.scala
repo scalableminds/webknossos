@@ -190,6 +190,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
       temporary.typ,
       temporary.version,
       temporary._name,
+      None,
       temporary.created,
       id)
 
@@ -236,6 +237,9 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
           name)
     }
   }
+
+  def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.logTime(time, _annotation)
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit ctx: DBAccessContext) = {
     val zipped = TemporaryFile("annotationZips", normalize(zipFileName))

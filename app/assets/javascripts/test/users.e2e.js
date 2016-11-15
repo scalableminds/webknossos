@@ -1,3 +1,4 @@
+import _ from "lodash"
 import UserPage from "./pages/user_page"
 import Request from "./helpers/ajaxDownload"
 import { getPaginationPagesCount } from "./helpers/pageHelpers"
@@ -38,14 +39,13 @@ describe("User List", function() {
         // select first user 'SCM Boy' and switch the role of the newly created
         // team to 'user'
         await page.selectUser("SCM Boy")
-        const newTeamRoles = await page.selectTeams([newTeamName])
+        await page.selectTeams([newTeamName])
         await page.clickConfirmButton()
 
-        expect(newTeamRoles[0]).toBe("user")
-
         // confirm that the user table updated
-        const teams = await page.getTeamsForUser("SCM Boy")
-        expect(teams).toContain(newTeamName)
+        const teamsAndRoles = await page.getTeamsAndRolesForUser("SCM Boy")
+        expect(_.keys(teamsAndRoles)).toContain(newTeamName)
+        expect(teamsAndRoles[newTeamName]).toBe("user")
     })
   })
 

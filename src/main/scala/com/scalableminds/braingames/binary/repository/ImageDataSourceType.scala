@@ -239,7 +239,8 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
             logger.error(s"An error occurred while trying to down scale target of image stack $id. ${e.getMessage}", e)
         }
 
-        layerFuture.map(_ => DataLayer(layerName, DefaultLayerType.category, targetRoot.toString, None, elements, false, None, List(section)))
+        layerFuture.map(_ => DataLayer(layerName, DefaultLayerType.category, targetRoot.toString, None, elements,
+          isWritable = false, _isCompressed = Some(false), None, List(section)))
     }
   }
 
@@ -329,12 +330,14 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
   }
 
   private class KnossosWriterCache(id: String, resolution: Int, folder: Path) {
+    val knossosExtension = "raw"
+
     def get(block: Point3D): FileOutputStream = {
       fileForPosition(block)
     }
 
     private def fileForPosition(block: Point3D): FileOutputStream = {
-      val path = DataStore.knossosFilePath(folder, id, resolution, block)
+      val path = DataStore.knossosFilePath(folder, id, resolution, block, knossosExtension)
       Files.createDirectories(path.getParent)
       PathUtils.createFile(path, failIfExists = false)
       PathUtils.fileOption(path) match {

@@ -30,21 +30,27 @@ object FallbackLayer{
 case class DataLayerType(category: String, defaultElementClass: String = "uint8")
 
 case class DataLayer(
-  name: String,
-  category: String,
-  baseDir: String,
-  flags: Option[List[String]],
-  elementClass: String = "uint8",
-  isWritable: Boolean = false,
-  fallback: Option[FallbackLayer] = None,
-  sections: List[DataLayerSection] = Nil,
-  nextSegmentationId: Option[Long] = None,
-  mappings: List[DataLayerMapping] = List()
+                      name: String,
+                      category: String,
+                      baseDir: String,
+                      flags: Option[List[String]],
+                      elementClass: String = "uint8",
+                      isWritable: Boolean = false,
+                      _isCompressed: Option[Boolean] = None,
+                      fallback: Option[FallbackLayer] = None,
+                      sections: List[DataLayerSection] = Nil,
+                      nextSegmentationId: Option[Long] = None,
+                      mappings: List[DataLayerMapping] = List()
   ) extends DataLayerLike {
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
   def isUserDataLayer = baseDir.contains("userBinaryData")
+
+  // Should be used instead of the optional property (optional because of parsing compatibility)
+  def isCompressed = _isCompressed getOrElse false
+
+  def fileExtension = DataLayer.fileExt(isCompressed)
 
   def getMapping(name: String) =
     mappings.find(_.name == name)
@@ -58,6 +64,10 @@ case class DataLayer(
 
 object DataLayer extends LazyLogging{
 
+  val KnossosFileExtention = "raw"
+
+  val CompressedFileExtention = "sz"
+
   val COLOR =
     DataLayerType("color")
   val SEGMENTATION =
@@ -70,7 +80,11 @@ object DataLayer extends LazyLogging{
   val supportedLayers = List(
     COLOR, SEGMENTATION, CLASSIFICATION
   )
-  
+
+  def supportedFileExt = List(CompressedFileExtention, KnossosFileExtention)
+
+  def fileExt(isCompressed: Boolean) = if(isCompressed) CompressedFileExtention else KnossosFileExtention
+
   def isValidElementClass(elementClass: String): Boolean = {
     Try(elementClass).isSuccess
   }

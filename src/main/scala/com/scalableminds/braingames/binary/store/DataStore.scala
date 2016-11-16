@@ -20,21 +20,21 @@ import java.io.{File, FilenameFilter}
 import com.scalableminds.util.tools.Fox
 
 /**
- * Abstract Datastore defines all method a binary data source (e.q. normal file
- * system or db implementation) must implement to be used
- */
+  * Abstract Datastore defines all method a binary data source (e.q. normal file
+  * system or db implementation) must implement to be used
+  */
 
 class DataNotFoundException(message: String) extends Exception(s"$message Could not find the data")
 
 trait DataStore {
   /**
-   * Loads the data of a given point from the data source
-   */
+    * Loads the data of a given point from the data source
+    */
   def load(dataInfo: LoadBlock): Fox[Array[Byte]]
 
   /**
-   * Saves the data of a given point to the data source
-   */
+    * Saves the data of a given point to the data source
+    */
   def save(dataInfo: SaveBlock): Fox[Boolean]
 
   def load(request: MappingRequest): Fox[Array[Byte]]
@@ -52,19 +52,19 @@ object DataStore {
     dataSetDir.resolve(resolution.toString).resolve(x).resolve(y).resolve(z)
   }
 
-  def knossosFilePath(dataSetDir: Path, id: String, resolution: Int, block: Point3D): Path = {
+  def knossosFilePath(dataSetDir: Path, id: String, resolution: Int, block: Point3D, fileExt: String): Path = {
     val x = "x%04d".format(block.x)
     val y = "y%04d".format(block.y)
     val z = "z%04d".format(block.z)
-    val fileName = s"${id}_mag${resolution}_${x}_${y}_${z}.raw"
+    val fileName = s"${id}_mag${resolution}_${x}_${y}_${z}.$fileExt"
     knossosDir(dataSetDir, resolution, block).resolve(fileName)
   }
 
-  def fuzzyKnossosFile(dataSetDir: Path, id: String, resolution: Int, block: Point3D): Option[File] = {
+  def fuzzyKnossosFile(dataSetDir: Path, id: String, resolution: Int, block: Point3D, extensions: List[String]): Option[File] = {
     val dir = knossosDir(dataSetDir, resolution, block)
     Option(dir.toFile.listFiles(new FilenameFilter() {
       override def accept(dir: File, name: String): Boolean = {
-        name.endsWith(".raw")
+        extensions.exists(e => name.endsWith(s".$e"))
       }
     })).getOrElse(Array.empty).headOption
   }

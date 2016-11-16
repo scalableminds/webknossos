@@ -40,6 +40,7 @@ trait DataSourceService extends FoxImplicits{
       None,
       fallbackLayer.map(l => l.elementClass).getOrElse(DataLayer.SEGMENTATION.defaultElementClass),
       isWritable = true,
+      _isCompressed = Some(true),
       fallback = fallbackLayer.map(l => FallbackLayer(baseDataSource.id, l.name)),
       sections = List(sections),
       nextSegmentationId = baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId),

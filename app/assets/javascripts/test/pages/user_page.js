@@ -119,9 +119,7 @@ export default class UserPage {
 
     const userRowSelector = `tbody tr[data-name='${userName}']`
     return browser
-      .saveScreenshot("errorShots/bad_test_before.png")
       .pause(1000)
-      .saveScreenshot("errorShots/bad_test_after.png")
       .getText(`${userRowSelector} td:nth-child(6)`)
       .then(function(teamString) {
 

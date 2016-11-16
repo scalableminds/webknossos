@@ -194,10 +194,10 @@ exports.config = {
                  [mongoDB, "testdb", mongoURL],
                  {stdio : "ignore"})
 
-    // browser.setViewportSize({
-    //   width: 1024,
-    //   height: 768
-    // })
+    browser.setViewportSize({
+      width: 1024,
+      height: 768
+    })
   },
   //
   // Hook that gets executed before the suite starts

@@ -6,7 +6,7 @@ export default class RegisterPage {
 
 
   get() {
-    browser.url("/register")
+    return browser.url("/register");
   }
 
   signUpWithCompleteForm() {

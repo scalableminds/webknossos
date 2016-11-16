@@ -13,8 +13,8 @@ export default class ProjectPage {
   priorityColumn = "tbody td:nth-child(3)"
 
   get() {
-    browser
-      .url("/projects")
+    return browser
+      .url("/projects");
   }
 
 

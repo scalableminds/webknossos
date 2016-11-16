@@ -15,8 +15,8 @@ export default class UserPage {
   deleteExperienceButton = ".delete-experience"
 
   get() {
-    browser
-      .url("/users")
+    return browser
+      .url("/users");
   }
 
 
@@ -40,10 +40,10 @@ export default class UserPage {
 
 
   clickConfirmButton() {
-    browser
+    return browser
       .waitForExist(this.confirmButton)
       .click(this.confirmButton)
-      .pause(500) // wait for DOM updates
+      .pause(500); // wait for DOM updates
   }
 
 

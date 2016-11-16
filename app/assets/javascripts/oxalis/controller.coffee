@@ -206,7 +206,7 @@ class Controller
       model = @model
 
       tracingType = model.skeletonTracing || model.volumeTracing
-      tracingType.stateLogger.pushNow().done( ->
+      tracingType.stateLogger.pushNow().then( ->
         url = "/annotations/#{model.tracingType}/#{model.tracingId}/finishAndRedirect"
         app.router.loadURL(url)
       )

@@ -12,6 +12,7 @@ constants          = require("../../constants")
 {M4x4, V3}         = require("libs/mjs")
 Utils              = require("libs/utils")
 
+Toast              = require("libs/toast")
 
 class ArbitraryController
 
@@ -170,8 +171,6 @@ class ArbitraryController
       "b" : => @pushBranch()
       "j" : => @popBranch()
 
-      #Reset Matrix
-      "r" : => @cam.setRotation([0, 0, 0])
 
       #Recenter active node
       "y" : => @centerActiveNode()
@@ -181,6 +180,8 @@ class ArbitraryController
         @setRecord(true)
       "u" : =>
         @setRecord(false)
+      #Rotate view by 180 deg
+      "r" : => @cam.yaw(Math.PI)
     )
 
     @input.keyboardOnce = new Input.Keyboard(
@@ -302,12 +303,17 @@ class ArbitraryController
   pushBranch : ->
 
     @model.skeletonTracing.pushBranch()
+    Toast.success("Branchpoint set")
 
 
   popBranch : ->
 
     _.defer => @model.skeletonTracing.popBranch().then((id) =>
       @setActiveNode(id, true)
+      if id == 1
+        @cam.yaw(Math.PI)
+        Toast.warning("Reached initial node, view reversed")
+        @model.commentTabView.appendComment("reversed")
     )
 
 

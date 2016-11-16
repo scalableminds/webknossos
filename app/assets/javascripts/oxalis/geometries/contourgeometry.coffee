@@ -7,7 +7,7 @@ constants       = require("../constants")
 
 class ContourGeometry
 
-  COLOR_NORMAL : new THREE.Color(0x000000)
+  COLOR_NORMAL : new THREE.Color(0x0000ff)
   COLOR_DELETE : new THREE.Color(0xff0000)
 
   constructor : (@volumeTracing, @flycam) ->

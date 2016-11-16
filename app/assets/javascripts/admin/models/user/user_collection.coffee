@@ -1,6 +1,6 @@
-Backbone = require("backbone")
+SortedCollection = require("../sorted_collection")
 
-class UserCollection extends Backbone.Collection
+class UserCollection extends SortedCollection
 
   url : "/api/users"
   sortAttribute : "firstName"

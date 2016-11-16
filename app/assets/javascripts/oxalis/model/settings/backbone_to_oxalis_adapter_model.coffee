@@ -93,9 +93,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
 
       @listenTo(@skeletonTracingAdapter, "change:boundingBox", (model, string) ->
         bbArray = Utils.stringToNumberArray(string)
-        if bbArray?.length == 6
-          @oxalisModel.boundingBox = bbArray
-          @oxalisModel.trigger("newBoundingBox", bbArray)
+        @oxalisModel.setUserBoundingBox(bbArray)
       )
 
     else if @oxalisModel.volumeTracing

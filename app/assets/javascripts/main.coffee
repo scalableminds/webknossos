@@ -14,7 +14,7 @@ require("backbone.marionette")
 
 require("../stylesheets/main.less")
 
-ErrorHandling.initialize( throwAssertions: false, sendLocalErrors: false )
+ErrorHandling.initialize( throwAssertions : false, sendLocalErrors : false )
 
 Router = require("./router")
 

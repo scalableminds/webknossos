@@ -43,7 +43,7 @@ class TaskTransferModalView extends ModalView
     selectionView = new SelectionView(
       collection : @userCollection
       childViewOptions :
-        modelValue: -> return "#{@model.get("firstName")} #{@model.get("lastName")}"
+        modelValue: -> return "#{@model.get("firstName")} #{@model.get("lastName")} (#{@model.get("email")})"
     )
     @showChildView("datalist", selectionView)
 

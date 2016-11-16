@@ -83,11 +83,11 @@ object MTurkNotificationReceiver extends LazyLogging with FoxImplicits {
             case _                 =>
           }
           sqsHelper.deleteMessages(messages, queueUrl)
-          self ! RequestNotifications
+          context.system.scheduler.scheduleOnce(1.second, self, RequestNotifications)
         }.recover {
           case e: Exception =>
             logger.error(s"An exception occured while trying to poll SQS messages. ${e.getMessage}", e)
-            self ! RequestNotifications
+            context.system.scheduler.scheduleOnce(1.second, self, RequestNotifications)
         }
     }
 

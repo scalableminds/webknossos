@@ -1,5 +1,5 @@
 // --- !Ups
-db.userDataLayers.update({}, {$set: {"dataLayer._isCompressed": true}}, {"multi": true});
+db.userDataLayers.update({}, {$set: {"dataLayer._isCompressed": false}}, {"multi": true});
 
 db.dataSets.find().forEach(function (elem) {
   if(elem.dataSource) {

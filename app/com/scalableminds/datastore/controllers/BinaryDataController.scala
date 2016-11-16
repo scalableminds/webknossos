@@ -370,7 +370,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
         case (Empty, _) | (_, Empty) => Empty
         case (Full(rs), Full(r)) =>
           val expectedDataSize = r.header.cubeSize * r.header.cubeSize * r.header.cubeSize * dataLayer.bytesPerElement
-          if(r.data.size == expectedDataSize)
+          if(r.data.length == expectedDataSize)
               Full(rs :+ r)
           else
               Failure("Wrong payload length.")
@@ -382,11 +382,11 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          if (dataLayer.isWritable)
+          if dataLayer.isWritable ?~> "Data Layer is not writable"
           // unpack parsed requests from their FileParts
           requests <- validateRequests(request.body.files.map(_.ref), dataLayer).toFox
           dataRequestCollection = createRequestCollection(dataSource, dataLayer, requests)
-          _ = dataRequestCollection.requests.map(VolumeUpdateService.store _)
+          _ = dataRequestCollection.requests.foreach(VolumeUpdateService.store)
           _ <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
         } yield Ok
       }
@@ -400,7 +400,7 @@ trait BinaryDataDownloadController extends BinaryDataCommonController {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          if (dataLayer.category == "segmentation")
+          if dataLayer.category == DataLayer.SEGMENTATION.category
         } yield {
           val enumerator = Enumerator.outputStream { outputStream =>
             DataStorePlugin.binaryDataService.downloadDataLayer(dataLayer, outputStream)
@@ -409,7 +409,7 @@ trait BinaryDataDownloadController extends BinaryDataCommonController {
             CONTENT_TYPE ->
               "application/zip",
             CONTENT_DISPOSITION ->
-              s"filename=${dataLayerName}.zip")
+              s"filename=$dataLayerName.zip")
 
         }
       }

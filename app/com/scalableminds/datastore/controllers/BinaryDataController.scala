@@ -382,7 +382,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          if dataLayer.isWritable ?~> "Data Layer is not writable"
+          _ <- dataLayer.isWritable ?~> "Data Layer is not writable"
           // unpack parsed requests from their FileParts
           requests <- validateRequests(request.body.files.map(_.ref), dataLayer).toFox
           dataRequestCollection = createRequestCollection(dataSource, dataLayer, requests)
@@ -400,7 +400,7 @@ trait BinaryDataDownloadController extends BinaryDataCommonController {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          if dataLayer.category == DataLayer.SEGMENTATION.category
+          _ <- (dataLayer.category == DataLayer.SEGMENTATION.category) ?~> "Download is only possible for segmentation data"
         } yield {
           val enumerator = Enumerator.outputStream { outputStream =>
             DataStorePlugin.binaryDataService.downloadDataLayer(dataLayer, outputStream)

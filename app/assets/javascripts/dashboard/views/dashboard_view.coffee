@@ -18,24 +18,24 @@ class DashboardView extends Marionette.View
       <ul class="nav nav-tabs">
         <% if (!isAdminView) { %>
           <li class="active">
-            <a href="#" id="tab-datasets" data-toggle="tab">Datasets</a>
+            <a href="#" id="tab-datasets" data-target="#placeholder" data-toggle="tab">Datasets</a>
           </li>
         <% } %>
         <li <% if (isAdminView) { %> class="active" <% } %> >
-          <a href="#" id="tab-tasks" data-toggle="tab">Tasks</a>
+          <a href="#" id="tab-tasks" data-target="#placeholder" data-toggle="tab">Tasks</a>
         <li <% if (isAdminView) { %> class="active" <% } %> >
         </li>
         <li>
-          <a href="#" id="tab-explorative" data-toggle="tab">Explorative Annotations</a>
+          <a href="#" id="tab-explorative" data-target="#placeholder" data-toggle="tab">Explorative Annotations</a>
         </li>
         <% if (isAdminView) { %>
           <li>
-            <a href="#" id="tab-logged-time" data-toggle="tab">Tracked Time</a>
+            <a href="#" id="tab-logged-time" data-target="#placeholder" data-toggle="tab">Tracked Time</a>
           </li>
         <% } %>
       </ul>
       <div class="tab-content">
-        <div class="tab-pane active"></div>
+        <div class="tab-pane active" id="placeholder"></div>
       </div>
     </div>
   """)

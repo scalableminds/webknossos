@@ -73,9 +73,9 @@ class BoundingBox
           z = baseVoxel[2] + ( dz << bucket[3] )
 
           if (
-            @min[0] <= x <= @max[0] and
-            @min[1] <= y <= @max[1] and
-            @min[2] <= z <= @max[2]
+            @min[0] <= x < @max[0] and
+            @min[1] <= y < @max[1] and
+            @min[2] <= z < @max[2]
           )
             continue
 

@@ -30,7 +30,7 @@ module.exports = {
     // Only add libraries that have no dependencies eg. no require, define or similar calls.
     noParse: [
       /lodash/,
-      /jquery/,
+      /\/jquery\//,
     ],
     loaders: [
       { test: /\.coffee$/, loader: "coffee-loader" },

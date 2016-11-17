@@ -10,9 +10,12 @@ import java.io.InputStream
 import java.util.zip._
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream}
 import java.io.FileOutputStream
-import play.api.libs.concurrent.Execution.Implicits._
+import java.nio.file.{Files, Path}
 
+import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.Fox
+import net.liftweb.common.Full
+import org.apache.commons.io.IOUtils
 
 import scala.concurrent.Future
 
@@ -115,6 +118,18 @@ object ZipIO {
       .toList
 
     zip.close()
+    result
+  }
+
+  def withUnziped[A](zip: ZipFile, includeHiddenFiles: Boolean)(f: (List[ZipEntry]) => Fox[A]): Fox[A] = {
+    import collection.JavaConverters._
+    val entries = zip
+      .entries
+      .asScala
+      .filter(e => !e.isDirectory && (includeHiddenFiles || !isHiddenFile(e.getName)))
+
+    val result = f(entries.toList)
+    result.futureBox.onComplete(_ => zip.close())
     result
   }
 }

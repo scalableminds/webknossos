@@ -390,7 +390,7 @@ trait BinaryDataDownloadController extends BinaryDataCommonController {
       AllowRemoteOrigin {
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-          _ <- (dataLayer.category == "segmentation") ?~> "Invalid layer type"
+          _ <- (dataLayer.category == DataLayer.SEGMENTATION.category) ?~> "Download is only possible for segmentation data"
         } yield {
           val enumerator = Enumerator.outputStream { outputStream =>
             DataStorePlugin.binaryDataService.downloadDataLayer(dataLayer, outputStream)
@@ -399,7 +399,7 @@ trait BinaryDataDownloadController extends BinaryDataCommonController {
             CONTENT_TYPE ->
               "application/zip",
             CONTENT_DISPOSITION ->
-              s"filename=${dataLayerName}.zip")
+              s"filename=$dataLayerName.zip")
 
         }
       }

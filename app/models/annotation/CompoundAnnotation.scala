@@ -31,7 +31,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           project.name,
           _user,
           project.team,
-          controllers.routes.SkeletonIOController.projectDownload(project.name).url,
+          controllers.routes.AnnotationIOController.projectDownload(project.name).url,
           annotations,
           AnnotationType.CompoundProject,
           Some(AnnotationSettings.default)) ?~> "project.noAnnotations"
@@ -47,7 +47,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           task.id,
           _user,
           task.team,
-          controllers.routes.SkeletonIOController.taskDownload(task.id).url,
+          controllers.routes.AnnotationIOController.taskDownload(task.id).url,
           annotations,
           AnnotationType.CompoundTask,
           Some(AnnotationSettings.default)) ?~> "task.noAnnotations"
@@ -64,7 +64,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
           taskType.id,
           _user,
           taskType.team,
-          controllers.routes.SkeletonIOController.taskTypeDownload(taskType.id).url,
+          controllers.routes.AnnotationIOController.taskTypeDownload(taskType.id).url,
           annotations,
           AnnotationType.CompoundTaskType,
           Some(AnnotationSettings.default)) ?~> "taskType.noAnnotations"

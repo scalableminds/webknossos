@@ -93,7 +93,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       _ <- ensureTeamAdministration(request.user, team)
       result <- {
-        val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
+        val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename).nmls
 
         val futureResult: Future[List[Box[String]]] = Fox.serialSequence(nmls){
           case NMLService.NMLParseSuccess(_, nml) =>

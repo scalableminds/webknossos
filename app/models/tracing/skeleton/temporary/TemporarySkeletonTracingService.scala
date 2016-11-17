@@ -52,16 +52,29 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
     }
   }
 
-  def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
+  def createFrom(
+    nmls: List[NML],
+    boundingBox: Option[BoundingBox],
+    settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
+
+    def renameTrees(nml: NML) = {
+      // Only rename the trees of the tracings if there is more than one NML
+      if(nmls.length > 1) {
+        val prefix = nml.name.replaceAll("\\.[^.]*$", "") + "_"
+        nml.copy(trees = nml.trees.map(_.addNamePrefix(prefix)))
+      } else
+        nml
+    }
+
     nmls match {
-      case head :: tail =>
-        val startTracing = createFrom(head, head.timestamp.toString, boundingBox, settings)
+      case nml :: tail =>
+        val startTracing = createFrom(renameTrees(nml), nml.timestamp.toString, boundingBox, settings)
 
         tail.foldLeft(startTracing) {
           case (f, s) =>
             for {
               t <- f
-              n <- createFrom(s, s.timestamp.toString, boundingBox)
+              n <- createFrom(renameTrees(s), s.timestamp.toString, boundingBox)
               r <- t.mergeWith(n, settings)
             } yield {
               r

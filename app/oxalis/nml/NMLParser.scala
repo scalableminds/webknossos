@@ -20,8 +20,8 @@ object NMLParser {
     result
   }
 
-  def parse(file: File): Box[NML] = {
-    parse(new FileInputStream(file), file.getName)
+  def parse(file: File, name: String): Box[NML] = {
+    parse(new FileInputStream(file), name)
   }
 
   private object NMLParserImpl {
@@ -61,7 +61,7 @@ object NMLParser {
           val zoomLevel = parseZoomLevel(parameters \ "zoomLevel")
 
           Logger.debug(s"Parsed NML file. Trees: ${trees.size}")
-          NML(dataSetName, trees.toList, volumes.toList, time, activeNodeId, scale, editPosition, editRotation, zoomLevel)
+          NML(name, dataSetName, trees.toList, volumes.toList, time, activeNodeId, scale, editPosition, editRotation, zoomLevel)
         }
       } catch {
         case e: Exception =>

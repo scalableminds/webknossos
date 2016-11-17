@@ -1,26 +1,26 @@
 package controllers
 
-import scala.concurrent.Future
-
-import play.api.mvc.{Controller => PlayController, Result, Request}
+import com.scalableminds.util.mvc.ExtendedController
+import com.scalableminds.util.tools.{Converter, Fox}
+import com.typesafe.scalalogging.LazyLogging
+import models.binary.DataSet
+import models.user.User
+import net.liftweb.common.{Box, Failure, Full, ParamFailure}
 import oxalis.security.AuthenticatedRequest
 import oxalis.view.ProvidesSessionData
-import com.scalableminds.util.mvc.ExtendedController
-import models.user.User
-import net.liftweb.common.{ParamFailure, Box, Failure, Full}
-import play.api.i18n.{MessagesApi, I18nSupport, Messages}
-import models.binary.DataSet
-import com.scalableminds.util.tools.{Fox, Converter}
-import play.api.libs.json._
+import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
+import play.api.mvc.{Request, Result, Controller => PlayController}
 
 
 trait Controller extends PlayController
-with ExtendedController
-with ProvidesSessionData
-with models.basics.Implicits
-with I18nSupport
-{
+  with ExtendedController
+  with ProvidesSessionData
+  with models.basics.Implicits
+  with I18nSupport
+  with LazyLogging {
+
   def messagesApi: MessagesApi
 
   implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]): Request[T] =
@@ -36,7 +36,7 @@ with I18nSupport
     def applyOn(list: List[T])(implicit request: Request[_]): List[T] = {
       request.getQueryString(name).orElse(default).flatMap(converter.convert) match {
         case Some(attr) => list.filter(predicate(attr, _))
-        case _ => list
+        case _          => list
       }
     }
   }
@@ -94,7 +94,7 @@ with I18nSupport
     json.validate(reads) match {
       case JsSuccess(result, _) =>
         f(result)
-      case e: JsError =>
+      case e: JsError           =>
         Fox.successful(JsonBadRequest(jsonErrorWrites(e), Messages("format.json.invalid")))
     }
   }

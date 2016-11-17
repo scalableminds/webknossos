@@ -45,7 +45,7 @@ trait AnnotationContent {
 
   def contentType: String
 
-  def toDownloadStream(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]]
+  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]]
 
   def downloadFileExtension: String
 

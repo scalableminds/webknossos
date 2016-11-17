@@ -52,7 +52,7 @@ PUT           /api/users/:id                                                    
 GET           /api/users/:id/tasks                                              controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int])
 GET           /api/users/:id/loggedTime                                         controllers.UserController.userLoggedTime(id: String)
 GET           /api/users/:id/annotations                                        controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int])
-GET           /api/users/:id/annotations/download                               controllers.NMLIOController.userDownload(id: String)
+GET           /api/users/:id/annotations/download                               controllers.AnnotationIOController.userDownload(id: String)
 
 # MTurk
 GET           /hits/:id                                                         controllers.MTurkController.startAssignment(id: String, workerId: String, assignmentId: String)
@@ -101,7 +101,7 @@ GET           /api/datasetToken/validate                                        
 
 # SkeletonTracing Stuff
 POST          /annotations/createExplorational                                  controllers.AnnotationController.createExplorational
-POST          /admin/nml/upload                                                 controllers.NMLIOController.upload
+POST          /admin/nml/upload                                                 controllers.AnnotationIOController.upload
 PUT           /annotations/:typ/:id                                             controllers.AnnotationController.updateWithJson(typ: String, id: String, version: Int)
 POST          /annotations/:typ/:id/name                                        controllers.AnnotationController.nameExplorativeAnnotation(typ: String, id: String)
 GET           /annotations/:typ/:id/finishAndRedirect                           controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
@@ -121,7 +121,7 @@ GET           /annotations/:typ/:id                                             
 GET           /annotations/:typ/:id/readOnly                                    controllers.AnnotationController.trace(typ: String, id: String)
 GET           /annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/readOnly/info                               controllers.AnnotationController.infoReadOnly(typ: String, id: String)
-GET           /annotations/:typ/:id/download                                    controllers.AnnotationController.download(typ: String, id: String)
+GET           /annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
 GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId/:readOnly        controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean)
 # GET           /annotations/:typ/:id/saveMerged                                  controllers.AnnotationController.saveMerged(typ: String, id: String)
@@ -164,7 +164,7 @@ GET           /tasks/:id/edit                                                   
 #GET           /api/tasks/overview                                               controllers.admin.TaskAdministration.overviewData
 GET           /workload                                                         controllers.TaskController.empty
 
-GET           /api/tasks/:id/download                                           controllers.NMLIOController.taskDownload(id: String)
+GET           /api/tasks/:id/download                                           controllers.AnnotationIOController.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
 
 GET           /taskTypes                                                        controllers.TaskTypeController.empty(id: String = "")
@@ -177,7 +177,7 @@ POST          /api/taskTypes                                                    
 DELETE        /api/taskTypes/:id                                                controllers.TaskTypeController.delete(id: String)
 GET           /api/taskTypes/:id/tasks                                          controllers.TaskController.listTasksForType(id: String)
 
-GET           /api/taskTypes/:id/download                                       controllers.NMLIOController.taskTypeDownload(id: String)
+GET           /api/taskTypes/:id/download                                       controllers.AnnotationIOController.taskTypeDownload(id: String)
 GET           /api/taskTypes/:id                                                controllers.TaskTypeController.get(id: String)
 PUT           /api/taskTypes/:id                                                controllers.TaskTypeController.update(id: String)
 
@@ -195,7 +195,7 @@ POST          /api/projects                                                     
 GET           /api/projects/:name                                               controllers.ProjectController.read(name: String)
 DELETE        /api/projects/:name                                               controllers.ProjectController.delete(name: String)
 PUT           /api/projects/:name                                               controllers.ProjectController.update(name: String)
-GET           /api/projects/:name/download                                      controllers.NMLIOController.projectDownload(name: String)
+GET           /api/projects/:name/download                                      controllers.AnnotationIOController.projectDownload(name: String)
 GET           /api/projects/:name/tasks                                         controllers.ProjectController.tasksForProject(name: String)
 GET           /api/projects/:name/pause                                         controllers.ProjectController.pause(name: String)
 GET           /api/projects/:name/resume                                        controllers.ProjectController.resume(name: String)

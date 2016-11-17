@@ -6,6 +6,7 @@ import models.basics.SecuredBaseDAO
 import models.binary._
 import java.io.{FileInputStream, InputStream, PipedInputStream, PipedOutputStream}
 import java.nio.file.Paths
+import java.util.zip.ZipInputStream
 
 import scala.concurrent.Future
 
@@ -27,6 +28,7 @@ import models.tracing.skeleton.SkeletonTracing
 import models.tracing.volume.VolumeTracing.VolumeTracingXMLWrites
 import org.apache.commons.io.IOUtils
 import oxalis.nml.{NML, NMLService}
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 
 /**
@@ -94,7 +96,7 @@ case class VolumeTracing(
     pis
   }
 
-  def toDownloadStream(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
+  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
     import play.api.Play.current
     def createStream(url: String): Fox[Enumerator[Array[Byte]]] = {
       val futureResponse = WS
@@ -121,8 +123,8 @@ case class VolumeTracing(
       Enumerator.outputStream{ outputStream =>
         ZipIO.zip(
           List(
-            new NamedEnumeratorStream(inputStream, s"volume_data.zip"),
-            new NamedEnumeratorStream(volumeNml, s"volume.nml")
+            new NamedEnumeratorStream(inputStream, "data.zip"),
+            new NamedEnumeratorStream(volumeNml, name + ".nml")
           ), outputStream)
       }
     }
@@ -162,7 +164,12 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
     }
   }
 
-  def createFrom(nmls: List[NML], boundingBox: Option[BoundingBox], settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[VolumeTracing] = {
+  def createFrom(
+    nmls: List[NML],
+    additionalFiles: Map[String, TemporaryFile],
+    boundingBox: Option[BoundingBox],
+    settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[VolumeTracing] = {
+
     nmls.headOption.toFox.flatMap{ nml =>
       val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
 
@@ -170,7 +177,9 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
         dataSet <- DataSetDAO.findOneBySourceName(nml.dataSetName)
         baseSource <- dataSet.dataSource.toFox
         start <- nml.editPosition.toFox.orElse(DataSetService.defaultDataSetPosition(nml.dataSetName))
-        dataLayer <- DataStoreHandler.createUserDataLayer(dataSet.dataStoreInfo, baseSource)
+        nmlVolume <- nml.volumes.headOption.toFox
+        volume <- additionalFiles.get(nmlVolume.location).toFox
+        dataLayer <- DataStoreHandler.uploadUserDataLayer(dataSet.dataStoreInfo, baseSource, volume)
         volumeTracing = VolumeTracing(
           dataSet.name,
           dataLayer.dataLayer.name,
@@ -215,7 +224,7 @@ object VolumeTracing extends FoxImplicits{
             {parameters}
             {e.activeCellId.map(id => scala.xml.XML.loadString(s"""<activeNodeId id="$id"/>""")).getOrElse(scala.xml.Null)}
           </parameters>
-          <volume location="volume_data.zip"></volume>
+          <volume id ="1" location="data.zip"></volume>
         </things>
       }
     }

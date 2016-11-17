@@ -21,11 +21,11 @@ class ExplorativeTracingListView extends Marionette.CompositeView
           id="upload-and-explore-form"
           class="form-inline inline-block">
           <div id="fileinput" class="fileinput fileinput-new" data-provides="fileinput">
-            <span class="btn btn-default btn-file">   
+            <span class="btn btn-default btn-file">
               <span>
                 <i class="fa fa-upload fileinput-new" id="form-upload-icon"></i>
                 <i class="fa fa-spinner fa-spin fileinput-exists" id="form-spinner-icon"></i>
-                Upload NML & explore
+                Upload Annotation
               </span>
               <input type="file" name="nmlFile" multiple accept=".nml, .zip">
             </span>

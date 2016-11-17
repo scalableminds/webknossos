@@ -38,11 +38,11 @@ object KnossosMultiResCreator extends LazyLogging with FoxImplicits{
       var i = 0
       while(i < bytesPerElement){
         var idx = 0
-        while(idx < elements.size){
+        while(idx < elements.length){
           sum(i) = sum(i) + byteToUnsignedInt(elements(idx)(i))
           idx += 1
         }
-        result(i) = (sum(i) / elements.size).toByte
+        result(i) = (sum(i) / elements.length).toByte
         i += 1
       }
       result
@@ -62,10 +62,16 @@ object KnossosMultiResCreator extends LazyLogging with FoxImplicits{
     result
   }
 
-  private def loadCubes(dataStore: FileDataStore, target: Path, dataSetId: String, start: Point3D, resolution: Int, fileSize: Int, neighbours: Array[Point3D]): Future[List[Array[Byte]]] = {
+  private def loadCubes(dataStore: FileDataStore,
+                        target: Path,
+                        dataSetId: String,
+                        start: Point3D,
+                        resolution: Int,
+                        fileSize: Int,
+                        neighbours: Array[Point3D]): Future[List[Array[Byte]]] = {
     Future.traverse(neighbours.toList){ movement =>
       val cubePosition = start.move(movement)
-      dataStore.load(target, dataSetId, resolution, cubePosition, fileSize).futureBox.map{
+      dataStore.load(target, dataSetId, resolution, cubePosition, fileSize, isCompressed = false).futureBox.map{
         case Full(data) =>
           data.padTo(fileSize, 0.toByte)
         case _ =>
@@ -74,7 +80,14 @@ object KnossosMultiResCreator extends LazyLogging with FoxImplicits{
     }
   }
 
-  def createResolutions(source: Path, target: Path, dataSetId: String, bytesPerElement: Int, baseResolution: Int, resolutions: Int, boundingBox: BoundingBox, progressHook: Double => Unit): Future[_] = {
+  def createResolutions(source: Path,
+                        target: Path,
+                        dataSetId: String,
+                        bytesPerElement: Int,
+                        baseResolution: Int,
+                        resolutions: Int,
+                        boundingBox: BoundingBox,
+                        progressHook: Double => Unit): Future[_] = {
     def createNextResolution(resolution: Int) = {
       val targetResolution = resolution * 2
       logger.info(s"About to create resolution $targetResolution for $dataSetId")
@@ -94,10 +107,11 @@ object KnossosMultiResCreator extends LazyLogging with FoxImplicits{
         case (f, p) => f.flatMap{ _ =>
           val base = p.scale(baseScale)
           val goal = p.scale(targetScale)
-          loadCubes(dataStore, target, dataSetId, base, resolution, fileSize(bytesPerElement), InterpolationNeighbours).flatMap{ cubes =>
+          val size = fileSize(bytesPerElement)
+          loadCubes(dataStore, target, dataSetId, base, resolution, size, InterpolationNeighbours).flatMap{ cubes =>
             val block = BlockedArray3D[Byte](cubes.toArray, CubeSize, CubeSize, CubeSize, 2, 2, 2, bytesPerElement, 0)
             val data = downScale(block, CubeSize, CubeSize, CubeSize, bytesPerElement)
-            dataStore.save(target, dataSetId, targetResolution, goal, data)
+            dataStore.save(target, dataSetId, targetResolution, goal, data, shouldBeCompressed = false)
           }
         }}
       }

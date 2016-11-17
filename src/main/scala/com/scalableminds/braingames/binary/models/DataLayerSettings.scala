@@ -10,6 +10,7 @@ case class DataLayerSettings(
                               `class`: String,
                               largestValue: Option[Long],
                               flags: Option[List[String]],
+                              isCompressed: Option[Boolean],
                               fallback: Option[FallbackLayer])
 
 object DataLayerSettings extends SettingsFile[DataLayerSettings] {

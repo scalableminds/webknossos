@@ -58,15 +58,25 @@ export default class UserPage {
       .then(function() {
         return Promise.all(
           teamNames.map(function(team) {
-            const selector = `select[data-teamname='${team}']`
+            const selector = `select[data-teamname='${team}']`;
 
             return browser
               .waitForExist(selector)
-              .selectByValue(selector, "user")
-              .getValue(selector)
+              // This is a hack to select the value from the dropdown as browser.selectByValue doesn't work in Firefox
+              // It executes a javascript function in the browser context which gets the select element as an argument
+              // ATTENTION: .selectorExecute works with an XPath selector
+              .selectorExecute(`//select[@data-teamname='${team}']`, (selectEl) => {
+                for (var i = 0; i < selectEl[0].options.length; i++) {
+                  if (selectEl[0].options[i].value === "user") {
+                      selectEl[0].options[i].selected = true;
+                      return;
+                  }
+                }
+              })
+              .getValue(selector);
           })
-        )
-      })
+        );
+      });
   }
 
 

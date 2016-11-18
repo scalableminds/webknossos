@@ -38,9 +38,9 @@ describe("User List", function() {
 
         // select first user 'SCM Boy' and switch the role of the newly created
         // team to 'user'
-        await page.selectUser("SCM Boy")
-        await page.selectTeams([newTeamName])
-        await page.clickConfirmButton()
+        await page.selectUser("SCM Boy");
+        await page.selectTeams([newTeamName]);
+        await page.clickConfirmButton();
 
         // confirm that the user table updated
         const teamsAndRoles = await page.getTeamsAndRolesForUser("SCM Boy")

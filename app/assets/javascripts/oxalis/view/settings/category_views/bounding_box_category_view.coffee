@@ -20,7 +20,7 @@ class BoundingBoxCategory extends CategoryView
             name : "boundingBox"
             displayName : "Bounding Box"
             pattern : "(\\d+\\s*,\\s*){5}\\d+"
-            title : "Format: minX, minY, minZ, maxX, maxY, maxZ"
+            title : "Format: minX, minY, minZ, width, height, depth"
             validate : @validate
         )
     ]
@@ -28,16 +28,17 @@ class BoundingBoxCategory extends CategoryView
 
   validate : (value)->
 
-    [minX, minY, minZ, maxX, maxY, maxZ] = Utils.stringToNumberArray(value)
+    [minX, minY, minZ, width, height, depth] = Utils.stringToNumberArray(value)
 
-    if isInvalid = minX > maxX or minY > maxY or minZ > maxZ
+    # Width, height and depth of 0 should be allowed as a non-existing bounding box equals 0,0,0,0,0,0
+    if isInvalid = width < 0 or height < 0 or depth < 0
 
       # Unfortunately we cannot use HTML5 form validation here since the text box
       # is not part of a form and a submit event is missing :-(
-      Toast.error("Bounding Box: Max value must be bigger than min value.", false)
+      Toast.error("Bounding Box: Width, height and depth must be >= 0.", false)
 
       # Set input as invalid for CSS highlighting
-      @ui.text[0].setCustomValidity("Max value must be bigger than min value.")
+      @ui.text[0].setCustomValidity("Width, height and depth must be >= 0.")
     else
       # reset error state
       @ui.text[0].setCustomValidity("")

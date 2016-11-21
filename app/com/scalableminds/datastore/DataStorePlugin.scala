@@ -15,7 +15,7 @@ class DataStorePlugin @Inject()(implicit app: play.api.Application, messagesApi:
   extends Plugin
           with LazyLogging{
 
-  implicit val system = ActorSystem("datastore")
+  implicit val system = ActorSystem("webknossos")
 
   lazy val dataSourceRepository = new DataSourceRepository
 

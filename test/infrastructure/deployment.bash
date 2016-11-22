@@ -2,4 +2,4 @@
 
 source "$(dirname "$0")/helper.bash"
 
-run_test "curl localhost:9000" curl -m 10 --retry 20 --retry-delay 5 -v -I http://localhost:9000
+run_test "curl localhost:9000" retry 20 5 curl -v -I http://localhost:9000

@@ -8,12 +8,7 @@ fi
 
 host="$3"
 if [ ! $3 ]; then
-  host="localhost"
-fi
-
-port="$4"
-if [ ! $4 ]; then
-  port="27017"
+  host="localhost:27017"
 fi
 
 db=$1
@@ -24,9 +19,9 @@ else
   mkdir -p $out_dir
 fi
 
-cols=`mongo "$db" --host "$host" --port "$port" --eval "print(db.getCollectionNames())" | tail -n1 | tr ',' ' '`
+cols=`mongo "$host/$db" --eval "print(db.getCollectionNames())" | tail -n1 | tr ',' ' '`
 
 for c in $cols
 do
-  mongoexport --db "$db" --host "$host" --port "$port" --collection "$c" -o "$out_dir/${c}.json"
+  mongoexport --db "$db" --host "$host" --collection "$c" -o "$out_dir/${c}.json"
 done

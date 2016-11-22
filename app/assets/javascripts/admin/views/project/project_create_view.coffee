@@ -170,7 +170,7 @@ class ProjectCreateView extends Marionette.View
       childViewOptions :
         defaultItem : {email : app.currentUser.email}
         modelValue : -> return @model.id
-        modelLabel : -> return "#{@model.get("firstName")} #{@model.get("lastName")} (#{@model.get("email")})"
+        modelLabel : -> return "#{@model.get("lastName")}, #{@model.get("firstName")} (#{@model.get("email")})"
       name : "owner"
       data : "isAdmin=true"
     )

@@ -19,6 +19,9 @@ ITERATION=${4}
 
 pushd ${WORKSPACE}
 
+# CLEANUP
+docker-compose down
+
 # PRE
 docker login -u $DOCKER_USER -p $DOCKER_PASS
 docker pull scalableminds/sbt:$SBT_VERSION_TAG
@@ -48,5 +51,6 @@ docker push scalableminds/oxalis:commit-$COMMIT
 
 # POST
 docker logout
+docker-compose down
 
 popd

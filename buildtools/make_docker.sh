@@ -36,11 +36,9 @@ docker-compose run oxalis-e2e-tests
 
 # DOCKER SMOKE TEST
 DOCKER_TAG=$ITERATION docker-compose up oxalis &
-DOCKER_COMPOSE_PID=$!
-trap "kill $DOCKER_COMPOSE_PID" EXIT
 sleep 10
 ./test/infrastructure/deployment.bash
-kill $DOCKER_COMPOSE_PID
+docker-compose down
 
 # PUBLISH
 docker tag scalableminds/oxalis:$ITERATION scalableminds/oxalis:branch-$BRANCH
@@ -51,6 +49,5 @@ docker push scalableminds/oxalis:commit-$COMMIT
 
 # POST
 docker logout
-docker-compose down
 
 popd

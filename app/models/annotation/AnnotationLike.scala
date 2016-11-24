@@ -73,6 +73,8 @@ trait AnnotationLike extends AnnotationStatistics {
   def makeReadOnly: AnnotationLike
 
   def saveToDB(implicit ctx: DBAccessContext): Fox[AnnotationLike]
+
+  def tracingTime: Option[Long]
 }
 
 object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
@@ -104,7 +106,8 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
       "downloadUrl" +> a.relativeDownloadUrl.map(toAbsoluteUrl),
       "content" +> a.content.flatMap(AnnotationContent.writeAsJson(_)).getOrElse(JsNull),
       "contentType" +> a.content.map(_.contentType).getOrElse(""),
-      "dataSetName" +> a.dataSetName
+      "dataSetName" +> a.dataSetName,
+      "tracingTime" +> a.tracingTime
     )
   }
 }

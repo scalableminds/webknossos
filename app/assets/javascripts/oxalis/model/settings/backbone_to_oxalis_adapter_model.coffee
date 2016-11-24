@@ -71,15 +71,8 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
           _.defer( => @skeletonTracingModel.setActiveTree(id) )
       )
 
-      @listenTo(@skeletonTracingAdapter, "change:somaClicking", (model, bool, options) ->
-        if not options.triggeredByModel
-          if @oxalisModel.settings.somaClickingAllowed
-            @oxalisModel.user.set("newNodeNewTree", bool)
-          else
-            # uncheck the soma clicking option again as it is not allowed
-            _.defer( => @skeletonTracingAdapter.set("somaClicking", false, {triggeredByModel: true}) )
-            # trigger a user notification
-            @skeletonTracingModel.trigger("noSomaClicking")
+      @listenTo(@skeletonTracingAdapter, "change:somaClicking", (model, bool) ->
+        @oxalisModel.user.set("newNodeNewTree", bool)
       )
 
       @listenTo(@skeletonTracingAdapter, "change:activeNodeId", (model, id, options) ->

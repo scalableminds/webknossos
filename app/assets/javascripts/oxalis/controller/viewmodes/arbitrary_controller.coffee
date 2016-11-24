@@ -164,8 +164,6 @@ class ArbitraryController
 
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
-      "1" : => @skeletonTracingController.toggleSkeletonVisibility()
-
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch()

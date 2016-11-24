@@ -11,8 +11,8 @@ ArbitraryPlaneInfo = require("../../geometries/arbitrary_plane_info")
 constants          = require("../../constants")
 {M4x4, V3}         = require("libs/mjs")
 Utils              = require("libs/utils")
-
 Toast              = require("libs/toast")
+modal              = require("../../view/modal")
 
 class ArbitraryController
 
@@ -22,6 +22,7 @@ class ArbitraryController
 
   WIDTH : 128
   TIMETOCENTER : 200
+
 
   plane : null
   crosshair : null
@@ -58,7 +59,7 @@ class ArbitraryController
     @cam = @model.flycam3d
     @arbitraryView = new ArbitraryView(canvas, @cam, @view, @WIDTH)
 
-    @plane = new ArbitraryPlane(@cam, @model, @WIDTH)
+    @plane = new ArbitraryPlane(@cam, @model, this, @WIDTH)
     @arbitraryView.addGeometry @plane
 
     # render HTML element to indicate recording status
@@ -108,16 +109,14 @@ class ArbitraryController
         else if @mode == constants.MODE_ARBITRARY_PLANE
           f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
           @cam.move [delta.x * f, delta.y * f, 0]
+      rightClick : (pos, plane, event) =>
+        @createBranchMarker(pos)
+
       scroll : @scroll
     )
 
 
   initKeyboard : ->
-
-    getVoxelOffset  = (timeFactor) =>
-
-      return @model.user.get("moveValue3d") * timeFactor / app.scaleInfo.baseVoxel / constants.FPS
-
 
     @input.keyboard = new Input.Keyboard(
 
@@ -128,14 +127,19 @@ class ArbitraryController
       "k"             : (timeFactor) => @arbitraryView.applyScale  @model.user.get("scaleValue")
 
       #Move
-      "w"             : (timeFactor) => @cam.move [0, getVoxelOffset(timeFactor), 0]
-      "s"             : (timeFactor) => @cam.move [0, -getVoxelOffset(timeFactor), 0]
-      "a"             : (timeFactor) => @cam.move [getVoxelOffset(timeFactor), 0, 0]
-      "d"             : (timeFactor) => @cam.move [-getVoxelOffset(timeFactor), 0, 0]
       "space"         : (timeFactor) =>
-        @cam.move [0, 0, getVoxelOffset(timeFactor)]
-        @moved()
-      "ctrl + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
+        @setRecord(true)
+        @move(timeFactor)
+      "ctrl + space"   : (timeFactor) =>
+        @setRecord(true)
+        @move(-timeFactor)
+
+      "f"         : (timeFactor) =>
+        @setRecord(false)
+        @move(timeFactor)
+      "d"   : (timeFactor) =>
+        @setRecord(false)
+        @move(-timeFactor)
 
       #Rotate at centre
       "shift + left"  : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor
@@ -160,26 +164,16 @@ class ArbitraryController
 
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
-      "1" : => @skeletonTracingController.toggleSkeletonVisibility()
-      "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
-
-      #Delete active node
-      "delete" : => @model.skeletonTracing.deleteActiveNode()
-      "c" : => @model.skeletonTracing.createNewTree()
-
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch()
 
-
       #Recenter active node
-      "y" : => @centerActiveNode()
+      "s" : => @centerActiveNode()
 
-      #Recording of Waypoints
-      "z" : =>
-        @setRecord(true)
-      "u" : =>
-        @setRecord(false)
+      "." : => @nextNode(true)
+      "," : => @nextNode(false)
+
       #Rotate view by 180 deg
       "r" : => @cam.yaw(Math.PI)
     )
@@ -187,18 +181,57 @@ class ArbitraryController
     @input.keyboardOnce = new Input.Keyboard(
 
       #Delete active node and recenter last node
-      "shift + space" : =>
-        @model.skeletonTracing.deleteActiveNode()
-        @centerActiveNode()
-
+      "shift + space" : => @deleteActiveNode()
     , -1)
 
 
   setRecord : (record) ->
 
-    @model.set("flightmodeRecording", record)
-    if record
+    if record != @model.get("flightmodeRecording")
+      @model.set("flightmodeRecording", record)
       @setWaypoint()
+
+
+  createBranchMarker : (pos) ->
+
+    return unless @isBranchpointvideoMode() || @isSynapseannotationMode()
+    activeNode = @model.skeletonTracing.getActiveNode()
+    @model.setMode(2)
+    f = @cam.getZoomStep() / (@arbitraryView.width / @WIDTH)
+    @cam.move [-(pos.x - @arbitraryView.width / 2) * f, -(pos.y - @arbitraryView.width / 2) * f, 0]
+    position  = @cam.getPosition()
+    rotation = @cam.getRotation()
+    @model.skeletonTracing.createNewTree()
+    @addNode(position, rotation)
+    @cam.move [(pos.x - @arbitraryView.width / 2) * f, (pos.y - @arbitraryView.width / 2) * f, 0]
+    if @isBranchpointvideoMode()
+        @setActiveNode(activeNode.id, true)
+    @model.setMode(1)
+    @moved()
+
+
+  nextNode : (nextOne) ->
+
+    return unless @isBranchpointvideoMode()
+    activeNode = @model.skeletonTracing.getActiveNode()
+    if (nextOne && activeNode.id == @model.skeletonTracing.getActiveTree().nodes.length) || (!nextOne && activeNode.id == 1)
+      return
+    @setActiveNode((activeNode.id + 2 * nextOne - 1), true) # implicit cast from boolean to int
+    if (@view.theme is constants.THEME_BRIGHT) != nextOne # switch background to black for backwards move
+      @view.toggleTheme()
+
+
+  getVoxelOffset : (timeFactor) ->
+
+    return @model.user.get("moveValue3d") * timeFactor / app.scaleInfo.baseVoxel / constants.FPS
+
+
+  move : (timeFactor) ->
+
+    return if not @isStarted
+    return if @isBranchpointvideoMode()
+    @cam.move [0, 0, @getVoxelOffset(timeFactor)]
+    @moved()
 
 
   init : ->
@@ -259,6 +292,7 @@ class ArbitraryController
 
   addNode : (position, rotation) =>
 
+    return if not @isStarted
     datasetConfig = @model.get("datasetConfiguration")
     fourBit = if datasetConfig.get("fourBit") then 4 else 8
     interpolation = datasetConfig.get("interpolation")
@@ -297,11 +331,15 @@ class ArbitraryController
 
   setClippingDistance : (value) ->
 
-    @arbitraryView.setClippingDistance(value)
+    if @isBranchpointvideoMode()
+      @arbitraryView.setClippingDistance(constants.BRANCHPOINT_VIDEO_CLIPPING_DISTANCE)
+    else
+      @arbitraryView.setClippingDistance(value)
 
 
   pushBranch : ->
 
+    @setWaypoint()
     @model.skeletonTracing.pushBranch()
     Toast.success("Branchpoint set")
 
@@ -349,6 +387,19 @@ class ArbitraryController
     @cam.setRotation(@model.skeletonTracing.getActiveNodeRotation())
 
 
+  deleteActiveNode : ->
+
+    skeletonTracing = @model.skeletonTracing
+    activeNode = skeletonTracing.getActiveNode()
+    if activeNode.neighbors.length > 1
+      Toast.error("Unable: Attempting to cut skeleton")
+    else
+      _.defer => @model.skeletonTracing.deleteActiveNode().then(
+        =>
+          @centerActiveNode()
+      )
+
+
   getShortestRotation : (curRotation, newRotation) ->
 
     # TODO
@@ -384,6 +435,16 @@ class ArbitraryController
     if vectorLength > 10
       @setWaypoint()
       @lastNodeMatrix = matrix
+
+
+  isBranchpointvideoMode : ->
+
+    return @model.tracing.task?.type.summary == 'branchpointvideo'
+
+
+  isSynapseannotationMode : ->
+
+    return @model.tracing.task?.type.summary == 'synapseannotation'
 
 
 module.exports = ArbitraryController

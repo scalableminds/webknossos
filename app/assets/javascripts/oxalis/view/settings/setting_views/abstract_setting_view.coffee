@@ -7,6 +7,7 @@ class AbstractSettingView extends Marionette.View
   initialize : ({ @model, @options }) ->
 
     @listenTo(@model, "change:#{@options.name}" , @update)
+    @options = _.defaults(@options, {enabled: true})
 
 
   serializeData : ->

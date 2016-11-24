@@ -39,7 +39,9 @@ class BackboneToOxalisAdapterModel extends Backbone.Model
       @skeletonTracingAdapter.set("particleSize", @oxalisModel.user.get("particleSize"))
       @skeletonTracingAdapter.deleteActiveNode = @skeletonTracingModel.deleteActiveNode.bind(@skeletonTracingModel)
 
-      if @oxalisModel.settings.somaClickingAllowed
+      somaClickingAllowed = @oxalisModel.settings.somaClickingAllowed
+      @skeletonTracingAdapter.set("somaClickingAllowed", somaClickingAllowed)
+      if somaClickingAllowed
         @skeletonTracingAdapter.set("somaClicking", @oxalisModel.user.get("newNodeNewTree"))
 
 

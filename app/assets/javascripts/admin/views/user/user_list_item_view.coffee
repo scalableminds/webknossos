@@ -30,16 +30,17 @@ class UserListItemView extends Marionette.View
       <% }) %>
     </td>
     <td>
-      <% if(verified) { %>
-        <i class="fa fa-check"></i>
+      <% if(isActive) { %>
+        <i class="fa fa-check fa-2x"></i><br />
+        <a href="#" class="deactivate-user">deactivate</a>
       <% } else { %>
-        <a href="#" class="verify-user"> verify </a>
+        <i class="fa fa-remove fa-2x"></i><br />
+        <a href="#" class="activate-user">activate</a>
       <% } %>
     </td>
     <td class="nowrap">
       <a href="/users/<%- id %>/details"><i class="fa fa-user"></i>show Tracings</a><br />
       <a href="/api/users/<%- id %>/annotations/download" title="download all finished tracings"><i class="fa fa-download"></i>download </a><br />
-      <a href="#" class="delete-user"><i class="fa fa-trash-o"></i>delete </a><br />
       <!--<a href="/admin/users/<%- id %>/loginAs"><i class="fa fa-signin"></i>log in as User </a>-->
     </td>
   """)
@@ -48,26 +49,25 @@ class UserListItemView extends Marionette.View
     TemplateHelpers : TemplateHelpers
 
   events :
-    "click .delete-user" : "delete"
-    "click .verify-user" : "verify"
+    "click .activate-user" : "activate"
+    "click .deactivate-user" : "deactivate"
 
   modelEvents :
     "change" : "render"
 
-
-  delete : (evt) ->
-
-    evt.preventDefault()
-    if window.confirm("Do you really want to delete this user?")
-      @model.destroy()
-
-
-  verify : ->
+  activate : ->
 
     #select checkbox, so that it gets picked up by the bulk verification modal
     @$("input").prop("checked", true)
 
     #HACKY
     $("#team-role-modal").click()
+
+  deactivate : ->
+    if window.confirm("Do you really want to deactivate this user?")
+      #select checkbox, so that it gets picked up by the bulk verification modal
+      @$("input").prop("checked", true)
+
+      # TODO: deactivate user
 
 module.exports = UserListItemView

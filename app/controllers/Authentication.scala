@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import scala.concurrent.Future
 
+import akka.actor.ActorRef
 import com.scalableminds.util.mail._
 import models.team.TeamService
 import models.user._
@@ -24,11 +25,11 @@ import views.html
 
 class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with ProvidesUnauthorizedSessionData {
 
-  lazy val Mailer =
+  private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
   // -- Authentication
-  val autoVerify =
+  val automaticUserActivation: Boolean =
     Play.configuration.getBoolean("application.authentication.enableDevAutoVerify") getOrElse false
 
   val registerForm: Form[(String, String, String, String, String)] = {
@@ -70,20 +71,20 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
     boundForm.fold(
     formWithErrors =>
       formHtml(formWithErrors).map(BadRequest(_)), {
-      case (team, email, firstName, lastName, password) => {
-        UserService.findOneByEmail(email).futureBox.flatMap {
+      case (team, emailAddress, firstName, lastName, password) => {
+        UserService.findOneByEmail(emailAddress).futureBox.flatMap {
           case Full(_) =>
             formHtml(boundForm.withError("email", "user.email.alreadyInUse")).map(BadRequest(_))
           case _       =>
             for {
-              user <- UserService.insert(team, email, firstName, lastName, password, autoVerify)
+              user <- UserService.insert(team, emailAddress, firstName, lastName, password, automaticUserActivation)
               brainDBResult <- BrainTracing.register(user)
             } yield {
               Mailer ! Send(
-                DefaultMails.registerMail(user.name, email, brainDBResult))
+                DefaultMails.registerMail(user.name, emailAddress, brainDBResult))
               Mailer ! Send(
-                DefaultMails.registerAdminNotifyerMail(user, email, brainDBResult))
-              if (autoVerify) {
+                DefaultMails.registerAdminNotifyerMail(user, emailAddress, brainDBResult))
+              if (automaticUserActivation) {
                 Redirect(controllers.routes.Application.index)
                 .withSession(Secured.createSession(user))
               } else {
@@ -119,10 +120,10 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
         UserService.auth(email.toLowerCase, password).map {
           user =>
             val redirectLocation =
-              if (user.verified)
+              if (user.isActive)
                 Redirect(controllers.routes.Application.index)
               else
-                BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.notVerified")))
+                BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.deactivated")))
             redirectLocation.withSession(Secured.createSession(user))
 
         }.getOrElse {

@@ -63,13 +63,13 @@ object UserService extends FoxImplicits {
     UserDAO.logActivity(_user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(teamName: String, email: String, firstName: String, lastName: String, password: String, isVerified: Boolean): Fox[User] =
+  def insert(teamName: String, email: String, firstName: String, lastName: String, password: String, isActive: Boolean): Fox[User] =
     for {
       teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
       teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
-      user = User(email, firstName, lastName, verified = false, hashPassword(password), md5(password), teamMemberships)
-      result <- UserDAO.insert(user, isVerified)(GlobalAccessContext).futureBox
-    } yield result
+      user = User(email, firstName, lastName, isActive = false, hashPassword(password), md5(password), teamMemberships)
+      _ <- UserDAO.insert(user)(GlobalAccessContext)
+    } yield user
 
   def prepareMTurkUser(workerId: String, teamName: String, experience: Experience)(implicit ctx: DBAccessContext): Fox[User] = {
     def necessaryTeamMemberships = {
@@ -84,16 +84,14 @@ object UserService extends FoxImplicits {
         user = User(
           email,
           "mturk", workerId,
-          verified = true,
+          isActive = true,
           pwdHash = "",
           md5hash = "",
           teams = teamMemberships,
           _isAnonymous = Some(true),
           experiences = experience.toMap)
-        result <- UserDAO.insert(user, isVerified = true)
-      } yield {
-        result
-      }
+        _ <- UserDAO.insert(user)
+      } yield user
     }
 
     def updateUser(u: User): Fox[User] = {
@@ -115,17 +113,14 @@ object UserService extends FoxImplicits {
     user: User,
     firstName: String,
     lastName: String,
-    verified: Boolean,
+    activated: Boolean,
     teams: List[TeamMembership],
     experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
 
-    if (!user.verified && verified) {
-      Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
-      if(user.teams.isEmpty){
-        BrainTracing.register(user)
-      }
+    if (!user.isActive && activated) {
+      Mailer ! Send(DefaultMails.activatedMail(user.name, user.email))
     }
-    UserDAO.update(user._id, firstName, lastName, verified, teams, experiences).map {
+    UserDAO.update(user._id, firstName, lastName, activated, teams, experiences).map {
       result =>
         UserCache.invalidateUser(user.id)
         result
@@ -133,7 +128,7 @@ object UserService extends FoxImplicits {
   }
 
   def changePassword(user: User, newPassword: String)(implicit ctx: DBAccessContext) = {
-    if (user.verified)
+    if (user.isActive)
       Mailer ! Send(DefaultMails.changePasswordMail(user.name, user.email))
 
     UserDAO.changePassword(user._id, newPassword).map { result =>

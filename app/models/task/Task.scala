@@ -192,7 +192,9 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
 
-  def update(_task: BSONObjectID, _taskType: BSONObjectID,
+  def update(
+    _task: BSONObjectID,
+    _taskType: BSONObjectID,
     neededExperience: Experience,
     instances: Int,
     team: String,
@@ -205,6 +207,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
           "neededExperience" -> neededExperience,
           "instances" -> instances,
           "team" -> team,
+          "_taskType" -> _taskType,
           "_project" -> _project)),
       returnNew = true)
 

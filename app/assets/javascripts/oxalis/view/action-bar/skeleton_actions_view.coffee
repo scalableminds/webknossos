@@ -35,7 +35,8 @@ class SkeletonActionsView extends Marionette.View
       Constants.PLANE_XY, # xy viewport
       @model.flycam.getIntegerZoomStep(),
       if datasetConfig.get("fourBit") then 4 else 8,
-      datasetConfig.get("interpolation")
+      datasetConfig.get("interpolation"),
+      -1
     )
 
 module.exports = SkeletonActionsView

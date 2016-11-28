@@ -64,7 +64,7 @@ class SkeletonTracing
 
     tracingType = tracing.typ
     if (tracingType == "Task") and @getNodeListOfAllTrees().length == 0
-      @addNode(tracing.content.editPosition, tracing.content.editRotation, 0, 0, 4, false)
+      @addNode(tracing.content.editPosition, tracing.content.editRotation, 0, 0, 4, false, -1)
 
     @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
@@ -169,7 +169,7 @@ class SkeletonTracing
     return [curPoint, curTree]
 
 
-  addNode : (position, rotation, viewport, resolution, bitDepth, interpolation) ->
+  addNode : (position, rotation, viewport, resolution, bitDepth, interpolation, withSpeed) ->
 
     return if not @restrictionHandler.updateAllowed()
 
@@ -184,6 +184,7 @@ class SkeletonTracing
         resolution : resolution
         bitDepth : bitDepth
         interpolation : interpolation
+        withSpeed : withSpeed
 
       point = new TracePoint(@idCount++, position, radius, @activeTree.treeId, metaInfo, rotation)
       @activeTree.nodes.push(point)

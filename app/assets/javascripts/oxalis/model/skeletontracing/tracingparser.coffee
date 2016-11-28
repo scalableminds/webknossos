@@ -32,7 +32,7 @@ class TracingParser
       for node in treeData.nodes
 
         metaInfo = _.pick( node,
-          'timestamp', 'viewport', 'resolution', 'bitDepth', 'interpolation' )
+          'timestamp', 'viewport', 'resolution', 'bitDepth', 'interpolation', 'withSpeed' )
 
         tree.nodes.push(
           new TracePoint(

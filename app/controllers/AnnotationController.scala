@@ -78,13 +78,13 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   // json updates and hence we can not use them to replay previous updates. It is also infeasible to write
   // an evolution for this since it is to expensive to calculate the missing information to create the proper updates
 
-  // def combineUpdates(updates: List[AnnotationUpdate]) = updates.foldLeft(Seq.empty[JsValue]){
-  //   case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
-  //     updates ++ nextUpdates
-  //   case (updates, u) =>
-  //     Logger.warn("dropping update during replay! Update: " + u)
-  //     updates
-  // }
+   def combineUpdates(updates: List[AnnotationUpdate]) = updates.foldLeft(Seq.empty[JsValue]){
+     case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
+       updates ++ nextUpdates
+     case (updates, u) =>
+       Logger.warn("dropping update during replay! Update: " + u)
+       updates
+   }
 
   // def listUpdates(typ: String, id: String)= Authenticated.async { implicit request =>
   //   withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
@@ -117,21 +117,22 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   //   } yield JsonOk(Messages("annotation.updates.transfered"))
   // }
 
-  // def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
-  //   for {
-  //     oldAnnotation <- findAnnotation(typ, id)
-  //     _ <- isUpdateAllowed(oldAnnotation, version).toFox
-  //     updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion=version)
-  //     combinedUpdate = JsArray(combineUpdates(updates))
-  //     updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
-  //     updatedAnnotation <- oldAnnotation.muta.resetToBase()
-  //     result <- handleUpdates(updateableAnnotation, combinedUpdate, version)
-  //     _ <- AnnotationUpdateService.removeAll(typ, id, aboveVersion = version)
-  //   } yield {
-  //     Logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
-  //     JsonOk(result, "annotation.reverted")
-  //   }
-  // }
+   def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
+     for {
+       oldAnnotation <- findAnnotation(typ, id)
+       _ <- isUpdateAllowed(oldAnnotation, version).toFox
+       _ <- oldAnnotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
+       updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion=version) ?~> Messages("annotation.revert.findUpdatesFailed")
+       combinedUpdate = JsArray(combineUpdates(updates))
+       resetAnnotation <- oldAnnotation.muta.resetToBase() ?~> Messages("annotation.revert.resetToBaseFailed")
+       updateableAnnotation <- isUpdateable(resetAnnotation) ?~> Messages("annotation.update.impossible")
+       result <- handleUpdates(updateableAnnotation, combinedUpdate, version) ?~> Messages("annotation.revert.handlingUpdatesFailed")
+       _ <- AnnotationUpdateService.removeAll(typ, id, aboveVersion = version) ?~> Messages("annotation.revert.deleteUpdatesFailed")
+     } yield {
+       Logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
+       JsonOk(result, "annotation.reverted")
+     }
+   }
 
   def reset(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>

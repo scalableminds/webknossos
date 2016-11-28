@@ -182,6 +182,7 @@ annotation.reset.failed=Couldn''t reset tracing to base
 annotation.merge.success=Merging successfully done
 annotation.dirtyState=Annotation is not up to date. You can''t make any changes
 annotation.update.impossible=This annotation can''t be updated (read only)
+annotation.revert.toOld=Reverting the tracing to a previous version is not possible due to the tracing beeing to old.
 annotation.preferedMode.invalid=Prefered mode is invalid
 annotation.mode.invalid=Invalid annotation mode
 

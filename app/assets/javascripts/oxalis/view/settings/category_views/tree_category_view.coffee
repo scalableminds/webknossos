@@ -26,6 +26,7 @@ class TreeCategoryView extends CategoryView
         return new CheckboxSettingView(
           model : @model
           options :
+            enabled : @model.get("somaClickingAllowed")
             name : "somaClicking"
             displayName : "Soma Clicking"
         )

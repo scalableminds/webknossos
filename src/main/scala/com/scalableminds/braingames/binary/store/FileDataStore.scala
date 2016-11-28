@@ -104,7 +104,6 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
       logger.info(s"Attempting write to: $path")
       try {
         PathUtils.parent(path.toAbsolutePath).map(p => Files.createDirectories(p))
-        logger.info(s"Attempting write to: $path")
         val binaryStream = createOutputStream(path, shouldBeCompressed)
         logger.info("Created FileOutputStream")
         byteArrayToOutputStream(binaryStream, data)

@@ -25,7 +25,9 @@ case class ImageCreatorParameters(
                                    imagesPerRow: Int = 8,
                                    imagesPerColumn: Int = Int.MaxValue,
                                    imageWidth: Option[Int] = None,
-                                   imageHeight: Option[Int] = None)
+                                   imageHeight: Option[Int] = None,
+                                   blackAndWhite: Boolean
+                                 )
 
 object ImageCreator extends LazyLogging {
 
@@ -47,7 +49,10 @@ object ImageCreator extends LazyLogging {
             r(2*idx + 1)=(b & 0x0F << 4).toByte
         }
         r
-      } else data
+      } else if(params.blackAndWhite) {
+        data.map(d => if(d != 0x00) 0xFF.toByte else 0x00.toByte)
+      } else
+        data
     val slidingSize = params.slideHeight * params.slideWidth * params.bytesPerElement
     imageData.sliding(slidingSize, slidingSize).toList.flatMap {
       slice =>

@@ -7,25 +7,28 @@ import javax.inject.Inject
 
 import play.api.libs.json._
 import com.scalableminds.util.geometry.Point3D
-import play.api.i18n.{I18nSupport, MessagesApi, Messages}
+import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.datastore.models._
 import com.scalableminds.braingames.binary._
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.braingames.binary.DataRequestSettings
 import com.scalableminds.braingames.binary.MappingRequest
+
 import scala.concurrent.Future
-import com.scalableminds.util.image.{JPEGWriter, ImageCreator, ImageCreatorParameters}
-import com.scalableminds.datastore.services.{DataSetAccessService, UserDataLayerService, UserAccessService}
+import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
+import com.scalableminds.datastore.services.{DataSetAccessService, UserAccessService, UserDataLayerService}
 import com.scalableminds.datastore.models.DataSourceDAO
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.datastore.DataStorePlugin
 import java.io.File
+
 import org.apache.commons.io.FileUtils
 import org.apache.commons.codec.binary.Base64
 import play.api.libs.iteratee.Enumerator
 import com.scalableminds.datastore.models.DataProtocol
 import net.liftweb.common._
+import play.api.{Mode, Play}
 
 class BinaryDataController @Inject() (val messagesApi: MessagesApi)
   extends BinaryDataReadController
@@ -34,6 +37,8 @@ class BinaryDataController @Inject() (val messagesApi: MessagesApi)
   with BinaryDataMappingController
 
 trait BinaryDataCommonController extends Controller with FoxImplicits with I18nSupport{
+
+  val debugModeEnabled: Boolean = Play.current.configuration.getBoolean("datastore.debugMode") getOrElse false
 
   protected def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String): Fox[(DataSource, DataLayer)] = {
     for {
@@ -49,10 +54,12 @@ trait BinaryDataCommonController extends Controller with FoxImplicits with I18nS
 
   case class TokenSecuredAction(dataSetName: String, dataLayerName: String) extends ActionBuilder[Request] {
 
-    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]) = {
-
+    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
       hasUserAccess(request).flatMap {
         case true =>
+          block(request)
+        case _ if debugModeEnabled && Play.mode(Play.current) != Mode.Prod =>
+          // If we are in development mode, lets skip tokens
           block(request)
         case false =>
           hasDataSetTokenAccess(request).flatMap {
@@ -64,13 +71,13 @@ trait BinaryDataCommonController extends Controller with FoxImplicits with I18nS
       }
     }
 
-    def hasUserAccess[A](request: Request[A]) = {
+    private def hasUserAccess[A](request: Request[A]): Future[Boolean] = {
       request.getQueryString("token").map { token =>
         UserAccessService.hasAccess(token, dataSetName, dataLayerName)
       } getOrElse Future.successful(false)
     }
 
-    def hasDataSetTokenAccess[A](request: Request[A]) = {
+    private def hasDataSetTokenAccess[A](request: Request[A]): Future[Boolean] = {
       request.getQueryString("datasetToken").map { layerToken =>
         DataSetAccessService.hasAccess(layerToken, dataSetName)
       } getOrElse Future.successful(false)
@@ -158,7 +165,9 @@ trait BinaryDataReadController extends BinaryDataCommonController {
       AllowRemoteOrigin {
         val settings = DataRequestSettings(useHalfByte = halfByte)
         for {
-          image <- respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution, settings)
+          image <- respondWithSpriteSheet(
+            dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow,
+            x, y, z, resolution, settings, blackAndWhite = false)
         } yield {
           Ok.sendFile(image, inline = true, fileName = _ => "test.jpg").withHeaders(
             CONTENT_TYPE -> contentTypeJpeg)
@@ -175,12 +184,13 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                     y: Int,
                     z: Int,
                     resolution: Int,
-                    halfByte: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+                    halfByte: Boolean,
+                    blackAndWhite: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         val settings = DataRequestSettings(useHalfByte = halfByte)
         for {
-          image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution, settings)
+          image <- respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution, settings, blackAndWhite)
         } yield {
           Ok.sendFile(image, inline = true, fileName = _ => "test.jpg").withHeaders(
             CONTENT_TYPE -> contentTypeJpeg)
@@ -307,10 +317,11 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                                         y: Int,
                                         z: Int,
                                         resolution: Int,
-                                        settings: DataRequestSettings): Fox[File] = {
+                                        settings: DataRequestSettings,
+                                        blackAndWhite: Boolean): Fox[File] = {
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-      params = ImageCreatorParameters(dataLayer.bytesPerElement, settings.useHalfByte, width, height, imagesPerRow)
+      params = ImageCreatorParameters(dataLayer.bytesPerElement, settings.useHalfByte, width, height, imagesPerRow, blackAndWhite = blackAndWhite)
       data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> "Couldn'T create spritesheet"
@@ -328,8 +339,9 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                                   y: Int,
                                   z: Int,
                                   resolution: Int,
-                                  settings: DataRequestSettings) = {
-    respondWithSpriteSheet(dataSetName, dataLayerName, width, height, 1, 1, x, y, z, resolution, settings)
+                                  settings: DataRequestSettings,
+                                  blackAndWhite: Boolean = false) = {
+    respondWithSpriteSheet(dataSetName, dataLayerName, width, height, 1, 1, x, y, z, resolution, settings, blackAndWhite)
   }
 }
 

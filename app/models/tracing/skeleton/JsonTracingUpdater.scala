@@ -92,10 +92,10 @@ case class UpdateTree(value: JsObject) extends TracingUpdater {
       for {
         tree <- t.tree(id).toFox ?~> "Failed to access tree."
         updated = tree.copy(
-          color = color orElse tree.color, 
-          treeId = updatedId, 
-          branchPoints = branchPoints, 
-          comments = comments, 
+          color = color orElse tree.color,
+          treeId = updatedId,
+          branchPoints = branchPoints,
+          comments = comments,
           name = name)
         _ <- DBTreeDAO.update(tree._id, updated) ?~> "Failed to update tree."
       } yield t
@@ -114,6 +114,10 @@ case class MergeTree(value: JsObject) extends TracingUpdater {
         updatedTracing <- t.updateStatistics(_.mergeTree) ?~> "Failed to update tracing statistics."
         _ <- DBNodeDAO.moveAllNodes(source._id, target._id) ?~> "Failed to move all nodes."
         _ <- DBEdgeDAO.moveAllEdges(source._id, target._id) ?~> "Failed to move all edges."
+        updated = target.copy(
+          branchPoints = target.branchPoints ::: source.branchPoints,
+          comments = target.comments ::: source.comments)
+        _ <- DBTreeDAO.update(target._id, updated) ?~> "Failed to update tree."
         _ <- DBTreeService.remove(source._id) ?~> "Failed to remove source tree."
       } yield updatedTracing
     }
@@ -121,8 +125,6 @@ case class MergeTree(value: JsObject) extends TracingUpdater {
 }
 
 case class MoveTreeComponent(value: JsObject) extends TracingUpdater {
-
-  import oxalis.nml.Node
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val nodeIds = (value \ "nodeIds").as[List[Int]]
@@ -132,7 +134,13 @@ case class MoveTreeComponent(value: JsObject) extends TracingUpdater {
       for {
         source <- t.tree(sourceId).toFox ?~> "Failed to access source tree."
         target <- t.tree(targetId).toFox ?~> "Failed to access target tree."
-        _ <- DBTreeService.moveTreeComponent(nodeIds, source._id, target._id) ?~> "Failed to move tree compontents."
+        _ <- DBTreeService.moveNodesAndEdges(nodeIds, source._id, target._id) ?~> "Failed to move tree compontents."
+        (movedBp, remainingBp) = source.branchPoints.partition(bp => nodeIds.contains(bp.id))
+        (movedC, remainingC) = source.comments.partition(c => nodeIds.contains(c.node))
+        updatedSource = source.copy(branchPoints = remainingBp, comments = remainingC)
+        updatedTarget = target.copy(branchPoints = movedBp ::: target.branchPoints, comments = movedC ::: target.comments)
+        _ <- DBTreeDAO.update(target._id, updatedTarget) ?~> "Failed to update tree."
+        _ <- DBTreeDAO.update(source._id, updatedSource) ?~> "Failed to update tree."
       } yield t
     }
   }

@@ -86,7 +86,7 @@ object DBTreeService {
     }
   }
 
-  def moveTreeComponent(nodeIds: List[Int], _source: BSONObjectID, _target: BSONObjectID)(implicit ctx: DBAccessContext) = {
+  def moveNodesAndEdges(nodeIds: List[Int], _source: BSONObjectID, _target: BSONObjectID)(implicit ctx: DBAccessContext) = {
     for {
       _ <- DBNodeDAO.moveNodes(nodeIds, _source, _target)
       _ <- DBEdgeDAO.moveEdges(nodeIds, _source, _target)

@@ -39,7 +39,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
   def saveToFile(file: File, baseDataSource: DataSource, dataLayer: DataLayer, section: DataLayerSection) = {
     val dataStore = new FileDataStore
     try {
-      val dataInfo = SaveBlock(baseDataSource, dataLayer, section, 0, Point3D(0,0,0), Array.empty)
+      val dataInfo = SaveBlock(baseDataSource, dataLayer, section, 1, Point3D(0,0,0), Array.empty)
       val zip = new ZipFile(file)
       ZipIO.withUnziped(zip, includeHiddenFiles = false) { entries =>
         Fox.serialSequence(entries) { e =>

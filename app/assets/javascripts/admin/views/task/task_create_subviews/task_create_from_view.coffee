@@ -62,7 +62,7 @@ class TaskCreateFromView extends Marionette.View
         <div class="form-group">
           <label class="col-sm-2 control-label" for="status_open"><%- getInstanceLabel() %></label>
           <div class="col-sm-9">
-            <input type="number" id="open" name="status[open]" value="<%- status.open %>" min="1" class="form-control" required>
+            <input type="number" id="open" name="status[open]" value="<%- status.open %>" min="0" class="form-control" required>
           </div>
         </div>
 

@@ -141,16 +141,6 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def delete(userId: String) = Authenticated.async { implicit request =>
-    for {
-      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
-      _ <- UserService.removeFromAllPossibleTeams(user, request.user)
-    } yield {
-      JsonOk(Messages("user.deleted", user.name))
-    }
-  }
-
   val userUpdateReader =
     ((__ \ "firstName").read[String] and
       (__ \ "lastName").read[String] and

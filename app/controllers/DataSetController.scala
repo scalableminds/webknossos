@@ -74,8 +74,6 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
           }
       }
 
-
-
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       layer <- DataSetService.getDataLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName)

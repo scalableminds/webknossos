@@ -22,7 +22,7 @@ class DataLayerController @Inject()(val messagesApi: MessagesApi) extends Contro
       dataSource match {
         case d: UsableDataSource =>
           DataStorePlugin.binaryDataService.createUserDataLayer(d.dataSource, initialData)
-        case un: UnusableDataSource =>
+        case _: UnusableDataSource =>
           Fox.failure("dataStore.dataSource.notImported")
       }
     }

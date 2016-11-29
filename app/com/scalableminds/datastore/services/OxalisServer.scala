@@ -13,7 +13,7 @@ import com.scalableminds.util.rest.RESTCall
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.ws.WS
 import play.api.mvc._
-import play.api.test.Helpers._
+import play.api.test.Helpers.{route, _}
 import play.api.test.{FakeHeaders, FakeRequest}
 import play.api.mvc.AnyContentAsJson
 import play.api.libs.json.JsSuccess
@@ -23,15 +23,29 @@ import play.utils.UriEncoding
 
 import scala.concurrent.Future
 import net.liftweb.common.{Failure, Full}
+import org.apache.commons.codec.binary.Base64
 
 class OxalisMessageHandler extends JsonMessageHandler with LazyLogging {
 
   def queryStringToString(queryStrings: Map[String, String]) =
     queryStrings.map( t => t._1 + "=" + t._2).mkString("?", "&", "")
 
-  def requestFromRESTCall[T](call: RESTCall) = {
+  def requestFromRESTCall[T](call: RESTCall)(implicit codec: Codec): Option[Future[Result]] = {
     val path = call.path + queryStringToString(call.queryStrings)
-    FakeRequest(call.method, path, FakeHeaders(call.headers.toSeq), AnyContentAsJson(call.body))
+
+    call.method match {
+      case "FILE" =>
+        val fileContent = (call.body \ "file")
+          .asOpt[Array[Byte]].map(f => Base64.decodeBase64(f))
+          .getOrElse(Array.empty)
+        val request = FakeRequest("POST", path, FakeHeaders(call.headers.toSeq),
+          AnyContentAsRaw(RawBuffer(fileContent.length, fileContent)))
+        route(request)
+      case standardMethod =>
+        val request = FakeRequest(standardMethod, path, FakeHeaders(call.headers.toSeq),
+          AnyContentAsJson(call.body))
+        route(request)
+    }
   }
 
   def embedInRESTResponse(call: RESTCall, response: Result)(implicit codec: Codec): Future[Array[Byte]] = {
@@ -62,8 +76,7 @@ class OxalisMessageHandler extends JsonMessageHandler with LazyLogging {
     logger.trace("About to handle WS REST call. Json: " + js)
     js.validate(RESTCall.restCallFormat) match {
       case JsSuccess(call, _) =>
-        val request = requestFromRESTCall(call)
-        route(request) match {
+        requestFromRESTCall(call) match {
           case Some(f) =>
             logger.trace(s"Got a handler for WS REST request '${call.uuid}'. ")
             f.flatMap { response =>

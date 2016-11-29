@@ -17,8 +17,6 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
                                             (val messagesApi: MessagesApi)
   extends DirectoryChangeHandler with PathUtils with LazyLogging {
 
-  val defaultTeam = "Structure of Neocortical Circuits Group"
-
   val maxRecursiveLayerDepth = 2
 
   def onStart(path: Path, recursive: Boolean): Unit = {

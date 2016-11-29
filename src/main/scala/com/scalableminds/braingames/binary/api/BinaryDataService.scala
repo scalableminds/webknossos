@@ -3,40 +3,31 @@
  */
 package com.scalableminds.braingames.binary.api
 
-import java.io.OutputStream
-import java.nio.file.{Path, Paths}
+import java.nio.file.Paths
 
-import akka.actor.ActorSystem
-import akka.agent.Agent
-import akka.actor.ActorRef
-import akka.routing.RoundRobinPool
-import com.scalableminds.braingames.binary._
-import play.api.i18n.I18nSupport
-
-import scala.concurrent.Future
-import akka.actor.Props
-import akka.pattern.ask
-import com.scalableminds.braingames.binary.watcher._
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.util.Timeout
-
-import scala.concurrent.duration._
+import com.scalableminds.braingames.binary._
 import com.scalableminds.braingames.binary.models._
-import akka.pattern.AskTimeoutException
-import com.typesafe.config.Config
-import net.liftweb.common.Box
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
+import com.scalableminds.braingames.binary.watcher._
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.Fox
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
+import play.api.i18n.I18nSupport
 
-trait BinaryDataService 
-  extends DataSourceService 
-          with BinaryDataHelpers 
-          with DataLayerMappingHelpers 
-          with DataDownloadHelper 
-          with I18nSupport 
-          with LazyLogging {
+import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration._
+
+trait BinaryDataService
+  extends DataSourceService
+    with BinaryDataHelpers
+    with DataLayerMappingHelpers
+    with DataDownloadHelper
+    with I18nSupport
+    with LazyLogging {
 
   implicit def system: ActorSystem
 
@@ -46,32 +37,38 @@ trait BinaryDataService
 
   def serverUrl: String
 
-  lazy implicit val executor = system.dispatcher
+  lazy implicit val executor: ExecutionContextExecutor =
+    system.dispatcher
 
-  lazy val dataSourceInbox = DataSourceInbox.create(dataSourceRepository, serverUrl, system)(messagesApi)
+  lazy val dataSourceInbox: DataSourceInbox =
+    DataSourceInbox.create(dataSourceRepository, serverUrl, system)(messagesApi)
 
-  lazy implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds)
+  var repositoryWatcher: Option[ActorRef] =
+    None
 
-  lazy val dataSourceRepositoryDir = PathUtils.ensureDirectory(Paths.get(config.getString("braingames.binary.baseFolder")))
+  private lazy implicit val timeout =
+    Timeout(config.getInt("braingames.binary.loadTimeout").seconds)
 
-  val binDataCache = new LRUConcurrentCache[CachedBlock, Array[Byte]](config.getInt("braingames.binary.cacheMaxSize"))
+  private lazy val dataSourceRepositoryDir =
+    PathUtils.ensureDirectory(Paths.get(config.getString("braingames.binary.baseFolder")))
 
-  lazy val dataRequester = new DataRequester(
-      config.getConfig("braingames.binary"),
-      binDataCache,
-      dataSourceRepository)
+  private val binDataCache =
+    new LRUConcurrentCache[CachedBlock, Array[Byte]](config.getInt("braingames.binary.cacheMaxSize"))
 
-  var repositoryWatcher: Option[ActorRef] = None
+  private lazy val dataRequester =
+    new DataRequester(config.getConfig("braingames.binary"), binDataCache, dataSourceRepository)
 
-  def start() {
-    val repositoryWatcherConfig = config.getConfig("braingames.binary.changeHandler")
+  def start(): Unit = {
+    val repositoryWatcherConfig =
+      config.getConfig("braingames.binary.changeHandler")
+
     val repositoryWatchActor =
       system.actorOf(
         Props(classOf[DirectoryWatcherActor],
-              repositoryWatcherConfig,
-              dataSourceRepositoryDir,
-              true,
-              dataSourceInbox.handler),
+          repositoryWatcherConfig,
+          dataSourceRepositoryDir,
+          true,
+          dataSourceInbox.handler),
         name = "directoryWatcher")
 
     repositoryWatcher = Some(repositoryWatchActor)

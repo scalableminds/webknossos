@@ -88,7 +88,7 @@ case class Annotation(
       ResourceAction(traceOrView, AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
       ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), isAjax = true, clazz = "trace-finish"),
       ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), isAjax = true),
-      ResourceAction(ResourceAction.Download, AnnotationController.download(typ, id), icon = Some("fa fa-download")),
+      ResourceAction(ResourceAction.Download, AnnotationIOController.download(typ, id), icon = Some("fa fa-download")),
       ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), isAjax = true)
     )
 
@@ -100,7 +100,7 @@ object Annotation {
   implicit val annotationFormat = Json.format[Annotation]
 
   def relativeDownloadUrlOf(typ: String, id: String): String =
-    controllers.routes.AnnotationController.download(typ, id).url
+    controllers.routes.AnnotationIOController.download(typ, id).url
 
   def transformToJson(annotation: Annotation)(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {

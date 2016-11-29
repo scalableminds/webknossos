@@ -1,40 +1,35 @@
 package models.annotation
 
-import java.io.{BufferedOutputStream, FileOutputStream}
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 
-import com.scalableminds.util.io.ZipIO
-import models.user.{UsedAnnotationDAO, User}
-import com.scalableminds.util.reactivemongo.DBAccessContext
-import net.liftweb.common.Full
-import oxalis.security.AuthenticatedRequest
-import play.api.Logger
-import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.Json
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import models.tracing.skeleton.SkeletonTracingService
-import play.api.libs.concurrent.Execution.Implicits._
-import models.task.{Task, TaskService}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
-import reactivemongo.bson.BSONObjectID
-import models.annotation.AnnotationType._
-import scala.Some
-
-import models.binary.{DataSet, DataSetDAO}
-import oxalis.nml.NML
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.BoxImplicits
-import com.typesafe.scalalogging.LazyLogging
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import models.annotation.AnnotationType._
+import models.binary.{DataSet, DataSetDAO}
+import models.task.Task
+import models.tracing.skeleton.SkeletonTracingService
+import models.tracing.volume.VolumeTracingService
+import models.user.{UsedAnnotationDAO, User}
+import net.liftweb.common.Full
+import oxalis.nml.NML
+import play.api.i18n.Messages
+import play.api.libs.Files.TemporaryFile
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import play.api.i18n.{Messages, MessagesApi}
 
 /**
- * Company: scalableminds
- * User: tmbo
- * Date: 07.11.13
- * Time: 12:39
- */
+  * Company: scalableminds
+  * User: tmbo
+  * Date: 07.11.13
+  * Time: 12:39
+  */
 
 object AnnotationService extends AnnotationContentProviders with BoxImplicits with FoxImplicits with TextUtils {
 
@@ -66,7 +61,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     dataSetName: String,
     boundingBox: Option[BoundingBox],
     settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
-    for{
+    for {
       _ <- AnnotationDAO.updateTeamForAllOfTask(task, team)
       _ <- AnnotationDAO.updateAllOfTask(task, dataSetName, boundingBox, settings)
     } yield true
@@ -74,7 +69,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
 
   def finish(annotation: Annotation)(implicit ctx: DBAccessContext) = {
     // WARNING: needs to be repeatable, might be called multiple times for an annotation
-    AnnotationDAO.finish(annotation._id).map{ r =>
+    AnnotationDAO.finish(annotation._id).map { r =>
       annotation.muta.writeAnnotationToFile()
       UsedAnnotationDAO.removeAll(AnnotationIdentifier(annotation.typ, annotation.id))
       r
@@ -227,15 +222,28 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createAnnotationFrom(user: User, nmls: List[NML], typ: AnnotationType, name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
-    SkeletonTracingService.createFrom(nmls, None, AnnotationSettings.skeletonDefault).toFox.flatMap {
-      content =>
-        AnnotationService.createFrom(
-          user,
-          content,
-          typ,
-          name)
+  def createAnnotationFrom(
+    user: User,
+    nmls: List[NML],
+    additionalFiles: Map[String, TemporaryFile],
+    typ: AnnotationType,
+    name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
+
+    // TODO: until we implemented workspaces, we need to decide if this annotation is going to be a skeleton or a volume
+    // annotation --> hence, this hacky way of making a decision
+    def createContent() = {
+      if (nmls.exists(_.volumes.nonEmpty)) {
+        // There is a NML with a volume reference --> volume annotation
+        VolumeTracingService.createFrom(nmls, additionalFiles, None, AnnotationSettings.volumeDefault).toFox
+      } else {
+        // There is no NML with a volume reference --> skeleton annotation
+        SkeletonTracingService.createFrom(nmls, None, AnnotationSettings.skeletonDefault).toFox
+      }
     }
+    for {
+      content <- createContent()
+      annotation <- AnnotationService.createFrom(user, content, typ, name)
+    } yield annotation
   }
 
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
@@ -252,15 +260,15 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
             case Full(fs) =>
               zipper.addFile(fs)
               annotationContent(tail)
-            case _ =>
+            case _        =>
               annotationContent(tail)
           }
-        case _ =>
+        case _            =>
           Future.successful(true)
       }
     }
 
-    annotationContent(annotations).map{ _ =>
+    annotationContent(annotations).map { _ =>
       zipper.close()
       zipped
     }

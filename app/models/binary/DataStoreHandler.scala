@@ -3,26 +3,36 @@
  */
 package models.binary
 
+import java.io.FileInputStream
+
 import akka.agent.Agent
 import com.scalableminds.braingames.binary.models.{DataLayerHelpers, DataSource, DataSourceUpload, UserDataLayer}
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.rest.{RESTCall, RESTResponse}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import net.liftweb.common.{Failure, Empty, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
+import org.apache.commons.io.IOUtils
 import oxalis.rest.WebSocketRESTServer
 import play.api.http.Status
 import play.api.i18n.Messages
 import play.api.libs.json.{JsError, JsSuccess, Json}
-import play.api.libs.ws.{WSResponse, WS}
+import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Codec
 import play.api.{Logger, Play}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
+import play.api.libs.Files.TemporaryFile
+import play.api.libs.iteratee.Enumerator
 
 trait DataStoreHandlingStrategy {
 
   def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer]
+
+  def uploadUserDataLayer(
+    dataStoreInfo: DataStoreInfo,
+    base: DataSource,
+    file: TemporaryFile): Fox[UserDataLayer]
 
   def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]]
 
@@ -42,6 +52,12 @@ object DataStoreHandler extends DataStoreHandlingStrategy{
   override def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] =
     strategyForType(dataStoreInfo.typ).createUserDataLayer(dataStoreInfo, base)
 
+  override def uploadUserDataLayer(
+    dataStoreInfo: DataStoreInfo,
+    base: DataSource,
+    file: TemporaryFile): Fox[UserDataLayer] =
+    strategyForType(dataStoreInfo.typ).uploadUserDataLayer(dataStoreInfo, base, file)
+
   override def importDataSource(dataSet: DataSet): Fox[RESTResponse] =
     strategyForType(dataSet.dataStoreInfo.typ).importDataSource(dataSet)
 
@@ -57,6 +73,9 @@ object DataStoreHandler extends DataStoreHandlingStrategy{
 
 object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplicits{
   override def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] =
+    Fox.failure("NDStore doesn't support creation of user datalayers yet.")
+
+  override def uploadUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[UserDataLayer] =
     Fox.failure("NDStore doesn't support creation of user datalayers yet.")
 
   override def importDataSource(dataSet: DataSet): Fox[RESTResponse] =
@@ -104,6 +123,29 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with DataStoreB
       response.body.validate(UserDataLayer.userDataLayerFormat) match {
         case JsSuccess(userDataLayer, _) => Full(userDataLayer)
         case e: JsError                  => Failure("REST user data layer create returned malformed json: " + e.toString)
+      }
+    }
+  }
+
+  def uploadUserDataLayer(
+    dataStoreInfo: DataStoreInfo,
+    base: DataSource,
+    file: TemporaryFile): Fox[UserDataLayer] = {
+
+    Logger.debug("Called to upload user data layer. Base: " + base.id + " Datastore: " + dataStoreInfo)
+
+    val fileContent = IOUtils.toByteArray(new FileInputStream(file.file))
+    val call = RESTCall(
+      "FILE",
+      s"/data/datasets/${base.id}/layers",
+      Map.empty,
+      Map("token" -> DataTokenService.oxalisToken),
+      Json.obj("file" -> Base64.encodeBase64(fileContent)))
+
+    sendRequest(dataStoreInfo.name, call).flatMap { response =>
+      response.body.validate(UserDataLayer.userDataLayerFormat) match {
+        case JsSuccess(userDataLayer, _) => Full(userDataLayer)
+        case e: JsError                  => Failure("REST user data layer upload returned malformed json: " + e.toString)
       }
     }
   }

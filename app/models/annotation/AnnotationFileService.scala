@@ -82,7 +82,7 @@ trait AnnotationFileService extends FoxImplicits {
       annotationStream <- loadAnnotationContentStream()
       name <- SavedTracingInformationHandler.nameForAnnotation(annotation)
     } yield
-      NamedFileStream( annotationStream, name + ".nml")
+      NamedFileStream( () => annotationStream, name + ".nml")
   }
 
   def annotationToInputStream(): Fox[InputStream] = {

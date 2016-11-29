@@ -164,25 +164,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     }
   }
 
-  def download(typ: String, id: String) = Authenticated.async { implicit request =>
-    withAnnotation(AnnotationIdentifier(typ, id)) {
-      annotation =>
-        for {
-          name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
-          _ <- annotation.restrictions.allowDownload(request.user) ?~> Messages("annotation.download.notAllowed")
-          annotationDAO <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-          content <- annotation.content ?~> Messages("annotation.content.empty")
-          stream <- content.toDownloadStream
-        } yield {
-          Ok.chunked(stream.andThen(Enumerator.eof[Array[Byte]])).withHeaders(
-            CONTENT_TYPE ->
-              "application/octet-stream",
-            CONTENT_DISPOSITION ->
-              s"filename=${'"'}${name + content.downloadFileExtension}${'"'}")
-        }
-    }
-  }
-
   def createExplorational = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
       dataSetName <- postParameter("dataSetName") ?~> Messages("dataSet.notSupplied")

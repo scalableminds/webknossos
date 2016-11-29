@@ -17,7 +17,7 @@ object DataSetAccessService {
   def hasAccess(token: String, dataSetName: String): Future[Boolean] = {
     Cache.getOrElse(token, AccessExpiration.toSeconds.toInt){
       DataStorePlugin.current
-        .map(_.binaryDataService.oxalisServer.requestDataSetAccess(token, dataSetName))
+        .map(_.oxalisServer.requestDataSetAccess(token, dataSetName))
         .getOrElse(Future.successful(false))
     }
   }

@@ -77,7 +77,7 @@ class DataSourceController @Inject()(val messagesApi: MessagesApi) extends Contr
       } yield {
         startedImport.map { usableDataSource =>
           DataSourceDAO.updateDataSource(usableDataSource)
-          DataStorePlugin.binaryDataService.oxalisServer.reportDataSouce(usableDataSource)
+          DataStorePlugin.current.map(_.oxalisServer.reportDataSouce(usableDataSource))
         }.futureBox.foreach {
           case f: Failure =>
             logger.error("An error occoured: " + f)
@@ -124,11 +124,12 @@ class DataSourceController @Inject()(val messagesApi: MessagesApi) extends Contr
             _ <- unzipDataSource(baseDir, upload.filePath).toFox
             dataSource = DataStorePlugin.binaryDataService.dataSourceInbox.handler.dataSourceFromFolder(baseDir,
                                                                                                         upload.team)
-            _ <- DataStorePlugin.binaryDataService.oxalisServer.reportDataSouce(dataSource).toFox
+            oxalisServer <- DataStorePlugin.current.map(_.oxalisServer).toFox
+            _ <- oxalisServer.reportDataSouce(dataSource).toFox
             importingDataSource <- DataStorePlugin.binaryDataService.dataSourceInbox.importDataSource(dataSource)
             usableDataSource <- importingDataSource
             _ = DataSourceDAO.updateDataSource(usableDataSource)
-            _ <- DataStorePlugin.binaryDataService.oxalisServer.reportDataSouce(usableDataSource).toFox
+            _ <- oxalisServer.reportDataSouce(usableDataSource).toFox
           } yield Ok(Json.obj())
             ).futureBox.map {
             case Full(r) => r

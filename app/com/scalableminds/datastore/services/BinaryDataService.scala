@@ -3,40 +3,22 @@
  */
 package com.scalableminds.datastore.services
 
-import com.scalableminds.braingames.binary.api.{ BinaryDataService => AbstractBinaryDataService }
-import play.api.Play
-import akka.actor.ActorSystem
 import java.io.File
 
+import akka.actor.ActorSystem
+import com.scalableminds.braingames.binary.api.{BinaryDataService => AbstractBinaryDataService}
+import com.typesafe.config.Config
 import play.api.i18n.MessagesApi
 
-class BinaryDataService(val dataSourceRepository: DataSourceRepository)(val messagesApi: MessagesApi)(implicit val system: ActorSystem) extends AbstractBinaryDataService {
-  lazy val oxalisUrl = Play.current.configuration.getString("datastore.oxalis.uri") getOrElse "localhost:9000"
+class BinaryDataService(val dataSourceRepository: DataSourceRepository,
+                        confService: ConfigurationService,
+                        oxalisServer: OxalisServer)
+                       (val messagesApi: MessagesApi)
+                       (implicit val system: ActorSystem)
+  extends AbstractBinaryDataService {
 
-  lazy val isOxalisSecured = Play.current.configuration.getBoolean("datastore.oxalis.secured") getOrElse false
+  lazy val serverUrl: String =
+    confService.serverUrl
 
-  lazy val isCertificateSelfSigned = Play.current.configuration.getBoolean("datastore.oxalis.selfsigned") getOrElse false
-
-  val keyStoreInfo =
-    if (isOxalisSecured && isCertificateSelfSigned) {
-      val keyStorePath = Play.current.configuration.getString("keyStore.path") getOrElse "scmCAKeyStore"
-      val keyStorePassword = Play.current.configuration.getString("keyStore.password") getOrElse "changeit"
-      val keyStore = new File(keyStorePath)
-      if (keyStore.isFile() && keyStore.canRead())
-        Some(KeyStoreInfo(keyStore, keyStorePassword))
-      else
-        throw new Exception("Can't establish a selfsigned secured connection without a valid keystore")
-    } else None
-  
-  val webSocketSecurityInfo = WSSecurityInfo(isOxalisSecured, isCertificateSelfSigned, keyStoreInfo)
-
-  lazy val key = Play.current.configuration.getString("datastore.key") get
-
-  lazy val name = Play.current.configuration.getString("datastore.name") get
-
-  lazy val serverUrl = Play.current.configuration.getString("http.uri") getOrElse "http://localhost:9000"
-
-  lazy val config = Play.current.configuration.underlying
-
-  lazy val oxalisServer = new OxalisServer(oxalisUrl, key, name, webSocketSecurityInfo)
+  lazy val config: Config = confService.underlying
 }

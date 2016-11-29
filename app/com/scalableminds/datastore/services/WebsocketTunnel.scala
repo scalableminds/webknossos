@@ -3,42 +3,37 @@
  */
 package com.scalableminds.datastore.services
 
+import java.io.{File, FileInputStream}
+import java.net.URI
+import java.nio.ByteBuffer
+import java.security.KeyStore
+import java.util.concurrent.TimeoutException
+import javax.net.ssl.{SSLContext, TrustManagerFactory}
+
 import akka.actor.{Actor, ActorRef}
-import play.api.libs.ws.WS
+import akka.agent.Agent
+import com.fasterxml.jackson.core.JsonParseException
+import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Failure
 import org.java_websocket.client._
 import org.java_websocket.handshake.ServerHandshake
-import java.net.URI
-
 import play.api.libs.json.{JsValue, Json}
-import com.fasterxml.jackson.core.JsonParseException
-
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import java.nio.ByteBuffer
-
 import play.api.mvc.Codec
-import net.liftweb.common.Failure
-import java.io.{File, FileInputStream}
-import java.security.KeyStore
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
-import java.util.concurrent.TimeoutException
-
-import akka.agent.Agent
-import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.immutable.Queue
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 case class SendJson(js: JsValue, retryOnFailure: Boolean = true)(implicit codec: Codec) extends WSMessage[Array[Byte]] {
-  def payload = codec.encode(Json.prettyPrint(js))
+  def payload: Array[Byte] = codec.encode(Json.prettyPrint(js))
 }
 
 case class SendData(data: Array[Byte], retryOnFailure: Boolean = true) extends WSMessage[Array[Byte]] {
-  def payload = data
+  def payload: Array[Byte] = data
 }
 
 case class SendString(s: String, retryOnFailure: Boolean = true)(implicit codec: Codec) extends WSMessage[Array[Byte]] {
-  def payload = codec.encode(s)
+  def payload: Array[Byte] = codec.encode(s)
 }
 
 sealed trait WSMessage[T] {
@@ -52,6 +47,7 @@ case class ReceivedString(s: String)
 case object ConnectToWS
 
 case class KeyStoreInfo(keyStore: File, keyStorePassword: String)
+
 case class WSSecurityInfo(secured: Boolean, selfSigned: Boolean, keyStoreInfo: Option[KeyStoreInfo])
 
 trait JsonMessageHandler {
@@ -59,25 +55,29 @@ trait JsonMessageHandler {
 }
 
 class JsonWSTunnel(
-  serverUrl: String,
-  incomingMessageHandler: JsonMessageHandler,
-  webSocketSecurityInfo: WSSecurityInfo)(implicit codec: Codec) extends Actor with LazyLogging{
+                    serverUrl: String,
+                    incomingMessageHandler: JsonMessageHandler,
+                    webSocketSecurityInfo: WSSecurityInfo)(implicit codec: Codec) extends Actor with LazyLogging {
 
-  implicit val exco = context.system.dispatcher
+  private implicit val exco = context.system.dispatcher
 
   private var isTerminating = false
 
   private var isReconnectPaused = true
 
-  private val reconnectThrottle = 10 second
+  private val reconnectThrottle = 10.seconds
 
   private val websocket = Agent[Option[WebSock]](None)
 
   private val messageQueue = Agent[Queue[WSMessage[_]]](Queue.empty)
 
-  private val ConnectTimeout = 2 minutes
+  private val ConnectTimeout = 2.minutes
 
-  private val PingInterval = 5 seconds
+  private val PingInterval = 5.seconds
+
+  private val pingMessage = Json.obj(
+    "ping" -> ":D"
+  )
 
   private class WebSock(receiver: ActorRef, url: String) extends WebSocketClient(new URI(url)) {
     def onOpen(handshakedata: ServerHandshake): Unit = {
@@ -103,29 +103,29 @@ class JsonWSTunnel(
     }
   }
 
-  override def preStart = {
+  override def preStart(): Unit = {
     self ! ConnectToWS
 
-    context.system.scheduler.schedule(reconnectThrottle, reconnectThrottle){
+    context.system.scheduler.schedule(reconnectThrottle, reconnectThrottle) {
       isReconnectPaused = false
     }
-    context.system.scheduler.schedule(PingInterval, PingInterval, self, SendJson(ping, retryOnFailure = false))
+    context.system.scheduler.schedule(PingInterval, PingInterval, self, SendJson(pingMessage, retryOnFailure = false))
     super.preStart
   }
 
-  override def postStop = {
+  override def postStop(): Unit = {
     isTerminating = true
     closeCurrentWS()
     super.postStop
   }
 
-  def receive = {
+  def receive: Actor.Receive = {
     case ConnectToWS =>
       connect(serverUrl)
 
     case msg: WSMessage[_] =>
-      messageQueue.send{ msgs =>
-        msgs.map( m => tryToSend(m))
+      messageQueue.send { msgs =>
+        msgs.map(m => tryToSend(m))
         tryToSend(msg)
         Queue.empty
       }
@@ -141,52 +141,48 @@ class JsonWSTunnel(
         }
       } catch {
         case e: JsonParseException =>
-          logger.error(s"Received invalid json from WS: $s")
+          logger.error(s"Received invalid json from WS: $s", e)
       }
   }
 
-  val ping = Json.obj(
-    "ping" -> ":D"
-  )
-
-  def isAlive = {
-    websocket().map(w => w.getConnection.isOpen || w.getConnection.isConnecting) getOrElse false
+  def isAlive: Boolean = {
+    websocket().exists(w => w.getConnection.isOpen || w.getConnection.isConnecting)
   }
 
   private def initializeWS(): WebSock = {
     val w = new WebSock(self, serverUrl)
 
-    if(webSocketSecurityInfo.secured){
-      val sslContext = SSLContext.getInstance("TLS");
-      webSocketSecurityInfo.keyStoreInfo.map{keyStoreInfo =>
+    if (webSocketSecurityInfo.secured) {
+      val sslContext = SSLContext.getInstance("TLS")
+      webSocketSecurityInfo.keyStoreInfo.map { keyStoreInfo =>
         //load keystore for self signed certificate
-        val storetype = "JKS";
+        val storetype = "JKS"
 
-        val ks = KeyStore.getInstance(storetype);
-        ks.load(new FileInputStream(keyStoreInfo.keyStore), keyStoreInfo.keyStorePassword.toCharArray());
+        val ks = KeyStore.getInstance(storetype)
+        ks.load(new FileInputStream(keyStoreInfo.keyStore), keyStoreInfo.keyStorePassword.toCharArray)
 
-        val tmf = TrustManagerFactory.getInstance("SunX509");
-        tmf.init(ks);
+        val tmf = TrustManagerFactory.getInstance("SunX509")
+        tmf.init(ks)
         tmf
       } match {
         case Some(tmf) =>
-          sslContext.init(null, tmf.getTrustManagers, null);
+          sslContext.init(null, tmf.getTrustManagers, null)
         case _ =>
-          sslContext.init(null, null, null);
+          sslContext.init(null, null, null)
       }
-      w.setWebSocketFactory(new DefaultSSLWebSocketClientFactory(sslContext));
+      w.setWebSocketFactory(new DefaultSSLWebSocketClientFactory(sslContext))
     }
     w
   }
 
-  def scheduleReconnect() = {
-    context.system.scheduler.scheduleOnce(1 second, self, ConnectToWS)
+  private def scheduleReconnect() = {
+    context.system.scheduler.scheduleOnce(1.second, self, ConnectToWS)
   }
 
-  def connect(url: String) = {
+  private def connect(url: String) = {
     // Connecting to the websocket is a little difficult. If the websocket doesn't exist / respond the call to
     // `connectBlocking` doesn't fail or return
-    if(!isTerminating && !isReconnectPaused) {
+    if (!isTerminating && !isReconnectPaused) {
       isReconnectPaused = true
       try {
         val f = Future {
@@ -206,7 +202,7 @@ class JsonWSTunnel(
         Await.result(f, atMost = ConnectTimeout)
       } catch {
         case e: TimeoutException =>
-          logger.warn(s"WS connection took too long. Aborting.")
+          logger.warn(s"WS connection took too long. Aborting.", e)
           scheduleReconnect()
         case e: Exception =>
           logger.error(s"Trying to connect to WS resulted in: ${e.getMessage}", e)
@@ -215,25 +211,25 @@ class JsonWSTunnel(
     }
   }
 
-  def updateWebsocket(ws: WebSock) = {
+  private def updateWebsocket(ws: WebSock) = {
     websocket.send {
       w =>
-        w.map(_.close)
+        w.foreach(_.close())
         Some(ws)
     }
   }
 
-  def closeCurrentWS() = {
+  private def closeCurrentWS() = {
     websocket.send {
       ws =>
-        ws.map(_.close())
+        ws.foreach(_.close())
         None
     }
   }
 
-  def tryToSend(t: WSMessage[_]) = {
+  private def tryToSend(t: WSMessage[_]) = {
     def retry() = {
-      if(t.retryOnFailure) {
+      if (t.retryOnFailure) {
         logger.info("Scheduling retry for message.")
         messageQueue.send(_.enqueue(t))
       }

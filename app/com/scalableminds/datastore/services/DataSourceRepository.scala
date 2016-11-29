@@ -33,6 +33,6 @@ class DataSourceRepository(implicit val system: ActorSystem)
         DataSourceDAO.removeByName(d.id)
         DataSourceDAO.insert(d)
     }
-    DataStorePlugin.current.map(_.binaryDataService.oxalisServer.reportDataSources(dataSources))
+    DataStorePlugin.current.map(_.oxalisServer.reportDataSources(dataSources))
   }
 }

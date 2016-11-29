@@ -3,28 +3,26 @@
  */
 package com.scalableminds.datastore.services
 
-import play.api.cache.Cache
-import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
-import scala.concurrent.Future
-import play.api.Play
-import com.scalableminds.datastore.DataStorePlugin
-import com.scalableminds.util.tools.Fox
 import com.scalableminds.braingames.binary.models.DataLayer
+import com.scalableminds.datastore.DataStorePlugin
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import play.api.Play.current
+import play.api.cache.Cache
+import play.api.libs.concurrent.Execution.Implicits._
 
-object UserDataLayerService {
+import scala.concurrent.duration._
 
-  val DataLayerExpiration = 30 minutes
+object UserDataLayerService extends FoxImplicits {
 
-  def asCacheKey(dataSetName: String, dataLayerName: String) =
+  private val DataLayerExpiration = 30.minutes
+
+  private def asCacheKey(dataSetName: String, dataLayerName: String) =
     s"userLayer-$dataSetName-$dataLayerName"
 
   def findUserDataLayer(dataSetName: String, dataLayerName: String): Fox[DataLayer] = {
-    Cache.getOrElse(asCacheKey(dataSetName, dataLayerName), DataLayerExpiration.toSeconds.toInt){
+    Cache.getOrElse(asCacheKey(dataSetName, dataLayerName), DataLayerExpiration.toSeconds.toInt) {
       DataStorePlugin
-        .binaryDataService
-        .oxalisServer.requestUserDataLayer(dataSetName, dataLayerName)
+        .current.toFox.flatMap(_.oxalisServer.requestUserDataLayer(dataSetName, dataLayerName))
     }
   }
 }

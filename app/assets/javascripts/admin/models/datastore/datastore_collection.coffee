@@ -1,10 +1,9 @@
-SortedCollection     = require("../sorted_collection")
-DatastoreModel       = require("./datastore_model")
+Backbone       = require("backbone")
+DatastoreModel = require("./datastore_model")
 
-class DatastoreCollection extends SortedCollection
+class DatastoreCollection extends Backbone.Collection
 
   url : "/api/datastores"
   model : DatastoreModel
-  sortAttribute : "name"
 
 module.exports = DatastoreCollection

@@ -1,9 +1,10 @@
-_               = require("lodash")
-Marionette      = require("backbone.marionette")
-Toast           = require("libs/toast")
-Request         = require("libs/request")
-SelectionView   = require("admin/views/selection_view")
-TeamCollection  = require("admin/models/team/team_collection")
+_                   = require("lodash")
+Marionette          = require("backbone.marionette")
+Toast               = require("libs/toast")
+Request             = require("libs/request")
+SelectionView       = require("admin/views/selection_view")
+TeamCollection      = require("admin/models/team/team_collection")
+DatastoreCollection = require("admin/models/datastore/datastore_collection")
 
 class DatasetUploadView extends Marionette.View
 
@@ -12,27 +13,33 @@ class DatasetUploadView extends Marionette.View
       <div class="col-md-6">
         <h3>Upload Dataset</h3>
         <form action="/api/datasets/upload" method="POST" class="form-horizontal" enctype="multipart/form-data">
-          <div class=" form-group">
+          <div class="form-group">
             <label class="col-sm-3 control-label" for="name">Name</label>
             <div class="col-sm-9">
             <input type="text" required name="name" value="" class="form-control" autofocus>
               <span class="help-block errors"></span>
             </div>
           </div>
-          <div class=" form-group">
+          <div class="form-group">
             <label class="col-sm-3 control-label" for="team">Team</label>
             <div class="col-sm-9 team">
               <span class="help-block errors"></span>
             </div>
           </div>
-          <div class=" form-group">
+          <div class="form-group">
             <label class="col-sm-3 control-label" for="scale_scale">Scale</label>
             <div class="col-sm-9">
               <input type="text" required name="scale.scale" value="12.0, 12.0, 24.0" class="form-control" pattern="\\s*([0-9]+(?:\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?)\\s*" title="Specify dataset scale like &quot;XX, YY, ZZ&quot;">
               <span class="help-block errors"></span>
             </div>
           </div>
-          <div class=" form-group">
+          <div class="form-group">
+            <label class="col-sm-3 control-label" for="datastore">Datastore</label>
+            <div class="col-sm-9 datastore">
+              <span class="help-block errors"></span>
+            </div>
+          </div>
+          <div class="form-group">
             <label class="col-sm-3 control-label" for="zipFile">Dataset ZIP File</label>
             <div class="col-sm-9">
 
@@ -67,6 +74,7 @@ class DatasetUploadView extends Marionette.View
 
   regions :
     "team" : ".team"
+    "datastore" : ".datastore"
 
   events :
     "submit form" : "uploadDataset"
@@ -86,10 +94,20 @@ class DatasetUploadView extends Marionette.View
       data : "amIAnAdmin=true"
     )
 
+    @datastoreSelectionView = new SelectionView(
+      collection : new DatastoreCollection()
+      name : "datastore"
+      childViewOptions :
+        modelValue: -> return "#{@model.get("url")}"
+        modelLabel: -> return "#{@model.get("name")}"
+    )
+
+
 
   onRender : ->
 
     @showChildView("team", @teamSelectionView)
+    @showChildView("datastore", @datastoreSelectionView)
 
 
   uploadDataset : (evt) ->
@@ -102,8 +120,12 @@ class DatasetUploadView extends Marionette.View
       Toast.info("Uploading datasets", false)
       @ui.spinner.removeClass("hidden")
 
-      Request.sendMultipartFormReceiveJSON("/api/datasets/upload",
-        data : new FormData(form)
+      Request.receiveJSON("/api/dataToken/generate")
+      .then(({ token }) ->
+        return Request.sendMultipartFormReceiveJSON("/api/datasets/upload?token=#{token}", {
+          data : new FormData(form)
+          host : form.datastore.value
+        })
       )
       .then(
         ->

@@ -12,6 +12,10 @@ describe("User List", function() {
     page.get()
   })
 
+  it("should fail", function() {
+    expect(1).toEqual(2)
+  })
+
   it("should show all users", async function() {
 
     const maxUsersPerPage = 50

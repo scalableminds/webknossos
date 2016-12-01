@@ -146,7 +146,7 @@ class Cube
   getVoxelIndexByVoxelOffset : ([x, y, z]) ->
 
     return @BYTE_OFFSET *
-      x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2)
+      (x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2))
 
 
   isWithinBounds : ([x, y, z, zoomStep]) ->

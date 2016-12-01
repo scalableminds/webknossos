@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 function run_test() {
-  "${@:2}" &> /dev/null
+  echo "running test \"$1\""
+  "${@:2}"
   rc=$?
   if (exit $rc); then
       echo "test \"$1\" successful"

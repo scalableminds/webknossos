@@ -16,7 +16,7 @@ class DatasetUploadView extends Marionette.View
           <div class="form-group">
             <label class="col-sm-3 control-label" for="name">Name</label>
             <div class="col-sm-9">
-            <input type="text" required name="name" value="" class="form-control" autofocus>
+            <input type="text" required name="name" value="" class="form-control" autofocus pattern="^[0-9a-zA-Z_\-]+$">
               <span class="help-block errors"></span>
             </div>
           </div>

@@ -1,6 +1,5 @@
 _                 = require("lodash")
 Marionette        = require("backbone.marionette")
-TeamRoleModalView = require("admin/views/user/team_role_modal_view")
 TemplateHelpers   = require("libs/template_helpers")
 
 class UserListItemView extends Marionette.View
@@ -63,11 +62,13 @@ class UserListItemView extends Marionette.View
     #HACKY
     $("#team-role-modal").click()
 
-  deactivate : ->
-    if window.confirm("Do you really want to deactivate this user?")
-      #select checkbox, so that it gets picked up by the bulk verification modal
-      @$("input").prop("checked", true)
 
-      # TODO: deactivate user
+  deactivate : ->
+
+    if window.confirm("Do you really want to deactivate this user?")
+
+      @model.save(
+        "isActive" : false
+      )
 
 module.exports = UserListItemView

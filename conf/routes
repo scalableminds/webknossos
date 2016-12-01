@@ -93,11 +93,10 @@ GET           /api/datastores/:name/verifyUpload                                
 
 # Those routes are DEPRECATED and should NOT be used further
 GET           /dataToken/validate                                               controllers.DataTokenController.validateUserAndDataSetToken(token: String, dataSetName: String, dataLayerName: String)
-GET           /dataToken/generate                                               controllers.DataTokenController.generateUserAndDataSetToken(dataSetName: String, dataLayerName: String)
-GET           /dataToken/generate                                               controllers.DataTokenController.generateUserToken()
+GET           /dataToken/generate                                               controllers.DataTokenController.generateToken(dataSetName: Option[String], dataLayerName: Option[String])
 # ------ instead use
 GET           /api/dataToken/validate                                           controllers.DataTokenController.validateUserAndDataSetToken(token: String, dataSetName: String, dataLayerName: String)
-GET           /api/dataToken/generate                                           controllers.DataTokenController.generateUserAndDataSetToken(dataSetName: String, dataLayerName: String)
+GET           /api/dataToken/generate                                           controllers.DataTokenController.generateToken(dataSetName: Option[String], dataLayerName: Option[String])
 GET           /api/datasetToken/validate                                        controllers.DataTokenController.validateDataSetToken(token: String, dataSetName: String)
 
 ->            /data/                                                            com.scalableminds.datastore.Routes

@@ -9,6 +9,7 @@ import com.scalableminds.braingames.binary.models.DataLayer
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.binary._
+import models.user.User
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -26,25 +27,37 @@ class DataTokenController @Inject()(val messagesApi: MessagesApi) extends Contro
     .orElse(UserDataLayerDAO.findOneByName(dataLayerName).map(_.dataLayer))
   }
 
-  def generateUserAndDataSetToken(dataSetName: String, dataLayerName: String) = UserAwareAction.async {
+  def generateToken(dataSetNameOpt: Option[String], dataLayerName: Option[String]) = UserAwareAction.async {
     implicit request =>
+      dataSetNameOpt match {
+        case Some(dataSetName) =>
+          generateUserAndDataSetToken(dataSetName, dataLayerName: Option[String], request.userOpt)
+        case _ =>
+          generateUserToken(request.userOpt)
+      }
+  }
+
+  def generateUserAndDataSetToken(
+    dataSetName: String,
+    dataLayerNameOpt: Option[String],
+    user: Option[User])(implicit ctx: DBAccessContext) = {
+
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        dataLayerName <- dataLayerNameOpt.toFox ?~> Messages("dataLayer.notFound", "")
         _ <- ensureAccessToLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.forbidden") ~> FORBIDDEN
-        user =  request.userOpt
         token <- DataTokenService.generate(user, Some(dataSetName), Some(dataLayerName)) ?~> Messages("dataToken.creationFailed")
       } yield {
         Ok(Json.toJson(token))
       }
   }
 
-  def generateUserToken() = UserAwareAction.async {
-    implicit request =>
-      for {
-        token <- DataTokenService.generate(request.userOpt, None, None) ?~> Messages("dataToken.creationFailed")
-      } yield {
-        Ok(Json.toJson(token))
-      }
+  def generateUserToken(userOpt: Option[User])(implicit ctx: DBAccessContext) = {
+    for {
+      token <- DataTokenService.generate(userOpt, None, None) ?~> Messages("dataToken.creationFailed")
+    } yield {
+      Ok(Json.toJson(token))
+    }
   }
 
   def validateUserAndDataSetToken(token: String, dataSetName: String, dataLayerName: String) = Action.async {

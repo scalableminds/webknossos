@@ -121,22 +121,4 @@ class VolumeTracingPlaneController extends PlaneController
         @model.volumeTracing.createCell()
 
 
-  render3dCell : (id) ->
-
-    unless @model.user.get("isosurfaceDisplay")
-      @sceneController.removeShapes()
-    else
-      bb = @model.flycam.getViewportBoundingBox()
-      res = @model.user.get("isosurfaceResolution")
-      @sceneController.showShapes(@scaleIsosurfaceBB(bb), res, id)
-
-  scaleIsosurfaceBB : (bb) ->
-    factor = @model.user.get("isosurfaceBBsize")
-    for i in [0..2]
-      width = bb.max[i] - bb.min[i]
-      diff = (factor - 1) * width / 2
-      bb.min[i] -= diff
-      bb.max[i] += diff
-    return bb
-
 module.exports = VolumeTracingPlaneController

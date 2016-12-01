@@ -74,7 +74,7 @@ class SceneController
     @trigger("removeGeometries", @volumeMeshes)
 
 
-  showShapes : (bb, resolution, id) ->
+  showShapes : (bb, resolution, id, zoomStep = 0, removeShapes = true) ->
 
     return unless @model.getSegmentationBinary()?
 
@@ -84,12 +84,12 @@ class SceneController
     @polygonFactory = new PolygonFactory(
       @model.getSegmentationBinary().cube
       resolution
-      bb.min, bb.max, id
+      bb.min, bb.max, id, zoomStep
     )
 
     @polygonFactory.getTriangles().then (triangles) =>
-
-      @removeShapes()
+      
+      @removeShapes() if removeShapes
       @volumeMeshes = []
 
       for id of triangles

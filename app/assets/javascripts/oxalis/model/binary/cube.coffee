@@ -292,10 +292,10 @@ class Cube
         @pushQueue.insert(address)
 
 
-  getDataValue : ( voxel, mapping=@EMPTY_MAPPING ) ->
+  getDataValue : ( voxel, mapping = @EMPTY_MAPPING, zoomStep = 0 ) ->
 
-    bucket = @getBucket(@positionToZoomedAddress(voxel))
-    voxelIndex = @getVoxelIndex(voxel)
+    bucket = @getBucket(@positionToZoomedAddress(voxel, zoomStep))
+    voxelIndex = @getVoxelIndex(voxel, zoomStep)
 
     if bucket.hasData()
 
@@ -318,9 +318,9 @@ class Cube
     return @getDataValue(voxel, @currentMapping)
 
 
-  getVoxelIndex : (voxel) ->
+  getVoxelIndex : (voxel, zoomStep = 0) ->
 
-    [x, y, z] = voxel.map((v) -> v & 0b11111)
+    [x, y, z] = voxel.map((v) -> (v / 1 << zoomStep) & 0b11111)
     return @BYTE_OFFSET *
             (x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2))
 

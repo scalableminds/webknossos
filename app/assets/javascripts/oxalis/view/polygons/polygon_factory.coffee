@@ -6,7 +6,7 @@ Deferred = require("../../../libs/deferred")
 # Based on the marching cubes algorithm
 class PolygonFactory
 
-  constructor : (@modelCube, resolution, min, max, @id) ->
+  constructor : (@modelCube, resolution, min, max, @id, @zoomStep = 0) ->
 
     @voxelsToSkip = Math.ceil((max[0] - min[0]) / resolution) || 1
     @chunkSize  = 10000
@@ -96,14 +96,14 @@ class PolygonFactory
   getCubeIndices : ([x, y, z]) ->
 
     labels = [
-      @modelCube.getDataValue([x, y, z]                                                ),
-      @modelCube.getDataValue([x + @voxelsToSkip, y, z]                                ),
-      @modelCube.getDataValue([x + @voxelsToSkip, y, z + @voxelsToSkip]                ),
-      @modelCube.getDataValue([x, y, z + @voxelsToSkip]                                ),
-      @modelCube.getDataValue([x, y + @voxelsToSkip, z]                                ),
-      @modelCube.getDataValue([x + @voxelsToSkip, y + @voxelsToSkip, z]                ),
-      @modelCube.getDataValue([x + @voxelsToSkip, y + @voxelsToSkip, z + @voxelsToSkip]),
-      @modelCube.getDataValue([x, y + @voxelsToSkip, z + @voxelsToSkip]                ) ]
+      @modelCube.getDataValue([x, y, z]                                                ,@zoomStep),
+      @modelCube.getDataValue([x + @voxelsToSkip, y, z]                                ,@zoomStep),
+      @modelCube.getDataValue([x + @voxelsToSkip, y, z + @voxelsToSkip]                ,@zoomStep),
+      @modelCube.getDataValue([x, y, z + @voxelsToSkip]                                ,@zoomStep),
+      @modelCube.getDataValue([x, y + @voxelsToSkip, z]                                ,@zoomStep),
+      @modelCube.getDataValue([x + @voxelsToSkip, y + @voxelsToSkip, z]                ,@zoomStep),
+      @modelCube.getDataValue([x + @voxelsToSkip, y + @voxelsToSkip, z + @voxelsToSkip],@zoomStep),
+      @modelCube.getDataValue([x, y + @voxelsToSkip, z + @voxelsToSkip]                ,@zoomStep) ]
 
     cellIds = []
     for label in labels

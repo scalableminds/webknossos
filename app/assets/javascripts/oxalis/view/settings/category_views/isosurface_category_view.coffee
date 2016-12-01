@@ -56,6 +56,5 @@ class IsosurfaceCategoryView extends CategoryView
   initialize : ->
 
     super()
-    @hide() unless app.oxalis.model.volumeTracing?
 
 module.exports = IsosurfaceCategoryView

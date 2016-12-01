@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eu
 
 #check for existing environment variables
 : ${WORKSPACE:?"Need non-empty WORKSPACE variable"}
@@ -18,9 +18,6 @@ COMMIT=${3}
 ITERATION=${4}
 
 pushd ${WORKSPACE}
-
-# CLEANUP
-docker-compose down
 
 # PRE
 docker login -u $DOCKER_USER -p $DOCKER_PASS

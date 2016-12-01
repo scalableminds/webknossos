@@ -20,6 +20,15 @@ ITERATION=${4}
 pushd ${WORKSPACE}
 
 # PRE
+function cleanup {
+  docker-compose down || echo "Can not run docker-compose down"
+  docker logout || echo "Can not run docker logout"
+  popd
+}
+
+trap cleanup EXIT
+
+# PRE
 docker login -u $DOCKER_USER -p $DOCKER_PASS
 docker pull scalableminds/sbt:$SBT_VERSION_TAG
 
@@ -44,7 +53,3 @@ docker push scalableminds/oxalis:$ITERATION
 docker push scalableminds/oxalis:branch-$BRANCH
 docker push scalableminds/oxalis:commit-$COMMIT
 
-# POST
-docker logout
-
-popd

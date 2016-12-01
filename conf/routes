@@ -89,7 +89,7 @@ POST          /api/datastores/:name/datasources/:dataSet                        
 GET           /api/datastores/:name/datasources/:dataSet/layers/:layer          controllers.WKDataStoreController.layerRead(name: String, dataSet: String, layer: String)
 GET           /api/datastores/:name/backchannel                                 controllers.WKDataStoreController.backChannel(name: String, key: String)
 POST          /api/datastores/:name/status                                      controllers.WKDataStoreController.statusUpdate(name: String)
-GET           /api/datastores/:name/verifyUpload                                controllers.WKDataStoreController.validateDataSetUpload(name: String, token: String)
+POST          /api/datastores/:name/verifyUpload                                controllers.WKDataStoreController.validateDataSetUpload(name: String, token: String)
 
 # Those routes are DEPRECATED and should NOT be used further
 GET           /dataToken/validate                                               controllers.DataTokenController.validateUserAndDataSetToken(token: String, dataSetName: String, dataLayerName: String)

@@ -122,7 +122,7 @@ class DatasetUploadView extends Marionette.View
 
       Request.receiveJSON("/api/dataToken/generate")
       .then(({ token }) ->
-        return Request.sendMultipartFormReceiveJSON("/api/datasets/upload?token=#{token}", {
+        return Request.sendMultipartFormReceiveJSON("/data/datasets?token=#{token}", {
           data : new FormData(form)
           host : form.datastore.value
         })

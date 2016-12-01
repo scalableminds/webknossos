@@ -26,6 +26,17 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     with WKDataStoreActionHelper
     with LazyLogging {
 
+  def validateDataSetUpload(name: String, token: String) = DataStoreAction(name).async(parse.json){ implicit request =>
+    for {
+      uploadInfo <- request.body.validate[DataSourceUpload].asOpt.toFox ?~> Messages("dataStore.upload.invalid")
+      user <- DataTokenService.userFromToken(token) ?~> Messages("dataToken.user.invalid")
+      _ <- DataSetService.isProperDataSetName(uploadInfo.name) ?~> Messages("dataSet.name.invalid")
+      _ <- DataSetService.checkIfNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
+      _ <- uploadInfo.team.nonEmpty ?~> Messages("team.invalid")
+      _ <- ensureTeamAdministration(user, uploadInfo.team)
+    } yield Ok
+  }
+
   def statusUpdate(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     request.body.validate[DataStoreStatus] match {
       case JsSuccess(status, _) =>

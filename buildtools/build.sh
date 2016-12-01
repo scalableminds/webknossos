@@ -28,3 +28,5 @@ do
     ./build-helper.sh ${JOB_NAME} ${REAL_BRANCH} ${BUILD_NUMBER} ${PORT} ${MODE} ${PKG_TYPE}
   done
 done
+
+./make_docker.sh ${JOB_NAME} ${REAL_BRANCH} ${GIT_COMMIT} ${BUILD_NUMBER}

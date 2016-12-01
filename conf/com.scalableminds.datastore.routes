@@ -3,7 +3,7 @@
 # ~~~~
 
 # Upload
-POST        /datasets                                                                          @com.scalableminds.datastore.controllers.DataSourceController.upload()
+POST        /datasets                                                                          @com.scalableminds.datastore.controllers.DataSourceController.upload(token: String)
 
 # Read data
 POST        /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.datastore.controllers.BinaryDataController.requestViaAjax(dataSetName: String, dataLayerName: String)

@@ -186,6 +186,21 @@ class OxalisServer(
       }
   }
 
+  def validateDSUpload(token: String, dataSetName: String, team: String): Fox[Boolean] = {
+    oxalisWS(s"/api/datastores/$name/verifyUpload")
+      .withQueryString(
+        "token" -> token)
+      .post(Json.obj("name" -> dataSetName, "team" -> team))
+      .map {
+        result =>
+          logger.trace(s"Querying user access: $token. Status: '${result.status}'")
+          result.status match {
+            case OK => Full(true)
+            case _ => Failure(result.body)
+          }
+      }
+  }
+
   def requestUserAccess(token: String, dataSetName: String, dataLayerName: String): Future[Boolean] = {
     oxalisWS(s"/api/dataToken/validate")
       .withQueryString(

@@ -11,11 +11,14 @@ import com.scalableminds.braingames.binary.models.{DataSourceUpload, _}
 import com.scalableminds.braingames.binary.watcher.DirectoryWatcherActor
 import com.scalableminds.datastore.DataStorePlugin
 import com.scalableminds.datastore.models.DataSourceDAO
+import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.io.{PathUtils, ZipIO}
-import com.scalableminds.util.tools.{Finished, InProgress, NotStarted, ProgressState}
+import com.scalableminds.util.tools._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.io.IOUtils
 import play.api.Play
+import play.api.data.Form
+import play.api.data.Forms.{mapping, nonEmptyText, text, tuple}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsString, JsSuccess, Json}
@@ -107,40 +110,53 @@ class DataSourceController @Inject()(val messagesApi: MessagesApi) extends Contr
     }
   }
 
-  def upload() = Action.async(parse.json) {
-    implicit request =>
-      logger.warn("Dataset upload to store called.")
-      request.body.validate[DataSourceUpload] match {
-        case JsSuccess(upload, _) =>
-          val baseDir = Paths.get(config.getString("braingames.binary.baseFolder")).resolve(upload.team).resolve(upload
-                                                                                                                   .name)
-          logger.warn(s"Uploading dataset into '$baseDir'")
-          PathUtils.ensureDirectory(baseDir)
-          upload.settings.foreach(DataSourceSettings.writeSettingsToFile(_,
-                                                                         DataSourceSettings
-                                                                           .settingsFileInFolder(baseDir)))
+  def isProperDataSetName(name: String) = name.matches("[A-Za-z0-9_\\-]*")
 
-          (for {
-            _ <- unzipDataSource(baseDir, upload.filePath).toFox
-            dataSource = DataStorePlugin.binaryDataService.dataSourceInbox.handler.dataSourceFromFolder(baseDir,
-                                                                                                        upload.team)
-            oxalisServer <- DataStorePlugin.current.map(_.oxalisServer).toFox
-            _ <- oxalisServer.reportDataSouce(dataSource).toFox
-            importingDataSource <- DataStorePlugin.binaryDataService.dataSourceInbox.importDataSource(dataSource)
-            usableDataSource <- importingDataSource
-            _ = DataSourceDAO.updateDataSource(usableDataSource)
-            _ <- oxalisServer.reportDataSouce(usableDataSource).toFox
-          } yield Ok(Json.obj())
-            ).futureBox.map {
-            case Full(r) => r
-            case Empty =>
-              BadRequest(Json.obj("error" -> Messages("error.unknown")))
-            case Failure(error, _, _) =>
-              BadRequest(Json.obj("error" -> error))
-          }
+  def uploadForm = Form(
+    tuple(
+      "name" -> nonEmptyText.verifying("dataSet.name.invalid",
+        n => isProperDataSetName(n)),
+      "team" -> nonEmptyText,
+      "scale" -> mapping(
+        "scale" -> text.verifying("scale.invalid",
+          p => p.matches(Scale.formRx.toString)))(Scale.fromForm)(Scale.toForm)
+    )).fill(("", "", Scale.default))
 
-        case e: JsError =>
-          Future.successful(BadRequest(Json.obj("error" -> JsString("Json could not be parsed: " + e.toString))))
-      }
+  def upload(token: String) = Action.async(parse.multipartFormData) { implicit request =>
+    uploadForm.bindFromRequest(request.body.dataParts).fold(
+      hasErrors =
+        formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+      success = {
+        case (name, team, scale) =>
+          for {
+            oxalisServer <- DataStorePlugin.current.map(_.oxalisServer).toFox ?~> Messages("oxalis.server.unreachable")
+            _ <- oxalisServer.validateDSUpload(token, name, team) ?~> Messages("dataSet.name.alreadyTaken")
+            zipFile <- request.body.file("zipFile") ?~> Messages("zip.file.notFound")
+            settings = DataSourceSettings(None, scale, None)
+            upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath, Some(settings))
+            result <- processUpload(upload)
+          } yield result
+      })
+  }
+
+  def processUpload(upload: DataSourceUpload): Fox[Result] = {
+    val baseDir = Paths.get(config.getString("braingames.binary.baseFolder")).resolve(upload.team).resolve(upload
+                                                                                                             .name)
+    logger.warn(s"Uploading dataset into '$baseDir'")
+    PathUtils.ensureDirectory(baseDir)
+    upload.settings.foreach(DataSourceSettings.writeSettingsToFile(_,
+                                                                   DataSourceSettings
+                                                                     .settingsFileInFolder(baseDir)))
+
+    for {
+      _ <- unzipDataSource(baseDir, upload.filePath).toFox
+      dataSource = DataStorePlugin.binaryDataService.dataSourceInbox.handler.dataSourceFromFolder(baseDir, upload.team)
+      oxalisServer <- DataStorePlugin.current.map(_.oxalisServer).toFox
+      _ <- oxalisServer.reportDataSouce(dataSource).toFox
+      importingDataSource <- DataStorePlugin.binaryDataService.dataSourceInbox.importDataSource(dataSource)
+      usableDataSource <- importingDataSource
+      _ = DataSourceDAO.updateDataSource(usableDataSource)
+      _ <- oxalisServer.reportDataSouce(usableDataSource).toFox
+    } yield JsonOk(Messages("dataSet.upload.success"))
   }
 }

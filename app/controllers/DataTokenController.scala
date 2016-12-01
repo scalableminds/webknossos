@@ -32,7 +32,16 @@ class DataTokenController @Inject()(val messagesApi: MessagesApi) extends Contro
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- ensureAccessToLayer(dataSet, dataLayerName) ?~> Messages("dataLayer.forbidden") ~> FORBIDDEN
         user =  request.userOpt
-        token <- DataTokenService.generate(user, dataSetName, dataLayerName) ?~> Messages("dataToken.creationFailed")
+        token <- DataTokenService.generate(user, Some(dataSetName), Some(dataLayerName)) ?~> Messages("dataToken.creationFailed")
+      } yield {
+        Ok(Json.toJson(token))
+      }
+  }
+
+  def generateUserToken() = UserAwareAction.async {
+    implicit request =>
+      for {
+        token <- DataTokenService.generate(request.userOpt, None, None) ?~> Messages("dataToken.creationFailed")
       } yield {
         Ok(Json.toJson(token))
       }

@@ -53,8 +53,12 @@ object DataTokenService extends FoxImplicits {
     DataTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
   }
 
-  def generate(user: Option[User], dataSetName: String, dataLayerName: String)(implicit ctx: DBAccessContext) = {
-    val token = DataToken(user.map(_._id), Some(dataSetName), Some(dataLayerName))
+  def generate(
+    user: Option[User],
+    dataSetName: Option[String],
+    dataLayerName: Option[String])(implicit ctx: DBAccessContext) = {
+
+    val token = DataToken(user.map(_._id), dataSetName, dataLayerName)
     DataTokenDAO.insert(token).map(_ => token)
   }
 

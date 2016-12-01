@@ -94,6 +94,7 @@ GET           /api/datastores/:name/verifyUpload                                
 # Those routes are DEPRECATED and should NOT be used further
 GET           /dataToken/validate                                               controllers.DataTokenController.validateUserAndDataSetToken(token: String, dataSetName: String, dataLayerName: String)
 GET           /dataToken/generate                                               controllers.DataTokenController.generateUserAndDataSetToken(dataSetName: String, dataLayerName: String)
+GET           /dataToken/generate                                               controllers.DataTokenController.generateUserToken()
 # ------ instead use
 GET           /api/dataToken/validate                                           controllers.DataTokenController.validateUserAndDataSetToken(token: String, dataSetName: String, dataLayerName: String)
 GET           /api/dataToken/generate                                           controllers.DataTokenController.generateUserAndDataSetToken(dataSetName: String, dataLayerName: String)

@@ -28,7 +28,7 @@ class UserListItemView extends Marionette.View
         <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(team.role.name) %>"><%- team.role.name %></span><br/>
       <% }) %>
     </td>
-    <td>
+    <td class="center-text">
       <% if(isActive) { %>
         <i class="fa fa-check fa-2x"></i><br />
         <a href="#" class="deactivate-user">deactivate</a>

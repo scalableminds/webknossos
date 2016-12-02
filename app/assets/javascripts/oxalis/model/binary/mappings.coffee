@@ -9,7 +9,7 @@ class Mappings
 
     @mappings = _.keyBy(layer.mappings, "name")
     @baseUrl = "/data/datasets/#{datasetName}/layers/#{layer.name}/mappings/"
-    @doWithToken = layer.doWithToken
+    @doWithToken = layer.doWithToken.bind(layer)
 
 
   getMappingNames : ->
@@ -36,7 +36,7 @@ class Mappings
     if @mappings[mappingName].mappingObject?
       return Promise.resolve()
 
-    @doWithToken( (token) ->
+    @doWithToken( (token) =>
       Request.receiveJSON(
         @baseUrl + mappingName + "?token=#{token}"
       ).then(

@@ -60,7 +60,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi) extends Con
 
       for{
         annotation <- AnnotationService.createAnnotationFrom(
-          request.user, nmls, parsedFiles.otherFiles, AnnotationType.Explorational, name) ?~> "nml.file.createFailed"
+          request.user, nmls, parsedFiles.otherFiles, AnnotationType.Explorational, name)
       } yield JsonOk(
         Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
         Messages("nml.file.uploadSuccess")

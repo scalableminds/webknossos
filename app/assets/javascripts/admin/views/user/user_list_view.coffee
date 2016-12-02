@@ -22,7 +22,7 @@ class UserListView extends Marionette.CompositeView
           <th>Email</th>
           <th>Experiences</th>
           <th>Teams - Role</th>
-          <th id="status-column">Status</th>
+          <th class="center-text">Status</th>
           <th></th>
         </tr>
       </thead>

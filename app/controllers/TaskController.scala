@@ -93,7 +93,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       _ <- ensureTeamAdministration(request.user, team)
       result <- {
-        val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
+        val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename).nmls
 
         val futureResult: Future[List[Box[String]]] = Fox.serialSequence(nmls){
           case NMLService.NMLParseSuccess(_, nml) =>
@@ -256,7 +256,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def tryToGetNextAssignmentFor(user: User, retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
     val s = System.currentTimeMillis()
-    TimeLogger.logTimeF("assignables", Logger.warn)(TaskService.findAssignableFor(user)).futureBox.flatMap {
+    TaskService.findAssignableFor(user).futureBox.flatMap {
       case Full(assignment) =>
         TimeLogger.logTimeF("task request", Logger.warn)(OpenAssignmentService.remove(assignment)).flatMap { removeResult =>
           if (removeResult.n >= 1)

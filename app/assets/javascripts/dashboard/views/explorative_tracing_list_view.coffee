@@ -15,7 +15,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView
     <h3>Explorative Annotations</h3>
     <% if (!isAdminView) {%>
       <div>
-        <form action="<%- jsRoutes.controllers.NMLIOController.upload().url %>"
+        <form action="<%- jsRoutes.controllers.AnnotationIOController.upload().url %>"
           method="POST"
           enctype="multipart/form-data"
           id="upload-and-explore-form"
@@ -25,7 +25,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView
               <span>
                 <i class="fa fa-upload fileinput-new" id="form-upload-icon"></i>
                 <i class="fa fa-spinner fa-spin fileinput-exists" id="form-spinner-icon"></i>
-                Upload NML & explore
+                Upload Annotation
               </span>
               <input type="file" name="nmlFile" multiple accept=".nml, .zip">
             </span>

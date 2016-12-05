@@ -1,27 +1,29 @@
 package oxalis.nml
 
-import java.io.{File, FileInputStream, InputStream}
+import java.io.{File, FileInputStream, InputStream, InputStreamReader}
 
 import scala.annotation.tailrec
-import scala.xml.{NodeSeq, XML, Node => XMLNode}
+import scala.xml.{InputSource, NodeSeq, XML, Node => XMLNode}
 
 import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Failure, Full}
+import org.apache.commons.io.input.BOMInputStream
 import play.api.Logger
 
 object NMLParser {
 
   def parse(input: InputStream, name: String) = {
-    val result = NMLParserImpl.parse(input, name)
+    val in = new BOMInputStream(input)
+    val result = NMLParserImpl.parse(in, name)
     input.close()
     result
   }
 
-  def parse(file: File): Box[NML] = {
-    parse(new FileInputStream(file), file.getName)
+  def parse(file: File, name: String): Box[NML] = {
+    parse(new FileInputStream(file), name)
   }
 
   private object NMLParserImpl {
@@ -52,13 +54,16 @@ object NMLParser {
           comments = parseComments(data \ "comments")
           branchPoints = parseBranchPoints(data \ "branchpoints", time)
           trees <- extractTrees(data \ "thing", branchPoints, comments)
+          volumes = extractVolumes(data \ "volume")
         } yield {
           val dataSetName = parseDataSetName(parameters \ "experiment")
           val activeNodeId = parseActiveNode(parameters \ "activeNode")
           val editPosition = parseEditPosition(parameters \ "editPosition") // STARTPOS
+          val editRotation = parseEditRotation(parameters \ "editRotation")
+          val zoomLevel = parseZoomLevel(parameters \ "zoomLevel")
 
           Logger.debug(s"Parsed NML file. Trees: ${trees.size}")
-          NML(dataSetName, trees.toList, time, activeNodeId, scale, editPosition)
+          NML(name, dataSetName, trees.toList, volumes.toList, time, activeNodeId, scale, editPosition, editRotation, zoomLevel)
         }
       } catch {
         case e: Exception =>
@@ -69,6 +74,10 @@ object NMLParser {
 
     def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
       validateTrees(parseTrees(treeNodes, branchPoints, comments)).map(transformTrees)
+    }
+
+    def extractVolumes(volumeNodes: NodeSeq) = {
+      volumeNodes.map(node => Volume((node \ "@location").text))
     }
 
     def validateTrees(trees: Seq[Tree]): Box[Seq[Tree]] = {
@@ -157,6 +166,14 @@ object NMLParser {
 
     private def parseEditPosition(node: NodeSeq) = {
       node.headOption.flatMap(parsePoint3D)
+    }
+
+    private def parseEditRotation(node: NodeSeq) = {
+      node.headOption.flatMap(parseRotation)
+    }
+
+    private def parseZoomLevel(node: NodeSeq) = {
+      (node \ "@zoom").text.toDoubleOpt
     }
 
     private def parseBranchPoints(branchPoints: NodeSeq, defaultTimestamp: Long) = {

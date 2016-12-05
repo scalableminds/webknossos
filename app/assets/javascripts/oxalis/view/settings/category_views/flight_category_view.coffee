@@ -19,7 +19,7 @@ class FlightCategoryView extends CategoryView
           options :
             name : "mouseRotateValue"
             displayName : "Mouse Rotation"
-            min : 0.001
+            min : 0.0001
             max : 0.02
             step : 0.001
         )
@@ -48,7 +48,7 @@ class FlightCategoryView extends CategoryView
             name : "moveValue3d"
             displayName : "Move Value (nm/s)"
             min : constants.MIN_MOVE_VALUE
-            max : constants.MAX_MOVE_VALUE
+            max : constants.MAX_MOVE_VALUE_SLIDER
             step : 10
         )
     ]

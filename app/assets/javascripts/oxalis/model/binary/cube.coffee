@@ -145,7 +145,8 @@ class Cube
 
   getVoxelIndexByVoxelOffset : ([x, y, z]) ->
 
-    return x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2)
+    return @BYTE_OFFSET *
+      (x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2))
 
 
   isWithinBounds : ([x, y, z, zoomStep]) ->
@@ -320,9 +321,8 @@ class Cube
 
   getVoxelIndex : (voxel) ->
 
-    [x, y, z] = voxel.map((v) -> v & 0b11111)
-    return @BYTE_OFFSET *
-            (x + y * (1 << @BUCKET_SIZE_P) + z * (1 << @BUCKET_SIZE_P * 2))
+    voxelOffset = voxel.map((v) -> v & 0b11111)
+    return @getVoxelIndexByVoxelOffset(voxelOffset)
 
 
   positionToZoomedAddress : ([x, y, z], zoomStep = 0) ->

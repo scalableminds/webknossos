@@ -14,7 +14,7 @@ class TaskAnnotationView extends Marionette.View
   template : _.template("""
     <td><%- user.firstName %> <%- user.lastName %> (<%- user.email %>)</td>
     <td><%- moment(created).format("YYYY-MM-DD HH:SS") %></td>
-    <td><i class="fa fa-check-circle-o"></i><%- stateLabel %></td>
+    <td><span><i class="fa fa-check-circle-o"></i><%- stateLabel %></span><br /><span><i class="fa fa-clock-o"></i><%- formattedTracingTime %></span></td>
     <td class="nowrap">
       <div class="btn-group">
         <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">

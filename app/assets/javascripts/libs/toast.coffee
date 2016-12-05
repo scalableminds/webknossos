@@ -49,7 +49,11 @@ Toast =
       return (@message(type, message, sticky) for message in messages)
 
     else if shouldDisplayToast(type, message, sticky)
-      $messageElement = $("<div>", class : "alert alert-#{type} fade in", "data-id" : message).html(message)
+      if message.match(/<html[^>]*>/)
+        displayMessage = "<iframe src='data:text/html;charset=utf-8,#{escape(message)}'></iframe>"
+      else
+        displayMessage = message
+      $messageElement = $("<div>", class : "alert alert-#{type} fade in", "data-id" : message).html(displayMessage)
       $closeButton = $("<button>", type : "button", class : "close", "data-dismiss" : "alert").html("&times;")
       $messageElement.prepend($closeButton)
       if sticky
@@ -87,15 +91,7 @@ Toast =
 
   highlight : (target) ->
 
-    interval = setInterval(
-      ->
-        for i in [0..5]
-          target.animate({right : "+=10px"}, 30).animate({right : "-=10px"}, 30)
-        return
-      5000
-    )
-    # clearInterval when the toast is removed
-    target.on("closed.bs.alert", -> clearInterval(interval))
+    target.addClass("alert-wiggle")
 
 
   delete : (type, message) ->

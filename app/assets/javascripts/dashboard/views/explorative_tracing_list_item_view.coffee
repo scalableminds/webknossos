@@ -49,7 +49,7 @@ class ExplorativeTracingListItemView extends Marionette.View
             <i class="fa fa-random"></i>
             <strong>trace</strong>
           </a><br />
-          <a href="<%- jsRoutes.controllers.AnnotationController.download(typ, id).url %>">
+          <a href="<%- jsRoutes.controllers.AnnotationIOController.download(typ, id).url %>">
             <i class="fa fa-download"></i>
             download
           </a><br />

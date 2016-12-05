@@ -3,21 +3,45 @@
  */
 package models.binary
 
-import models.basics.SecuredBaseDAO
-import play.api.libs.json.Json
 import java.util.UUID
+
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import models.basics.SecuredBaseDAO
+import play.api.libs.functional.syntax._
+import play.api.libs.json.{Json, Writes, __}
 
-case class DataStore(name: String, key: String = UUID.randomUUID().toString, typ: DataStoreType)
+case class DataStoreStatus(
+  ok: Boolean,
+  url: String)
 
-case class DataStoreInfo(name: String, url: String, typ: DataStoreType, accessToken: Option[String])
+object DataStoreStatus{
+  implicit val dataStoreStatusFormat = Json.format[DataStoreStatus]
+}
 
-object DataStoreInfo{
+case class DataStore(
+  name: String,
+  url: Option[String],
+  typ: DataStoreType,
+  key: String = UUID.randomUUID().toString)
+
+case class DataStoreInfo(
+  name: String,
+  url: String,
+  typ: DataStoreType,
+  accessToken: Option[String])
+
+object DataStoreInfo {
   implicit val dataStoreInfoFormat = Json.format[DataStoreInfo]
 }
 
-object DataStore{
-  implicit val dataStoreFormat = Json.format[DataStore]
+object DataStore {
+  private[binary] val dataStoreFormat = Json.format[DataStore]
+
+  def dataStorePublicWrites: Writes[DataStore] =
+    ((__ \ "name").write[String] and
+      (__ \ "url").write[Option[String]] and
+      (__ \ "typ").write[DataStoreType]) (ds =>
+      (ds.name, ds.url, ds.typ))
 }
 
 object DataStoreDAO extends SecuredBaseDAO[DataStore] {
@@ -27,4 +51,7 @@ object DataStoreDAO extends SecuredBaseDAO[DataStore] {
 
   def findByKey(key: String)(implicit ctx: DBAccessContext) =
     findOne("key", key)
+
+  def updateUrl(name: String, url: String)(implicit ctx: DBAccessContext) =
+    update(Json.obj("name" -> name), Json.obj("$set" -> Json.obj("url" -> url)))
 }

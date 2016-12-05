@@ -62,7 +62,8 @@ class SkeletonTracingPlaneController extends PlaneController
       "2" : => @sceneController.skeleton.toggleInactiveTreeVisibility()
 
       #Delete active node
-      "delete" : => @model.skeletonTracing.deleteActiveNode()
+      "delete" : =>
+        _.defer => @model.skeletonTracing.deleteActiveNode()
       "c" : => @model.skeletonTracing.createNewTree()
 
       #Branches
@@ -161,7 +162,7 @@ class SkeletonTracingPlaneController extends PlaneController
 
   addNode : (position, rotation, centered) =>
 
-    if @model.user.get("newNodeNewTree") == true
+    if @model.settings.somaClickingAllowed and @model.user.get("newNodeNewTree")
       @model.skeletonTracing.createNewTree()
 
     if not @model.skeletonTracing.getActiveNode()?

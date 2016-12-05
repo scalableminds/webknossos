@@ -396,58 +396,67 @@ class SkeletonTracing
 
     return if not @restrictionHandler.updateAllowed()
 
-    unless @activeNode
-      return
+    reallyDeleteActiveNode = (resolve) =>
 
-    for neighbor in @activeNode.neighbors
-      neighbor.removeNeighbor(@activeNode.id)
-    updateTree = @activeTree.removeNode(@activeNode.id)
+      for neighbor in @activeNode.neighbors
+        neighbor.removeNeighbor(@activeNode.id)
+      updateTree = @activeTree.removeNode(@activeNode.id)
 
-    @stateLogger.updateTree(@activeTree) if updateTree
+      @stateLogger.updateTree(@activeTree) if updateTree
 
-    deletedNode = @activeNode
-    @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
+      deletedNode = @activeNode
+      @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
-    comments = @activeTree.comments
-    branchpoints = @activeTree.branchpoints
+      comments = @activeTree.comments
+      branchpoints = @activeTree.branchpoints
 
-    if deletedNode.neighbors.length > 1
-      # Need to split tree
-      newTrees = []
-      oldActiveTreeId = @activeTree.treeId
+      if deletedNode.neighbors.length > 1
+        # Need to split tree
+        newTrees = []
+        oldActiveTreeId = @activeTree.treeId
 
-      for i in [0...@activeNode.neighbors.length]
-        unless i == 0
-          # create new tree for all neighbors, except the first
-          @createNewTree()
+        for i in [0...@activeNode.neighbors.length]
+          unless i == 0
+            # create new tree for all neighbors, except the first
+            @createNewTree()
 
-        @activeTree.nodes = []
-        @getNodeListForRoot(@activeTree.nodes, deletedNode.neighbors[i])
-        # update tree ids
-        unless i == 0
-          for node in @activeTree.nodes
-            node.treeId = @activeTree.treeId
-        @setActiveNode(deletedNode.neighbors[i].id)
-        newTrees.push(@activeTree)
+          @activeTree.nodes = []
+          @getNodeListForRoot(@activeTree.nodes, deletedNode.neighbors[i])
+          # update tree ids
+          unless i == 0
+            for node in @activeTree.nodes
+              node.treeId = @activeTree.treeId
+          @setActiveNode(deletedNode.neighbors[i].id)
+          newTrees.push(@activeTree)
 
-        # update comments and branchpoints
-        @activeTree.comments = @getCommentsForNodes(comments, @activeTree.nodes)
-        @activeTree.branchpoints = @getBranchpointsForNodes(branchpoints, @activeTree.nodes)
+          # update comments and branchpoints
+          @activeTree.comments = @getCommentsForNodes(comments, @activeTree.nodes)
+          @activeTree.branchpoints = @getBranchpointsForNodes(branchpoints, @activeTree.nodes)
 
-        if @activeTree.treeId != oldActiveTreeId
-          nodeIds = []
-          for node in @activeTree.nodes
-            nodeIds.push(node.id)
-          @stateLogger.moveTreeComponent(oldActiveTreeId, @activeTree.treeId, nodeIds)
+          if @activeTree.treeId != oldActiveTreeId
+            nodeIds = []
+            for node in @activeTree.nodes
+              nodeIds.push(node.id)
+            @stateLogger.moveTreeComponent(oldActiveTreeId, @activeTree.treeId, nodeIds)
 
-      @trigger("reloadTrees", newTrees)
+        @trigger("reloadTrees", newTrees)
 
-    else if @activeNode.neighbors.length == 1
-      # no children, so just remove it.
-      @setActiveNode(deletedNode.neighbors[0].id)
-      @trigger("deleteActiveNode", deletedNode, @activeTree.treeId)
-    else
-      @deleteTree(false)
+      else if @activeNode.neighbors.length == 1
+        # no children, so just remove it.
+        @setActiveNode(deletedNode.neighbors[0].id)
+        @trigger("deleteActiveNode", deletedNode, @activeTree.treeId)
+      else
+        @deleteTree(false)
+      resolve()
+
+    return new Promise (resolve, reject) =>
+      if @activeNode
+        if @getBranchpointsForNodes(@activeTree.branchpoints, @activeNode).length
+          @trigger("deleteBranch", => reallyDeleteActiveNode(resolve) )
+        else
+          reallyDeleteActiveNode(resolve)
+      else
+        reject()
 
 
   deleteTree : (notify, id, notifyServer) ->

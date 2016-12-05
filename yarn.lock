@@ -170,40 +170,21 @@ backbone-subviews@^0.7.4:
   version "0.7.4"
   resolved "https://registry.yarnpkg.com/backbone-subviews/-/backbone-subviews-0.7.4.tgz#58abd9f73bc2fce3ea9bbf10187e1ffeab553062"
 
-backbone.babysitter@^0.1.0:
-  version "0.1.12"
-  resolved "https://registry.yarnpkg.com/backbone.babysitter/-/backbone.babysitter-0.1.12.tgz#7ca946434eeefbde1a553605c74b7049b6dfafc1"
+backbone.marionette@^3.0.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/backbone.marionette/-/backbone.marionette-3.1.0.tgz#0bacee64945eb4deb303e9285ee8c18fd58324a3"
   dependencies:
-    backbone ">=0.9.9 <=1.3.x"
-    underscore ">=1.4.0 <=1.8.3"
+    backbone.radio "^2.0.0"
 
-backbone.marionette@^2.4.4:
-  version "2.4.7"
-  resolved "https://registry.yarnpkg.com/backbone.marionette/-/backbone.marionette-2.4.7.tgz#a573d21b9c464741b80de18351faeacf1872e25f"
-  dependencies:
-    backbone "1.0.0 - 1.3.x"
-    backbone.babysitter "^0.1.0"
-    backbone.wreqr "^1.0.0"
-    underscore "1.4.4 - 1.8.3"
+backbone.radio@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/backbone.radio/-/backbone.radio-2.0.0.tgz#bbe8672b373e313f99f36d2fbcf583fe77d04f42"
 
-backbone.wreqr@^1.0.0, backbone.wreqr@^1.3.5:
-  version "1.3.7"
-  resolved "https://registry.yarnpkg.com/backbone.wreqr/-/backbone.wreqr-1.3.7.tgz#8e1c12776428806881f2770cd2535bde8923f067"
-  dependencies:
-    backbone ">=0.9.9 <=1.3.x"
-    underscore ">=1.3.3 <=1.8.3"
-
-"backbone@>=0.9.9 <=1.3.x", "backbone@1.0.0 - 1.3.x":
+backbone@1.3.3:
   version "1.3.3"
   resolved "https://registry.yarnpkg.com/backbone/-/backbone-1.3.3.tgz#4cc80ea7cb1631ac474889ce40f2f8bc683b2999"
   dependencies:
     underscore ">=1.8.3"
-
-backbone@1.2.3:
-  version "1.2.3"
-  resolved "https://registry.yarnpkg.com/backbone/-/backbone-1.2.3.tgz#c22cfd07fc86ebbeae61d18929ed115e999d65b9"
-  dependencies:
-    underscore ">=1.7.0"
 
 balanced-match@^0.4.1, balanced-match@^0.4.2:
   version "0.4.2"
@@ -2510,7 +2491,7 @@ ultron@1.0.x:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/ultron/-/ultron-1.0.2.tgz#ace116ab557cd197386a4e88f4685378c8b2e4fa"
 
-underscore@^1.8.3, "underscore@>= 1.3.1", "underscore@>=1.3.3 <=1.8.3", "underscore@>=1.4.0 <=1.8.3", underscore@>=1.7.0, underscore@>=1.8.3, "underscore@1.4.4 - 1.8.3":
+underscore@^1.8.3, "underscore@>= 1.3.1", underscore@>=1.8.3:
   version "1.8.3"
   resolved "https://registry.yarnpkg.com/underscore/-/underscore-1.8.3.tgz#4f3fb53b106e6097fcf9cb4109f2a5e9bdfa5022"
 

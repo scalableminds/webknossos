@@ -159,10 +159,12 @@ trait Secured extends FoxImplicits with I18nSupport{
         maybeUser(request).flatMap { user =>
           Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
           NewRelic.addCustomParameter("user-mail", user.email)
-          if (user.verified)
+          if (user.isActive)
             executeAndEnsureSession(user, request, block)
           else
-            Future.successful(Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash))))
+            Future.successful(Forbidden(
+              views.html.error.defaultError(Messages("user.deactivated"),
+                showNavButtons = false)(AuthedSessionData(user, request.flash))))
         }.getOrElse(onUnauthorized(request))
       }(request)
     }
@@ -171,7 +173,7 @@ trait Secured extends FoxImplicits with I18nSupport{
   object UserAwareAction extends ActionBuilder[UserAwareRequest] with AuthHelpers{
     def invokeBlock[A](request: Request[A], block: (UserAwareRequest[A]) => Future[Result]) = {
       withLongRunningOpTracking{
-        maybeUser(request).filter(_.verified).futureBox.flatMap {
+        maybeUser(request).filter(_.isActive).futureBox.flatMap {
           case Full(user) =>
             NewRelic.addCustomParameter("user-mail", user.email)
             Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)

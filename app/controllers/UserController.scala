@@ -141,20 +141,10 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def delete(userId: String) = Authenticated.async { implicit request =>
-    for {
-      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
-      _ <- UserService.removeFromAllPossibleTeams(user, request.user)
-    } yield {
-      JsonOk(Messages("user.deleted", user.name))
-    }
-  }
-
   val userUpdateReader =
     ((__ \ "firstName").read[String] and
       (__ \ "lastName").read[String] and
-      (__ \ "verified").read[Boolean] and
+      (__ \ "isActive").read[Boolean] and
       (__ \ "teams").read[List[TeamMembership]] and
       (__ \ "experiences").read[Map[String, Int]]).tupled
 
@@ -179,7 +169,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def update(userId: String) = Authenticated.async(parse.json) { implicit request =>
     val issuingUser = request.user
     withJsonBodyUsing(userUpdateReader) {
-      case (firstName, lastName, verified, assignedMemberships, experiences) =>
+      case (firstName, lastName, activated, assignedMemberships, experiences) =>
         for {
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
@@ -192,7 +182,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
-          updatedUser <- UserService.update(user, firstName.trim, lastName.trim, verified, updatedTeams, trimmedExperiences)
+          updatedUser <- UserService.update(user, firstName.trim, lastName.trim, activated, updatedTeams, trimmedExperiences)
         } yield {
           Ok(User.userPublicWrites(request.user).writes(updatedUser))
         }
@@ -233,8 +223,8 @@ trait UserAuthentication extends Secured with Dashboard with FoxImplicits { this
       case (oldPassword, newPassword) => {
         val email = request.user.email.toLowerCase
         for {
-          user <- UserService.auth(email, oldPassword).getOrElse(User.createNotVerifiedUser)
-          ok <- if (user.verified) UserService.changePassword(user, newPassword).map(_.ok) else Fox.successful(false)
+          user <- UserService.auth(email, oldPassword).getOrElse(User.defaultDeactivatedUser)
+          ok <- if (user.isActive) UserService.changePassword(user, newPassword).map(_.ok) else Fox.successful(false)
         } yield {
           if (ok) {
             Redirect(controllers.routes.Authentication.logout).flashing(FlashSuccess(Messages("user.resetPassword.success")))

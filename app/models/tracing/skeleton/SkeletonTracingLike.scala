@@ -43,8 +43,13 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def stats: Option[SkeletonTracingStatistics]
 
-  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] =
-    NMLService.toNML(this).map(data => Enumerator.fromStream(IOUtils.toInputStream(data)))
+  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
+    if(stats.exists(_.numberOfNodes < 5000) || stats.isEmpty) {
+      NMLService.toNML(this).map(data => Enumerator.fromStream(IOUtils.toInputStream(data)))
+    } else {
+     Fox.failure("Downloading of large tracings is currently disabled.")
+    }
+  }
 
   override def contentData =
     SkeletonTracingLike.skeletonTracingLikeWrites(this)

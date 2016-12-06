@@ -1,17 +1,35 @@
 package oxalis.nml
 
+import javax.xml.stream.XMLStreamWriter
+
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import play.api.libs.json._
-import com.scalableminds.util.xml.{SynchronousXMLWrites, XMLWrites}
+import com.scalableminds.util.xml.SynchronousXMLWrites
 
 case class Node(id: Int, position: Point3D, rotation: Vector3D = Node.defaultRotation, radius: Float = 120, viewport: Int = 1, resolution: Int = 1, bitDepth: Int = 0, interpolation: Boolean = false, timestamp: Long = System.currentTimeMillis)
 
 object Node {
-  val defaultRotation = Vector3D(0,0,0)
+  val defaultRotation = Vector3D(0, 0, 0)
 
   implicit object NodeXMLWrites extends SynchronousXMLWrites[Node] {
-    def synchronousWrites(n: Node) =
-      <node id={ n.id.toString } radius={ n.radius.toString } x={ n.position.x.toString } y={ n.position.y.toString } z={ n.position.z.toString } rotX={ n.rotation.x.toString } rotY={ n.rotation.y.toString } rotZ={ n.rotation.z.toString } inVp={ n.viewport.toString } inMag={ n.resolution.toString } bitDepth={ n.bitDepth.toString } interpolation={ n.interpolation.toString } time={ n.timestamp.toString }/>
+    def synchronousWrites(n: Node)(implicit writer: XMLStreamWriter): Boolean = {
+      writer.writeStartElement("node")
+      writer.writeAttribute("id", n.id.toString)
+      writer.writeAttribute("radius", n.radius.toString)
+      writer.writeAttribute("x", n.position.x.toString)
+      writer.writeAttribute("y", n.position.y.toString)
+      writer.writeAttribute("z", n.position.z.toString)
+      writer.writeAttribute("rotX", n.rotation.x.toString)
+      writer.writeAttribute("rotY", n.rotation.y.toString)
+      writer.writeAttribute("rotZ", n.rotation.z.toString)
+      writer.writeAttribute("inVp", n.viewport.toString)
+      writer.writeAttribute("inMag", n.resolution.toString)
+      writer.writeAttribute("bitDepth", n.bitDepth.toString)
+      writer.writeAttribute("interpolation", n.interpolation.toString)
+      writer.writeAttribute("time", n.timestamp.toString)
+      writer.writeEndElement()
+      true
+    }
   }
 
   implicit object NodeFormat extends Format[Node] {
@@ -50,4 +68,5 @@ object Node {
         (js \ INTERPOLATION).as[Boolean],
         (js \ TIMESTAMP).as[Long]))
   }
+
 }

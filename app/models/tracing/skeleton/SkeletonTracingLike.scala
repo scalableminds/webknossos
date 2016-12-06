@@ -1,10 +1,14 @@
 package models.tracing.skeleton
 
+import javax.xml.stream.XMLStreamWriter
+
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalDBAccess}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.{XMLWrites, Xml}
+import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{AnnotationContent, AnnotationSettings}
+import models.tracing.skeleton.SkeletonTracingLike.SkeletonTracingLikeXMLWrites
 import org.apache.commons.io.IOUtils
 import oxalis.nml._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -12,7 +16,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 
 
-trait SkeletonTracingLike extends AnnotationContent {
+trait SkeletonTracingLike extends AnnotationContent with LazyLogging {
   type Self <: SkeletonTracingLike
 
   def self = this.asInstanceOf[Self]
@@ -44,41 +48,28 @@ trait SkeletonTracingLike extends AnnotationContent {
   def stats: Option[SkeletonTracingStatistics]
 
   def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
-    if(stats.exists(_.numberOfNodes < 5000) || stats.isEmpty) {
-      NMLService.toNML(this).map(data => Enumerator.fromStream(IOUtils.toInputStream(data)))
-    } else {
-     Fox.failure("Downloading of large tracings is currently disabled.")
-    }
+    logger.trace("Download stream for skeleton content requested")
+    Fox.successful(Enumerator.outputStream { os =>
+      NMLService.toNML(this, os)(SkeletonTracingLikeXMLWrites).map(_ => os.close())
+    })
   }
 
   override def contentData =
     SkeletonTracingLike.skeletonTracingLikeWrites(this)
 }
 
-object SkeletonTracingLike extends FoxImplicits {
+object SkeletonTracingLike extends FoxImplicits with LazyLogging {
 
   implicit object SkeletonTracingLikeXMLWrites extends XMLWrites[SkeletonTracingLike] with GlobalDBAccess {
-    def writes(e: SkeletonTracingLike): Fox[scala.xml.Node] = {
-      for {
-        parameters <- AnnotationContent.writeParametersAsXML(e)
-        trees <- e.trees
-        treesXml <- Xml.toXML(trees.filterNot(_.nodes.isEmpty))
-        branchpoints <- Xml.toXML(trees.flatMap(_.branchPoints).sortBy(-_.timestamp))
-        comments <- Xml.toXML(trees.flatMap(_.comments))
-      } yield {
-        <things>
-          <parameters>
-            {parameters}
-            {e.activeNodeId.map(id => scala.xml.XML.loadString(s"""<activeNode id="$id"/>""")).getOrElse(scala.xml.Null)}
-          </parameters>
-          {treesXml}
-          <branchpoints>
-            {branchpoints}
-          </branchpoints>
-          <comments>
-            {comments}
-          </comments>
-        </things>
+    def writes(e: SkeletonTracingLike)(implicit writer: XMLStreamWriter): Fox[Boolean] = {
+      Xml.withinElement("things") {
+        for {
+          _ <- Xml.withinElement("parameters")(AnnotationContent.writeParametersAsXML(e, writer))
+          trees <- e.trees
+          _ <- Xml.toXML(trees.filterNot(_.nodes.isEmpty))
+          _ <- Xml.withinElement("branchpoints")(Xml.toXML(trees.flatMap(_.branchPoints).sortBy(-_.timestamp)))
+          _ <- Xml.withinElement("comments")(Xml.toXML(trees.flatMap(_.comments)))
+        } yield true
       }
     }
   }

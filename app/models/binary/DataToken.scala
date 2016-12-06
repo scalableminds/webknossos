@@ -24,7 +24,7 @@ case class DataToken(
                       dataSetName: String,
                       dataLayerName: String,
                       token: String = DataToken.generateRandomToken,
-                      expiration: Long = System.currentTimeMillis + DataToken.expirationTime) {
+                      expiration: Long = System.currentTimeMillis + DataToken.expirationTime.toMillis) {
   def isValidFor(dataSetName: String, dataLayerName: String) =
     !isExpired && dataSetName == this.dataSetName && dataLayerName == this.dataLayerName
 
@@ -36,7 +36,7 @@ object DataToken {
   private val generator = new SecureRandom()
   implicit val dataTokenFormat = Json.format[DataToken]
 
-  val expirationTime = 24.hours.toMillis
+  val expirationTime = 24.hours
 
   def generateRandomToken =
     new BigInteger(130, generator).toString(32)
@@ -46,7 +46,7 @@ object DataTokenService {
 
   val oxalisToken = DataToken.generateRandomToken
 
-  CleanUpService.register("deletion of expired dataTokens", DataToken.expirationTime.millis){
+  CleanUpService.register("deletion of expired dataTokens", DataToken.expirationTime){
     DataTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
   }
 

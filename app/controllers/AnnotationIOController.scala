@@ -16,12 +16,17 @@ import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
 
 import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
 import models.project.{Project, ProjectDAO}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.MultipartFormData
 
-class AnnotationIOController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with TracingInformationProvider{
+class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
+  extends Controller
+    with Secured
+    with TracingInformationProvider
+    with LazyLogging {
 
   private def nameForNMLs(fileNames: Seq[String]) =
     if (fileNames.size == 1)
@@ -72,6 +77,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi) extends Con
   def download(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) {
       annotation =>
+        logger.trace(s"Requested download for tracing: $typ/$id")
         for {
           name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
           _ <- annotation.restrictions.allowDownload(request.user) ?~> Messages("annotation.download.notAllowed")
@@ -79,7 +85,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi) extends Con
           content <- annotation.content ?~> Messages("annotation.content.empty")
           stream <- content.toDownloadStream(name)
         } yield {
-          Ok.chunked(stream.andThen(Enumerator.eof[Array[Byte]])).withHeaders(
+          Ok.chunked(stream).withHeaders(
             CONTENT_TYPE ->
               "application/octet-stream",
             CONTENT_DISPOSITION ->

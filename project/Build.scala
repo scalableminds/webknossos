@@ -14,7 +14,7 @@ object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
-  val braingamesVersion = "8.16.0"
+  val braingamesVersion = "8.16.2"
   val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
@@ -38,6 +38,7 @@ object Dependencies{
   val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
   val mongev = "com.scalableminds" %% "play-mongev" % "0.4.1"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
+  val resourceManager = "com.jsuereth" %% "scala-arm" % "2.0"
 
   // Unfortunately, we need to list all mturk dependencies seperately since mturk is not published on maven but rather
   // added to the project as a JAR. To keep the number of JARs added to this repo as small as possible, everthing that
@@ -222,6 +223,7 @@ object ApplicationBuild extends Build {
     urlHelper,
     newrelic,
     newrelicApi,
+    resourceManager,
     specs2 % Test) ++ tiff ++ mturk
 
   val dependencyResolvers = Seq(

@@ -20,11 +20,11 @@ case class BlockedArray3D[T](
   lazy val nullArray = Array.fill[T](elementSize)(nullElement)
 
   @inline
-  private def getBytes(p: Point3D, block: Array[T]) = {
+  def getBytes(x: Int, y: Int, z: Int, block: Array[T]) = {
     val address =
-      (p.x % blockWidth +
-        p.y % blockHeight * blockWidth +
-        p.z % blockDepth * blockHeight * blockWidth) * elementSize
+      (x % blockWidth +
+        y % blockHeight * blockWidth +
+        z % blockDepth * blockHeight * blockWidth) * elementSize
 
     val bytes = new Array[T](elementSize)
     Array.copy(block, address, bytes, 0, elementSize)
@@ -41,21 +41,25 @@ case class BlockedArray3D[T](
     Array.copy(d, offset, block, address, elementSize)
   }
 
-  private def calculateBlockIdx(p: Point3D) =
-    p.z / blockDepth +
-      p.y / blockHeight * zBlocks +
-      p.x / blockWidth * zBlocks * yBlocks
+  def calculateBlockIdx(x: Int, y: Int, z: Int) =
+    z / blockDepth +
+      y / blockHeight * zBlocks +
+      x / blockWidth * zBlocks * yBlocks
 
-  def apply(p: Point3D): Array[T] = {
-    if(p.x < 0 || p.y < 0 || p.z < 0)
+  def apply(x: Int, y: Int, z: Int) = {
+    if(x < 0 || y < 0 || z < 0)
       nullArray
     else {
-      val blockIdx = calculateBlockIdx(p)
+      val blockIdx = calculateBlockIdx(x, y, z)
       if(exists(blockIdx))
-        getBytes(p, underlying(blockIdx))
+        getBytes(x, y, z, underlying(blockIdx))
       else
         new Array[T](elementSize)
     }
+  }
+
+  def apply(p: Point3D): Array[T] = {
+    apply(p.x, p.y, p.z)
   }
 
   def exists(blockIdx: Int): Boolean = {
@@ -67,7 +71,7 @@ case class BlockedArray3D[T](
   }
 
   def setBytes(p: Point3D, d: Array[T], offset: Int): Unit = {
-    val blockIdx = calculateBlockIdx(p)
+    val blockIdx = calculateBlockIdx(p.x, p.y, p.z)
     if(!exists(blockIdx))
       underlying(blockIdx) = emptyBlock
     setBytes(p, underlying(blockIdx), d, offset)

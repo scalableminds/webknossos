@@ -18,6 +18,7 @@ import scala.collection.JavaConverters._
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.project.{Project, ProjectDAO}
+import org.apache.commons.io.{FileUtils, FilenameUtils}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.MultipartFormData
@@ -35,13 +36,15 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       None
 
   def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
+    def isZipFile(f: MultipartFormData.FilePart[TemporaryFile]): Boolean =
+      f.contentType.contains("application/zip") || FilenameUtils.isExtension(f.filename, "zip")
+
     def parseFile(f: MultipartFormData.FilePart[TemporaryFile]) = {
-      f.contentType match {
-        case Some("application/zip") =>
-          NMLService.extractFromZip(f.ref.file, Some(f.filename))
-        case _ =>
-          val nml = NMLService.extractFromNML(f.ref.file, Some(f.filename))
-          NMLService.ZipParseResult(List(nml), Map.empty)
+      if(isZipFile(f)) {
+        NMLService.extractFromZip(f.ref.file, Some(f.filename))
+      } else {
+        val nml = NMLService.extractFromNML(f.ref.file, Some(f.filename))
+        NMLService.ZipParseResult(List(nml), Map.empty)
       }
     }
 

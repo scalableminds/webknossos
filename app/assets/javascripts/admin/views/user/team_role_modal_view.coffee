@@ -116,7 +116,7 @@ class TeamRoleModalView extends ModalView
 
           # Verify user and update his teams
           user.save(
-            "verified" : true
+            "isActive" : true
             teams : teams
           )
 

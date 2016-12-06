@@ -242,7 +242,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
     for {
       content <- createContent()
-      annotation <- AnnotationService.createFrom(user, content, typ, name)
+      annotation <- AnnotationService.createFrom(user, content, typ, name) ?~> Messages("annotation.create.fromFailed")
     } yield annotation
   }
 

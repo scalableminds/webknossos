@@ -28,6 +28,7 @@ import models.tracing.skeleton.SkeletonTracing
 import models.tracing.volume.VolumeTracing.VolumeTracingXMLWrites
 import org.apache.commons.io.IOUtils
 import oxalis.nml.{NML, NMLService}
+import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -174,20 +175,20 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
       val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
 
       for {
-        dataSet <- DataSetDAO.findOneBySourceName(nml.dataSetName)
-        baseSource <- dataSet.dataSource.toFox
+        dataSet <- DataSetDAO.findOneBySourceName(nml.dataSetName) ?~> "dataSet.notFound"
+        baseSource <- dataSet.dataSource.toFox ?~> "dataSource.notFound"
         start <- nml.editPosition.toFox.orElse(DataSetService.defaultDataSetPosition(nml.dataSetName))
-        nmlVolume <- nml.volumes.headOption.toFox
-        volume <- additionalFiles.get(nmlVolume.location).toFox
-        dataLayer <- DataStoreHandler.uploadUserDataLayer(dataSet.dataStoreInfo, baseSource, volume)
+        nmlVolume <- nml.volumes.headOption.toFox ?~> "nml.volume.notFound"
+        volume <- additionalFiles.get(nmlVolume.location).toFox ?~> "nml.volume.volumeFileNotFound"
+        dataLayer <- DataStoreHandler.uploadUserDataLayer(dataSet.dataStoreInfo, baseSource, volume) ?~> "dataStore.dataLayer.uploadFailed"
         volumeTracing = VolumeTracing(
           dataSet.name,
           dataLayer.dataLayer.name,
           editPosition = start,
           editRotation = nml.editRotation.getOrElse(Vector3D(0,0,0)),
           zoomLevel = nml.zoomLevel.getOrElse(VolumeTracing.defaultZoomLevel))
-        _ <- UserDataLayerDAO.insert(dataLayer)
-        _ <- VolumeTracingDAO.insert(volumeTracing)
+        _ <- UserDataLayerDAO.insert(dataLayer) ?~> "dataLayer.creation.failed"
+        _ <- VolumeTracingDAO.insert(volumeTracing) ?~> "segmentation.creation.failed"
       } yield {
         volumeTracing
       }

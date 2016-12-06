@@ -92,8 +92,8 @@ object Dependencies{
       "com.twelvemonkeys.imageio" % "imageio-jpeg" % twelvemonkeysVersion,
       "com.twelvemonkeys.imageio" % "imageio-tiff" % twelvemonkeysVersion
     )
-  val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % "3.31.1"
-  val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % "3.31.1"
+  val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % "3.33.0"
+  val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % "3.33.0"
 }
 
 object Resolvers {

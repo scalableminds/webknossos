@@ -54,6 +54,7 @@ object ZipIO {
       val zip = startZip(out)
       Fox.serialSequence(sources)(zip.addFile).map{ _ =>
         zip.close()
+        out.close()
       }
     } else
       out.close()

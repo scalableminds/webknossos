@@ -8,16 +8,23 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common._
 import com.scalableminds.braingames.binary.models.UnusableDataSource
 import akka.actor.ActorSystem
+import com.scalableminds.braingames.binary.DataRequester
 import com.typesafe.scalalogging.LazyLogging
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 
 object DataSourceInbox{
-  def create(repo: DataSourceRepository, server: String, s: ActorSystem)(mApi: MessagesApi) = new DataSourceInbox {
+  def create(repo: DataSourceRepository,
+             server: String,
+             dR: DataRequester,
+             s: ActorSystem)(mApi: MessagesApi) = new DataSourceInbox {
+
     def messagesApi = mApi
     
     val dataSourceInboxHelper = new DataSourceInboxHelper {
       def messagesApi = mApi
+
+      val dataRequester = dR
       
       val system = s
       val serverUrl = server

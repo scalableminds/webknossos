@@ -153,18 +153,28 @@ class DataRequester(
     loadFromSections(sections)
   }
 
-  private def loadBlocks(minBlock: Point3D,
+  def loadBlocks(minBlock: Point3D,
                  maxBlock: Point3D,
                  dataRequest: DataRequest,
                  layer: DataLayer,
                  useCache: Boolean = true): Array[Fox[Array[Byte]]] = {
+    loadBlocks(minBlock, maxBlock, dataRequest.dataSource, dataRequest.dataSection, dataRequest.resolution, layer, useCache)
+  }
+
+  def loadBlocks(minBlock: Point3D,
+                 maxBlock: Point3D,
+                 dataSource: DataSource,
+                 dataSection: Option[String],
+                 resolution: Int,
+                 layer: DataLayer,
+                 useCache: Boolean): Array[Fox[Array[Byte]]] = {
     (minBlock to maxBlock).toArray.map{
       p =>
         loadFromSomewhere(
-                           dataRequest.dataSource,
+                           dataSource,
                            layer,
-                           dataRequest.dataSection,
-                           dataRequest.resolution,
+                           dataSection,
+                           resolution,
                            p,
                            useCache)
     }

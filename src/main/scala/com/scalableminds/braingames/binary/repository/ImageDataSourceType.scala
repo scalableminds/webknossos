@@ -9,6 +9,7 @@ import java.nio.file.{Files, Path}
 import javax.imageio.ImageIO
 import javax.imageio.spi.IIORegistry
 
+import com.scalableminds.braingames.binary.DataRequester
 import com.scalableminds.braingames.binary.models.{UnusableDataSource, _}
 import com.scalableminds.braingames.binary.store.DataStore
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
@@ -18,8 +19,8 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.twelvemonkeys.imageio.plugins.tiff.TIFFImageReaderSpi
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
-import net.liftweb.common.{Box, Full}
-import play.api.i18n.{I18nSupport, Messages}
+import net.liftweb.common.{Box, Failure, Full}
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import se.sawano.java.text.AlphanumericComparator
 
@@ -36,12 +37,12 @@ object TiffDataSourceType extends DataSourceType with ImageDataSourceTypeHandler
 
   registerTiffProvider()
 
-  protected def registerTiffProvider() = {
+  protected def registerTiffProvider(): Unit = {
     // sometimes there are problems with ImageIO finding the TiffImageReader
     // this should make sure the ImageReader is registered and can be used
     logger.info("Registering tiff provider")
     ImageIO.scanForPlugins()
-    val registry = IIORegistry.getDefaultInstance()
+    val registry = IIORegistry.getDefaultInstance
     registry.registerServiceProvider(new TIFFImageReaderSpi())
     logger.info("Finished registering tiff provider")
   }
@@ -63,9 +64,11 @@ object JpegDataSourceType extends DataSourceType with ImageDataSourceTypeHandler
 case class ImageLayer(layer: Int, width: Int, height: Int, depth: Int, bytesPerPixel: Int, images: Iterator[RawImage])
 
 case class ImageValueRange(minValue: Int = Int.MaxValue, maxValue: Int = Int.MinValue) {
-  def apply(value: Int) = ImageValueRange(math.min(minValue, value), math.max(maxValue, value))
+  def apply(value: Int) =
+    ImageValueRange(math.min(minValue, value), math.max(maxValue, value))
 
-  def combine(other: ImageValueRange) = ImageValueRange(math.min(minValue, other.minValue), math.max(maxValue, other.maxValue))
+  def combine(other: ImageValueRange) =
+    ImageValueRange(math.min(minValue, other.minValue), math.max(maxValue, other.maxValue))
 }
 
 case class ImageInfo(
@@ -84,7 +87,8 @@ case class ImageInfo(
         Some(s"Combined($source, ${other.source})")
       ))
     else {
-      val msg = s"Different image byte formats within the same layer. '$source' ($bytesPerPixel bytes/pixel) vs '${other.source}' (${other.bytesPerPixel} bytes/pixel) "
+      val msg = s"Different image byte formats within the same layer. '$source' " +
+        s"($bytesPerPixel bytes/pixel) vs '${other.source}' (${other.bytesPerPixel} bytes/pixel) "
       logger.error(msg)
       throw new InvalidImageFormatException(msg)
     }
@@ -99,8 +103,8 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
   val Target = "target"
 
   val LayerRxs = Seq(
-    "_c([0-9]+)" r,
-    "_ch([0-9]+)" r
+    "_c([0-9]+)".r,
+    "_ch([0-9]+)".r
   )
 
   def fileExtension: String
@@ -127,12 +131,12 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
   protected def elementClass(bytesPerPixel: Int) =
     s"uint${bytesPerPixel * 8}"
 
-  def importDataSource(unusableDataSource: UnusableDataSource, progress: ProgressTracker)(implicit messages: Messages): Fox[DataSource] = {
+  def importDataSource(dataRequester: DataRequester, unusableDataSource: UnusableDataSource, progress: ProgressTracker)(implicit messages: Messages): Fox[DataSource] = {
     val target = unusableDataSource.sourceFolder.resolve(Target).toAbsolutePath
 
     prepareTargetPath(target)
 
-    convertToKnossosStructure(unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).map{
+    convertToKnossosStructure(dataRequester, unusableDataSource.id, unusableDataSource.sourceFolder, target, progress).map{
       layers =>
         DataSourceSettings.fromSettingsFileIn(unusableDataSource.sourceFolder, unusableDataSource.sourceFolder) match {
           case Full(settings) =>
@@ -187,7 +191,11 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
         val depth = layerImages.size
         extractImageInfo(layerImages) match {
           case Some(imageInfo) =>
-            val rawImages = layerImages.toList.sorted(new AlphanumericOrdering()).toIterator.flatMap(t => toRawImage(t, imageInfo))
+            val rawImages =
+              layerImages
+              .sorted(new AlphanumericOrdering())
+              .toIterator
+              .flatMap(t => toRawImage(t, imageInfo))
             Some(ImageLayer(layer, imageInfo.width, imageInfo.height, depth, imageInfo.bytesPerPixel, rawImages))
           case _ =>
             logger.warn("No image files found")
@@ -203,13 +211,18 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
       s"color_$idx"
   }
 
-  def convertToKnossosStructure(id: String, source: Path, targetRoot: Path, progress: ProgressTracker): Future[List[DataLayer]] = {
+  def convertToKnossosStructure(
+                                 dataRequester: DataRequester,
+                                 id: String,
+                                 source: Path,
+                                 targetRoot: Path,
+                                 progress: ProgressTracker): Future[List[DataLayer]] = {
     val images = PathUtils
       .listFiles(source, recursive = true)
       .openOr(Nil)
       .filter(_.getFileName.toString.endsWith("." + fileExtension))
 
-    val layers = extractLayers(images.toList)
+    val layers = extractLayers(images)
     val namingSchema = namingSchemaFor(layers) _
 
     val progressPerLayer = 1.0 / layers.size
@@ -228,19 +241,31 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
 
         val layerName = namingSchema(layer.layer)
         val target = targetRoot.resolve(layerName)
-        TileToCubeWriter(id, 1, target, layer.depth, layer.bytesPerPixel, layer.images, reportTileProgress _).convertToCubes()
         val boundingBox = BoundingBox(Point3D(0, 0, 0), layer.width, layer.height, layer.depth)
         val section = DataLayerSection(layerName, layerName, Resolutions, boundingBox, boundingBox)
         val elements = elementClass(layer.bytesPerPixel)
-        
-        val layerFuture = KnossosMultiResCreator.createResolutions(target, target, id, layer.bytesPerPixel, 1, Resolutions.size, boundingBox, reportResolutionProgress _)
+        val knossosLayer = DataLayer(
+          layerName, DefaultLayerType.category, targetRoot.toString, None, elements,
+          isWritable = false, _isCompressed = Some(false), None, List(section))
+
+        val tempDataSource = DataSource(id, targetRoot.toString, Scale.default, dataLayers = List(knossosLayer))
+
+        TileToCubeWriter(
+          tempDataSource.id, 1, target, layer.depth,
+          layer.bytesPerPixel, layer.images, reportTileProgress)
+          .convertToCubes()
+
+        val layerFuture = new KnossosMultiResCreator(dataRequester)
+          .createResolutions(
+            tempDataSource, knossosLayer, target, target,
+            1, Resolutions.size, boundingBox, reportResolutionProgress)
+          .map(_ => knossosLayer)
         layerFuture.onFailure {
           case e: Exception =>
             logger.error(s"An error occurred while trying to down scale target of image stack $id. ${e.getMessage}", e)
         }
 
-        layerFuture.map(_ => DataLayer(layerName, DefaultLayerType.category, targetRoot.toString, None, elements,
-          isWritable = false, _isCompressed = Some(false), None, List(section)))
+        layerFuture
     }
   }
 
@@ -256,7 +281,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     }
 
     def useFullColorRange() = {
-      logger.debug(s"Converting image to to full range from dynamic range [${valueRange.minValue}, ${valueRange.maxValue}]")
+      logger.debug(s"Converting image from dynamic to full range [${valueRange.minValue}, ${valueRange.maxValue}]")
       val buffer = image.getRaster.getDataBuffer
       val offset = valueRange.minValue
       val scale = 255.0 / (valueRange.maxValue - valueRange.minValue)
@@ -281,19 +306,22 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     } else image
   }
 
-  def toRawImage(imageFile: Path, imageInfo: ImageInfo): Option[RawImage] = {
+  def toRawImage(imageFile: Path, imageInfo: ImageInfo): Box[RawImage] = {
     PathUtils.fileOption(imageFile).flatMap {
       file =>
         val image = convertIfNecessary(ImageIO.read(file), imageInfo.valueRange)
         if (image == null) {
-          logger.error("Couldn't load image file. " + ImageIO.getImageReaders(file).toList.map(_.getClass.toString))
+          val failure = "Couldn't load image file. " + ImageIO.getImageReaders(file).toList.map(_.getClass.toString)
+          logger.error(failure)
           //throw new Exception("Couldn't load image file due to missing reader.")
-          None
+          Failure(failure)
         } else {
           val raster = image.getRaster
-          val data = (raster.getDataBuffer().asInstanceOf[DataBufferByte]).getData()
+          val data = raster.getDataBuffer.asInstanceOf[DataBufferByte].getData()
           val bytesPerPixel = imageTypeToByteDepth(image.getType)
-          Some(RawImage(ImageInfo(image.getWidth, image.getHeight, bytesPerPixel, source = Some(imageFile.toString)), data))
+          val rawImageInfo =
+            ImageInfo(image.getWidth, image.getHeight, bytesPerPixel, source = Some(imageFile.toString))
+          Full(RawImage(rawImageInfo, data))
         }
     }
   }
@@ -309,13 +337,15 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
         } else {
           val bytesPerPixel = imageTypeToByteDepth(image.getType)
           val buffer = image.getRaster.getDataBuffer
-          val valueRange = (0 until buffer.getSize).foldLeft(ImageValueRange())((valueRange, index) => valueRange(buffer.getElem(index)))
+          val valueRange =
+            (0 until buffer.getSize)
+            .foldLeft(ImageValueRange())((valueRange, index) => valueRange(buffer.getElem(index)))
           Some(ImageInfo(image.getWidth, image.getHeight, bytesPerPixel, valueRange, Some(imageFile.toString)))
         }
     }
   }
 
-  def imageTypeToByteDepth(typ: Int) = {
+  def imageTypeToByteDepth(typ: Int): Int = {
     typ match {
       case BufferedImage.TYPE_BYTE_GRAY =>
         1
@@ -349,10 +379,17 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     }
   }
 
-  case class TileToCubeWriter(id: String, resolutions: Int, target: Path, depth: Int, bytesPerPixel: Int, tiles: Iterator[RawImage], progressHook: Double => Unit) {
+  case class TileToCubeWriter(
+                               id: String,
+                               resolutions: Int,
+                               target: Path,
+                               depth: Int,
+                               bytesPerPixel: Int,
+                               tiles: Iterator[RawImage],
+                               progressHook: Double => Unit) {
     val CubeSize = 128
 
-    def convertToCubes(cubeSize: Int = 128) = {
+    def convertToCubes(cubeSize: Int = 128): Unit = {
       val fileCache = new KnossosWriterCache(id, 1, target)
       tiles.zipWithIndex.foreach {
         case (tile, idx) =>
@@ -362,10 +399,10 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     }
 
     case class FixedSizedImage(underlying: RawImage, targetWidth: Int, targetHeight: Int, zero: Byte = 0) {
-      val uw = underlying.info.width
-      val uh = underlying.info.height
+      private val uw = underlying.info.width
+      private val uh = underlying.info.height
 
-      def copyTo(other: Array[Byte], destPos: Int, srcPos: Int, length: Int) = {
+      def copyTo(other: Array[Byte], destPos: Int, srcPos: Int, length: Int): Unit = {
         var i = 0
         while (i < length) {
           val col = (i + srcPos) % targetWidth
@@ -384,6 +421,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
         }
       }
     }
+
     private def writeTile(tile: RawImage, layerNumber: Int, files: KnossosWriterCache): Unit = {
       // number of knossos buckets in x direction
       val xs = (tile.data.length.toFloat / bytesPerPixel / tile.info.height / CubeSize).ceil.toInt

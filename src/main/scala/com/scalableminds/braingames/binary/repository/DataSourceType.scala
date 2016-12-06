@@ -6,6 +6,7 @@ package com.scalableminds.braingames.binary.repository
 import java.nio.file.Path
 import javax.inject.Inject
 
+import com.scalableminds.braingames.binary.DataRequester
 import com.scalableminds.braingames.binary.models.{DataSource, UnusableDataSource}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
@@ -15,7 +16,7 @@ import net.liftweb.common.{Box, Full}
 import play.api.i18n.{Messages, MessagesApi}
 
 trait DataSourceTypeHandler {
-  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker)(implicit messages: Messages): Fox[DataSource]
+  def importDataSource(dataRequester: DataRequester, unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker)(implicit messages: Messages): Fox[DataSource]
 }
 
 trait DataSourceTypeGuesser {

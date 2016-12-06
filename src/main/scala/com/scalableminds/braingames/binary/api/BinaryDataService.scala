@@ -40,9 +40,6 @@ trait BinaryDataService
   lazy implicit val executor: ExecutionContextExecutor =
     system.dispatcher
 
-  lazy val dataSourceInbox: DataSourceInbox =
-    DataSourceInbox.create(dataSourceRepository, serverUrl, system)(messagesApi)
-
   var repositoryWatcher: Option[ActorRef] =
     None
 
@@ -57,6 +54,9 @@ trait BinaryDataService
 
   private lazy val dataRequester =
     new DataRequester(config.getConfig("braingames.binary"), binDataCache, dataSourceRepository)
+
+  lazy val dataSourceInbox: DataSourceInbox =
+    DataSourceInbox.create(dataSourceRepository, serverUrl, dataRequester, system)(messagesApi)
 
   def start(): Unit = {
     val repositoryWatcherConfig =

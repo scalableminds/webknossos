@@ -5,6 +5,7 @@ package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.Path
 
+import com.scalableminds.braingames.binary.DataRequester
 import com.scalableminds.braingames.binary.models.{FiledDataSource, UnusableDataSource, UsableDataSource}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, InProgress, ProgressTracking}
@@ -25,6 +26,8 @@ trait DataSourceInboxHelper
   val DataSourceJson = "datasource.json"
 
   def serverUrl: String
+
+  def dataRequester: DataRequester
 
   protected def writeDataSourceToFile(path: Path, filedDataSource: FiledDataSource) = {
     PathUtils.fileOption(path.resolve(DataSourceJson)).map {
@@ -56,7 +59,7 @@ trait DataSourceInboxHelper
       clearAllTrackers(importTrackerId(unusableDataSource.id))
       cleanUp(unusableDataSource.sourceFolder)
       val importResult = dsTypeGuesser.guessRepositoryType(unusableDataSource.sourceFolder)
-        .importDataSource(unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
+        .importDataSource(dataRequester, unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
         .flatMap { dataSource =>
             val filedDS = FiledDataSource(unusableDataSource.owningTeam, unusableDataSource.sourceType, dataSource) 
             writeDataSourceToFile(unusableDataSource.sourceFolder, filedDS)

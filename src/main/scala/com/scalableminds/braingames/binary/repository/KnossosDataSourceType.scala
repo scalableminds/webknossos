@@ -6,6 +6,7 @@ package com.scalableminds.braingames.binary.repository
 import java.io.FileWriter
 import java.nio.file.{Files, Path}
 
+import com.scalableminds.braingames.binary.DataRequester
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.repository.mapping.{MappingParser, MappingPrinter}
 import com.scalableminds.util.geometry.{BoundingBox, Scale}
@@ -35,7 +36,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
 
   def fileExtension = "raw"
 
-  def importDataSource(unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker)
+  def importDataSource(dataRequester: DataRequester, unusableDataSource: UnusableDataSource, progressTracker: ProgressTracker)
                       (implicit messages: Messages): Fox[DataSource] = {
     dataSourceFromFile(unusableDataSource.sourceFolder)
   }

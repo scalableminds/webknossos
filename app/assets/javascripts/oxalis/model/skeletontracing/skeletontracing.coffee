@@ -48,21 +48,10 @@ class SkeletonTracing
       @activeTree
     } = tracingParser.parse()
 
-    # Initialize tree colors
-    @colorIdCounter = @treeIdCount
-
-    for tree in @trees
-      unless tree.color?
-        @shuffleTreeColor(tree)
-
-    # ensure a tree is active
-    unless @activeTree
-      if @trees.length > 0
-        @activeTree = @trees[0]
-      else
-        @createNewTree()
-
     tracingType = tracing.typ
+
+    @initializeTrees(tracingType, tracing.task?.id)
+
     if (tracingType == "Task") and @getNodeListOfAllTrees().length == 0
       @addNode(tracing.content.editPosition, tracing.content.editRotation, 0, 0, 4, false)
 
@@ -81,6 +70,26 @@ class SkeletonTracing
 
       if @firstEdgeDirection
         @flycam.setSpaceDirection(@firstEdgeDirection)
+
+
+  initializeTrees : (tracingType, taskId) ->
+
+    # Initialize tree colors
+    @colorIdCounter = @treeIdCount
+
+    # Initialize tree name prefix
+    @TREE_PREFIX = @generateTreeNamePrefix(tracingType, taskId)
+
+    for tree in @trees
+      unless tree.color?
+        @shuffleTreeColor(tree)
+
+    # Ensure a tree is active
+    unless @activeTree
+      if @trees.length > 0
+        @activeTree = @trees[0]
+      else
+        @createNewTree()
 
 
   benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
@@ -381,7 +390,7 @@ class SkeletonTracing
     tree = new TraceTree(
       @treeIdCount++,
       @getNewTreeColor(),
-      "Tree#{('00'+(@treeIdCount-1)).slice(-3)}",
+      @TREE_PREFIX + ('00'+(@treeIdCount-1)).slice(-3),
       (new Date()).getTime())
     @trees.push(tree)
     @activeTree = tree
@@ -533,6 +542,20 @@ class SkeletonTracing
   updateTree : (tree) ->
 
     @stateLogger.updateTree(tree)
+
+
+  generateTreeNamePrefix : (tracingType, taskId) ->
+
+    user = "#{app.currentUser.firstName}_#{app.currentUser.lastName}"
+    # Replace spaces in user names
+    user = user.replace(/ /g, "_")
+
+    if tracingType == "Explorational"
+      # Get YYYY-MM-DD string
+      creationDate = new Date().toJSON().slice(0,10)
+      return "explorative_#{creationDate}_#{user}_"
+    else
+      return "task_#{taskId}_#{user}_"
 
 
   getTree : (id) ->

@@ -14,6 +14,7 @@ import java.nio.file.{Files, Path}
 
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.Fox
+import com.sun.org.apache.xpath.internal.operations.Bool
 import net.liftweb.common.Full
 import org.apache.commons.io.IOUtils
 
@@ -28,14 +29,12 @@ object ZipIO {
   case class OpenZip(stream: ZipOutputStream){
     /**
       * Add a file to the zip
-      * @param source input
+      * @param f input
       * @return future, completes when file is added
       */
-    def addFile(source: NamedStream): Future[Unit] = {
-      stream.putNextEntry(new ZipEntry(source.normalizedName))
-      source.writeTo(stream).map{ _ =>
-        stream.closeEntry()
-      }
+    def withFile(name: String)(f: OutputStream => Future[_]) = {
+      stream.putNextEntry(new ZipEntry(name))
+      f(stream).map(_ => stream.closeEntry())
     }
 
     /**
@@ -52,9 +51,8 @@ object ZipIO {
   def zip(sources: List[NamedStream], out: OutputStream) = {
     if (sources.nonEmpty){
       val zip = startZip(out)
-      Fox.serialSequence(sources)(zip.addFile).map{ _ =>
+      Fox.serialSequence(sources){s => zip.withFile(s.normalizedName)(s.writeTo)}.map{ _ =>
         zip.close()
-        out.close()
       }
     } else
       out.close()

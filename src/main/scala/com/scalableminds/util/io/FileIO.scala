@@ -3,8 +3,9 @@
 */
 package com.scalableminds.util.io
 
-import java.io.{File, InputStream, OutputStream, PrintWriter}
+import java.io._
 
+import com.scalableminds.util.tools.Fox
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 
 import scala.concurrent.{Future, blocking}
@@ -25,6 +26,10 @@ trait NamedStream {
   def writeTo(out: OutputStream): Future[Unit]
 }
 
+case class NamedFunctionStream(name: String, writer: OutputStream => Future[Unit]) extends NamedStream {
+  def writeTo(out: OutputStream) = writer(out)
+}
+
 case class NamedEnumeratorStream(enumerator: Enumerator[Array[Byte]], name: String) extends NamedStream {
   def writeTo(out: OutputStream) = {
     val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
@@ -34,8 +39,10 @@ case class NamedEnumeratorStream(enumerator: Enumerator[Array[Byte]], name: Stri
   }
 }
 
-case class NamedFileStream(stream: () => InputStream, name: String) extends NamedStream{
-  def writeTo(out: OutputStream) = {
+case class NamedFileStream(file: File, name: String) extends NamedStream{
+  def stream(): InputStream =  new FileInputStream(file)
+
+  def writeTo(out: OutputStream): Future[Unit] = {
     Future {
       blocking {
         val in = stream()

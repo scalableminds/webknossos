@@ -7,6 +7,7 @@ import models.binary._
 import java.io.{FileInputStream, InputStream, PipedInputStream, PipedOutputStream}
 import java.nio.file.Paths
 import java.util.zip.ZipInputStream
+import javax.xml.stream.XMLStreamWriter
 
 import scala.concurrent.Future
 
@@ -22,12 +23,12 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.braingames.binary.models.{DataLayer, DataSource, UserDataLayer}
-import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFileStream, ZipIO}
-import com.scalableminds.util.xml.XMLWrites
+import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFileStream, NamedFunctionStream, ZipIO}
+import com.scalableminds.util.xml.{XMLWrites, Xml}
 import models.tracing.skeleton.SkeletonTracing
 import models.tracing.volume.VolumeTracing.VolumeTracingXMLWrites
 import org.apache.commons.io.IOUtils
-import oxalis.nml.{NML, NMLService}
+import oxalis.nml.{NML, NMLService, TreeLike}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
@@ -89,14 +90,6 @@ case class VolumeTracing(
 
   def contentType: String = VolumeTracing.contentType
 
-  private def enumeratorToIS(enumerator: Enumerator[Array[Byte]]): InputStream = {
-    val pos = new PipedOutputStream()
-    val pis = new PipedInputStream(pos)
-    val it = Iteratee.foreach{b: Array[Byte] => pos.write(b)}
-    enumerator.onDoneEnumerating(pos.close()) |>>> it
-    pis
-  }
-
   def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
     import play.api.Play.current
     def createStream(url: String): Fox[Enumerator[Array[Byte]]] = {
@@ -119,13 +112,12 @@ case class VolumeTracing(
       dataSource <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
       urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/datasets/$dataSetName/layers/$userDataLayerName/download"
       inputStream <- createStream(urlToVolumeData)
-      volumeNml <- NMLService.toNML(this)(VolumeTracingXMLWrites).map(data => Enumerator.fromStream(IOUtils.toInputStream(data)))
     } yield {
       Enumerator.outputStream{ outputStream =>
         ZipIO.zip(
           List(
             new NamedEnumeratorStream(inputStream, "data.zip"),
-            new NamedEnumeratorStream(volumeNml, name + ".nml")
+            new NamedFunctionStream(name + ".nml", os => NMLService.toNML(this, os)(VolumeTracingXMLWrites).futureBox.map(_ => Unit))
           ), outputStream)
       }
     }
@@ -216,17 +208,24 @@ object VolumeTracing extends FoxImplicits{
   val defaultZoomLevel = 0.0
 
   implicit object VolumeTracingXMLWrites extends XMLWrites[VolumeTracing] with GlobalDBAccess {
-    def writes(e: VolumeTracing): Fox[scala.xml.Node] = {
-      for {
-        parameters <- AnnotationContent.writeParametersAsXML(e)
+    def writes(e: VolumeTracing)(implicit writer: XMLStreamWriter): Fox[Boolean] = {
+      writer.writeStartElement("things")
+      writer.writeStartElement("parameters")
+      for{
+        _ <- AnnotationContent.writeParametersAsXML(e, writer)
       } yield {
-        <things>
-          <parameters>
-            {parameters}
-            {e.activeCellId.map(id => scala.xml.XML.loadString(s"""<activeNodeId id="$id"/>""")).getOrElse(scala.xml.Null)}
-          </parameters>
-          <volume id ="1" location="data.zip"></volume>
-        </things>
+        e.activeCellId.foreach{id =>
+          writer.writeStartElement("activeNodeId")
+          writer.writeAttribute("id" , id.toString)
+          writer.writeEndElement()
+        }
+        writer.writeEndElement() // end parameters
+        writer.writeStartElement("volume")
+        writer.writeAttribute("id" , "1")
+        writer.writeAttribute("location" , "data.zip")
+        writer.writeEndElement()
+        writer.writeEndElement() // end things
+        true
       }
     }
   }

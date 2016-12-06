@@ -12,14 +12,14 @@ import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.input.BOMInputStream
 import play.api.Logger
+import resource._
 
 object NMLParser {
 
   def parse(input: InputStream, name: String) = {
-    val in = new BOMInputStream(input)
-    val result = NMLParserImpl.parse(in, name)
-    input.close()
-    result
+    managed(new BOMInputStream(input)).acquireAndGet { in =>
+      NMLParserImpl.parse(in, name)
+    }
   }
 
   def parse(file: File, name: String): Box[NML] = {

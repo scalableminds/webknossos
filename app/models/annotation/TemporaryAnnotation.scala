@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.io.NamedStream
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -84,5 +85,5 @@ class TemporaryAnnotationMutations(annotation: TemporaryAnnotation) extends Anno
 
   def cancelTask()(implicit ctx: DBAccessContext): Fox[TemporaryAnnotationMutations#AType] = ???
 
-  def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedFileStream] = ???
+  def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedStream] = ???
 }

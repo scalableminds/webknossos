@@ -44,8 +44,6 @@ case class SkeletonTracing(
 
   def tree(treeId: Int) = DBTreeDAO.findOneByTreeId(_id, treeId)(GlobalAccessContext)
 
-  def maxNodeId = this.trees.map(oxalis.nml.utils.maxNodeId)
-
   def getOrCollectStatistics: Fox[SkeletonTracingStatistics] = this.stats.toFox.orElse(collectStatistics)
 
   def toTemporary(implicit ctx: DBAccessContext) =

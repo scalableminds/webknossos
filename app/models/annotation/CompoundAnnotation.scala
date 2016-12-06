@@ -96,30 +96,13 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
     state: AnnotationState,
     restrictions: AnnotationRestrictions,
     settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
-    def renameAnnotationContents(annotations: List[AnnotationLike], processed: Vector[AnnotationContent] = Vector.empty): Fox[List[AnnotationContent]] = {
-      annotations match {
-        case annotation :: tail =>
-
-          annotation.content.flatMap{
-            case skeleton: SkeletonTracing =>
-              SkeletonTracingService.renameTreesOfTracing(skeleton, annotation.user, annotation.task)
-            case c =>
-              Fox.successful(c)
-          }.flatMap { annotationContent =>
-            renameAnnotationContents(tail, processed :+ annotationContent)
-          }
-        case _ =>
-          Fox.successful(processed.toList)
-      }
-    }
     if(annotations.isEmpty)
       Fox.empty
     else
       Fox.successful(TemporaryAnnotation(
         id,
         _user,
-        () => renameAnnotationContents(annotations)
-              .flatMap(mergeAnnotationContent(_, id, settings)),
+        () => Fox.serialCombined(annotations)(_.content).flatMap(cs => mergeAnnotationContent(cs, id, settings)),
         None,
         team,
         downloadUrl,

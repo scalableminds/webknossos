@@ -34,6 +34,7 @@ echo "compiling application..."
 sbt clean compile stage || (echo "error creating package, aborting ..."; exit 1)
 APP_DIR=target/universal/stage
 chmod +x $APP_DIR/bin/${PROJECT}
+rm $APP_DIR/conf/newrelic.yml
 
 echo "creating root environment..."
 ROOT_ENV="rootenv"

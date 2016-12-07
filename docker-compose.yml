@@ -1,9 +1,9 @@
-version: '2'
+version: '2.1'
 
 services:
 
   oxalis:
-    image: scalableminds/oxalis:$DOCKER_TAG
+    image: scalableminds/oxalis:${DOCKER_TAG:-latest}
     ports:
       - "9000:9000"
     links:

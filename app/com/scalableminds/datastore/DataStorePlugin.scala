@@ -29,12 +29,13 @@ class DataStorePlugin @Inject()(implicit app: play.api.Application, messagesApi:
   lazy val oxalisStatusService = new OxalisStatusService(confService, oxalisServer)
 
   override def onStart(): Unit = {
+    logger.info("Datastore plugin started.")
     try {
-      binaryDataService.start()
       oxalisStatusService.start()
+      binaryDataService.start()
     } catch {
       case e: Exception =>
-        logger.error("EXCEPTION ON DataStorePlugin START: " + e.getMessage)
+        logger.error("EXCEPTION ON DataStorePlugin START: " + e.getMessage, e)
     }
   }
 

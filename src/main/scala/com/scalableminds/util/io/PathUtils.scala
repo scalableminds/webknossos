@@ -15,17 +15,16 @@ object PathUtils extends PathUtils
 
 trait PathUtils extends LazyLogging {
 
-  val directoryFilter = new FilenameFilter {
-    override def accept(dir: File, name: String): Boolean = {
-      val f = new File(dir, name)
-      f.isDirectory && !f.isHidden
-    }
+  private def directoryFilter(path: Path) = {
+    Files.isDirectory(path) && !Files.isHidden(path)
   }
 
-  val fileFilter = new FilenameFilter {
-    override def accept(f: File, name: String): Boolean =
-      new File(f, name).isFile
+  private def fileFilter(path: Path) = {
+    !Files.isDirectory(path)
   }
+
+  def parent(p: Path): Option[Path] =
+    Option(p.getParent)
 
   def createFile(p: Path, failIfExists: Boolean): Boolean = {
     try {
@@ -45,9 +44,6 @@ trait PathUtils extends LazyLogging {
     else
       None
 
-  def parent(p: Path): Option[Path] =
-    Option(p.getParent)
-
   def listDirectoryEntries(directory: Path, recursive: Boolean, filterPred: Path => Boolean): Box[List[Path]] = {
     try {
       val maxDepth = if (recursive) Int.MaxValue else 1
@@ -57,21 +53,21 @@ trait PathUtils extends LazyLogging {
       Full(r)
     } catch {
       case ex: AccessDeniedException =>
-        val errorMsg = s"Error access denied. Directory: ${directory.toAbsolutePath }"
+        val errorMsg = s"Error access denied. Directory: ${directory.toAbsolutePath}"
         logger.error(errorMsg)
         Failure(errorMsg)
       case ex: Exception =>
-        val errorMsg = s"Error: ${ex.getMessage }. Directory: ${directory.toAbsolutePath }"
+        val errorMsg = s"Error: ${ex.getMessage }. Directory: ${directory.toAbsolutePath}"
         logger.error(errorMsg)
         Failure(errorMsg)
     }
   }
 
   def listDirectories(directory: Path, recursive: Boolean = false): Box[List[Path]] =
-    listDirectoryEntries(directory, recursive, Files.isDirectory(_))
+    listDirectoryEntries(directory, recursive, directoryFilter)
 
   def listFiles(directory: Path, recursive: Boolean = false): Box[List[Path]] =
-    listDirectoryEntries(directory, recursive, !Files.isDirectory(_))
+    listDirectoryEntries(directory, recursive, fileFilter)
 
   def ensureDirectory(path: Path): Path = {
     if (!Files.exists(path) || !Files.isDirectory(path))

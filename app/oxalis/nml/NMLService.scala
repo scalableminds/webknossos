@@ -1,15 +1,21 @@
 package oxalis.nml
 
-import java.io.File
+import java.io.{File, OutputStream}
 import java.nio.file.{Files, StandardCopyOption}
+import javax.xml.stream.XMLOutputFactory
 
+import scala.concurrent.Future
 import scala.xml.PrettyPrinter
 
 import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.{XMLWrites, Xml}
+import com.sun.xml.txw2.output.IndentingXMLStreamWriter
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
+import play.api.libs.concurrent.Execution.Implicits._
 
 /**
   * Company: scalableminds
@@ -17,11 +23,16 @@ import play.api.libs.Files.TemporaryFile
   * Date: 26.07.13
   * Time: 12:04
   */
-object NMLService extends NMLParsingService {
+object NMLService extends NMLParsingService with FoxImplicits with LazyLogging{
+  private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNML[T](t: T)(implicit w: XMLWrites[T]) = {
-    val prettyPrinter = new PrettyPrinter(100, 2)
-    Xml.toXML(t).map(prettyPrinter.format(_))
+  def toNML[T](t: T, outputStream: OutputStream)(implicit w: XMLWrites[T]): Fox[Boolean] = {
+    val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(outputStream))
+    Xml.toXML(t)(writer, w).futureBox.map{ result =>
+      // Make sure all tags are properly closed
+      writer.writeEndDocument()
+      result
+    }
   }
 }
 

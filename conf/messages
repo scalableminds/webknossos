@@ -41,9 +41,9 @@ team.noOwner=This action is restricted to the creator of the team.
 team.admin.notAllowed=You are not allowed to administrate team {0}.
 team.notFound=Team could not be found.
 
-user.verified={0} has been verified
+user.activated={0} has been activated
 user.notFound=User not found
-user.notVerified=Your account hasn''t been activated yet
+user.deactivated=Your account hasn''t been activated yet
 user.deleted={0} has been deleted
 user.bulk.empty=No user has been chosen
 user.password.nomatch=Passwords don''t match

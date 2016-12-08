@@ -14,7 +14,7 @@ object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
-  val braingamesVersion = "8.17.0"
+  val braingamesVersion = "8.17.1-SNAPSHOT"
   val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
@@ -38,6 +38,7 @@ object Dependencies{
   val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
   val mongev = "com.scalableminds" %% "play-mongev" % "0.4.1"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
+  val resourceManager = "com.jsuereth" %% "scala-arm" % "2.0"
 
   // Unfortunately, we need to list all mturk dependencies seperately since mturk is not published on maven but rather
   // added to the project as a JAR. To keep the number of JARs added to this repo as small as possible, everthing that
@@ -91,8 +92,8 @@ object Dependencies{
       "com.twelvemonkeys.imageio" % "imageio-jpeg" % twelvemonkeysVersion,
       "com.twelvemonkeys.imageio" % "imageio-tiff" % twelvemonkeysVersion
     )
-  val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % "3.31.1"
-  val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % "3.31.1"
+  val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % "3.33.0"
+  val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % "3.33.0"
 }
 
 object Resolvers {
@@ -110,8 +111,8 @@ object Resolvers {
 
 object AssetCompilation {
   object SettingsKeys{
-    val webpackPath = SettingKey[String]("webpack-path","where webpack is installed")
-    val npmPath = SettingKey[String]("npm-path","where npm is installed")
+    val webpackPath = SettingKey[String]("webpack-path", "where webpack is installed")
+    val npmPath = SettingKey[String]("npm-path", "where npm is installed")
   }
 
   import SettingsKeys._
@@ -138,7 +139,9 @@ object AssetCompilation {
 
   private def npmInstall: Def.Initialize[Task[Seq[File]]] = (npmPath, baseDirectory, streams) map { (npm, base, s) =>
     try{
-      startProcess(npm, "install", base ) ! s.log
+      val exitValue = startProcess(npm, "install", base) ! s.log
+      if(exitValue != 0)
+        throw new Error(s"Running npm failed with exit code: $exitValue")
     } catch {
       case e: java.io.IOException =>
         s.log.error("Npm couldn't be found. Please set the configuration key 'AssetCompilation.npmPath' properly. " + e.getMessage)
@@ -220,6 +223,7 @@ object ApplicationBuild extends Build {
     urlHelper,
     newrelic,
     newrelicApi,
+    resourceManager,
     specs2 % Test) ++ tiff ++ mturk
 
   val dependencyResolvers = Seq(
@@ -242,7 +246,7 @@ object ApplicationBuild extends Build {
     scalacOptions += "-target:jvm-1.8",
     version := appVersion,
     webpackPath := (Path("node_modules") / ".bin" / "webpack").getPath,
-    npmPath := "npm",
+    npmPath := "yarn",
     routesGenerator := InjectedRoutesGenerator,
     libraryDependencies ++= oxalisDependencies,
     resolvers ++= dependencyResolvers,

@@ -1,6 +1,7 @@
 package models.annotation
 
 import java.util.Date
+import javax.xml.stream.XMLStreamWriter
 
 import scala.xml.NodeSeq
 
@@ -93,19 +94,44 @@ object AnnotationContent extends FoxImplicits {
     }
   }
 
-  def writeParametersAsXML(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
+  def writeParametersAsXML(
+    ac: AnnotationContent,
+    writer: XMLStreamWriter)(implicit ctx: DBAccessContext): Fox[Boolean] = {
+
     for {
       dataSet <- DataSetDAO.findOneBySourceName(ac.dataSetName)
       dataSource <- dataSet.dataSource.toFox
     } yield {
-      NodeSeq.fromSeq(Seq(
-          <experiment name={dataSet.name}/>,
-          <scale x={dataSource.scale.x.toString} y={dataSource.scale.y.toString} z={dataSource.scale.z.toString}/>,
-          <offset x="0" y="0" z="0"/>,
-          <time ms={ac.timestamp.toString}/>,
-          <editPosition x={ac.editPosition.x.toString} y={ac.editPosition.y.toString} z={ac.editPosition.z.toString}/>,
-          <editRotation xRot={ac.editRotation.x.toString} yRot={ac.editRotation.y.toString} zRot={ac.editRotation.z.toString}/>,
-          <zoomLevel zoom={ac.zoomLevel.toString}/>))
+      writer.writeStartElement("experiment")
+      writer.writeAttribute("name", dataSet.name)
+      writer.writeEndElement()
+      writer.writeStartElement("scale")
+      writer.writeAttribute("x", dataSource.scale.x.toString)
+      writer.writeAttribute("y", dataSource.scale.y.toString)
+      writer.writeAttribute("z", dataSource.scale.z.toString)
+      writer.writeEndElement()
+      writer.writeStartElement("offset")
+      writer.writeAttribute("x", "0")
+      writer.writeAttribute("y", "0")
+      writer.writeAttribute("z", "0")
+      writer.writeEndElement()
+      writer.writeStartElement("time")
+      writer.writeAttribute("ms", ac.timestamp.toString)
+      writer.writeEndElement()
+      writer.writeStartElement("editPosition")
+      writer.writeAttribute("x", ac.editPosition.x.toString)
+      writer.writeAttribute("y", ac.editPosition.y.toString)
+      writer.writeAttribute("z", ac.editPosition.z.toString)
+      writer.writeEndElement()
+      writer.writeStartElement("editRotation")
+      writer.writeAttribute("xRot", ac.editRotation.x.toString)
+      writer.writeAttribute("yRot", ac.editRotation.y.toString)
+      writer.writeAttribute("zRot", ac.editRotation.z.toString)
+      writer.writeEndElement()
+      writer.writeStartElement("zoomLevel")
+      writer.writeAttribute("zoom", ac.zoomLevel.toString)
+      writer.writeEndElement()
+      true
     }
   }
 }

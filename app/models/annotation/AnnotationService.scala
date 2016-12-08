@@ -9,6 +9,7 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationType._
 import models.binary.{DataSet, DataSetDAO}
 import models.task.Task
@@ -31,14 +32,23 @@ import reactivemongo.play.json.BSONFormats._
   * Time: 12:39
   */
 
-object AnnotationService extends AnnotationContentProviders with BoxImplicits with FoxImplicits with TextUtils {
+object AnnotationService extends AnnotationContentProviders
+  with BoxImplicits
+  with FoxImplicits
+  with TextUtils
+  with LazyLogging{
 
   private def selectSuitableTeam(user: User, dataSet: DataSet): String = {
     val dataSetTeams = dataSet.owningTeam +: dataSet.allowedTeams
     dataSetTeams.intersect(user.teamNames).head
   }
 
-  def createExplorationalFor(user: User, dataSet: DataSet, contentType: String, id: String = "")(implicit ctx: DBAccessContext) =
+  def createExplorationalFor(
+    user: User,
+    dataSet: DataSet,
+    contentType: String,
+    id: String = "")(implicit ctx: DBAccessContext) =
+
     withProviderForContentType(contentType) { provider =>
       for {
         content <- provider.createFrom(dataSet)
@@ -105,8 +115,10 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
   def findTasksOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFor(user._id, isFinished, AnnotationType.Task, limit)
 
-  def findExploratoryOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, AnnotationType.Task :: AnnotationType.SystemTracings, limit)
+  def findExploratoryOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) = {
+    val systemTypes = AnnotationType.Task :: AnnotationType.SystemTracings
+    AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, systemTypes, limit)
+  }
 
   def countTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countByTaskIdAndUser(user._id, _task, AnnotationType.Task)
@@ -137,9 +149,13 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     rotation: Vector3D)(implicit ctx: DBAccessContext) = {
 
     for {
-      tracing <- SkeletonTracingService.createFrom(dataSetName, start, rotation, boundingBox, insertStartAsNode = true, isFirstBranchPoint = true, settings) ?~> "Failed to create skeleton tracing."
+      tracing <- SkeletonTracingService.createFrom(
+        dataSetName, start, rotation, boundingBox,
+        insertStartAsNode = true, isFirstBranchPoint = true, settings) ?~> "Failed to create skeleton tracing."
       content = ContentReference.createFor(tracing)
-      _ <- AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id))) ?~> "Failed to insert annotation."
+      _ <- AnnotationDAO.insert(
+        Annotation(Some(userId), content, team = task.team,
+          typ = AnnotationType.TracingBase, _task = Some(task._id))) ?~> "Failed to insert annotation."
     } yield tracing
   }
 
@@ -152,15 +168,27 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createAnnotationBase(task: Task, userId: BSONObjectID, boundingBox: Option[BoundingBox], settings: AnnotationSettings, nml: NML)(implicit ctx: DBAccessContext) = {
+  def createAnnotationBase(
+    task: Task,
+    userId: BSONObjectID,
+    boundingBox: Option[BoundingBox],
+    settings: AnnotationSettings,
+    nml: NML)(implicit ctx: DBAccessContext) = {
+
     SkeletonTracingService.createFrom(nml, boundingBox, settings).toFox.flatMap {
       tracing =>
         val content = ContentReference.createFor(tracing)
-        AnnotationDAO.insert(Annotation(Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+        AnnotationDAO.insert(Annotation(
+          Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
     }
   }
 
-  def createFrom(user: User, content: AnnotationContent, annotationType: AnnotationType, name: Option[String])(implicit messages: Messages, ctx: DBAccessContext) = {
+  def createFrom(
+    user: User,
+    content: AnnotationContent,
+    annotationType: AnnotationType,
+    name: Option[String])(implicit messages: Messages, ctx: DBAccessContext) = {
+
     for {
       dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
       annotation = Annotation(
@@ -175,7 +203,11 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
   }
 
-  def createFrom(temporary: TemporaryAnnotation, content: AnnotationContent, id: BSONObjectID)(implicit ctx: DBAccessContext) = {
+  def createFrom(
+    temporary: TemporaryAnnotation,
+    content: AnnotationContent,
+    id: BSONObjectID)(implicit ctx: DBAccessContext) = {
+
     val annotation = Annotation(
       temporary._user,
       ContentReference.createFor(content),
@@ -207,7 +239,8 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
         AnnotationRestrictions.updateableAnnotation()
 
     CompoundAnnotation.createFromAnnotations(
-      newId.stringify, Some(_user), team, None, annotationsLike.toList, typ, AnnotationState.InProgress, restrictions, None)
+      newId.stringify, Some(_user), team, None,
+      annotationsLike.toList, typ, AnnotationState.InProgress, restrictions, None)
   }
 
   def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
@@ -242,7 +275,7 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
     }
     for {
       content <- createContent()
-      annotation <- AnnotationService.createFrom(user, content, typ, name)
+      annotation <- AnnotationService.createFrom(user, content, typ, name) ?~> Messages("annotation.create.fromFailed")
     } yield annotation
   }
 
@@ -258,9 +291,9 @@ object AnnotationService extends AnnotationContentProviders with BoxImplicits wi
         case head :: tail =>
           head.muta.loadAnnotationContent().futureBox.flatMap {
             case Full(fs) =>
-              zipper.addFile(fs)
-              annotationContent(tail)
-            case _        =>
+              zipper.withFile(fs.normalizedName)(fs.writeTo).flatMap(_ => annotationContent(tail))
+            case x        =>
+              logger.warn(s"Failed to retrieve annotation content for zip file ($zipFileName): $x")
               annotationContent(tail)
           }
         case _            =>

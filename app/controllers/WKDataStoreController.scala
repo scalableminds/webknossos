@@ -113,7 +113,7 @@ trait WKDataStoreActionHelper extends FoxImplicits with Results with I18nSupport
       request.getQueryString("key")
       .toFox
       .flatMap(key => DataStoreDAO.findByKey(key)(GlobalAccessContext)) // Check if key is valid
-      .filter(dataStore => dataStore.name == name) // Check if correct name is provided
+      //.filter(dataStore => dataStore.name == name) // Check if correct name is provided
       .flatMap(dataStore => block(new RequestWithDataStore(dataStore, request))) // Run underlying action
       .getOrElse(Forbidden(Messages("dataStore.notFound"))) // Default error
     }

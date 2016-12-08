@@ -258,14 +258,17 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     val s = System.currentTimeMillis()
     TaskService.findAssignableFor(user).futureBox.flatMap {
       case Full(assignment) =>
-        TimeLogger.logTimeF("task request", Logger.warn)(OpenAssignmentService.remove(assignment)).flatMap { removeResult =>
+        TimeLogger.logTimeF("task request", Logger.trace)(OpenAssignmentService.remove(assignment)).flatMap {
+          removeResult =>
           if (removeResult.n >= 1)
             Fox.successful(assignment)
           else if (retryCount > 0)
             tryToGetNextAssignmentFor(user, retryCount - 1)
           else {
             val e = System.currentTimeMillis()
-            Logger.warn(s"Failed to remove any assignment for user ${user.email}. Result: $removeResult n:${removeResult.n} ok:${removeResult.ok} code:${removeResult.code} TOOK: ${e-s}ms")
+            Logger.warn(s"Failed to remove any assignment for user ${user.email}. " +
+              s"Result: $removeResult n:${removeResult.n} ok:${removeResult.ok} " +
+              s"code:${removeResult.code} TOOK: ${e-s}ms")
             Fox.failure(Messages("task.unavailable"))
           }
         }.futureBox
@@ -286,17 +289,16 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def request = Authenticated.async { implicit request =>
     val user = request.user
     val id = UUID.randomUUID().toString
-    Logger.warn(s"TIMELOG for $id - user: ${user.email}")
-    TimeLogger.logTimeF("TOTAL task request " + id, Logger.warn)(for {
-      _ <- TimeLogger.logTimeF("MAXOPEN task request " + id, Logger.warn)(ensureMaxNumberOfOpenTasks(user))
+    for {
+      _ <- ensureMaxNumberOfOpenTasks(user)
       _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
-      assignment <- TimeLogger.logTimeF("GETNEXT task request " + id, Logger.warn)(tryToGetNextAssignmentFor(user))
-      task <- TimeLogger.logTimeF("TASK task request " + id, Logger.warn)(assignment.task)
-      annotation <- TimeLogger.logTimeF("CREATE task request " + id, Logger.warn)(AnnotationService.createAnnotationFor(user, task)) ?~> Messages("annotation.creationFailed")
-      annotationJSON <- TimeLogger.logTimeF("INFO task request " + id, Logger.warn)(AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions")))
+      assignment <- tryToGetNextAssignmentFor(user)
+      task <- assignment.task
+      annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
+      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
     } yield {
       JsonOk(annotationJSON, Messages("task.assigned"))
-    })
+    }
   }
 
   def peekNext(limit: Int) = Authenticated.async { implicit request =>

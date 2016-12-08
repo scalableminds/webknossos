@@ -9,6 +9,7 @@ Cellular-resolution connectomics is currently substantially limited by the throu
 * [sbt](http://www.scala-sbt.org/)
 * [mongoDB 3+](http://www.mongodb.org/downloads)
 * [node.js 4+](http://nodejs.org/download/)
+* [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
 ## Installation
@@ -26,6 +27,7 @@ Or install Java manually and run:
 
 # Install git, node.js, mongoDB, sbt
 brew install git node mongodb sbt
+npm install -g yarn
 
 # Start mongo
 brew services start mongodb
@@ -45,6 +47,7 @@ sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
 # Installing everything
 sudo apt-get update
 sudo apt-get install -y git mongodb-server nodejs nodejs-legacy scala npm sbt openjdk-8-jdk
+sudo npm install -g yarn
 ```
 
 On older Ubuntu distributions: Please make sure to have the correct versions of node, mongoDB and java installed.
@@ -70,9 +73,10 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 * Install mongoDB from http://www.mongodb.org/downloads
 * mongoDB version **3+ is required**
 
-##### node.js
+##### node.js & yarn
 * Install node from http://nodejs.org/download/
 * node version **4+ is required**
+* Install yarn package manager: `npm install -g yarn`
 
 ### Run
 ```bash

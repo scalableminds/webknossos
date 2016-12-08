@@ -20,9 +20,9 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
   override def nameForAnnotation(a: AnnotationLike)(implicit ctx: DBAccessContext): Future[String] = a match {
     case annotation: Annotation =>
       for {
-        userName <- annotation.user.toFox.map(_.abreviatedName) getOrElse ""
+        userName <- annotation.user.toFox.map(_.abreviatedName).getOrElse("")
         dataSetName <- annotation.dataSetName
-        task <- annotation.task.map(_.id) getOrElse ("explorational")
+        task <- annotation.task.map(_.id).getOrElse("explorational")
       } yield {
         val id = oxalis.view.helpers.formatHash(annotation.id)
         normalize(s"${dataSetName}__${task}__${userName}__${id}")

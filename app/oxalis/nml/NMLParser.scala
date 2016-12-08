@@ -1,23 +1,25 @@
 package oxalis.nml
 
-import java.io.{File, FileInputStream, InputStream}
+import java.io.{File, FileInputStream, InputStream, InputStreamReader}
 
 import scala.annotation.tailrec
-import scala.xml.{NodeSeq, XML, Node => XMLNode}
+import scala.xml.{InputSource, NodeSeq, XML, Node => XMLNode}
 
 import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Failure, Full}
+import org.apache.commons.io.input.BOMInputStream
 import play.api.Logger
+import resource._
 
 object NMLParser {
 
   def parse(input: InputStream, name: String) = {
-    val result = NMLParserImpl.parse(input, name)
-    input.close()
-    result
+    managed(new BOMInputStream(input)).acquireAndGet { in =>
+      NMLParserImpl.parse(in, name)
+    }
   }
 
   def parse(file: File, name: String): Box[NML] = {

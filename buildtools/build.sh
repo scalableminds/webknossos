@@ -17,6 +17,7 @@ BASE_PORT=10000
 
 REAL_BRANCH=$(<${WORKSPACE}/.git/REAL_BRANCH)
 cd `dirname $0`
+./make_docker.sh ${JOB_NAME} ${REAL_BRANCH} ${GIT_COMMIT} ${BUILD_NUMBER}
 ./make_dist.sh ${JOB_NAME} ${REAL_BRANCH} ${BUILD_NUMBER}
 
 let "PORT = BASE_PORT + BUILD_NUMBER % PORTS_PER_PROJECT"
@@ -29,4 +30,3 @@ do
   done
 done
 
-./make_docker.sh ${JOB_NAME} ${REAL_BRANCH} ${GIT_COMMIT} ${BUILD_NUMBER}

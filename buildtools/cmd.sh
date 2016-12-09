@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 INSTALL_DIR=$(pwd)
@@ -14,9 +14,9 @@ ARGS=(\
   -Dmongodb.uri="mongodb://mongo:27017/${MONGO_DB}")
 
 if [[ "$NEW_RELIC_LICENSE_KEY" ]]; then
-  NEWRELIC_AGENT_JAR=$(ls ${INSTALL_DIR}/lib | grep com.newrelic.agent.java.newrelic-agent)
+  NEWRELIC_AGENT_JAR=$(find ${INSTALL_DIR}/lib -name 'com.newrelic.agent.java.newrelic-agent*')
   ARGS+=(\
-    -J-javaagent:${INSTALL_DIR}/lib/${NEWRELIC_AGENT_JAR} \
+    -J-javaagent:${NEWRELIC_AGENT_JAR} \
     -J-Dnewrelic.config.file=${INSTALL_DIR}/conf/newrelic.yml)
 fi
 

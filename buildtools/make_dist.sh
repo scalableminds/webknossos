@@ -36,6 +36,7 @@ ROOT_ENV="rootenv"
 INSTALL_DIR="/usr/lib/${NAME}"
 mkdir -p ${ROOT_ENV}${INSTALL_DIR}
 cp -r ${APP_DIR}/* ${ROOT_ENV}${INSTALL_DIR}
+rm ${ROOT_ENV}${INSTALL_DIR}/conf/newrelic.yml
 chmod +x ${ROOT_ENV}${INSTALL_DIR}/bin/${PROJECT}
 
 echo "building packages..."

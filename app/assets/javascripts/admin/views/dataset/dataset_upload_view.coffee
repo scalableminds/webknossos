@@ -97,6 +97,7 @@ class DatasetUploadView extends Marionette.View
     @datastoreSelectionView = new SelectionView(
       collection : new DatastoreCollection()
       name : "datastore"
+      filter : (item) -> item.get("url") != null
       childViewOptions :
         modelValue: -> return "#{@model.get("url")}"
         modelLabel: -> return "#{@model.get("name")}"

@@ -13,7 +13,7 @@
       <level>DEBUG</level>
     </filter>
     <encoder>
-      <pattern>%date - [%level] - %message%n%xException{5}</pattern>
+      <pattern>%date - [%level] - %message%n%xException{15}</pattern>
     </encoder>
   </appender>
 

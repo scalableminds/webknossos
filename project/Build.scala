@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import play.sbt.routes.RoutesKeys._
 
 object Dependencies{
-  val braingamesVersion = "8.16.0"
+  val braingamesVersion = "8.17.1"
 
   val braingamesDataStore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
 

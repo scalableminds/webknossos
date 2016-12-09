@@ -7,13 +7,16 @@ import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json
 import java.security.SecureRandom
 import java.math.BigInteger
+
 import models.basics.SecuredBaseDAO
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
-import models.user.User
+
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.user.{User, UserService}
 import reactivemongo.play.json.BSONFormats._
-import reactivemongo.api.indexes.{IndexType, Index}
+import reactivemongo.api.indexes.{Index, IndexType}
 import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.cleanup.CleanUpService
 import net.liftweb.common.Full
@@ -21,14 +24,14 @@ import play.api.Logger
 
 case class DataToken(
                       _user: Option[BSONObjectID],
-                      dataSetName: String,
-                      dataLayerName: String,
+                      dataSetName: Option[String],
+                      dataLayerName: Option[String],
                       token: String = DataToken.generateRandomToken,
                       expiration: Long = System.currentTimeMillis + DataToken.expirationTime.toMillis) {
-  def isValidFor(dataSetName: String, dataLayerName: String) =
-    !isExpired && dataSetName == this.dataSetName && dataLayerName == this.dataLayerName
+  def isValidFor(dataSetName: String, dataLayerName: String): Boolean =
+    !isExpired && this.dataSetName.contains(dataSetName) && this.dataLayerName.contains(dataLayerName)
 
-  def isExpired =
+  def isExpired: Boolean =
     expiration < System.currentTimeMillis
 }
 
@@ -42,7 +45,7 @@ object DataToken {
     new BigInteger(130, generator).toString(32)
 }
 
-object DataTokenService {
+object DataTokenService extends FoxImplicits {
 
   val oxalisToken = DataToken.generateRandomToken
 
@@ -50,7 +53,11 @@ object DataTokenService {
     DataTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
   }
 
-  def generate(user: Option[User], dataSetName: String, dataLayerName: String)(implicit ctx: DBAccessContext) = {
+  def generate(
+    user: Option[User],
+    dataSetName: Option[String],
+    dataLayerName: Option[String])(implicit ctx: DBAccessContext) = {
+
     val token = DataToken(user.map(_._id), dataSetName, dataLayerName)
     DataTokenDAO.insert(token).map(_ => token)
   }
@@ -63,6 +70,12 @@ object DataTokenService {
         true
       case _ =>
         false
+    }
+  }
+
+  def userFromToken(token: String): Fox[User] = {
+    DataTokenDAO.findByToken(token)(GlobalAccessContext).filter(!_.isExpired).flatMap { dataToken =>
+      dataToken._user.toFox.flatMap(id => UserService.findOneById(id.stringify, useCache = true)(GlobalAccessContext))
     }
   }
 

@@ -1,4 +1,4 @@
-FROM java:8-jre
+FROM openjdk:8-jdk
 
 # Install mongo tools for evolutions
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927 \
@@ -17,7 +17,8 @@ COPY buildtools/cmd.sh .
 RUN groupadd -r app-user \
   && useradd -r -g app-user app-user \
   && mkdir disk \
-  && chown -R app-user .
+  && chown -R app-user . \
+  && sed -i s/BRANCH/$BRANCH/g conf/newrelic.yml
 
 USER app-user
 

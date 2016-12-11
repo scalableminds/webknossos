@@ -29,6 +29,10 @@ object DataSetService extends FoxImplicits {
 
   def isProperDataSetName(name: String) = name.matches("[A-Za-z0-9_\\-]*")
 
+  def checkIfNewDataSetName(name: String)(implicit ctx: DBAccessContext) = {
+    findDataSource(name)(GlobalAccessContext).reverse
+  }
+
   def defaultDataSetPosition(dataSetName: String)(implicit ctx: DBAccessContext) = {
     DataSetDAO.findOneBySourceName(dataSetName).futureBox.map {
       case Full(dataSet) =>

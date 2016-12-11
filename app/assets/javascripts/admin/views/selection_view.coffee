@@ -25,6 +25,13 @@ class SelectionView extends Marionette.CollectionView
     )
 
 
+  filter : (args...) ->
+
+    if @options.filter
+      return @options.filter(args...)
+    return true
+
+
   afterRender : ->
 
     @$el.prepend("<option></option>")

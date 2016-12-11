@@ -147,12 +147,16 @@ Request =
 
     defaultOptions =
       method : "GET"
+      host : ""
       credentials : "same-origin"
       headers : {}
       doNotCatch : false
       params : null
 
     options = _.defaultsDeep(options, defaultOptions)
+
+    if options.host
+      url = options.host + url
 
     # Append URL parameters to the URL
     if options.params

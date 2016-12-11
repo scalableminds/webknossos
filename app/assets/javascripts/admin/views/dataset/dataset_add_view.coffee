@@ -13,14 +13,14 @@ class DatasetAddView extends Marionette.View
       <div class="col-md-8">
         <ul class="nav nav-tabs">
           <li class="active">
-            <a href="#" id="tab-upload-dataset" data-toggle="tab">Upload Dataset</a>
+            <a href="#" id="tab-upload-dataset" data-target="#placeholder" data-toggle="tab">Upload Dataset</a>
           </li>
           <li>
-            <a href="#" id="tab-remote-dataset" data-toggle="tab">Add NDStore Dataset</a>
+            <a href="#" id="tab-remote-dataset" data-target="#placeholder" data-toggle="tab">Add NDStore Dataset</a>
           </li>
         </ul>
         <div class="tab-content">
-          <div class="tab-pane active"></div>
+          <div class="tab-pane active" id="placeholder"></div>
         </div>
       </div>
     </div>

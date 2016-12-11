@@ -179,39 +179,6 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
-  def uploadForm = Form(
-    tuple(
-      "name" -> nonEmptyText.verifying("dataSet.name.invalid",
-        n => DataSetService.isProperDataSetName(n)),
-      "team" -> nonEmptyText,
-      "scale" -> mapping(
-        "scale" -> text.verifying("scale.invalid",
-          p => p.matches(Scale.formRx.toString)))(Scale.fromForm)(Scale.toForm)
-    )).fill(("", "", Scale.default))
-
-  def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
-    uploadForm.bindFromRequest(request.body.dataParts).fold(
-      hasErrors =
-        formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-      success = {
-        case (name, team, scale) =>
-          for {
-            _ <- checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
-            _ <- ensureTeamAdministration(request.user, team)
-            zipFile <- request.body.file("zipFile") ?~> Messages("zip.file.notFound")
-            settings = DataSourceSettings(None, scale, None)
-            upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath, Some(settings))
-            _ <- DataStoreHandler.uploadDataSource(upload)
-          } yield {
-            JsonOk(Messages("dataSet.upload.success"))
-          }
-      })
-  }
-
-  private def checkIfNewDataSetName(name: String)(implicit ctx: DBAccessContext) = {
-    DataSetService.findDataSource(name)(GlobalAccessContext).reverse
-  }
-
   val externalDataSetFormReads =
     ((__ \ 'server).read[String] and
       (__ \ 'name).read[String] and
@@ -222,7 +189,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     withJsonBodyUsing(externalDataSetFormReads){
       case (server, name, token, team) =>
         for {
-          _ <- checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
+          _ <- DataSetService.checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
           _ <- ensureTeamAdministration(request.user, team)
           ndProject <- NDServerConnection.requestProjectInformationFromNDStore(server, name, token)
           dataSet <- ND2WK.dataSetFromNDProject(ndProject, team)

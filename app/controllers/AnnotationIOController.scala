@@ -40,39 +40,45 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       f.contentType.contains("application/zip") || FilenameUtils.isExtension(f.filename, "zip")
 
     def parseFile(f: MultipartFormData.FilePart[TemporaryFile]) = {
-      if(isZipFile(f)) {
+      if (isZipFile(f)) {
         NMLService.extractFromZip(f.ref.file, Some(f.filename))
       } else {
-        val nml = NMLService.extractFromNML(f.ref.file, Some(f.filename))
+        val nml = NMLService.extractFromNML(f.ref.file, f.filename)
         NMLService.ZipParseResult(List(nml), Map.empty)
       }
     }
 
-    val parsedFiles = request.body.files.foldLeft(NMLService.ZipParseResult()){
+    def returnError(parsedFiles: NMLService.ZipParseResult) = {
+      if (parsedFiles.containsFailure) {
+        val errors = parsedFiles.nmls.flatMap {
+          case result: NMLService.NMLParseFailure =>
+            Some("error" -> Messages("nml.file.invalid", result.fileName, result.error))
+          case _                                  => None
+        }
+        Future.successful(JsonBadRequest(errors))
+      } else {
+        Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
+      }
+    }
+
+    val parsedFiles = request.body.files.foldLeft(NMLService.ZipParseResult()) {
       case (acc, next) => acc.combineWith(parseFile(next))
     }
-    if(parsedFiles.nmls.isEmpty)
-      Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
-    else if (parsedFiles.nmls.exists(!_.succeeded)) {
-      val errors = parsedFiles.nmls.flatMap{
-        case result: NMLService.NMLParseFailure =>
-          Some("error" -> Messages("nml.file.invalid", result.fileName, result.error))
-        case _ => None
-      }
-      Future.successful(JsonBadRequest(errors))
-    } else {
+    if (!parsedFiles.isEmpty) {
       val parseSuccess = parsedFiles.nmls.filter(_.succeeded)
       val fileNames = parseSuccess.map(_.fileName)
       val nmls = parseSuccess.flatMap(_.nml)
       val name = nameForNMLs(fileNames)
 
-      for{
+      for {
         annotation <- AnnotationService.createAnnotationFrom(
           request.user, nmls, parsedFiles.otherFiles, AnnotationType.Explorational, name)
       } yield JsonOk(
         Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
         Messages("nml.file.uploadSuccess")
       )
+    } else {
+      returnError(parsedFiles)
     }
   }
 

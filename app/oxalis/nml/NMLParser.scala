@@ -1,20 +1,20 @@
 package oxalis.nml
 
-import java.io.{File, FileInputStream, InputStream, InputStreamReader}
+import java.io.{File, FileInputStream, InputStream}
 
 import scala.annotation.tailrec
-import scala.xml.{InputSource, NodeSeq, XML, Node => XMLNode}
+import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
 import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
-import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.io.input.BOMInputStream
-import play.api.Logger
 import resource._
 
-object NMLParser {
+object NMLParser extends LazyLogging {
 
   def parse(input: InputStream, name: String) = {
     managed(new BOMInputStream(input)).acquireAndGet { in =>
@@ -58,17 +58,26 @@ object NMLParser {
         } yield {
           val dataSetName = parseDataSetName(parameters \ "experiment")
           val activeNodeId = parseActiveNode(parameters \ "activeNode")
-          val editPosition = parseEditPosition(parameters \ "editPosition") // STARTPOS
+          val editPosition = parseEditPosition(parameters \ "editPosition")
+          // STARTPOS
           val editRotation = parseEditRotation(parameters \ "editRotation")
           val zoomLevel = parseZoomLevel(parameters \ "zoomLevel")
 
-          Logger.debug(s"Parsed NML file. Trees: ${trees.size}")
-          NML(name, dataSetName, trees.toList, volumes.toList, time, activeNodeId, scale, editPosition, editRotation, zoomLevel)
+          logger.debug(s"Parsed NML file. Trees: ${trees.size}")
+          NML(name, dataSetName, trees.toList, volumes.toList, time, activeNodeId,
+            scale, editPosition, editRotation, zoomLevel)
         }
       } catch {
-        case e: Exception =>
-          Logger.error(s"Failed to parse NML $name due to " + e)
-          Failure(s"Couldn't parse nml '$name': " + e.toString)
+        case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
+          logger.debug(s"Tried  to parse empty NML file $name.")
+          Empty
+        case e: org.xml.sax.SAXParseException                                                     =>
+          logger.debug(s"Failed to parse NML $name due to " + e)
+          Failure(s"Failed to parse NML '$name'. Error in Line ${e.getLineNumber} " +
+            s"(column ${e.getColumnNumber}): ${e.getMessage}")
+        case e: Exception                                                                         =>
+          logger.error(s"Failed to parse NML $name due to " + e)
+          Failure(s"Failed to parse NML '$name': " + e.toString)
       }
     }
 
@@ -112,7 +121,11 @@ object NMLParser {
       val nodeMap = tree.nodes.map(n => n.id -> n).toMap
 
       @tailrec
-      def buildTreeFromNode(nodesToProcess: List[Node], treeReminder: Tree, component: Tree = emptyTree): (Tree, Tree) = {
+      def buildTreeFromNode(
+        nodesToProcess: List[Node],
+        treeReminder: Tree,
+        component: Tree = emptyTree): (Tree, Tree) = {
+
         if (nodesToProcess.nonEmpty) {
           val node = nodesToProcess.head
           val tail = nodesToProcess.tail
@@ -139,7 +152,7 @@ object NMLParser {
         treeToProcess = treeReminder
         components ::= component
       }
-      Logger.trace("Connected components calculation: " + (System.currentTimeMillis() - start))
+      logger.trace("Connected components calculation: " + (System.currentTimeMillis() - start))
       components.map(
         _.copy(
           color = tree.color,
@@ -177,9 +190,9 @@ object NMLParser {
     }
 
     private def parseBranchPoints(branchPoints: NodeSeq, defaultTimestamp: Long) = {
-      (branchPoints \ "branchpoint").zipWithIndex.flatMap{
+      (branchPoints \ "branchpoint").zipWithIndex.flatMap {
         case (branchPoint, index) =>
-          (branchPoint \ "@id").text.toIntOpt.map{ nodeId =>
+          (branchPoint \ "@id").text.toIntOpt.map { nodeId =>
             val parsedTimestamp = (branchPoint \ "@time").text.toLongOpt
             val timestamp = parsedTimestamp.getOrElse(defaultTimestamp - index)
             BranchPoint(nodeId, timestamp)
@@ -231,21 +244,25 @@ object NMLParser {
       (node \ "@name").text
     }
 
-    private def parseTree(tree: XMLNode, branchPoints: Seq[BranchPoint], comments: Seq[Comment]): Option[Tree] = {
+    private def parseTree(
+      tree: XMLNode,
+      branchPoints: Seq[BranchPoint],
+      comments: Seq[Comment]): Option[Tree] = {
+
       (tree \ "@id").text.toIntOpt.flatMap {
         id =>
           val color = parseColor(tree)
           val name = parseName(tree)
-          Logger.trace("Parsing tree Id: %d".format(id))
+          logger.trace("Parsing tree Id: %d".format(id))
           (tree \ "nodes" \ "node").flatMap(parseNode) match {
             case parsedNodes if parsedNodes.nonEmpty =>
               val edges = (tree \ "edges" \ "edge").flatMap(parseEdge).toSet
               val nodes = parsedNodes.toSet
               val nodeIds = nodes.map(_.id)
               val treeBP = branchPoints.filter(bp => nodeIds.contains(bp.id)).toList
-              val treeComments =  comments.filter(bp => nodeIds.contains(bp.node)).toList
+              val treeComments = comments.filter(bp => nodeIds.contains(bp.node)).toList
               Some(Tree(id, nodes, edges, color, treeBP, treeComments, name))
-            case _                       =>
+            case _                                   =>
               None
           }
       }
@@ -306,4 +323,5 @@ object NMLParser {
       }
     }
   }
+
 }

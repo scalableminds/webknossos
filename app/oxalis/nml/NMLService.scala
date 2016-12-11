@@ -1,6 +1,6 @@
 package oxalis.nml
 
-import java.io.{File, OutputStream}
+import java.io.{File, FileInputStream, InputStream, OutputStream}
 import java.nio.file.{Files, StandardCopyOption}
 import javax.xml.stream.XMLOutputFactory
 
@@ -56,18 +56,36 @@ trait NMLParsingService {
     def succeeded = false
   }
 
+  case class NMLParseEmpty(fileName: String) extends NMLParseResult {
+    def succeeded = false
+  }
+
   case class ZipParseResult(nmls: List[NMLParseResult] = Nil, otherFiles: Map[String, TemporaryFile] = Map.empty) {
     def combineWith(other: ZipParseResult) = {
       ZipParseResult(nmls ::: other.nmls, other.otherFiles ++ otherFiles)
     }
+
+    def isEmpty = {
+      !nmls.exists(_.succeeded)
+    }
+
+    def containsFailure = {
+      nmls.exists{
+        case _: NMLParseFailure => true
+        case _ => false
+      }
+    }
   }
 
-  def extractFromNML(file: File, fileName: Option[String] = None): NMLParseResult = {
-    val name = fileName getOrElse file.getName
+  def extractFromNML(file: File, name: String): NMLParseResult = {
+    extractFromNML(new FileInputStream(file), name)
+  }
+
+  def extractFromNML(file: InputStream, name: String): NMLParseResult = {
     NMLParser.parse(file, name) match {
       case Full(nml)          => NMLParseSuccess(name, nml)
       case Failure(msg, _, _) => NMLParseFailure(name, msg)
-      case Empty              => NMLParseFailure(name, "Failed to extract nml from file")
+      case Empty              => NMLParseEmpty(name)
     }
   }
 
@@ -77,14 +95,7 @@ trait NMLParsingService {
     var parseResults = List.empty[NMLParseResult]
     ZipIO.withUnziped(file, includeHiddenFiles = false) { (filename, file) =>
       if (filename.endsWith(".nml")) {
-        val result = NMLParser.parse(file, filename) match {
-          case Full(nml)          =>
-            NMLParseSuccess(name, nml)
-          case Failure(msg, _, _) =>
-            NMLParseFailure(name, msg)
-          case Empty              =>
-            NMLParseFailure(name, "Failed to extract nml from file")
-        }
+        val result = extractFromNML(file, filename)
         parseResults ::= result
       } else {
         val tempFile = TemporaryFile(filename)
@@ -101,7 +112,8 @@ trait NMLParsingService {
       extractFromZip(file, Some(fileName))
     } else {
       Logger.trace("Extracting from NML file")
-      ZipParseResult(List(extractFromNML(file, Some(fileName))), Map.empty)
+      val parseResult = extractFromNML(file, fileName)
+      ZipParseResult(List(parseResult), Map.empty)
     }
   }
 }

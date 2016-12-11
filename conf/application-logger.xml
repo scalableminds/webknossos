@@ -22,7 +22,9 @@
   <logger name="application" level="TRACE" />
   <logger name="braingames.binary" level="TRACE" />
   <logger name="frontend" level="INFO" />
-  <logger name="oxalis" level="INFO" />
+  <logger name="oxalis" level="DEBUG" />
+  <logger name="controllers" level="DEBUG" />
+  <logger name="models" level="DEBUG" />
 
   <root level="INFO">
     <appender-ref ref="STDOUT" />

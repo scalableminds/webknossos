@@ -42,7 +42,7 @@ trait BinaryDataCommonController extends Controller with FoxImplicits with I18nS
 
   protected def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String): Fox[(DataSource, DataLayer)] = {
     for {
-      usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable")
+      usableDataSource <- DataSourceDAO.findUsableByName(dataSetName) ?~> Messages("dataSource.unavailable") ~> 400
       dataSource = usableDataSource.dataSource
       dataLayer <- dataSource.getDataLayer(dataLayerName).toFox orElse UserDataLayerService.findUserDataLayer(dataSource.id, dataLayerName) ?~> Messages("dataLayer.notFound")
     } yield {

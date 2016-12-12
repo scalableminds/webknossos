@@ -9,7 +9,6 @@ import javax.inject.Inject
 import com.scalableminds.braingames.binary.models.{DataSourceLike, UnusableDataSource, UsableDataSource}
 import com.scalableminds.datastore.DataStorePlugin
 import com.scalableminds.util.tools.Fox
-import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json

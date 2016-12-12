@@ -17,7 +17,7 @@
         </encoder>
     </appender>
 
-    <logger name="play" level="WARN"/>
+    <logger name="play" level="INFO"/>
     <logger name="application" level="TRACE"/>
     <logger name="braingames.binary" level="TRACE"/>
     <logger name="braingames.datastore" level="TRACE"/>

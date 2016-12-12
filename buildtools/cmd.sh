@@ -13,7 +13,7 @@ ARGS=(\
   -Dmongodb.db=${MONGO_DB} -Dmongodb.url=mongo -Dmongodb.port=27017 \
   -Dmongodb.uri="mongodb://mongo:27017/${MONGO_DB}")
 
-if [[ "$NEW_RELIC_LICENSE_KEY" ]]; then
+if [ -n "$NEW_RELIC_LICENSE_KEY" ]; then
   NEWRELIC_AGENT_JAR=$(find ${INSTALL_DIR}/lib -name 'com.newrelic.agent.java.newrelic-agent*')
   ARGS+=(\
     -J-javaagent:${NEWRELIC_AGENT_JAR} \

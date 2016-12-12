@@ -1,5 +1,5 @@
 <configuration>
-    <conversionRule conversionWord="coloredLevel" converterClass="play.api.Logger$ColoredLevel" />
+    <conversionRule conversionWord="coloredLevel" converterClass="play.api.Logger$ColoredLevel"/>
 
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
         <file>/var/log/standalone-datastore-master/standalone-datastore-master.log</file>
@@ -13,17 +13,19 @@
             <level>DEBUG</level>
         </filter>
         <encoder>
-            <pattern>%date - [%level] - %message%n%xException{5}</pattern>
+            <pattern>%date - [%level] - %message%n%xException{15}</pattern>
         </encoder>
     </appender>
 
-    <logger name="play" level="WARN" />
-    <logger name="application" level="TRACE" />
-    <logger name="braingames.binary" level="TRACE" />
-    <logger name="braingames.datastore" level="TRACE" />
+    <logger name="play" level="WARN"/>
+    <logger name="application" level="TRACE"/>
+    <logger name="braingames.binary" level="TRACE"/>
+    <logger name="braingames.datastore" level="TRACE"/>
+    <logger name="actor" level="DEBUG"/>
+    <logger name="akka" level="INFO"/>
 
     <root level="WARN">
-        <appender-ref ref="STDOUT" />
-        <appender-ref ref="FILE" />
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
     </root>
 </configuration>

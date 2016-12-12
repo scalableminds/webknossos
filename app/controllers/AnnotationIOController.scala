@@ -69,7 +69,6 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       val fileNames = parseSuccess.map(_.fileName)
       val nmls = parseSuccess.flatMap(_.nml)
       val name = nameForNMLs(fileNames)
-
       for {
         annotation <- AnnotationService.createAnnotationFrom(
           request.user, nmls, parsedFiles.otherFiles, AnnotationType.Explorational, name)

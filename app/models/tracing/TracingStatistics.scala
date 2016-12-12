@@ -27,7 +27,7 @@ trait AnnotationStatistics extends FoxImplicits with LazyLogging {
       case t: SkeletonTracing =>
         t.getOrCollectStatistics
       case _                  =>
-        logger.warn("No statistics available for content")
+        logger.trace("No statistics available for content")
         Future.successful(VolumeTracingStatistics())
     }
   }

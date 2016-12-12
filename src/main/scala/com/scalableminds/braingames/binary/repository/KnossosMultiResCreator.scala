@@ -14,10 +14,13 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 
+import scala.annotation.tailrec
 import scala.concurrent.Future
 import scala.math.pow
 
-class KnossosMultiResCreator(dataRequester: DataRequester) extends LazyLogging with FoxImplicits {
+class KnossosMultiResCreator(dataRequester: DataRequester)
+  extends LazyLogging
+    with FoxImplicits {
 
   val Parallelism = 4
 
@@ -25,18 +28,36 @@ class KnossosMultiResCreator(dataRequester: DataRequester) extends LazyLogging w
     @inline
     def byteToUnsignedInt(b: Byte): Int = 0xff & b.asInstanceOf[Int]
 
+    @inline
+    def average(l: List[Array[Byte]], offset: Int) = {
+      @tailrec
+      def summup(l: List[Array[Byte]], accum: Int = 0): Int = {
+        l match {
+          case head :: Nil =>
+            accum + byteToUnsignedInt(head(offset))
+          case head :: tail =>
+            summup(tail, accum + byteToUnsignedInt(head(offset)))
+          case Nil =>
+            accum
+        }
+      }
+      if(l.isEmpty)
+        0.toByte
+      else
+        (summup(l) / l.size).toByte
+    }
+
     // must be super fast is it is called for each pixel
 
     val size = width * height * depth
     val result = new Array[Byte](size * bytesPerElement)
     var idx = 0
-    val sum = Array.fill(bytesPerElement)(Array.empty[Byte])
     while (idx < size) {
       val x = (idx % width) * 2 - 1
       val y = (idx / width % height) * 2 - 1
       val z = (idx / width / height) * 2 - 1
       var i = 0
-      var found = 0
+      var sum = List.empty[Array[Byte]]
       while (i < 8) {
         val xi = x + (i % 2)
         val yi = y + ((i / 2) % 2)
@@ -45,16 +66,15 @@ class KnossosMultiResCreator(dataRequester: DataRequester) extends LazyLogging w
           val blockIdx = data.calculateBlockIdx(xi, yi, zi)
           if(data.exists(blockIdx)) {
             val d = data.getBytes(xi, yi, zi, data.underlying(blockIdx))
-            sum(found) = d
-            found += 1
+            sum ::= d
           }
         }
         i += 1
       }
 
       var j = 0
-      while (j < bytesPerElement && found > 0) {
-        result(idx * bytesPerElement + j) = (sum(j) / found).toByte
+      while (j < bytesPerElement) {
+        result(idx * bytesPerElement + j) = average(sum, j)
         j += 1
       }
       idx += 1
@@ -90,10 +110,16 @@ class KnossosMultiResCreator(dataRequester: DataRequester) extends LazyLogging w
           val maxBlock = p.scale(baseScale).move(1, 1, 1)
           val goal = p.scale(targetScale)
           val combinedF: Fox[Array[Array[Byte]]] =
-            Fox.combined(dataRequester.loadBlocks(minBlock, maxBlock, dataSource, None, resolution, layer, useCache = true))
+            Fox.combined(dataRequester.loadBlocks(
+              minBlock, maxBlock, dataSource, None, resolution, layer, useCache = true))
+
           combinedF.flatMap { cubes =>
-            val block = BlockedArray3D[Byte](cubes, dataSource.blockLength, dataSource.blockLength, dataSource.blockLength, 2, 2, 2, layer.bytesPerElement, 0)
-            val data = downScale(block, dataSource.blockLength, dataSource.blockLength, dataSource.blockLength, layer.bytesPerElement)
+            val block = BlockedArray3D[Byte](
+              cubes, dataSource.blockLength, dataSource.blockLength,
+              dataSource.blockLength, 2, 2, 2, layer.bytesPerElement, 0)
+            val data = downScale(
+              block, dataSource.blockLength, dataSource.blockLength,
+              dataSource.blockLength, layer.bytesPerElement)
             dataStore.save(target, dataSource.id, targetResolution, goal, data, shouldBeCompressed = false)
           }
         }

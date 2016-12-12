@@ -47,8 +47,8 @@ object DataStore extends LazyLogging{
     Paths.get(dataInfo.dataLayer.baseDir).resolve(dataInfo.dataLayerSection.baseDir)
 
 
-  def knossosDirToCube(dataInfo: DataStoreBlock, path: Path) = {
-    val LocRx = ".([0-9]+)"r
+  def knossosDirToCube(dataInfo: DataStoreBlock, path: Path): Option[(Int, Point3D)] = {
+    val LocRx = ".([0-9]+)".r
     def parseElem(e: String) = {
       e match {
         case LocRx(p) => Some(p.toInt)
@@ -58,11 +58,12 @@ object DataStore extends LazyLogging{
 
     val rel = Paths.get(dataInfo.dataLayerSection.baseDir).relativize(path)
     if(rel.getNameCount >= 5){
-      for{                      // 0 is the resolution
+      for{
+        resolution <- parseElem(rel.getName(0).toString)
         x <- parseElem(rel.getName(1).toString)
         y <- parseElem(rel.getName(2).toString)
         z <- parseElem(rel.getName(3).toString)
-      } yield Point3D(x,y,z)
+      } yield (resolution, Point3D(x,y,z))
     } else {
       None
     }

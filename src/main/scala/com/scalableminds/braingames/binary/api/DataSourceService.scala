@@ -4,7 +4,7 @@
 package com.scalableminds.braingames.binary.api
 
 import java.io.File
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Path, Paths}
 
 import com.scalableminds.braingames.binary.models._
 import java.util.UUID
@@ -12,13 +12,13 @@ import java.util.zip.ZipFile
 
 import com.scalableminds.braingames.binary.SaveBlock
 import com.typesafe.config.Config
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, ProgressState}
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.braingames.binary.store.{DataStore, FileDataStore}
 import com.scalableminds.util.geometry.Point3D
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.io.{PathUtils, ZipIO}
-import net.liftweb.common.Full
+import net.liftweb.common.{Box, Full}
 import org.apache.commons.io.IOUtils
 import com.typesafe.scalalogging.LazyLogging
 
@@ -30,26 +30,37 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
 
   lazy val userBaseFolder = PathUtils.ensureDirectory(Paths.get(config.getString("braingames.binary.userBaseFolder")))
 
-  def userDataLayerFolder(name: String) = userBaseFolder.resolve(name)
+  def userDataLayerFolder(name: String): Path = userBaseFolder.resolve(name)
 
-  def userDataLayerName() = {
+  def userDataLayerName(): String = {
     UUID.randomUUID().toString
   }
 
-  def saveToFile(file: File, baseDataSource: DataSource, dataLayer: DataLayer, section: DataLayerSection) = {
+  def saveToFile(
+                  file: File,
+                  baseDataSource: DataSource,
+                  dataLayer: DataLayer,
+                  section: DataLayerSection): Fox[DataLayerSection] = {
+
     val dataStore = new FileDataStore
     try {
       val dataInfo = SaveBlock(baseDataSource, dataLayer, section, 1, Point3D(0,0,0), Array.empty)
       val zip = new ZipFile(file)
-      ZipIO.withUnziped(zip, includeHiddenFiles = false) { entries =>
+      val resolutions = ZipIO.withUnziped(zip, includeHiddenFiles = false) { entries =>
         Fox.serialSequence(entries) { e =>
           val fileName = e.getName
           val stream = zip.getInputStream(e)
-          DataStore.knossosDirToCube(dataInfo, Paths.get(fileName)).map { point =>
-            val currentBlock = dataInfo.copy(block = point, data = IOUtils.toByteArray(stream))
-            dataStore.save(currentBlock)
-          }.getOrElse(Fox.successful(true))
+          DataStore.knossosDirToCube(dataInfo, Paths.get(fileName)).map {
+            case (resolution, point) =>
+              val currentBlock = dataInfo.copy(
+                block = point, resolution = resolution, data = IOUtils.toByteArray(stream))
+              dataStore.save(currentBlock).map(_ => resolution)
+          }.getOrElse(Fox.empty)
         }
+      }
+      resolutions.map{ res =>
+        val rs = res.flatten.distinct.sorted
+        section.copy(resolutions = rs)
       }
     } catch {
       case e: Exception =>
@@ -64,7 +75,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
     val basePath = userDataLayerFolder(name).toAbsolutePath
     val section = DataLayerSection("1", "1", List(1), baseDataSource.boundingBox, baseDataSource.boundingBox)
     val fallbackLayer = baseDataSource.getByCategory(category)
-    val dataLayer = DataLayer(
+    val preliminaryDataLayer = DataLayer(
       name,
       category,
       basePath.toString,
@@ -82,9 +93,12 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
 
     initialContent match {
       case Some(zip) =>
-        saveToFile(zip, baseDataSource, dataLayer, section).map( _ => UserDataLayer(baseDataSource.id, dataLayer))
+        saveToFile(zip, baseDataSource, preliminaryDataLayer, section)
+          .map { section =>
+            UserDataLayer(baseDataSource.id, preliminaryDataLayer.copy(sections = List(section)))
+          }
       case _ =>
-        Fox.successful(UserDataLayer(baseDataSource.id, dataLayer))
+        Fox.successful(UserDataLayer(baseDataSource.id, preliminaryDataLayer))
     }
   }
 
@@ -92,7 +106,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
     dataSourceInbox.importDataSource(id)
   }
 
-  def progressForImport(id: String) =
+  def progressForImport(id: String): ProgressState =
     dataSourceInbox.progressForImport(id)
 
 }

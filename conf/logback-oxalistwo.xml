@@ -18,9 +18,8 @@
     </appender>
 
     <logger name="play" level="INFO"/>
-    <logger name="application" level="TRACE"/>
-    <logger name="braingames.binary" level="TRACE"/>
-    <logger name="braingames.datastore" level="TRACE"/>
+    <logger name="application" level="DEBUG"/>
+    <logger name="com.scalableminds" level="DEBUG"/>
     <logger name="actor" level="DEBUG"/>
     <logger name="akka" level="INFO"/>
 

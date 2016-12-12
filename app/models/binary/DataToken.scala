@@ -20,7 +20,7 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.cleanup.CleanUpService
 import net.liftweb.common.Full
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 
 case class DataToken(
                       _user: Option[BSONObjectID],

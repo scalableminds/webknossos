@@ -13,7 +13,7 @@ import com.scalableminds.util.xml.{XMLWrites, Xml}
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -23,7 +23,7 @@ import play.api.libs.concurrent.Execution.Implicits._
   * Date: 26.07.13
   * Time: 12:04
   */
-object NMLService extends NMLParsingService with FoxImplicits with LazyLogging{
+object NMLService extends NMLParsingService with FoxImplicits with LazyLogging {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
   def toNML[T](t: T, outputStream: OutputStream)(implicit w: XMLWrites[T]): Fox[Boolean] = {
@@ -36,7 +36,7 @@ object NMLService extends NMLParsingService with FoxImplicits with LazyLogging{
   }
 }
 
-trait NMLParsingService {
+trait NMLParsingService extends LazyLogging {
 
   sealed trait NMLParseResult {
     def fileName: String
@@ -108,10 +108,10 @@ trait NMLParsingService {
 
   def extractFromFile(file: File, fileName: String): ZipParseResult = {
     if (fileName.endsWith(".zip")) {
-      Logger.trace("Extracting from ZIP file")
+      logger.trace("Extracting from ZIP file")
       extractFromZip(file, Some(fileName))
     } else {
-      Logger.trace("Extracting from NML file")
+      logger.trace("Extracting from NML file")
       val parseResult = extractFromNML(file, fileName)
       ZipParseResult(List(parseResult), Map.empty)
     }

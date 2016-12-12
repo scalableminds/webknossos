@@ -3,7 +3,7 @@ package models.tracing.skeleton
 import com.scalableminds.util.geometry.Vector3D
 import play.api.libs.json._
 import com.scalableminds.util.image.Color
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import scala.concurrent.Future
 
@@ -11,7 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import oxalis.nml.{BranchPoint, Comment}
 
-object TracingUpdater {
+object TracingUpdater extends LazyLogging {
 
   implicit object TracingUpdateReads extends Reads[TracingUpdater] {
     def reads(js: JsValue) = {
@@ -38,7 +38,7 @@ object TracingUpdater {
       Some(updater.createUpdate())
     } catch {
       case e: java.lang.RuntimeException =>
-        Logger.error("Invalid json: " + e + "\n While trying to parse:\n" + Json.prettyPrint(js))
+        logger.error("Invalid json: " + e + "\n While trying to parse:\n" + Json.prettyPrint(js))
         None
     }
   }

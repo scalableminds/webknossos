@@ -20,12 +20,14 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import scala.concurrent.duration._
 
-object Global extends GlobalSettings {
+import com.typesafe.scalalogging.LazyLogging
+
+object Global extends GlobalSettings with LazyLogging{
 
   override def onStart(app: Application) {
     val conf = app.configuration
 
-    Logger.info("Executing Global START")
+    logger.info("Executing Global START")
     startActors(conf.underlying, app)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
@@ -61,7 +63,7 @@ object Global extends GlobalSettings {
  * Initial set of data to be imported
  * in the sample application.
  */
-object InitialData extends GlobalDBAccess {
+object InitialData extends GlobalDBAccess with LazyLogging{
 
   val mpi = Team("Connectomics department", None, RoleService.roles)
 
@@ -76,7 +78,7 @@ object InitialData extends GlobalDBAccess {
     UserDAO.findOneByEmail("scmboy@scalableminds.com").futureBox.map {
       case Full(_) =>
       case _ =>
-        Logger.info("Inserted default user scmboy")
+        logger.info("Inserted default user scmboy")
         UserDAO.insert(User(
           "scmboy@scalableminds.com",
           "SCM",

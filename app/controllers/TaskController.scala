@@ -13,7 +13,7 @@ import play.api.libs.iteratee.{Done, Input, Iteratee}
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import oxalis.security.Secured
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json._
 import oxalis.security.{AuthenticatedRequest, Secured}
 import models.user._
@@ -258,7 +258,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     val s = System.currentTimeMillis()
     TaskService.findAssignableFor(user).futureBox.flatMap {
       case Full(assignment) =>
-        TimeLogger.logTimeF("task request", Logger.trace)(OpenAssignmentService.remove(assignment)).flatMap {
+        TimeLogger.logTimeF("task request", logger.trace(_))(OpenAssignmentService.remove(assignment)).flatMap {
           removeResult =>
           if (removeResult.n >= 1)
             Fox.successful(assignment)
@@ -266,22 +266,22 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             tryToGetNextAssignmentFor(user, retryCount - 1)
           else {
             val e = System.currentTimeMillis()
-            Logger.warn(s"Failed to remove any assignment for user ${user.email}. " +
+            logger.warn(s"Failed to remove any assignment for user ${user.email}. " +
               s"Result: $removeResult n:${removeResult.n} ok:${removeResult.ok} " +
               s"code:${removeResult.code} TOOK: ${e-s}ms")
             Fox.failure(Messages("task.unavailable"))
           }
         }.futureBox
       case f: Failure =>
-        Logger.warn(s"Failure while trying to getNextTask (u: ${user.email} r: $retryCount): " + f)
+        logger.warn(s"Failure while trying to getNextTask (u: ${user.email} r: $retryCount): " + f)
         if (retryCount > 0)
           tryToGetNextAssignmentFor(user, retryCount - 1).futureBox
         else {
-          Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to FAILURE")
+          logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to FAILURE")
           Fox.failure(Messages("assignment.retrieval.failed")).futureBox
         }
       case Empty =>
-        Logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to EMPTY")
+        logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to EMPTY")
         Fox.failure(Messages("task.unavailable")).futureBox
     }
   }

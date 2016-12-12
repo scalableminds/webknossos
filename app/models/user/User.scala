@@ -22,7 +22,7 @@ import play.api.libs.functional.syntax._
 import reactivemongo.core.commands.LastError
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import com.scalableminds.util.tools.Fox
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 
 case class User(
                  email: String,

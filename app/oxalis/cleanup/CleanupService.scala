@@ -4,13 +4,13 @@
 package oxalis.cleanup
 
 import scala.concurrent.duration.FiniteDuration
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Akka
 import com.scalableminds.util.tools.Fox
 import play.api.libs.concurrent.Execution.Implicits._
 import net.liftweb.common.{Empty, Failure, Full}
 
-object CleanUpService {
+object CleanUpService extends LazyLogging {
 
   implicit val system = Akka.system(play.api.Play.current)
 
@@ -20,14 +20,14 @@ object CleanUpService {
   private def runJob[T](description: String, job: => Fox[T]): Unit = {
     job.futureBox.map{
       case Full(value) =>
-        Logger.info(s"Completed cleanup job: $description. Result: " + value)
+        logger.info(s"Completed cleanup job: $description. Result: " + value)
       case f: Failure =>
-        Logger.warn(s"Failed to execute cleanup job: $description. " + f.msg)
+        logger.warn(s"Failed to execute cleanup job: $description. " + f.msg)
       case Empty =>
-        Logger.info(s"Completed cleanup job: $description. But result is empty.")
+        logger.info(s"Completed cleanup job: $description. But result is empty.")
     }.recover{
       case e: Exception =>
-        Logger.error(s"Exception during execution of cleanup job: $description. ${e.getMessage}", e)
+        logger.error(s"Exception during execution of cleanup job: $description. ${e.getMessage}", e)
     }
   }
 }

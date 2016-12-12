@@ -6,7 +6,7 @@ package oxalis.ndstore
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Failure, Full}
 import oxalis.ndstore.NDChannels.NDChannelsReads
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.Play.current
 import play.api.http.Status
 import play.api.i18n.Messages
@@ -15,7 +15,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.ws.{WS, WSResponse}
 
-object NDServerConnection extends FoxImplicits {
+object NDServerConnection extends FoxImplicits with LazyLogging {
 
   val ndInfoResponseReads =
     ((__ \ 'dataset).read[NDDataSet] and
@@ -37,14 +37,14 @@ object NDServerConnection extends FoxImplicits {
           case e: com.fasterxml.jackson.core.JsonParseException =>
             Failure(Messages("ndstore.response.parseFailure"))
           case e: Exception                                     =>
-            Logger.error("Exception while trying to access ndstore. " + e.getMessage)
+            logger.error("Exception while trying to access ndstore. " + e.getMessage)
             e.printStackTrace()
             Failure(Messages("ndstore.response.parseFailure"))
         }
       }
     } catch {
       case e: Exception =>
-        Logger.error(s"Exception while trying to access '$infoUrl': ${e.getMessage}")
+        logger.error(s"Exception while trying to access '$infoUrl': ${e.getMessage}")
         Failure(Messages("ndstore.unreachable"))
     }
   }
@@ -65,7 +65,7 @@ object NDServerConnection extends FoxImplicits {
         case JsSuccess((dataset, channels), _) =>
           Full(NDProject(server, name, token, dataset, channels))
         case e: JsError                        =>
-          Logger.error(e.toString)
+          logger.error(e.toString)
           Failure(Messages("ndstore.response.parseFailure"))
       }
     } else if(response.status == Status.NOT_FOUND) {

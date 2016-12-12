@@ -2,44 +2,50 @@ package controllers
 
 import javax.inject.Inject
 
-import models.user.User
-import play.api.libs.concurrent.Akka
-import play.api.libs.json._
-import oxalis.security.{AuthenticatedRequest, Secured, UserAwareRequest}
-import net.liftweb.common._
-import scala.concurrent.Future
-import scala.concurrent.duration._
-
-import akka.pattern.ask
-import play.api.libs.concurrent.Execution.Implicits._
-import akka.util.Timeout
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
-import play.api.i18n.{I18nSupport, Messages, MessagesApi}
-import models.annotation.{Annotation, AnnotationIdentifier, AnnotationLike, AnnotationStore}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType._
 import models.annotation.handler.AnnotationInformationHandler
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import play.api.Logger
+import models.annotation.{AnnotationIdentifier, AnnotationLike, AnnotationStore}
+import oxalis.security.{AuthenticatedRequest, Secured, UserAwareRequest}
+import play.api.i18n.{I18nSupport, Messages, MessagesApi}
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
 
-class TracingController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with TracingInformationProvider
+class TracingController @Inject() (val messagesApi: MessagesApi)
+  extends Controller
+    with Secured
+    with TracingInformationProvider
 
-trait TracingInformationProvider extends play.api.http.Status with FoxImplicits with models.basics.Implicits with I18nSupport{
+trait TracingInformationProvider
+  extends play.api.http.Status
+    with FoxImplicits
+    with models.basics.Implicits with I18nSupport {
 
   import AnnotationInformationHandler._
 
-  def withInformationHandler[A, T](tracingType: String)(f: AnnotationInformationHandler => T)(implicit request: UserAwareRequest[_]): T = {
+  def withInformationHandler[A, T](
+    tracingType: String)(f: AnnotationInformationHandler => T)(implicit request: UserAwareRequest[_]): T = {
+
     f(informationHandlers(tracingType))
   }
 
-  def withAnnotation[T](typ: AnnotationType, id: String)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+  def withAnnotation[T](
+    typ: AnnotationType,
+    id: String)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+
     withAnnotation(AnnotationIdentifier(typ, id))(a => f(a))
   }
 
-  def withAnnotation[T](annotationId: AnnotationIdentifier)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+  def withAnnotation[T](
+    annotationId: AnnotationIdentifier)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+
     findAnnotation(annotationId).flatMap(f)
   }
 
-  def findAnnotation(typ: AnnotationType, id: String)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
+  def findAnnotation(
+    typ: AnnotationType,
+    id: String)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
+
     findAnnotation(AnnotationIdentifier(typ, id))
   }
 
@@ -47,11 +53,21 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     AnnotationStore.requestAnnotation(annotationId, request.userOpt)
   }
 
-  def withMergedAnnotation[T](typ: AnnotationType, id: String, mergedId: String, mergedTyp: String, readOnly: Boolean)(f: AnnotationLike => Fox[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
+  def withMergedAnnotation[T](
+    typ: AnnotationType,
+    id: String,
+    mergedId: String,
+    mergedTyp: String,
+    readOnly: Boolean)(f: AnnotationLike => Fox[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
+
     mergeAnnotation(AnnotationIdentifier(typ, id), AnnotationIdentifier(mergedTyp, mergedId), readOnly).flatMap(f)
   }
 
-  def mergeAnnotation(annotationId: AnnotationIdentifier, mergedAnnotationId: AnnotationIdentifier, readOnly: Boolean)(implicit request: AuthenticatedRequest[_]): Fox[AnnotationLike] = {
+  def mergeAnnotation(
+    annotationId: AnnotationIdentifier,
+    mergedAnnotationId: AnnotationIdentifier,
+    readOnly: Boolean)(implicit request: AuthenticatedRequest[_]): Fox[AnnotationLike] = {
+
     val annotation = AnnotationStore.requestAnnotation(annotationId, request.userOpt)
     val annotationSec = AnnotationStore.requestAnnotation(mergedAnnotationId, request.userOpt)
 
@@ -65,7 +81,9 @@ trait TracingInformationProvider extends play.api.http.Status with FoxImplicits 
     }
   }
 
-  def tracingInformation(annotation: AnnotationLike, readOnly: Boolean)(implicit request: UserAwareRequest[_]): Fox[JsValue] = {
+  def tracingInformation(
+    annotation: AnnotationLike,
+    readOnly: Boolean)(implicit request: UserAwareRequest[_]): Fox[JsValue] = {
     for {
       _ <- annotation.restrictions.allowAccess(request.userOpt) ?~> Messages("notAllowed") ~> BAD_REQUEST
       json <- if(readOnly)

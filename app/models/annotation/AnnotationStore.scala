@@ -7,13 +7,13 @@ import com.scalableminds.util.tools.Fox
 import models.user.User
 import net.liftweb.common.Failure
 import models.annotation.handler.AnnotationInformationHandler
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 
-object AnnotationStore {
+object AnnotationStore extends LazyLogging {
 
   private val maxCacheTime = 5 minutes
 
@@ -29,7 +29,7 @@ object AnnotationStore {
     .futureBox
     .recover {
       case e =>
-        Logger.error("AnnotationStore ERROR: " + e)
+        logger.error("AnnotationStore ERROR: " + e)
         e.printStackTrace()
         Failure("AnnotationStore ERROR: " + e)
     }
@@ -46,7 +46,7 @@ object AnnotationStore {
     .futureBox
     .recover {
       case e =>
-        Logger.error("AnnotationStore ERROR: " + e)
+        logger.error("AnnotationStore ERROR: " + e)
         e.printStackTrace()
         Failure("AnnotationStore ERROR: " + e)
     }
@@ -72,7 +72,7 @@ object AnnotationStore {
       f
     } catch {
       case e: Exception =>
-        Logger.error("Request Annotaton in AnnotationStore failed: " + e)
+        logger.error("Request Annotaton in AnnotationStore failed: " + e)
         throw e
     }
   }
@@ -98,7 +98,7 @@ object AnnotationStore {
       }
     } catch {
       case e: Exception =>
-        Logger.error("Request Annotation in AnnotationStore failed: " + e)
+        logger.error("Request Annotation in AnnotationStore failed: " + e)
         throw e
     }
   }

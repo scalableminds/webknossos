@@ -4,7 +4,7 @@ import models.user.User
 import play.api.libs.ws.{WSAuthScheme, WS}
 import com.ning.http.client.Realm.AuthScheme
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.Play.current
 import play.api.Play
 import scala.concurrent.Promise
@@ -13,7 +13,7 @@ import scala.util._
 import models.annotation.AnnotationLike
 import com.scalableminds.util.reactivemongo.{DBAccessContext}
 
-object BrainTracing {
+object BrainTracing extends LazyLogging {
   val URL = "http://braintracing.org/"
   val CREATE_URL = URL + "oxalis_create_user.php"
   val LOGTIME_URL = URL + "oxalis_add_hours.php"
@@ -49,11 +49,11 @@ object BrainTracing {
           case _ =>
             Success("braintracing.error")
         })
-        Logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
+        logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
       }
       brainTracingRequest.onFailure{
         case e: Exception =>
-          Logger.error(s"Failed to register user '${user.email}' in brain tracing db. Exception: ${e.getMessage}")
+          logger.error(s"Failed to register user '${user.email}' in brain tracing db. Exception: ${e.getMessage}")
       }
       result.future
     } else {
@@ -95,19 +95,19 @@ object BrainTracing {
           .map { response =>
             response.status match {
               case 200 if !isSilentFailure(response.body) =>
-                Logger.trace(s"Logged time! User: ${user.email} Time: $hours")
+                logger.trace(s"Logged time! User: ${user.email} Time: $hours")
                 true
               case 200 =>
-                Logger.error(s"Time logging failed. SILENT FAILURE! Code 200 User: ${user.email} Time: $hours")
+                logger.error(s"Time logging failed. SILENT FAILURE! Code 200 User: ${user.email} Time: $hours")
                 false
               case code =>
-                Logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
+                logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
                 false
             }
           }
           brainTracingRequest.onFailure{
             case e: Exception =>
-              Logger.error(s"Time logging failed! Exception ${e.getMessage}. User: ${user.email} Time: $hours")
+              logger.error(s"Time logging failed! Exception ${e.getMessage}. User: ${user.email} Time: $hours")
           }
           await(brainTracingRequest)
         } else {

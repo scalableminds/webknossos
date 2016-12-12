@@ -7,7 +7,7 @@ import models.annotation.{AnnotationContent, AnnotationSettings}
 import models.basics._
 import models.tracing.skeleton.temporary.TemporarySkeletonTracingService
 import oxalis.nml._
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
@@ -57,12 +57,15 @@ case class SkeletonTracing(
     SkeletonTracingService.saveToDB(this)
   }
 
-  def mergeWith(c: AnnotationContent, settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[AnnotationContent] = {
+  def mergeWith(
+    c: AnnotationContent,
+    settings: Option[AnnotationSettings])(implicit ctx: DBAccessContext): Fox[AnnotationContent] = {
+
     toTemporary.flatMap(_.mergeWith(c, settings))
   }
 }
 
-trait SkeletonManipulations extends FoxImplicits {
+trait SkeletonManipulations extends FoxImplicits with LazyLogging {
   this: SkeletonTracing =>
 
   def updateFromJson(jsUpdates: Seq[JsValue])(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
@@ -74,10 +77,11 @@ trait SkeletonManipulations extends FoxImplicits {
         updatedTracing <- updates.foldLeft(Fox.successful(this)) {
           case (f, updater) => f.flatMap(tracing => updater.update(tracing))
         }
-        _ <- SkeletonTracingService.update(updatedTracing._id, updatedTracing.copy(timestamp = System.currentTimeMillis))(GlobalAccessContext)
+        t = System.currentTimeMillis
+        _ <- SkeletonTracingService.update(updatedTracing._id, updatedTracing.copy(timestamp = t))(GlobalAccessContext)
       } yield updatedTracing
     } else {
-      Logger.warn("Failed to parse all update commands from json.")
+      logger.warn("Failed to parse all update commands from json.")
       Fox.empty
     }
   }
@@ -97,7 +101,8 @@ trait SkeletonManipulations extends FoxImplicits {
           }
       }
     } yield {
-      SkeletonTracingDAO.updateStats(this._id, SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees))(GlobalAccessContext)
+      SkeletonTracingDAO.updateStats(
+        this._id, SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees))(GlobalAccessContext)
       SkeletonTracingStatistics(numberOfNodes, numberOfEdges, numberOfTrees)
     }
   }
@@ -147,10 +152,18 @@ object SkeletonTracingDAO extends SecuredBaseDAO[SkeletonTracing] with FoxImplic
   val formatter = SkeletonTracing.skeletonTracingFormat
 
   def resetComments(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("comments" -> Json.arr()), "$unset" -> Json.obj("notUpdated" -> true)))
+    update(
+      Json.obj("_id" -> _tracing),
+      Json.obj(
+        "$set" -> Json.obj("comments" -> Json.arr()),
+        "$unset" -> Json.obj("notUpdated" -> true)))
 
   def resetBranchPoints(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_id" -> _tracing), Json.obj("$set" -> Json.obj("branchPoints" -> Json.arr()), "$unset" -> Json.obj("notUpdated" -> true)))
+    update(
+      Json.obj("_id" -> _tracing),
+      Json.obj(
+        "$set" -> Json.obj("branchPoints" -> Json.arr()),
+        "$unset" -> Json.obj("notUpdated" -> true)))
 
   def resetStats(_tracing: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _tracing), Json.obj("$unset" -> Json.obj("stats" -> true)))

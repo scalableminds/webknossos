@@ -2,14 +2,13 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent._
 import scala.concurrent.duration._
 
 import akka.util.Timeout
 import com.scalableminds.util.mvc.JsonResult
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
 import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
 import models.task.TaskDAO
@@ -17,10 +16,8 @@ import models.user.time._
 import models.user.{UsedAnnotationDAO, User, UserDAO}
 import net.liftweb.common.{Full, _}
 import oxalis.security.{AuthenticatedRequest, Secured}
-import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsArray, JsObject, _}
 import play.twirl.api.Html
 
@@ -30,7 +27,10 @@ import play.twirl.api.Html
  * Date: 01.06.13
  * Time: 02:09
  */
-class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with TracingInformationProvider {
+class AnnotationController @Inject()(val messagesApi: MessagesApi)
+  extends Controller
+    with Secured
+    with TracingInformationProvider {
 
   implicit val timeout = Timeout(5 seconds)
 
@@ -82,7 +82,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
      case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
        updates ++ nextUpdates
      case (updates, u) =>
-       Logger.warn("dropping update during replay! Update: " + u)
+       logger.warn("dropping update during replay! Update: " + u)
        updates
    }
 
@@ -129,7 +129,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
        result <- handleUpdates(updateableAnnotation, combinedUpdate, version) ?~> Messages("annotation.revert.handlingUpdatesFailed")
        _ <- AnnotationUpdateService.removeAll(typ, id, aboveVersion = version) ?~> Messages("annotation.revert.deleteUpdatesFailed")
      } yield {
-       Logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
+       logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
        JsonOk(result, "annotation.reverted")
      }
    }
@@ -185,7 +185,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
           Json.obj("version" -> version)
         }
       case t                  =>
-        Logger.info("Failed to handle json update. Tried: " + t)
+        logger.info("Failed to handle json update. Tried: " + t)
         Failure(Messages("format.json.invalid"))
     }
   }

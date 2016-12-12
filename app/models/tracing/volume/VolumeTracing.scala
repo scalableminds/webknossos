@@ -13,7 +13,7 @@ import scala.concurrent.Future
 
 import models.tracing.CommonTracingService
 import net.liftweb.common.{Failure, Full}
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{JsValue, Json}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, GlobalDBAccess}

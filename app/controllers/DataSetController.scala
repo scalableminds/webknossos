@@ -5,37 +5,22 @@ import javax.inject.Inject
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-import com.scalableminds.braingames.binary.models._
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserService}
-import net.liftweb.common.{Failure, Full}
-import org.apache.commons.codec.binary.Base64
-import org.apache.xalan.res.XSLTErrorResources_pt_BR
 import oxalis.ndstore.{ND2WK, NDServerConnection}
 import oxalis.security.{AuthenticatedRequest, Secured}
-import play.api.Logger
-import play.api.data.validation.ValidationError
-import play.api.libs.json._
-import play.api.libs.json.Json._
-import play.api.libs.functional.syntax._
 import play.api.Play.current
 import play.api.cache.Cache
-import play.api.data.Form
-import play.api.data.Forms._
-import play.api.i18n.Messages.Message
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.libs.ws.{WS, WSResponse}
-import play.api.mvc.BodyParsers.parse
 import play.twirl.api.Html
-import reactivemongo.api.commands.WriteResult
 
 class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 

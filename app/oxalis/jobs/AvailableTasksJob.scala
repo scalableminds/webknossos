@@ -10,7 +10,7 @@ import oxalis.mail.DefaultMails
 import scala.concurrent.duration._
 
 import models.project.Project
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Akka
 
 
@@ -23,7 +23,7 @@ object AvailableTasksJob {
  * Actor which checks every day if there are users without available tasks.
  * If this is the case it sends an email with an overview of the available task count of each user.
  */
-class AvailableTasksJob extends Actor {
+class AvailableTasksJob extends Actor with LazyLogging {
   import AvailableTasksJob._
   import context.dispatcher
 
@@ -38,11 +38,11 @@ class AvailableTasksJob extends Actor {
 
   override def receive: Receive = {
     case CheckAvailableTasks =>
-      Logger.info("Daily check for users without any available tasks")
+      logger.info("Daily check for users without any available tasks")
       val availableTasksCountsFox = TaskService.getAllAvailableTaskCountsAndProjects()(GlobalAccessContext)
 
       availableTasksCountsFox foreach { availableTasks: Map[User, (Int, List[Project])] =>
-        Logger.info("Found users without available tasks. Sending email.")
+        logger.info("Found users without available tasks. Sending email.")
         if (availableTasks.exists { case (_ ,(count, _)) => count == 0 }) {
           val rows = (availableTasks map { case (user, (count, projects)) =>
             (user.name, count, projects.map(_.name).mkString(" "))

@@ -9,7 +9,7 @@ import models.task.{Task, TaskDAO, TaskType}
 import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
 import models.tracing.skeleton.{SkeletonTracing, SkeletonTracingLike, SkeletonTracingService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
@@ -17,13 +17,13 @@ import scala.concurrent.Future
 
 import models.project.Project
 
-object CompoundAnnotation extends Formatter with FoxImplicits {
+object CompoundAnnotation extends Formatter with FoxImplicits with LazyLogging {
 
   def filterFinishedAnnotations(a: Annotation) =
     a.state.isFinished
 
   def createFromProject(project: Project, _user: Option[BSONObjectID])(implicit ctx: DBAccessContext) = {
-    logTime("project composition", Logger.debug) {
+    logTime("project composition", logger.debug(_)) {
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
         annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten).toFox
@@ -40,7 +40,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
   }
 
   def createFromTask(task: Task, _user: Option[BSONObjectID])(implicit ctx: DBAccessContext) = {
-    logTime("task composition", Logger.debug) {
+    logTime("task composition", logger.debug(_)) {
       for {
         annotations <- task.annotations.toFox
         merged <- createFromFinishedAnnotations(
@@ -56,7 +56,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits {
   }
 
   def createFromTaskType(taskType: TaskType, _user: Option[BSONObjectID])(implicit ctx: DBAccessContext) = {
-    logTime("taskType composition", Logger.debug) {
+    logTime("taskType composition", logger.debug(_)) {
       for {
         tasks <- TaskDAO.findAllByTaskType(taskType._id)
         annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten).toFox

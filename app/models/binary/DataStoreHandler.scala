@@ -7,23 +7,22 @@ import java.io.FileInputStream
 
 import akka.agent.Agent
 import com.scalableminds.braingames.binary.models.{DataLayerHelpers, DataSource, DataSourceUpload, UserDataLayer}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.rest.{RESTCall, RESTResponse}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import net.liftweb.common.{Empty, Failure, Full}
+import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.io.IOUtils
 import oxalis.rest.WebSocketRESTServer
+import play.api.Play
+import play.api.Play.current
 import play.api.http.Status
 import play.api.i18n.Messages
+import play.api.libs.Files.TemporaryFile
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Codec
-import play.api.{Logger, Play}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
-import play.api.libs.Files.TemporaryFile
-import play.api.libs.iteratee.Enumerator
 
 trait DataStoreHandlingStrategy {
 
@@ -43,9 +42,9 @@ trait DataStoreHandlingStrategy {
   def uploadDataSource(upload: DataSourceUpload)(implicit messages: Messages): Fox[Boolean]
 }
 
-object DataStoreHandler extends DataStoreHandlingStrategy{
-  def strategyForType(typ: DataStoreType) = typ match {
-    case NDStore => NDStoreHandlingStrategy
+object DataStoreHandler extends DataStoreHandlingStrategy {
+  def strategyForType(typ: DataStoreType): DataStoreHandlingStrategy = typ match {
+    case NDStore         => NDStoreHandlingStrategy
     case WebKnossosStore => WKStoreHandlingStrategy
   }
 
@@ -71,11 +70,14 @@ object DataStoreHandler extends DataStoreHandlingStrategy{
     WKStoreHandlingStrategy.uploadDataSource(upload)
 }
 
-object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplicits{
+object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplicits with LazyLogging {
   override def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] =
     Fox.failure("NDStore doesn't support creation of user datalayers yet.")
 
-  override def uploadUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[UserDataLayer] =
+  override def uploadUserDataLayer(
+    dataStoreInfo: DataStoreInfo,
+    base: DataSource,
+    file: TemporaryFile): Fox[UserDataLayer] =
     Fox.failure("NDStore doesn't support creation of user datalayers yet.")
 
   override def importDataSource(dataSet: DataSet): Fox[RESTResponse] =
@@ -87,11 +89,16 @@ object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplici
   override def uploadDataSource(upload: DataSourceUpload)(implicit messages: Messages): Fox[Boolean] =
     Fox.failure("NDStore doesn't support datasource uploads yet.")
 
-  override def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] = {
-    Logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
+  override def requestDataLayerThumbnail(
+    dataSet: DataSet,
+    dataLayerName: String,
+    width: Int,
+    height: Int): Fox[Array[Byte]] = {
+
+    logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
 
     def extractImage(response: WSResponse)(implicit codec: Codec): Fox[Array[Byte]] = {
-      Logger.error(response.toString)
+      logger.error(response.toString)
       if (response.status == Status.OK) {
         Fox.successful(response.bodyAsBytes)
       } else {
@@ -103,26 +110,28 @@ object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplici
       dataLayer <- dataSet.dataSource.flatMap(ds => ds.getDataLayer(dataLayerName)).toFox
       accessToken <- dataSet.dataStoreInfo.accessToken ?~> "ndstore.accesstoken.missing"
       (x, y, z, resolution) = DataLayerHelpers.goodThumbnailParameters(dataLayer, width, height)
-      imageParams = s"$resolution/$x,${x+width}/$y,${y+height}/$z,${z+1}"
+      imageParams = s"$resolution/$x,${x + width}/$y,${y + height}/$z,${z + 1}"
       baseUrl = s"${dataSet.dataStoreInfo.url}/nd/ca"
-      asd = Logger.error(s"$baseUrl/$accessToken/$dataLayerName/jpeg/$imageParams")
+      _ = logger.error(s"$baseUrl/$accessToken/$dataLayerName/jpeg/$imageParams")
       response <- WS.url(s"$baseUrl/$accessToken/$dataLayerName/jpeg/$imageParams").get().toFox
       image <- extractImage(response)
     } yield image
   }
 }
 
-object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with DataStoreBackChannelHandler {
+object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with DataStoreBackChannelHandler with LazyLogging {
 
-  lazy val config = Play.current.configuration
+  private lazy val config = Play.current.configuration
 
   def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] = {
-    Logger.debug("Called to create user data source. Base: " + base.id + " Datastore: " + dataStoreInfo)
+    logger.debug("Called to create user data source. Base: " + base.id + " Datastore: " + dataStoreInfo)
     val call = RESTCall("POST", s"/data/datasets/${base.id}/layers", Map.empty, Map.empty, Json.obj())
     sendRequest(dataStoreInfo.name, call).flatMap { response =>
       response.body.validate(UserDataLayer.userDataLayerFormat) match {
-        case JsSuccess(userDataLayer, _) => Full(userDataLayer)
-        case e: JsError                  => Failure("REST user data layer create returned malformed json: " + e.toString)
+        case JsSuccess(userDataLayer, _) =>
+          Full(userDataLayer)
+        case e: JsError                  =>
+          Failure("REST user data layer create returned malformed json: " + e.toString)
       }
     }
   }
@@ -132,7 +141,7 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with DataStoreB
     base: DataSource,
     file: TemporaryFile): Fox[UserDataLayer] = {
 
-    Logger.debug("Called to upload user data layer. Base: " + base.id + " Datastore: " + dataStoreInfo)
+    logger.debug("Called to upload user data layer. Base: " + base.id + " Datastore: " + dataStoreInfo)
 
     val fileContent = IOUtils.toByteArray(new FileInputStream(file.file))
     val call = RESTCall(
@@ -144,14 +153,16 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with DataStoreB
 
     sendRequest(dataStoreInfo.name, call).flatMap { response =>
       response.body.validate(UserDataLayer.userDataLayerFormat) match {
-        case JsSuccess(userDataLayer, _) => Full(userDataLayer)
-        case e: JsError                  => Failure("REST user data layer upload returned malformed json: " + e.toString)
+        case JsSuccess(userDataLayer, _) =>
+          Full(userDataLayer)
+        case e: JsError                  =>
+          Failure("REST user data layer upload returned malformed json: " + e.toString)
       }
     }
   }
 
   def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] = {
-    Logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
+    logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
     val call = RESTCall(
       "GET",
       s"/data/datasets/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json",
@@ -165,13 +176,13 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with DataStoreB
   }
 
   def progressForImport(dataSet: DataSet): Fox[RESTResponse] = {
-    Logger.debug("Import rogress called for: " + dataSet.name)
+    logger.debug("Import rogress called for: " + dataSet.name)
     val call = RESTCall("GET", s"/data/datasets/${dataSet.urlEncodedName}/import", Map.empty, Map.empty, Json.obj())
     sendRequest(dataSet.dataStoreInfo.name, call)
   }
 
   def importDataSource(dataSet: DataSet): Fox[RESTResponse] = {
-    Logger.debug("Import called for: " + dataSet.name)
+    logger.debug("Import called for: " + dataSet.name)
     val call = RESTCall("POST", s"/data/datasets/${dataSet.urlEncodedName}/import", Map.empty, Map.empty, Json.obj())
     sendRequest(dataSet.dataStoreInfo.name, call)
   }
@@ -179,13 +190,13 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with DataStoreB
   def uploadDataSource(upload: DataSourceUpload)(implicit messages: Messages): Fox[Boolean] = {
     def parseResponse(response: RESTResponse) = (response.body \ "error").asOpt[String] match {
       case Some(error) => Failure(error)
-      case _ => Full(true)
+      case _           => Full(true)
     }
 
-    Logger.debug("Upload called for: " + upload.name)
+    logger.debug("Upload called for: " + upload.name)
     for {
-      localDatastore <- config.getString("datastore.name").toFox
-      dataStore <- findByServer(localDatastore).toFox
+      localDataStore <- config.getString("datastore.name").toFox
+      dataStore <- findByServer(localDataStore).toFox
       call = RESTCall("POST", s"/data/datasets", Map.empty, Map.empty, Json.toJson(upload))
       response <- dataStore.request(call) ?~> Messages("dataStore.notAvailable")
       result <- parseResponse(response)
@@ -196,15 +207,15 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with DataStoreB
 trait DataStoreBackChannelHandler extends FoxImplicits {
   val dataStores = Agent[Map[String, WebSocketRESTServer]](Map.empty)
 
-  def register(dataStoreName: String, restChannel: WebSocketRESTServer) = {
+  def register(dataStoreName: String, restChannel: WebSocketRESTServer): Unit = {
     dataStores.send(_ + (dataStoreName -> restChannel))
   }
 
-  def unregister(dataStoreName: String) = {
+  def unregister(dataStoreName: String): Unit = {
     dataStores.send(_ - dataStoreName)
   }
 
-  def findByServer(dataStoreName: String) = {
+  def findByServer(dataStoreName: String): Option[WebSocketRESTServer] = {
     dataStores().get(dataStoreName)
   }
 

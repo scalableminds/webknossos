@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import models.user.{User, UserService}
 import akka.agent.Agent
 import com.newrelic.api.agent.NewRelic
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 
@@ -14,7 +14,7 @@ case object FlushActivities
 
 case class UserActivity(user: User, time: Long)
 
-class ActivityMonitor extends Actor {
+class ActivityMonitor extends Actor with LazyLogging {
   implicit val system = context.system
 
   val collectedActivities = Agent(Map[BSONObjectID, Long]().empty)
@@ -34,13 +34,13 @@ class ActivityMonitor extends Actor {
       }
 
     case FlushActivities =>
-      Logger.info("Flushing user activities.")
+      logger.info("Flushing user activities.")
 
       collectedActivities.send {
         activities =>
           activities.map{
             case (_user, time) =>
-              Logger.debug(s"Flushing user activities of: ${_user.stringify} Time: $time")
+              logger.debug(s"Flushing user activities of: ${_user.stringify} Time: $time")
               UserService.logActivity(_user, time)
           }
           Map[BSONObjectID, Long]().empty

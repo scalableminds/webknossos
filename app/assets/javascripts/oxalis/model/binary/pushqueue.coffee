@@ -12,10 +12,8 @@ class PushQueue
 
   constructor : (@dataSetName, @cube, @layer, @tracingId, @updatePipeline, @sendData = true) ->
 
-    @url = "#{@layer.url}/data/datasets/#{@dataSetName}/layers/#{@layer.name}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}&annotationId=#{@tracingId}&token=#{@layer.token}"
     @queue = []
-
-    @push = _.debounce @pushImpl, @DEBOUNCE_TIME
+    @push = _.debounce(@pushImpl, @DEBOUNCE_TIME)
 
 
   stateSaved : ->

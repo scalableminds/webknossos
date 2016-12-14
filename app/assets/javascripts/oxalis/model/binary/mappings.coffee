@@ -9,7 +9,7 @@ class Mappings
 
     @mappings = _.keyBy(layer.mappings, "name")
     @baseUrl = "/data/datasets/#{datasetName}/layers/#{layer.name}/mappings/"
-    @getParams = "?token=#{layer.token}"
+    @doWithToken = layer.doWithToken.bind(layer)
 
 
   getMappingNames : ->
@@ -36,14 +36,16 @@ class Mappings
     if @mappings[mappingName].mappingObject?
       return Promise.resolve()
 
-    Request.receiveJSON(
-      @baseUrl + mappingName + @getParams
-    ).then(
-      (mapping) =>
-        @mappings[mappingName].mappingObject = mapping
-        console.log("Done downloading:", mappingName)
-      (error) ->
-        console.error("Error downloading:", mappingName, error)
+    @doWithToken( (token) =>
+      Request.receiveJSON(
+        @baseUrl + mappingName + "?token=#{token}"
+      ).then(
+        (mapping) =>
+          @mappings[mappingName].mappingObject = mapping
+          console.log("Done downloading:", mappingName)
+        (error) ->
+          console.error("Error downloading:", mappingName, error)
+      )
     )
 
 

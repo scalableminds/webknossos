@@ -8,7 +8,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import models.basics.SecuredBaseDAO
 import reactivemongo.api.indexes.{IndexType, Index}
 
-object TimeSpanDAO extends SecuredBaseDAO[TimeSpan]{
+object TimeSpanDAO extends SecuredBaseDAO[TimeSpan] {
 
   val collectionName = "timeSpans"
 
@@ -18,9 +18,9 @@ object TimeSpanDAO extends SecuredBaseDAO[TimeSpan]{
 
   def intervalFilter(start: Option[Long], end: Option[Long]) = {
 
-    if(start.isEmpty && end.isEmpty)
+    if (start.isEmpty && end.isEmpty)
       Json.obj()
-    else{
+    else {
       val startFilter = start.map(s => Json.obj("$gte" -> s)) getOrElse Json.obj()
       val endFilter = end.map(e => Json.obj("$lte" -> e)) getOrElse Json.obj()
 
@@ -29,11 +29,18 @@ object TimeSpanDAO extends SecuredBaseDAO[TimeSpan]{
 
   }
 
-  def findByUser(user: User, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(Json.obj("_user" -> user._id) ++ intervalFilter(start, end)).cursor[TimeSpan]().collect[List]()
-  }
+  def findByUser(user: User, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext) =
+    withExceptionCatcher {
+      find(Json.obj("_user" -> user._id) ++ intervalFilter(start, end)).cursor[TimeSpan]().collect[List]()
+    }
 
-  def findAllBetween(start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(intervalFilter(start, end)).cursor[TimeSpan]().collect[List]()
-  }
+  def findByAnnotation(annotation: String, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext) =
+    withExceptionCatcher {
+      find(Json.obj("annotation" -> annotation) ++ intervalFilter(start, end)).cursor[TimeSpan]().collect[List]()
+    }
+
+  def findAllBetween(start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext) =
+    withExceptionCatcher {
+      find(intervalFilter(start, end)).cursor[TimeSpan]().collect[List]()
+    }
 }

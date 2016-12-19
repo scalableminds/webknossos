@@ -52,7 +52,7 @@ object DefaultMails {
       bodyText = html.mail.register(name, Messages(brainDBresult)).body,
       recipients = List(receiver))
 
-  def verifiedMail(name: String, receiver: String) =
+  def activatedMail(name: String, receiver: String) =
     Mail(
       from = defaultFrom,
       subject = s"Your account on $uri got activated",

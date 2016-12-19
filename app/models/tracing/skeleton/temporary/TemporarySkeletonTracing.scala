@@ -54,10 +54,6 @@ case class TemporarySkeletonTracing(
   def temporaryDuplicate(id: String)(implicit ctx: DBAccessContext) =
     Fox.successful(this.copy(id = id))
 
-  def renameTrees(reNamer: TreeLike => String) = {
-    this.copy(_trees = _trees.map(tree => tree.changeName(reNamer(tree))))
-  }
-
   def saveToDB(implicit ctx: DBAccessContext) = {
     val s = SkeletonTracing.from(this)
     for{

@@ -96,7 +96,7 @@ ErrorHandling =
         "email",
         "firstName",
         "lastName",
-        "verified"
+        "isActive"
       ])
       return notice
     )

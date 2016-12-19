@@ -22,13 +22,13 @@ import play.api.libs.functional.syntax._
 import reactivemongo.core.commands.LastError
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
 import com.scalableminds.util.tools.Fox
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 
 case class User(
                  email: String,
                  firstName: String,
                  lastName: String,
-                 verified: Boolean = false,
+                 isActive: Boolean = false,
                  pwdHash: String = "",
                  md5hash: String = "",
                  teams: List[TeamMembership],
@@ -89,8 +89,11 @@ case class User(
   def logActivity(time: Long) =
     this.copy(lastActivity = time)
 
-  def verify =
-    this.copy(verified = true)
+  def activate =
+    this.copy(isActive = true)
+
+  def deactivate =
+    this.copy(isActive = false)
 
   def addTeam(teamMemberships: List[TeamMembership]) =
     this.copy(teams = teamMemberships ::: teams)
@@ -114,13 +117,14 @@ object User {
       (__ \ "email").write[String] and
       (__ \ "firstName").write[String] and
       (__ \ "lastName").write[String] and
-      (__ \ "verified").write[Boolean] and
+      (__ \ "isActive").write[Boolean] and
       (__ \ "teams").write[List[TeamMembership]] and
       (__ \ "experiences").write[Map[String, Int]] and
       (__ \ "lastActivity").write[Long] and
       (__ \ "isAnonymous").write[Boolean] and
       (__ \ "isEditable").write[Boolean])(u =>
-      (u.id, u.email, u.firstName, u.lastName, u.verified, u.teams, u.experiences, u.lastActivity, u.isAnonymous, u.isEditableBy(requestingUser)))
+      (u.id, u.email, u.firstName, u.lastName, u.isActive, u.teams, u.experiences,
+        u.lastActivity, u.isAnonymous, u.isEditableBy(requestingUser)))
 
   def userCompactWrites: Writes[User] =
     ((__ \ "id").write[String] and
@@ -131,7 +135,7 @@ object User {
       (__ \ "teams").write[List[TeamMembership]])( u =>
       (u.id, u.email, u.firstName, u.lastName, u.isAnonymous, u.teams))
 
-  val createNotVerifiedUser = User("","","", teams = Nil)
+  val defaultDeactivatedUser = User("","","", teams = Nil)
 }
 
 object UserDAO extends SecuredBaseDAO[User] {
@@ -185,19 +189,11 @@ object UserDAO extends SecuredBaseDAO[User] {
       verifyPassword(password, user.pwdHash)
     }
 
-  def insert(user: User, isVerified: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
-    if (isVerified) {
-      val u = user.verify
-      insert(u).map(_ => u)
-    } else
-      insert(user).map(_ => user)
-  }
-
-  def update(_user: BSONObjectID, firstName: String, lastName: String, verified: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
+  def update(_user: BSONObjectID, firstName: String, lastName: String, activated: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
     findAndModify(findByIdQ(_user), Json.obj("$set" -> Json.obj(
       "firstName" -> firstName,
       "lastName" -> lastName,
-      "verified" -> verified,
+      "isActive" -> activated,
       "teams" -> teams,
       "experiences" -> experiences)), returnNew = true)
 

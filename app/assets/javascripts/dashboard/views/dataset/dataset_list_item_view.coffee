@@ -175,7 +175,7 @@ class DatasetListItemView extends Marionette.CompositeView
 
   importFailed : (response) ->
 
-    if @isRendered and not @isDestroyed
+    if @isRendered() and not @isDestroyed()
       @ui.importLink.show()
       @ui.progressbarContainer.addClass("hide")
       @ui.row.addClass('import-failed')
@@ -200,7 +200,7 @@ class DatasetListItemView extends Marionette.CompositeView
             @model.fetch().then(@render.bind(@))
             Toast.message(responseJSON.messages)
           when "notStarted", "inProgress"
-            window.setTimeout((=> @updateProgress()), 100)
+            window.setTimeout((=> @updateProgress()), 1000)
           when "failed"
             @importFailed(responseJSON)
       )

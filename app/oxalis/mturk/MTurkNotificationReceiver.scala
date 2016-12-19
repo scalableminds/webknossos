@@ -65,9 +65,27 @@ object MTurkNotificationReceiver extends LazyLogging with FoxImplicits {
 
     implicit val exco = context.dispatcher
 
+    private var requestPause = 1.second
+
+    private val maxRequestPause = 1.minute
+
     override def preStart() = {
       logger.info("Started mturk notification receiver.")
-      context.system.scheduler.scheduleOnce(1.second, self, RequestNotifications)
+      resetRequestPause()
+    }
+
+    private def resetRequestPause(): Unit = {
+      requestPause = 1.second
+    }
+
+    private def increaseRequestPause(): Unit = {
+      if(requestPause < maxRequestPause){
+        requestPause *= 2
+      }
+    }
+
+    private def scheduleNotificationRequest(): Unit = {
+      context.system.scheduler.scheduleOnce(requestPause, self, RequestNotifications)
     }
 
     def receive = {
@@ -83,11 +101,13 @@ object MTurkNotificationReceiver extends LazyLogging with FoxImplicits {
             case _                 =>
           }
           sqsHelper.deleteMessages(messages, queueUrl)
-          context.system.scheduler.scheduleOnce(1.second, self, RequestNotifications)
+          resetRequestPause()
+          scheduleNotificationRequest()
         }.recover {
           case e: Exception =>
-            logger.error(s"An exception occured while trying to poll SQS messages. ${e.getMessage}", e)
-            context.system.scheduler.scheduleOnce(1.second, self, RequestNotifications)
+            logger.error(s"An exception occured while trying to poll SQS messages. ${e.getMessage}")
+            increaseRequestPause()
+            scheduleNotificationRequest()
         }
     }
 

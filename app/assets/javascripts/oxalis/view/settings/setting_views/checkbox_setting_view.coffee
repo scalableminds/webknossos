@@ -12,7 +12,11 @@ class CheckboxSettingView extends AbstractSettingView
       <%- displayName %>
     </div>
     <div class="col-sm-1">
-      <input type="checkbox" <%- boolToChecked(value) %>>
+      <input
+        type="checkbox"
+        <%- boolToString(value, "checked") %>
+        <%- boolToString(!enabled, "disabled") %>
+        >
     </div>
     <div class="col-sm-6"><div>
   """)
@@ -23,8 +27,8 @@ class CheckboxSettingView extends AbstractSettingView
 
 
   templateContext :
-    boolToChecked : (bool) ->
-      return if bool then "checked" else ""
+    boolToString : (bool, string) ->
+      return if bool then string else ""
 
 
   events :

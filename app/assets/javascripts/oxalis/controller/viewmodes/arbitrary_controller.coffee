@@ -214,8 +214,7 @@ class ArbitraryController
     rotation = @cam.getRotation()
     @model.skeletonTracing.createNewTree()
     @addNode(position, rotation)
-    if @isBranchpointvideoMode()
-        @model.skeletonTracing.setActiveTree(1)
+
     @cam.move [(pos.x - @arbitraryView.width / 2) * f, (pos.y - @arbitraryView.width / 2) * f, 0]
     if @isBranchpointvideoMode()
         @setActiveNode(activeNode.id, true)
@@ -388,7 +387,7 @@ class ArbitraryController
   setClippingDistance : (value) ->
 
     if @isBranchpointvideoMode()
-      @arbitraryView.setClippingDistance(@BRANCHPOINTVIDEOCLIPPINGDISTANCE)
+      @arbitraryView.setClippingDistance(constants.BRANCHPOINT_VIDEO_CLIPPING_DISTANCE)
     else
       @arbitraryView.setClippingDistance(value)
 

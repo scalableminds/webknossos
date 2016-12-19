@@ -3,20 +3,25 @@
  */
 package models.annotation
 
-import java.io.{FileInputStream, FileOutputStream, InputStream, File}
+import java.io._
 import java.nio.channels.Channels
 
-import com.scalableminds.util.io.NamedFileStream
+import scala.concurrent.Future
+
+import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFileStream, NamedFunctionStream, NamedStream}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
 import models.tracing.skeleton.SkeletonTracingLike
 import org.apache.commons.io.IOUtils
 import models.annotation.handler.SavedTracingInformationHandler
 import oxalis.nml.NMLService
 import play.api.Play
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
+import resource._
 
-trait AnnotationFileService extends FoxImplicits {
+trait AnnotationFileService extends FoxImplicits with LazyLogging{
 
   def annotation: Annotation
 
@@ -39,29 +44,18 @@ trait AnnotationFileService extends FoxImplicits {
 
   def writeAnnotationToFile(): Fox[Boolean] = {
     for {
-      in: InputStream <- annotationToInputStream()
       path <- outputPathForAnnotation()
-    } yield {
-      val f = new File(path)
-      val out = new FileOutputStream(f).getChannel
-      val ch = Channels.newChannel(in)
-      try {
-        out.transferFrom(ch, 0, in.available)
-        true
-      } finally {
-        in.close()
-        ch.close()
-        out.close()
-      }
-    }
+      out <- managed(new FileOutputStream(new File(path))).toFuture
+      _ <- annotationIntoOutputStream(out)
+    } yield true
   }
 
-  def loadAnnotationContentFromFileStream(): Fox[InputStream] = {
+  def loadAnnotationContentFromFileStream(): Fox[File] = {
     if (annotation.state.isFinished) {
       outputPathForAnnotation().map{ path =>
         val f = new File(path)
         if (f.exists())
-          Some(new FileInputStream(f))
+          Some(f)
         else
           None
       }
@@ -69,26 +63,29 @@ trait AnnotationFileService extends FoxImplicits {
       None
   }
 
-  def loadAnnotationContentStream(): Fox[InputStream] = {
+  def loadNamedAnnotationContentStream(name: String): Future[NamedStream] = {
     loadAnnotationContentFromFileStream().orElse {
       writeAnnotationToFile().flatMap{ x =>
         loadAnnotationContentFromFileStream()
       }
-    }.orElse(annotationToInputStream())
+    }.map{ file =>
+      NamedFileStream(file, name + ".nml")
+    }.getOrElse {
+      NamedFunctionStream(name + ".nml", os => annotationIntoOutputStream(os).futureBox.map(_ => Unit))
+    }
   }
 
-  def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedFileStream] = {
+  def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedStream] = {
     for{
-      annotationStream <- loadAnnotationContentStream()
       name <- SavedTracingInformationHandler.nameForAnnotation(annotation)
-    } yield
-      NamedFileStream( annotationStream, name + ".nml")
+      annotationStream <- loadNamedAnnotationContentStream(name)
+    } yield annotationStream
   }
 
-  def annotationToInputStream(): Fox[InputStream] = {
+  def annotationIntoOutputStream(os: OutputStream): Fox[Boolean] = {
     annotation.content.flatMap {
       case t: SkeletonTracingLike =>
-        NMLService.toNML(t).map(s => IOUtils.toInputStream(s, "utf-8")).toFox
+        NMLService.toNML(t, os)
       case _ =>
         throw new Exception("Invalid content!")
     }

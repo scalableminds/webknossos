@@ -5,7 +5,7 @@ general:
 
 machine:
   environment:
-    SBT_VERSION_TAG: sbt-0.13.9_mongo-3.2.1_node-4.x_jdk-8
+    SBT_VERSION_TAG: sbt-0.13.9_mongo-3.2.1_node-6.x_jdk-8
 
 dependencies:
   pre:
@@ -19,6 +19,7 @@ dependencies:
     - "~/.m2"
     - "~/.ivy2"
     - "~/.sbt"
+    - "~/.yarn-cache"
     - "node_modules"
   override:
     - docker pull scalableminds/sbt:$SBT_VERSION_TAG

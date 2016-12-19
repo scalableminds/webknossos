@@ -7,7 +7,7 @@ import com.scalableminds.util.geometry.Point3D
 import scala.concurrent.Future
 
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import models.user.{Experience, User}
 import models.annotation._
 import play.api.libs.iteratee.Enumerator

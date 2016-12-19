@@ -41,9 +41,9 @@ team.noOwner=This action is restricted to the creator of the team.
 team.admin.notAllowed=You are not allowed to administrate team {0}.
 team.notFound=Team could not be found.
 
-user.verified={0} has been verified
+user.activated={0} has been activated
 user.notFound=User not found
-user.notVerified=Your account hasn''t been activated yet
+user.deactivated=Your account hasn''t been activated yet
 user.deleted={0} has been deleted
 user.bulk.empty=No user has been chosen
 user.password.nomatch=Passwords don''t match
@@ -94,6 +94,7 @@ dataSource.import.alreadyFinished=Import of the dataset already finished
 dataSource.import.alreadyInProgress=Import of the dataset already in progress
 
 dataStore.notAvailable=Datastore not available. Please try again in a few minutes.
+dataStore.list.failed=Failed to retrieve list of data stores.
 
 ndstore.invalid.response=Received invalid response from NDStore: ''{0}''
 ndstore.response.parseFailure=Received invalid json from NDStore
@@ -137,7 +138,7 @@ nml.file.uploadSuccess=Successfully uploaded file
 nml.file.createFailed=Failed to create annotation from file
 nml.file.notFound=Couldn''t extract NML file
 nml.file.invalid=Couldn''t parse file: {0}. {1}
-nml.file.noFile=No file uploaded
+nml.file.noFile=No file or file with empty content uploaded
 
 owner=Owner
 isForAnonymous=Create anonymous users
@@ -182,6 +183,7 @@ annotation.reset.failed=Couldn''t reset tracing to base
 annotation.merge.success=Merging successfully done
 annotation.dirtyState=Annotation is not up to date. You can''t make any changes
 annotation.update.impossible=This annotation can''t be updated (read only)
+annotation.revert.toOld=Reverting the tracing to a previous version is not possible due to the tracing beeing to old.
 annotation.preferedMode.invalid=Prefered mode is invalid
 annotation.mode.invalid=Invalid annotation mode
 

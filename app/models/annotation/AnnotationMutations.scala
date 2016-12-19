@@ -1,6 +1,6 @@
 package models.annotation
 
-import com.scalableminds.util.io.NamedFileStream
+import com.scalableminds.util.io.{NamedFileStream, NamedStream}
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -30,7 +30,7 @@ trait AnnotationMutationsLike {
 
   def cancelTask()(implicit ctx: DBAccessContext): Fox[AType]
 
-  def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedFileStream]
+  def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedStream]
 }
 
 class AnnotationMutations(val annotation: Annotation)

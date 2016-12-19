@@ -5,37 +5,22 @@ import javax.inject.Inject
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-import com.scalableminds.braingames.binary.models._
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserService}
-import net.liftweb.common.{Failure, Full}
-import org.apache.commons.codec.binary.Base64
-import org.apache.xalan.res.XSLTErrorResources_pt_BR
 import oxalis.ndstore.{ND2WK, NDServerConnection}
 import oxalis.security.{AuthenticatedRequest, Secured}
-import play.api.Logger
-import play.api.data.validation.ValidationError
-import play.api.libs.json._
-import play.api.libs.json.Json._
-import play.api.libs.functional.syntax._
 import play.api.Play.current
 import play.api.cache.Cache
-import play.api.data.Form
-import play.api.data.Forms._
-import play.api.i18n.Messages.Message
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.libs.ws.{WS, WSResponse}
-import play.api.mvc.BodyParsers.parse
 import play.twirl.api.Html
-import reactivemongo.api.commands.WriteResult
 
 class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
@@ -73,8 +58,6 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
               result
           }
       }
-
-
 
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
@@ -181,39 +164,6 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
-  def uploadForm = Form(
-    tuple(
-      "name" -> nonEmptyText.verifying("dataSet.name.invalid",
-        n => DataSetService.isProperDataSetName(n)),
-      "team" -> nonEmptyText,
-      "scale" -> mapping(
-        "scale" -> text.verifying("scale.invalid",
-          p => p.matches(Scale.formRx.toString)))(Scale.fromForm)(Scale.toForm)
-    )).fill(("", "", Scale.default))
-
-  def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
-    uploadForm.bindFromRequest(request.body.dataParts).fold(
-      hasErrors =
-        formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-      success = {
-        case (name, team, scale) =>
-          for {
-            _ <- checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
-            _ <- ensureTeamAdministration(request.user, team)
-            zipFile <- request.body.file("zipFile") ?~> Messages("zip.file.notFound")
-            settings = DataSourceSettings(None, scale, None)
-            upload = DataSourceUpload(name, team, zipFile.ref.file.getAbsolutePath, Some(settings))
-            _ <- DataStoreHandler.uploadDataSource(upload)
-          } yield {
-            JsonOk(Messages("dataSet.upload.success"))
-          }
-      })
-  }
-
-  private def checkIfNewDataSetName(name: String)(implicit ctx: DBAccessContext) = {
-    DataSetService.findDataSource(name)(GlobalAccessContext).reverse
-  }
-
   val externalDataSetFormReads =
     ((__ \ 'server).read[String] and
       (__ \ 'name).read[String] and
@@ -224,7 +174,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     withJsonBodyUsing(externalDataSetFormReads){
       case (server, name, token, team) =>
         for {
-          _ <- checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
+          _ <- DataSetService.checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
           _ <- ensureTeamAdministration(request.user, team)
           ndProject <- NDServerConnection.requestProjectInformationFromNDStore(server, name, token)
           dataSet <- ND2WK.dataSetFromNDProject(ndProject, team)

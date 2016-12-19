@@ -126,9 +126,8 @@ class Model extends Backbone.Model
     )
 
     ErrorHandling.assertExtendContext({
-      task: @get("tracingId")
-      dataSet: dataset.get("name")
-
+      task : @get("tracingId")
+      dataSet : dataset.get("name")
     })
 
     console.log "tracing", tracing
@@ -138,14 +137,7 @@ class Model extends Backbone.Model
     app.scaleInfo = new ScaleInfo(dataset.get("scale"))
 
     if (bb = tracing.content.boundingBox)?
-      @boundingBox = {
-        min : bb.topLeft
-        max : [
-          bb.topLeft[0] + bb.width
-          bb.topLeft[1] + bb.height
-          bb.topLeft[2] + bb.depth
-        ]
-      }
+      @taskBoundingBox = @computeBoundingBoxFromArray(bb.topLeft.concat([bb.width, bb.height, bb.depth]))
 
     @connectionInfo = new ConnectionInfo()
     @binary = {}
@@ -167,8 +159,8 @@ class Model extends Backbone.Model
     flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
     @set("flycam", flycam)
     @set("flycam3d", flycam3d)
-    @listenTo(flycam3d, "changed", (matrix, zoomStep) => flycam.setPosition(matrix[12..14]))
-    @listenTo(flycam, "positionChanged" : (position) => flycam3d.setPositionSilent(position))
+    @listenTo(flycam3d, "changed", (matrix, zoomStep) -> flycam.setPosition(matrix[12..14]))
+    @listenTo(flycam, "positionChanged" : (position) -> flycam3d.setPositionSilent(position))
 
     if @get("controlMode") == constants.CONTROL_MODE_TRACE
 
@@ -213,6 +205,22 @@ class Model extends Backbone.Model
     @trigger("change:mode", mode)
 
 
+  setUserBoundingBox : (bb) ->
+
+    @userBoundingBox = @computeBoundingBoxFromArray(bb)
+    @trigger("change:userBoundingBox", @userBoundingBox)
+
+
+  computeBoundingBoxFromArray : (bb) ->
+
+    [x, y, z, width, height, depth] = bb
+
+    return {
+      min : [x, y, z]
+      max : [x + width, y + height, z + depth]
+    }
+
+
   # For now, since we have no UI for this
   buildMappingsObject : ->
 
@@ -220,9 +228,9 @@ class Model extends Backbone.Model
 
     if segmentationBinary?
       window.mappings = {
-        getAll : => segmentationBinary.mappings.getMappingNames()
-        getActive : => segmentationBinary.activeMapping
-        activate : (mapping) => segmentationBinary.setActiveMapping(mapping)
+        getAll : -> segmentationBinary.mappings.getMappingNames()
+        getActive : -> segmentationBinary.activeMapping
+        activate : (mapping) -> segmentationBinary.setActiveMapping(mapping)
       }
 
 

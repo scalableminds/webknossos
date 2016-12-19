@@ -1,7 +1,7 @@
 package models.tracing
 
-import com.scalableminds.util.geometry.{Vector3D, Point3D, BoundingBox}
-import models.annotation.AnnotationSettings
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import models.annotation.{AnnotationContent, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -10,9 +10,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 
 
 trait CommonTracingService extends FoxImplicits {
-  def dao: SecuredBaseDAO[_ <: CommonTracing]
-
-
+  def dao: SecuredBaseDAO[_ <: AnnotationContent]
 
   def updateEditPosRot(editPosition: Point3D, editRotation: Vector3D, tracingId: String)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     dao.withValidId(tracingId) {

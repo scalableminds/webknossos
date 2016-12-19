@@ -38,7 +38,7 @@ class MergeModalView extends ModalView
       <label for="nml">NML</label>
       <div class="row">
         <div class="col-md-10">
-          <form action="<%- jsRoutes.controllers.NMLIOController.upload().url %>"
+          <form action="<%- jsRoutes.controllers.AnnotationIOController.upload().url %>"
               method="POST"
               enctype="multipart/form-data"
               id="upload-and-explore-form"

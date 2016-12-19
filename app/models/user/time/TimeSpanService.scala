@@ -8,10 +8,11 @@ import models.task.TaskService
 import play.api.Play
 import play.api.libs.concurrent.Akka
 import akka.actor.{Actor, Props}
-import models.user.{UserDAO, User}
-import models.annotation.AnnotationLike
-import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
+import models.user.{User, UserDAO}
+import models.annotation.{Annotation, AnnotationLike, AnnotationService}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import scala.concurrent.duration._
+
 import net.liftweb.common.Full
 import reactivemongo.bson.BSONObjectID
 import akka.agent.Agent
@@ -31,9 +32,31 @@ object TimeSpanService extends FoxImplicits{
     timeSpanTracker ! TrackTime(timestamp, user._id, annotation, ctx)
   }
 
-  def loggedTimeOfUser[T](user: User, groupingF: TimeSpan => T, start: Option[Long] = None, end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
+  def loggedTimeOfUser[T](
+    user: User,
+    groupingF: TimeSpan => T,
+    start: Option[Long] = None,
+    end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
+
     for {
       timeTrackingOpt <- TimeSpanDAO.findByUser(user, start, end).futureBox
+    } yield {
+      timeTrackingOpt match {
+        case Full(timeSpans) =>
+          timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
+        case _ =>
+          Map.empty[T, Duration]
+      }
+    }
+
+  def loggedTimeOfAnnotation[T](
+    annotation: String,
+    groupingF: TimeSpan => T,
+    start: Option[Long] = None,
+    end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
+
+    for {
+      timeTrackingOpt <- TimeSpanDAO.findByAnnotation(annotation, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -91,20 +114,41 @@ object TimeSpanService extends FoxImplicits{
       timeSpan
     }
 
+    private def logTimeToAnnotation(duration: Long, annotation: Option[AnnotationLike]) = {
+      // Log time to annotation
+      annotation.map {
+        case a: Annotation =>
+          AnnotationService.logTime(duration, a._id)(GlobalAccessContext)
+        case _ =>
+        // do nothing, this is not a stored annotation
+      }
+    }
+
+    private def logTimeToTask(duration: Long, annotation: Option[AnnotationLike]) = {
+      // Log time to task
+      annotation.flatMap(_._task).foreach{ taskId =>
+        TaskService.logTime(duration, taskId)(GlobalAccessContext)
+      }
+    }
+
+    private def logTimeToUser(duration: Long, annotation: Option[AnnotationLike], _user: BSONObjectID) = {
+      // Log time to user
+      UserDAO.findOneById(_user)(GlobalAccessContext).map{ user =>
+        BrainTracing.logTime(user, duration, annotation)(GlobalAccessContext)
+      }
+    }
+
     def receive = {
       case TrackTime(timestamp, _user, annotation, ctx) =>
         val timeSpan = lastUserActivity().get(_user) match {
           case Some(last) if isNotInterrupted(timestamp, last) =>
             val duration = timestamp - last.lastUpdate
             val updated = last.copy(lastUpdate = timestamp, time = last.time + duration)
-            // Log time to task
-            annotation.flatMap(_._task).foreach{ taskId =>
-              TaskService.logTime(duration, taskId)(GlobalAccessContext)
-            }
-            // Log time to user
-            UserDAO.findOneById(_user)(GlobalAccessContext).map{ user =>
-              BrainTracing.logTime(user, duration, annotation)(GlobalAccessContext)
-            }
+
+            logTimeToTask(duration, annotation)
+            logTimeToAnnotation(duration, annotation)
+            logTimeToUser(duration, annotation, _user)
+
             TimeSpanDAO.update(updated._id, updated)(ctx)
 
             if(belongsToSameTracing(last, annotation))

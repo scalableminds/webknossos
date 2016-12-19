@@ -2,13 +2,12 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent._
 import scala.concurrent.duration._
 import akka.util.Timeout
 import com.scalableminds.util.mvc.JsonResult
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedBoolean
 import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
 import models.task.TaskDAO
@@ -16,10 +15,8 @@ import models.user.time._
 import models.user.{SpeedMeasurementService, UsedAnnotationDAO, User, UserDAO}
 import net.liftweb.common.{Full, _}
 import oxalis.security.{AuthenticatedRequest, Secured}
-import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsArray, JsObject, _}
 import play.twirl.api.Html
 
@@ -29,7 +26,10 @@ import play.twirl.api.Html
  * Date: 01.06.13
  * Time: 02:09
  */
-class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with TracingInformationProvider {
+class AnnotationController @Inject()(val messagesApi: MessagesApi)
+  extends Controller
+    with Secured
+    with TracingInformationProvider {
 
   implicit val timeout = Timeout(5 seconds)
 
@@ -73,17 +73,34 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     Ok(empty)
   }
 
+  def loggedTime(typ: String, id: String) = Authenticated.async { implicit request =>
+    val annotationId = AnnotationIdentifier(typ, id)
+    withAnnotation(annotationId) { annotation =>
+      for {
+        _ <- annotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
+        loggedTimeAsMap <- TimeSpanService.loggedTimeOfAnnotation(id, TimeSpan.groupByMonth)
+      } yield {
+        Ok(Json.arr(
+          loggedTimeAsMap.map {
+            case (month, duration) =>
+              Json.obj("interval" -> month, "durationInSeconds" -> duration.toSeconds)
+          }
+        ))
+      }
+    }
+  }
+
   // DISABLED: Due to changes in the json update protocol we are currently unable to parse all previous
   // json updates and hence we can not use them to replay previous updates. It is also infeasible to write
   // an evolution for this since it is to expensive to calculate the missing information to create the proper updates
 
-  // def combineUpdates(updates: List[AnnotationUpdate]) = updates.foldLeft(Seq.empty[JsValue]){
-  //   case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
-  //     updates ++ nextUpdates
-  //   case (updates, u) =>
-  //     Logger.warn("dropping update during replay! Update: " + u)
-  //     updates
-  // }
+   def combineUpdates(updates: List[AnnotationUpdate]) = updates.foldLeft(Seq.empty[JsValue]){
+     case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
+       updates ++ nextUpdates
+     case (updates, u) =>
+       logger.warn("dropping update during replay! Update: " + u)
+       updates
+   }
 
   // def listUpdates(typ: String, id: String)= Authenticated.async { implicit request =>
   //   withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
@@ -116,21 +133,22 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
   //   } yield JsonOk(Messages("annotation.updates.transfered"))
   // }
 
-  // def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
-  //   for {
-  //     oldAnnotation <- findAnnotation(typ, id)
-  //     _ <- isUpdateAllowed(oldAnnotation, version).toFox
-  //     updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion=version)
-  //     combinedUpdate = JsArray(combineUpdates(updates))
-  //     updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
-  //     updatedAnnotation <- oldAnnotation.muta.resetToBase()
-  //     result <- handleUpdates(updateableAnnotation, combinedUpdate, version)
-  //     _ <- AnnotationUpdateService.removeAll(typ, id, aboveVersion = version)
-  //   } yield {
-  //     Logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
-  //     JsonOk(result, "annotation.reverted")
-  //   }
-  // }
+   def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
+     for {
+       oldAnnotation <- findAnnotation(typ, id)
+       _ <- isUpdateAllowed(oldAnnotation, version).toFox
+       _ <- oldAnnotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
+       updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion=version) ?~> Messages("annotation.revert.findUpdatesFailed")
+       combinedUpdate = JsArray(combineUpdates(updates))
+       resetAnnotation <- oldAnnotation.muta.resetToBase() ?~> Messages("annotation.revert.resetToBaseFailed")
+       updateableAnnotation <- isUpdateable(resetAnnotation) ?~> Messages("annotation.update.impossible")
+       result <- handleUpdates(updateableAnnotation, combinedUpdate, version) ?~> Messages("annotation.revert.handlingUpdatesFailed")
+       _ <- AnnotationUpdateService.removeAll(typ, id, aboveVersion = version) ?~> Messages("annotation.revert.deleteUpdatesFailed")
+     } yield {
+       logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
+       JsonOk(result, "annotation.reverted")
+     }
+   }
 
   def reset(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
@@ -162,25 +180,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
     }
   }
 
-  def download(typ: String, id: String) = Authenticated.async { implicit request =>
-    withAnnotation(AnnotationIdentifier(typ, id)) {
-      annotation =>
-        for {
-          name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
-          _ <- annotation.restrictions.allowDownload(request.user) ?~> Messages("annotation.download.notAllowed")
-          annotationDAO <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-          content <- annotation.content ?~> Messages("annotation.content.empty")
-          stream <- content.toDownloadStream
-        } yield {
-          Ok.chunked(stream.andThen(Enumerator.eof[Array[Byte]])).withHeaders(
-            CONTENT_TYPE ->
-              "application/octet-stream",
-            CONTENT_DISPOSITION ->
-              s"filename=${'"'}${name + content.downloadFileExtension}${'"'}")
-        }
-    }
-  }
-
   def createExplorational = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
       dataSetName <- postParameter("dataSetName") ?~> Messages("dataSet.notSupplied")
@@ -202,7 +201,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi) extends Contr
           Json.obj("version" -> version)
         }
       case t                  =>
-        Logger.info("Failed to handle json update. Tried: " + t)
+        logger.info("Failed to handle json update. Tried: " + t)
         Failure(Messages("format.json.invalid"))
     }
   }

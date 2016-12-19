@@ -3,7 +3,7 @@ package models.tracing.skeleton
 import com.scalableminds.util.geometry.Vector3D
 import play.api.libs.json._
 import com.scalableminds.util.image.Color
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import scala.concurrent.Future
 
@@ -11,7 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import oxalis.nml.{BranchPoint, Comment}
 
-object TracingUpdater {
+object TracingUpdater extends LazyLogging {
 
   implicit object TracingUpdateReads extends Reads[TracingUpdater] {
     def reads(js: JsValue) = {
@@ -38,7 +38,7 @@ object TracingUpdater {
       Some(updater.createUpdate())
     } catch {
       case e: java.lang.RuntimeException =>
-        Logger.error("Invalid json: " + e + "\n While trying to parse:\n" + Json.prettyPrint(js))
+        logger.error("Invalid json: " + e + "\n While trying to parse:\n" + Json.prettyPrint(js))
         None
     }
   }
@@ -114,6 +114,10 @@ case class MergeTree(value: JsObject) extends TracingUpdater {
         updatedTracing <- t.updateStatistics(_.mergeTree) ?~> "Failed to update tracing statistics."
         _ <- DBNodeDAO.moveAllNodes(source._id, target._id) ?~> "Failed to move all nodes."
         _ <- DBEdgeDAO.moveAllEdges(source._id, target._id) ?~> "Failed to move all edges."
+        updated = target.copy(
+          branchPoints = target.branchPoints ::: source.branchPoints,
+          comments = target.comments ::: source.comments)
+        _ <- DBTreeDAO.update(target._id, updated) ?~> "Failed to update tree."
         _ <- DBTreeService.remove(source._id) ?~> "Failed to remove source tree."
       } yield updatedTracing
     }
@@ -121,8 +125,6 @@ case class MergeTree(value: JsObject) extends TracingUpdater {
 }
 
 case class MoveTreeComponent(value: JsObject) extends TracingUpdater {
-
-  import oxalis.nml.Node
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val nodeIds = (value \ "nodeIds").as[List[Int]]
@@ -132,7 +134,13 @@ case class MoveTreeComponent(value: JsObject) extends TracingUpdater {
       for {
         source <- t.tree(sourceId).toFox ?~> "Failed to access source tree."
         target <- t.tree(targetId).toFox ?~> "Failed to access target tree."
-        _ <- DBTreeService.moveTreeComponent(nodeIds, source._id, target._id) ?~> "Failed to move tree compontents."
+        _ <- DBTreeService.moveNodesAndEdges(nodeIds, source._id, target._id) ?~> "Failed to move tree compontents."
+        (movedBp, remainingBp) = source.branchPoints.partition(bp => nodeIds.contains(bp.id))
+        (movedC, remainingC) = source.comments.partition(c => nodeIds.contains(c.node))
+        updatedSource = source.copy(branchPoints = remainingBp, comments = remainingC)
+        updatedTarget = target.copy(branchPoints = movedBp ::: target.branchPoints, comments = movedC ::: target.comments)
+        _ <- DBTreeDAO.update(target._id, updatedTarget) ?~> "Failed to update tree."
+        _ <- DBTreeDAO.update(source._id, updatedSource) ?~> "Failed to update tree."
       } yield t
     }
   }

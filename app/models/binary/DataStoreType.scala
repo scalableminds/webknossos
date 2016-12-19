@@ -11,31 +11,32 @@ sealed trait DataStoreType {
   val name: String
 }
 
-case object WebKnossosStore extends DataStoreType{
+case object WebKnossosStore extends DataStoreType {
   val name = "webknossos-store"
 }
 
-case object NDStore extends DataStoreType{
+case object NDStore extends DataStoreType {
   val name = "ndstore"
 }
 
-object DataStoreType{
-  def stringToType(s: String) = s match {
+object DataStoreType {
+
+  def stringToType(s: String): DataStoreType = s match {
     case WebKnossosStore.name => WebKnossosStore
-    case NDStore.name => NDStore
-    case _ => throw new UnsupportedOperationException()
+    case NDStore.name         => NDStore
+    case _                    => throw new UnsupportedOperationException()
   }
 
   implicit object DataStoreTypeJsonFormatter extends Format[DataStoreType] {
     override def reads(json: JsValue): JsResult[DataStoreType] = json match {
-      case JsString(value)  =>
-        try{
+      case JsString(value) =>
+        try {
           JsSuccess(stringToType(value))
         } catch {
           case _: UnsupportedOperationException =>
             JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.string.invalidContent"))))
         }
-      case _ =>
+      case _               =>
         JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.string"))))
     }
 
@@ -43,8 +44,9 @@ object DataStoreType{
   }
 
   implicit object DataStoreTypeFormatter extends BSONHandler[BSONString, DataStoreType] {
-    override def write(t: DataStoreType) = BSONString(t.name)
+    override def write(t: DataStoreType): BSONString = BSONString(t.name)
 
-    override def read(bson: BSONString) = stringToType(bson.value)
+    override def read(bson: BSONString): DataStoreType = stringToType(bson.value)
   }
+
 }

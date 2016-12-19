@@ -5,13 +5,13 @@ import scala.concurrent.Future
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
 import models.basics._
 import models.mturk.{MTurkAssignmentConfig, MTurkProjectDAO}
-import models.task.{OpenAssignmentDAO, OpenAssignmentService, TaskDAO, TaskService}
+import models.task.{OpenAssignmentDAO, TaskDAO, TaskService}
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import oxalis.mturk.MTurkService
-import play.api.Logger
 import play.api.data.validation.ValidationError
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -41,7 +41,8 @@ case class Project(
 object Project {
   implicit val projectFormat = Json.format[Project]
 
-  def StringObjectIdReads(key: String) = Reads.filter[String](ValidationError("objectid.invalid", key))(BSONObjectID.parse(_).isSuccess)
+  def StringObjectIdReads(key: String) =
+    Reads.filter[String](ValidationError("objectid.invalid", key))(BSONObjectID.parse(_).isSuccess)
 
   def projectPublicWrites(project: Project, requestingUser: User): Future[JsObject] =
     for {
@@ -67,16 +68,22 @@ object Project {
     }
   }
 
-  def projectPublicWritesWithStatus(project: Project, requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] =
+  def projectPublicWritesWithStatus(
+    project: Project,
+    requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] = {
+
     for {
       open <- numberOfOpenAssignments(project) getOrElse -1
       projectJson <- projectPublicWrites(project, requestingUser)
     } yield {
       projectJson + ("numberOfOpenAssignments" -> JsNumber(open))
     }
+  }
+
+  private val validateProjectName = Reads.pattern("^[a-zA-Z0-9_-]*$".r, "project.name.invalidChars")
 
   val projectPublicReads: Reads[Project] =
-    ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd Reads.pattern("^[a-zA-Z0-9_-]*$".r, "project.name.invalidChars")) and
+    ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
       (__ \ 'team).read[String] and
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
@@ -86,7 +93,7 @@ object Project {
         Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, assignmentLocation))
 }
 
-object ProjectService extends FoxImplicits {
+object ProjectService extends FoxImplicits with LazyLogging {
   def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     ProjectDAO.remove("name", project.name).flatMap {
       case result if result.n > 0 =>
@@ -94,7 +101,7 @@ object ProjectService extends FoxImplicits {
           _ <- TaskService.removeAllWithProject(project)
         } yield true
       case _                      =>
-        Logger.warn("Tried to remove project without permission.")
+        logger.warn("Tried to remove project without permission.")
         Fox.successful(false)
     }
   }

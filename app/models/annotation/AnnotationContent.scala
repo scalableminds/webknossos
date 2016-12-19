@@ -1,11 +1,14 @@
 package models.annotation
 
 import java.util.Date
+import javax.xml.stream.XMLStreamWriter
+
+import scala.xml.NodeSeq
 
 import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, FallbackLayer}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataSet, DataSetDAO, DataStoreInfo}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -29,6 +32,8 @@ trait AnnotationContent {
 
   def totalBuckets: Option[Long]
 
+  def zoomLevel: Double
+
   def boundingBox: Option[BoundingBox]
 
   def timestamp: Long
@@ -47,7 +52,7 @@ trait AnnotationContent {
 
   def contentType: String
 
-  def toDownloadStream(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]]
+  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]]
 
   def downloadFileExtension: String
 
@@ -58,7 +63,7 @@ trait AnnotationContent {
   def dataSet(implicit ctx: DBAccessContext): Fox[DataSet] = DataSetDAO.findOneBySourceName(dataSetName)
 }
 
-object AnnotationContent {
+object AnnotationContent extends FoxImplicits {
 
   import AnnotationSettings._
 
@@ -69,14 +74,14 @@ object AnnotationContent {
       (__ \ 'resolutions).write[List[Int]] and
       (__ \ 'fallback).write[Option[FallbackLayer]] and
       (__ \ 'elementClass).write[String] and
-      (__ \ 'mappings).write[List[DataLayerMapping]])(l =>
+      (__ \ 'mappings).write[List[DataLayerMapping]]) (l =>
       (l.name, l.category, l.maxCoordinates, l.resolutions, l.fallback, l.elementClass, l.mappings))
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and
       (__ \ 'dataStore).write[DataStoreInfo] and
       (__ \ 'scale).write[Option[Scale]] and
-      (__ \ 'dataLayers).write[Option[List[DataLayer]]])(d =>
+      (__ \ 'dataLayers).write[Option[List[DataLayer]]]) (d =>
       (d.name, d.dataStoreInfo, d.dataSource.map(_.scale), d.dataSource.map(_.dataLayers)))
 
   def writeAsJson(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
@@ -95,6 +100,52 @@ object AnnotationContent {
         "totalBuckets" -> ac.totalBuckets,
         "boundingBox" -> ac.boundingBox,
         "contentType" -> ac.contentType)
+    }
+  }
+
+  def writeParametersAsXML(
+    ac: AnnotationContent,
+    writer: XMLStreamWriter)(implicit ctx: DBAccessContext): Fox[Boolean] = {
+
+    for {
+      dataSet <- DataSetDAO.findOneBySourceName(ac.dataSetName)
+      dataSource <- dataSet.dataSource.toFox
+    } yield {
+      writer.writeStartElement("experiment")
+      writer.writeAttribute("name", dataSet.name)
+      writer.writeEndElement()
+      writer.writeStartElement("scale")
+      writer.writeAttribute("x", dataSource.scale.x.toString)
+      writer.writeAttribute("y", dataSource.scale.y.toString)
+      writer.writeAttribute("z", dataSource.scale.z.toString)
+      writer.writeEndElement()
+      writer.writeStartElement("offset")
+      writer.writeAttribute("x", "0")
+      writer.writeAttribute("y", "0")
+      writer.writeAttribute("z", "0")
+      writer.writeEndElement()
+      writer.writeStartElement("time")
+      writer.writeAttribute("ms", ac.timestamp.toString)
+      writer.writeEndElement()
+      writer.writeStartElement("editPosition")
+      writer.writeAttribute("x", ac.editPosition.x.toString)
+      writer.writeAttribute("y", ac.editPosition.y.toString)
+      writer.writeAttribute("z", ac.editPosition.z.toString)
+      writer.writeEndElement()
+      writer.writeStartElement("editRotation")
+      writer.writeAttribute("xRot", ac.editRotation.x.toString)
+      writer.writeAttribute("yRot", ac.editRotation.y.toString)
+      writer.writeAttribute("zRot", ac.editRotation.z.toString)
+      writer.writeEndElement()
+      writer.writeStartElement("zoomLevel")
+      writer.writeAttribute("zoom", ac.zoomLevel.toString)
+      writer.writeEndElement()
+      writer.writeStartElement("connection")
+      writer.writeAttribute("roundTripTime", ac.roundTripTime.getOrElse(0).toString)
+      writer.writeAttribute("bandwidth", ac.bandwidth.getOrElse(0).toString)
+      writer.writeAttribute("totalBuckets", ac.totalBuckets.getOrElse(0).toString)
+      writer.writeEndElement()
+      true
     }
   }
 }

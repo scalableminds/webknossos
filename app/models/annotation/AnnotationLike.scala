@@ -12,7 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DBAccessContext}
 import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
-import play.api.Logger
+import com.typesafe.scalalogging.LazyLogging
 import models.tracing.AnnotationStatistics
 import oxalis.view.{ResourceActionCollection, ResourceAction}
 import play.api.libs.json.Json.JsValueWrapper
@@ -73,6 +73,15 @@ trait AnnotationLike extends AnnotationStatistics {
   def makeReadOnly: AnnotationLike
 
   def saveToDB(implicit ctx: DBAccessContext): Fox[AnnotationLike]
+
+  def tracingTime: Option[Long]
+
+  def isRevertPossible: Boolean = {
+    // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
+    // hence we need a way to decide if a tracing can safely be revert. We will use the created date of the
+    // annotation to do so
+    created > 1470002400000L  // 1.8.2016, 00:00:00
+  }
 }
 
 object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
@@ -104,7 +113,8 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
       "downloadUrl" +> a.relativeDownloadUrl.map(toAbsoluteUrl),
       "content" +> a.content.flatMap(AnnotationContent.writeAsJson(_)).getOrElse(JsNull),
       "contentType" +> a.content.map(_.contentType).getOrElse(""),
-      "dataSetName" +> a.dataSetName
+      "dataSetName" +> a.dataSetName,
+      "tracingTime" +> a.tracingTime
     )
   }
 }

@@ -28,6 +28,7 @@ case class Annotation(
                        typ: String = AnnotationType.Explorational,
                        version: Int = 0,
                        _name: Option[String] = None,
+                       tracingTime: Option[Long] = None,
                        created : Long = System.currentTimeMillis,
                        _id: BSONObjectID = BSONObjectID.generate,
                        isActive: Boolean = true,
@@ -87,7 +88,7 @@ case class Annotation(
       ResourceAction(traceOrView, AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
       ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), isAjax = true, clazz = "trace-finish"),
       ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), isAjax = true),
-      ResourceAction(ResourceAction.Download, AnnotationController.download(typ, id), icon = Some("fa fa-download")),
+      ResourceAction(ResourceAction.Download, AnnotationIOController.download(typ, id), icon = Some("fa fa-download")),
       ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), isAjax = true)
     )
 
@@ -99,7 +100,7 @@ object Annotation {
   implicit val annotationFormat = Json.format[Annotation]
 
   def relativeDownloadUrlOf(typ: String, id: String): String =
-    controllers.routes.AnnotationController.download(typ, id).url
+    controllers.routes.AnnotationIOController.download(typ, id).url
 
   def transformToJson(annotation: Annotation)(implicit ctx: DBAccessContext): Future[JsObject] = {
     for {
@@ -119,8 +120,8 @@ object Annotation {
         "name" -> annotation.name,
         "id" -> annotation.id,
         "formattedHash" -> Formatter.formatHash(annotation.id),
-        "stats" -> stats.map(_.writeAsJson).toOption
-
+        "stats" -> stats.map(_.writeAsJson).toOption,
+        "tracingTime" -> annotation.tracingTime
       )
     }
   }
@@ -198,6 +199,9 @@ object AnnotationDAO
 
     find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }
+
+  def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
+    update(Json.obj("_id" -> _annotation), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
 
   def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Option[Boolean], annotationTypes: List[AnnotationType], limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     var q = Json.obj(

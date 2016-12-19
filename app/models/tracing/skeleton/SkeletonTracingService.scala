@@ -74,7 +74,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
     for {
       _ <- SkeletonTracingDAO.insert(tracing)
       trees <- tracingLike.trees
-      - <- Fox.serialSequence(trees)(tree => DBTreeService.insert(tracing._id, tree))
+      _ <- Fox.serialSequence(trees)(tree => DBTreeService.insert(tracing._id, tree))
     } yield tracing
   }
 
@@ -107,21 +107,6 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
 
   def findOneById(tracingId: String)(implicit ctx: DBAccessContext) =
     SkeletonTracingDAO.findOneById(tracingId)
-
-  def uniqueTreePrefix(tracing: SkeletonTracingLike, user: Option[User], task: Option[Task])(tree: TreeLike): String = {
-    val userName = user.map(_.abreviatedName) getOrElse ""
-    val taskName = task.map(_.id) getOrElse ""
-    formatHash(taskName) + "_" + userName + "_" + f"tree${tree.treeId}%03d"
-  }
-
-  def renameTreesOfTracing(tracing: SkeletonTracing, user: Fox[User], task: Fox[Task])(implicit ctx: DBAccessContext): Fox[TemporarySkeletonTracing] = {
-    for {
-      t <- task.futureBox
-      u <- user.futureBox
-      temp <- tracing.toTemporary.futureBox
-    } yield
-      temp.map(_.renameTrees(uniqueTreePrefix(tracing, u, t)))
-  }
 
   def saveToDB(skeleton: SkeletonTracing)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] = {
     SkeletonTracingDAO.update(

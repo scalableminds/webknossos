@@ -21,7 +21,7 @@ import sys.process._
 
 import com.typesafe.scalalogging.LazyLogging
 
-class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll with LazyLogging {
+class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll with LazyLogging {
 
   val argumentMapRead = parseCustomJavaArgs(arguments)
   val mongoDb   = argumentMapRead.getOrElse("mongodb.db", "oxalis-testing")
@@ -49,23 +49,20 @@ class ProtractorSpec(arguments: Arguments) extends Specification with BeforeAll 
 
   "my application" should {
 
-    "pass the protractor e2e tests" in new WithServer(
+    "pass the webdriverio e2e tests" in new WithServer(
       app = FakeApplication(additionalConfiguration = argumentMap),
       port = testPort) {
 
       val resp = Await.result(WS.url(s"http://localhost:$testPort").get(), 2 seconds)
       resp.status === 200
 
-      runProtractorTests === 0
+      runWebdriverTests === 0
     }
 
   }
 
-  private def runProtractorTests: Int = {
-    val webdriver = "npm run webdriver".run(getProcessIO)
-    Thread.sleep(5000)
-    val result = "./node_modules/.bin/protractor".run(getProcessIO).exitValue()
-    webdriver.destroy()
+  private def runWebdriverTests: Int = {
+    val result = "npm run test-e2e".run().exitValue()
     result
   }
 

@@ -1,26 +1,27 @@
 package models.task
 
-import scala.async.Async._
-
-import models.annotation.{Annotation, AnnotationDAO, AnnotationService, AnnotationType}
-import com.scalableminds.util.reactivemongo.DBAccessContext
-import models.task.TaskDAO._
-import reactivemongo.bson.BSONObjectID
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import play.api.libs.concurrent.Execution.Implicits._
-import models.user.{Experience, User, UserDAO}
 import scala.concurrent.Future
 
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
+import models.annotation.AnnotationDAO
 import models.mturk.MTurkAssignmentConfig
 import models.project.{Project, WebknossosAssignmentConfig}
-import net.liftweb.common.{Box, Full}
+import models.task.TaskDAO._
+import models.user.{User, UserDAO}
+import net.liftweb.common.Full
 import oxalis.mturk.MTurkService
-import play.api.Logger
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import reactivemongo.core.commands.LastError
 
-object TaskService extends TaskAssignmentSimulation with TaskAssignment with FoxImplicits {
+object TaskService
+  extends TaskAssignmentSimulation
+    with TaskAssignment
+    with FoxImplicits
+    with LazyLogging{
 
   def findOneById(id: String)(implicit ctx: DBAccessContext) =
     TaskDAO.findOneById(id)
@@ -47,7 +48,7 @@ object TaskService extends TaskAssignmentSimulation with TaskAssignment with Fox
           _ <- MTurkService.removeByTask(result)
         } yield true
       case _ =>
-        Logger.warn("Tried to remove task without permission.")
+        logger.warn("Tried to remove task without permission.")
         Fox.successful(false)
     }
   }

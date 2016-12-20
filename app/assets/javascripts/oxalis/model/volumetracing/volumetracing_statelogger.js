@@ -4,10 +4,11 @@ class VolumeTracingStateLogger extends StateLogger {
 
 
   constructor(flycam, version, tracingId, tracingType, allowUpdate, volumeTracing, pushQueue) {
-
+    super(flycam, version, tracingId, tracingType, allowUpdate);
+    // TODO: These lines were before super in coffee, which is not allowed in
+    // ES6. Check if this is ok respectively fix it.
     this.volumeTracing = volumeTracing;
     this.pushQueue = pushQueue;
-    super(flycam, version, tracingId, tracingType, allowUpdate);
   }
 
 

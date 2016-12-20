@@ -8,9 +8,11 @@ class SkeletonTracingStateLogger extends StateLogger {
 
   constructor(flycam, flycam3d, version, tracingId, tracingType, allowUpdate, skeletonTracing) {
 
+    super(flycam, version, tracingId, tracingType, allowUpdate);
+    // TODO: These lines were before super in coffee, which is not allowed in
+    // ES6. Check if this is ok respectively fix it.
     this.flycam3d = flycam3d;
     this.skeletonTracing = skeletonTracing;
-    super(flycam, version, tracingId, tracingType, allowUpdate);
   }
 
 

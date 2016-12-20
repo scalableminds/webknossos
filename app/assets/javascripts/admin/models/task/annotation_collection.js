@@ -5,14 +5,15 @@ import FormatUtils from "libs/format_utils";
 
 class AnnotationCollection extends Backbone.Collection {
   static initClass() {
-  
+
     this.prototype.model  = AnnotationModel;
   }
 
   constructor(taskId) {
-
-    this.url = `/api/tasks/${taskId}/annotations`;
     super();
+    // TODO: This line was before super in coffee, which is not allowed in
+    // ES6. Check if this is ok respectively fix it.
+    this.url = `/api/tasks/${taskId}/annotations`;
   }
 
   parse(responses) {

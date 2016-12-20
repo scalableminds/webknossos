@@ -5,8 +5,8 @@ class VolumeTracingView extends View {
 
   constructor(model) {
 
+    super(model);
     this.model = model;
-    super(this.model);
 
     $(".skeleton-controls").hide();
     $(".skeleton-plane-controls").hide();

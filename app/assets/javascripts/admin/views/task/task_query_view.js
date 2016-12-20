@@ -1,6 +1,6 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import TaskListView from "./task_list_view.coffee";
+import TaskListView from "./task_list_view";
 import TaskCollection from "admin/models/task/task_collection";
 import Request from "libs/request";
 import admin from "admin/admin";
@@ -14,11 +14,11 @@ import 'brace/theme/clouds';
 
 class TaskQueryView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.template  = _.template(`\
 <div class="container wide">
   <h3>Tasks</h3>
-  
+
   <div class="row">
     <div class="col-sm-9">
       <div id="query" style="width: 100%; height: 100px; display: inline-block; border: 1px solid #ddd"></div>
@@ -45,18 +45,18 @@ class TaskQueryView extends Marionette.View {
 <div class="taskList"></div>
 <div id="modal-wrapper"></div>\
 `);
-  
+
     this.prototype.regions  = {
       "paginator" : ".paginator",
       "taskList" : ".taskList"
     };
-  
+
     this.prototype.ui  = {
       "taskList" : ".taskList",
       "query" : "#query",
       "modalWrapper" : "#modal-wrapper"
     };
-  
+
     this.prototype.events  = {
       "click .search-button" : "search",
       "click .documentation-button" : "showDocumentation"

@@ -26,16 +26,15 @@ import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 
 class Model extends Backbone.Model {
   static initClass() {
-  
-  
     this.prototype.HANDLED_ERROR  = {};
   }
 
 
   constructor() {
-
-    this.initialized = false;
     super(...arguments);
+    // TODO: This line was before super in coffee, which is not allowed in ES6.
+    // Check if this is ok.
+    this.initialized = false;
   }
 
 

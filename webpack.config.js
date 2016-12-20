@@ -17,7 +17,7 @@ var scriptPaths = {
 
 module.exports = {
   entry: {
-    main: srcPath + "main.coffee",
+    main: srcPath + "main.js",
   },
   output: {
     path:              __dirname + "/public/bundle",
@@ -33,7 +33,15 @@ module.exports = {
       /\/jquery\//,
     ],
     loaders: [
-      { test: /\.coffee$/, loader: "coffee-loader" },
+      {
+        test: /\.js$/,
+        exclude: /(node_modules|bower_components)/,
+        loader: 'babel-loader',
+        query: {
+          presets: ['es2015', 'stage-1']
+        }
+      },
+      // { test: /\.coffee$/, loader: "coffee-loader" },
       { test: /\.cjsx$/, loaders: ["coffee", "cjsx"] },
       { test: scriptPaths["three.color"], loader: "imports?THREE=three!exports?THREE.ColorConverter" },
       { test: scriptPaths["three.trackball"], loader: "imports?THREE=three" },
@@ -63,7 +71,8 @@ module.exports = {
   resolve: {
     root: srcPath,
     alias: scriptPaths,
-    extensions: ['', '.js', '.json', '.coffee', '.cjsx']
+    extensions: ['', '.js', '.json', '.coffee', '.cjsx'],
+    modulesDirectories: [nodePath],
   },
   externals: [
     { "routes": "var jsRoutes" }

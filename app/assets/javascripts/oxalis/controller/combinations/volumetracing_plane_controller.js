@@ -14,11 +14,13 @@ class VolumeTracingPlaneController extends PlaneController {
 
   constructor(model, view, sceneController, volumeTracingController) {
 
+    super(model, view, sceneController);
+    // TODO: These lines were before super in coffee, which is not allowed in
+    // ES6. Check if this is ok respectively fix it.
     this.model = model;
     this.view = view;
     this.sceneController = sceneController;
     this.volumeTracingController = volumeTracingController;
-    super(this.model, this.view, this.sceneController);
 
     this.simulateTracing = this.simulateTracing.bind(this);
     this.listenTo(this.model.flycam, "positionChanged", () => {

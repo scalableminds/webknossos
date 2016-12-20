@@ -104,8 +104,7 @@ class PushQueue {
       }
 
       return this.updatePipeline.getLastActionPromise();
-    }
-    );
+    });
   }
 
 

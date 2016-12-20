@@ -6,14 +6,16 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
 
   constructor(model, tWidth) {
+    super(model);
 
+    // TODO: These lines were before super in coffee, which is not allowed in
+    // ES6. Check if this is ok respectively fix it.
     this.model = model;
     this.tWidth = tWidth;
     _.extend(this, Backbone.Events);
 
     this.minFilter = THREE.NearestFilter;
     this.maxFilter = THREE.NearestFilter;
-    super(this.model);
   }
 
 

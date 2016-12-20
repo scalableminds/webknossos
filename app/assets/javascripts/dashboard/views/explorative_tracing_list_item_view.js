@@ -3,12 +3,11 @@ import Marionette from "backbone.marionette";
 import routes from "routes";
 import Toast from "libs/toast";
 import HoverShowHide from "libs/behaviors/hover_show_hide_behavior";
-Toast         = require("libs/toast");
 import Request from "libs/request";
 
 class ExplorativeTracingListItemView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.tagName  = "tr";
     this.prototype.template  = _.template(`\
 <td>
@@ -32,7 +31,7 @@ class ExplorativeTracingListItemView extends Marionette.View {
   </form>
 </td>
 <td><%- dataSetName %></td>
-  
+
 <td class="nowrap">
   <% if (stats && (contentType == "skeletonTracing")) { %>
     <span title="Trees"><i class="fa fa-sitemap"></i><%- stats.numberOfTrees %>&nbsp;</span><br />
@@ -40,7 +39,7 @@ class ExplorativeTracingListItemView extends Marionette.View {
     <span title="Edges"><i class="fa fa-arrows-h"></i><%- stats.numberOfEdges %></span>
   <% } %>
 </td>
-  
+
 <td><%- contentType + " - " + typ %></td>
 <td><%- created %></td>
 <td class="nowrap">
@@ -69,19 +68,19 @@ class ExplorativeTracingListItemView extends Marionette.View {
   <% } %>
 </td>\
 `);
-  
+
     this.prototype.events  = {
       "submit #explorative-name-form" : "nameExplorativeAnnotation",
       "click #finish-tracing" : "finishOrOpenTracing",
       "click #reopen-tracing" : "finishOrOpenTracing",
       "change @ui.explorativeNameInput" : "submitForm"
     };
-  
+
     this.prototype.ui  = {
       "explorativeNameForm" : "#explorative-name-form",
       "explorativeNameInput": "#explorative-name-input"
     };
-  
+
     this.prototype.behaviors  = {
       HoverShowHide : {
         behaviorClass : HoverShowHide

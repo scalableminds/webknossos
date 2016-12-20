@@ -36,9 +36,9 @@ docker pull scalableminds/sbt:$SBT_VERSION_TAG
 docker-compose run oxalis-sbt clean compile stage
 docker build -t scalableminds/oxalis:$ITERATION .
 
-# RUN TEST
-docker-compose run oxalis-frontend-tests
-docker-compose run oxalis-e2e-tests
+# RUN TEST (disabled on review)
+# docker-compose run oxalis-frontend-tests
+# docker-compose run oxalis-e2e-tests
 
 # DOCKER SMOKE TEST
 DOCKER_TAG=$ITERATION docker-compose up oxalis &

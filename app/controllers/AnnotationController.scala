@@ -74,6 +74,23 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     Ok(empty)
   }
 
+  def loggedTime(typ: String, id: String) = Authenticated.async { implicit request =>
+    val annotationId = AnnotationIdentifier(typ, id)
+    withAnnotation(annotationId) { annotation =>
+      for {
+        _ <- annotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
+        loggedTimeAsMap <- TimeSpanService.loggedTimeOfAnnotation(id, TimeSpan.groupByMonth)
+      } yield {
+        Ok(Json.arr(
+          loggedTimeAsMap.map {
+            case (month, duration) =>
+              Json.obj("interval" -> month, "durationInSeconds" -> duration.toSeconds)
+          }
+        ))
+      }
+    }
+  }
+
   // DISABLED: Due to changes in the json update protocol we are currently unable to parse all previous
   // json updates and hence we can not use them to replay previous updates. It is also infeasible to write
   // an evolution for this since it is to expensive to calculate the missing information to create the proper updates

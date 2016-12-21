@@ -25,6 +25,11 @@ module.exports = {
     sourceMapFilename: "[file].map",
     publicPath:        "/assets/bundle/"
   },
+
+  resolveLoader: {
+    modulesDirectories: [nodePath]
+  },
+
   module: {
     // Reduce compilation time by telling webpack to not parse these libraries.
     // Only add libraries that have no dependencies eg. no require, define or similar calls.

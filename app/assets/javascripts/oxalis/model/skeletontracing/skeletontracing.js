@@ -14,11 +14,11 @@ import TracingParser from "./tracingparser";
 
 class SkeletonTracing {
   static initClass() {
-  
+
     // Max and min radius in base voxels (see scaleInfo.baseVoxel)
     this.prototype.MIN_RADIUS  = 1;
     this.prototype.MAX_RADIUS  = 5000;
-  
+
     this.prototype.trees  = [];
     this.prototype.activeNode  = null;
     this.prototype.activeTree  = null;
@@ -223,7 +223,9 @@ class SkeletonTracing {
     if (this.ensureDirection(position)) {
 
       let radius = 10 * app.scaleInfo.baseVoxel;
-      if (this.activeNode) { ({ radius } = this.activeNode); }
+      if (this.activeNode) {
+        radius = this.activeNode.radius;
+      }
 
       const metaInfo = {
         timestamp : (new Date()).getTime(),
@@ -500,7 +502,7 @@ class SkeletonTracing {
       this.stateLogger.deleteNode(deletedNode, this.activeTree.treeId);
 
       const { comments } = this.activeTree;
-      ({ branchpoints } = this.activeTree);
+      branchpoints = this.activeTree.branchpoints;
 
       if (deletedNode.neighbors.length > 1) {
         // Need to split tree

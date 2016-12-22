@@ -8,10 +8,10 @@ import Tree from "./tree";
 
 class Skeleton {
   static initClass() {
-  
+
     // This class is supposed to collect all the Geometries that belong to the skeleton, like
     // nodes, edges and trees
-  
+
     this.prototype.COLOR_ACTIVE  = 0xff0000;
   }
 
@@ -207,7 +207,6 @@ class Skeleton {
 
 
   getTreeGeometry(treeId) {
-
     if (!treeId) {
       ({ treeId } = this.skeletonTracing.getTree());
     }

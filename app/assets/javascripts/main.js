@@ -3,7 +3,7 @@ import _ from "lodash";
 import Backbone from "backbone";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
-import app from "./app";
+import app from "app";
 
 import "bootstrap";
 import "jasny-bootstrap";
@@ -31,10 +31,10 @@ app.on("start", () =>
     }).catch(function(error) {  })
 );
 
-app.on("start", () =>
+app.on("start", () => {
   // set app.vent to the global radio channel
   app.vent = Backbone.Radio.channel('global')
-);
+});
 
 
 $(function() {

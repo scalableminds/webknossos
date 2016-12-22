@@ -5,8 +5,11 @@ const ErrorHandling = {
 
   initialize( options ) {
 
-    if (options == null) { options = { throwAssertions: false, sendLocalErrors: false }; }
-    ({ throwAssertions: this.throwAssertions, sendLocalErrors: this.sendLocalErrors } = options);
+    if (options == null) {
+      options = { throwAssertions: false, sendLocalErrors: false };
+    }
+    this.throwAssertions = options.throwAssertions;
+    this.sendLocalErrors = options.sendLocalErrors;
 
     return this.initializeAirbrake();
   },

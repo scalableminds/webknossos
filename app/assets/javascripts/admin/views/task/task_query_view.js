@@ -1,3 +1,4 @@
+import app from "app";
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import TaskListView from "./task_list_view";

@@ -13,21 +13,21 @@ import constants from "../constants";
 
 class Binary {
   static initClass() {
-  
+
     // Constants
     this.prototype.PING_THROTTLE_TIME  = 50;
     this.prototype.DIRECTION_VECTOR_SMOOTHER  = .125;
     this.prototype.TEXTURE_SIZE_P  = 0;
-  
+
     this.prototype.cube  = null;
     this.prototype.pullQueue  = null;
     this.prototype.planes  = [];
-  
+
     this.prototype.direction  = [0, 0, 0];
-  
-  
+
+
     this.prototype.arbitraryPing  = _.once(function(matrix, zoomStep) {
-  
+
       this.arbitraryPing = _.throttle(this.arbitraryPingImpl, this.PING_THROTTLE_TIME);
       return this.arbitraryPing(matrix, zoomStep);
     });
@@ -42,7 +42,8 @@ class Binary {
     _.extend(this, Backbone.Events);
 
     this.TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P;
-    ({ category: this.category, name: this.name } = this.layer);
+    this.category = this.layer.category;
+    this.name = this.layer.name;
 
     this.targetBitDepth = this.category === "color" ? this.layer.bitDepth : 8;
 

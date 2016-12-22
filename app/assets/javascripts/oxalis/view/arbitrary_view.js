@@ -8,18 +8,18 @@ import Constants from "../constants";
 
 class ArbitraryView {
   static initClass() {
-  
+
     this.prototype.DEFAULT_SCALE   = 1.35;
     this.prototype.MAX_SCALE       = 3;
     this.prototype.MIN_SCALE       = 1;
-  
+
     this.prototype.forceUpdate  = false;
     this.prototype.geometries  = [];
     this.prototype.additionalInfo  = "";
-  
+
     this.prototype.isRunning  = true;
     this.prototype.animationRequestId  = undefined;
-  
+
     this.prototype.scene  = null;
     this.prototype.camera  = null;
     this.prototype.cameraPosition  = null;
@@ -48,7 +48,8 @@ class ArbitraryView {
     this.height = this.container.height();
     this.deviceScaleFactor = window.devicePixelRatio || 1;
 
-    ({ renderer: this.renderer, scene: this.scene } = this.view);
+    this.renderer = this.view.renderer;
+    this.scene = this.view.scene;
 
     // Initialize main THREE.js components
 

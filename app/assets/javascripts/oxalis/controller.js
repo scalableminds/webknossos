@@ -1,6 +1,6 @@
 import $ from "jquery";
 import _ from "lodash";
-import app from "../app";
+import app from "app";
 import Backbone from "backbone";
 import Stats from "stats.js";
 import PlaneController from "./controller/viewmodes/plane_controller";
@@ -36,8 +36,7 @@ class Controller {
   // cross in this matrix.
 
   constructor(options) {
-
-    ({ model: this.model } = options);
+    this.model = options.model;
 
     _.extend(this, {
       view : null,
@@ -231,7 +230,7 @@ class Controller {
     // TODO move that somehwere else
     const finishTracing = () => {
       // save the progress
-      ({ model } = this);
+      model = this.model;
 
       const tracingType = model.skeletonTracing || model.volumeTracing;
       return tracingType.stateLogger.pushNow().then( function() {

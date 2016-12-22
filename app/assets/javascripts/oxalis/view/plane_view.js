@@ -21,7 +21,8 @@ class PlaneView {
     this.view = view;
     _.extend(this, Backbone.Events);
 
-    ({ renderer: this.renderer, scene: this.scene } = this.view);
+    this.renderer = this.view.renderer;
+    this.scene = this.view.scene;
     this.running = false;
 
     // The "render" div serves as a container for the canvas, that is

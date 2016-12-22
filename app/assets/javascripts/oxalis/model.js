@@ -1,6 +1,6 @@
 import Backbone from "backbone";
 import _ from "lodash";
-import app from "../app";
+import app from "app";
 import Binary from "./model/binary";
 import SkeletonTracing from "./model/skeletontracing/skeletontracing";
 import User from "./model/user";

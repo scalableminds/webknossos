@@ -100,7 +100,7 @@ class Pipeline {
   }
 
 
-  executeNext() {
+  executeNext = () => {
 
     const currentAction = this.actions.shift();
 

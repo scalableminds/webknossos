@@ -4,7 +4,7 @@ import MultipartData from "../../../libs/multipart_data";
 
 class PushQueue {
   static initClass() {
-  
+
     this.prototype.BATCH_LIMIT  = 1;
     this.prototype.BATCH_SIZE  = 32;
     this.prototype.DEBOUNCE_TIME  = 1000;
@@ -88,7 +88,7 @@ class PushQueue {
   }
 
 
-  pushImpl() {
+  pushImpl = () => {
 
     return this.cube.temporalBucketManager.getAllLoadedPromise().then(() => {
 

@@ -9,9 +9,6 @@ class SkeletonTracingView extends View {
   constructor(model) {
 
     super(model);
-    // TODO: This line was before super in coffee, which is not allowed in
-    // ES6. Check if this is ok respectively fix it.
-    this.model = model;
     _.extend(this, Backbone.Events);
 
 

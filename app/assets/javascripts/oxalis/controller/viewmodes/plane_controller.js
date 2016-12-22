@@ -9,30 +9,28 @@ import CameraController from "../camera_controller";
 import Dimensions from "../../model/dimensions";
 import PlaneView from "../../view/plane_view";
 import constants from "../../constants";
-import SkeletonTracingController from "../annotations/skeletontracing_controller";
-import VolumeTracingController from "../annotations/volumetracing_controller";
 import THREE from "three";
 
 class PlaneController {
   static initClass() {
-  
+
     // See comment in Controller class on general controller architecture.
     //
     // Plane Controller: Responsible for Plane Modes
-  
-  
+
+
     this.prototype.bindings  = [];
     this.prototype.model  = null;
     this.prototype.view  = null;
-  
+
     this.prototype.input  = {
       mouseControllers : [],
       keyboard : null,
       keyboardNoLoop : null,
       keyboardLoopDelayed : null,
-  
+
       destroy() {
-  
+
         for (let mouse of this.mouseControllers) {
           mouse.destroy();
         }

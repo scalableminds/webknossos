@@ -16,13 +16,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   constructor(model, view, sceneController, skeletonTracingController) {
-
     super(model, view, sceneController);
-    // TODO: These lines were before super in coffee, which is not allowed in
-    // ES6. Check if this is ok respectively fix it.
-    this.model = model;
-    this.view = view;
-    this.sceneController = sceneController;
     this.skeletonTracingController = skeletonTracingController;
 
     this.popBranch = this.popBranch.bind(this);

@@ -25,7 +25,9 @@ class Binary {
   upperBoundary = [4, 5, 6]
 }
 
-class Layer {}
+class Layer {
+  resolutions = [];
+}
 
 class Flycam2d {
   setPosition() {}

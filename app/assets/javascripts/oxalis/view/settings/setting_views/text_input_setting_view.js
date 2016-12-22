@@ -1,52 +1,61 @@
-_                   = require("lodash")
-Marionette          = require("backbone.marionette")
-AbstractSettingView = require("./abstract_setting_view")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import AbstractSettingView from "./abstract_setting_view";
 
-class TextInputSettingView extends AbstractSettingView
+class TextInputSettingView extends AbstractSettingView {
+  static initClass() {
+  
+  
+    this.prototype.className  = "text-setting-view row";
+  
+  
+    this.prototype.template  = _.template(`\
+<div class="col-sm-5">
+  <%- displayName %>
+</div>
+<div class="col-sm-7">
+  <input class="form-control" type="text" pattern="<%- pattern %>" title="<%- title %>" value="<%- value %>">
+</div>\
+`);
+  
+  
+    this.prototype.ui  =
+      {text : "input[type=text]"};
+  
+  
+    this.prototype.events  =
+      {"change @ui.text" : "handleChange"};
+  }
 
 
-  className : "text-setting-view row"
+  initialize(options) {
 
+    super.initialize(options);
 
-  template : _.template("""
-    <div class="col-sm-5">
-      <%- displayName %>
-    </div>
-    <div class="col-sm-7">
-      <input class="form-control" type="text" pattern="<%- pattern %>" title="<%- title %>" value="<%- value %>">
-    </div>
-  """)
-
-
-  ui :
-    text : "input[type=text]"
-
-
-  events :
-    "change @ui.text" : "handleChange"
-
-
-  initialize : (options) ->
-
-    super(options)
-
-    _.defaults(@options,
-      pattern : ""
+    return _.defaults(this.options, {
+      pattern : "",
       title : ""
-    )
+    }
+    );
+  }
 
-  handleChange : (evt) ->
+  handleChange(evt) {
 
-    value = evt.target.value
+    const { value } = evt.target;
 
-    if @options.validate
-      return if not @options.validate.call(@, value)
+    if (this.options.validate) {
+      if (!this.options.validate.call(this, value)) { return; }
+    }
 
-    @model.set(@options.name, value)
+    return this.model.set(this.options.name, value);
+  }
 
 
-  update : (model, value) ->
+  update(model, value) {
 
-    @ui.text.val(value)
+    return this.ui.text.val(value);
+  }
+}
+TextInputSettingView.initClass();
 
-module.exports = TextInputSettingView
+export default TextInputSettingView;

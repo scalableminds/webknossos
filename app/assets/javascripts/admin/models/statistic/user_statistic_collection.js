@@ -1,19 +1,25 @@
-_        = require("lodash")
-backbone = require("backbone")
+import _ from "lodash";
+import backbone from "backbone";
 
-class UserStatisticCollection extends Backbone.Collection
+class UserStatisticCollection extends Backbone.Collection {
+  static initClass() {
+  
+    this.prototype.url  = "/api/statistics/users";
+  }
 
-  url : "/api/statistics/users"
+  parse(responses) {
 
-  parse : (responses) ->
+    return responses.map(function(response) {
 
-    return responses.map((response) ->
+      if (_.isEmpty(response.tracingTimes)) {
+        response.tracingTimes.push({tracingTime: 0});
+      }
 
-      if _.isEmpty(response.tracingTimes)
-        response.tracingTimes.push(tracingTime: 0)
+      return response;
+    });
+  }
+}
+UserStatisticCollection.initClass();
 
-      return response
-    )
 
-
-module.exports = UserStatisticCollection
+export default UserStatisticCollection;

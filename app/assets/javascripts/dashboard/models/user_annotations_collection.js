@@ -1,23 +1,28 @@
-_        = require("lodash")
-Backbone = require("backbone")
-SortedCollection = require("admin/models/sorted_collection")
+import _ from "lodash";
+import Backbone from "backbone";
+import SortedCollection from "admin/models/sorted_collection";
 
-class UserAnnotationsCollection extends SortedCollection
+class UserAnnotationsCollection extends SortedCollection {
 
-  comparator : (a, b) ->
-    return b.get("created").localeCompare(a.get("created"))
-
-
-  url : ->
-    if @userID
-      return "/api/users/#{@userID}/annotations?isFinished=#{@isFinished}"
-    else
-      return "/api/user/annotations?isFinished=#{@isFinished}"
+  comparator(a, b) {
+    return b.get("created").localeCompare(a.get("created"));
+  }
 
 
-  initialize : (models, options) ->
-    @isFinished = options.isFinished || false
-    @userID = options.userID
+  url() {
+    if (this.userID) {
+      return `/api/users/${this.userID}/annotations?isFinished=${this.isFinished}`;
+    } else {
+      return `/api/user/annotations?isFinished=${this.isFinished}`;
+    }
+  }
 
 
-module.exports = UserAnnotationsCollection
+  initialize(models, options) {
+    this.isFinished = options.isFinished || false;
+    return this.userID = options.userID;
+  }
+}
+
+
+export default UserAnnotationsCollection;

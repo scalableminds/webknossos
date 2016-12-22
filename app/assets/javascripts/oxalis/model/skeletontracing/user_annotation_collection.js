@@ -1,20 +1,24 @@
-_                    = require("lodash")
-Backbone             = require("backbone")
+import _ from "lodash";
+import Backbone from "backbone";
 
-class UserAnnotationCollection extends Backbone.Collection
+class UserAnnotationCollection extends Backbone.Collection {
 
-  url : -> "/api/users/#{@userId}/annotations"
+  url() { return `/api/users/${this.userId}/annotations`; }
 
-  initialize : (models, options) ->
+  initialize(models, options) {
 
-    @userId = options.userId
-    @dataSetName = options.dataSetName
+    this.userId = options.userId;
+    return this.dataSetName = options.dataSetName;
+  }
 
-  parse : (response) ->
-    if @dataSetName
-      return _.filter(response, dataSetName : @dataSetName)
-    else
-      return response
+  parse(response) {
+    if (this.dataSetName) {
+      return _.filter(response, {dataSetName : this.dataSetName});
+    } else {
+      return response;
+    }
+  }
+}
 
 
-module.exports = UserAnnotationCollection
+export default UserAnnotationCollection;

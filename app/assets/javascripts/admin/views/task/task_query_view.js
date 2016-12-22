@@ -1,120 +1,135 @@
-_                = require("lodash")
-Marionette       = require("backbone.marionette")
-TaskListView     = require("./task_list_view.coffee")
-TaskCollection   = require("admin/models/task/task_collection")
-Request          = require("libs/request")
-admin            = require("admin/admin")
-Toast            = require("libs/toast")
-PaginationCollection  = require("admin/models/pagination_collection")
-TaskQueryDocumentationModal = require("./task_query_documentation_modal")
-ace              = require("brace")
-require('brace/mode/javascript');
-require('brace/mode/json');
-require('brace/theme/clouds');
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import TaskListView from "./task_list_view.coffee";
+import TaskCollection from "admin/models/task/task_collection";
+import Request from "libs/request";
+import admin from "admin/admin";
+import Toast from "libs/toast";
+import PaginationCollection from "admin/models/pagination_collection";
+import TaskQueryDocumentationModal from "./task_query_documentation_modal";
+import ace from "brace";
+import 'brace/mode/javascript';
+import 'brace/mode/json';
+import 'brace/theme/clouds';
 
-class TaskQueryView extends Marionette.View
-
-  template : _.template("""
-    <div class="container wide">
-      <h3>Tasks</h3>
-
-      <div class="row">
-        <div class="col-sm-9">
-          <div id="query" style="width: 100%; height: 100px; display: inline-block; border: 1px solid #ddd"></div>
-        </div>
-        <div class="col-sm-3">
-          <div style="vertical-align: top; display: inline-block">
-            <a class="btn btn-primary search-button" href="#">
-              <i class="fa fa-search"></i>Search
-            </a>
-            <div class="btn-group btn-group.btn-group-justified" role="group">
-              <a class="btn btn-default documentation-button" role="button" href="#">
-                <i class="fa fa-question-circle"></i>Documentation
-              </a>
-              <a class="btn btn-default" role="button" href="/help/faq#taskqueries">
-                 <i class="fa fa-info"></i>Examples
-              </a>
-            </div>
-          </div>
+class TaskQueryView extends Marionette.View {
+  static initClass() {
+  
+    this.prototype.template  = _.template(`\
+<div class="container wide">
+  <h3>Tasks</h3>
+  
+  <div class="row">
+    <div class="col-sm-9">
+      <div id="query" style="width: 100%; height: 100px; display: inline-block; border: 1px solid #ddd"></div>
+    </div>
+    <div class="col-sm-3">
+      <div style="vertical-align: top; display: inline-block">
+        <a class="btn btn-primary search-button" href="#">
+          <i class="fa fa-search"></i>Search
+        </a>
+        <div class="btn-group btn-group.btn-group-justified" role="group">
+          <a class="btn btn-default documentation-button" role="button" href="#">
+            <i class="fa fa-question-circle"></i>Documentation
+          </a>
+          <a class="btn btn-default" role="button" href="/help/faq#taskqueries">
+             <i class="fa fa-info"></i>Examples
+          </a>
         </div>
       </div>
-      <hr>
     </div>
-    <div class="paginator"></div>
-    <div class="taskList"></div>
-    <div id="modal-wrapper"></div>
-  """)
+  </div>
+  <hr>
+</div>
+<div class="paginator"></div>
+<div class="taskList"></div>
+<div id="modal-wrapper"></div>\
+`);
+  
+    this.prototype.regions  = {
+      "paginator" : ".paginator",
+      "taskList" : ".taskList"
+    };
+  
+    this.prototype.ui  = {
+      "taskList" : ".taskList",
+      "query" : "#query",
+      "modalWrapper" : "#modal-wrapper"
+    };
+  
+    this.prototype.events  = {
+      "click .search-button" : "search",
+      "click .documentation-button" : "showDocumentation"
+    };
+  }
 
-  regions :
-    "paginator" : ".paginator"
-    "taskList" : ".taskList"
+  onRender() {
 
-  ui :
-    "taskList" : ".taskList"
-    "query" : "#query"
-    "modalWrapper" : "#modal-wrapper"
+    this.collection = new TaskCollection(null);
+    const paginatedCollection = new PaginationCollection([], {fullCollection : this.collection});
+    this.taskListView = new TaskListView({collection: paginatedCollection});
 
-  events :
-    "click .search-button" : "search"
-    "click .documentation-button" : "showDocumentation"
+    app.router.hideLoadingSpinner();
 
-  onRender : ->
+    const paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : "Create New Task"});
 
-    @collection = new TaskCollection(null)
-    paginatedCollection = new PaginationCollection([], fullCollection : @collection)
-    @taskListView = new TaskListView({collection: paginatedCollection})
+    this.showChildView("taskList", this.taskListView);
+    this.showChildView("paginator", paginationView);
 
-    app.router.hideLoadingSpinner()
+    this.documentationModal = new TaskQueryDocumentationModal();
+    this.documentationModal.render();
+    this.ui.modalWrapper.html(this.documentationModal.el);
 
-    paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : "Create New Task"})
-
-    @showChildView("taskList", @taskListView)
-    @showChildView("paginator", paginationView)
-
-    @documentationModal = new TaskQueryDocumentationModal()
-    @documentationModal.render()
-    @ui.modalWrapper.html(@documentationModal.el)
-
-    @editor = ace.edit(@ui.query[0])
-    @editor.getSession().setMode('ace/mode/javascript')
-    @editor.setTheme('ace/theme/clouds')
-    defaultQuery = "{\n\t\"_id\": {\"$oid\": \"56cb594a16000045b4d0f273\"}\n}"
-    @editor.setValue(defaultQuery)
-    @editor.clearSelection()
-    @editor.resize()
-
-
-  search : ->
-
-    queryString = @editor.getValue()
-    try
-      queryObject = JSON.parse(queryString)
-    catch e
-      try
-        # This is an eval hack in order to allow JSON without quoted keys.
-        # JS is only executed locally so it doesn't yield more power than the
-        # browser console.
-        queryObject = eval("(function() { return eval(" + queryString + "); })()")
-      catch e
-        Toast.error("The task query couldn't be parsed. Ensure that the query is valid JSON.")
+    this.editor = ace.edit(this.ui.query[0]);
+    this.editor.getSession().setMode('ace/mode/javascript');
+    this.editor.setTheme('ace/theme/clouds');
+    const defaultQuery = "{\n\t\"_id\": {\"$oid\": \"56cb594a16000045b4d0f273\"}\n}";
+    this.editor.setValue(defaultQuery);
+    this.editor.clearSelection();
+    return this.editor.resize();
+  }
 
 
-    Request.sendJSONReceiveJSON(
-      "/api/queries"
+  search() {
+
+    let queryObject;
+    const queryString = this.editor.getValue();
+    try {
+      queryObject = JSON.parse(queryString);
+    } catch (e) {
+      try {
+        // This is an eval hack in order to allow JSON without quoted keys.
+        // JS is only executed locally so it doesn't yield more power than the
+        // browser console.
+        queryObject = eval(`(function() { return eval(${queryString}); })()`);
+      } catch (e) {
+        Toast.error("The task query couldn't be parsed. Ensure that the query is valid JSON.");
+      }
+    }
+
+
+    return Request.sendJSONReceiveJSON(
+      "/api/queries",
       {
-        params : {type : "task"}
+        params : {type : "task"},
         data : queryObject
       }
-    ).then((result) =>
-      @collection.reset()
-      defaultQueryLimit = 100
-      if result.length == defaultQueryLimit
-        Toast.warning("Not all results are shown because there are more than #{defaultQueryLimit}. Try to narrow your query.")
-      @collection.addObjects(result)
-    )
+    ).then(result => {
+      this.collection.reset();
+      const defaultQueryLimit = 100;
+      if (result.length === defaultQueryLimit) {
+        Toast.warning(`Not all results are shown because there are more than ${defaultQueryLimit}. Try to narrow your query.`);
+      }
+      return this.collection.addObjects(result);
+    }
+    );
+  }
 
-  showDocumentation : ->
+  showDocumentation() {
 
-    @documentationModal.$el.modal("show")
+    return this.documentationModal.$el.modal("show");
+  }
+}
+TaskQueryView.initClass();
 
-module.exports = TaskQueryView
+export default TaskQueryView;

@@ -1,40 +1,48 @@
-_              = require("lodash")
-NestedObjModel = require("libs/nested_obj_model")
-Request        = require("libs/request")
+import _ from "lodash";
+import NestedObjModel from "libs/nested_obj_model";
+import Request from "libs/request";
 
-class DashboardTaskModel extends NestedObjModel
+class DashboardTaskModel extends NestedObjModel {
 
-  parse : (annotation) ->
-    # transform the annotation object which holds a task to a task object which holds its annotation
+  parse(annotation) {
+    // transform the annotation object which holds a task to a task object which holds its annotation
 
-    task = annotation.task
+    const { task } = annotation;
 
-    return unless task
+    if (!task) { return; }
 
-    unless task.type
-      task.type = @defaultTaskType(annotation)
+    if (!task.type) {
+      task.type = this.defaultTaskType(annotation);
+    }
 
-    task.annotation = annotation
-    return task
-
-
-  defaultTaskType : (annotation) ->
-
-    summary : "[deleted] #{annotation.typ}"
-    description : ""
-    settings : { allowedModes : "" }
+    task.annotation = annotation;
+    return task;
+  }
 
 
-  finish : ->
+  defaultTaskType(annotation) {
 
-    annotation = @get("annotation")
-    url = "/annotations/#{annotation.typ}/#{annotation.id}/finish"
+    return {
+      summary : `[deleted] ${annotation.typ}`,
+      description : "",
+      settings : { allowedModes : "" }
+    };
+  }
+
+
+  finish() {
+
+    const annotation = this.get("annotation");
+    const url = `/annotations/${annotation.typ}/${annotation.id}/finish`;
 
     return Request.receiveJSON(url).then(
-      (response) =>
-        @set("annotation.state.isFinished", true)
-        return response
-    )
+      response => {
+        this.set("annotation.state.isFinished", true);
+        return response;
+      }
+    );
+  }
+}
 
 
-module.exports = DashboardTaskModel
+export default DashboardTaskModel;

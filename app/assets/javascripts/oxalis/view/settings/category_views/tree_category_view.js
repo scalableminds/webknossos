@@ -1,36 +1,44 @@
-NumberSettingView   = require("../setting_views/number_setting_view")
-CheckboxSettingView = require("../setting_views/checkbox_setting_view")
-CategoryView        = require("./category_view")
+import NumberSettingView from "../setting_views/number_setting_view";
+import CheckboxSettingView from "../setting_views/checkbox_setting_view";
+import CategoryView from "./category_view";
 
-class TreeCategoryView extends CategoryView
+class TreeCategoryView extends CategoryView {
+  static initClass() {
+  
+  
+    this.prototype.caption  = "Trees";
+  
+    this.prototype.subviewCreatorsList  = [
+  
+      [
+        "activeTree", function() {
+  
+          return new NumberSettingView({
+            model : this.model,
+            options : {
+              name : "activeTreeId",
+              displayName : "Active Tree ID"
+            }
+          });
+        }
+      ],
+  
+      [
+        "somaClicking", function() {
+  
+          return new CheckboxSettingView({
+            model : this.model,
+            options : {
+              enabled : this.model.get("somaClickingAllowed"),
+              name : "somaClicking",
+              displayName : "Soma Clicking"
+            }
+          });
+        }
+      ]
+    ];
+  }
+}
+TreeCategoryView.initClass();
 
-
-  caption : "Trees"
-
-  subviewCreatorsList : [
-
-    [
-      "activeTree", ->
-
-        return new NumberSettingView(
-          model : @model
-          options :
-            name : "activeTreeId"
-            displayName : "Active Tree ID"
-        )
-    ]
-
-    [
-      "somaClicking", ->
-
-        return new CheckboxSettingView(
-          model : @model
-          options :
-            enabled : @model.get("somaClickingAllowed")
-            name : "somaClicking"
-            displayName : "Soma Clicking"
-        )
-    ]
-  ]
-
-module.exports = TreeCategoryView
+export default TreeCategoryView;

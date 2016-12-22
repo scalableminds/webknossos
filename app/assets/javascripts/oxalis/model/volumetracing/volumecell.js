@@ -1,8 +1,10 @@
-class VolumeCell
+class VolumeCell {
 
-  constructor : (id) ->
+  constructor(id) {
 
-    @id = id
+    this.id = id;
+  }
+}
 
 
-module.exports = VolumeCell
+export default VolumeCell;

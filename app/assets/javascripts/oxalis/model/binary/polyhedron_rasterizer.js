@@ -1,512 +1,583 @@
-{M4x4, V3}  = require("libs/mjs")
+import { M4x4, V3 } from "libs/mjs";
 
-# Constants
-HEAP_SIZE = 1 << 25
-HEAP = new ArrayBuffer(HEAP_SIZE)
-Int32_MIN = -2147483648
-Int32_MAX = 2147483647
+// Constants
+const HEAP_SIZE = 1 << 25;
+const HEAP = new ArrayBuffer(HEAP_SIZE);
+const Int32_MIN = -2147483648;
+const Int32_MAX = 2147483647;
 
-# Macros
+// Macros
 
-# unused?
-# crossMacro = (o0, o1, a0, a1, b0, b1) ->
-#   (a0 - o0) * (b1 - o1) - (a1 - o1) * (b0 - o0)
-
-
-drawFunction = (x, y, z, buffer, shift_z) ->
-
-  __index_y = (z << shift_z) + (y << 1)
-
-  buffer[__index_y]     = x if x < buffer[__index_y]
-  buffer[__index_y + 1] = x if x > buffer[__index_y + 1]
+// unused?
+// crossMacro = (o0, o1, a0, a1, b0, b1) ->
+//   (a0 - o0) * (b1 - o1) - (a1 - o1) * (b0 - o0)
 
 
-# Returns the index of the next free bit.
-# Example: 5 = 0000 0101 => 3
-nextFreeBit = (x) ->
-  n = 1
-  if (x >> 16) == 0
-    n = n + 16
-    x <<= 16
-  if (x >> 24) == 0
-    n = n + 8
-    x <<= 8
-  if (x >> 28) == 0
-    n = n + 4
-    x <<= 4
-  if (x >> 30) == 0
-    n = n + 2
-    x <<= 2
-  32 - n - (x >> 31)
+const drawFunction = function(x, y, z, buffer, shift_z) {
+
+  const __index_y = (z << shift_z) + (y << 1);
+
+  if (x < buffer[__index_y]) { buffer[__index_y]     = x; }
+  if (x > buffer[__index_y + 1]) { return buffer[__index_y + 1] = x; }
+};
 
 
-# Represents a convex polyhedron, which can be voxelized.
-# Use it like this:
-#     masterPolyhredon = new PolyhedronRasterizer.Master([...], [...])
-#     polyhedron = masterPolyhedron.transformAffine(matrix)
-#     output = polyhedron.collectPointsOnion(0, 0, 0)
-#
-# ##A word of caution:##
-# The code is a bit verbose to keep it speedy. Also notice
-# that using this class is nowhere near thread-safe. Each instance
-# will use the same `HEAP`. Therefore two existing instances will
-# definitely collide.
-#
-# ##How the algorithm works:##
-# First, we use a buffer which holds all line segments orthogonal
-# to the yz-plane belonging to the polyhedron, i.e. the smallest
-# and highest x-coordinate for all y- and z-coordinates currently
-# known.
-# We start by drawing the edges of the polyhedron into the buffer.
-# This results in having at least one point in each orthogonal plane.
-# Knowing this, we slice polyhedron at each xy-plane (i.e. same
-# z-coordinate). We collect all points in this plane and run a convex
-# hull algorithm over them, resulting in a convex polygon. We then draw
-# edges of that polygon into our buffer.
-# Finally, we know all relevant line segments and can collect the points
-# There are some algorithms available to determine the order of the
-# collected points.
-#
-class PolyhedronRasterizer
-
-  # Orientation of transformed polyhedron 1 if z orientation is positive else -1
-  orientation : 1
+// Returns the index of the next free bit.
+// Example: 5 = 0000 0101 => 3
+const nextFreeBit = function(x) {
+  let n = 1;
+  if ((x >> 16) === 0) {
+    n = n + 16;
+    x <<= 16;
+  }
+  if ((x >> 24) === 0) {
+    n = n + 8;
+    x <<= 8;
+  }
+  if ((x >> 28) === 0) {
+    n = n + 4;
+    x <<= 4;
+  }
+  if ((x >> 30) === 0) {
+    n = n + 2;
+    x <<= 2;
+  }
+  return 32 - n - (x >> 31);
+};
 
 
-  constructor : (@vertices, @indices) ->
-
-    @calcExtent()
-    { min_x, min_y, min_z, delta_z, delta_y, shift_z, vertices } = @
-
-    @bufferLength = bufferLength = delta_z << shift_z
-    @buffer = buffer = new Int32Array(HEAP, 0, bufferLength)
-
-    # initialize buffer values
-    for z in [0...delta_z] by 1
-      index = z << shift_z
-      for index_y in [0...delta_y] by 1
-        buffer[index++] = Int32_MAX
-        buffer[index++] = Int32_MIN
-
-    # translate to 0 based coordinate system
-    i = vertices.length
-    while i
-      vertices[--i] -= min_z
-      vertices[--i] -= min_y
-      vertices[--i] -= min_x
-
-    # create convex hull buffers
-    @pointsBuffer = new Int32Array(delta_y << 2)
-
-    # draw edges of the polyhedron into the buffer
-    @drawEdges()
-    # fill each xy-plane with points
-    @drawPolygons()
-
-
-  calcExtent : ->
-
-    min_x = min_y = min_z = Int32_MAX
-    max_x = max_y = max_z = Int32_MIN
-
-    vertices = @vertices
-
-    i = 0
-    while i < vertices.length
-      x = vertices[i++]
-      y = vertices[i++]
-      z = vertices[i++]
-
-      min_x = x if x < min_x
-      min_y = y if y < min_y
-      min_z = z if z < min_z
-      max_x = x if x > max_x
-      max_y = y if y > max_y
-      max_z = z if z > max_z
-
-    @min_x = min_x
-    @min_y = min_y
-    @min_z = min_z
-    @max_x = max_x
-    @max_y = max_y
-    @max_z = max_z
-    @delta_x = max_x - min_x + 1
-    @delta_y = max_y - min_y + 1
-    @delta_z = max_z - min_z + 1
-    @shift_z = nextFreeBit((@delta_y << 1) - 1)
-
-    return
+// Represents a convex polyhedron, which can be voxelized.
+// Use it like this:
+//     masterPolyhredon = new PolyhedronRasterizer.Master([...], [...])
+//     polyhedron = masterPolyhedron.transformAffine(matrix)
+//     output = polyhedron.collectPointsOnion(0, 0, 0)
+//
+// ##A word of caution:##
+// The code is a bit verbose to keep it speedy. Also notice
+// that using this class is nowhere near thread-safe. Each instance
+// will use the same `HEAP`. Therefore two existing instances will
+// definitely collide.
+//
+// ##How the algorithm works:##
+// First, we use a buffer which holds all line segments orthogonal
+// to the yz-plane belonging to the polyhedron, i.e. the smallest
+// and highest x-coordinate for all y- and z-coordinates currently
+// known.
+// We start by drawing the edges of the polyhedron into the buffer.
+// This results in having at least one point in each orthogonal plane.
+// Knowing this, we slice polyhedron at each xy-plane (i.e. same
+// z-coordinate). We collect all points in this plane and run a convex
+// hull algorithm over them, resulting in a convex polygon. We then draw
+// edges of that polygon into our buffer.
+// Finally, we know all relevant line segments and can collect the points
+// There are some algorithms available to determine the order of the
+// collected points.
+//
+class PolyhedronRasterizer {
+  static initClass() {
+  
+    // Orientation of transformed polyhedron 1 if z orientation is positive else -1
+    this.prototype.orientation  = 1;
+  }
 
 
-  #transformAffine : (matrix) ->
-  #
-  #  { min_x, min_y, min_z, vertices } = @
-  #
-  #  vertices1 = new Int32Array(vertices.length)
-  #  i = vertices.length
-  #  while i
-  #    vertices1[--i] = vertices[i] + min_z
-  #    vertices1[--i] = vertices[i] + min_y
-  #    vertices1[--i] = vertices[i] + min_x
-  #
-  #  new PolyhedronRasterizer(
-  #    M4x4.transformPointsAffine(matrix, vertices1, vertices1),
-  #    @indices
-  #  )
+  constructor(vertices1, indices) {
+
+    let buffer, bufferLength;
+    this.vertices = vertices1;
+    this.indices = indices;
+    this.calcExtent();
+    const { min_x, min_y, min_z, delta_z, delta_y, shift_z, vertices } = this;
+
+    this.bufferLength = bufferLength = delta_z << shift_z;
+    this.buffer = buffer = new Int32Array(HEAP, 0, bufferLength);
+
+    // initialize buffer values
+    for (let z = 0; z < delta_z; z++) {
+      let index = z << shift_z;
+      for (let index_y = 0; index_y < delta_y; index_y++) {
+        buffer[index++] = Int32_MAX;
+        buffer[index++] = Int32_MIN;
+      }
+    }
+
+    // translate to 0 based coordinate system
+    let i = vertices.length;
+    while (i) {
+      vertices[--i] -= min_z;
+      vertices[--i] -= min_y;
+      vertices[--i] -= min_x;
+    }
+
+    // create convex hull buffers
+    this.pointsBuffer = new Int32Array(delta_y << 2);
+
+    // draw edges of the polyhedron into the buffer
+    this.drawEdges();
+    // fill each xy-plane with points
+    this.drawPolygons();
+  }
 
 
-  draw : (x, y, z) ->
+  calcExtent() {
 
-    { buffer, shift_z } = @
-    drawFunction(x, y, z, buffer, shift_z)
+    let max_y, max_z, min_y, min_z;
+    let min_x = min_y = min_z = Int32_MAX;
+    let max_x = max_y = max_z = Int32_MIN;
 
-    return
+    const { vertices } = this;
 
-  drawEdges : ->
-    # Draws the edges into the buffer.
+    let i = 0;
+    while (i < vertices.length) {
+      const x = vertices[i++];
+      const y = vertices[i++];
+      const z = vertices[i++];
 
-    { indices, vertices } = @
+      if (x < min_x) { min_x = x; }
+      if (y < min_y) { min_y = y; }
+      if (z < min_z) { min_z = z; }
+      if (x > max_x) { max_x = x; }
+      if (y > max_y) { max_y = y; }
+      if (z > max_z) { max_z = z; }
+    }
 
-    # rasterize edges with 3d bresenham
-    i = indices.length
-    while i
+    this.min_x = min_x;
+    this.min_y = min_y;
+    this.min_z = min_z;
+    this.max_x = max_x;
+    this.max_y = max_y;
+    this.max_z = max_z;
+    this.delta_x = (max_x - min_x) + 1;
+    this.delta_y = (max_y - min_y) + 1;
+    this.delta_z = (max_z - min_z) + 1;
+    this.shift_z = nextFreeBit((this.delta_y << 1) - 1);
 
-      i0 = indices[--i]
-      i1 = indices[--i]
+  }
 
-      @drawLine3d(
+
+  //transformAffine : (matrix) ->
+  //
+  //  { min_x, min_y, min_z, vertices } = @
+  //
+  //  vertices1 = new Int32Array(vertices.length)
+  //  i = vertices.length
+  //  while i
+  //    vertices1[--i] = vertices[i] + min_z
+  //    vertices1[--i] = vertices[i] + min_y
+  //    vertices1[--i] = vertices[i] + min_x
+  //
+  //  new PolyhedronRasterizer(
+  //    M4x4.transformPointsAffine(matrix, vertices1, vertices1),
+  //    @indices
+  //  )
+
+
+  draw(x, y, z) {
+
+    const { buffer, shift_z } = this;
+    drawFunction(x, y, z, buffer, shift_z);
+
+  }
+
+  drawEdges() {
+    // Draws the edges into the buffer.
+
+    const { indices, vertices } = this;
+
+    // rasterize edges with 3d bresenham
+    let i = indices.length;
+    while (i) {
+
+      let i0 = indices[--i];
+      let i1 = indices[--i];
+
+      this.drawLine3d(
         vertices[i0++],
         vertices[i0++],
         vertices[i0],
         vertices[i1++],
         vertices[i1++],
         vertices[i1]
-      )
+      );
+    }
 
-    return
+  }
 
 
-  drawLine3d : (x, y, z, x1, y1, z1) ->
-    # Source: https://sites.google.com/site/proyectosroboticos/bresenham-3d
+  drawLine3d(x, y, z, x1, y1, z1) {
+    // Source: https://sites.google.com/site/proyectosroboticos/bresenham-3d
 
-    { shift_z, buffer } = @
+    let __tmp, d, dx, dy, dz, mode;
+    const { shift_z, buffer } = this;
 
-    x_inc = if (dx = x1 - x) < 0 then -1 else 1
-    y_inc = if (dy = y1 - y) < 0 then -1 else 1
-    z_inc = if (dz = z1 - z) < 0 then -1 else 1
+    let x_inc = (dx = x1 - x) < 0 ? -1 : 1;
+    let y_inc = (dy = y1 - y) < 0 ? -1 : 1;
+    let z_inc = (dz = z1 - z) < 0 ? -1 : 1;
 
-    drawFunction(x, y, z, buffer, shift_z)
+    drawFunction(x, y, z, buffer, shift_z);
 
-    dx = if dx < 0 then -dx else dx
-    dy = if dy < 0 then -dy else dy
-    dz = if dz < 0 then -dz else dz
+    dx = dx < 0 ? -dx : dx;
+    dy = dy < 0 ? -dy : dy;
+    dz = dz < 0 ? -dz : dz;
 
-    dx2 = dx << 1
-    dy2 = dy << 1
-    dz2 = dz << 1
+    let dx2 = dx << 1;
+    let dy2 = dy << 1;
+    let dz2 = dz << 1;
 
 
-    if dx >= dy and dx >= dz
+    if (dx >= dy && dx >= dz) {
 
-      d = dx
-      mode = 0
+      d = dx;
+      mode = 0;
 
-    else if dy >= dz
+    } else if (dy >= dz) {
 
-      #swapMacro(y, x)
-      __tmp = y
-      y = x
-      x = __tmp
+      //swapMacro(y, x)
+      __tmp = y;
+      y = x;
+      x = __tmp;
 
-      #swapMacro(y_inc, x_inc)
-      __tmp = y_inc
-      y_inc = x_inc
-      x_inc = __tmp
+      //swapMacro(y_inc, x_inc)
+      __tmp = y_inc;
+      y_inc = x_inc;
+      x_inc = __tmp;
 
-      #swapMacro(dy2, dx2)
-      __tmp = dy2
-      dy2 = dx2
-      dx2 = __tmp
+      //swapMacro(dy2, dx2)
+      __tmp = dy2;
+      dy2 = dx2;
+      dx2 = __tmp;
 
-      d = dy
-      mode = 1
+      d = dy;
+      mode = 1;
 
-    else
-      #swapMacro(z, x)
-      __tmp = z
-      z = x
-      x = __tmp
+    } else {
+      //swapMacro(z, x)
+      __tmp = z;
+      z = x;
+      x = __tmp;
 
-      #swapMacro(z_inc, x_inc)
-      __tmp = z_inc
-      z_inc = x_inc
-      x_inc = __tmp
+      //swapMacro(z_inc, x_inc)
+      __tmp = z_inc;
+      z_inc = x_inc;
+      x_inc = __tmp;
 
-      #swapMacro(dz2, dx2)
-      __tmp = dz2
-      dz2 = dx2
-      dx2 = __tmp
+      //swapMacro(dz2, dx2)
+      __tmp = dz2;
+      dz2 = dx2;
+      dx2 = __tmp;
 
-      d = dz
-      mode = 2
+      d = dz;
+      mode = 2;
+    }
 
-    err_1 = dy2 - d
-    err_2 = dz2 - d
+    let err_1 = dy2 - d;
+    let err_2 = dz2 - d;
 
-    for i in [0...d] by 1
+    for (let i = 0; i < d; i++) {
 
-      if err_1 > 0
-        y += y_inc
-        err_1 -= dx2
-      if err_2 > 0
-        z += z_inc
-        err_2 -= dx2
+      if (err_1 > 0) {
+        y += y_inc;
+        err_1 -= dx2;
+      }
+      if (err_2 > 0) {
+        z += z_inc;
+        err_2 -= dx2;
+      }
 
-      err_1 += dy2
-      err_2 += dz2
-      x     += x_inc
+      err_1 += dy2;
+      err_2 += dz2;
+      x     += x_inc;
 
-      switch mode
-        when 0
-          drawFunction(x, y, z, buffer, shift_z)
-        when 1
-          drawFunction(y, x, z, buffer, shift_z)
-        else
-          drawFunction(z, y, x, buffer, shift_z)
+      switch (mode) {
+        case 0:
+          drawFunction(x, y, z, buffer, shift_z);
+          break;
+        case 1:
+          drawFunction(y, x, z, buffer, shift_z);
+          break;
+        default:
+          drawFunction(z, y, x, buffer, shift_z);
+      }
+    }
 
-    return
+  }
 
-  drawLine2d : (x, y, x1, y1, z) ->
-    # Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
+  drawLine2d(x, y, x1, y1, z) {
+    // Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
 
-    { shift_z, buffer } = @
+    let d, dx, dy, mode;
+    const { shift_z, buffer } = this;
 
-    x_inc = if (dx = x1 - x) < 0 then -1 else 1
-    y_inc = if (dy = y1 - y) < 0 then -1 else 1
+    let x_inc = (dx = x1 - x) < 0 ? -1 : 1;
+    let y_inc = (dy = y1 - y) < 0 ? -1 : 1;
 
-    dx = if dx < 0 then -dx else dx
-    dy = if dy < 0 then -dy else dy
+    dx = dx < 0 ? -dx : dx;
+    dy = dy < 0 ? -dy : dy;
 
-    dx2 = dx << 1
-    dy2 = dy << 1
+    let dx2 = dx << 1;
+    let dy2 = dy << 1;
 
-    drawFunction(x, y, z, buffer, shift_z)
+    drawFunction(x, y, z, buffer, shift_z);
 
-    if dx >= dy
+    if (dx >= dy) {
 
-      d = dx
-      mode = 0
+      d = dx;
+      mode = 0;
 
-    else
+    } else {
 
-      #swapMacro(y, x)
-      __tmp = y
-      y = x
-      x = __tmp
+      //swapMacro(y, x)
+      let __tmp = y;
+      y = x;
+      x = __tmp;
 
-      #swapMacro(y_inc, x_inc)
-      __tmp = y_inc
-      y_inc = x_inc
-      x_inc = __tmp
+      //swapMacro(y_inc, x_inc)
+      __tmp = y_inc;
+      y_inc = x_inc;
+      x_inc = __tmp;
 
-      #swapMacro(dy2, dx2)
-      __tmp = dy2
-      dy2 = dx2
-      dx2 = __tmp
+      //swapMacro(dy2, dx2)
+      __tmp = dy2;
+      dy2 = dx2;
+      dx2 = __tmp;
 
-      d = dy
-      mode = 1
+      d = dy;
+      mode = 1;
+    }
 
-    err = dy2 - d
+    let err = dy2 - d;
 
-    for i in [0...d] by 1
+    for (let i = 0; i < d; i++) {
 
-      if err > 0
-        y += y_inc
-        err -= dx2
+      if (err > 0) {
+        y += y_inc;
+        err -= dx2;
+      }
 
-      err += dy2
-      x   += x_inc
+      err += dy2;
+      x   += x_inc;
 
-      if mode
-        drawFunction(y, x, z, buffer, shift_z)
-      else
-        drawFunction(x, y, z, buffer, shift_z)
+      if (mode) {
+        drawFunction(y, x, z, buffer, shift_z);
+      } else {
+        drawFunction(x, y, z, buffer, shift_z);
+      }
+    }
 
-    return
+  }
 
-  drawPolygons : ->
-    # Iterates over all relevant xy-planes. The points in
-    # each plane are used to build a convex polygon. The
-    # edges of that polygon is then drawn into the buffer.
-    # After that, we know all line segments that belong to
-    # the polyhedron.
+  drawPolygons() {
+    // Iterates over all relevant xy-planes. The points in
+    // each plane are used to build a convex polygon. The
+    // edges of that polygon is then drawn into the buffer.
+    // After that, we know all line segments that belong to
+    // the polyhedron.
 
-    { delta_x, delta_y, delta_z, shift_z, buffer, pointsBuffer } = @
+    const { delta_x, delta_y, delta_z, shift_z, buffer, pointsBuffer } = this;
 
-    # build and rasterize convex hull of all xy-planes
+    // build and rasterize convex hull of all xy-planes
 
-    for z in [0...delta_z] by 1
+    for (let z = 0; z < delta_z; z++) {
 
-      # put found end points into an ordered collection
-      # ordered by (y,x)
-      pointsPointer = 0
-      index_y = z << shift_z
-      for y in [0...delta_y] by 1
+      // put found end points into an ordered collection
+      // ordered by (y,x)
+      let x0, x1;
+      let pointsPointer = 0;
+      let index_y = z << shift_z;
+      for (let y = 0; y < delta_y; y++) {
 
-        if (x0 = buffer[index_y++]) != Int32_MAX
-          pointsBuffer[pointsPointer++] = y
-          pointsBuffer[pointsPointer++] = x0
-          if (x1 = buffer[index_y++]) != x0
-            pointsBuffer[pointsPointer++] = y
-            pointsBuffer[pointsPointer++] = x1
-        else
-          index_y++
+        if ((x0 = buffer[index_y++]) !== Int32_MAX) {
+          pointsBuffer[pointsPointer++] = y;
+          pointsBuffer[pointsPointer++] = x0;
+          if ((x1 = buffer[index_y++]) !== x0) {
+            pointsBuffer[pointsPointer++] = y;
+            pointsBuffer[pointsPointer++] = x1;
+          }
+        } else {
+          index_y++;
+        }
+      }
 
 
-      # Generating convex hull by brute force. O(n²)
-      i = 0
-      while i < pointsPointer
+      // Generating convex hull by brute force. O(n²)
+      let i = 0;
+      while (i < pointsPointer) {
 
-        y0 = pointsBuffer[i++]
-        x0 = pointsBuffer[i++]
+        const y0 = pointsBuffer[i++];
+        x0 = pointsBuffer[i++];
 
-        j = i
-        while j < pointsPointer
+        let j = i;
+        while (j < pointsPointer) {
 
-          y1 = pointsBuffer[j++]
-          x1 = pointsBuffer[j++]
+          const y1 = pointsBuffer[j++];
+          x1 = pointsBuffer[j++];
 
-          @drawLine2d(x0, y0, x1, y1, z)
+          this.drawLine2d(x0, y0, x1, y1, z);
+        }
+      }
+    }
 
 
-    return
+  }
 
 
-  collectPoints : ->
+  collectPoints() {
 
-    { buffer, min_x, min_y, min_z, shift_z, delta_y, delta_z } = @
+    const { buffer, min_x, min_y, min_z, shift_z, delta_y, delta_z } = this;
 
-    output = []
+    const output = [];
 
-    for z in [0...delta_z] by 1
-      index = z << shift_z
-      for y in [0...delta_y] by 1
-        x0 = buffer[index++]
-        x1 = buffer[index++]
-        if x0 != Int32_MAX
-          output.push x + min_x, y + min_y, z + min_z for x in [x0..x1]
+    for (let z = 0; z < delta_z; z++) {
+      let index = z << shift_z;
+      for (let y = 0; y < delta_y; y++) {
+        const x0 = buffer[index++];
+        const x1 = buffer[index++];
+        if (x0 !== Int32_MAX) {
+          for (let x of __range__(x0, x1, true)) { output.push(x + min_x, y + min_y, z + min_z); }
+        }
+      }
+    }
 
-    output
+    return output;
+  }
 
 
-  collectPointsOnion : (xs, ys, zs) ->
+  collectPointsOnion(xs, ys, zs) {
 
-    { buffer, min_x, max_x, min_y, max_y, min_z, max_z, delta_x, delta_y, delta_z, shift_z } = @
+    const { buffer, min_x, max_x, min_y, max_y, min_z, max_z, delta_x, delta_y, delta_z, shift_z } = this;
 
-    maxRadius = Math.max(
-      Math.abs(xs - min_x)
-      Math.abs(xs - max_x)
-      Math.abs(ys - min_y)
-      Math.abs(ys - max_y)
-      Math.abs(zs - min_z)
+    const maxRadius = Math.max(
+      Math.abs(xs - min_x),
+      Math.abs(xs - max_x),
+      Math.abs(ys - min_y),
+      Math.abs(ys - max_y),
+      Math.abs(zs - min_z),
       Math.abs(zs - max_z)
-    )
+    );
 
-    outputBuffer = new Int32Array(HEAP, @bufferLength * Int32Array.BYTES_PER_ELEMENT, delta_x * delta_y * delta_z * 3)
-    outputLength = 0
+    const outputBuffer = new Int32Array(HEAP, this.bufferLength * Int32Array.BYTES_PER_ELEMENT, delta_x * delta_y * delta_z * 3);
+    let outputLength = 0;
 
-    for radius in [0..maxRadius] by 1
+    for (let radius = 0; radius <= maxRadius; radius++) {
 
-      radius_min_z = Math.max(zs - radius, min_z)
-      radius_max_z = Math.min(zs + radius, max_z)
-      radius_min_y = Math.max(ys - radius, min_y)
-      radius_max_y = Math.min(ys + radius, max_y)
+      let radius_end_z, radius_start_z;
+      const radius_min_z = Math.max(zs - radius, min_z);
+      const radius_max_z = Math.min(zs + radius, max_z);
+      const radius_min_y = Math.max(ys - radius, min_y);
+      const radius_max_y = Math.min(ys + radius, max_y);
 
-      if @orientation is 1
-        radius_start_z = radius_max_z
-        radius_end_z = radius_min_z
-      else
-        radius_end_z = radius_max_z
-        radius_start_z = radius_min_z
+      if (this.orientation === 1) {
+        radius_start_z = radius_max_z;
+        radius_end_z = radius_min_z;
+      } else {
+        radius_end_z = radius_max_z;
+        radius_start_z = radius_min_z;
+      }
 
-      for z in [radius_start_z..radius_end_z]
-        for y in [radius_min_y..radius_max_y] by 1
-          index = ((z - min_z) << shift_z) + ((y - min_y) << 1)
-          x0 = buffer[index++]
-          x1 = buffer[index++]
-          if x0 != Int32_MAX
-            x0 += min_x
-            x1 += min_x
-            for x in [Math.max(xs - radius, x0)..Math.min(xs + radius, x1)]
-              if x == xs - radius or x == xs + radius or
-              y == ys - radius or y == ys + radius or
-              z == zs - radius or z == zs + radius
-                outputBuffer[outputLength++] = x
-                outputBuffer[outputLength++] = y
-                outputBuffer[outputLength++] = z
+      for (let z of __range__(radius_start_z, radius_end_z, true)) {
+        for (let y = radius_min_y; y <= radius_max_y; y++) {
+          let index = ((z - min_z) << shift_z) + ((y - min_y) << 1);
+          let x0 = buffer[index++];
+          let x1 = buffer[index++];
+          if (x0 !== Int32_MAX) {
+            x0 += min_x;
+            x1 += min_x;
+            for (let x of __range__(Math.max(xs - radius, x0), Math.min(xs + radius, x1), true)) {
+              if (x === xs - radius || x === xs + radius ||
+              y === ys - radius || y === ys + radius ||
+              z === zs - radius || z === zs + radius) {
+                outputBuffer[outputLength++] = x;
+                outputBuffer[outputLength++] = y;
+                outputBuffer[outputLength++] = z;
+              }
+            }
+          }
+        }
+      }
+    }
 
-    outputBuffer.subarray(0, outputLength)
+    return outputBuffer.subarray(0, outputLength);
+  }
+}
+PolyhedronRasterizer.initClass();
 
-class PolyhedronRasterizer.Master
+PolyhedronRasterizer.Master = class Master {
 
-  # Works just like a regular mesh in WebGL.
-  constructor : (@vertices, @indices) ->
+  // Works just like a regular mesh in WebGL.
+  constructor(vertices, indices) {
+    this.vertices = vertices;
+    this.indices = indices;
+  }
 
-  transformAffine : (matrix) ->
+  transformAffine(matrix) {
 
-    { vertices, indices } = @
+    const { vertices, indices } = this;
 
-    transformedPolyhdron = new PolyhedronRasterizer(
+    const transformedPolyhdron = new PolyhedronRasterizer(
       M4x4.transformPointsAffine(matrix, vertices, new Int32Array(vertices.length)),
       indices
-    )
+    );
 
-    orientationVector = M4x4.transformLineAffine(matrix, [0, 0, 1], [0, 0, 0])
+    const orientationVector = M4x4.transformLineAffine(matrix, [0, 0, 1], [0, 0, 0]);
 
-    transformedPolyhdron.orientation = if orientationVector[2] < 0 then -1 else 1
+    transformedPolyhdron.orientation = orientationVector[2] < 0 ? -1 : 1;
 
-    transformedPolyhdron
+    return transformedPolyhdron;
+  }
 
 
-  @squareFrustum : (nearFaceXWidth, nearFaceYWidth, nearFaceZ, farFaceXWidth, farFaceYWidth, farFaceZ) ->
+  static squareFrustum(nearFaceXWidth, nearFaceYWidth, nearFaceZ, farFaceXWidth, farFaceYWidth, farFaceZ) {
 
-    vertices = [
-      -nearFaceXWidth / 2, -nearFaceYWidth / 2, nearFaceZ #0
-      -farFaceXWidth  / 2, -farFaceYWidth  / 2, farFaceZ #3
-      -nearFaceXWidth / 2,  nearFaceYWidth / 2, nearFaceZ #6
-      -farFaceXWidth  / 2,  farFaceYWidth  / 2, farFaceZ #9
-       nearFaceXWidth / 2, -nearFaceYWidth / 2, nearFaceZ #12
-       farFaceXWidth  / 2, -farFaceYWidth  / 2, farFaceZ #15
-       nearFaceXWidth / 2,  nearFaceYWidth / 2, nearFaceZ #18
-       farFaceXWidth  / 2,  farFaceYWidth  / 2, farFaceZ #21
-    ]
-    indices = [
-      0,3
-      0,6
-      0,12
-      3,9
-      3,15
-      6,9
-      6,18
-      9,21
-      12,15
-      12,18
-      15,21
+    const vertices = [
+      -nearFaceXWidth / 2, -nearFaceYWidth / 2, nearFaceZ, //0
+      -farFaceXWidth  / 2, -farFaceYWidth  / 2, farFaceZ, //3
+      -nearFaceXWidth / 2,  nearFaceYWidth / 2, nearFaceZ, //6
+      -farFaceXWidth  / 2,  farFaceYWidth  / 2, farFaceZ, //9
+       nearFaceXWidth / 2, -nearFaceYWidth / 2, nearFaceZ, //12
+       farFaceXWidth  / 2, -farFaceYWidth  / 2, farFaceZ, //15
+       nearFaceXWidth / 2,  nearFaceYWidth / 2, nearFaceZ, //18
+       farFaceXWidth  / 2,  farFaceYWidth  / 2, farFaceZ //21
+    ];
+    const indices = [
+      0,3,
+      0,6,
+      0,12,
+      3,9,
+      3,15,
+      6,9,
+      6,18,
+      9,21,
+      12,15,
+      12,18,
+      15,21,
       18,21
-    ]
-    new PolyhedronRasterizer.Master(vertices, indices)
+    ];
+    return new PolyhedronRasterizer.Master(vertices, indices);
+  }
 
 
-  @cuboid : (width_x, width_y, width_z) ->
+  static cuboid(width_x, width_y, width_z) {
 
-    @squareFrustum(width_x, width_y, 0, width_x, width_y, width_z)
-
-
-  @cube : (width) ->
-
-    @cuboid(width, width, width)
+    return this.squareFrustum(width_x, width_y, 0, width_x, width_y, width_z);
+  }
 
 
+  static cube(width) {
 
-module.exports = PolyhedronRasterizer
+    return this.cuboid(width, width, width);
+  }
+};
+
+
+
+export default PolyhedronRasterizer;
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}

@@ -1,32 +1,34 @@
-AbstractTabView              = require("oxalis/view/abstract_tab_view")
-SkeletonTracingSettingsView  = require("../settings_views/skeleton_tracing_settings_view")
-ArbitraryUserSettingsView    = require("../settings_views/arbitrary_user_settings_view")
-DatasetSettingsView          = require("../settings_views/dataset_settings_view")
+import AbstractTabView from "oxalis/view/abstract_tab_view";
+import SkeletonTracingSettingsView from "../settings_views/skeleton_tracing_settings_view";
+import ArbitraryUserSettingsView from "../settings_views/arbitrary_user_settings_view";
+import DatasetSettingsView from "../settings_views/dataset_settings_view";
 
-class SkeletonArbitraryTabView extends AbstractTabView
+class SkeletonArbitraryTabView extends AbstractTabView {
 
-  getTabs : ->
-    [
+  getTabs() {
+    return [
       {
-        id : "tracing-settings-tab"
-        name : "Tracing"
-        iconClass : "fa fa-cogs"
-        viewClass : SkeletonTracingSettingsView
-        options : { model: @adapterModel}
-      }
+        id : "tracing-settings-tab",
+        name : "Tracing",
+        iconClass : "fa fa-cogs",
+        viewClass : SkeletonTracingSettingsView,
+        options : { model: this.adapterModel}
+      },
       {
-        id : "dataset-settings-tab"
-        name : "Dataset"
-        iconClass : "fa fa-cogs"
-        active : true
+        id : "dataset-settings-tab",
+        name : "Dataset",
+        iconClass : "fa fa-cogs",
+        active : true,
         viewClass : DatasetSettingsView
-      }
+      },
       {
-        id : "user-settings-tab"
-        name : "User"
-        iconClass : "fa fa-cogs"
+        id : "user-settings-tab",
+        name : "User",
+        iconClass : "fa fa-cogs",
         viewClass : ArbitraryUserSettingsView
       }
-    ]
+    ];
+  }
+}
 
-module.exports = SkeletonArbitraryTabView
+export default SkeletonArbitraryTabView;

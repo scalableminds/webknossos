@@ -1,68 +1,78 @@
-_                       = require("lodash")
-Marionette              = require("backbone.marionette")
-app                     = require("app")
-moment                  = require("moment")
-StatisticListItemView   = require("./statistic_list_item_view")
-UserStatisticCollection = require("admin/models/statistic/user_statistic_collection")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import app from "app";
+import moment from "moment";
+import StatisticListItemView from "./statistic_list_item_view";
+import UserStatisticCollection from "admin/models/statistic/user_statistic_collection";
 
-class StatisticListView extends Marionette.CompositeView
+class StatisticListView extends Marionette.CompositeView {
+  static initClass() {
+  
+    this.prototype.template  = _.template(`\
+<h3>Best Tracers for week <%- startDate.format("DD.MM") %> - <%- endDate.format("DD.MM.YYYY") %></h3>
+<table class="table-striped table">
+  <thead>
+    <tr>
+      <th>User</td>
+      <th>Duration</td>
+    </th>
+  </thead>
+  <tbody></tbody>
+</table>\
+`);
+  
+    this.prototype.childView  = StatisticListItemView;
+    this.prototype.childViewContainer = "tbody";
+  }
 
-  template : _.template("""
-    <h3>Best Tracers for week <%- startDate.format("DD.MM") %> - <%- endDate.format("DD.MM.YYYY") %></h3>
-    <table class="table-striped table">
-      <thead>
-        <tr>
-          <th>User</td>
-          <th>Duration</td>
-        </th>
-      </thead>
-      <tbody></tbody>
-    </table>
-  """)
+  initialize() {
 
-  childView : StatisticListItemView
-  childViewContainer: "tbody"
+    //set first day of the week to monday globally
+    moment.locale("en", {week : { dow : 1
+  }});
 
-  initialize : ->
-
-    #set first day of the week to monday globally
-    moment.locale("en", week : dow : 1)
-
-    @model = new Backbone.Model(
-      startDate : moment().startOf("week")
+    this.model = new Backbone.Model({
+      startDate : moment().startOf("week"),
       endDate : moment().endOf("week")
-    )
+    });
 
-    @collection = new UserStatisticCollection()
-    @fetchData()
+    this.collection = new UserStatisticCollection();
+    this.fetchData();
 
-    @listenTo(app.vent, "graphView:updatedSelection", @update)
+    return this.listenTo(app.vent, "graphView:updatedSelection", this.update);
+  }
 
 
-  update : (data) ->
+  update(data) {
 
-    @model.set(
-      startDate : moment(data.x)
+    this.model.set({
+      startDate : moment(data.x),
       endDate : moment(data.x).endOf("week")
-    )
-    @fetchData()
-    @render()
+    });
+    this.fetchData();
+    return this.render();
+  }
 
 
-  toTimestamp : (date) ->
+  toTimestamp(date) {
 
-    return date.unix() * 1000
+    return date.unix() * 1000;
+  }
 
 
-  fetchData : ->
+  fetchData() {
 
-    @collection.fetch(
-      data :
-        interval : "week"
-        start : @toTimestamp(@model.get("startDate"))
-        end : @toTimestamp(@model.get("endDate"))
+    return this.collection.fetch({
+      data : {
+        interval : "week",
+        start : this.toTimestamp(this.model.get("startDate")),
+        end : this.toTimestamp(this.model.get("endDate")),
         limit : 5
+      },
       reset : true
-    )
+    });
+  }
+}
+StatisticListView.initClass();
 
-module.exports = StatisticListView
+export default StatisticListView;

@@ -1,67 +1,78 @@
-$              = require("jquery")
-_              = require("lodash")
-Marionette     = require("backbone.marionette")
-Toast          = require("libs/toast")
-Request        = require("libs/request")
-app            = require("app")
-SelectionView  = require("admin/views/selection_view")
-ModalView      = require("admin/views/modal_view")
-UserCollection = require("admin/models/user/user_collection")
+import $ from "jquery";
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import Toast from "libs/toast";
+import Request from "libs/request";
+import app from "app";
+import SelectionView from "admin/views/selection_view";
+import ModalView from "admin/views/modal_view";
+import UserCollection from "admin/models/user/user_collection";
 
-class TaskTransferModalView extends ModalView
-
-  headerTemplate : "<h3>Transfer a Task</h3>"
-  bodyTemplate : _.template("""
-    <div class="control-group">
-      <div class="form-group">
-        <label>New User's Name</label>
-        <div class="datalist"></div>
-      </div>
-    </div>
-  """)
-  footerTemplate : """
-    <a href="#" class="btn btn-primary transfer">Transfer</a>
-    <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
-  """
-
-
-  regions :
-    "datalist" : ".datalist"
-
-  events :
-    "click .transfer" : "transferTask"
-
-
-  initialize : (options) ->
-
-    @url = options.url
-    @userCollection = new UserCollection()
+class TaskTransferModalView extends ModalView {
+  static initClass() {
+  
+    this.prototype.headerTemplate  = "<h3>Transfer a Task</h3>";
+    this.prototype.bodyTemplate  = _.template(`\
+<div class="control-group">
+  <div class="form-group">
+    <label>New User's Name</label>
+    <div class="datalist"></div>
+  </div>
+</div>\
+`);
+    this.prototype.footerTemplate  = `\
+<a href="#" class="btn btn-primary transfer">Transfer</a>
+<a href="#" class="btn btn-default" data-dismiss="modal">Close</a>\
+`;
+  
+  
+    this.prototype.regions  =
+      {"datalist" : ".datalist"};
+  
+    this.prototype.events  =
+      {"click .transfer" : "transferTask"};
+  }
 
 
-  onRender : ->
+  initialize(options) {
 
-    selectionView = new SelectionView(
-      collection : @userCollection
-      childViewOptions :
-        modelValue: -> return "#{@model.get("lastName")}, #{@model.get("firstName")} (#{@model.get("email")})"
-    )
-    @showChildView("datalist", selectionView)
-
-    @$el.modal("show")
+    this.url = options.url;
+    return this.userCollection = new UserCollection();
+  }
 
 
-  transferTask : (evt) ->
+  onRender() {
 
-    evt.preventDefault()
+    const selectionView = new SelectionView({
+      collection : this.userCollection,
+      childViewOptions : {
+        modelValue() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; }
+      }
+    });
+    this.showChildView("datalist", selectionView);
 
-    userID = @$("select :selected").attr("id")
-    Request.sendJSONReceiveJSON(
-      @url,
-      data:
+    return this.$el.modal("show");
+  }
+
+
+  transferTask(evt) {
+
+    evt.preventDefault();
+
+    const userID = this.$("select :selected").attr("id");
+    return Request.sendJSONReceiveJSON(
+      this.url, {
+      data: {
         "userId" : userID
-    ).then( =>
-      @destroy()
-    )
+      }
+    }
+    ).then( () => {
+      return this.destroy();
+    }
+    );
+  }
+}
+TaskTransferModalView.initClass();
 
 
-module.exports = TaskTransferModalView
+export default TaskTransferModalView;

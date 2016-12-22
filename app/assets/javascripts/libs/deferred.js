@@ -1,41 +1,47 @@
-class Deferred
-  # Wrapper around `Promise` that keeps a reference to `resolve` and `reject`
-  # methods.
-  #
-  # Sample Usage:
-  # ```
-  # d = new Deferred()
-  # setTimeout(
-  #   -> d.resolve()
-  #   1000
-  # )
-  # return d.promise()
-  # ```
+class Deferred {
+  // Wrapper around `Promise` that keeps a reference to `resolve` and `reject`
+  // methods.
+  //
+  // Sample Usage:
+  // ```
+  // d = new Deferred()
+  // setTimeout(
+  //   -> d.resolve()
+  //   1000
+  // )
+  // return d.promise()
+  // ```
 
 
-  constructor : ->
+  constructor() {
 
-    @_resolve = null
-    @_reject = null
-    @_promise = new Promise((resolve, reject) =>
-      @_resolve = resolve
-      @_reject = reject
-    )
-
-
-  resolve : (arg) ->
-
-    @_resolve(arg)
+    this._resolve = null;
+    this._reject = null;
+    this._promise = new Promise((resolve, reject) => {
+      this._resolve = resolve;
+      return this._reject = reject;
+    }
+    );
+  }
 
 
-  reject : (arg) ->
+  resolve(arg) {
 
-    @_reject(arg)
-
-
-  promise : ->
-
-    return @_promise
+    return this._resolve(arg);
+  }
 
 
-module.exports = Deferred
+  reject(arg) {
+
+    return this._reject(arg);
+  }
+
+
+  promise() {
+
+    return this._promise;
+  }
+}
+
+
+export default Deferred;

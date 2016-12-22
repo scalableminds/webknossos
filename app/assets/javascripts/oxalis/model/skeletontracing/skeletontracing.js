@@ -1,647 +1,795 @@
-app                        = require("app")
-Backbone                   = require("backbone")
-_                          = require("lodash")
-Utils                      = require("libs/utils")
-backbone                   = require("backbone")
-Request                    = require("libs/request")
-ColorGenerator             = require("libs/color_generator")
-TracePoint                 = require("./tracepoint")
-TraceTree                  = require("./tracetree")
-SkeletonTracingStateLogger = require("./skeletontracing_statelogger")
-constants                  = require("../../constants")
-RestrictionHandler         = require("../helpers/restriction_handler")
-TracingParser              = require("./tracingparser")
+import app from "app";
+import Backbone from "backbone";
+import _ from "lodash";
+import Utils from "libs/utils";
+import backbone from "backbone";
+import Request from "libs/request";
+import ColorGenerator from "libs/color_generator";
+import TracePoint from "./tracepoint";
+import TraceTree from "./tracetree";
+import SkeletonTracingStateLogger from "./skeletontracing_statelogger";
+import constants from "../../constants";
+import RestrictionHandler from "../helpers/restriction_handler";
+import TracingParser from "./tracingparser";
 
-class SkeletonTracing
+class SkeletonTracing {
+  static initClass() {
+  
+    // Max and min radius in base voxels (see scaleInfo.baseVoxel)
+    this.prototype.MIN_RADIUS  = 1;
+    this.prototype.MAX_RADIUS  = 5000;
+  
+    this.prototype.trees  = [];
+    this.prototype.activeNode  = null;
+    this.prototype.activeTree  = null;
+    this.prototype.firstEdgeDirection  = null;
+  }
 
-  # Max and min radius in base voxels (see scaleInfo.baseVoxel)
-  MIN_RADIUS : 1
-  MAX_RADIUS : 5000
+  constructor(tracing, flycam, flycam3d, user) {
 
-  trees : []
-  activeNode : null
-  activeTree : null
-  firstEdgeDirection : null
+    this.flycam = flycam;
+    this.flycam3d = flycam3d;
+    this.user = user;
+    _.extend(this, Backbone.Events);
 
-  constructor : (tracing, @flycam, @flycam3d, @user) ->
+    this.doubleBranchPop = false;
 
-    _.extend(this, Backbone.Events)
-
-    @doubleBranchPop = false
-
-    @data = tracing.content.contentData
-    @restrictionHandler = new RestrictionHandler(tracing.restrictions)
+    this.data = tracing.content.contentData;
+    this.restrictionHandler = new RestrictionHandler(tracing.restrictions);
 
 
-    ############ Load Tree from @data ##############
+    //########### Load Tree from @data ##############
 
-    @stateLogger = new SkeletonTracingStateLogger(
-      @flycam, @flycam3d, tracing.version, tracing.id, tracing.typ,
-      tracing.restrictions.allowUpdate, this)
+    this.stateLogger = new SkeletonTracingStateLogger(
+      this.flycam, this.flycam3d, tracing.version, tracing.id, tracing.typ,
+      tracing.restrictions.allowUpdate, this);
 
-    tracingParser = new TracingParser(@, @data)
-    {
-      @idCount
-      @treeIdCount
-      @trees
-      @activeNode
-      @activeTree
-    } = tracingParser.parse()
+    const tracingParser = new TracingParser(this, this.data);
+    ({
+      idCount: this.idCount,
+      treeIdCount: this.treeIdCount,
+      trees: this.trees,
+      activeNode: this.activeNode,
+      activeTree: this.activeTree
+    } = tracingParser.parse());
 
-    tracingType = tracing.typ
+    const tracingType = tracing.typ;
 
-    @initializeTrees(tracingType, tracing.task?.id)
+    this.initializeTrees(tracingType, __guard__(tracing.task, x => x.id));
 
-    if (tracingType == "Task") and @getNodeListOfAllTrees().length == 0
-      @addNode(tracing.content.editPosition, tracing.content.editRotation, 0, 0, 4, false)
+    if ((tracingType === "Task") && this.getNodeListOfAllTrees().length === 0) {
+      this.addNode(tracing.content.editPosition, tracing.content.editRotation, 0, 0, 4, false);
+    }
 
-    @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
-    if not @branchPointsAllowed
-      #calculate direction of first edge in nm
-      if @data.trees[0]?.edges?
-        for edge in @data.trees[0].edges
-          sourceNode = @findNodeInList(@trees[0].nodes, edge.source).pos
-          targetNode = @findNodeInList(@trees[0].nodes, edge.target).pos
-          if sourceNode[0] != targetNode[0] or sourceNode[1] != targetNode[1] or sourceNode[2] != targetNode[2]
-            @firstEdgeDirection = [targetNode[0] - sourceNode[0],
+    this.branchPointsAllowed = tracing.content.settings.branchPointsAllowed;
+    if (!this.branchPointsAllowed) {
+      //calculate direction of first edge in nm
+      if (__guard__(this.data.trees[0], x1 => x1.edges) != null) {
+        for (let edge of this.data.trees[0].edges) {
+          const sourceNode = this.findNodeInList(this.trees[0].nodes, edge.source).pos;
+          const targetNode = this.findNodeInList(this.trees[0].nodes, edge.target).pos;
+          if (sourceNode[0] !== targetNode[0] || sourceNode[1] !== targetNode[1] || sourceNode[2] !== targetNode[2]) {
+            this.firstEdgeDirection = [targetNode[0] - sourceNode[0],
                                    targetNode[1] - sourceNode[1],
-                                   targetNode[2] - sourceNode[2]]
-            break
+                                   targetNode[2] - sourceNode[2]];
+            break;
+          }
+        }
+      }
 
-      if @firstEdgeDirection
-        @flycam.setSpaceDirection(@firstEdgeDirection)
-
-
-  initializeTrees : (tracingType, taskId) ->
-
-    # Initialize tree colors
-    @colorIdCounter = @treeIdCount
-
-    # Initialize tree name prefix
-    @TREE_PREFIX = @generateTreeNamePrefix(tracingType, taskId)
-
-    for tree in @trees
-      unless tree.color?
-        @shuffleTreeColor(tree)
-
-    # Ensure a tree is active
-    unless @activeTree
-      if @trees.length > 0
-        @activeTree = @trees[0]
-      else
-        @createNewTree()
+      if (this.firstEdgeDirection) {
+        this.flycam.setSpaceDirection(this.firstEdgeDirection);
+      }
+    }
+  }
 
 
-  benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
+  initializeTrees(tracingType, taskId) {
 
-    console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"
-    startTime = (new Date()).getTime()
-    offset = 0
-    size = numberOfNodesPerTree / 10
-    for i in [0...numberOfTrees]
-      @createNewTree()
-      for i in [0...numberOfNodesPerTree]
-        pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
-        point = new TracePoint(@idCount++, pos, Math.random() * 200, @activeTree.treeId, null, [0, 0, 0])
-        @activeTree.nodes.push(point)
-        if @activeNode
-          @activeNode.appendNext(point)
-          point.appendNext(@activeNode)
-          @activeNode = point
-        else
-          @activeNode = point
-          if @branchPointsAllowed
-            centered = true
-            @pushBranch()
-        @doubleBranchPop = false
-      offset += size
-    @trigger("reloadTrees")
-    console.log "[benchmark] done. Took me #{((new Date()).getTime() - startTime) / 1000} seconds."
+    // Initialize tree colors
+    this.colorIdCounter = this.treeIdCount;
+
+    // Initialize tree name prefix
+    this.TREE_PREFIX = this.generateTreeNamePrefix(tracingType, taskId);
+
+    for (let tree of this.trees) {
+      if (tree.color == null) {
+        this.shuffleTreeColor(tree);
+      }
+    }
+
+    // Ensure a tree is active
+    if (!this.activeTree) {
+      if (this.trees.length > 0) {
+        return this.activeTree = this.trees[0];
+      } else {
+        return this.createNewTree();
+      }
+    }
+  }
 
 
-  pushBranch : ->
+  benchmark(numberOfTrees, numberOfNodesPerTree) {
 
-    return if not @restrictionHandler.updateAllowed()
-
-    if @branchPointsAllowed
-      if @activeNode
-        @activeTree.branchpoints.push( { id : @activeNode.id, timestamp : Date.now() } )
-        @stateLogger.updateTree(@activeTree)
-
-        @trigger("setBranch", true, @activeNode)
-    else
-      @trigger("noBranchPoints")
-
-
-  popBranch : ->
-
-    return if not @restrictionHandler.updateAllowed()
-
-    reallyPopBranch = (point, tree, resolve) =>
-      tree.removeBranchWithNodeId(point.id)
-      @stateLogger.updateTree(tree)
-      @setActiveNode(point.id)
-
-      @trigger("setBranch", false, @activeNode)
-      @doubleBranchPop = true
-      resolve(@activeNode.id)
-
-    return new Promise (resolve, reject) =>
-      if @branchPointsAllowed
-        [point, tree] = @getNextBranch()
-        if point
-          if @doubleBranchPop
-            @trigger("doubleBranch", => reallyPopBranch(point, tree, resolve) )
-          else
-            reallyPopBranch(point, tree, resolve)
-        else
-          @trigger("emptyBranchStack")
-          reject()
-      else
-        @trigger("noBranchPoints")
-        reject()
+    if (numberOfTrees == null) { numberOfTrees = 1; }
+    if (numberOfNodesPerTree == null) { numberOfNodesPerTree = 10000; }
+    console.log(`[benchmark] start inserting ${numberOfNodesPerTree} nodes`);
+    const startTime = (new Date()).getTime();
+    let offset = 0;
+    const size = numberOfNodesPerTree / 10;
+    for (let i of __range__(0, numberOfTrees, false)) {
+      this.createNewTree();
+      for (i of __range__(0, numberOfNodesPerTree, false)) {
+        const pos = [(Math.random() * size) + offset, (Math.random() * size) + offset, (Math.random() * size) + offset];
+        const point = new TracePoint(this.idCount++, pos, Math.random() * 200, this.activeTree.treeId, null, [0, 0, 0]);
+        this.activeTree.nodes.push(point);
+        if (this.activeNode) {
+          this.activeNode.appendNext(point);
+          point.appendNext(this.activeNode);
+          this.activeNode = point;
+        } else {
+          this.activeNode = point;
+          if (this.branchPointsAllowed) {
+            const centered = true;
+            this.pushBranch();
+          }
+        }
+        this.doubleBranchPop = false;
+      }
+      offset += size;
+    }
+    this.trigger("reloadTrees");
+    return console.log(`[benchmark] done. Took me ${((new Date()).getTime() - startTime) / 1000} seconds.`);
+  }
 
 
-  getNextBranch : ->
+  pushBranch() {
 
-    curTime = 0
-    curPoint = null
-    curTree = null
+    if (!this.restrictionHandler.updateAllowed()) { return; }
 
-    for tree in @trees
-      for branch in tree.branchpoints
-        if branch.timestamp > curTime
-          curTime = branch.timestamp
-          curPoint = branch
-          curTree = tree
+    if (this.branchPointsAllowed) {
+      if (this.activeNode) {
+        this.activeTree.branchpoints.push( { id : this.activeNode.id, timestamp : Date.now() } );
+        this.stateLogger.updateTree(this.activeTree);
 
-    return [curPoint, curTree]
-
-
-  addNode : (position, rotation, viewport, resolution, bitDepth, interpolation) ->
-
-    return if not @restrictionHandler.updateAllowed()
-
-    if @ensureDirection(position)
-
-      radius = 10 * app.scaleInfo.baseVoxel
-      if @activeNode then radius = @activeNode.radius
-
-      metaInfo =
-        timestamp : (new Date()).getTime()
-        viewport : viewport
-        resolution : resolution
-        bitDepth : bitDepth
-        interpolation : interpolation
-
-      point = new TracePoint(@idCount++, position, radius, @activeTree.treeId, metaInfo, rotation)
-      @activeTree.nodes.push(point)
-
-      if @activeNode
-
-        @activeNode.appendNext(point)
-        point.appendNext(@activeNode)
-        @activeNode = point
-
-      else
-
-        @activeNode = point
-        # first node should be a branchpoint
-        if @branchPointsAllowed
-          @pushBranch()
-
-      @doubleBranchPop = false
-
-      @stateLogger.createNode(point, @activeTree.treeId)
-
-      @trigger("newNode", @activeNode.id, @activeTree.treeId)
-      @trigger("newActiveNode", @activeNode.id)
-    else
-      @trigger("wrongDirection")
+        return this.trigger("setBranch", true, this.activeNode);
+      }
+    } else {
+      return this.trigger("noBranchPoints");
+    }
+  }
 
 
-  ensureDirection : (position) ->
+  popBranch() {
 
-    if (!@branchPointsAllowed and @activeTree.nodes.length == 2 and
-        @firstEdgeDirection and @activeTree.treeId == @trees[0].treeId)
-      sourceNodeNm = app.scaleInfo.voxelToNm(@activeTree.nodes[1].pos)
-      targetNodeNm = app.scaleInfo.voxelToNm(position)
-      secondEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
+    if (!this.restrictionHandler.updateAllowed()) { return; }
+
+    const reallyPopBranch = (point, tree, resolve) => {
+      tree.removeBranchWithNodeId(point.id);
+      this.stateLogger.updateTree(tree);
+      this.setActiveNode(point.id);
+
+      this.trigger("setBranch", false, this.activeNode);
+      this.doubleBranchPop = true;
+      return resolve(this.activeNode.id);
+    };
+
+    return new Promise((resolve, reject) => {
+      if (this.branchPointsAllowed) {
+        const [point, tree] = this.getNextBranch();
+        if (point) {
+          if (this.doubleBranchPop) {
+            return this.trigger("doubleBranch", () => reallyPopBranch(point, tree, resolve) );
+          } else {
+            return reallyPopBranch(point, tree, resolve);
+          }
+        } else {
+          this.trigger("emptyBranchStack");
+          return reject();
+        }
+      } else {
+        this.trigger("noBranchPoints");
+        return reject();
+      }
+    }
+    );
+  }
+
+
+  getNextBranch() {
+
+    let curTime = 0;
+    let curPoint = null;
+    let curTree = null;
+
+    for (let tree of this.trees) {
+      for (let branch of tree.branchpoints) {
+        if (branch.timestamp > curTime) {
+          curTime = branch.timestamp;
+          curPoint = branch;
+          curTree = tree;
+        }
+      }
+    }
+
+    return [curPoint, curTree];
+  }
+
+
+  addNode(position, rotation, viewport, resolution, bitDepth, interpolation) {
+
+    if (!this.restrictionHandler.updateAllowed()) { return; }
+
+    if (this.ensureDirection(position)) {
+
+      let radius = 10 * app.scaleInfo.baseVoxel;
+      if (this.activeNode) { ({ radius } = this.activeNode); }
+
+      const metaInfo = {
+        timestamp : (new Date()).getTime(),
+        viewport,
+        resolution,
+        bitDepth,
+        interpolation
+      };
+
+      const point = new TracePoint(this.idCount++, position, radius, this.activeTree.treeId, metaInfo, rotation);
+      this.activeTree.nodes.push(point);
+
+      if (this.activeNode) {
+
+        this.activeNode.appendNext(point);
+        point.appendNext(this.activeNode);
+        this.activeNode = point;
+
+      } else {
+
+        this.activeNode = point;
+        // first node should be a branchpoint
+        if (this.branchPointsAllowed) {
+          this.pushBranch();
+        }
+      }
+
+      this.doubleBranchPop = false;
+
+      this.stateLogger.createNode(point, this.activeTree.treeId);
+
+      this.trigger("newNode", this.activeNode.id, this.activeTree.treeId);
+      return this.trigger("newActiveNode", this.activeNode.id);
+    } else {
+      return this.trigger("wrongDirection");
+    }
+  }
+
+
+  ensureDirection(position) {
+
+    if (!this.branchPointsAllowed && this.activeTree.nodes.length === 2 &&
+        this.firstEdgeDirection && this.activeTree.treeId === this.trees[0].treeId) {
+      const sourceNodeNm = app.scaleInfo.voxelToNm(this.activeTree.nodes[1].pos);
+      const targetNodeNm = app.scaleInfo.voxelToNm(position);
+      const secondEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
                              targetNodeNm[1] - sourceNodeNm[1],
-                             targetNodeNm[2] - sourceNodeNm[2]]
+                             targetNodeNm[2] - sourceNodeNm[2]];
 
-      return (@firstEdgeDirection[0] * secondEdgeDirection[0] +
-              @firstEdgeDirection[1] * secondEdgeDirection[1] +
-              @firstEdgeDirection[2] * secondEdgeDirection[2] > 0)
-    else
-      true
+      return ((this.firstEdgeDirection[0] * secondEdgeDirection[0]) +
+              (this.firstEdgeDirection[1] * secondEdgeDirection[1]) +
+              (this.firstEdgeDirection[2] * secondEdgeDirection[2]) > 0);
+    } else {
+      return true;
+    }
+  }
 
 
-  getActiveNode : -> @activeNode
+  getActiveNode() { return this.activeNode; }
 
 
-  getActiveNodeId : ->
+  getActiveNodeId() {
 
-    if @activeNode then @activeNode.id else null
+    if (this.activeNode) { return this.activeNode.id; } else { return null; }
+  }
 
 
-  getActiveNodePos : ->
+  getActiveNodePos() {
 
-    if @activeNode then @activeNode.pos else null
+    if (this.activeNode) { return this.activeNode.pos; } else { return null; }
+  }
 
 
-  getActiveNodeRadius : ->
+  getActiveNodeRadius() {
 
-    if @activeNode then @activeNode.radius else 10 * app.scaleInfo.baseVoxel
+    if (this.activeNode) { return this.activeNode.radius; } else { return 10 * app.scaleInfo.baseVoxel; }
+  }
 
 
-  getActiveNodeRotation : ->
+  getActiveNodeRotation() {
 
-    if @activeNode then @activeNode.rotation else null
+    if (this.activeNode) { return this.activeNode.rotation; } else { return null; }
+  }
 
 
-  getActiveTree : ->
+  getActiveTree() {
 
-    if @activeTree then @activeTree else null
+    if (this.activeTree) { return this.activeTree; } else { return null; }
+  }
 
 
-  getActiveTreeId : ->
+  getActiveTreeId() {
 
-    if @activeTree then @activeTree.treeId else null
+    if (this.activeTree) { return this.activeTree.treeId; } else { return null; }
+  }
 
 
-  getActiveTreeName : ->
+  getActiveTreeName() {
 
-    if @activeTree then @activeTree.name else null
+    if (this.activeTree) { return this.activeTree.name; } else { return null; }
+  }
 
 
-  setTreeName : (name) ->
+  setTreeName(name) {
 
-    if @activeTree
-      if name
-        @activeTree.name = name
-      else
-        @activeTree.name = "Tree#{('00'+@activeTree.treeId).slice(-3)}"
-      @stateLogger.updateTree(@activeTree)
+    if (this.activeTree) {
+      if (name) {
+        this.activeTree.name = name;
+      } else {
+        this.activeTree.name = `Tree${(`00${this.activeTree.treeId}`).slice(-3)}`;
+      }
+      this.stateLogger.updateTree(this.activeTree);
 
-      @trigger("newTreeName", @activeTree.treeId)
+      return this.trigger("newTreeName", this.activeTree.treeId);
+    }
+  }
 
 
-  getNode : (id) ->
+  getNode(id) {
 
-    for tree in @trees
-      for node in tree.nodes
-        if node.id == id then return node
-    return null
+    for (let tree of this.trees) {
+      for (let node of tree.nodes) {
+        if (node.id === id) { return node; }
+      }
+    }
+    return null;
+  }
 
 
-  setActiveNode : (nodeID, mergeTree = false) ->
+  setActiveNode(nodeID, mergeTree) {
 
-    lastActiveNode = @activeNode
-    lastActiveTree = @activeTree
-    for tree in @trees
-      for node in tree.nodes
-        if node.id == nodeID
-          @activeNode = node
-          @activeTree = tree
-          break
+    if (mergeTree == null) { mergeTree = false; }
+    const lastActiveNode = this.activeNode;
+    const lastActiveTree = this.activeTree;
+    for (let tree of this.trees) {
+      for (let node of tree.nodes) {
+        if (node.id === nodeID) {
+          this.activeNode = node;
+          this.activeTree = tree;
+          break;
+        }
+      }
+    }
 
-    @stateLogger.push()
-    @trigger("newActiveNode", @activeNode.id)
-    if lastActiveTree.treeId != @activeTree.treeId
-      @trigger("newActiveTree", @activeTree.treeId)
+    this.stateLogger.push();
+    this.trigger("newActiveNode", this.activeNode.id);
+    if (lastActiveTree.treeId !== this.activeTree.treeId) {
+      this.trigger("newActiveTree", this.activeTree.treeId);
+    }
 
-    if mergeTree
-      @mergeTree(lastActiveNode, lastActiveTree)
+    if (mergeTree) {
+      return this.mergeTree(lastActiveNode, lastActiveTree);
+    }
+  }
 
 
-  setActiveNodeRadius : (radius) ->
+  setActiveNodeRadius(radius) {
 
-    return if not @restrictionHandler.updateAllowed()
+    if (!this.restrictionHandler.updateAllowed()) { return; }
 
-    if @activeNode?
-      @activeNode.radius = Math.min( @MAX_RADIUS,
-                            Math.max( @MIN_RADIUS, radius ) )
-      @stateLogger.updateNode( @activeNode, @activeNode.treeId )
-      @trigger("newActiveNodeRadius", radius)
+    if (this.activeNode != null) {
+      this.activeNode.radius = Math.min( this.MAX_RADIUS,
+                            Math.max( this.MIN_RADIUS, radius ) );
+      this.stateLogger.updateNode( this.activeNode, this.activeNode.treeId );
+      return this.trigger("newActiveNodeRadius", radius);
+    }
+  }
 
 
-  selectNextTree : (forward) ->
+  selectNextTree(forward) {
 
-    trees = @getTreesSorted(@user.get("sortTreesByName"))
-    for i in [0...trees.length]
-      if @activeTree.treeId == trees[i].treeId
-        break
+    const trees = this.getTreesSorted(this.user.get("sortTreesByName"));
+    for (var i of __range__(0, trees.length, false)) {
+      if (this.activeTree.treeId === trees[i].treeId) {
+        break;
+      }
+    }
 
-    diff = (if forward then 1 else -1) + trees.length
-    @setActiveTree(trees[ (i + diff) % trees.length ].treeId)
+    const diff = (forward ? 1 : -1) + trees.length;
+    return this.setActiveTree(trees[ (i + diff) % trees.length ].treeId);
+  }
 
 
-  centerActiveNode : ->
+  centerActiveNode() {
 
-    position = @getActiveNodePos()
-    if position
-      @flycam.setPosition(position)
+    const position = this.getActiveNodePos();
+    if (position) {
+      return this.flycam.setPosition(position);
+    }
+  }
 
 
-  setActiveTree : (id) ->
+  setActiveTree(id) {
 
-    for tree in @trees
-      if tree.treeId == id
-        @activeTree = tree
-        break
-    if @activeTree.nodes.length == 0
-      @activeNode = null
-    else
-      @activeNode = @activeTree.nodes[0]
-      @trigger("newActiveNode", @activeNode.id)
-    @stateLogger.push()
+    for (let tree of this.trees) {
+      if (tree.treeId === id) {
+        this.activeTree = tree;
+        break;
+      }
+    }
+    if (this.activeTree.nodes.length === 0) {
+      this.activeNode = null;
+    } else {
+      this.activeNode = this.activeTree.nodes[0];
+      this.trigger("newActiveNode", this.activeNode.id);
+    }
+    this.stateLogger.push();
 
-    @trigger("newActiveTree", @activeTree.treeId)
+    return this.trigger("newActiveTree", this.activeTree.treeId);
+  }
 
 
-  getNewTreeColor : ->
+  getNewTreeColor() {
 
-    return ColorGenerator.distinctColorForId( @colorIdCounter++ )
+    return ColorGenerator.distinctColorForId( this.colorIdCounter++ );
+  }
 
 
-  shuffleTreeColor : (tree) ->
+  shuffleTreeColor(tree) {
 
-    tree = @activeTree unless tree
-    tree.color = @getNewTreeColor()
+    if (!tree) { tree = this.activeTree; }
+    tree.color = this.getNewTreeColor();
 
-    # force the tree color change, although it may not be persisted if the user is in read-only mode
-    if @restrictionHandler.updateAllowed(false)
-      @stateLogger.updateTree(tree)
+    // force the tree color change, although it may not be persisted if the user is in read-only mode
+    if (this.restrictionHandler.updateAllowed(false)) {
+      this.stateLogger.updateTree(tree);
+    }
 
-    @trigger("newTreeColor", tree.treeId)
+    return this.trigger("newTreeColor", tree.treeId);
+  }
 
 
-  shuffleAllTreeColors : ->
+  shuffleAllTreeColors() {
 
-    for tree in @trees
-      @shuffleTreeColor(tree)
+    return this.trees.map((tree) =>
+      this.shuffleTreeColor(tree));
+  }
 
 
-  createNewTree : ->
+  createNewTree() {
 
-    return if not @restrictionHandler.updateAllowed()
+    if (!this.restrictionHandler.updateAllowed()) { return; }
 
-    tree = new TraceTree(
-      @treeIdCount++,
-      @getNewTreeColor(),
-      @TREE_PREFIX + ('00'+(@treeIdCount-1)).slice(-3),
-      (new Date()).getTime())
-    @trees.push(tree)
-    @activeTree = tree
-    @activeNode = null
+    const tree = new TraceTree(
+      this.treeIdCount++,
+      this.getNewTreeColor(),
+      this.TREE_PREFIX + (`00${this.treeIdCount-1}`).slice(-3),
+      (new Date()).getTime());
+    this.trees.push(tree);
+    this.activeTree = tree;
+    this.activeNode = null;
 
-    @stateLogger.createTree(tree)
+    this.stateLogger.createTree(tree);
 
-    @trigger("newTree", tree.treeId, tree.color)
+    return this.trigger("newTree", tree.treeId, tree.color);
+  }
 
 
-  deleteActiveNode : ->
+  deleteActiveNode() {
 
-    return if not @restrictionHandler.updateAllowed()
+    let branchpoints;
+    if (!this.restrictionHandler.updateAllowed()) { return; }
 
-    reallyDeleteActiveNode = (resolve) =>
+    const reallyDeleteActiveNode = resolve => {
 
-      for neighbor in @activeNode.neighbors
-        neighbor.removeNeighbor(@activeNode.id)
-      updateTree = @activeTree.removeNode(@activeNode.id)
+      for (let neighbor of this.activeNode.neighbors) {
+        neighbor.removeNeighbor(this.activeNode.id);
+      }
+      const updateTree = this.activeTree.removeNode(this.activeNode.id);
 
-      @stateLogger.updateTree(@activeTree) if updateTree
+      if (updateTree) { this.stateLogger.updateTree(this.activeTree); }
 
-      deletedNode = @activeNode
-      @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
+      const deletedNode = this.activeNode;
+      this.stateLogger.deleteNode(deletedNode, this.activeTree.treeId);
 
-      comments = @activeTree.comments
-      branchpoints = @activeTree.branchpoints
+      const { comments } = this.activeTree;
+      ({ branchpoints } = this.activeTree);
 
-      if deletedNode.neighbors.length > 1
-        # Need to split tree
-        newTrees = []
-        oldActiveTreeId = @activeTree.treeId
+      if (deletedNode.neighbors.length > 1) {
+        // Need to split tree
+        const newTrees = [];
+        const oldActiveTreeId = this.activeTree.treeId;
 
-        for i in [0...@activeNode.neighbors.length]
-          unless i == 0
-            # create new tree for all neighbors, except the first
-            @createNewTree()
+        for (let i of __range__(0, this.activeNode.neighbors.length, false)) {
+          let node;
+          if (i !== 0) {
+            // create new tree for all neighbors, except the first
+            this.createNewTree();
+          }
+
+          this.activeTree.nodes = [];
+          this.getNodeListForRoot(this.activeTree.nodes, deletedNode.neighbors[i]);
+          // update tree ids
+          if (i !== 0) {
+            for (node of this.activeTree.nodes) {
+              node.treeId = this.activeTree.treeId;
+            }
+          }
+          this.setActiveNode(deletedNode.neighbors[i].id);
+          newTrees.push(this.activeTree);
 
-          @activeTree.nodes = []
-          @getNodeListForRoot(@activeTree.nodes, deletedNode.neighbors[i])
-          # update tree ids
-          unless i == 0
-            for node in @activeTree.nodes
-              node.treeId = @activeTree.treeId
-          @setActiveNode(deletedNode.neighbors[i].id)
-          newTrees.push(@activeTree)
+          // update comments and branchpoints
+          this.activeTree.comments = this.getCommentsForNodes(comments, this.activeTree.nodes);
+          this.activeTree.branchpoints = this.getBranchpointsForNodes(branchpoints, this.activeTree.nodes);
 
-          # update comments and branchpoints
-          @activeTree.comments = @getCommentsForNodes(comments, @activeTree.nodes)
-          @activeTree.branchpoints = @getBranchpointsForNodes(branchpoints, @activeTree.nodes)
+          if (this.activeTree.treeId !== oldActiveTreeId) {
+            const nodeIds = [];
+            for (node of this.activeTree.nodes) {
+              nodeIds.push(node.id);
+            }
+            this.stateLogger.moveTreeComponent(oldActiveTreeId, this.activeTree.treeId, nodeIds);
+          }
+        }
+
+        this.trigger("reloadTrees", newTrees);
 
-          if @activeTree.treeId != oldActiveTreeId
-            nodeIds = []
-            for node in @activeTree.nodes
-              nodeIds.push(node.id)
-            @stateLogger.moveTreeComponent(oldActiveTreeId, @activeTree.treeId, nodeIds)
+      } else if (this.activeNode.neighbors.length === 1) {
+        // no children, so just remove it.
+        this.setActiveNode(deletedNode.neighbors[0].id);
+        this.trigger("deleteActiveNode", deletedNode, this.activeTree.treeId);
+      } else {
+        this.deleteTree(false);
+      }
+      return resolve();
+    };
 
-        @trigger("reloadTrees", newTrees)
+    return new Promise((resolve, reject) => {
+      if (this.activeNode) {
+        if (this.getBranchpointsForNodes(this.activeTree.branchpoints, this.activeNode).length) {
+          return this.trigger("deleteBranch", () => reallyDeleteActiveNode(resolve) );
+        } else {
+          return reallyDeleteActiveNode(resolve);
+        }
+      } else {
+        return reject();
+      }
+    }
+    );
+  }
 
-      else if @activeNode.neighbors.length == 1
-        # no children, so just remove it.
-        @setActiveNode(deletedNode.neighbors[0].id)
-        @trigger("deleteActiveNode", deletedNode, @activeTree.treeId)
-      else
-        @deleteTree(false)
-      resolve()
 
-    return new Promise (resolve, reject) =>
-      if @activeNode
-        if @getBranchpointsForNodes(@activeTree.branchpoints, @activeNode).length
-          @trigger("deleteBranch", => reallyDeleteActiveNode(resolve) )
-        else
-          reallyDeleteActiveNode(resolve)
-      else
-        reject()
+  deleteTree(notify, id, notifyServer) {
 
+    if (!this.restrictionHandler.updateAllowed()) { return; }
 
-  deleteTree : (notify, id, notifyServer) ->
+    if (notify) {
+      if (confirm("Do you really want to delete the whole tree?")) {
+        return this.reallyDeleteTree(id, notifyServer);
+      } else {
+        return;
+      }
+    } else {
+      return this.reallyDeleteTree(id, notifyServer);
+    }
+  }
 
-    return if not @restrictionHandler.updateAllowed()
 
-    if notify
-      if confirm("Do you really want to delete the whole tree?")
-        @reallyDeleteTree(id, notifyServer)
-      else
-        return
-    else
-      @reallyDeleteTree(id, notifyServer)
+  reallyDeleteTree(id, notifyServer) {
 
+    let index;
+    if (notifyServer == null) { notifyServer = true; }
+    if (!this.restrictionHandler.updateAllowed()) { return; }
 
-  reallyDeleteTree : (id, notifyServer = true) ->
+    if (!id) {
+      id = this.activeTree.treeId;
+    }
+    const tree = this.getTree(id);
 
-    return if not @restrictionHandler.updateAllowed()
+    for (let i of __range__(0, this.trees.length, true)) {
+      if (this.trees[i].treeId === tree.treeId) {
+        index = i;
+        break;
+      }
+    }
+    this.trees.splice(index, 1);
 
-    unless id
-      id = @activeTree.treeId
-    tree = @getTree(id)
+    if (notifyServer) {
+      this.stateLogger.deleteTree(tree);
+    }
+    this.trigger("deleteTree", index);
 
-    for i in [0..@trees.length]
-      if @trees[i].treeId == tree.treeId
-        index = i
-        break
-    @trees.splice(index, 1)
+    // Because we always want an active tree, check if we need
+    // to create one.
+    if (this.trees.length === 0) {
+      return this.createNewTree();
+    } else {
+      // just set the last tree to be the active one
+      return this.setActiveTree(this.trees[this.trees.length - 1].treeId);
+    }
+  }
 
-    if notifyServer
-      @stateLogger.deleteTree(tree)
-    @trigger("deleteTree", index)
 
-    # Because we always want an active tree, check if we need
-    # to create one.
-    if @trees.length == 0
-      @createNewTree()
-    else
-      # just set the last tree to be the active one
-      @setActiveTree(@trees[@trees.length - 1].treeId)
+  mergeTree(lastNode, lastTree) {
 
+    if (!this.restrictionHandler.updateAllowed()) { return; }
 
-  mergeTree : (lastNode, lastTree) ->
+    if (!lastNode) {
+      return;
+    }
 
-    return if not @restrictionHandler.updateAllowed()
+    const activeNodeID = this.activeNode.id;
+    if (lastNode.id !== activeNodeID) {
+      if (lastTree.treeId !== this.activeTree.treeId) {
+        this.activeTree.nodes = this.activeTree.nodes.concat(lastTree.nodes);
+        this.activeTree.comments = this.activeTree.comments.concat(lastTree.comments);
+        this.activeTree.branchpoints = this.activeTree.branchpoints.concat(lastTree.branchpoints);
+        this.activeNode.appendNext(lastNode);
+        lastNode.appendNext(this.activeNode);
 
-    unless lastNode
-      return
+        // update tree ids
+        for (let node of this.activeTree.nodes) {
+          node.treeId = this.activeTree.treeId;
+        }
 
-    activeNodeID = @activeNode.id
-    if lastNode.id != activeNodeID
-      if lastTree.treeId != @activeTree.treeId
-        @activeTree.nodes = @activeTree.nodes.concat(lastTree.nodes)
-        @activeTree.comments = @activeTree.comments.concat(lastTree.comments)
-        @activeTree.branchpoints = @activeTree.branchpoints.concat(lastTree.branchpoints)
-        @activeNode.appendNext(lastNode)
-        lastNode.appendNext(@activeNode)
+        this.stateLogger.mergeTree(lastTree, this.activeTree, lastNode.id, activeNodeID);
 
-        # update tree ids
-        for node in @activeTree.nodes
-          node.treeId = @activeTree.treeId
+        this.trigger("mergeTree", lastTree.treeId, lastNode, this.activeNode);
 
-        @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
+        this.deleteTree(false, lastTree.treeId, false);
 
-        @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
+        return this.setActiveNode(activeNodeID);
+      } else {
+        return this.trigger("mergeDifferentTrees");
+      }
+    }
+  }
 
-        @deleteTree(false, lastTree.treeId, false)
 
-        @setActiveNode(activeNodeID)
-      else
-        @trigger("mergeDifferentTrees")
+  updateTree(tree) {
 
+    return this.stateLogger.updateTree(tree);
+  }
 
-  updateTree : (tree) ->
 
-    @stateLogger.updateTree(tree)
+  generateTreeNamePrefix(tracingType, taskId) {
 
+    let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
+    // Replace spaces in user names
+    user = user.replace(/ /g, "_");
 
-  generateTreeNamePrefix : (tracingType, taskId) ->
+    if (tracingType === "Explorational") {
+      // Get YYYY-MM-DD string
+      const creationDate = new Date().toJSON().slice(0,10);
+      return `explorative_${creationDate}_${user}_`;
+    } else {
+      return `task_${taskId}_${user}_`;
+    }
+  }
 
-    user = "#{app.currentUser.firstName}_#{app.currentUser.lastName}"
-    # Replace spaces in user names
-    user = user.replace(/ /g, "_")
 
-    if tracingType == "Explorational"
-      # Get YYYY-MM-DD string
-      creationDate = new Date().toJSON().slice(0,10)
-      return "explorative_#{creationDate}_#{user}_"
-    else
-      return "task_#{taskId}_#{user}_"
+  getTree(id) {
 
+    if (!id) {
+      return this.activeTree;
+    }
+    for (let tree of this.trees) {
+      if (tree.treeId === id) {
+        return tree;
+      }
+    }
+    return null;
+  }
 
-  getTree : (id) ->
 
-    unless id
-      return @activeTree
-    for tree in @trees
-      if tree.treeId == id
-        return tree
-    return null
+  getTrees() { return this.trees; }
 
 
-  getTrees : -> @trees
+  getTreesSorted() {
 
+    if (this.user.get("sortTreesByName")) {
+      return this.getTreesSortedBy("name");
+    } else {
+      return this.getTreesSortedBy("timestamp");
+    }
+  }
 
-  getTreesSorted : ->
 
-    if @user.get("sortTreesByName")
-      return @getTreesSortedBy("name")
-    else
-      return @getTreesSortedBy("timestamp")
+  getTreesSortedBy(key, isSortedAscending) {
 
+    return (this.trees.slice(0)).sort(Utils.compareBy(key, isSortedAscending));
+  }
 
-  getTreesSortedBy : (key, isSortedAscending) ->
 
-    return (@trees.slice(0)).sort(Utils.compareBy(key, isSortedAscending))
+  getNodeListForRoot(result, root, previous) {
+    // returns a list of nodes that are connected to the parent
+    //
+    // ASSUMPTION:    we are dealing with a tree, circles would
+    //                break this algorithm
 
+    result.push(root);
+    let next = root.getNext(previous);
+    while (next != null) {
+      if (_.isArray(next)) {
+        for (let neighbor of next) {
+          this.getNodeListForRoot(result, neighbor, root);
+        }
+        return;
+      } else {
+        result.push(next);
+        const newNext = next.getNext(root);
+        root = next;
+        next = newNext;
+      }
+    }
+  }
 
-  getNodeListForRoot : (result, root, previous) ->
-    # returns a list of nodes that are connected to the parent
-    #
-    # ASSUMPTION:    we are dealing with a tree, circles would
-    #                break this algorithm
 
-    result.push(root)
-    next = root.getNext(previous)
-    while next?
-      if _.isArray(next)
-        for neighbor in next
-          @getNodeListForRoot(result, neighbor, root)
-        return
-      else
-        result.push(next)
-        newNext = next.getNext(root)
-        root = next
-        next = newNext
+  getNodeListOfAllTrees() {
 
+    let result = [];
+    for (let tree of this.trees) {
+      result = result.concat(tree.nodes);
+    }
+    return result;
+  }
 
-  getNodeListOfAllTrees : ->
 
-    result = []
-    for tree in @trees
-      result = result.concat(tree.nodes)
-    return result
+  findNodeInList(list, id) {
+    // Helper method used in initialization
 
+    for (let node of list) {
+      if (node.id === id) {
+        return node;
+      }
+    }
+    return null;
+  }
 
-  findNodeInList : (list, id) ->
-    # Helper method used in initialization
 
-    for node in list
-      if node.id == id
-        return node
-    return null
+  getCommentsForNodes(comments, nodes) {
 
+    return _.filter(comments, comment => _.find(nodes, { id : comment.node }));
+  }
 
-  getCommentsForNodes : (comments, nodes) ->
 
-    return _.filter(comments, (comment) ->
-      _.find(nodes, { id : comment.node })
-    )
+  getBranchpointsForNodes(branchpoints, nodes) {
 
+    return _.filter(branchpoints, branch => _.find(nodes, { id : branch.id }));
+  }
 
-  getBranchpointsForNodes : (branchpoints, nodes) ->
 
-    return _.filter(branchpoints, (branch) ->
-      _.find(nodes, { id : branch.id })
-    )
+  compareNodes(a, b) {
 
+    if (a.node.treeId < b.node.treeId) {
+      return -1;
+    }
+    if (a.node.treeId > b.node.treeId) {
+      return 1;
+    }
+    return a.node.id - b.node.id;
+  }
+}
+SkeletonTracing.initClass();
 
-  compareNodes : (a, b) ->
 
-    if a.node.treeId < b.node.treeId
-      return -1
-    if a.node.treeId > b.node.treeId
-      return 1
-    return a.node.id - b.node.id
+export default SkeletonTracing;
 
-
-module.exports = SkeletonTracing
+function __guard__(value, transform) {
+  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+}
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}

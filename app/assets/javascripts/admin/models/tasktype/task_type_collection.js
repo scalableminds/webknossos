@@ -1,21 +1,27 @@
-_                = require("lodash")
-TaskTypeModel    = require("./task_type_model")
-SortedCollection = require("../sorted_collection")
+import _ from "lodash";
+import TaskTypeModel from "./task_type_model";
+import SortedCollection from "../sorted_collection";
 
-class TaskTypeCollection extends SortedCollection
+class TaskTypeCollection extends SortedCollection {
+  static initClass() {
+  
+    this.prototype.url  = "/api/taskTypes";
+    this.prototype.model  = TaskTypeModel;
+    this.prototype.sortAttribute  = "summary";
+  }
 
-  url : "/api/taskTypes"
-  model : TaskTypeModel
-  sortAttribute : "summary"
+  parse(responses) {
 
-  parse : (responses) ->
-
-    return _.map(responses, TaskTypeModel::parse)
+    return _.map(responses, TaskTypeModel.prototype.parse);
+  }
 
 
-  addJSON : (item) ->
+  addJSON(item) {
 
-    [item] = @parse([item])
-    @add(item)
+    [item] = this.parse([item]);
+    return this.add(item);
+  }
+}
+TaskTypeCollection.initClass();
 
-module.exports = TaskTypeCollection
+export default TaskTypeCollection;

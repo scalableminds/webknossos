@@ -1,48 +1,55 @@
-Backbone = require("backbone")
-THREE    = require("three")
+import Backbone from "backbone";
+import THREE from "three";
 
-class AbstractMaterialFactory
-
-
-  constructor : (@model) ->
-
-    _.extend(this, Backbone.Events)
-
-    @setupAttributesAndUniforms()
-    @makeMaterial()
-    @setupChangeListeners()
+class AbstractMaterialFactory {
 
 
-  setupAttributesAndUniforms : ->
+  constructor(model) {
 
-    @uniforms = {}
-    @attributes = {}
+    this.model = model;
+    _.extend(this, Backbone.Events);
 
-
-  makeMaterial : (options = {}) ->
-
-    options = _.extend options, {
-      @uniforms
-      @attributes
-      vertexShader   : @getVertexShader()
-      fragmentShader : @getFragmentShader()
-    }
-
-    @material = new THREE.ShaderMaterial(options)
+    this.setupAttributesAndUniforms();
+    this.makeMaterial();
+    this.setupChangeListeners();
+  }
 
 
-  setupChangeListeners : ->
+  setupAttributesAndUniforms() {
+
+    this.uniforms = {};
+    return this.attributes = {};
+  }
 
 
-  getMaterial : ->
+  makeMaterial(options) {
 
-    return @material
+    if (options == null) { options = {}; }
+    options = _.extend(options, {
+      uniforms: this.uniforms,
+      attributes: this.attributes,
+      vertexShader   : this.getVertexShader(),
+      fragmentShader : this.getFragmentShader()
+    });
+
+    return this.material = new THREE.ShaderMaterial(options);
+  }
 
 
-  getVertexShader : ->
+  setupChangeListeners() {}
 
 
-  getFragmentShader : ->
+  getMaterial() {
+
+    return this.material;
+  }
 
 
-module.exports = AbstractMaterialFactory
+  getVertexShader() {}
+
+
+  getFragmentShader() {}
+}
+
+
+export default AbstractMaterialFactory;

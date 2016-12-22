@@ -1,43 +1,51 @@
-_      = require("lodash")
-moment = require("moment")
+import _ from "lodash";
+import moment from "moment";
 
-class FormatUtils
+class FormatUtils {
 
-  @formatSeconds : (seconds) ->
+  static formatSeconds(seconds) {
 
-    t = moment.duration(seconds: seconds)
-    [ days, hours, minutes, seconds ] = [ t.days(), t.hours(), t.minutes(), t.seconds() ]
+    let days, hours, minutes;
+    const t = moment.duration({seconds});
+    [ days, hours, minutes, seconds ] = [ t.days(), t.hours(), t.minutes(), t.seconds() ];
 
     return (
-      if  days == 0 and hours == 0 and minutes == 0
-        "#{seconds}s"
-      else if days == 0 and hours == 0
-        "#{minutes}m #{seconds}s"
-      else if days == 0
-        "#{hours}h #{minutes}m #{seconds}s"
-      else
-        "#{days}d #{hours}h #{minutes}m #{seconds}s"
-    )
+      days === 0 && hours === 0 && minutes === 0 ?
+        `${seconds}s`
+      : days === 0 && hours === 0 ?
+        `${minutes}m ${seconds}s`
+      : days === 0 ?
+        `${hours}h ${minutes}m ${seconds}s`
+      :
+        `${days}d ${hours}h ${minutes}m ${seconds}s`
+    );
+  }
 
 
-  @formatHash : (id) ->
+  static formatHash(id) {
 
-    return id.slice(-6)
-
-
-  @formatShortText : (text, maxLength = 100) ->
-
-    if text.length > maxLength and maxLength > 4
-      text.slice(0, maxLength - 4) + " ..."
-    else
-      text
+    return id.slice(-6);
+  }
 
 
-  ###*
+  static formatShortText(text, maxLength) {
+
+    if (maxLength == null) { maxLength = 100; }
+    if (text.length > maxLength && maxLength > 4) {
+      return text.slice(0, maxLength - 4) + " ...";
+    } else {
+      return text;
+    }
+  }
+
+
+  /**
    * Return current date and time
-   ###
-  @formatDate : ->
+   */
+  static formatDate() {
 
-    return moment().format("YYYY-MM-DD HH:mm")
+    return moment().format("YYYY-MM-DD HH:mm");
+  }
+}
 
-module.exports = FormatUtils
+export default FormatUtils;

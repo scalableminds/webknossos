@@ -1,228 +1,279 @@
-Dimensions = require("../dimensions")
-Drawing    = require("libs/drawing")
+import Dimensions from "../dimensions";
+import Drawing from "libs/drawing";
 
 
-class VolumeLayer
+class VolumeLayer {
 
 
-  constructor : (@plane, @thirdDimensionValue) ->
+  constructor(plane, thirdDimensionValue) {
 
-    @contourList = []
-    @maxCoord    = null
-    @minCoord    = null
-
-
-  addContour : (pos) ->
-
-    @contourList.push(pos)
-    @updateArea(pos)
+    this.plane = plane;
+    this.thirdDimensionValue = thirdDimensionValue;
+    this.contourList = [];
+    this.maxCoord    = null;
+    this.minCoord    = null;
+  }
 
 
-  updateArea : (pos) ->
+  addContour(pos) {
 
-    unless @maxCoord?
-      @maxCoord = pos.slice()
-      @minCoord = pos.slice()
-
-    for i in [0..2]
-      @minCoord[i] = Math.min(@minCoord[i], Math.floor(pos[i]) - 2)
-      @maxCoord[i] = Math.max(@maxCoord[i], Math.ceil(pos[i]) + 2)
+    this.contourList.push(pos);
+    return this.updateArea(pos);
+  }
 
 
-  getSmoothedContourList : ->
+  updateArea(pos) {
 
-    return Drawing.smoothLine(@contourList, ( (pos) => @updateArea(pos) ) )
-
-
-  finish : ->
-
-    unless @isEmpty()
-      @addContour(@contourList[0])
-
-
-  isEmpty : ->
-
-    return @contourList.length == 0
-
-
-  getVoxelIterator : ->
-
-    if @isEmpty()
-      return { hasNext : false }
-
-    minCoord2d = @get2DCoordinate(@minCoord)
-    maxCoord2d = @get2DCoordinate(@maxCoord)
-
-    width      = maxCoord2d[0] - minCoord2d[0] + 1
-    height     = maxCoord2d[1] - minCoord2d[1] + 1
-
-    map = new Array(width)
-    for x in [0...width]
-      map[x] = new Array(height)
-      for y in [0...height]
-        map[x][y] = true
-
-    setMap = (x, y, value = true) ->
-
-      x = Math.floor(x); y = Math.floor(y)
-      map[x - minCoord2d[0]][y - minCoord2d[1]] = value
-
-
-    # The approach is to initialize the map to true, then
-    # draw the outline with false, then fill everything
-    # outside the cell with false and then repaint the outline
-    # with true.
-    #
-    # Reason:
-    # Unless the shape is something like a ring, the area
-    # outside the cell will be in one piece, unlike the inner
-    # area if you consider narrow shapes.
-    # Also, it will be very clear where to start the filling
-    # algorithm.
-    @drawOutlineVoxels( (x, y) -> setMap(x, y, false) )
-    @fillOutsideArea(map, width, height)
-    @drawOutlineVoxels(setMap)
-
-    iterator = {
-      hasNext : true
-      x : 0
-      y : 0
-      getNext : ->
-        res = @get3DCoordinate([@x + minCoord2d[0], @y + minCoord2d[1]])
-        while true
-          @x = (@x + 1) % width
-          if @x == 0 then @y++
-          if map[@x][@y] or @y == height
-            @hasNext = @y != height
-            break
-        return res
-      initialize : ->
-        if not map[0][0]
-          @getNext()
-      get3DCoordinate : (arg) => return @get3DCoordinate(arg)
+    if (this.maxCoord == null) {
+      this.maxCoord = pos.slice();
+      this.minCoord = pos.slice();
     }
-    iterator.initialize()
 
-    return iterator
-
-
-  drawOutlineVoxels : (setMap) ->
-
-    for i in [0...@contourList.length]
-
-      p1 = @get2DCoordinate(  @contourList[i]  )
-      p2 = @get2DCoordinate(  @contourList[(i+1) % @contourList.length]  )
-
-      Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap)
+    return [0, 1, 2].map((i) =>
+      (this.minCoord[i] = Math.min(this.minCoord[i], Math.floor(pos[i]) - 2),
+      this.maxCoord[i] = Math.max(this.maxCoord[i], Math.ceil(pos[i]) + 2)));
+  }
 
 
-  fillOutsideArea : (map, width, height) ->
+  getSmoothedContourList() {
 
-    setMap = (x, y) ->
-      map[x][y] = false
-    isEmpty = (x, y) ->
-      return map[x][y] == true
-
-    # Fill everything BUT the cell
-    Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap)
+    return Drawing.smoothLine(this.contourList, ( pos => this.updateArea(pos) ) );
+  }
 
 
-  get2DCoordinate : (coord3d) ->
-    # Throw out 'thirdCoordinate' which is equal anyways
+  finish() {
 
-    result = []
-    for i in [0..2]
-      if i != Dimensions.thirdDimensionForPlane(@plane)
-        result.push(coord3d[i])
-    return result
+    if (!this.isEmpty()) {
+      return this.addContour(this.contourList[0]);
+    }
+  }
 
 
-  get3DCoordinate : (coord2d) ->
-    # Put thirdCoordinate back in
-    index   = Dimensions.thirdDimensionForPlane(@plane)
-    index2d = 0
-    res     = [0, 0, 0]
+  isEmpty() {
 
-    for i in [0..2]
-      if i != index
-        res[i] = coord2d[index2d++]
-      else
-        res[i] = @thirdDimensionValue
-
-    return res
+    return this.contourList.length === 0;
+  }
 
 
-  contains2dCoordinate : (point, list = @contourList) ->
+  getVoxelIterator() {
 
-    # Algorithm described in OX-322
-    totalDiff = 0
+    let y;
+    if (this.isEmpty()) {
+      return { hasNext : false };
+    }
 
-    for contour in list
+    const minCoord2d = this.get2DCoordinate(this.minCoord);
+    const maxCoord2d = this.get2DCoordinate(this.maxCoord);
 
-      contour2d = @get2DCoordinate(contour)
-      newQuadrant = @getQuadrantWithRespectToPoint(contour2d, point)
-      prevQuadrant = if quadrant? then quadrant else newQuadrant
-      quadrant = newQuadrant
+    const width      = (maxCoord2d[0] - minCoord2d[0]) + 1;
+    const height     = (maxCoord2d[1] - minCoord2d[1]) + 1;
 
-      if Math.abs(prevQuadrant - quadrant) == 2 or quadrant == 0
-        # point is on the edge, considered within the polygon
-        #console.log "Point is ON the edge", prevQuadrant, quadrant
-        return true
-      diff = quadrant - prevQuadrant
-      # special cases if quadrants are 4 and 1
-      if diff ==  3 then diff = -1
-      if diff == -3 then diff =  1
-      totalDiff -= diff
+    const map = new Array(width);
+    for (let x of __range__(0, width, false)) {
+      map[x] = new Array(height);
+      for (y of __range__(0, height, false)) {
+        map[x][y] = true;
+      }
+    }
 
-    return totalDiff != 0
+    const setMap = function(x, y, value) {
 
-
-  getQuadrantWithRespectToPoint : (vertex, point) ->
-    xDiff = vertex[0] - point[0]
-    yDiff = vertex[1] - point[1]
-
-    if xDiff == 0 and yDiff == 0
-      # Vertex and point have the same coordinates
-      return 0
-
-    switch
-      when xDiff <= 0 and yDiff >  0 then return 1
-      when xDiff <= 0 and yDiff <= 0 then return 2
-      when xDiff >  0 and yDiff <= 0 then return 3
-      when xDiff >  0 and yDiff >  0 then return 4
+      if (value == null) { value = true; }
+      x = Math.floor(x); y = Math.floor(y);
+      return map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
+    };
 
 
-  calculateDistance : (p1, p2) ->
+    // The approach is to initialize the map to true, then
+    // draw the outline with false, then fill everything
+    // outside the cell with false and then repaint the outline
+    // with true.
+    //
+    // Reason:
+    // Unless the shape is something like a ring, the area
+    // outside the cell will be in one piece, unlike the inner
+    // area if you consider narrow shapes.
+    // Also, it will be very clear where to start the filling
+    // algorithm.
+    this.drawOutlineVoxels( (x, y) => setMap(x, y, false));
+    this.fillOutsideArea(map, width, height);
+    this.drawOutlineVoxels(setMap);
 
-    diff = [p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]]
-    return Math.sqrt( diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2])
+    const iterator = {
+      hasNext : true,
+      x : 0,
+      y : 0,
+      getNext() {
+        const res = this.get3DCoordinate([this.x + minCoord2d[0], this.y + minCoord2d[1]]);
+        while (true) {
+          this.x = (this.x + 1) % width;
+          if (this.x === 0) { this.y++; }
+          if (map[this.x][this.y] || this.y === height) {
+            this.hasNext = this.y !== height;
+            break;
+          }
+        }
+        return res;
+      },
+      initialize() {
+        if (!map[0][0]) {
+          return this.getNext();
+        }
+      },
+      get3DCoordinate : arg => { return this.get3DCoordinate(arg); }
+    };
+    iterator.initialize();
+
+    return iterator;
+  }
 
 
-  interpolatePositions : (pos1, pos2, f) ->
+  drawOutlineVoxels(setMap) {
 
-    sPos1 = [pos1[0] * (1 - f), pos1[1] * (1 - f), pos1[2] * (1 - f)]
-    sPos2 = [pos2[0] * f, pos2[1] * f, pos2[2] * f]
-    return [sPos1[0] + sPos2[0], sPos1[1] + sPos2[1], sPos1[2] + sPos2[2]]
+    let p1, p2;
+    return __range__(0, this.contourList.length, false).map((i) =>
+
+      (p1 = this.get2DCoordinate(  this.contourList[i]  ),
+      p2 = this.get2DCoordinate(  this.contourList[(i+1) % this.contourList.length]  ),
+
+      Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap)));
+  }
 
 
-  getCentroid : ->
-    # Formula:
-    # https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
+  fillOutsideArea(map, width, height) {
 
-    sumArea = 0
-    sumCx = 0
-    sumCy = 0
-    for i in [0...(@contourList.length - 1)]
-      [x_i, y_i] = @get2DCoordinate(@contourList[i])
-      [x_i_1, y_i_1] = @get2DCoordinate(@contourList[i+1])
-      sumArea += x_i * y_i_1 - x_i_1 * y_i
-      sumCx += (x_i + x_i_1) * (x_i * y_i_1 - x_i_1 * y_i)
-      sumCy += (y_i + y_i_1) * (x_i * y_i_1 - x_i_1 * y_i)
+    const setMap = (x, y) => map[x][y] = false;
+    const isEmpty = (x, y) => map[x][y] === true;
 
-    area = sumArea / 2
-    cx = sumCx / 6 / area
-    cy = sumCy / 6 / area
+    // Fill everything BUT the cell
+    return Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap);
+  }
 
-    return @get3DCoordinate([cx, cy])
 
-module.exports = VolumeLayer
+  get2DCoordinate(coord3d) {
+    // Throw out 'thirdCoordinate' which is equal anyways
+
+    const result = [];
+    for (let i = 0; i <= 2; i++) {
+      if (i !== Dimensions.thirdDimensionForPlane(this.plane)) {
+        result.push(coord3d[i]);
+      }
+    }
+    return result;
+  }
+
+
+  get3DCoordinate(coord2d) {
+    // Put thirdCoordinate back in
+    const index   = Dimensions.thirdDimensionForPlane(this.plane);
+    let index2d = 0;
+    const res     = [0, 0, 0];
+
+    for (let i = 0; i <= 2; i++) {
+      if (i !== index) {
+        res[i] = coord2d[index2d++];
+      } else {
+        res[i] = this.thirdDimensionValue;
+      }
+    }
+
+    return res;
+  }
+
+
+  contains2dCoordinate(point, list) {
+
+    // Algorithm described in OX-322
+    if (list == null) { list = this.contourList; }
+    let totalDiff = 0;
+
+    for (let contour of list) {
+
+      const contour2d = this.get2DCoordinate(contour);
+      const newQuadrant = this.getQuadrantWithRespectToPoint(contour2d, point);
+      const prevQuadrant = (quadrant != null) ? quadrant : newQuadrant;
+      var quadrant = newQuadrant;
+
+      if (Math.abs(prevQuadrant - quadrant) === 2 || quadrant === 0) {
+        // point is on the edge, considered within the polygon
+        //console.log "Point is ON the edge", prevQuadrant, quadrant
+        return true;
+      }
+      let diff = quadrant - prevQuadrant;
+      // special cases if quadrants are 4 and 1
+      if (diff ===  3) { diff = -1; }
+      if (diff === -3) { diff =  1; }
+      totalDiff -= diff;
+    }
+
+    return totalDiff !== 0;
+  }
+
+
+  getQuadrantWithRespectToPoint(vertex, point) {
+    const xDiff = vertex[0] - point[0];
+    const yDiff = vertex[1] - point[1];
+
+    if (xDiff === 0 && yDiff === 0) {
+      // Vertex and point have the same coordinates
+      return 0;
+    }
+
+    switch (false) {
+      case xDiff > 0 || yDiff <=  0: return 1;
+      case xDiff > 0 || yDiff > 0: return 2;
+      case xDiff <=  0 || yDiff > 0: return 3;
+      case xDiff <=  0 || yDiff <=  0: return 4;
+    }
+  }
+
+
+  calculateDistance(p1, p2) {
+
+    const diff = [p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]];
+    return Math.sqrt( (diff[0] * diff[0]) + (diff[1] * diff[1]) + (diff[2] * diff[2]));
+  }
+
+
+  interpolatePositions(pos1, pos2, f) {
+
+    const sPos1 = [pos1[0] * (1 - f), pos1[1] * (1 - f), pos1[2] * (1 - f)];
+    const sPos2 = [pos2[0] * f, pos2[1] * f, pos2[2] * f];
+    return [sPos1[0] + sPos2[0], sPos1[1] + sPos2[1], sPos1[2] + sPos2[2]];
+  }
+
+
+  getCentroid() {
+    // Formula:
+    // https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
+
+    let sumArea = 0;
+    let sumCx = 0;
+    let sumCy = 0;
+    for (let i of __range__(0, (this.contourList.length - 1), false)) {
+      const [x_i, y_i] = this.get2DCoordinate(this.contourList[i]);
+      const [x_i_1, y_i_1] = this.get2DCoordinate(this.contourList[i+1]);
+      sumArea += (x_i * y_i_1) - (x_i_1 * y_i);
+      sumCx += (x_i + x_i_1) * ((x_i * y_i_1) - (x_i_1 * y_i));
+      sumCy += (y_i + y_i_1) * ((x_i * y_i_1) - (x_i_1 * y_i));
+    }
+
+    const area = sumArea / 2;
+    const cx = sumCx / 6 / area;
+    const cy = sumCy / 6 / area;
+
+    return this.get3DCoordinate([cx, cy]);
+  }
+}
+
+export default VolumeLayer;
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}

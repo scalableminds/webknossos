@@ -1,103 +1,119 @@
-_                  = require("lodash")
-THREE              = require("three")
-TracePoint         = require("./tracepoint")
-TraceTree          = require("./tracetree")
-Toast              = require("libs/toast")
+import _ from "lodash";
+import THREE from "three";
+import TracePoint from "./tracepoint";
+import TraceTree from "./tracetree";
+import Toast from "libs/toast";
 
-class TracingParser
-
-
-  constructor : (@skeletonTracing, @data) ->
-
-    @idCount = 1
-    @treeIdCount = 1
-    @trees = []
-    @activeNode = null
-    @activeTree = null
+class TracingParser {
 
 
-  buildTrees : ->
+  constructor(skeletonTracing, data) {
 
-    for treeData in @data.trees
-      # Create new tree
-      tree = new TraceTree(
+    this.skeletonTracing = skeletonTracing;
+    this.data = data;
+    this.idCount = 1;
+    this.treeIdCount = 1;
+    this.trees = [];
+    this.activeNode = null;
+    this.activeTree = null;
+  }
+
+
+  buildTrees() {
+
+    for (let treeData of this.data.trees) {
+      // Create new tree
+      const tree = new TraceTree(
         treeData.id,
-        @convertColor(treeData.color),
-        if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
+        this.convertColor(treeData.color),
+        treeData.name ? treeData.name : `Tree${(`00${treeData.id}`).slice(-3)}`,
         treeData.timestamp,
-        treeData.comments
-        treeData.branchPoints)
+        treeData.comments,
+        treeData.branchPoints);
 
-      # Initialize nodes
-      for node in treeData.nodes
+      // Initialize nodes
+      for (let node of treeData.nodes) {
 
-        metaInfo = _.pick( node,
-          'timestamp', 'viewport', 'resolution', 'bitDepth', 'interpolation' )
+        const metaInfo = _.pick( node,
+          'timestamp', 'viewport', 'resolution', 'bitDepth', 'interpolation' );
 
         tree.nodes.push(
           new TracePoint(
             node.id, node.position, node.radius, treeData.id,
-            metaInfo, node.rotation))
+            metaInfo, node.rotation));
 
-        # idCount should be bigger than any other id
-        @idCount = Math.max(node.id + 1, @idCount)
-
-      # Initialize edges
-      for edge in treeData.edges
-        sourceNode = @skeletonTracing.findNodeInList(tree.nodes, edge.source)
-        targetNode = @skeletonTracing.findNodeInList(tree.nodes, edge.target)
-        if sourceNode and targetNode
-          sourceNode.appendNext(targetNode)
-          targetNode.appendNext(sourceNode)
-        else
-          Toast.error("Node with id #{edge.source} doesn't exist. Ignored edge due to missing source node.") if not sourceNode
-          Toast.error("Node with id #{edge.target} doesn't exist. Ignored edge due to missing target node.") if not targetNode
-
-      # Set active Node
-      activeNodeT = @skeletonTracing.findNodeInList(tree.nodes, @data.activeNode)
-      if activeNodeT
-        @activeNode = activeNodeT
-        # Active Tree is the one last added
-        @activeTree = tree
-
-      @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
-      @trees.push(tree)
-
-    if @data.activeNode and not @activeNode
-      Toast.error("Node with id #{@data.activeNode} doesn't exist. Ignored active node.")
-
-
-  convertColor : (colorArray) ->
-
-    if colorArray?
-      return new THREE.Color().setRGB(colorArray...).getHex()
-
-    return null
-
-
-  parse : ->
-
-    unless @data?
-      return {
-        idCount : 0
-        treeIdCount : 0
-        trees : []
-        activeNode : null
-        activeTree : null
+        // idCount should be bigger than any other id
+        this.idCount = Math.max(node.id + 1, this.idCount);
       }
 
-    @buildTrees()
+      // Initialize edges
+      for (let edge of treeData.edges) {
+        const sourceNode = this.skeletonTracing.findNodeInList(tree.nodes, edge.source);
+        const targetNode = this.skeletonTracing.findNodeInList(tree.nodes, edge.target);
+        if (sourceNode && targetNode) {
+          sourceNode.appendNext(targetNode);
+          targetNode.appendNext(sourceNode);
+        } else {
+          if (!sourceNode) { Toast.error(`Node with id ${edge.source} doesn't exist. Ignored edge due to missing source node.`); }
+          if (!targetNode) { Toast.error(`Node with id ${edge.target} doesn't exist. Ignored edge due to missing target node.`); }
+        }
+      }
 
-    nodeList = []
-    for tree in @trees
-      nodeList = nodeList.concat(tree.nodes)
+      // Set active Node
+      const activeNodeT = this.skeletonTracing.findNodeInList(tree.nodes, this.data.activeNode);
+      if (activeNodeT) {
+        this.activeNode = activeNodeT;
+        // Active Tree is the one last added
+        this.activeTree = tree;
+      }
 
-    return {
-      @idCount
-      @treeIdCount
-      @trees
-      @activeNode
-      @activeTree
+      this.treeIdCount = Math.max(tree.treeId + 1, this.treeIdCount);
+      this.trees.push(tree);
     }
 
-module.exports = TracingParser
+    if (this.data.activeNode && !this.activeNode) {
+      return Toast.error(`Node with id ${this.data.activeNode} doesn't exist. Ignored active node.`);
+    }
+  }
+
+
+  convertColor(colorArray) {
+
+    if (colorArray != null) {
+      return new THREE.Color().setRGB(...colorArray).getHex();
+    }
+
+    return null;
+  }
+
+
+  parse() {
+
+    if (this.data == null) {
+      return {
+        idCount : 0,
+        treeIdCount : 0,
+        trees : [],
+        activeNode : null,
+        activeTree : null
+      };
+    }
+
+    this.buildTrees();
+
+    let nodeList = [];
+    for (let tree of this.trees) {
+      nodeList = nodeList.concat(tree.nodes);
+    }
+
+    return {
+      idCount: this.idCount,
+      treeIdCount: this.treeIdCount,
+      trees: this.trees,
+      activeNode: this.activeNode,
+      activeTree: this.activeTree
+    };
+  }
+}
+
+export default TracingParser;

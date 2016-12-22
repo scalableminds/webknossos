@@ -1,99 +1,116 @@
-_                          = require("lodash")
-Marionette                 = require("backbone.marionette")
-DashboardTaskListView      = require("./dashboard_task_list_view")
-ExplorativeTracingListView = require("./explorative_tracing_list_view")
-LoggedTimeView             = require("./logged_time_view")
-DatasetSwitchView          = require("./dataset/dataset_switch_view")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import DashboardTaskListView from "./dashboard_task_list_view";
+import ExplorativeTracingListView from "./explorative_tracing_list_view";
+import LoggedTimeView from "./logged_time_view";
+import DatasetSwitchView from "./dataset/dataset_switch_view";
 
 
-class DashboardView extends Marionette.View
-
-  className : "container wide"
-  id : "dashboard"
-  template : _.template("""
-    <% if (isAdminView) { %>
-      <h3>User: <%- firstName %> <%- lastName %></h3>
+class DashboardView extends Marionette.View {
+  static initClass() {
+  
+    this.prototype.className  = "container wide";
+    this.prototype.id  = "dashboard";
+    this.prototype.template  = _.template(`\
+<% if (isAdminView) { %>
+  <h3>User: <%- firstName %> <%- lastName %></h3>
+<% } %>
+<div class="tabbable" id="tabbable-dashboard">
+  <ul class="nav nav-tabs">
+    <% if (!isAdminView) { %>
+      <li class="active">
+        <a href="#" id="tab-datasets" data-target="#placeholder" data-toggle="tab">Datasets</a>
+      </li>
     <% } %>
-    <div class="tabbable" id="tabbable-dashboard">
-      <ul class="nav nav-tabs">
-        <% if (!isAdminView) { %>
-          <li class="active">
-            <a href="#" id="tab-datasets" data-target="#placeholder" data-toggle="tab">Datasets</a>
-          </li>
-        <% } %>
-        <li <% if (isAdminView) { %> class="active" <% } %> >
-          <a href="#" id="tab-tasks" data-target="#placeholder" data-toggle="tab">Tasks</a>
-        <li <% if (isAdminView) { %> class="active" <% } %> >
-        </li>
-        <li>
-          <a href="#" id="tab-explorative" data-target="#placeholder" data-toggle="tab">Explorative Annotations</a>
-        </li>
-        <% if (isAdminView) { %>
-          <li>
-            <a href="#" id="tab-logged-time" data-target="#placeholder" data-toggle="tab">Tracked Time</a>
-          </li>
-        <% } %>
-      </ul>
-      <div class="tab-content">
-        <div class="tab-pane active" id="placeholder"></div>
-      </div>
-    </div>
-  """)
-
-  regions :
-    "tabPane" : ".tab-pane"
-
-
-  events :
-    "click #tab-datasets" : "showDatasets"
-    "click #tab-tasks" : "showTasks"
-    "click #tab-explorative" : "showExplorative"
-    "click #tab-logged-time" : "showLoggedTime"
+    <li <% if (isAdminView) { %> class="active" <% } %> >
+      <a href="#" id="tab-tasks" data-target="#placeholder" data-toggle="tab">Tasks</a>
+    <li <% if (isAdminView) { %> class="active" <% } %> >
+    </li>
+    <li>
+      <a href="#" id="tab-explorative" data-target="#placeholder" data-toggle="tab">Explorative Annotations</a>
+    </li>
+    <% if (isAdminView) { %>
+      <li>
+        <a href="#" id="tab-logged-time" data-target="#placeholder" data-toggle="tab">Tracked Time</a>
+      </li>
+    <% } %>
+  </ul>
+  <div class="tab-content">
+    <div class="tab-pane active" id="placeholder"></div>
+  </div>
+</div>\
+`);
+  
+    this.prototype.regions  =
+      {"tabPane" : ".tab-pane"};
+  
+  
+    this.prototype.events  = {
+      "click #tab-datasets" : "showDatasets",
+      "click #tab-tasks" : "showTasks",
+      "click #tab-explorative" : "showExplorative",
+      "click #tab-logged-time" : "showLoggedTime"
+    };
+  }
 
 
-  templateContext : ->
-    isAdminView : @options.isAdminView
+  templateContext() {
+    return {isAdminView : this.options.isAdminView};
+  }
 
 
-  initialize : (@options) ->
+  initialize(options) {
 
-    if @options.isAdminView
-      @listenTo(@, "render", @showTasks)
-    else
-      @listenTo(@, "render", @showDatasets)
+    this.options = options;
+    if (this.options.isAdminView) {
+      this.listenTo(this, "render", this.showTasks);
+    } else {
+      this.listenTo(this, "render", this.showDatasets);
+    }
 
-    @viewCache =
-      datasetSwitchView : null
-      taskListView : null
-      explorativeTracingListView : null
+    return this.viewCache = {
+      datasetSwitchView : null,
+      taskListView : null,
+      explorativeTracingListView : null,
       loggedTimeView : null
+    };
+  }
 
 
-  showDatasets : ->
+  showDatasets() {
 
-    @showTab("datasetSwitchView", DatasetSwitchView)
-
-
-  showTasks : ->
-
-    @showTab("taskListView", DashboardTaskListView)
+    return this.showTab("datasetSwitchView", DatasetSwitchView);
+  }
 
 
-  showExplorative : ->
+  showTasks() {
 
-    @showTab("explorativeTracingListView", ExplorativeTracingListView)
-
-
-  showLoggedTime : ->
-
-    @showTab("loggedTimeView", LoggedTimeView)
+    return this.showTab("taskListView", DashboardTaskListView);
+  }
 
 
-  showTab : (viewName, viewClass) ->
+  showExplorative() {
 
-    unless view = @viewCache[viewName]
-      view = @viewCache[viewName] = new viewClass(@options)
-    @showChildView("tabPane", view, preventDestroy : true)
+    return this.showTab("explorativeTracingListView", ExplorativeTracingListView);
+  }
 
 
-module.exports = DashboardView
+  showLoggedTime() {
+
+    return this.showTab("loggedTimeView", LoggedTimeView);
+  }
+
+
+  showTab(viewName, viewClass) {
+
+    let view;
+    if (!(view = this.viewCache[viewName])) {
+      view = this.viewCache[viewName] = new viewClass(this.options);
+    }
+    return this.showChildView("tabPane", view, {preventDestroy : true});
+  }
+}
+DashboardView.initClass();
+
+
+export default DashboardView;

@@ -1,47 +1,56 @@
-$ = require("jquery")
+import $ from "jquery";
 
-Modal =
+const Modal = {
 
-  callbacks : {}
+  callbacks : {},
 
-  show : (text, title="Ups...", buttons=[{id: "ok-button", label: "OK"}]) ->
-    # buttons: [{id:..., label:..., callback:...}, ...]
+  show(text, title, buttons) {
+    // buttons: [{id:..., label:..., callback:...}, ...]
 
-    html =  """
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-          <h4 class="modal-title" id="myModalLabel">#{title}</h4>
-        </div>
-        <div class=\"modal-body\">
-          <p>#{text}</p>
-        </div>"""
+    if (title == null) { title = "Ups..."; }
+    if (buttons == null) { buttons = [{id: "ok-button", label: "OK"}]; }
+    let html =  `\
+<div class="modal-dialog">
+  <div class="modal-content">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+      <h4 class="modal-title" id="myModalLabel">${title}</h4>
+    </div>
+    <div class=\"modal-body\">
+      <p>${text}</p>
+    </div>`;
 
-    html += "<div class=\"modal-footer\">"
-    for button in buttons
-      html += "<a href=\"#\" id=\"" + button.id + "\" class=\"btn btn-default\">" +
-                    button.label + "</a>"
-    html += "</div></div></div>"
+    html += "<div class=\"modal-footer\">";
+    for (var button of buttons) {
+      html += `<a href="#" id="${button.id}" class="btn btn-default">` +
+                    button.label + "</a>";
+    }
+    html += "</div></div></div>";
 
-    $("#modal").html(html)
+    $("#modal").html(html);
 
-    for button in buttons
+    for (button of buttons) {
 
-      @callbacks[button.id] = button.callback
+      this.callbacks[button.id] = button.callback;
 
-      $("#" + button.id).on("click", (evt) =>
+      $(`#${button.id}`).on("click", evt => {
 
-        callback = @callbacks[evt.target.id]
-        if callback?
-          callback()
-        $("#modal").modal("hide"))
+        const callback = this.callbacks[evt.target.id];
+        if (callback != null) {
+          callback();
+        }
+        return $("#modal").modal("hide");
+      });
+    }
 
-    $("#modal").modal("show")
+    return $("#modal").modal("show");
+  },
 
 
-  hide : ->
+  hide() {
 
-    $("#modal").modal("hide")
+    return $("#modal").modal("hide");
+  }
+};
 
-module.exports = Modal
+export default Modal;

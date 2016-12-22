@@ -1,36 +1,46 @@
-_              = require("lodash")
-backbone       = require("backbone")
-NestedObjModel = require("libs/nested_obj_model")
-moment         = require("moment")
+import _ from "lodash";
+import backbone from "backbone";
+import NestedObjModel from "libs/nested_obj_model";
+import moment from "moment";
 
-class DatasetModel extends NestedObjModel
+class DatasetModel extends NestedObjModel {
+  static initClass() {
+  
+    this.prototype.urlRoot  = "/api/datasets";
+    this.prototype.idAttribute  = "name";
+  }
 
-  urlRoot : "/api/datasets"
-  idAttribute : "name"
+  parse(response) {
 
-  parse : (response) ->
-
-    # since defaults doesn't override null...
-    if response.dataSource == null
-      response.dataSource =
-        needsImport : true
-        baseDir : ""
-        scale : []
+    // since defaults doesn't override null...
+    if (response.dataSource === null) {
+      response.dataSource = {
+        needsImport : true,
+        baseDir : "",
+        scale : [],
         dataLayers : []
+      };
+    }
 
     response.hasSegmentation = _.some(response.dataSource.dataLayers,
-      (layer) -> layer.category == "segmentation")
+      layer => layer.category === "segmentation");
 
-    response.thumbnailURL = @createThumbnailURL(response.name, response.dataSource.dataLayers)
+    response.thumbnailURL = this.createThumbnailURL(response.name, response.dataSource.dataLayers);
 
-    response.formattedCreated = moment(response.created).format("YYYY-MM-DD HH:mm")
+    response.formattedCreated = moment(response.created).format("YYYY-MM-DD HH:mm");
 
-    return response
+    return response;
+  }
 
 
-  createThumbnailURL : (datasetName, layers) ->
+  createThumbnailURL(datasetName, layers) {
 
-    if colorLayer = _.find(layers, category : "color")
-      return "/api/datasets/#{datasetName}/layers/#{colorLayer.name}/thumbnail"
+    let colorLayer;
+    if (colorLayer = _.find(layers, {category : "color"})) {
+      return `/api/datasets/${datasetName}/layers/${colorLayer.name}/thumbnail`;
+    }
+  }
+}
+DatasetModel.initClass();
 
-module.exports = DatasetModel
+export default DatasetModel;

@@ -1,54 +1,71 @@
-_        = require("lodash")
-Backbone = require("backbone")
-app      = require("app")
+import _ from "lodash";
+import Backbone from "backbone";
+import app from "app";
 
-class User extends Backbone.Model
-
-  url : "/api/user/userConfiguration"
-  # To add any user setting, you must define default values in
-  # UserSettings.scala
-
-
-  initialize : ->
-
-    @listenTo(@, "change", _.debounce(
-      => if app.currentUser? then @save()
-      500))
-
-  getMouseInversionX : ->
-
-    return if @get("inverseX") then 1 else -1
+class User extends Backbone.Model {
+  static initClass() {
+  
+    this.prototype.url  = "/api/user/userConfiguration";
+  }
+  // To add any user setting, you must define default values in
+  // UserSettings.scala
 
 
-  getMouseInversionY : ->
+  initialize() {
 
-    return if @get("inverseY") then 1 else -1
+    return this.listenTo(this, "change", _.debounce(
+      () => { if (app.currentUser != null) { return this.save(); } },
+      500));
+  }
 
+  getMouseInversionX() {
 
-  getOrCreateBrightnessContrastColorSettings : (model) ->
-
-    settings = @get("brightnessContrastColorSettings")
-    datasetSettings = settings[model.datasetPostfix] || {}
-
-    for binary in model.getColorBinaries()
-      datasetSettings[binary.name] = datasetSettings[binary.name] || {}
-      _.defaults(datasetSettings[binary.name], settings.default)
-
-    settings[model.datasetPostfix] = datasetSettings
+    return this.get("inverseX") ? 1 : -1;
+  }
 
 
-  resetBrightnessContrastColorSettings : (model) ->
+  getMouseInversionY() {
 
-    Request.receiveJSON("/user/configuration/default").then( (defaultData) =>
-      @get("brightnessContrastColorSettings")[model.datasetPostfix] =
-        defaultData.brightnessContrastColorSettings[model.datasetPostfix]
+    return this.get("inverseY") ? 1 : -1;
+  }
 
-      @getOrCreateBrightnessContrastColorSettings(model)
-    )
 
-  triggerAll : ->
+  getOrCreateBrightnessContrastColorSettings(model) {
 
-    for property of @attributes
-      @trigger("change:#{property}", @, @get(property))
+    const settings = this.get("brightnessContrastColorSettings");
+    const datasetSettings = settings[model.datasetPostfix] || {};
 
-module.exports = User
+    for (let binary of model.getColorBinaries()) {
+      datasetSettings[binary.name] = datasetSettings[binary.name] || {};
+      _.defaults(datasetSettings[binary.name], settings.default);
+    }
+
+    return settings[model.datasetPostfix] = datasetSettings;
+  }
+
+
+  resetBrightnessContrastColorSettings(model) {
+
+    return Request.receiveJSON("/user/configuration/default").then( defaultData => {
+      this.get("brightnessContrastColorSettings")[model.datasetPostfix] =
+        defaultData.brightnessContrastColorSettings[model.datasetPostfix];
+
+      return this.getOrCreateBrightnessContrastColorSettings(model);
+    }
+    );
+  }
+
+  triggerAll() {
+
+    return (() => {
+      const result = [];
+      for (let property in this.attributes) {
+        result.push(this.trigger(`change:${property}`, this, this.get(property)));
+      }
+      return result;
+    })();
+  }
+}
+User.initClass();
+
+export default User;

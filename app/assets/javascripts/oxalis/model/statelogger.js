@@ -1,130 +1,159 @@
-Backbone      = require("backbone")
-_             = require("lodash")
-$             = require("jquery")
-app           = require("app")
-Request       = require("libs/request")
-Toast         = require("libs/toast")
-ErrorHandling = require("libs/error_handling")
+import Backbone from "backbone";
+import _ from "lodash";
+import $ from "jquery";
+import app from "app";
+import Request from "libs/request";
+import Toast from "libs/toast";
+import ErrorHandling from "libs/error_handling";
 
-class StateLogger
+class StateLogger {
+  static initClass() {
+  
+    this.prototype.PUSH_THROTTLE_TIME  = 30000; //30s
+    this.prototype.SAVE_RETRY_WAITING_TIME  = 5000;
+  }
 
-  PUSH_THROTTLE_TIME : 30000 #30s
-  SAVE_RETRY_WAITING_TIME : 5000
+  constructor(flycam, version, tracingId, tracingType, allowUpdate) {
 
-  constructor : (@flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
+    this.flycam = flycam;
+    this.version = version;
+    this.tracingId = tracingId;
+    this.tracingType = tracingType;
+    this.allowUpdate = allowUpdate;
+    _.extend(this, Backbone.Events);
+    this.mutexedPush = _.mutexPromise(this.pushImpl, -1);
 
-    _.extend(this, Backbone.Events)
-    @mutexedPush = _.mutexPromise(@pushImpl, -1)
+    this.newDiffs = [];
 
-    @newDiffs = []
-
-    # Push state to server whenever a user moves
-    @listenTo(@flycam, "positionChanged", @push)
-
-
-  pushDiff : (action, value, push = true) ->
-
-    @newDiffs.push({
-      action : action
-      value : value
-    })
-    # In order to assure that certain actions are atomic,
-    # it is sometimes necessary not to push.
-    if push
-      @push()
+    // Push state to server whenever a user moves
+    this.listenTo(this.flycam, "positionChanged", this.push);
+  }
 
 
-  concatUpdateTracing : ->
+  pushDiff(action, value, push) {
 
-    throw new Error("concatUpdateTracing has to be overwritten by subclass!")
-
-
-  #### SERVER COMMUNICATION
-
-  stateSaved : ->
-
-    return @newDiffs.length == 0
-
-
-  push : ->
-
-    if @allowUpdate
-      @pushThrottled()
+    if (push == null) { push = true; }
+    this.newDiffs.push({
+      action,
+      value
+    });
+    // In order to assure that certain actions are atomic,
+    // it is sometimes necessary not to push.
+    if (push) {
+      return this.push();
+    }
+  }
 
 
-  pushThrottled : ->
-    # Pushes the buffered tracing to the server. Pushing happens at most
-    # every 30 seconds.
+  concatUpdateTracing() {
 
-    @pushThrottled = _.throttle(@mutexedPush, @PUSH_THROTTLE_TIME)
-    @pushThrottled()
+    throw new Error("concatUpdateTracing has to be overwritten by subclass!");
+  }
 
 
-  pushNow : ->   # Interface for view & controller
+  //### SERVER COMMUNICATION
 
-    return @mutexedPush(false)
+  stateSaved() {
 
-  # alias for `pushNow`
-  # needed for save delegation by `Model`
-  # see `model.coffee`
-  save : ->
-
-    return @pushNow()
+    return this.newDiffs.length === 0;
+  }
 
 
-  pushImpl : (notifyOnFailure) ->
+  push() {
 
-    if not @allowUpdate
-      return Promise.resolve()
+    if (this.allowUpdate) {
+      return this.pushThrottled();
+    }
+  }
 
-    # TODO: remove existing updateTracing
-    @concatUpdateTracing()
 
-    diffsCurrentLength = @newDiffs.length
-    console.log "Sending data: ", @newDiffs
-    ErrorHandling.assert(@newDiffs.length > 0, "Empty update sent to server!", {
-      @newDiffs
-    })
+  pushThrottled() {
+    // Pushes the buffered tracing to the server. Pushing happens at most
+    // every 30 seconds.
+
+    this.pushThrottled = _.throttle(this.mutexedPush, this.PUSH_THROTTLE_TIME);
+    return this.pushThrottled();
+  }
+
+
+  pushNow() {   // Interface for view & controller
+
+    return this.mutexedPush(false);
+  }
+
+  // alias for `pushNow`
+  // needed for save delegation by `Model`
+  // see `model.coffee`
+  save() {
+
+    return this.pushNow();
+  }
+
+
+  pushImpl(notifyOnFailure) {
+
+    if (!this.allowUpdate) {
+      return Promise.resolve();
+    }
+
+    // TODO: remove existing updateTracing
+    this.concatUpdateTracing();
+
+    const diffsCurrentLength = this.newDiffs.length;
+    console.log("Sending data: ", this.newDiffs);
+    ErrorHandling.assert(this.newDiffs.length > 0, "Empty update sent to server!", {
+      newDiffs: this.newDiffs
+    });
 
     return Request.sendJSONReceiveJSON(
-      "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
-      method : "PUT"
-      data : @newDiffs
+      `/annotations/${this.tracingType}/${this.tracingId}?version=${(this.version + 1)}`,{
+      method : "PUT",
+      data : this.newDiffs
+    }
     ).then(
-      (response) =>
-        @newDiffs = @newDiffs.slice(diffsCurrentLength)
-        @version = response.version
-        @pushDoneCallback()
-      (responseObject) =>
-        @pushFailCallback(responseObject, notifyOnFailure)
-    )
+      response => {
+        this.newDiffs = this.newDiffs.slice(diffsCurrentLength);
+        this.version = response.version;
+        return this.pushDoneCallback();
+      },
+      responseObject => {
+        return this.pushFailCallback(responseObject, notifyOnFailure);
+      }
+    );
+  }
 
 
-  pushFailCallback : (response, notifyOnFailure) ->
+  pushFailCallback(response, notifyOnFailure) {
 
-    $('body').addClass('save-error')
+    $('body').addClass('save-error');
 
-    # HTTP Code 409 'conflict' for dirty state
-    if response.status == 409
-      app.router.off("beforeunload")
-      alert("""
-        It seems that you edited the tracing simultaneously in different windows.
-        Editing should be done in a single window only.
+    // HTTP Code 409 'conflict' for dirty state
+    if (response.status === 409) {
+      app.router.off("beforeunload");
+      alert(`\
+It seems that you edited the tracing simultaneously in different windows.
+Editing should be done in a single window only.
 
-        In order to restore the current window, a reload is necessary.
-      """)
-      app.router.reload()
-
-
-    setTimeout((=> @pushNow()), @SAVE_RETRY_WAITING_TIME)
-    if notifyOnFailure
-      @trigger("pushFailed")
+In order to restore the current window, a reload is necessary.\
+`);
+      app.router.reload();
+    }
 
 
-  pushDoneCallback : ->
+    setTimeout((() => this.pushNow()), this.SAVE_RETRY_WAITING_TIME);
+    if (notifyOnFailure) {
+      return this.trigger("pushFailed");
+    }
+  }
 
-    @trigger("pushDone")
-    $('body').removeClass('save-error')
+
+  pushDoneCallback() {
+
+    this.trigger("pushDone");
+    return $('body').removeClass('save-error');
+  }
+}
+StateLogger.initClass();
 
 
-module.exports = StateLogger
+export default StateLogger;

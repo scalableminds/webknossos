@@ -1,49 +1,62 @@
-Marionette             = require("backbone.marionette")
-Utils                  = require("libs/utils")
-ColorConverter         = require("three.color")
-scrollIntoViewIfNeeded = require("scroll-into-view-if-needed")
+import Marionette from "backbone.marionette";
+import Utils from "libs/utils";
+import ColorConverter from "three.color";
+import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 
-class ListTreeItemView extends Marionette.View
+class ListTreeItemView extends Marionette.View {
+  static initClass() {
+  
+    this.prototype.tagName  = "li";
+    this.prototype.template  = _.template(`\
+<i class="fa <%- getIcon() %>"></i>
+<a href="#" data-treeid="<%- treeId %>">
+  <span title="Node count" class="inline-block tree-node-count" style="width: 50px;"><%- nodes.length %></span>
+  <i class="fa fa-circle tree-icon" style="color: #<%- intToHex(color) %>"></i>
+  <span title="Tree Name" class="tree-name"><%- name %></span>
+</a>\
+`);
+  
+    this.prototype.events  =
+      {"click a" : "setActive"};
+  }
 
-  tagName : "li"
-  template : _.template("""
-    <i class="fa <%- getIcon() %>"></i>
-    <a href="#" data-treeid="<%- treeId %>">
-      <span title="Node count" class="inline-block tree-node-count" style="width: 50px;"><%- nodes.length %></span>
-      <i class="fa fa-circle tree-icon" style="color: #<%- intToHex(color) %>"></i>
-      <span title="Tree Name" class="tree-name"><%- name %></span>
-    </a>
-  """)
+  templateContext() {
+    return {
+      getIcon : () => {
+        if (this.model.get("treeId") === this.activeTreeId) {
+          return "fa-angle-right";
+        } else {
+          return "fa-bull";
+        }
+      },
 
-  events :
-    "click a" : "setActive"
-
-  templateContext : ->
-    getIcon : =>
-      if @model.get("treeId") == @activeTreeId
-        return "fa-angle-right"
-      else
-        return "fa-bull"
-
-    intToHex : Utils.intToHex
-
-
-  initialize : (options) ->
-
-    @activeTreeId = options.activeTreeId
-    @parent = options.parent
-
-
-  setActive : ->
-
-    id = @model.get("treeId")
-    @parent.setActiveTree(id)
+      intToHex : Utils.intToHex
+    };
+  }
 
 
-  onRender : ->
+  initialize(options) {
 
-    # scroll to active tree
-    if @model.get("treeId") == @activeTreeId
-      scrollIntoViewIfNeeded(@el)
+    this.activeTreeId = options.activeTreeId;
+    return this.parent = options.parent;
+  }
 
-module.exports = ListTreeItemView
+
+  setActive() {
+
+    const id = this.model.get("treeId");
+    return this.parent.setActiveTree(id);
+  }
+
+
+  onRender() {
+
+    // scroll to active tree
+    if (this.model.get("treeId") === this.activeTreeId) {
+      return scrollIntoViewIfNeeded(this.el);
+    }
+  }
+}
+ListTreeItemView.initClass();
+
+export default ListTreeItemView;

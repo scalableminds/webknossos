@@ -1,63 +1,72 @@
-_                   = require("lodash")
-Marionette          = require("backbone.marionette")
-Toast               = require("libs/toast")
-SelectAllRows       = require("libs/behaviors/select_all_rows_behavior")
-app                 = require("app")
-TeamListItemView    = require("./team_list_item_view")
-CreateTeamModalView = require("./create_team_modal_view")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import Toast from "libs/toast";
+import SelectAllRows from "libs/behaviors/select_all_rows_behavior";
+import app from "app";
+import TeamListItemView from "./team_list_item_view";
+import CreateTeamModalView from "./create_team_modal_view";
 
-class TeamListView extends Marionette.CompositeView
+class TeamListView extends Marionette.CompositeView {
+  static initClass() {
+  
+    this.prototype.template  = _.template(`\
+ <h3>Teams</h3>
+ <table class="table table-striped">
+   <thead>
+     <tr>
+       <th>Name</th>
+       <th>Parent</th>
+       <th>Owner</th>
+       <th>Roles</th>
+       <th>Actions</th>
+     </tr>
+   </thead>
+   <tbody></tbody>
+ </table>
+<div class="modal-wrapper"></div>\
+`);
+  
+    this.prototype.className  = "team-administration container wide";
+    this.prototype.childView  = TeamListItemView;
+    this.prototype.childViewContainer  = "tbody";
+  
+    this.prototype.behaviors = {
+      SelectAllRows : {
+        behaviorClass : SelectAllRows
+      }
+    };
+  
+    this.prototype.ui  =
+      {"modalWrapper" : ".modal-wrapper"};
+  }
 
-  template : _.template("""
-    <h3>Teams</h3>
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Parent</th>
-          <th>Owner</th>
-          <th>Roles</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-   <div class="modal-wrapper"></div>
-  """)
+  initialize() {
 
-  className : "team-administration container wide"
-  childView : TeamListItemView
-  childViewContainer : "tbody"
+    this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
+    this.listenTo(app.vent, "modal:destroy", this.render);
+    this.listenTo(app.vent, "paginationView:addElement", this.showModal);
 
-  behaviors:
-    SelectAllRows :
-      behaviorClass : SelectAllRows
-
-  ui :
-    "modalWrapper" : ".modal-wrapper"
-
-  initialize : ->
-
-    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
-    @listenTo(app.vent, "modal:destroy", @render)
-    @listenTo(app.vent, "paginationView:addElement", @showModal)
-
-    @collection.fetch(
+    return this.collection.fetch({
       data : "isEditable=true"
-    )
+    });
+  }
 
 
-  filterBySearch : (filterQuery) ->
+  filterBySearch(filterQuery) {
 
-    @collection.setFilter(["name", "owner"], filterQuery)
-
-
-  showModal : (modalView) ->
-
-    modalView = new CreateTeamModalView(teamCollection : @collection)
-    @ui.modalWrapper.html(modalView.render().el)
-
-    modalView.show()
+    return this.collection.setFilter(["name", "owner"], filterQuery);
+  }
 
 
-module.exports = TeamListView
+  showModal(modalView) {
+
+    modalView = new CreateTeamModalView({teamCollection : this.collection});
+    this.ui.modalWrapper.html(modalView.render().el);
+
+    return modalView.show();
+  }
+}
+TeamListView.initClass();
+
+
+export default TeamListView;

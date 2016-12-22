@@ -1,280 +1,330 @@
-_           = require("lodash")
-THREE       = require("three")
-{M4x4, V3}  = require("libs/mjs")
+import _ from "lodash";
+import THREE from "three";
+import { M4x4, V3 } from "libs/mjs";
 
-updateMacro = (_this) ->
+const updateMacro = function(_this) {
 
-  _this.trigger("changed", _this.currentMatrix, _this.zoomStep)
-  _this.hasChanged = true
-
-
-transformationWithDistanceMacro = (_this, transformationFn, transformationArg1, transformationArg2) ->
-
-  { currentMatrix } = _this
-  M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix)
-  transformationFn.call(_this, transformationArg1, transformationArg2)
-  M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix)
-  return
-
-class Flycam3d
-
-  ZOOM_STEP_INTERVAL : 1.1
-  ZOOM_STEP_MIN : 0.5
-  ZOOM_STEP_MAX : 5
-
-  zoomStep : 1.3
-  hasChanged : true
-  scale : null
-  currentMatrix : null
-
-  constructor : (@distance, scale) ->
-
-    _.extend(this, Backbone.Events)
-
-    @scale = @calculateScaleValues(scale)
-
-    @reset()
-    @calculateDistanceVectors(@zoomStep)
+  _this.trigger("changed", _this.currentMatrix, _this.zoomStep);
+  return _this.hasChanged = true;
+};
 
 
-  calculateDistanceVectors : (zoomStep = 1) ->
-    @distanceVecNegative = [0, 0, -zoomStep * @distance]
-    @distanceVecPositive = [0, 0, zoomStep * @distance]
+const transformationWithDistanceMacro = function(_this, transformationFn, transformationArg1, transformationArg2) {
+
+  const { currentMatrix } = _this;
+  M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix);
+  transformationFn.call(_this, transformationArg1, transformationArg2);
+  M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix);
+};
+
+class Flycam3d {
+  static initClass() {
+  
+    this.prototype.ZOOM_STEP_INTERVAL  = 1.1;
+    this.prototype.ZOOM_STEP_MIN  = 0.5;
+    this.prototype.ZOOM_STEP_MAX  = 5;
+  
+    this.prototype.zoomStep  = 1.3;
+    this.prototype.hasChanged  = true;
+    this.prototype.scale  = null;
+    this.prototype.currentMatrix  = null;
+  }
+
+  constructor(distance, scale) {
+
+    this.distance = distance;
+    _.extend(this, Backbone.Events);
+
+    this.scale = this.calculateScaleValues(scale);
+
+    this.reset();
+    this.calculateDistanceVectors(this.zoomStep);
+  }
 
 
-  calculateScaleValues : (scale) ->
-
-    scale = [1/scale[0], 1/scale[1], 1/scale[2]]
-    maxScale = Math.max(scale[0], scale[1], scale[2])
-    multi = 1/maxScale
-    scale = [multi * scale[0], multi * scale[1], multi * scale[2]]
-    return scale
+  calculateDistanceVectors(zoomStep) {
+    if (zoomStep == null) { zoomStep = 1; }
+    this.distanceVecNegative = [0, 0, -zoomStep * this.distance];
+    return this.distanceVecPositive = [0, 0, zoomStep * this.distance];
+  }
 
 
-  reset : (resetPosition = true) ->
+  calculateScaleValues(scale) {
 
-    { scale } = @
-    if @currentMatrix?
-      position = @currentMatrix[12..14]
+    scale = [1/scale[0], 1/scale[1], 1/scale[2]];
+    const maxScale = Math.max(scale[0], scale[1], scale[2]);
+    const multi = 1/maxScale;
+    scale = [multi * scale[0], multi * scale[1], multi * scale[2]];
+    return scale;
+  }
 
-    m = [
+
+  reset(resetPosition) {
+
+    let position;
+    if (resetPosition == null) { resetPosition = true; }
+    const { scale } = this;
+    if (this.currentMatrix != null) {
+      position = this.currentMatrix.slice(12, 15);
+    }
+
+    const m = [
       1, 0, 0, 0,
       0, 1, 0, 0,
       0, 0, 1, 0,
       0, 0, 0, 1
-    ]
-    M4x4.scale(scale, m, m)
-    @currentMatrix = m
+    ];
+    M4x4.scale(scale, m, m);
+    this.currentMatrix = m;
 
-    if position? and not resetPosition
-      @setPosition(position)
+    if ((position != null) && !resetPosition) {
+      this.setPosition(position);
+    }
 
-    # Apply 180° Rotation to keep it consistent with plane view
-    @roll(Math.PI)
+    // Apply 180° Rotation to keep it consistent with plane view
+    this.roll(Math.PI);
 
-    updateMacro(this)
-
-
-  update : ->
-
-    updateMacro(this)
+    return updateMacro(this);
+  }
 
 
-  flush : ->
+  update() {
 
-    if @hasChanged
-      @hasChanged = false
-      true
-    else
-      false
+    return updateMacro(this);
+  }
 
 
-  zoomIn : ->
+  flush() {
 
-    @zoomStep = Math.max(@zoomStep / @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MIN)
-    @calculateDistanceVectors(@zoomStep)
-    updateMacro(this)
-
-
-  zoomOut : ->
-
-    @zoomStep = Math.min(@zoomStep * @ZOOM_STEP_INTERVAL, @ZOOM_STEP_MAX)
-    @calculateDistanceVectors(@zoomStep)
-    updateMacro(this)
+    if (this.hasChanged) {
+      this.hasChanged = false;
+      return true;
+    } else {
+      return false;
+    }
+  }
 
 
-  getZoomStep : ->
+  zoomIn() {
 
-    return @zoomStep
-
-
-  setZoomStep : (zoomStep) ->
-
-    @zoomStep = Math.min(@ZOOM_STEP_MAX, Math.max(@ZOOM_STEP_MIN, zoomStep))
+    this.zoomStep = Math.max(this.zoomStep / this.ZOOM_STEP_INTERVAL, this.ZOOM_STEP_MIN);
+    this.calculateDistanceVectors(this.zoomStep);
+    return updateMacro(this);
+  }
 
 
-  getMatrix : ->
+  zoomOut() {
 
-    return M4x4.clone(@currentMatrix)
-
-
-  getZoomedMatrix : ->
-
-    matrix = @getMatrix()
-    return M4x4.scale1(@zoomStep, matrix, matrix)
+    this.zoomStep = Math.min(this.zoomStep * this.ZOOM_STEP_INTERVAL, this.ZOOM_STEP_MAX);
+    this.calculateDistanceVectors(this.zoomStep);
+    return updateMacro(this);
+  }
 
 
-  setMatrix : (matrix) ->
+  getZoomStep() {
 
-    @currentMatrix = M4x4.clone(matrix)
-    updateMacro(this)
-
-
-  move : (vector) ->
-
-    M4x4.translate(vector, @currentMatrix, @currentMatrix)
-    updateMacro(this)
+    return this.zoomStep;
+  }
 
 
-  yaw : (angle, regardDistance = false) ->
+  setZoomStep(zoomStep) {
 
-    if regardDistance
-      transformationWithDistanceMacro(this, @yawSilent, angle)
-    else
-      @yawSilent(angle)
-    updateMacro(this)
+    return this.zoomStep = Math.min(this.ZOOM_STEP_MAX, Math.max(this.ZOOM_STEP_MIN, zoomStep));
+  }
 
 
-  yawSilent : (angle) ->
+  getMatrix() {
 
-    @rotateOnAxisSilent(angle, [ 0, 1, 0 ])
-
-
-  roll : (angle, regardDistance = false) ->
-
-    if regardDistance
-      transformationWithDistanceMacro(this, @rollSilent, angle)
-    else
-      @rollSilent(angle)
-    updateMacro(this)
+    return M4x4.clone(this.currentMatrix);
+  }
 
 
-  rollSilent : (angle) ->
+  getZoomedMatrix() {
 
-    @rotateOnAxisSilent(angle, [ 0, 0, 1 ])
-
-
-  pitch : (angle, regardDistance = false) ->
-
-    if regardDistance
-      transformationWithDistanceMacro(this, @pitchSilent, angle)
-    else
-      @pitchSilent(angle)
-    updateMacro(this)
+    const matrix = this.getMatrix();
+    return M4x4.scale1(this.zoomStep, matrix, matrix);
+  }
 
 
-  pitchSilent : (angle) ->
+  setMatrix(matrix) {
 
-    @rotateOnAxisSilent(angle, [ 1, 0, 0 ])
-
-
-  rotateOnAxis : (angle, axis) ->
-
-    @rotateOnAxisSilent(angle, axis)
-    updateMacro(this)
+    this.currentMatrix = M4x4.clone(matrix);
+    return updateMacro(this);
+  }
 
 
-  rotateOnAxisSilent : (angle, axis) ->
+  move(vector) {
 
-    M4x4.rotate(angle, axis, @currentMatrix, @currentMatrix)
-
-
-  rotateOnAxisDistance : (angle, axis) ->
-
-    transformationWithDistanceMacro(this, @rotateOnAxisSilent, angle, axis)
-    updateMacro(this)
+    M4x4.translate(vector, this.currentMatrix, this.currentMatrix);
+    return updateMacro(this);
+  }
 
 
-  toString : ->
+  yaw(angle, regardDistance) {
 
-    matrix = @currentMatrix
-    return "[" + matrix[ 0] + ", " + matrix[ 1] + ", " + matrix[ 2] + ", " + matrix[ 3] + ", " +
+    if (regardDistance == null) { regardDistance = false; }
+    if (regardDistance) {
+      transformationWithDistanceMacro(this, this.yawSilent, angle);
+    } else {
+      this.yawSilent(angle);
+    }
+    return updateMacro(this);
+  }
+
+
+  yawSilent(angle) {
+
+    return this.rotateOnAxisSilent(angle, [ 0, 1, 0 ]);
+  }
+
+
+  roll(angle, regardDistance) {
+
+    if (regardDistance == null) { regardDistance = false; }
+    if (regardDistance) {
+      transformationWithDistanceMacro(this, this.rollSilent, angle);
+    } else {
+      this.rollSilent(angle);
+    }
+    return updateMacro(this);
+  }
+
+
+  rollSilent(angle) {
+
+    return this.rotateOnAxisSilent(angle, [ 0, 0, 1 ]);
+  }
+
+
+  pitch(angle, regardDistance) {
+
+    if (regardDistance == null) { regardDistance = false; }
+    if (regardDistance) {
+      transformationWithDistanceMacro(this, this.pitchSilent, angle);
+    } else {
+      this.pitchSilent(angle);
+    }
+    return updateMacro(this);
+  }
+
+
+  pitchSilent(angle) {
+
+    return this.rotateOnAxisSilent(angle, [ 1, 0, 0 ]);
+  }
+
+
+  rotateOnAxis(angle, axis) {
+
+    this.rotateOnAxisSilent(angle, axis);
+    return updateMacro(this);
+  }
+
+
+  rotateOnAxisSilent(angle, axis) {
+
+    return M4x4.rotate(angle, axis, this.currentMatrix, this.currentMatrix);
+  }
+
+
+  rotateOnAxisDistance(angle, axis) {
+
+    transformationWithDistanceMacro(this, this.rotateOnAxisSilent, angle, axis);
+    return updateMacro(this);
+  }
+
+
+  toString() {
+
+    const matrix = this.currentMatrix;
+    return `[${matrix[ 0]}, ${matrix[ 1]}, ${matrix[ 2]}, ${matrix[ 3]}, ` +
       matrix[ 4] + ", " + matrix[ 5] + ", " + matrix[ 6] + ", " + matrix[ 7] + ", " +
       matrix[ 8] + ", " + matrix[ 9] + ", " + matrix[10] + ", " + matrix[11] + ", " +
-      matrix[12] + ", " + matrix[13] + ", " + matrix[14] + ", " + matrix[15] + "]"
+      matrix[12] + ", " + matrix[13] + ", " + matrix[14] + ", " + matrix[15] + "]";
+  }
 
 
-  getPosition : ->
+  getPosition() {
 
-    matrix = @currentMatrix
-    return [ matrix[12], matrix[13], matrix[14] ]
+    const matrix = this.currentMatrix;
+    return [ matrix[12], matrix[13], matrix[14] ];
+  }
 
 
-  getRotation : ->
+  getRotation() {
 
-    object = new THREE.Object3D()
-    matrix = (new THREE.Matrix4()).fromArray( @currentMatrix ).transpose()
-    object.applyMatrix( matrix )
+    const object = new THREE.Object3D();
+    const matrix = (new THREE.Matrix4()).fromArray( this.currentMatrix ).transpose();
+    object.applyMatrix( matrix );
 
-    # Fix JS modulo bug
-    # http://javascript.about.com/od/problemsolving/a/modulobug.htm
-    mod = (x, n) ->
-      return ((x % n) + n) % n
+    // Fix JS modulo bug
+    // http://javascript.about.com/od/problemsolving/a/modulobug.htm
+    const mod = (x, n) => ((x % n) + n) % n;
 
-    return _.map [
-      object.rotation.x
-      object.rotation.y
+    return _.map([
+      object.rotation.x,
+      object.rotation.y,
       object.rotation.z - Math.PI
-      ], (e) -> mod(180 / Math.PI * e, 360)
+      ], e => mod((180 / Math.PI) * e, 360));
+  }
 
 
 
-  setPositionSilent : (p) ->
+  setPositionSilent(p) {
 
-    matrix = @currentMatrix
-    matrix[12] = p[0]
-    matrix[13] = p[1]
-    matrix[14] = p[2]
-
-
-  setPosition : (p) ->
-
-    @setPositionSilent(p)
-    updateMacro(this)
+    const matrix = this.currentMatrix;
+    matrix[12] = p[0];
+    matrix[13] = p[1];
+    return matrix[14] = p[2];
+  }
 
 
-  setRotation : ([x, y, z]) ->
+  setPosition(p) {
 
-    @reset(false)
-    @roll  -z * Math.PI / 180
-    @yaw   -y * Math.PI / 180
-    @pitch -x * Math.PI / 180
-
-
-  getCurrentUpVector : ->
-
-    currentRotation = new THREE.Matrix4()
-    currentRotation.extractRotation(new THREE.Matrix4(@currentMatrix...))
-    up = new THREE.Vector3(0, 1, 0)
-    up.applyMatrix4(currentRotation)
-
-    return up
+    this.setPositionSilent(p);
+    return updateMacro(this);
+  }
 
 
-  convertToJsArray : (floatXArray) ->
+  setRotation([x, y, z]) {
 
-    return Array.prototype.slice.call(floatXArray)
-
-
-  getUp : ->
-
-    matrix = @currentMatrix
-    return [ matrix[4], matrix[5], matrix[6] ]
+    this.reset(false);
+    this.roll((-z * Math.PI) / 180);
+    this.yaw((-y * Math.PI) / 180);
+    return this.pitch((-x * Math.PI) / 180);
+  }
 
 
-  getLeft : ->
+  getCurrentUpVector() {
 
-    matrix = @currentMatrix
-    return [ matrix[0], matrix[1], matrix[2] ]
+    const currentRotation = new THREE.Matrix4();
+    currentRotation.extractRotation(new THREE.Matrix4(...this.currentMatrix));
+    const up = new THREE.Vector3(0, 1, 0);
+    up.applyMatrix4(currentRotation);
 
-module.exports = Flycam3d
+    return up;
+  }
+
+
+  convertToJsArray(floatXArray) {
+
+    return Array.prototype.slice.call(floatXArray);
+  }
+
+
+  getUp() {
+
+    const matrix = this.currentMatrix;
+    return [ matrix[4], matrix[5], matrix[6] ];
+  }
+
+
+  getLeft() {
+
+    const matrix = this.currentMatrix;
+    return [ matrix[0], matrix[1], matrix[2] ];
+  }
+}
+Flycam3d.initClass();
+
+export default Flycam3d;

@@ -1,14 +1,17 @@
-$    = require("jquery")
-View = require("../../view")
+import $ from "jquery";
+import View from "../../view";
 
-class VolumeTracingView extends View
+class VolumeTracingView extends View {
 
-  constructor : (@model) ->
+  constructor(model) {
 
-    super(@model)
+    this.model = model;
+    super(this.model);
 
-    $(".skeleton-controls").hide()
-    $(".skeleton-plane-controls").hide()
-    $(".skeleton-arbitrary-controls").hide()
+    $(".skeleton-controls").hide();
+    $(".skeleton-plane-controls").hide();
+    $(".skeleton-arbitrary-controls").hide();
+  }
+}
 
-module.exports = VolumeTracingView
+export default VolumeTracingView;

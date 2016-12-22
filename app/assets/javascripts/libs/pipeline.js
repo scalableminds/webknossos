@@ -1,119 +1,142 @@
-_ = require("lodash")
-Deferred = require("./deferred")
+import _ from "lodash";
+import Deferred from "./deferred";
 
 
-class Pipeline
+class Pipeline {
 
-  # Executes asnychronous actions in order.
-  #
-  # Each action is executed after the previous action
-  # is finished. Any output of the previous action is
-  # passed to the current action.
+  // Executes asnychronous actions in order.
+  //
+  // Each action is executed after the previous action
+  // is finished. Any output of the previous action is
+  // passed to the current action.
 
 
-  constructor : (firstArguments, @options = {}) ->
+  constructor(firstArguments, options) {
 
-    @actions       = []
-    @nextArguments = firstArguments
-    @retryCount    = 0
-    @running       = false
-    @failed        = false
+    if (options == null) { options = {}; }
+    this.options = options;
+    this.actions       = [];
+    this.nextArguments = firstArguments;
+    this.retryCount    = 0;
+    this.running       = false;
+    this.failed        = false;
 
-    _.defaults @options,
-      maxRetry : 3
+    _.defaults(this.options, {
+      maxRetry : 3,
       retryTimeMs : 1000
+    }
+    );
+  }
 
 
-  isBusy : ->
+  isBusy() {
 
-    return @actions.length != 0
-
-
-  getLastActionPromise : ->
-
-    if @actions.length == 0
-      return Promise.resolve()
-
-    return @actions[@actions.length - 1]._deferred.promise()
+    return this.actions.length !== 0;
+  }
 
 
-  executeAction : (action) ->
-    # action : function that returns a `Promise`
+  getLastActionPromise() {
 
-    action._deferred = new Deferred()
-    @actions.push( action )
+    if (this.actions.length === 0) {
+      return Promise.resolve();
+    }
 
-    if not @running
-      @executeNext()
-
-    return action._deferred.promise()
+    return this.actions[this.actions.length - 1]._deferred.promise();
+  }
 
 
-  executePassAlongAction : (action) ->
-    # For actions that don't return anything
+  executeAction(action) {
+    // action : function that returns a `Promise`
 
-    newAction = ->
-      args = arguments
-      action(args...).then ->
-        # TODO: Figure out how to pass along all arguments
-        return args[0]
+    action._deferred = new Deferred();
+    this.actions.push( action );
 
-    return @executeAction(newAction)
+    if (!this.running) {
+      this.executeNext();
+    }
 
-
-  executeActions : (actionList) ->
-
-    for action in actionList
-      promise = @executeAction(action)
-    return promise
+    return action._deferred.promise();
+  }
 
 
-  restart : ->
-    # To restart the pipeline after it failed.
-    # Returns a new Promise for the first item.
+  executePassAlongAction(action) {
+    // For actions that don't return anything
 
-    if @failed and @actions.length > 0
-      @failed = false
-      @retryCount = 0
-      @running = false
+    const newAction = function() {
+      const args = arguments;
+      return action(...args).then(() =>
+        // TODO: Figure out how to pass along all arguments
+        args[0]);
+    };
 
-      # Reinsert first action
-      return @executeAction(@actions.shift())
-
-    return Promise.resolve()
+    return this.executeAction(newAction);
+  }
 
 
-  executeNext : =>
+  executeActions(actionList) {
 
-    currentAction = @actions.shift()
+    let promise;
+    for (let action of actionList) {
+      promise = this.executeAction(action);
+    }
+    return promise;
+  }
 
-    if currentAction?
 
-      @running = true
+  restart() {
+    // To restart the pipeline after it failed.
+    // Returns a new Promise for the first item.
 
-      currentAction(@nextArguments...).then(
-        (response) =>
+    if (this.failed && this.actions.length > 0) {
+      this.failed = false;
+      this.retryCount = 0;
+      this.running = false;
 
-          currentAction._deferred.resolve(response)
+      // Reinsert first action
+      return this.executeAction(this.actions.shift());
+    }
 
-          @nextArguments = arguments
-          @retryCount = 0
-          @executeNext()
+    return Promise.resolve();
+  }
 
-        (response) =>
 
-          @retryCount++
-          @actions.unshift(currentAction)
+  executeNext() {
 
-          if @retryCount >= @options.maxRetry
-            @failed = true
-            currentAction._deferred.reject(response)
-          else
-            setTimeout(@executeNext, @options.retryTimeMs)
-      )
+    const currentAction = this.actions.shift();
 
-    else
+    if (currentAction != null) {
 
-      @running = false
+      this.running = true;
 
-module.exports = Pipeline
+      return currentAction(...this.nextArguments).then(
+        function(response) {
+
+          currentAction._deferred.resolve(response);
+
+          this.nextArguments = arguments;
+          this.retryCount = 0;
+          return this.executeNext();
+        }.bind(this),
+
+        response => {
+
+          this.retryCount++;
+          this.actions.unshift(currentAction);
+
+          if (this.retryCount >= this.options.maxRetry) {
+            this.failed = true;
+            return currentAction._deferred.reject(response);
+          } else {
+            return setTimeout(this.executeNext, this.options.retryTimeMs);
+          }
+        }
+      );
+
+    } else {
+
+      return this.running = false;
+    }
+  }
+}
+
+export default Pipeline;

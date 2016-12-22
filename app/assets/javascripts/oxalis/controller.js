@@ -1,231 +1,269 @@
-$                                  = require("jquery")
-_                                  = require("lodash")
-app                                = require("../app")
-Backbone                           = require("backbone")
-Stats                              = require("stats.js")
-PlaneController                    = require("./controller/viewmodes/plane_controller")
-SkeletonTracingController          = require("./controller/annotations/skeletontracing_controller")
-VolumeTracingController            = require("./controller/annotations/volumetracing_controller")
-SkeletonTracingArbitraryController = require("./controller/combinations/skeletontracing_arbitrary_controller")
-SkeletonTracingPlaneController     = require("./controller/combinations/skeletontracing_plane_controller")
-VolumeTracingPlaneController       = require("./controller/combinations/volumetracing_plane_controller")
-MinimalArbitraryController         = require("./controller/combinations/minimal_skeletontracing_arbitrary_controller")
-SceneController                    = require("./controller/scene_controller")
-UrlManager                         = require("./controller/url_manager")
-Model                              = require("./model")
-View                               = require("./view")
-SkeletonTracingView                = require("./view/skeletontracing/skeletontracing_view")
-VolumeTracingView                  = require("./view/volumetracing/volumetracing_view")
-constants                          = require("./constants")
-Input                              = require("../libs/input")
-Toast                              = require("../libs/toast")
+import $ from "jquery";
+import _ from "lodash";
+import app from "../app";
+import Backbone from "backbone";
+import Stats from "stats.js";
+import PlaneController from "./controller/viewmodes/plane_controller";
+import SkeletonTracingController from "./controller/annotations/skeletontracing_controller";
+import VolumeTracingController from "./controller/annotations/volumetracing_controller";
+import SkeletonTracingArbitraryController from "./controller/combinations/skeletontracing_arbitrary_controller";
+import SkeletonTracingPlaneController from "./controller/combinations/skeletontracing_plane_controller";
+import VolumeTracingPlaneController from "./controller/combinations/volumetracing_plane_controller";
+import MinimalArbitraryController from "./controller/combinations/minimal_skeletontracing_arbitrary_controller";
+import SceneController from "./controller/scene_controller";
+import UrlManager from "./controller/url_manager";
+import Model from "./model";
+import View from "./view";
+import SkeletonTracingView from "./view/skeletontracing/skeletontracing_view";
+import VolumeTracingView from "./view/volumetracing/volumetracing_view";
+import constants from "./constants";
+import Input from "../libs/input";
+import Toast from "../libs/toast";
 
-class Controller
+class Controller {
 
-  # Main controller, responsible for setting modes and everything
-  # that has to be controlled in any mode.
-  #
-  # We have a matrix of modes like this:
-  #
-  #   Annotation Mode \ View mode    Plane       Arbitrary
-  #              Skeleton Tracing      X             X
-  #                Volume Tracing      X             /
-  #
-  # In order to maximize code reuse, there is - besides the main
-  # controller - a controller for each row, each column and each
-  # cross in this matrix.
+  // Main controller, responsible for setting modes and everything
+  // that has to be controlled in any mode.
+  //
+  // We have a matrix of modes like this:
+  //
+  //   Annotation Mode \ View mode    Plane       Arbitrary
+  //              Skeleton Tracing      X             X
+  //                Volume Tracing      X             /
+  //
+  // In order to maximize code reuse, there is - besides the main
+  // controller - a controller for each row, each column and each
+  // cross in this matrix.
 
-  constructor : (options) ->
+  constructor(options) {
 
-    { @model } = options
+    ({ model: this.model } = options);
 
-    _.extend(@,
-      view : null
-      planeController : null
+    _.extend(this, {
+      view : null,
+      planeController : null,
       arbitraryController : null
-    )
+    }
+    );
 
-    _.extend(@, Backbone.Events)
+    _.extend(this, Backbone.Events);
 
-    @fullScreen = false
+    this.fullScreen = false;
 
-    @urlManager = new UrlManager(@model)
-    @model.set("state", @urlManager.initialState)
+    this.urlManager = new UrlManager(this.model);
+    this.model.set("state", this.urlManager.initialState);
 
-    @model.fetch()
-        .then( => @modelFetchDone())
-        .catch( (error) =>
-          # Don't throw errors for errors already handled by the model.
-          unless error == @model.HANDLED_ERROR
-            throw error
-        )
-
-
-  modelFetchDone : ->
-
-    unless @model.tracing.restrictions.allowAccess
-      Toast.Error "You are not allowed to access this tracing"
-      return
-
-    app.router.on("beforeunload", =>
-      if (@model.get("controlMode") == constants.CONTROL_MODE_TRACE)
-        stateLogger = @model.annotationModel.stateLogger
-        if not stateLogger.stateSaved() and stateLogger.allowUpdate
-          stateLogger.pushNow()
-          return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
-    )
-
-    @urlManager.startUrlUpdater()
-
-    @sceneController = new SceneController(
-      @model.upperBoundary, @model.flycam, @model)
+    this.model.fetch()
+        .then( () => this.modelFetchDone())
+        .catch( error => {
+          // Don't throw errors for errors already handled by the model.
+          if (error !== this.model.HANDLED_ERROR) {
+            throw error;
+          }
+        }
+        );
+  }
 
 
-    if @model.skeletonTracing?
+  modelFetchDone() {
 
-      @view = new SkeletonTracingView(@model)
-      @annotationController = new SkeletonTracingController(
-        @model, @view, @sceneController)
-      @planeController = new SkeletonTracingPlaneController(
-        @model, @view, @sceneController, @annotationController)
+    if (!this.model.tracing.restrictions.allowAccess) {
+      Toast.Error("You are not allowed to access this tracing");
+      return;
+    }
 
-      ArbitraryController = if @model.tracing.content.settings.advancedOptionsAllowed then SkeletonTracingArbitraryController else MinimalArbitraryController
-      @arbitraryController = new ArbitraryController(
-        @model, @view, @sceneController, @annotationController)
+    app.router.on("beforeunload", () => {
+      if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+        const { stateLogger } = this.model.annotationModel;
+        if (!stateLogger.stateSaved() && stateLogger.allowUpdate) {
+          stateLogger.pushNow();
+          return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.";
+        }
+      }
+    }
+    );
 
-    else if @model.volumeTracing?
+    this.urlManager.startUrlUpdater();
 
-      @view = new VolumeTracingView(@model)
-      @annotationController = new VolumeTracingController(
-        @model, @view, @sceneController)
-      @planeController = new VolumeTracingPlaneController(
-        @model, @view, @sceneController, @annotationController)
-
-    else # View mode
-
-      @view = new View(@model)
-      @planeController = new PlaneController(
-        @model, @view, @sceneController)
-
-    # FPS stats
-    stats = new Stats()
-    $("body").append stats.domElement
-    @listenTo(@arbitraryController.arbitraryView, "render", -> stats.update()) if @arbitraryController
-    @listenTo(@planeController.planeView, "render", -> stats.update())
-
-    @initKeyboard()
-    @initTimeLimit()
-
-    for binaryName of @model.binary
-      @listenTo(@model.binary[binaryName].cube, "bucketLoaded", -> app.vent.trigger("rerender"))
+    this.sceneController = new SceneController(
+      this.model.upperBoundary, this.model.flycam, this.model);
 
 
-    @listenTo(@model, "change:mode", @loadMode)
-    @loadMode(@model.get("mode"))
+    if (this.model.skeletonTracing != null) {
+
+      this.view = new SkeletonTracingView(this.model);
+      this.annotationController = new SkeletonTracingController(
+        this.model, this.view, this.sceneController);
+      this.planeController = new SkeletonTracingPlaneController(
+        this.model, this.view, this.sceneController, this.annotationController);
+
+      const ArbitraryController = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalArbitraryController;
+      this.arbitraryController = new ArbitraryController(
+        this.model, this.view, this.sceneController, this.annotationController);
+
+    } else if (this.model.volumeTracing != null) {
+
+      this.view = new VolumeTracingView(this.model);
+      this.annotationController = new VolumeTracingController(
+        this.model, this.view, this.sceneController);
+      this.planeController = new VolumeTracingPlaneController(
+        this.model, this.view, this.sceneController, this.annotationController);
+
+    } else { // View mode
+
+      this.view = new View(this.model);
+      this.planeController = new PlaneController(
+        this.model, this.view, this.sceneController);
+    }
+
+    // FPS stats
+    const stats = new Stats();
+    $("body").append(stats.domElement);
+    if (this.arbitraryController) { this.listenTo(this.arbitraryController.arbitraryView, "render", () => stats.update()); }
+    this.listenTo(this.planeController.planeView, "render", () => stats.update());
+
+    this.initKeyboard();
+    this.initTimeLimit();
+
+    for (let binaryName in this.model.binary) {
+      this.listenTo(this.model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
+    }
 
 
-    # Zoom step warning
-    @zoomStepWarningToast = null
-    @model.flycam.on
-      zoomStepChanged : =>
-        shouldWarn = not @model.canDisplaySegmentationData()
-        if shouldWarn and not @zoomStepWarningToast?
-          toastType = if @model.volumeTracing? then "danger" else "info"
-          @zoomStepWarningToast = Toast.message(toastType,
-            "Segmentation data is only fully supported at a smaller zoom level.", true)
-        else if not shouldWarn and @zoomStepWarningToast?
-          @zoomStepWarningToast.remove()
-          @zoomStepWarningToast = null
+    this.listenTo(this.model, "change:mode", this.loadMode);
+    this.loadMode(this.model.get("mode"));
 
 
-  initKeyboard : ->
+    // Zoom step warning
+    this.zoomStepWarningToast = null;
+    return this.model.flycam.on({
+      zoomStepChanged : () => {
+        const shouldWarn = !this.model.canDisplaySegmentationData();
+        if (shouldWarn && (this.zoomStepWarningToast == null)) {
+          const toastType = (this.model.volumeTracing != null) ? "danger" : "info";
+          return this.zoomStepWarningToast = Toast.message(toastType,
+            "Segmentation data is only fully supported at a smaller zoom level.", true);
+        } else if (!shouldWarn && (this.zoomStepWarningToast != null)) {
+          this.zoomStepWarningToast.remove();
+          return this.zoomStepWarningToast = null;
+        }
+      }
+    });
+  }
 
-    # avoid scrolling while pressing space
-    $(document).keydown (event) ->
-      event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
-      return
 
-    keyboardControls = {}
+  initKeyboard() {
 
-    if @model.get("controlMode") == constants.CONTROL_MODE_TRACE
+    // avoid scrolling while pressing space
+    $(document).keydown(function(event) {
+      if ((event.which === 32 || event.which === 18 || 37 <= event.which && event.which <= 40) && !$(":focus").length) { event.preventDefault(); }
+    });
+
+    const keyboardControls = {};
+
+    if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
       _.extend( keyboardControls, {
-        #Set Mode, outcomment for release
-        "shift + 1" : =>
-          @model.setMode(constants.MODE_PLANE_TRACING)
-        "shift + 2" : =>
-          @model.setMode(constants.MODE_ARBITRARY)
-        "shift + 3" : =>
-          @model.setMode(constants.MODE_ARBITRARY_PLANE)
+        //Set Mode, outcomment for release
+        "shift + 1" : () => {
+          return this.model.setMode(constants.MODE_PLANE_TRACING);
+        },
+        "shift + 2" : () => {
+          return this.model.setMode(constants.MODE_ARBITRARY);
+        },
+        "shift + 3" : () => {
+          return this.model.setMode(constants.MODE_ARBITRARY_PLANE);
+        },
 
-        "t" : =>
-          @view.toggleTheme()
+        "t" : () => {
+          return this.view.toggleTheme();
+        },
 
-        "m" : => # rotate allowed modes
+        "m" : () => { // rotate allowed modes
 
-          index = (@model.allowedModes.indexOf(@model.get("mode")) + 1) % @model.allowedModes.length
-          @model.setMode(@model.allowedModes[index])
+          const index = (this.model.allowedModes.indexOf(this.model.get("mode")) + 1) % this.model.allowedModes.length;
+          return this.model.setMode(this.model.allowedModes[index]);
+        },
 
-        "super + s" : (event) =>
-          event.preventDefault()
-          event.stopPropagation()
-          @model.save()
+        "super + s" : event => {
+          event.preventDefault();
+          event.stopPropagation();
+          return this.model.save();
+        },
 
-        "ctrl + s" : (event) =>
-          event.preventDefault()
-          event.stopPropagation()
-          @model.save()
+        "ctrl + s" : event => {
+          event.preventDefault();
+          event.stopPropagation();
+          return this.model.save();
+        }
 
-      } )
+      } );
+    }
 
-    new Input.KeyboardNoLoop( keyboardControls )
-
-
-  loadMode : (newMode, force = false) ->
-
-    if (newMode == constants.MODE_ARBITRARY or newMode == constants.MODE_ARBITRARY_PLANE) and (newMode in @model.allowedModes or force)
-      @planeController?.stop()
-      @arbitraryController.start(newMode)
-
-    else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and (newMode in @model.allowedModes or force)
-      @arbitraryController?.stop()
-      @planeController.start(newMode)
-
-    else # newMode not allowed or invalid
-      return
+    return new Input.KeyboardNoLoop( keyboardControls );
+  }
 
 
-  initTimeLimit :  ->
+  loadMode(newMode, force) {
 
-    # only enable hard time limit for anonymous users so far
-    unless @model.tracing.task and @model.tracing.user.isAnonymous
-      return
+    if (force == null) { force = false; }
+    if ((newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) && (this.model.allowedModes.includes(newMode) || force)) {
+      __guard__(this.planeController, x => x.stop());
+      return this.arbitraryController.start(newMode);
 
-    # TODO move that somehwere else
-    finishTracing = =>
-      # save the progress
-      model = @model
+    } else if ((newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) && (this.model.allowedModes.includes(newMode) || force)) {
+      __guard__(this.arbitraryController, x1 => x1.stop());
+      return this.planeController.start(newMode);
 
-      tracingType = model.skeletonTracing || model.volumeTracing
-      tracingType.stateLogger.pushNow().then( ->
-        url = "/annotations/#{model.tracingType}/#{model.tracingId}/finishAndRedirect"
-        app.router.loadURL(url)
-      )
-
-    # parse hard time limit and convert from min to ms
-    expectedTime = @model.tracing.task.type.expectedTime
-    timeLimit = expectedTime.maxHard * 60 * 1000 or 0
-
-    # setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
-    if timeLimit >= Math.pow(2, 32) / 2
-      Toast.error("Time limit was reduced as it cannot be bigger than 35791 minutes.")
-      timeLimit = Math.pow(2, 32) / 2 - 1
-    console.log("TimeLimit is #{timeLimit/60/1000} min")
-
-    if timeLimit
-      setTimeout( ->
-        window.alert("Time limit is reached, thanks for tracing!")
-        finishTracing()
-      , timeLimit)
+    } else { // newMode not allowed or invalid
+      return;
+    }
+  }
 
 
-module.exports = Controller
+  initTimeLimit() {
+
+    // only enable hard time limit for anonymous users so far
+    let model;
+    if (!this.model.tracing.task || !this.model.tracing.user.isAnonymous) {
+      return;
+    }
+
+    // TODO move that somehwere else
+    const finishTracing = () => {
+      // save the progress
+      ({ model } = this);
+
+      const tracingType = model.skeletonTracing || model.volumeTracing;
+      return tracingType.stateLogger.pushNow().then( function() {
+        const url = `/annotations/${model.tracingType}/${model.tracingId}/finishAndRedirect`;
+        return app.router.loadURL(url);
+      });
+    };
+
+    // parse hard time limit and convert from min to ms
+    const { expectedTime } = this.model.tracing.task.type;
+    let timeLimit = (expectedTime.maxHard * 60 * 1000) || 0;
+
+    // setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
+    if (timeLimit >= Math.pow(2, 32) / 2) {
+      Toast.error("Time limit was reduced as it cannot be bigger than 35791 minutes.");
+      timeLimit = (Math.pow(2, 32) / 2) - 1;
+    }
+    console.log(`TimeLimit is ${timeLimit/60/1000} min`);
+
+    if (timeLimit) {
+      return setTimeout( function() {
+        window.alert("Time limit is reached, thanks for tracing!");
+        return finishTracing();
+      }
+      , timeLimit);
+    }
+  }
+}
+
+
+export default Controller;
+
+function __guard__(value, transform) {
+  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+}

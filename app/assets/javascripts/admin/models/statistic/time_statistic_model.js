@@ -1,28 +1,34 @@
-_        = require("lodash")
-backbone = require("backbone")
-moment   = require("moment")
+import _ from "lodash";
+import backbone from "backbone";
+import moment from "moment";
 
-class TimeStatisticModel extends Backbone.Model
+class TimeStatisticModel extends Backbone.Model {
+  static initClass() {
+  
+    this.prototype.url  = "api/statistics/webknossos";
+  }
 
-  url : "api/statistics/webknossos"
+  initialize() {
 
-  initialize : ->
-
-    # set defaults
-    @set("tracingTimes", new Backbone.Collection([{
+    // set defaults
+    return this.set("tracingTimes", new Backbone.Collection([{
       start : moment().startOf("week"),
       end : moment().endOf("week"),
       tracingTime : 0}])
-    )
+    );
+  }
 
 
-  parse : (response) ->
+  parse(response) {
 
-    timings = _.sortBy(response.tracingTimes, (timeEntry) -> return timeEntry.start)
-    response.tracingTimes = new Backbone.Collection(timings)
+    const timings = _.sortBy(response.tracingTimes, timeEntry => timeEntry.start);
+    response.tracingTimes = new Backbone.Collection(timings);
 
-    return response
+    return response;
+  }
+}
+TimeStatisticModel.initClass();
 
-module.exports = TimeStatisticModel
+export default TimeStatisticModel;
 
 

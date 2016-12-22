@@ -1,43 +1,49 @@
-_                   = require("lodash")
-Marionette          = require("backbone.marionette")
-Utils               = require("libs/utils")
-AbstractSettingView = require("./abstract_setting_view")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import Utils from "libs/utils";
+import AbstractSettingView from "./abstract_setting_view";
 
-class ColorSettingView extends AbstractSettingView
-
-
-  className : "color-setting-view row"
-
-
-  template : _.template("""
-    <div class="col-sm-5">
-      <%- displayName %>
-    </div>
-    <div class="col-sm-4 col-sm-offset-3">
-      <input class="form-control" type="color" value="<%- rgbToHex(value) %>">
-    </div>
-  """)
-
-
-  templateContext :
-    rgbToHex : Utils.rgbToHex
-
-
-  ui :
-    colorpicker : "input[type=color]"
-
-
-  events :
-    "change @ui.colorpicker" : "handleChange"
-
-
-  handleChange : (evt) ->
-
-    @model.set(@options.name, Utils.hexToRgb(evt.target.value))
+class ColorSettingView extends AbstractSettingView {
+  static initClass() {
+  
+  
+    this.prototype.className  = "color-setting-view row";
+  
+  
+    this.prototype.template  = _.template(`\
+<div class="col-sm-5">
+  <%- displayName %>
+</div>
+<div class="col-sm-4 col-sm-offset-3">
+  <input class="form-control" type="color" value="<%- rgbToHex(value) %>">
+</div>\
+`);
+  
+  
+    this.prototype.templateContext  =
+      {rgbToHex : Utils.rgbToHex};
+  
+  
+    this.prototype.ui  =
+      {colorpicker : "input[type=color]"};
+  
+  
+    this.prototype.events  =
+      {"change @ui.colorpicker" : "handleChange"};
+  }
 
 
-  update : (model, value) ->
+  handleChange(evt) {
 
-    @ui.colorpicker.val(Utils.rgbToHex(value))
+    return this.model.set(this.options.name, Utils.hexToRgb(evt.target.value));
+  }
 
-module.exports = ColorSettingView
+
+  update(model, value) {
+
+    return this.ui.colorpicker.val(Utils.rgbToHex(value));
+  }
+}
+ColorSettingView.initClass();
+
+export default ColorSettingView;

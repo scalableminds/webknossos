@@ -1,15 +1,17 @@
-AbstractTabView = require("../abstract_tab_view")
-DatasetInfoView = require("./right-menu/dataset_info_view")
+import AbstractTabView from "../abstract_tab_view";
+import DatasetInfoView from "./right-menu/dataset_info_view";
 
-class ViewmodeRightMenuView extends AbstractTabView
+class ViewmodeRightMenuView extends AbstractTabView {
 
-  getTabs : ->
-    [
+  getTabs() {
+    return [
       {
-        id : "tab-info"
-        name : "Info"
+        id : "tab-info",
+        name : "Info",
         viewClass : DatasetInfoView
       }
-    ]
+    ];
+  }
+}
 
-module.exports = ViewmodeRightMenuView
+export default ViewmodeRightMenuView;

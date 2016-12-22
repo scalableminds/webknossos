@@ -1,177 +1,210 @@
-Backbone               = require("backbone")
-InterpolationCollector = require("./binary/interpolation_collector")
-Cube                   = require("./binary/cube")
-PullQueue              = require("./binary/pullqueue")
-PushQueue              = require("./binary/pushqueue")
-Plane2D                = require("./binary/plane2d")
-PingStrategy           = require("./binary/ping_strategy")
-PingStrategy3d         = require("./binary/ping_strategy_3d")
-BoundingBox            = require("./binary/bounding_box")
-Mappings               = require("./binary/mappings")
-Pipeline               = require("libs/pipeline")
-constants              = require("../constants")
+import Backbone from "backbone";
+import InterpolationCollector from "./binary/interpolation_collector";
+import Cube from "./binary/cube";
+import PullQueue from "./binary/pullqueue";
+import PushQueue from "./binary/pushqueue";
+import Plane2D from "./binary/plane2d";
+import PingStrategy from "./binary/ping_strategy";
+import PingStrategy3d from "./binary/ping_strategy_3d";
+import BoundingBox from "./binary/bounding_box";
+import Mappings from "./binary/mappings";
+import Pipeline from "libs/pipeline";
+import constants from "../constants";
 
-class Binary
+class Binary {
+  static initClass() {
+  
+    // Constants
+    this.prototype.PING_THROTTLE_TIME  = 50;
+    this.prototype.DIRECTION_VECTOR_SMOOTHER  = .125;
+    this.prototype.TEXTURE_SIZE_P  = 0;
+  
+    this.prototype.cube  = null;
+    this.prototype.pullQueue  = null;
+    this.prototype.planes  = [];
+  
+    this.prototype.direction  = [0, 0, 0];
+  
+  
+    this.prototype.arbitraryPing  = _.once(function(matrix, zoomStep) {
+  
+      this.arbitraryPing = _.throttle(this.arbitraryPingImpl, this.PING_THROTTLE_TIME);
+      return this.arbitraryPing(matrix, zoomStep);
+    });
+  }
 
-  # Constants
-  PING_THROTTLE_TIME : 50
-  DIRECTION_VECTOR_SMOOTHER : .125
-  TEXTURE_SIZE_P : 0
+  constructor(model, tracing, layer, maxZoomStep, connectionInfo) {
 
-  cube : null
-  pullQueue : null
-  planes : []
+    this.model = model;
+    this.tracing = tracing;
+    this.layer = layer;
+    this.connectionInfo = connectionInfo;
+    _.extend(this, Backbone.Events);
 
-  direction : [0, 0, 0]
+    this.TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P;
+    ({ category: this.category, name: this.name } = this.layer);
 
-  constructor : (@model, @tracing, @layer, maxZoomStep, @connectionInfo) ->
+    this.targetBitDepth = this.category === "color" ? this.layer.bitDepth : 8;
 
-    _.extend(this, Backbone.Events)
+    const {topLeft, width, height, depth} = this.layer.maxCoordinates;
+    this.lowerBoundary = this.layer.lowerBoundary = topLeft;
+    this.upperBoundary = this.layer.upperBoundary = [ topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth ];
 
-    @TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P
-    { @category, @name } = @layer
+    this.cube = new Cube(this.model.taskBoundingBox, this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
 
-    @targetBitDepth = if @category == "color" then @layer.bitDepth else 8
+    const updatePipeline = new Pipeline([this.tracing.version]);
 
-    {topLeft, width, height, depth} = @layer.maxCoordinates
-    @lowerBoundary = @layer.lowerBoundary = topLeft
-    @upperBoundary = @layer.upperBoundary = [ topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth ]
+    const datasetName = this.model.get("dataset").get("name");
+    const datastoreInfo = this.model.get("dataset").get("dataStore");
+    this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
+    this.pushQueue = new PushQueue(datasetName, this.cube, this.layer, this.tracing.id, updatePipeline);
+    this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
+    this.mappings = new Mappings(datasetName, this.layer);
+    this.activeMapping = null;
 
-    @cube = new Cube(@model.taskBoundingBox, @upperBoundary, maxZoomStep + 1, @layer.bitDepth)
-
-    updatePipeline = new Pipeline([@tracing.version])
-
-    datasetName = @model.get("dataset").get("name")
-    datastoreInfo = @model.get("dataset").get("dataStore")
-    @pullQueue = new PullQueue(@cube, @layer, @connectionInfo, datastoreInfo)
-    @pushQueue = new PushQueue(datasetName, @cube, @layer, @tracing.id, updatePipeline)
-    @cube.initializeWithQueues(@pullQueue, @pushQueue)
-    @mappings = new Mappings(datasetName, @layer)
-    @activeMapping = null
-
-    @pingStrategies = [
-      new PingStrategy.Skeleton(@cube, @TEXTURE_SIZE_P),
-      new PingStrategy.Volume(@cube, @TEXTURE_SIZE_P)
-    ]
-    @pingStrategies3d = [
+    this.pingStrategies = [
+      new PingStrategy.Skeleton(this.cube, this.TEXTURE_SIZE_P),
+      new PingStrategy.Volume(this.cube, this.TEXTURE_SIZE_P)
+    ];
+    this.pingStrategies3d = [
       new PingStrategy3d.DslSlow()
-    ]
+    ];
 
-    @planes = []
-    for planeId in constants.ALL_PLANES
-      @planes.push( new Plane2D(planeId, @cube, @pullQueue, @TEXTURE_SIZE_P, @layer.bitDepth, @targetBitDepth,
-                                32, @category == "segmentation") )
+    this.planes = [];
+    for (let planeId of constants.ALL_PLANES) {
+      this.planes.push( new Plane2D(planeId, this.cube, this.pullQueue, this.TEXTURE_SIZE_P, this.layer.bitDepth, this.targetBitDepth,
+                                32, this.category === "segmentation") );
+    }
 
-    if @layer.dataStoreInfo.typ == "webknossos-store"
-      @layer.setFourBit(@model.get("datasetConfiguration").get("fourBit"))
-      @listenTo(@model.get("datasetConfiguration"), "change:fourBit",
-                (model, fourBit) -> @layer.setFourBit(fourBit) )
+    if (this.layer.dataStoreInfo.typ === "webknossos-store") {
+      this.layer.setFourBit(this.model.get("datasetConfiguration").get("fourBit"));
+      this.listenTo(this.model.get("datasetConfiguration"), "change:fourBit",
+                function(model, fourBit) { return this.layer.setFourBit(fourBit);  });
+    }
 
-    @cube.on(
-      newMapping : =>
-        @forcePlaneRedraw()
-    )
+    this.cube.on({
+      newMapping : () => {
+        return this.forcePlaneRedraw();
+      }
+    });
 
-    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-
-
-  forcePlaneRedraw : ->
-
-    for plane in @planes
-      plane.forceRedraw()
+    this.ping = _.throttle(this.pingImpl, this.PING_THROTTLE_TIME);
+  }
 
 
-  setActiveMapping : (mappingName) ->
+  forcePlaneRedraw() {
 
-    @activeMapping = mappingName
-
-    setMapping = (mapping) =>
-      @cube.setMapping(mapping)
-      @model.flycam.update()
-
-    if mappingName?
-      @mappings.getMappingArrayAsync(mappingName).then(setMapping)
-    else
-      setMapping([])
+    return this.planes.map((plane) =>
+      plane.forceRedraw());
+  }
 
 
-  setActiveMapping : (mappingName) ->
+  setActiveMapping(mappingName) {
 
-    @activeMapping = mappingName
+    this.activeMapping = mappingName;
 
-    setMapping = (mapping) =>
-      @cube.setMapping(mapping)
-      @model.flycam.update()
+    const setMapping = mapping => {
+      this.cube.setMapping(mapping);
+      return this.model.flycam.update();
+    };
 
-    if mappingName?
-      @mappings.getMappingArrayAsync(mappingName).then(setMapping)
-    else
-      setMapping([])
-
-
-  pingStop : ->
-
-    @pullQueue.clearNormalPriorities()
+    if (mappingName != null) {
+      return this.mappings.getMappingArrayAsync(mappingName).then(setMapping);
+    } else {
+      return setMapping([]);
+    }
+  }
 
 
-  pingImpl : (position, {zoomStep, area, activePlane}) ->
+  setActiveMapping(mappingName) {
 
-    if @lastPosition?
+    this.activeMapping = mappingName;
 
-      @direction = [
-        (1 - @DIRECTION_VECTOR_SMOOTHER) * @direction[0] + @DIRECTION_VECTOR_SMOOTHER * (position[0] - @lastPosition[0])
-        (1 - @DIRECTION_VECTOR_SMOOTHER) * @direction[1] + @DIRECTION_VECTOR_SMOOTHER * (position[1] - @lastPosition[1])
-        (1 - @DIRECTION_VECTOR_SMOOTHER) * @direction[2] + @DIRECTION_VECTOR_SMOOTHER * (position[2] - @lastPosition[2])
-      ]
+    const setMapping = mapping => {
+      this.cube.setMapping(mapping);
+      return this.model.flycam.update();
+    };
 
-    unless _.isEqual(position, @lastPosition) and zoomStep == @lastZoomStep and _.isEqual(area, @lastArea)
-
-      @lastPosition = position.slice()
-      @lastZoomStep = zoomStep
-      @lastArea     = area.slice()
-
-      for strategy in @pingStrategies
-        if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(@connectionInfo.bandwidth) and strategy.inRoundTripTimeRange(@connectionInfo.roundTripTime)
-          if zoomStep? and area? and activePlane?
-            @pullQueue.clearNormalPriorities()
-            @pullQueue.addAll(strategy.ping(position, @direction, zoomStep, area, activePlane))
-          break
-
-      @pullQueue.pull()
+    if (mappingName != null) {
+      return this.mappings.getMappingArrayAsync(mappingName).then(setMapping);
+    } else {
+      return setMapping([]);
+    }
+  }
 
 
-  arbitraryPing : _.once (matrix, zoomStep) ->
+  pingStop() {
 
-    @arbitraryPing = _.throttle(@arbitraryPingImpl, @PING_THROTTLE_TIME)
-    @arbitraryPing(matrix, zoomStep)
-
-
-  arbitraryPingImpl : (matrix, zoomStep) ->
-
-    for strategy in @pingStrategies3d
-      if strategy.forContentType(@tracing.contentType) and strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@pullQueue.roundTripTime)
-        @pullQueue.clearNormalPriorities()
-        @pullQueue.addAll(strategy.ping(matrix, zoomStep))
-        break
-
-    @pullQueue.pull()
+    return this.pullQueue.clearNormalPriorities();
+  }
 
 
-  getByVerticesSync : (vertices) ->
-    # A synchronized implementation of `get`. Cuz its faster.
+  pingImpl(position, {zoomStep, area, activePlane}) {
 
-    { buffer, missingBuckets } = InterpolationCollector.bulkCollect(
-      vertices
-      @cube.getArbitraryCube()
-    )
+    if (this.lastPosition != null) {
 
-    @pullQueue.addAll(missingBuckets.map(
-      (bucket) ->
-        bucket: bucket
-        priority: PullQueue::PRIORITY_HIGHEST
-    ))
-    @pullQueue.pull()
+      this.direction = [
+        ((1 - this.DIRECTION_VECTOR_SMOOTHER) * this.direction[0]) + (this.DIRECTION_VECTOR_SMOOTHER * (position[0] - this.lastPosition[0])),
+        ((1 - this.DIRECTION_VECTOR_SMOOTHER) * this.direction[1]) + (this.DIRECTION_VECTOR_SMOOTHER * (position[1] - this.lastPosition[1])),
+        ((1 - this.DIRECTION_VECTOR_SMOOTHER) * this.direction[2]) + (this.DIRECTION_VECTOR_SMOOTHER * (position[2] - this.lastPosition[2]))
+      ];
+    }
 
-    buffer
+    if (!_.isEqual(position, this.lastPosition) || zoomStep !== this.lastZoomStep || !_.isEqual(area, this.lastArea)) {
 
-module.exports = Binary
+      this.lastPosition = position.slice();
+      this.lastZoomStep = zoomStep;
+      this.lastArea     = area.slice();
+
+      for (let strategy of this.pingStrategies) {
+        if (strategy.forContentType(this.tracing.contentType) && strategy.inVelocityRange(this.connectionInfo.bandwidth) && strategy.inRoundTripTimeRange(this.connectionInfo.roundTripTime)) {
+          if ((zoomStep != null) && (area != null) && (activePlane != null)) {
+            this.pullQueue.clearNormalPriorities();
+            this.pullQueue.addAll(strategy.ping(position, this.direction, zoomStep, area, activePlane));
+          }
+          break;
+        }
+      }
+
+      return this.pullQueue.pull();
+    }
+  }
+
+
+  arbitraryPingImpl(matrix, zoomStep) {
+
+    for (let strategy of this.pingStrategies3d) {
+      if (strategy.forContentType(this.tracing.contentType) && strategy.inVelocityRange(1) && strategy.inRoundTripTimeRange(this.pullQueue.roundTripTime)) {
+        this.pullQueue.clearNormalPriorities();
+        this.pullQueue.addAll(strategy.ping(matrix, zoomStep));
+        break;
+      }
+    }
+
+    return this.pullQueue.pull();
+  }
+
+
+  getByVerticesSync(vertices) {
+    // A synchronized implementation of `get`. Cuz its faster.
+
+    const { buffer, missingBuckets } = InterpolationCollector.bulkCollect(
+      vertices,
+      this.cube.getArbitraryCube()
+    );
+
+    this.pullQueue.addAll(missingBuckets.map(
+      bucket =>
+        ({
+          bucket,
+          priority: PullQueue.prototype.PRIORITY_HIGHEST
+        })
+    ));
+    this.pullQueue.pull();
+
+    return buffer;
+  }
+}
+Binary.initClass();
+
+export default Binary;

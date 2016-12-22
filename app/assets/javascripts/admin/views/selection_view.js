@@ -1,40 +1,50 @@
-_                 = require("lodash")
-Marionette        = require("backbone.marionette")
-SelectionItemView = require("./selection_item_view")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import SelectionItemView from "./selection_item_view";
 
-class SelectionView extends Marionette.CollectionView
-
-  tagName : "select"
-  className : "form-control"
-  attributes : ->
+class SelectionView extends Marionette.CollectionView {
+  static initClass() {
+  
+    this.prototype.tagName  = "select";
+    this.prototype.className  = "form-control";
+  
+    this.prototype.childView  = SelectionItemView;
+  }
+  attributes() {
     return {
-      name : @options.name
-      required : @options.required
+      name : this.options.name,
+      required : this.options.required
+    };
+  }
+
+  initialize(options) {
+
+    // append an empty option if the emptyOption option was supplied
+    if (options.emptyOption) {
+      this.listenTo(this, "render", this.afterRender);
     }
 
-  childView : SelectionItemView
-
-  initialize : (options) ->
-
-    # append an empty option if the emptyOption option was supplied
-    if options.emptyOption
-      @listenTo(@, "render", @afterRender)
-
-    @collection.fetch(
+    return this.collection.fetch({
       data : options.data
-    )
+    });
+  }
 
 
-  filter : (args...) ->
+  filter(...args) {
 
-    if @options.filter
-      return @options.filter(args...)
-    return true
-
-
-  afterRender : ->
-
-    @$el.prepend("<option></option>")
+    if (this.options.filter) {
+      return this.options.filter(...args);
+    }
+    return true;
+  }
 
 
-module.exports = SelectionView
+  afterRender() {
+
+    return this.$el.prepend("<option></option>");
+  }
+}
+SelectionView.initClass();
+
+
+export default SelectionView;

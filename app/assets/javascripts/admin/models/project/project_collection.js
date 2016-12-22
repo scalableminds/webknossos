@@ -1,12 +1,16 @@
-_                    = require("lodash")
-Backbone             = require("backbone")
-ProjectModel         = require("./project_model")
+import _ from "lodash";
+import Backbone from "backbone";
+import ProjectModel from "./project_model";
 
-class ProjectCollection extends Backbone.Collection
+class ProjectCollection extends Backbone.Collection {
+  static initClass() {
+  
+    this.prototype.model  = ProjectModel;
+    this.prototype.url  = "/api/projects";
+    this.prototype.idAttribute  = "name";
+    this.prototype.sortAttribute  = "name";
+  }
+}
+ProjectCollection.initClass();
 
-  model : ProjectModel
-  url : "/api/projects"
-  idAttribute : "name"
-  sortAttribute : "name"
-
-module.exports = ProjectCollection
+export default ProjectCollection;

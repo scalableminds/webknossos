@@ -1,131 +1,169 @@
 
 
-class ResizableBuffer
+class ResizableBuffer {
+  static initClass() {
+  
+    this.prototype.GROW_MULTIPLIER  = 1.3;
+  }
 
-  GROW_MULTIPLIER : 1.3
+  constructor(elementLength, initialCapacity, bufferType) {
 
-  constructor : (@elementLength, initialCapacity = 100, @bufferType = Float32Array) ->
+    if (initialCapacity == null) { initialCapacity = 100; }
+    if (bufferType == null) { bufferType = Float32Array; }
+    this.elementLength = elementLength;
+    this.bufferType = bufferType;
+    this.capacity = initialCapacity * this.elementLength;
+    this.buffer = new this.bufferType(this.capacity);
 
-    @capacity = initialCapacity * @elementLength
-    @buffer = new @bufferType(@capacity)
-
-    @length = 0
-
-
-  clear : ->
-
-    @length = 0
-
-
-  isEmpty : -> @length == 0
-
-  isFull : -> @length == @capacity
-
-  getLength : -> @length/@elementLength
-
-  getBufferLength : -> @length
-
-  getBuffer : -> @buffer
-
-  getAllElements : -> @buffer.subarray(0, @length)
-
-  get : (i) -> @buffer[i]
-
-  set : (element, i) ->
-
-    @buffer.set(element, i * @elementLength)
+    this.length = 0;
+  }
 
 
-  push : (element) ->
+  clear() {
 
-    @ensureCapacity()
-
-    { buffer, elementLength, length } = this
-
-    buffer.set(element, length)
-
-    @length += elementLength
+    return this.length = 0;
+  }
 
 
-  pushMany : (elements) ->
+  isEmpty() { return this.length === 0; }
 
-    @ensureCapacity(@length + elements.length * @elementLength)
+  isFull() { return this.length === this.capacity; }
 
-    { buffer, elementLength, length } = this
+  getLength() { return this.length/this.elementLength; }
 
-    for element in elements
-      buffer.set(element, length)
-      length += elementLength
+  getBufferLength() { return this.length; }
 
-    @length += elements.length * elementLength
+  getBuffer() { return this.buffer; }
 
-  pushSubarray : (subarray) ->
+  getAllElements() { return this.buffer.subarray(0, this.length); }
 
-    @ensureCapacity(@length + subarray.length)
+  get(i) { return this.buffer[i]; }
 
-    { buffer, elementLength, length } = this
+  set(element, i) {
 
-    buffer.set(subarray, length)
-
-    @length += subarray.length
+    return this.buffer.set(element, i * this.elementLength);
+  }
 
 
-  pop : (r = new Array(@elementLength)) ->
+  push(element) {
 
-    return unless @length
+    this.ensureCapacity();
 
-    { buffer, elementLength, length } = this
+    const { buffer, elementLength, length } = this;
 
-    for i in [(elementLength - 1)..0] by -1
-      r[i] = buffer[--length]
+    buffer.set(element, length);
 
-    @length -= elementLength
-
-    r
+    return this.length += elementLength;
+  }
 
 
-  top : (r = new Array(@elementLength)) ->
+  pushMany(elements) {
 
-    return unless @length
+    this.ensureCapacity(this.length + (elements.length * this.elementLength));
 
-    { buffer, elementLength, length } = this
+    let { buffer, elementLength, length } = this;
 
-    for i in [(elementLength - 1)..0] by -1
-      r[i] = buffer[--length]
+    for (let element of elements) {
+      buffer.set(element, length);
+      length += elementLength;
+    }
 
-    r
+    return this.length += elements.length * elementLength;
+  }
 
+  pushSubarray(subarray) {
 
-  ensureCapacity : (newCapacity = @length + @elementLength) ->
+    this.ensureCapacity(this.length + subarray.length);
 
-    if @capacity < newCapacity
+    const { buffer, elementLength, length } = this;
 
-      { buffer } = this
+    buffer.set(subarray, length);
 
-      while @capacity < newCapacity
-
-        @capacity = Math.floor(@capacity * @GROW_MULTIPLIER)
-        @capacity -= @capacity % @elementLength
-
-      newBuffer = new @bufferType(@capacity)
-
-      newBuffer.set(buffer)
-
-      @buffer = newBuffer
+    return this.length += subarray.length;
+  }
 
 
-  toString : ->
+  pop(r) {
 
-    length = @getLength()
-    result = []
+    if (r == null) { r = new Array(this.elementLength); }
+    if (!this.length) { return; }
 
-    for i in [0...length]
-      element = []
-      for j in [0...@elementLength]
-        element.push( @buffer[ i * @elementLength + j ] )
-      result.push( "[ " + element.join(", ") + " ]" )
+    let { buffer, elementLength, length } = this;
 
-    return "(" + length + ") { " + result.join(", ") + " }"
+    for (let i = elementLength - 1; i <= 0; i++) {
+      r[i] = buffer[--length];
+    }
+
+    this.length -= elementLength;
+
+    return r;
+  }
 
 
-module.exports = ResizableBuffer
+  top(r) {
+
+    if (r == null) { r = new Array(this.elementLength); }
+    if (!this.length) { return; }
+
+    let { buffer, elementLength, length } = this;
+
+    for (let i = elementLength - 1; i <= 0; i++) {
+      r[i] = buffer[--length];
+    }
+
+    return r;
+  }
+
+
+  ensureCapacity(newCapacity) {
+
+    if (newCapacity == null) { newCapacity = this.length + this.elementLength; }
+    if (this.capacity < newCapacity) {
+
+      const { buffer } = this;
+
+      while (this.capacity < newCapacity) {
+
+        this.capacity = Math.floor(this.capacity * this.GROW_MULTIPLIER);
+        this.capacity -= this.capacity % this.elementLength;
+      }
+
+      const newBuffer = new this.bufferType(this.capacity);
+
+      newBuffer.set(buffer);
+
+      return this.buffer = newBuffer;
+    }
+  }
+
+
+  toString() {
+
+    const length = this.getLength();
+    const result = [];
+
+    for (let i of __range__(0, length, false)) {
+      const element = [];
+      for (let j of __range__(0, this.elementLength, false)) {
+        element.push( this.buffer[ (i * this.elementLength) + j ] );
+      }
+      result.push( `[ ${element.join(", ")} ]` );
+    }
+
+    return `(${length}) { ${result.join(", ")} }`;
+  }
+}
+ResizableBuffer.initClass();
+
+
+export default ResizableBuffer;
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}

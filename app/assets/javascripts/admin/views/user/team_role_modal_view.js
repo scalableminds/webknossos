@@ -1,145 +1,165 @@
-_                 = require("lodash")
-Marionette        = require("backbone.marionette")
-Toast             = require("libs/toast")
-TeamCollection    = require("admin/models/team/team_collection")
-ModalView         = require("admin/views/modal_view")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import Toast from "libs/toast";
+import TeamCollection from "admin/models/team/team_collection";
+import ModalView from "admin/views/modal_view";
 
-class TeamRoleModalView extends ModalView
-
-  headerTemplate : "<h3>Assign teams</h3>"
-  footerTemplate : """
-    <a href="#" class="btn btn-primary">Set Teams</a>
-    <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
-  """
-  bodyTemplate : _.template("""
-    <header>
-      <h4 class="col-sm-8" for="teams">Teams</h4>
-      <h4 class="col-sm-4" for="role">Role</h4>
-    </header>
-    <div class="row-fluid">
-      <% items.forEach(function(team) { %>
-        <div class="col-sm-8">
-          <div class="checkbox">
-            <label>
-              <input data-teamname="<%- team.name %>" type="checkbox" value="<%- team.name %>" <%- isChecked(team.name) %>>
-                <%- team.name %>
-              </option>
-            </label>
-          </div>
-        </div>
-        <div class="col-sm-4">
-          <div>
-            <select data-teamname="<%- team.name %>" name="role" class="form-control">
-              <option value="">Modify roles...</option>
-                <% _.each(team.roles, function(role) { %>
-                  <option value="<%- role.name %>" <%- isSelected(team.name, role.name) %>><%- role.name %></option>
-                <% }) %>
-            </select>
-          </div>
-        </div>
-      <% }) %>
+class TeamRoleModalView extends ModalView {
+  static initClass() {
+  
+    this.prototype.headerTemplate  = "<h3>Assign teams</h3>";
+    this.prototype.footerTemplate  = `\
+<a href="#" class="btn btn-primary">Set Teams</a>
+<a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>\
+`;
+    this.prototype.bodyTemplate  = _.template(`\
+<header>
+  <h4 class="col-sm-8" for="teams">Teams</h4>
+  <h4 class="col-sm-4" for="role">Role</h4>
+</header>
+<div class="row-fluid">
+  <% items.forEach(function(team) { %>
+    <div class="col-sm-8">
+      <div class="checkbox">
+        <label>
+          <input data-teamname="<%- team.name %>" type="checkbox" value="<%- team.name %>" <%- isChecked(team.name) %>>
+            <%- team.name %>
+          </option>
+        </label>
+      </div>
     </div>
-  """)
+    <div class="col-sm-4">
+      <div>
+        <select data-teamname="<%- team.name %>" name="role" class="form-control">
+          <option value="">Modify roles...</option>
+            <% _.each(team.roles, function(role) { %>
+              <option value="<%- role.name %>" <%- isSelected(team.name, role.name) %>><%- role.name %></option>
+            <% }) %>
+        </select>
+      </div>
+    </div>
+  <% }) %>
+</div>\
+`);
+  
+    this.prototype.events  =
+      {"click .btn-primary" : "changeExperience"};
+  }
 
-  templateContext : ->
-    # If only one user is selected then prefill the modal with his current values
-    isChecked: (teamName) =>
-      users = @getSelectedUsers()
-      if users.length == 1
-        if _.find(users[0].get("teams"), team: teamName)
-          return "checked"
+  templateContext() {
+    // If only one user is selected then prefill the modal with his current values
+    let users;
+    return {
+      isChecked: teamName => {
+        users = this.getSelectedUsers();
+        if (users.length === 1) {
+          if (_.find(users[0].get("teams"), {team: teamName})) {
+            return "checked";
+          }
+        }
+      },
 
-    isSelected: (teamName, roleName) =>
-      users = @getSelectedUsers()
-      if users.length == 1
-        team = _.find(users[0].get("teams"), team: teamName)
-        if team and team.role.name == roleName
-          return "selected"
+      isSelected: (teamName, roleName) => {
+        users = this.getSelectedUsers();
+        if (users.length === 1) {
+          const team = _.find(users[0].get("teams"), {team: teamName});
+          if (team && team.role.name === roleName) {
+            return "selected";
+          }
+        }
+      }
+    };
+  }
 
-  events :
-    "click .btn-primary" : "changeExperience"
+  initialize(options) {
 
-  initialize : (options) ->
+    this.collection = new TeamCollection();
+    this.listenTo(this.collection, "sync", this.render);
+    this.listenTo(this, "add:child", this.prefillModal);
 
-    @collection = new TeamCollection()
-    @listenTo(@collection, "sync", @render)
-    @listenTo(@, "add:child", @prefillModal)
-
-    @collection.fetch(
+    this.collection.fetch({
       data: "amIAnAdmin=true"
-    )
-    @userCollection = options.userCollection
-    @selectedUsers = @getSelectedUsers()
+    });
+    this.userCollection = options.userCollection;
+    return this.selectedUsers = this.getSelectedUsers();
+  }
 
 
-  getSelectedUsers : ->
+  getSelectedUsers() {
 
-    checkboxes = $("tbody input[type=checkbox]:checked")
-    return checkboxes.map((i, element) =>
-      return @userCollection.findWhere(id: $(element).val())
-    )
+    const checkboxes = $("tbody input[type=checkbox]:checked");
+    return checkboxes.map((i, element) => {
+      return this.userCollection.findWhere({id: $(element).val()});
+    }
+    );
+  }
 
 
-  changeExperience : ->
+  changeExperience() {
 
-    if @isValid()
+    if (this.isValid()) {
 
-      # Find all selected users that will be affected by the bulk action
+      // Find all selected users that will be affected by the bulk action
       $("tbody input[type=checkbox]:checked").each(
-        (i, element) =>
-          user = @userCollection.findWhere(
+        (i, element) => {
+          const user = this.userCollection.findWhere({
             id: $(element).val()
-          )
+          });
 
-          # Find all selected teams
-          teams = _.map(@$("input[type=checkbox]:checked"), (element) =>
-            teamName = $(element).data("teamname")
+          // Find all selected teams
+          let teams = _.map(this.$("input[type=checkbox]:checked"), element => {
+            const teamName = $(element).data("teamname");
             return {
-              team : $(element).val()
-              role :
-                name: @$("select[data-teamname=\"#{teamName}\"] :selected").val()
+              team : $(element).val(),
+              role : {
+                name: this.$(`select[data-teamname=\"${teamName}\"] :selected`).val()
+              }
+            };
+          }
+          ) || [];
+
+          // Find unselected teams
+          const removedTeamsNames = _.map(this.$("input[type=checkbox]:not(:checked)"), element => $(element).data("teamname")) || [];
+
+          // Add / remove teams
+          const teamNames = _.map(teams, "team");
+          for (let oldTeam of user.get("teams")) {
+            if (!(teamNames.includes(oldTeam.team))) {
+              teams.push(oldTeam);
             }
-          ) || []
-
-          # Find unselected teams
-          removedTeamsNames = _.map(@$("input[type=checkbox]:not(:checked)"), (element) ->
-            return $(element).data("teamname")
-          ) || []
-
-          # Add / remove teams
-          teamNames = _.map(teams, "team")
-          for oldTeam in user.get("teams")
-            if not (oldTeam.team in teamNames)
-              teams.push(oldTeam)
+          }
           teams = _.filter(teams,
-            (team) -> not _.includes(removedTeamsNames, team.team))
+            team => !_.includes(removedTeamsNames, team.team));
 
-          # Verify user and update his teams
-          user.save(
-            "isActive" : true
-            teams : teams
-          )
+          // Verify user and update his teams
+          user.save({
+            "isActive" : true,
+            teams
+          });
 
-          return
-      )
+        }
+      );
 
-      @hide()
+      return this.hide();
 
-    else
-      Toast.error("No role is selected!")
-
-
-  isValid : ->
-
-    isValid = true
-
-    # Make sure that all selected checkboxes have a selected role
-    @$("input[type=checkbox]:checked").parent().parent().find("select :selected").each(
-      (i, element) ->
-        isValid = $(element).text() != "Modify roles..."
-    )
-
-    return isValid
+    } else {
+      return Toast.error("No role is selected!");
+    }
+  }
 
 
-module.exports = TeamRoleModalView
+  isValid() {
+
+    let isValid = true;
+
+    // Make sure that all selected checkboxes have a selected role
+    this.$("input[type=checkbox]:checked").parent().parent().find("select :selected").each(
+      (i, element) => isValid = $(element).text() !== "Modify roles...");
+
+    return isValid;
+  }
+}
+TeamRoleModalView.initClass();
+
+
+export default TeamRoleModalView;

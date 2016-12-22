@@ -1,71 +1,83 @@
-_                    = require("lodash")
-app                  = require("app")
-Marionette           = require("backbone.marionette")
-AbstractTreeRenderer = require("oxalis/view/skeletontracing/abstract_tree_renderer")
+import _ from "lodash";
+import app from "app";
+import Marionette from "backbone.marionette";
+import AbstractTreeRenderer from "oxalis/view/skeletontracing/abstract_tree_renderer";
 
 
-class AbstractTreeView extends Marionette.View
+class AbstractTreeView extends Marionette.View {
+  static initClass() {
+  
+    this.prototype.className  = "flex-column";
+    this.prototype.template  = _.template(`\
+<canvas id="abstract-tree-canvas">\
+`);
+  
+    this.prototype.ui  =
+      {"canvas" : "canvas"};
+  
+    this.prototype.events =
+      {"click @ui.canvas" : "handleClick"};
+  }
 
-  className : "flex-column"
-  template : _.template("""
-      <canvas id="abstract-tree-canvas">
-    """)
+  initialize() {
 
-  ui :
-    "canvas" : "canvas"
+    this.listenTo(app.vent, "planes:resize", this.resize);
+    this.listenTo(app.vent, "view:setTheme", this.drawTree);
+    this.listenTo(this.model.user, "change:renderComments", this.drawTree);
 
-  events:
-    "click @ui.canvas" : "handleClick"
+    this.listenTo(this.model.skeletonTracing, "newActiveNode" , this.drawTree);
+    this.listenTo(this.model.skeletonTracing, "newActiveTree" , this.drawTree);
+    this.listenTo(this.model.skeletonTracing, "newTree" , this.drawTree);
+    this.listenTo(this.model.skeletonTracing, "mergeTree" , this.drawTree);
+    this.listenTo(this.model.skeletonTracing, "reloadTrees" , this.drawTree);
+    this.listenTo(this.model.skeletonTracing, "deleteTree" , this.drawTree);
+    this.listenTo(this.model.skeletonTracing, "deleteActiveNode" , this.drawTree);
+    this.listenTo(this.model.skeletonTracing, "newNode" , this.drawTree);
+    this.listenTo(this.model.skeletonTracing, "updateComments" , this.drawTree);
 
-  initialize : ->
-
-    @listenTo(app.vent, "planes:resize", @resize)
-    @listenTo(app.vent, "view:setTheme", @drawTree)
-    @listenTo(@model.user, "change:renderComments", @drawTree)
-
-    @listenTo(@model.skeletonTracing, "newActiveNode" , @drawTree)
-    @listenTo(@model.skeletonTracing, "newActiveTree" , @drawTree)
-    @listenTo(@model.skeletonTracing, "newTree" , @drawTree)
-    @listenTo(@model.skeletonTracing, "mergeTree" , @drawTree)
-    @listenTo(@model.skeletonTracing, "reloadTrees" , @drawTree)
-    @listenTo(@model.skeletonTracing, "deleteTree" , @drawTree)
-    @listenTo(@model.skeletonTracing, "deleteActiveNode" , @drawTree)
-    @listenTo(@model.skeletonTracing, "newNode" , @drawTree)
-    @listenTo(@model.skeletonTracing, "updateComments" , @drawTree)
-
-    @initialized = false
-    $(window).on("resize", => @drawTree())
-
-
-  resize : ->
-
-    @initialized = true
-    @render()
+    this.initialized = false;
+    return $(window).on("resize", () => this.drawTree());
+  }
 
 
-  render : ->
+  resize() {
 
-    super()
-    if @initialized
-      @abstractTreeRenderer = new AbstractTreeRenderer(@ui.canvas)
-    @drawTree()
-
-
-  drawTree : ->
-
-    if @model.skeletonTracing and @abstractTreeRenderer
-      @abstractTreeRenderer.renderComments(@model.user.get("renderComments"))
-      @abstractTreeRenderer.drawTree(
-        @model.skeletonTracing.getTree(),
-        @model.skeletonTracing.getActiveNodeId())
+    this.initialized = true;
+    return this.render();
+  }
 
 
-  handleClick : (event) ->
+  render() {
 
-    id = @abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY)
-    if id
-      @model.skeletonTracing.setActiveNode(id)
-      @model.skeletonTracing.centerActiveNode()
+    super.render();
+    if (this.initialized) {
+      this.abstractTreeRenderer = new AbstractTreeRenderer(this.ui.canvas);
+    }
+    return this.drawTree();
+  }
 
 
-module.exports = AbstractTreeView
+  drawTree() {
+
+    if (this.model.skeletonTracing && this.abstractTreeRenderer) {
+      this.abstractTreeRenderer.renderComments(this.model.user.get("renderComments"));
+      return this.abstractTreeRenderer.drawTree(
+        this.model.skeletonTracing.getTree(),
+        this.model.skeletonTracing.getActiveNodeId());
+    }
+  }
+
+
+  handleClick(event) {
+
+    const id = this.abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY);
+    if (id) {
+      this.model.skeletonTracing.setActiveNode(id);
+      return this.model.skeletonTracing.centerActiveNode();
+    }
+  }
+}
+AbstractTreeView.initClass();
+
+
+export default AbstractTreeView;

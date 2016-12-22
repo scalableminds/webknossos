@@ -1,69 +1,92 @@
-constants = require("../constants")
+import constants from "../constants";
 
-# This is a class with static methods dealing with dimensions and
-# conversions between them.
+// This is a class with static methods dealing with dimensions and
+// conversions between them.
 
-Dimensions =
+const Dimensions = {
 
-  PLANE_XY : constants.PLANE_XY
-  PLANE_YZ : constants.PLANE_YZ
-  PLANE_XZ : constants.PLANE_XZ
-  TDView  : constants.TDView
+  PLANE_XY : constants.PLANE_XY,
+  PLANE_YZ : constants.PLANE_YZ,
+  PLANE_XZ : constants.PLANE_XZ,
+  TDView  : constants.TDView,
 
-  getIndices : (planeID) ->
-    # Returns a ordered 3-tuple [x, y, z] which represents the dimensions from the viewpoint
+  getIndices(planeID) {
+    // Returns a ordered 3-tuple [x, y, z] which represents the dimensions from the viewpoint
 
-    switch planeID
-      when constants.PLANE_XY then [0, 1, 2]  # of each plane. For example, moving along the
-      when constants.PLANE_YZ then [2, 1, 0]  # X-Axis of the YZ-Plane is equivalent to moving
-      when constants.PLANE_XZ then [0, 2, 1]  # along the Z axis in the cube -> ind[0]=2
-
-
-  transDim : (array, planeID) ->
-    # Translate Dimension: Helper method to translate arrays with three elements
-
-    ind = @getIndices(planeID)
-    return [array[ind[0]], array[ind[1]], array[ind[2]]]
+    switch (planeID) {
+      case constants.PLANE_XY: return [0, 1, 2];  // of each plane. For example, moving along the
+      case constants.PLANE_YZ: return [2, 1, 0];  // X-Axis of the YZ-Plane is equivalent to moving
+      case constants.PLANE_XZ: return [0, 2, 1];  // along the Z axis in the cube -> ind[0]=2
+    }
+  },
 
 
-  planeForThirdDimension : (dim) ->
-    # Return the plane in which dim is always the same
+  transDim(array, planeID) {
+    // Translate Dimension: Helper method to translate arrays with three elements
 
-    switch dim
-      when 2 then @PLANE_XY
-      when 0 then @PLANE_YZ
-      when 1 then @PLANE_XZ
-
-
-  thirdDimensionForPlane : (planeID) ->
-    # Opposite of planeForThirdDimension
-
-    switch planeID
-      when @PLANE_XY then 2
-      when @PLANE_YZ then 0
-      when @PLANE_XZ then 1
+    const ind = this.getIndices(planeID);
+    return [array[ind[0]], array[ind[1]], array[ind[2]]];
+  },
 
 
-  round : (number) ->
-    # Floor number, as done at texture rendering
+  planeForThirdDimension(dim) {
+    // Return the plane in which dim is always the same
 
-    return ~~number
-
-
-  roundCoordinate : (coordinate) ->
-
-    res = coordinate.slice()
-    for i in [0...res.length]
-      res[i] = @round(res[i])
-    return res
+    switch (dim) {
+      case 2: return this.PLANE_XY;
+      case 0: return this.PLANE_YZ;
+      case 1: return this.PLANE_XZ;
+    }
+  },
 
 
-  distance : (pos1, pos2) ->
+  thirdDimensionForPlane(planeID) {
+    // Opposite of planeForThirdDimension
 
-    sumOfSquares = 0
-    for i in [0...pos1.length]
-      diff = pos1[i] - pos2[i]
-      sumOfSquares += diff * diff
-    return Math.sqrt(sumOfSquares)
+    switch (planeID) {
+      case this.PLANE_XY: return 2;
+      case this.PLANE_YZ: return 0;
+      case this.PLANE_XZ: return 1;
+    }
+  },
 
-module.exports = Dimensions
+
+  round(number) {
+    // Floor number, as done at texture rendering
+
+    return ~~number;
+  },
+
+
+  roundCoordinate(coordinate) {
+
+    const res = coordinate.slice();
+    for (let i of __range__(0, res.length, false)) {
+      res[i] = this.round(res[i]);
+    }
+    return res;
+  },
+
+
+  distance(pos1, pos2) {
+
+    let sumOfSquares = 0;
+    for (let i of __range__(0, pos1.length, false)) {
+      const diff = pos1[i] - pos2[i];
+      sumOfSquares += diff * diff;
+    }
+    return Math.sqrt(sumOfSquares);
+  }
+};
+
+export default Dimensions;
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}

@@ -1,10 +1,12 @@
-_        = require("lodash")
-backbone = require("backbone")
+import _ from "lodash";
+import backbone from "backbone";
 
-class DatasetAccesslistCollection extends Backbone.Collection
+class DatasetAccesslistCollection extends Backbone.Collection {
 
-  constructor : (datasetId) ->
-    @url = "/api/datasets/#{datasetId}/accessList"
-    super()
+  constructor(datasetId) {
+    this.url = `/api/datasets/${datasetId}/accessList`;
+    super();
+  }
+}
 
-module.exports = DatasetAccesslistCollection
+export default DatasetAccesslistCollection;

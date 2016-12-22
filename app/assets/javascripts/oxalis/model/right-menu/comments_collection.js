@@ -1,32 +1,38 @@
-_        = require("lodash")
-backbone = require("backbone")
+import _ from "lodash";
+import backbone from "backbone";
 
-class CommentsCollection extends Backbone.Collection
-
-
-  intitalize : ->
-
-    @coefficient = 1
+class CommentsCollection extends Backbone.Collection {
 
 
-  comparator : (model) ->
+  intitalize() {
 
-    return model.get("node") * @coefficient
-
-
-  sort : (isAscending) ->
-
-    @coefficient = if isAscending then 1 else -1
-    super()
+    return this.coefficient = 1;
+  }
 
 
-  findCommentByNodeId : (id) ->
+  comparator(model) {
 
-    return @findWhere({ node: id })
+    return model.get("node") * this.coefficient;
+  }
 
 
-  hasCommentWithNodeId : (id) ->
+  sort(isAscending) {
 
-    return @findCommentByNodeId(id) != undefined
+    this.coefficient = isAscending ? 1 : -1;
+    return super.sort();
+  }
 
-module.exports = CommentsCollection
+
+  findCommentByNodeId(id) {
+
+    return this.findWhere({ node: id });
+  }
+
+
+  hasCommentWithNodeId(id) {
+
+    return this.findCommentByNodeId(id) !== undefined;
+  }
+}
+
+export default CommentsCollection;

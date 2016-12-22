@@ -1,11 +1,15 @@
-_                    = require("lodash")
-TeamModel            = require("./team_model")
-SortedCollection     = require("../sorted_collection")
+import _ from "lodash";
+import TeamModel from "./team_model";
+import SortedCollection from "../sorted_collection";
 
-class TeamCollection extends SortedCollection
+class TeamCollection extends SortedCollection {
+  static initClass() {
+  
+    this.prototype.url  = "/api/teams";
+    this.prototype.model  = TeamModel;
+    this.prototype.sortAttribute  = "name";
+  }
+}
+TeamCollection.initClass();
 
-  url : "/api/teams"
-  model : TeamModel
-  sortAttribute : "name"
-
-module.exports = TeamCollection
+export default TeamCollection;

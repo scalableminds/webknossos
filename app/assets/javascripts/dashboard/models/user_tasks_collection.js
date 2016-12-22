@@ -1,44 +1,54 @@
-_                   = require("lodash")
-Backbone            = require("backbone")
-DashboardTaskModel  = require("./dashboard_task_model")
-SortedCollection    = require("admin/models/sorted_collection")
+import _ from "lodash";
+import Backbone from "backbone";
+import DashboardTaskModel from "./dashboard_task_model";
+import SortedCollection from "admin/models/sorted_collection";
 
-class UserTasksCollection extends SortedCollection
+class UserTasksCollection extends SortedCollection {
+  static initClass() {
+  
+    this.prototype.model  = DashboardTaskModel;
+    this.prototype.newTaskUrl  = "/user/tasks/request";
+    this.prototype.defaults  =
+        {showFinishedTasks : false};
+  }
 
-  model : DashboardTaskModel
-  newTaskUrl : "/user/tasks/request"
-  defaults :
-      showFinishedTasks : false
+  url() {
 
-  url : ->
-
-    if @userID
-      return "/api/users/#{@userID}/tasks?isFinished=#{@isFinished}"
-    else
-      return "/api/user/tasks?isFinished=#{@isFinished}"
-
-
-  initialize : (models, options) ->
-
-    @userID = options.userID
-    @isFinished = options.isFinished || false
+    if (this.userID) {
+      return `/api/users/${this.userID}/tasks?isFinished=${this.isFinished}`;
+    } else {
+      return `/api/user/tasks?isFinished=${this.isFinished}`;
+    }
+  }
 
 
-  unfinishedTasksFilter : (task) ->
+  initialize(models, options) {
 
-    return !task.get("annotation.state.isFinished")
-
-
-  getNewTask : ->
-
-    newTask = new DashboardTaskModel()
-
-    return newTask.fetch(
-      url : @newTaskUrl
-      success :  =>
-        @add(newTask)
-    )
+    this.userID = options.userID;
+    return this.isFinished = options.isFinished || false;
+  }
 
 
+  unfinishedTasksFilter(task) {
 
-module.exports = UserTasksCollection
+    return !task.get("annotation.state.isFinished");
+  }
+
+
+  getNewTask() {
+
+    const newTask = new DashboardTaskModel();
+
+    return newTask.fetch({
+      url : this.newTaskUrl,
+      success :  () => {
+        return this.add(newTask);
+      }
+    });
+  }
+}
+UserTasksCollection.initClass();
+
+
+
+export default UserTasksCollection;

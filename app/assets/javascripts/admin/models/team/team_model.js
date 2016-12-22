@@ -1,17 +1,22 @@
-_        = require("lodash")
-Backbone = require("backbone")
+import _ from "lodash";
+import Backbone from "backbone";
 
-class TeamModel extends Backbone.Model
+class TeamModel extends Backbone.Model {
+  static initClass() {
+    
+      this.prototype.urlRoot  = "/api/teams";
+    
+      this.prototype.defaults  = {
+        name : "",
+        owner : "",
+        roles : [
+            {name : "admin"},
+            {name : "user"}
+        ],
+        isEditable : "true"
+      };
+    }
+}
+TeamModel.initClass();
 
-  urlRoot : "/api/teams"
-
-  defaults :
-    name : ""
-    owner : ""
-    roles : [
-        {name : "admin"},
-        {name : "user"}
-    ]
-    isEditable : "true"
-
-module.exports = TeamModel
+export default TeamModel;

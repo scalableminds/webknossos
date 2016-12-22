@@ -1,9 +1,13 @@
-Backbone       = require("backbone")
-DatastoreModel = require("./datastore_model")
+import Backbone from "backbone";
+import DatastoreModel from "./datastore_model";
 
-class DatastoreCollection extends Backbone.Collection
+class DatastoreCollection extends Backbone.Collection {
+  static initClass() {
+  
+    this.prototype.url  = "/api/datastores";
+    this.prototype.model  = DatastoreModel;
+  }
+}
+DatastoreCollection.initClass();
 
-  url : "/api/datastores"
-  model : DatastoreModel
-
-module.exports = DatastoreCollection
+export default DatastoreCollection;

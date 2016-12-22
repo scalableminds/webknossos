@@ -1,49 +1,57 @@
-_                   = require("lodash")
-Marionette          = require("backbone.marionette")
-AbstractSettingView = require("./abstract_setting_view")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import AbstractSettingView from "./abstract_setting_view";
 
-class NumberSettingView extends AbstractSettingView
+class NumberSettingView extends AbstractSettingView {
+  static initClass() {
+  
+  
+    this.prototype.className  = "number-setting-view row";
+  
+  
+    this.prototype.template  = _.template(`\
+<div class="col-sm-5">
+  <%- displayName %>
+</div>
+<div class="col-sm-7">
+  <input class="form-control" type="number" min="<%- min %>" max="<%- max %>" step="<%- step %>" value="<%- value %>">
+</div>\
+`);
+  
+  
+    this.prototype.ui  =
+      {number : "input[type=number]"};
+  
+  
+    this.prototype.events  =
+      {"change @ui.number" : "handleChange"};
+  }
 
 
-  className : "number-setting-view row"
+  initialize(options) {
 
+    super.initialize(options);
 
-  template : _.template("""
-    <div class="col-sm-5">
-      <%- displayName %>
-    </div>
-    <div class="col-sm-7">
-      <input class="form-control" type="number" min="<%- min %>" max="<%- max %>" step="<%- step %>" value="<%- value %>">
-    </div>
-  """)
-
-
-  ui :
-    number : "input[type=number]"
-
-
-  events :
-    "change @ui.number" : "handleChange"
-
-
-  initialize : (options) ->
-
-    super(options)
-
-    _.defaults(@options,
-      min : ""
-      max : ""
+    return _.defaults(this.options, {
+      min : "",
+      max : "",
       step : 1
-    )
+    }
+    );
+  }
 
 
-  handleChange : (evt) ->
+  handleChange(evt) {
 
-    @model.set(@options.name, (Number) evt.target.value)
+    return this.model.set(this.options.name, (Number)(evt.target.value));
+  }
 
 
-  update : (model, value) ->
+  update(model, value) {
 
-    @ui.number.val(value)
+    return this.ui.number.val(value);
+  }
+}
+NumberSettingView.initClass();
 
-module.exports = NumberSettingView
+export default NumberSettingView;

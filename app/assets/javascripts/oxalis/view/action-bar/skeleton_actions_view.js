@@ -1,41 +1,49 @@
-_          = require("lodash")
-Marionette = require("backbone.marionette")
-Constants  = require("oxalis/constants")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import Constants from "oxalis/constants";
 
-class SkeletonActionsView extends Marionette.View
+class SkeletonActionsView extends Marionette.View {
+  static initClass() {
+  
+    this.prototype.template  = _.template(`\
+      <% if(isTracingMode()) { %>
+        <div class="btn-group">
+<button type="button" class="btn btn-default" id="add-node">Add Node (Right-Click) </button>
+        </div>
+      <% } %>\
+`);
+  
+    this.prototype.templateContext  = {
+      isTracingMode() {
+        return this.mode === Constants.MODE_PLANE_TRACING;
+      }
+    };
+  
+    this.prototype.events  =
+      {"click #add-node" : "addNode"};
+  }
 
-  template : _.template("""
-    <% if(isTracingMode()) { %>
-      <div class="btn-group">
-	<button type="button" class="btn btn-default" id="add-node">Add Node (Right-Click) </button>
-      </div>
-    <% } %>
-  """)
+  initialize() {
 
-  templateContext :
-    isTracingMode : ->
-      return @mode == Constants.MODE_PLANE_TRACING
-
-  events :
-    "click #add-node" : "addNode"
-
-  initialize : ->
-
-    @listenTo(@model, "change:mode", @render)
+    return this.listenTo(this.model, "change:mode", this.render);
+  }
 
 
-  addNode : ->
+  addNode() {
 
-    datasetConfig = @model.get("datasetConfiguration")
+    const datasetConfig = this.model.get("datasetConfiguration");
 
-    # add node
-    @model.skeletonTracing.addNode(
-      @model.flycam.getPosition(),
-      @model.flycam.getRotation(Constants.PLANE_XY),
-      Constants.PLANE_XY, # xy viewport
-      @model.flycam.getIntegerZoomStep(),
-      if datasetConfig.get("fourBit") then 4 else 8,
+    // add node
+    return this.model.skeletonTracing.addNode(
+      this.model.flycam.getPosition(),
+      this.model.flycam.getRotation(Constants.PLANE_XY),
+      Constants.PLANE_XY, // xy viewport
+      this.model.flycam.getIntegerZoomStep(),
+      datasetConfig.get("fourBit") ? 4 : 8,
       datasetConfig.get("interpolation")
-    )
+    );
+  }
+}
+SkeletonActionsView.initClass();
 
-module.exports = SkeletonActionsView
+export default SkeletonActionsView;

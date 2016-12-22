@@ -1,147 +1,172 @@
-Backbone                 = require("backbone")
-VolumeCell               = require("./volumecell")
-VolumeLayer              = require("./volumelayer")
-Dimensions               = require("../dimensions")
-RestrictionHandler       = require("../helpers/restriction_handler")
-Drawing                  = require("libs/drawing")
-VolumeTracingStateLogger = require("./volumetracing_statelogger")
-Constants                = require("../../constants")
+import Backbone from "backbone";
+import VolumeCell from "./volumecell";
+import VolumeLayer from "./volumelayer";
+import Dimensions from "../dimensions";
+import RestrictionHandler from "../helpers/restriction_handler";
+import Drawing from "libs/drawing";
+import VolumeTracingStateLogger from "./volumetracing_statelogger";
+import Constants from "../../constants";
 
-class VolumeTracing
+class VolumeTracing {
 
-  constructor : (tracing, @flycam, @flycam3d, @binary) ->
+  constructor(tracing, flycam, flycam3d, binary) {
 
-    _.extend(this, Backbone.Events)
+    this.flycam = flycam;
+    this.flycam3d = flycam3d;
+    this.binary = binary;
+    _.extend(this, Backbone.Events);
 
-    @contentData  = tracing.content.contentData
-    @restrictionHandler = new RestrictionHandler(tracing.restrictions)
-    @mode = Constants.VOLUME_MODE_MOVE
+    this.contentData  = tracing.content.contentData;
+    this.restrictionHandler = new RestrictionHandler(tracing.restrictions);
+    this.mode = Constants.VOLUME_MODE_MOVE;
 
-    @cells        = []
-    @activeCell   = null
-    @currentLayer = null        # Layer currently edited
-    @idCount      = @contentData.nextCell || 1
-    @lastCentroid = null
+    this.cells        = [];
+    this.activeCell   = null;
+    this.currentLayer = null;        // Layer currently edited
+    this.idCount      = this.contentData.nextCell || 1;
+    this.lastCentroid = null;
 
-    @stateLogger  = new VolumeTracingStateLogger(
-      @flycam, tracing.version, tracing.id, tracing.typ,
+    this.stateLogger  = new VolumeTracingStateLogger(
+      this.flycam, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate,
-      this, @binary.pushQueue
-    )
+      this, this.binary.pushQueue
+    );
 
-    @createCell(@contentData.activeCell)
+    this.createCell(this.contentData.activeCell);
 
-    @listenTo(@binary.cube, "newMapping", ->
-      @trigger("newActiveCell", @getActiveCellId())
-    )
+    this.listenTo(this.binary.cube, "newMapping", function() {
+      return this.trigger("newActiveCell", this.getActiveCellId());
+    });
 
-    # For testing
-    window.setAlpha = (v) -> Drawing.setAlpha(v)
-    window.setSmoothLength = (v) -> Drawing.setSmoothLength(v)
-
-
-  setMode : (@mode) ->
-
-    @trigger("change:mode", @mode)
+    // For testing
+    window.setAlpha = v => Drawing.setAlpha(v);
+    window.setSmoothLength = v => Drawing.setSmoothLength(v);
+  }
 
 
-  toggleMode : ->
+  setMode(mode) {
 
-    @setMode(
-      if @mode == Constants.VOLUME_MODE_TRACE
+    this.mode = mode;
+    return this.trigger("change:mode", this.mode);
+  }
+
+
+  toggleMode() {
+
+    return this.setMode(
+      this.mode === Constants.VOLUME_MODE_TRACE ?
         Constants.VOLUME_MODE_MOVE
-      else
+      :
         Constants.VOLUME_MODE_TRACE
-    )
+    );
+  }
 
 
-  createCell : (id) ->
+  createCell(id) {
 
-    unless id?
-      id = @idCount++
+    let newCell;
+    if (id == null) {
+      id = this.idCount++;
+    }
 
-    @cells.push( newCell = new VolumeCell(id) )
-    @setActiveCell( newCell.id )
-    @currentLayer = null
-
-
-  startEditing : (planeId) ->
-    # Return, if layer was actually started
-
-    return false if not @restrictionHandler.updateAllowed()
-
-    if currentLayer? or @flycam.getIntegerZoomStep() > 0
-      return false
-
-    pos = Dimensions.roundCoordinate(@flycam.getPosition())
-    thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)]
-    @currentLayer = new VolumeLayer(planeId, thirdDimValue)
-    return true
+    this.cells.push( newCell = new VolumeCell(id) );
+    this.setActiveCell( newCell.id );
+    return this.currentLayer = null;
+  }
 
 
-  addToLayer : (pos) ->
+  startEditing(planeId) {
+    // Return, if layer was actually started
 
-    return if not @restrictionHandler.updateAllowed()
+    if (!this.restrictionHandler.updateAllowed()) { return false; }
 
-    unless @currentLayer?
-      return
+    if ((typeof currentLayer !== 'undefined' && currentLayer !== null) || this.flycam.getIntegerZoomStep() > 0) {
+      return false;
+    }
 
-    @currentLayer.addContour(pos)
-    @trigger "updateLayer", @getActiveCellId(), @currentLayer.getSmoothedContourList()
-
-
-  finishLayer : ->
-
-    return if not @restrictionHandler.updateAllowed()
-
-    if not @currentLayer? or @currentLayer.isEmpty()
-      return
-
-    start = (new Date()).getTime()
-    @currentLayer.finish()
-    iterator = @currentLayer.getVoxelIterator()
-    labelValue = if @activeCell then @activeCell.id else 0
-    @binary.cube.labelVoxels(iterator, labelValue)
-    console.log "Labeling time:", ((new Date()).getTime() - start)
-
-    @updateDirection(@currentLayer.getCentroid())
-    @currentLayer = null
-
-    @trigger "volumeAnnotated"
+    const pos = Dimensions.roundCoordinate(this.flycam.getPosition());
+    const thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)];
+    this.currentLayer = new VolumeLayer(planeId, thirdDimValue);
+    return true;
+  }
 
 
-  updateDirection : (centroid) ->
-    if @lastCentroid?
-      @flycam.setDirection([
-        centroid[0] - @lastCentroid[0]
-        centroid[1] - @lastCentroid[1]
-        centroid[2] - @lastCentroid[2]
-      ])
-    @lastCentroid = centroid
+  addToLayer(pos) {
+
+    if (!this.restrictionHandler.updateAllowed()) { return; }
+
+    if (this.currentLayer == null) {
+      return;
+    }
+
+    this.currentLayer.addContour(pos);
+    return this.trigger("updateLayer", this.getActiveCellId(), this.currentLayer.getSmoothedContourList());
+  }
 
 
-  getActiveCellId : ->
+  finishLayer() {
 
-    if @activeCell?
-      return @activeCell.id
-    else
-      return 0
+    if (!this.restrictionHandler.updateAllowed()) { return; }
+
+    if ((this.currentLayer == null) || this.currentLayer.isEmpty()) {
+      return;
+    }
+
+    const start = (new Date()).getTime();
+    this.currentLayer.finish();
+    const iterator = this.currentLayer.getVoxelIterator();
+    const labelValue = this.activeCell ? this.activeCell.id : 0;
+    this.binary.cube.labelVoxels(iterator, labelValue);
+    console.log("Labeling time:", ((new Date()).getTime() - start));
+
+    this.updateDirection(this.currentLayer.getCentroid());
+    this.currentLayer = null;
+
+    return this.trigger("volumeAnnotated");
+  }
 
 
-  getMappedActiveCellId : ->
+  updateDirection(centroid) {
+    if (this.lastCentroid != null) {
+      this.flycam.setDirection([
+        centroid[0] - this.lastCentroid[0],
+        centroid[1] - this.lastCentroid[1],
+        centroid[2] - this.lastCentroid[2]
+      ]);
+    }
+    return this.lastCentroid = centroid;
+  }
 
-    return @binary.cube.mapId(@getActiveCellId())
+
+  getActiveCellId() {
+
+    if (this.activeCell != null) {
+      return this.activeCell.id;
+    } else {
+      return 0;
+    }
+  }
 
 
-  setActiveCell : (id) ->
+  getMappedActiveCellId() {
 
-    @activeCell = null
-    for cell in @cells
-      if cell.id == id then @activeCell = cell
+    return this.binary.cube.mapId(this.getActiveCellId());
+  }
 
-    if not @activeCell? and id > 0
-      @createCell(id)
 
-    @trigger "newActiveCell", id
+  setActiveCell(id) {
 
-module.exports = VolumeTracing
+    this.activeCell = null;
+    for (let cell of this.cells) {
+      if (cell.id === id) { this.activeCell = cell; }
+    }
+
+    if ((this.activeCell == null) && id > 0) {
+      this.createCell(id);
+    }
+
+    return this.trigger("newActiveCell", id);
+  }
+}
+
+export default VolumeTracing;

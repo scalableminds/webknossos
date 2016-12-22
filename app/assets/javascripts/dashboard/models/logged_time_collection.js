@@ -1,33 +1,38 @@
-_        = require("lodash")
-Backbone = require("backbone")
-moment   = require("moment")
+import _ from "lodash";
+import Backbone from "backbone";
+import moment from "moment";
 
-class LoggedTimeCollection extends Backbone.Collection
+class LoggedTimeCollection extends Backbone.Collection {
 
-  comparator : (model) -> return -model.get("interval")
+  comparator(model) { return -model.get("interval"); }
 
-  url : ->
+  url() {
 
-    if @userID
-      return "/api/users/#{@userID}/loggedTime"
-    else
-      return "/api/user/loggedTime"
+    if (this.userID) {
+      return `/api/users/${this.userID}/loggedTime`;
+    } else {
+      return "/api/user/loggedTime";
+    }
+  }
 
-  initialize : (models, options) ->
+  initialize(models, options) {
 
-    @userID = options.userID
+    return this.userID = options.userID;
+  }
 
 
-  parse : (response) ->
+  parse(response) {
 
     return response.loggedTime.map(
-      (entry) ->
-        interval = entry.paymentInterval
+      function(entry) {
+        const interval = entry.paymentInterval;
         return {
-          interval : moment("#{interval.year} #{interval.month}", "YYYY MM")
-          time: moment.duration(entry.durationInSeconds, "seconds")
-          months: interval.year * 12 + interval.month
-        }
-    ).sort( (a, b) -> b.months - a.months )
+          interval : moment(`${interval.year} ${interval.month}`, "YYYY MM"),
+          time: moment.duration(entry.durationInSeconds, "seconds"),
+          months: (interval.year * 12) + interval.month
+        };
+    }).sort( (a, b) => b.months - a.months);
+  }
+}
 
-module.exports = LoggedTimeCollection
+export default LoggedTimeCollection;

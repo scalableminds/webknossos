@@ -1,185 +1,214 @@
-_                             = require("lodash")
-backbone                      = require("backbone")
-THREE                         = require("three")
-{M4x4, V3}                    = require("libs/mjs")
-constants                     = require("oxalis/constants")
-ArbitraryPlaneMaterialFactory = require("./materials/arbitrary_plane_material_factory")
+import _ from "lodash";
+import backbone from "backbone";
+import THREE from "three";
+import { M4x4, V3 } from "libs/mjs";
+import constants from "oxalis/constants";
+import ArbitraryPlaneMaterialFactory from "./materials/arbitrary_plane_material_factory";
 
-# Let's set up our trianglesplane.
-# It serves as a "canvas" where the brain images
-# are drawn.
-# Don't let the name fool you, this is just an
-# ordinary plane with a texture applied to it.
-#
-# User tests showed that looking a bend surface (a half sphere)
-# feels more natural when moving around in 3D space.
-# To acknowledge this fact we determine the pixels that will
-# be displayed by requesting them as though they were
-# attached to bend surface.
-# The result is then projected on a flat surface.
-# For me detail look in Model.
-#
-# queryVertices: holds the position/matrices
-# needed to for the bend surface.
-# normalVertices: (depricated) holds the vertex postion
-# for the flat surface
-class ArbitraryPlane
-
-  cam : null
-  model : null
-  controller : null
-
-  mesh : null
-
-  isDirty : true
-
-  queryVertices : null
-  width : 0
-  height : 0
-  x : 0
-
-
-  constructor : (@cam, @model, @controller, @width = 128) ->
-
-    _.extend(@, Backbone.Events)
-
-    @mesh = @createMesh()
-
-    @listenTo(@cam, "changed", -> @isDirty = true)
-    @listenTo(@model.flycam, "positionChanged", -> @isDirty = true)
-
-    for name, binary of @model.binary
-      binary.cube.on "bucketLoaded", => @isDirty = true
-
-    throw "width needs to be a power of 2" unless Math.log(@width) / Math.LN2 % 1 != 1
+// Let's set up our trianglesplane.
+// It serves as a "canvas" where the brain images
+// are drawn.
+// Don't let the name fool you, this is just an
+// ordinary plane with a texture applied to it.
+//
+// User tests showed that looking a bend surface (a half sphere)
+// feels more natural when moving around in 3D space.
+// To acknowledge this fact we determine the pixels that will
+// be displayed by requesting them as though they were
+// attached to bend surface.
+// The result is then projected on a flat surface.
+// For me detail look in Model.
+//
+// queryVertices: holds the position/matrices
+// needed to for the bend surface.
+// normalVertices: (depricated) holds the vertex postion
+// for the flat surface
+class ArbitraryPlane {
+  static initClass() {
+  
+    this.prototype.cam  = null;
+    this.prototype.model  = null;
+    this.prototype.controller  = null;
+  
+    this.prototype.mesh  = null;
+  
+    this.prototype.isDirty  = true;
+  
+    this.prototype.queryVertices  = null;
+    this.prototype.width  = 0;
+    this.prototype.height  = 0;
+    this.prototype.x  = 0;
+  }
 
 
-  setMode : ( mode, radius ) ->
+  constructor(cam, model, controller, width) {
 
-    @queryVertices = switch mode
-      when constants.MODE_ARBITRARY       then @calculateSphereVertices()
-      when constants.MODE_ARBITRARY_PLANE then @calculatePlaneVertices()
+    if (width == null) { width = 128; }
+    this.cam = cam;
+    this.model = model;
+    this.controller = controller;
+    this.width = width;
+    _.extend(this, Backbone.Events);
 
-    @isDirty = true
+    this.mesh = this.createMesh();
+
+    this.listenTo(this.cam, "changed", function() { return this.isDirty = true; });
+    this.listenTo(this.model.flycam, "positionChanged", function() { return this.isDirty = true; });
+
+    for (let name in this.model.binary) {
+      const binary = this.model.binary[name];
+      binary.cube.on("bucketLoaded", () => this.isDirty = true);
+    }
+
+    if ((Math.log(this.width) / Math.LN2) % 1 === 1) { throw "width needs to be a power of 2"; }
+  }
 
 
-  attachScene : (scene) ->
+  setMode( mode, radius ) {
 
-    scene.add(@mesh)
+    this.queryVertices = (() => { switch (mode) {
+      case constants.MODE_ARBITRARY:       return this.calculateSphereVertices();
+      case constants.MODE_ARBITRARY_PLANE: return this.calculatePlaneVertices();
+    } })();
+
+    return this.isDirty = true;
+  }
 
 
-  update : ->
+  attachScene(scene) {
 
-    if @isDirty
+    return scene.add(this.mesh);
+  }
 
-      { mesh, cam } = this
 
-      matrix = cam.getZoomedMatrix()
+  update() {
 
-      newVertices = M4x4.transformPointsAffine matrix, @queryVertices
-      newColors = @model.getColorBinaries()[0].getByVerticesSync(newVertices)
+    if (this.isDirty) {
 
-      @textureMaterial.setData("color", newColors)
+      const { mesh, cam } = this;
 
-      m = cam.getZoomedMatrix()
+      const matrix = cam.getZoomedMatrix();
 
-      mesh.matrix.set m[0], m[4], m[8], m[12],
+      const newVertices = M4x4.transformPointsAffine(matrix, this.queryVertices);
+      const newColors = this.model.getColorBinaries()[0].getByVerticesSync(newVertices);
+
+      this.textureMaterial.setData("color", newColors);
+
+      const m = cam.getZoomedMatrix();
+
+      mesh.matrix.set(m[0], m[4], m[8], m[12],
                       m[1], m[5], m[9], m[13],
                       m[2], m[6], m[10], m[14],
-                      m[3], m[7], m[11], m[15]
+                      m[3], m[7], m[11], m[15]);
 
-      mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI))
-      mesh.matrixWorldNeedsUpdate = true
+      mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
+      mesh.matrixWorldNeedsUpdate = true;
 
-      @isDirty = false
-
-
-  calculateSphereVertices : ( sphericalCapRadius = @cam.distance ) ->
-
-    queryVertices = new Float32Array(@width * @width * 3)
-
-    # so we have Point [0, 0, 0] centered
-    currentIndex = 0
-
-    vertex        = [0, 0, 0]
-    vector        = [0, 0, 0]
-    centerVertex  = [0, 0, -sphericalCapRadius]
-
-    # Transforming those normalVertices to become a spherical cap
-    # which is better more smooth for querying.
-    # http://en.wikipedia.org/wiki/Spherical_cap
-    for y in [0...@width] by 1
-      for x in [0...@width] by 1
-
-        vertex[0] = x - (Math.floor @width/2)
-        vertex[1] = y - (Math.floor @width/2)
-        vertex[2] = 0
-
-        vector = V3.sub(vertex, centerVertex, vector)
-        length = V3.length(vector)
-        vector = V3.scale(vector, sphericalCapRadius / length, vector)
-
-        queryVertices[currentIndex++] = centerVertex[0] + vector[0]
-        queryVertices[currentIndex++] = centerVertex[1] + vector[1]
-        queryVertices[currentIndex++] = centerVertex[2] + vector[2]
-
-    queryVertices
+      return this.isDirty = false;
+    }
+  }
 
 
-  calculatePlaneVertices : ->
+  calculateSphereVertices( sphericalCapRadius ) {
 
-    queryVertices = new Float32Array(@width * @width * 3)
+    if (sphericalCapRadius == null) { sphericalCapRadius = this.cam.distance; }
+    const queryVertices = new Float32Array(this.width * this.width * 3);
 
-    # so we have Point [0, 0, 0] centered
-    currentIndex = 0
+    // so we have Point [0, 0, 0] centered
+    let currentIndex = 0;
 
-    for y in [0...@width] by 1
-      for x in [0...@width] by 1
+    const vertex        = [0, 0, 0];
+    let vector        = [0, 0, 0];
+    const centerVertex  = [0, 0, -sphericalCapRadius];
 
-        queryVertices[currentIndex++] = x - (Math.floor @width/2)
-        queryVertices[currentIndex++] = y - (Math.floor @width/2)
-        queryVertices[currentIndex++] = 0
+    // Transforming those normalVertices to become a spherical cap
+    // which is better more smooth for querying.
+    // http://en.wikipedia.org/wiki/Spherical_cap
+    for (let y = 0; y < this.width; y++) {
+      for (let x = 0; x < this.width; x++) {
 
-    queryVertices
+        vertex[0] = x - (Math.floor(this.width/2));
+        vertex[1] = y - (Math.floor(this.width/2));
+        vertex[2] = 0;
+
+        vector = V3.sub(vertex, centerVertex, vector);
+        const length = V3.length(vector);
+        vector = V3.scale(vector, sphericalCapRadius / length, vector);
+
+        queryVertices[currentIndex++] = centerVertex[0] + vector[0];
+        queryVertices[currentIndex++] = centerVertex[1] + vector[1];
+        queryVertices[currentIndex++] = centerVertex[2] + vector[2];
+      }
+    }
+
+    return queryVertices;
+  }
 
 
-  applyScale : (delta) ->
+  calculatePlaneVertices() {
 
-    @x = Number(@mesh.scale.x) + Number(delta)
+    const queryVertices = new Float32Array(this.width * this.width * 3);
 
-    if @x > .5 and @x < 10
-      @mesh.scale.x = @mesh.scale.y = @mesh.scale.z = @x
-      @cam.update()
+    // so we have Point [0, 0, 0] centered
+    let currentIndex = 0;
+
+    for (let y = 0; y < this.width; y++) {
+      for (let x = 0; x < this.width; x++) {
+
+        queryVertices[currentIndex++] = x - (Math.floor(this.width/2));
+        queryVertices[currentIndex++] = y - (Math.floor(this.width/2));
+        queryVertices[currentIndex++] = 0;
+      }
+    }
+
+    return queryVertices;
+  }
 
 
-  createMesh : ->
+  applyScale(delta) {
 
-    if @controller.isBranchpointvideoMode()
+    this.x = Number(this.mesh.scale.x) + Number(delta);
 
-      options =
-        polygonOffset : true
-        polygonOffsetFactor : 10.0
+    if (this.x > .5 && this.x < 10) {
+      this.mesh.scale.x = this.mesh.scale.y = this.mesh.scale.z = this.x;
+      return this.cam.update();
+    }
+  }
+
+
+  createMesh() {
+
+    if (this.controller.isBranchpointvideoMode()) {
+
+      const options = {
+        polygonOffset : true,
+        polygonOffsetFactor : 10.0,
         polygonOffsetUnits : 40.0
+      };
 
-      factory = new ArbitraryPlaneMaterialFactory(@model, @width)
-      factory.makeMaterial(options)
-      @textureMaterial = factory.getMaterial()
+      const factory = new ArbitraryPlaneMaterialFactory(this.model, this.width);
+      factory.makeMaterial(options);
+      this.textureMaterial = factory.getMaterial();
 
-    else
+    } else {
 
-      @textureMaterial = new ArbitraryPlaneMaterialFactory(@model, @width).getMaterial()
+      this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.model, this.width).getMaterial();
+    }
 
-    # create mesh
-    plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(@width, @width, 1, 1)
-      @textureMaterial
-    )
-    plane.rotation.x = Math.PI
-    @x = 1
+    // create mesh
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(this.width, this.width, 1, 1),
+      this.textureMaterial
+    );
+    plane.rotation.x = Math.PI;
+    this.x = 1;
 
-    plane.matrixAutoUpdate = false
-    plane.doubleSided = true
+    plane.matrixAutoUpdate = false;
+    plane.doubleSided = true;
 
-    plane
+    return plane;
+  }
+}
+ArbitraryPlane.initClass();
 
-module.exports = ArbitraryPlane
+export default ArbitraryPlane;

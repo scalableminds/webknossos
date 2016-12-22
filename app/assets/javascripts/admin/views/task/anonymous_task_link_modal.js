@@ -1,35 +1,39 @@
-$           = require("jquery")
-_           = require("lodash")
-Clipboard   = require("clipboard-js")
-Marionette  = require("backbone.marionette")
-Toast       = require("libs/toast")
-ModalView   = require("admin/views/modal_view")
+import $ from "jquery";
+import _ from "lodash";
+import Clipboard from "clipboard-js";
+import Marionette from "backbone.marionette";
+import Toast from "libs/toast";
+import ModalView from "admin/views/modal_view";
 
 
-class AnonymousTaskListModal extends ModalView
-
-  headerTemplate : _.template("<h3>Anonymous Task Links for Task <%- id %></h3>")
-  bodyTemplate : _.template("""
+class AnonymousTaskListModal extends ModalView {
+  static initClass() {
+  
+    this.prototype.headerTemplate  = _.template("<h3>Anonymous Task Links for Task <%- id %></h3>");
+    this.prototype.bodyTemplate  = _.template(`\
     <textarea class="form-control" style="min-height: 200px">
 <%- directLinks.join("\\n") %>
-    </textarea>
-  """)
-  footerTemplate : """
-    <a href="#" class="btn btn-primary"><i class="fa fa-copy"></i>Copy</a>
-    <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
-  """
+    </textarea>\
+`);
+    this.prototype.footerTemplate  = `\
+<a href="#" class="btn btn-primary"><i class="fa fa-copy"></i>Copy</a>
+<a href="#" class="btn btn-default" data-dismiss="modal">Close</a>\
+`;
+  
+    this.prototype.events  =
+      {"click .btn-primary" : "copyToClipboard"};
+  }
 
-  events :
-    "click .btn-primary" : "copyToClipboard"
 
+  copyToClipboard(evt) {
 
-  copyToClipboard : (evt) ->
+    evt.preventDefault();
 
-    evt.preventDefault()
+    const links = this.model.get("directLinks").join("\n");
+    return Clipboard.copy(links).then(
+      () => Toast.success("Links copied to clipboard"));
+  }
+}
+AnonymousTaskListModal.initClass();
 
-    links = @model.get("directLinks").join("\n")
-    Clipboard.copy(links).then(
-      -> Toast.success("Links copied to clipboard")
-    )
-
-module.exports = AnonymousTaskListModal
+export default AnonymousTaskListModal;

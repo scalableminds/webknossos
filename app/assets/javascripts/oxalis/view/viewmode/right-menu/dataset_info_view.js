@@ -1,88 +1,108 @@
-Marionette          = require("backbone.marionette")
-app                 = require("app")
-constants           = require("oxalis/constants")
-ArbitraryController = require("oxalis/controller/viewmodes/arbitrary_controller")
+import Marionette from "backbone.marionette";
+import app from "app";
+import constants from "oxalis/constants";
+import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 
-class DatasetInfoView extends Marionette.View
-
-  className : "col-sm-12 flex-column"
-  id : "dataset"
-  template : _.template("""
-    <div class="well">
-      <p><%- annotationType %></p>
-      <p>DataSet: <%- dataSetName %></p>
-      <p>Viewport width: <%- chooseUnit(zoomLevel) %></p>
-      <% if(treeCount != null) { %>
-        <p>Total number of trees: <%- treeCount %></p>
-      <% } %>
-    </div>
-  """)
-
-  templateContext :
-    chooseUnit : ->
-      if(@zoomLevel < 1000)
-        return @zoomLevel.toFixed(0) + " nm"
-      else if (@zoomLevel < 1000000)
-        return (@zoomLevel / 1000).toFixed(1) + " μm"
-      else
-        return (@zoomLevel / 1000000).toFixed(1) + " mm"
-
-
-  initialize : (options) ->
-
-    @render = _.throttle(@render, 100)
-    @listenTo(@model.flycam3d, "changed", @render)
-    @listenTo(@model.flycam, "zoomStepChanged", @render)
-
-    if @model.skeletonTracing
-      @listenTo(@model.skeletonTracing, "deleteTree", @render)
-      @listenTo(@model.skeletonTracing, "mergeTree", @render)
-      @listenTo(@model.skeletonTracing, "newTree", @render)
+class DatasetInfoView extends Marionette.View {
+  static initClass() {
+  
+    this.prototype.className  = "col-sm-12 flex-column";
+    this.prototype.id  = "dataset";
+    this.prototype.template  = _.template(`\
+<div class="well">
+  <p><%- annotationType %></p>
+  <p>DataSet: <%- dataSetName %></p>
+  <p>Viewport width: <%- chooseUnit(zoomLevel) %></p>
+  <% if(treeCount != null) { %>
+    <p>Total number of trees: <%- treeCount %></p>
+  <% } %>
+</div>\
+`);
+  
+    this.prototype.templateContext  = {
+      chooseUnit() {
+        if(this.zoomLevel < 1000) {
+          return this.zoomLevel.toFixed(0) + " nm";
+        } else if (this.zoomLevel < 1000000) {
+          return (this.zoomLevel / 1000).toFixed(1) + " μm";
+        } else {
+          return (this.zoomLevel / 1000000).toFixed(1) + " mm";
+        }
+      }
+    };
+  }
 
 
-  # Rendering performance optimization
-  attachElContent : (html) ->
-    this.el.innerHTML = html
-    return html
+  initialize(options) {
+
+    this.render = _.throttle(this.render, 100);
+    this.listenTo(this.model.flycam3d, "changed", this.render);
+    this.listenTo(this.model.flycam, "zoomStepChanged", this.render);
+
+    if (this.model.skeletonTracing) {
+      this.listenTo(this.model.skeletonTracing, "deleteTree", this.render);
+      this.listenTo(this.model.skeletonTracing, "mergeTree", this.render);
+      return this.listenTo(this.model.skeletonTracing, "newTree", this.render);
+    }
+  }
 
 
-  serializeData : ->
+  // Rendering performance optimization
+  attachElContent(html) {
+    this.el.innerHTML = html;
+    return html;
+  }
 
-    annotationType = @model.get("tracingType")
-    tracing = @model.get("tracing")
-    task = tracing.task
-    name = tracing.name
 
-    # In case we have a task display its id as well
-    if task then annotationType += ": #{task.id}"
-    # Or display an explorative tracings name if there is one
-    if name then annotationType += ": #{name}"
+  serializeData() {
+
+    let annotationType = this.model.get("tracingType");
+    const tracing = this.model.get("tracing");
+    const { task } = tracing;
+    const { name } = tracing;
+
+    // In case we have a task display its id as well
+    if (task) { annotationType += `: ${task.id}`; }
+    // Or display an explorative tracings name if there is one
+    if (name) { annotationType += `: ${name}`; }
 
     return {
-      annotationType : annotationType
-      zoomLevel : @calculateZoomLevel()
-      dataSetName : @model.get("dataset").get("name")
-      treeCount : @model.skeletonTracing?.trees.length
+      annotationType,
+      zoomLevel : this.calculateZoomLevel(),
+      dataSetName : this.model.get("dataset").get("name"),
+      treeCount : __guard__(this.model.skeletonTracing, x => x.trees.length)
+    };
+  }
+
+
+  calculateZoomLevel() {
+
+    let width, zoom;
+    if (constants.MODES_PLANE.includes(this.model.mode)) {
+      zoom  = this.model.flycam.getPlaneScalingFactor();
+      width = constants.PLANE_WIDTH;
     }
 
+    if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
+      zoom  = this.model.flycam3d.zoomStep;
+      width = ArbitraryController.prototype.WIDTH;
+    }
 
-  calculateZoomLevel : ->
-
-    if @model.mode in constants.MODES_PLANE
-      zoom  = @model.flycam.getPlaneScalingFactor()
-      width = constants.PLANE_WIDTH
-
-    if @model.mode in constants.MODES_ARBITRARY
-      zoom  = @model.flycam3d.zoomStep
-      width = ArbitraryController::WIDTH
-
-    # unit is nm
-    return zoom * width * app.scaleInfo.baseVoxel
+    // unit is nm
+    return zoom * width * app.scaleInfo.baseVoxel;
+  }
 
 
-  onDestroy : ->
+  onDestroy() {
 
-    @model.flycam3d.off("changed")
-    @model.flycam.off("zoomStepChanged")
+    this.model.flycam3d.off("changed");
+    return this.model.flycam.off("zoomStepChanged");
+  }
+}
+DatasetInfoView.initClass();
 
-module.exports = DatasetInfoView
+export default DatasetInfoView;
+
+function __guard__(value, transform) {
+  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+}

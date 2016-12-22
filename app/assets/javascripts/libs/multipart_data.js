@@ -1,37 +1,46 @@
 
-class MultipartData
+class MultipartData {
 
-  randomBoundary : ->
+  randomBoundary() {
 
-    '--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--'.replace(/[x]/g,
-      ->
-        (Math.random() * 16 | 0).toString(16))
-
-
-  constructor : (@boundary) ->
-
-    @boundary = @boundary || @randomBoundary()
-    @data = ['--' + @boundary + '\r\n']
+    return '--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--'.replace(/[x]/g,
+      () => ((Math.random() * 16) | 0).toString(16));
+  }
 
 
-  addPart : (headers, body) ->
+  constructor(boundary) {
 
-    for name, value of headers
-      @data.push(name + ': ' + value + '\r\n')
-
-    @data.push('\r\n')
-    @data.push(body) if body?
-    @data.push('\r\n--' + @boundary + '\r\n')
+    this.boundary = boundary;
+    this.boundary = this.boundary || this.randomBoundary();
+    this.data = [`--${this.boundary}\r\n`];
+  }
 
 
-  dataPromise : ->
+  addPart(headers, body) {
 
-    return new Promise((resolve) =>
-      reader = new FileReader()
-      reader.onload = (e) =>
-        resolve(e.target.result)
-      reader.readAsArrayBuffer(new Blob(@data))
-    )
+    for (let name in headers) {
+      const value = headers[name];
+      this.data.push(name + ': ' + value + '\r\n');
+    }
+
+    this.data.push('\r\n');
+    if (body != null) { this.data.push(body); }
+    return this.data.push(`\r\n--${this.boundary}\r\n`);
+  }
 
 
-module.exports = MultipartData
+  dataPromise() {
+
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        return resolve(e.target.result);
+      };
+      return reader.readAsArrayBuffer(new Blob(this.data));
+    }
+    );
+  }
+}
+
+
+export default MultipartData;

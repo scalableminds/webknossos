@@ -1,11 +1,15 @@
-_                    = require("lodash")
-Backbone             = require("backbone")
+import _ from "lodash";
+import Backbone from "backbone";
 
-class WorkloadCollection extends Backbone.Collection
+class WorkloadCollection extends Backbone.Collection {
+  static initClass() {
+  
+    this.prototype.url  = "/api/tasks/workload";
+  
+    this.prototype.state  =
+      {pageSize : 20};
+  }
+}
+WorkloadCollection.initClass();
 
-  url : "/api/tasks/workload"
-
-  state :
-    pageSize : 20
-
-module.exports = WorkloadCollection
+export default WorkloadCollection;

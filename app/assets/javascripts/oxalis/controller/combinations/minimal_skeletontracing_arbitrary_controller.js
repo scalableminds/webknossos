@@ -1,81 +1,92 @@
-_                   = require("lodash")
-app                 = require("app")
-Input               = require("libs/input")
-ArbitraryController = require("../viewmodes/arbitrary_controller")
-Constants           = require("../../constants")
-Toast               = require("libs/toast")
+import _ from "lodash";
+import app from "app";
+import Input from "libs/input";
+import ArbitraryController from "../viewmodes/arbitrary_controller";
+import Constants from "../../constants";
+import Toast from "libs/toast";
 
-class MinimalSkeletonTracingArbitraryController extends ArbitraryController
+class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
-  # See comment in Controller class on general controller architecture.
-  #
-  # Minimal Skeleton Tracing Arbitrary Controller:
-  # Extends Arbitrary controller to add controls that are specific to minimal Arbitrary mode.
+  // See comment in Controller class on general controller architecture.
+  //
+  // Minimal Skeleton Tracing Arbitrary Controller:
+  // Extends Arbitrary controller to add controls that are specific to minimal Arbitrary mode.
 
-  constructor : (args...) ->
+  constructor(...args) {
 
-    super args...
+    super(...args);
 
-    _.defer => @setRecord(true)
-
-
-  initKeyboard : ->
-
-    @input.keyboard = new Input.Keyboard(
-
-      "space"         : (timeFactor) =>
-        @move(timeFactor)
-
-      #Zoom in/out
-      "i"             : (timeFactor) => @cam.zoomIn()
-      "o"             : (timeFactor) => @cam.zoomOut()
-
-      #Rotate in distance
-      "left"          : (timeFactor) => @cam.yaw @model.user.get("rotateValue") * timeFactor, @mode == Constants.MODE_ARBITRARY
-      "right"         : (timeFactor) => @cam.yaw -@model.user.get("rotateValue") * timeFactor, @mode == Constants.MODE_ARBITRARY
-      "up"            : (timeFactor) => @cam.pitch -@model.user.get("rotateValue") * timeFactor, @mode == Constants.MODE_ARBITRARY
-      "down"          : (timeFactor) => @cam.pitch @model.user.get("rotateValue") * timeFactor, @mode == Constants.MODE_ARBITRARY
-    )
-
-    @input.keyboardNoLoop = new Input.KeyboardNoLoop(
-
-      #Branches
-      "b" : => @pushBranch()
-      "j" : => @popBranch()
-
-      #Branchpointvideo
-      "." : => @nextNode(true)
-      "," : => @nextNode(false)
-
-    )
-
-    @input.keyboardOnce = new Input.Keyboard(
-
-      #Delete active node and recenter last node
-      "shift + space" : =>
-        @deleteActiveNode()
-
-    , -1)
+    this.setWaypoint = this.setWaypoint.bind(this);
+    _.defer(() => this.setRecord(true));
+  }
 
 
-  # make sure that it is not possible to keep nodes from being created
-  setWaypoint : =>
+  initKeyboard() {
 
-    return if @isBranchpointvideoMode()
-    unless @model.get("flightmodeRecording")
-      @model.set("flightmodeRecording", true)
-    super
+    this.input.keyboard = new Input.Keyboard({
+
+      "space"         : timeFactor => {
+        return this.move(timeFactor);
+      },
+
+      //Zoom in/out
+      "i"             : timeFactor => this.cam.zoomIn(),
+      "o"             : timeFactor => this.cam.zoomOut(),
+
+      //Rotate in distance
+      "left"          : timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
+      "right"         : timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
+      "up"            : timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
+      "down"          : timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY)
+    });
+
+    this.input.keyboardNoLoop = new Input.KeyboardNoLoop({
+
+      //Branches
+      "b" : () => this.pushBranch(),
+      "j" : () => this.popBranch(),
+
+      //Branchpointvideo
+      "." : () => this.nextNode(true),
+      "," : () => this.nextNode(false)
+
+    });
+
+    return this.input.keyboardOnce = new Input.Keyboard({
+
+      //Delete active node and recenter last node
+      "shift + space" : () => {
+        return this.deleteActiveNode();
+      }
+    }
+
+    , -1);
+  }
 
 
-  deleteActiveNode : ->
+  // make sure that it is not possible to keep nodes from being created
+  setWaypoint() {
 
-    return if @isBranchpointvideoMode()
-    skeletonTracing = @model.skeletonTracing
-    activeNode = skeletonTracing.getActiveNode()
-    if activeNode.id == 1
-      Toast.error("Unable: Attempting to delete first node")
-    else
-      _.defer => @model.skeletonTracing.deleteActiveNode().then( => @centerActiveNode() )
+    if (this.isBranchpointvideoMode()) { return; }
+    if (!this.model.get("flightmodeRecording")) {
+      this.model.set("flightmodeRecording", true);
+    }
+    return super.setWaypoint(...arguments);
+  }
 
 
-module.exports = MinimalSkeletonTracingArbitraryController
+  deleteActiveNode() {
+
+    if (this.isBranchpointvideoMode()) { return; }
+    const { skeletonTracing } = this.model;
+    const activeNode = skeletonTracing.getActiveNode();
+    if (activeNode.id === 1) {
+      return Toast.error("Unable: Attempting to delete first node");
+    } else {
+      return _.defer(() => this.model.skeletonTracing.deleteActiveNode().then( () => this.centerActiveNode() ));
+    }
+  }
+}
+
+
+export default MinimalSkeletonTracingArbitraryController;

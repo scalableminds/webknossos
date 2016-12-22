@@ -1,152 +1,204 @@
-Backbone = require("backbone")
-_ = require("lodash")
+import Backbone from "backbone";
+import _ from "lodash";
 
-class Bucket
+let STATE_NAMES = undefined;
+class Bucket {
+  static initClass() {
+  
+  
+    this.prototype.STATE_UNREQUESTED  = 0;
+    this.prototype.STATE_REQUESTED  = 1;
+    this.prototype.STATE_LOADED  = 2;
+  
+    STATE_NAMES = ["unrequested", "requested", "loaded"];
+  
+    this.prototype.BUCKET_SIZE_P  = 5;
+  }
 
 
-  STATE_UNREQUESTED : 0
-  STATE_REQUESTED : 1
-  STATE_LOADED : 2
+  constructor(BIT_DEPTH, zoomedAddress, temporalBucketManager) {
 
-  STATE_NAMES = ["unrequested", "requested", "loaded"]
+    this.BIT_DEPTH = BIT_DEPTH;
+    this.zoomedAddress = zoomedAddress;
+    this.temporalBucketManager = temporalBucketManager;
+    _.extend(this, Backbone.Events);
 
-  BUCKET_SIZE_P : 5
+    this.BUCKET_LENGTH = (1 << (this.BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
+    this.BYTE_OFFSET   = (this.BIT_DEPTH >> 3);
 
+    this.state = this.STATE_UNREQUESTED;
+    this.dirty = false;
+    this.accessed = true;
 
-  constructor : (@BIT_DEPTH, @zoomedAddress, @temporalBucketManager) ->
+    this.data = null;
+  }
 
-    _.extend(this, Backbone.Events)
 
-    @BUCKET_LENGTH = (1 << @BUCKET_SIZE_P * 3) * (@BIT_DEPTH >> 3)
-    @BYTE_OFFSET   = (@BIT_DEPTH >> 3)
+  shouldCollect() {
 
-    @state = @STATE_UNREQUESTED
-    @dirty = false
-    @accessed = true
+    const collect = !this.accessed && !this.dirty && this.state !== this.STATE_REQUESTED;
+    this.accessed = false;
+    return collect;
+  }
 
-    @data = null
 
+  needsRequest() {
 
-  shouldCollect : ->
+    return this.state === this.STATE_UNREQUESTED;
+  }
 
-    collect = not @accessed and not @dirty and @state != @STATE_REQUESTED
-    @accessed = false
-    return collect
 
+  isLoaded() {
 
-  needsRequest : ->
+    return this.state === this.STATE_LOADED;
+  }
 
-    return @state == @STATE_UNREQUESTED
 
+  label(labelFunc) {
 
-  isLoaded : ->
+    labelFunc(this.getOrCreateData());
+    return this.dirty = true;
+  }
 
-    return @state == @STATE_LOADED
 
+  hasData() {
 
-  label : (labelFunc) ->
+    return (this.data != null);
+  }
 
-    labelFunc(@getOrCreateData())
-    @dirty = true
 
+  getData() {
 
-  hasData : ->
+    if (this.data == null) {
+      throw new Error("Bucket.getData() called, but data does not exist.");
+    }
 
-    return @data?
+    this.accessed = true;
+    return this.data;
+  }
 
 
-  getData : ->
+  getOrCreateData() {
 
-    unless @data?
-      throw new Error("Bucket.getData() called, but data does not exist.")
+    if (this.data == null) {
+      this.data = new Uint8Array(this.BUCKET_LENGTH);
+      this.temporalBucketManager.addBucket(this);
+    }
 
-    @accessed = true
-    return @data
+    return this.getData();
+  }
 
 
-  getOrCreateData : ->
+  pull() {
 
-    unless @data?
-      @data = new Uint8Array(@BUCKET_LENGTH)
-      @temporalBucketManager.addBucket(this)
+    return this.state = (() => { switch (this.state) {
+      case this.STATE_UNREQUESTED: return this.STATE_REQUESTED;
+      default: return this.unexpectedState();
+    } })();
+  }
 
-    return @getData()
 
-
-  pull : ->
-
-    @state = switch @state
-      when @STATE_UNREQUESTED then @STATE_REQUESTED
-      else @unexpectedState()
-
-
-  pullFailed : ->
-
-    @state = switch @state
-      when @STATE_REQUESTED then @STATE_UNREQUESTED
-      else @unexpectedState()
-
-
-  receiveData : (data) ->
-
-    @state = switch @state
-      when @STATE_REQUESTED
-        if @dirty
-          @merge(data)
-        else
-          @data = data
-        @trigger("bucketLoaded")
-        @STATE_LOADED
-      else
-        @unexpectedState()
-
-
-  push : ->
-
-    switch @state
-      when @STATE_LOADED
-        @dirty = false
-      else
-        @unexpectedState()
-
-
-  unexpectedState : ->
-
-    throw new Error("Unexpected state: " + @STATE_NAMES[@state])
-
-
-  merge : (newData) ->
-
-    voxelPerBucket = 1 << @BUCKET_SIZE_P * 3
-    for i in [0...voxelPerBucket]
-
-      oldVoxel = (@data[i * @BYTE_OFFSET + j] for j in [0...@BYTE_OFFSET])
-      oldVoxelEmpty = _.reduce(oldVoxel, ((memo, v) => memo and v == 0), true)
-
-      if oldVoxelEmpty
-        for j in [0...@BYTE_OFFSET]
-          @data[i * @BYTE_OFFSET + j] = newData[i * @BYTE_OFFSET + j]
-
-
-class NullBucket
-
-  # A NullBucket represents a bucket that does not exist, e.g. because it's
-  # outside the dataset's bounding box. It supports only a small subset of
-  # Bucket's methods.
-
-
-  TYPE_OUT_OF_BOUNDING_BOX : 1
-  TYPE_OTHER : 2
-
-
-  constructor : (type) ->
-
-    @isNullBucket = true
-    @isOutOfBoundingBox = type == @TYPE_OUT_OF_BOUNDING_BOX
-
-
-  hasData : -> return false
-  needsRequest : -> return false
-
-
-module.exports = {Bucket, NullBucket}
+  pullFailed() {
+
+    return this.state = (() => { switch (this.state) {
+      case this.STATE_REQUESTED: return this.STATE_UNREQUESTED;
+      default: return this.unexpectedState();
+    } })();
+  }
+
+
+  receiveData(data) {
+
+    return this.state = (() => { switch (this.state) {
+      case this.STATE_REQUESTED:
+        if (this.dirty) {
+          this.merge(data);
+        } else {
+          this.data = data;
+        }
+        this.trigger("bucketLoaded");
+        return this.STATE_LOADED;
+      default:
+        return this.unexpectedState();
+    } })();
+  }
+
+
+  push() {
+
+    switch (this.state) {
+      case this.STATE_LOADED:
+        return this.dirty = false;
+      default:
+        return this.unexpectedState();
+    }
+  }
+
+
+  unexpectedState() {
+
+    throw new Error(`Unexpected state: ${this.STATE_NAMES[this.state]}`);
+  }
+
+
+  merge(newData) {
+
+    const voxelPerBucket = 1 << (this.BUCKET_SIZE_P * 3);
+    return (() => {
+      const result = [];
+      for (let i of __range__(0, voxelPerBucket, false)) {
+
+        let item;
+        const oldVoxel = (__range__(0, this.BYTE_OFFSET, false).map((j) => this.data[(i * this.BYTE_OFFSET) + j]));
+        const oldVoxelEmpty = _.reduce(oldVoxel, ((memo, v) => memo && v === 0), true);
+
+        if (oldVoxelEmpty) {
+          item = __range__(0, this.BYTE_OFFSET, false).map((j) =>
+            this.data[(i * this.BYTE_OFFSET) + j] = newData[(i * this.BYTE_OFFSET) + j]);
+        }
+        result.push(item);
+      }
+      return result;
+    })();
+  }
+}
+Bucket.initClass();
+
+
+class NullBucket {
+  static initClass() {
+  
+    // A NullBucket represents a bucket that does not exist, e.g. because it's
+    // outside the dataset's bounding box. It supports only a small subset of
+    // Bucket's methods.
+  
+  
+    this.prototype.TYPE_OUT_OF_BOUNDING_BOX  = 1;
+    this.prototype.TYPE_OTHER  = 2;
+  }
+
+
+  constructor(type) {
+
+    this.isNullBucket = true;
+    this.isOutOfBoundingBox = type === this.TYPE_OUT_OF_BOUNDING_BOX;
+  }
+
+
+  hasData() { return false; }
+  needsRequest() { return false; }
+}
+NullBucket.initClass();
+
+
+export { Bucket, NullBucket };
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}

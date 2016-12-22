@@ -1,348 +1,407 @@
-Backbone             = require("backbone")
-_                    = require("lodash")
-app                  = require("../app")
-Binary               = require("./model/binary")
-SkeletonTracing      = require("./model/skeletontracing/skeletontracing")
-User                 = require("./model/user")
-DatasetConfiguration = require("./model/dataset_configuration")
-VolumeTracing        = require("./model/volumetracing/volumetracing")
-ConnectionInfo       = require("./model/binarydata_connection_info")
-ScaleInfo            = require("./model/scaleinfo")
-Flycam2d             = require("./model/flycam2d")
-Flycam3d             = require("./model/flycam3d")
-constants            = require("./constants")
-Request              = require("../libs/request")
-Toast                = require("../libs/toast")
-ErrorHandling        = require("../libs/error_handling")
-WkLayer              = require("./model/binary/layers/wk_layer")
-NdStoreLayer         = require("./model/binary/layers/nd_store_layer")
+import Backbone from "backbone";
+import _ from "lodash";
+import app from "../app";
+import Binary from "./model/binary";
+import SkeletonTracing from "./model/skeletontracing/skeletontracing";
+import User from "./model/user";
+import DatasetConfiguration from "./model/dataset_configuration";
+import VolumeTracing from "./model/volumetracing/volumetracing";
+import ConnectionInfo from "./model/binarydata_connection_info";
+import ScaleInfo from "./model/scaleinfo";
+import Flycam2d from "./model/flycam2d";
+import Flycam3d from "./model/flycam3d";
+import constants from "./constants";
+import Request from "../libs/request";
+import Toast from "../libs/toast";
+import ErrorHandling from "../libs/error_handling";
+import WkLayer from "./model/binary/layers/wk_layer";
+import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 
-# This is THE model. It takes care of the data including the
-# communication with the server.
+// This is THE model. It takes care of the data including the
+// communication with the server.
 
-# All public operations are **asynchronous**. We return a promise
-# which you can react on.
-
-
-class Model extends Backbone.Model
+// All public operations are **asynchronous**. We return a promise
+// which you can react on.
 
 
-  HANDLED_ERROR : {}
+class Model extends Backbone.Model {
+  static initClass() {
+  
+  
+    this.prototype.HANDLED_ERROR  = {};
+  }
 
 
-  constructor : ->
+  constructor() {
 
-    @initialized = false
-    super(arguments...)
+    this.initialized = false;
+    super(...arguments);
+  }
 
 
-  fetch : (options) ->
+  fetch(options) {
 
-    if @get("controlMode") == constants.CONTROL_MODE_TRACE
-      # Include /readOnly part whenever it is in the pathname
-      infoUrl = location.pathname + "/info"
-    else
-      infoUrl = "/annotations/#{@get('tracingType')}/#{@get('tracingId')}/info"
+    let datasetName, infoUrl;
+    if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+      // Include /readOnly part whenever it is in the pathname
+      infoUrl = location.pathname + "/info";
+    } else {
+      infoUrl = `/annotations/${this.get('tracingType')}/${this.get('tracingId')}/info`;
+    }
 
-    Request.receiveJSON(infoUrl).then( (tracing) =>
+    return Request.receiveJSON(infoUrl).then( tracing => {
 
-      if tracing.error
-        error = tracing.error
+      let error;
+      if (tracing.error) {
+        ({ error } = tracing);
 
-      else unless tracing.content.dataSet
-        error = "Selected dataset doesn't exist"
+      } else if (!tracing.content.dataSet) {
+        error = "Selected dataset doesn't exist";
 
-      else unless tracing.content.dataSet.dataLayers
-        if datasetName = tracing.content.dataSet.name
-          error = "Please, double check if you have the dataset '#{datasetName}' imported."
-        else
-          error = "Please, make sure you have a dataset imported."
+      } else if (!tracing.content.dataSet.dataLayers) {
+        if (datasetName = tracing.content.dataSet.name) {
+          error = `Please, double check if you have the dataset '${datasetName}' imported.`;
+        } else {
+          error = "Please, make sure you have a dataset imported.";
+        }
+      }
 
-      if error
-        Toast.error(error)
-        throw @HANDLED_ERROR
+      if (error) {
+        Toast.error(error);
+        throw this.HANDLED_ERROR;
+      }
 
-      @user = new User()
-      @set("user", @user)
-      @set("datasetName", tracing.content.dataSet.name)
+      this.user = new User();
+      this.set("user", this.user);
+      this.set("datasetName", tracing.content.dataSet.name);
 
-      return @user.fetch().then(-> Promise.resolve(tracing))
+      return this.user.fetch().then(() => Promise.resolve(tracing));
+    }
 
-    ).then( (tracing) =>
+    ).then( tracing => {
 
-      @set("dataset", new Backbone.Model(tracing.content.dataSet))
-      colorLayers = _.filter( @get("dataset").get("dataLayers"),
-                              (layer) -> layer.category == "color")
-      @set("datasetConfiguration", new DatasetConfiguration({
-        datasetName : @get("datasetName")
+      this.set("dataset", new Backbone.Model(tracing.content.dataSet));
+      const colorLayers = _.filter( this.get("dataset").get("dataLayers"),
+                              layer => layer.category === "color");
+      this.set("datasetConfiguration", new DatasetConfiguration({
+        datasetName : this.get("datasetName"),
         dataLayerNames : _.map(colorLayers, "name")
-      }))
-      return @get("datasetConfiguration").fetch().then(-> Promise.resolve(tracing))
+      }));
+      return this.get("datasetConfiguration").fetch().then(() => Promise.resolve(tracing));
+    }
 
-    ).then( (tracing) =>
+    ).then( tracing => {
 
-      layerInfos = @getLayerInfos(tracing.content.contentData.customLayers)
-      @initializeWithData(tracing, layerInfos)
+      const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
+      return this.initializeWithData(tracing, layerInfos);
+    }
 
-    )
-
-
-  determineAllowedModes : ->
-
-    allowedModes = []
-    settings = @get("settings")
-    for allowedMode in settings.allowedModes
-
-      if @getColorBinaries()[0].cube.BIT_DEPTH == 8
-        switch allowedMode
-          when "flight" then allowedModes.push(constants.MODE_ARBITRARY)
-          when "oblique" then allowedModes.push(constants.MODE_ARBITRARY_PLANE)
-
-      if allowedMode in ["orthogonal", "volume"]
-        allowedModes.push(constants.MODE_NAME_TO_ID[allowedMode])
-
-    if settings.preferredMode
-      modeId = constants.MODE_NAME_TO_ID[settings.preferredMode]
-      if modeId in allowedModes
-        @set("preferredMode", modeId)
-
-    allowedModes.sort()
-    return allowedModes
+    );
+  }
 
 
-  initializeWithData : (tracing, layerInfos) ->
+  determineAllowedModes() {
 
-    dataStore = tracing.content.dataSet.dataStore
-    dataset = @get("dataset")
+    const allowedModes = [];
+    const settings = this.get("settings");
+    for (let allowedMode of settings.allowedModes) {
 
-    LayerClass = switch dataStore.typ
-      when "webknossos-store" then WkLayer
-      when "ndstore" then NdStoreLayer
-      else throw new Error("Unknown datastore type: #{dataStore.typ}")
+      if (this.getColorBinaries()[0].cube.BIT_DEPTH === 8) {
+        switch (allowedMode) {
+          case "flight": allowedModes.push(constants.MODE_ARBITRARY); break;
+          case "oblique": allowedModes.push(constants.MODE_ARBITRARY_PLANE); break;
+        }
+      }
 
-    layers = layerInfos.map((layerInfo) ->
-      new LayerClass(layerInfo, dataset.get("name"), dataStore)
-    )
+      if (["orthogonal", "volume"].includes(allowedMode)) {
+        allowedModes.push(constants.MODE_NAME_TO_ID[allowedMode]);
+      }
+    }
+
+    if (settings.preferredMode) {
+      const modeId = constants.MODE_NAME_TO_ID[settings.preferredMode];
+      if (allowedModes.includes(modeId)) {
+        this.set("preferredMode", modeId);
+      }
+    }
+
+    allowedModes.sort();
+    return allowedModes;
+  }
+
+
+  initializeWithData(tracing, layerInfos) {
+
+    let bb;
+    const { dataStore } = tracing.content.dataSet;
+    const dataset = this.get("dataset");
+
+    const LayerClass = (() => { switch (dataStore.typ) {
+      case "webknossos-store": return WkLayer;
+      case "ndstore": return NdStoreLayer;
+      default: throw new Error(`Unknown datastore type: ${dataStore.typ}`);
+    } })();
+
+    const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataset.get("name"), dataStore));
 
     ErrorHandling.assertExtendContext({
-      task : @get("tracingId")
+      task : this.get("tracingId"),
       dataSet : dataset.get("name")
-    })
+    });
 
-    console.log "tracing", tracing
-    console.log "user", @user
+    console.log("tracing", tracing);
+    console.log("user", this.user);
 
-    isVolumeTracing = "volume" in tracing.content.settings.allowedModes
-    app.scaleInfo = new ScaleInfo(dataset.get("scale"))
+    const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
+    app.scaleInfo = new ScaleInfo(dataset.get("scale"));
 
-    if (bb = tracing.content.boundingBox)?
-      @taskBoundingBox = @computeBoundingBoxFromArray(bb.topLeft.concat([bb.width, bb.height, bb.depth]))
+    if ((bb = tracing.content.boundingBox) != null) {
+      this.taskBoundingBox = this.computeBoundingBoxFromArray(bb.topLeft.concat([bb.width, bb.height, bb.depth]));
+    }
 
-    @connectionInfo = new ConnectionInfo()
-    @binary = {}
+    this.connectionInfo = new ConnectionInfo();
+    this.binary = {};
 
-    maxZoomStep = -Infinity
+    let maxZoomStep = -Infinity;
 
-    for layer in layers
-      maxLayerZoomStep = Math.log(Math.max(layer.resolutions...)) / Math.LN2
-      @binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, @connectionInfo)
-      maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep)
+    for (let layer of layers) {
+      const maxLayerZoomStep = Math.log(Math.max(...layer.resolutions)) / Math.LN2;
+      this.binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, this.connectionInfo);
+      maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep);
+    }
 
-    @buildMappingsObject()
+    this.buildMappingsObject();
 
-    if @getColorBinaries().length == 0
-      Toast.error("No data available! Something seems to be wrong with the dataset.")
-      throw @HANDLED_ERROR
+    if (this.getColorBinaries().length === 0) {
+      Toast.error("No data available! Something seems to be wrong with the dataset.");
+      throw this.HANDLED_ERROR;
+    }
 
-    flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, @)
-    flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"))
-    @set("flycam", flycam)
-    @set("flycam3d", flycam3d)
-    @listenTo(flycam3d, "changed", (matrix, zoomStep) -> flycam.setPosition(matrix[12..14]))
-    @listenTo(flycam, "positionChanged" : (position) -> flycam3d.setPositionSilent(position))
+    const flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, this);
+    const flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"));
+    this.set("flycam", flycam);
+    this.set("flycam3d", flycam3d);
+    this.listenTo(flycam3d, "changed", (matrix, zoomStep) => flycam.setPosition(matrix.slice(12, 15)));
+    this.listenTo(flycam, {["positionChanged"](position) { return flycam3d.setPositionSilent(position); }});
 
-    if @get("controlMode") == constants.CONTROL_MODE_TRACE
+    if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
 
-      if isVolumeTracing
-        ErrorHandling.assert( @getSegmentationBinary()?,
-          "Volume is allowed, but segmentation does not exist" )
-        @set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, @getSegmentationBinary()))
-        @annotationModel = @get("volumeTracing")
-      else
-        @set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, @user))
-        @annotationModel = @get("skeletonTracing")
+      if (isVolumeTracing) {
+        ErrorHandling.assert( (this.getSegmentationBinary() != null),
+          "Volume is allowed, but segmentation does not exist" );
+        this.set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, this.getSegmentationBinary()));
+        this.annotationModel = this.get("volumeTracing");
+      } else {
+        this.set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, this.user));
+        this.annotationModel = this.get("skeletonTracing");
+      }
+    }
 
-    @applyState(@get("state"), tracing)
-    @computeBoundaries()
+    this.applyState(this.get("state"), tracing);
+    this.computeBoundaries();
 
-    @set("tracing", tracing)
-    @set("flightmodeRecording", false)
-    @set("settings", tracing.content.settings)
-    @set("allowedModes", @determineAllowedModes())
-    @set("isTask", @get("tracingType") == "Task")
-
-
-    # Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
-    if @get("allowedModes").length == 0
-      Toast.error("There was no valid allowed tracing mode specified.")
-    else
-      mode = @get("preferredMode") or @get("state").mode or @get("allowedModes")[0]
-      @setMode(mode)
+    this.set("tracing", tracing);
+    this.set("flightmodeRecording", false);
+    this.set("settings", tracing.content.settings);
+    this.set("allowedModes", this.determineAllowedModes());
+    this.set("isTask", this.get("tracingType") === "Task");
 
 
-    @initSettersGetter()
-    @initialized = true
-    @trigger("sync")
-
-    # no error
-    return
-
-
-  setMode : (mode) ->
-
-    @set("mode", mode)
-    @trigger("change:mode", mode)
-
-
-  setUserBoundingBox : (bb) ->
-
-    @userBoundingBox = @computeBoundingBoxFromArray(bb)
-    @trigger("change:userBoundingBox", @userBoundingBox)
-
-
-  computeBoundingBoxFromArray : (bb) ->
-
-    [x, y, z, width, height, depth] = bb
-
-    return {
-      min : [x, y, z]
-      max : [x + width, y + height, z + depth]
+    // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
+    if (this.get("allowedModes").length === 0) {
+      Toast.error("There was no valid allowed tracing mode specified.");
+    } else {
+      const mode = this.get("preferredMode") || this.get("state").mode || this.get("allowedModes")[0];
+      this.setMode(mode);
     }
 
 
-  # For now, since we have no UI for this
-  buildMappingsObject : ->
+    this.initSettersGetter();
+    this.initialized = true;
+    this.trigger("sync");
 
-    segmentationBinary = @getSegmentationBinary()
+    // no error
+  }
 
-    if segmentationBinary?
-      window.mappings = {
-        getAll : -> segmentationBinary.mappings.getMappingNames()
-        getActive : -> segmentationBinary.activeMapping
-        activate : (mapping) -> segmentationBinary.setActiveMapping(mapping)
+
+  setMode(mode) {
+
+    this.set("mode", mode);
+    return this.trigger("change:mode", mode);
+  }
+
+
+  setUserBoundingBox(bb) {
+
+    this.userBoundingBox = this.computeBoundingBoxFromArray(bb);
+    return this.trigger("change:userBoundingBox", this.userBoundingBox);
+  }
+
+
+  computeBoundingBoxFromArray(bb) {
+
+    const [x, y, z, width, height, depth] = bb;
+
+    return {
+      min : [x, y, z],
+      max : [x + width, y + height, z + depth]
+    };
+  }
+
+
+  // For now, since we have no UI for this
+  buildMappingsObject() {
+
+    const segmentationBinary = this.getSegmentationBinary();
+
+    if (segmentationBinary != null) {
+      return window.mappings = {
+        getAll() { return segmentationBinary.mappings.getMappingNames(); },
+        getActive() { return segmentationBinary.activeMapping; },
+        activate(mapping) { return segmentationBinary.setActiveMapping(mapping); }
+      };
+    }
+  }
+
+
+  getColorBinaries() {
+
+    return _.filter(this.binary, binary => binary.category === "color");
+  }
+
+
+  getSegmentationBinary() {
+
+    return _.find(this.binary, binary => binary.category === "segmentation");
+  }
+
+
+  getLayerInfos(userLayers) {
+    // Overwrite or extend layers with userLayers
+
+    const layers = this.get("dataset").get("dataLayers");
+    if (userLayers == null) { return layers; }
+
+    for (let userLayer of userLayers) {
+
+      const layer = _.find(layers, layer => layer.name === __guard__(userLayer.fallback, x => x.layerName));
+
+      if (layer != null) {
+        _.extend(layer, userLayer);
+      } else {
+        layers.push(userLayer);
       }
+    }
+
+    return layers;
+  }
 
 
-  getColorBinaries : ->
+  canDisplaySegmentationData() {
 
-    return _.filter(@binary, (binary) ->
-      binary.category == "color"
-    )
-
-
-  getSegmentationBinary : ->
-
-    return _.find(@binary, (binary) ->
-      binary.category == "segmentation"
-    )
+    return !this.flycam.getIntegerZoomStep() > 0 || !this.getSegmentationBinary();
+  }
 
 
-  getLayerInfos : (userLayers) ->
-    # Overwrite or extend layers with userLayers
+  computeBoundaries() {
 
-    layers = @get("dataset").get("dataLayers")
-    return layers unless userLayers?
+    this.lowerBoundary = [ Infinity,  Infinity,  Infinity];
+    this.upperBoundary = [-Infinity, -Infinity, -Infinity];
 
-    for userLayer in userLayers
+    return (() => {
+      const result = [];
+      for (let key in this.binary) {
+        const binary = this.binary[key];
+        result.push([0, 1, 2].map((i) =>
+          (this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]),
+          this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]))));
+      }
+      return result;
+    })();
+  }
 
-      layer = _.find layers, (layer) ->
-        layer.name == userLayer.fallback?.layerName
+  // delegate save request to all submodules
+  save() {
 
-      if layer?
-        _.extend layer, userLayer
-      else
-        layers.push(userLayer)
+    const submodels = [];
+    const promises = [];
 
-    return layers
+    if (this.user != null) {
+      submodels.push[this.user];
+    }
 
+    if (this.get("dataset") != null) {
+      submodels.push[this.get("dataset")];
+    }
 
-  canDisplaySegmentationData : ->
+    if (this.get("datasetConfiguration") != null) {
+      submodels.push[this.get("datasetConfiguration")];
+    }
 
-    return not @flycam.getIntegerZoomStep() > 0 or not @getSegmentationBinary()
+    if (this.get("volumeTracing") != null) {
+      submodels.push(this.get("volumeTracing").stateLogger);
+    }
 
+    if (this.get("skeletonTracing") != null) {
+      submodels.push(this.get("skeletonTracing").stateLogger);
+    }
 
-  computeBoundaries : ->
-
-    @lowerBoundary = [ Infinity,  Infinity,  Infinity]
-    @upperBoundary = [-Infinity, -Infinity, -Infinity]
-
-    for key, binary of @binary
-      for i in [0..2]
-        @lowerBoundary[i] = Math.min @lowerBoundary[i], binary.lowerBoundary[i]
-        @upperBoundary[i] = Math.max @upperBoundary[i], binary.upperBoundary[i]
-
-  # delegate save request to all submodules
-  save : ->
-
-    submodels = []
-    promises = []
-
-    if @user?
-      submodels.push[@user]
-
-    if @get("dataset")?
-      submodels.push[@get("dataset")]
-
-    if @get("datasetConfiguration")?
-      submodels.push[@get("datasetConfiguration")]
-
-    if @get("volumeTracing")?
-      submodels.push(@get("volumeTracing").stateLogger)
-
-    if @get("skeletonTracing")?
-      submodels.push(@get("skeletonTracing").stateLogger)
-
-    _.each(submodels, (model) ->
-      promises.push( model.save() )
-    )
+    _.each(submodels, model => promises.push( model.save() ));
 
     return Promise.all(promises).then(
-      ->
-        Toast.success("Saved!")
-        return Promise.resolve(arguments)
-      ->
-        Toast.error("Couldn't save. Please try again.")
-        return Promise.reject(arguments)
-    )
+      function() {
+        Toast.success("Saved!");
+        return Promise.resolve(arguments);
+      },
+      function() {
+        Toast.error("Couldn't save. Please try again.");
+        return Promise.reject(arguments);
+    });
+  }
 
 
-  # Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
-  initSettersGetter : ->
+  // Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
+  initSettersGetter() {
 
-    _.forEach(@attributes, (value, key, attribute) =>
+    return _.forEach(this.attributes, (value, key, attribute) => {
 
-      Object.defineProperty(@, key,
-        set : (val) ->
-          this.set(key, val)
-        , get : ->
-          return @get(key)
-      )
-    )
-
-
-  applyState : (state, tracing) ->
-
-    @get("flycam").setPosition(state.position || tracing.content.editPosition)
-    if state.zoomStep?
-      @get("user").set("zoom", Math.exp(Math.LN2 * state.zoomStep))
-      @get("flycam3d").setZoomStep( state.zoomStep )
-
-    rotation = state.rotation || tracing.content.editRotation
-    if rotation?
-      @get("flycam3d").setRotation(rotation)
-
-    if state.activeNode?
-      @get("skeletonTracing")?.setActiveNode(state.activeNode)
+      return Object.defineProperty(this, key, {
+        set(val) {
+          return this.set(key, val);
+        }
+        , get() {
+          return this.get(key);
+        }
+      }
+      );
+    }
+    );
+  }
 
 
-module.exports = Model
+  applyState(state, tracing) {
+
+    this.get("flycam").setPosition(state.position || tracing.content.editPosition);
+    if (state.zoomStep != null) {
+      this.get("user").set("zoom", Math.exp(Math.LN2 * state.zoomStep));
+      this.get("flycam3d").setZoomStep( state.zoomStep );
+    }
+
+    const rotation = state.rotation || tracing.content.editRotation;
+    if (rotation != null) {
+      this.get("flycam3d").setRotation(rotation);
+    }
+
+    if (state.activeNode != null) {
+      return __guard__(this.get("skeletonTracing"), x => x.setActiveNode(state.activeNode));
+    }
+  }
+}
+Model.initClass();
+
+
+export default Model;
+
+function __guard__(value, transform) {
+  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+}

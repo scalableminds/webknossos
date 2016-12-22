@@ -1,244 +1,297 @@
-app             = require("app")
-Backbone        = require("backbone")
-ErrorHandling   = require("libs/error_handling")
-Model           = require("../model")
-Dimensions      = require("../model/dimensions")
-constants       = require("../constants")
-Tree            = require("./tree")
+import app from "app";
+import Backbone from "backbone";
+import ErrorHandling from "libs/error_handling";
+import Model from "../model";
+import Dimensions from "../model/dimensions";
+import constants from "../constants";
+import Tree from "./tree";
 
-class Skeleton
+class Skeleton {
+  static initClass() {
+  
+    // This class is supposed to collect all the Geometries that belong to the skeleton, like
+    // nodes, edges and trees
+  
+    this.prototype.COLOR_ACTIVE  = 0xff0000;
+  }
 
-  # This class is supposed to collect all the Geometries that belong to the skeleton, like
-  # nodes, edges and trees
+  constructor(model) {
 
-  COLOR_ACTIVE : 0xff0000
+    this.getMeshes = this.getMeshes.bind(this);
+    this.setWaypoint = this.setWaypoint.bind(this);
+    this.model = model;
+    _.extend(this, Backbone.Events);
 
-  constructor : (@model) ->
+    this.skeletonTracing    = this.model.skeletonTracing;
+    this.treeGeometries = [];
+    this.isVisible      = true;
 
-    _.extend(this, Backbone.Events)
+    this.showInactiveTrees = true;
 
-    @skeletonTracing    = @model.skeletonTracing
-    @treeGeometries = []
-    @isVisible      = true
+    this.reset();
 
-    @showInactiveTrees = true
+    this.listenTo(this.skeletonTracing, "newActiveNode", function(nodeId) {
+      this.setActiveNode();
+      return this.setInactiveTreeVisibility(this.showInactiveTrees);
+    });
+    this.listenTo(this.skeletonTracing, "newActiveNodeRadius", this.setActiveNodeRadius);
+    this.listenTo(this.skeletonTracing, "newTree", function(treeId, treeColor) {
+      this.createNewTree(treeId, treeColor);
+      return this.setInactiveTreeVisibility(this.showInactiveTrees);
+    });
+    this.listenTo(this.skeletonTracing, "deleteTree", this.deleteTree);
+    this.listenTo(this.skeletonTracing, "deleteActiveNode", this.deleteNode);
+    this.listenTo(this.skeletonTracing, "mergeTree", this.mergeTree);
+    this.listenTo(this.skeletonTracing, "newNode", this.setWaypoint);
+    this.listenTo(this.skeletonTracing, "setBranch", this.setBranch);
+    this.listenTo(this.skeletonTracing, "newTreeColor", this.updateTreeColor);
+    this.listenTo(this.skeletonTracing, "reloadTrees", this.loadSkeletonFromModel);
 
-    @reset()
+    this.listenTo(this.model.user, "change:particleSize", this.setParticleSize);
+    this.listenTo(this.model.user, "change:overrideNodeRadius", overrideNodeRadius => {
+      return this.treeGeometries.map((tree) =>
+        tree.showRadius(!this.model.user.get("overrideNodeRadius")));
+    }
+    );
+  }
 
-    @listenTo(@skeletonTracing, "newActiveNode", (nodeId) ->
-      @setActiveNode()
-      @setInactiveTreeVisibility(@showInactiveTrees)
-    )
-    @listenTo(@skeletonTracing, "newActiveNodeRadius", @setActiveNodeRadius)
-    @listenTo(@skeletonTracing, "newTree", (treeId, treeColor) ->
-      @createNewTree(treeId, treeColor)
-      @setInactiveTreeVisibility(@showInactiveTrees)
-    )
-    @listenTo(@skeletonTracing, "deleteTree", @deleteTree)
-    @listenTo(@skeletonTracing, "deleteActiveNode", @deleteNode)
-    @listenTo(@skeletonTracing, "mergeTree", @mergeTree)
-    @listenTo(@skeletonTracing, "newNode", @setWaypoint)
-    @listenTo(@skeletonTracing, "setBranch", @setBranch)
-    @listenTo(@skeletonTracing, "newTreeColor", @updateTreeColor)
-    @listenTo(@skeletonTracing, "reloadTrees", @loadSkeletonFromModel)
+  createNewTree(treeId, treeColor) {
 
-    @listenTo(@model.user, "change:particleSize", @setParticleSize)
-    @listenTo(@model.user, "change:overrideNodeRadius", (overrideNodeRadius) =>
-      for tree in @treeGeometries
-        tree.showRadius(not @model.user.get("overrideNodeRadius"))
-    )
+    const tree = new Tree(treeId, treeColor, this.model);
+    this.treeGeometries.push(tree);
+    this.setActiveNode();
+    return this.trigger("newGeometries", tree.getMeshes());
+  }
 
-  createNewTree : (treeId, treeColor) ->
 
-    tree = new Tree(treeId, treeColor, @model)
-    @treeGeometries.push(tree)
-    @setActiveNode()
-    @trigger("newGeometries", tree.getMeshes())
+  // Will completely reload the trees from model.
+  // This needs to be done at initialization
 
+  reset() {
 
-  # Will completely reload the trees from model.
-  # This needs to be done at initialization
+    for (var tree of this.treeGeometries) {
+      this.trigger("removeGeometries", tree.getMeshes());
+      tree.dispose();
+    }
 
-  reset : ->
+    this.treeGeometries = [];
 
-    for tree in @treeGeometries
-      @trigger("removeGeometries", tree.getMeshes())
-      tree.dispose()
+    for (tree of this.skeletonTracing.getTrees()) {
+      this.createNewTree(tree.treeId, tree.color);
+    }
 
-    @treeGeometries = []
+    return this.loadSkeletonFromModel();
+  }
 
-    for tree in @skeletonTracing.getTrees()
-      @createNewTree(tree.treeId, tree.color)
 
-    @loadSkeletonFromModel()
+  loadSkeletonFromModel(trees) {
 
+    if (trees == null) { trees = this.model.skeletonTracing.getTrees(); }
 
-  loadSkeletonFromModel : (trees) ->
+    for (let tree of trees) {
 
-    unless trees? then trees = @model.skeletonTracing.getTrees()
+      const treeGeometry = this.getTreeGeometry(tree.treeId);
+      treeGeometry.clear();
+      treeGeometry.addNodes( tree.nodes );
 
-    for tree in trees
+      for (let branchpoint of tree.branchpoints) {
+        treeGeometry.updateNodeColor(branchpoint.id, null, true);
+      }
+    }
 
-      treeGeometry = @getTreeGeometry(tree.treeId)
-      treeGeometry.clear()
-      treeGeometry.addNodes( tree.nodes )
+    this.setActiveNode();
 
-      for branchpoint in tree.branchpoints
-        treeGeometry.updateNodeColor(branchpoint.id, null, true)
+    return app.vent.trigger("rerender");
+  }
 
-    @setActiveNode()
 
-    app.vent.trigger("rerender")
+  setBranch(isBranchPoint, node) {
 
+    const treeGeometry = this.getTreeGeometry( node.treeId );
+    treeGeometry.updateNodeColor(node.id, null, isBranchPoint);
 
-  setBranch : (isBranchPoint, node) ->
+    return app.vent.trigger("rerender");
+  }
 
-    treeGeometry = @getTreeGeometry( node.treeId )
-    treeGeometry.updateNodeColor(node.id, null, isBranchPoint)
 
-    app.vent.trigger("rerender")
+  updateTreeColor(treeId) {
 
+    this.getTreeGeometry(treeId).updateTreeColor();
+    return app.vent.trigger("rerender");
+  }
 
-  updateTreeColor : (treeId) ->
 
-    @getTreeGeometry(treeId).updateTreeColor()
-    app.vent.trigger("rerender")
+  getMeshes() {
 
+    let meshes = [];
+    for (let tree of this.treeGeometries) {
+      meshes = meshes.concat(tree.getMeshes());
+    }
+    return meshes;
+  }
 
-  getMeshes : =>
+  setWaypoint(centered) {
 
-    meshes = []
-    for tree in @treeGeometries
-      meshes = meshes.concat(tree.getMeshes())
-    return meshes
+    const treeGeometry = this.getTreeGeometry(this.skeletonTracing.getTree().treeId);
 
-  setWaypoint : (centered) =>
+    treeGeometry.addNode(this.skeletonTracing.getActiveNode());
+    return app.vent.trigger("rerender");
+  }
 
-    treeGeometry = @getTreeGeometry(@skeletonTracing.getTree().treeId)
 
-    treeGeometry.addNode(@skeletonTracing.getActiveNode())
-    app.vent.trigger("rerender")
+  deleteNode(node, treeId) {
 
+    ErrorHandling.assertEquals(node.neighbors.length, 1, "Node needs to have exactly 1 neighbor.");
 
-  deleteNode : (node, treeId) ->
+    const treeGeometry = this.getTreeGeometry(treeId);
+    treeGeometry.deleteNode(node);
 
-    ErrorHandling.assertEquals(node.neighbors.length, 1, "Node needs to have exactly 1 neighbor.")
+    return app.vent.trigger("rerender");
+  }
 
-    treeGeometry = @getTreeGeometry(treeId)
-    treeGeometry.deleteNode(node)
 
-    app.vent.trigger("rerender")
+  mergeTree(lastTreeID, lastNode, activeNode) {
 
+    const lastTree   = this.getTreeGeometry(lastTreeID);
+    const activeTree = this.getTreeGeometry(this.skeletonTracing.getTree().treeId);
 
-  mergeTree : (lastTreeID, lastNode, activeNode) ->
+    return activeTree.mergeTree(lastTree, lastNode, activeNode);
+  }
 
-    lastTree   = @getTreeGeometry(lastTreeID)
-    activeTree = @getTreeGeometry(@skeletonTracing.getTree().treeId)
 
-    activeTree.mergeTree(lastTree, lastNode, activeNode)
+  deleteTree(index) {
 
+    const treeGeometry = this.treeGeometries[index];
 
-  deleteTree : (index) ->
+    this.trigger("removeGeometries", treeGeometry.getMeshes());
+    treeGeometry.dispose();
+    this.treeGeometries.splice(index, 1);
 
-    treeGeometry = @treeGeometries[index]
+    return app.vent.trigger("rerender");
+  }
 
-    @trigger("removeGeometries", treeGeometry.getMeshes())
-    treeGeometry.dispose()
-    @treeGeometries.splice(index, 1)
 
-    app.vent.trigger("rerender")
+  setActiveNode() {
 
+    let activeNode, treeGeometry;
+    if (this.lastActiveNode != null) {
+      treeGeometry = this.getTreeGeometry(this.lastActiveNode.treeId);
+      __guard__(treeGeometry, x => x.updateNodeColor(this.lastActiveNode.id, false));
+    }
 
-  setActiveNode : ->
+    if ((activeNode = this.model.skeletonTracing.getActiveNode()) != null) {
+      treeGeometry = this.getTreeGeometry(activeNode.treeId);
+      __guard__(treeGeometry, x1 => x1.updateNodeColor(activeNode.id, true));
+      __guard__(treeGeometry, x2 => x2.startNodeHighlightAnimation(activeNode.id));
+    }
 
-    if @lastActiveNode?
-      treeGeometry = @getTreeGeometry(@lastActiveNode.treeId)
-      treeGeometry?.updateNodeColor(@lastActiveNode.id, false)
+    return this.lastActiveNode = activeNode;
+  }
 
-    if (activeNode = @model.skeletonTracing.getActiveNode())?
-      treeGeometry = @getTreeGeometry(activeNode.treeId)
-      treeGeometry?.updateNodeColor(activeNode.id, true)
-      treeGeometry?.startNodeHighlightAnimation(activeNode.id)
 
-    @lastActiveNode = activeNode
+  setActiveNodeRadius() {
 
+    let activeNode;
+    if ((activeNode = this.model.skeletonTracing.getActiveNode()) != null) {
+      const treeGeometry = this.getTreeGeometry( activeNode.treeId );
+      __guard__(treeGeometry, x => x.updateNodeRadius( activeNode.id, activeNode.radius ));
+      return app.vent.trigger("rerender");
+    }
+  }
 
-  setActiveNodeRadius : ->
 
-    if (activeNode = @model.skeletonTracing.getActiveNode())?
-      treeGeometry = @getTreeGeometry( activeNode.treeId )
-      treeGeometry?.updateNodeRadius( activeNode.id, activeNode.radius )
-      app.vent.trigger("rerender")
+  getAllNodes() {
 
+    return (this.treeGeometries.map((tree) => tree.nodes));
+  }
 
-  getAllNodes : ->
 
-    return (tree.nodes for tree in @treeGeometries)
+  getTreeGeometry(treeId) {
 
+    if (!treeId) {
+      ({ treeId } = this.skeletonTracing.getTree());
+    }
+    for (let tree of this.treeGeometries) {
+      if (tree.id === treeId) {
+        return tree;
+      }
+    }
+    return null;
+  }
 
-  getTreeGeometry : (treeId) ->
 
-    unless treeId
-      treeId = @skeletonTracing.getTree().treeId
-    for tree in @treeGeometries
-      if tree.id == treeId
-        return tree
-    return null
+  setVisibilityTemporary(isVisible) {
 
+    for (let mesh of this.getMeshes()) {
+      mesh.visible = isVisible && ((mesh.isVisible != null) ? mesh.isVisible : true);
+    }
+    return app.vent.trigger("rerender");
+  }
 
-  setVisibilityTemporary : (isVisible) ->
 
-    for mesh in @getMeshes()
-      mesh.visible = isVisible && (if mesh.isVisible? then mesh.isVisible else true)
-    app.vent.trigger("rerender")
+  setVisibility(isVisible) {
 
+    this.isVisible = isVisible;
+    return app.vent.trigger("rerender");
+  }
 
-  setVisibility : (@isVisible) ->
 
-    app.vent.trigger("rerender")
+  restoreVisibility() {
 
+    return this.setVisibilityTemporary( this.isVisible );
+  }
 
-  restoreVisibility : ->
 
-    @setVisibilityTemporary( @isVisible )
+  toggleVisibility() {
 
+    return this.setVisibility( !this.isVisible );
+  }
 
-  toggleVisibility : ->
 
-    @setVisibility( not @isVisible )
+  updateForCam(id) {
 
+    for (let tree of this.treeGeometries) {
+      tree.showRadius( id !== constants.TDView &&
+        !this.model.user.get("overrideNodeRadius") );
+    }
 
-  updateForCam : (id) ->
+    if (constants.ALL_PLANES.includes(id)) {
+      return this.setVisibilityTemporary( this.isVisible );
+    } else {
+      return this.setVisibilityTemporary( true );
+    }
+  }
 
-    for tree in @treeGeometries
-      tree.showRadius( id != constants.TDView and
-        not @model.user.get("overrideNodeRadius") )
 
-    if id in constants.ALL_PLANES
-      @setVisibilityTemporary( @isVisible )
-    else
-      @setVisibilityTemporary( true )
+  toggleInactiveTreeVisibility() {
 
+    this.showInactiveTrees = !this.showInactiveTrees;
+    return this.setInactiveTreeVisibility(this.showInactiveTrees);
+  }
 
-  toggleInactiveTreeVisibility : ->
 
-    @showInactiveTrees = not @showInactiveTrees
-    @setInactiveTreeVisibility(@showInactiveTrees)
+  setInactiveTreeVisibility(visible) {
 
+    for (let mesh of this.getMeshes()) {
+      mesh.isVisible = visible;
+    }
+    const treeGeometry = this.getTreeGeometry(this.skeletonTracing.getTree().treeId);
+    treeGeometry.edges.isVisible = true;
+    treeGeometry.nodes.isVisible = true;
+    return app.vent.trigger("rerender");
+  }
 
-  setInactiveTreeVisibility : (visible) ->
 
-    for mesh in @getMeshes()
-      mesh.isVisible = visible
-    treeGeometry = @getTreeGeometry(@skeletonTracing.getTree().treeId)
-    treeGeometry.edges.isVisible = true
-    treeGeometry.nodes.isVisible = true
-    app.vent.trigger("rerender")
+  setSizeAttenuation(sizeAttenuation) {
 
+    return this.treeGeometries.map((tree) =>
+      tree.setSizeAttenuation(sizeAttenuation));
+  }
+}
+Skeleton.initClass();
 
-  setSizeAttenuation : (sizeAttenuation) ->
+export default Skeleton;
 
-    for tree in @treeGeometries
-      tree.setSizeAttenuation(sizeAttenuation)
-
-module.exports = Skeleton
+function __guard__(value, transform) {
+  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+}

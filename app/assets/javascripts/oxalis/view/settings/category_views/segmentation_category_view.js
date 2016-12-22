@@ -1,32 +1,39 @@
-SliderSettingView = require("../setting_views/slider_setting_view")
-CategoryView      = require("./category_view")
+import SliderSettingView from "../setting_views/slider_setting_view";
+import CategoryView from "./category_view";
 
-class SegementationCategoryView extends CategoryView
+class SegementationCategoryView extends CategoryView {
+  static initClass() {
+  
+  
+    this.prototype.caption  = "Segmentation";
+  
+    this.prototype.subviewCreatorsList  = [
+  
+      [
+        "segmentOpacity", function() {
+  
+          return new SliderSettingView({
+            model : this.model,
+            options : {
+              name : "segmentationOpacity",
+              displayName : "Segement Opacity",
+              min : 0,
+              max : 100,
+              step : 1
+            }
+          });
+        }
+      ]
+    ];
+  }
 
 
-  caption : "Segmentation"
+  initialize() {
 
-  subviewCreatorsList : [
+    super.initialize();
+    if (app.oxalis.model.getSegmentationBinary() == null) { return this.hide(); }
+  }
+}
+SegementationCategoryView.initClass();
 
-    [
-      "segmentOpacity", ->
-
-        return new SliderSettingView(
-          model : @model
-          options :
-            name : "segmentationOpacity"
-            displayName : "Segement Opacity"
-            min : 0
-            max : 100
-            step : 1
-        )
-    ]
-  ]
-
-
-  initialize : ->
-
-    super()
-    @hide() unless app.oxalis.model.getSegmentationBinary()?
-
-module.exports = SegementationCategoryView
+export default SegementationCategoryView;

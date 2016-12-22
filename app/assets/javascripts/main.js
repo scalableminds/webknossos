@@ -1,46 +1,46 @@
-$             = require("jquery")
-_             = require("lodash")
-Backbone      = require("backbone")
-ErrorHandling = require("libs/error_handling")
-Request       = require("libs/request")
-app           = require("./app")
+import $ from "jquery";
+import _ from "lodash";
+import Backbone from "backbone";
+import ErrorHandling from "libs/error_handling";
+import Request from "libs/request";
+import app from "./app";
 
-require("bootstrap")
-require("jasny-bootstrap")
-require("whatwg-fetch")
-require("es6-promise")
-require("libs/core_ext")
-require("backbone.marionette")
+import "bootstrap";
+import "jasny-bootstrap";
+import "whatwg-fetch";
+import "es6-promise";
+import "libs/core_ext";
+import "backbone.marionette";
 
-require("../stylesheets/main.less")
+import "../stylesheets/main.less";
 
-ErrorHandling.initialize( throwAssertions : false, sendLocalErrors : false )
+ErrorHandling.initialize({ throwAssertions : false, sendLocalErrors : false });
 
-Router = require("./router")
+import Router from "./router";
 
-app.on("start", ->
-  app.router = new Router()
-  Backbone.history.start( pushState : true )
-)
+app.on("start", function() {
+  app.router = new Router();
+  return Backbone.history.start({ pushState : true });
+});
 
-app.on("start", ->
-  Request.receiveJSON("/api/user", doNotCatch : true)
-    .then((user) ->
-      app.currentUser = user
-      ErrorHandling.setCurrentUser(user)
-      return
-    ).catch((error) -> return)
-)
+app.on("start", () =>
+  Request.receiveJSON("/api/user", {doNotCatch : true})
+    .then(function(user) {
+      app.currentUser = user;
+      ErrorHandling.setCurrentUser(user);
+    }).catch(function(error) {  })
+);
 
-app.on("start", ->
-  # set app.vent to the global radio channel
+app.on("start", () =>
+  // set app.vent to the global radio channel
   app.vent = Backbone.Radio.channel('global')
-)
+);
 
 
-$ ->
-  # show the bootstrap flash modal on load
-  $("#flashModal").modal("show")
+$(function() {
+  // show the bootstrap flash modal on load
+  $("#flashModal").modal("show");
 
-  app.start()
+  return app.start();
+});
 

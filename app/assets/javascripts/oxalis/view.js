@@ -1,49 +1,58 @@
-$         = require("jquery")
-app       = require("../app")
-Toast     = require("../libs/toast")
-THREE     = require("three")
-constants = require("./constants")
-modal     = require("./view/modal")
+import $ from "jquery";
+import app from "../app";
+import Toast from "../libs/toast";
+import THREE from "three";
+import constants from "./constants";
+import modal from "./view/modal";
 
-class View
+class View {
 
-  constructor : (@model) ->
+  constructor(model) {
 
-    unless @isWebGlSupported()
+    this.model = model;
+    if (!this.isWebGlSupported()) {
       Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>"+
-        "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>")
+        "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>");
+    }
 
-    @renderer = new THREE.WebGLRenderer( clearColor: 0x000000, clearAlpha: 1.0, antialias: false )
-    @scene = new THREE.Scene()
+    this.renderer = new THREE.WebGLRenderer({ clearColor: 0x000000, clearAlpha: 1.0, antialias: false });
+    this.scene = new THREE.Scene();
 
-    @setTheme(constants.THEME_BRIGHT)
+    this.setTheme(constants.THEME_BRIGHT);
 
-    # disable loader
-    $("#loader").addClass("hidden")
-
-
-  toggleTheme : ->
-
-    if @theme is constants.THEME_BRIGHT
-      @setTheme(constants.THEME_DARK)
-    else
-      @setTheme(constants.THEME_BRIGHT)
+    // disable loader
+    $("#loader").addClass("hidden");
+  }
 
 
-  setTheme : (theme) ->
+  toggleTheme() {
 
-    @theme = theme
-    app.vent.trigger("view:setTheme", theme)
-
-    if theme is constants.THEME_BRIGHT
-      $("body").attr('class', 'bright')
-    else
-      $("body").attr('class', 'dark')
-
+    if (this.theme === constants.THEME_BRIGHT) {
+      return this.setTheme(constants.THEME_DARK);
+    } else {
+      return this.setTheme(constants.THEME_BRIGHT);
+    }
+  }
 
 
-  isWebGlSupported : ->
+  setTheme(theme) {
 
-    return window.WebGLRenderingContext and document.createElement('canvas').getContext('experimental-webgl')
+    this.theme = theme;
+    app.vent.trigger("view:setTheme", theme);
 
-module.exports = View
+    if (theme === constants.THEME_BRIGHT) {
+      return $("body").attr('class', 'bright');
+    } else {
+      return $("body").attr('class', 'dark');
+    }
+  }
+
+
+
+  isWebGlSupported() {
+
+    return window.WebGLRenderingContext && document.createElement('canvas').getContext('experimental-webgl');
+  }
+}
+
+export default View;

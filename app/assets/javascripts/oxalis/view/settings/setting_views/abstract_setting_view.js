@@ -1,20 +1,25 @@
-_          = require("lodash")
-Marionette = require("backbone.marionette")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
 
-class AbstractSettingView extends Marionette.View
-
-
-  initialize : ({ @model, @options }) ->
-
-    @listenTo(@model, "change:#{@options.name}" , @update)
-    @options = _.defaults(@options, {enabled: true})
+class AbstractSettingView extends Marionette.View {
 
 
-  serializeData : ->
+  initialize({ model, options }) {
+
+    this.model = model;
+    this.options = options;
+    this.listenTo(this.model, `change:${this.options.name}` , this.update);
+    return this.options = _.defaults(this.options, {enabled: true});
+  }
+
+
+  serializeData() {
 
     return _.extend(
-      @options
-      { value : @model.get(@options.name) }
-    )
+      this.options,
+      { value : this.model.get(this.options.name) }
+    );
+  }
+}
 
-module.exports = AbstractSettingView
+export default AbstractSettingView;

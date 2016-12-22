@@ -1,217 +1,253 @@
-_          = require("lodash")
-Marionette = require("backbone.marionette")
-routes     = require("routes")
-Toast      = require("libs/toast")
-Request    = require("libs/request")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import routes from "routes";
+import Toast from "libs/toast";
+import Request from "libs/request";
 
-class TaskCreateBulkImportView extends Marionette.View
+class TaskCreateBulkImportView extends Marionette.View {
+  constructor(...args) {
+    super(...args);
+    this.showSaveSuccess = this.showSaveSuccess.bind(this);
+  }
 
-  id : "create-bulk-import"
-
-  template : _.template("""
-  <div class="row">
-    <div class="col-sm-12">
-      <div class="well">
-        One line for each task. The values are seperated by ','. Format: <br>
-        dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project<br><br>
-        <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
-          <div class="form-group">
-            <div class="col-sm-12">
-              <textarea class="form-control input-monospace" rows="20" name="data"></textarea>
-            </div>
+  static initClass() {
+  
+    this.prototype.id  = "create-bulk-import";
+  
+    this.prototype.template  = _.template(`\
+<div class="row">
+  <div class="col-sm-12">
+    <div class="well">
+      One line for each task. The values are seperated by ','. Format: <br>
+      dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project<br><br>
+      <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
+        <div class="form-group">
+          <div class="col-sm-12">
+            <textarea class="form-control input-monospace" rows="20" name="data"></textarea>
           </div>
-          <div class="form-group">
-            <div class="col-sm-offset-10 col-sm-2">
-              <button type="submit" class="form-control btn btn-primary">
-                <i class="fa fa-spinner fa-pulse fa-fw hide"></i>Import
-              </button>
-            </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-10 col-sm-2">
+            <button type="submit" class="form-control btn btn-primary">
+              <i class="fa fa-spinner fa-pulse fa-fw hide"></i>Import
+            </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   </div>
-  """)
+</div>\
+`);
+  
+    this.prototype.events  =
+      {"submit" : "submit"};
+  
+    this.prototype.ui  = {
+      "bulkText" : "textarea[name=data]",
+      "submitButton" : "button[type=submit]",
+      "submitSpinner" : ".fa-spinner"
+    };
+  }
 
-  events :
-    "submit" : "submit"
-
-  ui :
-    "bulkText" : "textarea[name=data]"
-    "submitButton" : "button[type=submit]"
-    "submitSpinner" : ".fa-spinner"
-
-  ###*
+  /**
     * Submit form data as json.
-  ###
-  submit : ->
+  */
+  submit() {
 
-    bulkText = @ui.bulkText.val()
+    const bulkText = this.ui.bulkText.val();
 
-    if !@isValidData(bulkText)
-      @showInvalidData()
-      return
+    if (!this.isValidData(bulkText)) {
+      this.showInvalidData();
+      return;
+    }
 
-    tasks = @parseText(bulkText)
+    const tasks = this.parseText(bulkText);
     Request.sendJSONReceiveJSON(
-      "/api/tasks"
+      "/api/tasks",{
       params : {type : "bulk"},
       data : tasks
+    }
     ).then(
-      @showSaveSuccess
-      @showSaveError
-    )
+      this.showSaveSuccess,
+      this.showSaveError
+    );
 
-    @toggleSubmitButton(false)
+    this.toggleSubmitButton(false);
 
-    # prevent page reload
-    return false
-
-
-  showSaveSuccess : (response) =>
-
-    # A succesful request indicates that the bulk syntax was correct. However,
-    # each task is processed individually and can fail or succeed.
-    if response.errors
-      @handleSuccessfulRequest(response.items)
-
-    else
-      @ui.bulkText.val("")
-      Toast.success("All tasks were successfully created")
-
-    @toggleSubmitButton(true)
+    // prevent page reload
+    return false;
+  }
 
 
-  showSaveError : ->
+  showSaveSuccess(response) {
 
-    Toast.error("The tasks could not be created due to server errors.")
+    // A succesful request indicates that the bulk syntax was correct. However,
+    // each task is processed individually and can fail or succeed.
+    if (response.errors) {
+      this.handleSuccessfulRequest(response.items);
 
-    @toggleSubmitButton(true)
+    } else {
+      this.ui.bulkText.val("");
+      Toast.success("All tasks were successfully created");
+    }
 
-
-  showInvalidData : ->
-
-    Toast.error("The form data is not correct.")
-
-
-  handleSuccessfulRequest : (items) ->
-
-    # Remove all successful tasks from the text area and show an error toast for
-    # the failed tasks
-    bulkText = @ui.bulkText.val()
-    tasks = @splitToLines(bulkText)
-    failedTasks = []
-    errorMessages = []
-
-    for item, i in items
-      if item.status == 400
-        failedTasks.push(tasks[i])
-        errorMessages.push(item.error)
-
-    # prefix the error message with line numbers
-    errorMessages = errorMessages.map((text, i) -> "Line #{i} : #{text}")
-
-    @ui.bulkText.val(failedTasks.join("\n"))
-    Toast.error(errorMessages.join("\n"))
+    return this.toggleSubmitButton(true);
+  }
 
 
-  toggleSubmitButton : (enabled) ->
+  showSaveError() {
 
-    @ui.submitButton.prop("disabled", not enabled)
-    @ui.submitSpinner.toggleClass("hide", enabled)
+    Toast.error("The tasks could not be created due to server errors.");
 
-
-  splitToLines : (string) ->
-
-    return string.trim().split("\n")
+    return this.toggleSubmitButton(true);
+  }
 
 
-  splitToWords : (string) ->
+  showInvalidData() {
 
-    return string.split(",").map(_.trim)
-
-
-  isValidData : (bulkText) ->
-
-    return _.every(@splitToLines(bulkText), @isValidLine.bind(@))
+    return Toast.error("The form data is not correct.");
+  }
 
 
-  isNull : (value) ->
+  handleSuccessfulRequest(items) {
 
-    return value is null
+    // Remove all successful tasks from the text area and show an error toast for
+    // the failed tasks
+    const bulkText = this.ui.bulkText.val();
+    const tasks = this.splitToLines(bulkText);
+    const failedTasks = [];
+    let errorMessages = [];
 
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.status === 400) {
+        failedTasks.push(tasks[i]);
+        errorMessages.push(item.error);
+      }
+    }
 
-  isValidLine : (bulkLine) ->
+    // prefix the error message with line numbers
+    errorMessages = errorMessages.map((text, i) => `Line ${i} : ${text}`);
 
-    bulkData = @formatLine(bulkLine)
-    if bulkData is null
-      return false
-
-    if _.some(bulkData, @isNull.bind(@))
-      return false
-
-    if _.some(bulkData.experienceDomain, isNaN) or
-      _.some(bulkData.editPosition, isNaN) or
-      isNaN(bulkData.boundingBox.width) or
-      isNaN(bulkData.boundingBox.height) or
-      isNaN(bulkData.boundingBox.depth) or
-      _.some(bulkData.boundingBox.topLeft, isNaN)
-        return false
-
-    return true
-
-
-  parseText : (bulkText) ->
-
-    return _.map(@splitToLines(bulkText), @formatLine.bind(@))
+    this.ui.bulkText.val(failedTasks.join("\n"));
+    return Toast.error(errorMessages.join("\n"));
+  }
 
 
-  formatLine : (bulkLine) ->
+  toggleSubmitButton(enabled) {
 
-    words = @splitToWords(bulkLine)
-    if words.length < 19
-      return null
+    this.ui.submitButton.prop("disabled", !enabled);
+    return this.ui.submitSpinner.toggleClass("hide", enabled);
+  }
 
-    dataSet = words[0]
-    taskTypeId = words[1]
-    experienceDomain = words[2]
-    minExperience = parseInt(words[3])
-    x = parseInt(words[4])
-    y = parseInt(words[5])
-    z = parseInt(words[6])
-    rotX = parseInt(words[7])
-    rotY = parseInt(words[8])
-    rotZ = parseInt(words[9])
-    instances = parseInt(words[10])
-    team = words[11]
-    minX = parseInt(words[12])
-    minY = parseInt(words[13])
-    minZ = parseInt(words[14])
-    width = parseInt(words[15])
-    height = parseInt(words[16])
-    depth = parseInt(words[17])
-    projectName = words[18]
+
+  splitToLines(string) {
+
+    return string.trim().split("\n");
+  }
+
+
+  splitToWords(string) {
+
+    return string.split(",").map(_.trim);
+  }
+
+
+  isValidData(bulkText) {
+
+    return _.every(this.splitToLines(bulkText), this.isValidLine.bind(this));
+  }
+
+
+  isNull(value) {
+
+    return value === null;
+  }
+
+
+  isValidLine(bulkLine) {
+
+    const bulkData = this.formatLine(bulkLine);
+    if (bulkData === null) {
+      return false;
+    }
+
+    if (_.some(bulkData, this.isNull.bind(this))) {
+      return false;
+    }
+
+    if (_.some(bulkData.experienceDomain, isNaN) ||
+      _.some(bulkData.editPosition, isNaN) ||
+      isNaN(bulkData.boundingBox.width) ||
+      isNaN(bulkData.boundingBox.height) ||
+      isNaN(bulkData.boundingBox.depth) ||
+      _.some(bulkData.boundingBox.topLeft, isNaN)) {
+        return false;
+      }
+
+    return true;
+  }
+
+
+  parseText(bulkText) {
+
+    return _.map(this.splitToLines(bulkText), this.formatLine.bind(this));
+  }
+
+
+  formatLine(bulkLine) {
+
+    const words = this.splitToWords(bulkLine);
+    if (words.length < 19) {
+      return null;
+    }
+
+    const dataSet = words[0];
+    const taskTypeId = words[1];
+    const experienceDomain = words[2];
+    const minExperience = parseInt(words[3]);
+    const x = parseInt(words[4]);
+    const y = parseInt(words[5]);
+    const z = parseInt(words[6]);
+    const rotX = parseInt(words[7]);
+    const rotY = parseInt(words[8]);
+    const rotZ = parseInt(words[9]);
+    const instances = parseInt(words[10]);
+    const team = words[11];
+    const minX = parseInt(words[12]);
+    const minY = parseInt(words[13]);
+    const minZ = parseInt(words[14]);
+    const width = parseInt(words[15]);
+    const height = parseInt(words[16]);
+    const depth = parseInt(words[17]);
+    const projectName = words[18];
 
     return {
       dataSet,
       team,
       taskTypeId,
-      neededExperience :
-        value : minExperience
+      neededExperience : {
+        value : minExperience,
         domain : experienceDomain
-      status :
-        open : instances
-        inProgress : 0
+      },
+      status : {
+        open : instances,
+        inProgress : 0,
         completed : 0
-      editPosition : [x, y, z]
-      editRotation : [rotX, rotY, rotZ]
-      boundingBox :
-        topLeft : [minX, minY, minZ]
-        width : width
-        height : height
-        depth : depth
+      },
+      editPosition : [x, y, z],
+      editRotation : [rotX, rotY, rotZ],
+      boundingBox : {
+        topLeft : [minX, minY, minZ],
+        width,
+        height,
+        depth
+      },
       projectName,
       isForAnonymous : false
-    }
+    };
+  }
+}
+TaskCreateBulkImportView.initClass();
 
-module.exports = TaskCreateBulkImportView
+export default TaskCreateBulkImportView;

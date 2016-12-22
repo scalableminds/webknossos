@@ -1,8 +1,12 @@
-_        = require("lodash")
-backbone = require("backbone")
+import _ from "lodash";
+import backbone from "backbone";
 
-class AnnotationModel extends Backbone.Model
+class AnnotationModel extends Backbone.Model {
+  static initClass() {
+  
+    this.prototype.urlRoot  = "/annotations/task/";
+  }
+}
+AnnotationModel.initClass();
 
-  urlRoot : "/annotations/task/"
-
-module.exports = AnnotationModel
+export default AnnotationModel;

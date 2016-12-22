@@ -1,84 +1,102 @@
-_             = require("lodash")
-BucketBuilder = require("./bucket_builder")
-Request       = require("../../../../libs/request")
+import _ from "lodash";
+import BucketBuilder from "./bucket_builder";
+import Request from "../../../../libs/request";
 
-# Abstract class that defines the Layer interface and implements common
-# functionality.
-class Layer
-
-
-  REQUEST_TIMEOUT : 10000
-
-
-  constructor : (layerInfo, @dataSetName, @dataStoreInfo) ->
-
-    _.extend(this, layerInfo)
-
-    @bitDepth = parseInt(@elementClass.substring(4))
-    @tokenPromise = @requestDataToken()
+// Abstract class that defines the Layer interface and implements common
+// functionality.
+class Layer {
+  static initClass() {
+  
+  
+    this.prototype.REQUEST_TIMEOUT  = 10000;
+  }
 
 
-  requestDataToken : ->
+  constructor(layerInfo, dataSetName, dataStoreInfo) {
 
-    return @tokenRequestPromise if @tokenRequestPromise
+    this.dataSetName = dataSetName;
+    this.dataStoreInfo = dataStoreInfo;
+    _.extend(this, layerInfo);
 
-    @tokenRequestPromise = Request.receiveJSON(
-      "/dataToken/generate?dataSetName=#{@dataSetName}&dataLayerName=#{@name}"
-    ).then( (dataStore) =>
-      @tokenRequestPromise = null
-      return dataStore.token
-    )
-
-    return @tokenRequestPromise
+    this.bitDepth = parseInt(this.elementClass.substring(4));
+    this.tokenPromise = this.requestDataToken();
+  }
 
 
-  doWithToken : (fn) ->
+  requestDataToken() {
 
-    return @tokenPromise
+    if (this.tokenRequestPromise) { return this.tokenRequestPromise; }
+
+    this.tokenRequestPromise = Request.receiveJSON(
+      `/dataToken/generate?dataSetName=${this.dataSetName}&dataLayerName=${this.name}`
+    ).then( dataStore => {
+      this.tokenRequestPromise = null;
+      return dataStore.token;
+    }
+    );
+
+    return this.tokenRequestPromise;
+  }
+
+
+  doWithToken(fn) {
+
+    return this.tokenPromise
         .then(fn)
-        .catch((error) =>
+        .catch(error => {
 
-          if error.status == 403
-            console.warn("Token expired. Requesting new token...")
-            @tokenPromise = @requestDataToken()
-            return @doWithToken(fn)
+          if (error.status === 403) {
+            console.warn("Token expired. Requesting new token...");
+            this.tokenPromise = this.requestDataToken();
+            return this.doWithToken(fn);
+          }
 
-          throw error
-        )
-
-
-  buildBuckets : (batch, options) ->
-
-    return batch.map((bucketAddress) ->
-      BucketBuilder.fromZoomedAddress(bucketAddress, options))
+          throw error;
+        }
+        );
+  }
 
 
-  # Requests the data, ensures it has the right tokens and resolves with
-  # an UInt8Array.
-  requestFromStore : (batch, options) ->
+  buildBuckets(batch, options) {
 
-    @doWithToken((token) =>
-      @requestFromStoreImpl(@buildBuckets(batch, options), token)
-    )
+    return batch.map(bucketAddress => BucketBuilder.fromZoomedAddress(bucketAddress, options));
+  }
 
 
-  # Sends the batch to the store. `getBucketData(zoomedAddress) -> Uint8Array`
-  # converts bucket addresses to the data to send to the server.
-  sendToStore : (batch, getBucketData) ->
+  // Requests the data, ensures it has the right tokens and resolves with
+  // an UInt8Array.
+  requestFromStore(batch, options) {
 
-    @doWithToken((token) =>
-      @sendToStoreImpl(@buildBuckets(batch), getBucketData, token)
-    )
-
-
-  requestFromStoreImpl : (batch, token) ->
-
-    throw new Error("Subclass responsibility")
+    return this.doWithToken(token => {
+      return this.requestFromStoreImpl(this.buildBuckets(batch, options), token);
+    }
+    );
+  }
 
 
-  sendToStoreImpl : (batch, getBucketData, token) ->
+  // Sends the batch to the store. `getBucketData(zoomedAddress) -> Uint8Array`
+  // converts bucket addresses to the data to send to the server.
+  sendToStore(batch, getBucketData) {
 
-    throw new Error("Subclass responsibility")
+    return this.doWithToken(token => {
+      return this.sendToStoreImpl(this.buildBuckets(batch), getBucketData, token);
+    }
+    );
+  }
 
 
-module.exports = Layer
+  requestFromStoreImpl(batch, token) {
+
+    throw new Error("Subclass responsibility");
+  }
+
+
+  sendToStoreImpl(batch, getBucketData, token) {
+
+    throw new Error("Subclass responsibility");
+  }
+}
+Layer.initClass();
+
+
+export default Layer;

@@ -1,40 +1,50 @@
-LayerColorSettingsView = require("../settings_views/layer_color_settings_view")
-ButtonSettingView      = require("../setting_views/button_setting_view")
-CategoryView           = require("./category_view")
+import LayerColorSettingsView from "../settings_views/layer_color_settings_view";
+import ButtonSettingView from "../setting_views/button_setting_view";
+import CategoryView from "./category_view";
 
-class ColorsCategoryView extends CategoryView
+class ColorsCategoryView extends CategoryView {
+  static initClass() {
+  
+  
+    this.prototype.caption  = "Colors";
+  
+  
+    this.prototype.subviewCreatorsList  = [
+  
+      [
+        "reset", function() {
+  
+          return new ButtonSettingView({
+            model : this.model,
+            options : {
+              displayName : "Reset Color Settings",
+              callbackName : "reset"
+            }
+          });
+        }
+      ]
+    ];
+  }
 
 
-  caption : "Colors"
+  initialize() {
 
+    for (let key of this.model.get("dataLayerNames")) {
 
-  subviewCreatorsList : [
+      (key => {
+        return this.subviewCreatorsList.push([key, function() { return new LayerColorSettingsView({
+          model : this.model,
+          options : {
+            name : `layers.${key}`,
+            displayName : `Layer: ${key}`
+          }
+        }); }]);
+      })(key);
+    }
 
-    [
-      "reset", ->
+    return super.initialize();
+  }
+}
+ColorsCategoryView.initClass();
 
-        return new ButtonSettingView(
-          model : @model
-          options :
-            displayName : "Reset Color Settings"
-            callbackName : "reset"
-        )
-    ]
-  ]
-
-
-  initialize : ->
-
-    for key in @model.get("dataLayerNames")
-
-      do (key) =>
-        @subviewCreatorsList.push([key, -> new LayerColorSettingsView(
-          model : @model
-          options :
-            name : "layers.#{key}"
-            displayName : "Layer: #{key}"
-        )])
-
-    super()
-
-module.exports = ColorsCategoryView
+export default ColorsCategoryView;

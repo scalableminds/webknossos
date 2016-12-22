@@ -1,56 +1,68 @@
-PullQueue = require("./pullqueue")
-_ = require("lodash")
+import PullQueue from "./pullqueue";
+import _ from "lodash";
 
 
-class TemporalBucketManager
-  # Manages temporal buckets (i.e., buckets created for annotation where
-  # the original bucket has not arrived from the server yet) and handles
-  # their special treatment.
+class TemporalBucketManager {
+  // Manages temporal buckets (i.e., buckets created for annotation where
+  // the original bucket has not arrived from the server yet) and handles
+  // their special treatment.
 
 
-  constructor : (@pullQueue, @pushQueue) ->
+  constructor(pullQueue, pushQueue) {
 
-    @loadedPromises = []
-
-
-  getCount : ->
-
-    return @loadedPromises.length
+    this.pullQueue = pullQueue;
+    this.pushQueue = pushQueue;
+    this.loadedPromises = [];
+  }
 
 
-  addBucket : (bucket) ->
+  getCount() {
 
-    @pullBucket(bucket)
-    @loadedPromises.push(@makeLoadedPromise(bucket))
-
-
-  pullBucket : (bucket) ->
-
-    @pullQueue.add(
-        bucket: bucket.zoomedAddress
-        priority: PullQueue::PRIORITY_HIGHEST
-    )
-    @pullQueue.pull()
+    return this.loadedPromises.length;
+  }
 
 
-  makeLoadedPromise : (bucket) ->
+  addBucket(bucket) {
 
-    loadedPromise = new Promise(
-      (resolve, reject) =>
-        bucket.on "bucketLoaded", =>
-
-          if bucket.dirty
-            @pushQueue.insert(bucket.zoomedAddress)
-
-          _.removeElement(@loadedPromises, loadedPromise)
-          resolve()
-    )
-    return loadedPromise
+    this.pullBucket(bucket);
+    return this.loadedPromises.push(this.makeLoadedPromise(bucket));
+  }
 
 
-  getAllLoadedPromise : ->
+  pullBucket(bucket) {
 
-    return Promise.all(@loadedPromises)
+    this.pullQueue.add({
+        bucket: bucket.zoomedAddress,
+        priority: PullQueue.prototype.PRIORITY_HIGHEST
+    });
+    return this.pullQueue.pull();
+  }
 
 
-module.exports = TemporalBucketManager
+  makeLoadedPromise(bucket) {
+
+    const loadedPromise = new Promise(
+      (resolve, reject) => {
+        return bucket.on("bucketLoaded", () => {
+
+          if (bucket.dirty) {
+            this.pushQueue.insert(bucket.zoomedAddress);
+          }
+
+          _.removeElement(this.loadedPromises, loadedPromise);
+          return resolve();
+        }
+    );
+      });
+    return loadedPromise;
+  }
+
+
+  getAllLoadedPromise() {
+
+    return Promise.all(this.loadedPromises);
+  }
+}
+
+
+export default TemporalBucketManager;

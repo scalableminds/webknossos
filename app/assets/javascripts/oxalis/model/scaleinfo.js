@@ -1,48 +1,66 @@
-THREE = require("three")
-# This class encapsulates any conversions between the nm and voxel
-# coordinate system.
+import THREE from "three";
+// This class encapsulates any conversions between the nm and voxel
+// coordinate system.
 
-class ScaleInfo
+class ScaleInfo {
 
-  constructor : (scale) ->
+  constructor(scale) {
 
-    @nmPerVoxel = scale
+    this.nmPerVoxel = scale;
 
-    @voxelPerNM = [0, 0, 0]
-    for i in [0..(@nmPerVoxel.length - 1)]
-      @voxelPerNM[i] = 1 / @nmPerVoxel[i]
+    this.voxelPerNM = [0, 0, 0];
+    for (let i of __range__(0, (this.nmPerVoxel.length - 1), true)) {
+      this.voxelPerNM[i] = 1 / this.nmPerVoxel[i];
+    }
 
-    # base voxel should be a cube with highest resolution
-    @baseVoxel = Math.min.apply(null, @nmPerVoxel)
+    // base voxel should be a cube with highest resolution
+    this.baseVoxel = Math.min.apply(null, this.nmPerVoxel);
 
-    # scale factor to calculate the voxels in a certain
-    # dimension from baseVoxels
-    @baseVoxelFactors = [@baseVoxel / @nmPerVoxel[0],
-                          @baseVoxel / @nmPerVoxel[1],
-                          @baseVoxel / @nmPerVoxel[2]]
+    // scale factor to calculate the voxels in a certain
+    // dimension from baseVoxels
+    this.baseVoxelFactors = [this.baseVoxel / this.nmPerVoxel[0],
+                          this.baseVoxel / this.nmPerVoxel[1],
+                          this.baseVoxel / this.nmPerVoxel[2]];
+  }
 
-  getNmPerVoxelVector : ->
+  getNmPerVoxelVector() {
 
-    return new THREE.Vector3(@nmPerVoxel...)
-
-
-  getVoxelPerNMVector : ->
-
-    return new THREE.Vector3(@voxelPerNM...)
+    return new THREE.Vector3(...this.nmPerVoxel);
+  }
 
 
-  voxelToNm : (posArray) ->
+  getVoxelPerNMVector() {
 
-    nmPos = posArray.slice()
-    for i in [0..2]
-      nmPos[i] *= @nmPerVoxel[i]
+    return new THREE.Vector3(...this.voxelPerNM);
+  }
 
 
-  baseVoxelToVoxel : (baseVoxel) ->
+  voxelToNm(posArray) {
 
-    res = @baseVoxelFactors.slice();
-    for i in [0..2]
-      res *= baseVoxel
-    return res
+    const nmPos = posArray.slice();
+    return [0, 1, 2].map((i) =>
+      nmPos[i] *= this.nmPerVoxel[i]);
+  }
 
-module.exports = ScaleInfo
+
+  baseVoxelToVoxel(baseVoxel) {
+
+    let res = this.baseVoxelFactors.slice();
+    for (let i = 0; i <= 2; i++) {
+      res *= baseVoxel;
+    }
+    return res;
+  }
+}
+
+export default ScaleInfo;
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}

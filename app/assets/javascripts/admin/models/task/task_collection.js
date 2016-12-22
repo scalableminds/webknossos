@@ -1,49 +1,65 @@
-FormatUtils           = require("libs/format_utils")
-Backbone              = require("backbone")
-TaskModel             = require("./task_model")
+import FormatUtils from "libs/format_utils";
+import Backbone from "backbone";
+import TaskModel from "./task_model";
 
-class TaskCollection extends Backbone.Collection
+class TaskCollection extends Backbone.Collection {
+  static initClass() {
+  
+    this.prototype.model = TaskModel;
+  }
+  initialize(models, options) {
 
-  model: TaskModel
-  initialize : (models, options={}) ->
+    if (options == null) { options = {}; }
+    this.projectName = options.projectName;
+    return this.taskTypeId = options.taskTypeId;
+  }
 
-    @projectName = options.projectName
-    @taskTypeId = options.taskTypeId
+  url() {
+    if (this.projectName != null) {
+      return `/api/projects/${this.projectName}/tasks`;
+    } else if (this.taskTypeId != null) {
+      return `/api/taskTypes/${this.taskTypeId}/tasks`;
+    } else {
+      return "/api/queries";
+    }
+  }
 
-  url : ->
-    if @projectName?
-      return "/api/projects/#{@projectName}/tasks"
-    else if @taskTypeId?
-      return "/api/taskTypes/#{@taskTypeId}/tasks"
-    else
-      return "/api/queries"
+  parse(responses) {
 
-  parse : (responses) ->
+    return responses.map(function(response) {
 
-    return responses.map((response) ->
+      // apply some defaults
+      response.type = {
+        summary : __guard__(response.type, x => x.summary) || "<deleted>",
+        id : __guard__(response.type, x1 => x1.id) || ""
+      };
 
-      # apply some defaults
-      response.type =
-        summary : response.type?.summary || "<deleted>"
-        id : response.type?.id || ""
+      if (response.tracingTime == null) { response.tracingTime = 0; }
+      response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime / 1000);
 
-      response.tracingTime ?= 0
-      response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime / 1000)
+      // convert bounding box
+      if (response.boundingBox != null) {
 
-      # convert bounding box
-      if response.boundingBox?
+        const { topLeft, width, height, depth } = response.boundingBox;
+        response.boundingBox = topLeft.concat([width, height, depth]);
 
-        { topLeft, width, height, depth } = response.boundingBox
-        response.boundingBox = topLeft.concat([width, height, depth])
+      } else {
+        response.boundingBox = [];
+      }
 
-      else
-        response.boundingBox = []
+      return response;
+    });
+  }
 
-      return response
-    )
+  addObjects(objects) {
 
-  addObjects : (objects) ->
+    return this.add(this.parse(objects));
+  }
+}
+TaskCollection.initClass();
 
-    @add(@parse(objects))
+export default TaskCollection;
 
-module.exports = TaskCollection
+function __guard__(value, transform) {
+  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+}

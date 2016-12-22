@@ -1,123 +1,150 @@
-app        = require("app")
-backbone   = require("backbone")
-constants  = require("../constants")
-dimensions = require("../model/dimensions")
-THREE      = require("three")
+import app from "app";
+import backbone from "backbone";
+import constants from "../constants";
+import dimensions from "../model/dimensions";
+import THREE from "three";
 
-class Cube
+class Cube {
 
-  constructor : (@model, properties) ->
+  constructor(model, properties) {
 
-    @min               = properties.min               || [0, 0, 0]
-    @max               = properties.max
-    lineWidth          = properties.lineWidth         || 1
-    color              = properties.color             || 0x000000
-    @showCrossSections = properties.showCrossSections || false
+    this.model = model;
+    this.min               = properties.min               || [0, 0, 0];
+    this.max               = properties.max;
+    const lineWidth          = properties.lineWidth         || 1;
+    const color              = properties.color             || 0x000000;
+    this.showCrossSections = properties.showCrossSections || false;
 
-    _.extend(@, Backbone.Events)
+    _.extend(this, Backbone.Events);
 
-    @initialized = false
-    @visible     = true
+    this.initialized = false;
+    this.visible     = true;
 
-    @listenTo(@model.flycam, "positionChanged", (pos) => @updatePosition(pos))
+    this.listenTo(this.model.flycam, "positionChanged", pos => this.updatePosition(pos));
 
-    lineProperties = {color: color, linewidth: lineWidth}
+    const lineProperties = {color, linewidth: lineWidth};
 
-    @cube = new THREE.Line(
+    this.cube = new THREE.Line(
       new THREE.Geometry(),
-      new THREE.LineBasicMaterial( lineProperties ))
+      new THREE.LineBasicMaterial( lineProperties ));
 
-    @crossSections = []
-    for i in constants.ALL_PLANES
-      @crossSections.push(
+    this.crossSections = [];
+    for (let i of constants.ALL_PLANES) {
+      this.crossSections.push(
         new THREE.Line(
           new THREE.Geometry(),
-          new THREE.LineBasicMaterial( lineProperties )))
+          new THREE.LineBasicMaterial( lineProperties )));
+    }
 
 
-    if @min? and @max?
-      @setCorners(@min, @max)
+    if ((this.min != null) && (this.max != null)) {
+      this.setCorners(this.min, this.max);
+    }
+  }
 
-  setCorners : (@min, @max) ->
+  setCorners(min1, max1) {
 
-    { min, max } = this
+    this.min = min1;
+    this.max = max1;
+    const { min, max } = this;
 
-    vec = (x, y, z) ->
-      new THREE.Vector3(x, y, z)
+    const vec = (x, y, z) => new THREE.Vector3(x, y, z);
 
-    v = (@cube.geometry.vertices = [])
-    v.push( vec( min[0], min[1], min[2] ));      v.push( vec( min[0], max[1], min[2] ))
-    v.push( vec( max[0], max[1], min[2] ));      v.push( vec( max[0], min[1], min[2] ))
-    v.push( vec( max[0], min[1], max[2] ));      v.push( vec( max[0], max[1], max[2] ))
-    v.push( vec( min[0], max[1], max[2] ));      v.push( vec( min[0], min[1], max[2] ))
-    v.push( vec( min[0], min[1], min[2] ));      v.push( vec( max[0], min[1], min[2] ))
-    v.push( vec( max[0], max[1], min[2] ));      v.push( vec( max[0], max[1], max[2] ))
-    v.push( vec( max[0], min[1], max[2] ));      v.push( vec( min[0], min[1], max[2] ))
-    v.push( vec( min[0], max[1], max[2] ));      v.push( vec( min[0], max[1], min[2] ))
+    let v = (this.cube.geometry.vertices = []);
+    v.push( vec( min[0], min[1], min[2] ));      v.push( vec( min[0], max[1], min[2] ));
+    v.push( vec( max[0], max[1], min[2] ));      v.push( vec( max[0], min[1], min[2] ));
+    v.push( vec( max[0], min[1], max[2] ));      v.push( vec( max[0], max[1], max[2] ));
+    v.push( vec( min[0], max[1], max[2] ));      v.push( vec( min[0], min[1], max[2] ));
+    v.push( vec( min[0], min[1], min[2] ));      v.push( vec( max[0], min[1], min[2] ));
+    v.push( vec( max[0], max[1], min[2] ));      v.push( vec( max[0], max[1], max[2] ));
+    v.push( vec( max[0], min[1], max[2] ));      v.push( vec( min[0], min[1], max[2] ));
+    v.push( vec( min[0], max[1], max[2] ));      v.push( vec( min[0], max[1], min[2] ));
 
-    v = (@crossSections[constants.PLANE_XY].geometry.vertices = [])
-    v.push( vec( min[0], min[1], 0 ));     v.push( vec( min[0], max[1], 0 ))
-    v.push( vec( max[0], max[1], 0 ));     v.push( vec( max[0], min[1], 0 ))
-    v.push( vec( min[0], min[1], 0 ))
+    v = (this.crossSections[constants.PLANE_XY].geometry.vertices = []);
+    v.push( vec( min[0], min[1], 0 ));     v.push( vec( min[0], max[1], 0 ));
+    v.push( vec( max[0], max[1], 0 ));     v.push( vec( max[0], min[1], 0 ));
+    v.push( vec( min[0], min[1], 0 ));
 
-    v = (@crossSections[constants.PLANE_YZ].geometry.vertices = [])
-    v.push( vec( 0, min[1], min[2] ));     v.push( vec( 0, min[1], max[2] ))
-    v.push( vec( 0, max[1], max[2] ));     v.push( vec( 0, max[1], min[2] ))
-    v.push( vec( 0, min[1], min[2] ))
+    v = (this.crossSections[constants.PLANE_YZ].geometry.vertices = []);
+    v.push( vec( 0, min[1], min[2] ));     v.push( vec( 0, min[1], max[2] ));
+    v.push( vec( 0, max[1], max[2] ));     v.push( vec( 0, max[1], min[2] ));
+    v.push( vec( 0, min[1], min[2] ));
 
-    v = (@crossSections[constants.PLANE_XZ].geometry.vertices = [])
-    v.push( vec( min[0], 0, min[2] ));     v.push( vec( min[0], 0, max[2] ))
-    v.push( vec( max[0], 0, max[2] ));     v.push( vec( max[0], 0, min[2] ))
-    v.push( vec( min[0], 0, min[2] ))
+    v = (this.crossSections[constants.PLANE_XZ].geometry.vertices = []);
+    v.push( vec( min[0], 0, min[2] ));     v.push( vec( min[0], 0, max[2] ));
+    v.push( vec( max[0], 0, max[2] ));     v.push( vec( max[0], 0, min[2] ));
+    v.push( vec( min[0], 0, min[2] ));
 
-    for mesh in @crossSections.concat( [@cube] )
-      mesh.geometry.verticesNeedUpdate = true
+    for (let mesh of this.crossSections.concat( [this.cube] )) {
+      mesh.geometry.verticesNeedUpdate = true;
+    }
 
-    @initialized = true
-    @updatePosition(@model.flycam.getPosition())
-    app.vent.trigger("rerender")
+    this.initialized = true;
+    this.updatePosition(this.model.flycam.getPosition());
+    return app.vent.trigger("rerender");
+  }
 
-  updatePosition : (position) ->
+  updatePosition(position) {
 
-    if not @initialized
-      return
+    if (!this.initialized) {
+      return;
+    }
 
-    for i in constants.ALL_PLANES
+    for (let i of constants.ALL_PLANES) {
 
-      thirdDim = dimensions.thirdDimensionForPlane(i)
-      geo = @crossSections[i].geometry
-      for j in [0...geo.vertices.length]
-        array = geo.vertices[j].toArray()
-        array[thirdDim] = position[thirdDim]
-        geo.vertices[j] = new THREE.Vector3(array[0], array[1], array[2])
+      const thirdDim = dimensions.thirdDimensionForPlane(i);
+      const geo = this.crossSections[i].geometry;
+      for (let j of __range__(0, geo.vertices.length, false)) {
+        const array = geo.vertices[j].toArray();
+        array[thirdDim] = position[thirdDim];
+        geo.vertices[j] = new THREE.Vector3(array[0], array[1], array[2]);
+      }
 
-      geo.verticesNeedUpdate = true
+      geo.verticesNeedUpdate = true;
+    }
 
-    return
+  }
 
-  getMeshes : ->
+  getMeshes() {
 
-    return [ @cube ].concat( @crossSections )
+    return [ this.cube ].concat( this.crossSections );
+  }
 
-  updateForCam : (id) ->
+  updateForCam(id) {
 
-    if not @initialized
-      return
+    if (!this.initialized) {
+      return;
+    }
 
-    for i in [0..2]
+    for (let i = 0; i <= 2; i++) {
 
-      thirdDim = dimensions.thirdDimensionForPlane(i)
-      position = @model.flycam.getPosition()
-      if position[thirdDim] >= @min[thirdDim] and position[thirdDim] <= @max[thirdDim]
-        @crossSections[i].visible = @visible and (i == id) and @showCrossSections
-      else
-        @crossSections[i].visible = false
+      const thirdDim = dimensions.thirdDimensionForPlane(i);
+      const position = this.model.flycam.getPosition();
+      if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] <= this.max[thirdDim]) {
+        this.crossSections[i].visible = this.visible && (i === id) && this.showCrossSections;
+      } else {
+        this.crossSections[i].visible = false;
+      }
+    }
 
-    @cube.visible = @visible and (id == constants.TDView)
+    return this.cube.visible = this.visible && (id === constants.TDView);
+  }
 
-  setVisibility : (visible) ->
+  setVisibility(visible) {
 
-    @visible = visible
+    return this.visible = visible;
+  }
+}
 
 
-module.exports = Cube
+export default Cube;
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}

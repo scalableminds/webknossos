@@ -1,29 +1,35 @@
-SettingsView         = require("./settings_view")
-ControlsCategoryView = require("../category_views/controls_category_view")
-FlightCategoryView   = require("../category_views/flight_category_view")
+import SettingsView from "./settings_view";
+import ControlsCategoryView from "../category_views/controls_category_view";
+import FlightCategoryView from "../category_views/flight_category_view";
 
-class ArbitraryUserSettingsView extends SettingsView
+class ArbitraryUserSettingsView extends SettingsView {
+  static initClass() {
+  
+  
+    this.prototype.id  = "user-settings";
+    this.prototype.className  = "flex-column";
+  
+  
+    this.prototype.modelName  = "user";
+  
+  
+    this.prototype.subviewCreatorsList  = [
+      [
+        "controls-category", function() {
+  
+          return new ControlsCategoryView({model : this.model});
+        }
+      ],
+  
+      [
+        "flight-category", function() {
+  
+          return new FlightCategoryView({model : this.model});
+        }
+      ]
+    ];
+  }
+}
+ArbitraryUserSettingsView.initClass();
 
-
-  id : "user-settings"
-  className : "flex-column"
-
-
-  modelName : "user"
-
-
-  subviewCreatorsList : [
-    [
-      "controls-category", ->
-
-        return new ControlsCategoryView(model : @model)
-    ]
-
-    [
-      "flight-category", ->
-
-        return new FlightCategoryView(model : @model)
-    ]
-  ]
-
-module.exports = ArbitraryUserSettingsView
+export default ArbitraryUserSettingsView;

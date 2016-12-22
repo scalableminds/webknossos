@@ -1,53 +1,62 @@
-_                          = require("lodash")
-Marionette                 = require("backbone.marionette")
-DatasetUploadView          = require("./dataset_upload_view")
-DatasetRemoteView          = require("./dataset_remote_view")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import DatasetUploadView from "./dataset_upload_view";
+import DatasetRemoteView from "./dataset_remote_view";
 
 
-class DatasetAddView extends Marionette.View
-
-  className : "container"
-  id : "dataset-add-view"
-  template : _.template("""
-    <div class="tabbable" id="tabbable-dataset-add">
-      <div class="col-md-8">
-        <ul class="nav nav-tabs">
-          <li class="active">
-            <a href="#" id="tab-upload-dataset" data-target="#placeholder" data-toggle="tab">Upload Dataset</a>
-          </li>
-          <li>
-            <a href="#" id="tab-remote-dataset" data-target="#placeholder" data-toggle="tab">Add NDStore Dataset</a>
-          </li>
-        </ul>
-        <div class="tab-content">
-          <div class="tab-pane active" id="placeholder"></div>
-        </div>
-      </div>
+class DatasetAddView extends Marionette.View {
+  static initClass() {
+  
+    this.prototype.className  = "container";
+    this.prototype.id  = "dataset-add-view";
+    this.prototype.template  = _.template(`\
+<div class="tabbable" id="tabbable-dataset-add">
+  <div class="col-md-8">
+    <ul class="nav nav-tabs">
+      <li class="active">
+        <a href="#" id="tab-upload-dataset" data-target="#placeholder" data-toggle="tab">Upload Dataset</a>
+      </li>
+      <li>
+        <a href="#" id="tab-remote-dataset" data-target="#placeholder" data-toggle="tab">Add NDStore Dataset</a>
+      </li>
+    </ul>
+    <div class="tab-content">
+      <div class="tab-pane active" id="placeholder"></div>
     </div>
-  """)
-
-  regions :
-    "tabPane" : ".tab-pane"
-
-
-  events :
-    "click #tab-upload-dataset" : "showUploadDataset"
-    "click #tab-remote-dataset" : "showRemoteDataset"
-
-
-  initialize : (@options) ->
-
-    @listenTo(@, "render", @showUploadDataset)
-
-
-  showUploadDataset : ->
-
-    @showChildView("tabPane", new DatasetUploadView(@options))
+  </div>
+</div>\
+`);
+  
+    this.prototype.regions  =
+      {"tabPane" : ".tab-pane"};
+  
+  
+    this.prototype.events  = {
+      "click #tab-upload-dataset" : "showUploadDataset",
+      "click #tab-remote-dataset" : "showRemoteDataset"
+    };
+  }
 
 
-  showRemoteDataset : ->
+  initialize(options) {
 
-    @showChildView("tabPane", new DatasetRemoteView(@options))
+    this.options = options;
+    return this.listenTo(this, "render", this.showUploadDataset);
+  }
 
 
-module.exports = DatasetAddView
+  showUploadDataset() {
+
+    return this.showChildView("tabPane", new DatasetUploadView(this.options));
+  }
+
+
+  showRemoteDataset() {
+
+    return this.showChildView("tabPane", new DatasetRemoteView(this.options));
+  }
+}
+DatasetAddView.initClass();
+
+
+export default DatasetAddView;

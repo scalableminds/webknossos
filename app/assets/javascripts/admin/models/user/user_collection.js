@@ -1,8 +1,12 @@
-SortedCollection = require("../sorted_collection")
+import SortedCollection from "../sorted_collection";
 
-class UserCollection extends SortedCollection
+class UserCollection extends SortedCollection {
+  static initClass() {
+  
+    this.prototype.url  = "/api/users";
+    this.prototype.sortAttribute  = "lastName";
+  }
+}
+UserCollection.initClass();
 
-  url : "/api/users"
-  sortAttribute : "lastName"
-
-module.exports = UserCollection
+export default UserCollection;

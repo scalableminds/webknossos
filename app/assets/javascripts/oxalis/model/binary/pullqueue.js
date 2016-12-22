@@ -1,121 +1,164 @@
-_             = require("lodash")
-Cube          = require("./cube")
-Request       = require("../../../libs/request")
+import _ from "lodash";
+import Cube from "./cube";
+import Request from "../../../libs/request";
 
-class PullQueue
-
-  # Constants
-  BATCH_LIMIT : 6
-
-  # For buckets that should be loaded immediately and
-  # should never be removed from the queue
-  PRIORITY_HIGHEST : -1
-
-  cube : null
-  queue : null
-
-  batchCount : 0
-  roundTripTime : 0
-
-
-  constructor : (@cube, @layer, @connectionInfo, @datastoreInfo) ->
-
-    @queue = []
-    @BATCH_SIZE = if @isNDstore() then 1 else 3
-
-    # Debug option.
-    # If true, buckets of all 0 will be transformed to have 255 bytes everywhere.
-    @whitenEmptyBuckets = false
+class PullQueue {
+  static initClass() {
+  
+    // Constants
+    this.prototype.BATCH_LIMIT  = 6;
+  
+    // For buckets that should be loaded immediately and
+    // should never be removed from the queue
+    this.prototype.PRIORITY_HIGHEST  = -1;
+  
+    this.prototype.cube  = null;
+    this.prototype.queue  = null;
+  
+    this.prototype.batchCount  = 0;
+    this.prototype.roundTripTime  = 0;
+  }
 
 
-  pull : ->
+  constructor(cube, layer, connectionInfo, datastoreInfo) {
 
-    # Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
-    @queue = _.filter(@queue, (item) =>
-      @cube.getOrCreateBucket(item.bucket).needsRequest()
-    )
-    @queue = _.sortBy(@queue, (item) -> item.priority)
+    this.cube = cube;
+    this.layer = layer;
+    this.connectionInfo = connectionInfo;
+    this.datastoreInfo = datastoreInfo;
+    this.queue = [];
+    this.BATCH_SIZE = this.isNDstore() ? 1 : 3;
 
-    # Starting to download some buckets
-    while @batchCount < @BATCH_LIMIT and @queue.length
-
-      batch = []
-      while batch.length < @BATCH_SIZE and @queue.length
-        address = @queue.shift().bucket
-        bucket = @cube.getOrCreateBucket(address)
-
-        # Buckets might be in the Queue multiple times
-        continue unless bucket.needsRequest()
-
-        batch.push(address)
-        bucket.pull()
-
-      if batch.length > 0
-        @pullBatch(batch)
+    // Debug option.
+    // If true, buckets of all 0 will be transformed to have 255 bytes everywhere.
+    this.whitenEmptyBuckets = false;
+  }
 
 
-  pullBatch : (batch) ->
+  pull() {
 
-    # Loading a bunch of buckets
-    @batchCount++
+    // Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
+    this.queue = _.filter(this.queue, item => {
+      return this.cube.getOrCreateBucket(item.bucket).needsRequest();
+    }
+    );
+    this.queue = _.sortBy(this.queue, item => item.priority);
 
-    # Measuring the time until response arrives to select appropriate preloading strategy
-    roundTripBeginTime = new Date()
+    // Starting to download some buckets
+    return (() => {
+      const result = [];
+      while (this.batchCount < this.BATCH_LIMIT && this.queue.length) {
 
-    Request.always(
-      @layer.requestFromStore(batch).then((responseBuffer) =>
-        @connectionInfo.log(@layer.name, roundTripBeginTime, batch.length, responseBuffer.length)
+        let item;
+        const batch = [];
+        while (batch.length < this.BATCH_SIZE && this.queue.length) {
+          const address = this.queue.shift().bucket;
+          const bucket = this.cube.getOrCreateBucket(address);
 
-        offset = 0
-        for bucket in batch
-          bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-          @cube.boundingBox.removeOutsideArea(bucket, bucketData)
-          @maybeWhitenEmptyBucket(bucketData)
-          @cube.getBucket(bucket).receiveData(bucketData)
-      ).catch( (error) =>
-        for bucketAddress in batch
-          bucket = @cube.getBucket(bucketAddress)
-          bucket.pullFailed()
-          if bucket.dirty
-            @add({bucket : bucketAddress, priority : @PRIORITY_HIGHEST})
+          // Buckets might be in the Queue multiple times
+          if (!bucket.needsRequest()) { continue; }
 
-        console.error(error)
-      )
-      =>
-        @batchCount--
-        @pull()
-    )
+          batch.push(address);
+          bucket.pull();
+        }
 
-
-  clearNormalPriorities : ->
-
-    @queue = _.filter(@queue, (e) => e.priority == @PRIORITY_HIGHEST)
-
-
-  add : (item) ->
-
-    @queue.push(item)
+        if (batch.length > 0) {
+          item = this.pullBatch(batch);
+        }
+        result.push(item);
+      }
+      return result;
+    })();
+  }
 
 
-  addAll : (items) ->
+  pullBatch(batch) {
 
-    @queue = @queue.concat(items)
+    // Loading a bunch of buckets
+    this.batchCount++;
+
+    // Measuring the time until response arrives to select appropriate preloading strategy
+    const roundTripBeginTime = new Date();
+
+    return Request.always(
+      this.layer.requestFromStore(batch).then(responseBuffer => {
+        let bucketData;
+        this.connectionInfo.log(this.layer.name, roundTripBeginTime, batch.length, responseBuffer.length);
+
+        let offset = 0;
+        return batch.map((bucket) =>
+          (bucketData = responseBuffer.subarray(offset, offset += this.cube.BUCKET_LENGTH),
+          this.cube.boundingBox.removeOutsideArea(bucket, bucketData),
+          this.maybeWhitenEmptyBucket(bucketData),
+          this.cube.getBucket(bucket).receiveData(bucketData)));
+      }
+      ).catch( error => {
+        for (let bucketAddress of batch) {
+          const bucket = this.cube.getBucket(bucketAddress);
+          bucket.pullFailed();
+          if (bucket.dirty) {
+            this.add({bucket : bucketAddress, priority : this.PRIORITY_HIGHEST});
+          }
+        }
+
+        return console.error(error);
+      }
+      ),
+      () => {
+        this.batchCount--;
+        return this.pull();
+      }
+    );
+  }
 
 
-  isNDstore : ->
+  clearNormalPriorities() {
 
-    return @datastoreInfo.typ == "ndstore"
-
-
-  maybeWhitenEmptyBucket : (bucketData) ->
-
-    return unless @whitenEmptyBuckets
-
-    allZero = _.reduce(bucketData, ((res, e) -> res and e == 0), true)
-
-    if allZero
-      for i in [0...bucketData.length]
-        bucketData[i] = 255
+    return this.queue = _.filter(this.queue, e => e.priority === this.PRIORITY_HIGHEST);
+  }
 
 
-module.exports = PullQueue
+  add(item) {
+
+    return this.queue.push(item);
+  }
+
+
+  addAll(items) {
+
+    return this.queue = this.queue.concat(items);
+  }
+
+
+  isNDstore() {
+
+    return this.datastoreInfo.typ === "ndstore";
+  }
+
+
+  maybeWhitenEmptyBucket(bucketData) {
+
+    if (!this.whitenEmptyBuckets) { return; }
+
+    const allZero = _.reduce(bucketData, ((res, e) => res && e === 0), true);
+
+    if (allZero) {
+      return __range__(0, bucketData.length, false).map((i) =>
+        bucketData[i] = 255);
+    }
+  }
+}
+PullQueue.initClass();
+
+
+export default PullQueue;
+
+function __range__(left, right, inclusive) {
+  let range = [];
+  let ascending = left < right;
+  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+    range.push(i);
+  }
+  return range;
+}

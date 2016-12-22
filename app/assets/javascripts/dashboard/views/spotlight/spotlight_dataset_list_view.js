@@ -1,22 +1,28 @@
-_                    = require("lodash")
-Marionette           = require("backbone.marionette")
-SpotlightDatasetView = require("./spotlight_dataset_view")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import SpotlightDatasetView from "./spotlight_dataset_view";
 
-class SpotlightDatasetListView extends Marionette.CollectionView
+class SpotlightDatasetListView extends Marionette.CollectionView {
+  static initClass() {
+  
+    this.prototype.childView  = SpotlightDatasetView;
+  }
 
-  childView : SpotlightDatasetView
+  initialize(options) {
 
-  initialize : (options) ->
+    this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
+    this.collection.setSorting("created", "desc");
+    return this.collection.setCollectionFilter(child => child.get("isActive"));
+  }
 
-    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
-    @collection.setSorting("created", "desc")
-    @collection.setCollectionFilter((child) -> return child.get("isActive"))
 
+  filterBySearch(searchQuery) {
 
-  filterBySearch : (searchQuery) ->
+    return this.collection.setFilter(["name", "owningTeam", "description"], searchQuery);
+  }
+}
+SpotlightDatasetListView.initClass();
 
-    @collection.setFilter(["name", "owningTeam", "description"], searchQuery)
-
-module.exports = SpotlightDatasetListView
+export default SpotlightDatasetListView;
 
 

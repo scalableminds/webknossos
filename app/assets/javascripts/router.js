@@ -1,306 +1,356 @@
-$                     = require("jquery")
-_                     = require("lodash")
-Backbone              = require("backbone")
-constants             = require("oxalis/constants")
-BaseRouter            = require("libs/base_router")
-PaginationCollection  = require("admin/models/pagination_collection")
+import $ from "jquery";
+import _ from "lodash";
+import Backbone from "backbone";
+import constants from "oxalis/constants";
+import BaseRouter from "libs/base_router";
+import PaginationCollection from "admin/models/pagination_collection";
 
-# #####
-# This Router contains all the routes for views that have been
-# refactored to Backbone.View yet. All other routes, that require HTML to be
-# delivered by the Server are handled by the NonBackboneRouter.
-# #####
-class Router extends BaseRouter
+// #####
+// This Router contains all the routes for views that have been
+// refactored to Backbone.View yet. All other routes, that require HTML to be
+// delivered by the Server are handled by the NonBackboneRouter.
+// #####
+class Router extends BaseRouter {
+  static initClass() {
+  
+    this.prototype.routes  = {
+      "/users"                             : "users",
+      "/teams"                             : "teams",
+      "/statistics"                        : "statistics",
+      "/tasks/create"                      : "taskCreate",
+      "/tasks/:id/edit"                    : "taskEdit",
+      "/projects"                          : "projects",
+      "/projects/create"                   : "projectCreate",
+      "/projects/:name/tasks"              : "projectTasks",
+      "/projects/:id/edit"                 : "projectEdit",
+      "/annotations/:type/:id(/readOnly)"  : "tracingView",
+      "/datasets/:id/view"                 : "tracingViewPublic",
+      "/dashboard"                         : "dashboard",
+      "/datasets"                          : "dashboard",
+      "/datasets/upload"                   : "datasetAdd",
+      "/datasets/:id/edit"                 : "datasetEdit",
+      "/users/:id/details"                 : "dashboard",
+      "/taskTypes"                         : "taskTypes",
+      "/taskTypes/create"                  : "taskTypesCreate",
+      "/taskTypes/:id/edit"                : "taskTypesCreate",
+      "/taskTypes/:id/tasks"               : "taskTypesTasks",
+      "/spotlight"                         : "spotlight",
+      "/tasks/overview"                    : "taskOverview",
+      "/admin/taskTypes"                   : "hideLoadingSpinner",
+      "/workload"                          : "workload",
+      "/tasks"                             : "taskQuery"
+    };
+  }
 
-  routes :
-    "/users"                             : "users"
-    "/teams"                             : "teams"
-    "/statistics"                        : "statistics"
-    "/tasks/create"                      : "taskCreate"
-    "/tasks/:id/edit"                    : "taskEdit"
-    "/projects"                          : "projects"
-    "/projects/create"                   : "projectCreate"
-    "/projects/:name/tasks"              : "projectTasks"
-    "/projects/:id/edit"                 : "projectEdit"
-    "/annotations/:type/:id(/readOnly)"  : "tracingView"
-    "/datasets/:id/view"                 : "tracingViewPublic"
-    "/dashboard"                         : "dashboard"
-    "/datasets"                          : "dashboard"
-    "/datasets/upload"                   : "datasetAdd"
-    "/datasets/:id/edit"                 : "datasetEdit"
-    "/users/:id/details"                 : "dashboard"
-    "/taskTypes"                         : "taskTypes"
-    "/taskTypes/create"                  : "taskTypesCreate"
-    "/taskTypes/:id/edit"                : "taskTypesCreate"
-    "/taskTypes/:id/tasks"               : "taskTypesTasks"
-    "/spotlight"                         : "spotlight"
-    "/tasks/overview"                    : "taskOverview"
-    "/admin/taskTypes"                   : "hideLoadingSpinner"
-    "/workload"                          : "workload"
-    "/tasks"                             : "taskQuery"
-
-  constructor : ->
-    super
-    @$loadingSpinner = $("#loader")
-    @$mainContainer = $("#main-container")
+  constructor() {
+    super(...arguments);
+    this.dashboard = this.dashboard.bind(this);
+    this.$loadingSpinner = $("#loader");
+    this.$mainContainer = $("#main-container");
+  }
 
 
-  hideLoadingSpinner : ->
+  hideLoadingSpinner() {
 
-    @$loadingSpinner.addClass("hidden")
+    return this.$loadingSpinner.addClass("hidden");
+  }
 
 
-  tracingView : (type, id) ->
+  tracingView(type, id) {
 
-    require(["oxalis/view/tracing_layout_view"], (TracingLayoutView) =>
+    return require(["oxalis/view/tracing_layout_view"], TracingLayoutView => {
 
-      view = new TracingLayoutView(
-        tracingType: type
-        tracingId : id
+      const view = new TracingLayoutView({
+        tracingType: type,
+        tracingId : id,
         controlMode : constants.CONTROL_MODE_TRACE
-      )
-      view.forcePageReload = true
-      @changeView(view)
-    )
+      });
+      view.forcePageReload = true;
+      return this.changeView(view);
+    }
+    );
+  }
 
 
-  tracingViewPublic : (id) ->
+  tracingViewPublic(id) {
 
-    require(["oxalis/view/tracing_layout_view"], (TracingLayoutView) =>
-      view = new TracingLayoutView(
-        tracingType: "View"
-        tracingId : id
+    return require(["oxalis/view/tracing_layout_view"], TracingLayoutView => {
+      const view = new TracingLayoutView({
+        tracingType: "View",
+        tracingId : id,
         controlMode : constants.CONTROL_MODE_VIEW
-      )
-      view.forcePageReload = true
-      @changeView(view)
-    )
+      });
+      view.forcePageReload = true;
+      return this.changeView(view);
+    }
+    );
+  }
 
 
-  projects : ->
+  projects() {
 
-    @showWithPagination("ProjectListView", "ProjectCollection", {addButtonText : "Create New Project"})
-
-
-  projectCreate : ->
-
-    require(["admin/views/project/project_create_view", "admin/models/project/project_model"], (ProjectCreateView, ProjectModel) =>
-
-      model = new ProjectModel()
-      view = new ProjectCreateView(model : model)
-
-      @changeView(view)
-      @hideLoadingSpinner()
-    )
+    return this.showWithPagination("ProjectListView", "ProjectCollection", {addButtonText : "Create New Project"});
+  }
 
 
-  projectEdit : (projectName) ->
+  projectCreate() {
 
-    require(["admin/views/project/project_edit_view", "admin/models/project/project_model"], (ProjectEditView, ProjectModel) =>
+    return require(["admin/views/project/project_create_view", "admin/models/project/project_model"], (ProjectCreateView, ProjectModel) => {
 
-      model = new ProjectModel(name : projectName)
-      view = new ProjectEditView(model : model)
+      const model = new ProjectModel();
+      const view = new ProjectCreateView({model});
 
-      @listenTo(model, "sync", ->
-        @changeView(view)
-        @hideLoadingSpinner()
-      )
-    )
-
-
-  statistics : ->
-
-    @showAdminView("StatisticView")
+      this.changeView(view);
+      return this.hideLoadingSpinner();
+    }
+    );
+  }
 
 
-  datasetAdd : ->
+  projectEdit(projectName) {
 
-    @showAdminView("DatasetAddView")
+    return require(["admin/views/project/project_edit_view", "admin/models/project/project_model"], (ProjectEditView, ProjectModel) => {
 
+      const model = new ProjectModel({name : projectName});
+      const view = new ProjectEditView({model});
 
-  datasetEdit : (datasetID) ->
-
-    require(["admin/views/dataset/dataset_edit_view", "admin/models/dataset/dataset_model"], (DatasetEditView, DatasetModel) =>
-
-      model = new DatasetModel(name : datasetID)
-      view = new DatasetEditView(model : model)
-
-      @listenTo(model, "sync", ->
-        @changeView(view)
-        @hideLoadingSpinner()
-      )
-    )
+      return this.listenTo(model, "sync", function() {
+        this.changeView(view);
+        return this.hideLoadingSpinner();
+      });
+    }
+    );
+  }
 
 
-  users : ->
+  statistics() {
 
-    @showWithPagination("UserListView", "UserCollection", {})
-
-
-  teams : ->
-
-    @showWithPagination("TeamListView", "TeamCollection", {addButtonText : "Add New Team"})
+    return this.showAdminView("StatisticView");
+  }
 
 
-  taskQuery : ->
+  datasetAdd() {
 
-    require(["admin/views/task/task_query_view"], (TaskQueryView, TaskCollection) =>
-      view = new TaskQueryView()
-      @changeView(view)
-    )
+    return this.showAdminView("DatasetAddView");
+  }
 
 
-  projectTasks : (projectName) ->
+  datasetEdit(datasetID) {
 
-     @showWithPagination("TaskListView", "TaskCollection", {projectName, addButtonText : "Create New Task"})
+    return require(["admin/views/dataset/dataset_edit_view", "admin/models/dataset/dataset_model"], (DatasetEditView, DatasetModel) => {
 
+      const model = new DatasetModel({name : datasetID});
+      const view = new DatasetEditView({model});
 
-  taskTypesTasks : (taskTypeId) ->
-
-     @showWithPagination("TaskListView", "TaskCollection", {taskTypeId, addButtonText : "Create New Task"})
-
-
-  workload : ->
-
-    @showWithPagination("WorkloadListView", "WorkloadCollection")
-
-
-  taskTypes : ->
-
-    @showWithPagination("TaskTypeListView", "TaskTypeCollection", {addButtonText : "Create New TaskType"})
+      return this.listenTo(model, "sync", function() {
+        this.changeView(view);
+        return this.hideLoadingSpinner();
+      });
+    }
+    );
+  }
 
 
-  ###*
+  users() {
+
+    return this.showWithPagination("UserListView", "UserCollection", {});
+  }
+
+
+  teams() {
+
+    return this.showWithPagination("TeamListView", "TeamCollection", {addButtonText : "Add New Team"});
+  }
+
+
+  taskQuery() {
+
+    return require(["admin/views/task/task_query_view"], (TaskQueryView, TaskCollection) => {
+      const view = new TaskQueryView();
+      return this.changeView(view);
+    }
+    );
+  }
+
+
+  projectTasks(projectName) {
+
+     return this.showWithPagination("TaskListView", "TaskCollection", {projectName, addButtonText : "Create New Task"});
+   }
+
+
+  taskTypesTasks(taskTypeId) {
+
+     return this.showWithPagination("TaskListView", "TaskCollection", {taskTypeId, addButtonText : "Create New Task"});
+   }
+
+
+  workload() {
+
+    return this.showWithPagination("WorkloadListView", "WorkloadCollection");
+  }
+
+
+  taskTypes() {
+
+    return this.showWithPagination("TaskTypeListView", "TaskTypeCollection", {addButtonText : "Create New TaskType"});
+  }
+
+
+  /**
    * Load layout view that shows task-creation subviews
-   ###
-  taskCreate : ->
+   */
+  taskCreate() {
 
-    require(["admin/views/task/task_create_view", "admin/models/task/task_model"], (TaskCreateView, TaskModel) =>
+    return require(["admin/views/task/task_create_view", "admin/models/task/task_model"], (TaskCreateView, TaskModel) => {
 
-      model = new TaskModel()
-      view = new TaskCreateView(model : model)
+      const model = new TaskModel();
+      const view = new TaskCreateView({model});
 
-      @changeView(view)
-      @hideLoadingSpinner()
-    )
+      this.changeView(view);
+      return this.hideLoadingSpinner();
+    }
+    );
+  }
 
-  ###*
+  /**
    * Load item view which displays an editable task.
-   ###
-  taskEdit : (taskID) ->
+   */
+  taskEdit(taskID) {
 
-    require(["admin/views/task/task_create_subviews/task_create_from_view", "admin/models/task/task_model"], (TaskCreateFromView, TaskModel) =>
+    return require(["admin/views/task/task_create_subviews/task_create_from_view", "admin/models/task/task_model"], (TaskCreateFromView, TaskModel) => {
 
-      model = new TaskModel(id : taskID)
-      view = new TaskCreateFromView(model : model, type : "from_form")
+      const model = new TaskModel({id : taskID});
+      const view = new TaskCreateFromView({model, type : "from_form"});
 
-      @changeView(view)
-      @hideLoadingSpinner()
-    )
-
-
-  taskTypesCreate : (taskTypeId) ->
-
-    require(["admin/views/tasktype/task_type_create_view", "admin/models/tasktype/task_type_model"], (TaskTypeCreateView, TaskTypeModel) =>
-
-      model = new TaskTypeModel(id : taskTypeId)
-      view = new TaskTypeCreateView(model: model)
-      @changeView(view)
-      @hideLoadingSpinner()
-    )
+      this.changeView(view);
+      return this.hideLoadingSpinner();
+    }
+    );
+  }
 
 
-  dashboard : (userID) =>
+  taskTypesCreate(taskTypeId) {
 
-    require(["dashboard/views/dashboard_view", "dashboard/models/user_model"], (DashboardView, UserModel) =>
+    return require(["admin/views/tasktype/task_type_create_view", "admin/models/tasktype/task_type_model"], (TaskTypeCreateView, TaskTypeModel) => {
 
-      isAdminView = userID != null
-
-      model = new UserModel(id : userID)
-      view = new DashboardView({ model, isAdminView, userID})
-
-      @listenTo(model, "sync", ->
-        @changeView(view)
-        @hideLoadingSpinner()
-      )
-
-      model.fetch()
-    )
+      const model = new TaskTypeModel({id : taskTypeId});
+      const view = new TaskTypeCreateView({model});
+      this.changeView(view);
+      return this.hideLoadingSpinner();
+    }
+    );
+  }
 
 
-  spotlight : ->
+  dashboard(userID) {
 
-    require(["dashboard/views/spotlight/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) =>
+    return require(["dashboard/views/dashboard_view", "dashboard/models/user_model"], (DashboardView, UserModel) => {
 
-      collection = new DatasetCollection()
-      paginatedCollection = new PaginationCollection([], fullCollection : collection)
-      view = new SpotlightView(collection: paginatedCollection)
+      const isAdminView = userID !== null;
 
-      @changeView(view)
-      @listenTo(collection, "sync", @hideLoadingSpinner)
-    )
+      const model = new UserModel({id : userID});
+      const view = new DashboardView({ model, isAdminView, userID});
 
+      this.listenTo(model, "sync", function() {
+        this.changeView(view);
+        return this.hideLoadingSpinner();
+      });
 
-  taskOverview : ->
-
-    require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_collection"], (TaskOverviewView, TaskOverviewCollection) =>
-
-      collection = new TaskOverviewCollection()
-      view = new TaskOverviewView({collection})
-
-      @changeView(view)
-      @listenTo(collection, "sync", @hideLoadingSpinner)
-    )
+      return model.fetch();
+    }
+    );
+  }
 
 
-  showWithPagination : (view, collection, options = {}) ->
+  spotlight() {
 
-    _.defaults(options, {addButtonText : null})
+    return require(["dashboard/views/spotlight/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) => {
 
-    require(["admin/admin"], (admin) =>
+      const collection = new DatasetCollection();
+      const paginatedCollection = new PaginationCollection([], {fullCollection : collection});
+      const view = new SpotlightView({collection: paginatedCollection});
 
-      collection = new admin[collection](null, options)
-      paginatedCollection = new PaginationCollection([], fullCollection : collection)
-      view = new admin[view](collection : paginatedCollection)
-      paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : options.addButtonText})
-
-      @changeView(paginationView, view)
-      @listenTo(collection, "sync", => @hideLoadingSpinner())
-    )
-
-
-  showAdminView : (view, collection) ->
-
-    require(["admin/admin"], (admin) =>
-
-      if collection
-        collection = new admin[collection]()
-        view = new admin[view](collection : collection)
-        @listenTo(collection, "sync", => @hideLoadingSpinner())
-      else
-        view = new admin[view]()
-        setTimeout((=> @hideLoadingSpinner()), 200)
-
-      @changeView(view)
-    )
-
-  changeView : (views...) ->
-
-    if _.isEqual(@activeViews, views)
-      return
-
-    @$loadingSpinner.removeClass("hidden")
-
-    # Add new views
-    @activeViews = views
-    for view in views
-      @$mainContainer.append(view.render().el)
-
-    # Google Analytics
-    if ga?
-      ga("send", "pageview", location.pathname)
-
-    return
+      this.changeView(view);
+      return this.listenTo(collection, "sync", this.hideLoadingSpinner);
+    }
+    );
+  }
 
 
-module.exports = Router
+  taskOverview() {
+
+    return require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_collection"], (TaskOverviewView, TaskOverviewCollection) => {
+
+      const collection = new TaskOverviewCollection();
+      const view = new TaskOverviewView({collection});
+
+      this.changeView(view);
+      return this.listenTo(collection, "sync", this.hideLoadingSpinner);
+    }
+    );
+  }
+
+
+  showWithPagination(view, collection, options) {
+
+    if (options == null) { options = {}; }
+    _.defaults(options, {addButtonText : null});
+
+    return require(["admin/admin"], admin => {
+
+      collection = new admin[collection](null, options);
+      const paginatedCollection = new PaginationCollection([], {fullCollection : collection});
+      view = new admin[view]({collection : paginatedCollection});
+      const paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : options.addButtonText});
+
+      this.changeView(paginationView, view);
+      return this.listenTo(collection, "sync", () => this.hideLoadingSpinner());
+    }
+    );
+  }
+
+
+  showAdminView(view, collection) {
+
+    return require(["admin/admin"], admin => {
+
+      if (collection) {
+        collection = new admin[collection]();
+        view = new admin[view]({collection});
+        this.listenTo(collection, "sync", () => this.hideLoadingSpinner());
+      } else {
+        view = new admin[view]();
+        setTimeout((() => this.hideLoadingSpinner()), 200);
+      }
+
+      return this.changeView(view);
+    }
+    );
+  }
+
+  changeView(...views) {
+
+    if (_.isEqual(this.activeViews, views)) {
+      return;
+    }
+
+    this.$loadingSpinner.removeClass("hidden");
+
+    // Add new views
+    this.activeViews = views;
+    for (let view of views) {
+      this.$mainContainer.append(view.render().el);
+    }
+
+    // Google Analytics
+    if (typeof ga !== 'undefined' && ga !== null) {
+      ga("send", "pageview", location.pathname);
+    }
+
+  }
+}
+Router.initClass();
+
+
+export default Router;

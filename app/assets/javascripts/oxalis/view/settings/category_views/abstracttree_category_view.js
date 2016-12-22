@@ -1,22 +1,28 @@
-CheckboxSettingView = require("../setting_views/checkbox_setting_view")
-CategoryView        = require("./category_view")
+import CheckboxSettingView from "../setting_views/checkbox_setting_view";
+import CategoryView from "./category_view";
 
-class AbstractTreeCategoryView extends CategoryView
+class AbstractTreeCategoryView extends CategoryView {
+  static initClass() {
+  
+    this.prototype.caption  = "Abstract Tree";
+  
+    this.prototype.subviewCreatorsList  = [
+  
+      [
+        "renderComments", function() {
+  
+          return new CheckboxSettingView({
+            model : this.model,
+            options : {
+              name : "renderComments",
+              displayName : "Render Comments"
+            }
+          });
+        }
+      ]
+    ];
+  }
+}
+AbstractTreeCategoryView.initClass();
 
-  caption : "Abstract Tree"
-
-  subviewCreatorsList : [
-
-    [
-      "renderComments", ->
-
-        return new CheckboxSettingView(
-          model : @model
-          options :
-            name : "renderComments"
-            displayName : "Render Comments"
-        )
-    ]
-  ]
-
-module.exports = AbstractTreeCategoryView
+export default AbstractTreeCategoryView;

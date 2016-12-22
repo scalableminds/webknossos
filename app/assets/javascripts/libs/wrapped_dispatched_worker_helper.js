@@ -1,43 +1,47 @@
-# helper functions
+// helper functions
 
-self.log = (args...) ->
-
-  self.postMessage( { type : "log", time : Date.now(), args } )
+self.log = (...args) => self.postMessage( { type : "log", time : Date.now(), args } );
 
 
-module.exports = (obj) ->
+export default function(obj) {
 
-  queuedMessages = []
-  execMessage = (messageData) ->
+  const queuedMessages = [];
+  const execMessage = function(messageData) {
 
-    { workerHandle, payload } = messageData
+    const { workerHandle, payload } = messageData;
 
-    makeSender = (type) ->
-      (arg, transferred = []) ->
-        try
-          self.postMessage( { workerHandle, type, payload : arg }, transferred )
-        catch error
-          self.postMessage( { workerHandle, type, payload : arg } )
-        return
+    const makeSender = type =>
+      function(arg, transferred) {
+        if (transferred == null) { transferred = []; }
+        try {
+          self.postMessage( { workerHandle, type, payload : arg }, transferred );
+        } catch (error) {
+          self.postMessage( { workerHandle, type, payload : arg } );
+        }
+      }
+    ;
 
-    obj[payload.method](payload.args...).then(
-      makeSender("success")
-      makeSender("error")
+    obj[payload.method](...payload.args).then(
+      makeSender("success"),
+      makeSender("error"),
       makeSender("progress")
-    )
-    return
+    );
+  };
 
 
   self.addEventListener(
-    "message"
-    (event) ->
-      if event.data
-        execMessage(event.data)
+    "message",
+    function(event) {
+      if (event.data) {
+        return execMessage(event.data);
+      }
+    },
 
     false
-  )
+  );
 
 
-  self.postMessage(
+  return self.postMessage({
     type : "ready"
-  )
+  });
+};

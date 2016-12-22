@@ -1,4 +1,5 @@
-Marionette = require("backbone.marionette")
+let app;
+import Marionette from "backbone.marionette";
 
-module.exports = window.app = app = new Marionette.Application()
+export default window.app = app = new Marionette.Application();
 

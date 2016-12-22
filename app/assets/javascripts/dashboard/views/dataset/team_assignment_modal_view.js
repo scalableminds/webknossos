@@ -1,69 +1,80 @@
-_                           = require("lodash")
-app                         = require("app")
-Request                     = require("libs/request")
-Marionette                  = require("backbone.marionette")
-TeamCollection              = require("admin/models/team/team_collection")
-ModalView                   = require("admin/views/modal_view")
+import _ from "lodash";
+import app from "app";
+import Request from "libs/request";
+import Marionette from "backbone.marionette";
+import TeamCollection from "admin/models/team/team_collection";
+import ModalView from "admin/views/modal_view";
 
 
-class TeamAssignmentModalView extends ModalView
+class TeamAssignmentModalView extends ModalView {
+  static initClass() {
+  
+    this.prototype.headerTemplate  = "<h3>Assign teams for this dataset</h3>";
+    this.prototype.bodyTemplate  = _.template(`\
+<ul name="teams" class="team-list">
+  <% items.forEach(function(team) { %>
+    <li>
+      <div class="checkbox">
+        <label>
+          <input type="checkbox" value="<%- team.name %>" <%- isChecked(team.name) %>>
+          <%- team.name %>
+        </label>
+      </div>
+    </li>
+  <% }) %>
+</ul>\
+`);
+    this.prototype.footerTemplate  = `\
+<a class="btn btn-primary">Save</a>
+<a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>\
+`;
+  
+    this.prototype.ui  =
+      {"teamList" : ".team-list"};
+  
+    this.prototype.events  =
+      {"click .btn-primary" : "submitTeams"};
+  }
 
-  headerTemplate : "<h3>Assign teams for this dataset</h3>"
-  bodyTemplate : _.template("""
-    <ul name="teams" class="team-list">
-      <% items.forEach(function(team) { %>
-        <li>
-          <div class="checkbox">
-            <label>
-              <input type="checkbox" value="<%- team.name %>" <%- isChecked(team.name) %>>
-              <%- team.name %>
-            </label>
-          </div>
-        </li>
-      <% }) %>
-    </ul>
-  """)
-  footerTemplate : """
-    <a class="btn btn-primary">Save</a>
-    <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>
-  """
-
-  templateContext : ->
-    isChecked : (teamName) =>
-      if _.includes(@dataset.get("allowedTeams"), teamName)
-        return "checked"
-
-  ui :
-    "teamList" : ".team-list"
-
-  events :
-    "click .btn-primary" : "submitTeams"
+  templateContext() {
+    return {
+      isChecked : teamName => {
+        if (_.includes(this.dataset.get("allowedTeams"), teamName)) {
+          return "checked";
+        }
+      }
+    };
+  }
 
 
-  initialize : (args) ->
+  initialize(args) {
 
-    @collection = new TeamCollection()
-    @listenTo(@collection, "sync", @render)
-    @collection.fetch(
+    this.collection = new TeamCollection();
+    this.listenTo(this.collection, "sync", this.render);
+    this.collection.fetch({
       data : "isEditable=true"
-    )
+    });
 
-    @dataset = args.dataset
+    return this.dataset = args.dataset;
+  }
 
 
-  submitTeams : ->
+  submitTeams() {
 
-    $checkboxes = @$("input:checked")
-    allowedTeams = _.map($checkboxes, (checkbox) -> return $(checkbox).parent().parent().text().trim())
+    const $checkboxes = this.$("input:checked");
+    const allowedTeams = _.map($checkboxes, checkbox => $(checkbox).parent().parent().text().trim());
 
-    @dataset.set("allowedTeams", allowedTeams)
+    this.dataset.set("allowedTeams", allowedTeams);
 
     Request.sendJSONReceiveJSON(
-      "/api/datasets/#{@dataset.get("name")}/teams"
-      data: allowedTeams
-    )
+      `/api/datasets/${this.dataset.get("name")}/teams`,
+      {data: allowedTeams}
+    );
 
-    @destroy()
+    return this.destroy();
+  }
+}
+TeamAssignmentModalView.initClass();
 
 
-module.exports = TeamAssignmentModalView
+export default TeamAssignmentModalView;

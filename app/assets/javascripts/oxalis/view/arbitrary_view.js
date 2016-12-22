@@ -1,198 +1,228 @@
-$         = require("jquery")
-_         = require("lodash")
-app       = require("app")
-Backbone  = require("backbone")
-THREE     = require("three")
-TWEEN     = require("tween.js")
-Constants = require("../constants")
+import $ from "jquery";
+import _ from "lodash";
+import app from "app";
+import Backbone from "backbone";
+import THREE from "three";
+import TWEEN from "tween.js";
+import Constants from "../constants";
 
-class ArbitraryView
+class ArbitraryView {
+  static initClass() {
+  
+    this.prototype.DEFAULT_SCALE   = 1.35;
+    this.prototype.MAX_SCALE       = 3;
+    this.prototype.MIN_SCALE       = 1;
+  
+    this.prototype.forceUpdate  = false;
+    this.prototype.geometries  = [];
+    this.prototype.additionalInfo  = "";
+  
+    this.prototype.isRunning  = true;
+    this.prototype.animationRequestId  = undefined;
+  
+    this.prototype.scene  = null;
+    this.prototype.camera  = null;
+    this.prototype.cameraPosition  = null;
+  }
 
-  DEFAULT_SCALE  : 1.35
-  MAX_SCALE      : 3
-  MIN_SCALE      : 1
+  constructor(canvas, dataCam, view, width) {
 
-  forceUpdate : false
-  geometries : []
-  additionalInfo : ""
+    let camera;
+    this.animate = this.animate.bind(this);
+    this.resize = this.resize.bind(this);
+    this.applyScale = this.applyScale.bind(this);
+    this.setClippingDistance = this.setClippingDistance.bind(this);
+    this.dataCam = dataCam;
+    this.view = view;
+    _.extend(this, Backbone.Events);
 
-  isRunning : true
-  animationRequestId : undefined
+    // CAM_DISTANCE has to be calculates such that with cam
+    // angle 45°, the plane of width 128 fits exactly in the
+    // viewport.
+    this.CAM_DISTANCE = width / 2 / Math.tan( ((Math.PI / 180) * 45) / 2 );
 
-  scene : null
-  camera : null
-  cameraPosition : null
+    // The "render" div serves as a container for the canvas, that is
+    // attached to it once a renderer has been initalized.
+    this.container = $(canvas);
+    this.width  = this.container.width();
+    this.height = this.container.height();
+    this.deviceScaleFactor = window.devicePixelRatio || 1;
 
-  constructor : (canvas, @dataCam, @view, width) ->
+    ({ renderer: this.renderer, scene: this.scene } = this.view);
 
-    _.extend(this, Backbone.Events)
+    // Initialize main THREE.js components
 
-    # CAM_DISTANCE has to be calculates such that with cam
-    # angle 45°, the plane of width 128 fits exactly in the
-    # viewport.
-    @CAM_DISTANCE = width / 2 / Math.tan( Math.PI / 180 * 45 / 2 )
+    this.camera = camera = new THREE.PerspectiveCamera(45, this.width / this.height, 50, 1000);
+    camera.matrixAutoUpdate = false;
+    camera.aspect = this.width / this.height;
 
-    # The "render" div serves as a container for the canvas, that is
-    # attached to it once a renderer has been initalized.
-    @container = $(canvas)
-    @width  = @container.width()
-    @height = @container.height()
-    @deviceScaleFactor = window.devicePixelRatio || 1
+    this.cameraPosition = [0, 0, this.CAM_DISTANCE];
 
-    { @renderer, @scene } = @view
-
-    # Initialize main THREE.js components
-
-    @camera = camera = new THREE.PerspectiveCamera(45, @width / @height, 50, 1000)
-    camera.matrixAutoUpdate = false
-    camera.aspect = @width / @height
-
-    @cameraPosition = [0, 0, @CAM_DISTANCE]
-
-    @group = new THREE.Object3D
-    # The dimension(s) with the highest resolution will not be distorted
-    @group.scale = new THREE.Vector3(app.scaleInfo.nmPerVoxel...)
-    # Add scene to the group, all Geometries are then added to group
-    @scene.add(@group)
-    @group.add(camera)
-
-
-  start : ->
-
-    unless @isRunning
-      @isRunning = true
-
-      for element in @group.children
-        element.setVisibility = element.setVisibility || (v) -> this.visible = v
-        element.setVisibility true
-
-      $('.skeleton-arbitrary-controls').show()
-      $("#arbitrary-info-canvas").show()
-
-      @resize()
-      # start the rendering loop
-      @animationRequestId = window.requestAnimationFrame(@animate)
-      # Dont forget to handle window resizing!
-      $(window).on("resize", @resize)
+    this.group = new THREE.Object3D;
+    // The dimension(s) with the highest resolution will not be distorted
+    this.group.scale = new THREE.Vector3(...app.scaleInfo.nmPerVoxel);
+    // Add scene to the group, all Geometries are then added to group
+    this.scene.add(this.group);
+    this.group.add(camera);
+  }
 
 
-  stop : ->
+  start() {
 
-    if @isRunning
-      @isRunning = false
-      if @animationRequestId?
-        window.cancelAnimationFrame(@animationRequestId)
-        @animationRequestId = undefined
+    if (!this.isRunning) {
+      this.isRunning = true;
 
-      for element in @group.children
-        element.setVisibility = element.setVisibility || (v) -> this.visible = v
-        element.setVisibility(false)
+      for (let element of this.group.children) {
+        element.setVisibility = element.setVisibility || function(v) { return this.visible = v; };
+        element.setVisibility(true);
+      }
 
-      $(window).off("resize", @resize)
+      $('.skeleton-arbitrary-controls').show();
+      $("#arbitrary-info-canvas").show();
 
-      $('.skeleton-arbitrary-controls').hide()
-      $("#arbitrary-info-canvas").hide()
+      this.resize();
+      // start the rendering loop
+      this.animationRequestId = window.requestAnimationFrame(this.animate);
+      // Dont forget to handle window resizing!
+      return $(window).on("resize", this.resize);
+    }
+  }
 
 
-  animate : =>
+  stop() {
 
-    @animationRequestId = undefined
-    return unless @isRunning
+    if (this.isRunning) {
+      this.isRunning = false;
+      if (this.animationRequestId != null) {
+        window.cancelAnimationFrame(this.animationRequestId);
+        this.animationRequestId = undefined;
+      }
 
-    TWEEN.update()
+      for (let element of this.group.children) {
+        element.setVisibility = element.setVisibility || function(v) { return this.visible = v; };
+        element.setVisibility(false);
+      }
 
-    @trigger("render", @forceUpdate)
+      $(window).off("resize", this.resize);
 
-    { camera, geometries, renderer, scene } = this
+      $('.skeleton-arbitrary-controls').hide();
+      return $("#arbitrary-info-canvas").hide();
+    }
+  }
 
-    for geometry in geometries when geometry.update?
-      geometry.update()
 
-    m = @dataCam.getZoomedMatrix()
+  animate() {
+
+    this.animationRequestId = undefined;
+    if (!this.isRunning) { return; }
+
+    TWEEN.update();
+
+    this.trigger("render", this.forceUpdate);
+
+    const { camera, geometries, renderer, scene } = this;
+
+    for (let geometry of geometries) {
+      if (geometry.update != null) {
+        geometry.update();
+      }
+    }
+
+    const m = this.dataCam.getZoomedMatrix();
 
     camera.matrix.set(m[0], m[4], m[8],  m[12],
                       m[1], m[5], m[9],  m[13],
                       m[2], m[6], m[10], m[14],
-                      m[3], m[7], m[11], m[15])
+                      m[3], m[7], m[11], m[15]);
 
-    camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI))
-    camera.matrix.multiply(new THREE.Matrix4().makeTranslation(@cameraPosition...))
-    camera.matrixWorldNeedsUpdate = true
+    camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
+    camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
+    camera.matrixWorldNeedsUpdate = true;
 
     renderer.setViewport(0, 0,
-                         @width * @deviceScaleFactor,
-                         @height * @deviceScaleFactor)
+                         this.width * this.deviceScaleFactor,
+                         this.height * this.deviceScaleFactor);
     renderer.setScissor(0, 0,
-                        @width * @deviceScaleFactor,
-                        @height * @deviceScaleFactor)
-    renderer.enableScissorTest(true)
+                        this.width * this.deviceScaleFactor,
+                        this.height * this.deviceScaleFactor);
+    renderer.enableScissorTest(true);
     renderer.setClearColor(0xFFFFFF, 1);
 
-    renderer.render(scene, camera)
+    renderer.render(scene, camera);
 
-    @forceUpdate = false
+    this.forceUpdate = false;
 
-    @animationRequestId = window.requestAnimationFrame(@animate)
-
-
-  draw : ->
-
-    @forceUpdate = true
+    return this.animationRequestId = window.requestAnimationFrame(this.animate);
+  }
 
 
-  addGeometry : (geometry) ->
-    # Adds a new Three.js geometry to the scene.
-    # This provides the public interface to the GeometryFactory.
+  draw() {
 
-    @geometries.push(geometry)
-    geometry.attachScene(@group)
-    return
+    return this.forceUpdate = true;
+  }
 
 
-  resizeThrottled : ->
-    # throttle resize to avoid annoying flickering
+  addGeometry(geometry) {
+    // Adds a new Three.js geometry to the scene.
+    // This provides the public interface to the GeometryFactory.
 
-    @resizeThrottled = _.throttle(
-      => @resize()
+    this.geometries.push(geometry);
+    geometry.attachScene(this.group);
+  }
+
+
+  resizeThrottled() {
+    // throttle resize to avoid annoying flickering
+
+    this.resizeThrottled = _.throttle(
+      () => this.resize(),
       Constants.RESIZE_THROTTLE_TIME
-    )
-    @resizeThrottled()
+    );
+    return this.resizeThrottled();
+  }
 
 
-  resize : =>
-    # Call this after the canvas was resized to fix the viewport
-    # Needs to be bound
+  resize() {
+    // Call this after the canvas was resized to fix the viewport
+    // Needs to be bound
 
-    @width  = @container.width()
-    @height = @container.height()
+    this.width  = this.container.width();
+    this.height = this.container.height();
 
-    @renderer.setSize(@width, @height)
+    this.renderer.setSize(this.width, this.height);
 
-    @camera.aspect = @width / @height
-    @camera.updateProjectionMatrix()
-    @draw()
-
-
-  applyScale : (delta) =>
-
-    @scaleFactor = @DEFAULT_SCALE unless @scaleFactor
-
-    if (@scaleFactor+delta > @MIN_SCALE) and (@scaleFactor+delta < @MAX_SCALE)
-      @scaleFactor += Number(delta)
-      @width = @height = @scaleFactor * Constants.VIEWPORT_WIDTH
-      @container.width(@width)
-      @container.height(@height)
-
-      @resizeThrottled()
-
-  setClippingDistance : (value) =>
-
-    @camera.near = @CAM_DISTANCE - value
-    @camera.updateProjectionMatrix()
+    this.camera.aspect = this.width / this.height;
+    this.camera.updateProjectionMatrix();
+    return this.draw();
+  }
 
 
-  setAdditionalInfo : (info) ->
+  applyScale(delta) {
 
-    @additionalInfo = info
+    if (!this.scaleFactor) { this.scaleFactor = this.DEFAULT_SCALE; }
 
-module.exports = ArbitraryView
+    if ((this.scaleFactor+delta > this.MIN_SCALE) && (this.scaleFactor+delta < this.MAX_SCALE)) {
+      this.scaleFactor += Number(delta);
+      this.width = this.height = this.scaleFactor * Constants.VIEWPORT_WIDTH;
+      this.container.width(this.width);
+      this.container.height(this.height);
+
+      return this.resizeThrottled();
+    }
+  }
+
+  setClippingDistance(value) {
+
+    this.camera.near = this.CAM_DISTANCE - value;
+    return this.camera.updateProjectionMatrix();
+  }
+
+
+  setAdditionalInfo(info) {
+
+    return this.additionalInfo = info;
+  }
+}
+ArbitraryView.initClass();
+
+export default ArbitraryView;

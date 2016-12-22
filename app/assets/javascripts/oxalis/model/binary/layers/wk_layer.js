@@ -1,106 +1,125 @@
-Layer         = require("./layer")
-BucketBuilder = require("./bucket_builder")
-Request       = require("../../../../libs/request")
-MultipartData = require("../../../../libs/multipart_data")
-_             = require("lodash")
+import Layer from "./layer";
+import BucketBuilder from "./bucket_builder";
+import Request from "../../../../libs/request";
+import MultipartData from "../../../../libs/multipart_data";
+import _ from "lodash";
 
 
-class WkLayer extends Layer
+class WkLayer extends Layer {
 
 
-  constructor : ->
+  constructor() {
 
-    super
+    super(...arguments);
 
-    unless @dataStoreInfo.typ == "webknossos-store"
-      throw new Error("WkLayer should only be instantiated with webknossos-store")
+    if (this.dataStoreInfo.typ !== "webknossos-store") {
+      throw new Error("WkLayer should only be instantiated with webknossos-store");
+    }
 
-    @fourBit = false
-
-
-  setFourBit : (newFourBit) ->
-
-    # No op if this is not a color layer
-    if @category == "color"
-      @fourBit = newFourBit
+    this.fourBit = false;
+  }
 
 
-  buildBuckets : (batch, options={}) ->
+  setFourBit(newFourBit) {
 
-    options = _.extend(options, { fourBit : @fourBit })
-    return super(batch, options)
+    // No op if this is not a color layer
+    if (this.category === "color") {
+      return this.fourBit = newFourBit;
+    }
+  }
 
 
-  requestFromStoreImpl : (batch, token) ->
+  buildBuckets(batch, options) {
 
-    wasFourBit = @fourBit
-    requestData = new MultipartData()
+    if (options == null) { options = {}; }
+    options = _.extend(options, { fourBit : this.fourBit });
+    return super.buildBuckets(batch, options);
+  }
 
-    for bucket in batch
 
-      requestData.addPart(
+  requestFromStoreImpl(batch, token) {
+
+    const wasFourBit = this.fourBit;
+    const requestData = new MultipartData();
+
+    for (let bucket of batch) {
+
+      requestData.addPart({
         "X-Bucket" : JSON.stringify(bucket)
-      )
+      });
+    }
 
-    return requestData.dataPromise().then((data) =>
-      Request.sendArraybufferReceiveArraybuffer(
-        "#{@dataStoreInfo.url}/data/datasets/#{@dataSetName}/layers/#{@name}/data?token=#{token}",
+    return requestData.dataPromise().then(data => {
+      return Request.sendArraybufferReceiveArraybuffer(
+        `${this.dataStoreInfo.url}/data/datasets/${this.dataSetName}/layers/${this.name}/data?token=${token}`,
         {
-          data : data
-          headers :
-            "Content-Type" : "multipart/mixed; boundary=#{requestData.boundary}"
-          timeout : @REQUEST_TIMEOUT
-          compress : true
+          data,
+          headers : {
+            "Content-Type" : `multipart/mixed; boundary=${requestData.boundary}`
+          },
+          timeout : this.REQUEST_TIMEOUT,
+          compress : true,
           doNotCatch : true
         }
-      )
-    ).then( (responseBuffer) =>
-      result = new Uint8Array(responseBuffer)
-      if wasFourBit
-        result = @decodeFourBit(result)
-      return result
-    )
+      );
+    }
+    ).then( responseBuffer => {
+      let result = new Uint8Array(responseBuffer);
+      if (wasFourBit) {
+        result = this.decodeFourBit(result);
+      }
+      return result;
+    }
+    );
+  }
 
 
-  decodeFourBit : (bufferArray) ->
+  decodeFourBit(bufferArray) {
 
-    # Expand 4-bit data
-    newColors = new Uint8Array(bufferArray.length << 1)
+    // Expand 4-bit data
+    const newColors = new Uint8Array(bufferArray.length << 1);
 
-    index = 0
-    while index < newColors.length
-      value = bufferArray[index >> 1]
-      newColors[index] = value & 0b11110000
-      index++
-      newColors[index] = value << 4
-      index++
+    let index = 0;
+    while (index < newColors.length) {
+      const value = bufferArray[index >> 1];
+      newColors[index] = value & 0b11110000;
+      index++;
+      newColors[index] = value << 4;
+      index++;
+    }
 
-    return newColors
+    return newColors;
+  }
 
 
-  sendToStoreImpl : (batch, getBucketData, token) ->
+  sendToStoreImpl(batch, getBucketData, token) {
 
-    transmitData = new MultipartData()
+    const transmitData = new MultipartData();
 
-    for bucket in batch
+    for (let bucket of batch) {
 
       transmitData.addPart(
         {"X-Bucket" : JSON.stringify(bucket)},
-        getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)))
+        getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)));
+    }
 
-    return transmitData.dataPromise().then((data) =>
+    return transmitData.dataPromise().then(data => {
       return Request.sendArraybufferReceiveArraybuffer(
-        "#{@dataStoreInfo.url}/data/datasets/#{@dataSetName}/layers/#{@name}/data?token=#{token}", {
-          method : "PUT"
-          data : data
-          headers :
-            "Content-Type" : "multipart/mixed; boundary=#{transmitData.boundary}"
-          timeout : @REQUEST_TIMEOUT
-          compress : true
+        `${this.dataStoreInfo.url}/data/datasets/${this.dataSetName}/layers/${this.name}/data?token=${token}`, {
+          method : "PUT",
+          data,
+          headers : {
+            "Content-Type" : `multipart/mixed; boundary=${transmitData.boundary}`
+          },
+          timeout : this.REQUEST_TIMEOUT,
+          compress : true,
           doNotCatch : true
         }
-      )
-    )
+      );
+    }
+    );
+  }
+}
 
 
-module.exports = WkLayer
+export default WkLayer;

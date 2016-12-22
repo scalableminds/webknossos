@@ -1,62 +1,75 @@
-marionette    = require("backbone.marionette")
-ToggleButton  = require("bootstrap-toggle")
+import marionette from "backbone.marionette";
+import ToggleButton from "bootstrap-toggle";
 
-class ArbitraryPlaneInfo extends Backbone.Marionette.View
+class ArbitraryPlaneInfo extends Backbone.Marionette.View {
+  static initClass() {
+  
+    this.prototype.id  = "arbitrary-info-canvas";
+  
+    this.prototype.template  = _.template(`\
+<input type="checkbox" <%= getCheckedStatus() %> >\
+`);
+  
+    this.prototype.templateContext  = {
+      getCheckedStatus() {
+        if (this.flightmodeRecording) { return "checked"; }
+      }
+    };
+  
+    this.prototype.events  =
+      {"change input" : "handleCheckboxChange"};
+  
+    this.prototype.ui  =
+      {"checkbox" : "input"};
+  }
 
-  id : "arbitrary-info-canvas"
 
-  template : _.template("""
-    <input type="checkbox" <%= getCheckedStatus() %> >
-  """)
+  initialize() {
 
-  templateContext :
-    getCheckedStatus : ->
-      return "checked" if @flightmodeRecording
-
-  events :
-    "change input" : "handleCheckboxChange"
-
-  ui :
-    "checkbox" : "input"
+    return this.listenTo(this.model, "change:flightmodeRecording", this.updateCheckboxToggle);
+  }
 
 
-  initialize : ->
+  onRender() {
 
-    @listenTo(@model, "change:flightmodeRecording", @updateCheckboxToggle)
-
-
-  onRender : ->
-
-    @ui.checkbox.bootstrapToggle({
+    this.ui.checkbox.bootstrapToggle({
       off : "Watching",
       offstyle : "success",
       on : "RECORDING",
       onstyle : "danger",
       width : 140,
-    })
-    @updateCheckboxToggle()
+    });
+    return this.updateCheckboxToggle();
+  }
 
 
-  handleCheckboxChange : (evt) ->
+  handleCheckboxChange(evt) {
 
-    value = evt.target.checked
-    @model.set("flightmodeRecording", value)
+    let value = evt.target.checked;
+    this.model.set("flightmodeRecording", value);
 
-    # Set a inital waypoint when enabling flight mode
-    # TODO: use the offical wK API
-    if value = true
-      app.oxalis.arbitraryController.setWaypoint()
-
-
-  updateCheckboxToggle : ->
-    if @model.get("flightmodeRecording") == @ui.checkbox.prop("checked")
-      return
-    @ui.checkbox.prop({ checked:  @model.get("flightmodeRecording") }).change()
+    // Set a inital waypoint when enabling flight mode
+    // TODO: use the offical wK API
+    if (value = true) {
+      return app.oxalis.arbitraryController.setWaypoint();
+    }
+  }
 
 
-  onDestroy : ->
+  updateCheckboxToggle() {
+    if (this.model.get("flightmodeRecording") === this.ui.checkbox.prop("checked")) {
+      return;
+    }
+    return this.ui.checkbox.prop({ checked:  this.model.get("flightmodeRecording") }).change();
+  }
 
-    @ui.checkbox.bootstrapToggle("destroy")
+
+  onDestroy() {
+
+    return this.ui.checkbox.bootstrapToggle("destroy");
+  }
+}
+ArbitraryPlaneInfo.initClass();
 
 
-module.exports = ArbitraryPlaneInfo
+export default ArbitraryPlaneInfo;

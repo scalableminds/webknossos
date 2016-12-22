@@ -1,164 +1,187 @@
-StateLogger    = require("../statelogger")
-THREE          = require("three")
-{V3}           = require("libs/mjs")
-ErrorHandling  = require("libs/error_handling")
+import StateLogger from "../statelogger";
+import THREE from "three";
+import { V3 } from "libs/mjs";
+import ErrorHandling from "libs/error_handling";
 
-class SkeletonTracingStateLogger extends StateLogger
-
-
-  constructor : (flycam, @flycam3d, version, tracingId, tracingType, allowUpdate, @skeletonTracing) ->
-
-    super(flycam, version, tracingId, tracingType, allowUpdate)
+class SkeletonTracingStateLogger extends StateLogger {
 
 
-  #### TREES
+  constructor(flycam, flycam3d, version, tracingId, tracingType, allowUpdate, skeletonTracing) {
 
-  treeObject : (tree, oldId) ->
+    this.flycam3d = flycam3d;
+    this.skeletonTracing = skeletonTracing;
+    super(flycam, version, tracingId, tracingType, allowUpdate);
+  }
 
-    treeColor = new THREE.Color(tree.color)
+
+  //### TREES
+
+  treeObject(tree, oldId) {
+
+    const treeColor = new THREE.Color(tree.color);
     return {
-      id : if oldId then oldId else tree.treeId
-      updatedId : if oldId then tree.treeId
-      color : [treeColor.r, treeColor.g, treeColor.b, 1]
-      name : tree.name
-      timestamp : tree.timestamp
-      comments : tree.comments
+      id : oldId ? oldId : tree.treeId,
+      updatedId : oldId ? tree.treeId : undefined,
+      color : [treeColor.r, treeColor.g, treeColor.b, 1],
+      name : tree.name,
+      timestamp : tree.timestamp,
+      comments : tree.comments,
       branchPoints : tree.branchpoints
-    }
+    };
+  }
 
 
-  createTree : (tree) ->
+  createTree(tree) {
 
-    @pushDiff("createTree", @treeObject(tree))
-
-
-  updateTree : (tree, oldId = false) ->
-
-    @pushDiff("updateTree", @treeObject(tree, oldId))
+    return this.pushDiff("createTree", this.treeObject(tree));
+  }
 
 
-  deleteTree : (tree) ->
+  updateTree(tree, oldId) {
 
-    @pushDiff("deleteTree", {
+    if (oldId == null) { oldId = false; }
+    return this.pushDiff("updateTree", this.treeObject(tree, oldId));
+  }
+
+
+  deleteTree(tree) {
+
+    return this.pushDiff("deleteTree", {
       id : tree.treeId
-    })
+    });
+  }
 
 
-  mergeTree : (sourceTree, targetTree, lastNodeId, activeNodeId) ->
+  mergeTree(sourceTree, targetTree, lastNodeId, activeNodeId) {
 
-    # Make sure that those nodes exist
-    found = false; treeIds = []
-    for node in sourceTree.nodes
-      found |= (node.id == lastNodeId)
-      treeIds.push(node.id)
+    // Make sure that those nodes exist
+    let found = false; let treeIds = [];
+    for (var node of sourceTree.nodes) {
+      found |= (node.id === lastNodeId);
+      treeIds.push(node.id);
+    }
     ErrorHandling.assert(found, "lastNodeId not in sourceTree",
-      {sourceTreeNodeIds : treeIds, lastNodeId : lastNodeId})
+      {sourceTreeNodeIds : treeIds, lastNodeId});
 
-    found = false; treeIds = []
-    for node in targetTree.nodes
-      found |= (node.id == activeNodeId)
-      treeIds.push(node.id)
+    found = false; treeIds = [];
+    for (node of targetTree.nodes) {
+      found |= (node.id === activeNodeId);
+      treeIds.push(node.id);
+    }
     ErrorHandling.assert(found, "activeNodeId not in targetTree",
-      {targetTreeNodeIds : treeIds, activeNodeId : activeNodeId})
+      {targetTreeNodeIds : treeIds, activeNodeId});
 
-    # Copy all edges and nodes from sourceTree to
-    # targetTree, while leaving targetTree's properties
-    # unchanged. Then, delete sourceTree.
-    @pushDiff("mergeTree", {
-      sourceId : sourceTree.treeId
+    // Copy all edges and nodes from sourceTree to
+    // targetTree, while leaving targetTree's properties
+    // unchanged. Then, delete sourceTree.
+    this.pushDiff("mergeTree", {
+      sourceId : sourceTree.treeId,
       targetId : targetTree.treeId
-    }, false)
-    @createEdge(lastNodeId, activeNodeId, targetTree.treeId)
+    }, false);
+    return this.createEdge(lastNodeId, activeNodeId, targetTree.treeId);
+  }
 
 
-  #### NODES and EDGED
+  //### NODES and EDGED
 
-  nodeObject : (node, treeId) ->
+  nodeObject(node, treeId) {
 
-    return _.extend(node.metaInfo,
-      treeId : treeId,
+    return _.extend(node.metaInfo, {
+      treeId,
       id : node.id,
       radius : node.radius,
       position : V3.floor(node.pos),
       rotation : node.rotation
-    )
+    }
+    );
+  }
 
 
-  edgeObject : (node, treeId) ->
+  edgeObject(node, treeId) {
 
-    ErrorHandling.assert(node.neighbors.length == 1,
-      "Node has to have exactly one neighbor", node.neighbors.length)
+    ErrorHandling.assert(node.neighbors.length === 1,
+      "Node has to have exactly one neighbor", node.neighbors.length);
 
     return {
-      treeId : treeId
-      source : node.neighbors[0].id
+      treeId,
+      source : node.neighbors[0].id,
       target : node.id
-    }
+    };
+  }
 
 
-  createNode : (node, treeId) ->
+  createNode(node, treeId) {
 
     ErrorHandling.assert(node.neighbors.length <= 1,
-      "New node can't have more than one neighbor", node.neighbors.length)
-    if node.neighbors[0]
-      ErrorHandling.assert(node.treeId == node.neighbors[0].treeId,
+      "New node can't have more than one neighbor", node.neighbors.length);
+    if (node.neighbors[0]) {
+      ErrorHandling.assert(node.treeId === node.neighbors[0].treeId,
         "Neighbor has different treeId",
-        {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId})
+        {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId});
+    }
 
-    needsEdge = node.neighbors.length == 1
-    @pushDiff("createNode", @nodeObject(node, treeId), !needsEdge)
-    if needsEdge
-      @pushDiff("createEdge", @edgeObject(node, treeId))
-
-
-  updateNode : (node, treeId) ->
-
-    @pushDiff("updateNode", @nodeObject(node, treeId))
+    const needsEdge = node.neighbors.length === 1;
+    this.pushDiff("createNode", this.nodeObject(node, treeId), !needsEdge);
+    if (needsEdge) {
+      return this.pushDiff("createEdge", this.edgeObject(node, treeId));
+    }
+  }
 
 
-  deleteNode : (node, treeId) ->
+  updateNode(node, treeId) {
 
-    # Edges will be deleted implicitly
-    @pushDiff("deleteNode", {
-      treeId : treeId
+    return this.pushDiff("updateNode", this.nodeObject(node, treeId));
+  }
+
+
+  deleteNode(node, treeId) {
+
+    // Edges will be deleted implicitly
+    return this.pushDiff("deleteNode", {
+      treeId,
       id : node.id
-    })
+    });
+  }
 
 
-  moveTreeComponent : (sourceId, targetId, nodeIds) ->
+  moveTreeComponent(sourceId, targetId, nodeIds) {
 
-    @pushDiff("moveTreeComponent", {
-      sourceId : sourceId
-      targetId : targetId
-      nodeIds : nodeIds
-    })
-
-
-  createEdge : (source, target, treeId) ->
-
-    # used when edges are set manually, e.g. for merging trees
-    @pushDiff("createEdge", {
-      treeId : treeId
-      source : source
-      target : target
-    })
+    return this.pushDiff("moveTreeComponent", {
+      sourceId,
+      targetId,
+      nodeIds
+    });
+  }
 
 
-  concatUpdateTracing : ->
+  createEdge(source, target, treeId) {
 
-    @pushDiff(
-      "updateTracing"
+    // used when edges are set manually, e.g. for merging trees
+    return this.pushDiff("createEdge", {
+      treeId,
+      source,
+      target
+    });
+  }
+
+
+  concatUpdateTracing() {
+
+    this.pushDiff(
+      "updateTracing",
       {
-        activeNode : @skeletonTracing.getActiveNodeId()
-        editPosition : V3.floor(@flycam.getPosition())
-        editRotation : @flycam3d.getRotation()
-        zoomLevel : @flycam.getZoomStep()
-      }
+        activeNode : this.skeletonTracing.getActiveNodeId(),
+        editPosition : V3.floor(this.flycam.getPosition()),
+        editRotation : this.flycam3d.getRotation(),
+        zoomLevel : this.flycam.getZoomStep()
+      },
       false
-    )
-    ErrorHandling.assert(@newDiffs.length > 0, "newDiffs empty after concatUpdateTracing", {
-      @newDiffs
-    })
+    );
+    return ErrorHandling.assert(this.newDiffs.length > 0, "newDiffs empty after concatUpdateTracing", {
+      newDiffs: this.newDiffs
+    });
+  }
+}
 
 
-module.exports = SkeletonTracingStateLogger
+export default SkeletonTracingStateLogger;

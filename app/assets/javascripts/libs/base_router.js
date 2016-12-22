@@ -1,173 +1,215 @@
-$ = require("jquery")
-_ = require("lodash")
-Backbone = require("backbone")
+import $ from "jquery";
+import _ from "lodash";
+import Backbone from "backbone";
 
-class BaseRouter
+class BaseRouter {
+  static initClass() {
+  
+    this.prototype.$mainContainer  = null;
+    this.prototype.routes  = {};
+  }
 
-  $mainContainer : null
-  routes : {}
+  constructor() {
+    this.handlePopstate = this.handlePopstate.bind(this);
+    this.handleRoute = this.handleRoute.bind(this);
+    this.handleBeforeunload = this.handleBeforeunload.bind(this);
+    this.triggerBeforeunload = this.triggerBeforeunload.bind(this);
+    _.extend(this, Backbone.Events);
+    this.activeViews = [];
+    this.routes = _.map(this.routes, (handler, route) => {
+      return {
+        route: Backbone.Router.prototype._routeToRegExp(route),
+        handler: _.isString(handler) ? this[handler].bind(this) : handler
+      };
+    }
+    );
+    window.addEventListener("popstate", this.handlePopstate);
+    window.addEventListener("beforeunload", this.handleBeforeunload);
 
-  constructor : ->
-    _.extend(this, Backbone.Events)
-    @activeViews = []
-    @routes = _.map(@routes, (handler, route) =>
-      {
-        route: Backbone.Router::_routeToRegExp(route),
-        handler: if _.isString(handler) then this[handler].bind(this) else handler
+    this.setupClickHandler();
+
+    this.currentURL = window.location.pathname + window.location.search + window.location.hash;
+    _.defer( () => this.handleRoute());
+  }
+
+
+  setupClickHandler() {
+    // handle all links and manage page changes (rather the reloading the whole site)
+    return $(document).on("click", "a", evt => {
+
+      let newWindow;
+      const url = $(evt.currentTarget).attr("href") || "";
+
+      if (newWindow = $(evt.target).data("newwindow")) {
+        const [ width, height ] = newWindow.split("x");
+        window.open(url, "_blank", `width=${width},height=${height},location=no,menubar=no`);
+        evt.preventDefault();
+        return;
       }
-    )
-    window.addEventListener("popstate", @handlePopstate)
-    window.addEventListener("beforeunload", @handleBeforeunload)
 
-    @setupClickHandler()
+      // disable for links beginning with #
+      if (url.indexOf("#") === 0) {
+        return;
+      }
 
-    @currentURL = window.location.pathname + window.location.search + window.location.hash
-    _.defer( => @handleRoute())
+      // allow opening links in new tabs
+      if (evt.metaKey || evt.ctrlKey) {
+        return;
+      }
 
+      // allow target=_blank etc
+      if (evt.currentTarget.target !== "") {
+        return;
+      }
 
-  setupClickHandler : ->
-    # handle all links and manage page changes (rather the reloading the whole site)
-    $(document).on "click", "a", (evt) =>
+      for (let { route } of this.routes) {
+        if (url.match(route)) {
+          evt.preventDefault();
+          this.navigate(url);
 
-      url = $(evt.currentTarget).attr("href") or ""
-
-      if newWindow = $(evt.target).data("newwindow")
-        [ width, height ] = newWindow.split("x")
-        window.open(url, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
-        evt.preventDefault()
-        return
-
-      # disable for links beginning with #
-      if url.indexOf("#") == 0
-        return
-
-      # allow opening links in new tabs
-      if evt.metaKey or evt.ctrlKey
-        return
-
-      # allow target=_blank etc
-      if evt.currentTarget.target != ""
-        return
-
-      for { route } in @routes
-        if url.match(route)
-          evt.preventDefault()
-          @navigate(url)
-
-          return
-      return
+          return;
+        }
+      }
+    }
+    );
+  }
 
 
-  handlePopstate : (event) =>
-    # Remember: URL is already changed
+  handlePopstate(event) {
+    // Remember: URL is already changed
 
-    if not @shouldNavigate(window.location.pathname)
-      # Do nothing
-      return
+    if (!this.shouldNavigate(window.location.pathname)) {
+      // Do nothing
+      return;
+    }
 
-    # Check for beforeunload
-    beforeunloadValue = @triggerBeforeunload()
-    if beforeunloadValue? and not confirm(beforeunloadValue + "\nDo you wish to navigate away?")
-      # Rollback to previous URL
-      window.history.pushState({}, document.title, @currentURL)
-      return
+    // Check for beforeunload
+    const beforeunloadValue = this.triggerBeforeunload();
+    if ((beforeunloadValue != null) && !confirm(beforeunloadValue + "\nDo you wish to navigate away?")) {
+      // Rollback to previous URL
+      window.history.pushState({}, document.title, this.currentURL);
+      return;
+    }
 
-    @navigate(window.location.pathname, { trigger: false })
-    return
-
-
-  handleRoute : =>
-
-    baseUrl = @getBaseUrl()
-
-    for { route, handler } in @routes
-      match = baseUrl.match(route)
-      if match
-        args = Backbone.Router::_extractParameters(route, baseUrl)
-        handler.apply(null, args)
-        return
-    return
+    this.navigate(window.location.pathname, { trigger: false });
+  }
 
 
-  getBaseUrl : ->
+  handleRoute() {
 
-    # Return the baseUrl without urlParams or anchors/hashes
-    baseUrl = @currentURL.replace(/\?.*$/, "").replace(/#.*$/, "")
-    return baseUrl
+    const baseUrl = this.getBaseUrl();
 
-
-  shouldNavigate : (path) ->
-    return @getBaseUrl() != path
-
-
-  navigate : (path, { trigger = true } = {}) ->
-    if not @shouldNavigate(path)
-      # Do nothing
-      return
-
-    if trigger
-      beforeunloadValue = @triggerBeforeunload()
-      if beforeunloadValue? and not confirm(beforeunloadValue + "\nDo you wish to navigate away?")
-        return
-      window.history.pushState({}, document.title, path)
-    @currentURL = path
-
-    if @cleanupViews()
-      _.defer(@handleRoute)
-    return
+    for (let { route, handler } of this.routes) {
+      const match = baseUrl.match(route);
+      if (match) {
+        const args = Backbone.Router.prototype._extractParameters(route, baseUrl);
+        handler.apply(null, args);
+        return;
+      }
+    }
+  }
 
 
-  handleBeforeunload : (e) =>
-    beforeunloadValue = @triggerBeforeunload()
-    if beforeunloadValue?
-      e.returnValue = beforeunloadValue
-    return
+  getBaseUrl() {
+
+    // Return the baseUrl without urlParams or anchors/hashes
+    const baseUrl = this.currentURL.replace(/\?.*$/, "").replace(/#.*$/, "");
+    return baseUrl;
+  }
 
 
-  triggerBeforeunload : =>
-
-    # Triggers the registered `beforeunload` handlers and returns the first return value
-    # Doesn't use Backbone's trigger because we need return values
-    handlers = this._events?.beforeunload ? []
-    beforeunloadValue = _.find(
-      handlers.map((handler) => handler.callback.call(handler.ctx)),
-      (value) => value?)
-    return beforeunloadValue
+  shouldNavigate(path) {
+    return this.getBaseUrl() !== path;
+  }
 
 
-  cleanupViews : ->
+  navigate(path, param) {
+    if (param == null) { param = {}; }
+    ({ trigger = true } = param);
+    if (!this.shouldNavigate(path)) {
+      // Do nothing
+      return;
+    }
 
-    # Remove current views
-    if @activeViews.length > 0
-      for view in @activeViews
-        # prefer Marionette's.destroy() function to Backbone's remove()
-        if view.destroy
-          view.destroy()
-        else
-          view.remove()
+    if (trigger) {
+      const beforeunloadValue = this.triggerBeforeunload();
+      if ((beforeunloadValue != null) && !confirm(beforeunloadValue + "\nDo you wish to navigate away?")) {
+        return;
+      }
+      window.history.pushState({}, document.title, path);
+    }
+    this.currentURL = path;
 
-        if view.forcePageReload
-          window.removeEventListener("beforeunload", @handleBeforeunload)
-          @reload()
-          return false
-      @activeViews = []
-
-    else
-      # we are probably coming from a URL that isn't a Backbone.View yet (or page reload)
-      @$mainContainer.empty()
-
-    return true
-
-
-  loadURL : (url) ->
-
-    window.location.href = url
-    return
+    if (this.cleanupViews()) {
+      _.defer(this.handleRoute);
+    }
+  }
 
 
-  reload : ->
+  handleBeforeunload(e) {
+    const beforeunloadValue = this.triggerBeforeunload();
+    if (beforeunloadValue != null) {
+      e.returnValue = beforeunloadValue;
+    }
+  }
 
-    window.location.reload()
-    return
 
-module.exports = BaseRouter
+  triggerBeforeunload() {
+
+    // Triggers the registered `beforeunload` handlers and returns the first return value
+    // Doesn't use Backbone's trigger because we need return values
+    const handlers = __guard__(this._events, x => x.beforeunload) != null ? this._events.beforeunload : [];
+    const beforeunloadValue = _.find(
+      handlers.map(handler => handler.callback.call(handler.ctx)),
+      value => (value != null));
+    return beforeunloadValue;
+  }
+
+
+  cleanupViews() {
+
+    // Remove current views
+    if (this.activeViews.length > 0) {
+      for (let view of this.activeViews) {
+        // prefer Marionette's.destroy() function to Backbone's remove()
+        if (view.destroy) {
+          view.destroy();
+        } else {
+          view.remove();
+        }
+
+        if (view.forcePageReload) {
+          window.removeEventListener("beforeunload", this.handleBeforeunload);
+          this.reload();
+          return false;
+        }
+      }
+      this.activeViews = [];
+
+    } else {
+      // we are probably coming from a URL that isn't a Backbone.View yet (or page reload)
+      this.$mainContainer.empty();
+    }
+
+    return true;
+  }
+
+
+  loadURL(url) {
+
+    window.location.href = url;
+  }
+
+
+  reload() {
+
+    window.location.reload();
+  }
+}
+BaseRouter.initClass();
+
+export default BaseRouter;
+
+function __guard__(value, transform) {
+  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+}

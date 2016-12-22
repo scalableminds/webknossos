@@ -1,51 +1,59 @@
-THREE = require("three")
-Deferred = require("../../libs/deferred")
+import THREE from "three";
+import Deferred from "../../libs/deferred";
 
-# This loads and caches meshes.
+// This loads and caches meshes.
 
-class Mesh
+class Mesh {
+  static initClass() {
+  
+    this.LOAD_TIMEOUT  = 30000;
+  
+    this.prototype.mesh  = null;
+  }
 
-  @LOAD_TIMEOUT : 30000
+  constructor(geometry) {
 
-  mesh : null
-
-  constructor : (geometry) ->
-
-    @mesh = new THREE.Mesh(
+    this.mesh = new THREE.Mesh(
       geometry,
-      new THREE.MeshBasicMaterial( color: 0xffffff, shading: THREE.NoShading, vertexColors: THREE.VertexColors )
-    )
+      new THREE.MeshBasicMaterial({ color: 0xffffff, shading: THREE.NoShading, vertexColors: THREE.VertexColors })
+    );
+  }
 
 
-  setPosition : (x, y, z) ->
+  setPosition(x, y, z) {
 
-    { mesh } = this
-    mesh.position.x = x
-    mesh.position.y = y
-    mesh.position.z = z
-    return
-
-
-  attachScene : (scene) ->
-
-    scene.add @mesh
+    const { mesh } = this;
+    mesh.position.x = x;
+    mesh.position.y = y;
+    mesh.position.z = z;
+  }
 
 
-  @load : (filename) ->
+  attachScene(scene) {
 
-    deferred = new Deferred()
+    return scene.add(this.mesh);
+  }
+
+
+  static load(filename) {
+
+    const deferred = new Deferred();
 
     new THREE.JSONLoader().load(
-      "/assets/mesh/" + filename
-      (geometry) =>
-        deferred.resolve(new this(geometry))
-    )
+      `/assets/mesh/${filename}`,
+      geometry => {
+        return deferred.resolve(new this(geometry));
+      }
+    );
 
     setTimeout(
-      -> deferred.reject("timeout")
-      @LOAD_TIMEOUT
-    )
+      () => deferred.reject("timeout"),
+      this.LOAD_TIMEOUT
+    );
 
-    deferred.promise()
+    return deferred.promise();
+  }
+}
+Mesh.initClass();
 
-module.exports = Mesh
+export default Mesh;

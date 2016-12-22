@@ -1,54 +1,64 @@
-_          = require("lodash")
-Utils      = require("libs/utils")
-Marionette = require("backbone.marionette")
-Subviews   = require("backbone-subviews")
+import _ from "lodash";
+import Utils from "libs/utils";
+import Marionette from "backbone.marionette";
+import Subviews from "backbone-subviews";
 
-class SettingsView extends Marionette.View
+class SettingsView extends Marionette.View {
+  static initClass() {
+  
+  
+    this.prototype.template  = _.template(`\
+<div class="panel-group flex-overflow">
+  
+  <% _.forEach(subviewCreatorsList, function (key_value_pair) { %>
+    <div data-subview="<%- key_value_pair[0] %>"></div>
+  <% }) %>
+  
+</div>\
+`);
+  
+  
+    this.prototype.modelName  = null;
+  }
 
 
-  template : _.template("""
-    <div class="panel-group flex-overflow">
+  initialize() {
 
-      <% _.forEach(subviewCreatorsList, function (key_value_pair) { %>
-        <div data-subview="<%- key_value_pair[0] %>"></div>
-      <% }) %>
+    if (this.modelName != null) {
+      this.model = this.model[this.modelName];
+    }
 
-    </div>
-  """)
-
-
-  modelName : null
-
-
-  initialize : ->
-
-    if @modelName?
-      @model = @model[@modelName]
-
-    unless @subviewCreatorsList?
+    if (this.subviewCreatorsList == null) {
       throw new Error(
-        "Subclasses of CategoryView must specify subviewCreatorsList")
+        "Subclasses of CategoryView must specify subviewCreatorsList");
+    }
 
-    # subviewCreators hash needed for Subviews extension
-    @subviewCreators = _.transform(
-      @subviewCreatorsList
-      (result, [key, value]) -> result[key] = value
+    // subviewCreators hash needed for Subviews extension
+    this.subviewCreators = _.transform(
+      this.subviewCreatorsList,
+      (result, [key, value]) => result[key] = value,
       {}
-    )
+    );
 
-    Subviews.add(this)
-
-
-  render : ->
-
-    if @model
-      super()
-    else
-      @$el.html(Utils.loaderTemplate())
+    return Subviews.add(this);
+  }
 
 
-  serializeData : ->
+  render() {
 
-    return { @subviewCreatorsList }
+    if (this.model) {
+      return super.render();
+    } else {
+      return this.$el.html(Utils.loaderTemplate());
+    }
+  }
 
-module.exports = SettingsView
+
+  serializeData() {
+
+    return { subviewCreatorsList: this.subviewCreatorsList };
+  }
+}
+SettingsView.initClass();
+
+export default SettingsView;

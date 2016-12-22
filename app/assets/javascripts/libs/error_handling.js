@@ -1,120 +1,137 @@
-_ = require("lodash")
-AirbrakeClient = require("airbrake-js")
+import _ from "lodash";
+import AirbrakeClient from "airbrake-js";
 
-ErrorHandling =
+const ErrorHandling = {
 
-  initialize : ( options = { throwAssertions: false, sendLocalErrors: false } ) ->
+  initialize( options ) {
 
-    { @throwAssertions, @sendLocalErrors } = options
+    if (options == null) { options = { throwAssertions: false, sendLocalErrors: false }; }
+    ({ throwAssertions: this.throwAssertions, sendLocalErrors: this.sendLocalErrors } = options);
 
-    @initializeAirbrake()
+    return this.initializeAirbrake();
+  },
 
 
-  initializeAirbrake : ->
+  initializeAirbrake() {
 
-    # read Airbrake config from DOM
-    # config is inject from backend
-    $scriptTag = $("[data-airbrake-project-id]")
-    projectId = $scriptTag.data("airbrake-project-id")
-    projectKey = $scriptTag.data("airbrake-project-key")
-    envName = $scriptTag.data("airbrake-environment-name")
+    // read Airbrake config from DOM
+    // config is inject from backend
+    const $scriptTag = $("[data-airbrake-project-id]");
+    const projectId = $scriptTag.data("airbrake-project-id");
+    const projectKey = $scriptTag.data("airbrake-project-key");
+    const envName = $scriptTag.data("airbrake-environment-name");
 
     window.Airbrake = new AirbrakeClient({
-      projectId : projectId
-      projectKey : projectKey
-    })
+      projectId,
+      projectKey
+    });
 
-    Airbrake.addFilter((notice) ->
-      notice.context.environment = envName
-      return notice
-    )
+    Airbrake.addFilter(function(notice) {
+      notice.context.environment = envName;
+      return notice;
+    });
 
-    unless @sendLocalErrors
+    if (!this.sendLocalErrors) {
 
-      Airbrake.addFilter( (notice) ->
-        return location.hostname != "127.0.0.1" and location.hostname != "localhost"
-      )
+      Airbrake.addFilter( notice => location.hostname !== "127.0.0.1" && location.hostname !== "localhost");
+    }
 
-    window.onerror = (message, file, line, colno, error) ->
+    return window.onerror = function(message, file, line, colno, error) {
 
-      unless error?
-        # older browsers don't deliver the error parameter
-        error = new Error(message, file, line)
+      if (error == null) {
+        // older browsers don't deliver the error parameter
+        error = new Error(message, file, line);
+      }
 
-      console.error(error)
-      Airbrake.notify(error)
-
-
-
-  assertExtendContext : (additionalContext) ->
-
-    # since the context isn't displayed on Airbrake.io, we use the params-attribute
-    Airbrake.addFilter(additionalContext)
+      console.error(error);
+      return Airbrake.notify(error);
+    };
+  },
 
 
-  assert : (bool, message, assertionContext) =>
 
-    if bool
-      return
+  assertExtendContext(additionalContext) {
 
-    error = new Error("Assertion violated - " + message)
-
-    error.params = assertionContext
-    error.stack = @trimCallstack(error.stack)
-
-    Toast.error("Assertion violated - #{message}")
-
-    if @throwAssertions
-      # error will be automatically pushed to airbrake due to global handler
-      throw error
-    else
-      console.error(error)
-      Airbrake.notify(error)
+    // since the context isn't displayed on Airbrake.io, we use the params-attribute
+    return Airbrake.addFilter(additionalContext);
+  },
 
 
-  assertExists : (variable, message, assertionContext) ->
+  assert : (bool, message, assertionContext) => {
 
-    if variable?
-      return
+    if (bool) {
+      return;
+    }
 
-    @assert(false, message + " (variable is #{variable})", assertionContext)
+    const error = new Error(`Assertion violated - ${message}`);
+
+    error.params = assertionContext;
+    error.stack = this.trimCallstack(error.stack);
+
+    Toast.error(`Assertion violated - ${message}`);
+
+    if (this.throwAssertions) {
+      // error will be automatically pushed to airbrake due to global handler
+      throw error;
+    } else {
+      console.error(error);
+      return Airbrake.notify(error);
+    }
+  },
 
 
-  assertEquals : (actual, wanted, message, assertionContext) ->
+  assertExists(variable, message, assertionContext) {
 
-    if actual == wanted
-      return
+    if (variable != null) {
+      return;
+    }
 
-    @assert(false, message + " (#{actual} != #{wanted})", assertionContext)
+    return this.assert(false, message + ` (variable is ${variable})`, assertionContext);
+  },
 
 
-  setCurrentUser : (user) ->
+  assertEquals(actual, wanted, message, assertionContext) {
 
-    Airbrake.addFilter((notice) ->
+    if (actual === wanted) {
+      return;
+    }
+
+    return this.assert(false, message + ` (${actual} != ${wanted})`, assertionContext);
+  },
+
+
+  setCurrentUser(user) {
+
+    return Airbrake.addFilter(function(notice) {
       notice.context.user = _.pick(user, [
         "id",
         "email",
         "firstName",
         "lastName",
         "isActive"
-      ])
-      return notice
-    )
+      ]);
+      return notice;
+    });
+  },
 
 
-  trimCallstack : (callstack) ->
+  trimCallstack(callstack) {
 
-    # cut function calls caused by ErrorHandling so that Airbrake won't cluster all assertions into one group
+    // cut function calls caused by ErrorHandling so that Airbrake won't cluster all assertions into one group
 
-    trimmedCallstack = []
+    const trimmedCallstack = [];
 
-    for line in callstack.split("\n")
+    for (let line of callstack.split("\n")) {
 
-      if line.indexOf("errorHandling.js") == -1
+      if (line.indexOf("errorHandling.js") === -1) {
 
-        trimmedCallstack.push(line)
+        trimmedCallstack.push(line);
+      }
+    }
 
-    return trimmedCallstack.join("\n")
+    return trimmedCallstack.join("\n");
+  }
+};
 
 
-module.exports = ErrorHandling
+export default ErrorHandling;

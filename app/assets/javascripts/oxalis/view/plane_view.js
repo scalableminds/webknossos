@@ -1,263 +1,299 @@
-app        = require("app")
-Backbone   = require("backbone")
-$          = require("jquery")
-TWEEN      = require("tween.js")
-Dimensions = require("../model/dimensions")
-Toast      = require("../../libs/toast")
-constants  = require("../constants")
-modal      = require("./modal")
-THREE      = require("three")
+import app from "app";
+import Backbone from "backbone";
+import $ from "jquery";
+import TWEEN from "tween.js";
+import Dimensions from "../model/dimensions";
+import Toast from "../../libs/toast";
+import constants from "../constants";
+import modal from "./modal";
+import THREE from "three";
 
-class PlaneView
+class PlaneView {
 
-  constructor : (@model, @view) ->
+  constructor(model, view) {
 
-    _.extend(this, Backbone.Events)
+    let HEIGHT, WIDTH;
+    this.resize = this.resize.bind(this);
+    this.scaleTrianglesPlane = this.scaleTrianglesPlane.bind(this);
+    this.setActiveViewport = this.setActiveViewport.bind(this);
+    this.getCameras = this.getCameras.bind(this);
+    this.model = model;
+    this.view = view;
+    _.extend(this, Backbone.Events);
 
-    { @renderer, @scene } = @view
-    @running = false
+    ({ renderer: this.renderer, scene: this.scene } = this.view);
+    this.running = false;
 
-    # The "render" div serves as a container for the canvas, that is
-    # attached to it once a renderer has been initalized.
-    container = $("#render")
+    // The "render" div serves as a container for the canvas, that is
+    // attached to it once a renderer has been initalized.
+    const container = $("#render");
 
-    # Create a 4x4 grid
-    @curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH
-    @scaleFactor = 1
-    @deviceScaleFactor = window.devicePixelRatio || 1
+    // Create a 4x4 grid
+    this.curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH;
+    this.scaleFactor = 1;
+    this.deviceScaleFactor = window.devicePixelRatio || 1;
 
-    # Initialize main THREE.js components
-    @camera   = new Array(4)
-    @lights   = new Array(3)
+    // Initialize main THREE.js components
+    this.camera   = new Array(4);
+    this.lights   = new Array(3);
 
-    for i in constants.ALL_VIEWPORTS
-      # Let's set up cameras
-      # No need to set any properties, because the camera controller will deal with that
-      @camera[i]   = new THREE.OrthographicCamera(0, 0, 0, 0)
-      @scene.add @camera[i]
+    for (let i of constants.ALL_VIEWPORTS) {
+      // Let's set up cameras
+      // No need to set any properties, because the camera controller will deal with that
+      this.camera[i]   = new THREE.OrthographicCamera(0, 0, 0, 0);
+      this.scene.add(this.camera[i]);
+    }
 
-    @camera[constants.PLANE_XY].position.z = -1
-    @camera[constants.PLANE_YZ].position.x =  1
-    @camera[constants.PLANE_XZ].position.y =  1
-    @camera[constants.TDView].position    = new THREE.Vector3(10, 10, -10)
-    @camera[constants.PLANE_XY].up        = new THREE.Vector3( 0, -1,  0)
-    @camera[constants.PLANE_YZ].up        = new THREE.Vector3( 0, -1,  0)
-    @camera[constants.PLANE_XZ].up        = new THREE.Vector3( 0,  0, -1)
-    @camera[constants.TDView].up          = new THREE.Vector3( 0,  0, -1)
-    for cam in @camera
-      cam.lookAt(new THREE.Vector3( 0, 0, 0))
+    this.camera[constants.PLANE_XY].position.z = -1;
+    this.camera[constants.PLANE_YZ].position.x =  1;
+    this.camera[constants.PLANE_XZ].position.y =  1;
+    this.camera[constants.TDView].position    = new THREE.Vector3(10, 10, -10);
+    this.camera[constants.PLANE_XY].up        = new THREE.Vector3( 0, -1,  0);
+    this.camera[constants.PLANE_YZ].up        = new THREE.Vector3( 0, -1,  0);
+    this.camera[constants.PLANE_XZ].up        = new THREE.Vector3( 0,  0, -1);
+    this.camera[constants.TDView].up          = new THREE.Vector3( 0,  0, -1);
+    for (let cam of this.camera) {
+      cam.lookAt(new THREE.Vector3( 0, 0, 0));
+    }
 
-    # Because the voxel coordinates do not have a cube shape but are distorted,
-    # we need to distort the entire scene to provide an illustration that is
-    # proportional to the actual size in nm.
-    # For some reason, all objects have to be put into a group object. Changing
-    # scene.scale does not have an effect.
-    @group = new THREE.Object3D
-    # The dimension(s) with the highest resolution will not be distorted
-    @group.scale = app.scaleInfo.getNmPerVoxelVector()
-    # Add scene to the group, all Geometries are than added to group
-    @scene.add(@group)
+    // Because the voxel coordinates do not have a cube shape but are distorted,
+    // we need to distort the entire scene to provide an illustration that is
+    // proportional to the actual size in nm.
+    // For some reason, all objects have to be put into a group object. Changing
+    // scene.scale does not have an effect.
+    this.group = new THREE.Object3D;
+    // The dimension(s) with the highest resolution will not be distorted
+    this.group.scale = app.scaleInfo.getNmPerVoxelVector();
+    // Add scene to the group, all Geometries are than added to group
+    this.scene.add(this.group);
 
-    @scene.add( new THREE.AmbientLight(0x333333) )
-    directionalLight = new THREE.DirectionalLight(0xffffff, 0.3)
-    directionalLight.position.set(1, 1, -1).normalize()
-    @scene.add( directionalLight )
-    directionalLight = new THREE.DirectionalLight(0xffffff, 0.3)
-    directionalLight.position.set(-1, -1, -1).normalize()
-    @scene.add( directionalLight )
+    this.scene.add( new THREE.AmbientLight(0x333333) );
+    let directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    directionalLight.position.set(1, 1, -1).normalize();
+    this.scene.add( directionalLight );
+    directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    directionalLight.position.set(-1, -1, -1).normalize();
+    this.scene.add( directionalLight );
 
-    # Attach the canvas to the container
-    @renderer.setSize 2 * WIDTH + 20, 2 * HEIGHT + 20
-    $(@renderer.domElement).attr("id": "render-canvas")
-    container.append @renderer.domElement
+    // Attach the canvas to the container
+    this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
+    $(this.renderer.domElement).attr({"id": "render-canvas"});
+    container.append(this.renderer.domElement);
 
-    @setActiveViewport( constants.PLANE_XY )
+    this.setActiveViewport( constants.PLANE_XY );
 
-    @first = true
-    @newTextures = [true, true, true, true]
+    this.first = true;
+    this.newTextures = [true, true, true, true];
 
-    @needsRerender = true
-    app.vent.on("rerender", => @needsRerender = true)
+    this.needsRerender = true;
+    app.vent.on("rerender", () => this.needsRerender = true);
+  }
 
 
-  animate : ->
+  animate() {
 
-    return unless @running
+    if (!this.running) { return; }
 
-    @renderFunction()
+    this.renderFunction();
 
-    window.requestAnimationFrame => @animate()
+    return window.requestAnimationFrame(() => this.animate());
+  }
 
-  renderFunction : ->
-    # This is the main render function.
-    # All 3D meshes and the trianglesplane are rendered here.
+  renderFunction() {
+    // This is the main render function.
+    // All 3D meshes and the trianglesplane are rendered here.
 
-    TWEEN.update()
+    TWEEN.update();
 
-    # skip rendering if nothing has changed
-    # This prevents you the GPU/CPU from constantly
-    # working and keeps your lap cool
-    # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
+    // skip rendering if nothing has changed
+    // This prevents you the GPU/CPU from constantly
+    // working and keeps your lap cool
+    // ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
 
-    modelChanged = false
-    for name, binary of @model.binary
-      for plane in binary.planes
-        modelChanged |= plane.hasChanged()
+    let modelChanged = false;
+    for (let name in this.model.binary) {
+      const binary = this.model.binary[name];
+      for (let plane of binary.planes) {
+        modelChanged |= plane.hasChanged();
+      }
+    }
 
-    if @needsRerender or modelChanged
+    if (this.needsRerender || modelChanged) {
 
-      @trigger("render")
+      this.trigger("render");
 
-      viewport = [
-        [0, @curWidth + 20],
-        [@curWidth + 20, @curWidth + 20],
+      const viewport = [
+        [0, this.curWidth + 20],
+        [this.curWidth + 20, this.curWidth + 20],
         [0, 0],
-        [@curWidth + 20, 0]
-      ]
-      @renderer.autoClear = true
+        [this.curWidth + 20, 0]
+      ];
+      this.renderer.autoClear = true;
 
-      setupRenderArea = (x, y, width, color) =>
-        @renderer.setViewport x, y, width, width
-        @renderer.setScissor  x, y, width, width
-        @renderer.enableScissorTest true
-        @renderer.setClearColor color, 1
+      const setupRenderArea = (x, y, width, color) => {
+        this.renderer.setViewport(x, y, width, width);
+        this.renderer.setScissor(x, y, width, width);
+        this.renderer.enableScissorTest(true);
+        return this.renderer.setClearColor(color, 1);
+      };
 
-      setupRenderArea( 0, 0, @renderer.domElement.width, 0xffffff )
-      @renderer.clear()
+      setupRenderArea( 0, 0, this.renderer.domElement.width, 0xffffff );
+      this.renderer.clear();
 
-      for i in constants.ALL_VIEWPORTS
-        @trigger("renderCam", i)
+      for (let i of constants.ALL_VIEWPORTS) {
+        this.trigger("renderCam", i);
         setupRenderArea(
-          viewport[i][0] * @deviceScaleFactor,
-          viewport[i][1] * @deviceScaleFactor,
-          @curWidth * @deviceScaleFactor,
+          viewport[i][0] * this.deviceScaleFactor,
+          viewport[i][1] * this.deviceScaleFactor,
+          this.curWidth * this.deviceScaleFactor,
           constants.PLANE_COLORS[i]
-        )
-        @renderer.render(@scene, @camera[i])
+        );
+        this.renderer.render(this.scene, this.camera[i]);
+      }
 
-      @needsRerender = false
+      return this.needsRerender = false;
+    }
+  }
 
-  addGeometry : (geometry) ->
-    # Adds a new Three.js geometry to the scene.
-    # This provides the public interface to the GeometryFactory.
+  addGeometry(geometry) {
+    // Adds a new Three.js geometry to the scene.
+    // This provides the public interface to the GeometryFactory.
 
-    @group.add geometry
-
-
-  removeGeometry : (geometry) ->
-
-    @group.remove geometry
-
-
-  draw : ->
-    app.vent.trigger("rerender")
+    return this.group.add(geometry);
+  }
 
 
-  resizeThrottled : ->
+  removeGeometry(geometry) {
 
-    # throttle resize to avoid annoying flickering
-    @resizeThrottled = _.throttle(
-      =>
-        @resize()
-        app.vent.trigger("planes:resize")
+    return this.group.remove(geometry);
+  }
+
+
+  draw() {
+    return app.vent.trigger("rerender");
+  }
+
+
+  resizeThrottled() {
+
+    // throttle resize to avoid annoying flickering
+    this.resizeThrottled = _.throttle(
+      () => {
+        this.resize();
+        return app.vent.trigger("planes:resize");
+      },
       constants.RESIZE_THROTTLE_TIME
-    )
-    @resizeThrottled()
+    );
+    return this.resizeThrottled();
+  }
 
 
-  resize : =>
+  resize() {
 
-    # Call this after the canvas was resized to fix the viewport
-    canvas = $("#render-canvas")
-    WIDTH = (canvas.width() - 20 ) / 2
-    HEIGHT = (canvas.height() - 20 ) / 2
+    // Call this after the canvas was resized to fix the viewport
+    const canvas = $("#render-canvas");
+    const WIDTH = (canvas.width() - 20 ) / 2;
+    const HEIGHT = (canvas.height() - 20 ) / 2;
 
-    @renderer.setSize(2 * WIDTH + 20, 2 * HEIGHT + 20)
-    for i in constants.ALL_VIEWPORTS
-      @camera[i].aspect = WIDTH / HEIGHT
-      @camera[i].updateProjectionMatrix()
-    @draw()
+    this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
+    for (let i of constants.ALL_VIEWPORTS) {
+      this.camera[i].aspect = WIDTH / HEIGHT;
+      this.camera[i].updateProjectionMatrix();
+    }
+    return this.draw();
+  }
 
 
-  scaleTrianglesPlane : (scale) =>
+  scaleTrianglesPlane(scale) {
 
-    @scaleFactor = scale
-    @curWidth = WIDTH = HEIGHT = Math.round(@scaleFactor * constants.VIEWPORT_WIDTH)
-    canvas = $("#render-canvas")
-    canvas.width(2 * WIDTH + 20)
-    canvas.height(2 * HEIGHT + 20)
+    let HEIGHT, WIDTH;
+    this.scaleFactor = scale;
+    this.curWidth = WIDTH = HEIGHT = Math.round(this.scaleFactor * constants.VIEWPORT_WIDTH);
+    const canvas = $("#render-canvas");
+    canvas.width((2 * WIDTH) + 20);
+    canvas.height((2 * HEIGHT) + 20);
 
-    $('#TDViewControls button').outerWidth(@curWidth / 4 - 0.5)
+    $('#TDViewControls button').outerWidth((this.curWidth / 4) - 0.5);
 
     $(".inputcatcher")
-      .css(
-        width : WIDTH
+      .css({
+        width : WIDTH,
         height : HEIGHT
-      )
+      });
 
-    @resizeThrottled()
-
-
-  setActiveViewport : (viewportID) =>
-
-    for i in [0..3]
-      if i == viewportID
-        $(".inputcatcher").eq(i).removeClass("inactive").addClass("active")
-      else
-        $(".inputcatcher").eq(i).removeClass("active").addClass("inactive")
-
-    @draw()
+    return this.resizeThrottled();
+  }
 
 
-  getCameras : =>
+  setActiveViewport(viewportID) {
 
-    @camera
+    for (let i = 0; i <= 3; i++) {
+      if (i === viewportID) {
+        $(".inputcatcher").eq(i).removeClass("inactive").addClass("active");
+      } else {
+        $(".inputcatcher").eq(i).removeClass("active").addClass("inactive");
+      }
+    }
+
+    return this.draw();
+  }
 
 
-  showBranchModalDouble : (callback) ->
+  getCameras() {
 
-    modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+    return this.camera;
+  }
+
+
+  showBranchModalDouble(callback) {
+
+    return modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
       "Jump again?",
-      [{id: "jump-button", label: "Jump again", callback: callback},
-       {id: "cancel-button", label: "Cancel"}])
+      [{id: "jump-button", label: "Jump again", callback},
+       {id: "cancel-button", label: "Cancel"}]);
+  }
 
 
-  showBranchModalDelete : (callback) ->
+  showBranchModalDelete(callback) {
 
-    modal.show("You are about to delete an unused branchpoint, are you sure?",
+    return modal.show("You are about to delete an unused branchpoint, are you sure?",
       "Delete branchpoint?",
-      [{id: "delete-button", label: "Delete branchpoint", callback: callback},
-       {id: "cancel-button", label: "Cancel"}])
+      [{id: "delete-button", label: "Delete branchpoint", callback},
+       {id: "cancel-button", label: "Cancel"}]);
+  }
 
 
-  bindToEvents : ->
+  bindToEvents() {
 
-    if @model.skeletonTracing
-      @listenTo(@model.skeletonTracing, "doubleBranch", @showBranchModalDouble)
-      @listenTo(@model.skeletonTracing, "deleteBranch", @showBranchModalDelete)
-      @listenTo(@model.skeletonTracing, "mergeDifferentTrees", ->
-        Toast.error("You can't merge nodes within the same tree", false)
-      )
+    if (this.model.skeletonTracing) {
+      this.listenTo(this.model.skeletonTracing, "doubleBranch", this.showBranchModalDouble);
+      this.listenTo(this.model.skeletonTracing, "deleteBranch", this.showBranchModalDelete);
+      this.listenTo(this.model.skeletonTracing, "mergeDifferentTrees", () => Toast.error("You can't merge nodes within the same tree", false));
+    }
 
-    @listenTo(@model.user, "change:scale", (model, scale) ->
-      if @running then @scaleTrianglesPlane(scale)
-    )
-
-
-  stop : ->
-
-    $(".inputcatcher").hide()
-
-    @running = false
+    return this.listenTo(this.model.user, "change:scale", function(model, scale) {
+      if (this.running) { return this.scaleTrianglesPlane(scale); }
+    });
+  }
 
 
-  start : ->
+  stop() {
 
-    @running = true
+    $(".inputcatcher").hide();
 
-    $(".inputcatcher").show()
-    @scaleTrianglesPlane(@model.user.get("scale"))
+    return this.running = false;
+  }
 
-    @animate()
 
-module.exports = PlaneView
+  start() {
+
+    this.running = true;
+
+    $(".inputcatcher").show();
+    this.scaleTrianglesPlane(this.model.user.get("scale"));
+
+    return this.animate();
+  }
+}
+
+export default PlaneView;

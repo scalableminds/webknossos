@@ -1,102 +1,123 @@
-$         = require("jquery")
-Bootstrap = require("bootstrap")
+import $ from "jquery";
+import Bootstrap from "bootstrap";
 
-$.fn.alertWithTimeout = (timeout = 3000) ->
+$.fn.alertWithTimeout = function(timeout) {
 
-  this.each ->
+  if (timeout == null) { timeout = 3000; }
+  return this.each(function() {
 
-    $this = $(this)
-    $this.alert()
-    timerId = -1
+    const $this = $(this);
+    $this.alert();
+    let timerId = -1;
 
     $this.hover(
-      ->
-        clearTimeout(timerId)
-      ->
+      () => clearTimeout(timerId),
+      () =>
         timerId = setTimeout(
-          -> $this.alert("close")
+          () => $this.alert("close"),
           timeout
         )
-    )
-    $(window).one "mousemove", -> $this.mouseout()
+    );
+    return $(window).one("mousemove", () => $this.mouseout());
+  });
+};
 
 
-getToasts = (type, message) ->
-
-  return $(".alert-#{type}[data-id='#{message}']")
+const getToasts = (type, message) => $(`.alert-${type}[data-id='${message}']`);
 
 
-shouldDisplayToast = (type, message, sticky) ->
+const shouldDisplayToast = (type, message, sticky) =>
 
-  # Don't show duplicate sticky toasts
-  return not sticky or getToasts(type, message).length == 0
-
-
-Toast =
-
-  message : (type, message, sticky = false) ->
-
-    if _.isArray(type) and not message?
-      messages = type
-      for message in messages
-        if message.success?
-          return @success(message.success)
-        if message.error?
-          return @error(message.error)
-
-    else if _.isArray(message)
-      messages = message
-      return (@message(type, message, sticky) for message in messages)
-
-    else if shouldDisplayToast(type, message, sticky)
-      if message.match(/<html[^>]*>/)
-        displayMessage = "<iframe src='data:text/html;charset=utf-8,#{escape(message)}'></iframe>"
-      else
-        displayMessage = message
-      $messageElement = $("<div>", class : "alert alert-#{type} fade in", "data-id" : message).html(displayMessage)
-      $closeButton = $("<button>", type : "button", class : "close", "data-dismiss" : "alert").html("&times;")
-      $messageElement.prepend($closeButton)
-      if sticky
-        $messageElement.alert()
-      else
-        timeout = if type == "danger" then 6000 else 3000
-        $messageElement.alertWithTimeout(timeout)
-      $("#alert-container").append($messageElement)
-
-      if type == "danger"
-        @highlight($messageElement)
-
-      return {remove : -> $closeButton.click()}
+  // Don't show duplicate sticky toasts
+  !sticky || getToasts(type, message).length === 0
+;
 
 
-  info : (message, sticky) ->
+const Toast = {
 
-    return @message("info", message, sticky)
+  message(type, message, sticky) {
+
+    let messages;
+    if (sticky == null) { sticky = false; }
+    if (_.isArray(type) && (message == null)) {
+      messages = type;
+      for (message of messages) {
+        if (message.success != null) {
+          return this.success(message.success);
+        }
+        if (message.error != null) {
+          return this.error(message.error);
+        }
+      }
+
+    } else if (_.isArray(message)) {
+      messages = message;
+      return (messages.map((message) => this.message(type, message, sticky)));
+
+    } else if (shouldDisplayToast(type, message, sticky)) {
+      let displayMessage;
+      if (message.match(/<html[^>]*>/)) {
+        displayMessage = `<iframe src='data:text/html;charset=utf-8,${escape(message)}'></iframe>`;
+      } else {
+        displayMessage = message;
+      }
+      const $messageElement = $("<div>", {class : `alert alert-${type} fade in`, "data-id" : message}).html(displayMessage);
+      const $closeButton = $("<button>", {type : "button", class : "close", "data-dismiss" : "alert"}).html("&times;");
+      $messageElement.prepend($closeButton);
+      if (sticky) {
+        $messageElement.alert();
+      } else {
+        const timeout = type === "danger" ? 6000 : 3000;
+        $messageElement.alertWithTimeout(timeout);
+      }
+      $("#alert-container").append($messageElement);
+
+      if (type === "danger") {
+        this.highlight($messageElement);
+      }
+
+      return {remove() { return $closeButton.click(); }};
+    }
+  },
 
 
-  warning : (message, sticky) ->
+  info(message, sticky) {
 
-    return @message("warning", message, sticky)
-
-
-  success : (message = "Success :-)", sticky) ->
-
-    return @message("success", message, sticky)
+    return this.message("info", message, sticky);
+  },
 
 
-  error : (message = "Error :-/", sticky) ->
+  warning(message, sticky) {
 
-    return @message("danger", message, sticky)
-
-
-  highlight : (target) ->
-
-    target.addClass("alert-wiggle")
+    return this.message("warning", message, sticky);
+  },
 
 
-  delete : (type, message) ->
+  success(message, sticky) {
 
-    getToasts(type, message).alert("close")
+    if (message == null) { message = "Success :-)"; }
+    return this.message("success", message, sticky);
+  },
 
 
-module.exports = Toast
+  error(message, sticky) {
+
+    if (message == null) { message = "Error :-/"; }
+    return this.message("danger", message, sticky);
+  },
+
+
+  highlight(target) {
+
+    return target.addClass("alert-wiggle");
+  },
+
+
+  delete(type, message) {
+
+    return getToasts(type, message).alert("close");
+  }
+};
+
+
+export default Toast;

@@ -1,39 +1,42 @@
-Cube = require("../cube")
-_ = require("lodash")
+import Cube from "../cube";
+import _ from "lodash";
 
-# Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
-# object as expected by the server on bucket request
-BucketBuilder = {
+// Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
+// object as expected by the server on bucket request
+const BucketBuilder = {
 
-  fromZoomedAddress : ([x, y, z, zoomStep], options={}) ->
+  fromZoomedAddress([x, y, z, zoomStep], options) {
 
-    bucket = {
+    if (options == null) { options = {}; }
+    let bucket = {
       position : [
-        x << (zoomStep + Cube::BUCKET_SIZE_P)
-        y << (zoomStep + Cube::BUCKET_SIZE_P)
-        z << (zoomStep + Cube::BUCKET_SIZE_P)
-      ]
-      zoomStep : zoomStep
-      cubeSize : 1 << Cube::BUCKET_SIZE_P
-    }
+        x << (zoomStep + Cube.prototype.BUCKET_SIZE_P),
+        y << (zoomStep + Cube.prototype.BUCKET_SIZE_P),
+        z << (zoomStep + Cube.prototype.BUCKET_SIZE_P)
+      ],
+      zoomStep,
+      cubeSize : 1 << Cube.prototype.BUCKET_SIZE_P
+    };
 
-    bucket = _.extend(bucket, options)
+    bucket = _.extend(bucket, options);
 
-    return bucket
+    return bucket;
+  },
 
 
-  bucketToZoomedAddress : (bucket) ->
+  bucketToZoomedAddress(bucket) {
 
-    [x, y, z] = bucket.position
-    zoomStep = bucket.zoomStep
+    const [x, y, z] = bucket.position;
+    const { zoomStep } = bucket;
     return [
-      x >> (zoomStep + Cube::BUCKET_SIZE_P)
-      y >> (zoomStep + Cube::BUCKET_SIZE_P)
-      z >> (zoomStep + Cube::BUCKET_SIZE_P)
+      x >> (zoomStep + Cube.prototype.BUCKET_SIZE_P),
+      y >> (zoomStep + Cube.prototype.BUCKET_SIZE_P),
+      z >> (zoomStep + Cube.prototype.BUCKET_SIZE_P),
       zoomStep
-    ]
+    ];
+  }
 
-}
+};
 
 
-module.exports = BucketBuilder
+export default BucketBuilder;

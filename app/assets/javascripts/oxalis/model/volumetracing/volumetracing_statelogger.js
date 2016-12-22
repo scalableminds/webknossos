@@ -1,44 +1,54 @@
-StateLogger = require("../statelogger")
+import StateLogger from "../statelogger";
 
-class VolumeTracingStateLogger extends StateLogger
-
-
-  constructor : (flycam, version, tracingId, tracingType, allowUpdate, @volumeTracing, @pushQueue) ->
-
-    super(flycam, version, tracingId, tracingType, allowUpdate)
+class VolumeTracingStateLogger extends StateLogger {
 
 
-  pushDiff : (action, value, push = true) ->
+  constructor(flycam, version, tracingId, tracingType, allowUpdate, volumeTracing, pushQueue) {
 
-    @pushQueue.pushImpl()
-    super(arguments...)
-
-    if push
-      @pushImpl()
-
-
-  pushNow : ->
-
-    pushQueuePromise = @pushQueue.pushImpl()
-    stateLoggerPromise = super(arguments...)
-    return Promise.all([pushQueuePromise, stateLoggerPromise])
+    this.volumeTracing = volumeTracing;
+    this.pushQueue = pushQueue;
+    super(flycam, version, tracingId, tracingType, allowUpdate);
+  }
 
 
-  stateSaved : (args...) ->
+  pushDiff(action, value, push) {
 
-    return super(args...) and @pushQueue.stateSaved()
+    if (push == null) { push = true; }
+    this.pushQueue.pushImpl();
+    super.pushDiff(...arguments);
+
+    if (push) {
+      return this.pushImpl();
+    }
+  }
 
 
-  concatUpdateTracing : ->
+  pushNow() {
 
-    @pushDiff(
-      "updateTracing"
+    const pushQueuePromise = this.pushQueue.pushImpl();
+    const stateLoggerPromise = super.pushNow(...arguments);
+    return Promise.all([pushQueuePromise, stateLoggerPromise]);
+  }
+
+
+  stateSaved(...args) {
+
+    return super.stateSaved(...args) && this.pushQueue.stateSaved();
+  }
+
+
+  concatUpdateTracing() {
+
+    return this.pushDiff(
+      "updateTracing",
       {
-        activeCell : @volumeTracing.getActiveCellId()
-        editPosition : @flycam.getPosition()
-        nextCell : @volumeTracing.idCount
-      }
+        activeCell : this.volumeTracing.getActiveCellId(),
+        editPosition : this.flycam.getPosition(),
+        nextCell : this.volumeTracing.idCount
+      },
       false
-    )
+    );
+  }
+}
 
-module.exports = VolumeTracingStateLogger
+export default VolumeTracingStateLogger;

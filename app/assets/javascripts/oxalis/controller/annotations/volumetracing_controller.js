@@ -1,110 +1,136 @@
-app        = require("app")
-Backbone   = require("backbone")
-Dimensions = require("oxalis/model/dimensions")
-Input      = require("libs/input")
+import app from "app";
+import Backbone from "backbone";
+import Dimensions from "oxalis/model/dimensions";
+import Input from "libs/input";
 
-class VolumeTracingController
+class VolumeTracingController {
+  static initClass() {
+  
+    // See comment in Controller class on general controller architecture.
+    //
+    // Volume Tracing Controller:
+    // Add Volume Tracing controls that are not specific to the view mode.
+    // Also, this would be the place to define general Volume Tracing
+    // functions that can be called by the specific view mode controller.
+  
+  
+    this.prototype.MERGE_MODE_NORMAL  = 0;
+    this.prototype.MERGE_MODE_CELL1   = 1;
+    this.prototype.MERGE_MODE_CELL2   = 2;
+  }
 
-  # See comment in Controller class on general controller architecture.
-  #
-  # Volume Tracing Controller:
-  # Add Volume Tracing controls that are not specific to the view mode.
-  # Also, this would be the place to define general Volume Tracing
-  # functions that can be called by the specific view mode controller.
+  constructor(model, volumeTracingView, sceneController) {
 
+    this.model = model;
+    this.volumeTracingView = volumeTracingView;
+    this.sceneController = sceneController;
+    this.inDeleteMode = false;
 
-  MERGE_MODE_NORMAL : 0
-  MERGE_MODE_CELL1  : 1
-  MERGE_MODE_CELL2  : 2
+    _.extend(this, Backbone.Events);
 
-  constructor : (@model, @volumeTracingView, @sceneController) ->
+    $('#create-cell-button').on("click", () => {
+      return this.model.volumeTracing.createCell();
+    }
+    );
 
-    @inDeleteMode = false
+    // Keyboard shortcuts
+    new Input.KeyboardNoLoop({
+      "w" : () => this.model.volumeTracing.toggleMode(),
+      "1" : () => this.model.volumeTracing.toggleMode()
+    });
 
-    _.extend(@, Backbone.Events)
+    // no merging for now
+    $("#btn-merge").hide();
 
-    $('#create-cell-button').on("click", =>
-      @model.volumeTracing.createCell()
-    )
+    this.mergeMode = this.MERGE_MODE_NORMAL;
+    const isMergeVisible = () => $("#merge").css("visibility") === "visible";
 
-    # Keyboard shortcuts
-    new Input.KeyboardNoLoop(
-      "w" : => @model.volumeTracing.toggleMode()
-      "1" : => @model.volumeTracing.toggleMode()
-    )
+    $("#btn-merge").on("click", function() {
+      $("#merge").css({
+        visibility : isMergeVisible() ? "hidden" : "visible"});
+      if (isMergeVisible()) {
+        return $("#merge-cell1").focus();
+      }
+    });
 
-    # no merging for now
-    $("#btn-merge").hide()
+    const inputModeMapping = {
+      "#merge-cell1" : this.MERGE_MODE_CELL1,
+      "#merge-cell2" : this.MERGE_MODE_CELL2
+    };
 
-    @mergeMode = @MERGE_MODE_NORMAL
-    isMergeVisible = ->
-      return $("#merge").css("visibility") == "visible"
+    for (let input in inputModeMapping) {
 
-    $("#btn-merge").on "click", ->
-      $("#merge").css
-        visibility : if isMergeVisible() then "hidden" else "visible"
-      if isMergeVisible()
-        $("#merge-cell1").focus()
-
-    inputModeMapping =
-      "#merge-cell1" : @MERGE_MODE_CELL1
-      "#merge-cell2" : @MERGE_MODE_CELL2
-
-    for input of inputModeMapping
-
-      do (input) =>
-        $(input).on "focus", =>
-          @mergeMode = inputModeMapping[input]
-          console.log @mergeMode
-        $(input).keypress (event) =>
-          if event.which == 13
-            @merge()
-
-
-  merge : ->
-
-    inputs = [ $("#merge-cell1"), $("#merge-cell2") ]
-    $("#merge").css( visibility: "hidden")
-    console.log "Merge:", $("#merge-cell1").val(), $("#merge-cell2").val()
-
-    for input in inputs
-      input.blur()
-      input.val("")
-
-
-  handleCellSelection : (cellId) ->
-
-    if cellId > 0
-      if @mergeMode == @MERGE_MODE_NORMAL
-        @model.volumeTracing.setActiveCell( cellId )
-      else if @mergeMode == @MERGE_MODE_CELL1
-        $("#merge-cell1").val(cellId)
-        $("#merge-cell2").focus()
-      else if @mergeMode == @MERGE_MODE_CELL2
-        $("#merge-cell2").val(cellId)
-        @merge()
+      (input => {
+        $(input).on("focus", () => {
+          this.mergeMode = inputModeMapping[input];
+          return console.log(this.mergeMode);
+        }
+        );
+        return $(input).keypress(event => {
+          if (event.which === 13) {
+            return this.merge();
+          }
+        }
+        );
+      })(input);
+    }
+  }
 
 
+  merge() {
 
-  enterDeleteMode : ->
+    const inputs = [ $("#merge-cell1"), $("#merge-cell2") ];
+    $("#merge").css({ visibility: "hidden"});
+    console.log("Merge:", $("#merge-cell1").val(), $("#merge-cell2").val());
 
-    return if @inDeleteMode
-
-    @inDeleteMode = true
-
-    @prevActiveCell = @model.volumeTracing.getActiveCellId()
-    @model.volumeTracing.setActiveCell(0)
-
-
-  restoreAfterDeleteMode : ->
-
-    if @inDeleteMode
-      @model.volumeTracing.setActiveCell( @prevActiveCell )
-    @inDeleteMode = false
+    return inputs.map((input) =>
+      (input.blur(),
+      input.val("")));
+  }
 
 
-  drawVolume : (pos) ->
+  handleCellSelection(cellId) {
 
-    @model.volumeTracing.addToLayer(pos)
+    if (cellId > 0) {
+      if (this.mergeMode === this.MERGE_MODE_NORMAL) {
+        return this.model.volumeTracing.setActiveCell( cellId );
+      } else if (this.mergeMode === this.MERGE_MODE_CELL1) {
+        $("#merge-cell1").val(cellId);
+        return $("#merge-cell2").focus();
+      } else if (this.mergeMode === this.MERGE_MODE_CELL2) {
+        $("#merge-cell2").val(cellId);
+        return this.merge();
+      }
+    }
+  }
 
-module.exports = VolumeTracingController
+
+
+  enterDeleteMode() {
+
+    if (this.inDeleteMode) { return; }
+
+    this.inDeleteMode = true;
+
+    this.prevActiveCell = this.model.volumeTracing.getActiveCellId();
+    return this.model.volumeTracing.setActiveCell(0);
+  }
+
+
+  restoreAfterDeleteMode() {
+
+    if (this.inDeleteMode) {
+      this.model.volumeTracing.setActiveCell( this.prevActiveCell );
+    }
+    return this.inDeleteMode = false;
+  }
+
+
+  drawVolume(pos) {
+
+    return this.model.volumeTracing.addToLayer(pos);
+  }
+}
+VolumeTracingController.initClass();
+
+export default VolumeTracingController;

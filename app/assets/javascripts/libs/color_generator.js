@@ -1,16 +1,17 @@
-THREE          = require("three")
-ColorConverter = require("three.color")
+import THREE from "three";
+import ColorConverter from "three.color";
 
-GOLDEN_RATIO = 0.618033988749895
+const GOLDEN_RATIO = 0.618033988749895;
 
-ColorGenerator = {
-  distinctColorForId : (id) ->
+const ColorGenerator = {
+  distinctColorForId(id) {
 
-    hue = id * GOLDEN_RATIO
-    hue %= 1
+    let hue = id * GOLDEN_RATIO;
+    hue %= 1;
     return ColorConverter.setHSV(
       new THREE.Color(), hue, 1, 1
-    ).getHex()
-}
+    ).getHex();
+  }
+};
 
-module.exports = ColorGenerator
+export default ColorGenerator;

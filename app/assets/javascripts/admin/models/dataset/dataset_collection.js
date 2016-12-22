@@ -1,10 +1,14 @@
-SortedCollection     = require("../sorted_collection")
-DatasetModel         = require("./dataset_model")
+import SortedCollection from "../sorted_collection";
+import DatasetModel from "./dataset_model";
 
-class DatasetCollection extends SortedCollection
+class DatasetCollection extends SortedCollection {
+  static initClass() {
+  
+    this.prototype.url  = "/api/datasets";
+    this.prototype.model  = DatasetModel;
+    this.prototype.sortAttribute  = "name";
+  }
+}
+DatasetCollection.initClass();
 
-  url : "/api/datasets"
-  model : DatasetModel
-  sortAttribute : "name"
-
-module.exports = DatasetCollection
+export default DatasetCollection;

@@ -1,8 +1,12 @@
-Backbone = require("backbone")
+import Backbone from "backbone";
 
-class TaskOverviewCollection extends Backbone.Collection
+class TaskOverviewCollection extends Backbone.Collection {
+  static initClass() {
+  
+    this.prototype.url  = "/api/statistics/assignments";
+  }
+}
+TaskOverviewCollection.initClass();
 
-  url : "/api/statistics/assignments"
 
-
-module.exports = TaskOverviewCollection
+export default TaskOverviewCollection;

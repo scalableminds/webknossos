@@ -1,123 +1,130 @@
-Backbone = require("backbone")
-app      = require("app")
-Utils    = require("libs/utils")
+import Backbone from "backbone";
+import app from "app";
+import Utils from "libs/utils";
 
 
-class BackboneToOxalisAdapterModel extends Backbone.Model
+class BackboneToOxalisAdapterModel extends Backbone.Model {
 
-  initialize : (@oxalisModel) ->
+  initialize(oxalisModel) {
 
-    # Default Values for inital setup / rendering
-    @skeletonTracingAdapter = new Backbone.Model(
-      activeTreeId : 0
-      somaClicking : false
-      activeNodeId : 0
-      radius : 0
-      particleSize : 0
-      overrideNodeRadius : true
+    // Default Values for inital setup / rendering
+    this.oxalisModel = oxalisModel;
+    this.skeletonTracingAdapter = new Backbone.Model({
+      activeTreeId : 0,
+      somaClicking : false,
+      activeNodeId : 0,
+      radius : 0,
+      particleSize : 0,
+      overrideNodeRadius : true,
       boundingBox : "0, 0, 0, 0, 0, 0"
-    )
+    });
 
-    @volumeTracingAdapter = new Backbone.Model(
+    this.volumeTracingAdapter = new Backbone.Model({
       activeCellId : 0
-    )
+    });
 
-    @listenTo(@oxalisModel, "sync", @bind)
-
-
-  bind : ->
-
-    if @oxalisModel.skeletonTracing
-
-      # Update values after OxalisModel is done syncing
-      @skeletonTracingModel = @oxalisModel.skeletonTracing
-
-      @skeletonTracingAdapter.set("activeTreeId", @skeletonTracingModel.getActiveTreeId())
-      @skeletonTracingAdapter.set("activeNodeId", @skeletonTracingModel.getActiveNodeId())
-      @skeletonTracingAdapter.set("radius", @skeletonTracingModel.getActiveNodeRadius())
-      @skeletonTracingAdapter.set("overrideNodeRadius", @oxalisModel.user.get("overrideNodeRadius"))
-      @skeletonTracingAdapter.set("particleSize", @oxalisModel.user.get("particleSize"))
-      @skeletonTracingAdapter.deleteActiveNode = @skeletonTracingModel.deleteActiveNode.bind(@skeletonTracingModel)
-
-      somaClickingAllowed = @oxalisModel.settings.somaClickingAllowed
-      @skeletonTracingAdapter.set("somaClickingAllowed", somaClickingAllowed)
-      if somaClickingAllowed
-        @skeletonTracingAdapter.set("somaClicking", @oxalisModel.user.get("newNodeNewTree"))
+    return this.listenTo(this.oxalisModel, "sync", this.bind);
+  }
 
 
-      # ####################################
-      # Listen to changes in the OxalisModel
+  bind() {
 
-      @listenTo(@skeletonTracingModel, "newTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id, {triggeredByModel: true}))
-      @listenTo(@skeletonTracingModel, "newActiveTree", (id) -> @skeletonTracingAdapter.set("activeTreeId", id, {triggeredByModel: true}))
-      @listenTo(@skeletonTracingModel, "newActiveNode", (id) ->
-        @skeletonTracingAdapter.set("activeNodeId", id, {triggeredByModel: true})
-        # update node radius display accordingly
-        @skeletonTracingAdapter.set("radius", @skeletonTracingModel.getActiveNodeRadius(), {triggeredByModel: true})
-      )
-      @listenTo(@skeletonTracingModel, "newActiveNodeRadius", (id) -> @skeletonTracingAdapter.set("radius", id, {triggeredByModel: true}))
+    if (this.oxalisModel.skeletonTracing) {
 
+      // Update values after OxalisModel is done syncing
+      this.skeletonTracingModel = this.oxalisModel.skeletonTracing;
 
-      # ######################################
-      # Listen to changes in the BackboneModel
+      this.skeletonTracingAdapter.set("activeTreeId", this.skeletonTracingModel.getActiveTreeId());
+      this.skeletonTracingAdapter.set("activeNodeId", this.skeletonTracingModel.getActiveNodeId());
+      this.skeletonTracingAdapter.set("radius", this.skeletonTracingModel.getActiveNodeRadius());
+      this.skeletonTracingAdapter.set("overrideNodeRadius", this.oxalisModel.user.get("overrideNodeRadius"));
+      this.skeletonTracingAdapter.set("particleSize", this.oxalisModel.user.get("particleSize"));
+      this.skeletonTracingAdapter.deleteActiveNode = this.skeletonTracingModel.deleteActiveNode.bind(this.skeletonTracingModel);
 
-      # Some calls are deferred, so the backbone change is propagated first, as the property in question
-      # may be reset again if it is invalid.
-      # If the original event was triggered by the oxalis model (options.triggeredByModel), the change in the backbone model
-      # doesn't need to be propagated again. This lead to race conditions, if the property was changed in the oxalis
-      # model in the mean time.
-      @listenTo(@skeletonTracingAdapter, "change:activeTreeId", (model, id, options) ->
-        if not options.triggeredByModel
-          _.defer( => @skeletonTracingModel.setActiveTree(id) )
-      )
-
-      @listenTo(@skeletonTracingAdapter, "change:somaClicking", (model, bool) ->
-        @oxalisModel.user.set("newNodeNewTree", bool)
-      )
-
-      @listenTo(@skeletonTracingAdapter, "change:activeNodeId", (model, id, options) ->
-        if not options.triggeredByModel
-          _.defer( => @skeletonTracingModel.setActiveNode(id) )
-      )
-
-      @listenTo(@skeletonTracingAdapter, "change:particleSize", (model, size) ->
-        _.defer( => @oxalisModel.user.set("particleSize", size) )
-      )
-
-      @listenTo(@skeletonTracingAdapter, "change:overrideNodeRadius", (model, bool) ->
-        @oxalisModel.user.set("overrideNodeRadius", bool)
-      )
-
-      @listenTo(@skeletonTracingAdapter, "change:radius", (model, radius, options) ->
-        if not options.triggeredByModel
-          _.defer( => @skeletonTracingModel.setActiveNodeRadius(radius) )
-      )
-
-      @listenTo(@skeletonTracingAdapter, "change:boundingBox", (model, string) ->
-        bbArray = Utils.stringToNumberArray(string)
-        @oxalisModel.setUserBoundingBox(bbArray)
-      )
-
-    else if @oxalisModel.volumeTracing
-
-      # Update values after OxalisModel is done syncing
-      @volumeTracingModel = @oxalisModel.volumeTracing
-
-      @volumeTracingAdapter.set("mappedActiveCellId", @volumeTracingModel.getMappedActiveCellId())
-      @volumeTracingAdapter.createCell = @volumeTracingModel.createCell.bind(@volumeTracingModel)
+      const { somaClickingAllowed } = this.oxalisModel.settings;
+      this.skeletonTracingAdapter.set("somaClickingAllowed", somaClickingAllowed);
+      if (somaClickingAllowed) {
+        this.skeletonTracingAdapter.set("somaClicking", this.oxalisModel.user.get("newNodeNewTree"));
+      }
 
 
-      # ####################################
-      # Listen to changes in the OxalisModel
-      @listenTo(@volumeTracingModel, "newActiveCell", ->
-        @volumeTracingAdapter.set("mappedActiveCellId", @volumeTracingModel.getMappedActiveCellId())
-      )
+      // ####################################
+      // Listen to changes in the OxalisModel
+
+      this.listenTo(this.skeletonTracingModel, "newTree", function(id) { return this.skeletonTracingAdapter.set("activeTreeId", id, {triggeredByModel: true}); });
+      this.listenTo(this.skeletonTracingModel, "newActiveTree", function(id) { return this.skeletonTracingAdapter.set("activeTreeId", id, {triggeredByModel: true}); });
+      this.listenTo(this.skeletonTracingModel, "newActiveNode", function(id) {
+        this.skeletonTracingAdapter.set("activeNodeId", id, {triggeredByModel: true});
+        // update node radius display accordingly
+        return this.skeletonTracingAdapter.set("radius", this.skeletonTracingModel.getActiveNodeRadius(), {triggeredByModel: true});
+      });
+      this.listenTo(this.skeletonTracingModel, "newActiveNodeRadius", function(id) { return this.skeletonTracingAdapter.set("radius", id, {triggeredByModel: true}); });
 
 
-      # ######################################
-      # Listen to changes in the BackboneModel
-      @listenTo(@volumeTracingAdapter, "change:mappedActiveCellId", (model, id) ->
-        @volumeTracingModel.setActiveCell(id)
-      )
+      // ######################################
+      // Listen to changes in the BackboneModel
 
-module.exports = BackboneToOxalisAdapterModel
+      // Some calls are deferred, so the backbone change is propagated first, as the property in question
+      // may be reset again if it is invalid.
+      // If the original event was triggered by the oxalis model (options.triggeredByModel), the change in the backbone model
+      // doesn't need to be propagated again. This lead to race conditions, if the property was changed in the oxalis
+      // model in the mean time.
+      this.listenTo(this.skeletonTracingAdapter, "change:activeTreeId", function(model, id, options) {
+        if (!options.triggeredByModel) {
+          return _.defer( () => this.skeletonTracingModel.setActiveTree(id) );
+        }
+      });
+
+      this.listenTo(this.skeletonTracingAdapter, "change:somaClicking", function(model, bool) {
+        return this.oxalisModel.user.set("newNodeNewTree", bool);
+      });
+
+      this.listenTo(this.skeletonTracingAdapter, "change:activeNodeId", function(model, id, options) {
+        if (!options.triggeredByModel) {
+          return _.defer( () => this.skeletonTracingModel.setActiveNode(id) );
+        }
+      });
+
+      this.listenTo(this.skeletonTracingAdapter, "change:particleSize", (model, size) => _.defer( () => this.oxalisModel.user.set("particleSize", size) ));
+
+      this.listenTo(this.skeletonTracingAdapter, "change:overrideNodeRadius", function(model, bool) {
+        return this.oxalisModel.user.set("overrideNodeRadius", bool);
+      });
+
+      this.listenTo(this.skeletonTracingAdapter, "change:radius", function(model, radius, options) {
+        if (!options.triggeredByModel) {
+          return _.defer( () => this.skeletonTracingModel.setActiveNodeRadius(radius) );
+        }
+      });
+
+      return this.listenTo(this.skeletonTracingAdapter, "change:boundingBox", function(model, string) {
+        const bbArray = Utils.stringToNumberArray(string);
+        return this.oxalisModel.setUserBoundingBox(bbArray);
+      });
+
+    } else if (this.oxalisModel.volumeTracing) {
+
+      // Update values after OxalisModel is done syncing
+      this.volumeTracingModel = this.oxalisModel.volumeTracing;
+
+      this.volumeTracingAdapter.set("mappedActiveCellId", this.volumeTracingModel.getMappedActiveCellId());
+      this.volumeTracingAdapter.createCell = this.volumeTracingModel.createCell.bind(this.volumeTracingModel);
+
+
+      // ####################################
+      // Listen to changes in the OxalisModel
+      this.listenTo(this.volumeTracingModel, "newActiveCell", function() {
+        return this.volumeTracingAdapter.set("mappedActiveCellId", this.volumeTracingModel.getMappedActiveCellId());
+      });
+
+
+      // ######################################
+      // Listen to changes in the BackboneModel
+      return this.listenTo(this.volumeTracingAdapter, "change:mappedActiveCellId", function(model, id) {
+        return this.volumeTracingModel.setActiveCell(id);
+      });
+    }
+  }
+}
+
+export default BackboneToOxalisAdapterModel;

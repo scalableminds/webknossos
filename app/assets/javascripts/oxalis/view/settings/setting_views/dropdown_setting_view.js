@@ -1,46 +1,54 @@
-_                   = require("lodash")
-Marionette          = require("backbone.marionette")
-AbstractSettingView = require("./abstract_setting_view")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import AbstractSettingView from "./abstract_setting_view";
 
-class DropdownSettingView extends AbstractSettingView
+class DropdownSettingView extends AbstractSettingView {
+  static initClass() {
+  
+  
+    this.prototype.className  = "dropdown-setting-view row";
+  
+  
+    this.prototype.template  = _.template(`\
+<div class="col-sm-5">
+  <%- displayName %>
+</div>
+<div class="col-sm-7">
+  <select class="form-control">
+    <% _.forEach(options, function (name, index) { %>
+      <option value="<%- index %>" <%- isSelected(value, index) %>><%- name %></option>
+    <% }) %>
+  </select>
+</div>\
+`);
+  
+  
+    this.prototype.templateContext  = {
+      isSelected(value, index) {
+        return value === index ? "selected" : "";
+      }
+    };
+  
+  
+    this.prototype.ui  =
+      {select : "select"};
+  
+  
+    this.prototype.events  =
+      {"change @ui.select" : "handleChange"};
+  }
 
 
-  className : "dropdown-setting-view row"
+  handleChange(evt) {
+    return this.model.set(this.options.name, parseInt(evt.target.value, 10));
+  }
 
 
-  template : _.template("""
-    <div class="col-sm-5">
-      <%- displayName %>
-    </div>
-    <div class="col-sm-7">
-      <select class="form-control">
-        <% _.forEach(options, function (name, index) { %>
-          <option value="<%- index %>" <%- isSelected(value, index) %>><%- name %></option>
-        <% }) %>
-      </select>
-    </div>
-  """)
+  update(model, value) {
 
+    return this.ui.select.val(parseInt(value, 10));
+  }
+}
+DropdownSettingView.initClass();
 
-  templateContext :
-    isSelected : (value, index) ->
-      return if value == index then "selected" else ""
-
-
-  ui :
-    select : "select"
-
-
-  events :
-    "change @ui.select" : "handleChange"
-
-
-  handleChange : (evt) ->
-    @model.set(@options.name, parseInt(evt.target.value, 10))
-
-
-  update : (model, value) ->
-
-    @ui.select.val(parseInt(value, 10))
-
-module.exports = DropdownSettingView
+export default DropdownSettingView;

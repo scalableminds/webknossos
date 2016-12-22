@@ -1,25 +1,31 @@
-_               = require("lodash")
-backbone        = require("backbone")
-AnnotationModel = require("./annotation_model")
-FormatUtils     = require("libs/format_utils")
+import _ from "lodash";
+import backbone from "backbone";
+import AnnotationModel from "./annotation_model";
+import FormatUtils from "libs/format_utils";
 
-class AnnotationCollection extends Backbone.Collection
+class AnnotationCollection extends Backbone.Collection {
+  static initClass() {
+  
+    this.prototype.model  = AnnotationModel;
+  }
 
-  model : AnnotationModel
+  constructor(taskId) {
 
-  constructor : (taskId) ->
+    this.url = `/api/tasks/${taskId}/annotations`;
+    super();
+  }
 
-    @url = "/api/tasks/#{taskId}/annotations"
-    super()
+  parse(responses) {
 
-  parse : (responses) ->
+    return responses.map(function(response) {
 
-    return responses.map((response) ->
+      if (response.tracingTime == null) { response.tracingTime = 0; }
+      response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime / 1000);
 
-      response.tracingTime ?= 0
-      response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime / 1000)
+      return response;
+    });
+  }
+}
+AnnotationCollection.initClass();
 
-      return response
-    )
-
-module.exports = AnnotationCollection
+export default AnnotationCollection;

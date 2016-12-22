@@ -1,78 +1,92 @@
-NumberSettingView   = require("../setting_views/number_setting_view")
-CheckboxSettingView = require("../setting_views/checkbox_setting_view")
-SliderSettingView   = require("../setting_views/slider_setting_view")
-ButtonSettingView   = require("../setting_views/button_setting_view")
-CategoryView        = require("./category_view")
-Constants           = require("oxalis/constants")
+import NumberSettingView from "../setting_views/number_setting_view";
+import CheckboxSettingView from "../setting_views/checkbox_setting_view";
+import SliderSettingView from "../setting_views/slider_setting_view";
+import ButtonSettingView from "../setting_views/button_setting_view";
+import CategoryView from "./category_view";
+import Constants from "oxalis/constants";
 
-class NodeCategoryView extends CategoryView
+class NodeCategoryView extends CategoryView {
+  static initClass() {
+  
+  
+    this.prototype.caption  = "Nodes";
+  
+    this.prototype.subviewCreatorsList  = [
+  
+      [
+        "activeNode", function() {
+  
+          return new NumberSettingView({
+            model : this.model,
+            options : {
+              name : "activeNodeId",
+              displayName : "Active Node ID"
+            }
+          });
+        }
+      ],
+  
+      [
+        "radius", function() {
+  
+          return new SliderSettingView({
+            model : this.model,
+            options : {
+              name : "radius",
+              displayName : "Radius",
+              min : 1,
+              max : 5000,
+              step : 1
+            }
+          });
+        }
+      ],
+  
+      [
+        "particleSize", function() {
+  
+          return new SliderSettingView({
+            model : this.model,
+            options : {
+              name : "particleSize",
+              displayName : "Particle Size",
+              min : Constants.MIN_PARTICLE_SIZE,
+              max : Constants.MAX_PARTICLE_SIZE,
+              step : 0.1
+            }
+          });
+        }
+      ],
+  
+      [
+        "overrideNodeRadius", function() {
+  
+          return new CheckboxSettingView({
+            model : this.model,
+            options : {
+              name : "overrideNodeRadius",
+              displayName : "Override Radius"
+            }
+          });
+        }
+      ],
+  
+      [
+        "deleteActiveNode", function() {
+  
+          return new ButtonSettingView({
+            model : this.model,
+            options : {
+              displayName : "Delete Active Node",
+              callbackName : "deleteActiveNode"
+            }
+          });
+        }
+      ]
+    ];
+  }
+}
+NodeCategoryView.initClass();
 
 
-  caption : "Nodes"
-
-  subviewCreatorsList : [
-
-    [
-      "activeNode", ->
-
-        return new NumberSettingView(
-          model : @model
-          options :
-            name : "activeNodeId"
-            displayName : "Active Node ID"
-        )
-    ]
-
-    [
-      "radius", ->
-
-        return new SliderSettingView(
-          model : @model
-          options :
-            name : "radius"
-            displayName : "Radius"
-            min : 1
-            max : 5000
-            step : 1
-        )
-    ]
-
-    [
-      "particleSize", ->
-
-        return new SliderSettingView(
-          model : @model
-          options :
-            name : "particleSize"
-            displayName : "Particle Size"
-            min : Constants.MIN_PARTICLE_SIZE
-            max : Constants.MAX_PARTICLE_SIZE
-            step : 0.1
-        )
-    ]
-
-    [
-      "overrideNodeRadius", ->
-
-        return new CheckboxSettingView(
-          model : @model
-          options :
-            name : "overrideNodeRadius"
-            displayName : "Override Radius"
-        )
-    ]
-
-    [
-      "deleteActiveNode", ->
-
-        return new ButtonSettingView(
-          model : @model
-          options :
-            displayName : "Delete Active Node"
-            callbackName : "deleteActiveNode"
-        )
-    ]
-  ]
-
-
-module.exports = NodeCategoryView
+export default NodeCategoryView;

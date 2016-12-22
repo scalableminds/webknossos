@@ -1,62 +1,73 @@
-_                      = require("lodash")
-Marionette             = require("backbone.marionette")
-ProjectListItemView    = require("./project_list_item_view")
-SortTableBehavior      = require("libs/behaviors/sort_table_behavior")
+import _ from "lodash";
+import Marionette from "backbone.marionette";
+import ProjectListItemView from "./project_list_item_view";
+import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 
-class ProjectsListView extends Marionette.CompositeView
-
-  template : _.template("""
-    <h3>Projects</h3>
-    <table class="table table-striped table-details sortable-table" id="projectlist-table">
-      <thead>
-        <tr>
-          <th data-sort="name">Name</th>
-          <th data-sort="team">Team</th>
-          <th data-sort="priority">Priority</th>
-          <th data-sort="location">Location</th>
-          <th data-sort="owner.lastName">Owner</th>
-          <th data-sort="numberOfOpenAssignments">Open Assignments</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <div id="modal-wrapper"></div>
-  """)
-
-  className : "container wide project-administration"
-  childView : ProjectListItemView
-  childViewContainer : "tbody"
-
-  behaviors :
-    SortTableBehavior:
-      behaviorClass: SortTableBehavior
-
-  ui :
-    "modalWrapper" : "#modal-wrapper"
-
-  behaviors :
-    SortTableBehavior:
-      behaviorClass: SortTableBehavior
-
-
-  initialize : ->
-
-    @collection.fetch()
-    @collection.setSorting("priority", "desc")
-
-    @listenTo(app.vent, "paginationView:filter", @filterBySearch)
-    @listenTo(app.vent, "modal:destroy", @render)
-    @listenTo(app.vent, "paginationView:addElement", @createProject)
+class ProjectsListView extends Marionette.CompositeView {
+  static initClass() {
+  
+    this.prototype.template  = _.template(`\
+<h3>Projects</h3>
+<table class="table table-striped table-details sortable-table" id="projectlist-table">
+  <thead>
+    <tr>
+      <th data-sort="name">Name</th>
+      <th data-sort="team">Team</th>
+      <th data-sort="priority">Priority</th>
+      <th data-sort="location">Location</th>
+      <th data-sort="owner.lastName">Owner</th>
+      <th data-sort="numberOfOpenAssignments">Open Assignments</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+<div id="modal-wrapper"></div>\
+`);
+  
+    this.prototype.className  = "container wide project-administration";
+    this.prototype.childView  = ProjectListItemView;
+    this.prototype.childViewContainer  = "tbody";
+  
+    this.prototype.behaviors  = {
+      SortTableBehavior: {
+        behaviorClass: SortTableBehavior
+      }
+    };
+  
+    this.prototype.ui  =
+      {"modalWrapper" : "#modal-wrapper"};
+  
+    this.prototype.behaviors  = {
+      SortTableBehavior: {
+        behaviorClass: SortTableBehavior
+      }
+    };
+  }
 
 
-  filterBySearch : (searchQuery) ->
+  initialize() {
 
-    @collection.setFilter(["name", "team", "priority", "location"], searchQuery)
+    this.collection.fetch();
+    this.collection.setSorting("priority", "desc");
+
+    this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
+    this.listenTo(app.vent, "modal:destroy", this.render);
+    return this.listenTo(app.vent, "paginationView:addElement", this.createProject);
+  }
 
 
-  createProject : ->
+  filterBySearch(searchQuery) {
 
-    app.router.navigate("/projects/create", {trigger : true})
+    return this.collection.setFilter(["name", "team", "priority", "location"], searchQuery);
+  }
 
-module.exports = ProjectsListView
+
+  createProject() {
+
+    return app.router.navigate("/projects/create", {trigger : true});
+  }
+}
+ProjectsListView.initClass();
+
+export default ProjectsListView;

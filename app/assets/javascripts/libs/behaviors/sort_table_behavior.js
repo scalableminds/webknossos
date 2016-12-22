@@ -1,63 +1,76 @@
-Marionette = require("backbone.marionette")
+import Marionette from "backbone.marionette";
 
-class SortTableBehavior extends Marionette.Behavior
-
-  events :
-    "click thead" : "onClick"
-
-  sortAttributes : {}
-
-  lastSortAttribute : ""
-
-  defaults :
-    sortDirection : "asc"
-
-
-  onRender : ->
-
-    sortableTableHeads = @$("[data-sort]").toArray()
-    sortableTableHeads.forEach((tableHeader) =>
-      $tableHeader = $(tableHeader)
-
-      sortAttribute = $tableHeader.data().sort
-      sortDirection = @sortAttributes[sortAttribute]
-      sortIcon = if sortDirection then "fa-sort-#{sortDirection}" else "fa-sort"
-
-      $tableHeader.append("<div class='sort-icon-wrapper'><span class='fa #{sortIcon} sort-icon'></span></div>")
-      $tableHeader.addClass("sortable-column")
-    )
+class SortTableBehavior extends Marionette.Behavior {
+  static initClass() {
+  
+    this.prototype.events  =
+      {"click thead" : "onClick"};
+  
+    this.prototype.sortAttributes  = {};
+  
+    this.prototype.lastSortAttribute  = "";
+  
+    this.prototype.defaults  =
+      {sortDirection : "asc"};
+  }
 
 
-  getSortDirection : (sortAttribute) ->
+  onRender() {
 
-    toggleDirection = (direction) ->
-      if direction == "desc" then "asc" else "desc"
+    const sortableTableHeads = this.$("[data-sort]").toArray();
+    return sortableTableHeads.forEach(tableHeader => {
+      const $tableHeader = $(tableHeader);
 
-    if @lastSortAttribute != sortAttribute
-      @sortAttributes[@lastSortAttribute] = null
-      @lastSortAttribute = sortAttribute
-      sortDirection = @options.sortDirection
-    else
-      sortDirection = toggleDirection(@sortAttributes[sortAttribute])
+      const sortAttribute = $tableHeader.data().sort;
+      const sortDirection = this.sortAttributes[sortAttribute];
+      const sortIcon = sortDirection ? `fa-sort-${sortDirection}` : "fa-sort";
 
-    @sortAttributes[sortAttribute] = sortDirection
-    return sortDirection
-
-
-  sortTable : ($elem, sortAttribute) ->
-
-    sortDirection = @getSortDirection(sortAttribute)
-    this.view.collection.setSort(sortAttribute, sortDirection)
-    this.view.resortView()
+      $tableHeader.append(`<div class='sort-icon-wrapper'><span class='fa ${sortIcon} sort-icon'></span></div>`);
+      return $tableHeader.addClass("sortable-column");
+    }
+    );
+  }
 
 
-  onClick : (evt) ->
+  getSortDirection(sortAttribute) {
 
-    $elem = if _.includes(evt.target.className, "sort-icon") then $(evt.target).closest("th") else $(evt.target)
-    elemData = $elem.data()
-    if "sort" not of elemData
-      return
-    else
-      @sortTable($elem, elemData.sort)
+    let sortDirection;
+    const toggleDirection = function(direction) {
+      if (direction === "desc") { return "asc"; } else { return "desc"; }
+    };
 
-module.exports = SortTableBehavior
+    if (this.lastSortAttribute !== sortAttribute) {
+      this.sortAttributes[this.lastSortAttribute] = null;
+      this.lastSortAttribute = sortAttribute;
+      ({ sortDirection } = this.options);
+    } else {
+      sortDirection = toggleDirection(this.sortAttributes[sortAttribute]);
+    }
+
+    this.sortAttributes[sortAttribute] = sortDirection;
+    return sortDirection;
+  }
+
+
+  sortTable($elem, sortAttribute) {
+
+    const sortDirection = this.getSortDirection(sortAttribute);
+    this.view.collection.setSort(sortAttribute, sortDirection);
+    return this.view.resortView();
+  }
+
+
+  onClick(evt) {
+
+    const $elem = _.includes(evt.target.className, "sort-icon") ? $(evt.target).closest("th") : $(evt.target);
+    const elemData = $elem.data();
+    if (!("sort" in elemData)) {
+      return;
+    } else {
+      return this.sortTable($elem, elemData.sort);
+    }
+  }
+}
+SortTableBehavior.initClass();
+
+export default SortTableBehavior;

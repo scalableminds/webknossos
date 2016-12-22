@@ -20,6 +20,7 @@ class Pipeline {
     this.retryCount    = 0;
     this.running       = false;
     this.failed        = false;
+    this.executeNext = this.executeNext.bind(this);
 
     _.defaults(this.options, {
       maxRetry : 3,
@@ -100,7 +101,7 @@ class Pipeline {
   }
 
 
-  executeNext = () => {
+  executeNext() {
 
     const currentAction = this.actions.shift();
 

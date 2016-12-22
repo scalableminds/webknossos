@@ -43,7 +43,7 @@ module.exports = {
         exclude: /(node_modules|bower_components)/,
         loader: 'babel-loader',
         query: {
-          presets: ['es2015', 'stage-1']
+          presets: ['es2015']
         }
       },
       // { test: /\.coffee$/, loader: "coffee-loader" },

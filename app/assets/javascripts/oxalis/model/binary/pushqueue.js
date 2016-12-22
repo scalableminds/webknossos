@@ -22,6 +22,7 @@ class PushQueue {
     this.updatePipeline = updatePipeline;
     this.sendData = sendData;
     this.queue = [];
+    this.pushImpl = this.pushImpl.bind(this);
     this.push = _.debounce(this.pushImpl, this.DEBOUNCE_TIME);
   }
 
@@ -88,7 +89,7 @@ class PushQueue {
   }
 
 
-  pushImpl = () => {
+  pushImpl() {
 
     return this.cube.temporalBucketManager.getAllLoadedPromise().then(() => {
 

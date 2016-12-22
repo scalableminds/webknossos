@@ -11,7 +11,7 @@ const RequestMock = {
 }
 mockRequire("../../../libs/request", RequestMock)
 
-const PullQueue = require("../../../oxalis/model/binary/pullqueue")
+const PullQueue = require("../../../oxalis/model/binary/pullqueue").default;
 
 describe("PullQueue", function() {
 

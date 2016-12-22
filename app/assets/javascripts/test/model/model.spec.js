@@ -70,7 +70,7 @@ const TRACING_OBJECT = {
   }
 }
 
-const Model = require("../../oxalis/model")
+const Model = require("../../oxalis/model").default;
 
 describe("Model", function() {
 
@@ -93,7 +93,6 @@ describe("Model", function() {
     describe("Successful initialization", function() {
 
       it("should resolve", function(done) {
-
         model.fetch()
           .then(done)
           .catch((error) => {

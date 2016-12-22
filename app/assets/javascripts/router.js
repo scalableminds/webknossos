@@ -12,7 +12,7 @@ import PaginationCollection from "admin/models/pagination_collection";
 // #####
 class Router extends BaseRouter {
   static initClass() {
-  
+
     this.prototype.routes  = {
       "/users"                             : "users",
       "/teams"                             : "teams",
@@ -59,6 +59,7 @@ class Router extends BaseRouter {
   tracingView(type, id) {
 
     return require(["oxalis/view/tracing_layout_view"], TracingLayoutView => {
+      TracingLayoutView = TracingLayoutView.default;
 
       const view = new TracingLayoutView({
         tracingType: type,
@@ -75,6 +76,8 @@ class Router extends BaseRouter {
   tracingViewPublic(id) {
 
     return require(["oxalis/view/tracing_layout_view"], TracingLayoutView => {
+      TracingLayoutView = TracingLayoutView.default;
+
       const view = new TracingLayoutView({
         tracingType: "View",
         tracingId : id,
@@ -88,14 +91,14 @@ class Router extends BaseRouter {
 
 
   projects() {
-
     return this.showWithPagination("ProjectListView", "ProjectCollection", {addButtonText : "Create New Project"});
   }
 
 
   projectCreate() {
-
     return require(["admin/views/project/project_create_view", "admin/models/project/project_model"], (ProjectCreateView, ProjectModel) => {
+      ProjectCreateView = ProjectCreateView.default;
+      ProjectModel = ProjectModel.default;
 
       const model = new ProjectModel();
       const view = new ProjectCreateView({model});
@@ -110,6 +113,8 @@ class Router extends BaseRouter {
   projectEdit(projectName) {
 
     return require(["admin/views/project/project_edit_view", "admin/models/project/project_model"], (ProjectEditView, ProjectModel) => {
+      ProjectEditView = ProjectEditView.default;
+      ProjectModel = ProjectModel.default;
 
       const model = new ProjectModel({name : projectName});
       const view = new ProjectEditView({model});
@@ -124,20 +129,19 @@ class Router extends BaseRouter {
 
 
   statistics() {
-
     return this.showAdminView("StatisticView");
   }
 
 
   datasetAdd() {
-
     return this.showAdminView("DatasetAddView");
   }
 
 
   datasetEdit(datasetID) {
-
     return require(["admin/views/dataset/dataset_edit_view", "admin/models/dataset/dataset_model"], (DatasetEditView, DatasetModel) => {
+      DatasetEditView = DatasetEditView.default;
+      DatasetModel = DatasetModel.default;
 
       const model = new DatasetModel({name : datasetID});
       const view = new DatasetEditView({model});
@@ -152,20 +156,19 @@ class Router extends BaseRouter {
 
 
   users() {
-
     return this.showWithPagination("UserListView", "UserCollection", {});
   }
 
 
   teams() {
-
     return this.showWithPagination("TeamListView", "TeamCollection", {addButtonText : "Add New Team"});
   }
 
 
   taskQuery() {
+    return require(["admin/views/task/task_query_view"], (TaskQueryView) => {
+      TaskQueryView = TaskQueryView.default;
 
-    return require(["admin/views/task/task_query_view"], (TaskQueryView, TaskCollection) => {
       const view = new TaskQueryView();
       return this.changeView(view);
     }
@@ -174,25 +177,21 @@ class Router extends BaseRouter {
 
 
   projectTasks(projectName) {
-
      return this.showWithPagination("TaskListView", "TaskCollection", {projectName, addButtonText : "Create New Task"});
    }
 
 
   taskTypesTasks(taskTypeId) {
-
      return this.showWithPagination("TaskListView", "TaskCollection", {taskTypeId, addButtonText : "Create New Task"});
    }
 
 
   workload() {
-
     return this.showWithPagination("WorkloadListView", "WorkloadCollection");
   }
 
 
   taskTypes() {
-
     return this.showWithPagination("TaskTypeListView", "TaskTypeCollection", {addButtonText : "Create New TaskType"});
   }
 
@@ -201,8 +200,9 @@ class Router extends BaseRouter {
    * Load layout view that shows task-creation subviews
    */
   taskCreate() {
-
     return require(["admin/views/task/task_create_view", "admin/models/task/task_model"], (TaskCreateView, TaskModel) => {
+      TaskCreateView = TaskCreateView.default;
+      TaskModel = TaskModel.default;
 
       const model = new TaskModel();
       const view = new TaskCreateView({model});
@@ -219,6 +219,8 @@ class Router extends BaseRouter {
   taskEdit(taskID) {
 
     return require(["admin/views/task/task_create_subviews/task_create_from_view", "admin/models/task/task_model"], (TaskCreateFromView, TaskModel) => {
+      TaskCreateFromView = TaskCreateFromView.default;
+      TaskModel = TaskModel.default;
 
       const model = new TaskModel({id : taskID});
       const view = new TaskCreateFromView({model, type : "from_form"});
@@ -233,6 +235,8 @@ class Router extends BaseRouter {
   taskTypesCreate(taskTypeId) {
 
     return require(["admin/views/tasktype/task_type_create_view", "admin/models/tasktype/task_type_model"], (TaskTypeCreateView, TaskTypeModel) => {
+      TaskTypeCreateView = TaskTypeCreateView.default;
+      TaskTypeModel = TaskTypeModel.default;
 
       const model = new TaskTypeModel({id : taskTypeId});
       const view = new TaskTypeCreateView({model});
@@ -244,8 +248,9 @@ class Router extends BaseRouter {
 
 
   dashboard(userID) {
-
     return require(["dashboard/views/dashboard_view", "dashboard/models/user_model"], (DashboardView, UserModel) => {
+      DashboardView = DashboardView.default;
+      UserModel = UserModel.default;
 
       const isAdminView = userID !== null;
 
@@ -264,8 +269,9 @@ class Router extends BaseRouter {
 
 
   spotlight() {
-
     return require(["dashboard/views/spotlight/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) => {
+      SpotlightView = SpotlightView.default;
+      DatasetCollection = DatasetCollection.default;
 
       const collection = new DatasetCollection();
       const paginatedCollection = new PaginationCollection([], {fullCollection : collection});
@@ -281,6 +287,8 @@ class Router extends BaseRouter {
   taskOverview() {
 
     return require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_collection"], (TaskOverviewView, TaskOverviewCollection) => {
+      TaskOverviewView = TaskOverviewView.default;
+      TaskOverviewCollection = TaskOverviewCollection.default;
 
       const collection = new TaskOverviewCollection();
       const view = new TaskOverviewView({collection});
@@ -293,11 +301,11 @@ class Router extends BaseRouter {
 
 
   showWithPagination(view, collection, options) {
-
     if (options == null) { options = {}; }
     _.defaults(options, {addButtonText : null});
 
     return require(["admin/admin"], admin => {
+      admin = admin.default;
 
       collection = new admin[collection](null, options);
       const paginatedCollection = new PaginationCollection([], {fullCollection : collection});
@@ -312,8 +320,8 @@ class Router extends BaseRouter {
 
 
   showAdminView(view, collection) {
-
     return require(["admin/admin"], admin => {
+      admin = admin.default;
 
       if (collection) {
         collection = new admin[collection]();

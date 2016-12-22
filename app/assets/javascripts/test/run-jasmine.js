@@ -5,8 +5,6 @@ require("babel-register")(
   }
 );
 
-require('coffee-script/register')
-
 var Jasmine = require("jasmine")
 
 var jasmine = new Jasmine()

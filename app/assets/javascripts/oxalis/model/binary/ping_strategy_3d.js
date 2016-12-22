@@ -3,15 +3,15 @@ import { M4x4, V3 } from "libs/mjs";
 
 class PingStrategy3d {
   static initClass() {
-  
+
     this.prototype.velocityRangeStart  = 0;
     this.prototype.velocityRangeEnd  = 0;
-  
+
     this.prototype.roundTripTimeRangeStart  = 0;
     this.prototype.roundTripTimeRangeEnd  = 0;
-  
+
     this.prototype.contentTypes  = [];
-  
+
     this.prototype.name  = 'Abstract';
   }
 
@@ -68,15 +68,15 @@ PingStrategy3d.initClass();
 
 PingStrategy3d.DslSlow = class DslSlow extends PingStrategy3d {
   static initClass() {
-  
+
     this.prototype.velocityRangeStart  = 0;
     this.prototype.velocityRangeEnd  = Infinity;
-  
+
     this.prototype.roundTripTimeRangeStart  = 0;
     this.prototype.roundTripTimeRangeEnd  = Infinity;
-  
+
     this.prototype.name  = 'DSL_SLOW';
-  
+
     this.prototype.pingPolyhedron  = PolyhedronRasterizer.Master.squareFrustum(
       5, 5, -0.5,
       4, 4, 2
@@ -107,7 +107,7 @@ PingStrategy3d.DslSlow = class DslSlow extends PingStrategy3d {
     return pullQueue;
   }
 };
-undefined.initClass();
+PingStrategy3d.DslSlow.initClass();
     // priority 0 is highest
 
 

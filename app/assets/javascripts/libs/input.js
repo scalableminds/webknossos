@@ -76,7 +76,7 @@ Input.KeyboardNoLoop = class KeyboardNoLoop {
 // fire the attached callback.
 Input.Keyboard = class Keyboard {
   static initClass() {
-  
+
     this.prototype.DELAY  = 1000 / constants.FPS;
   }
 
@@ -182,7 +182,7 @@ Input.Keyboard = class Keyboard {
     for (let binding of this.bindings) { KeyboardJS.unbind(...binding); }
   }
 };
-undefined.initClass();
+Input.Keyboard.initClass();
 
 
 // The mouse module.
@@ -190,13 +190,13 @@ undefined.initClass();
 let MouseButton = undefined;
 Input.Mouse = class Mouse {
   static initClass() {
-  
+
     MouseButton = class MouseButton {
       static initClass() {
-    
+
         this.prototype.MOVE_DELTA_THRESHOLD  = 30;
       }
-  
+
       constructor(name, which, mouse, id) {
         this.name = name;
         this.which = which;
@@ -206,22 +206,22 @@ Input.Mouse = class Mouse {
         this.drag  = false;
         this.moveDelta = 0;
       }
-  
-  
+
+
       handleMouseDown(event) {
-  
+
         if (event.which === this.which) {
           $(":focus").blur(); // see OX-159
-  
+
           this.down = true;
           this.moveDelta = 0;
           return this.mouse.trigger(this.name + "MouseDown", this.mouse.lastPosition, this.id, event);
         }
       }
-  
-  
+
+
       handleMouseUp(event) {
-  
+
         if (event.which === this.which && this.down) {
           this.mouse.trigger(this.name + "MouseUp", event);
           if (this.moveDelta <= this.MOVE_DELTA_THRESHOLD) {
@@ -230,10 +230,10 @@ Input.Mouse = class Mouse {
           return this.down = false;
         }
       }
-  
-  
+
+
       handleMouseMove(event, delta) {
-  
+
         if (this.down) {
           this.moveDelta += Math.abs( delta.x ) + Math.abs( delta.y );
           return this.mouse.trigger(this.name + "DownMove", delta, this.mouse.position, this.id, event);
@@ -406,7 +406,7 @@ Input.Mouse = class Mouse {
 
   }
 };
-undefined.initClass();
+Input.Mouse.initClass();
 
 
 export default Input;

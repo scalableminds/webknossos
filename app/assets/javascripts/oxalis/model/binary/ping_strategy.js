@@ -2,21 +2,21 @@ import Dimensions from "../dimensions";
 
 class PingStrategy {
   static initClass() {
-  
+
     // Constants
     this.prototype.TEXTURE_SIZE_P  = 0;
     this.prototype.MAX_ZOOM_STEP_DIFF  = 1;
-  
+
     this.prototype.velocityRangeStart  = 0;
     this.prototype.velocityRangeEnd  = 0;
-  
+
     this.prototype.roundTripTimeRangeStart  = 0;
     this.prototype.roundTripTimeRangeEnd  = 0;
-  
+
     this.prototype.contentTypes  = [];
-  
+
     this.prototype.cube  = null;
-  
+
     this.prototype.name  = 'ABSTRACT';
   }
 
@@ -78,13 +78,13 @@ PingStrategy.initClass();
 
 PingStrategy.BaseStrategy = class BaseStrategy extends PingStrategy {
   static initClass() {
-  
+
     this.prototype.velocityRangeStart  = 0;
     this.prototype.velocityRangeEnd  = Infinity;
-  
+
     this.prototype.roundTripTimeRangeStart  = 0;
     this.prototype.roundTripTimeRangeEnd  = Infinity;
-  
+
     this.prototype.preloadingSlides  = 0;
     this.prototype.preloadingPriorityOffset  = 0;
   }
@@ -133,32 +133,32 @@ PingStrategy.BaseStrategy = class BaseStrategy extends PingStrategy {
     return pullQueue;
   }
 };
-undefined.initClass();
+PingStrategy.BaseStrategy.initClass();
 
 
 PingStrategy.Skeleton = class Skeleton extends PingStrategy.BaseStrategy {
   static initClass() {
-  
+
     this.prototype.contentTypes  = ["skeletonTracing"];
-  
+
     this.prototype.name  = 'SKELETON';
     this.prototype.preloadingSlides  = 2;
   }
 };
-undefined.initClass();
+PingStrategy.Skeleton.initClass();
 
 
 PingStrategy.Volume = class Volume extends PingStrategy.BaseStrategy {
   static initClass() {
-  
+
     this.prototype.contentTypes  = ["volumeTracing"];
-  
+
     this.prototype.name  = 'VOLUME';
     this.prototype.preloadingSlides  = 1;
     this.prototype.preloadingPriorityOffset  = 80;
   }
 };
-undefined.initClass();
+PingStrategy.Volume.initClass();
 
 
 export default PingStrategy;

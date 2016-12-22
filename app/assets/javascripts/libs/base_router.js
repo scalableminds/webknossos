@@ -4,7 +4,7 @@ import Backbone from "backbone";
 
 class BaseRouter {
   static initClass() {
-  
+
     this.prototype.$mainContainer  = null;
     this.prototype.routes  = {};
   }
@@ -125,7 +125,7 @@ class BaseRouter {
 
   navigate(path, param) {
     if (param == null) { param = {}; }
-    ({ trigger = true } = param);
+    let { trigger = true } = param;
     if (!this.shouldNavigate(path)) {
       // Do nothing
       return;

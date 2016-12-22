@@ -3,7 +3,7 @@ import Marionette from "backbone.marionette";
 import TaskListView from "./task_list_view";
 import TaskCollection from "admin/models/task/task_collection";
 import Request from "libs/request";
-import admin from "admin/admin";
+import PaginationView from "admin/views/pagination_view";
 import Toast from "libs/toast";
 import PaginationCollection from "admin/models/pagination_collection";
 import TaskQueryDocumentationModal from "./task_query_documentation_modal";
@@ -71,7 +71,7 @@ class TaskQueryView extends Marionette.View {
 
     app.router.hideLoadingSpinner();
 
-    const paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : "Create New Task"});
+    const paginationView = new PaginationView({collection : paginatedCollection, addButtonText : "Create New Task"});
 
     this.showChildView("taskList", this.taskListView);
     this.showChildView("paginator", paginationView);

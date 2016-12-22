@@ -305,8 +305,6 @@ class Router extends BaseRouter {
     _.defaults(options, {addButtonText : null});
 
     return require(["admin/admin"], admin => {
-      admin = admin.default;
-
       collection = new admin[collection](null, options);
       const paginatedCollection = new PaginationCollection([], {fullCollection : collection});
       view = new admin[view]({collection : paginatedCollection});
@@ -321,8 +319,6 @@ class Router extends BaseRouter {
 
   showAdminView(view, collection) {
     return require(["admin/admin"], admin => {
-      admin = admin.default;
-
       if (collection) {
         collection = new admin[collection]();
         view = new admin[view]({collection});

@@ -21,4 +21,21 @@ import WorkloadCollection from "./models/workload/workload_collection";
 // waiting to be combinend and minified with rjs.
 // ####
 
-export { PaginationView, DatasetCollection, UserListView, UserCollection, TeamListView, TeamCollection, TaskListView, TaskCollection, TaskTypeCollection, TaskTypeListView, ProjectListView, ProjectCollection, StatisticView, WorkloadListView, WorkloadCollection, DatasetAddView };
+export {
+  PaginationView,
+  DatasetCollection,
+  UserListView,
+  UserCollection,
+  TeamListView,
+  TeamCollection,
+  TaskListView,
+  TaskCollection,
+  TaskTypeCollection,
+  TaskTypeListView,
+  ProjectListView,
+  ProjectCollection,
+  StatisticView,
+  WorkloadListView,
+  WorkloadCollection,
+  DatasetAddView,
+};

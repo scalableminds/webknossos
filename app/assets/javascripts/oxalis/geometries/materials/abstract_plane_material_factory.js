@@ -10,6 +10,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
     this.tWidth = tWidth;
     this.minFilter = THREE.NearestFilter;
     this.maxFilter = THREE.NearestFilter;
+    this.createTextures();
   }
 
 
@@ -29,8 +30,6 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
       };
     }
 
-
-    return this.createTextures();
   }
 
 
@@ -38,10 +37,10 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
     super.makeMaterial(options);
 
-    return this.material.setData = (name, data) => {
+    this.material.setData = (name, data) => {
       const textureName = this.sanitizeName(name);
       __guard__(this.textures[textureName], x => x.image.data.set(data));
-      return __guard__(this.textures[textureName], x1 => x1.needsUpdate = true);
+      __guard__(this.textures[textureName], x1 => x1.needsUpdate = true);
     };
   }
 

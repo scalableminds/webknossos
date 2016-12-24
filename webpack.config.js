@@ -43,11 +43,9 @@ module.exports = {
         exclude: /(node_modules|bower_components)/,
         loader: 'babel-loader',
         query: {
-          presets: ['es2015']
+          presets: ['es2015', 'react'],
         }
       },
-      // { test: /\.coffee$/, loader: "coffee-loader" },
-      { test: /\.cjsx$/, loaders: ["coffee", "cjsx"] },
       { test: scriptPaths["three.color"], loader: "imports?THREE=three!exports?THREE.ColorConverter" },
       { test: scriptPaths["three.trackball"], loader: "imports?THREE=three" },
       { test: scriptPaths["three"], loader: "exports?THREE" },

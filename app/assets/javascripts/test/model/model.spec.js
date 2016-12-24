@@ -36,7 +36,7 @@ class Flycam2d {
 mockRequire("../../libs/toast", { error : _.noop })
 mockRequire("../../libs/request", Request)
 mockRequire("../../libs/error_handling", ErrorHandling)
-mockRequire("../../app", {})
+mockRequire("app", {})
 mockRequire("../../oxalis/model/binary", Binary)
 mockRequire("../../oxalis/model/scaleinfo", _.noop)
 mockRequire("../../oxalis/model/flycam2d", Flycam2d)

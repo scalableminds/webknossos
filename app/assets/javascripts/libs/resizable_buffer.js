@@ -2,7 +2,7 @@
 
 class ResizableBuffer {
   static initClass() {
-  
+
     this.prototype.GROW_MULTIPLIER  = 1.3;
   }
 
@@ -90,7 +90,7 @@ class ResizableBuffer {
 
     let { buffer, elementLength, length } = this;
 
-    for (let i = elementLength - 1; i <= 0; i++) {
+    for (let i = elementLength - 1; i >= 0; i--) {
       r[i] = buffer[--length];
     }
 
@@ -107,7 +107,7 @@ class ResizableBuffer {
 
     let { buffer, elementLength, length } = this;
 
-    for (let i = elementLength - 1; i <= 0; i++) {
+    for (let i = elementLength - 1; i >= 0; i--) {
       r[i] = buffer[--length];
     }
 

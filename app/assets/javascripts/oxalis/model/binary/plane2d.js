@@ -16,7 +16,7 @@ const bufferOffsetByTileMacro = (_this, tile, tileSize) => (tile[0] * (1 << tile
 
 class Plane2D {
   static initClass() {
-  
+
     // Constants
     this.prototype.TEXTURE_SIZE_P  = 0;
     this.prototype.BUCKETS_PER_ROW  = 0;
@@ -26,13 +26,13 @@ class Plane2D {
     this.prototype.U  = 0;
     this.prototype.V  = 0;
     this.prototype.W  = 0;
-  
+
     this.prototype.NOT_LOADED_BUCKET_INTENSITY  = 100;
     this.prototype.NOT_LOADED_BUCKET_PLACEHOLDER  = {notLoadedBucketPlaceholder: true};
-  
+
     this.prototype.cube  = null;
     this.prototype.queue  = null;
-  
+
     this.prototype.dataTexture  = null;
   }
 
@@ -221,8 +221,8 @@ class Plane2D {
 
       // Tiles are rendered from the bottom-right to the top-left corner
       // to make linear interpolation possible in the future
-      for (let u = area[2]; u <= area[0]; u++) {
-        for (let v = area[3]; v <= area[1]; v++) {
+      for (let u = area[2]; u >= area[0]; u--) {
+        for (let v = area[3]; v >= area[1]; v--) {
 
           const tile = [u, v];
           const tileIndex = tileIndexByTileMacro(this, tile);

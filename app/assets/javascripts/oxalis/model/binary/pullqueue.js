@@ -4,17 +4,17 @@ import Request from "../../../libs/request";
 
 class PullQueue {
   static initClass() {
-  
+
     // Constants
     this.prototype.BATCH_LIMIT  = 6;
-  
+
     // For buckets that should be loaded immediately and
     // should never be removed from the queue
     this.prototype.PRIORITY_HIGHEST  = -1;
-  
+
     this.prototype.cube  = null;
     this.prototype.queue  = null;
-  
+
     this.prototype.batchCount  = 0;
     this.prototype.roundTripTime  = 0;
   }

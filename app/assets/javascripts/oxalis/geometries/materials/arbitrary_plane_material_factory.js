@@ -4,18 +4,21 @@ import AbstractPlaneMaterialFactory from "./abstract_plane_material_factory";
 class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
 
-  createTextures() {
-
-    this.colorName = this.sanitizeName(
+  getColorName() {
+    return this.sanitizeName(
       this.model.getColorBinaries()[0].name
     );
+  }
+
+
+  createTextures() {
 
     this.textures = {};
-    this.textures[this.colorName] = this.createDataTexture(this.tWidth, 1);
+    this.textures[this.getColorName()] = this.createDataTexture(this.tWidth, 1);
 
-    return this.uniforms[this.colorName + "_texture"] = {
+    return this.uniforms[this.getColorName() + "_texture"] = {
       type : "t",
-      value : this.textures[this.colorName]
+      value : this.textures[this.getColorName()]
     };
   }
 
@@ -49,7 +52,7 @@ void main()
   gl_FragColor = vec4(color_value, color_value, color_value, 1.0);
 }\
 `
-    )({colorName : this.colorName});
+    )({colorName : this.getColorName()});
   }
 }
 

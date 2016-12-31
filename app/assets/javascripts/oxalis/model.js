@@ -32,9 +32,6 @@ class Model extends Backbone.Model {
 
   constructor() {
     super(...arguments);
-    // TODO: This line was before super in coffee, which is not allowed in ES6.
-    // Check if this is ok.
-    // Is initialized a magic property of a backbone model?
     this.initialized = false;
   }
 

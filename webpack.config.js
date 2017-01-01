@@ -17,7 +17,7 @@ var scriptPaths = {
 
 module.exports = {
   entry: {
-    main: srcPath + "main.coffee",
+    main: srcPath + "main.js",
   },
   output: {
     path:              __dirname + "/public/bundle",
@@ -25,6 +25,11 @@ module.exports = {
     sourceMapFilename: "[file].map",
     publicPath:        "/assets/bundle/"
   },
+
+  resolveLoader: {
+    modulesDirectories: [nodePath]
+  },
+
   module: {
     // Reduce compilation time by telling webpack to not parse these libraries.
     // Only add libraries that have no dependencies eg. no require, define or similar calls.
@@ -33,8 +38,14 @@ module.exports = {
       /\/jquery\//,
     ],
     loaders: [
-      { test: /\.coffee$/, loader: "coffee-loader" },
-      { test: /\.cjsx$/, loaders: ["coffee", "cjsx"] },
+      {
+        test: /\.js$/,
+        exclude: /(node_modules|bower_components)/,
+        loader: 'babel-loader',
+        query: {
+          presets: ['es2015', 'react'],
+        }
+      },
       { test: scriptPaths["three.color"], loader: "imports?THREE=three!exports?THREE.ColorConverter" },
       { test: scriptPaths["three.trackball"], loader: "imports?THREE=three" },
       { test: scriptPaths["three"], loader: "exports?THREE" },
@@ -63,7 +74,8 @@ module.exports = {
   resolve: {
     root: srcPath,
     alias: scriptPaths,
-    extensions: ['', '.js', '.json', '.coffee', '.cjsx']
+    extensions: ['', '.js', '.json', '.coffee', '.cjsx'],
+    modulesDirectories: [nodePath],
   },
   externals: [
     { "routes": "var jsRoutes" }

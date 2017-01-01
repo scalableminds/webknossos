@@ -25,7 +25,9 @@ class Binary {
   upperBoundary = [4, 5, 6]
 }
 
-class Layer {}
+class Layer {
+  resolutions = [];
+}
 
 class Flycam2d {
   setPosition() {}
@@ -34,7 +36,7 @@ class Flycam2d {
 mockRequire("../../libs/toast", { error : _.noop })
 mockRequire("../../libs/request", Request)
 mockRequire("../../libs/error_handling", ErrorHandling)
-mockRequire("../../app", {})
+mockRequire("app", {})
 mockRequire("../../oxalis/model/binary", Binary)
 mockRequire("../../oxalis/model/scaleinfo", _.noop)
 mockRequire("../../oxalis/model/flycam2d", Flycam2d)
@@ -70,7 +72,7 @@ const TRACING_OBJECT = {
   }
 }
 
-const Model = require("../../oxalis/model")
+const Model = require("../../oxalis/model").default;
 
 describe("Model", function() {
 
@@ -93,7 +95,6 @@ describe("Model", function() {
     describe("Successful initialization", function() {
 
       it("should resolve", function(done) {
-
         model.fetch()
           .then(done)
           .catch((error) => {

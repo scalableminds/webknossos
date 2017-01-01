@@ -3,8 +3,7 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 
 mockRequire.stopAll();
-
-const MultipartData = require("../../../../libs/multipart_data");
+const MultipartData = require("../../../../libs/multipart_data").default;
 // FileReader is not available in node context
 // -> Mock MultipartData to just return the data string
 MultipartData.prototype.dataPromise = function() {
@@ -23,10 +22,10 @@ const RequestMock = {
   receiveJSON : sinon.stub()
 };
 mockRequire("../../../../libs/request", RequestMock);
-mockRequire.reRequire("../../../../libs/request");
-mockRequire.reRequire("../../../../oxalis/model/binary/layers/layer");
+mockRequire.reRequire("../../../../libs/request").default;
+mockRequire.reRequire("../../../../oxalis/model/binary/layers/layer").default;
 
-const WkLayer = require("../../../../oxalis/model/binary/layers/wk_layer");
+const WkLayer = require("../../../../oxalis/model/binary/layers/wk_layer").default;
 
 describe("WkLayer", function() {
 

@@ -10,7 +10,7 @@ mockRequire("../../../oxalis/model/binary/pullqueue", {
   }
 })
 
-const Cube = require("../../../oxalis/model/binary/cube")
+const Cube = require("../../../oxalis/model/binary/cube").default;
 
 describe("Cube", function() {
 

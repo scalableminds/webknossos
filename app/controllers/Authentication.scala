@@ -90,9 +90,9 @@ class Authentication @Inject()(val messagesApi: MessagesApi, val configuration: 
         val returnPayload =
           s"nonce=$nonce&" +
             s"email=${URLEncoder.encode(request.user.email, "UTF-8")}&" +
-            s"external_id=${request.user.id}&" +
-            s"username=${request.user.abreviatedName}&" +
-            s"name=${request.user.name}"
+            s"external_id=${URLEncoder.encode(request.user.id, "UTF-8")}&" +
+            s"username=${URLEncoder.encode(request.user.abreviatedName, "UTF-8")}&" +
+            s"name=${URLEncoder.encode(request.user.name, "UTF-8")}"
         val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
         val returnSignature = HmacUtils.hmacSha256Hex(ssoKey, encodedReturnPayload)
         val query = "sso=" + URLEncoder.encode(encodedReturnPayload, "UTF-8") + "&sig=" + returnSignature

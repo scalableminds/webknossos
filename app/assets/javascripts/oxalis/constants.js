@@ -1,3 +1,8 @@
+/**
+ * constants.js
+ * @flow weak
+ */
+
 const Constants = {
 
   PLANE_XY                             : 0,

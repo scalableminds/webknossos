@@ -1,0 +1,20 @@
+[ignore]
+.*/buildtools/.*
+.*/doc/.*
+.*/errorShots/.*
+.*/logs/.*
+.*/project/.*
+.*/target/.*
+.*/testdb/.*
+.*/userBinaryData/.*
+.*/binaryData/.*
+.*/conf/.*
+.*/dummy-db/.*
+.*/lib/.*
+.*/public/.*
+.*/test/.*
+.*/tools/.*
+
+[options]
+module.ignore_non_literal_requires=true
+module.name_mapper='^\(.*\)' -> '<PROJECT_ROOT>/app/assets/javascripts/\1'

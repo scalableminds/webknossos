@@ -29,6 +29,7 @@
     "exports-loader": "^0.6.2",
     "extract-text-webpack-plugin": "^1.0.1",
     "file-loader": "^0.9.0",
+    "flow-bin": "^0.37.4",
     "imports-loader": "^0.6.4",
     "isomorphic-fetch": "^2.2.0",
     "jasmine": "^2.5.2",
@@ -48,7 +49,8 @@
   },
   "scripts": {
     "test": "node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
-    "test-e2e": "node_modules/.bin/wdio wdio.conf.js"
+    "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
+    "flow": "cd app/assets/javascripts; flow check; test $? -eq 0 -o $? -eq 2"
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",

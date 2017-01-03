@@ -1,3 +1,8 @@
+/**
+ * router.js
+ * @flow weak
+ */
+
 import $ from "jquery";
 import _ from "lodash";
 import Backbone from "backbone";
@@ -44,7 +49,7 @@ class Router extends BaseRouter {
 
   constructor() {
     super(...arguments);
-    this.dashboard = this.dashboard.bind(this);
+    this.dashboard = this.dashboardImpl.bind(this);
     this.$loadingSpinner = $("#loader");
     this.$mainContainer = $("#main-container");
   }
@@ -247,7 +252,7 @@ class Router extends BaseRouter {
   }
 
 
-  dashboard(userID) {
+  dashboardImpl(userID) {
     return require(["dashboard/views/dashboard_view", "dashboard/models/user_model"], (DashboardView, UserModel) => {
       DashboardView = DashboardView.default;
       UserModel = UserModel.default;
@@ -348,8 +353,8 @@ class Router extends BaseRouter {
     }
 
     // Google Analytics
-    if (typeof ga !== 'undefined' && ga !== null) {
-      ga("send", "pageview", location.pathname);
+    if (typeof window.ga !== 'undefined' && window.ga !== null) {
+      window.ga("send", "pageview", location.pathname);
     }
 
   }

@@ -88,7 +88,7 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
                 Redirect(controllers.routes.Application.index)
                 .withSession(Secured.createSession(user))
               } else {
-                Redirect(controllers.routes.Authentication.login)
+                Redirect(controllers.routes.Authentication.login(None))
                 .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
               }
             }
@@ -100,13 +100,14 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
   val loginForm = Form(
     tuple(
       "email" -> text,
-      "password" -> text))
+      "password" -> text,
+      "redirect" -> text))
 
   /**
    * Login page.
    */
-  def login = Action { implicit request =>
-    Ok(html.user.login(loginForm))
+  def login(redirect: Option[String]) = Action { implicit request =>
+    Ok(html.user.login(loginForm.fill(("", "", redirect.getOrElse("")))))
   }
 
   /**
@@ -116,11 +117,13 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
     loginForm.bindFromRequest.fold(
     formWithErrors =>
       Future.successful(BadRequest(html.user.login(formWithErrors))), {
-      case (email, password) =>
+      case (email, password, redirect) =>
         UserService.auth(email.toLowerCase, password).map {
           user =>
             val redirectLocation =
-              if (user.isActive)
+              if (user.isActive && redirect != "")
+                Redirect(redirect)
+              else if(user.isActive)
                 Redirect(controllers.routes.Application.index)
               else
                 BadRequest(html.user.login(loginForm.bindFromRequest.withGlobalError("user.deactivated")))
@@ -152,7 +155,7 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
    * Logout and clean the session.
    */
   def logout = Action {
-    Redirect(controllers.routes.Authentication.login)
+    Redirect(controllers.routes.Authentication.login(None))
     .withNewSession
     .flashing("success" -> Messages("user.logout.success"))
   }

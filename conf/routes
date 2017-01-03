@@ -18,7 +18,7 @@ GET           /help/faq                                                         
 GET           /help/keyboardshortcuts                                           controllers.HelpController.keyboardShortcuts
 
 # Authentication
-GET           /login                                                            controllers.Authentication.login
+GET           /login                                                            controllers.Authentication.login(redirect: Option[String])
 POST          /login                                                            controllers.Authentication.authenticate
 GET           /switch                                                           controllers.Authentication.switchTo(to: String)
 GET           /logout                                                           controllers.Authentication.logout

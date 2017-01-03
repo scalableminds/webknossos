@@ -192,7 +192,7 @@ trait Secured extends FoxImplicits with I18nSupport{
     if (request.path.startsWith("/api/"))
       new JsonResult(FORBIDDEN)(Messages("notAllowed"))
     else {
-      Results.Redirect(routes.Authentication.login(Some(request.path)))
+      Results.Redirect(routes.Authentication.login(Some(request.uri)))
     }
   // --
 

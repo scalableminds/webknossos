@@ -57,6 +57,7 @@ class Router extends BaseRouter {
 
 
   tracingView(type, id) {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = TracingLayoutView => {
       TracingLayoutView = TracingLayoutView.default;
 
@@ -73,6 +74,7 @@ class Router extends BaseRouter {
 
 
   tracingViewPublic(id) {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = TracingLayoutView => {
       TracingLayoutView = TracingLayoutView.default;
 
@@ -94,6 +96,7 @@ class Router extends BaseRouter {
 
 
   projectCreate() {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = (ProjectCreateView, ProjectModel) => {
       ProjectCreateView = ProjectCreateView.default;
       ProjectModel = ProjectModel.default;
@@ -109,6 +112,7 @@ class Router extends BaseRouter {
 
 
   projectEdit(projectName) {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = (ProjectEditView, ProjectModel) => {
       ProjectEditView = ProjectEditView.default;
       ProjectModel = ProjectModel.default;
@@ -136,6 +140,7 @@ class Router extends BaseRouter {
 
 
   datasetEdit(datasetID) {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = (DatasetEditView, DatasetModel) => {
       DatasetEditView = DatasetEditView.default;
       DatasetModel = DatasetModel.default;
@@ -163,6 +168,7 @@ class Router extends BaseRouter {
 
 
   taskQuery() {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = (TaskQueryView) => {
       TaskQueryView = TaskQueryView.default;
 
@@ -197,6 +203,7 @@ class Router extends BaseRouter {
    * Load layout view that shows task-creation subviews
    */
   taskCreate() {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = (TaskCreateView, TaskModel) => {
       TaskCreateView = TaskCreateView.default;
       TaskModel = TaskModel.default;
@@ -214,6 +221,7 @@ class Router extends BaseRouter {
    * Load item view which displays an editable task.
    */
   taskEdit(taskID) {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = (TaskCreateFromView, TaskModel) => {
       TaskCreateFromView = TaskCreateFromView.default;
       TaskModel = TaskModel.default;
@@ -229,6 +237,7 @@ class Router extends BaseRouter {
 
 
   taskTypesCreate(taskTypeId) {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = (TaskTypeCreateView, TaskTypeModel) => {
       TaskTypeCreateView = TaskTypeCreateView.default;
       TaskTypeModel = TaskTypeModel.default;
@@ -243,6 +252,7 @@ class Router extends BaseRouter {
 
 
   dashboard(userID) {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = (DashboardView, UserModel) => {
       DashboardView = DashboardView.default;
       UserModel = UserModel.default;
@@ -264,6 +274,7 @@ class Router extends BaseRouter {
 
 
   spotlight() {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = (SpotlightView, DatasetCollection) => {
       SpotlightView = SpotlightView.default;
       DatasetCollection = DatasetCollection.default;
@@ -280,6 +291,7 @@ class Router extends BaseRouter {
 
 
   taskOverview() {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = (TaskOverviewView, TaskOverviewCollection) => {
       TaskOverviewView = TaskOverviewView.default;
       TaskOverviewCollection = TaskOverviewCollection.default;
@@ -298,6 +310,7 @@ class Router extends BaseRouter {
     if (options == null) { options = {}; }
     _.defaults(options, {addButtonText : null});
 
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = admin => {
       collection = new admin[collection](null, options);
       const paginatedCollection = new PaginationCollection([], {fullCollection : collection});
@@ -312,6 +325,7 @@ class Router extends BaseRouter {
 
 
   showAdminView(view, collection) {
+    // Webpack `require` doesn't work with inline arrow functions
     const callback = admin => {
       if (collection) {
         collection = new admin[collection]();

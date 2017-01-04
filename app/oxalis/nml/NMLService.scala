@@ -31,6 +31,7 @@ object NMLService extends NMLParsingService with FoxImplicits with LazyLogging {
     Xml.toXML(t)(writer, w).futureBox.map{ result =>
       // Make sure all tags are properly closed
       writer.writeEndDocument()
+      writer.close()
       result
     }
   }

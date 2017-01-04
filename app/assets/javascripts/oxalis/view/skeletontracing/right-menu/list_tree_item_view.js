@@ -1,3 +1,4 @@
+import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Utils from "libs/utils";
 import ColorConverter from "three.color";
@@ -5,7 +6,7 @@ import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 
 class ListTreeItemView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.tagName  = "li";
     this.prototype.template  = _.template(`\
 <i class="fa <%- getIcon() %>"></i>
@@ -15,7 +16,7 @@ class ListTreeItemView extends Marionette.View {
   <span title="Tree Name" class="tree-name"><%- name %></span>
 </a>\
 `);
-  
+
     this.prototype.events  =
       {"click a" : "setActive"};
   }

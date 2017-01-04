@@ -44,17 +44,15 @@ class NestedObjModel extends Backbone.Model {
             value[attribute] = {};
           }
           return value[attribute];
-        } else {
+        } else if (value[attribute] !== val) {
           // Set the value if attribute is the last key in the attributeString
-          if (value[attribute] !== val) {
-            const oldVal = value[attribute];
-            value[attribute] = val;
+          const oldVal = value[attribute];
+          value[attribute] = val;
 
-            if (!silent) {
-              // Trigger the change in the model
-              this.triggerDeepChange(oldVal, val, attributeString);
-              return this.trigger("change", this);
-            }
+          if (!silent) {
+            // Trigger the change in the model
+            this.triggerDeepChange(oldVal, val, attributeString);
+            return this.trigger("change", this);
           }
         }
       },

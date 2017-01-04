@@ -1,5 +1,6 @@
-import Request from "libs/request";
 import _ from "lodash";
+import app from "app";
+import Request from "libs/request";
 import Backbone from "backbone";
 import NestedObjModel from "libs/nested_obj_model";
 
@@ -30,20 +31,16 @@ class DatasetConfiguration extends NestedObjModel {
 
   triggerAll() {
 
-    return (() => {
-      const result = [];
-      for (let property in this.attributes) {
-        result.push(this.trigger(`change:${property}`, this, this.get(property)));
-      }
-      return result;
-    })();
+    for (const property in this.attributes) {
+      this.trigger(`change:${property}`, this, this.get(property));
+    }
   }
 
 
   setDefaultBinaryColors(forceDefault) {
 
     let defaultColors;
-    let defaults, layer;
+    let layer;
     if (forceDefault == null) { forceDefault = false; }
     const layers = this.get("layers");
 
@@ -54,19 +51,22 @@ class DatasetConfiguration extends NestedObjModel {
                         [255, 255, 0], [0, 255, 255], [255, 0, 255]];
     }
 
-    return this.dataLayerNames.map((layerName, i) =>
-      (defaults = {
+    this.dataLayerNames.forEach((layerName, i) => {
+
+      const defaults = {
         color: defaultColors[i % defaultColors.length],
         brightness: 0,
         contrast: 1
-      },
+      };
 
-      forceDefault || !layers[layerName] ?
-        layer = defaults
-      :
-        layer = _.defaults(layers[layerName], defaults),
+      if (forceDefault || !layers[layerName]) {
+        layer = defaults;
+      } else {
+        layer = _.defaults(layers[layerName], defaults);
+      }
 
-      this.set(`layers.${layerName}`, layer)));
+      this.set(`layers.${layerName}`, layer);
+    })
   }
 }
 

@@ -1,4 +1,4 @@
-import backbone from "backbone";
+import Backbone from "backbone";
 import Marionette from "backbone.marionette";
 import subviews from "backbone-subviews";
 import _ from "lodash";
@@ -6,9 +6,9 @@ import CheckboxSettingView from "oxalis/view/settings/setting_views/checkbox_set
 
 class MappingInfoView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.RENDER_DEBOUNCE_TIME  = 200;
-  
+
     this.prototype.id  = "volume-mapping-info";
     this.prototype.template  = _.template(`\
 <div class="well">
@@ -23,12 +23,12 @@ class MappingInfoView extends Marionette.View {
   <div data-subview="enableMapping"></div>
 <% } %>\
 `);
-  
-  
+
+
     this.prototype.subviewCreators  = {
-  
-      ["enableMapping"]() {
-  
+
+      "enableMapping": () => {
+
         return new CheckboxSettingView({
           model : this.model,
           options : {

@@ -1,4 +1,5 @@
 import _ from "lodash";
+import $ from "jquery";
 import app from "app";
 import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
@@ -7,7 +8,7 @@ import ListTreeItemView from "./list_tree_item_view";
 
 class ListTreeView extends Marionette.CompositeView {
   static initClass() {
-  
+
     this.prototype.id  = "tree-navbar";
     this.prototype.className  = "flex-column";
     this.prototype.template  = _.template(`\
@@ -47,11 +48,11 @@ class ListTreeView extends Marionette.CompositeView {
 </div>
 <ul id="tree-list" class="flex-overflow"></ul>\
 `);
-  
+
     this.prototype.childView  = ListTreeItemView;
     this.prototype.childViewContainer  = "ul#tree-list";
-  
-  
+
+
     this.prototype.events  = {
       "change #tree-name-input" : "setTreeName",
       "click #tree-prev-button" : "selectPreviousTree",
@@ -62,7 +63,7 @@ class ListTreeView extends Marionette.CompositeView {
       "click #tree-color-shuffle-all" : "shuffleAllTreeColors",
       "click a[data-sort]" : "sortTrees"
     };
-  
+
     this.prototype.ui  = {
       "treeNameInput" : "#tree-name-input",
       "sortNameIcon" : "#sort-name-icon",

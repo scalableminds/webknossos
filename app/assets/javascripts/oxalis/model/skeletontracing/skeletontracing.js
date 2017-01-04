@@ -2,7 +2,6 @@ import app from "app";
 import Backbone from "backbone";
 import _ from "lodash";
 import Utils from "libs/utils";
-import backbone from "backbone";
 import Request from "libs/request";
 import ColorGenerator from "libs/color_generator";
 import TracePoint from "./tracepoint";

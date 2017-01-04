@@ -1,9 +1,10 @@
+import _ from "lodash"
 import Marionette from "backbone.marionette";
 import Constants from "../constants";
 
 class TracingView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.id  = "render";
     this.prototype.template  = _.template(`\
 <div id="modal" class="modal fade" tabindex="-1" role="dialog"></div>
@@ -27,10 +28,10 @@ class TracingView extends Marionette.View {
   </div>
 </div>\
 `);
-  
+
     this.prototype.events  =
       {"contextmenu" : "disableContextMenu"};
-  
+
     this.prototype.ui  =
       {"inputcatchers" : ".inputcatcher"};
   }

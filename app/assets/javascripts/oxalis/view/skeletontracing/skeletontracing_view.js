@@ -1,5 +1,7 @@
 import $ from "jquery";
 import _ from "lodash";
+import app from "app";
+import Backbone from "backbone"
 import Toast from "libs/toast";
 import modal from "../modal";
 import View from "../../view";

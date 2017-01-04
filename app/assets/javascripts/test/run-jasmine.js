@@ -1,3 +1,4 @@
+/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 require("babel-register")(
   {
     "presets": ["es2015", "stage-3"],

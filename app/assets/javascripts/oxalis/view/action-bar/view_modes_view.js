@@ -1,10 +1,11 @@
+import _ from "lodash";
 import Marionette from "backbone.marionette";
 import app from "app";
 import constants from "oxalis/constants";
 
 class ViewModesView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.template  = _.template(`\
 <div class="btn-group btn-group">
   <div class="btn-group">
@@ -18,13 +19,13 @@ class ViewModesView extends Marionette.View {
   </div>
 </div>\
 `);
-  
+
     this.prototype.modeMapping  = {
       "mode-3planes" : constants.MODE_PLANE_TRACING,
       "mode-sphere" : constants.MODE_ARBITRARY,
       "mode-arbitraryplane" : constants.MODE_ARBITRARY_PLANE
     };
-  
+
     this.prototype.events  =
       {"click button" : "changeMode"};
   }

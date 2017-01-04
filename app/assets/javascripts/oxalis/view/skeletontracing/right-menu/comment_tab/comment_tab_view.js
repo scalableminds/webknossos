@@ -1,3 +1,5 @@
+import _ from "lodash";
+import $ from "jquery";
 import app from "app";
 import Marionette from "backbone.marionette";
 import Input from "libs/input";
@@ -180,16 +182,14 @@ class CommentTabView extends Marionette.View {
         tree.removeCommentWithNodeId(nodeId);
       }
       this.updateState();
-    } else {
-      if (commentText !== "") {
-        comment = {
-          node : nodeId,
-          content : commentText
-        };
-        tree.comments.push(comment);
+    } else if (commentText !== "") {
+      comment = {
+        node : nodeId,
+        content : commentText
+      };
+      tree.comments.push(comment);
 
-        this.setActiveNode(comment, tree.treeId);
-      }
+      this.setActiveNode(comment, tree.treeId);
     }
 
     return this.model.skeletonTracing.updateTree(tree);

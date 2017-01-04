@@ -1,5 +1,5 @@
 import _ from "lodash";
-import backbone from "backbone";
+import Backbone from "backbone";
 
 class CommentsCollection extends Backbone.Collection {
 

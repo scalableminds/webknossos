@@ -1,3 +1,4 @@
+import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Clipboard from "clipboard-js";
 import app from "app";
@@ -8,7 +9,7 @@ import { V3 } from "libs/mjs";
 
 class DatasetPositionView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.tagName  = "div";
     this.prototype.className  = "form-inline dataset-position-view";
     this.prototype.template  = _.template(`\
@@ -29,28 +30,28 @@ class DatasetPositionView extends Marionette.View {
   <% } %>
 </div>\
 `);
-  
+
     this.prototype.templateContext  = {
       position() {
         return V3.floor(this.flycam.getPosition()).join(", ");
       },
-  
+
       rotation() {
         return V3.round(this.flycam3d.getRotation()).join(", ");
       },
-  
+
       isArbitrayMode() {
         return constants.MODES_ARBITRARY.includes(this.mode);
       }
     };
-  
-  
+
+
     this.prototype.events  = {
       "change #trace-position-input" : "changePosition",
       "change #trace-rotation-input" : "changeRotation",
       "click button" : "copyToClipboard"
     };
-  
+
     this.prototype.ui  = {
       "positionInput" : "#trace-position-input",
       "rotationInput" : "#trace-rotation-input"

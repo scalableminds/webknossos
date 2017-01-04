@@ -1,10 +1,10 @@
 import _ from "lodash";
-import backbone from "backbone";
+import Backbone from "backbone";
 import moment from "moment";
 
 class TimeStatisticModel extends Backbone.Model {
   static initClass() {
-  
+
     this.prototype.url  = "api/statistics/webknossos";
   }
 

@@ -5,8 +5,8 @@ import { V3 } from "libs/mjs";
 
 class UrlManager {
   static initClass() {
-  
-  
+
+
     this.prototype.MAX_UPDATE_INTERVAL  = 1000;
   }
 
@@ -49,10 +49,8 @@ class UrlManager {
             state.activeNode = +stateArray[8];
           }
 
-        } else {
-          if (stateArray[5] != null) {
-            state.activeNode = +stateArray[5];
-          }
+        } else if (stateArray[5] != null) {
+          state.activeNode = +stateArray[5];
         }
       }
     }

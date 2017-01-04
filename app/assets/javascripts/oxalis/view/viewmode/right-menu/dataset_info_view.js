@@ -1,3 +1,4 @@
+import _ from "lodash";
 import Marionette from "backbone.marionette";
 import app from "app";
 import constants from "oxalis/constants";
@@ -5,7 +6,7 @@ import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controlle
 
 class DatasetInfoView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.className  = "col-sm-12 flex-column";
     this.prototype.id  = "dataset";
     this.prototype.template  = _.template(`\
@@ -18,7 +19,7 @@ class DatasetInfoView extends Marionette.View {
   <% } %>
 </div>\
 `);
-  
+
     this.prototype.templateContext  = {
       chooseUnit() {
         if(this.zoomLevel < 1000) {

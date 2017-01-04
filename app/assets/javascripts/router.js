@@ -1,3 +1,6 @@
+// Remove these linting rules after refactoring
+/*eslint global-require: "off", import/no-dynamic-require: "off", no-param-reassign: "off" */
+
 import $ from "jquery";
 import _ from "lodash";
 import Backbone from "backbone";
@@ -42,8 +45,8 @@ class Router extends BaseRouter {
     };
   }
 
-  constructor() {
-    super(...arguments);
+  constructor(...args) {
+    super(...args);
     this.dashboard = this.dashboard.bind(this);
     this.$loadingSpinner = $("#loader");
     this.$mainContainer = $("#main-container");

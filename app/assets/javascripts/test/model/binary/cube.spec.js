@@ -1,3 +1,4 @@
+/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import mockRequire from "mock-require"
 import sinon from "sinon"
 import runAsync from "../../helpers/run-async"

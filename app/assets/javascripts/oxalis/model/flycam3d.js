@@ -19,11 +19,11 @@ const transformationWithDistanceMacro = function(_this, transformationFn, transf
 
 class Flycam3d {
   static initClass() {
-  
+
     this.prototype.ZOOM_STEP_INTERVAL  = 1.1;
     this.prototype.ZOOM_STEP_MIN  = 0.5;
     this.prototype.ZOOM_STEP_MAX  = 5;
-  
+
     this.prototype.zoomStep  = 1.3;
     this.prototype.hasChanged  = true;
     this.prototype.scale  = null;

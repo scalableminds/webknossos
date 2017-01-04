@@ -1,3 +1,5 @@
+import _ from "lodash";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 import app from "app";
 import ActionBarView from "./action_bar_view";

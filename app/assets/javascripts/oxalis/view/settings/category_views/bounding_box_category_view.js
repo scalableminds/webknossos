@@ -1,7 +1,7 @@
-import CategoryView from "./category_view";
-import TextInputSettingView from "../setting_views/text_input_setting_view";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
+import CategoryView from "./category_view";
+import TextInputSettingView from "../setting_views/text_input_setting_view";
 
 class BoundingBoxCategory extends CategoryView {
   static initClass() {

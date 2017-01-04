@@ -1,17 +1,17 @@
-import app from "app";
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
-import TaskListView from "./task_list_view";
-import TaskCollection from "admin/models/task/task_collection";
 import Request from "libs/request";
-import PaginationView from "admin/views/pagination_view";
 import Toast from "libs/toast";
+import TaskCollection from "admin/models/task/task_collection";
+import PaginationView from "admin/views/pagination_view";
 import PaginationCollection from "admin/models/pagination_collection";
-import TaskQueryDocumentationModal from "./task_query_documentation_modal";
 import ace from "brace";
 import "brace/mode/javascript";
 import "brace/mode/json";
 import "brace/theme/clouds";
+import TaskListView from "./task_list_view";
+import TaskQueryDocumentationModal from "./task_query_documentation_modal";
 
 class TaskQueryView extends Marionette.View {
   static initClass() {

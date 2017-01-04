@@ -2,9 +2,9 @@ import _ from "lodash";
 import $ from "jquery";
 import app from "app";
 import Marionette from "backbone.marionette";
+import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 import DatasetListItemView from "./dataset_list_item_view";
 import TeamAssignmentModalView from "./team_assignment_modal_view";
-import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 
 class DatasetListView extends Marionette.CompositeView {
   static initClass() {

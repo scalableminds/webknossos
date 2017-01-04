@@ -3,9 +3,9 @@ import app from "app";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import TemplateHelpers from "libs/template_helpers";
+import Request from "libs/request";
 import DatasetAccesslistCollection from "admin/models/dataset/dataset_accesslist_collection";
 import DatasetAccessView from "./dataset_access_view";
-import Request from "libs/request";
 
 
 class DatasetListItemView extends Marionette.CompositeView {

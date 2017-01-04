@@ -1,5 +1,5 @@
-import Cube from "../cube";
 import _ from "lodash";
+import Cube from "../cube";
 
 // Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
 // object as expected by the server on bucket request

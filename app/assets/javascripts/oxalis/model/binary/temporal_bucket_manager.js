@@ -1,5 +1,5 @@
-import PullQueue from "./pullqueue";
 import _ from "lodash";
+import PullQueue from "./pullqueue";
 
 
 class TemporalBucketManager {

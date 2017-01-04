@@ -1,8 +1,8 @@
 import _ from "lodash";
-import StateLogger from "../statelogger";
 import THREE from "three";
 import { V3 } from "libs/mjs";
 import ErrorHandling from "libs/error_handling";
+import StateLogger from "../statelogger";
 
 class SkeletonTracingStateLogger extends StateLogger {
 

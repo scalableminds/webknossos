@@ -1,7 +1,7 @@
 import _ from "lodash";
+import pako from "pako";
 import Toast from "./toast";
 import ErrorHandling from "./error_handling";
-import pako from "pako";
 
 const Request = {
 

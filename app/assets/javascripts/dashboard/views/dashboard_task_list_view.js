@@ -1,10 +1,10 @@
 import _ from "lodash";
 import app from "app";
 import Marionette from "backbone.marionette";
-import DashboardTaskListItemView from "./dashboard_task_list_item_view";
-import TaskTransferModalView from "./task_transfer_modal_view";
 import routes from "routes"; // eslint-disable-line no-unused-vars
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
+import DashboardTaskListItemView from "./dashboard_task_list_item_view";
+import TaskTransferModalView from "./task_transfer_modal_view";
 import UserTasksCollection from "../models/user_tasks_collection";
 
 class DashboardTaskListView extends Marionette.CompositeView {

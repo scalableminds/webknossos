@@ -1,8 +1,8 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
+import PaginationView from "admin/views/pagination_view";
 import CreditsView from "./credits_view";
 import SpotlightDatasetListView from "./spotlight_dataset_list_view";
-import PaginationView from "admin/views/pagination_view";
 
 class SpotlightView extends Marionette.View {
   static initClass() {

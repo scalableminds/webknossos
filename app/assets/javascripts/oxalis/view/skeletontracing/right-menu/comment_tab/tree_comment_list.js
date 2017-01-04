@@ -1,6 +1,6 @@
 import React, { Component } from "react";
-import Comment from "./comment";
 import classNames from "classnames";
+import Comment from "./comment";
 
 
 class TreeCommentList extends Component {

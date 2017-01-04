@@ -6,10 +6,10 @@ import TaskTypeCollection from "admin/models/tasktype/task_type_collection";
 import TeamCollection from "admin/models/team/team_collection";
 import ProjectCollection from "admin/models/project/project_collection";
 import SelectionView from "admin/views/selection_view";
-import TaskCreateFromFormView from "./task_create_from_form_view";
-import TaskCreateFromNMLView from "./task_create_from_nml_view";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
+import TaskCreateFromFormView from "./task_create_from_form_view";
+import TaskCreateFromNMLView from "./task_create_from_nml_view";
 
 class TaskCreateFromView extends Marionette.View {
   static initClass() {

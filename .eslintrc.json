@@ -27,18 +27,19 @@
     },
     "rules": {
       "quotes": ["error", "double"],
-      "no-bitwise": "off",
-      "no-mixed-operators": "off",
       "max-len": ["warn", 100],
-      "no-underscore-dangle": ["error", { "allow": ["__guard__", "__range__"] }],
       "class-methods-use-this": "off",
       "operator-assignment": "warn",
       "react/jsx-filename-extension": "off",
-      "no-restricted-syntax": "warn",
       "radix": "off",
+      "no-bitwise": "off",
+      "no-mixed-operators": "off",
+      "no-underscore-dangle": ["error", { "allow": ["__guard__", "__range__"] }],
+      "no-restricted-syntax": "warn",
       "no-restricted-properties": ["off", {"object": "Math", "property": "pow"}],
       "no-restricted-syntax": ["off", "ForInStatement", "ForOfStatement"],
       "no-param-reassign": "warn",
-      "no-plusplus": "off"
+      "no-plusplus": "off",
+      "import/extensions": ["warn", { "js": "never", "jsx": "always" }]
     }
 }

@@ -1,8 +1,8 @@
 import _ from "lodash";
 import THREE from "three";
+import Toast from "libs/toast";
 import TracePoint from "./tracepoint";
 import TraceTree from "./tracetree";
-import Toast from "libs/toast";
 
 class TracingParser {
 

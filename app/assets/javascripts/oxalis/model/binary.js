@@ -1,5 +1,6 @@
 import _ from "lodash";
 import Backbone from "backbone";
+import Pipeline from "libs/pipeline";
 import InterpolationCollector from "./binary/interpolation_collector";
 import Cube from "./binary/cube";
 import PullQueue from "./binary/pullqueue";
@@ -8,7 +9,6 @@ import Plane2D from "./binary/plane2d";
 import PingStrategy from "./binary/ping_strategy";
 import PingStrategy3d from "./binary/ping_strategy_3d";
 import Mappings from "./binary/mappings";
-import Pipeline from "libs/pipeline";
 import constants from "../constants";
 
 class Binary {

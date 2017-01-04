@@ -3,10 +3,10 @@ import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
 import TWEEN from "tween.js";
+import THREE from "three";
+import modal from "./modal";
 import Toast from "../../libs/toast";
 import constants from "../constants";
-import modal from "./modal";
-import THREE from "three";
 
 class PlaneView {
 

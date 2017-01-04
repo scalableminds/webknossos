@@ -1,9 +1,9 @@
 import _ from "lodash";
 import app from "app";
+import THREE from "three";
 import Backbone from "backbone";
 import constants from "../constants";
 import dimensions from "../model/dimensions";
-import THREE from "three";
 
 class Cube {
 

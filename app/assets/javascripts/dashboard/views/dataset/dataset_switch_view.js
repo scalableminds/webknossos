@@ -1,11 +1,11 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import DatasetListView from "./dataset_list_view";
-import SpotlightDatasetListView from "../spotlight/spotlight_dataset_list_view";
+import Utils from "libs/utils";
 import DatasetCollection from "admin/models/dataset/dataset_collection";
 import PaginationCollection from "admin/models/pagination_collection";
 import PaginationView from "admin/views/pagination_view";
-import Utils from "libs/utils";
+import DatasetListView from "./dataset_list_view";
+import SpotlightDatasetListView from "../spotlight/spotlight_dataset_list_view";
 
 class DatasetSwitchView extends Marionette.View {
   static initClass() {
@@ -23,7 +23,7 @@ class DatasetSwitchView extends Marionette.View {
     </a>
   <% } %>
 </div>
-  
+
 <h3>Datasets</h3>
 <div class="pagination-region"></div>
 <div class="dataset-region"></div>\

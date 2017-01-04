@@ -1,8 +1,8 @@
 import app from "app";
-import Dimensions from "../model/dimensions";
-import constants from "../constants";
 import THREE from "three";
 import PlaneMaterialFactory from "./materials/plane_material_factory";
+import Dimensions from "../model/dimensions";
+import constants from "../constants";
 
 class Plane {
   static initClass() {

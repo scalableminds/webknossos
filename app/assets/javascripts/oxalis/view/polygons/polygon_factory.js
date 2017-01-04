@@ -1,5 +1,5 @@
-import tlt from "./tlt";
 import _ from "lodash";
+import tlt from "./tlt";
 import Deferred from "../../../libs/deferred";
 
 // This class is capable of turning voxel data into triangles

@@ -71,6 +71,7 @@
     "d3": "^3.5.12",
     "es6-promise": "^3.0.2",
     "eslint-import-resolver-webpack": "^0.8.0",
+    "eslint-nibble": "^3.1.0",
     "eslint-plugin-promise": "^3.4.0",
     "font-awesome": "^4.5.0",
     "form-syphon": "0.0.5",

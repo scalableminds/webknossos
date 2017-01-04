@@ -4,14 +4,14 @@ import $ from "jquery";
 import _ from "lodash";
 import TWEEN from "tween.js";
 import Input from "libs/input";
+import { V3 } from "libs/mjs";
+import Utils from "libs/utils";
+import Toast from "libs/toast";
 import ArbitraryPlane from "../../geometries/arbitrary_plane";
 import Crosshair from "../../geometries/crosshair";
 import ArbitraryView from "../../view/arbitrary_view";
 import ArbitraryPlaneInfo from "../../geometries/arbitrary_plane_info";
 import constants from "../../constants";
-import { V3 } from "libs/mjs";
-import Utils from "libs/utils";
-import Toast from "libs/toast";
 
 class ArbitraryController {
   static initClass() {

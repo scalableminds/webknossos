@@ -1,9 +1,9 @@
+import Constants from "oxalis/constants";
 import NumberSettingView from "../setting_views/number_setting_view";
 import CheckboxSettingView from "../setting_views/checkbox_setting_view";
 import SliderSettingView from "../setting_views/slider_setting_view";
 import ButtonSettingView from "../setting_views/button_setting_view";
 import CategoryView from "./category_view";
-import Constants from "oxalis/constants";
 
 class NodeCategoryView extends CategoryView {
   static initClass() {

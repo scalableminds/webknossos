@@ -1,5 +1,5 @@
-import DashboardTaskModel from "./dashboard_task_model";
 import SortedCollection from "admin/models/sorted_collection";
+import DashboardTaskModel from "./dashboard_task_model";
 
 class UserTasksCollection extends SortedCollection {
   static initClass() {

@@ -5,11 +5,11 @@ import _ from "lodash";
 import Utils from "libs/utils";
 import Input from "libs/input";
 import Trackball from "three.trackball"; // eslint-disable-line no-unused-vars
+import THREE from "three";
 import CameraController from "../camera_controller";
 import Dimensions from "../../model/dimensions";
 import PlaneView from "../../view/plane_view";
 import constants from "../../constants";
-import THREE from "three";
 
 class PlaneController {
   static initClass() {

@@ -1,7 +1,7 @@
 import _ from "lodash";
 import Backbone from "backbone";
-import constants from "../constants";
 import { V3 } from "libs/mjs";
+import constants from "../constants";
 
 class UrlManager {
   static initClass() {

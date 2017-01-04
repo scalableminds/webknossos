@@ -3,6 +3,8 @@ import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import runAsync from "../../helpers/run-async";
+import { Bucket } from "../../../oxalis/model/binary/bucket";
+import TemporalBucketManager from "../../../oxalis/model/binary/temporal_bucket_manager";
 
 mockRequire.stopAll();
 
@@ -15,9 +17,6 @@ mockRequire("../../../oxalis/model/binary/pullqueue", {
     PRIORITY_HIGHEST: 123,
   },
 });
-
-import { Bucket } from "../../../oxalis/model/binary/bucket";
-import TemporalBucketManager from "../../../oxalis/model/binary/temporal_bucket_manager";
 
 
 describe("TemporalBucketManager", () => {

@@ -1,8 +1,8 @@
+import _ from "lodash";
 import Layer from "./layer";
 import BucketBuilder from "./bucket_builder";
 import Request from "../../../../libs/request";
 import MultipartData from "../../../../libs/multipart_data";
-import _ from "lodash";
 
 
 class WkLayer extends Layer {

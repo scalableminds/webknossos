@@ -1,7 +1,7 @@
+import app from "app";
 import CategoryView from "./category_view";
 import CheckboxSettingView from "../setting_views/checkbox_setting_view";
 import SliderSettingView from "../setting_views/slider_setting_view";
-import app from "app";
 
 class IsosurfaceCategoryView extends CategoryView {
   static initClass() {

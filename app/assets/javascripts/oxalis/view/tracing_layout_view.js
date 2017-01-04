@@ -2,6 +2,12 @@ import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
 import app from "app";
+import OxalisController from "oxalis/controller";
+import OxalisModel from "oxalis/model";
+import Constants from "oxalis/constants";
+import BackboneToOxalisAdapterModel from "oxalis/model/settings/backbone_to_oxalis_adapter_model";
+import Modal from "oxalis/view/modal";
+import Utils from "libs/utils";
 import ActionBarView from "./action_bar_view";
 import SkeletonPlaneTabView from "./settings/tab_views/skeleton_plane_tab_view";
 import SkeletonArbitraryTabView from "./settings/tab_views/skeleton_arbitrary_tab_view";
@@ -12,12 +18,6 @@ import VolumeTracingRightMenuView from "./volumetracing/volumetracing_right_menu
 import ViewmodeRightMenuView from "./viewmode/viewmode_right_menu_view";
 import UserScriptsModalView from "./user_scripts_modal";
 import TracingView from "./tracing_view";
-import OxalisController from "oxalis/controller";
-import OxalisModel from "oxalis/model";
-import Constants from "oxalis/constants";
-import BackboneToOxalisAdapterModel from "oxalis/model/settings/backbone_to_oxalis_adapter_model";
-import Modal from "oxalis/view/modal";
-import Utils from "libs/utils";
 
 class TracingLayoutView extends Marionette.View {
   constructor(...args) {

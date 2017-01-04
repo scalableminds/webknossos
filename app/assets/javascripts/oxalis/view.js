@@ -1,8 +1,8 @@
 import $ from "jquery";
 import app from "app";
-import Toast from "../libs/toast";
 import THREE from "three";
 import constants from "./constants";
+import Toast from "../libs/toast";
 
 class View {
 

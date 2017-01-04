@@ -1,6 +1,6 @@
 import _ from "lodash";
-import PolyhedronRasterizer from "./polyhedron_rasterizer";
 import { M4x4 } from "libs/mjs";
+import PolyhedronRasterizer from "./polyhedron_rasterizer";
 
 class PingStrategy3d {
   static initClass() {

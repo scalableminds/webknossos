@@ -2,9 +2,9 @@ import _ from "lodash";
 import Marionette from "backbone.marionette";
 import app from "app";
 import Request from "libs/request";
+import Constants from "oxalis/constants";
 import MergeModalView from "./merge_modal_view";
 import ShareModalView from "./share_modal_view";
-import Constants from "oxalis/constants";
 
 class DatasetActionsView extends Marionette.View {
   static initClass() {

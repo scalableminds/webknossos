@@ -1,5 +1,5 @@
-import Dimensions from "../dimensions";
 import Drawing from "libs/drawing";
+import Dimensions from "../dimensions";
 
 
 class VolumeLayer {

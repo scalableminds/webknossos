@@ -1,11 +1,11 @@
 import _ from "lodash";
 import Backbone from "backbone";
+import Drawing from "libs/drawing";
 import VolumeCell from "./volumecell";
 import VolumeLayer from "./volumelayer";
+import VolumeTracingStateLogger from "./volumetracing_statelogger";
 import Dimensions from "../dimensions";
 import RestrictionHandler from "../helpers/restriction_handler";
-import Drawing from "libs/drawing";
-import VolumeTracingStateLogger from "./volumetracing_statelogger";
 import Constants from "../../constants";
 
 class VolumeTracing {

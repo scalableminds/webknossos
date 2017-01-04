@@ -1,8 +1,8 @@
 import _ from "lodash";
 import app from "app";
 import Marionette from "backbone.marionette";
-import ProjectListItemView from "./project_list_item_view";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
+import ProjectListItemView from "./project_list_item_view";
 
 class ProjectsListView extends Marionette.CompositeView {
   static initClass() {

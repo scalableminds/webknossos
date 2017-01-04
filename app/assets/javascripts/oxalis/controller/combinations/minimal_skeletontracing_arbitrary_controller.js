@@ -1,8 +1,8 @@
 import _ from "lodash";
 import Input from "libs/input";
+import Toast from "libs/toast";
 import ArbitraryController from "../viewmodes/arbitrary_controller";
 import Constants from "../../constants";
-import Toast from "libs/toast";
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 

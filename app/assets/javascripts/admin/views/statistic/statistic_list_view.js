@@ -3,8 +3,8 @@ import app from "app";
 import Backbone from "backbone";
 import Marionette from "backbone.marionette";
 import moment from "moment";
-import StatisticListItemView from "./statistic_list_item_view";
 import UserStatisticCollection from "admin/models/statistic/user_statistic_collection";
+import StatisticListItemView from "./statistic_list_item_view";
 
 class StatisticListView extends Marionette.CompositeView {
   static initClass() {

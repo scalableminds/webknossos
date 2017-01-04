@@ -1,6 +1,6 @@
+import AbstractTabView from "oxalis/view/abstract_tab_view";
 import TaskCreateFromView from "./task_create_subviews/task_create_from_view";
 import TaskCreateBulkImportView from "./task_create_subviews/task_create_bulk_import_view";
-import AbstractTabView from "oxalis/view/abstract_tab_view";
 
 class TaskCreateView extends AbstractTabView {
   static initClass() {

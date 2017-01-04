@@ -1,10 +1,10 @@
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
-import Dimensions from "../model/dimensions";
-import constants from "../constants";
 import THREE from "three";
 import TWEEN from "tween.js";
+import Dimensions from "../model/dimensions";
+import constants from "../constants";
 
 class CameraController {
   static initClass() {

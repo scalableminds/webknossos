@@ -119,5 +119,9 @@ const Toast = {
   }
 };
 
+type ToastType = {
+  remove: () => void
+};
 
+export type ToastType;
 export default Toast;

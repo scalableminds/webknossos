@@ -1,3 +1,8 @@
+/**
+ * model.js
+ * @flow weak
+ */
+
 import Backbone from "backbone";
 import _ from "lodash";
 import app from "app";

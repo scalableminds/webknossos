@@ -1,3 +1,8 @@
+/**
+ * model.js
+ * @flow weak
+ */
+
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
@@ -9,6 +14,7 @@ import VolumeTracingController from "./controller/annotations/volumetracing_cont
 import SkeletonTracingArbitraryController from "./controller/combinations/skeletontracing_arbitrary_controller";
 import SkeletonTracingPlaneController from "./controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "./controller/combinations/volumetracing_plane_controller";
+import ArbitraryController from "./controller/viewmodes/arbitrary_controller";
 import MinimalArbitraryController from "./controller/combinations/minimal_skeletontracing_arbitrary_controller";
 import SceneController from "./controller/scene_controller";
 import UrlManager from "./controller/url_manager";
@@ -20,7 +26,23 @@ import constants from "./constants";
 import Input from "../libs/input";
 import Toast from "../libs/toast";
 
+import type {ToastType} from "../libs/toast";
+
 class Controller {
+
+  model: Model;
+  fullScreen: boolean;
+  urlManager: UrlManager;
+  sceneController: SceneController;
+  view: View;
+  annotationController: SkeletonTracingController | VolumeTracingController;
+  planeController: PlaneController;
+  arbitraryController: ArbitraryController;
+  zoomStepWarningToast: ToastType;
+
+  // Todo: The whole class is extended by Backbone.Events, which we should tell
+  // Flow somehow
+  listenTo: Function;
 
   // Main controller, responsible for setting modes and everything
   // that has to be controlled in any mode.
@@ -37,13 +59,6 @@ class Controller {
 
   constructor(options) {
     this.model = options.model;
-
-    _.extend(this, {
-      view : null,
-      planeController : null,
-      arbitraryController : null
-    }
-    );
 
     _.extend(this, Backbone.Events);
 

@@ -10,7 +10,7 @@ echo "Usage: $0 <project> <branch> <commit> <iteration> "
   exit 1
 fi
 
-export SBT_VERSION_TAG=sbt-0.13.9_mongo-3.2.1_node-6.x_jdk-8
+export SBT_VERSION_TAG=sbt-0.13.9_mongo-3.2.1_node-7.x_jdk-8
 
 PROJECT=${1}
 BRANCH=${2}

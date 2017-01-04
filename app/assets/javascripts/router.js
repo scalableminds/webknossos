@@ -57,8 +57,7 @@ class Router extends BaseRouter {
 
 
   tracingView(type, id) {
-
-    return require(["oxalis/view/tracing_layout_view"], TracingLayoutView => {
+    const callback = TracingLayoutView => {
       TracingLayoutView = TracingLayoutView.default;
 
       const view = new TracingLayoutView({
@@ -67,15 +66,14 @@ class Router extends BaseRouter {
         controlMode : constants.CONTROL_MODE_TRACE
       });
       view.forcePageReload = true;
-      return this.changeView(view);
-    }
-    );
+      this.changeView(view);
+    };
+    require(["oxalis/view/tracing_layout_view"], callback);
   }
 
 
   tracingViewPublic(id) {
-
-    return require(["oxalis/view/tracing_layout_view"], TracingLayoutView => {
+    const callback = TracingLayoutView => {
       TracingLayoutView = TracingLayoutView.default;
 
       const view = new TracingLayoutView({
@@ -84,19 +82,19 @@ class Router extends BaseRouter {
         controlMode : constants.CONTROL_MODE_VIEW
       });
       view.forcePageReload = true;
-      return this.changeView(view);
+      this.changeView(view);
     }
-    );
+    require(["oxalis/view/tracing_layout_view"], callback);
   }
 
 
   projects() {
-    return this.showWithPagination("ProjectListView", "ProjectCollection", {addButtonText : "Create New Project"});
+    this.showWithPagination("ProjectListView", "ProjectCollection", { addButtonText : "Create New Project" });
   }
 
 
   projectCreate() {
-    return require(["admin/views/project/project_create_view", "admin/models/project/project_model"], (ProjectCreateView, ProjectModel) => {
+    const callback = (ProjectCreateView, ProjectModel) => {
       ProjectCreateView = ProjectCreateView.default;
       ProjectModel = ProjectModel.default;
 
@@ -104,95 +102,94 @@ class Router extends BaseRouter {
       const view = new ProjectCreateView({model});
 
       this.changeView(view);
-      return this.hideLoadingSpinner();
-    }
-    );
+      this.hideLoadingSpinner();
+    };
+    require(["admin/views/project/project_create_view", "admin/models/project/project_model"], callback);
   }
 
 
   projectEdit(projectName) {
-
-    return require(["admin/views/project/project_edit_view", "admin/models/project/project_model"], (ProjectEditView, ProjectModel) => {
+    const callback = (ProjectEditView, ProjectModel) => {
       ProjectEditView = ProjectEditView.default;
       ProjectModel = ProjectModel.default;
 
       const model = new ProjectModel({name : projectName});
       const view = new ProjectEditView({model});
 
-      return this.listenTo(model, "sync", function() {
+      this.listenTo(model, "sync", function() {
         this.changeView(view);
-        return this.hideLoadingSpinner();
+        this.hideLoadingSpinner();
       });
-    }
-    );
+    };
+    require(["admin/views/project/project_edit_view", "admin/models/project/project_model"], callback);
   }
 
 
   statistics() {
-    return this.showAdminView("StatisticView");
+    this.showAdminView("StatisticView");
   }
 
 
   datasetAdd() {
-    return this.showAdminView("DatasetAddView");
+    this.showAdminView("DatasetAddView");
   }
 
 
   datasetEdit(datasetID) {
-    return require(["admin/views/dataset/dataset_edit_view", "admin/models/dataset/dataset_model"], (DatasetEditView, DatasetModel) => {
+    const callback = (DatasetEditView, DatasetModel) => {
       DatasetEditView = DatasetEditView.default;
       DatasetModel = DatasetModel.default;
 
       const model = new DatasetModel({name : datasetID});
       const view = new DatasetEditView({model});
 
-      return this.listenTo(model, "sync", function() {
+      this.listenTo(model, "sync", function() {
         this.changeView(view);
-        return this.hideLoadingSpinner();
+        this.hideLoadingSpinner();
       });
     }
-    );
+    require(["admin/views/dataset/dataset_edit_view", "admin/models/dataset/dataset_model"], callback);
   }
 
 
   users() {
-    return this.showWithPagination("UserListView", "UserCollection", {});
+    this.showWithPagination("UserListView", "UserCollection", {});
   }
 
 
   teams() {
-    return this.showWithPagination("TeamListView", "TeamCollection", {addButtonText : "Add New Team"});
+    this.showWithPagination("TeamListView", "TeamCollection", {addButtonText : "Add New Team"});
   }
 
 
   taskQuery() {
-    return require(["admin/views/task/task_query_view"], (TaskQueryView) => {
+    const callback = (TaskQueryView) => {
       TaskQueryView = TaskQueryView.default;
 
       const view = new TaskQueryView();
-      return this.changeView(view);
+      this.changeView(view);
     }
-    );
+    require(["admin/views/task/task_query_view"], callback);
   }
 
 
   projectTasks(projectName) {
-     return this.showWithPagination("TaskListView", "TaskCollection", {projectName, addButtonText : "Create New Task"});
+     this.showWithPagination("TaskListView", "TaskCollection", {projectName, addButtonText : "Create New Task"});
    }
 
 
   taskTypesTasks(taskTypeId) {
-     return this.showWithPagination("TaskListView", "TaskCollection", {taskTypeId, addButtonText : "Create New Task"});
+     this.showWithPagination("TaskListView", "TaskCollection", {taskTypeId, addButtonText : "Create New Task"});
    }
 
 
   workload() {
-    return this.showWithPagination("WorkloadListView", "WorkloadCollection");
+    this.showWithPagination("WorkloadListView", "WorkloadCollection");
   }
 
 
   taskTypes() {
-    return this.showWithPagination("TaskTypeListView", "TaskTypeCollection", {addButtonText : "Create New TaskType"});
+    this.showWithPagination("TaskTypeListView", "TaskTypeCollection", {addButtonText : "Create New TaskType"});
   }
 
 
@@ -200,7 +197,7 @@ class Router extends BaseRouter {
    * Load layout view that shows task-creation subviews
    */
   taskCreate() {
-    return require(["admin/views/task/task_create_view", "admin/models/task/task_model"], (TaskCreateView, TaskModel) => {
+    const callback = (TaskCreateView, TaskModel) => {
       TaskCreateView = TaskCreateView.default;
       TaskModel = TaskModel.default;
 
@@ -208,17 +205,16 @@ class Router extends BaseRouter {
       const view = new TaskCreateView({model});
 
       this.changeView(view);
-      return this.hideLoadingSpinner();
+      this.hideLoadingSpinner();
     }
-    );
+    require(["admin/views/task/task_create_view", "admin/models/task/task_model"], callback);
   }
 
   /**
    * Load item view which displays an editable task.
    */
   taskEdit(taskID) {
-
-    return require(["admin/views/task/task_create_subviews/task_create_from_view", "admin/models/task/task_model"], (TaskCreateFromView, TaskModel) => {
+    const callback = (TaskCreateFromView, TaskModel) => {
       TaskCreateFromView = TaskCreateFromView.default;
       TaskModel = TaskModel.default;
 
@@ -226,29 +222,28 @@ class Router extends BaseRouter {
       const view = new TaskCreateFromView({model, type : "from_form"});
 
       this.changeView(view);
-      return this.hideLoadingSpinner();
+      this.hideLoadingSpinner();
     }
-    );
+    require(["admin/views/task/task_create_subviews/task_create_from_view", "admin/models/task/task_model"], callback);
   }
 
 
   taskTypesCreate(taskTypeId) {
-
-    return require(["admin/views/tasktype/task_type_create_view", "admin/models/tasktype/task_type_model"], (TaskTypeCreateView, TaskTypeModel) => {
+    const callback = (TaskTypeCreateView, TaskTypeModel) => {
       TaskTypeCreateView = TaskTypeCreateView.default;
       TaskTypeModel = TaskTypeModel.default;
 
       const model = new TaskTypeModel({id : taskTypeId});
       const view = new TaskTypeCreateView({model});
       this.changeView(view);
-      return this.hideLoadingSpinner();
+      this.hideLoadingSpinner();
     }
-    );
+    require(["admin/views/tasktype/task_type_create_view", "admin/models/tasktype/task_type_model"], callback);
   }
 
 
   dashboard(userID) {
-    return require(["dashboard/views/dashboard_view", "dashboard/models/user_model"], (DashboardView, UserModel) => {
+    const callback = (DashboardView, UserModel) => {
       DashboardView = DashboardView.default;
       UserModel = UserModel.default;
 
@@ -259,17 +254,17 @@ class Router extends BaseRouter {
 
       this.listenTo(model, "sync", function() {
         this.changeView(view);
-        return this.hideLoadingSpinner();
+        this.hideLoadingSpinner();
       });
 
-      return model.fetch();
+      model.fetch();
     }
-    );
+    require(["dashboard/views/dashboard_view", "dashboard/models/user_model"], callback);
   }
 
 
   spotlight() {
-    return require(["dashboard/views/spotlight/spotlight_view", "admin/models/dataset/dataset_collection"], (SpotlightView, DatasetCollection) => {
+    const callback = (SpotlightView, DatasetCollection) => {
       SpotlightView = SpotlightView.default;
       DatasetCollection = DatasetCollection.default;
 
@@ -278,15 +273,14 @@ class Router extends BaseRouter {
       const view = new SpotlightView({collection: paginatedCollection});
 
       this.changeView(view);
-      return this.listenTo(collection, "sync", this.hideLoadingSpinner);
+      this.listenTo(collection, "sync", this.hideLoadingSpinner);
     }
-    );
+    require(["dashboard/views/spotlight/spotlight_view", "admin/models/dataset/dataset_collection"], callback);
   }
 
 
   taskOverview() {
-
-    return require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_collection"], (TaskOverviewView, TaskOverviewCollection) => {
+    const callback = (TaskOverviewView, TaskOverviewCollection) => {
       TaskOverviewView = TaskOverviewView.default;
       TaskOverviewCollection = TaskOverviewCollection.default;
 
@@ -294,9 +288,9 @@ class Router extends BaseRouter {
       const view = new TaskOverviewView({collection});
 
       this.changeView(view);
-      return this.listenTo(collection, "sync", this.hideLoadingSpinner);
+      this.listenTo(collection, "sync", this.hideLoadingSpinner);
     }
-    );
+    require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_collection"], callback);
   }
 
 
@@ -304,21 +298,21 @@ class Router extends BaseRouter {
     if (options == null) { options = {}; }
     _.defaults(options, {addButtonText : null});
 
-    return require(["admin/admin"], admin => {
+    const callback = admin => {
       collection = new admin[collection](null, options);
       const paginatedCollection = new PaginationCollection([], {fullCollection : collection});
       view = new admin[view]({collection : paginatedCollection});
       const paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : options.addButtonText});
 
       this.changeView(paginationView, view);
-      return this.listenTo(collection, "sync", () => this.hideLoadingSpinner());
-    }
-    );
+      this.listenTo(collection, "sync", () => this.hideLoadingSpinner());
+    };
+    require(["admin/admin"], callback);
   }
 
 
   showAdminView(view, collection) {
-    return require(["admin/admin"], admin => {
+    const callback = admin => {
       if (collection) {
         collection = new admin[collection]();
         view = new admin[view]({collection});
@@ -328,9 +322,9 @@ class Router extends BaseRouter {
         setTimeout((() => this.hideLoadingSpinner()), 200);
       }
 
-      return this.changeView(view);
-    }
-    );
+      this.changeView(view);
+    };
+    require(["admin/admin"], callback);
   }
 
   changeView(...views) {

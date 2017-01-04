@@ -1,10 +1,4 @@
-require("babel-register")(
-  {
-  "presets": ["es2015", "stage-3"],
-  "plugins": ["transform-class-properties", "transform-runtime"]
-  }
-);
-require("babel-polyfill");
+require("babel-register");
 
 const path = require("path");
 const child_process = require("child_process")

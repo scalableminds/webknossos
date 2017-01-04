@@ -6,7 +6,6 @@ var fs = require("fs");
 var srcPath = __dirname + "/app/assets/javascripts/";
 var nodePath = __dirname + "/node_modules/";
 var scriptPaths = {
-  "gzip"                  : nodePath + "zlibjs/bin/gzip.min",
   "three"                 : nodePath + "three.js/build/three",
   "three.color"           : nodePath + "three.js/examples/js/math/ColorConverter",
   "three.trackball"       : nodePath + "three.js/examples/js/controls/TrackballControls",
@@ -42,14 +41,10 @@ module.exports = {
         test: /\.js$/,
         exclude: /(node_modules|bower_components)/,
         loader: 'babel-loader',
-        query: {
-          presets: ['es2015', 'react'],
-        }
       },
       { test: scriptPaths["three.color"], loader: "imports?THREE=three!exports?THREE.ColorConverter" },
       { test: scriptPaths["three.trackball"], loader: "imports?THREE=three" },
       { test: scriptPaths["three"], loader: "exports?THREE" },
-      { test: scriptPaths["gzip"], loader: "exports?this.Zlib" },
       {
         test: /\.less$/,
         loader: ExtractTextPlugin.extract('style-loader', 'css-loader!less-loader'),
@@ -64,11 +59,6 @@ module.exports = {
       },
       { test: /\.png$/, loader: "url-loader?limit=100000" },
       { test: /\.jpg$/, loader: "file-loader" },
-      // {
-      //   test: /\.jsx?$/,
-      //   exclude: /(node_modules|bower_components)/,
-      //   loader: 'babel'
-      // }
     ]
   },
   resolve: {

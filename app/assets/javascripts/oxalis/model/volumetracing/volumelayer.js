@@ -237,11 +237,11 @@ class VolumeLayer {
     let sumCx = 0;
     let sumCy = 0;
     for (const i of __range__(0, (this.contourList.length - 1), false)) {
-      const [x_i, y_i] = this.get2DCoordinate(this.contourList[i]);
-      const [x_i_1, y_i_1] = this.get2DCoordinate(this.contourList[i + 1]);
-      sumArea += (x_i * y_i_1) - (x_i_1 * y_i);
-      sumCx += (x_i + x_i_1) * ((x_i * y_i_1) - (x_i_1 * y_i));
-      sumCy += (y_i + y_i_1) * ((x_i * y_i_1) - (x_i_1 * y_i));
+      const [x, y] = this.get2DCoordinate(this.contourList[i]);
+      const [x1, y1] = this.get2DCoordinate(this.contourList[i + 1]);
+      sumArea += (x * y1) - (x1 * y);
+      sumCx += (x + x1) * ((x * y1) - (x1 * y));
+      sumCy += (y + y1) * ((x * y1) - (x1 * y));
     }
 
     const area = sumArea / 2;

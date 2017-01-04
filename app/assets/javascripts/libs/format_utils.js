@@ -2,8 +2,8 @@ import moment from "moment";
 
 class FormatUtils {
 
-  static formatSeconds(duration_seconds) {
-    const t = moment.duration({ duration_seconds });
+  static formatSeconds(durationSeconds) {
+    const t = moment.duration({ durationSeconds });
     const [days, hours, minutes, seconds] = [t.days(), t.hours(), t.minutes(), t.seconds()];
 
     return (

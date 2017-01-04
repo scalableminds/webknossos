@@ -71,7 +71,7 @@ class VolumeTracingPlaneController extends PlaneController {
   getPlaneMouseControls(planeId) {
     return _.extend(super.getPlaneMouseControls(planeId), {
 
-      leftDownMove: (delta, pos, plane) => {
+      leftDownMove: (delta, pos) => {
         if (this.model.volumeTracing.mode === Constants.VOLUME_MODE_MOVE) {
           return this.move([
             (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,

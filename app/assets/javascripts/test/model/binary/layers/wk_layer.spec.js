@@ -101,11 +101,11 @@ describe("WkLayer", () => {
 
           expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(2);
 
-          // eslint-disable-next line no-unused-vars
+          // eslint-disable-next-line no-unused-vars
           const [url, options] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args;
           expect(url).toBe("url/data/datasets/dataSet/layers/layername/data?token=token");
 
-          // eslint-disable-next line no-unused-vars
+          // eslint-disable-next-line no-unused-vars
           const [url2, options2] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(1).args;
           expect(url2).toBe("url/data/datasets/dataSet/layers/layername/data?token=token2");
 

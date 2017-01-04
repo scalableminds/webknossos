@@ -191,10 +191,11 @@ describe("Cube", () => {
       const b1 = cube.getOrCreateBucket([0, 0, 0, 0]);
       b1.pull();
 
-      // eslint-disable-next-line no-unused-vars
+      /* eslint-disable no-unused-vars */
       const b2 = cube.getOrCreateBucket([1, 1, 1, 0]);
       const b3 = cube.getOrCreateBucket([2, 2, 2, 0]);
       const b4 = cube.getOrCreateBucket([3, 3, 3, 0]);
+      /* eslint-enable no-unused-vars */
 
       expect(b1.shouldCollect()).toBe(false);
 

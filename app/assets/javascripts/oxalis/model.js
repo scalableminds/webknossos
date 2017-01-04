@@ -172,7 +172,7 @@ class Model extends Backbone.Model {
     const flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"));
     this.set("flycam", flycam);
     this.set("flycam3d", flycam3d);
-    this.listenTo(flycam3d, "changed", (matrix, zoomStep) => flycam.setPosition(matrix.slice(12, 15)));
+    this.listenTo(flycam3d, "changed", (matrix) => flycam.setPosition(matrix.slice(12, 15)));
     this.listenTo(flycam, { positionChanged(position) { return flycam3d.setPositionSilent(position); } });
 
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {

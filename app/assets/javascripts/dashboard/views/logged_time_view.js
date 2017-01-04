@@ -49,7 +49,7 @@ class LoggedTimeView extends Marionette.View {
       const dates = this.collection.map(item => item.get("interval").toDate());
       const monthlyHours = this.collection.map(item => item.get("time").asHours());
 
-      const graph = c3.generate({
+      c3.generate({
         bindto: "#time-graph", // doesn't work with classes
         data: {
           x: "date",

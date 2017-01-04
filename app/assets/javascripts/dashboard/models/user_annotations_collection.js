@@ -1,4 +1,3 @@
-import _ from "lodash";
 import SortedCollection from "admin/models/sorted_collection";
 
 class UserAnnotationsCollection extends SortedCollection {

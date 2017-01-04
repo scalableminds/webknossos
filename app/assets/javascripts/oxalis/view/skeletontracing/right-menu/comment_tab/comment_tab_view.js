@@ -1,9 +1,9 @@
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
-import Input from "libs/input";
 import React from "react";
 import { render } from "react-dom";
+import Input from "libs/input";
 import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import CommentList from "./comment_list";

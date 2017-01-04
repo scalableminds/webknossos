@@ -1,5 +1,4 @@
 import _ from "lodash";
-import Cube from "./cube";
 import Request from "../../../libs/request";
 
 class PullQueue {

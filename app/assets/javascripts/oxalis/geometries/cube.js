@@ -29,12 +29,12 @@ class Cube {
       new THREE.LineBasicMaterial(lineProperties));
 
     this.crossSections = [];
-    for (const i of constants.ALL_PLANES) {
+    constants.ALL_PLANES.forEach(() => {
       this.crossSections.push(
         new THREE.Line(
           new THREE.Geometry(),
           new THREE.LineBasicMaterial(lineProperties)));
-    }
+    });
 
 
     if ((this.min != null) && (this.max != null)) {

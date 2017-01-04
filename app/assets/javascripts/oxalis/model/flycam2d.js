@@ -274,7 +274,7 @@ class Flycam2d {
 
   needsUpdate(planeID) {
     const area = this.getArea(planeID);
-    const ind = Dimensions.getIndices(planeID);
+    // const ind = Dimensions.getIndices(planeID);
     const res = ((area[0] < 0) || (area[1] < 0) || (area[2] > this.TEXTURE_WIDTH) || (area[3] > this.TEXTURE_WIDTH) ||
     // (@position[ind[2]] != @getTexturePosition(planeID)[ind[2]]) or # TODO: always false
     (this.zoomStep - (this.integerZoomStep - 1)) < this.maxZoomStepDiff) ||

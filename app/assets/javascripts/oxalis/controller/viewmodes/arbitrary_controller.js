@@ -94,7 +94,7 @@ class ArbitraryController {
   }
 
 
-  render(forceUpdate, event) {
+  render(forceUpdate) {
     const matrix = this.cam.getMatrix();
     return this.model.getColorBinaries().map(binary =>
       binary.arbitraryPing(matrix, this.model.datasetConfiguration.get("quality")));

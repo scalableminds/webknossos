@@ -1,3 +1,4 @@
+import _ from "lodash";
 import Backbone from "backbone";
 import VolumeCell from "./volumecell";
 import VolumeLayer from "./volumelayer";
@@ -80,7 +81,7 @@ class VolumeTracing {
 
     if (!this.restrictionHandler.updateAllowed()) { return false; }
 
-    if ((typeof currentLayer !== 'undefined' && currentLayer !== null) || this.flycam.getIntegerZoomStep() > 0) {
+    if ((typeof this.currentLayer !== 'undefined' && this.currentLayer !== null) || this.flycam.getIntegerZoomStep() > 0) {
       return false;
     }
 

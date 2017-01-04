@@ -1,4 +1,5 @@
 import _ from "lodash";
+import $ from "jquery";
 import moment from "moment";
 import Toast from "libs/toast";
 import Request from "libs/request";
@@ -7,9 +8,9 @@ import AnnotationModel from "admin/models/task/annotation_model";
 
 class TaskAnnotationView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.tagName  = "tr";
-  
+
     this.prototype.template  = _.template(`\
 <td><%- user.firstName %> <%- user.lastName %> (<%- user.email %>)</td>
 <td><%- moment(created).format("YYYY-MM-DD HH:SS") %></td>
@@ -33,15 +34,15 @@ class TaskAnnotationView extends Marionette.View {
   </div>
 </td>\
 `);
-  
+
     this.prototype.templateContext  =
       {moment};
-  
+
     this.prototype.events  = {
       "click .isAjax" : "callAjax",
       "click .cancel-annotation" : "cancelAnnotation"
     };
-  
+
     this.prototype.modelEvents  =
       {"change" : "render"};
   }

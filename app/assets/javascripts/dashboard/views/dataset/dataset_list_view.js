@@ -1,4 +1,6 @@
 import _ from "lodash";
+import $ from "jquery";
+import app from "app";
 import Marionette from "backbone.marionette";
 import DatasetListItemView from "./dataset_list_item_view";
 import TeamAssignmentModalView from "./team_assignment_modal_view";
@@ -6,7 +8,7 @@ import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 
 class DatasetListView extends Marionette.CompositeView {
   static initClass() {
-  
+
     this.prototype.className  = "datasets";
     this.prototype.template  = _.template(`\
 <table class="table table-double-striped table-details sortable-table">
@@ -29,28 +31,28 @@ class DatasetListView extends Marionette.CompositeView {
 </table>
 <div id="modal-wrapper"></div>\
 `);
-  
-  
+
+
     this.prototype.events  = {
       "click .team-label" : "showModal",
       "click .details-toggle-all" : "toggleAllDetails"
     };
-  
-  
+
+
     this.prototype.ui  = {
       "modalWrapper" : "#modal-wrapper",
       "detailsToggle" : ".details-toggle-all"
     };
-  
+
     this.prototype.childView  = DatasetListItemView;
     this.prototype.childViewContainer = "table";
-  
+
     this.prototype.behaviors  = {
       SortTableBehavior: {
         behaviorClass: SortTableBehavior
       }
     };
-  
+
     this.prototype.DATASETS_PER_PAGE  = 30;
   }
 

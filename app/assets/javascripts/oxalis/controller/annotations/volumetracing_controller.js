@@ -1,3 +1,5 @@
+import _ from "lodash";
+import $ from "jquery";
 import app from "app";
 import Backbone from "backbone";
 import Dimensions from "oxalis/model/dimensions";
@@ -5,15 +7,15 @@ import Input from "libs/input";
 
 class VolumeTracingController {
   static initClass() {
-  
+
     // See comment in Controller class on general controller architecture.
     //
     // Volume Tracing Controller:
     // Add Volume Tracing controls that are not specific to the view mode.
     // Also, this would be the place to define general Volume Tracing
     // functions that can be called by the specific view mode controller.
-  
-  
+
+
     this.prototype.MERGE_MODE_NORMAL  = 0;
     this.prototype.MERGE_MODE_CELL1   = 1;
     this.prototype.MERGE_MODE_CELL2   = 2;

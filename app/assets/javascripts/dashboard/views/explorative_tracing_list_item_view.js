@@ -1,4 +1,5 @@
 import _ from "lodash";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 import routes from "routes";
 import Toast from "libs/toast";

@@ -1,9 +1,9 @@
 import _ from "lodash";
-import backbone from "backbone";
+import Backbone from "backbone";
 
 class UserStatisticCollection extends Backbone.Collection {
   static initClass() {
-  
+
     this.prototype.url  = "/api/statistics/users";
   }
 

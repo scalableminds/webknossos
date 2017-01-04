@@ -16,33 +16,33 @@ import modal from "../../view/modal";
 
 class ArbitraryController {
   static initClass() {
-  
+
     // See comment in Controller class on general controller architecture.
     //
     // Arbitrary Controller: Responsible for Arbitrary Modes
-  
+
     this.prototype.WIDTH  = 128;
     this.prototype.TIMETOCENTER  = 200;
-  
-  
+
+
     this.prototype.plane  = null;
     this.prototype.crosshair  = null;
     this.prototype.cam  = null;
-  
+
     this.prototype.fullscreen  = false;
     this.prototype.lastNodeMatrix  = null;
-  
+
     this.prototype.model  = null;
     this.prototype.view  = null;
-  
+
     this.prototype.input  = {
       mouse : null,
       keyboard : null,
       keyboardNoLoop : null,
       keyboardOnce : null,
-  
+
       destroy() {
-  
+
         __guard__(this.mouse, x => x.destroy());
         __guard__(this.keyboard, x1 => x1.destroy());
         __guard__(this.keyboardNoLoop, x2 => x2.destroy());

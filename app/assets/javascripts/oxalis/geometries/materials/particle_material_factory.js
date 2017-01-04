@@ -1,3 +1,4 @@
+import _ from "lodash";
 import app from "app";
 import THREE from "three";
 import AbstractMaterialFactory from "./abstract_material_factory";

@@ -1,4 +1,5 @@
 import _ from "lodash";
+import $ from "jquery";
 import app from "app";
 import Marionette from "backbone.marionette";
 import AbstractTreeRenderer from "oxalis/view/skeletontracing/abstract_tree_renderer";
@@ -6,15 +7,15 @@ import AbstractTreeRenderer from "oxalis/view/skeletontracing/abstract_tree_rend
 
 class AbstractTreeView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.className  = "flex-column";
     this.prototype.template  = _.template(`\
 <canvas id="abstract-tree-canvas">\
 `);
-  
+
     this.prototype.ui  =
       {"canvas" : "canvas"};
-  
+
     this.prototype.events =
       {"click @ui.canvas" : "handleClick"};
   }

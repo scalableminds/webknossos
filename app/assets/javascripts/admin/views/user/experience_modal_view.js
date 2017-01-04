@@ -1,9 +1,10 @@
 import _ from "lodash";
+import $ from "jquery";
 import ModalView from "../modal_view";
 
 class ExperienceModalView extends ModalView {
   static initClass() {
-  
+
     this.prototype.headerTemplate  = "<h3>Change Experience</h3>";
     this.prototype.bodyTemplate  = _.template(`\
 <form class="form-horizontal">
@@ -27,14 +28,14 @@ class ExperienceModalView extends ModalView {
 <a href="#" class="delete-experience btn btn-primary">Delete Experience</a>
 <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>\
 `);
-  
+
     this.prototype.events  = {
       "click .set-experience" : "setExperience",
       "click .delete-experience" : "deleteExperience",
       "click .increase-experience" : "changeExperience"
     };
-  
-  
+
+
     this.prototype.ui  = {
       "experienceValue" : "input[type=number]",
       "experienceDomain" : "input[type=text]"

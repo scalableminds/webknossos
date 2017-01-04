@@ -1,12 +1,12 @@
 import _ from "lodash";
-import backbone from "backbone";
+import Backbone from "backbone";
 
 class ProjectModel extends Backbone.Model {
   static initClass() {
-  
+
     this.prototype.urlRoot  = "/api/projects";
     this.prototype.idAttribute = "name";
-  
+
     this.prototype.default  = {
       owner : {
         firstName : "",

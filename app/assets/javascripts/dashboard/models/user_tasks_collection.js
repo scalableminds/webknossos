@@ -5,7 +5,7 @@ import SortedCollection from "admin/models/sorted_collection";
 
 class UserTasksCollection extends SortedCollection {
   static initClass() {
-  
+
     this.prototype.model  = DashboardTaskModel;
     this.prototype.newTaskUrl  = "/user/tasks/request";
     this.prototype.defaults  =

@@ -1,15 +1,17 @@
+import _ from "lodash";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 
 class SortTableBehavior extends Marionette.Behavior {
   static initClass() {
-  
+
     this.prototype.events  =
       {"click thead" : "onClick"};
-  
+
     this.prototype.sortAttributes  = {};
-  
+
     this.prototype.lastSortAttribute  = "";
-  
+
     this.prototype.defaults  =
       {sortDirection : "asc"};
   }

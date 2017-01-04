@@ -1,4 +1,5 @@
 import _ from "lodash";
+import $ from "jquery";
 import app from "app";
 import Request from "libs/request";
 import Marionette from "backbone.marionette";
@@ -8,7 +9,7 @@ import ModalView from "admin/views/modal_view";
 
 class TeamAssignmentModalView extends ModalView {
   static initClass() {
-  
+
     this.prototype.headerTemplate  = "<h3>Assign teams for this dataset</h3>";
     this.prototype.bodyTemplate  = _.template(`\
 <ul name="teams" class="team-list">
@@ -28,10 +29,10 @@ class TeamAssignmentModalView extends ModalView {
 <a class="btn btn-primary">Save</a>
 <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>\
 `;
-  
+
     this.prototype.ui  =
       {"teamList" : ".team-list"};
-  
+
     this.prototype.events  =
       {"click .btn-primary" : "submitTeams"};
   }

@@ -1,3 +1,4 @@
+import _ from "lodash";
 import Backbone from "backbone";
 import InterpolationCollector from "./binary/interpolation_collector";
 import Cube from "./binary/cube";

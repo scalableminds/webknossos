@@ -1,12 +1,13 @@
 import _ from "lodash";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 import TemplateHelpers from "libs/template_helpers";
 
 class UserListItemView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.tagName  = "tr";
-  
+
     this.prototype.template  = _.template(`\
 <td>
   <input type="checkbox" name="id" value="<%- id %>" class="select-row">
@@ -40,15 +41,15 @@ class UserListItemView extends Marionette.View {
   <!--<a href="/admin/users/<%- id %>/loginAs"><i class="fa fa-signin"></i>log in as User </a>-->
 </td>\
 `);
-  
+
     this.prototype.templateContext  =
       {TemplateHelpers};
-  
+
     this.prototype.events  = {
       "click .activate-user" : "activate",
       "click .deactivate-user" : "deactivate"
     };
-  
+
     this.prototype.modelEvents  =
       {"change" : "render"};
   }

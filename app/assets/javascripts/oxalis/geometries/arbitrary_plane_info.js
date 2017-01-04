@@ -1,24 +1,26 @@
-import marionette from "backbone.marionette";
+import _ from "lodash";
+import app from "app";
+import Marionette from "backbone.marionette";
 import ToggleButton from "bootstrap-toggle";
 
-class ArbitraryPlaneInfo extends Backbone.Marionette.View {
+class ArbitraryPlaneInfo extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.id  = "arbitrary-info-canvas";
-  
+
     this.prototype.template  = _.template(`\
 <input type="checkbox" <%= getCheckedStatus() %> >\
 `);
-  
+
     this.prototype.templateContext  = {
       getCheckedStatus() {
         if (this.flightmodeRecording) { return "checked"; }
       }
     };
-  
+
     this.prototype.events  =
       {"change input" : "handleCheckboxChange"};
-  
+
     this.prototype.ui  =
       {"checkbox" : "input"};
   }

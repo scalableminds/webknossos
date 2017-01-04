@@ -1,11 +1,11 @@
 import _ from "lodash";
-import backbone from "backbone";
+import Backbone from "backbone";
 import NestedObjModel from "libs/nested_obj_model";
 import moment from "moment";
 
 class DatasetModel extends NestedObjModel {
   static initClass() {
-  
+
     this.prototype.urlRoot  = "/api/datasets";
     this.prototype.idAttribute  = "name";
   }

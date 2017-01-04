@@ -4,7 +4,7 @@ import FormatUtils from "libs/format_utils";
 
 class TaskModel extends NestedObjModel {
   static initClass() {
-  
+
     this.prototype.defaults  = {
       team : "",
       formattedHash : "",

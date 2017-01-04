@@ -4,14 +4,14 @@ import _ from "lodash";
 let STATE_NAMES = undefined;
 class Bucket {
   static initClass() {
-  
-  
+
+
     this.prototype.STATE_UNREQUESTED  = 0;
     this.prototype.STATE_REQUESTED  = 1;
     this.prototype.STATE_LOADED  = 2;
-  
+
     STATE_NAMES = ["unrequested", "requested", "loaded"];
-  
+
     this.prototype.BUCKET_SIZE_P  = 5;
   }
 
@@ -167,12 +167,12 @@ Bucket.initClass();
 
 class NullBucket {
   static initClass() {
-  
+
     // A NullBucket represents a bucket that does not exist, e.g. because it's
     // outside the dataset's bounding box. It supports only a small subset of
     // Bucket's methods.
-  
-  
+
+
     this.prototype.TYPE_OUT_OF_BOUNDING_BOX  = 1;
     this.prototype.TYPE_OTHER  = 2;
   }

@@ -1,4 +1,5 @@
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
 import routes from "routes";
 import FormSyphon from "form-syphon";
@@ -13,12 +14,12 @@ import Utils from "libs/utils";
 
 class TaskCreateFromView extends Marionette.View {
   static initClass() {
-  
+
     // which type of form is created?
     // from_form/ from_nml
     this.prototype.type  = null;
     this.prototype.id  = "create-from";
-  
+
     this.prototype.template  = _.template(`\
 <div class="row">
   <div class="col-sm-12">
@@ -35,7 +36,7 @@ class TaskCreateFromView extends Marionette.View {
       </div>
       <% } %>
       <form id="createForm" action="" method="POST" class="form-horizontal" onSubmit="return false;">
-  
+
       <div class="form-group">
         <label class="col-sm-2 control-label" for="taskType">Task type</label>
         <div class="col-sm-9">
@@ -45,40 +46,40 @@ class TaskCreateFromView extends Marionette.View {
           </span>
         </div>
       </div>
-  
+
       <div class="form-group">
         <label class="col-sm-2 control-label" for="experience_domain">Experience Domain</label>
         <div class="col-sm-9">
           <input type="text" class="form-control" name="neededExperience[domain]" value="<%- neededExperience.domain %>" placeholder="Enter a domain (min. 3 characters)" pattern=".{3,}" required>
         </div>
       </div>
-  
+
       <div class="form-group">
         <label class="col-sm-2 control-label" for="experience_value">Min Experience</label>
         <div class="col-sm-9">
           <input type="number" id="value" name="neededExperience[value]" value="<%- neededExperience.value %>" class="form-control" required>
         </div>
       </div>
-  
+
       <div class="form-group">
         <label class="col-sm-2 control-label" for="status_open"><%- getInstanceLabel() %></label>
         <div class="col-sm-9">
           <input type="number" id="open" name="status[open]" value="<%- status.open %>" min="0" class="form-control" required>
         </div>
       </div>
-  
+
       <div class="form-group">
         <label class="col-sm-2 control-label" for="team">Team</label>
         <div class="col-sm-9 team">
         </div>
       </div>
-  
+
       <div class="form-group">
         <label class="col-sm-2 control-label" for="projectName">Project</label>
         <div class="col-sm-9 project">
         </div>
       </div>
-  
+
       <div class="form-group">
         <label class="col-sm-2 control-label" for="boundingBox">Bounding Box</label>
         <div class="col-sm-9">
@@ -95,32 +96,32 @@ class TaskCreateFromView extends Marionette.View {
           >
         </div>
       </div>
-  
+
       <div class="subview"></div>
-  
+
       <div class="form-group">
         <div class="col-sm-2 col-sm-offset-9">
           <button id="submit" type="submit" class="form-control btn btn-primary"><%- getActionName() %></button>
         </div>
       </div>
-  
+
     </form>
   </div>
   </div>
 </div>\
 `);
-  
-  
+
+
     this.prototype.regions  = {
       "taskType" : ".taskType",
       "team"     : ".team",
       "project"  : ".project",
       "subview"  : ".subview"
     };
-  
+
     this.prototype.events  =
       {"submit" : "submit"};
-  
+
     this.prototype.ui  = {
       form : "#createForm",
       status_open : "#status_open",

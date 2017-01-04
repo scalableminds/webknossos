@@ -1,13 +1,14 @@
 import _ from "lodash";
-import Marionette from "backbone.marionette";
 import app from "app";
+import Backbone from "backbone";
+import Marionette from "backbone.marionette";
 import moment from "moment";
 import StatisticListItemView from "./statistic_list_item_view";
 import UserStatisticCollection from "admin/models/statistic/user_statistic_collection";
 
 class StatisticListView extends Marionette.CompositeView {
   static initClass() {
-  
+
     this.prototype.template  = _.template(`\
 <h3>Best Tracers for week <%- startDate.format("DD.MM") %> - <%- endDate.format("DD.MM.YYYY") %></h3>
 <table class="table-striped table">
@@ -20,7 +21,7 @@ class StatisticListView extends Marionette.CompositeView {
   <tbody></tbody>
 </table>\
 `);
-  
+
     this.prototype.childView  = StatisticListItemView;
     this.prototype.childViewContainer = "tbody";
   }
@@ -28,8 +29,7 @@ class StatisticListView extends Marionette.CompositeView {
   initialize() {
 
     //set first day of the week to monday globally
-    moment.locale("en", {week : { dow : 1
-  }});
+    moment.locale("en", {week : { dow : 1}});
 
     this.model = new Backbone.Model({
       startDate : moment().startOf("week"),

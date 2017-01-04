@@ -1,4 +1,5 @@
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import Request from "libs/request";
@@ -8,7 +9,7 @@ import TeamCollection from "admin/models/team/team_collection";
 
 class DatasetRemoteView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.template  = _.template(`\
 <div class="row">
   <div class="col-md-6">
@@ -52,15 +53,15 @@ class DatasetRemoteView extends Marionette.View {
   </div>
 </div>\
 `);
-  
+
     this.prototype.className  = "container";
-  
+
     this.prototype.regions  =
       {"team" : ".team"};
-  
+
     this.prototype.events  =
       {"submit form" : "addDataset"};
-  
+
     this.prototype.ui  =
       {form : "form"};
   }

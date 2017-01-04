@@ -1,11 +1,12 @@
+import _ from "lodash";
 import Marionette from "backbone.marionette";
 import TemplateHelpers from "libs/template_helpers";
 
 class DatasetAccessView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.tagName  = "tr";
-  
+
     this.prototype.template  = _.template(`\
 <td><%- firstName %> <%- lastName %></td>
 <td>
@@ -14,7 +15,7 @@ class DatasetAccessView extends Marionette.View {
   <% }) %>
 </td>\
 `);
-  
+
     this.prototype.templateContext  =
       {TemplateHelpers};
   }

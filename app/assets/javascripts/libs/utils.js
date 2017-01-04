@@ -22,13 +22,11 @@ const Utils = {
 
   unflatten(array, tupleSize) {
 
-    return (() => {
-      const result = [];
-      for (let i = 0; i < array.length; i += step) {
-        result.push(array.slice(i, i + tupleSize));
-      }
-      return result;
-    })();
+    const result = [];
+    for (let i = 0; i < array.length; i += tupleSize) {
+      result.push(array.slice(i, i + tupleSize));
+    }
+    return result;
   },
 
 
@@ -124,7 +122,7 @@ const Utils = {
   isElementInViewport(el) {
 
     //special bonus for those using jQuery
-    if (typeof jQuery === "function" && el instanceof jQuery) {
+    if (typeof jQuery === "function" && el instanceof $) {
       el = el[0];
     }
 

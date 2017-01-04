@@ -1,4 +1,5 @@
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import Request from "libs/request";
@@ -8,7 +9,7 @@ import DatastoreCollection from "admin/models/datastore/datastore_collection";
 
 class DatasetUploadView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.template  = _.template(`\
 <div class="row">
   <div class="col-md-6">
@@ -43,7 +44,7 @@ class DatasetUploadView extends Marionette.View {
       <div class="form-group">
         <label class="col-sm-3 control-label" for="zipFile">Dataset ZIP File</label>
         <div class="col-sm-9">
-  
+
           <div class="fileinput fileinput-new input-group" data-provides="fileinput">
             <div class="form-control" data-trigger="fileinput">
               <i class="fa fa-file fileinput-exists"></i>
@@ -70,19 +71,19 @@ class DatasetUploadView extends Marionette.View {
   </div>
 </div>\
 `);
-  
+
     this.prototype.className  = "container dataset-administration";
-  
+
     this.prototype.regions  = {
       "team" : ".team",
       "datastore" : ".datastore"
     };
-  
+
     this.prototype.events  = {
       "submit form" : "uploadDataset",
       "change input[type=file]" : "createProject"
     };
-  
+
     this.prototype.ui  = {
       form : "form",
       spinner : ".fa-spinner"

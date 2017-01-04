@@ -1,10 +1,11 @@
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
 import SpotlightDatasetView from "./spotlight_dataset_view";
 
 class SpotlightDatasetListView extends Marionette.CollectionView {
   static initClass() {
-  
+
     this.prototype.childView  = SpotlightDatasetView;
   }
 

@@ -1,3 +1,4 @@
+import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
 import Plane from "../geometries/plane";
@@ -12,10 +13,10 @@ import THREE from "three";
 
 class SceneController {
   static initClass() {
-  
+
     // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
     // element depending on the provided flycam.
-  
+
     this.prototype.CUBE_COLOR  = 0x999999;
   }
 

@@ -1,4 +1,5 @@
 import _ from "lodash";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 import d3 from "d3";
 import cola from "webcola";

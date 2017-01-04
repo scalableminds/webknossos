@@ -1,11 +1,12 @@
 import _ from "lodash";
+import Backbone from "backbone";
 import FormatUtils from "libs/format_utils";
 
 class TaskTypeModel extends Backbone.Model {
   static initClass() {
-  
+
     this.prototype.urlRoot  = "/api/taskTypes";
-  
+
     this.prototype.defaults  = {
       summary : "",
       description : "",

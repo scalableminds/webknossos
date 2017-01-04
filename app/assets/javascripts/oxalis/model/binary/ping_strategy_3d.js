@@ -1,3 +1,4 @@
+import _ from "lodash";
 import PolyhedronRasterizer from "./polyhedron_rasterizer";
 import { M4x4, V3 } from "libs/mjs";
 

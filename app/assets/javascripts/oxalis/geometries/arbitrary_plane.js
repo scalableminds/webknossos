@@ -1,5 +1,5 @@
 import _ from "lodash";
-import backbone from "backbone";
+import Backbone from "backbone";
 import THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";

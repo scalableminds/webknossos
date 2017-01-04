@@ -1,14 +1,16 @@
+import _ from "lodash";
 import app from "app";
+import Backbone from "backbone";
 import Dimensions from "./dimensions";
 import constants from "../constants";
 
 class Flycam2d {
   static initClass() {
-  
+
     this.prototype.TEXTURE_WIDTH        = 512;
     this.prototype.MAX_TEXTURE_OFFSET   = 31;     // maximum difference between requested coordinate and actual texture position
     this.prototype.MAX_ZOOM_THRESHOLD   = 2;
-  
+
     this.prototype.viewportWidth  = 0;
   }
 

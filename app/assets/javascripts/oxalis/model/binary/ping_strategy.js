@@ -1,3 +1,4 @@
+import _ from "lodash";
 import Dimensions from "../dimensions";
 
 class PingStrategy {

@@ -1,3 +1,4 @@
+import $ from "jquery";
 import app from "app";
 import THREE from "three";
 import TWEEN from "tween.js";

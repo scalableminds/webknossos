@@ -1,11 +1,12 @@
-import Marionette from "backbone.marionette";
 import _ from "lodash";
+import $ from "jquery";
+import Marionette from "backbone.marionette";
 
 class AbstractTabView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.MARGIN  = 40;
-  
+
     this.prototype.className  = "flex-column";
     this.prototype.template  = _.template(`\
 <ul class="nav nav-tabs">
@@ -21,7 +22,7 @@ class AbstractTabView extends Marionette.View {
   <% }) %>
 </div>\
 `);
-  
+
     this.prototype.ui  = {
       "tabContentContainer" : ".tab-content",
       "tabNavbarContainer" : ".nav-tabs"

@@ -1,10 +1,11 @@
 import _ from "lodash";
+import $ from "jquery";
 import app from "app";
 import Marionette from "backbone.marionette";
 
 class PaginationView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.paginatorTemplate  = _.template(`\
 <li class="first <% if (Pagination.currentPage == 0) { %> disabled <% } %>">
   <a><i class="fa fa-angle-double-left"></i></a>
@@ -34,9 +35,9 @@ class PaginationView extends Marionette.View {
 <div class="row">
   <div class="col-sm-9">
     <ul class="pagination">
-  
+
     </ul>
-  
+
     <% if (addButtonText) { %>
       <a class="btn btn-primary add-button" href="#">
         <i class="fa fa-plus"></i><%- addButtonText %>
@@ -51,12 +52,12 @@ class PaginationView extends Marionette.View {
   </div>
 </div>\
 `);
-  
+
     this.prototype.className  = "container wide";
-  
+
     this.prototype.ui  =
       {"inputSearch" : ".search-query"};
-  
+
     this.prototype.events  = {
       "click .prev" : "goBack",
       "click .next" : "goNext",

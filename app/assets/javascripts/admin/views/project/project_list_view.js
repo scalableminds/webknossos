@@ -1,11 +1,12 @@
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
 import ProjectListItemView from "./project_list_item_view";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 
 class ProjectsListView extends Marionette.CompositeView {
   static initClass() {
-  
+
     this.prototype.template  = _.template(`\
 <h3>Projects</h3>
 <table class="table table-striped table-details sortable-table" id="projectlist-table">
@@ -24,20 +25,20 @@ class ProjectsListView extends Marionette.CompositeView {
 </table>
 <div id="modal-wrapper"></div>\
 `);
-  
+
     this.prototype.className  = "container wide project-administration";
     this.prototype.childView  = ProjectListItemView;
     this.prototype.childViewContainer  = "tbody";
-  
+
     this.prototype.behaviors  = {
       SortTableBehavior: {
         behaviorClass: SortTableBehavior
       }
     };
-  
+
     this.prototype.ui  =
       {"modalWrapper" : "#modal-wrapper"};
-  
+
     this.prototype.behaviors  = {
       SortTableBehavior: {
         behaviorClass: SortTableBehavior

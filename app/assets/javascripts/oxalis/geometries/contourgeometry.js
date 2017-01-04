@@ -1,3 +1,4 @@
+import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
 import ResizableBuffer from "libs/resizable_buffer";
@@ -7,7 +8,7 @@ import constants from "../constants";
 
 class ContourGeometry {
   static initClass() {
-  
+
     this.prototype.COLOR_NORMAL  = new THREE.Color(0x0000ff);
     this.prototype.COLOR_DELETE  = new THREE.Color(0xff0000);
   }

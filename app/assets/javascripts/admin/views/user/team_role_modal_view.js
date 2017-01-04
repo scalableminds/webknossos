@@ -1,4 +1,5 @@
 import _ from "lodash";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import TeamCollection from "admin/models/team/team_collection";
@@ -6,7 +7,7 @@ import ModalView from "admin/views/modal_view";
 
 class TeamRoleModalView extends ModalView {
   static initClass() {
-  
+
     this.prototype.headerTemplate  = "<h3>Assign teams</h3>";
     this.prototype.footerTemplate  = `\
 <a href="#" class="btn btn-primary">Set Teams</a>
@@ -41,7 +42,7 @@ class TeamRoleModalView extends ModalView {
   <% }) %>
 </div>\
 `);
-  
+
     this.prototype.events  =
       {"click .btn-primary" : "changeExperience"};
   }

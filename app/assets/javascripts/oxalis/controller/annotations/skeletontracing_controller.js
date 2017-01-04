@@ -1,5 +1,6 @@
+import _ from "lodash";
 import app from "app";
-import backbone from "backbone";
+import Backbone from "backbone";
 import Dimensions from "oxalis/model/dimensions";
 import constants from "oxalis/constants";
 

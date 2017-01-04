@@ -1,3 +1,4 @@
+import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
 import ErrorHandling from "libs/error_handling";

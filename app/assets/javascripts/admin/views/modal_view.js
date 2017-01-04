@@ -1,15 +1,16 @@
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
 
 class ModalView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.className  = "modal fade";
     this.prototype.attributes  = {
       "tabindex" : "-1",
       "role" : "dialog"
     };
-  
+
     this.prototype.modalTemplate  = _.template(`\
 <div>
   <!-- Root 'div' is required -->
@@ -28,7 +29,7 @@ class ModalView extends Marionette.View {
   </div>
 </div>\
 `);
-  
+
     this.prototype.genericHeaderTemplate  = _.template("ModalHeader");
     this.prototype.genericBodyTemplate  = _.template("ModalBody");
     this.prototype.genericFooterTemplate  = _.template(`\

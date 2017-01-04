@@ -1,4 +1,5 @@
 import _ from "lodash";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 import app from "app";
 import constants from "oxalis/constants";

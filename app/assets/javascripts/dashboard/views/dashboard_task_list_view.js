@@ -1,4 +1,5 @@
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
 import DashboardTaskListItemView from "./dashboard_task_list_item_view";
 import TaskTransferModalView from "./task_transfer_modal_view";
@@ -9,7 +10,7 @@ import UserTasksCollection from "../models/user_tasks_collection";
 
 class DashboardTaskListView extends Marionette.CompositeView {
   static initClass() {
-  
+
     this.prototype.template  = _.template(`\
 <h3>Tasks</h3>
 <% if (isAdminView) { %>
@@ -45,20 +46,20 @@ class DashboardTaskListView extends Marionette.CompositeView {
 </table>
 <div class="modal-container"></div>\
 `);
-  
+
     this.prototype.childViewContainer  = "tbody";
     this.prototype.childView  = DashboardTaskListItemView;
-  
-  
+
+
     this.prototype.ui  =
       {"modalContainer" : ".modal-container"};
-  
+
     this.prototype.events  = {
       "click #new-task-button" : "newTask",
       "click #transfer-task" : "transferTask",
       "click #toggle-finished" : "toggleFinished"
     };
-  
+
     this.prototype.behaviors = {
       SortTableBehavior: {
         behaviorClass: SortTableBehavior
@@ -121,7 +122,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
 
     evt.preventDefault();
 
-    const modalContainer = new Backbone.Marionette.Region({
+    const modalContainer = new Marionette.Region({
       el : this.ui.modalContainer
     });
     const url = evt.target.href;

@@ -43,11 +43,7 @@ class PingStrategy {
 
 
   ping() {
-    throw "Needs to be implemented in subclass";
-    return {
-      pullQueue: [x0, y0, z0, zoomStep0, x1, y1, z1, zoomStep1],
-      extent: { min_x, min_y, min_z, max_x, max_y, max_z },
-    };
+    throw new Error("Needs to be implemented in subclass");
   }
 
 

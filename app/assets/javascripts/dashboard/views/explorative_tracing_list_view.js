@@ -4,6 +4,7 @@ import app from "app";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
+import jsRoutes from "routes";
 import ExplorativeTracingListItemView from "./explorative_tracing_list_item_view";
 import UserAnnotationsCollection from "../models/user_annotations_collection";
 

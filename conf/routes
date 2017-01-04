@@ -18,12 +18,13 @@ GET           /help/faq                                                         
 GET           /help/keyboardshortcuts                                           controllers.HelpController.keyboardShortcuts
 
 # Authentication
-GET           /login                                                            controllers.Authentication.login(redirect: Option[String])
-POST          /login                                                            controllers.Authentication.authenticate
-GET           /switch                                                           controllers.Authentication.switchTo(to: String)
-GET           /logout                                                           controllers.Authentication.logout
-GET           /register                                                         controllers.Authentication.register
-POST          /register                                                         controllers.Authentication.handleRegistration
+GET           /auth/login                                                       controllers.Authentication.login(redirect: Option[String])
+POST          /auth/login                                                       controllers.Authentication.authenticate
+GET           /auth/switch                                                      controllers.Authentication.switchTo(to: String)
+GET           /auth/logout                                                      controllers.Authentication.logout
+GET           /auth/register                                                    controllers.Authentication.register
+POST          /auth/register                                                    controllers.Authentication.handleRegistration
+GET           /auth/sso                                                         controllers.Authentication.singleSignOn(sso: String, sig: String)
 
 # Configurations
 GET           /api/userConfigurations/default                                   controllers.ConfigurationController.default

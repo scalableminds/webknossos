@@ -1,14 +1,19 @@
 package controllers
 
+import java.net.URLEncoder
 import javax.inject.Inject
 
 import scala.concurrent.Future
 
 import akka.actor.ActorRef
 import com.scalableminds.util.mail._
+import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
 import models.team.TeamService
 import models.user._
 import net.liftweb.common.Full
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
 import oxalis.security.Secured
 import oxalis.thirdparty.BrainTracing
@@ -23,10 +28,17 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Action
 import views.html
 
-class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with ProvidesUnauthorizedSessionData {
+class Authentication @Inject()(val messagesApi: MessagesApi, val configuration: Configuration)
+  extends Controller
+    with Secured
+    with ProvidesUnauthorizedSessionData
+    with LazyLogging {
 
   private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
+
+  private lazy val ssoKey =
+    configuration.getString("application.authentication.ssoKey").getOrElse("")
 
   // -- Authentication
   val automaticUserActivation: Boolean =
@@ -61,6 +73,34 @@ class Authentication @Inject()(val messagesApi: MessagesApi) extends Controller 
     for {
       teams <- TeamService.rootTeams()
     } yield html.user.register(form, teams)
+  }
+
+  def singleSignOn(sso: String, sig: String) = Authenticated.async { implicit request =>
+    if(ssoKey == "")
+      logger.warn("No SSO key configured! To use single-sign-on a sso key needs to be defined in the configuration.")
+
+    // Check if the request we recieved was signed using our private sso-key
+    if(HmacUtils.hmacSha256Hex(ssoKey, sso) == sig){
+      val payload = new String(Base64.decodeBase64(sso))
+      val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
+      for{
+        nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
+        returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
+      } yield {
+        val returnPayload =
+          s"nonce=$nonce&" +
+            s"email=${URLEncoder.encode(request.user.email, "UTF-8")}&" +
+            s"external_id=${URLEncoder.encode(request.user.id, "UTF-8")}&" +
+            s"username=${URLEncoder.encode(request.user.abreviatedName, "UTF-8")}&" +
+            s"name=${URLEncoder.encode(request.user.name, "UTF-8")}"
+        val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
+        val returnSignature = HmacUtils.hmacSha256Hex(ssoKey, encodedReturnPayload)
+        val query = "sso=" + URLEncoder.encode(encodedReturnPayload, "UTF-8") + "&sig=" + returnSignature
+        Redirect(returnUrl + "?" + query)
+      }
+    } else {
+      Fox.successful(BadRequest("Invalid signature"))
+    }
   }
 
   /**

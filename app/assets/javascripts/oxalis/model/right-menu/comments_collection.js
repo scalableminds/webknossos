@@ -1,11 +1,10 @@
-import _ from "lodash";
 import Backbone from "backbone";
 
 class CommentsCollection extends Backbone.Collection {
 
 
   intitalize() {
-    return this.coefficient = 1;
+    this.coefficient = 1;
   }
 
 

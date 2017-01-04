@@ -1,6 +1,5 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import AbstractSettingView from "./abstract_setting_view";
 
 class ButtonSettingView extends Marionette.View {
   static initClass() {

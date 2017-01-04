@@ -1,6 +1,5 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import WorkloadCollection from "admin/models/workload/workload_collection";
 import TemplateHelpers from "libs/template_helpers";
 
 class WorkloadListItemView extends Marionette.View {

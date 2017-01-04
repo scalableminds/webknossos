@@ -63,11 +63,9 @@ describe("Project List", () => {
 
   it("should delete a project", async () => {
     const oldProjectCount = await page.getProjectCountFromServer();
-    const oldRowCount = await page.getProjectListEntryCount();
 
     await page.deleteFirstProject();
 
-    const newRowCount = await page.getProjectListEntryCount();
     const newProjectCount = await page.getProjectCountFromServer();
 
     expect(newProjectCount).toEqual(oldProjectCount - 1);

@@ -1,4 +1,3 @@
-import _ from "lodash";
 import Backbone from "backbone";
 import ProjectModel from "./project_model";
 

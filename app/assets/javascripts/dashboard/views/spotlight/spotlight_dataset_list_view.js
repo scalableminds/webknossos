@@ -1,4 +1,3 @@
-import _ from "lodash";
 import app from "app";
 import Marionette from "backbone.marionette";
 import SpotlightDatasetView from "./spotlight_dataset_view";
@@ -8,7 +7,7 @@ class SpotlightDatasetListView extends Marionette.CollectionView {
     this.prototype.childView = SpotlightDatasetView;
   }
 
-  initialize(options) {
+  initialize() {
     this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
     this.collection.setSorting("created", "desc");
     return this.collection.setCollectionFilter(child => child.get("isActive"));

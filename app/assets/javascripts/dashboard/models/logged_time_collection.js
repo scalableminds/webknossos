@@ -1,4 +1,3 @@
-import _ from "lodash";
 import Backbone from "backbone";
 import moment from "moment";
 
@@ -9,13 +8,12 @@ class LoggedTimeCollection extends Backbone.Collection {
   url() {
     if (this.userID) {
       return `/api/users/${this.userID}/loggedTime`;
-    } else {
-      return "/api/user/loggedTime";
     }
+    return "/api/user/loggedTime";
   }
 
   initialize(models, options) {
-    return this.userID = options.userID;
+    this.userID = options.userID;
   }
 
 

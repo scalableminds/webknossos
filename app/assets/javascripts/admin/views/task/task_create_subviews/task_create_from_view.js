@@ -1,7 +1,6 @@
 import _ from "lodash";
 import app from "app";
 import Marionette from "backbone.marionette";
-import routes from "routes";
 import FormSyphon from "form-syphon";
 import TaskTypeCollection from "admin/models/tasktype/task_type_collection";
 import TeamCollection from "admin/models/team/team_collection";

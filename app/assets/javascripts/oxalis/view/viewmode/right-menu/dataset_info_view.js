@@ -33,7 +33,7 @@ class DatasetInfoView extends Marionette.View {
   }
 
 
-  initialize(options) {
+  initialize() {
     this.render = _.throttle(this.render, 100);
     this.listenTo(this.model.flycam3d, "changed", this.render);
     this.listenTo(this.model.flycam, "zoomStepChanged", this.render);

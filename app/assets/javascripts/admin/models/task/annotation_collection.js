@@ -1,4 +1,3 @@
-import _ from "lodash";
 import Backbone from "backbone";
 import AnnotationModel from "./annotation_model";
 import FormatUtils from "libs/format_utils";

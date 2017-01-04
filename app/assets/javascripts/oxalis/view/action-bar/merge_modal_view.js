@@ -2,15 +2,11 @@ import _ from "lodash";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import app from "app";
-import UserAnnotationCollection from "oxalis/model/skeletontracing/user_annotation_collection";
 import SelectionView from "admin/views/selection_view";
 import ModalView from "admin/views/modal_view";
-import UserCollection from "admin/models/user/user_collection";
-import TeamCollection from "admin/models/team/team_collection";
 import TaskTypeCollection from "admin/models/tasktype/task_type_collection";
 import ProjectCollection from "admin/models/project/project_collection";
-import ProjectModel from "admin/models/project/project_model";
-import jsRoutes from "routes";
+import jsRoutes from "routes"; // eslint-disable-line no-unused-vars
 
 class MergeModalView extends ModalView {
   static initClass() {
@@ -43,7 +39,7 @@ class MergeModalView extends ModalView {
           enctype="multipart/form-data"
           id="upload-and-explore-form"
           class="inline-block">
-  
+
           <div class="fileinput fileinput-new input-group" data-provides="fileinput">
             <div class="form-control" data-trigger="fileinput">
               <span class="fileinput-filename"></span>
@@ -123,7 +119,7 @@ class MergeModalView extends ModalView {
 
 
   onRender() {
-    return Request.receiveJSON("/api/user").then((user) => {
+    return Request.receiveJSON("/api/user").then(() => {
       this.taskTypeSelectionView = new SelectionView({
         collection: new TaskTypeCollection(),
         childViewOptions: {
@@ -189,7 +185,7 @@ class MergeModalView extends ModalView {
   }
 
 
-  selectFiles(event) {
+  selectFiles() {
     if (this.ui.fileInput[0].files.length) {
       return this.ui.uploadAndExploreForm.submit();
     }

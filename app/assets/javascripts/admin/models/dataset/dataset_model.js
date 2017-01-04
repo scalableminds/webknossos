@@ -1,5 +1,4 @@
 import _ from "lodash";
-import Backbone from "backbone";
 import NestedObjModel from "libs/nested_obj_model";
 import moment from "moment";
 

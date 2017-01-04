@@ -1,5 +1,3 @@
-import _ from "lodash";
-import Backbone from "backbone";
 import DashboardTaskModel from "./dashboard_task_model";
 import SortedCollection from "admin/models/sorted_collection";
 
@@ -14,15 +12,14 @@ class UserTasksCollection extends SortedCollection {
   url() {
     if (this.userID) {
       return `/api/users/${this.userID}/tasks?isFinished=${this.isFinished}`;
-    } else {
-      return `/api/user/tasks?isFinished=${this.isFinished}`;
     }
+    return `/api/user/tasks?isFinished=${this.isFinished}`;
   }
 
 
   initialize(models, options) {
     this.userID = options.userID;
-    return this.isFinished = options.isFinished || false;
+    this.isFinished = options.isFinished || false;
   }
 
 

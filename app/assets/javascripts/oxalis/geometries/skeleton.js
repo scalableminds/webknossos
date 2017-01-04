@@ -2,8 +2,6 @@ import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
 import ErrorHandling from "libs/error_handling";
-import Model from "../model";
-import Dimensions from "../model/dimensions";
 import constants from "../constants";
 import Tree from "./tree";
 
@@ -29,7 +27,7 @@ class Skeleton {
 
     this.reset();
 
-    this.listenTo(this.skeletonTracing, "newActiveNode", function (nodeId) {
+    this.listenTo(this.skeletonTracing, "newActiveNode", function () {
       this.setActiveNode();
       return this.setInactiveTreeVisibility(this.showInactiveTrees);
     });
@@ -47,8 +45,8 @@ class Skeleton {
     this.listenTo(this.skeletonTracing, "reloadTrees", this.loadSkeletonFromModel);
 
     this.listenTo(this.model.user, "change:particleSize", this.setParticleSize);
-    this.listenTo(this.model.user, "change:overrideNodeRadius", overrideNodeRadius => this.treeGeometries.map(tree =>
-        tree.showRadius(!this.model.user.get("overrideNodeRadius"))),
+    this.listenTo(this.model.user, "change:overrideNodeRadius", () => this.treeGeometries.map(tree =>
+      tree.showRadius(!this.model.user.get("overrideNodeRadius"))),
     );
   }
 
@@ -64,14 +62,14 @@ class Skeleton {
   // This needs to be done at initialization
 
   reset() {
-    for (var tree of this.treeGeometries) {
+    for (const tree of this.treeGeometries) {
       this.trigger("removeGeometries", tree.getMeshes());
       tree.dispose();
     }
 
     this.treeGeometries = [];
 
-    for (tree of this.skeletonTracing.getTrees()) {
+    for (const tree of this.skeletonTracing.getTrees()) {
       this.createNewTree(tree.treeId, tree.color);
     }
 
@@ -120,7 +118,7 @@ class Skeleton {
     return meshes;
   }
 
-  setWaypoint(centered) {
+  setWaypoint() {
     const treeGeometry = this.getTreeGeometry(this.skeletonTracing.getTree().treeId);
 
     treeGeometry.addNode(this.skeletonTracing.getActiveNode());
@@ -158,14 +156,14 @@ class Skeleton {
 
 
   setActiveNode() {
-    let activeNode,
-      treeGeometry;
+    let treeGeometry;
     if (this.lastActiveNode != null) {
       treeGeometry = this.getTreeGeometry(this.lastActiveNode.treeId);
       __guard__(treeGeometry, x => x.updateNodeColor(this.lastActiveNode.id, false));
     }
 
-    if ((activeNode = this.model.skeletonTracing.getActiveNode()) != null) {
+    const activeNode = this.model.skeletonTracing.getActiveNode();
+    if (activeNode != null) {
       treeGeometry = this.getTreeGeometry(activeNode.treeId);
       __guard__(treeGeometry, x1 => x1.updateNodeColor(activeNode.id, true));
       __guard__(treeGeometry, x2 => x2.startNodeHighlightAnimation(activeNode.id));
@@ -176,8 +174,8 @@ class Skeleton {
 
 
   setActiveNodeRadius() {
-    let activeNode;
-    if ((activeNode = this.model.skeletonTracing.getActiveNode()) != null) {
+    const activeNode = this.model.skeletonTracing.getActiveNode()
+    if (activeNode != null) {
       const treeGeometry = this.getTreeGeometry(activeNode.treeId);
       __guard__(treeGeometry, x => x.updateNodeRadius(activeNode.id, activeNode.radius));
       return app.vent.trigger("rerender");
@@ -235,9 +233,8 @@ class Skeleton {
 
     if (constants.ALL_PLANES.includes(id)) {
       return this.setVisibilityTemporary(this.isVisible);
-    } else {
-      return this.setVisibilityTemporary(true);
     }
+    return this.setVisibilityTemporary(true);
   }
 
 

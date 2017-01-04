@@ -10,12 +10,12 @@ const Drawing = {
 
   // Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
   drawLine2d(x, y, x1, y1, draw) {
-    let d,
-      dx,
-      dy,
-      mode;
-    let x_inc = (dx = x1 - x) < 0 ? -1 : 1;
-    let y_inc = (dy = y1 - y) < 0 ? -1 : 1;
+    let d;
+    let dx;
+    let dy;
+    let mode;
+    let incX = (dx = x1 - x) < 0 ? -1 : 1;
+    let incY = (dy = y1 - y) < 0 ? -1 : 1;
 
     dx = Math.abs(dx);
     dy = Math.abs(dy);
@@ -30,19 +30,19 @@ const Drawing = {
       mode = 0;
     } else {
       // swapMacro(y, x)
-      let __tmp = y;
+      let tmp = y;
       y = x;
-      x = __tmp;
+      x = tmp;
 
-      // swapMacro(y_inc, x_inc)
-      __tmp = y_inc;
-      y_inc = x_inc;
-      x_inc = __tmp;
+      // swapMacro(incY, incX)
+      tmp = incY;
+      incY = incX;
+      incX = tmp;
 
       // swapMacro(dy2, dx2)
-      __tmp = dy2;
+      tmp = dy2;
       dy2 = dx2;
-      dx2 = __tmp;
+      dx2 = tmp;
 
       d = dy;
       mode = 1;
@@ -52,12 +52,12 @@ const Drawing = {
 
     for (const i of __range__(0, d, false)) {
       if (err > 0) {
-        y += y_inc;
+        y += incY;
         err -= dx2;
       }
 
       err += dy2;
-      x += x_inc;
+      x += incX;
 
       if (mode) {
         draw(y, x);
@@ -163,8 +163,8 @@ const Drawing = {
   },
 
 
-  setSmoothLength(v) { return this.smoothLength = v; },
-  setAlpha(v) { return this.alpha = v; },
+  setSmoothLength(v) { this.smoothLength = v; },
+  setAlpha(v) { this.alpha = v; },
 
 };
 

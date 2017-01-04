@@ -4,7 +4,8 @@
         "react",
         "jsx-a11y",
         "import",
-        "jasmine"
+        "jasmine",
+        "promise"
     ],
     "parserOptions": {
       "ecmaVersion": 8

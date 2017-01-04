@@ -1,7 +1,7 @@
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
-import routes from "routes";
+import routes from "routes"; // eslint-disable-line no-unused-vars
 import Toast from "libs/toast";
 import HoverShowHide from "libs/behaviors/hover_show_hide_behavior";
 import Request from "libs/request";

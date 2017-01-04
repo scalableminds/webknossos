@@ -12,7 +12,6 @@ import VolumeTracingPlaneController from "./controller/combinations/volumetracin
 import MinimalArbitraryController from "./controller/combinations/minimal_skeletontracing_arbitrary_controller";
 import SceneController from "./controller/scene_controller";
 import UrlManager from "./controller/url_manager";
-import Model from "./model";
 import View from "./view";
 import SkeletonTracingView from "./view/skeletontracing/skeletontracing_view";
 import VolumeTracingView from "./view/volumetracing/volumetracing_view";

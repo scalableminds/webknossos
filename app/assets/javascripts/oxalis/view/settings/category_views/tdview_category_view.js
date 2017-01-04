@@ -1,6 +1,5 @@
 import CheckboxSettingView from "../setting_views/checkbox_setting_view";
 import CategoryView from "./category_view";
-import constants from "../../../constants";
 
 class TDViewCategoryView extends CategoryView {
   static initClass() {

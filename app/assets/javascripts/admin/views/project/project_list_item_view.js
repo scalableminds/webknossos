@@ -1,6 +1,5 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import Toast from "libs/toast";
 import TemplateHelpers from "libs/template_helpers";
 
 class ProjectListItemView extends Marionette.View {
@@ -50,8 +49,7 @@ class ProjectListItemView extends Marionette.View {
 
   deleteProject() {
     if (window.confirm("Do you really want to delete this project?")) {
-      let xhr;
-      return xhr = this.model.destroy({
+      this.model.destroy({
         wait: true,
       });
     }

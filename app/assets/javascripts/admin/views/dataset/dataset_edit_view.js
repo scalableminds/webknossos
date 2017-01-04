@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
@@ -13,7 +12,7 @@ class DatasetEditView extends Marionette.View {
       <div class="col-sm-9 col-sm-offset-2">
         <h3>Update dataset</h3>
       </div>
-  
+
       <form method="POST" class="form-horizontal">
         <div class="form-group">
           <label class="col-sm-2 control-label" for="name">Name</label>

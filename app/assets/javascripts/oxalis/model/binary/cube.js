@@ -250,7 +250,7 @@ class Cube {
 
     this.bucketCount++;
     this.buckets[this.bucketIterator] = bucket;
-    return this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
+    this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
   }
 
 
@@ -258,7 +258,7 @@ class Cube {
     const address = bucket.zoomedAddress;
     const bucketIndex = this.getBucketIndex(address);
     const cube = this.cubes[address[3]].data;
-    return cube[bucketIndex] = null;
+    cube[bucketIndex] = null;
   }
 
 
@@ -275,7 +275,7 @@ class Cube {
       }
     }
 
-    return this.trigger("volumeLabeled");
+    this.trigger("volumeLabeled");
   }
 
 

@@ -28,6 +28,7 @@ class LoggedTimeView extends Marionette.View {
 
 
   initialize(options) {
+    this.options = options
     this.collection = new LoggedTimeCollection([], { userID: this.options.userID });
     this.listenTo(this.collection, "sync", this.render);
     return this.collection.fetch();
@@ -45,11 +46,10 @@ class LoggedTimeView extends Marionette.View {
   addGraph() {
     // Only render the chart if we have any data.
     if (this.collection.length > 0) {
-      let graph;
       const dates = this.collection.map(item => item.get("interval").toDate());
       const monthlyHours = this.collection.map(item => item.get("time").asHours());
 
-      return graph = c3.generate({
+      const graph = c3.generate({
         bindto: "#time-graph", // doesn't work with classes
         data: {
           x: "date",

@@ -1,7 +1,6 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import app from "app";
-import Input from "libs/input";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
@@ -31,9 +30,9 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
         </span>
       </div>
     </form>
-  
+
     <div class="divider-vertical"></div>
-  
+
     <% if (showArchivedAnnotations) { %>
     <a href="#" id="toggle-view-open" class="btn btn-default">
       <i class="fa fa-spinner fa-spin hide" id="toggle-view-spinner-icon"></i>
@@ -50,7 +49,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
     <% } %>
   </div>
 <% } %>
-  
+
 <table class="table table-striped table-hover sortable-table" id="explorative-tasks">
   <thead>
     <tr>
@@ -118,7 +117,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
   }
 
 
-  selectFiles(event) {
+  selectFiles() {
     if (this.ui.uploadFileInput[0].files.length) {
       return this.ui.uploadAndExploreForm.submit();
     }

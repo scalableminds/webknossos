@@ -1,6 +1,5 @@
 import _ from "lodash";
 import $ from "jquery";
-import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import TeamCollection from "admin/models/team/team_collection";
 import ModalView from "admin/views/modal_view";
@@ -80,7 +79,7 @@ class TeamRoleModalView extends ModalView {
       data: "amIAnAdmin=true",
     });
     this.userCollection = options.userCollection;
-    return this.selectedUsers = this.getSelectedUsers();
+    this.selectedUsers = this.getSelectedUsers();
   }
 
 

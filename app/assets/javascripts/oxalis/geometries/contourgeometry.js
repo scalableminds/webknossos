@@ -3,8 +3,6 @@ import app from "app";
 import Backbone from "backbone";
 import ResizableBuffer from "libs/resizable_buffer";
 import THREE from "three";
-import Dimensions from "../model/dimensions";
-import constants from "../constants";
 
 class ContourGeometry {
   static initClass() {

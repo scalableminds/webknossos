@@ -19,13 +19,12 @@ class GraphView extends Marionette.View {
 
 
   addGraph() {
-    let graph;
     const previousWeeks = this.model.get("tracingTimes").map(item => parseInt(moment.duration(item.get("tracingTime")).asHours()));
     const currentWeek = previousWeeks.length - 1;
 
     const dates = this.model.get("tracingTimes").map(item => moment(item.get("start")).format("YYYY-MM-DD"));
 
-    return graph = c3.generate({
+    c3.generate({
       bindto: "#graph",
       data: {
         x: "date",

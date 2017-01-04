@@ -1,4 +1,3 @@
-import _ from "lodash";
 import Marionette from "backbone.marionette";
 import SelectionItemView from "./selection_item_view";
 

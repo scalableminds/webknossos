@@ -1,7 +1,5 @@
-import $ from "jquery";
 import _ from "lodash";
 import Clipboard from "clipboard-js";
-import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import ModalView from "admin/views/modal_view";
 

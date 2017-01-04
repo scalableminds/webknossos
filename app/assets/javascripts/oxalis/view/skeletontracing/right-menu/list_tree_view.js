@@ -1,6 +1,5 @@
 import _ from "lodash";
 import $ from "jquery";
-import app from "app";
 import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Backbone from "backbone";
@@ -77,7 +76,7 @@ class ListTreeView extends Marionette.CompositeView {
   }
 
 
-  initialize(options) {
+  initialize() {
     this.collection = new Backbone.Collection();
 
     this.listenTo(this, "render", this.updateSortIndicator);

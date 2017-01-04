@@ -7,7 +7,6 @@ import PushQueue from "./binary/pushqueue";
 import Plane2D from "./binary/plane2d";
 import PingStrategy from "./binary/ping_strategy";
 import PingStrategy3d from "./binary/ping_strategy_3d";
-import BoundingBox from "./binary/bounding_box";
 import Mappings from "./binary/mappings";
 import Pipeline from "libs/pipeline";
 import constants from "../constants";
@@ -109,23 +108,6 @@ class Binary {
       return setMapping([]);
     }
   }
-
-
-  setActiveMapping(mappingName) {
-    this.activeMapping = mappingName;
-
-    const setMapping = (mapping) => {
-      this.cube.setMapping(mapping);
-      return this.model.flycam.update();
-    };
-
-    if (mappingName != null) {
-      return this.mappings.getMappingArrayAsync(mappingName).then(setMapping);
-    } else {
-      return setMapping([]);
-    }
-  }
-
 
   pingStop() {
     return this.pullQueue.clearNormalPriorities();

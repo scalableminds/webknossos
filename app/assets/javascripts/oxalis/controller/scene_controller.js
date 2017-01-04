@@ -177,7 +177,7 @@ class SceneController {
   }
 
 
-  setTextRotation(rotVec) {}
+  setTextRotation() {}
 
     // TODO: Implement
 

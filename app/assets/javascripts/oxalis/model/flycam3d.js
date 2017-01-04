@@ -1,11 +1,11 @@
 import _ from "lodash";
 import Backbone from "backbone";
 import THREE from "three";
-import { M4x4, V3 } from "libs/mjs";
+import { M4x4 } from "libs/mjs";
 
 const updateMacro = function (_this) {
   _this.trigger("changed", _this.currentMatrix, _this.zoomStep);
-  return _this.hasChanged = true;
+  _this.hasChanged = true;
 };
 
 
@@ -41,7 +41,7 @@ class Flycam3d {
 
   calculateDistanceVectors(zoomStep = 1) {
     this.distanceVecNegative = [0, 0, -zoomStep * this.distance];
-    return this.distanceVecPositive = [0, 0, zoomStep * this.distance];
+    this.distanceVecPositive = [0, 0, zoomStep * this.distance];
   }
 
 
@@ -90,9 +90,8 @@ class Flycam3d {
     if (this.hasChanged) {
       this.hasChanged = false;
       return true;
-    } else {
-      return false;
     }
+    return false;
   }
 
 
@@ -116,7 +115,7 @@ class Flycam3d {
 
 
   setZoomStep(zoomStep) {
-    return this.zoomStep = Math.min(this.ZOOM_STEP_MAX, Math.max(this.ZOOM_STEP_MIN, zoomStep));
+    this.zoomStep = Math.min(this.ZOOM_STEP_MAX, Math.max(this.ZOOM_STEP_MIN, zoomStep));
   }
 
 
@@ -241,7 +240,7 @@ class Flycam3d {
     const matrix = this.currentMatrix;
     matrix[12] = p[0];
     matrix[13] = p[1];
-    return matrix[14] = p[2];
+    matrix[14] = p[2];
   }
 
 

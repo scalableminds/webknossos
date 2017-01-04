@@ -1,9 +1,8 @@
 // Remove these linting rules after refactoring
-/* eslint global-require: "off", import/no-dynamic-require: "off", no-param-reassign: "off" */
+/* eslint-disable global-require, import/no-dynamic-require, no-param-reassign */
 
 import $ from "jquery";
 import _ from "lodash";
-import Backbone from "backbone";
 import constants from "oxalis/constants";
 import BaseRouter from "libs/base_router";
 import PaginationCollection from "admin/models/pagination_collection";

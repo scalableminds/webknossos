@@ -1,6 +1,5 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import Toast from "libs/toast";
 import SelectAllRows from "libs/behaviors/select_all_rows_behavior";
 import app from "app";
 import TeamListItemView from "./team_list_item_view";

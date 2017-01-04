@@ -2,7 +2,6 @@ import AbstractTabView from "oxalis/view/abstract_tab_view";
 import VolumeTracingSettingsView from "../settings_views/volume_tracing_settings_view";
 import PlaneUserSettingsView from "../settings_views/plane_user_settings_view";
 import DatasetSettingsView from "../settings_views/dataset_settings_view";
-import BackboneToOxalisAdapterModel from "oxalis/model/settings/backbone_to_oxalis_adapter_model";
 
 class VolumeTabView extends AbstractTabView {
 

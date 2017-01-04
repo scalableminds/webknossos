@@ -1,7 +1,6 @@
 import _ from "lodash";
 import Constants from "oxalis/constants";
 import PlaneController from "../viewmodes/plane_controller";
-import VolumeTracingController from "../annotations/volumetracing_controller";
 
 class VolumeTracingPlaneController extends PlaneController {
 
@@ -72,16 +71,15 @@ class VolumeTracingPlaneController extends PlaneController {
   getPlaneMouseControls(planeId) {
     return _.extend(super.getPlaneMouseControls(planeId), {
 
-      leftDownMove: (delta, pos, plane, event) => {
+      leftDownMove: (delta, pos, plane) => {
         if (this.model.volumeTracing.mode === Constants.VOLUME_MODE_MOVE) {
           return this.move([
             (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
             (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
             0,
           ]);
-        } else {
-          return this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
         }
+        return this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
       },
 
       leftMouseDown: (pos, plane, event) => {
@@ -97,9 +95,9 @@ class VolumeTracingPlaneController extends PlaneController {
         return this.volumeTracingController.restoreAfterDeleteMode();
       },
 
-      rightDownMove: (delta, pos, plane, event) => this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos)),
+      rightDownMove: (delta, pos) => this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos)),
 
-      rightMouseDown: (pos, plane, event) => {
+      rightMouseDown: (pos, plane) => {
         this.volumeTracingController.enterDeleteMode();
         this.model.volumeTracing.startEditing(plane);
         return this.adjustSegmentationOpacity();
@@ -110,9 +108,8 @@ class VolumeTracingPlaneController extends PlaneController {
         return this.volumeTracingController.restoreAfterDeleteMode();
       },
 
-      leftClick: (pos, plane, event) => {
-        const cellId = this.model.getSegmentationBinary().cube.getDataValue(
-                  this.calculateGlobalPos(pos));
+      leftClick: (pos) => {
+        const cellId = this.model.getSegmentationBinary().cube.getDataValue(this.calculateGlobalPos(pos));
 
         return this.volumeTracingController.handleCellSelection(cellId);
       },
@@ -140,11 +137,10 @@ class VolumeTracingPlaneController extends PlaneController {
   render3dCell(id) {
     if (!this.model.user.get("isosurfaceDisplay")) {
       return this.sceneController.removeShapes();
-    } else {
-      const bb = this.model.flycam.getViewportBoundingBox();
-      const res = this.model.user.get("isosurfaceResolution");
-      return this.sceneController.showShapes(this.scaleIsosurfaceBB(bb), res, id);
     }
+    const bb = this.model.flycam.getViewportBoundingBox();
+    const res = this.model.user.get("isosurfaceResolution");
+    return this.sceneController.showShapes(this.scaleIsosurfaceBB(bb), res, id);
   }
 
   scaleIsosurfaceBB(bb) {

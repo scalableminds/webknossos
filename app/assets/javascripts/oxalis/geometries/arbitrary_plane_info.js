@@ -1,7 +1,6 @@
 import _ from "lodash";
 import app from "app";
 import Marionette from "backbone.marionette";
-import ToggleButton from "bootstrap-toggle";
 
 class ArbitraryPlaneInfo extends Marionette.View {
   static initClass() {
@@ -26,7 +25,7 @@ class ArbitraryPlaneInfo extends Marionette.View {
 
 
   initialize() {
-    return this.listenTo(this.model, "change:flightmodeRecording", this.updateCheckboxToggle);
+    this.listenTo(this.model, "change:flightmodeRecording", this.updateCheckboxToggle);
   }
 
 
@@ -38,7 +37,7 @@ class ArbitraryPlaneInfo extends Marionette.View {
       onstyle: "danger",
       width: 140,
     });
-    return this.updateCheckboxToggle();
+    this.updateCheckboxToggle();
   }
 
 
@@ -49,7 +48,7 @@ class ArbitraryPlaneInfo extends Marionette.View {
     // Set a inital waypoint when enabling flight mode
     // TODO: use the offical wK API
     if (value = true) {
-      return app.oxalis.arbitraryController.setWaypoint();
+      app.oxalis.arbitraryController.setWaypoint();
     }
   }
 
@@ -58,12 +57,12 @@ class ArbitraryPlaneInfo extends Marionette.View {
     if (this.model.get("flightmodeRecording") === this.ui.checkbox.prop("checked")) {
       return;
     }
-    return this.ui.checkbox.prop({ checked: this.model.get("flightmodeRecording") }).change();
+    this.ui.checkbox.prop({ checked: this.model.get("flightmodeRecording") }).change();
   }
 
 
   onDestroy() {
-    return this.ui.checkbox.bootstrapToggle("destroy");
+    this.ui.checkbox.bootstrapToggle("destroy");
   }
 }
 ArbitraryPlaneInfo.initClass();

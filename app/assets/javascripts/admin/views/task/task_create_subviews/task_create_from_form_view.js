@@ -1,6 +1,5 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import routes from "routes";
 import DatasetCollection from "admin/models/dataset/dataset_collection";
 import SelectionView from "admin/views/selection_view";
 import Utils from "libs/utils";
@@ -19,7 +18,7 @@ class TaskCreateFromFormView extends Marionette.View {
   <div class="col-sm-9 dataSet">
   </div>
 </div>
-  
+
 <div class=" form-group">
   <label class="col-sm-2 control-label" for="editPosition">Start</label>
   <div class="col-sm-9">
@@ -35,7 +34,7 @@ class TaskCreateFromFormView extends Marionette.View {
       class="form-control">
   </div>
 </div>
-  
+
 <div class=" form-group">
   <label class="col-sm-2 control-label" for="editRotation">Start Rotation</label>
   <div class="col-sm-9">

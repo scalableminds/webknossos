@@ -3,7 +3,6 @@ import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
 import TWEEN from "tween.js";
-import Dimensions from "../model/dimensions";
 import Toast from "../../libs/toast";
 import constants from "../constants";
 import modal from "./modal";

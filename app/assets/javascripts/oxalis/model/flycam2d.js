@@ -114,13 +114,14 @@ class Flycam2d {
 
 
   calculateBuffer() {
-    let pixelNeeded,
-      scaleArray;
-    return [0, 1, 2].map(planeID =>
-      (scaleArray = Dimensions.transDim(app.scaleInfo.baseVoxelFactors, planeID),
-      pixelNeeded = this.viewportWidth * this.getTextureScalingFactor(),
+    let pixelNeeded;
+    let scaleArray;
+    return [0, 1, 2].forEach((planeID) => {
+      scaleArray = Dimensions.transDim(app.scaleInfo.baseVoxelFactors, planeID);
+      pixelNeeded = this.viewportWidth * this.getTextureScalingFactor();
       this.buffer[planeID] = [this.TEXTURE_WIDTH - (pixelNeeded * scaleArray[0]),
-        this.TEXTURE_WIDTH - (pixelNeeded * scaleArray[1])]));
+        this.TEXTURE_WIDTH - (pixelNeeded * scaleArray[1])];
+    });
   }
 
 
@@ -163,8 +164,13 @@ class Flycam2d {
 
 
   setSpaceDirection(direction) {
-    return [0, 1, 2].map(index =>
-      direction[index] <= 0 ? this.spaceDirection[index] = -1 : this.spaceDirection[index] = 1);
+    return [0, 1, 2].forEach((index) => {
+      if (direction[index] <= 0) {
+        this.spaceDirection[index] = -1;
+      } else {
+        this.spaceDirection[index] = 1;
+      }
+    });
   }
 
 
@@ -174,13 +180,12 @@ class Flycam2d {
 
 
   getRotation(planeID) {
-    return (() => {
-      switch (planeID) {
-        case constants.PLANE_XY: return [0, 0, 0];
-        case constants.PLANE_YZ: return [0, 270, 0];
-        case constants.PLANE_XZ: return [90, 0, 0];
-      }
-    })();
+    switch (planeID) {
+      case constants.PLANE_YZ: return [0, 270, 0];
+      case constants.PLANE_XZ: return [90, 0, 0];
+      default:
+      case constants.PLANE_XY: return [0, 0, 0];
+    }
   }
 
 
@@ -200,7 +205,6 @@ class Flycam2d {
 
     if (increaseSpeedWithZoom == null) { increaseSpeedWithZoom = true; }
     vector = Dimensions.transDim(vector, planeID);
-    const ind = Dimensions.getIndices(planeID);
     const zoomFactor = increaseSpeedWithZoom ? Math.pow(2, this.zoomStep) : 1;
     const scaleFactor = app.scaleInfo.baseVoxelFactors;
     const delta = [vector[0] * zoomFactor * scaleFactor[0],

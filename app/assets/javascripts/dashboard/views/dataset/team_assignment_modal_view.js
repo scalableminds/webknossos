@@ -1,8 +1,6 @@
 import _ from "lodash";
 import $ from "jquery";
-import app from "app";
 import Request from "libs/request";
-import Marionette from "backbone.marionette";
 import TeamCollection from "admin/models/team/team_collection";
 import ModalView from "admin/views/modal_view";
 
@@ -54,7 +52,7 @@ class TeamAssignmentModalView extends ModalView {
       data: "isEditable=true",
     });
 
-    return this.dataset = args.dataset;
+    this.dataset = args.dataset;
   }
 
 

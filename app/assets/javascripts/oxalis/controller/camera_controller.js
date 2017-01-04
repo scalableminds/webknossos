@@ -1,8 +1,6 @@
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
-import Model from "../model";
-import View from "../view";
 import Dimensions from "../model/dimensions";
 import constants from "../constants";
 import THREE from "three";
@@ -53,7 +51,7 @@ class CameraController {
     const cPos = app.scaleInfo.voxelToNm(gPos);
     this.cameras[constants.PLANE_XY].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
     this.cameras[constants.PLANE_YZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
-    return this.cameras[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
+    this.cameras[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
   }
 
 
@@ -70,13 +68,18 @@ class CameraController {
     const from = {
       notify,
       getConvertedPosition,
-      upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z,
+      upX: camera.up.x,
+      upY: camera.up.y,
+      upZ: camera.up.z,
       camera,
       flycam: this.flycam,
       dx: camera.position.x - pos[0],
       dy: camera.position.y - pos[1],
       dz: camera.position.z - pos[2],
-      l: camera.left, r: camera.right, t: camera.top, b: camera.bottom };
+      l: camera.left,
+      r: camera.right,
+      t: camera.top,
+      b: camera.bottom };
     this.tween = new TWEEN.Tween(from);
 
     if (id === constants.TDView) {
@@ -103,7 +106,9 @@ class CameraController {
         dx: b[1] / diagonal,
         dy: b[0] / diagonal,
         dz: -1 / 2,
-        upX: 0, upY: 0, upZ: -1,
+        upX: 0,
+        upY: 0,
+        upZ: -1,
         l: -distance - padding,
         r: (diagonal - distance) + padding,
         t: (diagonal / 2) + padding + yOffset,
@@ -170,8 +175,8 @@ class CameraController {
 
 
   zoomTDView(value, position, curWidth) {
-    let offsetX,
-      offsetY;
+    let offsetX;
+    let offsetY;
     const camera = this.cameras[constants.TDView];
     const factor = Math.pow(0.9, value);
     const middleX = (camera.left + camera.right) / 2;
@@ -273,7 +278,7 @@ class CameraController {
 
   bindToEvents() {
     this.listenTo(this.model.user, "change:clippingDistance", function (model, value) { return this.setClippingDistance(value); });
-    return this.listenTo(this.model.user, "change:zoom", function (model, value) { return this.updateCamViewport(); });
+    this.listenTo(this.model.user, "change:zoom", function (model, value) { return this.updateCamViewport(); });
   }
 }
 CameraController.initClass();

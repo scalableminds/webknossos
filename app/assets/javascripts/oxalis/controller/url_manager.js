@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import Backbone from "backbone";
 import constants from "../constants";
 import { V3 } from "libs/mjs";

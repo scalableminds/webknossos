@@ -1,9 +1,7 @@
+// eslint-disable-next-line no-unused-vars
 import $ from "jquery";
 import _ from "lodash";
-import Marionette from "backbone.marionette";
-import Toast from "libs/toast";
 import Request from "libs/request";
-import app from "app";
 import SelectionView from "admin/views/selection_view";
 import ModalView from "admin/views/modal_view";
 import UserCollection from "admin/models/user/user_collection";
@@ -35,7 +33,7 @@ class TaskTransferModalView extends ModalView {
 
   initialize(options) {
     this.url = options.url;
-    return this.userCollection = new UserCollection();
+    this.userCollection = new UserCollection();
   }
 
 

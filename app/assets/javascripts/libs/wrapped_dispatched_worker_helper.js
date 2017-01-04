@@ -4,7 +4,6 @@ self.log = (...args) => self.postMessage({ type: "log", time: Date.now(), args }
 
 
 export default function (obj) {
-  const queuedMessages = [];
   const execMessage = function (messageData) {
     const { workerHandle, payload } = messageData;
 

@@ -101,9 +101,11 @@ describe("WkLayer", () => {
 
           expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(2);
 
+          // eslint-disable-next line no-unused-vars
           const [url, options] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args;
           expect(url).toBe("url/data/datasets/dataSet/layers/layername/data?token=token");
 
+          // eslint-disable-next line no-unused-vars
           const [url2, options2] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(1).args;
           expect(url2).toBe("url/data/datasets/dataSet/layers/layername/data?token=token2");
 
@@ -139,7 +141,7 @@ describe("WkLayer", () => {
           doNotCatch: true,
         };
 
-        layer.requestFromStore(batch).then((result) => {
+        layer.requestFromStore(batch).then(() => {
           expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(1);
 
           const [url, options] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args;
@@ -189,7 +191,7 @@ describe("WkLayer", () => {
           doNotCatch: true,
         };
 
-        layer.sendToStore(batch, getBucketData).then((result) => {
+        layer.sendToStore(batch, getBucketData).then(() => {
           expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(1);
 
           const [url, options] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args;

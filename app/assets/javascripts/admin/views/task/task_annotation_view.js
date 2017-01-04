@@ -4,7 +4,6 @@ import moment from "moment";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import Marionette from "backbone.marionette";
-import AnnotationModel from "admin/models/task/annotation_model";
 
 class TaskAnnotationView extends Marionette.View {
   static initClass() {

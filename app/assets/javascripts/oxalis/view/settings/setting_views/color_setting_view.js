@@ -1,5 +1,4 @@
 import _ from "lodash";
-import Marionette from "backbone.marionette";
 import Utils from "libs/utils";
 import AbstractSettingView from "./abstract_setting_view";
 

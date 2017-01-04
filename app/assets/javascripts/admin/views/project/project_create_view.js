@@ -5,8 +5,6 @@ import Marionette from "backbone.marionette";
 import UserCollection from "admin/models/user/user_collection";
 import TeamCollection from "admin/models/team/team_collection";
 import SelectionView from "admin/views/selection_view";
-import ProjectModel from "admin/models/project/project_model";
-import Toast from "libs/toast";
 
 class ProjectCreateView extends Marionette.View {
   static initClass() {
@@ -17,7 +15,7 @@ class ProjectCreateView extends Marionette.View {
       <div class="col-sm-9 col-sm-offset-2">
         <h3>Create Project</h3>
       </div>
-  
+
       <form method="POST" class="form-horizontal">
         <div class="form-group">
           <label class="col-sm-2 control-label" for="name">Project Name</label>
@@ -26,26 +24,26 @@ class ProjectCreateView extends Marionette.View {
              required pattern=".{3,100}" title="Please use at least 3 and max 100 characters ." autofocus>
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label" for="team">Team</label>
           <div class="col-sm-9 team">
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label" for="owner">Owner</label>
           <div class="col-sm-9 owner">
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label" for="priority">Priority</label>
           <div class="col-sm-9">
             <input type="number" class="form-control" name="priority" value="100" required>
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label">Project Type</label>
           <div class="col-sm-9">
@@ -59,10 +57,10 @@ class ProjectCreateView extends Marionette.View {
             </label>
           </div>
         </div>
-  
+
         <div class="mturk-settings">
           <h4>Mechanical Turk settings</h4>
-  
+
           <div class="form-group">
             <label class="col-sm-2 control-label" for="requiredQualification">Required qualification</label>
             <div class="col-sm-9">
@@ -75,28 +73,28 @@ class ProjectCreateView extends Marionette.View {
               </select>
             </div>
           </div>
-  
+
           <div class="form-group">
             <label class="col-sm-2 control-label" for="assignmentDurationInSeconds">Assignment duration in seconds</label>
             <div class="col-sm-9">
               <input type="number" class="form-control" name="assignmentConfiguration[assignmentDurationInSeconds]" value="3600" disabled required>
             </div>
           </div>
-  
+
           <div class="form-group">
             <label class="col-sm-2 control-label" for="rewardInDollar">Reward in USD</label>
             <div class="col-sm-9">
               <input type="number" class="form-control" name="assignmentConfiguration[rewardInDollar]" value="0.05" step="0.01" disabled required>
             </div>
           </div>
-  
+
           <div class="form-group">
             <label class="col-sm-2 control-label" for="autoApprovalDelayInSeconds">Auto approval delay in seconds</label>
             <div class="col-sm-9">
               <input type="number" class="form-control" name="assignmentConfiguration[autoApprovalDelayInSeconds]" value="60000" disabled required>
             </div>
           </div>
-  
+
           <div class="form-group">
             <label class="col-sm-2 control-label" for="template">HIT Template</label>
             <div class="col-sm-9">
@@ -106,28 +104,28 @@ class ProjectCreateView extends Marionette.View {
               </select>
             </div>
           </div>
-  
+
           <div class="form-group">
             <label class="col-sm-2 control-label" for="title">Title</label>
             <div class="col-sm-9">
               <input type="text" class="form-control" name="assignmentConfiguration[title]" disabled required>
             </div>
           </div>
-  
+
           <div class="form-group">
             <label class="col-sm-2 control-label" for="keywords">Keywords (comma separated)</label>
             <div class="col-sm-9">
               <input type="text" class="form-control" name="assignmentConfiguration[keywords]" disabled required>
             </div>
           </div>
-  
+
           <div class="form-group">
             <label class="col-sm-2 control-label" for="description">Description</label>
             <div class="col-sm-9">
               <textarea class="form-control" name="assignmentConfiguration[description]" disabled required rows="3"></textarea>
             </div>
           </div>
-  
+
         <div class="form-group">
           <div class="col-sm-2 col-sm-offset-9">
           <button type="submit" class="form-control btn btn-primary">Create Project</button>

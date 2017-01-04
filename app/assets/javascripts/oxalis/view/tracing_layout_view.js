@@ -102,7 +102,7 @@ class TracingLayoutView extends Marionette.View {
   }
 
 
-  doneSliding(evt) {
+  doneSliding() {
     return this.resizeRightMenu();
   }
 

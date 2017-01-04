@@ -1,10 +1,9 @@
 import _ from "lodash";
 import $ from "jquery";
-import app from "app";
 import Marionette from "backbone.marionette";
 import Input from "libs/input";
 import CommentList from "./comment_list";
-import React, { Component } from "react";
+import React from "react";
 import { render } from "react-dom";
 import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
@@ -230,7 +229,7 @@ class CommentTabView extends Marionette.View {
   }
 
 
-  sortComments(evt) {
+  sortComments() {
     this.isSortedAscending = !this.isSortedAscending;
     return this.updateState();
   }

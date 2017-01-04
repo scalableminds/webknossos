@@ -1,6 +1,5 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import app from "app";
 import GraphView from "./graph_view";
 import StatisticListView from "./statistic_list_view";
 import AchievementView from "./achievement_view";
@@ -16,7 +15,7 @@ class StatisticView extends Marionette.View {
     <div class="timings well"></div>
   </div>
   <div class="achievements col-sm-4 well">
-  
+
   </div>
 </div>\
 `);

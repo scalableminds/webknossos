@@ -1,6 +1,5 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import Toast from "libs/toast";
 import Request from "libs/request";
 import moment from "moment";
 
@@ -67,9 +66,8 @@ class DashboardTaskListItemView extends Marionette.View {
   className() {
     if (this.model.get("annotation.state.isFinished")) {
       return "finished";
-    } else {
-      return "unfinished";
     }
+    return "unfinished";
   }
 
 

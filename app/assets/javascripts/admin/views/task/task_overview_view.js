@@ -1,15 +1,15 @@
+// eslint-disable no-underscore-dangle
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
 import d3 from "d3";
 import cola from "webcola";
 import moment from "moment";
-import routes from "routes";
 import RangeSlider from "nouislider";
 import Utils from "libs/utils";
 import TeamCollection from "admin/models/team/team_collection";
 import SelectionView from "admin/views/selection_view";
-import DateRangePicker from "bootstrap-daterangepicker";
+import DateRangePicker from "bootstrap-daterangepicker"; // eslint-disable-line no-unused-vars
 
 class TaskOverviewView extends Marionette.View {
   static initClass() {
@@ -175,7 +175,7 @@ class TaskOverviewView extends Marionette.View {
       endDate: moment().format("L"),
       opens: "left",
     },
-    (start, end, label) => {
+    (start, end) => {
       this.fetchData(start.valueOf(), end.valueOf());
       return this.paintGraphDebounced();
     },
@@ -241,7 +241,7 @@ class TaskOverviewView extends Marionette.View {
       },
       );
 
-      return sliderEl.noUiSlider.on("update", (values, handle) => {
+      return sliderEl.noUiSlider.on("update", (values) => {
         this.chosenMinHours = Math.round(+values[0]);
         this.chosenMaxHours = Math.round(+values[1]);
         this.ui.rangeSliderLabel1.html(`${this.chosenMinHours}h`);
@@ -370,7 +370,7 @@ class TaskOverviewView extends Marionette.View {
       .text(d => d.text)
       .each(function (d) {
         d.width = this.getBBox().width + TEXT_PADDING;
-        return d.height = RECT_HEIGHT;
+        d.height = RECT_HEIGHT;
       })
       .attr("x", d => d.width / 2)
       .attr("y", RECT_HEIGHT / 2);

@@ -1,4 +1,3 @@
-import _ from "lodash";
 import TeamModel from "./team_model";
 import SortedCollection from "../sorted_collection";
 

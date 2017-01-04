@@ -1,4 +1,3 @@
-import _ from "lodash";
 import Backbone from "backbone";
 
 class ProjectModel extends Backbone.Model {

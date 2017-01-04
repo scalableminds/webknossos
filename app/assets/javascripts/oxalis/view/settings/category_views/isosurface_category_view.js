@@ -1,7 +1,6 @@
 import CategoryView from "./category_view";
 import CheckboxSettingView from "../setting_views/checkbox_setting_view";
 import SliderSettingView from "../setting_views/slider_setting_view";
-import constants from "oxalis/constants";
 import app from "app";
 
 class IsosurfaceCategoryView extends CategoryView {

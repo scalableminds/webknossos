@@ -1,7 +1,6 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import app from "app";
-import Toast from "libs/toast";
 import Request from "libs/request";
 import MergeModalView from "./merge_modal_view";
 import ShareModalView from "./share_modal_view";
@@ -21,17 +20,17 @@ class DatasetActionsView extends Marionette.View {
   <div class="btn-group btn-group">
     <% if(tracing.restrictions.allowFinish) { %>
       <a href="/annotations/<%- tracingType %>/<%- tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i><%- getArchiveBtnText() %></a>
-    <% } %>
+    <% } %>
     <% if(tracing.restrictions.allowDownload || ! tracing.downloadUrl) { %>
       <a class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>Download</a>
-    <% } %>
+    <% } %>
     <button class="btn btn-default" id="trace-share-button"><i class="fa fa-share-alt"></i>Share</button>
   </div>
-  
+
   <% if(tracing.restrictions.allowFinish && tracing.task) { %>
       <button class="btn btn-default" id="trace-next-task-button"><i class="fa fa-step-forward"></i>Finish and Get Next Task</button>
   <% } %>
-  
+
   <% if (isSkeletonMode) { %>
     <div class="btn btn-default" id="trace-merge-button"><i class="fa fa-folder-open"></i>Merge Tracing</div>
     <div class="merge-modal-wrapper"></div>
@@ -65,16 +64,15 @@ class DatasetActionsView extends Marionette.View {
 
 
   initialize() {
-    return this.savedPollingInterval = window.setInterval((() => this.updateSavedState()), this.SAVED_POLLING_INTERVAL);
+    this.savedPollingInterval = window.setInterval((() => this.updateSavedState()), this.SAVED_POLLING_INTERVAL);
   }
 
 
   updateSavedState() {
     if (this.model.annotationModel.stateLogger.stateSaved()) {
       return this.ui.saveButton.text("Saved   ✓");
-    } else {
-      return this.ui.saveButton.text("Save");
     }
+    return this.ui.saveButton.text("Save");
   }
 
 

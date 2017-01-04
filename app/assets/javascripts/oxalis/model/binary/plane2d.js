@@ -1,7 +1,5 @@
 import _ from "lodash";
 import Backbone from "backbone";
-import Cube from "./cube";
-import Queue from "./pullqueue";
 import Dimensions from "../dimensions";
 
 // Macros
@@ -59,7 +57,7 @@ class Plane2D {
       this.NOT_LOADED_BUCKET_DATA[i] = this.NOT_LOADED_BUCKET_INTENSITY;
     }
 
-    this._forceRedraw = false;
+    this.forceRedraw = false;
 
     for (let i = 0; i <= this.cube.LOOKUP_DEPTH_DOWN; i++) {
       this.MAP_SIZE += 1 << (i << 1);
@@ -106,12 +104,12 @@ class Plane2D {
 
   reset() {
     this.dataTexture.tiles = new Array(this.BUCKETS_PER_ROW * this.BUCKETS_PER_ROW);
-    return this.dataTexture.ready = false;
+    this.dataTexture.ready = false;
   }
 
 
   forceRedraw() {
-    return this._forceRedraw = true;
+    this.forceRedraw = true;
   }
 
 
@@ -157,7 +155,7 @@ class Plane2D {
     ];
 
     // If layer or zoomStep have changed, everything needs to be redrawn
-    if (this._forceRedraw || !_.isEqual(texture.layer, layer) || !_.isEqual(texture.zoomStep, zoomStep)) {
+    if (this.forceRedraw || !_.isEqual(texture.layer, layer) || !_.isEqual(texture.zoomStep, zoomStep)) {
       texture.layer = layer;
       texture.zoomStep = zoomStep;
       texture.topLeftBucket = topLeftBucket;
@@ -167,7 +165,7 @@ class Plane2D {
       texture.buffer = new Uint8Array(this.TEXTURE_SIZE);
       texture.ready = false;
 
-      this._forceRedraw = false;
+      this.forceRedraw = false;
     }
 
     // If the top-left-bucket has changed, still visible tiles are copied to their new location
@@ -175,8 +173,6 @@ class Plane2D {
       const oldTopLeftBucket = texture.topLeftBucket;
       texture.topLeftBucket = topLeftBucket;
 
-      const oldTiles = texture.tiles;
-      const oldBuffer = texture.buffer;
       texture.tiles = new Array(this.BUCKETS_PER_ROW * this.BUCKETS_PER_ROW);
       texture.buffer = new Uint8Array(this.TEXTURE_SIZE);
       texture.ready = false;
@@ -199,8 +195,8 @@ class Plane2D {
           const oldTile = [oldOffset[0] + du, oldOffset[1] + dv];
           const newTile = [newOffset[0] + du, newOffset[1] + dv];
 
-          const oldTileIndex = tileIndexByTileMacro(this, oldTile);
-          const newTileIndex = tileIndexByTileMacro(this, newTile);
+          tileIndexByTileMacro(this, oldTile);
+          tileIndexByTileMacro(this, newTile);
         }
       }
     }
@@ -348,9 +344,9 @@ class Plane2D {
   }
 
 
-  generateRenderMap([bucket_x, bucket_y, bucket_z, zoomStep]) {
-    let bucket = this.cube.getBucket([bucket_x, bucket_y, bucket_z, zoomStep]);
-    if (bucket.hasData()) { return [[bucket_x, bucket_y, bucket_z, zoomStep]]; }
+  generateRenderMap([bucketX, bucketY, bucketZ, zoomStep]) {
+    let bucket = this.cube.getBucket([bucketX, bucketY, bucketZ, zoomStep]);
+    if (bucket.hasData()) { return [[bucketX, bucketY, bucketZ, zoomStep]]; }
     if (bucket.isOutOfBoundingBox) { return [undefined]; }
 
     const map = new Array(this.MAP_SIZE);
@@ -364,9 +360,9 @@ class Plane2D {
       // TODO
       for (let i = maxZoomStepOffset; i > 0; i--) {
         bucket = [
-          bucket_x >> i,
-          bucket_y >> i,
-          bucket_z >> i,
+          bucketX >> i,
+          bucketY >> i,
+          bucketZ >> i,
           zoomStep + i,
         ];
 
@@ -375,7 +371,7 @@ class Plane2D {
     }
 
     if (zoomStep !== 0 && this.enhanceRenderMap(map, 0,
-        [bucket_x, bucket_y, bucket_z, zoomStep], map[0], this.cube.LOOKUP_DEPTH_DOWN)) {
+        [bucketX, bucketY, bucketZ, zoomStep], map[0], this.cube.LOOKUP_DEPTH_DOWN)) {
       map[0] = this.RECURSION_PLACEHOLDER;
     }
 
@@ -383,12 +379,12 @@ class Plane2D {
   }
 
 
-  enhanceRenderMap(map, mapIndex, [bucket_x, bucket_y, bucket_z, zoomStep], fallback, level) {
+  enhanceRenderMap(map, mapIndex, [bucketX, bucketY, bucketZ, zoomStep], fallback, level) {
     let enhanced = false;
-    const bucket = this.cube.getBucket([bucket_x, bucket_y, bucket_z, zoomStep]);
+    const bucket = this.cube.getBucket([bucketX, bucketY, bucketZ, zoomStep]);
 
     if (bucket.hasData()) {
-      map[mapIndex] = [bucket_x, bucket_y, bucket_z, zoomStep];
+      map[mapIndex] = [bucketX, bucketY, bucketZ, zoomStep];
       enhanced = true;
     } else if (bucket.isOutOfBoundingBox && fallback === this.NOT_LOADED_BUCKET_PLACEHOLDER) {
       map[mapIndex] = undefined;
@@ -404,7 +400,7 @@ class Plane2D {
     if (level && zoomStep) {
       for (let du = 0; du <= 1; du++) {
         for (let dv = 0; dv <= 1; dv++) {
-          const subBucket = [bucket_x << 1, bucket_y << 1, bucket_z << 1, zoomStep - 1];
+          const subBucket = [bucketX << 1, bucketY << 1, bucketZ << 1, zoomStep - 1];
           subBucket[this.U] += du;
           subBucket[this.V] += dv;
           subBucket[this.W] += dw;

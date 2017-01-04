@@ -1,5 +1,3 @@
-import Marionette from "backbone.marionette";
-import _ from "lodash";
 import SettingsView from "./settings_view";
 import TreeCategoryView from "../category_views/tree_category_view";
 import NodeCategoryView from "../category_views/node_category_view";

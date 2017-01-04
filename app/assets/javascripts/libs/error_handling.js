@@ -35,7 +35,7 @@ const ErrorHandling = {
     });
 
     if (!this.sendLocalErrors) {
-      Airbrake.addFilter(notice => location.hostname !== "127.0.0.1" && location.hostname !== "localhost");
+      Airbrake.addFilter(() => location.hostname !== "127.0.0.1" && location.hostname !== "localhost");
     }
 
     return window.onerror = function (message, file, line, colno, error) {

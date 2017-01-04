@@ -1,9 +1,6 @@
-import $ from "jquery";
 import Backbone from "backbone";
 import _ from "lodash";
 import Request from "./request";
-import Marionette from "backbone.marionette";
-
 
 _.mixin({
 

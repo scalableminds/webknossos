@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 let app;
 import Marionette from "backbone.marionette";
 

@@ -1,4 +1,3 @@
-import _ from "lodash";
 import Backbone from "backbone";
 
 class UserModel extends Backbone.Model {
@@ -13,9 +12,8 @@ class UserModel extends Backbone.Model {
     let userID;
     if (userID = this.get("id")) {
       return `/api/users/${userID}`;
-    } else {
-      return "/api/user";
     }
+    return "/api/user";
   }
 
 

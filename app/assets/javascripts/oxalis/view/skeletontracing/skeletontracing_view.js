@@ -1,4 +1,3 @@
-import $ from "jquery";
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";

@@ -36,7 +36,7 @@ class VolumeActionsView extends Marionette.View {
   }
 
 
-  initialize(options) {
+  initialize() {
     return this.listenTo(this.model.volumeTracing, "change:mode", this.render);
   }
 

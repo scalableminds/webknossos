@@ -1,7 +1,6 @@
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
-import app from "app";
 import constants from "oxalis/constants";
 
 class ViewModesView extends Marionette.View {
@@ -31,7 +30,7 @@ class ViewModesView extends Marionette.View {
   }
 
 
-  initialize(options) {
+  initialize() {
     this.listenTo(this.model, "change:mode", this.updateForMode);
     return this.listenTo(this, "attach", this.afterAttach);
   }

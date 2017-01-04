@@ -1,8 +1,6 @@
 import _ from "lodash";
 import $ from "jquery";
-import app from "app";
 import Backbone from "backbone";
-import Dimensions from "oxalis/model/dimensions";
 import Input from "libs/input";
 
 class VolumeTracingController {
@@ -106,7 +104,7 @@ class VolumeTracingController {
     this.inDeleteMode = true;
 
     this.prevActiveCell = this.model.volumeTracing.getActiveCellId();
-    return this.model.volumeTracing.setActiveCell(0);
+    this.model.volumeTracing.setActiveCell(0);
   }
 
 
@@ -114,7 +112,7 @@ class VolumeTracingController {
     if (this.inDeleteMode) {
       this.model.volumeTracing.setActiveCell(this.prevActiveCell);
     }
-    return this.inDeleteMode = false;
+    this.inDeleteMode = false;
   }
 
 

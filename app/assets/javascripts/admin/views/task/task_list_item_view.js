@@ -94,7 +94,7 @@ class TaskListItemView extends Marionette.CompositeView {
     this.collection = new AnnotationCollection(this.model.get("id"));
 
     // minimize the toggle view on item deletion
-    return this.listenTo(this.collection, "remove", item => this.toggleDetails(),
+    return this.listenTo(this.collection, "remove", () => this.toggleDetails(),
     );
   }
 

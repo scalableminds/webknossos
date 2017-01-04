@@ -31,7 +31,7 @@ describe("User List", () => {
     const payload = { name: newTeamName, parent: "Connectomics department", owner: "", roles: [{ name: "admin" }, { name: "user" }], isEditable: "true" };
 
     return Request.json().upload("/api/teams", { data: payload }).then(
-      async (response) => {
+      async () => {
         // select first user 'SCM Boy' and switch the role of the newly created
         // team to 'user'
         await page.selectUser("SCM Boy");

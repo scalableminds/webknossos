@@ -80,7 +80,7 @@ class Cube {
 
     this.initialized = true;
     this.updatePosition(this.model.flycam.getPosition());
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
   updatePosition(position) {
@@ -120,11 +120,11 @@ class Cube {
       }
     }
 
-    return this.cube.visible = this.visible && (id === constants.TDView);
+    this.cube.visible = this.visible && (id === constants.TDView);
   }
 
   setVisibility(visible) {
-    return this.visible = visible;
+    this.visible = visible;
   }
 }
 

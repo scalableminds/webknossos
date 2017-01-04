@@ -28,16 +28,16 @@ class Crosshair {
 
     this.mesh.setVisibility = function (v) {
       this.arbitraryVisible = v;
-      return this.updateVisibility();
+      this.updateVisibility();
     };
 
     this.mesh.setVisibilityEnabled = function (v) {
       this.visibilityEnabled = v;
-      return this.updateVisibility();
+      this.updateVisibility();
     };
 
     this.mesh.updateVisibility = function () {
-      return this.visible = this.arbitraryVisible && this.visibilityEnabled;
+      this.visible = this.arbitraryVisible && this.visibilityEnabled;
     };
 
     this.setScale(scale);
@@ -45,11 +45,12 @@ class Crosshair {
 
 
   setVisibility(v) {
-    return this.mesh.setVisibilityEnabled(v);
+    this.mesh.setVisibilityEnabled(v);
   }
 
 
   update() {
+    // eslint-disable-next-line no-unused-vars
     const { isDirty, context, WIDTH, COLOR, texture, mesh, cam } = this;
 
     if (this.isDirty) {
@@ -85,18 +86,19 @@ class Crosshair {
 
     mesh.matrixWorldNeedsUpdate = true;
 
-    return this.isDirty = false;
+    this.isDirty = false;
   }
 
 
   setScale(value) {
+    // eslint-disable-next-line no-unused-vars
     const { SCALE_MIN, SCALE_MAX, mesh } = this;
 
     if (value > SCALE_MIN && value < SCALE_MAX) {
       this.scale = value;
     }
 
-    return this.isDirty = true;
+    this.isDirty = true;
   }
 
 

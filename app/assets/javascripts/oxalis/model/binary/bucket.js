@@ -1,14 +1,13 @@
 import Backbone from "backbone";
 import _ from "lodash";
 
-let STATE_NAMES;
 class Bucket {
   static initClass() {
     this.prototype.STATE_UNREQUESTED = 0;
     this.prototype.STATE_REQUESTED = 1;
     this.prototype.STATE_LOADED = 2;
 
-    STATE_NAMES = ["unrequested", "requested", "loaded"];
+    this.prototype.STATE_NAMES = ["unrequested", "requested", "loaded"];
 
     this.prototype.BUCKET_SIZE_P = 5;
   }

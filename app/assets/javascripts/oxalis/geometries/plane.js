@@ -1,6 +1,4 @@
 import app from "app";
-import Model from "../model";
-import View from "../view";
 import Dimensions from "../model/dimensions";
 import constants from "../constants";
 import THREE from "three";
@@ -69,32 +67,30 @@ class Plane {
     TDViewBordersGeo.vertices.push(new THREE.Vector3(pWidth / 2, pWidth / 2, 0));
     TDViewBordersGeo.vertices.push(new THREE.Vector3(pWidth / 2, -pWidth / 2, 0));
     TDViewBordersGeo.vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
-    return this.TDViewBorders = new THREE.Line(TDViewBordersGeo, new THREE.LineBasicMaterial({ color: constants.PLANE_COLORS[this.planeID], linewidth: 1 }));
+    this.TDViewBorders = new THREE.Line(TDViewBordersGeo, new THREE.LineBasicMaterial({ color: constants.PLANE_COLORS[this.planeID], linewidth: 1 }));
   }
 
 
   setDisplayCrosshair(value) {
-    return this.displayCosshair = value;
+    this.displayCosshair = value;
   }
 
 
   setOriginalCrosshairColor() {
-    return [0, 1].map(i =>
-      this.crosshair[i].material = new THREE.LineBasicMaterial({ color: this.CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 }));
+    [0, 1].forEach((i) => {
+      this.crosshair[i].material = new THREE.LineBasicMaterial({ color: this.CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 });
+    });
   }
 
-
   setGrayCrosshairColor() {
-    return [0, 1].map(i =>
-      this.crosshair[i].material = new THREE.LineBasicMaterial({ color: this.GRAY_CH_COLOR, linewidth: 1 }));
+    [0, 1].forEach((i) => {
+      this.crosshair[i].material = new THREE.LineBasicMaterial({ color: this.GRAY_CH_COLOR, linewidth: 1 });
+    });
   }
 
 
   updateTexture() {
-    const globalPos = this.flycam.getPosition();
-
     const area = this.flycam.getArea(this.planeID);
-    const tPos = this.flycam.getTexturePosition(this.planeID).slice();
     if (this.model != null) {
       for (const name in this.model.binary) {
         const binary = this.model.binary[name];
@@ -126,7 +122,7 @@ class Plane {
 
   setScale(factor) {
     const scaleVec = new THREE.Vector3().multiplyVectors(new THREE.Vector3(factor, factor, factor), this.scaleVector);
-    return this.plane.scale = this.TDViewBorders.scale = this.crosshair[0].scale = this.crosshair[1].scale = scaleVec;
+    this.plane.scale = this.TDViewBorders.scale = this.crosshair[0].scale = this.crosshair[1].scale = scaleVec;
   }
 
 
@@ -145,19 +141,19 @@ class Plane {
     } else if (this.planeID === constants.PLANE_YZ) {
       offset.x = -1;
     } else if (this.planeID === constants.PLANE_XZ) { offset.y = -1; }
-    return this.plane.position = offset.addVectors(posVec, offset);
+    this.plane.position = offset.addVectors(posVec, offset);
   }
 
 
   setVisible(visible) {
     this.plane.visible = this.TDViewBorders.visible = visible;
-    return this.crosshair[0].visible = this.crosshair[1].visible = visible && this.displayCosshair;
+    this.crosshair[0].visible = this.crosshair[1].visible = visible && this.displayCosshair;
   }
 
 
   setSegmentationAlpha(alpha) {
     this.plane.material.setSegmentationAlpha(alpha);
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 

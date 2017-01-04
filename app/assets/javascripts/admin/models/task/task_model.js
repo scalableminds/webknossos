@@ -1,4 +1,3 @@
-import Backbone from "backbone";
 import NestedObjModel from "libs/nested_obj_model";
 import FormatUtils from "libs/format_utils";
 

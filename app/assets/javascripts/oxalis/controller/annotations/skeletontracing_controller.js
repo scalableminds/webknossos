@@ -1,7 +1,5 @@
 import _ from "lodash";
-import app from "app";
 import Backbone from "backbone";
-import Dimensions from "oxalis/model/dimensions";
 import constants from "oxalis/constants";
 
 class SkeletonTracingController {

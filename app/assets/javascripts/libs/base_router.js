@@ -71,7 +71,7 @@ class BaseRouter {
   }
 
 
-  handlePopstate(event) {
+  handlePopstate() {
     // Remember: URL is already changed
 
     if (!this.shouldNavigate(window.location.pathname)) {

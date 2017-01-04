@@ -1,4 +1,3 @@
-import constants from "oxalis/constants";
 import CategoryView from "./category_view";
 import NumberSettingView from "../setting_views/number_setting_view";
 import ButtonSettingView from "../setting_views/button_setting_view";

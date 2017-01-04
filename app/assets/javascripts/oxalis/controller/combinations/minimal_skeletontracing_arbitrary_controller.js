@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import Input from "libs/input";
 import ArbitraryController from "../viewmodes/arbitrary_controller";
 import Constants from "../../constants";
@@ -26,8 +25,8 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
       space: timeFactor => this.move(timeFactor),
 
       // Zoom in/out
-      i: timeFactor => this.cam.zoomIn(),
-      o: timeFactor => this.cam.zoomOut(),
+      i: () => this.cam.zoomIn(),
+      o: () => this.cam.zoomOut(),
 
       // Rotate in distance
       left: timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
@@ -48,7 +47,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
     });
 
-    return this.input.keyboardOnce = new Input.Keyboard({
+    this.input.keyboardOnce = new Input.Keyboard({
 
       // Delete active node and recenter last node
       "shift + space": () => this.deleteActiveNode(),
@@ -59,12 +58,12 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
 
   // make sure that it is not possible to keep nodes from being created
-  setWaypoint() {
+  setWaypoint(...args) {
     if (this.isBranchpointvideoMode()) { return; }
     if (!this.model.get("flightmodeRecording")) {
       this.model.set("flightmodeRecording", true);
     }
-    return super.setWaypoint(...arguments);
+    return super.setWaypoint(...args);
   }
 
 
@@ -73,9 +72,9 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
     const { skeletonTracing } = this.model;
     const activeNode = skeletonTracing.getActiveNode();
     if (activeNode.id === 1) {
-      return Toast.error("Unable: Attempting to delete first node");
+      Toast.error("Unable: Attempting to delete first node");
     } else {
-      return _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(() => this.centerActiveNode()));
+      _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(() => this.centerActiveNode()));
     }
   }
 }

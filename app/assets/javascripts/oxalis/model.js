@@ -30,13 +30,13 @@ class Model extends Backbone.Model {
   }
 
 
-  constructor() {
-    super(...arguments);
+  constructor(...args) {
+    super(...args);
     this.initialized = false;
   }
 
 
-  fetch(options) {
+  fetch() {
     let datasetName,
       infoUrl;
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
@@ -121,7 +121,6 @@ class Model extends Backbone.Model {
 
 
   initializeWithData(tracing, layerInfos) {
-    let bb;
     const { dataStore } = tracing.content.dataSet;
     const dataset = this.get("dataset");
 
@@ -146,7 +145,8 @@ class Model extends Backbone.Model {
     const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
     app.scaleInfo = new ScaleInfo(dataset.get("scale"));
 
-    if ((bb = tracing.content.boundingBox) != null) {
+    const bb = tracing.content.boundingBox;
+    if (bb != null) {
       this.taskBoundingBox = this.computeBoundingBoxFromArray(bb.topLeft.concat([bb.width, bb.height, bb.depth]));
     }
 
@@ -342,6 +342,7 @@ class Model extends Backbone.Model {
 
   // Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
   initSettersGetter() {
+    // eslint-disable-next-line no-unused-vars
     return _.forEach(this.attributes, (value, key, attribute) => Object.defineProperty(this, key, {
       set(val) {
         return this.set(key, val);

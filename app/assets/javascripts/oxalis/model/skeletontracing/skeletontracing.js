@@ -2,12 +2,10 @@ import app from "app";
 import Backbone from "backbone";
 import _ from "lodash";
 import Utils from "libs/utils";
-import Request from "libs/request";
 import ColorGenerator from "libs/color_generator";
 import TracePoint from "./tracepoint";
 import TraceTree from "./tracetree";
 import SkeletonTracingStateLogger from "./skeletontracing_statelogger";
-import constants from "../../constants";
 import RestrictionHandler from "../helpers/restriction_handler";
 import TracingParser from "./tracingparser";
 
@@ -124,7 +122,6 @@ class SkeletonTracing {
         } else {
           this.activeNode = point;
           if (this.branchPointsAllowed) {
-            const centered = true;
             this.pushBranch();
           }
         }
@@ -145,7 +142,7 @@ class SkeletonTracing {
         this.activeTree.branchpoints.push({ id: this.activeNode.id, timestamp: Date.now() });
         this.stateLogger.updateTree(this.activeTree);
 
-        return this.trigger("setBranch", true, this.activeNode);
+        this.trigger("setBranch", true, this.activeNode);
       }
     } else {
       return this.trigger("noBranchPoints");

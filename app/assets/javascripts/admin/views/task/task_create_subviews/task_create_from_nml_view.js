@@ -1,6 +1,5 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import routes from "routes";
 import Toast from "libs/toast";
 import Request from "libs/request";
 
@@ -33,7 +32,7 @@ class TaskCreateFromNMLView extends Marionette.View {
   }
 
   initialize(options) {
-    return this.parent = options.parent;
+    this.parent = options.parent;
   }
 
 

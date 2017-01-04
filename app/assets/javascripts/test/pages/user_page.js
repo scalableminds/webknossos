@@ -1,4 +1,4 @@
-import { map, isArray, flatten, extend, fromPairs, chain, trim } from "lodash";
+import { isArray, fromPairs, chain, trim } from "lodash";
 
 export default class UserPage {
 

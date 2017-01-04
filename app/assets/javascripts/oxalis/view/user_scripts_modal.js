@@ -1,4 +1,4 @@
-/* eslint no-eval: "off", no-alert: "off" */
+/* eslint-disable no-eval, no-alert */
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 

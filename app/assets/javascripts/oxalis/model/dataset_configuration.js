@@ -1,7 +1,5 @@
 import _ from "lodash";
 import app from "app";
-import Request from "libs/request";
-import Backbone from "backbone";
 import NestedObjModel from "libs/nested_obj_model";
 
 

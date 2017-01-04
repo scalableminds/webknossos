@@ -3,7 +3,6 @@ import _ from "lodash";
 import $ from "jquery";
 import app from "app";
 import Request from "libs/request";
-import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 
 class StateLogger {

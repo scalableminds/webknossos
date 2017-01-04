@@ -8,16 +8,16 @@ import Cube from "../cube";
 class NdStoreLayer extends Layer {
 
 
-  constructor() {
-    super(...arguments);
+  constructor(...args) {
+    super(...args);
 
     if (this.dataStoreInfo.typ !== "ndstore") {
       throw new Error("NDstoreLayer should only be instantiated with ndstore");
     }
   }
 
-
-  sendToStoreImpl(batch, getBucketData, token) {
+  // eslint-disable-next-line no-unused-vars
+  sendToStoreImpl(token) {
     throw new Error("NDstore does not currently support sendToStore");
   }
 

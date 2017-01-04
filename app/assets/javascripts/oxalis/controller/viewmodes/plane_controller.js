@@ -4,7 +4,7 @@ import $ from "jquery";
 import _ from "lodash";
 import Utils from "libs/utils";
 import Input from "libs/input";
-import Trackball from "three.trackball";
+import Trackball from "three.trackball"; // eslint-disable-line no-unused-vars
 import CameraController from "../camera_controller";
 import Dimensions from "../../model/dimensions";
 import PlaneView from "../../view/plane_view";
@@ -122,7 +122,7 @@ class PlaneController {
   getPlaneMouseControls(planeId) {
     return {
 
-      leftDownMove: (delta, pos) => this.move([
+      leftDownMove: (delta) => this.move([
         (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
         (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
         0,
@@ -187,9 +187,8 @@ class PlaneController {
     const getMoveValue = (timeFactor) => {
       if (([0, 1, 2]).includes(this.activeViewport)) {
         return (this.model.user.get("moveValue") * timeFactor) / app.scaleInfo.baseVoxel / constants.FPS;
-      } else {
-        return (constants.TDView_MOVE_SPEED * timeFactor) / constants.FPS;
       }
+      return (constants.TDView_MOVE_SPEED * timeFactor) / constants.FPS;
     };
 
     this.input.keyboard = new Input.Keyboard({
@@ -224,7 +223,7 @@ class PlaneController {
 
     this.listenTo(this.model.user, "change:keyboardDelay", function (model, value) { return this.input.keyboardLoopDelayed.delay = value; });
 
-    return this.input.keyboardNoLoop = new Input.KeyboardNoLoop(this.getKeyboardControls());
+    this.input.keyboardNoLoop = new Input.KeyboardNoLoop(this.getKeyboardControls());
   }
 
 
@@ -247,7 +246,7 @@ class PlaneController {
   }
 
 
-  start(newMode) {
+  start() {
     this.stop();
 
     this.sceneController.start();
@@ -257,7 +256,7 @@ class PlaneController {
     this.init();
     this.initMouse();
 
-    return this.isStarted = true;
+    this.isStarted = true;
   }
 
 
@@ -269,7 +268,7 @@ class PlaneController {
     this.sceneController.stop();
     this.planeView.stop();
 
-    return this.isStarted = false;
+    this.isStarted = false;
   }
 
   bindToEvents() {
@@ -320,9 +319,8 @@ class PlaneController {
   move(v, increaseSpeedWithZoom = true) {
     if (([0, 1, 2]).includes(this.activeViewport)) {
       return this.flycam.movePlane(v, this.activeViewport, increaseSpeedWithZoom);
-    } else {
-      return this.moveTDView({ x: -v[0], y: -v[1] });
     }
+    return this.moveTDView({ x: -v[0], y: -v[1] });
   }
 
 
@@ -442,22 +440,25 @@ class PlaneController {
     const zoomFactor = this.flycam.getPlaneScalingFactor();
     const { scaleFactor } = this.planeView;
     const planeRatio = app.scaleInfo.baseVoxelFactors;
-    return position = (() => {
-      switch (this.activeViewport) {
-        case constants.PLANE_XY:
-          return [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),
-            curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[1] * zoomFactor),
-            curGlobalPos[2]];
-        case constants.PLANE_YZ:
-          return [curGlobalPos[0],
-            curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[1] * zoomFactor),
-            curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[2] * zoomFactor)];
-        case constants.PLANE_XZ:
-          return [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),
-            curGlobalPos[1],
-            curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[2] * zoomFactor)];
-      }
-    })();
+    switch (this.activeViewport) {
+      case constants.PLANE_XY:
+        position = [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),
+          curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[1] * zoomFactor),
+          curGlobalPos[2]];
+        break;
+      case constants.PLANE_YZ:
+        position = [curGlobalPos[0],
+          curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[1] * zoomFactor),
+          curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[2] * zoomFactor)];
+        break;
+      case constants.PLANE_XZ:
+        position = [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),
+          curGlobalPos[1],
+          curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[2] * zoomFactor)];
+        break;
+    }
+
+    return position;
   }
 }
 PlaneController.initClass();

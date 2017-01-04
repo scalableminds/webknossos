@@ -1,7 +1,6 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Utils from "libs/utils";
-import ColorConverter from "three.color";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 
 class ListTreeItemView extends Marionette.View {

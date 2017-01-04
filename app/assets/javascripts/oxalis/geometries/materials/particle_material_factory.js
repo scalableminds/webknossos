@@ -1,6 +1,5 @@
 import _ from "lodash";
 import app from "app";
-import THREE from "three";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
 class ParticleMaterialFactory extends AbstractMaterialFactory {
@@ -37,7 +36,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
     },
     );
 
-    return this.attributes = _.extend(this.attributes, {
+    this.attributes = _.extend(this.attributes, {
       sizeNm: {
         type: "f",
       },
@@ -52,7 +51,10 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
   makeMaterial() {
     super.makeMaterial({ vertexColors: true });
 
-    return this.material.setShowRadius = showRadius => this.uniforms.showRadius.value = showRadius ? 1 : 0;
+    this.material.setShowRadius = (showRadius) => {
+      const radius = this.uniforms.showRadius.value = showRadius ? 1 : 0;
+      return radius;
+    };
   }
 
 

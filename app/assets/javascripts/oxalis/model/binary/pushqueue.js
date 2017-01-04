@@ -1,7 +1,4 @@
 import _ from "lodash";
-import Cube from "./cube";
-import Request from "../../../libs/request";
-import MultipartData from "../../../libs/multipart_data";
 
 class PushQueue {
   static initClass() {
@@ -47,7 +44,7 @@ class PushQueue {
 
 
   clear() {
-    return this.queue = [];
+    this.queue = [];
   }
 
 

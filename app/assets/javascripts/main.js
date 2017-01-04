@@ -1,5 +1,4 @@
 import $ from "jquery";
-import _ from "lodash";
 import Backbone from "backbone";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
@@ -13,10 +12,10 @@ import "libs/core_ext";
 import "backbone.marionette";
 
 import "../stylesheets/main.less";
+import Router from "./router";
 
 ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
 
-import Router from "./router";
 
 app.on("start", () => {
   app.router = new Router();
@@ -28,6 +27,7 @@ app.on("start", () =>
     .then((user) => {
       app.currentUser = user;
       ErrorHandling.setCurrentUser(user);
+      // eslint-disable-next-line no-unused-vars
     }).catch((error) => { }),
 );
 

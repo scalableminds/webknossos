@@ -71,12 +71,13 @@ class Layer {
     );
   }
 
-
+  // eslint-disable-next-line no-unused-vars
   requestFromStoreImpl(batch, token) {
     throw new Error("Subclass responsibility");
   }
 
 
+  // eslint-disable-next-line no-unused-vars
   sendToStoreImpl(batch, getBucketData, token) {
     throw new Error("Subclass responsibility");
   }

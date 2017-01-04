@@ -5,18 +5,18 @@ class ResizableBuffer {
     this.prototype.GROW_MULTIPLIER = 1.3;
   }
 
-  constructor(elementLength, initialCapacity = 100, bufferType = Float32Array) {
+  constructor(elementLength, initialCapacity = 100, BufferType = Float32Array) {
     this.elementLength = elementLength;
-    this.bufferType = bufferType;
+    this.BufferType = BufferType;
     this.capacity = initialCapacity * this.elementLength;
-    this.buffer = new this.bufferType(this.capacity);
+    this.buffer = new this.BufferType(this.capacity);
 
     this.length = 0;
   }
 
 
   clear() {
-    return this.length = 0;
+    this.length = 0;
   }
 
 
@@ -66,6 +66,7 @@ class ResizableBuffer {
   pushSubarray(subarray) {
     this.ensureCapacity(this.length + subarray.length);
 
+    // eslint-disable-next-line no-unused-vars
     const { buffer, elementLength, length } = this;
 
     buffer.set(subarray, length);
@@ -94,6 +95,7 @@ class ResizableBuffer {
     if (r == null) { r = new Array(this.elementLength); }
     if (!this.length) { return; }
 
+    // eslint-disable-next-line no-unused-vars
     let { buffer, elementLength, length } = this;
 
     for (let i = elementLength - 1; i >= 0; i--) {
@@ -114,7 +116,7 @@ class ResizableBuffer {
         this.capacity -= this.capacity % this.elementLength;
       }
 
-      const newBuffer = new this.bufferType(this.capacity);
+      const newBuffer = new this.BufferType(this.capacity);
 
       newBuffer.set(buffer);
 

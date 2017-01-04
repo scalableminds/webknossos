@@ -1,5 +1,6 @@
 import _ from "lodash";
 import $ from "jquery";
+// eslint-disable-next-line no-unused-vars
 import Bootstrap from "bootstrap";
 
 $.fn.alertWithTimeout = function (timeout = 3000) {

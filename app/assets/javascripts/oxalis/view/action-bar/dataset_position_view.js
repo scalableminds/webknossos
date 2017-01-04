@@ -58,7 +58,7 @@ class DatasetPositionView extends Marionette.View {
   }
 
 
-  initialize(options) {
+  initialize() {
     this.render = _.throttle(this.render, 100);
     this.listenTo(this.model, "change:mode", this.render);
 

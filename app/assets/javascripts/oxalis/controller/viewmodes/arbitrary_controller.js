@@ -9,10 +9,9 @@ import Crosshair from "../../geometries/crosshair";
 import ArbitraryView from "../../view/arbitrary_view";
 import ArbitraryPlaneInfo from "../../geometries/arbitrary_plane_info";
 import constants from "../../constants";
-import { M4x4, V3 } from "libs/mjs";
+import { V3 } from "libs/mjs";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
-import modal from "../../view/modal";
 
 class ArbitraryController {
   static initClass() {
@@ -120,7 +119,7 @@ class ArbitraryController {
             return this.cam.move([delta.x * f, delta.y * f, 0]);
           }
         },
-        rightClick: (pos, plane, event) => this.createBranchMarker(pos),
+        rightClick: pos => this.createBranchMarker(pos),
 
         scroll: this.scroll,
       },
@@ -134,8 +133,8 @@ class ArbitraryController {
       // KeyboardJS is sensitive to ordering (complex combos first)
 
       // Scale plane
-      l: timeFactor => this.arbitraryView.applyScale(-this.model.user.get("scaleValue")),
-      k: timeFactor => this.arbitraryView.applyScale(this.model.user.get("scaleValue")),
+      l: () => this.arbitraryView.applyScale(-this.model.user.get("scaleValue")),
+      k: () => this.arbitraryView.applyScale(this.model.user.get("scaleValue")),
 
       // Move
       space: (timeFactor) => {
@@ -169,12 +168,12 @@ class ArbitraryController {
       down: timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
 
       // Zoom in/out
-      i: timeFactor => this.cam.zoomIn(),
-      o: timeFactor => this.cam.zoomOut(),
+      i: () => this.cam.zoomIn(),
+      o: () => this.cam.zoomOut(),
 
       // Change move value
-      h: timeFactor => this.changeMoveValue(25),
-      g: timeFactor => this.changeMoveValue(-25),
+      h: () => this.changeMoveValue(25),
+      g: () => this.changeMoveValue(-25),
     });
 
     this.input.keyboardNoLoop = new Input.KeyboardNoLoop({
@@ -193,7 +192,7 @@ class ArbitraryController {
       r: () => this.cam.yaw(Math.PI),
     });
 
-    return this.input.keyboardOnce = new Input.Keyboard(
+    this.input.keyboardOnce = new Input.Keyboard(
 
       // Delete active node and recenter last node
       { "shift + space": () => this.deleteActiveNode() }
@@ -224,7 +223,7 @@ class ArbitraryController {
       this.setActiveNode(activeNode.id, true);
     }
     this.model.setMode(1);
-    return this.moved();
+    this.moved();
   }
 
 
@@ -236,7 +235,7 @@ class ArbitraryController {
     }
     this.setActiveNode(((activeNode.id + (2 * nextOne)) - 1), true); // implicit cast from boolean to int
     if ((this.view.theme === constants.THEME_BRIGHT) !== nextOne) { // switch background to black for backwards move
-      return this.view.toggleTheme();
+      this.view.toggleTheme();
     }
   }
 
@@ -250,7 +249,7 @@ class ArbitraryController {
     if (!this.isStarted) { return; }
     if (this.isBranchpointvideoMode()) { return; }
     this.cam.move([0, 0, this.getVoxelOffset(timeFactor)]);
-    return this.moved();
+    this.moved();
   }
 
 
@@ -295,7 +294,7 @@ class ArbitraryController {
     this.init();
     this.arbitraryView.draw();
 
-    return this.isStarted = true;
+    this.isStarted = true;
   }
 
 
@@ -306,7 +305,7 @@ class ArbitraryController {
 
     this.arbitraryView.stop();
 
-    return this.isStarted = false;
+    this.isStarted = false;
   }
 
 
@@ -323,7 +322,7 @@ class ArbitraryController {
     const fourBit = datasetConfig.get("fourBit") ? 4 : 8;
     const interpolation = datasetConfig.get("interpolation");
 
-    return this.model.skeletonTracing.addNode(position, rotation, constants.ARBITRARY_VIEW, 0, fourBit, interpolation);
+    this.model.skeletonTracing.addNode(position, rotation, constants.ARBITRARY_VIEW, 0, fourBit, interpolation);
   }
 
 
@@ -335,7 +334,7 @@ class ArbitraryController {
     const position = this.cam.getPosition();
     const rotation = this.cam.getRotation();
 
-    return this.addNode(position, rotation);
+    this.addNode(position, rotation);
   }
 
 
@@ -360,9 +359,8 @@ class ArbitraryController {
   setClippingDistance(value) {
     if (this.isBranchpointvideoMode()) {
       return this.arbitraryView.setClippingDistance(constants.BRANCHPOINT_VIDEO_CLIPPING_DISTANCE);
-    } else {
-      return this.arbitraryView.setClippingDistance(value);
-    }
+    } else
+    return this.arbitraryView.setClippingDistance(value);
   }
 
 
@@ -424,12 +422,12 @@ class ArbitraryController {
     const activeNode = skeletonTracing.getActiveNode();
     if (activeNode.neighbors.length > 1) {
       return Toast.error("Unable: Attempting to cut skeleton");
-    } else {
-      return _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(
-        () => this.centerActiveNode(),
-      ),
-      );
     }
+
+    return _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(
+      () => this.centerActiveNode(),
+    ),
+    );
   }
 
 

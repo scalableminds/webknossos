@@ -61,7 +61,7 @@ class ArbitraryPlane {
   }
 
 
-  setMode(mode, radius) {
+  setMode(mode) {
     this.queryVertices = (() => {
       switch (mode) {
         case constants.MODE_ARBITRARY: return this.calculateSphereVertices();
@@ -69,7 +69,7 @@ class ArbitraryPlane {
       }
     })();
 
-    return this.isDirty = true;
+    this.isDirty = true;
   }
 
 

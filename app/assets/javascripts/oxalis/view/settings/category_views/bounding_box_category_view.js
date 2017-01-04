@@ -29,6 +29,7 @@ class BoundingBoxCategory extends CategoryView {
 
   validate(value) {
     let isInvalid;
+    // eslint-disable-next-line no-unused-vars
     const [minX, minY, minZ, width, height, depth] = Utils.stringToNumberArray(value);
 
     // Width, height and depth of 0 should be allowed as a non-existing bounding box equals 0,0,0,0,0,0

@@ -3,7 +3,6 @@ import app from "app";
 import Toast from "../libs/toast";
 import THREE from "three";
 import constants from "./constants";
-import modal from "./view/modal";
 
 class View {
 

@@ -1,7 +1,4 @@
 import _ from "lodash";
-import app from "app";
-import Marionette from "backbone.marionette";
-import Toast from "libs/toast";
 import TeamModel from "admin/models/team/team_model";
 import TeamCollection from "admin/models/team/team_collection";
 import SelectionView from "admin/views/selection_view";
@@ -48,7 +45,7 @@ class CreateTeamModalView extends ModalView {
   initialize(options) {
     this.teamCollection = options.teamCollection;
 
-    return this.teamSelectionView = new SelectionView({
+    this.teamSelectionView = new SelectionView({
       collection: new TeamCollection(),
       childViewOptions: {
         modelValue() { return `${this.model.get("name")}`; },

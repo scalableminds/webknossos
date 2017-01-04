@@ -36,7 +36,7 @@ class SliderSettingView extends AbstractSettingView {
   }
 
 
-  handleSliderChange(evt) {
+  handleSliderChange() {
     const value = this.getSliderValue();
     this.ui.text.val(value);
     return this.model.set(this.options.name, value);
@@ -74,7 +74,7 @@ class SliderSettingView extends AbstractSettingView {
   }
 
 
-  resetValue(evt) {
+  resetValue() {
     if (this.model) {
       let reset;
       if (reset = this.model.reset) {

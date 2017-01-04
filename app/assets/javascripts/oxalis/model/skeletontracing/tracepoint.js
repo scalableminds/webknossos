@@ -48,9 +48,8 @@ class TracePoint {
   }
 
 
-  buildTree(parent) {
+  buildTree(parent = null) {
 
-    if (parent == null) { parent = null; }
     this.setChildRelation(parent);
 
     let childrenIterator = this.children;

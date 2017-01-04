@@ -42,8 +42,7 @@ class Flycam3d {
   }
 
 
-  calculateDistanceVectors(zoomStep) {
-    if (zoomStep == null) { zoomStep = 1; }
+  calculateDistanceVectors(zoomStep = 1) {
     this.distanceVecNegative = [0, 0, -zoomStep * this.distance];
     return this.distanceVecPositive = [0, 0, zoomStep * this.distance];
   }
@@ -59,10 +58,9 @@ class Flycam3d {
   }
 
 
-  reset(resetPosition) {
+  reset(resetPosition = true) {
 
     let position;
-    if (resetPosition == null) { resetPosition = true; }
     const { scale } = this;
     if (this.currentMatrix != null) {
       position = this.currentMatrix.slice(12, 15);
@@ -160,9 +158,8 @@ class Flycam3d {
   }
 
 
-  yaw(angle, regardDistance) {
+  yaw(angle, regardDistance = false) {
 
-    if (regardDistance == null) { regardDistance = false; }
     if (regardDistance) {
       transformationWithDistanceMacro(this, this.yawSilent, angle);
     } else {
@@ -178,9 +175,8 @@ class Flycam3d {
   }
 
 
-  roll(angle, regardDistance) {
+  roll(angle, regardDistance = false) {
 
-    if (regardDistance == null) { regardDistance = false; }
     if (regardDistance) {
       transformationWithDistanceMacro(this, this.rollSilent, angle);
     } else {
@@ -196,9 +192,8 @@ class Flycam3d {
   }
 
 
-  pitch(angle, regardDistance) {
+  pitch(angle, regardDistance = false) {
 
-    if (regardDistance == null) { regardDistance = false; }
     if (regardDistance) {
       transformationWithDistanceMacro(this, this.pitchSilent, angle);
     } else {

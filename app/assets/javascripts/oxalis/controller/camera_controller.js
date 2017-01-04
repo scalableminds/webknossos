@@ -9,10 +9,10 @@ import TWEEN from "tween.js";
 
 class CameraController {
   static initClass() {
-  
+
     // The Sceleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
     // View. It provides methods to set a certain View (animated).
-  
+
     this.prototype.cameras  = null;
     this.prototype.flycam  = null;
     this.prototype.model  = null;
@@ -58,9 +58,8 @@ class CameraController {
   }
 
 
-  changeTDView(id, animate) {
+  changeTDView(id, animate = true) {
     let padding;
-    if (animate == null) { animate = true; }
     const camera = this.cameras[constants.TDView];
     const b = app.scaleInfo.voxelToNm(this.model.upperBoundary);
 

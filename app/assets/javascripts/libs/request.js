@@ -7,9 +7,8 @@ const Request = {
 
   // IN:  nothing
   // OUT: json
-  receiveJSON(url, options) {
+  receiveJSON(url, options = {}) {
 
-    if (options == null) { options = {}; }
     return this.triggerRequest(
       url,
       _.defaultsDeep(options, { headers : { "Accept": "application/json" }}),
@@ -20,11 +19,10 @@ const Request = {
 
   // IN:  json
   // OUT: json
-  sendJSONReceiveJSON(url, options) {
+  sendJSONReceiveJSON(url, options = {}) {
 
     // Sanity check
     // Requests without body should not send 'json' header and use 'receiveJSON' instead
-    if (options == null) { options = {}; }
     if (!options.data) {
       if (options.method === "POST" || options.method === "PUT") {
         console.warn("Sending POST/PUT request without body", url);
@@ -32,7 +30,7 @@ const Request = {
       return this.receiveJSON(url, options);
     }
 
-    const body = typeof(options.data) === "string" ?
+    const body = typeof (options.data) === "string" ?
         options.data
       :
         JSON.stringify(options.data);
@@ -52,9 +50,8 @@ const Request = {
 
   // IN:  multipart formdata
   // OUT: json
-  sendMultipartFormReceiveJSON(url, options) {
+  sendMultipartFormReceiveJSON(url, options = {}) {
 
-    if (options == null) { options = {}; }
     const toFormData = function(input, form, namespace) {
       const formData = form || new FormData();
 
@@ -107,9 +104,8 @@ const Request = {
 
   // IN:  url-encoded formdata
   // OUT: json
-  sendUrlEncodedFormReceiveJSON(url, options) {
+  sendUrlEncodedFormReceiveJSON(url, options = {}) {
 
-    if (options == null) { options = {}; }
     const body = typeof options.data === "string" ?
         options.data
       :
@@ -129,9 +125,8 @@ const Request = {
   },
 
 
-  receiveArraybuffer(url, options) {
+  receiveArraybuffer(url, options = {}) {
 
-    if (options == null) { options = {}; }
     return this.triggerRequest(
       url,
       _.defaultsDeep(options, { headers : { "Accept": "application/octet-stream" }}),
@@ -141,9 +136,8 @@ const Request = {
 
   // IN:  arraybuffer
   // OUT: arraybuffer
-  sendArraybufferReceiveArraybuffer(url, options) {
+  sendArraybufferReceiveArraybuffer(url, options = {}) {
 
-    if (options == null) { options = {}; }
     let body = options.data instanceof ArrayBuffer ?
         options.data
       :
@@ -168,9 +162,8 @@ const Request = {
   },
 
 
-  triggerRequest(url, options, responseDataHandler) {
+  triggerRequest(url, options= {}, responseDataHandler) {
 
-    if (options == null) { options = {}; }
     const defaultOptions = {
       method : "GET",
       host : "",

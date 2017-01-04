@@ -8,7 +8,7 @@ import BoundingBox from "./bounding_box";
 
 class Cube {
   static initClass() {
-  
+
     // Constants
     this.prototype.BUCKET_SIZE_P  = 5;
     this.prototype.CUBE_SIZE_P    = 7;
@@ -19,13 +19,13 @@ class Cube {
     this.prototype.LOOKUP_DEPTH_DOWN  = 1;
     this.prototype.MAXIMUM_BUCKET_COUNT  = 5000;
     this.prototype.ARBITRARY_MAX_ZOOMSTEP  = 2;
-  
+
     this.prototype.EMPTY_MAPPING  = null;
-  
+
     this.prototype.arbitraryCube  = null;
     this.prototype.dataCubes  = null;
     this.prototype.upperBoundary  = null;
-  
+
     this.prototype.buckets  = null;
     this.prototype.bucketIterator  = 0;
     this.prototype.bucketCount  = 0;
@@ -383,10 +383,9 @@ class Cube {
   }
 
 
-  positionToZoomedAddress([x, y, z], zoomStep) {
+  positionToZoomedAddress([x, y, z], zoomStep = 0) {
     // return the bucket a given voxel lies in
 
-    if (zoomStep == null) { zoomStep = 0; }
     return [
       x >> (this.BUCKET_SIZE_P + zoomStep),
       y >> (this.BUCKET_SIZE_P + zoomStep),

@@ -3,7 +3,7 @@ import Marionette from "backbone.marionette";
 
 class StatisticListItemView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.tagName  = "tr";
     this.prototype.template  = _.template(`\
 <td><%- user.firstName %> <%- user.lastName %></td>
@@ -24,9 +24,8 @@ class StatisticListItemView extends Marionette.View {
   }
 
 
-  zeroPad(number, digits) {
+  zeroPad(number, digits = 2) {
 
-    if (digits == null) { digits = 2; }
     number = `${number}`;
     while (number.length < digits) {
       number = `0${number}`;

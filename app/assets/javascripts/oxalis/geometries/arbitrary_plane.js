@@ -25,15 +25,15 @@ import ArbitraryPlaneMaterialFactory from "./materials/arbitrary_plane_material_
 // for the flat surface
 class ArbitraryPlane {
   static initClass() {
-  
+
     this.prototype.cam  = null;
     this.prototype.model  = null;
     this.prototype.controller  = null;
-  
+
     this.prototype.mesh  = null;
-  
+
     this.prototype.isDirty  = true;
-  
+
     this.prototype.queryVertices  = null;
     this.prototype.width  = 0;
     this.prototype.height  = 0;
@@ -41,9 +41,8 @@ class ArbitraryPlane {
   }
 
 
-  constructor(cam, model, controller, width) {
+  constructor(cam, model, controller, width = 128) {
 
-    if (width == null) { width = 128; }
     this.cam = cam;
     this.model = model;
     this.controller = controller;

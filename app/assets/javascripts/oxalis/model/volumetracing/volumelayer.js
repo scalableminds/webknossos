@@ -76,9 +76,8 @@ class VolumeLayer {
       }
     }
 
-    const setMap = function(x, y, value) {
+    const setMap = function(x, y, value = true) {
 
-      if (value == null) { value = true; }
       x = Math.floor(x); y = Math.floor(y);
       return map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
     };

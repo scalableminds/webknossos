@@ -49,9 +49,8 @@ class DispatchedWorker {
 
 DispatchedWorker.Pool = class Pool {
 
-  constructor(workerClass, workerLimit) {
+  constructor(workerClass, workerLimit = 3) {
 
-    if (workerLimit == null) { workerLimit = 3; }
     this.workerClass = workerClass;
     this.workerLimit = workerLimit;
     this.queue = [];

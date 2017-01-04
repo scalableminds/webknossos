@@ -56,10 +56,8 @@ class SkeletonTracingController {
   }
 
 
-  setActiveNode(nodeId, merge, centered) {
+  setActiveNode(nodeId, merge = false, centered = false) {
 
-    if (merge == null) { merge = false; }
-    if (centered == null) { centered = false; }
     this.model.skeletonTracing.setActiveNode(nodeId, merge);
     if (centered) { return this.model.skeletonTracing.centerActiveNode(); }
   }

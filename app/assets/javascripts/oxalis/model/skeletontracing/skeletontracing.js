@@ -108,9 +108,8 @@ class SkeletonTracing {
   }
 
 
-  benchmark(numberOfTrees, numberOfNodesPerTree) {
+  benchmark(numberOfTrees, numberOfNodesPerTree = 1) {
 
-    if (numberOfTrees == null) { numberOfTrees = 1; }
     if (numberOfNodesPerTree == null) { numberOfNodesPerTree = 10000; }
     console.log(`[benchmark] start inserting ${numberOfNodesPerTree} nodes`);
     const startTime = (new Date()).getTime();
@@ -354,9 +353,8 @@ class SkeletonTracing {
   }
 
 
-  setActiveNode(nodeID, mergeTree) {
+  setActiveNode(nodeID, mergeTree = false) {
 
-    if (mergeTree == null) { mergeTree = false; }
     const lastActiveNode = this.activeNode;
     const lastActiveTree = this.activeTree;
     for (let tree of this.trees) {
@@ -582,10 +580,9 @@ class SkeletonTracing {
   }
 
 
-  reallyDeleteTree(id, notifyServer) {
+  reallyDeleteTree(id, notifyServer = true) {
 
     let index;
-    if (notifyServer == null) { notifyServer = true; }
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if (!id) {

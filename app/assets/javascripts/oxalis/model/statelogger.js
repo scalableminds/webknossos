@@ -8,7 +8,7 @@ import ErrorHandling from "libs/error_handling";
 
 class StateLogger {
   static initClass() {
-  
+
     this.prototype.PUSH_THROTTLE_TIME  = 30000; //30s
     this.prototype.SAVE_RETRY_WAITING_TIME  = 5000;
   }
@@ -30,9 +30,8 @@ class StateLogger {
   }
 
 
-  pushDiff(action, value, push) {
+  pushDiff(action, value, push = true) {
 
-    if (push == null) { push = true; }
     this.newDiffs.push({
       action,
       value

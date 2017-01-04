@@ -4,11 +4,9 @@ const Modal = {
 
   callbacks : {},
 
-  show(text, title, buttons) {
+  show(text, title = "Ups...", buttons = [{id: "ok-button", label: "OK"}]) {
     // buttons: [{id:..., label:..., callback:...}, ...]
 
-    if (title == null) { title = "Ups..."; }
-    if (buttons == null) { buttons = [{id: "ok-button", label: "OK"}]; }
     let html =  `\
 <div class="modal-dialog">
   <div class="modal-content">

@@ -108,9 +108,8 @@ class ListTreeView extends Marionette.CompositeView {
   }
 
 
-  selectNextTree(next) {
+  selectNextTree(next = true) {
 
-    if (next == null) { next = true; }
     this.model.skeletonTracing.selectNextTree(next);
     this.model.skeletonTracing.centerActiveNode();
     return this.updateName();

@@ -29,9 +29,8 @@ class WkLayer extends Layer {
   }
 
 
-  buildBuckets(batch, options) {
+  buildBuckets(batch, options = {}) {
 
-    if (options == null) { options = {}; }
     options = _.extend(options, { fourBit : this.fourBit });
     return super.buildBuckets(batch, options);
   }

@@ -6,10 +6,8 @@ class ResizableBuffer {
     this.prototype.GROW_MULTIPLIER  = 1.3;
   }
 
-  constructor(elementLength, initialCapacity, bufferType) {
+  constructor(elementLength, initialCapacity  = 100, bufferType = Float32Array) {
 
-    if (initialCapacity == null) { initialCapacity = 100; }
-    if (bufferType == null) { bufferType = Float32Array; }
     this.elementLength = elementLength;
     this.bufferType = bufferType;
     this.capacity = initialCapacity * this.elementLength;

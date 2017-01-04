@@ -1,9 +1,7 @@
 class TraceTree {
 
-  constructor(treeId, color, name, timestamp, comments, branchpoints) {
+  constructor(treeId, color, name, timestamp, comments = [], branchpoints = []) {
 
-    if (comments == null) { comments = []; }
-    if (branchpoints == null) { branchpoints = []; }
     this.treeId = treeId;
     this.color = color;
     this.name = name;

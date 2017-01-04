@@ -4,12 +4,11 @@ import TaskModel from "./task_model";
 
 class TaskCollection extends Backbone.Collection {
   static initClass() {
-  
+
     this.prototype.model = TaskModel;
   }
-  initialize(models, options) {
+  initialize(models, options = {}) {
 
-    if (options == null) { options = {}; }
     this.projectName = options.projectName;
     return this.taskTypeId = options.taskTypeId;
   }

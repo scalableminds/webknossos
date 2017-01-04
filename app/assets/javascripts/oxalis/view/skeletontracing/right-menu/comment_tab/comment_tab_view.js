@@ -196,10 +196,9 @@ class CommentTabView extends Marionette.View {
   }
 
 
-  nextComment(forward) {
+  nextComment(forward = true) {
 
     let trees;
-    if (forward == null) { forward = true; }
     let sortAscending = forward ? this.isSortedAscending : !this.isSortedAscending;
 
     let { activeComment } = this;

@@ -12,9 +12,8 @@ class PushQueue {
   }
 
 
-  constructor(dataSetName, cube, layer, tracingId, updatePipeline, sendData) {
+  constructor(dataSetName, cube, layer, tracingId, updatePipeline, sendData = true) {
 
-    if (sendData == null) { sendData = true; }
     this.dataSetName = dataSetName;
     this.cube = cube;
     this.layer = layer;

@@ -202,9 +202,8 @@ class Controller {
   }
 
 
-  loadMode(newMode, force) {
+  loadMode(newMode, force = false) {
 
-    if (force == null) { force = false; }
     if ((newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) && (this.model.allowedModes.includes(newMode) || force)) {
       __guard__(this.planeController, x => x.stop());
       return this.arbitraryController.start(newMode);

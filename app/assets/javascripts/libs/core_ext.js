@@ -17,9 +17,8 @@ _.mixin({
   // instance of the function is still running. The mutex can be
   // cleared with a predefined timeout. The wrapped function is
   // required to return a `Promise` at all times.
-  mutexPromise(func, timeout) {
+  mutexPromise(func, timeout = 20000) {
 
-    if (timeout == null) { timeout = 20000; }
     let promise = null;
 
     return function(...args) {

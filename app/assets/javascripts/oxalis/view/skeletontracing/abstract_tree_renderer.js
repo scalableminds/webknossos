@@ -7,14 +7,14 @@ import Toast from "libs/toast";
 
 class AbstractTreeRenderer {
   static initClass() {
-  
+
     this.prototype.NODE_RADIUS           = 2;
     this.prototype.MAX_NODE_DISTANCE     = 100;
     this.prototype.CLICK_TRESHOLD        = 6;
-  
+
     this.prototype.MODE_NORMAL           = 0;     // draw every node and the complete tree
     this.prototype.MODE_NOCHAIN          = 1;     // draw only decision points
-  
+
     this.prototype.RENDER_COMMENTS       = true;  // draw comments into tree
   }
 
@@ -389,9 +389,8 @@ class AbstractTreeRenderer {
    * @param  {Number} bottom      end y coordinate
    * @param  {Boolean} emphasize  draw in bold outline when active node is in the chain
   */
-  drawChainIndicator(x, top, bottom, emphasize) {
+  drawChainIndicator(x, top, bottom, emphasize = false) {
 
-    if (emphasize == null) { emphasize = false; }
     const dashLength = (bottom - top) / 7;
     if (emphasize) {
       this.ctx.lineWidth = 4;
@@ -457,10 +456,10 @@ class AbstractTreeRenderer {
    * @param  {Number} count     helper count, current depth
    * @return {Number}           depth of the tree
   */
-  getMaxTreeDepth(tree, mode, count) {
+  getMaxTreeDepth(tree, mode, count = 0) {
 
     if (mode == null) { mode = this.MODE_NORMAL; }
-    if (count == null) { count = 0; }
+
     if (!tree) {
       return count;
     }

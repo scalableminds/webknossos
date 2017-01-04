@@ -38,9 +38,8 @@ class SkeletonTracingStateLogger extends StateLogger {
   }
 
 
-  updateTree(tree, oldId) {
+  updateTree(tree, oldId = false) {
 
-    if (oldId == null) { oldId = false; }
     return this.pushDiff("updateTree", this.treeObject(tree, oldId));
   }
 

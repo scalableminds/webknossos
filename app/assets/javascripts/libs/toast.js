@@ -1,9 +1,8 @@
 import $ from "jquery";
 import Bootstrap from "bootstrap";
 
-$.fn.alertWithTimeout = function(timeout) {
+$.fn.alertWithTimeout = function(timeout = 3000) {
 
-  if (timeout == null) { timeout = 3000; }
   return this.each(function() {
 
     const $this = $(this);
@@ -35,10 +34,9 @@ const shouldDisplayToast = (type, message, sticky) =>
 
 const Toast = {
 
-  message(type, message, sticky) {
+  message(type, message, sticky = false) {
 
     let messages;
-    if (sticky == null) { sticky = false; }
     if (_.isArray(type) && (message == null)) {
       messages = type;
       for (message of messages) {
@@ -93,16 +91,14 @@ const Toast = {
   },
 
 
-  success(message, sticky) {
+  success(message = "Success :-)", sticky) {
 
-    if (message == null) { message = "Success :-)"; }
     return this.message("success", message, sticky);
   },
 
 
-  error(message, sticky) {
+  error(message = "Error :-/", sticky) {
 
-    if (message == null) { message = "Error :-/"; }
     return this.message("danger", message, sticky);
   },
 

@@ -10,9 +10,8 @@ class VolumeTracingStateLogger extends StateLogger {
   }
 
 
-  pushDiff(action, value, push) {
+  pushDiff(action, value, push = true) {
 
-    if (push == null) { push = true; }
     this.pushQueue.pushImpl();
     super.pushDiff(...arguments);
 

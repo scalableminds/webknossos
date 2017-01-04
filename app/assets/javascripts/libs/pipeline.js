@@ -11,9 +11,8 @@ class Pipeline {
   // passed to the current action.
 
 
-  constructor(firstArguments, options) {
+  constructor(firstArguments, options = {}) {
 
-    if (options == null) { options = {}; }
     this.options = options;
     this.actions       = [];
     this.nextArguments = firstArguments;

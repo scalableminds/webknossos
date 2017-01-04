@@ -22,9 +22,8 @@ class AbstractMaterialFactory {
   }
 
 
-  makeMaterial(options) {
+  makeMaterial(options = {}) {
 
-    if (options == null) { options = {}; }
     options = _.extend(options, {
       uniforms: this.uniforms,
       attributes: this.attributes,

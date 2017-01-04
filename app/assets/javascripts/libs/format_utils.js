@@ -28,9 +28,8 @@ class FormatUtils {
   }
 
 
-  static formatShortText(text, maxLength) {
+  static formatShortText(text, maxLength = 100) {
 
-    if (maxLength == null) { maxLength = 100; }
     if (text.length > maxLength && maxLength > 4) {
       return text.slice(0, maxLength - 4) + " ...";
     } else {

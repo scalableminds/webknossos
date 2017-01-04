@@ -303,8 +303,7 @@ class Router extends BaseRouter {
   }
 
 
-  showWithPagination(view, collection, options) {
-    if (options == null) { options = {}; }
+  showWithPagination(view, collection, options  = {}) {
     _.defaults(options, {addButtonText : null});
 
     return require(["admin/admin"], admin => {

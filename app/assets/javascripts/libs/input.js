@@ -80,9 +80,8 @@ Input.Keyboard = class Keyboard {
     this.prototype.DELAY  = 1000 / constants.FPS;
   }
 
-  constructor(initialBindings, delay) {
+  constructor(initialBindings, delay = 0) {
 
-    if (delay == null) { delay = 0; }
     this.delay = delay;
     this.keyCallbackMap = {};
     this.keyPressedCount = 0;

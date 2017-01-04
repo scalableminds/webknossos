@@ -5,9 +5,8 @@ import _ from "lodash";
 // object as expected by the server on bucket request
 const BucketBuilder = {
 
-  fromZoomedAddress([x, y, z, zoomStep], options) {
+  fromZoomedAddress([x, y, z, zoomStep], options = {}) {
 
-    if (options == null) { options = {}; }
     let bucket = {
       position : [
         x << (zoomStep + Cube.prototype.BUCKET_SIZE_P),

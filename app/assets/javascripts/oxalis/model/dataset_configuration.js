@@ -37,11 +37,10 @@ class DatasetConfiguration extends NestedObjModel {
   }
 
 
-  setDefaultBinaryColors(forceDefault) {
+  setDefaultBinaryColors(forceDefault = false) {
 
     let defaultColors;
     let layer;
-    if (forceDefault == null) { forceDefault = false; }
     const layers = this.get("layers");
 
     if (this.dataLayerNames.length === 1) {

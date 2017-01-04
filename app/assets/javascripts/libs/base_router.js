@@ -123,8 +123,7 @@ class BaseRouter {
   }
 
 
-  navigate(path, param) {
-    if (param == null) { param = {}; }
+  navigate(path, param = {}) {
     let { trigger = true } = param;
     if (!this.shouldNavigate(path)) {
       // Do nothing

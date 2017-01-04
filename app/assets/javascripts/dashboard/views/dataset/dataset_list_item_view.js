@@ -10,10 +10,10 @@ import Request from "libs/request";
 
 class DatasetListItemView extends Marionette.CompositeView {
   static initClass() {
-  
-  
+
+
     this.prototype.tagName  = "tbody";
-  
+
     this.prototype.template  = _.template(`\
 <tr class="dataset-row">
   <td class="details-toggle" href="#">
@@ -101,21 +101,21 @@ class DatasetListItemView extends Marionette.CompositeView {
   </td>
 </tr>\
 `);
-  
+
     this.prototype.childView  = DatasetAccessView;
     this.prototype.childViewContainer  = "tbody";
-  
+
     this.prototype.templateContext  =
       {TemplateHelpers};
-  
+
     this.prototype.events  = {
       "click .import-dataset" : "startImport",
       "click .details-toggle" : "toggleDetails",
       "click #skeletonTraceLink" : "startSkeletonTracing",
       "click #volumeTraceLink" : "startVolumeTracing"
     };
-  
-  
+
+
     this.prototype.ui = {
       "row" : ".dataset-row",
       "importError" : ".import-error",
@@ -153,9 +153,8 @@ class DatasetListItemView extends Marionette.CompositeView {
   }
 
 
-  startImport(evt, method) {
+  startImport(evt, method = "POST") {
 
-    if (method == null) { method = "POST"; }
     if (evt) {
       evt.preventDefault();
     }

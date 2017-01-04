@@ -10,9 +10,8 @@ const Utils = {
   },
 
 
-  zeroPad(num, zeros) {
+  zeroPad(num, zeros = 0) {
 
-    if (zeros == null) { zeros = 0; }
     num = `${num}`;
     while (num.length < zeros) {
       num = `0${num}`;
@@ -51,9 +50,8 @@ const Utils = {
   },
 
 
-  intToHex(int, digits) {
+  intToHex(int, digits = 6) {
 
-    if (digits == null) { digits = 6; }
     return (_.repeat("0", digits) + int.toString( 16 )).slice(-digits);
   },
 
@@ -75,10 +73,9 @@ const Utils = {
   },
 
 
-  compareBy(key, isSortedAscending) {
+  compareBy(key, isSortedAscending = true) {
     // generic key comparator for array.prototype.sort
 
-    if (isSortedAscending == null) { isSortedAscending = true; }
     return function(a, b) {
       if (!isSortedAscending) {
         [a,b] = [b,a];

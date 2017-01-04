@@ -19,10 +19,9 @@ class NestedObjModel extends Backbone.Model {
   }
 
 
-  set(attributeString, val, options) {
+  set(attributeString, val, options = {}) {
 
     // We don't handle objects for now
-    if (options == null) { options = {}; }
     if (_.isObject(attributeString)) {
       return super.set(attributeString, val, options);
     }
@@ -32,9 +31,8 @@ class NestedObjModel extends Backbone.Model {
   }
 
 
-  deepSet(obj, attributeString, val, silent) {
+  deepSet(obj, attributeString, val, silent = false) {
 
-    if (silent == null) { silent = false; }
     const attributes = attributeString.split(".");
     return _.reduce(
       attributes,

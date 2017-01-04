@@ -19,7 +19,7 @@ class ProjectModel extends Backbone.Model {
     // Workaround. Since we use 'name' as the id attribute, there is no way to
     // know if a model was newly created or fetched from the server
     // Attribute is set in 'create_project_modal_view'
-    return this._isNew || false;
+    return this.isReallyNew || false;
   }
 
 

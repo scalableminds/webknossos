@@ -65,13 +65,13 @@ class TracePoint {
 
   setChildRelation(parent) {
     // Make sure you only look once at every node. Assumes
-    // that @_seen does not exist or has been initialized
+    // that @seen does not exist or has been initialized
     // to false for all nodes
     this.parent = parent;
-    if (this._seen) {
+    if (this.seen) {
       throw "CyclicTree";
     }
-    this._seen = true;
+    this.seen = true;
 
     this.children = this.getNext(this.parent);
     if (this.children == null) {

@@ -55,9 +55,9 @@ DispatchedWorker.Pool = class Pool {
 
   send(data) {
     let worker;
-    for (const _worker of this.workers) {
-      if (!_worker.busy) {
-        worker = _worker;
+    for (const worker of this.workers) {
+      if (!worker.busy) {
+        worker = worker;
         break;
       }
     }

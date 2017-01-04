@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 import _ from "lodash";
 import Backbone from "backbone";
 

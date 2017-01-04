@@ -115,6 +115,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     const raycaster = projector.pickingRay(vector, camera);
     raycaster.ray.threshold = this.model.flycam.getRayThreshold(plane);
 
+    // eslint-disable-next-line no-underscore-dangle
     raycaster.ray.__scalingFactors = app.scaleInfo.nmPerVoxel;
 
     // identify clicked object

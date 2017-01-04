@@ -112,15 +112,15 @@ Input.Keyboard = class Keyboard {
 
         callback(1, true);
         // reset lastTime
-        callback._lastTime = null;
-        callback._delayed = true;
+        callback.lastTime = null;
+        callback.delayed = true;
         this.keyCallbackMap[key] = callback;
 
         this.keyPressedCount++;
         if (this.keyPressedCount === 1) { this.buttonLoop(); }
 
         if (this.delay >= 0) {
-          setTimeout((() => callback._delayed = false
+          setTimeout((() => callback.delayed = false
             ), this.delay);
         }
 
@@ -149,12 +149,12 @@ Input.Keyboard = class Keyboard {
     if (this.keyPressedCount > 0) {
       for (const key of Object.keys(this.keyCallbackMap)) {
         const callback = this.keyCallbackMap[key];
-        if (!callback._delayed) {
+        if (!callback.delayed) {
           const curTime = (new Date()).getTime();
           // If no lastTime, assume that desired FPS is met
-          const lastTime = callback._lastTime || (curTime - (1000 / constants.FPS));
+          const lastTime = callback.lastTime || (curTime - (1000 / constants.FPS));
           const elapsed = curTime - lastTime;
-          callback._lastTime = curTime;
+          callback.lastTime = curTime;
 
           callback((elapsed / 1000) * constants.FPS, false);
         }

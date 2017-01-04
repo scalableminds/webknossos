@@ -45,10 +45,10 @@ class Flycam2d {
     this.listenTo(this.user, "change:zoom", function (model, zoomFactor) { return this.zoom(Math.log(zoomFactor) / Math.LN2); });
 
     // Fire changed event every time
-    const _trigger = this.trigger;
+    const trigger = this.trigger;
     this.trigger = function () {
-      _trigger.apply(this, arguments);
-      return _trigger.call(this, "changed");
+      trigger.apply(this, arguments);
+      return trigger.call(this, "changed");
     }.bind(this);
   }
 

@@ -25,11 +25,11 @@ class Tree {
     edgeGeometry.dynamic = true;
     nodeGeometry.dynamic = true;
 
-    this.edgesBuffer = edgeGeometry.attributes.position._rBuffer = new ResizableBuffer(6);
-    this.nodesBuffer = nodeGeometry.attributes.position._rBuffer = new ResizableBuffer(3);
-    this.sizesBuffer = nodeGeometry.attributes.sizeNm._rBuffer = new ResizableBuffer(1);
-    this.scalesBuffer = nodeGeometry.attributes.nodeScaleFactor._rBuffer = new ResizableBuffer(1);
-    this.nodesColorBuffer = nodeGeometry.attributes.color._rBuffer = new ResizableBuffer(3);
+    this.edgesBuffer = edgeGeometry.attributes.position.rBuffer = new ResizableBuffer(6);
+    this.nodesBuffer = nodeGeometry.attributes.position.rBuffer = new ResizableBuffer(3);
+    this.sizesBuffer = nodeGeometry.attributes.sizeNm.rBuffer = new ResizableBuffer(1);
+    this.scalesBuffer = nodeGeometry.attributes.nodeScaleFactor.rBuffer = new ResizableBuffer(1);
+    this.nodesColorBuffer = nodeGeometry.attributes.color.rBuffer = new ResizableBuffer(3);
 
     this.edges = new THREE.Line(
       edgeGeometry,
@@ -272,8 +272,8 @@ class Tree {
         const result = [];
         for (const attr in mesh.geometry.attributes) {
           const a = mesh.geometry.attributes[attr];
-          a.array = a._rBuffer.getBuffer();
-          a.numItems = a._rBuffer.getBufferLength();
+          a.array = a.rBuffer.getBuffer();
+          a.numItems = a.rBuffer.getBufferLength();
           result.push(a.needsUpdate = true);
         }
         return result;

@@ -42,13 +42,13 @@ export default class Request {
       const headers = new Headers();
       headers.set("Content-Type", "application/json");
 
-      const _options = _.defaultsDeep(options, {
+      const new_options = _.defaultsDeep(options, {
         method: "POST",
         body,
         headers,
       });
 
-      return from(url, _options);
+      return from(url, new_options);
     }
 
     return {

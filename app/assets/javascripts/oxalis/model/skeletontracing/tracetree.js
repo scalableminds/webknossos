@@ -57,7 +57,7 @@ class TraceTree {
     let root;
     for (const node of this.nodes) {
       // Initialize Cyclic tree detection
-      node._seen = false;
+      node.seen = false;
 
       // define root as the node with smallest id
       if (root != null) {

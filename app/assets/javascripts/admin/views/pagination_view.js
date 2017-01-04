@@ -133,6 +133,7 @@ class PaginationView extends Marionette.View {
 
 
   render() {
+    /* eslint-disable no-underscore-dangle */
     this._ensureViewIsIntact();
     this.triggerMethod("before:render", this);
 
@@ -141,6 +142,7 @@ class PaginationView extends Marionette.View {
       this.$el.html(this.template(obj));
     }
     this._isRendered = true;
+    /* eslint-enable no-underscore-dangle */
 
     this.$el.find("ul.pagination").html(this.paginatorTemplate(obj));
     this.bindUIElements();

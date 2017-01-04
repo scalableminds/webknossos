@@ -164,7 +164,7 @@ class ProjectCreateView extends Marionette.View {
 
 
   initialize() {
-    this.model._isNew = true;
+    this.model.isReallyNew = true;
 
     this.userSelectionView = new SelectionView({
       collection: new UserCollection(),

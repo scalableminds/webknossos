@@ -38,21 +38,21 @@ class Pipeline {
       return Promise.resolve();
     }
 
-    return this.actions[this.actions.length - 1]._deferred.promise();
+    return this.actions[this.actions.length - 1].deferred.promise();
   }
 
 
   executeAction(action) {
     // action : function that returns a `Promise`
 
-    action._deferred = new Deferred();
+    action.deferred = new Deferred();
     this.actions.push(action);
 
     if (!this.running) {
       this.executeNext();
     }
 
-    return action._deferred.promise();
+    return action.deferred.promise();
   }
 
 
@@ -104,7 +104,7 @@ class Pipeline {
 
       return currentAction(...this.nextArguments).then(
         function (response) {
-          currentAction._deferred.resolve(response);
+          currentAction.deferred.resolve(response);
 
           this.nextArguments = arguments;
           this.retryCount = 0;
@@ -117,7 +117,7 @@ class Pipeline {
 
           if (this.retryCount >= this.options.maxRetry) {
             this.failed = true;
-            return currentAction._deferred.reject(response);
+            return currentAction.deferred.reject(response);
           } else {
             return setTimeout(this.executeNext, this.options.retryTimeMs);
           }

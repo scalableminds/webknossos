@@ -18,11 +18,11 @@ _.mixin({
 
     return function (...args) {
       if (!promise) {
-        let _promise;
-        promise = _promise = func.apply(this, args);
+        let internalPromise;
+        promise = internalPromise = func.apply(this, args);
         if (timeout >= 0) {
           setTimeout((() => {
-            if (promise === _promise) { return promise = null; }
+            if (promise === internalPromise) { return promise = null; }
           }), timeout);
         }
         promise.then(

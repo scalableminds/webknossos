@@ -62,9 +62,9 @@ class AbstractTreeRenderer {
     } catch (e) {
       console.log("Error:", e);
       if (e === "CyclicTree") {
-        if (!this._cyclicTreeWarningIssued) {
+        if (!this.cyclicTreeWarningIssued) {
           Toast.error(`Cyclic trees (Tree-ID: ${tree.treeId}) are not supported by webKnossos. Please check the .nml file.`);
-          this._cyclicTreeWarningIssued = true;
+          this.cyclicTreeWarningIssued = true;
         }
         return;
       }

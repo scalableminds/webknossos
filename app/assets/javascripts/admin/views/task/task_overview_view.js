@@ -1,4 +1,4 @@
-// eslint-disable no-underscore-dangle
+/* eslint-disable no-underscore-dangle */
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";

@@ -9,8 +9,7 @@ import Toast from "libs/toast";
 
 class TaskTypeCreateView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <div class="row">
   <div class="col-sm-12">
     <div class="well">
@@ -127,31 +126,30 @@ class TaskTypeCreateView extends Marionette.View {
   </div>
 </div>\
 `);
-    this.prototype.className  = "container wide task-types-administration";
-  
-    this.prototype.regions  =
-      {"team" : ".team"};
-  
-    this.prototype.events  =
-      {"submit form" : "submitForm"};
-  
-    this.prototype.ui  = {
-      "form" : "form",
-      "multiselect" : "select[multiple='multiple']"
+    this.prototype.className = "container wide task-types-administration";
+
+    this.prototype.regions =
+      { team: ".team" };
+
+    this.prototype.events =
+      { "submit form": "submitForm" };
+
+    this.prototype.ui = {
+      form: "form",
+      multiselect: "select[multiple='multiple']",
     };
   }
 
   templateContext() {
     return {
-      getTitle : () => this.isEditingMode ? "Update" : "Create",
+      getTitle: () => this.isEditingMode ? "Update" : "Create",
       isChecked(bool) { if (bool) { return "checked"; } },
-      isSelected(bool) { if (bool) { return "selected"; } }
+      isSelected(bool) { if (bool) { return "selected"; } },
     };
   }
 
 
   initialize() {
-
     this.isEditingMode = _.isString(this.model.id);
 
     if (this.isEditingMode) {
@@ -162,7 +160,6 @@ class TaskTypeCreateView extends Marionette.View {
 
 
   submitForm(event) {
-
     event.preventDefault();
 
     if (!this.ui.form[0].checkValidity()) {
@@ -188,16 +185,15 @@ class TaskTypeCreateView extends Marionette.View {
 
 
   onRender() {
-
     const teamSelectionView = new SelectionView({
-      collection : new TeamCollection(),
-      childViewOptions : {
+      collection: new TeamCollection(),
+      childViewOptions: {
         modelValue() { return `${this.model.get("name")}`; },
-        defaultItem : {name : this.model.get("team")}
+        defaultItem: { name: this.model.get("team") },
       },
-      data : "amIAnAdmin=true",
-      name : "team",
-      required : true
+      data: "amIAnAdmin=true",
+      name: "team",
+      required: true,
     });
     this.showChildView("team", teamSelectionView);
 
@@ -206,7 +202,6 @@ class TaskTypeCreateView extends Marionette.View {
 
 
   onBeforeDestroy() {
-
     return this.ui.multiselect.multiselect("destroy");
   }
 }

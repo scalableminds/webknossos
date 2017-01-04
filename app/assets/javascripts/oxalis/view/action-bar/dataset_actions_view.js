@@ -9,10 +9,9 @@ import Constants from "oxalis/constants";
 
 class DatasetActionsView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.SAVED_POLLING_INTERVAL  = 1000;
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.SAVED_POLLING_INTERVAL = 1000;
+
+    this.prototype.template = _.template(`\
 <% if(tracing.restrictions.allowUpdate){ %>
   <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
 <% } else { %>
@@ -39,41 +38,38 @@ class DatasetActionsView extends Marionette.View {
   <% } %>
 <% } %>\
 `);
-  
-  
-    this.prototype.events  = {
-      "click #trace-finish-button" : "finishTracing",
-      "click #trace-download-button" : "downloadTracing",
-      "click #trace-save-button" : "saveTracing",
-      "click #trace-merge-button" : "mergeTracing",
-      "click #trace-share-button" : "shareTracing",
-      "click #trace-next-task-button" : "getNextTask"
+
+
+    this.prototype.events = {
+      "click #trace-finish-button": "finishTracing",
+      "click #trace-download-button": "downloadTracing",
+      "click #trace-save-button": "saveTracing",
+      "click #trace-merge-button": "mergeTracing",
+      "click #trace-share-button": "shareTracing",
+      "click #trace-next-task-button": "getNextTask",
     };
-  
-    this.prototype.ui  = {
-      "modalWrapper" : ".merge-modal-wrapper",
-      "saveButton" : "#trace-save-button"
+
+    this.prototype.ui = {
+      modalWrapper: ".merge-modal-wrapper",
+      saveButton: "#trace-save-button",
     };
   }
 
   templateContext() {
-
     return {
-      isSkeletonMode : this.isSkeletonMode(),
+      isSkeletonMode: this.isSkeletonMode(),
       getArchiveBtnText() { return this.isTask ? "Finish" : "Archive"; },
-      hasAdvancedOptions : this.hasAdvancedOptions()
+      hasAdvancedOptions: this.hasAdvancedOptions(),
     };
   }
 
 
   initialize() {
-
     return this.savedPollingInterval = window.setInterval((() => this.updateSavedState()), this.SAVED_POLLING_INTERVAL);
   }
 
 
   updateSavedState() {
-
     if (this.model.annotationModel.stateLogger.stateSaved()) {
       return this.ui.saveButton.text("Saved   ✓");
     } else {
@@ -83,26 +79,24 @@ class DatasetActionsView extends Marionette.View {
 
 
   finishTracing(evt) {
-
     evt.preventDefault();
-    return this.saveTracing().then( () => {
+    return this.saveTracing().then(() => {
       if (confirm("Are you sure you want to permanently finish this tracing?")) {
         return app.router.loadURL(evt.currentTarget.href);
       }
-    }
+    },
     );
   }
 
 
   downloadTracing(evt) {
-
     evt.preventDefault();
     const win = window.open("about:blank", "_blank");
-    win.document.body.innerHTML="Please wait...";
-    return this.saveTracing().then( () => {
+    win.document.body.innerHTML = "Please wait...";
+    return this.saveTracing().then(() => {
       win.location.href = this.model.tracing.downloadUrl;
-      return win.document.body.innerHTML="You may close this window after the download has started.";
-    }
+      return win.document.body.innerHTML = "You may close this window after the download has started.";
+    },
       // setTimeout(
       //   -> win.close()
       //   2000
@@ -112,7 +106,6 @@ class DatasetActionsView extends Marionette.View {
 
 
   saveTracing(evt) {
-
     if (evt) {
       evt.preventDefault();
     }
@@ -122,48 +115,42 @@ class DatasetActionsView extends Marionette.View {
 
 
   mergeTracing() {
-
-    const modalView = new MergeModalView({model: this.model});
+    const modalView = new MergeModalView({ model: this.model });
     this.ui.modalWrapper.html(modalView.render().el);
     return modalView.show();
   }
 
 
   shareTracing() {
-
       // save the progress
-      const model = this.model.skeletonTracing || this.model.volumeTracing;
-      model.stateLogger.save();
+    const model = this.model.skeletonTracing || this.model.volumeTracing;
+    model.stateLogger.save();
 
-      const modalView = new ShareModalView({model: this.model});
-      this.ui.modalWrapper.html(modalView.render().el);
-      return modalView.show();
-    }
+    const modalView = new ShareModalView({ model: this.model });
+    this.ui.modalWrapper.html(modalView.render().el);
+    return modalView.show();
+  }
 
 
   isSkeletonMode() {
-
     return _.includes(Constants.MODES_SKELETON, this.model.get("mode"));
   }
 
 
   hasAdvancedOptions() {
-
     return this.model.settings.advancedOptionsAllowed;
   }
 
 
   getNextTask() {
-
     const model = this.model.skeletonTracing || this.model.volumeTracing;
     const finishUrl = `/annotations/${this.model.tracingType}/${this.model.tracingId}/finish`;
     const requestTaskUrl = "/user/tasks/request";
 
     return model.stateLogger.save()
         .then(() => Request.triggerRequest(finishUrl))
-        .then(() => {
-          return Request.receiveJSON(requestTaskUrl).then(
-            annotation => {
+        .then(() => Request.receiveJSON(requestTaskUrl).then(
+            (annotation) => {
               const differentTaskType = annotation.task.type.id !== __guard__(this.model.tracing.task, x => x.type.id);
               const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
               const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
@@ -171,15 +158,13 @@ class DatasetActionsView extends Marionette.View {
             },
             () =>
               // Wait a while so users have a chance to read the error message
-              setTimeout((() => app.router.loadURL("/dashboard")), 2000)
-          );
-        }
+              setTimeout((() => app.router.loadURL("/dashboard")), 2000),
+          ),
         );
   }
 
 
   onDestroy() {
-
     return window.clearInterval(this.savedPollingInterval);
   }
 }
@@ -188,5 +173,5 @@ DatasetActionsView.initClass();
 export default DatasetActionsView;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

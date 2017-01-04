@@ -9,8 +9,7 @@ import TeamCollection from "admin/models/team/team_collection";
 
 class DatasetRemoteView extends Marionette.View {
   static initClass() {
-
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <div class="row">
   <div class="col-md-6">
     <h3>Add Remote NDStore Dataset</h3>
@@ -54,53 +53,49 @@ class DatasetRemoteView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.className  = "container";
+    this.prototype.className = "container";
 
-    this.prototype.regions  =
-      {"team" : ".team"};
+    this.prototype.regions =
+      { team: ".team" };
 
-    this.prototype.events  =
-      {"submit form" : "addDataset"};
+    this.prototype.events =
+      { "submit form": "addDataset" };
 
-    this.prototype.ui  =
-      {form : "form"};
+    this.prototype.ui =
+      { form: "form" };
   }
 
   initialize() {
-
     return this.teamSelectionView = new SelectionView({
-      collection : new TeamCollection(),
-      name : "team",
-      childViewOptions : {
-        modelValue() { return `${this.model.get("name")}`; }
+      collection: new TeamCollection(),
+      name: "team",
+      childViewOptions: {
+        modelValue() { return `${this.model.get("name")}`; },
       },
-      data : "amIAnAdmin=true"
+      data: "amIAnAdmin=true",
     });
   }
 
 
   onRender() {
-
     return this.showChildView("team", this.teamSelectionView);
   }
 
 
   addDataset(evt) {
-
     evt.preventDefault();
     const { form } = this.ui;
 
     if (form[0].checkValidity()) {
-
       return Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore",
-        {data : FormSyphon.serialize(form)}
+        { data: FormSyphon.serialize(form) },
       )
       .then(
-        function() {
+        () => {
           Toast.success();
           return app.router.navigate("/dashboard", { trigger: true });
         },
-        function() {} // NOOP
+        () => {}, // NOOP
       );
     }
   }

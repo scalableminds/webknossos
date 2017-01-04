@@ -3,7 +3,6 @@ import Backbone from "backbone";
 class SortedCollection extends Backbone.Collection {
 
   initialize() {
-
     if (this.sortAttribute) {
       return this.setSort(this.sortAttribute, "asc");
     }
@@ -11,7 +10,6 @@ class SortedCollection extends Backbone.Collection {
 
 
   setSort(field, sortDirection) {
-
     if (sortDirection === "asc") {
       sortDirection = 1;
     }
@@ -20,8 +18,8 @@ class SortedCollection extends Backbone.Collection {
     }
 
     // Set your comparator function, pass the field.
-    this.comparator = function(left, right) {
-      const leftValue  = left.get(field);
+    this.comparator = function (left, right) {
+      const leftValue = left.get(field);
       const rightValue = right.get(field);
       return _.isString(leftValue) && _.isString(rightValue) ?
           sortDirection > 0 ?

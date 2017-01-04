@@ -27,15 +27,15 @@ class Comment extends Component {
   }
 
   render() {
-    const liClassName = classNames({ "bold" : this.props.isActive })
+    const liClassName = classNames({ bold: this.props.isActive });
     const iClassName = classNames("fa", "fa-fw", {
-      "fa-angle-right" : this.props.isActive,
+      "fa-angle-right": this.props.isActive,
     });
 
     const { data } = this.props;
     return (
       <li className={liClassName} id={`comment-tab-node-${data.node}`} ref={(ref) => { this.comment = ref; }}>
-        <i className={iClassName}></i>
+        <i className={iClassName} />
         <a href="#" onClick={this.handleClick}>
           {`${data.node} - ${data.content}`}
         </a>

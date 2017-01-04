@@ -4,12 +4,10 @@ import AbstractSettingView from "./abstract_setting_view";
 
 class TextInputSettingView extends AbstractSettingView {
   static initClass() {
-  
-  
-    this.prototype.className  = "text-setting-view row";
-  
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "text-setting-view row";
+
+
+    this.prototype.template = _.template(`\
 <div class="col-sm-5">
   <%- displayName %>
 </div>
@@ -17,30 +15,28 @@ class TextInputSettingView extends AbstractSettingView {
   <input class="form-control" type="text" pattern="<%- pattern %>" title="<%- title %>" value="<%- value %>">
 </div>\
 `);
-  
-  
-    this.prototype.ui  =
-      {text : "input[type=text]"};
-  
-  
-    this.prototype.events  =
-      {"change @ui.text" : "handleChange"};
+
+
+    this.prototype.ui =
+      { text: "input[type=text]" };
+
+
+    this.prototype.events =
+      { "change @ui.text": "handleChange" };
   }
 
 
   initialize(options) {
-
     super.initialize(options);
 
     return _.defaults(this.options, {
-      pattern : "",
-      title : ""
-    }
+      pattern: "",
+      title: "",
+    },
     );
   }
 
   handleChange(evt) {
-
     const { value } = evt.target;
 
     if (this.options.validate) {
@@ -52,7 +48,6 @@ class TextInputSettingView extends AbstractSettingView {
 
 
   update(model, value) {
-
     return this.ui.text.val(value);
   }
 }

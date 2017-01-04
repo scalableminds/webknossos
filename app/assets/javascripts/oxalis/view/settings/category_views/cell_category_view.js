@@ -5,38 +5,34 @@ import ButtonSettingView from "../setting_views/button_setting_view";
 
 class CellCategoryView extends CategoryView {
   static initClass() {
-  
-  
-    this.prototype.caption  = "Cells";
-  
-  
-    this.prototype.subviewCreatorsList  = [
-  
+    this.prototype.caption = "Cells";
+
+
+    this.prototype.subviewCreatorsList = [
+
       [
-        "mappedActiveCellId", function() {
-  
+        "mappedActiveCellId", function () {
           return new NumberSettingView({
-            model : this.model,
-            options : {
-              name : "mappedActiveCellId",
-              displayName : "Active Cell ID"
-            }
+            model: this.model,
+            options: {
+              name: "mappedActiveCellId",
+              displayName: "Active Cell ID",
+            },
           });
-        }
+        },
       ],
-  
+
       [
-        "createCell", function() {
-  
+        "createCell", function () {
           return new ButtonSettingView({
-            model : this.model,
-            options : {
-              displayName : "Create new Cell",
-              callbackName : "createCell"
-            }
+            model: this.model,
+            options: {
+              displayName: "Create new Cell",
+              callbackName: "createCell",
+            },
           });
-        }
-      ]
+        },
+      ],
     ];
   }
 }

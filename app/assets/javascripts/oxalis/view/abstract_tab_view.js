@@ -4,11 +4,10 @@ import Marionette from "backbone.marionette";
 
 class AbstractTabView extends Marionette.View {
   static initClass() {
+    this.prototype.MARGIN = 40;
 
-    this.prototype.MARGIN  = 40;
-
-    this.prototype.className  = "flex-column";
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "flex-column";
+    this.prototype.template = _.template(`\
 <ul class="nav nav-tabs">
   <% tabs.forEach(function(tab) { %>
     <li>
@@ -23,15 +22,14 @@ class AbstractTabView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.ui  = {
-      "tabContentContainer" : ".tab-content",
-      "tabNavbarContainer" : ".nav-tabs"
+    this.prototype.ui = {
+      tabContentContainer: ".tab-content",
+      tabNavbarContainer: ".nav-tabs",
     };
   }
 
 
   initialize(options) {
-
     this.listenTo(this, "render", this.afterRender);
 
     this.adapterModel = options.adapterModel;
@@ -47,7 +45,7 @@ class AbstractTabView extends Marionette.View {
       tab.iconString = tab.iconClass ? `<i class=\"${tab.iconClass}\"></i>` : "";
 
       return regions[tab.id] = `#${tab.id}`;
-    }
+    },
     );
     return this.addRegions(regions);
   }
@@ -55,33 +53,28 @@ class AbstractTabView extends Marionette.View {
 
   // abstract method
   getTabs() {
-
     return [];
   }
 
 
   afterRender() {
-
     this.$(this.ui.tabContentContainer.children()[this.activeTabIndex]).addClass("active");
     this.$(this.ui.tabNavbarContainer.children()[this.activeTabIndex]).addClass("active");
 
-    this.tabs.forEach(tab => {
-      return this.showChildView(tab.id, tab.view);
-    }
+    this.tabs.forEach(tab => this.showChildView(tab.id, tab.view),
     );
 
-    return this.$('a[data-toggle="tab"]').on('shown.bs.tab', e => {
+    return this.$("a[data-toggle=\"tab\"]").on("shown.bs.tab", (e) => {
       const tabId = $(e.target).data("tab-id");
       const tab = _.find(this.tabs, t => t.id === tabId);
       return tab.view.render();
-    }
+    },
     );
   }
 
 
   serializeData() {
-
-    return {tabs: this.tabs};
+    return { tabs: this.tabs };
   }
 }
 AbstractTabView.initClass();

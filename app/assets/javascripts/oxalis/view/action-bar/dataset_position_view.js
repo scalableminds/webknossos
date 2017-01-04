@@ -9,10 +9,9 @@ import { V3 } from "libs/mjs";
 
 class DatasetPositionView extends Marionette.View {
   static initClass() {
-
-    this.prototype.tagName  = "div";
-    this.prototype.className  = "form-inline dataset-position-view";
-    this.prototype.template  = _.template(`\
+    this.prototype.tagName = "div";
+    this.prototype.className = "form-inline dataset-position-view";
+    this.prototype.template = _.template(`\
 <div class="form-group">
   <div class="input-group">
     <span class="input-group-btn">
@@ -31,7 +30,7 @@ class DatasetPositionView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.templateContext  = {
+    this.prototype.templateContext = {
       position() {
         return V3.floor(this.flycam.getPosition()).join(", ");
       },
@@ -42,25 +41,24 @@ class DatasetPositionView extends Marionette.View {
 
       isArbitrayMode() {
         return constants.MODES_ARBITRARY.includes(this.mode);
-      }
+      },
     };
 
 
-    this.prototype.events  = {
-      "change #trace-position-input" : "changePosition",
-      "change #trace-rotation-input" : "changeRotation",
-      "click button" : "copyToClipboard"
+    this.prototype.events = {
+      "change #trace-position-input": "changePosition",
+      "change #trace-rotation-input": "changeRotation",
+      "click button": "copyToClipboard",
     };
 
-    this.prototype.ui  = {
-      "positionInput" : "#trace-position-input",
-      "rotationInput" : "#trace-rotation-input"
+    this.prototype.ui = {
+      positionInput: "#trace-position-input",
+      rotationInput: "#trace-rotation-input",
     };
   }
 
 
   initialize(options) {
-
     this.render = _.throttle(this.render, 100);
     this.listenTo(this.model, "change:mode", this.render);
 
@@ -78,7 +76,6 @@ class DatasetPositionView extends Marionette.View {
 
 
   changePosition(event) {
-
     const posArray = utils.stringToNumberArray(event.target.value);
     if (posArray.length === 3) {
       this.model.flycam.setPosition(posArray);
@@ -92,7 +89,6 @@ class DatasetPositionView extends Marionette.View {
 
 
   changeRotation(event) {
-
     const rotArray = utils.stringToNumberArray(event.target.value);
     if (rotArray.length === 3) {
       this.model.flycam3d.setRotation(rotArray);
@@ -105,7 +101,6 @@ class DatasetPositionView extends Marionette.View {
 
 
   copyToClipboard(evt) {
-
     evt.preventDefault();
 
     const positionString = this.ui.positionInput.val();
@@ -114,7 +109,6 @@ class DatasetPositionView extends Marionette.View {
   }
 
   onDestroy() {
-
     this.model.flycam3d.off("changed");
     return this.model.flycam.off("positionChanged");
   }

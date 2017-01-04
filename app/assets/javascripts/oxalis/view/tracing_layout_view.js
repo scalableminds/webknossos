@@ -26,12 +26,11 @@ class TracingLayoutView extends Marionette.View {
   }
 
   static initClass() {
+    this.prototype.MARGIN = 40;
 
-    this.prototype.MARGIN  = 40;
+    this.prototype.className = "text-nowrap";
 
-    this.prototype.className  = "text-nowrap";
-
-    this.prototype.traceTemplate  = _.template(`\
+    this.prototype.traceTemplate = _.template(`\
 <div id="action-bar"></div>
 <div id="sliding-canvas">
   <div id="settings-menu-wrapper" class="navmenu-fixed-left offcanvas">
@@ -43,7 +42,7 @@ class TracingLayoutView extends Marionette.View {
 <div class="modal-wrapper"></div>\
 `);
 
-    this.prototype.viewTemplate  = _.template(`\
+    this.prototype.viewTemplate = _.template(`\
 <div id="action-bar"></div>
 <div id="settings-menu"></div>
 <div id="tracing"></div>
@@ -51,22 +50,22 @@ class TracingLayoutView extends Marionette.View {
 <div class="modal-wrapper"></div>\
 `);
 
-    this.prototype.ui  = {
-      "rightMenu" : "#right-menu",
-      "slidingCanvas" : "#sliding-canvas"
+    this.prototype.ui = {
+      rightMenu: "#right-menu",
+      slidingCanvas: "#sliding-canvas",
     };
 
-    this.prototype.regions  = {
-      "actionBar" : "#action-bar",
-      "rightMenu" : "#right-menu",
-      "tracingContainer" : "#tracing",
-      "settings" : "#settings-menu",
-      "modalWrapper" : ".modal-wrapper"
+    this.prototype.regions = {
+      actionBar: "#action-bar",
+      rightMenu: "#right-menu",
+      tracingContainer: "#tracing",
+      settings: "#settings-menu",
+      modalWrapper: ".modal-wrapper",
     };
 
     this.prototype.events = {
-      "hidden.bs.offcanvas #settings-menu-wrapper" : "doneSliding",
-      "shown.bs.offcanvas #settings-menu-wrapper" : "doneSliding"
+      "hidden.bs.offcanvas #settings-menu-wrapper": "doneSliding",
+      "shown.bs.offcanvas #settings-menu-wrapper": "doneSliding",
     };
   }
 
@@ -80,11 +79,10 @@ class TracingLayoutView extends Marionette.View {
 
 
   initialize(options) {
-
     this.options = _.extend(
       {},
       options,
-      {model : new OxalisModel(options)}
+      { model: new OxalisModel(options) },
     );
 
     this.model = this.options.model;
@@ -105,15 +103,12 @@ class TracingLayoutView extends Marionette.View {
 
 
   doneSliding(evt) {
-
     return this.resizeRightMenu();
   }
 
 
   resizeRightMenu() {
-
     if (this.isSkeletonMode()) {
-
       const menuPosition = this.ui.rightMenu.position();
       const slidingCanvasOffset = this.ui.slidingCanvas.position().left;
 
@@ -127,15 +122,14 @@ class TracingLayoutView extends Marionette.View {
 
 
   renderRegions() {
-
     this.render();
 
     const actionBarView = new ActionBarView(this.options);
     const tracingView = new TracingView(this.options);
 
-    this.showChildView("tracingContainer", tracingView, {preventDestroy : true});
+    this.showChildView("tracingContainer", tracingView, { preventDestroy: true });
 
-    this.showChildView("actionBar", actionBarView, {preventDestroy : true});
+    this.showChildView("actionBar", actionBarView, { preventDestroy: true });
 
     if (!this.model.settings.advancedOptionsAllowed) {
       return;
@@ -156,7 +150,6 @@ class TracingLayoutView extends Marionette.View {
 
 
   showUserScriptsModal(event) {
-
     event.preventDefault();
     const modalView = new UserScriptsModalView();
     this.showChildView("modalWrapper", modalView);
@@ -165,7 +158,6 @@ class TracingLayoutView extends Marionette.View {
 
 
   maybeShowNewTaskTypeModal() {
-
     // Users can aquire new tasks directly in the tracing view. Occasionally,
     // they start working on a new TaskType and need to be instructed.
     let text;
@@ -183,7 +175,6 @@ class TracingLayoutView extends Marionette.View {
 
 
   renderSettings() {
-
     // This method will be invoked again once the model is initialized as part of
     // the "sync" event callback.
     let settingsTabView;
@@ -203,31 +194,26 @@ class TracingLayoutView extends Marionette.View {
 
 
   isTracingMode() {
-
     return this.model.get("controlMode") !== Constants.CONTROL_MODE_VIEW;
   }
 
 
   isSkeletonMode() {
-
     return Constants.MODES_SKELETON.includes(this.model.get("mode")) && this.isTracingMode();
   }
 
 
   isVolumeMode() {
-
     return this.model.get("mode") === Constants.MODE_VOLUME && this.isTracingMode();
   }
 
 
   isArbitraryMode() {
-
     return Constants.MODES_ARBITRARY.includes(this.model.get("mode"));
   }
 
 
   onDestroy() {
-
     $("#add-script-link")
       .addClass("hide")
       .off("click");

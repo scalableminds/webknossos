@@ -14,30 +14,30 @@ import "backbone.marionette";
 
 import "../stylesheets/main.less";
 
-ErrorHandling.initialize({ throwAssertions : false, sendLocalErrors : false });
+ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
 
 import Router from "./router";
 
-app.on("start", function() {
+app.on("start", () => {
   app.router = new Router();
-  return Backbone.history.start({ pushState : true });
+  return Backbone.history.start({ pushState: true });
 });
 
 app.on("start", () =>
-  Request.receiveJSON("/api/user", {doNotCatch : true})
-    .then(function(user) {
+  Request.receiveJSON("/api/user", { doNotCatch: true })
+    .then((user) => {
       app.currentUser = user;
       ErrorHandling.setCurrentUser(user);
-    }).catch(function(error) {  })
+    }).catch((error) => { }),
 );
 
 app.on("start", () => {
   // set app.vent to the global radio channel
-  app.vent = Backbone.Radio.channel('global')
+  app.vent = Backbone.Radio.channel("global");
 });
 
 
-$(function() {
+$(() => {
   // show the bootstrap flash modal on load
   $("#flashModal").modal("show");
 

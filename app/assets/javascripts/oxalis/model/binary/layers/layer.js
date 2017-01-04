@@ -6,14 +6,11 @@ import Request from "../../../../libs/request";
 // functionality.
 class Layer {
   static initClass() {
-  
-  
-    this.prototype.REQUEST_TIMEOUT  = 10000;
+    this.prototype.REQUEST_TIMEOUT = 10000;
   }
 
 
   constructor(layerInfo, dataSetName, dataStoreInfo) {
-
     this.dataSetName = dataSetName;
     this.dataStoreInfo = dataStoreInfo;
     _.extend(this, layerInfo);
@@ -24,15 +21,14 @@ class Layer {
 
 
   requestDataToken() {
-
     if (this.tokenRequestPromise) { return this.tokenRequestPromise; }
 
     this.tokenRequestPromise = Request.receiveJSON(
-      `/dataToken/generate?dataSetName=${this.dataSetName}&dataLayerName=${this.name}`
-    ).then( dataStore => {
+      `/dataToken/generate?dataSetName=${this.dataSetName}&dataLayerName=${this.name}`,
+    ).then((dataStore) => {
       this.tokenRequestPromise = null;
       return dataStore.token;
-    }
+    },
     );
 
     return this.tokenRequestPromise;
@@ -40,11 +36,9 @@ class Layer {
 
 
   doWithToken(fn) {
-
     return this.tokenPromise
         .then(fn)
-        .catch(error => {
-
+        .catch((error) => {
           if (error.status === 403) {
             console.warn("Token expired. Requesting new token...");
             this.tokenPromise = this.requestDataToken();
@@ -52,13 +46,12 @@ class Layer {
           }
 
           throw error;
-        }
+        },
         );
   }
 
 
   buildBuckets(batch, options) {
-
     return batch.map(bucketAddress => BucketBuilder.fromZoomedAddress(bucketAddress, options));
   }
 
@@ -66,10 +59,7 @@ class Layer {
   // Requests the data, ensures it has the right tokens and resolves with
   // an UInt8Array.
   requestFromStore(batch, options) {
-
-    return this.doWithToken(token => {
-      return this.requestFromStoreImpl(this.buildBuckets(batch, options), token);
-    }
+    return this.doWithToken(token => this.requestFromStoreImpl(this.buildBuckets(batch, options), token),
     );
   }
 
@@ -77,22 +67,17 @@ class Layer {
   // Sends the batch to the store. `getBucketData(zoomedAddress) -> Uint8Array`
   // converts bucket addresses to the data to send to the server.
   sendToStore(batch, getBucketData) {
-
-    return this.doWithToken(token => {
-      return this.sendToStoreImpl(this.buildBuckets(batch), getBucketData, token);
-    }
+    return this.doWithToken(token => this.sendToStoreImpl(this.buildBuckets(batch), getBucketData, token),
     );
   }
 
 
   requestFromStoreImpl(batch, token) {
-
     throw new Error("Subclass responsibility");
   }
 
 
   sendToStoreImpl(batch, getBucketData, token) {
-
     throw new Error("Subclass responsibility");
   }
 }

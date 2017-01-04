@@ -4,25 +4,22 @@ import constants from "../../../constants";
 
 class TDViewCategoryView extends CategoryView {
   static initClass() {
-  
-  
-    this.prototype.caption  = "3D View";
-  
-  
-    this.prototype.subviewCreatorsList  = [
-  
+    this.prototype.caption = "3D View";
+
+
+    this.prototype.subviewCreatorsList = [
+
       [
-        "tdViewDisplayPlanes", function() {
-  
+        "tdViewDisplayPlanes", function () {
           return new CheckboxSettingView({
-            model : this.model,
-            options : {
-              name : "tdViewDisplayPlanes",
-              displayName : "Display Planes"
-            }
+            model: this.model,
+            options: {
+              name: "tdViewDisplayPlanes",
+              displayName: "Display Planes",
+            },
           });
-        }
-      ]
+        },
+      ],
     ];
   }
 }

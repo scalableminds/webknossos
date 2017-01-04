@@ -8,11 +8,10 @@ const Request = {
   // IN:  nothing
   // OUT: json
   receiveJSON(url, options = {}) {
-
     return this.triggerRequest(
       url,
-      _.defaultsDeep(options, { headers : { "Accept": "application/json" }}),
-      this.handleEmptyJsonResponse
+      _.defaultsDeep(options, { headers: { Accept: "application/json" } }),
+      this.handleEmptyJsonResponse,
     );
   },
 
@@ -20,7 +19,6 @@ const Request = {
   // IN:  json
   // OUT: json
   sendJSONReceiveJSON(url, options = {}) {
-
     // Sanity check
     // Requests without body should not send 'json' header and use 'receiveJSON' instead
     if (!options.data) {
@@ -38,12 +36,12 @@ const Request = {
     return this.receiveJSON(
       url,
       _.defaultsDeep(options, {
-        method : "POST",
+        method: "POST",
         body,
-        headers : {
-          "Content-Type" : "application/json"
-        }
-      })
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
     );
   },
 
@@ -51,12 +49,10 @@ const Request = {
   // IN:  multipart formdata
   // OUT: json
   sendMultipartFormReceiveJSON(url, options = {}) {
-
-    const toFormData = function(input, form, namespace) {
+    const toFormData = function (input, form, namespace) {
       const formData = form || new FormData();
 
-      for (let key in input) {
-
+      for (const key in input) {
         let formKey;
         const value = input[key];
         if (namespace) {
@@ -66,16 +62,13 @@ const Request = {
         }
 
         if (_.isArray(value)) {
-          for (let val of value) {
+          for (const val of value) {
             formData.append(`${formKey}[]`, val);
           }
-
         } else if (value instanceof File) {
           formData.append(`${formKey}[]`, value, value.name);
-
         } else if (_.isObject(value)) {
           toFormData(value, formData, key);
-
         } else { // string
           ErrorHandling.assert(_.isString(value));
           formData.append(formKey, value);
@@ -95,9 +88,9 @@ const Request = {
     return this.receiveJSON(
       url,
       _.defaultsDeep(options, {
-        method : "POST",
-        body
-      })
+        method: "POST",
+        body,
+      }),
     );
   },
 
@@ -105,7 +98,6 @@ const Request = {
   // IN:  url-encoded formdata
   // OUT: json
   sendUrlEncodedFormReceiveJSON(url, options = {}) {
-
     const body = typeof options.data === "string" ?
         options.data
       :
@@ -114,22 +106,21 @@ const Request = {
     return this.receiveJSON(
       url,
       _.defaultsDeep(options, {
-        method : "POST",
+        method: "POST",
         body,
-        headers : {
-          "Content-Type" : "application/x-www-form-urlencoded"
-        }
-      }
-      )
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      },
+      ),
     );
   },
 
 
   receiveArraybuffer(url, options = {}) {
-
     return this.triggerRequest(
       url,
-      _.defaultsDeep(options, { headers : { "Accept": "application/octet-stream" }}),
+      _.defaultsDeep(options, { headers: { Accept: "application/octet-stream" } }),
       response => response.arrayBuffer());
   },
 
@@ -137,7 +128,6 @@ const Request = {
   // IN:  arraybuffer
   // OUT: arraybuffer
   sendArraybufferReceiveArraybuffer(url, options = {}) {
-
     let body = options.data instanceof ArrayBuffer ?
         options.data
       :
@@ -151,26 +141,25 @@ const Request = {
     return this.receiveArraybuffer(
       url,
       _.defaultsDeep(options, {
-        method : "POST",
+        method: "POST",
         body,
-        headers : {
-          "Content-Type" : "application/octet-stream"
-        }
-      }
-      )
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+      },
+      ),
     );
   },
 
 
-  triggerRequest(url, options= {}, responseDataHandler) {
-
+  triggerRequest(url, options = {}, responseDataHandler) {
     const defaultOptions = {
-      method : "GET",
-      host : "",
-      credentials : "same-origin",
-      headers : {},
-      doNotCatch : false,
-      params : null
+      method: "GET",
+      host: "",
+      credentials: "same-origin",
+      headers: {},
+      doNotCatch: false,
+      params: null,
     };
 
     options = _.defaultsDeep(options, defaultOptions);
@@ -197,7 +186,7 @@ const Request = {
 
 
     const headers = new Headers();
-    for (let name in options.headers) {
+    for (const name in options.headers) {
       headers.set(name, options.headers[name]);
     }
     options.headers = headers;
@@ -211,8 +200,8 @@ const Request = {
     }
 
     if (options.timeout != null) {
-      return Promise.race([ fetchPromise, this.timeoutPromise(options.timeout) ])
-        .then(function(result) {
+      return Promise.race([fetchPromise, this.timeoutPromise(options.timeout)])
+        .then((result) => {
           if (result === "timeout") {
             throw new Error("Timeout");
           } else {
@@ -226,19 +215,17 @@ const Request = {
 
 
   timeoutPromise(timeout) {
-
-    return new Promise( (resolve, reject) =>
+    return new Promise((resolve, reject) =>
       setTimeout(
         () => resolve("timeout"),
-        timeout
-      )
+        timeout,
+      ),
     );
   },
 
 
   handleStatus(response) {
-
-    if (200 <= response.status && response.status < 400) {
+    if (response.status >= 200 && response.status < 400) {
       return Promise.resolve(response);
     }
 
@@ -247,10 +234,9 @@ const Request = {
 
 
   handleError(error) {
-
     if (error instanceof Response) {
       return error.text().then(
-        function(text) {
+        (text) => {
           try {
             const json = JSON.parse(text);
 
@@ -264,10 +250,10 @@ const Request = {
             return Promise.reject(text);
           }
         },
-        function(error) {
+        (error) => {
           Toast.error(error.toString());
           return Promise.reject(error);
-      });
+        });
     } else {
       Toast.error(error);
       return Promise.reject(error);
@@ -276,7 +262,6 @@ const Request = {
 
 
   handleEmptyJsonResponse(response) {
-
     const contentLength = parseInt(response.headers.get("Content-Length"));
     if (contentLength === 0) {
       return Promise.resolve({});
@@ -289,9 +274,8 @@ const Request = {
   // Extends the native Promise API with `always` functionality similar to jQuery.
   // http://api.jquery.com/deferred.always/
   always(promise, func) {
-
     return promise.then(func, func);
-  }
+  },
 };
 
 

@@ -10,8 +10,7 @@ import UserTasksCollection from "../models/user_tasks_collection";
 
 class DashboardTaskListView extends Marionette.CompositeView {
   static initClass() {
-
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <h3>Tasks</h3>
 <% if (isAdminView) { %>
   <a href="<%- jsRoutes.controllers.AnnotationIOController.userDownload(id).url %>"
@@ -47,45 +46,42 @@ class DashboardTaskListView extends Marionette.CompositeView {
 <div class="modal-container"></div>\
 `);
 
-    this.prototype.childViewContainer  = "tbody";
-    this.prototype.childView  = DashboardTaskListItemView;
+    this.prototype.childViewContainer = "tbody";
+    this.prototype.childView = DashboardTaskListItemView;
 
 
-    this.prototype.ui  =
-      {"modalContainer" : ".modal-container"};
+    this.prototype.ui =
+      { modalContainer: ".modal-container" };
 
-    this.prototype.events  = {
-      "click #new-task-button" : "newTask",
-      "click #transfer-task" : "transferTask",
-      "click #toggle-finished" : "toggleFinished"
+    this.prototype.events = {
+      "click #new-task-button": "newTask",
+      "click #transfer-task": "transferTask",
+      "click #toggle-finished": "toggleFinished",
     };
 
     this.prototype.behaviors = {
       SortTableBehavior: {
-        behaviorClass: SortTableBehavior
-      }
+        behaviorClass: SortTableBehavior,
+      },
     };
   }
   childViewOptions() {
-    return {isAdminView : this.options.isAdminView};
+    return { isAdminView: this.options.isAdminView };
   }
 
 
   templateContext() {
     return {
-      isAdminView : this.options.isAdminView,
-      getFinishVerb : () => {
-        return this.showFinishedTasks ? "unfinished" : "finished";
-      }
+      isAdminView: this.options.isAdminView,
+      getFinishVerb: () => this.showFinishedTasks ? "unfinished" : "finished",
     };
   }
 
 
   initialize(options) {
-
     this.options = options;
     this.showFinishedTasks = false;
-    this.collection = new UserTasksCollection([], {userID : this.options.userID});
+    this.collection = new UserTasksCollection([], { userID: this.options.userID });
     this.collection.fetch();
 
     return this.listenTo(app.vent, "modal:destroy", this.refresh);
@@ -100,18 +96,15 @@ class DashboardTaskListView extends Marionette.CompositeView {
   }
 
   newTask(event) {
-
     event.preventDefault();
 
     if (this.collection.filter(UserTasksCollection.prototype.unfinishedTasksFilter).length === 0 || confirm("Do you really want another task?")) {
-
       return this.collection.getNewTask();
     }
   }
 
 
   toggleFinished() {
-
     this.showFinishedTasks = !this.showFinishedTasks;
     this.collection.isFinished = this.showFinishedTasks;
     return this.refresh();
@@ -119,28 +112,23 @@ class DashboardTaskListView extends Marionette.CompositeView {
 
 
   transferTask(evt) {
-
     evt.preventDefault();
 
     const modalContainer = new Marionette.Region({
-      el : this.ui.modalContainer
+      el: this.ui.modalContainer,
     });
     const url = evt.target.href;
-    this.modal = new TaskTransferModalView({url});
+    this.modal = new TaskTransferModalView({ url });
     return modalContainer.show(this.modal);
   }
 
 
   refresh() {
-
-    return this.collection.fetch().then( () => {
-      return this.render();
-    }
+    return this.collection.fetch().then(() => this.render(),
     );
   }
 
   onDestroy() {
-
     return __guard__(this.modal, x => x.destroy());
   }
 }
@@ -150,5 +138,5 @@ DashboardTaskListView.initClass();
 export default DashboardTaskListView;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

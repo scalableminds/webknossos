@@ -2,12 +2,10 @@
 
 class ResizableBuffer {
   static initClass() {
-
-    this.prototype.GROW_MULTIPLIER  = 1.3;
+    this.prototype.GROW_MULTIPLIER = 1.3;
   }
 
-  constructor(elementLength, initialCapacity  = 100, bufferType = Float32Array) {
-
+  constructor(elementLength, initialCapacity = 100, bufferType = Float32Array) {
     this.elementLength = elementLength;
     this.bufferType = bufferType;
     this.capacity = initialCapacity * this.elementLength;
@@ -18,7 +16,6 @@ class ResizableBuffer {
 
 
   clear() {
-
     return this.length = 0;
   }
 
@@ -27,7 +24,7 @@ class ResizableBuffer {
 
   isFull() { return this.length === this.capacity; }
 
-  getLength() { return this.length/this.elementLength; }
+  getLength() { return this.length / this.elementLength; }
 
   getBufferLength() { return this.length; }
 
@@ -38,13 +35,11 @@ class ResizableBuffer {
   get(i) { return this.buffer[i]; }
 
   set(element, i) {
-
     return this.buffer.set(element, i * this.elementLength);
   }
 
 
   push(element) {
-
     this.ensureCapacity();
 
     const { buffer, elementLength, length } = this;
@@ -56,12 +51,11 @@ class ResizableBuffer {
 
 
   pushMany(elements) {
-
     this.ensureCapacity(this.length + (elements.length * this.elementLength));
 
     let { buffer, elementLength, length } = this;
 
-    for (let element of elements) {
+    for (const element of elements) {
       buffer.set(element, length);
       length += elementLength;
     }
@@ -70,7 +64,6 @@ class ResizableBuffer {
   }
 
   pushSubarray(subarray) {
-
     this.ensureCapacity(this.length + subarray.length);
 
     const { buffer, elementLength, length } = this;
@@ -82,7 +75,6 @@ class ResizableBuffer {
 
 
   pop(r) {
-
     if (r == null) { r = new Array(this.elementLength); }
     if (!this.length) { return; }
 
@@ -99,7 +91,6 @@ class ResizableBuffer {
 
 
   top(r) {
-
     if (r == null) { r = new Array(this.elementLength); }
     if (!this.length) { return; }
 
@@ -114,14 +105,11 @@ class ResizableBuffer {
 
 
   ensureCapacity(newCapacity) {
-
     if (newCapacity == null) { newCapacity = this.length + this.elementLength; }
     if (this.capacity < newCapacity) {
-
       const { buffer } = this;
 
       while (this.capacity < newCapacity) {
-
         this.capacity = Math.floor(this.capacity * this.GROW_MULTIPLIER);
         this.capacity -= this.capacity % this.elementLength;
       }
@@ -136,16 +124,15 @@ class ResizableBuffer {
 
 
   toString() {
-
     const length = this.getLength();
     const result = [];
 
-    for (let i of __range__(0, length, false)) {
+    for (const i of __range__(0, length, false)) {
       const element = [];
-      for (let j of __range__(0, this.elementLength, false)) {
-        element.push( this.buffer[ (i * this.elementLength) + j ] );
+      for (const j of __range__(0, this.elementLength, false)) {
+        element.push(this.buffer[(i * this.elementLength) + j]);
       }
-      result.push( `[ ${element.join(", ")} ]` );
+      result.push(`[ ${element.join(", ")} ]`);
     }
 
     return `(${length}) { ${result.join(", ")} }`;
@@ -157,9 +144,9 @@ ResizableBuffer.initClass();
 export default ResizableBuffer;
 
 function __range__(left, right, inclusive) {
-  let range = [];
-  let ascending = left < right;
-  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  const range = [];
+  const ascending = left < right;
+  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
   for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
     range.push(i);
   }

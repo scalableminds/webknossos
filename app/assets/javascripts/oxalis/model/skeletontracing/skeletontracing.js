@@ -13,19 +13,17 @@ import TracingParser from "./tracingparser";
 
 class SkeletonTracing {
   static initClass() {
-
     // Max and min radius in base voxels (see scaleInfo.baseVoxel)
-    this.prototype.MIN_RADIUS  = 1;
-    this.prototype.MAX_RADIUS  = 5000;
+    this.prototype.MIN_RADIUS = 1;
+    this.prototype.MAX_RADIUS = 5000;
 
-    this.prototype.trees  = [];
-    this.prototype.activeNode  = null;
-    this.prototype.activeTree  = null;
-    this.prototype.firstEdgeDirection  = null;
+    this.prototype.trees = [];
+    this.prototype.activeNode = null;
+    this.prototype.activeTree = null;
+    this.prototype.firstEdgeDirection = null;
   }
 
   constructor(tracing, flycam, flycam3d, user) {
-
     this.flycam = flycam;
     this.flycam3d = flycam3d;
     this.user = user;
@@ -37,7 +35,7 @@ class SkeletonTracing {
     this.restrictionHandler = new RestrictionHandler(tracing.restrictions);
 
 
-    //########### Load Tree from @data ##############
+    // ########### Load Tree from @data ##############
 
     this.stateLogger = new SkeletonTracingStateLogger(
       this.flycam, this.flycam3d, tracing.version, tracing.id, tracing.typ,
@@ -49,7 +47,7 @@ class SkeletonTracing {
       treeIdCount: this.treeIdCount,
       trees: this.trees,
       activeNode: this.activeNode,
-      activeTree: this.activeTree
+      activeTree: this.activeTree,
     } = tracingParser.parse());
 
     const tracingType = tracing.typ;
@@ -62,15 +60,15 @@ class SkeletonTracing {
 
     this.branchPointsAllowed = tracing.content.settings.branchPointsAllowed;
     if (!this.branchPointsAllowed) {
-      //calculate direction of first edge in nm
+      // calculate direction of first edge in nm
       if (__guard__(this.data.trees[0], x1 => x1.edges) != null) {
-        for (let edge of this.data.trees[0].edges) {
+        for (const edge of this.data.trees[0].edges) {
           const sourceNode = this.findNodeInList(this.trees[0].nodes, edge.source).pos;
           const targetNode = this.findNodeInList(this.trees[0].nodes, edge.target).pos;
           if (sourceNode[0] !== targetNode[0] || sourceNode[1] !== targetNode[1] || sourceNode[2] !== targetNode[2]) {
             this.firstEdgeDirection = [targetNode[0] - sourceNode[0],
-                                   targetNode[1] - sourceNode[1],
-                                   targetNode[2] - sourceNode[2]];
+              targetNode[1] - sourceNode[1],
+              targetNode[2] - sourceNode[2]];
             break;
           }
         }
@@ -84,14 +82,13 @@ class SkeletonTracing {
 
 
   initializeTrees(tracingType, taskId) {
-
     // Initialize tree colors
     this.colorIdCounter = this.treeIdCount;
 
     // Initialize tree name prefix
     this.TREE_PREFIX = this.generateTreeNamePrefix(tracingType, taskId);
 
-    for (let tree of this.trees) {
+    for (const tree of this.trees) {
       if (tree.color == null) {
         this.shuffleTreeColor(tree);
       }
@@ -109,7 +106,6 @@ class SkeletonTracing {
 
 
   benchmark(numberOfTrees, numberOfNodesPerTree = 1) {
-
     if (numberOfNodesPerTree == null) { numberOfNodesPerTree = 10000; }
     console.log(`[benchmark] start inserting ${numberOfNodesPerTree} nodes`);
     const startTime = (new Date()).getTime();
@@ -142,12 +138,11 @@ class SkeletonTracing {
 
 
   pushBranch() {
-
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if (this.branchPointsAllowed) {
       if (this.activeNode) {
-        this.activeTree.branchpoints.push( { id : this.activeNode.id, timestamp : Date.now() } );
+        this.activeTree.branchpoints.push({ id: this.activeNode.id, timestamp: Date.now() });
         this.stateLogger.updateTree(this.activeTree);
 
         return this.trigger("setBranch", true, this.activeNode);
@@ -159,7 +154,6 @@ class SkeletonTracing {
 
 
   popBranch() {
-
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     const reallyPopBranch = (point, tree, resolve) => {
@@ -177,7 +171,7 @@ class SkeletonTracing {
         const [point, tree] = this.getNextBranch();
         if (point) {
           if (this.doubleBranchPop) {
-            return this.trigger("doubleBranch", () => reallyPopBranch(point, tree, resolve) );
+            return this.trigger("doubleBranch", () => reallyPopBranch(point, tree, resolve));
           } else {
             return reallyPopBranch(point, tree, resolve);
           }
@@ -189,19 +183,18 @@ class SkeletonTracing {
         this.trigger("noBranchPoints");
         return reject();
       }
-    }
+    },
     );
   }
 
 
   getNextBranch() {
-
     let curTime = 0;
     let curPoint = null;
     let curTree = null;
 
-    for (let tree of this.trees) {
-      for (let branch of tree.branchpoints) {
+    for (const tree of this.trees) {
+      for (const branch of tree.branchpoints) {
         if (branch.timestamp > curTime) {
           curTime = branch.timestamp;
           curPoint = branch;
@@ -215,35 +208,30 @@ class SkeletonTracing {
 
 
   addNode(position, rotation, viewport, resolution, bitDepth, interpolation) {
-
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if (this.ensureDirection(position)) {
-
       let radius = 10 * app.scaleInfo.baseVoxel;
       if (this.activeNode) {
         radius = this.activeNode.radius;
       }
 
       const metaInfo = {
-        timestamp : (new Date()).getTime(),
+        timestamp: (new Date()).getTime(),
         viewport,
         resolution,
         bitDepth,
-        interpolation
+        interpolation,
       };
 
       const point = new TracePoint(this.idCount++, position, radius, this.activeTree.treeId, metaInfo, rotation);
       this.activeTree.nodes.push(point);
 
       if (this.activeNode) {
-
         this.activeNode.appendNext(point);
         point.appendNext(this.activeNode);
         this.activeNode = point;
-
       } else {
-
         this.activeNode = point;
         // first node should be a branchpoint
         if (this.branchPointsAllowed) {
@@ -264,14 +252,13 @@ class SkeletonTracing {
 
 
   ensureDirection(position) {
-
     if (!this.branchPointsAllowed && this.activeTree.nodes.length === 2 &&
         this.firstEdgeDirection && this.activeTree.treeId === this.trees[0].treeId) {
       const sourceNodeNm = app.scaleInfo.voxelToNm(this.activeTree.nodes[1].pos);
       const targetNodeNm = app.scaleInfo.voxelToNm(position);
       const secondEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
-                             targetNodeNm[1] - sourceNodeNm[1],
-                             targetNodeNm[2] - sourceNodeNm[2]];
+        targetNodeNm[1] - sourceNodeNm[1],
+        targetNodeNm[2] - sourceNodeNm[2]];
 
       return ((this.firstEdgeDirection[0] * secondEdgeDirection[0]) +
               (this.firstEdgeDirection[1] * secondEdgeDirection[1]) +
@@ -286,49 +273,41 @@ class SkeletonTracing {
 
 
   getActiveNodeId() {
-
     if (this.activeNode) { return this.activeNode.id; } else { return null; }
   }
 
 
   getActiveNodePos() {
-
     if (this.activeNode) { return this.activeNode.pos; } else { return null; }
   }
 
 
   getActiveNodeRadius() {
-
     if (this.activeNode) { return this.activeNode.radius; } else { return 10 * app.scaleInfo.baseVoxel; }
   }
 
 
   getActiveNodeRotation() {
-
     if (this.activeNode) { return this.activeNode.rotation; } else { return null; }
   }
 
 
   getActiveTree() {
-
     if (this.activeTree) { return this.activeTree; } else { return null; }
   }
 
 
   getActiveTreeId() {
-
     if (this.activeTree) { return this.activeTree.treeId; } else { return null; }
   }
 
 
   getActiveTreeName() {
-
     if (this.activeTree) { return this.activeTree.name; } else { return null; }
   }
 
 
   setTreeName(name) {
-
     if (this.activeTree) {
       if (name) {
         this.activeTree.name = name;
@@ -343,9 +322,8 @@ class SkeletonTracing {
 
 
   getNode(id) {
-
-    for (let tree of this.trees) {
-      for (let node of tree.nodes) {
+    for (const tree of this.trees) {
+      for (const node of tree.nodes) {
         if (node.id === id) { return node; }
       }
     }
@@ -354,11 +332,10 @@ class SkeletonTracing {
 
 
   setActiveNode(nodeID, mergeTree = false) {
-
     const lastActiveNode = this.activeNode;
     const lastActiveTree = this.activeTree;
-    for (let tree of this.trees) {
-      for (let node of tree.nodes) {
+    for (const tree of this.trees) {
+      for (const node of tree.nodes) {
         if (node.id === nodeID) {
           this.activeNode = node;
           this.activeTree = tree;
@@ -380,20 +357,18 @@ class SkeletonTracing {
 
 
   setActiveNodeRadius(radius) {
-
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if (this.activeNode != null) {
-      this.activeNode.radius = Math.min( this.MAX_RADIUS,
-                            Math.max( this.MIN_RADIUS, radius ) );
-      this.stateLogger.updateNode( this.activeNode, this.activeNode.treeId );
+      this.activeNode.radius = Math.min(this.MAX_RADIUS,
+                            Math.max(this.MIN_RADIUS, radius));
+      this.stateLogger.updateNode(this.activeNode, this.activeNode.treeId);
       return this.trigger("newActiveNodeRadius", radius);
     }
   }
 
 
   selectNextTree(forward) {
-
     const trees = this.getTreesSorted(this.user.get("sortTreesByName"));
     for (var i of __range__(0, trees.length, false)) {
       if (this.activeTree.treeId === trees[i].treeId) {
@@ -402,12 +377,11 @@ class SkeletonTracing {
     }
 
     const diff = (forward ? 1 : -1) + trees.length;
-    return this.setActiveTree(trees[ (i + diff) % trees.length ].treeId);
+    return this.setActiveTree(trees[(i + diff) % trees.length].treeId);
   }
 
 
   centerActiveNode() {
-
     const position = this.getActiveNodePos();
     if (position) {
       return this.flycam.setPosition(position);
@@ -416,8 +390,7 @@ class SkeletonTracing {
 
 
   setActiveTree(id) {
-
-    for (let tree of this.trees) {
+    for (const tree of this.trees) {
       if (tree.treeId === id) {
         this.activeTree = tree;
         break;
@@ -436,13 +409,11 @@ class SkeletonTracing {
 
 
   getNewTreeColor() {
-
-    return ColorGenerator.distinctColorForId( this.colorIdCounter++ );
+    return ColorGenerator.distinctColorForId(this.colorIdCounter++);
   }
 
 
   shuffleTreeColor(tree) {
-
     if (!tree) { tree = this.activeTree; }
     tree.color = this.getNewTreeColor();
 
@@ -456,20 +427,18 @@ class SkeletonTracing {
 
 
   shuffleAllTreeColors() {
-
-    return this.trees.map((tree) =>
+    return this.trees.map(tree =>
       this.shuffleTreeColor(tree));
   }
 
 
   createNewTree() {
-
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     const tree = new TraceTree(
       this.treeIdCount++,
       this.getNewTreeColor(),
-      this.TREE_PREFIX + (`00${this.treeIdCount-1}`).slice(-3),
+      this.TREE_PREFIX + (`00${this.treeIdCount - 1}`).slice(-3),
       (new Date()).getTime());
     this.trees.push(tree);
     this.activeTree = tree;
@@ -482,13 +451,11 @@ class SkeletonTracing {
 
 
   deleteActiveNode() {
-
     let branchpoints;
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
-    const reallyDeleteActiveNode = resolve => {
-
-      for (let neighbor of this.activeNode.neighbors) {
+    const reallyDeleteActiveNode = (resolve) => {
+      for (const neighbor of this.activeNode.neighbors) {
         neighbor.removeNeighbor(this.activeNode.id);
       }
       const updateTree = this.activeTree.removeNode(this.activeNode.id);
@@ -506,7 +473,7 @@ class SkeletonTracing {
         const newTrees = [];
         const oldActiveTreeId = this.activeTree.treeId;
 
-        for (let i of __range__(0, this.activeNode.neighbors.length, false)) {
+        for (const i of __range__(0, this.activeNode.neighbors.length, false)) {
           let node;
           if (i !== 0) {
             // create new tree for all neighbors, except the first
@@ -538,7 +505,6 @@ class SkeletonTracing {
         }
 
         this.trigger("reloadTrees", newTrees);
-
       } else if (this.activeNode.neighbors.length === 1) {
         // no children, so just remove it.
         this.setActiveNode(deletedNode.neighbors[0].id);
@@ -552,27 +518,26 @@ class SkeletonTracing {
     return new Promise((resolve, reject) => {
       if (this.activeNode) {
         if (this.getBranchpointsForNodes(this.activeTree.branchpoints, this.activeNode).length) {
-          return this.trigger("deleteBranch", () => reallyDeleteActiveNode(resolve) );
+          return this.trigger("deleteBranch", () => reallyDeleteActiveNode(resolve));
         } else {
           return reallyDeleteActiveNode(resolve);
         }
       } else {
         return reject();
       }
-    }
+    },
     );
   }
 
 
   deleteTree(notify, id, notifyServer) {
-
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if (notify) {
       if (confirm("Do you really want to delete the whole tree?")) {
         return this.reallyDeleteTree(id, notifyServer);
       } else {
-        return;
+
       }
     } else {
       return this.reallyDeleteTree(id, notifyServer);
@@ -581,7 +546,6 @@ class SkeletonTracing {
 
 
   reallyDeleteTree(id, notifyServer = true) {
-
     let index;
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
@@ -590,7 +554,7 @@ class SkeletonTracing {
     }
     const tree = this.getTree(id);
 
-    for (let i of __range__(0, this.trees.length, true)) {
+    for (const i of __range__(0, this.trees.length, true)) {
       if (this.trees[i].treeId === tree.treeId) {
         index = i;
         break;
@@ -615,7 +579,6 @@ class SkeletonTracing {
 
 
   mergeTree(lastNode, lastTree) {
-
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if (!lastNode) {
@@ -632,7 +595,7 @@ class SkeletonTracing {
         lastNode.appendNext(this.activeNode);
 
         // update tree ids
-        for (let node of this.activeTree.nodes) {
+        for (const node of this.activeTree.nodes) {
           node.treeId = this.activeTree.treeId;
         }
 
@@ -651,20 +614,18 @@ class SkeletonTracing {
 
 
   updateTree(tree) {
-
     return this.stateLogger.updateTree(tree);
   }
 
 
   generateTreeNamePrefix(tracingType, taskId) {
-
     let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
     // Replace spaces in user names
     user = user.replace(/ /g, "_");
 
     if (tracingType === "Explorational") {
       // Get YYYY-MM-DD string
-      const creationDate = new Date().toJSON().slice(0,10);
+      const creationDate = new Date().toJSON().slice(0, 10);
       return `explorative_${creationDate}_${user}_`;
     } else {
       return `task_${taskId}_${user}_`;
@@ -673,11 +634,10 @@ class SkeletonTracing {
 
 
   getTree(id) {
-
     if (!id) {
       return this.activeTree;
     }
-    for (let tree of this.trees) {
+    for (const tree of this.trees) {
       if (tree.treeId === id) {
         return tree;
       }
@@ -690,7 +650,6 @@ class SkeletonTracing {
 
 
   getTreesSorted() {
-
     if (this.user.get("sortTreesByName")) {
       return this.getTreesSortedBy("name");
     } else {
@@ -700,7 +659,6 @@ class SkeletonTracing {
 
 
   getTreesSortedBy(key, isSortedAscending) {
-
     return (this.trees.slice(0)).sort(Utils.compareBy(key, isSortedAscending));
   }
 
@@ -715,7 +673,7 @@ class SkeletonTracing {
     let next = root.getNext(previous);
     while (next != null) {
       if (_.isArray(next)) {
-        for (let neighbor of next) {
+        for (const neighbor of next) {
           this.getNodeListForRoot(result, neighbor, root);
         }
         return;
@@ -730,9 +688,8 @@ class SkeletonTracing {
 
 
   getNodeListOfAllTrees() {
-
     let result = [];
-    for (let tree of this.trees) {
+    for (const tree of this.trees) {
       result = result.concat(tree.nodes);
     }
     return result;
@@ -742,7 +699,7 @@ class SkeletonTracing {
   findNodeInList(list, id) {
     // Helper method used in initialization
 
-    for (let node of list) {
+    for (const node of list) {
       if (node.id === id) {
         return node;
       }
@@ -752,19 +709,16 @@ class SkeletonTracing {
 
 
   getCommentsForNodes(comments, nodes) {
-
-    return _.filter(comments, comment => _.find(nodes, { id : comment.node }));
+    return _.filter(comments, comment => _.find(nodes, { id: comment.node }));
   }
 
 
   getBranchpointsForNodes(branchpoints, nodes) {
-
-    return _.filter(branchpoints, branch => _.find(nodes, { id : branch.id }));
+    return _.filter(branchpoints, branch => _.find(nodes, { id: branch.id }));
   }
 
 
   compareNodes(a, b) {
-
     if (a.node.treeId < b.node.treeId) {
       return -1;
     }
@@ -780,12 +734,12 @@ SkeletonTracing.initClass();
 export default SkeletonTracing;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }
 function __range__(left, right, inclusive) {
-  let range = [];
-  let ascending = left < right;
-  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  const range = [];
+  const ascending = left < right;
+  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
   for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
     range.push(i);
   }

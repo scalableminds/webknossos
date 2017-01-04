@@ -3,16 +3,15 @@ import Backbone from "backbone";
 
 class ProjectModel extends Backbone.Model {
   static initClass() {
-
-    this.prototype.urlRoot  = "/api/projects";
+    this.prototype.urlRoot = "/api/projects";
     this.prototype.idAttribute = "name";
 
-    this.prototype.default  = {
-      owner : {
-        firstName : "",
-        lastName : ""
+    this.prototype.default = {
+      owner: {
+        firstName: "",
+        lastName: "",
       },
-      priority: 100
+      priority: 100,
     };
   }
 
@@ -25,8 +24,7 @@ class ProjectModel extends Backbone.Model {
   }
 
 
-  parse(response){
-
+  parse(response) {
     // set some sensible defaults
     if (!response.owner) { response.owner = this.default.owner; }
     return response;

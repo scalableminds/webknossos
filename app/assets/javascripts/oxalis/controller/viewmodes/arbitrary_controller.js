@@ -16,44 +16,41 @@ import modal from "../../view/modal";
 
 class ArbitraryController {
   static initClass() {
-
     // See comment in Controller class on general controller architecture.
     //
     // Arbitrary Controller: Responsible for Arbitrary Modes
 
-    this.prototype.WIDTH  = 128;
-    this.prototype.TIMETOCENTER  = 200;
+    this.prototype.WIDTH = 128;
+    this.prototype.TIMETOCENTER = 200;
 
 
-    this.prototype.plane  = null;
-    this.prototype.crosshair  = null;
-    this.prototype.cam  = null;
+    this.prototype.plane = null;
+    this.prototype.crosshair = null;
+    this.prototype.cam = null;
 
-    this.prototype.fullscreen  = false;
-    this.prototype.lastNodeMatrix  = null;
+    this.prototype.fullscreen = false;
+    this.prototype.lastNodeMatrix = null;
 
-    this.prototype.model  = null;
-    this.prototype.view  = null;
+    this.prototype.model = null;
+    this.prototype.view = null;
 
-    this.prototype.input  = {
-      mouse : null,
-      keyboard : null,
-      keyboardNoLoop : null,
-      keyboardOnce : null,
+    this.prototype.input = {
+      mouse: null,
+      keyboard: null,
+      keyboardNoLoop: null,
+      keyboardOnce: null,
 
       destroy() {
-
         __guard__(this.mouse, x => x.destroy());
         __guard__(this.keyboard, x1 => x1.destroy());
         __guard__(this.keyboardNoLoop, x2 => x2.destroy());
         return __guard__(this.keyboardOnce, x3 => x3.destroy());
-      }
+      },
     };
   }
 
 
   constructor(model, view, sceneController, skeletonTracingController) {
-
     let canvas;
     this.scroll = this.scroll.bind(this);
     this.addNode = this.addNode.bind(this);
@@ -75,7 +72,7 @@ class ArbitraryController {
     this.arbitraryView.addGeometry(this.plane);
 
     // render HTML element to indicate recording status
-    this.infoPlane = new ArbitraryPlaneInfo({model: this.model});
+    this.infoPlane = new ArbitraryPlaneInfo({ model: this.model });
     this.infoPlane.render();
     $("#render").append(this.infoPlane.el);
 
@@ -85,7 +82,7 @@ class ArbitraryController {
     this.crosshair = new Crosshair(this.cam, this.model.user.get("crosshairSize"));
     this.arbitraryView.addGeometry(this.crosshair);
 
-    this.listenTo(this.model.user, "change:displayCrosshair", function(model, value) {
+    this.listenTo(this.model.user, "change:displayCrosshair", function (model, value) {
       return this.crosshair.setVisibility(value);
     });
 
@@ -99,118 +96,112 @@ class ArbitraryController {
 
 
   render(forceUpdate, event) {
-
     const matrix = this.cam.getMatrix();
-    return this.model.getColorBinaries().map((binary) =>
+    return this.model.getColorBinaries().map(binary =>
       binary.arbitraryPing(matrix, this.model.datasetConfiguration.get("quality")));
   }
 
 
   initMouse() {
-
     return this.input.mouse = new Input.Mouse(
-      this.canvas,{
-      leftDownMove : delta => {
-        if (this.mode === constants.MODE_ARBITRARY) {
-          this.cam.yaw(
+      this.canvas, {
+        leftDownMove: (delta) => {
+          if (this.mode === constants.MODE_ARBITRARY) {
+            this.cam.yaw(
             -delta.x * this.model.user.getMouseInversionX() * this.model.user.get("mouseRotateValue"),
-            true
+            true,
           );
-          return this.cam.pitch(
+            return this.cam.pitch(
             delta.y * this.model.user.getMouseInversionY() * this.model.user.get("mouseRotateValue"),
-            true
+            true,
           );
-        } else if (this.mode === constants.MODE_ARBITRARY_PLANE) {
-          const f = this.cam.getZoomStep() / (this.arbitraryView.width / this.WIDTH);
-          return this.cam.move([delta.x * f, delta.y * f, 0]);
-        }
-      },
-      rightClick : (pos, plane, event) => {
-        return this.createBranchMarker(pos);
-      },
+          } else if (this.mode === constants.MODE_ARBITRARY_PLANE) {
+            const f = this.cam.getZoomStep() / (this.arbitraryView.width / this.WIDTH);
+            return this.cam.move([delta.x * f, delta.y * f, 0]);
+          }
+        },
+        rightClick: (pos, plane, event) => this.createBranchMarker(pos),
 
-      scroll : this.scroll
-    }
+        scroll: this.scroll,
+      },
     );
   }
 
 
   initKeyboard() {
-
     this.input.keyboard = new Input.Keyboard({
 
       // KeyboardJS is sensitive to ordering (complex combos first)
 
       // Scale plane
-      "l"             : timeFactor => this.arbitraryView.applyScale(-this.model.user.get("scaleValue")),
-      "k"             : timeFactor => this.arbitraryView.applyScale(this.model.user.get("scaleValue")),
+      l: timeFactor => this.arbitraryView.applyScale(-this.model.user.get("scaleValue")),
+      k: timeFactor => this.arbitraryView.applyScale(this.model.user.get("scaleValue")),
 
-      //Move
-      "space"         : timeFactor => {
+      // Move
+      space: (timeFactor) => {
         this.setRecord(true);
         return this.move(timeFactor);
       },
-      "ctrl + space"   : timeFactor => {
+      "ctrl + space": (timeFactor) => {
         this.setRecord(true);
         return this.move(-timeFactor);
       },
 
-      "f"         : timeFactor => {
+      f: (timeFactor) => {
         this.setRecord(false);
         return this.move(timeFactor);
       },
-      "d"   : timeFactor => {
+      d: (timeFactor) => {
         this.setRecord(false);
         return this.move(-timeFactor);
       },
 
-      //Rotate at centre
-      "shift + left"  : timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor),
-      "shift + right" : timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor),
-      "shift + up"    : timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor),
-      "shift + down"  : timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor),
+      // Rotate at centre
+      "shift + left": timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor),
+      "shift + right": timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor),
+      "shift + up": timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor),
+      "shift + down": timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor),
 
-      //Rotate in distance
-      "left"          : timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      "right"         : timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      "up"            : timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      "down"          : timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      // Rotate in distance
+      left: timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      right: timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      up: timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      down: timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
 
-      //Zoom in/out
-      "i"             : timeFactor => this.cam.zoomIn(),
-      "o"             : timeFactor => this.cam.zoomOut(),
+      // Zoom in/out
+      i: timeFactor => this.cam.zoomIn(),
+      o: timeFactor => this.cam.zoomOut(),
 
-      //Change move value
-      "h"             : timeFactor => this.changeMoveValue(25),
-      "g"             : timeFactor => this.changeMoveValue(-25)
+      // Change move value
+      h: timeFactor => this.changeMoveValue(25),
+      g: timeFactor => this.changeMoveValue(-25),
     });
 
     this.input.keyboardNoLoop = new Input.KeyboardNoLoop({
 
-      //Branches
-      "b" : () => this.pushBranch(),
-      "j" : () => this.popBranch(),
+      // Branches
+      b: () => this.pushBranch(),
+      j: () => this.popBranch(),
 
-      //Recenter active node
-      "s" : () => this.centerActiveNode(),
+      // Recenter active node
+      s: () => this.centerActiveNode(),
 
-      "." : () => this.nextNode(true),
-      "," : () => this.nextNode(false),
+      ".": () => this.nextNode(true),
+      ",": () => this.nextNode(false),
 
-      //Rotate view by 180 deg
-      "r" : () => this.cam.yaw(Math.PI)
+      // Rotate view by 180 deg
+      r: () => this.cam.yaw(Math.PI),
     });
 
     return this.input.keyboardOnce = new Input.Keyboard(
 
-      //Delete active node and recenter last node
-      {"shift + space" : () => this.deleteActiveNode()}
+      // Delete active node and recenter last node
+      { "shift + space": () => this.deleteActiveNode() }
     , -1);
   }
 
 
   setRecord(record) {
-
     if (record !== this.model.get("flightmodeRecording")) {
       this.model.set("flightmodeRecording", record);
       return this.setWaypoint();
@@ -219,27 +210,25 @@ class ArbitraryController {
 
 
   createBranchMarker(pos) {
-
     if (!this.isBranchpointvideoMode() && !this.isSynapseannotationMode()) { return; }
     const activeNode = this.model.skeletonTracing.getActiveNode();
     this.model.setMode(2);
     const f = this.cam.getZoomStep() / (this.arbitraryView.width / this.WIDTH);
     this.cam.move([-(pos.x - (this.arbitraryView.width / 2)) * f, -(pos.y - (this.arbitraryView.width / 2)) * f, 0]);
-    const position  = this.cam.getPosition();
+    const position = this.cam.getPosition();
     const rotation = this.cam.getRotation();
     this.model.skeletonTracing.createNewTree();
     this.addNode(position, rotation);
     this.cam.move([(pos.x - (this.arbitraryView.width / 2)) * f, (pos.y - (this.arbitraryView.width / 2)) * f, 0]);
     if (this.isBranchpointvideoMode()) {
-        this.setActiveNode(activeNode.id, true);
-      }
+      this.setActiveNode(activeNode.id, true);
+    }
     this.model.setMode(1);
     return this.moved();
   }
 
 
   nextNode(nextOne) {
-
     if (!this.isBranchpointvideoMode()) { return; }
     const activeNode = this.model.skeletonTracing.getActiveNode();
     if ((nextOne && activeNode.id === this.model.skeletonTracing.getActiveTree().nodes.length) || (!nextOne && activeNode.id === 1)) {
@@ -253,13 +242,11 @@ class ArbitraryController {
 
 
   getVoxelOffset(timeFactor) {
-
     return (this.model.user.get("moveValue3d") * timeFactor) / app.scaleInfo.baseVoxel / constants.FPS;
   }
 
 
   move(timeFactor) {
-
     if (!this.isStarted) { return; }
     if (this.isBranchpointvideoMode()) { return; }
     this.cam.move([0, 0, this.getVoxelOffset(timeFactor)]);
@@ -268,38 +255,35 @@ class ArbitraryController {
 
 
   init() {
-
     this.setClippingDistance(this.model.user.get("clippingDistanceArbitrary"));
     return this.arbitraryView.applyScale(0);
   }
 
 
   bindToEvents() {
-
     this.listenTo(this.arbitraryView, "render", this.render);
 
-    for (let name in this.model.binary) {
+    for (const name in this.model.binary) {
       const binary = this.model.binary[name];
       this.listenTo(binary.cube, "bucketLoaded", this.arbitraryView.draw);
     }
 
-    this.listenTo(this.model.user, "change:crosshairSize", function(model, value) {
+    this.listenTo(this.model.user, "change:crosshairSize", function (model, value) {
       return this.crosshair.setScale(value);
     });
-    this.listenTo(this.model.user, { ["change:sphericalCapRadius"](model, value) {
+    this.listenTo(this.model.user, { "change:sphericalCapRadius": function (model, value) {
       this.model.flycam3d.distance = value;
       return this.plane.setMode(this.mode);
-    }
-  }
+    },
+    },
     );
-    return this.listenTo(this.model.user, "change:clippingDistanceArbitrary", function(model, value) {
+    return this.listenTo(this.model.user, "change:clippingDistanceArbitrary", function (model, value) {
       return this.setClippingDistance(value);
     });
   }
 
 
   start(mode) {
-
     this.mode = mode;
     this.stop();
 
@@ -316,7 +300,6 @@ class ArbitraryController {
 
 
   stop() {
-
     if (this.isStarted) {
       this.input.destroy();
     }
@@ -328,7 +311,6 @@ class ArbitraryController {
 
 
   scroll(delta, type) {
-
     switch (type) {
       case "shift": return this.setParticleSize(Utils.clamp(-1, delta, 1));
     }
@@ -336,7 +318,6 @@ class ArbitraryController {
 
 
   addNode(position, rotation) {
-
     if (!this.isStarted) { return; }
     const datasetConfig = this.model.get("datasetConfiguration");
     const fourBit = datasetConfig.get("fourBit") ? 4 : 8;
@@ -347,12 +328,11 @@ class ArbitraryController {
 
 
   setWaypoint() {
-
     if (!this.model.get("flightmodeRecording")) {
       return;
     }
 
-    const position  = this.cam.getPosition();
+    const position = this.cam.getPosition();
     const rotation = this.cam.getRotation();
 
     return this.addNode(position, rotation);
@@ -360,7 +340,6 @@ class ArbitraryController {
 
 
   changeMoveValue(delta) {
-
     let moveValue = this.model.user.get("moveValue3d") + delta;
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
@@ -370,7 +349,6 @@ class ArbitraryController {
 
 
   setParticleSize(delta) {
-
     let particleSize = this.model.user.get("particleSize") + delta;
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize);
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize);
@@ -380,7 +358,6 @@ class ArbitraryController {
 
 
   setClippingDistance(value) {
-
     if (this.isBranchpointvideoMode()) {
       return this.arbitraryView.setClippingDistance(constants.BRANCHPOINT_VIDEO_CLIPPING_DISTANCE);
     } else {
@@ -390,7 +367,6 @@ class ArbitraryController {
 
 
   pushBranch() {
-
     this.setWaypoint();
     this.model.skeletonTracing.pushBranch();
     return Toast.success("Branchpoint set");
@@ -398,25 +374,22 @@ class ArbitraryController {
 
 
   popBranch() {
-
-    return _.defer(() => this.model.skeletonTracing.popBranch().then(id => {
+    return _.defer(() => this.model.skeletonTracing.popBranch().then((id) => {
       this.setActiveNode(id, true);
       if (id === 1) {
         this.cam.yaw(Math.PI);
         Toast.warning("Reached initial node, view reversed");
         return this.model.commentTabView.appendComment("reversed");
       }
-    }
-    )
+    },
+    ),
     );
   }
 
 
   centerActiveNode() {
-
     const activeNode = this.model.skeletonTracing.getActiveNode();
     if (activeNode) {
-
       // animate the change to the new position and new rotation
       const curPos = this.cam.getPosition();
       const newPos = this.model.skeletonTracing.getActiveNodePos();
@@ -425,10 +398,10 @@ class ArbitraryController {
       newRotation = this.getShortestRotation(curRotation, newRotation);
 
       const waypointAnimation = new TWEEN.Tween(
-        {x: curPos[0], y: curPos[1], z: curPos[2], rx: curRotation[0], ry: curRotation[1], rz: curRotation[2], cam: this.cam});
+        { x: curPos[0], y: curPos[1], z: curPos[2], rx: curRotation[0], ry: curRotation[1], rz: curRotation[2], cam: this.cam });
       waypointAnimation.to(
-        {x: newPos[0], y: newPos[1], z: newPos[2], rx: newRotation[0], ry: newRotation[1], rz: newRotation[2]}, this.TIMETOCENTER);
-      waypointAnimation.onUpdate( function() {
+        { x: newPos[0], y: newPos[1], z: newPos[2], rx: newRotation[0], ry: newRotation[1], rz: newRotation[2] }, this.TIMETOCENTER);
+      waypointAnimation.onUpdate(function () {
         this.cam.setPosition([this.x, this.y, this.z]);
         return this.cam.setRotation([this.rx, this.ry, this.rz]);
       });
@@ -440,7 +413,6 @@ class ArbitraryController {
 
 
   setActiveNode(nodeId, centered, mergeTree) {
-
     this.model.skeletonTracing.setActiveNode(nodeId, mergeTree);
     this.cam.setPosition(this.model.skeletonTracing.getActiveNodePos());
     return this.cam.setRotation(this.model.skeletonTracing.getActiveNodeRotation());
@@ -448,24 +420,20 @@ class ArbitraryController {
 
 
   deleteActiveNode() {
-
     const { skeletonTracing } = this.model;
     const activeNode = skeletonTracing.getActiveNode();
     if (activeNode.neighbors.length > 1) {
       return Toast.error("Unable: Attempting to cut skeleton");
     } else {
       return _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(
-        () => {
-          return this.centerActiveNode();
-        }
-      )
+        () => this.centerActiveNode(),
+      ),
       );
     }
   }
 
 
   getShortestRotation(curRotation, newRotation) {
-
     // TODO
     // interpolating Euler angles does not lead to the shortest rotation
     // interpolate the Quaternion representation instead
@@ -484,7 +452,6 @@ class ArbitraryController {
 
 
   moved() {
-
     const matrix = this.cam.getMatrix();
 
     if (this.lastNodeMatrix == null) {
@@ -496,7 +463,7 @@ class ArbitraryController {
     const vector = [
       lastNodeMatrix[12] - matrix[12],
       lastNodeMatrix[13] - matrix[13],
-      lastNodeMatrix[14] - matrix[14]
+      lastNodeMatrix[14] - matrix[14],
     ];
     const vectorLength = V3.length(vector);
 
@@ -508,14 +475,12 @@ class ArbitraryController {
 
 
   isBranchpointvideoMode() {
-
-    return __guard__(this.model.tracing.task, x => x.type.summary) === 'branchpointvideo';
+    return __guard__(this.model.tracing.task, x => x.type.summary) === "branchpointvideo";
   }
 
 
   isSynapseannotationMode() {
-
-    return __guard__(this.model.tracing.task, x => x.type.summary) === 'synapseannotation';
+    return __guard__(this.model.tracing.task, x => x.type.summary) === "synapseannotation";
   }
 }
 ArbitraryController.initClass();
@@ -524,5 +489,5 @@ ArbitraryController.initClass();
 export default ArbitraryController;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

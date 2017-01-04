@@ -8,10 +8,9 @@ import modal from "./view/modal";
 class View {
 
   constructor(model) {
-
     this.model = model;
     if (!this.isWebGlSupported()) {
-      Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>"+
+      Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>" +
         "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>");
     }
 
@@ -26,7 +25,6 @@ class View {
 
 
   toggleTheme() {
-
     if (this.theme === constants.THEME_BRIGHT) {
       return this.setTheme(constants.THEME_DARK);
     } else {
@@ -36,22 +34,19 @@ class View {
 
 
   setTheme(theme) {
-
     this.theme = theme;
     app.vent.trigger("view:setTheme", theme);
 
     if (theme === constants.THEME_BRIGHT) {
-      return $("body").attr('class', 'bright');
+      return $("body").attr("class", "bright");
     } else {
-      return $("body").attr('class', 'dark');
+      return $("body").attr("class", "dark");
     }
   }
 
 
-
   isWebGlSupported() {
-
-    return window.WebGLRenderingContext && document.createElement('canvas').getContext('experimental-webgl');
+    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
   }
 }
 

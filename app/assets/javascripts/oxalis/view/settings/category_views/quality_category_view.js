@@ -5,52 +5,47 @@ import constants from "../../../constants";
 
 class QualityCategoryView extends CategoryView {
   static initClass() {
-  
-  
-    this.prototype.caption  = "Quality";
-  
-  
-    this.prototype.subviewCreatorsList  = [
-  
+    this.prototype.caption = "Quality";
+
+
+    this.prototype.subviewCreatorsList = [
+
       [
-        "fourBit", function() {
-  
+        "fourBit", function () {
           return new CheckboxSettingView({
-            model : this.model,
-            options : {
-              name : "fourBit",
-              displayName : "4 Bit"
-            }
+            model: this.model,
+            options: {
+              name: "fourBit",
+              displayName: "4 Bit",
+            },
           });
-        }
+        },
       ],
-  
+
       [
-        "interpolation", function() {
-  
+        "interpolation", function () {
           return new CheckboxSettingView({
-            model : this.model,
-            options : {
-              name : "interpolation",
-              displayName : "Interpolation"
-            }
+            model: this.model,
+            options: {
+              name: "interpolation",
+              displayName: "Interpolation",
+            },
           });
-        }
+        },
       ],
-  
+
       [
-        "quality", function() {
-  
+        "quality", function () {
           return new DropdownSettingView({
-            model : this.model,
-            options : {
-              name : "quality",
-              displayName : "Quality",
-              options : ["high", "medium", "low"]
-            }
+            model: this.model,
+            options: {
+              name: "quality",
+              displayName: "Quality",
+              options: ["high", "medium", "low"],
+            },
           });
-        }
-      ]
+        },
+      ],
     ];
   }
 }

@@ -6,9 +6,8 @@ import PaginationView from "admin/views/pagination_view";
 
 class SpotlightView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.className  = "spotlight-view";
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "spotlight-view";
+    this.prototype.template = _.template(`\
 <div class="container">
   <div id="oxalis-header">
     <img src="/assets/images/oxalis.svg">
@@ -19,24 +18,23 @@ class SpotlightView extends Marionette.View {
 </div>
 <div id="credits"></div>\
 `);
-  
-    this.prototype.regions  = {
-      pagination : "#pagination",
-      credits : "#credits",
-      datasets : "#datasets"
+
+    this.prototype.regions = {
+      pagination: "#pagination",
+      credits: "#credits",
+      datasets: "#datasets",
     };
   }
 
 
   initialize() {
-
-    this.paginationView = new PaginationView({collection: this.collection});
-    this.spotlightDatasetListView = new SpotlightDatasetListView({collection : this.collection});
+    this.paginationView = new PaginationView({ collection: this.collection });
+    this.spotlightDatasetListView = new SpotlightDatasetListView({ collection: this.collection });
 
     this.creditsView = new CreditsView();
 
-    this.collection.fetch({ data : "isActive=true" });
-    return this.listenTo(this.collection, "sync", function() {
+    this.collection.fetch({ data: "isActive=true" });
+    return this.listenTo(this.collection, "sync", function () {
       this.listenTo(this, "render", this.show);
       return this.show();
     });
@@ -44,7 +42,6 @@ class SpotlightView extends Marionette.View {
 
 
   show() {
-
     this.showChildView("pagination", this.paginationView);
     this.showChildView("datasets", this.spotlightDatasetListView);
     return this.showChildView("credits", this.creditsView);

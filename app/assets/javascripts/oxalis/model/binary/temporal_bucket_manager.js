@@ -9,7 +9,6 @@ class TemporalBucketManager {
 
 
   constructor(pullQueue, pushQueue) {
-
     this.pullQueue = pullQueue;
     this.pushQueue = pushQueue;
     this.loadedPromises = [];
@@ -17,49 +16,41 @@ class TemporalBucketManager {
 
 
   getCount() {
-
     return this.loadedPromises.length;
   }
 
 
   addBucket(bucket) {
-
     this.pullBucket(bucket);
     return this.loadedPromises.push(this.makeLoadedPromise(bucket));
   }
 
 
   pullBucket(bucket) {
-
     this.pullQueue.add({
-        bucket: bucket.zoomedAddress,
-        priority: PullQueue.prototype.PRIORITY_HIGHEST
+      bucket: bucket.zoomedAddress,
+      priority: PullQueue.prototype.PRIORITY_HIGHEST,
     });
     return this.pullQueue.pull();
   }
 
 
   makeLoadedPromise(bucket) {
-
     const loadedPromise = new Promise(
-      (resolve, reject) => {
-        return bucket.on("bucketLoaded", () => {
-
-          if (bucket.dirty) {
-            this.pushQueue.insert(bucket.zoomedAddress);
-          }
-
-          _.removeElement(this.loadedPromises, loadedPromise);
-          return resolve();
+      (resolve, reject) => bucket.on("bucketLoaded", () => {
+        if (bucket.dirty) {
+          this.pushQueue.insert(bucket.zoomedAddress);
         }
-    );
-      });
+
+        _.removeElement(this.loadedPromises, loadedPromise);
+        return resolve();
+      },
+    ));
     return loadedPromise;
   }
 
 
   getAllLoadedPromise() {
-
     return Promise.all(this.loadedPromises);
   }
 }

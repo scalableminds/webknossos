@@ -1,22 +1,20 @@
 // helper functions
 
-self.log = (...args) => self.postMessage( { type : "log", time : Date.now(), args } );
+self.log = (...args) => self.postMessage({ type: "log", time: Date.now(), args });
 
 
-export default function(obj) {
-
+export default function (obj) {
   const queuedMessages = [];
-  const execMessage = function(messageData) {
-
+  const execMessage = function (messageData) {
     const { workerHandle, payload } = messageData;
 
     const makeSender = type =>
-      function(arg, transferred) {
+      function (arg, transferred) {
         if (transferred == null) { transferred = []; }
         try {
-          self.postMessage( { workerHandle, type, payload : arg }, transferred );
+          self.postMessage({ workerHandle, type, payload: arg }, transferred);
         } catch (error) {
-          self.postMessage( { workerHandle, type, payload : arg } );
+          self.postMessage({ workerHandle, type, payload: arg });
         }
       }
     ;
@@ -24,24 +22,24 @@ export default function(obj) {
     obj[payload.method](...payload.args).then(
       makeSender("success"),
       makeSender("error"),
-      makeSender("progress")
+      makeSender("progress"),
     );
   };
 
 
   self.addEventListener(
     "message",
-    function(event) {
+    (event) => {
       if (event.data) {
         return execMessage(event.data);
       }
     },
 
-    false
+    false,
   );
 
 
   return self.postMessage({
-    type : "ready"
+    type: "ready",
   });
-};
+}

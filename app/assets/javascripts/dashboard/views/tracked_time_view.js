@@ -5,8 +5,7 @@ import routes from "routes";
 
 class TrackedTimeView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <h3>Tracked Time</h3>
 <table class="table table-striped">
   <thead>
@@ -29,7 +28,6 @@ class TrackedTimeView extends Marionette.View {
 
 
   initialize(options) {
-
     this.listenTo(this.model, "sync", this.render);
 
     return this.model.fetch();

@@ -6,20 +6,17 @@ import { V3 } from "libs/mjs";
 
 class UrlManager {
   static initClass() {
-
-
-    this.prototype.MAX_UPDATE_INTERVAL  = 1000;
+    this.prototype.MAX_UPDATE_INTERVAL = 1000;
   }
 
   constructor(model) {
-
     this.model = model;
-    this.baseUrl      = document.location.pathname + document.location.search;
+    this.baseUrl = document.location.pathname + document.location.search;
     this.initialState = this.parseUrl();
 
     this.update = _.throttle(
       () => location.replace(this.buildUrl()),
-      this.MAX_UPDATE_INTERVAL
+      this.MAX_UPDATE_INTERVAL,
     );
 
     _.extend(this, Backbone.Events);
@@ -27,7 +24,6 @@ class UrlManager {
 
 
   parseUrl() {
-
     // State string format:
     // x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
 
@@ -35,12 +31,10 @@ class UrlManager {
     const state = {};
 
     if (stateString) {
-
       const stateArray = stateString.split(",");
       if (stateArray.length >= 5) {
-
         state.position = _.map(stateArray.slice(0, 3), e => +e);
-        state.mode     = +stateArray[3];
+        state.mode = +stateArray[3];
         state.zoomStep = +stateArray[4];
 
         if (stateArray.length >= 8) {
@@ -49,7 +43,6 @@ class UrlManager {
           if (stateArray[8] != null) {
             state.activeNode = +stateArray[8];
           }
-
         } else if (stateArray[5] != null) {
           state.activeNode = +stateArray[5];
         }
@@ -61,7 +54,6 @@ class UrlManager {
 
 
   startUrlUpdater() {
-
     this.listenTo(this.model.flycam, "changed", this.update);
     this.listenTo(this.model.flycam3d, "changed", this.update);
     this.listenTo(this.model, "change:mode", this.update);
@@ -73,25 +65,23 @@ class UrlManager {
 
 
   buildUrl() {
-
     const { flycam, flycam3d } = this.model;
     let state = V3.floor(flycam.getPosition());
-    state.push( this.model.mode );
+    state.push(this.model.mode);
 
     if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
       state = state
-        .concat( [flycam3d.getZoomStep().toFixed(2)] )
-        .concat( _.map(flycam3d.getRotation(), e => e.toFixed(2)) );
-
+        .concat([flycam3d.getZoomStep().toFixed(2)])
+        .concat(_.map(flycam3d.getRotation(), e => e.toFixed(2)));
     } else {
-      state = state.concat( [flycam.getZoomStep().toFixed(2)] );
+      state = state.concat([flycam.getZoomStep().toFixed(2)]);
     }
 
     if (__guard__(this.model.skeletonTracing, x => x.getActiveNodeId()) != null) {
       state.push(this.model.skeletonTracing.getActiveNodeId());
     }
 
-    return this.baseUrl + "#" + state.join(",");
+    return `${this.baseUrl}#${state.join(",")}`;
   }
 }
 UrlManager.initClass();
@@ -99,5 +89,5 @@ UrlManager.initClass();
 export default UrlManager;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

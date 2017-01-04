@@ -37,6 +37,7 @@
       "radix": "off",
       "no-restricted-properties": ["off", {"object": "Math", "property": "pow"}],
       "no-restricted-syntax": ["off", "ForInStatement", "ForOfStatement"],
-      "no-param-reassign": "warn"
+      "no-param-reassign": "warn",
+      "no-plusplus": "off"
     }
 }

@@ -5,10 +5,9 @@ import TemplateHelpers from "libs/template_helpers";
 
 class UserListItemView extends Marionette.View {
   static initClass() {
+    this.prototype.tagName = "tr";
 
-    this.prototype.tagName  = "tr";
-
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <td>
   <input type="checkbox" name="id" value="<%- id %>" class="select-row">
 </td>
@@ -42,41 +41,38 @@ class UserListItemView extends Marionette.View {
 </td>\
 `);
 
-    this.prototype.templateContext  =
-      {TemplateHelpers};
+    this.prototype.templateContext =
+      { TemplateHelpers };
 
-    this.prototype.events  = {
-      "click .activate-user" : "activate",
-      "click .deactivate-user" : "deactivate"
+    this.prototype.events = {
+      "click .activate-user": "activate",
+      "click .deactivate-user": "deactivate",
     };
 
-    this.prototype.modelEvents  =
-      {"change" : "render"};
+    this.prototype.modelEvents =
+      { change: "render" };
   }
   attributes() {
     return {
-      "data-name" : `${this.model.get("firstName")} ${this.model.get("lastName")}`,
-      "data-id" : this.model.get("id"),
-      "id" : this.model.get("id")
+      "data-name": `${this.model.get("firstName")} ${this.model.get("lastName")}`,
+      "data-id": this.model.get("id"),
+      id: this.model.get("id"),
     };
   }
 
   activate() {
-
-    //select checkbox, so that it gets picked up by the bulk verification modal
+    // select checkbox, so that it gets picked up by the bulk verification modal
     this.$("input").prop("checked", true);
 
-    //HACKY
+    // HACKY
     return $("#team-role-modal").click();
   }
 
 
   deactivate() {
-
     if (window.confirm("Do you really want to deactivate this user?")) {
-
       return this.model.save({
-        "isActive" : false
+        isActive: false,
       });
     }
   }

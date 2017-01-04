@@ -14,31 +14,27 @@ class Deferred {
 
 
   constructor() {
-
     this._resolve = null;
     this._reject = null;
     this._promise = new Promise((resolve, reject) => {
       this._resolve = resolve;
       return this._reject = reject;
-    }
+    },
     );
   }
 
 
   resolve(arg) {
-
     return this._resolve(arg);
   }
 
 
   reject(arg) {
-
     return this._reject(arg);
   }
 
 
   promise() {
-
     return this._promise;
   }
 }

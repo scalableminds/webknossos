@@ -4,10 +4,9 @@ import routes from "routes";
 
 class CreditsView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.className  = "well";
-    this.prototype.id  = "credits";
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "well";
+    this.prototype.id = "credits";
+    this.prototype.template = _.template(`\
 <div class="container">
   <h3>webKnossos Credits</h3>
   <section class="row">

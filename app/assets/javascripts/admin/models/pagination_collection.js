@@ -4,7 +4,6 @@ import Backbone from "backbone";
 class PaginationCollection {
 
   constructor(models, options) {
-
     let left;
     _.extend(this, Backbone.Events);
 
@@ -21,7 +20,7 @@ class PaginationCollection {
       this.fullCollection.model = this.model;
     }
     if (this.url != null) {
-      this.fullCollection.url   = this.url;
+      this.fullCollection.url = this.url;
     }
     if (this.parse != null) {
       this.fullCollection.parse = this.parse;
@@ -32,13 +31,13 @@ class PaginationCollection {
 
     this.currentModels = this.fullCollection.models.slice();
     this.state = _.defaults((left = _.clone(this.state)) != null ? left : {}, {
-      pageSize : 10,
-      currentPage : 0,
-      sorting : null,
-      filter : null,
-      collectionFilter : null,
-      filterQuery : ""
-    }
+      pageSize: 10,
+      currentPage: 0,
+      sorting: null,
+      filter: null,
+      collectionFilter: null,
+      filterQuery: "",
+    },
     );
 
     if (this.sortAttribute) {
@@ -94,7 +93,6 @@ class PaginationCollection {
 
 
   setSort(field, order) {
-
     if (order === "asc") {
       order = 1;
     }
@@ -102,8 +100,8 @@ class PaginationCollection {
       order = -1;
     }
 
-    this.state.sorting = function(left, right) {
-      const leftValue  = left.get(field);
+    this.state.sorting = function (left, right) {
+      const leftValue = left.get(field);
       const rightValue = right.get(field);
       return _.isString(leftValue) && _.isString(rightValue) ?
           order > 0 ?
@@ -122,26 +120,24 @@ class PaginationCollection {
 
 
   setCollectionFilter(filter) {
-
     this.state.collectionFilter = filter;
   }
 
 
   setFilter(fields, query) {
-
-    if (query === '' || !_.isString(query)) {
+    if (query === "" || !_.isString(query)) {
       this.state.filterQuery = "";
       this.state.filter = null;
     } else {
       const words = _.map(query.split(" "),
         element => element.toLowerCase().replace(/[\-\[\]{}()\*\+\?\.,\\\^\$\|\#\s]/g, "\\$&"));
-      const uniques = _.filter(_.uniq(words), element => element !== '');
+      const uniques = _.filter(_.uniq(words), element => element !== "");
       const pattern = `(${uniques.join("|")})`;
       const regexp = new RegExp(pattern, "igm");
 
       this.state.filterQuery = query;
       this.state.filter = model =>
-        _.some(fields, function(fieldName) {
+        _.some(fields, (fieldName) => {
           const value = model.get(fieldName);
           if (value != null) {
             return !!value.toString().match(regexp);
@@ -166,7 +162,7 @@ class PaginationCollection {
 
   clone() {
     const clonedCollection = new PaginationCollection(null, {
-      fullCollection : this.fullCollection
+      fullCollection: this.fullCollection,
     });
     clonedCollection.setPageSize(this.state.pageSize);
     return clonedCollection;
@@ -181,7 +177,7 @@ class PaginationCollection {
   }
 
   _passthroughEvent(eventType) {
-    return function(...args) {
+    return function (...args) {
       if (eventType === "sync") {
         this._resetNow();
       } else {
@@ -210,7 +206,6 @@ class PaginationCollection {
     this.state.currentPage = Math.max(0, Math.min(
       this._lastPageIndex(),
       this.state.currentPage));
-
   }
 
 
@@ -229,10 +224,10 @@ class PaginationCollection {
 
   getPaginationInfo() {
     return {
-      firstPage : 0,
-      lastPage : this._lastPageIndex(),
-      currentPage : this.state.currentPage,
-      pageSize : this.state.pageSize
+      firstPage: 0,
+      lastPage: this._lastPageIndex(),
+      currentPage: this.state.currentPage,
+      pageSize: this.state.pageSize,
     };
   }
 
@@ -258,7 +253,7 @@ class PaginationCollection {
 
 
   getPage(pageIndex) {
-    if (0 <= pageIndex && pageIndex < Math.ceil(this.currentModels.length / this.state.pageSize)) {
+    if (pageIndex >= 0 && pageIndex < Math.ceil(this.currentModels.length / this.state.pageSize)) {
       this.state.currentPage = pageIndex;
       this._reset();
     }
@@ -270,7 +265,6 @@ class PaginationCollection {
 
 
   findWhere() {
-
     return this.fullCollection.findWhere.apply(this.fullCollection, arguments);
   }
 }
@@ -279,5 +273,5 @@ class PaginationCollection {
 export default PaginationCollection;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

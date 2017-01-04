@@ -7,31 +7,29 @@ import BoundingBoxCategory from "../category_views/bounding_box_category_view";
 
 class SkeletonTracingSettingsView extends SettingsView {
   static initClass() {
-  
-  
-    this.prototype.id  = "tracing-settings";
-    this.prototype.className  = "flex-column";
-  
-    this.prototype.modelName  = "skeletonTracingAdapter";
-  
-    this.prototype.subviewCreatorsList  = [
+    this.prototype.id = "tracing-settings";
+    this.prototype.className = "flex-column";
+
+    this.prototype.modelName = "skeletonTracingAdapter";
+
+    this.prototype.subviewCreatorsList = [
       [
-        "tree-category", function() {
+        "tree-category", function () {
           return new TreeCategoryView({ model: this.model });
-        }
+        },
       ],
-  
+
       [
-        "node-category", function() {
+        "node-category", function () {
           return new NodeCategoryView({ model: this.model });
-        }
+        },
       ],
-  
+
       [
-        "boundingBox-category", function() {
+        "boundingBox-category", function () {
           return new BoundingBoxCategory({ model: this.model });
-        }
-      ]
+        },
+      ],
     ];
   }
 }

@@ -21,25 +21,23 @@ class DashboardTaskModel extends NestedObjModel {
 
 
   defaultTaskType(annotation) {
-
     return {
-      summary : `[deleted] ${annotation.typ}`,
-      description : "",
-      settings : { allowedModes : "" }
+      summary: `[deleted] ${annotation.typ}`,
+      description: "",
+      settings: { allowedModes: "" },
     };
   }
 
 
   finish() {
-
     const annotation = this.get("annotation");
     const url = `/annotations/${annotation.typ}/${annotation.id}/finish`;
 
     return Request.receiveJSON(url).then(
-      response => {
+      (response) => {
         this.set("annotation.state.isFinished", true);
         return response;
-      }
+      },
     );
   }
 }

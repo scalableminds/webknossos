@@ -1,4 +1,4 @@
-import { map, isArray, flatten, extend, fromPairs, chain, trim } from "lodash"
+import { map, isArray, flatten, extend, fromPairs, chain, trim } from "lodash";
 
 export default class UserPage {
 
@@ -21,21 +21,19 @@ export default class UserPage {
 
 
   getUserListEntries() {
-
     return browser
       .waitForExist(this.userListElements)
-      .elements(this.userListElements).then(response => response.value)
+      .elements(this.userListElements).then(response => response.value);
   }
 
 
   selectUser(userName) {
-
-    const userRowSelector = `tbody tr[data-name='${userName}']`
+    const userRowSelector = `tbody tr[data-name='${userName}']`;
 
     return browser
       .pause(1000)
       .waitForExist(userRowSelector)
-      .click(`${userRowSelector} .select-row`)
+      .click(`${userRowSelector} .select-row`);
   }
 
 
@@ -48,16 +46,14 @@ export default class UserPage {
 
 
   selectTeams(teamNames) {
-
     return browser
       .waitForExist(this.changeTeamButton)
       .pause(3000)
       .click(this.changeTeamButton)
       .waitForExist(this.modal)
       .waitForExist(".checkbox")
-      .then(function() {
-        return Promise.all(
-          teamNames.map(function(team) {
+      .then(() => Promise.all(
+          teamNames.map((team) => {
             const selector = `select[data-teamname='${team}']`;
 
             return browser
@@ -66,22 +62,20 @@ export default class UserPage {
               // It executes a javascript function in the browser context which gets the select element as an argument
               // ATTENTION: .selectorExecute works with an XPath selector
               .selectorExecute(`//select[@data-teamname='${team}']`, (selectEl) => {
-                for (var i = 0; i < selectEl[0].options.length; i++) {
+                for (let i = 0; i < selectEl[0].options.length; i++) {
                   if (selectEl[0].options[i].value === "user") {
-                      selectEl[0].options[i].selected = true;
-                      return;
+                    selectEl[0].options[i].selected = true;
+                    return;
                   }
                 }
               })
               .getValue(selector);
-          })
-        );
-      });
+          }),
+        ));
   }
 
 
   setExperience(userName, experience) {
-
     return this.selectUser(userName)
       .waitForExist(this.changeExperienceButton)
       .pause(1000)
@@ -91,12 +85,11 @@ export default class UserPage {
       .waitForExist(this.inputExperienceDomain)
       .setValue(this.inputExperienceDomain, experience.domain)
       .setValue(this.inputExperienceLevel, experience.level)
-      .click(this.setExperienceButton)
+      .click(this.setExperienceButton);
   }
 
 
   increaseExperience(userName, experience) {
-
     return this.selectUser(userName)
       .waitForExist(this.changeExperienceButton)
       .pause(1000)
@@ -106,12 +99,11 @@ export default class UserPage {
       .waitForExist(this.inputExperienceDomain)
       .setValue(this.inputExperienceDomain, experience.domain)
       .setValue(this.inputExperienceLevel, experience.level)
-      .click(this.increaseExperienceButton)
+      .click(this.increaseExperienceButton);
   }
 
 
   deleteExperience(userName, experience) {
-
     return this.selectUser(userName)
       .waitForExist(this.changeExperienceButton)
       .pause(1000)
@@ -121,52 +113,47 @@ export default class UserPage {
       .waitForExist(this.inputExperienceDomain)
       .setValue(this.inputExperienceDomain, experience.domain)
       .click(this.deleteExperienceButton)
-      .pause(1000) // wait for DOM updates
+      .pause(1000); // wait for DOM updates
   }
 
 
   getTeamsAndRolesForUser(userName) {
-
-    const userRowSelector = `tbody tr[data-name='${userName}']`
+    const userRowSelector = `tbody tr[data-name='${userName}']`;
     return browser
       .pause(1000)
       .getText(`${userRowSelector} td:nth-child(6)`)
-      .then(function(teamString) {
-
+      .then((teamString) => {
         const teamsAndRoles = teamString
           .split("\n")
-          .map((teamRoleString) => {
-            return chain(teamRoleString)
+          .map(teamRoleString => chain(teamRoleString)
               .replace("admin", ":admin")
               .replace("user", ":user")
               .split(":")
               .map(trim)
-              .value()
-          })
+              .value());
 
-        return fromPairs(teamsAndRoles)
-      })
+        return fromPairs(teamsAndRoles);
+      });
   }
 
 
   getExperiencesForUser(userName) {
-
-    const userRowSelector = `tbody tr[data-name='${userName}']`
+    const userRowSelector = `tbody tr[data-name='${userName}']`;
     return browser
       .pause(500)
       .getText(`${userRowSelector} td:nth-child(5) .label`)
-      .then(function(labelStrings) {
+      .then((labelStrings) => {
         if (!isArray(labelStrings)) {
           labelStrings = [labelStrings];
         }
 
         return labelStrings.map((labelString) => {
-          const [domain, level] = labelString.split(":")
+          const [domain, level] = labelString.split(":");
           return {
-            domain : domain.trim(),
-            level : parseInt(level)
-          }
+            domain: domain.trim(),
+            level: parseInt(level),
+          };
         });
-      })
+      });
   }
 }

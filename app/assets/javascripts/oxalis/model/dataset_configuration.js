@@ -12,8 +12,7 @@ class DatasetConfiguration extends NestedObjModel {
     this.reset = this.reset.bind(this);
   }
 
-  initialize({datasetName, dataLayerNames}) {
-
+  initialize({ datasetName, dataLayerNames }) {
     this.dataLayerNames = dataLayerNames;
     this.url = `/api/dataSetConfigurations/${datasetName}`;
     this.listenTo(this, "change", _.debounce(
@@ -24,13 +23,11 @@ class DatasetConfiguration extends NestedObjModel {
 
 
   reset() {
-
     return this.setDefaultBinaryColors(true);
   }
 
 
   triggerAll() {
-
     for (const property in this.attributes) {
       this.trigger(`change:${property}`, this, this.get(property));
     }
@@ -38,7 +35,6 @@ class DatasetConfiguration extends NestedObjModel {
 
 
   setDefaultBinaryColors(forceDefault = false) {
-
     let defaultColors;
     let layer;
     const layers = this.get("layers");
@@ -51,11 +47,10 @@ class DatasetConfiguration extends NestedObjModel {
     }
 
     this.dataLayerNames.forEach((layerName, i) => {
-
       const defaults = {
         color: defaultColors[i % defaultColors.length],
         brightness: 0,
-        contrast: 1
+        contrast: 1,
       };
 
       if (forceDefault || !layers[layerName]) {
@@ -65,7 +60,7 @@ class DatasetConfiguration extends NestedObjModel {
       }
 
       this.set(`layers.${layerName}`, layer);
-    })
+    });
   }
 }
 

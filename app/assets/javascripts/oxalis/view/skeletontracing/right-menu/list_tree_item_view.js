@@ -6,9 +6,8 @@ import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 
 class ListTreeItemView extends Marionette.View {
   static initClass() {
-
-    this.prototype.tagName  = "li";
-    this.prototype.template  = _.template(`\
+    this.prototype.tagName = "li";
+    this.prototype.template = _.template(`\
 <i class="fa <%- getIcon() %>"></i>
 <a href="#" data-treeid="<%- treeId %>">
   <span title="Node count" class="inline-block tree-node-count" style="width: 50px;"><%- nodes.length %></span>
@@ -17,13 +16,13 @@ class ListTreeItemView extends Marionette.View {
 </a>\
 `);
 
-    this.prototype.events  =
-      {"click a" : "setActive"};
+    this.prototype.events =
+      { "click a": "setActive" };
   }
 
   templateContext() {
     return {
-      getIcon : () => {
+      getIcon: () => {
         if (this.model.get("treeId") === this.activeTreeId) {
           return "fa-angle-right";
         } else {
@@ -31,27 +30,24 @@ class ListTreeItemView extends Marionette.View {
         }
       },
 
-      intToHex : Utils.intToHex
+      intToHex: Utils.intToHex,
     };
   }
 
 
   initialize(options) {
-
     this.activeTreeId = options.activeTreeId;
     return this.parent = options.parent;
   }
 
 
   setActive() {
-
     const id = this.model.get("treeId");
     return this.parent.setActiveTree(id);
   }
 
 
   onRender() {
-
     // scroll to active tree
     if (this.model.get("treeId") === this.activeTreeId) {
       return scrollIntoViewIfNeeded(this.el);

@@ -13,15 +13,13 @@ import THREE from "three";
 
 class SceneController {
   static initClass() {
-
     // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
     // element depending on the provided flycam.
 
-    this.prototype.CUBE_COLOR  = 0x999999;
+    this.prototype.CUBE_COLOR = 0x999999;
   }
 
   constructor(upperBoundary, flycam, model) {
-
     this.updateSceneForCam = this.updateSceneForCam.bind(this);
     this.update = this.update.bind(this);
     this.setDisplayPlanes = this.setDisplayPlanes.bind(this);
@@ -31,13 +29,13 @@ class SceneController {
     this.model = model;
     _.extend(this, Backbone.Events);
 
-    this.current          = 0;
-    this.displayPlane     = [true, true, true];
-    this.planeShift       = [0, 0, 0];
-    this.pingBinary       = true;
-    this.pingBinarySeg    = true;
+    this.current = 0;
+    this.displayPlane = [true, true, true];
+    this.planeShift = [0, 0, 0];
+    this.pingBinary = true;
+    this.pingBinarySeg = true;
 
-    this.volumeMeshes   = [];
+    this.volumeMeshes = [];
 
     this.createMeshes();
     this.bindToEvents();
@@ -47,20 +45,20 @@ class SceneController {
   createMeshes() {
     // Cubes
     this.cube = new Cube(this.model, {
-      max : this.upperBoundary,
-      color : this.CUBE_COLOR,
-      showCrossSections : true });
+      max: this.upperBoundary,
+      color: this.CUBE_COLOR,
+      showCrossSections: true });
     this.userBoundingBox = new Cube(this.model, {
-      max : [0, 0, 0],
-      color : 0xffaa00,
-      showCrossSections : true });
+      max: [0, 0, 0],
+      color: 0xffaa00,
+      showCrossSections: true });
 
     if (this.model.taskBoundingBox != null) {
       this.taskBoundingBox = new Cube(this.model, {
-        min : this.model.taskBoundingBox.min,
-        max : this.model.taskBoundingBox.max,
-        color : 0x00ff00,
-        showCrossSections : true });
+        min: this.model.taskBoundingBox.min,
+        max: this.model.taskBoundingBox.max,
+        color: 0x00ff00,
+        showCrossSections: true });
     }
 
     // TODO: Implement text
@@ -75,24 +73,22 @@ class SceneController {
 
     // create Meshes
     this.planes = new Array(3);
-    for (let i of [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]) {
+    for (const i of [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]) {
       this.planes[i] = new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, this.flycam, i, this.model);
     }
 
-    this.planes[constants.PLANE_XY].setRotation(new THREE.Euler( Math.PI , 0, 0));
-    this.planes[constants.PLANE_YZ].setRotation(new THREE.Euler( Math.PI, (1/2) * Math.PI, 0));
-    return this.planes[constants.PLANE_XZ].setRotation(new THREE.Euler( (- 1/2) * Math.PI, 0, 0));
+    this.planes[constants.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
+    this.planes[constants.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
+    return this.planes[constants.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
   }
 
 
   removeShapes() {
-
     return this.trigger("removeGeometries", this.volumeMeshes);
   }
 
 
   showShapes(bb, resolution, id) {
-
     if (this.model.getSegmentationBinary() == null) { return; }
 
     if (this.polygonFactory != null) {
@@ -102,11 +98,10 @@ class SceneController {
     this.polygonFactory = new PolygonFactory(
       this.model.getSegmentationBinary().cube,
       resolution,
-      bb.min, bb.max, id
+      bb.min, bb.max, id,
     );
 
-    return this.polygonFactory.getTriangles().then(triangles => {
-
+    return this.polygonFactory.getTriangles().then((triangles) => {
       this.removeShapes();
       this.volumeMeshes = [];
 
@@ -119,18 +114,18 @@ class SceneController {
       this.trigger("newGeometries", this.volumeMeshes);
       app.vent.trigger("rerender");
       return this.polygonFactory = null;
-    }
+    },
     );
   }
 
 
   updateSceneForCam(id) {
-
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
 
-    let mesh, pos;
+    let mesh,
+      pos;
     this.cube.updateForCam(id);
     this.userBoundingBox.updateForCam(id);
     __guard__(this.taskBoundingBox, x => x.updateForCam(id));
@@ -141,14 +136,14 @@ class SceneController {
       for (mesh of this.volumeMeshes) {
         mesh.visible = false;
       }
-      return constants.ALL_PLANES.map((i) =>
+      return constants.ALL_PLANES.map(i =>
         i === id ?
           (this.planes[i].setOriginalCrosshairColor(),
           this.planes[i].setVisible(true),
           pos = this.flycam.getPosition().slice(),
           ind = Dimensions.getIndices(i),
           // Offset the plane so the user can see the skeletonTracing behind the plane
-          pos[ind[2]] += i===constants.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]],
+          pos[ind[2]] += i === constants.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]],
           this.planes[i].setPosition(new THREE.Vector3(...pos)))
         :
           this.planes[i].setVisible(false));
@@ -156,7 +151,7 @@ class SceneController {
       for (mesh of this.volumeMeshes) {
         mesh.visible = true;
       }
-      return constants.ALL_PLANES.map((i) =>
+      return constants.ALL_PLANES.map(i =>
         (pos = this.flycam.getPosition(),
         this.planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2])),
         this.planes[i].setGrayCrosshairColor(),
@@ -167,11 +162,10 @@ class SceneController {
 
 
   update() {
-
-    const gPos         = this.flycam.getPosition();
+    const gPos = this.flycam.getPosition();
     const globalPosVec = new THREE.Vector3(...gPos);
-    const planeScale   = this.flycam.getPlaneScalingFactor();
-    return constants.ALL_PLANES.map((i) =>
+    const planeScale = this.flycam.getPlaneScalingFactor();
+    return constants.ALL_PLANES.map(i =>
 
       (this.planes[i].updateTexture(),
 
@@ -189,8 +183,7 @@ class SceneController {
 
 
   setDisplayCrosshair(value) {
-
-    for (let plane of this.planes) {
+    for (const plane of this.planes) {
       plane.setDisplayCrosshair(value);
     }
     return app.vent.trigger("rerender");
@@ -198,9 +191,8 @@ class SceneController {
 
 
   setClippingDistance(value) {
-
     // convert nm to voxel
-    for (let i of constants.ALL_PLANES) {
+    for (const i of constants.ALL_PLANES) {
       this.planeShift[i] = value * app.scaleInfo.voxelPerNM[i];
     }
     return app.vent.trigger("rerender");
@@ -208,8 +200,7 @@ class SceneController {
 
 
   setInterpolation(value) {
-
-    for (let plane of this.planes) {
+    for (const plane of this.planes) {
       plane.setLinearInterpolationEnabled(value);
     }
     return app.vent.trigger("rerender");
@@ -217,7 +208,6 @@ class SceneController {
 
 
   setDisplayPlanes(value) {
-
     for (let i = 0; i <= 2; i++) {
       this.displayPlane[i] = value;
     }
@@ -226,13 +216,12 @@ class SceneController {
 
 
   getMeshes() {
-
     let result = [];
-    for (let plane of this.planes) {
+    for (const plane of this.planes) {
       result = result.concat(plane.getMeshes());
     }
 
-    for (let geometry of [this.skeleton, this.contour, this.cube, this.userBoundingBox, this.taskBoundingBox]) {
+    for (const geometry of [this.skeleton, this.contour, this.cube, this.userBoundingBox, this.taskBoundingBox]) {
       if (geometry != null) {
         result = result.concat(geometry.getMeshes());
       }
@@ -243,21 +232,18 @@ class SceneController {
 
 
   setUserBoundingBox(bb) {
-
     return this.userBoundingBox.setCorners(bb.min, bb.max);
   }
 
 
   setSegmentationAlpha(alpha) {
-
-    for (let plane of this.planes) {
+    for (const plane of this.planes) {
       plane.setSegmentationAlpha(alpha);
     }
     return this.pingBinarySeg = alpha !== 0;
   }
 
   pingDataLayer(dataLayerName) {
-
     if (this.model.binary[dataLayerName].category === "color") {
       return this.pingBinary;
     }
@@ -269,8 +255,7 @@ class SceneController {
 
 
   stop() {
-
-    for (let plane of this.planes) {
+    for (const plane of this.planes) {
       plane.setVisible(false);
     }
     this.cube.setVisibility(false);
@@ -283,8 +268,7 @@ class SceneController {
 
 
   start() {
-
-    for (let plane of this.planes) {
+    for (const plane of this.planes) {
       plane.setVisible(true);
     }
     this.cube.setVisibility(true);
@@ -296,18 +280,17 @@ class SceneController {
 
 
   bindToEvents() {
-
     const { user } = this.model;
-    this.listenTo(this.model, "change:userBoundingBox", function(bb) { return this.setUserBoundingBox(bb); });
-    this.listenTo(user, "change:segmentationOpacity", function(model, opacity) {
+    this.listenTo(this.model, "change:userBoundingBox", function (bb) { return this.setUserBoundingBox(bb); });
+    this.listenTo(user, "change:segmentationOpacity", function (model, opacity) {
       return this.setSegmentationAlpha(opacity);
     });
-    this.listenTo(user, "change:clippingDistance", function(model, value) { return this.setClippingDistance(value); });
-    this.listenTo(user, "change:displayCrosshair", function(model, value) { return this.setDisplayCrosshair(value); });
-    this.listenTo(this.model.datasetConfiguration, "change:interpolation", function(model, value) {
+    this.listenTo(user, "change:clippingDistance", function (model, value) { return this.setClippingDistance(value); });
+    this.listenTo(user, "change:displayCrosshair", function (model, value) { return this.setDisplayCrosshair(value); });
+    this.listenTo(this.model.datasetConfiguration, "change:interpolation", function (model, value) {
       return this.setInterpolation(value);
     });
-    return this.listenTo(user, "change:tdViewDisplayPlanes", function(model, value) { return this.setDisplayPlanes(value); });
+    return this.listenTo(user, "change:tdViewDisplayPlanes", function (model, value) { return this.setDisplayPlanes(value); });
   }
 }
 SceneController.initClass();
@@ -315,5 +298,5 @@ SceneController.initClass();
 export default SceneController;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

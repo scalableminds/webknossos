@@ -6,11 +6,10 @@ import CheckboxSettingView from "oxalis/view/settings/setting_views/checkbox_set
 
 class MappingInfoView extends Marionette.View {
   static initClass() {
+    this.prototype.RENDER_DEBOUNCE_TIME = 200;
 
-    this.prototype.RENDER_DEBOUNCE_TIME  = 200;
-
-    this.prototype.id  = "volume-mapping-info";
-    this.prototype.template  = _.template(`\
+    this.prototype.id = "volume-mapping-info";
+    this.prototype.template = _.template(`\
 <div class="well">
   <% if (hasMapping) { %>
     <p>ID without mapping: <%- idWithoutMapping %></p>
@@ -25,24 +24,20 @@ class MappingInfoView extends Marionette.View {
 `);
 
 
-    this.prototype.subviewCreators  = {
+    this.prototype.subviewCreators = {
 
-      "enableMapping": () => {
-
-        return new CheckboxSettingView({
-          model : this.model,
-          options : {
-            name : "enableMapping",
-            displayName : "Enable Mapping"
-          }
-        });
-      }
+      enableMapping: () => new CheckboxSettingView({
+        model: this.model,
+        options: {
+          name: "enableMapping",
+          displayName: "Enable Mapping",
+        },
+      }),
     };
   }
 
 
-  initialize({model : oxalisModel}) {
-
+  initialize({ model: oxalisModel }) {
     Backbone.Subviews.add(this);
 
     this.model = new Backbone.Model();
@@ -57,20 +52,19 @@ class MappingInfoView extends Marionette.View {
     this.listenTo(this.cube, "volumeLabeled", this.renderDebounced);
     this.listenTo(this.cube, "newMapping", this.render);
     this.listenTo(this.flycam, "positionChanged", this.renderDebounced);
-    return this.listenTo(this.model, "change:enableMapping", function() {
+    return this.listenTo(this.model, "change:enableMapping", function () {
       return this.cube.setMappingEnabled(this.model.get("enableMapping"));
     });
   }
 
 
   serializeData() {
-
     const pos = this.flycam.getPosition();
 
     return {
-      hasMapping : this.cube.hasMapping(),
-      idWithMapping : this.cube.getDataValue(pos, this.cube.mapping),
-      idWithoutMapping : this.cube.getDataValue(pos, this.cube.EMPTY_MAPPING)
+      hasMapping: this.cube.hasMapping(),
+      idWithMapping: this.cube.getDataValue(pos, this.cube.mapping),
+      idWithoutMapping: this.cube.getDataValue(pos, this.cube.EMPTY_MAPPING),
     };
   }
 }

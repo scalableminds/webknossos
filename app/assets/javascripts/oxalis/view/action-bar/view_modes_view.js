@@ -6,8 +6,7 @@ import constants from "oxalis/constants";
 
 class ViewModesView extends Marionette.View {
   static initClass() {
-
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <div class="btn-group btn-group">
   <div class="btn-group">
     <button type="button" class="btn btn-default" id="mode-3planes">Orthogonal</button>
@@ -21,26 +20,25 @@ class ViewModesView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.modeMapping  = {
-      "mode-3planes" : constants.MODE_PLANE_TRACING,
-      "mode-sphere" : constants.MODE_ARBITRARY,
-      "mode-arbitraryplane" : constants.MODE_ARBITRARY_PLANE
+    this.prototype.modeMapping = {
+      "mode-3planes": constants.MODE_PLANE_TRACING,
+      "mode-sphere": constants.MODE_ARBITRARY,
+      "mode-arbitraryplane": constants.MODE_ARBITRARY_PLANE,
     };
 
-    this.prototype.events  =
-      {"click button" : "changeMode"};
+    this.prototype.events =
+      { "click button": "changeMode" };
   }
 
 
   initialize(options) {
-
     this.listenTo(this.model, "change:mode", this.updateForMode);
     return this.listenTo(this, "attach", this.afterAttach);
   }
 
 
   afterAttach() {
-    for (let mode in this.modeMapping) {
+    for (const mode in this.modeMapping) {
       const modeValue = this.modeMapping[mode];
       $(`#${mode}`).attr("disabled", !this.model.get("allowedModes").includes(modeValue));
     }
@@ -50,7 +48,6 @@ class ViewModesView extends Marionette.View {
 
 
   changeMode(evt) {
-
     evt.target.blur();
     const mode = this.modeMapping[evt.target.id];
     return this.model.setMode(mode);
@@ -58,7 +55,6 @@ class ViewModesView extends Marionette.View {
 
 
   updateForMode(mode) {
-
     this.$("button").removeClass("btn-primary");
 
     const buttonId = _.invert(this.modeMapping)[mode];

@@ -10,17 +10,15 @@ import TWEEN from "tween.js";
 
 class CameraController {
   static initClass() {
-
     // The Sceleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
     // View. It provides methods to set a certain View (animated).
 
-    this.prototype.cameras  = null;
-    this.prototype.flycam  = null;
-    this.prototype.model  = null;
+    this.prototype.cameras = null;
+    this.prototype.flycam = null;
+    this.prototype.model = null;
   }
 
   constructor(cameras, flycam, model) {
-
     this.update = this.update.bind(this);
     this.changeTDViewXY = this.changeTDViewXY.bind(this);
     this.changeTDViewYZ = this.changeTDViewYZ.bind(this);
@@ -35,13 +33,13 @@ class CameraController {
     _.extend(this, Backbone.Events);
 
     app.vent.on({
-      centerTDView : () => this.centerTDView()
+      centerTDView: () => this.centerTDView(),
     });
 
     this.updateCamViewport();
-    for (let cam of this.cameras) {
+    for (const cam of this.cameras) {
       cam.near = -1000000;
-      cam.far  =  1000000;
+      cam.far = 1000000;
     }
 
     this.changeTDViewDiagonal(false);
@@ -68,21 +66,21 @@ class CameraController {
     const time = 800;
     let to = {};
     const notify = () => this.trigger("cameraPositionChanged");
-    const getConvertedPosition = () => { return app.scaleInfo.voxelToNm(this.model.flycam.getPosition()); };
+    const getConvertedPosition = () => app.scaleInfo.voxelToNm(this.model.flycam.getPosition());
     const from = {
       notify,
       getConvertedPosition,
       upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z,
       camera,
       flycam: this.flycam,
-      dx:camera.position.x - pos[0],
-      dy:camera.position.y - pos[1],
-      dz:camera.position.z - pos[2],
+      dx: camera.position.x - pos[0],
+      dy: camera.position.y - pos[1],
+      dz: camera.position.z - pos[2],
       l: camera.left, r: camera.right, t: camera.top, b: camera.bottom };
     this.tween = new TWEEN.Tween(from);
 
     if (id === constants.TDView) {
-      const diagonal = Math.sqrt((b[0]*b[0])+(b[1]*b[1]));
+      const diagonal = Math.sqrt((b[0] * b[0]) + (b[1] * b[1]));
       padding = 0.05 * diagonal;
 
       // Calculate the distance from (0, b[1]) in order to center the view
@@ -90,11 +88,11 @@ class CameraController {
       const x2 = pos[0]; const y2 = pos[1];
 
       const b2 = 1 / Math.sqrt(((b1 * b1) / a1 / a1) + 1);
-      const a2 = (- b2 * b1) / a1;
-      const d2 = ((((a1 / b1) * (y1 - y2)) - x1) + x2) / (- a2 + ((a1 * b2) / b1));
+      const a2 = (-b2 * b1) / a1;
+      const d2 = ((((a1 / b1) * (y1 - y2)) - x1) + x2) / (-a2 + ((a1 * b2) / b1));
 
       const intersect = [x2 + (d2 * a2), y2 + (d2 * b2)];
-      const distance  = Dimensions.distance([x1, y1], intersect);
+      const distance = Dimensions.distance([x1, y1], intersect);
 
       // Approximation to center the view vertically
       const yOffset = pos[2] - (b[2] / 2);
@@ -104,7 +102,7 @@ class CameraController {
       to = {
         dx: b[1] / diagonal,
         dy: b[0] / diagonal,
-        dz:- 1 / 2,
+        dz: -1 / 2,
         upX: 0, upY: 0, upZ: -1,
         l: -distance - padding,
         r: (diagonal - distance) + padding,
@@ -119,7 +117,7 @@ class CameraController {
       const offsetY = pos[ind[1]] + paddingTop + padding;
 
       const positionOffset = [[0, 0, -1], [1, 0, 0], [0, 1, 0]];
-      const upVector       = [[0, -1, 0], [0, -1, 0], [0, 0, -1]];
+      const upVector = [[0, -1, 0], [0, -1, 0], [0, 0, -1]];
 
       to.dx = positionOffset[id][0];
       to.dy = positionOffset[id][1];
@@ -134,7 +132,7 @@ class CameraController {
       .onUpdate(this.updateCameraTDView)
       .start();
     } else {
-      for (let prop in from) {
+      for (const prop in from) {
         if (to[prop] == null) {
           to[prop] = from[prop];
         }
@@ -143,7 +141,7 @@ class CameraController {
     }
   }
 
-  degToRad(deg) { return (deg/180)*Math.PI; }
+  degToRad(deg) { return (deg / 180) * Math.PI; }
 
   changeTDViewXY() { return this.changeTDView(constants.PLANE_XY); }
   changeTDViewYZ() { return this.changeTDView(constants.PLANE_YZ); }
@@ -151,7 +149,6 @@ class CameraController {
   changeTDViewDiagonal(animate) { if (animate == null) { animate = true; } return this.changeTDView(constants.TDView, animate); }
 
   updateCameraTDView() {
-
     const p = this.getConvertedPosition();
     this.camera.position.set(this.dx + p[0], this.dy + p[1], this.dz + p[2]);
     this.camera.left = this.l;
@@ -168,18 +165,17 @@ class CameraController {
 
 
   TDViewportSize() {
-
     return (this.cameras[constants.TDView].right - this.cameras[constants.TDView].left);
   }         // always quadratic
 
 
   zoomTDView(value, position, curWidth) {
-
-    let offsetX, offsetY;
+    let offsetX,
+      offsetY;
     const camera = this.cameras[constants.TDView];
     const factor = Math.pow(0.9, value);
-    const middleX = (camera.left + camera.right)/2;
-    const middleY = (camera.bottom + camera.top)/2;
+    const middleX = (camera.left + camera.right) / 2;
+    const middleY = (camera.bottom + camera.top) / 2;
     const size = this.TDViewportSize();
 
     const baseOffset = (factor * size) / 2;
@@ -204,40 +200,37 @@ class CameraController {
 
 
   moveTDViewX(x) {
-
     return this.moveTDViewRaw(
-      new THREE.Vector2( (x * this.TDViewportSize()) / constants.VIEWPORT_WIDTH, 0 ));
+      new THREE.Vector2((x * this.TDViewportSize()) / constants.VIEWPORT_WIDTH, 0));
   }
 
 
   moveTDViewY(y) {
-
     return this.moveTDViewRaw(
-      new THREE.Vector2( 0, (- y * this.TDViewportSize()) / constants.VIEWPORT_WIDTH ));
+      new THREE.Vector2(0, (-y * this.TDViewportSize()) / constants.VIEWPORT_WIDTH));
   }
 
 
-  moveTDView( nmVector ) {
+  moveTDView(nmVector) {
     // moves camera by the nm vector
     const camera = this.cameras[constants.TDView];
 
     const rotation = THREE.Vector3.prototype.multiplyScalar.call(
-      camera.rotation.clone(), -1
+      camera.rotation.clone(), -1,
     );
     // reverse euler order
     rotation.order = rotation.order.split("").reverse().join("");
 
-    nmVector.applyEuler( rotation );
-    return this.moveTDViewRaw( nmVector );
+    nmVector.applyEuler(rotation);
+    return this.moveTDViewRaw(nmVector);
   }
 
 
   moveTDViewRaw(moveVector) {
-
     const camera = this.cameras[constants.TDView];
-    camera.left   += moveVector.x;
-    camera.right  += moveVector.x;
-    camera.top    += moveVector.y;
+    camera.left += moveVector.x;
+    camera.right += moveVector.x;
+    camera.top += moveVector.y;
     camera.bottom += moveVector.y;
     camera.updateProjectionMatrix();
     return app.vent.trigger("rerender");
@@ -245,37 +238,33 @@ class CameraController {
 
 
   centerTDView() {
-
     const camera = this.cameras[constants.TDView];
     return this.moveTDViewRaw(
       new THREE.Vector2(
         -(camera.left + camera.right) / 2,
-        -(camera.top + camera.bottom) / 2)
+        -(camera.top + camera.bottom) / 2),
     );
   }
 
 
   setClippingDistance(value) {
-
     this.camDistance = value; // Plane is shifted so it's <value> to the back and the front
     return this.updateCamViewport();
   }
 
 
   getClippingDistance(planeID) {
-
     return this.camDistance * app.scaleInfo.voxelPerNM[planeID];
   }
 
 
   updateCamViewport() {
-
     const scaleFactor = app.scaleInfo.baseVoxel;
-    const boundary    = (constants.VIEWPORT_WIDTH / 2) * this.model.user.get("zoom");
-    for (let i of [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]) {
+    const boundary = (constants.VIEWPORT_WIDTH / 2) * this.model.user.get("zoom");
+    for (const i of [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]) {
       this.cameras[i].near = -this.camDistance;
-      this.cameras[i].left  = this.cameras[i].bottom = -boundary * scaleFactor;
-      this.cameras[i].right = this.cameras[i].top    =  boundary * scaleFactor;
+      this.cameras[i].left = this.cameras[i].bottom = -boundary * scaleFactor;
+      this.cameras[i].right = this.cameras[i].top = boundary * scaleFactor;
       this.cameras[i].updateProjectionMatrix();
     }
     return app.vent.trigger("rerender");
@@ -283,9 +272,8 @@ class CameraController {
 
 
   bindToEvents() {
-
-    this.listenTo(this.model.user, "change:clippingDistance", function(model, value) { return this.setClippingDistance(value); });
-    return this.listenTo(this.model.user, "change:zoom", function(model, value) { return this.updateCamViewport(); });
+    this.listenTo(this.model.user, "change:clippingDistance", function (model, value) { return this.setClippingDistance(value); });
+    return this.listenTo(this.model.user, "change:zoom", function (model, value) { return this.updateCamViewport(); });
   }
 }
 CameraController.initClass();

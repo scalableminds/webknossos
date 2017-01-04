@@ -9,25 +9,25 @@ class VolumeTabView extends AbstractTabView {
   getTabs() {
     return [
       {
-        id : "tracing-settings-tab",
-        name : "Tracing",
-        iconClass : "fa fa-cogs",
-        viewClass : VolumeTracingSettingsView,
-        options : { model: this.adapterModel}
+        id: "tracing-settings-tab",
+        name: "Tracing",
+        iconClass: "fa fa-cogs",
+        viewClass: VolumeTracingSettingsView,
+        options: { model: this.adapterModel },
       },
       {
-        id : "dataset-settings-tab",
-        name : "Dataset",
-        iconClass : "fa fa-cogs",
-        active : true,
-        viewClass : DatasetSettingsView
+        id: "dataset-settings-tab",
+        name: "Dataset",
+        iconClass: "fa fa-cogs",
+        active: true,
+        viewClass: DatasetSettingsView,
       },
       {
-        id : "user-settings-tab",
-        name : "User",
-        iconClass : "fa fa-cogs",
-        viewClass : PlaneUserSettingsView
-      }
+        id: "user-settings-tab",
+        name: "User",
+        iconClass: "fa fa-cogs",
+        viewClass: PlaneUserSettingsView,
+      },
     ];
   }
 }

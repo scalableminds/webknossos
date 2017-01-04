@@ -8,10 +8,9 @@ import TemplateHelpers from "libs/template_helpers";
 
 class TaskListItemView extends Marionette.CompositeView {
   static initClass() {
-  
-    this.prototype.tagName  = "tbody";
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.tagName = "tbody";
+
+    this.prototype.template = _.template(`\
 <tr>
   <td class="details-toggle" href="#">
     <i class="caret-right"></i>
@@ -68,43 +67,39 @@ class TaskListItemView extends Marionette.CompositeView {
   </td>
 </tr>\
 `);
-  
-    this.prototype.childView  = TaskAnnotationView;
-    this.prototype.childViewContainer  = "tbody";
-  
-    this.prototype.events  = {
-      "click .delete" : "deleteTask",
-      "click .details-toggle" : "toggleDetails"
+
+    this.prototype.childView = TaskAnnotationView;
+    this.prototype.childViewContainer = "tbody";
+
+    this.prototype.events = {
+      "click .delete": "deleteTask",
+      "click .details-toggle": "toggleDetails",
     };
-  
-    this.prototype.ui  = {
-      "detailsRow" : ".details-row",
-      "detailsToggle" : ".details-toggle"
+
+    this.prototype.ui = {
+      detailsRow: ".details-row",
+      detailsToggle: ".details-toggle",
     };
-  
-    this.prototype.templateContext  =
-      {TemplateHelpers};
+
+    this.prototype.templateContext =
+      { TemplateHelpers };
   }
   attributes() {
-    return {id : this.model.get("id")};
+    return { id: this.model.get("id") };
   }
 
 
   initialize() {
-
     this.listenTo(app.vent, "taskListView:toggleDetails", this.toggleDetails);
     this.collection = new AnnotationCollection(this.model.get("id"));
 
     // minimize the toggle view on item deletion
-    return this.listenTo(this.collection, "remove", item => {
-      return this.toggleDetails();
-    }
+    return this.listenTo(this.collection, "remove", item => this.toggleDetails(),
     );
   }
 
 
   deleteTask() {
-
     if (window.confirm("Do you really want to delete this task?")) {
       return this.model.destroy();
     }
@@ -112,16 +107,14 @@ class TaskListItemView extends Marionette.CompositeView {
 
 
   toggleDetails() {
-
     if (this.ui.detailsRow.hasClass("hide")) {
-
       return this.collection
         .fetch()
-        .then( () => {
+        .then(() => {
           this.render();
           this.ui.detailsRow.removeClass("hide");
           return this.ui.detailsToggle.addClass("open");
-        }
+        },
         );
     } else {
       this.ui.detailsRow.addClass("hide");

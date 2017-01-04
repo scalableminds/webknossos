@@ -29,88 +29,69 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   start() {
-
     super.start();
-    return $('.skeleton-plane-controls').show();
+    return $(".skeleton-plane-controls").show();
   }
 
 
   stop() {
-
     super.stop();
-    return $('.skeleton-plane-controls').hide();
+    return $(".skeleton-plane-controls").hide();
   }
 
 
   getPlaneMouseControls(planeId) {
-
     return _.extend(super.getPlaneMouseControls(planeId), {
 
-      leftClick : (pos, plane, event) => {
-
-        return this.onClick(pos, event.shiftKey, event.altKey, plane);
-      },
+      leftClick: (pos, plane, event) => this.onClick(pos, event.shiftKey, event.altKey, plane),
 
 
-      rightClick : (pos, plane, event) => {
-
-        return this.setWaypoint(this.calculateGlobalPos( pos ), event.ctrlKey);
-      }
-    }
+      rightClick: (pos, plane, event) => this.setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
+    },
     );
   }
 
 
   getTDViewMouseControls() {
-
     return _.extend(super.getTDViewMouseControls(), {
 
-      leftClick : (position, plane, event) => {
-        return this.onClick(position, event.shiftKey, event.altKey, constants.TDView);
-      }
-    }
+      leftClick: (position, plane, event) => this.onClick(position, event.shiftKey, event.altKey, constants.TDView),
+    },
     );
   }
 
 
   getKeyboardControls() {
-
     return _.extend(super.getKeyboardControls(), {
 
-      "1" : () => this.skeletonTracingController.toggleSkeletonVisibility(),
-      "2" : () => this.sceneController.skeleton.toggleInactiveTreeVisibility(),
+      1: () => this.skeletonTracingController.toggleSkeletonVisibility(),
+      2: () => this.sceneController.skeleton.toggleInactiveTreeVisibility(),
 
-      //Delete active node
-      "delete" : () => {
-        return _.defer(() => this.model.skeletonTracing.deleteActiveNode());
-      },
-      "c" : () => this.model.skeletonTracing.createNewTree(),
+      // Delete active node
+      delete: () => _.defer(() => this.model.skeletonTracing.deleteActiveNode()),
+      c: () => this.model.skeletonTracing.createNewTree(),
 
-      //Branches
-      "b" : () => this.model.skeletonTracing.pushBranch(),
-      "j" : () => this.popBranch(),
+      // Branches
+      b: () => this.model.skeletonTracing.pushBranch(),
+      j: () => this.popBranch(),
 
-      "s" : () => {
+      s: () => {
         this.skeletonTracingController.centerActiveNode();
         return this.cameraController.centerTDView();
-      }
-    }
+      },
+    },
     );
   }
 
 
   popBranch() {
-
-    return _.defer(() => this.model.skeletonTracing.popBranch().then(id => {
-      return this.skeletonTracingController.setActiveNode(id, false, true);
-    }
-    )
+    return _.defer(() => this.model.skeletonTracing.popBranch().then(id => this.skeletonTracingController.setActiveNode(id, false, true),
+    ),
     );
   }
 
 
   scrollPlanes(delta, type) {
-
     super.scrollPlanes(delta, type);
 
     if (type === "shift") {
@@ -120,15 +101,14 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   onClick(position, shiftPressed, altPressed, plane) {
-
     if (!shiftPressed) { // do nothing
       return;
     }
 
     const { scaleFactor } = this.planeView;
-    const camera      = this.planeView.getCameras()[plane];
+    const camera = this.planeView.getCameras()[plane];
     // vector with direction from camera position to click position
-    const vector = new THREE.Vector3(((position.x / (384 * scaleFactor) ) * 2) - 1, (- (position.y / (384 * scaleFactor)) * 2) + 1, 0.5);
+    const vector = new THREE.Vector3(((position.x / (384 * scaleFactor)) * 2) - 1, (-(position.y / (384 * scaleFactor)) * 2) + 1, 0.5);
 
     // create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     const projector = new THREE.Projector();
@@ -142,8 +122,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
     return (() => {
       const result = [];
-      for (let intersect of intersects) {
-
+      for (const intersect of intersects) {
         let item;
         const { index } = intersect;
         const { geometry } = intersect.object;
@@ -164,8 +143,7 @@ class SkeletonTracingPlaneController extends PlaneController {
         const ind = dimensions.getIndices(plane);
         if (intersect.object.visible &&
           (plane === constants.TDView ||
-            (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2])+1))) {
-
+            (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
           // set the active Node to the one that has the ID stored in the vertex
           // center the node if click was in 3d-view
           const centered = plane === constants.TDView;
@@ -180,14 +158,13 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   setWaypoint(position, ctrlPressed) {
-
     const activeNode = this.model.skeletonTracing.getActiveNode();
     // set the new trace direction
     if (activeNode) {
       this.model.flycam.setDirection([
         position[0] - activeNode.pos[0],
         position[1] - activeNode.pos[1],
-        position[2] - activeNode.pos[2]
+        position[2] - activeNode.pos[2],
       ]);
     }
 
@@ -196,7 +173,6 @@ class SkeletonTracingPlaneController extends PlaneController {
 
     // Strg + Rightclick to set new not active branchpoint
     if (ctrlPressed && !this.model.user.get("newNodeNewTree")) {
-
       this.model.skeletonTracing.pushBranch();
       return this.skeletonTracingController.setActiveNode(activeNode.id);
     }
@@ -204,7 +180,6 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   addNode(position, rotation, centered) {
-
     if (this.model.settings.somaClickingAllowed && this.model.user.get("newNodeNewTree")) {
       this.model.skeletonTracing.createNewTree();
     }
@@ -221,7 +196,7 @@ class SkeletonTracingPlaneController extends PlaneController {
       this.activeViewport,
       this.model.flycam.getIntegerZoomStep(),
       datasetConfig.get("fourBit") ? 4 : 8,
-      datasetConfig.get("interpolation")
+      datasetConfig.get("interpolation"),
     );
 
     if (centered) {
@@ -231,29 +206,28 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   centerPositionAnimated(position) {
-
     // Let the user still manipulate the "third dimension" during animation
     const dimensionToSkip = dimensions.thirdDimensionForPlane(this.activeViewport);
 
     const curGlobalPos = this.flycam.getPosition();
 
     return (new TWEEN.Tween({
-        globalPosX: curGlobalPos[0],
-        globalPosY: curGlobalPos[1],
-        globalPosZ: curGlobalPos[2],
-        flycam: this.flycam,
-        dimensionToSkip
+      globalPosX: curGlobalPos[0],
+      globalPosY: curGlobalPos[1],
+      globalPosZ: curGlobalPos[2],
+      flycam: this.flycam,
+      dimensionToSkip,
     }))
     .to({
-        globalPosX: position[0],
-        globalPosY: position[1],
-        globalPosZ: position[2]
-      }, 200)
-    .onUpdate( function() {
-        position = [this.globalPosX, this.globalPosY, this.globalPosZ];
-        position[this.dimensionToSkip] = null;
-        return this.flycam.setPosition(position);
-      })
+      globalPosX: position[0],
+      globalPosY: position[1],
+      globalPosZ: position[2],
+    }, 200)
+    .onUpdate(function () {
+      position = [this.globalPosX, this.globalPosY, this.globalPosZ];
+      position[this.dimensionToSkip] = null;
+      return this.flycam.setPosition(position);
+    })
     .start();
   }
 }

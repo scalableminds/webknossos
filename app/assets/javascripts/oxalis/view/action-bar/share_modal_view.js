@@ -6,9 +6,8 @@ import ModalView from "admin/views/modal_view";
 
 class ShareModalView extends ModalView {
   static initClass() {
-  
-    this.prototype.headerTemplate  = "<h3>Share</h3>";
-    this.prototype.bodyTemplate  = _.template(`\
+    this.prototype.headerTemplate = "<h3>Share</h3>";
+    this.prototype.bodyTemplate = _.template(`\
 <div class="form-group">
   <label for="task">Shareable Link</label>
   <div class="row">
@@ -23,34 +22,32 @@ class ShareModalView extends ModalView {
   </div>
 </div>\
 `);
-  
-  
-    this.prototype.templateContext  =
-      {getUrl() { return ShareModalView.prototype.getUrl(); }};
-  
-  
-    this.prototype.events  = {
-      "click input" : "copyToClipboard",
-      "click .copy-btn" : "copyToClipboard"
+
+
+    this.prototype.templateContext =
+      { getUrl() { return ShareModalView.prototype.getUrl(); } };
+
+
+    this.prototype.events = {
+      "click input": "copyToClipboard",
+      "click .copy-btn": "copyToClipboard",
     };
   }
 
 
   getUrl() {
-
     const loc = window.location;
 
     // in readonly mode the pathname already contains "/readonly"
     let { pathname } = loc;
     pathname = pathname.replace("/readOnly", "");
 
-    const url = loc.origin + pathname + "/readOnly" + loc.hash;
+    const url = `${loc.origin + pathname}/readOnly${loc.hash}`;
     return url;
   }
 
 
   copyToClipboard() {
-
     const url = this.getUrl();
     return Clipboard.copy(url).then(
       () => Toast.success("Position copied to clipboard"));

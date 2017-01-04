@@ -6,8 +6,7 @@ import Toast from "libs/toast";
 
 class DatasetEditView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <div class="row">
   <div class="col-sm-12">
     <div class="well">
@@ -44,30 +43,28 @@ class DatasetEditView extends Marionette.View {
   </div>
 </div>\
 `);
-  
-    this.prototype.className  = "container wide dataset-administration";
-  
-    this.prototype.events  =
-      {"submit form" : "submitForm"};
-  
-    this.prototype.ui  =
-      {"form" : "form"};
+
+    this.prototype.className = "container wide dataset-administration";
+
+    this.prototype.events =
+      { "submit form": "submitForm" };
+
+    this.prototype.ui =
+      { form: "form" };
   }
 
   templateContext() {
-    return {isChecked(bool) { if (bool) { return "checked"; } }};
+    return { isChecked(bool) { if (bool) { return "checked"; } } };
   }
 
 
   initialize() {
-
     this.listenTo(this.model, "sync", this.render);
     return this.model.fetch();
   }
 
 
   submitForm(event) {
-
     event.preventDefault();
 
     if (!this.ui.form[0].checkValidity()) {

@@ -5,8 +5,7 @@ import FormatUtils from "libs/format_utils";
 
 class AnnotationCollection extends Backbone.Collection {
   static initClass() {
-
-    this.prototype.model  = AnnotationModel;
+    this.prototype.model = AnnotationModel;
   }
 
   constructor(taskId) {
@@ -15,9 +14,7 @@ class AnnotationCollection extends Backbone.Collection {
   }
 
   parse(responses) {
-
-    return responses.map(function(response) {
-
+    return responses.map((response) => {
       if (response.tracingTime == null) { response.tracingTime = 0; }
       response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime / 1000);
 

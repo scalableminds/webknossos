@@ -20,7 +20,6 @@ class NestedObjModel extends Backbone.Model {
 
 
   set(attributeString, val, options = {}) {
-
     // We don't handle objects for now
     if (_.isObject(attributeString)) {
       return super.set(attributeString, val, options);
@@ -32,7 +31,6 @@ class NestedObjModel extends Backbone.Model {
 
 
   deepSet(obj, attributeString, val, silent = false) {
-
     const attributes = attributeString.split(".");
     return _.reduce(
       attributes,
@@ -59,14 +57,11 @@ class NestedObjModel extends Backbone.Model {
 
 
   triggerDeepChange(oldObj, newObj, deepKey) {
-
     // This method only triggers the change for those parts of the object
     // that actually changed (e.g. layers.color.brightness)
     if (_.isPlainObject(newObj)) {
       // Recursively call triggerDeepChange for each key
-      return _.forOwn(newObj, (value, key) => {
-        return this.triggerDeepChange(((oldObj != null) ? oldObj[key] : oldObj), newObj[key], `${deepKey}.${key}`);
-      }
+      return _.forOwn(newObj, (value, key) => this.triggerDeepChange(((oldObj != null) ? oldObj[key] : oldObj), newObj[key], `${deepKey}.${key}`),
       );
     } else if (oldObj !== newObj) {
       // Add the change to the changed object
@@ -80,5 +75,5 @@ class NestedObjModel extends Backbone.Model {
 export default NestedObjModel;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

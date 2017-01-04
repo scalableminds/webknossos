@@ -9,8 +9,7 @@ import Utils from "libs/utils";
 
 class DatasetSwitchView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <div class="pull-right">
   <% if(isAdmin) { %>
     <a href="/datasets/upload" class="btn btn-primary">
@@ -29,36 +28,35 @@ class DatasetSwitchView extends Marionette.View {
 <div class="pagination-region"></div>
 <div class="dataset-region"></div>\
 `);
-  
-    this.prototype.ui  = {
-      "showAdvancedButton" : "#showAdvancedView",
-      "showGalleryButton" : "#showGalleryView"
+
+    this.prototype.ui = {
+      showAdvancedButton: "#showAdvancedView",
+      showGalleryButton: "#showGalleryView",
     };
-  
-    this.prototype.events  = {
-      "click @ui.showAdvancedButton" : "showAdvancedView",
-      "click @ui.showGalleryButton" : "showGalleryView"
+
+    this.prototype.events = {
+      "click @ui.showAdvancedButton": "showAdvancedView",
+      "click @ui.showGalleryButton": "showGalleryView",
     };
-  
-    this.prototype.regions  = {
-      "datasetPane" : ".dataset-region",
-      "pagination" : ".pagination-region"
+
+    this.prototype.regions = {
+      datasetPane: ".dataset-region",
+      pagination: ".pagination-region",
     };
   }
 
 
   templateContext() {
-    return {isAdmin : Utils.isUserAdmin(this.model)};
+    return { isAdmin: Utils.isUserAdmin(this.model) };
   }
 
 
   initialize() {
-
     const datasetCollection = new DatasetCollection();
-    this.collection = new PaginationCollection([], {fullCollection : datasetCollection});
+    this.collection = new PaginationCollection([], { fullCollection: datasetCollection });
 
     this.listenToOnce(this, "render", () => this.toggleSwitchButtons(true));
-    this.listenToOnce(this.collection, "sync", function() {
+    this.listenToOnce(this.collection, "sync", function () {
       this.listenTo(this, "render", this.showGalleryView);
       return this.showGalleryView();
     });
@@ -68,35 +66,30 @@ class DatasetSwitchView extends Marionette.View {
 
 
   toggleSwitchButtons(state) {
-
     this.ui.showGalleryButton.toggleClass("hide", state);
     return this.ui.showAdvancedButton.toggleClass("hide", !state);
   }
 
 
   showGalleryView() {
-
     this.toggleSwitchButtons(true);
     return this.showPaginatedDatasetView(SpotlightDatasetListView);
   }
 
 
   showAdvancedView() {
-
     this.toggleSwitchButtons(false);
     return this.showPaginatedDatasetView(DatasetListView);
   }
 
 
   showPaginatedDatasetView(DatasetView) {
-
     const collection = this.collection.clone();
-    this.showChildView("datasetPane", new DatasetView({collection}));
-    return this.showChildView("pagination", new PaginationView({collection}));
+    this.showChildView("datasetPane", new DatasetView({ collection }));
+    return this.showChildView("pagination", new PaginationView({ collection }));
   }
 }
 DatasetSwitchView.initClass();
-
 
 
 export default DatasetSwitchView;

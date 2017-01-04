@@ -2,10 +2,8 @@ import _ from "lodash";
 import $ from "jquery";
 import Bootstrap from "bootstrap";
 
-$.fn.alertWithTimeout = function(timeout = 3000) {
-
-  return this.each(function() {
-
+$.fn.alertWithTimeout = function (timeout = 3000) {
+  return this.each(function () {
     const $this = $(this);
     $this.alert();
     let timerId = -1;
@@ -15,8 +13,8 @@ $.fn.alertWithTimeout = function(timeout = 3000) {
       () =>
         timerId = setTimeout(
           () => $this.alert("close"),
-          timeout
-        )
+          timeout,
+        ),
     );
     return $(window).one("mousemove", () => $this.mouseout());
   });
@@ -36,7 +34,6 @@ const shouldDisplayToast = (type, message, sticky) =>
 const Toast = {
 
   message(type, message, sticky = false) {
-
     let messages;
     if (_.isArray(type) && (message == null)) {
       messages = type;
@@ -48,11 +45,9 @@ const Toast = {
           return this.error(message.error);
         }
       }
-
     } else if (_.isArray(message)) {
       messages = message;
-      return (messages.map((message) => this.message(type, message, sticky)));
-
+      return (messages.map(message => this.message(type, message, sticky)));
     } else if (shouldDisplayToast(type, message, sticky)) {
       let displayMessage;
       if (message.match(/<html[^>]*>/)) {
@@ -60,8 +55,8 @@ const Toast = {
       } else {
         displayMessage = message;
       }
-      const $messageElement = $("<div>", {class : `alert alert-${type} fade in`, "data-id" : message}).html(displayMessage);
-      const $closeButton = $("<button>", {type : "button", class : "close", "data-dismiss" : "alert"}).html("&times;");
+      const $messageElement = $("<div>", { class: `alert alert-${type} fade in`, "data-id": message }).html(displayMessage);
+      const $closeButton = $("<button>", { type: "button", class: "close", "data-dismiss": "alert" }).html("&times;");
       $messageElement.prepend($closeButton);
       if (sticky) {
         $messageElement.alert();
@@ -75,45 +70,39 @@ const Toast = {
         this.highlight($messageElement);
       }
 
-      return {remove() { return $closeButton.click(); }};
+      return { remove() { return $closeButton.click(); } };
     }
   },
 
 
   info(message, sticky) {
-
     return this.message("info", message, sticky);
   },
 
 
   warning(message, sticky) {
-
     return this.message("warning", message, sticky);
   },
 
 
   success(message = "Success :-)", sticky) {
-
     return this.message("success", message, sticky);
   },
 
 
   error(message = "Error :-/", sticky) {
-
     return this.message("danger", message, sticky);
   },
 
 
   highlight(target) {
-
     return target.addClass("alert-wiggle");
   },
 
 
   delete(type, message) {
-
     return getToasts(type, message).alert("close");
-  }
+  },
 };
 
 

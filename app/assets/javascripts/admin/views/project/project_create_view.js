@@ -10,8 +10,7 @@ import Toast from "libs/toast";
 
 class ProjectCreateView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <div class="row">
   <div class="col-sm-12">
     <div class="well">
@@ -139,60 +138,58 @@ class ProjectCreateView extends Marionette.View {
   </div>
 </div>\
 `);
-    this.prototype.className  = "container wide project-administration";
-  
-    this.prototype.footerTemplate  = `\
+    this.prototype.className = "container wide project-administration";
+
+    this.prototype.footerTemplate = `\
 <button type="submit" class="btn btn-primary">Create</button>
 <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>\
 `;
-  
-  
-    this.prototype.regions  = {
-      "team" : ".team",
-      "owner" : ".owner"
+
+
+    this.prototype.regions = {
+      team: ".team",
+      owner: ".owner",
     };
-  
-    this.prototype.events  = {
-      "submit form" : "createProject",
-      "change @ui.projectTypeInput" : "changeProjectType"
+
+    this.prototype.events = {
+      "submit form": "createProject",
+      "change @ui.projectTypeInput": "changeProjectType",
     };
-  
-    this.prototype.ui  = {
-      "name" : ".project-name",
-      "form" : "form",
-      "projectTypeInput" : "[name='assignmentConfiguration[location]']",
-      "mturkSettingsInputs" : ".mturk-settings input, .mturk-settings textarea, .mturk-settings select"
+
+    this.prototype.ui = {
+      name: ".project-name",
+      form: "form",
+      projectTypeInput: "[name='assignmentConfiguration[location]']",
+      mturkSettingsInputs: ".mturk-settings input, .mturk-settings textarea, .mturk-settings select",
     };
   }
 
 
   initialize() {
-
     this.model._isNew = true;
 
     this.userSelectionView = new SelectionView({
-      collection : new UserCollection(),
-      childViewOptions : {
-        defaultItem : {email : app.currentUser.email},
+      collection: new UserCollection(),
+      childViewOptions: {
+        defaultItem: { email: app.currentUser.email },
         modelValue() { return this.model.id; },
-        modelLabel() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; }
+        modelLabel() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
       },
-      name : "owner",
-      data : "isAdmin=true"
+      name: "owner",
+      data: "isAdmin=true",
     });
     return this.teamSelectionView = new SelectionView({
-      collection : new TeamCollection(),
-      childViewOptions : {
-        modelValue() { return `${this.model.get("name")}`; }
+      collection: new TeamCollection(),
+      childViewOptions: {
+        modelValue() { return `${this.model.get("name")}`; },
       },
-      data : "amIAnAdmin=true",
-      name : "team"
+      data: "amIAnAdmin=true",
+      name: "team",
     });
   }
 
 
   changeProjectType() {
-
     const projectType = this.ui.projectTypeInput.filter(":checked").val();
     if (projectType === "mturk") {
       return this.ui.mturkSettingsInputs.prop("disabled", false);
@@ -203,24 +200,19 @@ class ProjectCreateView extends Marionette.View {
 
 
   onRender() {
-
     this.showChildView("owner", this.userSelectionView);
     return this.showChildView("team", this.teamSelectionView);
   }
 
 
   createProject(evt) {
-
     evt.preventDefault();
 
     if (this.ui.form[0].checkValidity()) {
-
       const formValues = FormSyphon.serialize(this.ui.form);
       return this.model.save(formValues).then(
         () => app.router.navigate("/projects", { trigger: true }));
-
     } else {
-
       return this.ui.name.focus();
     }
   }

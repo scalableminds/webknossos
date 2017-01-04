@@ -1,12 +1,11 @@
-import _ from "lodash"
+import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Constants from "../constants";
 
 class TracingView extends Marionette.View {
   static initClass() {
-
-    this.prototype.id  = "render";
-    this.prototype.template  = _.template(`\
+    this.prototype.id = "render";
+    this.prototype.template = _.template(`\
 <div id="modal" class="modal fade" tabindex="-1" role="dialog"></div>
 <div id="inputcatchers">
   <div id="planexy" class="inputcatcher"></div>
@@ -29,16 +28,15 @@ class TracingView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.events  =
-      {"contextmenu" : "disableContextMenu"};
+    this.prototype.events =
+      { contextmenu: "disableContextMenu" };
 
-    this.prototype.ui  =
-      {"inputcatchers" : ".inputcatcher"};
+    this.prototype.ui =
+      { inputcatchers: ".inputcatcher" };
   }
 
   initialize() {
-
-    return this.listenTo(this.model.flycam, "zoomStepChanged", function() {
+    return this.listenTo(this.model.flycam, "zoomStepChanged", function () {
       return this.$el.toggleClass("zoomstep-warning",
         (this.model.volumeTracing != null) && !this.model.canDisplaySegmentationData());
     });
@@ -46,14 +44,12 @@ class TracingView extends Marionette.View {
 
 
   disableContextMenu(event) {
-
     // hide contextmenu, while rightclicking a canvas
     event.preventDefault();
   }
 
 
   onRender() {
-
     // Hide the input catchers arbitrary model
     if (Constants.MODES_ARBITRARY.includes(this.model.get("mode"))) {
       return this.ui.inputcatchers.hide();

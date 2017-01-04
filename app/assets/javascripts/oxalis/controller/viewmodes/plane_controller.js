@@ -13,38 +13,35 @@ import THREE from "three";
 
 class PlaneController {
   static initClass() {
-
     // See comment in Controller class on general controller architecture.
     //
     // Plane Controller: Responsible for Plane Modes
 
 
-    this.prototype.bindings  = [];
-    this.prototype.model  = null;
-    this.prototype.view  = null;
+    this.prototype.bindings = [];
+    this.prototype.model = null;
+    this.prototype.view = null;
 
-    this.prototype.input  = {
-      mouseControllers : [],
-      keyboard : null,
-      keyboardNoLoop : null,
-      keyboardLoopDelayed : null,
+    this.prototype.input = {
+      mouseControllers: [],
+      keyboard: null,
+      keyboardNoLoop: null,
+      keyboardLoopDelayed: null,
 
       destroy() {
-
-        for (let mouse of this.mouseControllers) {
+        for (const mouse of this.mouseControllers) {
           mouse.destroy();
         }
         this.mouseControllers = [];
         __guard__(this.keyboard, x => x.destroy());
         __guard__(this.keyboardNoLoop, x1 => x1.destroy());
         return __guard__(this.keyboardLoopDelayed, x2 => x2.destroy());
-      }
+      },
     };
   }
 
 
   constructor(model, view, sceneController) {
-
     this.move = this.move.bind(this);
     this.moveX = this.moveX.bind(this);
     this.moveY = this.moveY.bind(this);
@@ -61,7 +58,7 @@ class PlaneController {
 
     this.flycam = this.model.flycam;
 
-    this.oldNmPos = app.scaleInfo.voxelToNm( this.flycam.getPosition() );
+    this.oldNmPos = app.scaleInfo.voxelToNm(this.flycam.getPosition());
 
     this.planeView = new PlaneView(this.model, this.view);
 
@@ -72,23 +69,21 @@ class PlaneController {
 
     this.canvasesAndNav = $("#main")[0];
 
-    this.TDViewControls = $('#TDViewControls');
+    this.TDViewControls = $("#TDViewControls");
     this.TDViewControls.addClass("btn-group");
 
     const callbacks = [
       this.cameraController.changeTDViewDiagonal,
       this.cameraController.changeTDViewXY,
       this.cameraController.changeTDViewYZ,
-      this.cameraController.changeTDViewXZ
+      this.cameraController.changeTDViewXZ,
     ];
-    $("#TDViewControls button").each((i, element) => {
-      return $(element).on("click", callbacks[i]);
-    }
+    $("#TDViewControls button").each((i, element) => $(element).on("click", callbacks[i]),
     );
 
     const meshes = this.sceneController.getMeshes();
 
-    for (let mesh of meshes) {
+    for (const mesh of meshes) {
       this.planeView.addGeometry(mesh);
     }
 
@@ -102,9 +97,8 @@ class PlaneController {
 
 
   initMouse() {
-
     for (let planeId = 0; planeId <= 2; planeId++) {
-      (planeId => {
+      ((planeId) => {
         const inputcatcher = $(`#plane${constants.PLANE_NAMES[planeId]}`);
         return this.input.mouseControllers.push(
           new Input.Mouse(inputcatcher, this.getPlaneMouseControls(planeId), planeId));
@@ -112,45 +106,39 @@ class PlaneController {
     }
 
     return this.input.mouseControllers.push(
-      new Input.Mouse($("#TDView"), this.getTDViewMouseControls(), constants.TDView ));
+      new Input.Mouse($("#TDView"), this.getTDViewMouseControls(), constants.TDView));
   }
 
 
   getTDViewMouseControls() {
-
     return {
-      leftDownMove : delta => this.moveTDView(delta),
-      scroll : value => this.zoomTDView(Utils.clamp(-1, value, 1), true),
-      over : () => this.planeView.setActiveViewport( this.activeViewport = constants.TDView )
+      leftDownMove: delta => this.moveTDView(delta),
+      scroll: value => this.zoomTDView(Utils.clamp(-1, value, 1), true),
+      over: () => this.planeView.setActiveViewport(this.activeViewport = constants.TDView),
     };
   }
 
 
   getPlaneMouseControls(planeId) {
-
     return {
 
-      leftDownMove : (delta, pos) => {
+      leftDownMove: (delta, pos) => this.move([
+        (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
+        (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
+        0,
+      ]),
 
-        return this.move([
-          (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
-          (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
-          0
-        ]);
+      over: () => {
+        $(":focus").blur();
+        return this.planeView.setActiveViewport(this.activeViewport = planeId);
       },
 
-      over : () => {
-        $(':focus').blur();
-        return this.planeView.setActiveViewport( this.activeViewport = planeId );
-      },
-
-      scroll : this.scrollPlanes
+      scroll: this.scrollPlanes,
     };
   }
 
 
   initTrackballControls() {
-
     const view = $("#TDView")[0];
     const pos = app.scaleInfo.voxelToNm(this.flycam.getPosition());
     this.controls = new THREE.TrackballControls(
@@ -166,11 +154,10 @@ class PlaneController {
     this.controls.target.set(
       ...app.scaleInfo.voxelToNm(this.flycam.getPosition()));
 
-    this.listenTo(this.flycam, "positionChanged", function(position) {
-
+    this.listenTo(this.flycam, "positionChanged", function (position) {
       const nmPosition = app.scaleInfo.voxelToNm(position);
 
-      this.controls.target.set( ...nmPosition );
+      this.controls.target.set(...nmPosition);
       this.controls.update();
 
       // As the previous step will also move the camera, we need to
@@ -178,12 +165,12 @@ class PlaneController {
 
       const invertedDiff = [];
       for (let i = 0; i <= 2; i++) {
-        invertedDiff.push( this.oldNmPos[i] - nmPosition[i] );
+        invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
       }
       this.oldNmPos = nmPosition;
 
       return this.cameraController.moveTDView(
-        new THREE.Vector3( ...invertedDiff )
+        new THREE.Vector3(...invertedDiff),
       );
     });
 
@@ -192,13 +179,12 @@ class PlaneController {
 
 
   initKeyboard() {
-
     // avoid scrolling while pressing space
-    $(document).keydown(function(event) {
-      if ((event.which === 32 || event.which === 18 || 37 <= event.which && event.which <= 40) && !$(":focus").length) { event.preventDefault(); }
+    $(document).keydown((event) => {
+      if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) { event.preventDefault(); }
     });
 
-    const getMoveValue  = timeFactor => {
+    const getMoveValue = (timeFactor) => {
       if (([0, 1, 2]).includes(this.activeViewport)) {
         return (this.model.user.get("moveValue") * timeFactor) / app.scaleInfo.baseVoxel / constants.FPS;
       } else {
@@ -208,63 +194,60 @@ class PlaneController {
 
     this.input.keyboard = new Input.Keyboard({
 
-      //ScaleTrianglesPlane
-      "l" : timeFactor => this.scaleTrianglesPlane(-this.model.user.get("scaleValue") * timeFactor ),
-      "k" : timeFactor => this.scaleTrianglesPlane( this.model.user.get("scaleValue") * timeFactor ),
+      // ScaleTrianglesPlane
+      l: timeFactor => this.scaleTrianglesPlane(-this.model.user.get("scaleValue") * timeFactor),
+      k: timeFactor => this.scaleTrianglesPlane(this.model.user.get("scaleValue") * timeFactor),
 
-      //Move
-      "left"  : timeFactor => this.moveX(-getMoveValue(timeFactor)),
-      "right" : timeFactor => this.moveX( getMoveValue(timeFactor)),
-      "up"    : timeFactor => this.moveY(-getMoveValue(timeFactor)),
-      "down"  : timeFactor => this.moveY( getMoveValue(timeFactor))
+      // Move
+      left: timeFactor => this.moveX(-getMoveValue(timeFactor)),
+      right: timeFactor => this.moveX(getMoveValue(timeFactor)),
+      up: timeFactor => this.moveY(-getMoveValue(timeFactor)),
+      down: timeFactor => this.moveY(getMoveValue(timeFactor)),
 
     });
 
     this.input.keyboardLoopDelayed = new Input.Keyboard({
 
       // KeyboardJS is sensitive to ordering (complex combos first)
-      "shift + f"     : (timeFactor, first) => this.moveZ( getMoveValue(timeFactor) * 5, first),
-      "shift + d"     : (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor) * 5, first),
+      "shift + f": (timeFactor, first) => this.moveZ(getMoveValue(timeFactor) * 5, first),
+      "shift + d": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor) * 5, first),
 
-      "shift + space" : (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor)    , first),
-      "ctrl + space"  : (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor)    , first),
-      "space"         : (timeFactor, first) => this.moveZ( getMoveValue(timeFactor)    , first),
-      "f"             : (timeFactor, first) => this.moveZ( getMoveValue(timeFactor)    , first),
-      "d"             : (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor)    , first)
+      "shift + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
+      "ctrl + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
+      space: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
+      f: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
+      d: (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
     }
 
-    , this.model.user.get("keyboardDelay")
+    , this.model.user.get("keyboardDelay"),
     );
 
-    this.listenTo(this.model.user, "change:keyboardDelay", function(model, value) { return this.input.keyboardLoopDelayed.delay = value; });
+    this.listenTo(this.model.user, "change:keyboardDelay", function (model, value) { return this.input.keyboardLoopDelayed.delay = value; });
 
-    return this.input.keyboardNoLoop = new Input.KeyboardNoLoop( this.getKeyboardControls() );
+    return this.input.keyboardNoLoop = new Input.KeyboardNoLoop(this.getKeyboardControls());
   }
 
 
   getKeyboardControls() {
-
     return {
-      //Zoom in/out
-      "i" : () => this.zoom( 1, false),
-      "o" : () => this.zoom(-1, false),
+      // Zoom in/out
+      i: () => this.zoom(1, false),
+      o: () => this.zoom(-1, false),
 
-      //Change move value
-      "h" : () => this.changeMoveValue(25),
-      "g" : () => this.changeMoveValue(-25)
+      // Change move value
+      h: () => this.changeMoveValue(25),
+      g: () => this.changeMoveValue(-25),
     };
   }
 
 
   init() {
-
     this.cameraController.setClippingDistance(this.model.user.get("clippingDistance"));
     return this.sceneController.setClippingDistance(this.model.user.get("clippingDistance"));
   }
 
 
   start(newMode) {
-
     this.stop();
 
     this.sceneController.start();
@@ -279,7 +262,6 @@ class PlaneController {
 
 
   stop() {
-
     if (this.isStarted) {
       this.input.destroy();
     }
@@ -291,43 +273,41 @@ class PlaneController {
   }
 
   bindToEvents() {
-
     this.planeView.bindToEvents();
 
     this.listenTo(this.planeView, "render", this.render);
     this.listenTo(this.planeView, "renderCam", this.sceneController.updateSceneForCam);
 
     this.listenTo(this.sceneController, "newGeometries", list =>
-      list.map((geometry) =>
-        this.planeView.addGeometry(geometry))
+      list.map(geometry =>
+        this.planeView.addGeometry(geometry)),
     );
     this.listenTo(this.sceneController, "removeGeometries", list =>
-      list.map((geometry) =>
-        this.planeView.removeGeometry(geometry))
+      list.map(geometry =>
+        this.planeView.removeGeometry(geometry)),
     );
 
     // TODO check for ControleMode rather the Object existence
     if (this.sceneController.skeleton) {
       this.listenTo(this.sceneController.skeleton, "newGeometries", list =>
-        list.map((geometry) =>
-          this.planeView.addGeometry(geometry))
+        list.map(geometry =>
+          this.planeView.addGeometry(geometry)),
       );
       return this.listenTo(this.sceneController.skeleton, "removeGeometries", list =>
-        list.map((geometry) =>
-          this.planeView.removeGeometry(geometry))
+        list.map(geometry =>
+          this.planeView.removeGeometry(geometry)),
       );
     }
   }
 
 
   render() {
-
-    for (let dataLayerName in this.model.binary) {
+    for (const dataLayerName in this.model.binary) {
       if (this.sceneController.pingDataLayer(dataLayerName)) {
         this.model.binary[dataLayerName].ping(this.flycam.getPosition(), {
-          zoomStep:     this.flycam.getIntegerZoomStep(),
-          area:         this.flycam.getAreas(),
-          activePlane:  this.activeViewport
+          zoomStep: this.flycam.getIntegerZoomStep(),
+          area: this.flycam.getAreas(),
+          activePlane: this.activeViewport,
         });
       }
     }
@@ -338,11 +318,10 @@ class PlaneController {
 
 
   move(v, increaseSpeedWithZoom = true) {
-
     if (([0, 1, 2]).includes(this.activeViewport)) {
-      return this.flycam.movePlane( v, this.activeViewport, increaseSpeedWithZoom );
+      return this.flycam.movePlane(v, this.activeViewport, increaseSpeedWithZoom);
     } else {
-      return this.moveTDView( {x : -v[0], y : -v[1]} );
+      return this.moveTDView({ x: -v[0], y: -v[1] });
     }
   }
 
@@ -352,7 +331,6 @@ class PlaneController {
   moveY(y) { return this.move([0, y, 0]); }
 
   moveZ(z, oneSlide) {
-
     if (this.activeViewport === constants.TDView) {
       return;
     }
@@ -363,7 +341,6 @@ class PlaneController {
           [0, 0, (z < 0 ? -1 : 1) << this.flycam.getIntegerZoomStep()],
           this.activeViewport),
         this.activeViewport);
-
     } else {
       return this.move([0, 0, z], false);
     }
@@ -371,7 +348,6 @@ class PlaneController {
 
 
   zoom(value, zoomToMouse) {
-
     if (([0, 1, 2]).includes(this.activeViewport)) {
       return this.zoomPlanes(value, zoomToMouse);
     } else {
@@ -381,12 +357,11 @@ class PlaneController {
 
 
   zoomPlanes(value, zoomToMouse) {
-
     if (zoomToMouse) {
       this.zoomPos = this.getMousePosition();
     }
 
-    this.flycam.zoomByDelta( value );
+    this.flycam.zoomByDelta(value);
     this.model.user.set("zoom", this.flycam.getPlaneScalingFactor());
 
     if (zoomToMouse) {
@@ -396,7 +371,6 @@ class PlaneController {
 
 
   zoomTDView(value, zoomToMouse) {
-
     let zoomToPosition;
     if (zoomToMouse) {
       zoomToPosition = this.input.mouseControllers[constants.TDView].position;
@@ -407,40 +381,35 @@ class PlaneController {
 
 
   moveTDView(delta) {
-
     this.cameraController.moveTDViewX(delta.x * this.model.user.getMouseInversionX());
     return this.cameraController.moveTDViewY(delta.y * this.model.user.getMouseInversionY());
   }
 
 
   finishZoom() {
-
     // Move the plane so that the mouse is at the same position as
     // before the zoom
     if (this.isMouseOver()) {
       const mousePos = this.getMousePosition();
       const moveVector = [this.zoomPos[0] - mousePos[0],
-                    this.zoomPos[1] - mousePos[1],
-                    this.zoomPos[2] - mousePos[2]];
+        this.zoomPos[1] - mousePos[1],
+        this.zoomPos[2] - mousePos[2]];
       return this.flycam.move(moveVector, this.activeViewport);
     }
   }
 
   getMousePosition() {
-
     const pos = this.input.mouseControllers[this.activeViewport].position;
     return this.calculateGlobalPos(pos);
   }
 
 
   isMouseOver() {
-
     return this.input.mouseControllers[this.activeViewport].isMouseOver;
   }
 
 
   changeMoveValue(delta) {
-
     let moveValue = this.model.user.get("moveValue") + delta;
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
@@ -450,7 +419,6 @@ class PlaneController {
 
 
   scaleTrianglesPlane(delta) {
-
     let scale = this.model.user.get("scale") + delta;
     scale = Math.min(constants.MAX_SCALE, scale);
     scale = Math.max(constants.MIN_SCALE, scale);
@@ -460,7 +428,6 @@ class PlaneController {
 
 
   scrollPlanes(delta, type) {
-
     switch (type) {
       case null: return this.moveZ(delta, true);
       case "alt":
@@ -470,26 +437,27 @@ class PlaneController {
 
 
   calculateGlobalPos(clickPos) {
-
     let position;
-    const curGlobalPos  = this.flycam.getPosition();
-    const zoomFactor    = this.flycam.getPlaneScalingFactor();
-    const { scaleFactor }   = this.planeView;
-    const planeRatio    = app.scaleInfo.baseVoxelFactors;
-    return position = (() => { switch (this.activeViewport) {
-      case constants.PLANE_XY:
-        return [ curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),
-          curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[1] * zoomFactor),
-          curGlobalPos[2] ];
-      case constants.PLANE_YZ:
-         return [ curGlobalPos[0],
-          curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[1] * zoomFactor),
-          curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[2] * zoomFactor) ];
-      case constants.PLANE_XZ:
-        return [ curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),
-          curGlobalPos[1],
-          curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[2] * zoomFactor) ];
-    } })();
+    const curGlobalPos = this.flycam.getPosition();
+    const zoomFactor = this.flycam.getPlaneScalingFactor();
+    const { scaleFactor } = this.planeView;
+    const planeRatio = app.scaleInfo.baseVoxelFactors;
+    return position = (() => {
+      switch (this.activeViewport) {
+        case constants.PLANE_XY:
+          return [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),
+            curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[1] * zoomFactor),
+            curGlobalPos[2]];
+        case constants.PLANE_YZ:
+          return [curGlobalPos[0],
+            curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[1] * zoomFactor),
+            curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[2] * zoomFactor)];
+        case constants.PLANE_XZ:
+          return [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),
+            curGlobalPos[1],
+            curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[2] * zoomFactor)];
+      }
+    })();
   }
 }
 PlaneController.initClass();
@@ -497,5 +465,5 @@ PlaneController.initClass();
 export default PlaneController;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

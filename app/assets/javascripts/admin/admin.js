@@ -1,3 +1,8 @@
+/**
+ * admin.js
+ * @flow weak
+ */
+
 import DatasetListView from "../dashboard/views/dataset/dataset_list_view";
 import PaginationView from "./views/pagination_view";
 import DatasetCollection from "./models/dataset/dataset_collection";
@@ -16,10 +21,10 @@ import StatisticView from "./views/statistic/statistic_view";
 import WorkloadListView from "./views/workload/workload_list_view";
 import WorkloadCollection from "./models/workload/workload_collection";
 
-// ####
+//
 // This exports all the modules listed above and mainly the serves the purpose of
 // waiting to be combinend and minified with rjs.
-// ####
+//
 
 export {
   PaginationView,

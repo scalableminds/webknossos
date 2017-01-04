@@ -1,20 +1,24 @@
 [ignore]
-.*/buildtools/.*
-.*/doc/.*
-.*/errorShots/.*
-.*/logs/.*
-.*/project/.*
-.*/target/.*
-.*/testdb/.*
-.*/userBinaryData/.*
-.*/binaryData/.*
-.*/conf/.*
-.*/dummy-db/.*
-.*/lib/.*
-.*/public/.*
-.*/test/.*
-.*/tools/.*
+<PROJECT_ROOT>/buildtools/.*
+<PROJECT_ROOT>/doc/.*
+<PROJECT_ROOT>/errorShots/.*
+<PROJECT_ROOT>/logs/.*
+<PROJECT_ROOT>/project/.*
+<PROJECT_ROOT>/target/.*
+<PROJECT_ROOT>/testdb/.*
+<PROJECT_ROOT>/userBinaryData/.*
+<PROJECT_ROOT>/binaryData/.*
+<PROJECT_ROOT>/conf/.*
+<PROJECT_ROOT>/dummy-db/.*
+<PROJECT_ROOT>/lib/.*
+<PROJECT_ROOT>/public/.*
+<PROJECT_ROOT>/test/.*
+<PROJECT_ROOT>/tools/.*
 
 [options]
 module.ignore_non_literal_requires=true
-module.name_mapper='^\(.*\)' -> '<PROJECT_ROOT>/app/assets/javascripts/\1'
+module.name_mapper='jasny-bootstrap' -> '<PROJECT_ROOT>/node_modules/jasny-bootstrap/dist/js/jasny-bootstrap.js'
+module.name_mapper='backbone\.marionette' -> '<PROJECT_ROOT>/node_modules/backbone\.marionette/lib/backbone.marionette.js'
+module.name_mapper='three' -> '<PROJECT_ROOT>/node_modules/three.js/build/three.js'
+module.name_mapper='^\([^.].*\)' -> '<PROJECT_ROOT>/app/assets/javascripts/\1'
+module.name_mapper.extension='less' -> '<PROJECT_ROOT>/app/assets/javascripts/flow/LESSFlowStub.js.flow'

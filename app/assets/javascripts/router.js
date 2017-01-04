@@ -8,7 +8,7 @@ import _ from "lodash";
 import Backbone from "backbone";
 import constants from "oxalis/constants";
 import BaseRouter from "libs/base_router";
-import PaginationCollection from "admin/models/pagination_collection";
+import PaginationCollection from "./admin/models/pagination_collection";
 
 // #####
 // This Router contains all the routes for views that have been

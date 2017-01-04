@@ -1,3 +1,9 @@
+/**
+ * app.js
+ * @flow weak
+ */
+
+
 let app;
 import Marionette from "backbone.marionette";
 

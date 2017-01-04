@@ -10,7 +10,7 @@ class TaskTypeListView extends Marionette.CompositeView {
   }
 
   static initClass() {
-  
+
     this.prototype.className  = "container wide task-types-administration";
     this.prototype.childView  = TaskTypeListItemView;
     this.prototype.childViewContainer = "tbody";

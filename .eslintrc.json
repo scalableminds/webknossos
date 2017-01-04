@@ -20,7 +20,9 @@
     },
     "globals": {
       "ga": false,
-      "browser": false
+      "browser": false,
+      "Airbrake": false,
+      "routes": false
     },
     "rules": {
       "quotes": ["error", "double"],
@@ -34,7 +36,7 @@
       "no-restricted-syntax": "warn",
       "radix": "off",
       "no-restricted-properties": ["off", {"object": "Math", "property": "pow"}],
-      "no-param-reassign": "warn",
-
+      "no-restricted-syntax": ["off", "ForInStatement", "ForOfStatement"],
+      "no-param-reassign": "warn"
     }
 }

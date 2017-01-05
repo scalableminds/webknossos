@@ -70,7 +70,7 @@ module.exports = {
   externals: [
     { "routes": "var jsRoutes" }
   ],
-  // devtool: "source-map",
+  devtool: "cheap-source-map",
   // debug: true,
   plugins: [
     new webpack.DefinePlugin({

@@ -56,13 +56,13 @@ class Plane2D {
       this.NOT_LOADED_BUCKET_INTENSITY = 0;
     }
     this.NOT_LOADED_BUCKET_DATA = new Uint8Array(this.cube.BUCKET_LENGTH);
-    for (var i of __range__(0, this.NOT_LOADED_BUCKET_DATA.length, false)) {
+    for (let i = 0; i < this.NOT_LOADED_BUCKET_DATA.length; i++) {
       this.NOT_LOADED_BUCKET_DATA[i] = this.NOT_LOADED_BUCKET_INTENSITY;
     }
 
     this._forceRedraw = false;
 
-    for (i of __range__(0, this.cube.LOOKUP_DEPTH_DOWN, true)) {
+    for (let i = 0; i <= this.cube.LOOKUP_DEPTH_DOWN; i++) {
       this.MAP_SIZE += 1 << (i << 1);
     }
 
@@ -83,17 +83,21 @@ class Plane2D {
       }
 
       // Checking, whether the new bucket intersects with the current layer
-      if (this.dataTexture.layer >> (this.cube.BUCKET_SIZE_P + bucket[3]) === bucket[this.W] && (this.dataTexture.topLeftBucket != null)) {
+      if (this.dataTexture.layer >> (this.cube.BUCKET_SIZE_P + bucket[3]) === bucket[this.W] &&
+          (this.dataTexture.topLeftBucket != null)) {
 
         // Get the tile, the bucket would be drawn to
         const u = bucket[this.U] - this.dataTexture.topLeftBucket[this.U];
         const v = bucket[this.V] - this.dataTexture.topLeftBucket[this.V];
 
         // If the tile is part of the texture, mark it as changed
-        if ((__range__(0, this.BUCKETS_PER_ROW, false)).includes(u) && (__range__(0, this.BUCKETS_PER_ROW, false)).includes(v)) {
+        if ((__range__(0, this.BUCKETS_PER_ROW, false)).includes(u) &&
+            (__range__(0, this.BUCKETS_PER_ROW, false)).includes(v)) {
           const tile = [u, v];
           this.dataTexture.tiles[tileIndexByTileMacro(this, tile)] = false;
-          return this.dataTexture.ready &= !((__range__(this.dataTexture.area[0], this.dataTexture.area[2], true)).includes(u) && (__range__(this.dataTexture.area[1], this.dataTexture.area[3], true)).includes(v));
+          return this.dataTexture.ready &=
+            !((__range__(this.dataTexture.area[0], this.dataTexture.area[2], true)).includes(u) &&
+              (__range__(this.dataTexture.area[1], this.dataTexture.area[3], true)).includes(v));
         }
       }
     });
@@ -289,14 +293,12 @@ class Plane2D {
 
     if (map[mapIndex] === this.RECURSION_PLACEHOLDER) {
 
-      return (() => {
-        const result = [];
-        for (let i = 0; i <= 3; i++) {
-          const subTile = subTileMacro(tile, i);
-          result.push(this.renderSubTile(map, (mapIndex << 2) + 1 + i, subTile, tileZoomStep - 1));
-        }
-        return result;
-      })();
+      const result = new Array(4);
+      for (let i = 0; i <= 3; i++) {
+        const subTile = subTileMacro(tile, i);
+        result[i] = this.renderSubTile(map, (mapIndex << 2) + 1 + i, subTile, tileZoomStep - 1);
+      }
+      return result;
 
     } else if (map[mapIndex] === this.NOT_LOADED_BUCKET_PLACEHOLDER) {
 
@@ -337,7 +339,10 @@ class Plane2D {
         (this.dataTexture.layer >> bucketZoomStep) & ((1 << this.cube.BUCKET_SIZE_P) - 1)
       ];
 
-      const sourceOffset = (sourceOffsets[0] << this.DELTA[this.U]) + (sourceOffsets[1] << this.DELTA[this.V]) + (sourceOffsets[2] << this.DELTA[this.W]);
+      const sourceOffset =
+        (sourceOffsets[0] << this.DELTA[this.U]) +
+        (sourceOffsets[1] << this.DELTA[this.V]) +
+        (sourceOffsets[2] << this.DELTA[this.W]);
 
       const bucketData = this.cube.getBucket(bucket).getData();
       const mapping    = this.cube.currentMapping;
@@ -377,7 +382,8 @@ class Plane2D {
     ));
 
     if (zoomStep < this.cube.ZOOM_STEP_COUNT) {
-      for (let i of __range__(maxZoomStepOffset, 0, false)) {
+      // TODO
+      for (let i = maxZoomStepOffset; i > 0; i--) {
 
         bucket = [
           bucket_x >> i,
@@ -390,7 +396,8 @@ class Plane2D {
       }
     }
 
-    if (zoomStep !== 0 && this.enhanceRenderMap(map, 0, [bucket_x, bucket_y, bucket_z, zoomStep], map[0], this.cube.LOOKUP_DEPTH_DOWN)) {
+    if (zoomStep !== 0 && this.enhanceRenderMap(map, 0,
+        [bucket_x, bucket_y, bucket_z, zoomStep], map[0], this.cube.LOOKUP_DEPTH_DOWN)) {
 
       map[0] = this.RECURSION_PLACEHOLDER;
     }
@@ -466,7 +473,7 @@ class Plane2D {
       const src = source.offset * bytesSrc;
 
       let sourceValue = 0;
-      for (var b of __range__(0, bytesSrc, false)) {
+      for (let b = 0; b < bytesSrc; b++) {
         sourceValue += (1 << (b * 8)) * source.buffer[ src + b ];
       }
       sourceValue = (mapping != null) && (mapping[ sourceValue ] != null) ? mapping[ sourceValue ] : sourceValue;
@@ -474,7 +481,7 @@ class Plane2D {
       // If you have to shorten the data,
       // use the first none-zero byte unless all are zero
       // assuming little endian order
-      for (b of __range__(0, bytesSrcMapped, false)) {
+      for (let b = 0; b < bytesSrcMapped; b++) {
         let value;
         if ((value = (sourceValue >> (b*8)) % 256 ) || b === bytesSrcMapped - 1 || (!shorten)) {
           destination.buffer[dest++] = value;

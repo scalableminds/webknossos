@@ -1,9 +1,4 @@
-require("babel-register")(
-  {
-    "presets": ["es2015", "stage-3"],
-    "plugins": ["transform-class-properties", "transform-runtime"]
-  }
-);
+require("babel-register");
 
 var Jasmine = require("jasmine")
 
@@ -16,4 +11,4 @@ jasmine.loadConfig({
     ],
 });
 
-jasmine.execute()
+jasmine.execute();

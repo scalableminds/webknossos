@@ -24,11 +24,11 @@ class TracingLayoutView extends Marionette.View {
   }
 
   static initClass() {
-  
+
     this.prototype.MARGIN  = 40;
-  
+
     this.prototype.className  = "text-nowrap";
-  
+
     this.prototype.traceTemplate  = _.template(`\
 <div id="action-bar"></div>
 <div id="sliding-canvas">
@@ -40,7 +40,7 @@ class TracingLayoutView extends Marionette.View {
 </div>
 <div class="modal-wrapper"></div>\
 `);
-  
+
     this.prototype.viewTemplate  = _.template(`\
 <div id="action-bar"></div>
 <div id="settings-menu"></div>
@@ -48,12 +48,12 @@ class TracingLayoutView extends Marionette.View {
 <div id="right-menu"></div>
 <div class="modal-wrapper"></div>\
 `);
-  
+
     this.prototype.ui  = {
       "rightMenu" : "#right-menu",
       "slidingCanvas" : "#sliding-canvas"
     };
-  
+
     this.prototype.regions  = {
       "actionBar" : "#action-bar",
       "rightMenu" : "#right-menu",
@@ -61,7 +61,7 @@ class TracingLayoutView extends Marionette.View {
       "settings" : "#settings-menu",
       "modalWrapper" : ".modal-wrapper"
     };
-  
+
     this.prototype.events = {
       "hidden.bs.offcanvas #settings-menu-wrapper" : "doneSliding",
       "shown.bs.offcanvas #settings-menu-wrapper" : "doneSliding"
@@ -96,7 +96,7 @@ class TracingLayoutView extends Marionette.View {
 
     $("#add-script-link")
       .removeClass("hide")
-      .on("click", this.showUserScriptsModal);
+      .on("click", this.showUserScriptsModal.bind(this));
 
     return app.oxalis = new OxalisController(this.options);
   }

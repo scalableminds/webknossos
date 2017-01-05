@@ -39,7 +39,8 @@
       "no-restricted-syntax": ["off", "ForInStatement", "ForOfStatement"],
       "no-param-reassign": "warn",
       "no-plusplus": "off",
+      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
       "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
-      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+      "import/no-unresolved": "off"
     }
 }

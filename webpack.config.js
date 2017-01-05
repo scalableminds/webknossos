@@ -34,25 +34,7 @@ module.exports = {
     rules: [{
       test: /\.js$/,
       exclude: /(node_modules|bower_components)/,
-      use: {
-        loader: "babel-loader",
-        options: {
-          presets: [
-            ["env", {
-              "targets": {
-                "browsers": [
-                  "last 2 Chrome versions",
-                  "last 2 Firefox versions",
-                  "last 2 Edge versions",
-                  "last 1 Safari versions",
-                  "last 1 iOS versions",
-                ],
-              },
-            }],
-            "react",
-          ],
-        },
-      }
+      use: "babel-loader",
     }, {
       test: scriptPaths["three.color"],
       use: [{

@@ -291,9 +291,9 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     } yield {
       finished match {
         case Full((_, message)) =>
-          Redirect(redirectTarget).flashing("success" -> message)
+          Redirect(redirectTarget).flashing("success" -> Messages(message))
         case Failure(message, _, _) =>
-          Redirect(redirectTarget).flashing("error" -> message)
+          Redirect(redirectTarget).flashing("error" -> Messages(message))
         case _ =>
           Redirect(redirectTarget).flashing("error" -> Messages("error.unknown"))
       }

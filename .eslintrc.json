@@ -26,7 +26,7 @@
     },
     "rules": {
       "quotes": ["error", "double"],
-      "max-len": ["warn", 100],
+      "max-len": ["off", 100],
       "class-methods-use-this": "off",
       "operator-assignment": "warn",
       "react/jsx-filename-extension": "off",

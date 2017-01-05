@@ -119,9 +119,8 @@ const Toast = {
   }
 };
 
-type ToastType = {
+export type ToastType = {
   remove: () => void
 };
 
-export type ToastType;
 export default Toast;

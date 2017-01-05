@@ -52,6 +52,7 @@ class Router extends BaseRouter {
     this.dashboard = this.dashboardImpl.bind(this);
     this.$loadingSpinner = $("#loader");
     this.$mainContainer = $("#main-container");
+    this.initialize();
   }
 
 

@@ -1,10 +1,5 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-require("babel-register")(
-  {
-    presets: ["es2015", "stage-3"],
-    plugins: ["transform-class-properties", "transform-runtime"],
-  },
-);
+require("babel-register");
 
 const Jasmine = require("jasmine");
 

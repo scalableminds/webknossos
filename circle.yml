@@ -1,6 +1,6 @@
 machine:
   environment:
-    SBT_VERSION_TAG: sbt-0.13.9_mongo-3.2.1_node-6.x_jdk-8
+    SBT_VERSION_TAG: sbt-0.13.9_mongo-3.2.1_node-7.x_jdk-8
 
 dependencies:
   pre:

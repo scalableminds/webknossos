@@ -1,6 +1,7 @@
 import _ from "lodash";
 import app from "app";
 import Marionette from "backbone.marionette";
+import ToggleButton from "bootstrap-toggle"; // eslint-disable-line no-unused-vars
 
 class ArbitraryPlaneInfo extends Marionette.View {
   static initClass() {

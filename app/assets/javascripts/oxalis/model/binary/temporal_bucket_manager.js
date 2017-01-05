@@ -37,12 +37,12 @@ class TemporalBucketManager {
 
   makeLoadedPromise(bucket) {
     const loadedPromise = new Promise(
-      (resolve, reject) => bucket.on("bucketLoaded", () => {
+      (resolve, _reject) => bucket.on("bucketLoaded", () => {
         if (bucket.dirty) {
           this.pushQueue.insert(bucket.zoomedAddress);
         }
 
-        _.removeElement(this.loadedPromises, loadedPromise);
+        this.loadedPromises = _.without(this.loadedPromises, loadedPromise);
         return resolve();
       },
     ));

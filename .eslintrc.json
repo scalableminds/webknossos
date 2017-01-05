@@ -4,8 +4,7 @@
         "react",
         "jsx-a11y",
         "import",
-        "jasmine",
-        "promise"
+        "jasmine"
     ],
     "parserOptions": {
       "ecmaVersion": 8
@@ -40,6 +39,7 @@
       "no-restricted-syntax": ["off", "ForInStatement", "ForOfStatement"],
       "no-param-reassign": "warn",
       "no-plusplus": "off",
-      "import/extensions": ["warn", { "js": "never", "jsx": "always" }]
+      "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
+      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
     }
 }

@@ -34,15 +34,6 @@ _.mixin({
       }
     };
   },
-
-  // Removes the first occurrence of given element from an array.
-  removeElement(array, element) {
-    let index;
-    if ((index = array.indexOf(element)) !== -1) {
-      return array.splice(index, 1);
-    }
-  },
-
 });
 
 

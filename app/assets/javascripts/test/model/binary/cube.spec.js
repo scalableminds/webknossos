@@ -5,6 +5,7 @@ import runAsync from "../../helpers/run-async";
 
 mockRequire.stopAll();
 
+mockRequire("jquery", { fn: {} });
 mockRequire("../../../oxalis/model/binary/pullqueue", {
   prototype: {
     PRIORITY_HIGHEST: 123,

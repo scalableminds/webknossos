@@ -1,10 +1,10 @@
-import Backbone from "backbone";
 import _ from "lodash";
-import ErrorHandling from "../../../libs/error_handling";
+import Backbone from "backbone";
 import { Bucket, NullBucket } from "./bucket";
 import ArbitraryCubeAdapter from "./arbitrary_cube_adapter";
 import TemporalBucketManager from "./temporal_bucket_manager";
 import BoundingBox from "./bounding_box";
+import ErrorHandling from "../../../libs/error_handling";
 
 class Cube {
   static initClass() {

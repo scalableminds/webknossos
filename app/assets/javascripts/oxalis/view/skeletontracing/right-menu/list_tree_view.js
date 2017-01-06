@@ -7,7 +7,7 @@ import ListTreeItemView from "./list_tree_item_view";
 
 class ListTreeView extends Marionette.CompositeView {
   static initClass() {
-  
+
     this.prototype.id  = "tree-navbar";
     this.prototype.className  = "flex-column";
     this.prototype.template  = _.template(`\
@@ -40,18 +40,18 @@ class ListTreeView extends Marionette.CompositeView {
   <span class="input-group-btn">
     <button class="btn btn-default" id="tree-prev-button"><i class="fa fa-arrow-left"></i></button>
   </span>
-  <input name="name" id="tree-name-input" class="form-control" maxlength="30" type="text" autocomplete="off">
+  <input name="name" id="tree-name-input" class="form-control" type="text" autocomplete="off">
   <span class="input-group-btn">
     <button class="btn btn-default" id="tree-next-button"><i class="fa fa-arrow-right"></i></button>
   </span>
 </div>
 <ul id="tree-list" class="flex-overflow"></ul>\
 `);
-  
+
     this.prototype.childView  = ListTreeItemView;
     this.prototype.childViewContainer  = "ul#tree-list";
-  
-  
+
+
     this.prototype.events  = {
       "change #tree-name-input" : "setTreeName",
       "click #tree-prev-button" : "selectPreviousTree",
@@ -62,7 +62,7 @@ class ListTreeView extends Marionette.CompositeView {
       "click #tree-color-shuffle-all" : "shuffleAllTreeColors",
       "click a[data-sort]" : "sortTrees"
     };
-  
+
     this.prototype.ui  = {
       "treeNameInput" : "#tree-name-input",
       "sortNameIcon" : "#sort-name-icon",

@@ -9,7 +9,7 @@ import UserTasksCollection from "../models/user_tasks_collection";
 
 class DashboardTaskListView extends Marionette.CompositeView {
   static initClass() {
-  
+
     this.prototype.template  = _.template(`\
 <h3>Tasks</h3>
 <% if (isAdminView) { %>
@@ -45,20 +45,20 @@ class DashboardTaskListView extends Marionette.CompositeView {
 </table>
 <div class="modal-container"></div>\
 `);
-  
+
     this.prototype.childViewContainer  = "tbody";
     this.prototype.childView  = DashboardTaskListItemView;
-  
-  
+
+
     this.prototype.ui  =
       {"modalContainer" : ".modal-container"};
-  
+
     this.prototype.events  = {
       "click #new-task-button" : "newTask",
       "click #transfer-task" : "transferTask",
       "click #toggle-finished" : "toggleFinished"
     };
-  
+
     this.prototype.behaviors = {
       SortTableBehavior: {
         behaviorClass: SortTableBehavior
@@ -84,10 +84,13 @@ class DashboardTaskListView extends Marionette.CompositeView {
 
     this.options = options;
     this.showFinishedTasks = false;
+
+    app.router.showLoadingSpinner()
     this.collection = new UserTasksCollection([], {userID : this.options.userID});
+    this.listenTo(this.collection, "sync", () => app.router.hideLoadingSpinner())
     this.collection.fetch();
 
-    return this.listenTo(app.vent, "modal:destroy", this.refresh);
+    this.listenTo(app.vent, "modal:destroy", this.refresh);
   }
 
   filter(child) {
@@ -132,6 +135,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
 
   refresh() {
 
+    app.router.showLoadingSpinner()
     return this.collection.fetch().then( () => {
       return this.render();
     }

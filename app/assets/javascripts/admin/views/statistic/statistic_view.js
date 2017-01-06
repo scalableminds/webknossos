@@ -8,7 +8,7 @@ import TimeStatisticModel from "admin/models/statistic/time_statistic_model";
 
 class StatisticView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.className  = "statistics container wide";
     this.prototype.template  = _.template(`\
 <div class="row-fluid">
@@ -17,11 +17,11 @@ class StatisticView extends Marionette.View {
     <div class="timings well"></div>
   </div>
   <div class="achievements col-sm-4 well">
-  
+
   </div>
 </div>\
 `);
-  
+
     this.prototype.regions  = {
       "graph" : ".graph",
       "timings" : ".timings",
@@ -31,6 +31,7 @@ class StatisticView extends Marionette.View {
 
   initialize() {
 
+    app.router.showLoadingSpinner()
     const timeStatisticModel = new TimeStatisticModel();
     timeStatisticModel.fetch({
       data : "interval=week"
@@ -41,20 +42,21 @@ class StatisticView extends Marionette.View {
     this.statisticListView = new StatisticListView();
 
     this.listenTo(timeStatisticModel, "sync", this.showGraphView);
-    return this.listenTo(this, "render", this.showStatisticsListView);
+    this.listenTo(this, "render", this.showStatisticsListView);
   }
 
 
   showStatisticsListView() {
 
-    return this.showChildView("timings", this.statisticListView);
+    this.showChildView("timings", this.statisticListView);
   }
 
 
   showGraphView() {
 
     this.showChildView("graph", this.graphView);
-    return this.showChildView("achievements", this.achievementView);
+    this.showChildView("achievements", this.achievementView);
+    app.router.hideLoadingSpinner()
   }
 }
 StatisticView.initClass();

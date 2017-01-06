@@ -19,7 +19,7 @@ import java.io.{File, FilenameFilter}
 
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 /**
   * Abstract Datastore defines all method a binary data source (e.q. normal file
   * system or db implementation) must implement to be used
@@ -48,21 +48,13 @@ object DataStore extends LazyLogging{
 
 
   def knossosDirToCube(dataInfo: DataStoreBlock, path: Path): Option[(Int, Point3D)] = {
-    val LocRx = ".([0-9]+)".r
-    def parseElem(e: String) = {
-      e match {
-        case LocRx(p) => Some(p.toInt)
-        case _ => None
-      }
-    }
-
     val rel = Paths.get(dataInfo.dataLayerSection.baseDir).relativize(path)
     if(rel.getNameCount >= 5){
       for{
-        resolution <- parseElem(rel.getName(0).toString)
-        x <- parseElem(rel.getName(1).toString)
-        y <- parseElem(rel.getName(2).toString)
-        z <- parseElem(rel.getName(3).toString)
+        resolution <- rel.getName(rel.getNameCount - 5).toString.toIntOpt
+        x <- rel.getName(rel.getNameCount - 4).toString.drop(1).toIntOpt
+        y <- rel.getName(rel.getNameCount - 3).toString.drop(1).toIntOpt
+        z <- rel.getName(rel.getNameCount - 2).toString.drop(1).toIntOpt
       } yield (resolution, Point3D(x,y,z))
     } else {
       None

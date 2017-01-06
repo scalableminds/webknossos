@@ -104,7 +104,7 @@ object ZipIO {
   }
   
   def isHiddenFile(s: String) = 
-    s.startsWith(".") || s.startsWith("__MACOSX")
+    new File(s).isHidden || s.startsWith("__MACOSX")
 
   def withUnziped[A](zip: ZipFile, includeHiddenFiles: Boolean, customFilter: ZipEntry => Boolean)(f: (String, InputStream) => A): List[A] = {
     import collection.JavaConverters._

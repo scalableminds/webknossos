@@ -22,7 +22,6 @@ class ExplorativeTracingListItemView extends Marionette.View {
       <input class="input-medium hover-input form-control"
              name="name"
              id="explorative-name-input"
-             maxlength="50"
              type="text"
              value="<%- name %>"
              autocomplete="off">

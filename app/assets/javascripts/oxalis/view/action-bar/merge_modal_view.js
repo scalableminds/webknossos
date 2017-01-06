@@ -6,7 +6,6 @@ import SelectionView from "admin/views/selection_view";
 import ModalView from "admin/views/modal_view";
 import TaskTypeCollection from "admin/models/tasktype/task_type_collection";
 import ProjectCollection from "admin/models/project/project_collection";
-import jsRoutes from "routes"; // eslint-disable-line no-unused-vars
 
 class MergeModalView extends ModalView {
   static initClass() {

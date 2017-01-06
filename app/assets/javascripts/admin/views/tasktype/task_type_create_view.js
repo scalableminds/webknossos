@@ -2,7 +2,7 @@ import _ from "lodash";
 import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
-import Multiselect from "bootstrap-multiselect"; // eslint-disable-line no-unused-vars
+import "bootstrap-multiselect";
 import TeamCollection from "admin/models/team/team_collection";
 import SelectionView from "admin/views/selection_view";
 import Toast from "libs/toast";

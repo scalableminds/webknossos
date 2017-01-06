@@ -342,8 +342,7 @@ class Model extends Backbone.Model {
 
   // Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
   initSettersGetter() {
-    // eslint-disable-next-line no-unused-vars
-    return _.forEach(this.attributes, (value, key, attribute) => Object.defineProperty(this, key, {
+    return _.forEach(this.attributes, (value, key, ) => Object.defineProperty(this, key, {
       set(val) {
         return this.set(key, val);
       },

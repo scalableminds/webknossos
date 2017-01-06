@@ -111,7 +111,7 @@ const Utils = {
 
   isElementInViewport(el) {
     // special bonus for those using jQuery
-    if (typeof jQuery === "function" && el instanceof $) {
+    if (typeof $ === "function" && el instanceof $) {
       el = el[0];
     }
 

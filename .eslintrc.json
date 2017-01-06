@@ -22,7 +22,8 @@
       "ga": false,
       "browser": false,
       "Airbrake": false,
-      "routes": false
+      "routes": false,
+      "jsRoutes": false,
     },
     "rules": {
       "quotes": ["error", "double"],

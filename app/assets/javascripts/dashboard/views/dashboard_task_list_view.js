@@ -1,7 +1,6 @@
 import _ from "lodash";
 import app from "app";
 import Marionette from "backbone.marionette";
-import routes from "routes"; // eslint-disable-line no-unused-vars
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 import DashboardTaskListItemView from "./dashboard_task_list_item_view";
 import TaskTransferModalView from "./task_transfer_modal_view";

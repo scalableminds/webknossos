@@ -9,7 +9,7 @@ import RangeSlider from "nouislider";
 import Utils from "libs/utils";
 import TeamCollection from "admin/models/team/team_collection";
 import SelectionView from "admin/views/selection_view";
-import DateRangePicker from "bootstrap-daterangepicker"; // eslint-disable-line no-unused-vars
+import "bootstrap-daterangepicker";
 
 class TaskOverviewView extends Marionette.View {
   static initClass() {

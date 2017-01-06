@@ -28,7 +28,7 @@ const Request = {
       return this.receiveJSON(url, options);
     }
 
-    const body = typeof (options.data) === "string" ?
+    const body = _.isString(options.data) ?
         options.data
       :
         JSON.stringify(options.data);

@@ -12,7 +12,7 @@ import DateRangePicker from "bootstrap-daterangepicker";
 
 class TaskOverviewView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.id  = "task-overview";
     this.prototype.className  = "container wide";
     this.prototype.template  = _.template(`\
@@ -40,20 +40,20 @@ class TaskOverviewView extends Marionette.View {
     <span id="rangeSliderLabel3"/>
   </div>
 </div>
-  
+
 <div class="graph well">
   <p><i class="fa fa-refresh rotating"></i>Loading ...</p>
 </div>\
 `);
-  
+
     this.prototype.regions  =
       {"team" : ".team"};
-  
+
     this.prototype.events  = {
       "change @ui.taskTypesCheckbox" : "selectionChanged",
       "change @ui.projectsCheckbox" : "selectionChanged"
     };
-  
+
     this.prototype.ui  = {
       "graph" : ".graph",
       "taskTypesCheckbox" : "#taskTypesCheckbox",
@@ -65,17 +65,17 @@ class TaskOverviewView extends Marionette.View {
       "rangeSliderLabel2" : "#rangeSliderLabel2",
       "rangeSliderLabel3" : "#rangeSliderLabel3"
     };
-  
+
     this.prototype.DEFAULT_TEAM  = "Tracing crew";
-  
+
     this.prototype.DEFAULT_TIME_PERIOD_UNIT  = "month";
     this.prototype.DEFAULT_TIME_PERIOD_TIME  = 3;
     this.prototype.MS_PER_HOUR  = 3600000;
-  
+
     // These values will be configured by the user, using the RangeSlider
     this.prototype.chosenMinHours  = 0;
     this.prototype.chosenMaxHours  = 24 * 356 * 100;
-  
+
     // Graph constants
     this.prototype.FORCE_LAYOUT_TIMEOUT  = 10000;
     this.prototype.RECT_HEIGHT  = 30;
@@ -83,11 +83,11 @@ class TaskOverviewView extends Marionette.View {
     this.prototype.OPTIONS_MARGIN  = 30;
     this.prototype.FUTURE_TASK_EDGE_COLOR  = "#3091E6";
     this.prototype.MAX_SCALE  = 3.0;
-  
-  
-  
+
+
+
     // utility functions
-  
+
     this.prototype.color  = (() =>
       // Red -> Yellow -> Green
       d3.scale.linear()
@@ -192,13 +192,6 @@ class TaskOverviewView extends Marionette.View {
 
   renderTeamDropdown() {
 
-    const TeamSelectionView = SelectionView.extend({
-      teamChanged: () => {
-        this.updateSelectedTeam();
-        return this.paintGraphDebounced();
-      }
-    });
-
     // sort the collection so the default team is the first one
     // don't bind the comparator function though as backbones sorting is
     // checking for the number of arguments which could lead to strange behaviour when bound
@@ -210,14 +203,17 @@ class TaskOverviewView extends Marionette.View {
     }
     );
 
-    const teamSelectionView = new TeamSelectionView({
+    const teamSelectionView = new SelectionView({
       collection: teamCollection,
       childViewOptions: {
         modelValue() { return `${this.model.get("name")}`; }
       },
       name: "team",
       events: {
-        change: "teamChanged"
+        change: () => {
+          this.updateSelectedTeam();
+          this.paintGraphDebounced();
+        }
       }
     });
 

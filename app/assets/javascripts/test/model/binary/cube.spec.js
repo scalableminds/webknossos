@@ -1,6 +1,7 @@
 import mockRequire from "mock-require"
 import sinon from "sinon"
 import runAsync from "../../helpers/run-async"
+import _ from "lodash"
 
 mockRequire.stopAll()
 
@@ -8,7 +9,12 @@ mockRequire("../../../oxalis/model/binary/pullqueue", {
   prototype : {
     PRIORITY_HIGHEST: 123
   }
-})
+});
+mockRequire("../../../libs/error_handling", {
+  assertExists(expr) { this.assert(expr != null) },
+  assert(expr) { if (!expr) throw new Error(`Assertion failed`); }
+});
+mockRequire("../../../libs/toast", { error : _.noop });
 
 const Cube = require("../../../oxalis/model/binary/cube").default;
 

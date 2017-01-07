@@ -15,8 +15,7 @@ const User = makeModelMock()
 const DatasetConfiguration = makeModelMock()
 const Request = { receiveJSON : sinon.stub() }
 const ErrorHandling = {
-  assertExtendContext : _.noop,
-  assert : _.noop
+  assertExtendContext : _.noop
 }
 
 class Binary {

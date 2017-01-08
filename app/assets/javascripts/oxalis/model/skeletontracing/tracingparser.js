@@ -1,14 +1,13 @@
 import _ from "lodash";
 import THREE from "three";
+import Toast from "libs/toast";
 import TracePoint from "./tracepoint";
 import TraceTree from "./tracetree";
-import Toast from "libs/toast";
 
 class TracingParser {
 
 
   constructor(skeletonTracing, data) {
-
     this.skeletonTracing = skeletonTracing;
     this.data = data;
     this.idCount = 1;
@@ -20,8 +19,7 @@ class TracingParser {
 
 
   buildTrees() {
-
-    for (let treeData of this.data.trees) {
+    for (const treeData of this.data.trees) {
       // Create new tree
       const tree = new TraceTree(
         treeData.id,
@@ -32,10 +30,9 @@ class TracingParser {
         treeData.branchPoints);
 
       // Initialize nodes
-      for (let node of treeData.nodes) {
-
-        const metaInfo = _.pick( node,
-          'timestamp', 'viewport', 'resolution', 'bitDepth', 'interpolation' );
+      for (const node of treeData.nodes) {
+        const metaInfo = _.pick(node,
+          "timestamp", "viewport", "resolution", "bitDepth", "interpolation");
 
         tree.nodes.push(
           new TracePoint(
@@ -47,7 +44,7 @@ class TracingParser {
       }
 
       // Initialize edges
-      for (let edge of treeData.edges) {
+      for (const edge of treeData.edges) {
         const sourceNode = this.skeletonTracing.findNodeInList(tree.nodes, edge.source);
         const targetNode = this.skeletonTracing.findNodeInList(tree.nodes, edge.target);
         if (sourceNode && targetNode) {
@@ -78,7 +75,6 @@ class TracingParser {
 
 
   convertColor(colorArray) {
-
     if (colorArray != null) {
       return new THREE.Color().setRGB(...colorArray).getHex();
     }
@@ -88,21 +84,20 @@ class TracingParser {
 
 
   parse() {
-
     if (this.data == null) {
       return {
-        idCount : 0,
-        treeIdCount : 0,
-        trees : [],
-        activeNode : null,
-        activeTree : null
+        idCount: 0,
+        treeIdCount: 0,
+        trees: [],
+        activeNode: null,
+        activeTree: null,
       };
     }
 
     this.buildTrees();
 
     let nodeList = [];
-    for (let tree of this.trees) {
+    for (const tree of this.trees) {
       nodeList = nodeList.concat(tree.nodes);
     }
 
@@ -111,7 +106,7 @@ class TracingParser {
       treeIdCount: this.treeIdCount,
       trees: this.trees,
       activeNode: this.activeNode,
-      activeTree: this.activeTree
+      activeTree: this.activeTree,
     };
   }
 }

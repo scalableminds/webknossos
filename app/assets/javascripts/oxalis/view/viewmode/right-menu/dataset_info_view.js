@@ -1,3 +1,4 @@
+import _ from "lodash";
 import Marionette from "backbone.marionette";
 import app from "app";
 import constants from "oxalis/constants";
@@ -5,10 +6,9 @@ import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controlle
 
 class DatasetInfoView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.className  = "col-sm-12 flex-column";
-    this.prototype.id  = "dataset";
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "col-sm-12 flex-column";
+    this.prototype.id = "dataset";
+    this.prototype.template = _.template(`\
 <div class="well">
   <p><%- annotationType %></p>
   <p>DataSet: <%- dataSetName %></p>
@@ -18,23 +18,22 @@ class DatasetInfoView extends Marionette.View {
   <% } %>
 </div>\
 `);
-  
-    this.prototype.templateContext  = {
+
+    this.prototype.templateContext = {
       chooseUnit() {
-        if(this.zoomLevel < 1000) {
-          return this.zoomLevel.toFixed(0) + " nm";
+        if (this.zoomLevel < 1000) {
+          return `${this.zoomLevel.toFixed(0)} nm`;
         } else if (this.zoomLevel < 1000000) {
-          return (this.zoomLevel / 1000).toFixed(1) + " μm";
+          return `${(this.zoomLevel / 1000).toFixed(1)} μm`;
         } else {
-          return (this.zoomLevel / 1000000).toFixed(1) + " mm";
+          return `${(this.zoomLevel / 1000000).toFixed(1)} mm`;
         }
-      }
+      },
     };
   }
 
 
-  initialize(options) {
-
+  initialize() {
     this.render = _.throttle(this.render, 100);
     this.listenTo(this.model.flycam3d, "changed", this.render);
     this.listenTo(this.model.flycam, "zoomStepChanged", this.render);
@@ -55,7 +54,6 @@ class DatasetInfoView extends Marionette.View {
 
 
   serializeData() {
-
     let annotationType = this.model.get("tracingType");
     const tracing = this.model.get("tracing");
     const { task } = tracing;
@@ -68,23 +66,23 @@ class DatasetInfoView extends Marionette.View {
 
     return {
       annotationType,
-      zoomLevel : this.calculateZoomLevel(),
-      dataSetName : this.model.get("dataset").get("name"),
-      treeCount : __guard__(this.model.skeletonTracing, x => x.trees.length)
+      zoomLevel: this.calculateZoomLevel(),
+      dataSetName: this.model.get("dataset").get("name"),
+      treeCount: __guard__(this.model.skeletonTracing, x => x.trees.length),
     };
   }
 
 
   calculateZoomLevel() {
-
-    let width, zoom;
+    let width,
+      zoom;
     if (constants.MODES_PLANE.includes(this.model.mode)) {
-      zoom  = this.model.flycam.getPlaneScalingFactor();
+      zoom = this.model.flycam.getPlaneScalingFactor();
       width = constants.PLANE_WIDTH;
     }
 
     if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
-      zoom  = this.model.flycam3d.zoomStep;
+      zoom = this.model.flycam3d.zoomStep;
       width = ArbitraryController.prototype.WIDTH;
     }
 
@@ -94,7 +92,6 @@ class DatasetInfoView extends Marionette.View {
 
 
   onDestroy() {
-
     this.model.flycam3d.off("changed");
     return this.model.flycam.off("zoomStepChanged");
   }
@@ -104,5 +101,5 @@ DatasetInfoView.initClass();
 export default DatasetInfoView;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

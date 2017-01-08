@@ -7,15 +7,15 @@ class VolumeTracingRightMenuView extends AbstractTabView {
   getTabs() {
     return [
       {
-        id : "tab-info",
-        name : "Info",
-        viewClass : DatasetInfoView
+        id: "tab-info",
+        name: "Info",
+        viewClass: DatasetInfoView,
       },
       {
-        id : "volume-mapping-info",
-        name : "Mapping Info",
-        viewClass : MappingInfoView
-      }
+        id: "volume-mapping-info",
+        name: "Mapping Info",
+        viewClass: MappingInfoView,
+      },
     ];
   }
 }

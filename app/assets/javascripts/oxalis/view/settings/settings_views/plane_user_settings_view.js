@@ -8,48 +8,46 @@ import AbstractTreeCategoryView from "../category_views/abstracttree_category_vi
 
 class PlaneUserSettingsView extends SettingsView {
   static initClass() {
-  
-  
-    this.prototype.id  = "user-settings";
-    this.prototype.className  = "flex-column";
-  
-  
-    this.prototype.subviewCreatorsList  = [
+    this.prototype.id = "user-settings";
+    this.prototype.className = "flex-column";
+
+
+    this.prototype.subviewCreatorsList = [
       [
-        "controls-category", function() {
-          return new ControlsCategoryView({model : this.model.get("user")});
-        }
+        "controls-category", function () {
+          return new ControlsCategoryView({ model: this.model.get("user") });
+        },
       ],
-  
+
       [
-        "viewport-category", function() {
-          return new ViewportCategoryView({model: this.model});
-        }
+        "viewport-category", function () {
+          return new ViewportCategoryView({ model: this.model });
+        },
       ],
-  
+
       [
-        "tdview-category", function() {
-          return new TDViewCategoryView({model : this.model.get("user")});
-        }
+        "tdview-category", function () {
+          return new TDViewCategoryView({ model: this.model.get("user") });
+        },
       ],
-  
+
       [
-        "isosurface-category", function() {
-          return new IsosurfaceCategoryView({model : this.model.get("user")});
-        }
+        "isosurface-category", function () {
+          return new IsosurfaceCategoryView({ model: this.model.get("user") });
+        },
       ],
-  
+
       [
-        "segmentation-category", function() {
-          return new SegmentationCategoryView({model : this.model.get("user")});
-        }
+        "segmentation-category", function () {
+          return new SegmentationCategoryView({ model: this.model.get("user") });
+        },
       ],
-  
+
       [
-        "abstracttree-category", function() {
-          return new AbstractTreeCategoryView({model : this.model.get("user")});
-        }
-      ]
+        "abstracttree-category", function () {
+          return new AbstractTreeCategoryView({ model: this.model.get("user") });
+        },
+      ],
     ];
   }
 }

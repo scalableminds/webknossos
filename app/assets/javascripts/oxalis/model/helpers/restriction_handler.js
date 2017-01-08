@@ -2,10 +2,8 @@ import Toast from "libs/toast";
 
 class RestrictionHandler {
   static initClass() {
-  
-  
-    this.prototype.UPDATE_ERROR  = "You cannot update this tracing, because you are in Read-only mode!";
-    this.prototype.UPDATE_WARNING  = "This change will not be persisted, because your are in Read-only mode!";
+    this.prototype.UPDATE_ERROR = "You cannot update this tracing, because you are in Read-only mode!";
+    this.prototype.UPDATE_WARNING = "This change will not be persisted, because your are in Read-only mode!";
   }
 
 
@@ -19,12 +17,9 @@ class RestrictionHandler {
   // Should be called whenever the model is modified
   // Returns whether the modification is allowed
   // ==> return if not @restrictionHandler.updateAllowed()
-  updateAllowed(error) {
-
-    if (error == null) { error = true; }
+  updateAllowed(error = true) {
     if (this.restrictions.allowUpdate) {
       return true;
-
     } else {
       // Display error or warning if it wasn't displayed before
       if (error) {
@@ -32,11 +27,9 @@ class RestrictionHandler {
           Toast.error(this.UPDATE_ERROR);
           this.issuedUpdateError = true;
         }
-      } else {
-        if (!this.issuedUpdateWarning) {
-          Toast.warning(this.UPDATE_WARNING);
-          this.issuedUpdateWarning = true;
-        }
+      } else if (!this.issuedUpdateWarning) {
+        Toast.warning(this.UPDATE_WARNING);
+        this.issuedUpdateWarning = true;
       }
       return false;
     }

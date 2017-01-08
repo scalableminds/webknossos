@@ -3,18 +3,15 @@ import _ from "lodash";
 import $ from "jquery";
 import app from "app";
 import Request from "libs/request";
-import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 
 class StateLogger {
   static initClass() {
-  
-    this.prototype.PUSH_THROTTLE_TIME  = 30000; //30s
-    this.prototype.SAVE_RETRY_WAITING_TIME  = 5000;
+    this.prototype.PUSH_THROTTLE_TIME = 30000; // 30s
+    this.prototype.SAVE_RETRY_WAITING_TIME = 5000;
   }
 
   constructor(flycam, version, tracingId, tracingType, allowUpdate) {
-
     this.flycam = flycam;
     this.version = version;
     this.tracingId = tracingId;
@@ -30,12 +27,10 @@ class StateLogger {
   }
 
 
-  pushDiff(action, value, push) {
-
-    if (push == null) { push = true; }
+  pushDiff(action, value, push = true) {
     this.newDiffs.push({
       action,
-      value
+      value,
     });
     // In order to assure that certain actions are atomic,
     // it is sometimes necessary not to push.
@@ -46,21 +41,18 @@ class StateLogger {
 
 
   concatUpdateTracing() {
-
     throw new Error("concatUpdateTracing has to be overwritten by subclass!");
   }
 
 
-  //### SERVER COMMUNICATION
+  // ### SERVER COMMUNICATION
 
   stateSaved() {
-
     return this.newDiffs.length === 0;
   }
 
 
   push() {
-
     if (this.allowUpdate) {
       return this.pushThrottled();
     }
@@ -76,7 +68,8 @@ class StateLogger {
   }
 
 
-  pushNow() {   // Interface for view & controller
+  pushNow() {
+   // Interface for view & controller
 
     return this.mutexedPush(false);
   }
@@ -85,13 +78,11 @@ class StateLogger {
   // needed for save delegation by `Model`
   // see `model.coffee`
   save() {
-
     return this.pushNow();
   }
 
 
   pushImpl(notifyOnFailure) {
-
     if (!this.allowUpdate) {
       return Promise.resolve();
     }
@@ -102,30 +93,27 @@ class StateLogger {
     const diffsCurrentLength = this.newDiffs.length;
     console.log("Sending data: ", this.newDiffs);
     ErrorHandling.assert(this.newDiffs.length > 0, "Empty update sent to server!", {
-      newDiffs: this.newDiffs
+      newDiffs: this.newDiffs,
     });
 
     return Request.sendJSONReceiveJSON(
-      `/annotations/${this.tracingType}/${this.tracingId}?version=${(this.version + 1)}`,{
-      method : "PUT",
-      data : this.newDiffs
-    }
+      `/annotations/${this.tracingType}/${this.tracingId}?version=${(this.version + 1)}`, {
+        method: "PUT",
+        data: this.newDiffs,
+      },
     ).then(
-      response => {
+      (response) => {
         this.newDiffs = this.newDiffs.slice(diffsCurrentLength);
         this.version = response.version;
         return this.pushDoneCallback();
       },
-      responseObject => {
-        return this.pushFailCallback(responseObject, notifyOnFailure);
-      }
+      responseObject => this.pushFailCallback(responseObject, notifyOnFailure),
     );
   }
 
 
   pushFailCallback(response, notifyOnFailure) {
-
-    $('body').addClass('save-error');
+    $("body").addClass("save-error");
 
     // HTTP Code 409 'conflict' for dirty state
     if (response.status === 409) {
@@ -148,9 +136,8 @@ In order to restore the current window, a reload is necessary.\
 
 
   pushDoneCallback() {
-
     this.trigger("pushDone");
-    return $('body').removeClass('save-error');
+    return $("body").removeClass("save-error");
   }
 }
 StateLogger.initClass();

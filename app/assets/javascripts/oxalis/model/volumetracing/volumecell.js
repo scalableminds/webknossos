@@ -1,7 +1,6 @@
 class VolumeCell {
 
   constructor(id) {
-
     this.id = id;
   }
 }

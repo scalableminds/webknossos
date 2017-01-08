@@ -1,24 +1,24 @@
+import _ from "lodash";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 
 class SortTableBehavior extends Marionette.Behavior {
   static initClass() {
-  
-    this.prototype.events  =
-      {"click thead" : "onClick"};
-  
-    this.prototype.sortAttributes  = {};
-  
-    this.prototype.lastSortAttribute  = "";
-  
-    this.prototype.defaults  =
-      {sortDirection : "asc"};
+    this.prototype.events =
+      { "click thead": "onClick" };
+
+    this.prototype.sortAttributes = {};
+
+    this.prototype.lastSortAttribute = "";
+
+    this.prototype.defaults =
+      { sortDirection: "asc" };
   }
 
 
   onRender() {
-
     const sortableTableHeads = this.$("[data-sort]").toArray();
-    return sortableTableHeads.forEach(tableHeader => {
+    return sortableTableHeads.forEach((tableHeader) => {
       const $tableHeader = $(tableHeader);
 
       const sortAttribute = $tableHeader.data().sort;
@@ -27,15 +27,14 @@ class SortTableBehavior extends Marionette.Behavior {
 
       $tableHeader.append(`<div class='sort-icon-wrapper'><span class='fa ${sortIcon} sort-icon'></span></div>`);
       return $tableHeader.addClass("sortable-column");
-    }
+    },
     );
   }
 
 
   getSortDirection(sortAttribute) {
-
     let sortDirection;
-    const toggleDirection = function(direction) {
+    const toggleDirection = function (direction) {
       if (direction === "desc") { return "asc"; } else { return "desc"; }
     };
 
@@ -53,7 +52,6 @@ class SortTableBehavior extends Marionette.Behavior {
 
 
   sortTable($elem, sortAttribute) {
-
     const sortDirection = this.getSortDirection(sortAttribute);
     this.view.collection.setSort(sortAttribute, sortDirection);
     return this.view.resortView();
@@ -61,11 +59,10 @@ class SortTableBehavior extends Marionette.Behavior {
 
 
   onClick(evt) {
-
     const $elem = _.includes(evt.target.className, "sort-icon") ? $(evt.target).closest("th") : $(evt.target);
     const elemData = $elem.data();
     if (!("sort" in elemData)) {
-      return;
+
     } else {
       return this.sortTable($elem, elemData.sort);
     }

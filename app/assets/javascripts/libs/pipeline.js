@@ -11,59 +11,55 @@ class Pipeline {
   // passed to the current action.
 
 
-  constructor(firstArguments, options) {
-
-    if (options == null) { options = {}; }
+  constructor(firstArguments, options = {}) {
     this.options = options;
-    this.actions       = [];
+    this.actions = [];
     this.nextArguments = firstArguments;
-    this.retryCount    = 0;
-    this.running       = false;
-    this.failed        = false;
+    this.retryCount = 0;
+    this.running = false;
+    this.failed = false;
     this.executeNext = this.executeNext.bind(this);
 
     _.defaults(this.options, {
-      maxRetry : 3,
-      retryTimeMs : 1000
-    }
+      maxRetry: 3,
+      retryTimeMs: 1000,
+    },
     );
   }
 
 
   isBusy() {
-
     return this.actions.length !== 0;
   }
 
 
   getLastActionPromise() {
-
     if (this.actions.length === 0) {
       return Promise.resolve();
     }
 
-    return this.actions[this.actions.length - 1]._deferred.promise();
+    return this.actions[this.actions.length - 1].deferred.promise();
   }
 
 
   executeAction(action) {
     // action : function that returns a `Promise`
 
-    action._deferred = new Deferred();
-    this.actions.push( action );
+    action.deferred = new Deferred();
+    this.actions.push(action);
 
     if (!this.running) {
       this.executeNext();
     }
 
-    return action._deferred.promise();
+    return action.deferred.promise();
   }
 
 
   executePassAlongAction(action) {
     // For actions that don't return anything
 
-    const newAction = function() {
+    const newAction = function () {
       const args = arguments;
       return action(...args).then(() =>
         // TODO: Figure out how to pass along all arguments
@@ -75,9 +71,8 @@ class Pipeline {
 
 
   executeActions(actionList) {
-
     let promise;
-    for (let action of actionList) {
+    for (const action of actionList) {
       promise = this.executeAction(action);
     }
     return promise;
@@ -102,39 +97,33 @@ class Pipeline {
 
 
   executeNext() {
-
     const currentAction = this.actions.shift();
 
     if (currentAction != null) {
-
       this.running = true;
 
       return currentAction(...this.nextArguments).then(
-        function(response) {
-
-          currentAction._deferred.resolve(response);
+        function (response) {
+          currentAction.deferred.resolve(response);
 
           this.nextArguments = arguments;
           this.retryCount = 0;
           return this.executeNext();
         }.bind(this),
 
-        response => {
-
+        (response) => {
           this.retryCount++;
           this.actions.unshift(currentAction);
 
           if (this.retryCount >= this.options.maxRetry) {
             this.failed = true;
-            return currentAction._deferred.reject(response);
+            return currentAction.deferred.reject(response);
           } else {
             return setTimeout(this.executeNext, this.options.retryTimeMs);
           }
-        }
+        },
       );
-
     } else {
-
       return this.running = false;
     }
   }

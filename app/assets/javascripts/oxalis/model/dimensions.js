@@ -5,10 +5,10 @@ import constants from "../constants";
 
 const Dimensions = {
 
-  PLANE_XY : constants.PLANE_XY,
-  PLANE_YZ : constants.PLANE_YZ,
-  PLANE_XZ : constants.PLANE_XZ,
-  TDView  : constants.TDView,
+  PLANE_XY: constants.PLANE_XY,
+  PLANE_YZ: constants.PLANE_YZ,
+  PLANE_XZ: constants.PLANE_XZ,
+  TDView: constants.TDView,
 
   getIndices(planeID) {
     // Returns a ordered 3-tuple [x, y, z] which represents the dimensions from the viewpoint
@@ -59,9 +59,8 @@ const Dimensions = {
 
 
   roundCoordinate(coordinate) {
-
     const res = coordinate.slice();
-    for (let i of __range__(0, res.length, false)) {
+    for (const i of __range__(0, res.length, false)) {
       res[i] = this.round(res[i]);
     }
     return res;
@@ -69,22 +68,21 @@ const Dimensions = {
 
 
   distance(pos1, pos2) {
-
     let sumOfSquares = 0;
-    for (let i of __range__(0, pos1.length, false)) {
+    for (const i of __range__(0, pos1.length, false)) {
       const diff = pos1[i] - pos2[i];
       sumOfSquares += diff * diff;
     }
     return Math.sqrt(sumOfSquares);
-  }
+  },
 };
 
 export default Dimensions;
 
 function __range__(left, right, inclusive) {
-  let range = [];
-  let ascending = left < right;
-  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  const range = [];
+  const ascending = left < right;
+  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
   for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
     range.push(i);
   }

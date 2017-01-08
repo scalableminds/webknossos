@@ -1,13 +1,11 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import routes from "routes";
 
 class CreditsView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.className  = "well";
-    this.prototype.id  = "credits";
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "well";
+    this.prototype.id = "credits";
+    this.prototype.template = _.template(`\
 <div class="container">
   <h3>webKnossos Credits</h3>
   <section class="row">
@@ -72,7 +70,7 @@ class CreditsView extends Marionette.View {
       For more information about our project, visit <a href="http://www.brainflight.net">http://www.brainflight.net</a> and
       <a href="http://www.brain.mpg.de/connectomics">http://www.brain.mpg.de/connectomics</a>
     </p>
-  
+
     <p>&copy; Max Planck Institut for Brain Research</p>
   </section>
     <p>

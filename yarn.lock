@@ -4493,9 +4493,9 @@ wdio-sync@0.6.10:
     fibers "^1.0.9"
     object.assign "^4.0.3"
 
-webcola@~3.1.3:
-  version "3.1.3"
-  resolved "https://registry.yarnpkg.com/webcola/-/webcola-3.1.3.tgz#9b63589ac9ed031d25b70815f343b5a5d2c72553"
+webcola@3.3.0:
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/webcola/-/webcola-3.3.0.tgz#8ca24691f26876b6fe3d57fa7480b0e7b4041a23"
 
 webdriverio@^4.4.0:
   version "4.5.2"

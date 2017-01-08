@@ -47,6 +47,7 @@ class UserScriptsModalView extends Marionette.View {
       // close modal if the script executed successfully
       return this.$el.modal("hide");
     } catch (error) {
+      console.error(error);
       return alert(error);
     }
   }

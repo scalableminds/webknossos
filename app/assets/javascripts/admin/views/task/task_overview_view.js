@@ -3,7 +3,7 @@ import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
 import d3 from "d3";
-import cola from "webcola";
+import cola from "webcola/WebCola/cola";
 import moment from "moment";
 import RangeSlider from "nouislider";
 import Utils from "libs/utils";
@@ -86,7 +86,6 @@ class TaskOverviewView extends Marionette.View {
 
 
     // utility functions
-
     this.prototype.color = (() =>
       // Red -> Yellow -> Green
       d3.scale.linear()
@@ -184,13 +183,6 @@ class TaskOverviewView extends Marionette.View {
 
 
   renderTeamDropdown() {
-    const TeamSelectionView = SelectionView.extend({
-      teamChanged: () => {
-        this.updateSelectedTeam();
-        return this.paintGraphDebounced();
-      },
-    });
-
     // sort the collection so the default team is the first one
     // don't bind the comparator function though as backbones sorting is
     // checking for the number of arguments which could lead to strange behaviour when bound
@@ -202,14 +194,17 @@ class TaskOverviewView extends Marionette.View {
     },
     );
 
-    const teamSelectionView = new TeamSelectionView({
+    const teamSelectionView = new SelectionView({
       collection: teamCollection,
       childViewOptions: {
         modelValue() { return `${this.model.get("name")}`; },
       },
       name: "team",
       events: {
-        change: "teamChanged",
+        change: () => {
+          this.updateSelectedTeam();
+          this.paintGraphDebounced();
+        },
       },
     });
 

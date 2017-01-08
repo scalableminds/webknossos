@@ -3,7 +3,7 @@ import Marionette from "backbone.marionette";
 
 class UserScriptsModalView extends Marionette.View {
   static initClass() {
-  
+
     this.prototype.className  = "modal fade";
     this.prototype.template  = _.template(`\
 <div class="modal-dialog modal-lg">
@@ -22,13 +22,13 @@ class UserScriptsModalView extends Marionette.View {
   </div>
 </div>\
 `);
-  
+
     this.prototype.ui  =
       {"inputBox" : "#add-script-input"};
-  
+
     this.prototype.events  =
       {"click #add-script-button" : "handleAddClick"};
-  
+
     this.prototype.attributes = {
       "tabindex" : "-1",
       "role": "dialog"
@@ -49,6 +49,7 @@ class UserScriptsModalView extends Marionette.View {
       // close modal if the script executed successfully
       return this.$el.modal("hide");
     } catch (error) {
+      console.error(error);
       return alert(error);
     }
   }

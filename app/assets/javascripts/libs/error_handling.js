@@ -1,4 +1,5 @@
 import _ from "lodash";
+import $ from "jquery";
 import AirbrakeClient from "airbrake-js";
 import Toast from "./toast";
 
@@ -8,7 +9,7 @@ class ErrorHandling {
     this.assert = this.assertImpl.bind(this);
   }
 
-  initialize( options ) {
+  initialize(options) {
     if (options == null) {
       options = { throwAssertions: false, sendLocalErrors: false };
     }
@@ -28,19 +29,19 @@ class ErrorHandling {
 
     window.Airbrake = new AirbrakeClient({
       projectId,
-      projectKey
+      projectKey,
     });
 
-    Airbrake.addFilter(function(notice) {
+    Airbrake.addFilter((notice) => {
       notice.context.environment = envName;
       return notice;
     });
 
     if (!this.sendLocalErrors) {
-      Airbrake.addFilter( notice => location.hostname !== "127.0.0.1" && location.hostname !== "localhost");
+      Airbrake.addFilter(() => location.hostname !== "127.0.0.1" && location.hostname !== "localhost");
     }
 
-    window.onerror = function(message, file, line, colno, error) {
+    window.onerror = function (message, file, line, colno, error) {
       if (error == null) {
         // older browsers don't deliver the error parameter
         error = new Error(message, file, line);
@@ -83,24 +84,24 @@ class ErrorHandling {
     if (variable != null) {
       return;
     }
-    this.assert(false, message + ` (variable is ${variable})`, assertionContext);
+    this.assert(false, `${message} (variable is ${variable})`, assertionContext);
   }
 
   assertEquals(actual, wanted, message, assertionContext) {
     if (actual === wanted) {
       return;
     }
-    this.assert(false, message + ` (${actual} != ${wanted})`, assertionContext);
+    this.assert(false, `${message} (${actual} != ${wanted})`, assertionContext);
   }
 
   setCurrentUser(user) {
-    Airbrake.addFilter(function(notice) {
+    Airbrake.addFilter((notice) => {
       notice.context.user = _.pick(user, [
         "id",
         "email",
         "firstName",
         "lastName",
-        "isActive"
+        "isActive",
       ]);
       return notice;
     });
@@ -109,7 +110,8 @@ class ErrorHandling {
   trimCallstack(callstack) {
     // cut function calls caused by ErrorHandling so that Airbrake won't cluster all assertions into one group
     const trimmedCallstack = [];
-    for (let line of callstack.split("\n")) {
+
+    for (const line of callstack.split("\n")) {
       if (line.indexOf("errorHandling.js") === -1) {
         trimmedCallstack.push(line);
       }

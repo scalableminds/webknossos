@@ -1,11 +1,11 @@
+/* eslint-disable no-eval, no-alert */
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 
 class UserScriptsModalView extends Marionette.View {
   static initClass() {
-
-    this.prototype.className  = "modal fade";
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "modal fade";
+    this.prototype.template = _.template(`\
 <div class="modal-dialog modal-lg">
   <div class="modal-content">
     <div class="modal-header">
@@ -23,27 +23,25 @@ class UserScriptsModalView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.ui  =
-      {"inputBox" : "#add-script-input"};
+    this.prototype.ui =
+      { inputBox: "#add-script-input" };
 
-    this.prototype.events  =
-      {"click #add-script-button" : "handleAddClick"};
+    this.prototype.events =
+      { "click #add-script-button": "handleAddClick" };
 
     this.prototype.attributes = {
-      "tabindex" : "-1",
-      "role": "dialog"
+      tabindex: "-1",
+      role: "dialog",
     };
   }
 
 
   show() {
-
     return this.$el.modal("show");
   }
 
 
   handleAddClick() {
-
     try {
       eval(this.ui.inputBox.val());
       // close modal if the script executed successfully

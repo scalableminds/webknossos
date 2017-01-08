@@ -1,18 +1,18 @@
+import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
 import TWEEN from "tween.js";
-import Dimensions from "../model/dimensions";
+import THREE from "three";
+import modal from "./modal";
 import Toast from "../../libs/toast";
 import constants from "../constants";
-import modal from "./modal";
-import THREE from "three";
 
 class PlaneView {
 
   constructor(model, view) {
-
-    let HEIGHT, WIDTH;
+    let HEIGHT,
+      WIDTH;
     this.resize = this.resize.bind(this);
     this.scaleTrianglesPlane = this.scaleTrianglesPlane.bind(this);
     this.setActiveViewport = this.setActiveViewport.bind(this);
@@ -35,26 +35,26 @@ class PlaneView {
     this.deviceScaleFactor = window.devicePixelRatio || 1;
 
     // Initialize main THREE.js components
-    this.camera   = new Array(4);
-    this.lights   = new Array(3);
+    this.camera = new Array(4);
+    this.lights = new Array(3);
 
-    for (let i of constants.ALL_VIEWPORTS) {
+    for (const i of constants.ALL_VIEWPORTS) {
       // Let's set up cameras
       // No need to set any properties, because the camera controller will deal with that
-      this.camera[i]   = new THREE.OrthographicCamera(0, 0, 0, 0);
+      this.camera[i] = new THREE.OrthographicCamera(0, 0, 0, 0);
       this.scene.add(this.camera[i]);
     }
 
     this.camera[constants.PLANE_XY].position.z = -1;
-    this.camera[constants.PLANE_YZ].position.x =  1;
-    this.camera[constants.PLANE_XZ].position.y =  1;
-    this.camera[constants.TDView].position    = new THREE.Vector3(10, 10, -10);
-    this.camera[constants.PLANE_XY].up        = new THREE.Vector3( 0, -1,  0);
-    this.camera[constants.PLANE_YZ].up        = new THREE.Vector3( 0, -1,  0);
-    this.camera[constants.PLANE_XZ].up        = new THREE.Vector3( 0,  0, -1);
-    this.camera[constants.TDView].up          = new THREE.Vector3( 0,  0, -1);
-    for (let cam of this.camera) {
-      cam.lookAt(new THREE.Vector3( 0, 0, 0));
+    this.camera[constants.PLANE_YZ].position.x = 1;
+    this.camera[constants.PLANE_XZ].position.y = 1;
+    this.camera[constants.TDView].position = new THREE.Vector3(10, 10, -10);
+    this.camera[constants.PLANE_XY].up = new THREE.Vector3(0, -1, 0);
+    this.camera[constants.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
+    this.camera[constants.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
+    this.camera[constants.TDView].up = new THREE.Vector3(0, 0, -1);
+    for (const cam of this.camera) {
+      cam.lookAt(new THREE.Vector3(0, 0, 0));
     }
 
     // Because the voxel coordinates do not have a cube shape but are distorted,
@@ -62,26 +62,26 @@ class PlaneView {
     // proportional to the actual size in nm.
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
-    this.group = new THREE.Object3D;
+    this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
     this.group.scale = app.scaleInfo.getNmPerVoxelVector();
     // Add scene to the group, all Geometries are than added to group
     this.scene.add(this.group);
 
-    this.scene.add( new THREE.AmbientLight(0x333333) );
+    this.scene.add(new THREE.AmbientLight(0x333333));
     let directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
     directionalLight.position.set(1, 1, -1).normalize();
-    this.scene.add( directionalLight );
+    this.scene.add(directionalLight);
     directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
     directionalLight.position.set(-1, -1, -1).normalize();
-    this.scene.add( directionalLight );
+    this.scene.add(directionalLight);
 
     // Attach the canvas to the container
     this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
-    $(this.renderer.domElement).attr({"id": "render-canvas"});
+    $(this.renderer.domElement).attr({ id: "render-canvas" });
     container.append(this.renderer.domElement);
 
-    this.setActiveViewport( constants.PLANE_XY );
+    this.setActiveViewport(constants.PLANE_XY);
 
     this.first = true;
     this.newTextures = [true, true, true, true];
@@ -92,7 +92,6 @@ class PlaneView {
 
 
   animate() {
-
     if (!this.running) { return; }
 
     this.renderFunction();
@@ -112,22 +111,21 @@ class PlaneView {
     // ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
 
     let modelChanged = false;
-    for (let name in this.model.binary) {
+    for (const name in this.model.binary) {
       const binary = this.model.binary[name];
-      for (let plane of binary.planes) {
+      for (const plane of binary.planes) {
         modelChanged |= plane.hasChanged();
       }
     }
 
     if (this.needsRerender || modelChanged) {
-
       this.trigger("render");
 
       const viewport = [
         [0, this.curWidth + 20],
         [this.curWidth + 20, this.curWidth + 20],
         [0, 0],
-        [this.curWidth + 20, 0]
+        [this.curWidth + 20, 0],
       ];
       this.renderer.autoClear = true;
 
@@ -138,16 +136,16 @@ class PlaneView {
         return this.renderer.setClearColor(color, 1);
       };
 
-      setupRenderArea( 0, 0, this.renderer.domElement.width, 0xffffff );
+      setupRenderArea(0, 0, this.renderer.domElement.width, 0xffffff);
       this.renderer.clear();
 
-      for (let i of constants.ALL_VIEWPORTS) {
+      for (const i of constants.ALL_VIEWPORTS) {
         this.trigger("renderCam", i);
         setupRenderArea(
           viewport[i][0] * this.deviceScaleFactor,
           viewport[i][1] * this.deviceScaleFactor,
           this.curWidth * this.deviceScaleFactor,
-          constants.PLANE_COLORS[i]
+          constants.PLANE_COLORS[i],
         );
         this.renderer.render(this.scene, this.camera[i]);
       }
@@ -165,7 +163,6 @@ class PlaneView {
 
 
   removeGeometry(geometry) {
-
     return this.group.remove(geometry);
   }
 
@@ -176,28 +173,26 @@ class PlaneView {
 
 
   resizeThrottled() {
-
     // throttle resize to avoid annoying flickering
     this.resizeThrottled = _.throttle(
       () => {
         this.resize();
         return app.vent.trigger("planes:resize");
       },
-      constants.RESIZE_THROTTLE_TIME
+      constants.RESIZE_THROTTLE_TIME,
     );
     return this.resizeThrottled();
   }
 
 
   resize() {
-
     // Call this after the canvas was resized to fix the viewport
     const canvas = $("#render-canvas");
-    const WIDTH = (canvas.width() - 20 ) / 2;
-    const HEIGHT = (canvas.height() - 20 ) / 2;
+    const WIDTH = (canvas.width() - 20) / 2;
+    const HEIGHT = (canvas.height() - 20) / 2;
 
     this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
-    for (let i of constants.ALL_VIEWPORTS) {
+    for (const i of constants.ALL_VIEWPORTS) {
       this.camera[i].aspect = WIDTH / HEIGHT;
       this.camera[i].updateProjectionMatrix();
     }
@@ -206,20 +201,20 @@ class PlaneView {
 
 
   scaleTrianglesPlane(scale) {
-
-    let HEIGHT, WIDTH;
+    let HEIGHT,
+      WIDTH;
     this.scaleFactor = scale;
     this.curWidth = WIDTH = HEIGHT = Math.round(this.scaleFactor * constants.VIEWPORT_WIDTH);
     const canvas = $("#render-canvas");
     canvas.width((2 * WIDTH) + 20);
     canvas.height((2 * HEIGHT) + 20);
 
-    $('#TDViewControls button').outerWidth((this.curWidth / 4) - 0.5);
+    $("#TDViewControls button").outerWidth((this.curWidth / 4) - 0.5);
 
     $(".inputcatcher")
       .css({
-        width : WIDTH,
-        height : HEIGHT
+        width: WIDTH,
+        height: HEIGHT,
       });
 
     return this.resizeThrottled();
@@ -227,7 +222,6 @@ class PlaneView {
 
 
   setActiveViewport(viewportID) {
-
     for (let i = 0; i <= 3; i++) {
       if (i === viewportID) {
         $(".inputcatcher").eq(i).removeClass("inactive").addClass("active");
@@ -241,45 +235,40 @@ class PlaneView {
 
 
   getCameras() {
-
     return this.camera;
   }
 
 
   showBranchModalDouble(callback) {
-
     return modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
       "Jump again?",
-      [{id: "jump-button", label: "Jump again", callback},
-       {id: "cancel-button", label: "Cancel"}]);
+      [{ id: "jump-button", label: "Jump again", callback },
+       { id: "cancel-button", label: "Cancel" }]);
   }
 
 
   showBranchModalDelete(callback) {
-
     return modal.show("You are about to delete an unused branchpoint, are you sure?",
       "Delete branchpoint?",
-      [{id: "delete-button", label: "Delete branchpoint", callback},
-       {id: "cancel-button", label: "Cancel"}]);
+      [{ id: "delete-button", label: "Delete branchpoint", callback },
+       { id: "cancel-button", label: "Cancel" }]);
   }
 
 
   bindToEvents() {
-
     if (this.model.skeletonTracing) {
       this.listenTo(this.model.skeletonTracing, "doubleBranch", this.showBranchModalDouble);
       this.listenTo(this.model.skeletonTracing, "deleteBranch", this.showBranchModalDelete);
       this.listenTo(this.model.skeletonTracing, "mergeDifferentTrees", () => Toast.error("You can't merge nodes within the same tree", false));
     }
 
-    return this.listenTo(this.model.user, "change:scale", function(model, scale) {
+    return this.listenTo(this.model.user, "change:scale", function (model, scale) {
       if (this.running) { return this.scaleTrianglesPlane(scale); }
     });
   }
 
 
   stop() {
-
     $(".inputcatcher").hide();
 
     return this.running = false;
@@ -287,7 +276,6 @@ class PlaneView {
 
 
   start() {
-
     this.running = true;
 
     $(".inputcatcher").show();

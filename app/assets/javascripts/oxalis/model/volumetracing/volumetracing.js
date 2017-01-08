@@ -1,40 +1,40 @@
+import _ from "lodash";
 import Backbone from "backbone";
+import Drawing from "libs/drawing";
 import VolumeCell from "./volumecell";
 import VolumeLayer from "./volumelayer";
+import VolumeTracingStateLogger from "./volumetracing_statelogger";
 import Dimensions from "../dimensions";
 import RestrictionHandler from "../helpers/restriction_handler";
-import Drawing from "libs/drawing";
-import VolumeTracingStateLogger from "./volumetracing_statelogger";
 import Constants from "../../constants";
 
 class VolumeTracing {
 
   constructor(tracing, flycam, flycam3d, binary) {
-
     this.flycam = flycam;
     this.flycam3d = flycam3d;
     this.binary = binary;
     _.extend(this, Backbone.Events);
 
-    this.contentData  = tracing.content.contentData;
+    this.contentData = tracing.content.contentData;
     this.restrictionHandler = new RestrictionHandler(tracing.restrictions);
     this.mode = Constants.VOLUME_MODE_MOVE;
 
-    this.cells        = [];
-    this.activeCell   = null;
+    this.cells = [];
+    this.activeCell = null;
     this.currentLayer = null;        // Layer currently edited
-    this.idCount      = this.contentData.nextCell || 1;
+    this.idCount = this.contentData.nextCell || 1;
     this.lastCentroid = null;
 
-    this.stateLogger  = new VolumeTracingStateLogger(
+    this.stateLogger = new VolumeTracingStateLogger(
       this.flycam, tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate,
-      this, this.binary.pushQueue
+      this, this.binary.pushQueue,
     );
 
     this.createCell(this.contentData.activeCell);
 
-    this.listenTo(this.binary.cube, "newMapping", function() {
+    this.listenTo(this.binary.cube, "newMapping", function () {
       return this.trigger("newActiveCell", this.getActiveCellId());
     });
 
@@ -45,32 +45,29 @@ class VolumeTracing {
 
 
   setMode(mode) {
-
     this.mode = mode;
     return this.trigger("change:mode", this.mode);
   }
 
 
   toggleMode() {
-
     return this.setMode(
       this.mode === Constants.VOLUME_MODE_TRACE ?
         Constants.VOLUME_MODE_MOVE
       :
-        Constants.VOLUME_MODE_TRACE
+        Constants.VOLUME_MODE_TRACE,
     );
   }
 
 
   createCell(id) {
-
     let newCell;
     if (id == null) {
       id = this.idCount++;
     }
 
-    this.cells.push( newCell = new VolumeCell(id) );
-    this.setActiveCell( newCell.id );
+    this.cells.push(newCell = new VolumeCell(id));
+    this.setActiveCell(newCell.id);
     return this.currentLayer = null;
   }
 
@@ -80,7 +77,7 @@ class VolumeTracing {
 
     if (!this.restrictionHandler.updateAllowed()) { return false; }
 
-    if ((typeof currentLayer !== 'undefined' && currentLayer !== null) || this.flycam.getIntegerZoomStep() > 0) {
+    if ((typeof this.currentLayer !== "undefined" && this.currentLayer !== null) || this.flycam.getIntegerZoomStep() > 0) {
       return false;
     }
 
@@ -92,7 +89,6 @@ class VolumeTracing {
 
 
   addToLayer(pos) {
-
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if (this.currentLayer == null) {
@@ -105,7 +101,6 @@ class VolumeTracing {
 
 
   finishLayer() {
-
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if ((this.currentLayer == null) || this.currentLayer.isEmpty()) {
@@ -131,7 +126,7 @@ class VolumeTracing {
       this.flycam.setDirection([
         centroid[0] - this.lastCentroid[0],
         centroid[1] - this.lastCentroid[1],
-        centroid[2] - this.lastCentroid[2]
+        centroid[2] - this.lastCentroid[2],
       ]);
     }
     return this.lastCentroid = centroid;
@@ -139,7 +134,6 @@ class VolumeTracing {
 
 
   getActiveCellId() {
-
     if (this.activeCell != null) {
       return this.activeCell.id;
     } else {
@@ -149,15 +143,13 @@ class VolumeTracing {
 
 
   getMappedActiveCellId() {
-
     return this.binary.cube.mapId(this.getActiveCellId());
   }
 
 
   setActiveCell(id) {
-
     this.activeCell = null;
-    for (let cell of this.cells) {
+    for (const cell of this.cells) {
       if (cell.id === id) { this.activeCell = cell; }
     }
 

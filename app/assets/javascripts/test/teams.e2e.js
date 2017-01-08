@@ -1,78 +1,71 @@
-import TeamPage from "./pages/team_page"
-import { getPaginationPagesCount, isWarningToastVisible } from "./helpers/pageHelpers"
+import TeamPage from "./pages/team_page";
+import { getPaginationPagesCount, isWarningToastVisible } from "./helpers/pageHelpers";
 
-describe("Team List", function() {
+describe("Team List", () => {
+  let page;
+  const maxTeamsPerPage = 10;
 
-  var page;
-  const maxTeamsPerPage = 10
+  beforeEach(() => {
+    page = new TeamPage();
+    page.get();
+  });
 
-  beforeEach(function() {
-    page = new TeamPage()
-    page.get()
-  })
+  it("should show all teams", async () => {
+    const teamListEntries = await page.getTeamListEntryCount();
+    const numPaginationPages = await getPaginationPagesCount();
 
-  it("should show all teams", async function() {
+    const numTeamListEntries = Math.min(teamListEntries, maxTeamsPerPage);
 
-    const teamListEntries = await page.getTeamListEntryCount()
-    const numPaginationPages = await getPaginationPagesCount()
-
-    const numTeamListEntries = Math.min(teamListEntries, maxTeamsPerPage)
-
-    const numTeams = await await page.getTeamCountFromServer()
-    expect(numTeams).toEqual(numTeamListEntries)
-    expect(numPaginationPages).toEqual(Math.ceil(numTeams / maxTeamsPerPage))
-  })
+    const numTeams = await await page.getTeamCountFromServer();
+    expect(numTeams).toEqual(numTeamListEntries);
+    expect(numPaginationPages).toEqual(Math.ceil(numTeams / maxTeamsPerPage));
+  });
 
 
-  it("should create a new team", async function() {
+  it("should create a new team", async () => {
+    const oldTeamCount = await page.getTeamCountFromServer();
+    const oldRowCount = await page.getTeamListEntryCount();
 
-    const oldTeamCount = await page.getTeamCountFromServer()
-    const oldRowCount = await page.getTeamListEntryCount()
+    const newTeamName = "TestTeam";
+    await page.createTeam(newTeamName);
 
-    const newTeamName = "TestTeam"
-    await page.createTeam(newTeamName)
+    const newRowCount = await page.getTeamListEntryCount();
+    const newTeamCount = await page.getTeamCountFromServer();
 
-    const newRowCount = await page.getTeamListEntryCount()
-    const newTeamCount = await page.getTeamCountFromServer()
-
-    expect(newTeamCount).toEqual(oldTeamCount + 1)
+    expect(newTeamCount).toEqual(oldTeamCount + 1);
 
     if (oldRowCount <= maxTeamsPerPage - 1) {
-      expect(newRowCount).toEqual(oldRowCount + 1)
+      expect(newRowCount).toEqual(oldRowCount + 1);
     } // else the team was created on a new page
-  })
+  });
 
 
-  it("should create a new team with invalid name", async function() {
-
-    const oldTeamCount = await page.getTeamCountFromServer()
+  it("should create a new team with invalid name", async () => {
+    const oldTeamCount = await page.getTeamCountFromServer();
 
     // Team names must be at least 3 chars long
-    const newTeamName = "Te"
-    await page.createTeam(newTeamName)
-    const isWarningVisible = await isWarningToastVisible()
+    const newTeamName = "Te";
+    await page.createTeam(newTeamName);
+    const isWarningVisible = await isWarningToastVisible();
 
-    const newTeamCount = await page.getTeamCountFromServer()
-    expect(newTeamCount).toEqual(oldTeamCount)
-    expect(isWarningVisible).toBe(true)
-  })
+    const newTeamCount = await page.getTeamCountFromServer();
+    expect(newTeamCount).toEqual(oldTeamCount);
+    expect(isWarningVisible).toBe(true);
+  });
 
 
-  it("should delete an existing team", async function() {
+  it("should delete an existing team", async () => {
+    const oldTeamCount = await page.getTeamCountFromServer();
+    const oldRowCount = await page.getTeamListEntryCount();
 
-    const oldTeamCount = await page.getTeamCountFromServer()
-    const oldRowCount = await page.getTeamListEntryCount()
+    const teamName = "TestTeam";
+    await page.deleteTeam(teamName);
 
-    const teamName = "TestTeam"
-    await page.deleteTeam(teamName)
+    const newRowCount = await page.getTeamListEntryCount();
+    const newTeamCount = await page.getTeamCountFromServer();
 
-    const newRowCount = await page.getTeamListEntryCount()
-    const newTeamCount = await page.getTeamCountFromServer()
-
-    expect(newTeamCount).toEqual(oldTeamCount - 1)
-    expect(newRowCount).toEqual(oldRowCount - 1)
-  })
-
-})
-
+    expect(newTeamCount).toEqual(oldTeamCount - 1);
+    expect(newRowCount).toEqual(oldRowCount - 1);
+  });
+});
 

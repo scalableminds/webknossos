@@ -4,8 +4,7 @@ import Toast from "libs/toast";
 
 class TaskTypeItemView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <td class="monospace-id"><%- id %></td>
 <td><%- team %></td>
 <td><%- summary %></td>
@@ -54,21 +53,18 @@ class TaskTypeItemView extends Marionette.View {
   </a>
 </td>\
 `);
-  
-    this.prototype.tagName  = "tr";
-  
-    this.prototype.events  =
-      {"click .delete" : "deleteTaskType"};
+
+    this.prototype.tagName = "tr";
+
+    this.prototype.events =
+      { "click .delete": "deleteTaskType" };
   }
 
   deleteTaskType(evt) {
-
     evt.preventDefault();
 
     if (window.confirm("Do you really want to delete this task type?")) {
-      return this.model.destroy().then(response => {
-        return Toast.message(response.messages);
-      }
+      return this.model.destroy().then(response => Toast.message(response.messages),
       );
     }
   }

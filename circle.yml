@@ -23,6 +23,7 @@ dependencies:
 
 test:
   override:
+    - docker-compose run oxalis-frontend-linting
     - docker-compose run oxalis-frontend-tests
     - docker-compose run oxalis-e2e-tests
     - DOCKER_TAG=$CIRCLE_BUILD_NUM docker-compose up -d oxalis:

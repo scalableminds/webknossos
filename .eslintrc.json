@@ -23,7 +23,7 @@
       "browser": false,
       "Airbrake": false,
       "routes": false,
-      "jsRoutes": false,
+      "jsRoutes": false
     },
     "rules": {
       "quotes": ["error", "double"],

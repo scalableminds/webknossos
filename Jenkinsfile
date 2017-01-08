@@ -30,6 +30,7 @@ ansiColor('xterm') {
 
       stage("Test") {
 
+        sh "docker-compose run oxalis-frontend-linting"
         sh "docker-compose run oxalis-frontend-tests"
         sh "docker-compose run oxalis-e2e-tests"
       }

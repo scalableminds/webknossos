@@ -9,8 +9,7 @@ import UserListItemView from "./user_list_item_view";
 
 class UserListView extends Marionette.CompositeView {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <h3>Users</h3>
 <table class="table table-striped">
   <thead>
@@ -44,30 +43,29 @@ class UserListView extends Marionette.CompositeView {
 </div>
 <div id="modal-wrapper"></div>\
 `);
-    this.prototype.className  = "user-administration-table container wide";
-    this.prototype.childView  = UserListItemView;
-    this.prototype.childViewContainer  = "tbody";
-  
-    this.prototype.ui  =
-      {"modalWrapper" : "#modal-wrapper"};
-  
-    this.prototype.events  = {
-      "click #team-role-modal" : "showTeamRoleModal",
-      "click #experience-modal" : "showExperienceModal"
+    this.prototype.className = "user-administration-table container wide";
+    this.prototype.childView = UserListItemView;
+    this.prototype.childViewContainer = "tbody";
+
+    this.prototype.ui =
+      { modalWrapper: "#modal-wrapper" };
+
+    this.prototype.events = {
+      "click #team-role-modal": "showTeamRoleModal",
+      "click #experience-modal": "showExperienceModal",
     };
-  
+
     this.prototype.behaviors = {
-      SelectAllRows : {
-        behaviorClass : SelectAllRows
-      }
+      SelectAllRows: {
+        behaviorClass: SelectAllRows,
+      },
     };
   }
 
   initialize() {
-
     this.collection.setPageSize(50);
     this.collection.fetch({
-      data : "isEditable=true"
+      data: "isEditable=true",
     });
 
     return this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
@@ -75,33 +73,28 @@ class UserListView extends Marionette.CompositeView {
 
 
   filterBySearch(filterQuery) {
-
-    return this.collection.setFilter(["email", "firstName",  "id", "lastName"], filterQuery);
+    return this.collection.setFilter(["email", "firstName", "id", "lastName"], filterQuery);
   }
 
 
   showTeamRoleModal() {
-
     return this.showModal(TeamRoleModalView);
   }
 
 
   showExperienceModal() {
-
     return this.showModal(ExperienceModalView);
   }
 
 
   showModal(modalView) {
-
     if (this.$("tbody input[type=checkbox]:checked").length > 0) {
-      modalView = new modalView({userCollection : this.collection});
+      modalView = new modalView({ userCollection: this.collection });
       modalView.render();
       this.ui.modalWrapper.html(modalView.el);
 
       modalView.$el.modal("show");
       return this.modalView = modalView;
-
     } else {
       return Toast.error("No user is selected.");
     }
@@ -109,7 +102,6 @@ class UserListView extends Marionette.CompositeView {
 
 
   onDestroy() {
-
     return __guard__(this.modalView, x => x.destroy());
   }
 }
@@ -118,5 +110,5 @@ UserListView.initClass();
 export default UserListView;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

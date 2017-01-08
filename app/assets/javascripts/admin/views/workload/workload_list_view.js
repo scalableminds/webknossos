@@ -1,12 +1,11 @@
 import _ from "lodash";
 import app from "app";
 import Marionette from "backbone.marionette";
-import WorkloadListItemView from "./workload_list_item_view";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
+import WorkloadListItemView from "./workload_list_item_view";
 
 class WorkloadListView extends Marionette.CompositeView {
   static initClass() {
-  
     // TODO: WORKLOAD CURRENTLY DISABLED DUE TO PERFORMANCE REASONS
   //  template : _.template("""
   //    <h3>Workload</h3>
@@ -22,27 +21,24 @@ class WorkloadListView extends Marionette.CompositeView {
   //        <tbody></tbody>
   //      </table>
   //  """)
-  
+
     this.prototype.template = _.template(`\
 <h3>Workload</h3>
 <p>Disabled due to performance issues.</p>\
 `);
-    this.prototype.className  = "workload-table container wide";
-    this.prototype.childView  = WorkloadListItemView;
-    this.prototype.childViewContainer  = "tbody";
-  
+    this.prototype.className = "workload-table container wide";
+    this.prototype.childView = WorkloadListItemView;
+    this.prototype.childViewContainer = "tbody";
+
     this.prototype.behaviors = {
       SortTableBehavior: {
-        behaviorClass: SortTableBehavior
-      }
+        behaviorClass: SortTableBehavior,
+      },
     };
   }
 
   initialize() {
-
-    this.collection.fetch().then( () => {
-      return this.collection.setSorting("availableTaskCount", 1);
-    }
+    this.collection.fetch().then(() => this.collection.setSorting("availableTaskCount", 1),
     );
 
     return this.listenTo(app.vent, "paginationView:filter", this.filterByQuery);
@@ -50,7 +46,6 @@ class WorkloadListView extends Marionette.CompositeView {
 
 
   filterByQuery(filterQuery) {
-
     return this.collection.setFilter(["name", "teams", "projects"], filterQuery);
   }
 }

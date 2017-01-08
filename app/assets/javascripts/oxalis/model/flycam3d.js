@@ -1,16 +1,15 @@
 import _ from "lodash";
+import Backbone from "backbone";
 import THREE from "three";
-import { M4x4, V3 } from "libs/mjs";
+import { M4x4 } from "libs/mjs";
 
-const updateMacro = function(_this) {
-
+const updateMacro = function (_this) {
   _this.trigger("changed", _this.currentMatrix, _this.zoomStep);
-  return _this.hasChanged = true;
+  _this.hasChanged = true;
 };
 
 
-const transformationWithDistanceMacro = function(_this, transformationFn, transformationArg1, transformationArg2) {
-
+const transformationWithDistanceMacro = function (_this, transformationFn, transformationArg1, transformationArg2) {
   const { currentMatrix } = _this;
   M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix);
   transformationFn.call(_this, transformationArg1, transformationArg2);
@@ -19,19 +18,17 @@ const transformationWithDistanceMacro = function(_this, transformationFn, transf
 
 class Flycam3d {
   static initClass() {
-  
-    this.prototype.ZOOM_STEP_INTERVAL  = 1.1;
-    this.prototype.ZOOM_STEP_MIN  = 0.5;
-    this.prototype.ZOOM_STEP_MAX  = 5;
-  
-    this.prototype.zoomStep  = 1.3;
-    this.prototype.hasChanged  = true;
-    this.prototype.scale  = null;
-    this.prototype.currentMatrix  = null;
+    this.prototype.ZOOM_STEP_INTERVAL = 1.1;
+    this.prototype.ZOOM_STEP_MIN = 0.5;
+    this.prototype.ZOOM_STEP_MAX = 5;
+
+    this.prototype.zoomStep = 1.3;
+    this.prototype.hasChanged = true;
+    this.prototype.scale = null;
+    this.prototype.currentMatrix = null;
   }
 
   constructor(distance, scale) {
-
     this.distance = distance;
     _.extend(this, Backbone.Events);
 
@@ -42,27 +39,23 @@ class Flycam3d {
   }
 
 
-  calculateDistanceVectors(zoomStep) {
-    if (zoomStep == null) { zoomStep = 1; }
+  calculateDistanceVectors(zoomStep = 1) {
     this.distanceVecNegative = [0, 0, -zoomStep * this.distance];
-    return this.distanceVecPositive = [0, 0, zoomStep * this.distance];
+    this.distanceVecPositive = [0, 0, zoomStep * this.distance];
   }
 
 
   calculateScaleValues(scale) {
-
-    scale = [1/scale[0], 1/scale[1], 1/scale[2]];
+    scale = [1 / scale[0], 1 / scale[1], 1 / scale[2]];
     const maxScale = Math.max(scale[0], scale[1], scale[2]);
-    const multi = 1/maxScale;
+    const multi = 1 / maxScale;
     scale = [multi * scale[0], multi * scale[1], multi * scale[2]];
     return scale;
   }
 
 
-  reset(resetPosition) {
-
+  reset(resetPosition = true) {
     let position;
-    if (resetPosition == null) { resetPosition = true; }
     const { scale } = this;
     if (this.currentMatrix != null) {
       position = this.currentMatrix.slice(12, 15);
@@ -72,7 +65,7 @@ class Flycam3d {
       1, 0, 0, 0,
       0, 1, 0, 0,
       0, 0, 1, 0,
-      0, 0, 0, 1
+      0, 0, 0, 1,
     ];
     M4x4.scale(scale, m, m);
     this.currentMatrix = m;
@@ -89,24 +82,20 @@ class Flycam3d {
 
 
   update() {
-
     return updateMacro(this);
   }
 
 
   flush() {
-
     if (this.hasChanged) {
       this.hasChanged = false;
       return true;
-    } else {
-      return false;
     }
+    return false;
   }
 
 
   zoomIn() {
-
     this.zoomStep = Math.max(this.zoomStep / this.ZOOM_STEP_INTERVAL, this.ZOOM_STEP_MIN);
     this.calculateDistanceVectors(this.zoomStep);
     return updateMacro(this);
@@ -114,7 +103,6 @@ class Flycam3d {
 
 
   zoomOut() {
-
     this.zoomStep = Math.min(this.zoomStep * this.ZOOM_STEP_INTERVAL, this.ZOOM_STEP_MAX);
     this.calculateDistanceVectors(this.zoomStep);
     return updateMacro(this);
@@ -122,47 +110,39 @@ class Flycam3d {
 
 
   getZoomStep() {
-
     return this.zoomStep;
   }
 
 
   setZoomStep(zoomStep) {
-
-    return this.zoomStep = Math.min(this.ZOOM_STEP_MAX, Math.max(this.ZOOM_STEP_MIN, zoomStep));
+    this.zoomStep = Math.min(this.ZOOM_STEP_MAX, Math.max(this.ZOOM_STEP_MIN, zoomStep));
   }
 
 
   getMatrix() {
-
     return M4x4.clone(this.currentMatrix);
   }
 
 
   getZoomedMatrix() {
-
     const matrix = this.getMatrix();
     return M4x4.scale1(this.zoomStep, matrix, matrix);
   }
 
 
   setMatrix(matrix) {
-
     this.currentMatrix = M4x4.clone(matrix);
     return updateMacro(this);
   }
 
 
   move(vector) {
-
     M4x4.translate(vector, this.currentMatrix, this.currentMatrix);
     return updateMacro(this);
   }
 
 
-  yaw(angle, regardDistance) {
-
-    if (regardDistance == null) { regardDistance = false; }
+  yaw(angle, regardDistance = false) {
     if (regardDistance) {
       transformationWithDistanceMacro(this, this.yawSilent, angle);
     } else {
@@ -173,14 +153,11 @@ class Flycam3d {
 
 
   yawSilent(angle) {
-
-    return this.rotateOnAxisSilent(angle, [ 0, 1, 0 ]);
+    return this.rotateOnAxisSilent(angle, [0, 1, 0]);
   }
 
 
-  roll(angle, regardDistance) {
-
-    if (regardDistance == null) { regardDistance = false; }
+  roll(angle, regardDistance = false) {
     if (regardDistance) {
       transformationWithDistanceMacro(this, this.rollSilent, angle);
     } else {
@@ -191,14 +168,11 @@ class Flycam3d {
 
 
   rollSilent(angle) {
-
-    return this.rotateOnAxisSilent(angle, [ 0, 0, 1 ]);
+    return this.rotateOnAxisSilent(angle, [0, 0, 1]);
   }
 
 
-  pitch(angle, regardDistance) {
-
-    if (regardDistance == null) { regardDistance = false; }
+  pitch(angle, regardDistance = false) {
     if (regardDistance) {
       transformationWithDistanceMacro(this, this.pitchSilent, angle);
     } else {
@@ -209,53 +183,46 @@ class Flycam3d {
 
 
   pitchSilent(angle) {
-
-    return this.rotateOnAxisSilent(angle, [ 1, 0, 0 ]);
+    return this.rotateOnAxisSilent(angle, [1, 0, 0]);
   }
 
 
   rotateOnAxis(angle, axis) {
-
     this.rotateOnAxisSilent(angle, axis);
     return updateMacro(this);
   }
 
 
   rotateOnAxisSilent(angle, axis) {
-
     return M4x4.rotate(angle, axis, this.currentMatrix, this.currentMatrix);
   }
 
 
   rotateOnAxisDistance(angle, axis) {
-
     transformationWithDistanceMacro(this, this.rotateOnAxisSilent, angle, axis);
     return updateMacro(this);
   }
 
 
   toString() {
-
     const matrix = this.currentMatrix;
-    return `[${matrix[ 0]}, ${matrix[ 1]}, ${matrix[ 2]}, ${matrix[ 3]}, ` +
-      matrix[ 4] + ", " + matrix[ 5] + ", " + matrix[ 6] + ", " + matrix[ 7] + ", " +
-      matrix[ 8] + ", " + matrix[ 9] + ", " + matrix[10] + ", " + matrix[11] + ", " +
-      matrix[12] + ", " + matrix[13] + ", " + matrix[14] + ", " + matrix[15] + "]";
+    return `[${matrix[0]}, ${matrix[1]}, ${matrix[2]}, ${matrix[3]}, ${
+      matrix[4]}, ${matrix[5]}, ${matrix[6]}, ${matrix[7]}, ${
+      matrix[8]}, ${matrix[9]}, ${matrix[10]}, ${matrix[11]}, ${
+      matrix[12]}, ${matrix[13]}, ${matrix[14]}, ${matrix[15]}]`;
   }
 
 
   getPosition() {
-
     const matrix = this.currentMatrix;
-    return [ matrix[12], matrix[13], matrix[14] ];
+    return [matrix[12], matrix[13], matrix[14]];
   }
 
 
   getRotation() {
-
     const object = new THREE.Object3D();
-    const matrix = (new THREE.Matrix4()).fromArray( this.currentMatrix ).transpose();
-    object.applyMatrix( matrix );
+    const matrix = (new THREE.Matrix4()).fromArray(this.currentMatrix).transpose();
+    object.applyMatrix(matrix);
 
     // Fix JS modulo bug
     // http://javascript.about.com/od/problemsolving/a/modulobug.htm
@@ -264,30 +231,26 @@ class Flycam3d {
     return _.map([
       object.rotation.x,
       object.rotation.y,
-      object.rotation.z - Math.PI
-      ], e => mod((180 / Math.PI) * e, 360));
+      object.rotation.z - Math.PI,
+    ], e => mod((180 / Math.PI) * e, 360));
   }
 
 
-
   setPositionSilent(p) {
-
     const matrix = this.currentMatrix;
     matrix[12] = p[0];
     matrix[13] = p[1];
-    return matrix[14] = p[2];
+    matrix[14] = p[2];
   }
 
 
   setPosition(p) {
-
     this.setPositionSilent(p);
     return updateMacro(this);
   }
 
 
   setRotation([x, y, z]) {
-
     this.reset(false);
     this.roll((-z * Math.PI) / 180);
     this.yaw((-y * Math.PI) / 180);
@@ -296,7 +259,6 @@ class Flycam3d {
 
 
   getCurrentUpVector() {
-
     const currentRotation = new THREE.Matrix4();
     currentRotation.extractRotation(new THREE.Matrix4(...this.currentMatrix));
     const up = new THREE.Vector3(0, 1, 0);
@@ -307,22 +269,19 @@ class Flycam3d {
 
 
   convertToJsArray(floatXArray) {
-
     return Array.prototype.slice.call(floatXArray);
   }
 
 
   getUp() {
-
     const matrix = this.currentMatrix;
-    return [ matrix[4], matrix[5], matrix[6] ];
+    return [matrix[4], matrix[5], matrix[6]];
   }
 
 
   getLeft() {
-
     const matrix = this.currentMatrix;
-    return [ matrix[0], matrix[1], matrix[2] ];
+    return [matrix[0], matrix[1], matrix[2]];
   }
 }
 Flycam3d.initClass();

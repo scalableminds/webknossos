@@ -6,8 +6,7 @@ import Toast from "libs/toast";
 
 class ProjectEditView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <div class="row">
   <div class="col-sm-12">
     <div class="well">
@@ -50,25 +49,23 @@ class ProjectEditView extends Marionette.View {
   </div>
 </div>\
 `);
-  
-    this.prototype.className  = "container wide project-administration";
-    this.prototype.events  =
-      {"submit form" : "submitForm"};
-  
-    this.prototype.ui  =
-      {"form" : "form"};
+
+    this.prototype.className = "container wide project-administration";
+    this.prototype.events =
+      { "submit form": "submitForm" };
+
+    this.prototype.ui =
+      { form: "form" };
   }
 
 
   initialize() {
-
     this.listenTo(this.model, "sync", this.render);
     return this.model.fetch();
   }
 
 
   submitForm(event) {
-
     event.preventDefault();
 
     if (!this.ui.form[0].checkValidity()) {
@@ -80,9 +77,9 @@ class ProjectEditView extends Marionette.View {
     formValues.owner = this.model.get("owner").id;
 
     return this.model.save(formValues).then(
-      function() {},
+      () => {},
       Toast.success("Saved!"),
-      app.router.loadURL(`/projects#${this.model.get("name")}`)
+      app.router.loadURL(`/projects#${this.model.get("name")}`),
     );
   }
 }

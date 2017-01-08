@@ -1,5 +1,3 @@
-import _ from "lodash";
-import Backbone from "backbone";
 import SortedCollection from "admin/models/sorted_collection";
 
 class UserAnnotationsCollection extends SortedCollection {
@@ -20,7 +18,7 @@ class UserAnnotationsCollection extends SortedCollection {
 
   initialize(models, options) {
     this.isFinished = options.isFinished || false;
-    return this.userID = options.userID;
+    this.userID = options.userID;
   }
 }
 

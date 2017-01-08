@@ -1,11 +1,12 @@
-import app from "app";
+import _ from "lodash";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
-import Input from "libs/input";
-import CommentList from "./comment_list";
-import React, { Component } from "react";
+import React from "react";
 import { render } from "react-dom";
+import Input from "libs/input";
 import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
+import CommentList from "./comment_list";
 
 class CommentTabView extends Marionette.View {
   constructor(...args) {
@@ -14,9 +15,8 @@ class CommentTabView extends Marionette.View {
   }
 
   static initClass() {
-
-    this.prototype.className  = "flex-column";
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "flex-column";
+    this.prototype.template = _.template(`\
 <div class="input-group" id="comment-navbar">
   <div class="input-group-btn">
     <button class="btn btn-default" id="comment-previous"><i class="fa fa-arrow-left"></i></button>
@@ -37,36 +37,35 @@ class CommentTabView extends Marionette.View {
 `);
 
 
-    this.prototype.ui  = {
-      "commentInput" : "input",
-      "commentList" : "#comment-list"
+    this.prototype.ui = {
+      commentInput: "input",
+      commentList: "#comment-list",
     };
 
-    this.prototype.events  = {
-      "click #comment-sort" : "sortComments",
-      "change input" : "handleInput",
-      "click #comment-list li" : "setActive",
-      "click #comment-next" : "nextComment",
-      "click #comment-previous" : "previousComment"
+    this.prototype.events = {
+      "click #comment-sort": "sortComments",
+      "change input": "handleInput",
+      "click #comment-list li": "setActive",
+      "click #comment-next": "nextComment",
+      "click #comment-previous": "previousComment",
     };
   }
 
   templateContext() {
     return {
-      activeComment : this.activeComment,
-      isSortedAscending : this.isSortedAscending
+      activeComment: this.activeComment,
+      isSortedAscending: this.isSortedAscending,
     };
   }
 
 
   initialize() {
-
     let comment;
     this.activeComment = {};
     this.isSortedAscending = true;
 
     // select the activeNode if there is a comment...
-    if (comment =  this.getCommentForNode(this.getActiveNodeId())) {
+    if (comment = this.getCommentForNode(this.getActiveNodeId())) {
       this.activeComment = this.makeComment(comment);
     } else {
       // make null comment
@@ -75,24 +74,23 @@ class CommentTabView extends Marionette.View {
 
     // events
     this.listenTo(this.model.skeletonTracing, "newActiveNode", this.updateInputElement);
-    this.listenTo(this.model.skeletonTracing, "reloadTrees" , this.updateState);
+    this.listenTo(this.model.skeletonTracing, "reloadTrees", this.updateState);
 
     // keyboard shortcuts
     return new Input.KeyboardNoLoop({
-      "n" : () => this.nextComment(),
-      "p" : () => this.previousComment()
+      n: () => this.nextComment(),
+      p: () => this.previousComment(),
     });
   }
 
 
   render() {
-
     // tabs are not destroyed and a rerender would cause the react components to lose their state
     if (!this.commentList) {
       super.render();
       this.commentList = render(
-        <CommentList onNewActiveNode={this.setActiveNode}/>,
-        this.ui.commentList[0]
+        <CommentList onNewActiveNode={this.setActiveNode} />,
+        this.ui.commentList[0],
       );
       this.updateState();
     }
@@ -103,34 +101,30 @@ class CommentTabView extends Marionette.View {
 
 
   updateState() {
-
     if (!this.commentList) { return; }
 
     return this.commentList.setState({
-      data : this.model.skeletonTracing.getTreesSortedBy("treeId", this.isSortedAscending),
-      activeNodeId : this.getActiveNodeId(),
-      activeTreeId : this.model.skeletonTracing.getActiveTreeId(),
-      isSortedAscending : this.isSortedAscending
+      data: this.model.skeletonTracing.getTreesSortedBy("treeId", this.isSortedAscending),
+      activeNodeId: this.getActiveNodeId(),
+      activeTreeId: this.model.skeletonTracing.getActiveTreeId(),
+      isSortedAscending: this.isSortedAscending,
     });
   }
 
 
   ensureActiveCommentVisible() {
-
-    let activeNodeId = this.getActiveNodeId();
-    let comment = $(`#comment-tab-node-${activeNodeId}`)[0];
+    const activeNodeId = this.getActiveNodeId();
+    const comment = $(`#comment-tab-node-${activeNodeId}`)[0];
     if (comment) { return scrollIntoViewIfNeeded(comment); }
   }
 
 
   getActiveNodeId() {
-
     return this.model.skeletonTracing.getActiveNodeId();
   }
 
 
   setActiveNode(comment, treeId) {
-
     this.activeComment = this.makeComment(comment, treeId);
     this.model.skeletonTracing.setActiveNode(comment.node);
     return this.model.skeletonTracing.centerActiveNode();
@@ -138,9 +132,8 @@ class CommentTabView extends Marionette.View {
 
 
   getCommentForNode(nodeId) {
-
-    let activeTree = this.model.skeletonTracing.getActiveTree();
-    return _.find(activeTree.comments, { node : nodeId });
+    const activeTree = this.model.skeletonTracing.getActiveTree();
+    return _.find(activeTree.comments, { node: nodeId });
   }
 
 
@@ -160,18 +153,17 @@ class CommentTabView extends Marionette.View {
 
 
   handleInput(evt) {
-
     let comment;
     if (!this.model.skeletonTracing.restrictionHandler.updateAllowed()) { return; }
 
     // add, delete or update a comment
-    let nodeId = this.getActiveNodeId();
+    const nodeId = this.getActiveNodeId();
 
     // don't add a comment if there is no active node
     if (!nodeId) { return; }
 
-    let tree = this.model.skeletonTracing.getActiveTree();
-    let commentText = $(evt.target).val();
+    const tree = this.model.skeletonTracing.getActiveTree();
+    const commentText = $(evt.target).val();
 
     if (comment = this.getCommentForNode(nodeId)) {
       if (commentText !== "") {
@@ -180,29 +172,25 @@ class CommentTabView extends Marionette.View {
         tree.removeCommentWithNodeId(nodeId);
       }
       this.updateState();
-    } else {
-      if (commentText !== "") {
-        comment = {
-          node : nodeId,
-          content : commentText
-        };
-        tree.comments.push(comment);
+    } else if (commentText !== "") {
+      comment = {
+        node: nodeId,
+        content: commentText,
+      };
+      tree.comments.push(comment);
 
-        this.setActiveNode(comment, tree.treeId);
-      }
+      this.setActiveNode(comment, tree.treeId);
     }
 
     return this.model.skeletonTracing.updateTree(tree);
   }
 
 
-  nextComment(forward) {
-
+  nextComment(forward = true) {
     let trees;
-    if (forward == null) { forward = true; }
-    let sortAscending = forward ? this.isSortedAscending : !this.isSortedAscending;
+    const sortAscending = forward ? this.isSortedAscending : !this.isSortedAscending;
 
-    let { activeComment } = this;
+    const { activeComment } = this;
 
     // get tree of active comment or activeTree if there is no active comment
     let nextTree = this.model.skeletonTracing.getTree(activeComment.treeId);
@@ -237,13 +225,11 @@ class CommentTabView extends Marionette.View {
 
 
   previousComment() {
-
     return this.nextComment(false);
   }
 
 
-  sortComments(evt) {
-
+  sortComments() {
     this.isSortedAscending = !this.isSortedAscending;
     return this.updateState();
   }
@@ -252,9 +238,8 @@ class CommentTabView extends Marionette.View {
   // Helper functions
 
   makeComment(comment, treeId) {
-
     if (comment === undefined) {
-      return { comment : { node : null }, treeId : null };
+      return { comment: { node: null }, treeId: null };
     }
 
     if (treeId === undefined) {
@@ -266,15 +251,13 @@ class CommentTabView extends Marionette.View {
 
 
   commentComparator(comment, sortAscending) {
-
-    let coefficient = sortAscending ? 1 : -1;
+    const coefficient = sortAscending ? 1 : -1;
     return comment.node * coefficient;
   }
 
 
   treeComparator(treeId, sortAscending) {
-
-    let coefficient = sortAscending ? 1 : -1;
+    const coefficient = sortAscending ? 1 : -1;
     return treeId * coefficient;
   }
 }

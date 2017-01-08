@@ -1,0 +1,47 @@
+{
+    "extends": "airbnb",
+    "plugins": [
+        "react",
+        "jsx-a11y",
+        "import",
+        "jasmine"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 8
+    },
+    "env": {
+      "browser": true,
+      "jasmine": true
+    },
+    "parser": "babel-eslint",
+    "settings": {
+      "import/resolver": "webpack",
+      "import/ignore": ["$three.*"]
+    },
+    "globals": {
+      "ga": false,
+      "browser": false,
+      "Airbrake": false,
+      "routes": false,
+      "jsRoutes": false
+    },
+    "rules": {
+      "quotes": ["error", "double"],
+      "max-len": ["off", 100],
+      "class-methods-use-this": "off",
+      "operator-assignment": "warn",
+      "react/jsx-filename-extension": "off",
+      "radix": "off",
+      "no-bitwise": "off",
+      "no-mixed-operators": "off",
+      "no-underscore-dangle": ["error", { "allow": ["__guard__", "__range__"] }],
+      "no-restricted-syntax": "warn",
+      "no-restricted-properties": ["off", {"object": "Math", "property": "pow"}],
+      "no-restricted-syntax": ["off", "ForInStatement", "ForOfStatement"],
+      "no-param-reassign": "warn",
+      "no-plusplus": "off",
+      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+      "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
+      "import/no-unresolved": "off"
+    }
+}

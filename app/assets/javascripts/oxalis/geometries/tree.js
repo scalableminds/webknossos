@@ -15,28 +15,28 @@ class Tree {
     const edgeGeometry = new THREE.BufferGeometry();
     const nodeGeometry = new THREE.BufferGeometry();
 
-    edgeGeometry.addAttribute('position', Float32Array, 0, 3);
-    nodeGeometry.addAttribute('position', Float32Array, 0, 3);
-    nodeGeometry.addAttribute('sizeNm', Float32Array, 0, 1);
-    nodeGeometry.addAttribute('nodeScaleFactor', Float32Array, 0, 1);
-    nodeGeometry.addAttribute('color', Float32Array, 0, 3);
+    edgeGeometry.addAttribute("position", Float32Array, 0, 3);
+    nodeGeometry.addAttribute("position", Float32Array, 0, 3);
+    nodeGeometry.addAttribute("sizeNm", Float32Array, 0, 1);
+    nodeGeometry.addAttribute("nodeScaleFactor", Float32Array, 0, 1);
+    nodeGeometry.addAttribute("color", Float32Array, 0, 3);
 
     this.nodeIDs = nodeGeometry.nodeIDs = new ResizableBuffer(1, 100, Int32Array);
     edgeGeometry.dynamic = true;
     nodeGeometry.dynamic = true;
 
-    this.edgesBuffer = edgeGeometry.attributes.position._rBuffer = new ResizableBuffer(6);
-    this.nodesBuffer = nodeGeometry.attributes.position._rBuffer = new ResizableBuffer(3);
-    this.sizesBuffer = nodeGeometry.attributes.sizeNm._rBuffer = new ResizableBuffer(1);
-    this.scalesBuffer = nodeGeometry.attributes.nodeScaleFactor._rBuffer = new ResizableBuffer(1);
-    this.nodesColorBuffer = nodeGeometry.attributes.color._rBuffer = new ResizableBuffer(3);
+    this.edgesBuffer = edgeGeometry.attributes.position.rBuffer = new ResizableBuffer(6);
+    this.nodesBuffer = nodeGeometry.attributes.position.rBuffer = new ResizableBuffer(3);
+    this.sizesBuffer = nodeGeometry.attributes.sizeNm.rBuffer = new ResizableBuffer(1);
+    this.scalesBuffer = nodeGeometry.attributes.nodeScaleFactor.rBuffer = new ResizableBuffer(1);
+    this.nodesColorBuffer = nodeGeometry.attributes.color.rBuffer = new ResizableBuffer(3);
 
     this.edges = new THREE.Line(
       edgeGeometry,
       new THREE.LineBasicMaterial({
-        color: this.darkenHex( treeColor ),
-        linewidth: this.getLineWidth()}),
-      THREE.LinePieces
+        color: this.darkenHex(treeColor),
+        linewidth: this.getLineWidth() }),
+      THREE.LinePieces,
     );
 
     this.particleMaterial = new ParticleMaterialFactory(this.model).getMaterial();
@@ -47,7 +47,6 @@ class Tree {
 
 
   clear() {
-
     this.nodesBuffer.clear();
     this.edgesBuffer.clear();
     this.sizesBuffer.clear();
@@ -58,13 +57,11 @@ class Tree {
 
 
   isEmpty() {
-
     return this.nodesBuffer.getLength() === 0;
   }
 
 
   addNode(node) {
-
     this.nodesBuffer.push(node.pos);
     this.sizesBuffer.push([node.radius * 2]);
     this.scalesBuffer.push([1.0]);
@@ -74,7 +71,7 @@ class Tree {
     // Add any edge from smaller IDs to the node
     // ASSUMPTION: if this node is new, it should have a
     //             greater id as its neighbor
-    for (let neighbor of node.neighbors) {
+    for (const neighbor of node.neighbors) {
       if (neighbor.id < node.id) {
         this.edgesBuffer.push(neighbor.pos.concat(node.pos));
       }
@@ -85,35 +82,34 @@ class Tree {
 
 
   addNodes(nodeList) {
-
-    return nodeList.map((node) =>
+    return nodeList.map(node =>
       this.addNode(node));
   }
 
 
   deleteNode(node) {
-
-    let edgesIndex, found;
+    let edgesIndex,
+      found;
     const swapLast = (array, index) => {
       const lastElement = array.pop();
-      return __range__(0, array.elementLength, false).map((i) =>
+      return __range__(0, array.elementLength, false).map(i =>
         array.getAllElements()[(index * array.elementLength) + i] = lastElement[i]);
     };
 
     const nodesIndex = this.getNodeIndex(node.id);
-    ErrorHandling.assert((nodesIndex != null), "No node found.", { id : node.id, nodeIDs: this.nodeIDs });
+    ErrorHandling.assert((nodesIndex != null), "No node found.", { id: node.id, nodeIDs: this.nodeIDs });
 
     // swap IDs and nodes
-    swapLast( this.nodeIDs, nodesIndex );
-    swapLast( this.nodesBuffer, nodesIndex );
-    swapLast( this.sizesBuffer, nodesIndex );
-    swapLast( this.scalesBuffer, nodesIndex );
-    swapLast( this.nodesColorBuffer, nodesIndex );
+    swapLast(this.nodeIDs, nodesIndex);
+    swapLast(this.nodesBuffer, nodesIndex);
+    swapLast(this.sizesBuffer, nodesIndex);
+    swapLast(this.scalesBuffer, nodesIndex);
+    swapLast(this.nodesColorBuffer, nodesIndex);
 
     // Delete Edge by finding it in the array
     const edgeArray = this.getEdgeArray(node, node.neighbors[0]);
 
-    for (let i of __range__(0, this.edgesBuffer.getLength(), false)) {
+    for (const i of __range__(0, this.edgesBuffer.getLength(), false)) {
       found = true;
       for (let j = 0; j <= 5; j++) {
         found &= Math.abs(this.edges.geometry.attributes.position.array[(6 * i) + j] - edgeArray[j]) < 0.5;
@@ -132,10 +128,7 @@ class Tree {
   }
 
   mergeTree(otherTree, lastNode, activeNode) {
-
-    const merge = property => {
-      return this[property].pushSubarray(otherTree[property].getAllElements());
-    };
+    const merge = property => this[property].pushSubarray(otherTree[property].getAllElements());
 
     // merge IDs, nodes and edges
     merge("nodeIDs");
@@ -162,14 +155,12 @@ class Tree {
 
 
   setSizeAttenuation(sizeAttenuation) {
-
     this.nodes.material.sizeAttenuation = sizeAttenuation;
     return this.updateGeometries();
   }
 
 
   updateTreeColor() {
-
     const newColor = this.model.skeletonTracing.getTree(this.id).color;
     this.edges.material.color = new THREE.Color(this.darkenHex(newColor));
 
@@ -179,14 +170,12 @@ class Tree {
 
 
   getMeshes() {
-
-    return [ this.edges, this.nodes ];
+    return [this.edges, this.nodes];
   }
 
 
   dispose() {
-
-    return this.getMeshes().map((geometry) =>
+    return this.getMeshes().map(geometry =>
 
       (geometry.geometry.dispose(),
       geometry.material.dispose()));
@@ -194,9 +183,8 @@ class Tree {
 
 
   updateNodesColors() {
-
     this.nodesColorBuffer.clear();
-    for (let i of __range__(0, this.nodeIDs.length, false)) {
+    for (const i of __range__(0, this.nodeIDs.length, false)) {
       this.nodesColorBuffer.push(this.getColor(this.nodeIDs.get(i)));
     }
 
@@ -205,10 +193,7 @@ class Tree {
 
 
   updateNodeColor(id, isActiveNode, isBranchPoint) {
-
-    this.doWithNodeIndex(id, index => {
-      return this.nodesColorBuffer.set(this.getColor(id, isActiveNode, isBranchPoint), index);
-    }
+    this.doWithNodeIndex(id, index => this.nodesColorBuffer.set(this.getColor(id, isActiveNode, isBranchPoint), index),
     );
 
     return this.updateGeometries();
@@ -216,10 +201,7 @@ class Tree {
 
 
   updateNodeRadius(id, radius) {
-
-    this.doWithNodeIndex(id, index => {
-      return this.sizesBuffer.set([radius * 2], index);
-    }
+    this.doWithNodeIndex(id, index => this.sizesBuffer.set([radius * 2], index),
     );
 
     return this.updateGeometries();
@@ -227,37 +209,29 @@ class Tree {
 
 
   startNodeHighlightAnimation(nodeId) {
-
     const normal = 1.0;
     const highlighted = 2.0;
 
-    return this.doWithNodeIndex(nodeId, index => {
-      return this.animateNodeScale(normal, highlighted, index, () => {
-        return this.animateNodeScale(highlighted, normal, index);
-      }
-      );
-    }
+    return this.doWithNodeIndex(nodeId, index => this.animateNodeScale(normal, highlighted, index, () => this.animateNodeScale(highlighted, normal, index),
+      ),
     );
   }
 
 
   animateNodeScale(from, to, index, onComplete) {
-
-    if (onComplete == null) { onComplete = function() {}; }
-    const setScaleFactor = factor => {
-      return this.scalesBuffer.set([factor], index);
-    };
+    if (onComplete == null) { onComplete = function () {}; }
+    const setScaleFactor = factor => this.scalesBuffer.set([factor], index);
     const redraw = () => {
       this.updateGeometries();
       return app.vent.trigger("rerender");
     };
-    const onUpdate = function() {
+    const onUpdate = function () {
       setScaleFactor(this.scaleFactor);
       return redraw();
     };
 
-    return (new TWEEN.Tween({scaleFactor : from}))
-      .to({scaleFactor : to}, 100)
+    return (new TWEEN.Tween({ scaleFactor: from }))
+      .to({ scaleFactor: to }, 100)
       .onUpdate(onUpdate)
       .onComplete(onComplete)
       .start();
@@ -265,16 +239,14 @@ class Tree {
 
 
   getColor(id, isActiveNode, isBranchPoint) {
-
     const tree = this.model.skeletonTracing.getTree(this.id);
     let { color } = tree;
     if (id != null) {
-
-      isActiveNode  = isActiveNode  || this.model.skeletonTracing.getActiveNodeId() === id;
+      isActiveNode = isActiveNode || this.model.skeletonTracing.getActiveNodeId() === id;
       isBranchPoint = isBranchPoint || tree.isBranchPoint(id);
 
       if (isActiveNode) {
-        color = this.shiftHex(color, 1/4);
+        color = this.shiftHex(color, 1 / 4);
       } else {
         color = this.darkenHex(color);
       }
@@ -289,21 +261,19 @@ class Tree {
 
 
   showRadius(show) {
-
     this.edges.material.linewidth = this.getLineWidth();
     return this.particleMaterial.setShowRadius(show);
   }
 
 
   updateGeometries() {
-
-    return [ this.edges, this.nodes ].map((mesh) =>
+    return [this.edges, this.nodes].map(mesh =>
       (() => {
         const result = [];
-        for (let attr in mesh.geometry.attributes) {
+        for (const attr in mesh.geometry.attributes) {
           const a = mesh.geometry.attributes[attr];
-          a.array       = a._rBuffer.getBuffer();
-          a.numItems    = a._rBuffer.getBufferLength();
+          a.array = a.rBuffer.getBuffer();
+          a.numItems = a.rBuffer.getBufferLength();
           result.push(a.needsUpdate = true);
         }
         return result;
@@ -312,7 +282,6 @@ class Tree {
 
 
   logState(title) {
-
     console.log(` +++ ${title} +++ `);
     console.log("nodeIDs", this.nodeIDs.toString());
     console.log("nodesBuffer", this.nodesBuffer.toString());
@@ -322,8 +291,7 @@ class Tree {
 
 
   getNodeIndex(nodeId) {
-
-    for (let i of __range__(0, this.nodeIDs.length, true)) {
+    for (const i of __range__(0, this.nodeIDs.length, true)) {
       if (this.nodeIDs.get(i) === nodeId) {
         return i;
       }
@@ -332,7 +300,6 @@ class Tree {
 
 
   doWithNodeIndex(nodeId, f) {
-
     const index = this.getNodeIndex(nodeId);
     if (index == null) { return; }
     return f(index);
@@ -340,22 +307,19 @@ class Tree {
 
 
   getLineWidth() {
-
     return this.model.user.get("particleSize") / 4;
   }
 
 
-  //### Color utility methods
+  // ### Color utility methods
 
   hexToRGB(hexColor) {
-
     const rgbColor = new THREE.Color().setHex(hexColor);
     return [rgbColor.r, rgbColor.g, rgbColor.b];
   }
 
 
   darkenHex(hexColor) {
-
     const hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor));
     hsvColor.v = 0.6;
     return ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex();
@@ -363,7 +327,6 @@ class Tree {
 
 
   shiftHex(hexColor, shiftValue) {
-
     const hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor));
     hsvColor.h = (hsvColor.h + shiftValue) % 1;
     return ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex();
@@ -371,7 +334,6 @@ class Tree {
 
 
   invertHex(hexColor) {
-
     return this.shiftHex(hexColor, 0.5);
   }
 }
@@ -379,9 +341,9 @@ class Tree {
 export default Tree;
 
 function __range__(left, right, inclusive) {
-  let range = [];
-  let ascending = left < right;
-  let end = !inclusive ? right : ascending ? right + 1 : right - 1;
+  const range = [];
+  const ascending = left < right;
+  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
   for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
     range.push(i);
   }

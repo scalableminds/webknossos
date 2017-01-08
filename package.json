@@ -19,6 +19,13 @@
     "babel-preset-react": "^6.16.0",
     "babel-register": "^6.9.0",
     "css-loader": "^0.23.1",
+    "eslint": "^3.12.2",
+    "eslint-config-airbnb": "^13.0.0",
+    "eslint-import-resolver-webpack": "^0.8.0",
+    "eslint-plugin-import": "^2.2.0",
+    "eslint-plugin-jasmine": "^2.2.0",
+    "eslint-plugin-jsx-a11y": "2.2.3",
+    "eslint-plugin-react": "^6.8.0",
     "exports-loader": "^0.6.2",
     "extract-text-webpack-plugin": "^1.0.1",
     "file-loader": "^0.9.0",
@@ -32,7 +39,7 @@
     "style-loader": "^0.13.1",
     "three.js": "georgwiese/three.js#scm_oxalis",
     "url-loader": "^0.5.7",
-    "wdio-jasmine-framework": "^0.2.3",
+    "wdio-jasmine-framework": "^0.2.19",
     "wdio-selenium-standalone-service": "0.0.7",
     "wdio-spec-reporter": "0.0.3",
     "webdriverio": "^4.4.0",
@@ -41,10 +48,12 @@
   },
   "scripts": {
     "test": "node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
-    "test-e2e": "node_modules/.bin/wdio wdio.conf.js"
+    "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
+    "lint": "./node_modules/.bin/eslint app/assets/javascripts/"
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",
+    "babel-eslint": "^7.1.1",
     "backbone": "1.3.3",
     "backbone-subviews": "^0.7.4",
     "backbone.marionette": "^3.0.0",

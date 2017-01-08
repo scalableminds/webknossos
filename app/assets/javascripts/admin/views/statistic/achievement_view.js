@@ -3,8 +3,7 @@ import Marionette from "backbone.marionette";
 
 class AchievementView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <h3>Achievements</h3>
 <table class="table">
   <tbod>

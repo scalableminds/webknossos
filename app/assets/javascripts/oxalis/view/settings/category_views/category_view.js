@@ -13,8 +13,8 @@ class CategoryView extends Marionette.View {
     //       # Create & return subview
     //   ]
     // ]
-  
-    this.prototype.template  = _.template(`\
+
+    this.prototype.template = _.template(`\
 <div class="panel panel-default">
   <div class="panel-heading" data-toggle="collapse" data-target="#user-settings-<%- tabId %>">
     <h4 class="panel-title">
@@ -40,7 +40,6 @@ class CategoryView extends Marionette.View {
 
 
   initialize() {
-
     if (this.subviewCreatorsList == null) {
       throw new Error(
         "Subclasses of CategoryView must specify subviewCreatorsList");
@@ -50,7 +49,7 @@ class CategoryView extends Marionette.View {
     this.subviewCreators = _.transform(
       this.subviewCreatorsList,
       (result, [key, value]) => result[key] = value,
-      {}
+      {},
     );
 
     return Subviews.add(this);
@@ -58,19 +57,16 @@ class CategoryView extends Marionette.View {
 
 
   serializeData() {
-
-    return { subviewCreatorsList: this.subviewCreatorsList, caption: this.caption, tabId : _.uniqueId() };
+    return { subviewCreatorsList: this.subviewCreatorsList, caption: this.caption, tabId: _.uniqueId() };
   }
 
 
   hide() {
-
     return this.$el.hide();
   }
 
 
   show() {
-
     return this.$el.show();
   }
 }

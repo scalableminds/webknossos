@@ -23,7 +23,7 @@ ansiColor('xterm') {
       stage("Build") {
 
         sh "docker-compose run oxalis-sbt clean compile stage"
-        sh "docker build -t scalableminds/oxalis:${env.BUILD_NUMBER} ."
+        sh "docker build -t scalableminds/webknossos:${env.BUILD_NUMBER} ."
       }
 
 
@@ -34,15 +34,12 @@ ansiColor('xterm') {
         retry(3) {
           sh "docker-compose run oxalis-e2e-tests"
         }
-      }
-
-
-      stage("Smoke test") {
-
-        sh "DOCKER_TAG=${env.BUILD_NUMBER} docker-compose up oxalis &"
-        sh "sleep 10"
-        sh "./test/infrastructure/deployment.bash"
-        sh "docker-compose down"
+        sh """
+          DOCKER_TAG=${env.BUILD_NUMBER} docker-compose up webknossos &
+          sleep 10
+          ./test/infrastructure/deployment.bash
+          docker-compose down
+        """
       }
 
 
@@ -111,24 +108,6 @@ ansiColor('xterm') {
   }
 }
 
-
-@NonCPS
-def retry(count, cl) {
-  def i = count
-  waitUntil {
-    try {
-      cl()
-      true
-    } catch (err) {
-      i = i - 1
-      if (i <= 0) {
-        throw err
-      } else {
-        false
-      }
-    }
-  }
-}
 
 @NonCPS
 def formatChangeSets(changeSets) {

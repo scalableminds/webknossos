@@ -16,7 +16,6 @@ ansiColor('xterm') {
         echo "Branch: ${env.BRANCH_NAME}\nCommit: ${commit}\nAuthors: ${formatChangeSets(currentBuild.changeSets)}"
 
         env.SBT_VERSION_TAG = "sbt-0.13.9_mongo-3.2.1_node-7.x_jdk-8"
-        sh "docker login -u ${env.DOCKER_USER} -p ${env.DOCKER_PASS}"
         sh "docker pull scalableminds/sbt:${env.SBT_VERSION_TAG}"
       }
 
@@ -47,6 +46,7 @@ ansiColor('xterm') {
 
       stage("Publish docker images") {
 
+        sh "docker login -u ${env.DOCKER_USER} -p ${env.DOCKER_PASS}"
         sh "docker tag scalableminds/webknossos:${env.BUILD_NUMBER} scalableminds/webknossos:branch-${env.BRANCH_NAME}"
         sh "docker push scalableminds/webknossos:${env.BUILD_NUMBER}"
         sh "docker push scalableminds/webknossos:branch-${env.BRANCH_NAME}"
@@ -99,7 +99,6 @@ ansiColor('xterm') {
 
         archiveArtifacts(artifacts: 'packages/*,errorShots/*', fingerprint: true)
         sh 'docker-compose down || echo "Can not run docker-compose down"'
-        sh 'docker logout || echo "Can not run docker logout"'
 
         notifyBuild(currentBuild.result)
         // deleteDir()

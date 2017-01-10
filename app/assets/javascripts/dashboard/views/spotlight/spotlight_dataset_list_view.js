@@ -1,15 +1,13 @@
-import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
 import SpotlightDatasetView from "./spotlight_dataset_view";
 
 class SpotlightDatasetListView extends Marionette.CollectionView {
   static initClass() {
-  
-    this.prototype.childView  = SpotlightDatasetView;
+    this.prototype.childView = SpotlightDatasetView;
   }
 
-  initialize(options) {
-
+  initialize() {
     this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
     this.collection.setSorting("created", "desc");
     return this.collection.setCollectionFilter(child => child.get("isActive"));
@@ -17,12 +15,10 @@ class SpotlightDatasetListView extends Marionette.CollectionView {
 
 
   filterBySearch(searchQuery) {
-
     return this.collection.setFilter(["name", "owningTeam", "description"], searchQuery);
   }
 }
 SpotlightDatasetListView.initClass();
 
 export default SpotlightDatasetListView;
-
 

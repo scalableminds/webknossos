@@ -1,14 +1,12 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import Toast from "libs/toast";
 import TemplateHelpers from "libs/template_helpers";
 
 class ProjectListItemView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.tagName  = "tr";
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.tagName = "tr";
+
+    this.prototype.template = _.template(`\
 <td><%= name %></td>
 <td><%= team %></td>
 <td><%= priority %><% if(paused) { %> (paused)<% } %></td>
@@ -41,20 +39,18 @@ class ProjectListItemView extends Marionette.View {
   </a>
 </td>\
 `);
-  
-    this.prototype.events  =
-      {"click .delete" : "deleteProject"};
-  
-    this.prototype.templateContext  =
-      {TemplateHelpers};
+
+    this.prototype.events =
+      { "click .delete": "deleteProject" };
+
+    this.prototype.templateContext =
+      { TemplateHelpers };
   }
 
   deleteProject() {
-
     if (window.confirm("Do you really want to delete this project?")) {
-      let xhr;
-      return xhr = this.model.destroy({
-        wait : true
+      this.model.destroy({
+        wait: true,
       });
     }
   }

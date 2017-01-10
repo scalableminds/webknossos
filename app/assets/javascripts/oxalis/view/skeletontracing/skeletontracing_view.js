@@ -1,5 +1,6 @@
-import $ from "jquery";
 import _ from "lodash";
+import app from "app";
+import Backbone from "backbone";
 import Toast from "libs/toast";
 import modal from "../modal";
 import View from "../../view";
@@ -7,7 +8,6 @@ import View from "../../view";
 class SkeletonTracingView extends View {
 
   constructor(model) {
-
     super(model);
     _.extend(this, Backbone.Events);
 
@@ -18,29 +18,29 @@ class SkeletonTracingView extends View {
 
 
     const autoSaveFailureMessage = "Auto-Save failed!";
-    this.listenTo(this.model.skeletonTracing.stateLogger, "pushFailed", function() {
+    this.listenTo(this.model.skeletonTracing.stateLogger, "pushFailed", function () {
       if (this.reloadDenied) {
-        return Toast.error(autoSaveFailureMessage,  true);
+        return Toast.error(autoSaveFailureMessage, true);
       } else {
         return modal.show(
-          `Several attempts to reach our server have failed. You should \
-reload the page to make sure that your work won't be lost.`,
+          "Several attempts to reach our server have failed. You should \
+reload the page to make sure that your work won't be lost.",
           "Connection error",
           [
             {
-              id : "reload-button",
-              label : "OK, reload",
+              id: "reload-button",
+              label: "OK, reload",
               callback() {
                 app.router.off("beforeunload");
                 return app.router.reload();
-              }
+              },
             },
             {
-              id : "cancel-button",
-              label : "Cancel",
-              callback : () => this.reloadDenied = true
-            }
-          ]
+              id: "cancel-button",
+              label: "Cancel",
+              callback: () => this.reloadDenied = true,
+            },
+          ],
         );
       }
     });
@@ -49,10 +49,9 @@ reload the page to make sure that your work won't be lost.`,
 
 
   showFirstVisToggle() {
-
     return modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
       "Skeleton visibility",
-      [{id: "ok-button", label: "OK, Got it."}]
+      [{ id: "ok-button", label: "OK, Got it." }],
     );
   }
 }

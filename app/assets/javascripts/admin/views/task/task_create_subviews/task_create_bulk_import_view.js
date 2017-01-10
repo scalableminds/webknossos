@@ -1,6 +1,5 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import routes from "routes";
 import Toast from "libs/toast";
 import Request from "libs/request";
 
@@ -11,10 +10,9 @@ class TaskCreateBulkImportView extends Marionette.View {
   }
 
   static initClass() {
-  
-    this.prototype.id  = "create-bulk-import";
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.id = "create-bulk-import";
+
+    this.prototype.template = _.template(`\
 <div class="row">
   <div class="col-sm-12">
     <div class="well">
@@ -38,14 +36,14 @@ class TaskCreateBulkImportView extends Marionette.View {
   </div>
 </div>\
 `);
-  
-    this.prototype.events  =
-      {"submit" : "submit"};
-  
-    this.prototype.ui  = {
-      "bulkText" : "textarea[name=data]",
-      "submitButton" : "button[type=submit]",
-      "submitSpinner" : ".fa-spinner"
+
+    this.prototype.events =
+      { submit: "submit" };
+
+    this.prototype.ui = {
+      bulkText: "textarea[name=data]",
+      submitButton: "button[type=submit]",
+      submitSpinner: ".fa-spinner",
     };
   }
 
@@ -53,7 +51,6 @@ class TaskCreateBulkImportView extends Marionette.View {
     * Submit form data as json.
   */
   submit() {
-
     const bulkText = this.ui.bulkText.val();
 
     if (!this.isValidData(bulkText)) {
@@ -63,13 +60,13 @@ class TaskCreateBulkImportView extends Marionette.View {
 
     const tasks = this.parseText(bulkText);
     Request.sendJSONReceiveJSON(
-      "/api/tasks",{
-      params : {type : "bulk"},
-      data : tasks
-    }
+      "/api/tasks", {
+        params: { type: "bulk" },
+        data: tasks,
+      },
     ).then(
       this.showSaveSuccess,
-      this.showSaveError
+      this.showSaveError,
     );
 
     this.toggleSubmitButton(false);
@@ -80,12 +77,10 @@ class TaskCreateBulkImportView extends Marionette.View {
 
 
   showSaveSuccess(response) {
-
     // A succesful request indicates that the bulk syntax was correct. However,
     // each task is processed individually and can fail or succeed.
     if (response.errors) {
       this.handleSuccessfulRequest(response.items);
-
     } else {
       this.ui.bulkText.val("");
       Toast.success("All tasks were successfully created");
@@ -96,7 +91,6 @@ class TaskCreateBulkImportView extends Marionette.View {
 
 
   showSaveError() {
-
     Toast.error("The tasks could not be created due to server errors.");
 
     return this.toggleSubmitButton(true);
@@ -104,13 +98,11 @@ class TaskCreateBulkImportView extends Marionette.View {
 
 
   showInvalidData() {
-
     return Toast.error("The form data is not correct.");
   }
 
 
   handleSuccessfulRequest(items) {
-
     // Remove all successful tasks from the text area and show an error toast for
     // the failed tasks
     const bulkText = this.ui.bulkText.val();
@@ -135,38 +127,32 @@ class TaskCreateBulkImportView extends Marionette.View {
 
 
   toggleSubmitButton(enabled) {
-
     this.ui.submitButton.prop("disabled", !enabled);
     return this.ui.submitSpinner.toggleClass("hide", enabled);
   }
 
 
   splitToLines(string) {
-
     return string.trim().split("\n");
   }
 
 
   splitToWords(string) {
-
     return string.split(",").map(_.trim);
   }
 
 
   isValidData(bulkText) {
-
     return _.every(this.splitToLines(bulkText), this.isValidLine.bind(this));
   }
 
 
   isNull(value) {
-
     return value === null;
   }
 
 
   isValidLine(bulkLine) {
-
     const bulkData = this.formatLine(bulkLine);
     if (bulkData === null) {
       return false;
@@ -182,21 +168,19 @@ class TaskCreateBulkImportView extends Marionette.View {
       isNaN(bulkData.boundingBox.height) ||
       isNaN(bulkData.boundingBox.depth) ||
       _.some(bulkData.boundingBox.topLeft, isNaN)) {
-        return false;
-      }
+      return false;
+    }
 
     return true;
   }
 
 
   parseText(bulkText) {
-
     return _.map(this.splitToLines(bulkText), this.formatLine.bind(this));
   }
 
 
   formatLine(bulkLine) {
-
     const words = this.splitToWords(bulkLine);
     if (words.length < 19) {
       return null;
@@ -226,25 +210,25 @@ class TaskCreateBulkImportView extends Marionette.View {
       dataSet,
       team,
       taskTypeId,
-      neededExperience : {
-        value : minExperience,
-        domain : experienceDomain
+      neededExperience: {
+        value: minExperience,
+        domain: experienceDomain,
       },
-      status : {
-        open : instances,
-        inProgress : 0,
-        completed : 0
+      status: {
+        open: instances,
+        inProgress: 0,
+        completed: 0,
       },
-      editPosition : [x, y, z],
-      editRotation : [rotX, rotY, rotZ],
-      boundingBox : {
-        topLeft : [minX, minY, minZ],
+      editPosition: [x, y, z],
+      editRotation: [rotX, rotY, rotZ],
+      boundingBox: {
+        topLeft: [minX, minY, minZ],
         width,
         height,
-        depth
+        depth,
       },
       projectName,
-      isForAnonymous : false
+      isForAnonymous: false,
     };
   }
 }

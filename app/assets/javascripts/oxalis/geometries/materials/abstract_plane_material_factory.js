@@ -15,26 +15,23 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
 
   setupAttributesAndUniforms() {
-
     super.setupAttributesAndUniforms();
 
-    for (let binary of this.model.getColorBinaries()) {
+    for (const binary of this.model.getColorBinaries()) {
       const name = this.sanitizeName(binary.name);
-      this.uniforms[name + "_brightness"] = {
-        type : "f",
-        value : this.model.datasetConfiguration.get(`layers.${binary.name}.brightness`) / 255
+      this.uniforms[`${name}_brightness`] = {
+        type: "f",
+        value: this.model.datasetConfiguration.get(`layers.${binary.name}.brightness`) / 255,
       };
-      this.uniforms[name + "_contrast"] = {
-        type : "f",
-        value : this.model.datasetConfiguration.get(`layers.${binary.name}.contrast`)
+      this.uniforms[`${name}_contrast`] = {
+        type: "f",
+        value: this.model.datasetConfiguration.get(`layers.${binary.name}.contrast`),
       };
     }
-
   }
 
 
   makeMaterial(options) {
-
     super.makeMaterial(options);
 
     this.material.setData = (name, data) => {
@@ -46,18 +43,16 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
 
   setupChangeListeners() {
-
-    return this.listenTo(this.model.datasetConfiguration, "change", function(model) {
-
+    return this.listenTo(this.model.datasetConfiguration, "change", function (model) {
       const object = model.changed.layers || {};
-      for (let binaryName in object) {
+      for (const binaryName in object) {
         const changes = object[binaryName];
         const name = this.sanitizeName(binaryName);
         if (changes.brightness != null) {
-          this.uniforms[name + "_brightness"].value = changes.brightness / 255;
+          this.uniforms[`${name}_brightness`].value = changes.brightness / 255;
         }
         if (changes.contrast != null) {
-          this.uniforms[name + "_contrast"].value = changes.contrast;
+          this.uniforms[`${name}_contrast`].value = changes.contrast;
         }
       }
       return app.vent.trigger("rerender");
@@ -66,7 +61,6 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
 
   createTextures() {
-
     throw new Error("Subclass responsibility");
   }
 
@@ -81,7 +75,6 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
 
   createDataTexture(width, bytes) {
-
     const format = bytes === 1 ? THREE.LuminanceFormat : THREE.RGBFormat;
 
     return new THREE.DataTexture(
@@ -89,13 +82,12 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
       format, THREE.UnsignedByteType,
       new THREE.UVMapping(),
       THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping,
-      this.minFilter, this.maxFilter
+      this.minFilter, this.maxFilter,
     );
   }
 
 
   getVertexShader() {
-
     return `\
 varying vec2 vUv;
 void main() {
@@ -110,5 +102,5 @@ void main() {
 export default AbstractPlaneMaterialFactory;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

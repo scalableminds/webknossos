@@ -1,15 +1,12 @@
 import _ from "lodash";
-import Marionette from "backbone.marionette";
-import AbstractSettingView from "./abstract_setting_view";
+import AbstractSettingView from "./abstract_setting_view.js";
 
 class NumberSettingView extends AbstractSettingView {
   static initClass() {
-  
-  
-    this.prototype.className  = "number-setting-view row";
-  
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "number-setting-view row";
+
+
+    this.prototype.template = _.template(`\
 <div class="col-sm-5">
   <%- displayName %>
 </div>
@@ -17,38 +14,35 @@ class NumberSettingView extends AbstractSettingView {
   <input class="form-control" type="number" min="<%- min %>" max="<%- max %>" step="<%- step %>" value="<%- value %>">
 </div>\
 `);
-  
-  
-    this.prototype.ui  =
-      {number : "input[type=number]"};
-  
-  
-    this.prototype.events  =
-      {"change @ui.number" : "handleChange"};
+
+
+    this.prototype.ui =
+      { number: "input[type=number]" };
+
+
+    this.prototype.events =
+      { "change @ui.number": "handleChange" };
   }
 
 
   initialize(options) {
-
     super.initialize(options);
 
     return _.defaults(this.options, {
-      min : "",
-      max : "",
-      step : 1
-    }
+      min: "",
+      max: "",
+      step: 1,
+    },
     );
   }
 
 
   handleChange(evt) {
-
     return this.model.set(this.options.name, (Number)(evt.target.value));
   }
 
 
   update(model, value) {
-
     return this.ui.number.val(value);
   }
 }

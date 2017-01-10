@@ -1,8 +1,7 @@
-const { M4x4, V2, V3 }  = require("mjs")(Float32Array);
+const { M4x4, V2, V3 } = require("mjs")(Float32Array);
 
 // Applies an affine transformation matrix on an array of points.
-M4x4.transformPointsAffine = function(m, points, r) {
-
+M4x4.transformPointsAffine = function (m, points, r) {
   if (r == null) { r = new Float32Array(points.length); }
   const m00 = m[0];
   const m01 = m[1];
@@ -22,7 +21,7 @@ M4x4.transformPointsAffine = function(m, points, r) {
     const v1 = points[i + 1];
     const v2 = points[i + 2];
 
-    r[i]     = (m00 * v0) + (m10 * v1) + (m20 * v2) + m30;
+    r[i] = (m00 * v0) + (m10 * v1) + (m20 * v2) + m30;
     r[i + 1] = (m01 * v0) + (m11 * v1) + (m21 * v2) + m31;
     r[i + 2] = (m02 * v0) + (m12 * v1) + (m22 * v2) + m32;
   }
@@ -32,18 +31,17 @@ M4x4.transformPointsAffine = function(m, points, r) {
 
 
 // Applies a transformation matrix on an array of points.
-M4x4.transformPoints = function(m, points, r) {
-
+M4x4.transformPoints = function (m, points, r) {
   if (r == null) { r = new Float32Array(points.length); }
   for (let i = 0; i < points.length; i += 3) {
     const v0 = points[i];
     const v1 = points[i + 1];
     const v2 = points[i + 2];
 
-    r[i]     = (m[0] * v0) + (m[4] * v1) + (m[8] * v2) + m[12];
+    r[i] = (m[0] * v0) + (m[4] * v1) + (m[8] * v2) + m[12];
     r[i + 1] = (m[1] * v0) + (m[5] * v1) + (m[9] * v2) + m[13];
     r[i + 2] = (m[2] * v0) + (m[6] * v1) + (m[10] * v2) + m[14];
-    const w        = (m[3] * v0) + (m[7] * v1) + (m[11] * v2) + m[15];
+    const w = (m[3] * v0) + (m[7] * v1) + (m[11] * v2) + m[15];
 
     if (w !== 1.0) {
       r[0] /= w;
@@ -56,8 +54,7 @@ M4x4.transformPoints = function(m, points, r) {
 };
 
 
-M4x4.inverse = function(mat, dest) {
-
+M4x4.inverse = function (mat, dest) {
   // cache matrix values
   if (dest == null) { dest = new Float32Array(16); }
   const a00 = mat[0];
@@ -114,8 +111,7 @@ M4x4.inverse = function(mat, dest) {
 };
 
 
-M4x4.extractTranslation = function(m, r) {
-
+M4x4.extractTranslation = function (m, r) {
   if (r == null) { r = new Float32Array(3); }
   r[0] = m[12];
   r[1] = m[13];
@@ -124,8 +120,7 @@ M4x4.extractTranslation = function(m, r) {
 };
 
 
-V3.round = function(v, r) {
-
+V3.round = function (v, r) {
   if (r == null) { r = new Float32Array(3); }
   r[0] = Math.round(v[0]);
   r[1] = Math.round(v[1]);

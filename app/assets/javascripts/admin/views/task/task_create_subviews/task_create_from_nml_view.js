@@ -1,14 +1,12 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import routes from "routes";
 import Toast from "libs/toast";
 import Request from "libs/request";
 
 class TaskCreateFromNMLView extends Marionette.View {
   static initClass() {
-  
     this.prototype.id = "create-from-nml";
-  
+
     this.prototype.template = _.template(`\
 <div class="form-group">
   <label class="col-sm-2 control-label" for="nmlFile">Reference NML File</label>
@@ -28,14 +26,13 @@ class TaskCreateFromNMLView extends Marionette.View {
   </div>
 </div>\
 `);
-  
-    this.prototype.ui  =
-      {"fileUpload" : "[type=file]"};
+
+    this.prototype.ui =
+      { fileUpload: "[type=file]" };
   }
 
   initialize(options) {
-
-    return this.parent = options.parent;
+    this.parent = options.parent;
   }
 
 
@@ -44,7 +41,6 @@ class TaskCreateFromNMLView extends Marionette.View {
    * @return {Boolean} false, prevent page reload
   */
   submit() {
-
     const serializedForm = this.parent.serializeForm();
     this.model.set(serializedForm);
 
@@ -55,17 +51,16 @@ class TaskCreateFromNMLView extends Marionette.View {
     const form = this.parent.ui.form[0];
 
     if (form.checkValidity()) {
-
       Toast.info("Uploading NML", false);
 
       Request.sendMultipartFormReceiveJSON("/api/tasks", {
-        data : payload,
-        params : {type : "nml"}
-      }
+        data: payload,
+        params: { type: "nml" },
+      },
       )
       .then(
         task => this.parent.showSaveSuccess(task),
-        () => this.parent.showSaveError()
+        () => this.parent.showSaveError(),
       );
     }
 

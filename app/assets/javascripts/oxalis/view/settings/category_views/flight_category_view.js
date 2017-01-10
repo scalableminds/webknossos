@@ -5,123 +5,114 @@ import constants from "../../../constants";
 
 class FlightCategoryView extends CategoryView {
   static initClass() {
-  
-  
-    this.prototype.caption  = "Flightoptions";
-  
-  
-    this.prototype.subviewCreatorsList  = [
-  
+    this.prototype.caption = "Flightoptions";
+
+
+    this.prototype.subviewCreatorsList = [
+
       [
-        "mouseRotateValue", function() {
-  
+        "mouseRotateValue", function () {
           return new SliderSettingView({
-            model : this.model,
-            options : {
-              name : "mouseRotateValue",
-              displayName : "Mouse Rotation",
-              min : 0.0001,
-              max : 0.02,
-              step : 0.001
-          }
+            model: this.model,
+            options: {
+              name: "mouseRotateValue",
+              displayName: "Mouse Rotation",
+              min: 0.0001,
+              max: 0.02,
+              step: 0.001,
+            },
           });
-      }
+        },
       ],
-  
+
       [
-        "rotateValue", function() {
-  
+        "rotateValue", function () {
           return new SliderSettingView({
-            model : this.model,
-            options : {
-              name : "rotateValue",
-              displayName : "Keyboard Rotation Value",
-              min : 0.001,
-              max : 0.08,
-              step : 0.001
-          }
+            model: this.model,
+            options: {
+              name: "rotateValue",
+              displayName: "Keyboard Rotation Value",
+              min: 0.001,
+              max: 0.08,
+              step: 0.001,
+            },
           });
-      }
+        },
       ],
-  
+
       [
-        "moveValue3d", function() {
-  
+        "moveValue3d", function () {
           return new SliderSettingView({
-            model : this.model,
-            options : {
-              name : "moveValue3d",
-              displayName : "Move Value (nm/s)",
-              min : constants.MIN_MOVE_VALUE,
-              max : constants.MAX_MOVE_VALUE_SLIDER,
-              step : 10
-          }
+            model: this.model,
+            options: {
+              name: "moveValue3d",
+              displayName: "Move Value (nm/s)",
+              min: constants.MIN_MOVE_VALUE,
+              max: constants.MAX_MOVE_VALUE_SLIDER,
+              step: 10,
+            },
           });
-      }
+        },
       ],
-  
+
       [
-        "crosshairSize", function() {
-  
+        "crosshairSize", function () {
           return new SliderSettingView({
-            model : this.model,
-            options : {
-              name : "crosshairSize",
-              displayName : "Crosshair Size",
-              min : 0.05,
-              max : 0.5,
-              step : 0.01
-          }
+            model: this.model,
+            options: {
+              name: "crosshairSize",
+              displayName: "Crosshair Size",
+              min: 0.05,
+              max: 0.5,
+              step: 0.01,
+            },
           });
-      }
+        },
       ],
-  
+
       [
-        "sphericalCapRadius", function() {
-  
+        "sphericalCapRadius", function () {
           return new SliderSettingView({
-            model : this.model,
-            options : {
-              name : "sphericalCapRadius",
-              displayName : "Sphere Radius",
-              min : 50,
-              max : 500,
-              step : 1
-          }
+            model: this.model,
+            options: {
+              name: "sphericalCapRadius",
+              displayName: "Sphere Radius",
+              min: 50,
+              max: 500,
+              step: 1,
+            },
           });
-      }
+        },
       ],
-  
+
       [
-        "clippingDistanceArbitrary", function() {
-  
+        "clippingDistanceArbitrary", function () {
           return new SliderSettingView({
-            model : this.model,
-            options : {
-              name : "clippingDistanceArbitrary",
-              displayName : "Clipping Distance",
-              min : 1,
-              max : 127,
-              step : 1
-          }
+            model: this.model,
+            options: {
+              name: "clippingDistanceArbitrary",
+              displayName: "Clipping Distance",
+              min: 1,
+              max: 127,
+              step: 1,
+            },
           });
-      }
+        },
       ],
-  
+
       [
-        "displayCrosshair", function() {
-  
+        "displayCrosshair", function () {
           return new CheckboxSettingView({
-            model : this.model,
-            options : {
-              name : "displayCrosshair",
-              displayName : "Show Crosshair"
-          }
+            model: this.model,
+            options: {
+              name: "displayCrosshair",
+              displayName: "Show Crosshair",
+            },
           });
-      }
-      ]
+        },
+      ],
     ];
-}
+  }
 }
 FlightCategoryView.initClass();
 

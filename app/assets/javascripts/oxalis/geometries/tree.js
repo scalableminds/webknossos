@@ -175,10 +175,10 @@ class Tree {
 
 
   dispose() {
-    return this.getMeshes().map(geometry =>
-
-      (geometry.geometry.dispose(),
-      geometry.material.dispose()));
+    for (const geometry of this.getMeshes()) {
+      geometry.geometry.dispose();
+      geometry.material.dispose();
+    }
   }
 
 

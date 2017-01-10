@@ -7,7 +7,6 @@ import ListTreeItemView from "./list_tree_item_view";
 
 class ListTreeView extends Marionette.CompositeView {
   static initClass() {
-
     this.prototype.id = "tree-navbar";
     this.prototype.className = "flex-column";
     this.prototype.template = _.template(`\

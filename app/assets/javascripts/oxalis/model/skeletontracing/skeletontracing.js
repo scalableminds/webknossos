@@ -95,9 +95,9 @@ class SkeletonTracing {
     // Ensure a tree is active
     if (!this.activeTree) {
       if (this.trees.length > 0) {
-        return this.activeTree = this.trees[0];
+        this.activeTree = this.trees[0];
       } else {
-        return this.createNewTree();
+        this.createNewTree();
       }
     }
   }
@@ -109,9 +109,9 @@ class SkeletonTracing {
     const startTime = (new Date()).getTime();
     let offset = 0;
     const size = numberOfNodesPerTree / 10;
-    for (let i of __range__(0, numberOfTrees, false)) {
+    for (let i = 0; i < numberOfTrees; i++) {
       this.createNewTree();
-      for (i of __range__(0, numberOfNodesPerTree, false)) {
+      for (let j = 0; j < numberOfNodesPerTree; j++) {
         const pos = [(Math.random() * size) + offset, (Math.random() * size) + offset, (Math.random() * size) + offset];
         const point = new TracePoint(this.idCount++, pos, Math.random() * 200, this.activeTree.treeId, null, [0, 0, 0]);
         this.activeTree.nodes.push(point);
@@ -145,7 +145,7 @@ class SkeletonTracing {
         this.trigger("setBranch", true, this.activeNode);
       }
     } else {
-      return this.trigger("noBranchPoints");
+      this.trigger("noBranchPoints");
     }
   }
 
@@ -168,17 +168,17 @@ class SkeletonTracing {
         const [point, tree] = this.getNextBranch();
         if (point) {
           if (this.doubleBranchPop) {
-            return this.trigger("doubleBranch", () => reallyPopBranch(point, tree, resolve));
+            this.trigger("doubleBranch", () => reallyPopBranch(point, tree, resolve));
           } else {
-            return reallyPopBranch(point, tree, resolve);
+            reallyPopBranch(point, tree, resolve);
           }
         } else {
           this.trigger("emptyBranchStack");
-          return reject();
+          reject();
         }
       } else {
         this.trigger("noBranchPoints");
-        return reject();
+        reject();
       }
     },
     );
@@ -241,9 +241,9 @@ class SkeletonTracing {
       this.stateLogger.createNode(point, this.activeTree.treeId);
 
       this.trigger("newNode", this.activeNode.id, this.activeTree.treeId);
-      return this.trigger("newActiveNode", this.activeNode.id);
+      this.trigger("newActiveNode", this.activeNode.id);
     } else {
-      return this.trigger("wrongDirection");
+      this.trigger("wrongDirection");
     }
   }
 
@@ -313,7 +313,7 @@ class SkeletonTracing {
       }
       this.stateLogger.updateTree(this.activeTree);
 
-      return this.trigger("newTreeName", this.activeTree.treeId);
+      this.trigger("newTreeName", this.activeTree.treeId);
     }
   }
 
@@ -348,7 +348,7 @@ class SkeletonTracing {
     }
 
     if (mergeTree) {
-      return this.mergeTree(lastActiveNode, lastActiveTree);
+      this.mergeTree(lastActiveNode, lastActiveTree);
     }
   }
 
@@ -360,28 +360,29 @@ class SkeletonTracing {
       this.activeNode.radius = Math.min(this.MAX_RADIUS,
                             Math.max(this.MIN_RADIUS, radius));
       this.stateLogger.updateNode(this.activeNode, this.activeNode.treeId);
-      return this.trigger("newActiveNodeRadius", radius);
+      this.trigger("newActiveNodeRadius", radius);
     }
   }
 
 
   selectNextTree(forward) {
+    let i;
     const trees = this.getTreesSorted(this.user.get("sortTreesByName"));
-    for (var i of __range__(0, trees.length, false)) {
+    for (i of __range__(0, trees.length, false)) {
       if (this.activeTree.treeId === trees[i].treeId) {
         break;
       }
     }
 
     const diff = (forward ? 1 : -1) + trees.length;
-    return this.setActiveTree(trees[(i + diff) % trees.length].treeId);
+    this.setActiveTree(trees[(i + diff) % trees.length].treeId);
   }
 
 
   centerActiveNode() {
     const position = this.getActiveNodePos();
     if (position) {
-      return this.flycam.setPosition(position);
+      this.flycam.setPosition(position);
     }
   }
 
@@ -401,7 +402,7 @@ class SkeletonTracing {
     }
     this.stateLogger.push();
 
-    return this.trigger("newActiveTree", this.activeTree.treeId);
+    this.trigger("newActiveTree", this.activeTree.treeId);
   }
 
 
@@ -419,13 +420,14 @@ class SkeletonTracing {
       this.stateLogger.updateTree(tree);
     }
 
-    return this.trigger("newTreeColor", tree.treeId);
+    this.trigger("newTreeColor", tree.treeId);
   }
 
 
   shuffleAllTreeColors() {
-    return this.trees.map(tree =>
-      this.shuffleTreeColor(tree));
+    for (const tree of this.trees) {
+      this.shuffleTreeColor(tree);
+    }
   }
 
 
@@ -443,7 +445,7 @@ class SkeletonTracing {
 
     this.stateLogger.createTree(tree);
 
-    return this.trigger("newTree", tree.treeId, tree.color);
+    this.trigger("newTree", tree.treeId, tree.color);
   }
 
 
@@ -515,12 +517,12 @@ class SkeletonTracing {
     return new Promise((resolve, reject) => {
       if (this.activeNode) {
         if (this.getBranchpointsForNodes(this.activeTree.branchpoints, this.activeNode).length) {
-          return this.trigger("deleteBranch", () => reallyDeleteActiveNode(resolve));
+          this.trigger("deleteBranch", () => reallyDeleteActiveNode(resolve));
         } else {
-          return reallyDeleteActiveNode(resolve);
+          reallyDeleteActiveNode(resolve);
         }
       } else {
-        return reject();
+        reject();
       }
     },
     );
@@ -532,12 +534,10 @@ class SkeletonTracing {
 
     if (notify) {
       if (confirm("Do you really want to delete the whole tree?")) {
-        return this.reallyDeleteTree(id, notifyServer);
-      } else {
-
+        this.reallyDeleteTree(id, notifyServer);
       }
     } else {
-      return this.reallyDeleteTree(id, notifyServer);
+      this.reallyDeleteTree(id, notifyServer);
     }
   }
 
@@ -567,10 +567,10 @@ class SkeletonTracing {
     // Because we always want an active tree, check if we need
     // to create one.
     if (this.trees.length === 0) {
-      return this.createNewTree();
+      this.createNewTree();
     } else {
       // just set the last tree to be the active one
-      return this.setActiveTree(this.trees[this.trees.length - 1].treeId);
+      this.setActiveTree(this.trees[this.trees.length - 1].treeId);
     }
   }
 
@@ -602,9 +602,9 @@ class SkeletonTracing {
 
         this.deleteTree(false, lastTree.treeId, false);
 
-        return this.setActiveNode(activeNodeID);
+        this.setActiveNode(activeNodeID);
       } else {
-        return this.trigger("mergeDifferentTrees");
+        this.trigger("mergeDifferentTrees");
       }
     }
   }

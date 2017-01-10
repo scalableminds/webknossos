@@ -136,27 +136,30 @@ class SceneController {
       for (mesh of this.volumeMeshes) {
         mesh.visible = false;
       }
-      return constants.ALL_PLANES.map(i =>
-        i === id ?
-          (this.planes[i].setOriginalCrosshairColor(),
-          this.planes[i].setVisible(true),
-          pos = this.flycam.getPosition().slice(),
-          ind = Dimensions.getIndices(i),
+      for (const i of constants.ALL_PLANES) {
+        if (i === id) {
+          this.planes[i].setOriginalCrosshairColor();
+          this.planes[i].setVisible(true);
+          pos = this.flycam.getPosition().slice();
+          ind = Dimensions.getIndices(i);
           // Offset the plane so the user can see the skeletonTracing behind the plane
-          pos[ind[2]] += i === constants.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]],
-          this.planes[i].setPosition(new THREE.Vector3(...pos)))
-        :
-          this.planes[i].setVisible(false));
+          pos[ind[2]] += i === constants.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
+          this.planes[i].setPosition(new THREE.Vector3(...pos));
+        } else {
+          this.planes[i].setVisible(false);
+        }
+      }
     } else {
       for (mesh of this.volumeMeshes) {
         mesh.visible = true;
       }
-      return constants.ALL_PLANES.map(i =>
-        (pos = this.flycam.getPosition(),
-        this.planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2])),
-        this.planes[i].setGrayCrosshairColor(),
-        this.planes[i].setVisible(true),
-        this.planes[i].plane.visible = this.displayPlane[i]));
+      for (const i of constants.ALL_PLANES) {
+        pos = this.flycam.getPosition();
+        this.planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
+        this.planes[i].setGrayCrosshairColor();
+        this.planes[i].setVisible(true);
+        this.planes[i].plane.visible = this.displayPlane[i];
+      }
     }
   }
 
@@ -165,15 +168,15 @@ class SceneController {
     const gPos = this.flycam.getPosition();
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = this.flycam.getPlaneScalingFactor();
-    return constants.ALL_PLANES.map(i =>
-
-      (this.planes[i].updateTexture(),
+    for (const i of constants.ALL_PLANES) {
+      this.planes[i].updateTexture();
 
       // Update plane position
-      this.planes[i].setPosition(globalPosVec),
+      this.planes[i].setPosition(globalPosVec);
 
       // Update plane scale
-      this.planes[i].setScale(planeScale)));
+      this.planes[i].setScale(planeScale);
+    }
   }
 
 

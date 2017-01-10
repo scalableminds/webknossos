@@ -12,7 +12,7 @@ class TaskTypeItemView extends Marionette.View {
 <td>
   <% _.each(settings.allowedModes, function (mode) { %>
   <% var modename = mode[0].toUpperCase() + mode.slice(1); %>
-  <% if(mode == settings.preferredMode) { %>
+  <% if(mode == settings.preferredMode) { %>
     <span class="label label-primary" title="default mode"><%= modename %></span><br />
   <% } else { %>
     <span class="label label-default" ><%= modename %></span><br />
@@ -64,7 +64,7 @@ class TaskTypeItemView extends Marionette.View {
     evt.preventDefault();
 
     if (window.confirm("Do you really want to delete this task type?")) {
-      return this.model.destroy().then(response => Toast.message(response.messages),
+      this.model.destroy().then(response => Toast.message(response.messages),
       );
     }
   }

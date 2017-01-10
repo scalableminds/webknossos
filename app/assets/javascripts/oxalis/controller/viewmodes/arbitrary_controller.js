@@ -94,7 +94,7 @@ class ArbitraryController {
   }
 
 
-  render(forceUpdate) {
+  render() {
     const matrix = this.cam.getMatrix();
     return this.model.getColorBinaries().map(binary =>
       binary.arbitraryPing(matrix, this.model.datasetConfiguration.get("quality")));
@@ -310,8 +310,8 @@ class ArbitraryController {
 
 
   scroll(delta, type) {
-    switch (type) {
-      case "shift": return this.setParticleSize(Utils.clamp(-1, delta, 1));
+    if (type === "shift") {
+      this.setParticleSize(Utils.clamp(-1, delta, 1));
     }
   }
 
@@ -359,7 +359,7 @@ class ArbitraryController {
   setClippingDistance(value) {
     if (this.isBranchpointvideoMode()) {
       return this.arbitraryView.setClippingDistance(constants.BRANCHPOINT_VIDEO_CLIPPING_DISTANCE);
-    } else
+    }
     return this.arbitraryView.setClippingDistance(value);
   }
 
@@ -377,11 +377,9 @@ class ArbitraryController {
       if (id === 1) {
         this.cam.yaw(Math.PI);
         Toast.warning("Reached initial node, view reversed");
-        return this.model.commentTabView.appendComment("reversed");
+        this.model.commentTabView.appendComment("reversed");
       }
-    },
-    ),
-    );
+    }));
   }
 
 
@@ -399,13 +397,13 @@ class ArbitraryController {
         { x: curPos[0], y: curPos[1], z: curPos[2], rx: curRotation[0], ry: curRotation[1], rz: curRotation[2], cam: this.cam });
       waypointAnimation.to(
         { x: newPos[0], y: newPos[1], z: newPos[2], rx: newRotation[0], ry: newRotation[1], rz: newRotation[2] }, this.TIMETOCENTER);
-      waypointAnimation.onUpdate(function () {
+      waypointAnimation.onUpdate(() => {
         this.cam.setPosition([this.x, this.y, this.z]);
         return this.cam.setRotation([this.rx, this.ry, this.rz]);
       });
       waypointAnimation.start();
 
-      return this.cam.update();
+      this.cam.update();
     }
   }
 

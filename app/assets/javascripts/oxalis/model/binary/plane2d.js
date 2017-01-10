@@ -98,7 +98,6 @@ class Plane2D {
     });
 
     this.cube.on("volumeLabeled", () => this.reset());
-    this.cube.on("mappingChanged", () => this.reset());
   }
 
 

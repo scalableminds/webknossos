@@ -17,6 +17,7 @@ const Dimensions = {
       case constants.PLANE_XY: return [0, 1, 2];  // of each plane. For example, moving along the
       case constants.PLANE_YZ: return [2, 1, 0];  // X-Axis of the YZ-Plane is equivalent to moving
       case constants.PLANE_XZ: return [0, 2, 1];  // along the Z axis in the cube -> ind[0]=2
+      default: throw new Error(`Unrecognized plane ID: ${planeID}`);
     }
   },
 
@@ -36,6 +37,7 @@ const Dimensions = {
       case 2: return this.PLANE_XY;
       case 0: return this.PLANE_YZ;
       case 1: return this.PLANE_XZ;
+      default: throw new Error(`Unrecognized dimension: ${dim}`);
     }
   },
 
@@ -47,6 +49,7 @@ const Dimensions = {
       case this.PLANE_XY: return 2;
       case this.PLANE_YZ: return 0;
       case this.PLANE_XZ: return 1;
+      default: throw new Error(`Unrecognized plane ID: ${planeID}`);
     }
   },
 

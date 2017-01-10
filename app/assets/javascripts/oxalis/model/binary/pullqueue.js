@@ -78,11 +78,12 @@ class PullQueue {
         this.connectionInfo.log(this.layer.name, roundTripBeginTime, batch.length, responseBuffer.length);
 
         let offset = 0;
-        return batch.map(bucket =>
-          (bucketData = responseBuffer.subarray(offset, offset += this.cube.BUCKET_LENGTH),
-          this.cube.boundingBox.removeOutsideArea(bucket, bucketData),
-          this.maybeWhitenEmptyBucket(bucketData),
-          this.cube.getBucket(bucket).receiveData(bucketData)));
+        for (const bucket of batch) {
+          bucketData = responseBuffer.subarray(offset, offset += this.cube.BUCKET_LENGTH);
+          this.cube.boundingBox.removeOutsideArea(bucket, bucketData);
+          this.maybeWhitenEmptyBucket(bucketData);
+          this.cube.getBucket(bucket).receiveData(bucketData);
+        }
       },
       ).catch((error) => {
         for (const bucketAddress of batch) {
@@ -93,12 +94,12 @@ class PullQueue {
           }
         }
 
-        return console.error(error);
+        console.error(error);
       },
       ),
       () => {
         this.batchCount--;
-        return this.pull();
+        this.pull();
       },
     );
   }

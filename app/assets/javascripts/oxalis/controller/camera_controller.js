@@ -278,7 +278,7 @@ class CameraController {
 
   bindToEvents() {
     this.listenTo(this.model.user, "change:clippingDistance", function (model, value) { return this.setClippingDistance(value); });
-    this.listenTo(this.model.user, "change:zoom", function (model) { return this.updateCamViewport(); });
+    this.listenTo(this.model.user, "change:zoom", function () { return this.updateCamViewport(); });
   }
 }
 CameraController.initClass();

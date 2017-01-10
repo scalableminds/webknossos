@@ -105,7 +105,7 @@ class TeamRoleModalView extends ModalView {
             return {
               team: $(element).val(),
               role: {
-                name: this.$(`select[data-teamname=\"${teamName}\"] :selected`).val(),
+                name: this.$(`select[data-teamname="${teamName}"] :selected`).val(),
               },
             };
           },
@@ -143,8 +143,8 @@ class TeamRoleModalView extends ModalView {
     let isValid = true;
 
     // Make sure that all selected checkboxes have a selected role
-    this.$("input[type=checkbox]:checked").parent().parent().find("select :selected").each(
-      (i, element) => isValid = $(element).text() !== "Modify roles...");
+    this.$("input[type=checkbox]:checked").parent().parent().find("select :selected")
+      .each((i, element) => { isValid &= $(element).text() !== "Modify roles..."; });
 
     return isValid;
   }

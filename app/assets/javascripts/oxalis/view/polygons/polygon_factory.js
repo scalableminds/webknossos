@@ -146,16 +146,18 @@ class PolygonFactory {
 
 
   addNewTriangles(triangleList, cubeIndex, [x, y, z]) {
-    let vertices;
-    return tlt[cubeIndex].map(triangle =>
-        (vertices = [],
+    for (const triangle of Array.from(tlt[cubeIndex])) {
+      const vertices = [];
 
-        triangle.map(vertex =>
-          vertices.push([(vertex[0] * this.voxelsToSkip) + x,
-            (vertex[1] * this.voxelsToSkip) + y,
-            (vertex[2] * this.voxelsToSkip) + z])),
+      for (const vertex of Array.from(triangle)) {
+        vertices.push([
+          (vertex[0] * this.voxelsToSkip) + x,
+          (vertex[1] * this.voxelsToSkip) + y,
+          (vertex[2] * this.voxelsToSkip) + z]);
+      }
 
-        triangleList.push(vertices)));
+      triangleList.push(vertices);
+    }
   }
 }
 

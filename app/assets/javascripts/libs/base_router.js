@@ -34,10 +34,9 @@ class BaseRouter {
   setupClickHandler() {
     // handle all links and manage page changes (rather the reloading the whole site)
     return $(document).on("click", "a", (evt) => {
-      let newWindow;
       const url = $(evt.currentTarget).attr("href") || "";
-
-      if (newWindow = $(evt.target).data("newwindow")) {
+      const newWindow = $(evt.target).data("newwindow");
+      if (newWindow) {
         const [width, height] = newWindow.split("x");
         window.open(url, "_blank", `width=${width},height=${height},location=no,menubar=no`);
         evt.preventDefault();
@@ -95,7 +94,7 @@ class BaseRouter {
   handleRoute() {
     const baseUrl = this.getBaseUrl();
 
-    for (let { route, handler } of this.routes) {
+    for (const { route, handler } of this.routes) {
       const match = baseUrl.match(route);
       if (match) {
         const args = Backbone.Router.prototype._extractParameters(route, baseUrl);
@@ -119,7 +118,7 @@ class BaseRouter {
 
 
   navigate(path, param = {}) {
-    let { trigger = true } = param;
+    const { trigger = true } = param;
     if (!this.shouldNavigate(path)) {
       // Do nothing
       return;

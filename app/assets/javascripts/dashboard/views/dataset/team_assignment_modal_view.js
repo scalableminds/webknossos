@@ -58,6 +58,7 @@ class TeamAssignmentModalView extends ModalView {
 
   submitTeams() {
     const $checkboxes = this.$("input:checked");
+    // eslint-disable-next-line newline-per-chained-call
     const allowedTeams = _.map($checkboxes, checkbox => $(checkbox).parent().parent().text().trim());
 
     this.dataset.set("allowedTeams", allowedTeams);

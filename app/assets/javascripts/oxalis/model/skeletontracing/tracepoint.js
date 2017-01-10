@@ -69,7 +69,7 @@ class TracePoint {
     // to false for all nodes
     this.parent = parent;
     if (this.seen) {
-      throw "CyclicTree";
+      throw new Error("CyclicTree");
     }
     this.seen = true;
 
@@ -78,7 +78,7 @@ class TracePoint {
       this.children = [];
     }
     if (!_.isArray(this.children)) {
-      return this.children = [this.children];
+      this.children = [this.children];
     }
   }
 

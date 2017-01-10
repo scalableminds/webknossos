@@ -122,7 +122,7 @@ class PlaneController {
   getPlaneMouseControls(planeId) {
     return {
 
-      leftDownMove: (delta) => this.move([
+      leftDownMove: delta => this.move([
         (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
         (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
         0,
@@ -324,9 +324,9 @@ class PlaneController {
   }
 
 
-  moveX(x) { return this.move([x, 0, 0]); }
+  moveX(x) { this.move([x, 0, 0]); }
 
-  moveY(y) { return this.move([0, y, 0]); }
+  moveY(y) { this.move([0, y, 0]); }
 
   moveZ(z, oneSlide) {
     if (this.activeViewport === constants.TDView) {
@@ -334,13 +334,13 @@ class PlaneController {
     }
 
     if (oneSlide) {
-      return this.flycam.move(
+      this.flycam.move(
         Dimensions.transDim(
           [0, 0, (z < 0 ? -1 : 1) << this.flycam.getIntegerZoomStep()],
           this.activeViewport),
         this.activeViewport);
     } else {
-      return this.move([0, 0, z], false);
+      this.move([0, 0, z], false);
     }
   }
 
@@ -363,7 +363,7 @@ class PlaneController {
     this.model.user.set("zoom", this.flycam.getPlaneScalingFactor());
 
     if (zoomToMouse) {
-      return this.finishZoom();
+      this.finishZoom();
     }
   }
 
@@ -392,7 +392,7 @@ class PlaneController {
       const moveVector = [this.zoomPos[0] - mousePos[0],
         this.zoomPos[1] - mousePos[1],
         this.zoomPos[2] - mousePos[2]];
-      return this.flycam.move(moveVector, this.activeViewport);
+      this.flycam.move(moveVector, this.activeViewport);
     }
   }
 
@@ -427,9 +427,13 @@ class PlaneController {
 
   scrollPlanes(delta, type) {
     switch (type) {
-      case null: return this.moveZ(delta, true);
+      case null:
+        this.moveZ(delta, true);
+        break;
       case "alt":
-        return this.zoomPlanes(Utils.clamp(-1, delta, 1), true);
+        this.zoomPlanes(Utils.clamp(-1, delta, 1), true);
+        break;
+      default: // ignore other cases
     }
   }
 
@@ -456,6 +460,7 @@ class PlaneController {
           curGlobalPos[1],
           curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[2] * zoomFactor)];
         break;
+      default: throw new Error("Trying to calculate the global position, but no viewport is active:", this.activeViewport);
     }
 
     return position;

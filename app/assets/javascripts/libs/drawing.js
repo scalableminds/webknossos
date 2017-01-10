@@ -50,7 +50,7 @@ const Drawing = {
 
     let err = dy2 - d;
 
-    for (const i of __range__(0, d, false)) {
+    for (let i = 0; i < d; i++) {
       if (err > 0) {
         y += incY;
         err -= dx2;

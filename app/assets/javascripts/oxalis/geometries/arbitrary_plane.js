@@ -49,15 +49,15 @@ class ArbitraryPlane {
 
     this.mesh = this.createMesh();
 
-    this.listenTo(this.cam, "changed", function () { return this.isDirty = true; });
-    this.listenTo(this.model.flycam, "positionChanged", function () { return this.isDirty = true; });
+    this.listenTo(this.cam, "changed", function () { this.isDirty = true; });
+    this.listenTo(this.model.flycam, "positionChanged", function () { this.isDirty = true; });
 
     for (const name in this.model.binary) {
       const binary = this.model.binary[name];
       binary.cube.on("bucketLoaded", () => this.isDirty = true);
     }
 
-    if ((Math.log(this.width) / Math.LN2) % 1 === 1) { throw "width needs to be a power of 2"; }
+    if ((Math.log(this.width) / Math.LN2) % 1 === 1) { throw new Error("width needs to be a power of 2"); }
   }
 
 
@@ -66,6 +66,7 @@ class ArbitraryPlane {
       switch (mode) {
         case constants.MODE_ARBITRARY: return this.calculateSphereVertices();
         case constants.MODE_ARBITRARY_PLANE: return this.calculatePlaneVertices();
+        default: throw new Error("Unrecognized mode:", mode);
       }
     })();
 

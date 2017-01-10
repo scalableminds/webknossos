@@ -6,12 +6,12 @@ import $ from "jquery";
 // returned deferred.
 class WrappedDispatchedWorker {
 
-  constructor(workerClass) {
-    this.worker = new workerClass();
+  constructor(WorkerClass) {
+    this.worker = new WorkerClass();
 
     this.worker.addEventListener("message", ({ data: packet }) => {
       if (packet.type === "log") {
-        return console.log(new Date(packet.time).toISOString(), ...packet.args);
+        console.log(new Date(packet.time).toISOString(), ...packet.args);
       }
     },
     );
@@ -29,15 +29,15 @@ class WrappedDispatchedWorker {
     const workerMessageCallback = ({ data: packet }) => {
       if (packet.workerHandle === workerHandle) {
         if (packet.type === "progress") {
-          return deferred.notify(packet.payload);
+          deferred.notify(packet.payload);
         } else {
           this.worker.removeEventListener("message", workerMessageCallback, false);
 
           if (packet.type === "success") {
-            return deferred.resolve(packet.payload);
+            deferred.resolve(packet.payload);
           } else {
             deferred.reject(packet.payload);
-            return console.log("reject", packet);
+            console.log("reject", packet);
           }
         }
       }

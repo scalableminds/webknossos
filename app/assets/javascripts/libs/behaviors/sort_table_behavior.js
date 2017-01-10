@@ -61,9 +61,7 @@ class SortTableBehavior extends Marionette.Behavior {
   onClick(evt) {
     const $elem = _.includes(evt.target.className, "sort-icon") ? $(evt.target).closest("th") : $(evt.target);
     const elemData = $elem.data();
-    if (!("sort" in elemData)) {
-
-    } else {
+    if ("sort" in elemData) {
       return this.sortTable($elem, elemData.sort);
     }
   }

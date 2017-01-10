@@ -211,6 +211,7 @@ buffer[j] = trilinearOutput;\
   { imports: { trilinearMacro, subPointMacro } },
 );
 const InterpolationCollector = {
+  // eslint-disable-next-line no-new-func
   bulkCollect: new Function(
     "vertices", "buckets",
     _.template(

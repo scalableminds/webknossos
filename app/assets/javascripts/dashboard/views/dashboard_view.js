@@ -66,7 +66,7 @@ class DashboardView extends Marionette.View {
       this.listenTo(this, "render", this.showDatasets);
     }
 
-    return this.viewCache = {
+    this.viewCache = {
       datasetSwitchView: null,
       taskListView: null,
       explorativeTracingListView: null,
@@ -95,10 +95,10 @@ class DashboardView extends Marionette.View {
   }
 
 
-  showTab(viewName, viewClass) {
-    let view;
-    if (!(view = this.viewCache[viewName])) {
-      view = this.viewCache[viewName] = new viewClass(this.options);
+  showTab(viewName, ViewClass) {
+    let view = this.viewCache[viewName];
+    if (!view) {
+      view = this.viewCache[viewName] = new ViewClass(this.options);
     }
     return this.showChildView("tabPane", view, { preventDestroy: true });
   }

@@ -339,7 +339,7 @@ class AbstractTreeRenderer {
 
     let radius = this.NODE_RADIUS;
     if (id === this.activeNodeId) {
-      radius = 2 * radius;
+      radius *= 2;
     }
 
     this.ctx.arc(x, y, radius, 0, 2 * Math.PI);

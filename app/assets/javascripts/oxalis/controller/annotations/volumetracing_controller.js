@@ -30,7 +30,7 @@ class VolumeTracingController {
     );
 
     // Keyboard shortcuts
-    new Input.KeyboardNoLoop({
+    this.keyboardNoLoop = new Input.KeyboardNoLoop({
       w: () => this.model.volumeTracing.toggleMode(),
       1: () => this.model.volumeTracing.toggleMode(),
     });
@@ -45,7 +45,7 @@ class VolumeTracingController {
       $("#merge").css({
         visibility: isMergeVisible() ? "hidden" : "visible" });
       if (isMergeVisible()) {
-        return $("#merge-cell1").focus();
+        $("#merge-cell1").focus();
       }
     });
 
@@ -58,7 +58,7 @@ class VolumeTracingController {
       ((input) => {
         $(input).on("focus", () => {
           this.mergeMode = inputModeMapping[input];
-          return console.log(this.mergeMode);
+          console.log(this.mergeMode);
         },
         );
         return $(input).keypress((event) => {
@@ -77,9 +77,10 @@ class VolumeTracingController {
     $("#merge").css({ visibility: "hidden" });
     console.log("Merge:", $("#merge-cell1").val(), $("#merge-cell2").val());
 
-    return inputs.map(input =>
-      (input.blur(),
-      input.val("")));
+    for (const input of inputs) {
+      input.blur();
+      input.val("");
+    }
   }
 
 

@@ -7,8 +7,8 @@ import _ from "lodash";
 // using the returned deferred.
 class DispatchedWorker {
 
-  constructor(workerClass) {
-    this.worker = new workerClass();
+  constructor(WorkerClass) {
+    this.worker = new WorkerClass();
 
     this.worker.onerror = err => __guard__(console, x => x.error(err));
   }
@@ -54,20 +54,20 @@ DispatchedWorker.Pool = class Pool {
 
 
   send(data) {
-    let worker;
+    let freeWorker;
     for (const worker of this.workers) {
       if (!worker.busy) {
-        worker = worker;
+        freeWorker = worker;
         break;
       }
     }
 
-    if (!worker && this.workers.length < this.workerLimit) {
-      worker = this.spawnWorker();
+    if (!freeWorker && this.workers.length < this.workerLimit) {
+      freeWorker = this.spawnWorker();
     }
 
-    if (worker) {
-      return worker.send(data);
+    if (freeWorker) {
+      return freeWorker.send(data);
     } else {
       return this.queuePush(data);
     }
@@ -102,7 +102,7 @@ DispatchedWorker.Pool = class Pool {
     if (this.queue.length > 0 && !worker.busy) {
       const { data, deferred } = this.queue.shift();
       return worker.send(data)
-        .done(data => deferred.resolve(data))
+        .done(response => deferred.resolve(response))
         .fail(err => deferred.reject(err));
     }
   }

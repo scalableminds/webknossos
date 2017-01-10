@@ -28,7 +28,7 @@ class UserListView extends Marionette.CompositeView {
   </thead>
   <tbody></tbody>
 </table>
-  
+
 <div class="navbar navbar-default navbar-fixed-bottom">
   <div class="navbar-form">
     <div class="btn-group">
@@ -87,22 +87,22 @@ class UserListView extends Marionette.CompositeView {
   }
 
 
-  showModal(modalView) {
+  showModal(ModalView) {
     if (this.$("tbody input[type=checkbox]:checked").length > 0) {
-      modalView = new modalView({ userCollection: this.collection });
+      const modalView = new ModalView({ userCollection: this.collection });
       modalView.render();
       this.ui.modalWrapper.html(modalView.el);
 
       modalView.$el.modal("show");
-      return this.modalView = modalView;
+      this.modalView = modalView;
     } else {
-      return Toast.error("No user is selected.");
+      Toast.error("No user is selected.");
     }
   }
 
 
   onDestroy() {
-    return __guard__(this.modalView, x => x.destroy());
+    __guard__(this.modalView, x => x.destroy());
   }
 }
 UserListView.initClass();

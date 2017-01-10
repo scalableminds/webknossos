@@ -28,7 +28,7 @@ class LoggedTimeView extends Marionette.View {
 
 
   initialize(options) {
-    this.options = options
+    this.options = options;
     this.collection = new LoggedTimeCollection([], { userID: this.options.userID });
     this.listenTo(this.collection, "sync", this.render);
     return this.collection.fetch();
@@ -38,7 +38,7 @@ class LoggedTimeView extends Marionette.View {
   onRender() {
     if (this.collection.length > 0) {
       this.showChildView("timeTable", new LoggedTimeListView({ collection: this.collection }));
-      return _.defer(() => this.addGraph());
+      _.defer(() => this.addGraph());
     }
   }
 

@@ -99,6 +99,7 @@ class TaskQueryView extends Marionette.View {
         // This is an eval hack in order to allow JSON without quoted keys.
         // JS is only executed locally so it doesn't yield more power than the
         // browser console.
+        // eslint-disable-next-line no-eval
         queryObject = eval(`(function() { return eval(${queryString}); })()`);
       } catch (e) {
         Toast.error("The task query couldn't be parsed. Ensure that the query is valid JSON.");

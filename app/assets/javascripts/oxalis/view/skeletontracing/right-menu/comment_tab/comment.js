@@ -10,13 +10,13 @@ class Comment extends Component {
     this.handleClick = this.handleClick.bind(this);
   }
 
-
-  handleClick() {
-    this.props.onNewActiveNode(this.props.data, this.props.treeId);
-  }
-
   componentDidUpdate() {
     this.ensureVisible();
+  }
+
+  handleClick(evt) {
+    evt.preventDefault();
+    this.props.onNewActiveNode(this.props.data, this.props.treeId);
   }
 
   ensureVisible() {
@@ -36,7 +36,7 @@ class Comment extends Component {
     return (
       <li className={liClassName} id={`comment-tab-node-${data.node}`} ref={(ref) => { this.comment = ref; }}>
         <i className={iClassName} />
-        <a href="#" onClick={this.handleClick}>
+        <a href="#jump-to-comment" onClick={this.handleClick}>
           {`${data.node} - ${data.content}`}
         </a>
       </li>

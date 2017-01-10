@@ -53,6 +53,7 @@ class ResizableBuffer {
   pushMany(elements) {
     this.ensureCapacity(this.length + (elements.length * this.elementLength));
 
+    // eslint-disable-next-line prefer-const
     let { buffer, elementLength, length } = this;
 
     for (const element of elements) {
@@ -79,6 +80,7 @@ class ResizableBuffer {
     if (r == null) { r = new Array(this.elementLength); }
     if (!this.length) { return; }
 
+    // eslint-disable-next-line prefer-const
     let { buffer, elementLength, length } = this;
 
     for (let i = elementLength - 1; i >= 0; i--) {
@@ -95,7 +97,7 @@ class ResizableBuffer {
     if (r == null) { r = new Array(this.elementLength); }
     if (!this.length) { return; }
 
-    // eslint-disable-next-line no-unused-vars
+    // eslint-disable-next-line no-unused-vars, prefer-const
     let { buffer, elementLength, length } = this;
 
     for (let i = elementLength - 1; i >= 0; i--) {
@@ -120,7 +122,7 @@ class ResizableBuffer {
 
       newBuffer.set(buffer);
 
-      return this.buffer = newBuffer;
+      this.buffer = newBuffer;
     }
   }
 

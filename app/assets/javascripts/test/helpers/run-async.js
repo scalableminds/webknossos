@@ -3,8 +3,8 @@ export default function runAsync(functions, waitTimeMs = 100) {
   // each of them. The functions can either return synchronous or return a
   // promise.
 
-  return new Promise((resolve, reject) => {
-    if (functions.length == 0) {
+  return new Promise((resolve) => {
+    if (functions.length === 0) {
       resolve();
       return;
     }

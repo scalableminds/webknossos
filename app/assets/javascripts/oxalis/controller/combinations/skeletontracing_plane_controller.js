@@ -95,7 +95,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     super.scrollPlanes(delta, type);
 
     if (type === "shift") {
-      return this.skeletonTracingController.setRadius(delta);
+      this.skeletonTracingController.setRadius(delta);
     }
   }
 
@@ -121,40 +121,34 @@ class SkeletonTracingPlaneController extends PlaneController {
     // identify clicked object
     const intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());
 
-    return (() => {
-      const result = [];
-      for (const intersect of intersects) {
-        let item;
-        const { index } = intersect;
-        const { geometry } = intersect.object;
+    for (const intersect of intersects) {
+      const { index } = intersect;
+      const { geometry } = intersect.object;
 
-        // Raycaster also intersects with vertices that have an
-        // index larger than numItems
-        if (geometry.nodeIDs.getLength() <= index) {
-          continue;
-        }
-
-        const nodeID = geometry.nodeIDs.getAllElements()[index];
-
-        const posArray = geometry.attributes.position.array;
-        const intersectsCoord = [posArray[3 * index], posArray[(3 * index) + 1], posArray[(3 * index) + 2]];
-        const globalPos = this.model.flycam.getPosition();
-
-        // make sure you can't click nodes, that are clipped away (one can't see)
-        const ind = dimensions.getIndices(plane);
-        if (intersect.object.visible &&
-          (plane === constants.TDView ||
-            (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
-          // set the active Node to the one that has the ID stored in the vertex
-          // center the node if click was in 3d-view
-          const centered = plane === constants.TDView;
-          this.skeletonTracingController.setActiveNode(nodeID, shiftPressed && altPressed, centered);
-          break;
-        }
-        result.push(item);
+      // Raycaster also intersects with vertices that have an
+      // index larger than numItems
+      if (geometry.nodeIDs.getLength() <= index) {
+        continue;
       }
-      return result;
-    })();
+
+      const nodeID = geometry.nodeIDs.getAllElements()[index];
+
+      const posArray = geometry.attributes.position.array;
+      const intersectsCoord = [posArray[3 * index], posArray[(3 * index) + 1], posArray[(3 * index) + 2]];
+      const globalPos = this.model.flycam.getPosition();
+
+      // make sure you can't click nodes, that are clipped away (one can't see)
+      const ind = dimensions.getIndices(plane);
+      if (intersect.object.visible &&
+        (plane === constants.TDView ||
+          (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
+        // set the active Node to the one that has the ID stored in the vertex
+        // center the node if click was in 3d-view
+        const centered = plane === constants.TDView;
+        this.skeletonTracingController.setActiveNode(nodeID, shiftPressed && altPressed, centered);
+        break;
+      }
+    }
   }
 
 
@@ -175,7 +169,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     // Strg + Rightclick to set new not active branchpoint
     if (ctrlPressed && !this.model.user.get("newNodeNewTree")) {
       this.model.skeletonTracing.pushBranch();
-      return this.skeletonTracingController.setActiveNode(activeNode.id);
+      this.skeletonTracingController.setActiveNode(activeNode.id);
     }
   }
 
@@ -201,7 +195,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     );
 
     if (centered) {
-      return this.centerPositionAnimated(this.model.skeletonTracing.getActiveNodePos());
+      this.centerPositionAnimated(this.model.skeletonTracing.getActiveNodePos());
     }
   }
 
@@ -225,9 +219,9 @@ class SkeletonTracingPlaneController extends PlaneController {
       globalPosZ: position[2],
     }, 200)
     .onUpdate(function () {
-      position = [this.globalPosX, this.globalPosY, this.globalPosZ];
-      position[this.dimensionToSkip] = null;
-      return this.flycam.setPosition(position);
+      const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
+      curPos[this.dimensionToSkip] = null;
+      this.flycam.setPosition(curPos);
     })
     .start();
   }

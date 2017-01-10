@@ -19,7 +19,7 @@ const Modal = {
     </div>`;
 
     html += "<div class=\"modal-footer\">";
-    for (var button of buttons) {
+    for (const button of buttons) {
       html += `<a href="#" id="${button.id}" class="btn btn-default">${
                     button.label}</a>`;
     }
@@ -27,7 +27,7 @@ const Modal = {
 
     $("#modal").html(html);
 
-    for (button of buttons) {
+    for (const button of buttons) {
       this.callbacks[button.id] = button.callback;
 
       $(`#${button.id}`).on("click", (evt) => {

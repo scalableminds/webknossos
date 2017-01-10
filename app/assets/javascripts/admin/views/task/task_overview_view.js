@@ -431,17 +431,15 @@ class TaskOverviewView extends Marionette.View {
   buildNodes(taskTypes, projects) {
     let nodes = [];
 
-    nodes = nodes.concat(_.compact(this.users.map((user) => {
-      if (this.doDrawUser(user)) {
-        return {
-          id: user.id,
-          text: `${user.firstName} ${user.lastName}`,
-          color: this.color((user.workingHours - this.chosenMinHours) / (this.chosenMaxHours - this.chosenMinHours)),
-          type: "user",
-        };
-      }
+    nodes = nodes.concat(this.users.filter(user => this.doDrawUser(user)).map((user) => {
+      return {
+        id: user.id,
+        text: `${user.firstName} ${user.lastName}`,
+        color: this.color((user.workingHours - this.chosenMinHours) / (this.chosenMaxHours - this.chosenMinHours)),
+        type: "user",
+      };
     },
-    )));
+    ));
 
     if (this.doDrawTaskTypes()) {
       nodes = nodes.concat(taskTypes.map(taskType =>

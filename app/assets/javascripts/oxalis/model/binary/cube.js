@@ -110,12 +110,6 @@ class Cube {
   }
 
 
-  setMapping(mapping) {
-    this.mapping = mapping;
-    return this.trigger("mappingChanged");
-  }
-
-
   setMappingEnabled(isEnabled) {
     this.currentMapping = isEnabled ? this.mapping : this.EMPTY_MAPPING;
     return this.trigger("newMapping");
@@ -235,7 +229,7 @@ class Cube {
 
   addBucketToGarbageCollection(bucket) {
     if (this.bucketCount >= this.MAXIMUM_BUCKET_COUNT) {
-      for (const i of __range__(0, (2 * this.bucketCount), false)) {
+      for (let i = 0; i < 2 * this.bucketCount; i++) {
         this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
         if (this.buckets[this.bucketIterator].shouldCollect()) { break; }
       }

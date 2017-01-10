@@ -169,16 +169,16 @@ class Skeleton {
       __guard__(treeGeometry, x2 => x2.startNodeHighlightAnimation(activeNode.id));
     }
 
-    return this.lastActiveNode = activeNode;
+    this.lastActiveNode = activeNode;
   }
 
 
   setActiveNodeRadius() {
-    const activeNode = this.model.skeletonTracing.getActiveNode()
+    const activeNode = this.model.skeletonTracing.getActiveNode();
     if (activeNode != null) {
       const treeGeometry = this.getTreeGeometry(activeNode.treeId);
       __guard__(treeGeometry, x => x.updateNodeRadius(activeNode.id, activeNode.radius));
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     }
   }
 

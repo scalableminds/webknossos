@@ -100,6 +100,7 @@ class Model extends Backbone.Model {
         switch (allowedMode) {
           case "flight": allowedModes.push(constants.MODE_ARBITRARY); break;
           case "oblique": allowedModes.push(constants.MODE_ARBITRARY_PLANE); break;
+          default: // ignore other modes for now
         }
       }
 
@@ -172,7 +173,7 @@ class Model extends Backbone.Model {
     const flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"));
     this.set("flycam", flycam);
     this.set("flycam3d", flycam3d);
-    this.listenTo(flycam3d, "changed", (matrix) => flycam.setPosition(matrix.slice(12, 15)));
+    this.listenTo(flycam3d, "changed", matrix => flycam.setPosition(matrix.slice(12, 15)));
     this.listenTo(flycam, { positionChanged(position) { return flycam3d.setPositionSilent(position); } });
 
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
@@ -289,34 +290,19 @@ class Model extends Backbone.Model {
     this.lowerBoundary = [Infinity, Infinity, Infinity];
     this.upperBoundary = [-Infinity, -Infinity, -Infinity];
 
-    return (() => {
-      const result = [];
-      for (const key in this.binary) {
-        const binary = this.binary[key];
-        result.push([0, 1, 2].map(i =>
-          (this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]),
-          this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]))));
+    for (const key in this.binary) {
+      const binary = this.binary[key];
+      for (let i = 0; i <= 2; i++) {
+        this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]);
+        this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]);
       }
-      return result;
-    })();
+    }
   }
 
   // delegate save request to all submodules
   save() {
     const submodels = [];
     const promises = [];
-
-    if (this.user != null) {
-      submodels.push[this.user];
-    }
-
-    if (this.get("dataset") != null) {
-      submodels.push[this.get("dataset")];
-    }
-
-    if (this.get("datasetConfiguration") != null) {
-      submodels.push[this.get("datasetConfiguration")];
-    }
 
     if (this.get("volumeTracing") != null) {
       submodels.push(this.get("volumeTracing").stateLogger);
@@ -342,7 +328,7 @@ class Model extends Backbone.Model {
 
   // Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
   initSettersGetter() {
-    return _.forEach(this.attributes, (value, key, ) => Object.defineProperty(this, key, {
+    return _.forEach(this.attributes, (value, key) => Object.defineProperty(this, key, {
       set(val) {
         return this.set(key, val);
       },

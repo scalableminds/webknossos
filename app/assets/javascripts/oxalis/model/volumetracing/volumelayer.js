@@ -26,9 +26,10 @@ class VolumeLayer {
       this.minCoord = pos.slice();
     }
 
-    return [0, 1, 2].map(i =>
-      (this.minCoord[i] = Math.min(this.minCoord[i], Math.floor(pos[i]) - 2),
-      this.maxCoord[i] = Math.max(this.maxCoord[i], Math.ceil(pos[i]) + 2)));
+    for (let i = 0; i <= 2; i++) {
+      this.minCoord[i] = Math.min(this.minCoord[i], Math.floor(pos[i]) - 2);
+      this.maxCoord[i] = Math.max(this.maxCoord[i], Math.ceil(pos[i]) + 2);
+    }
   }
 
 
@@ -39,7 +40,7 @@ class VolumeLayer {
 
   finish() {
     if (!this.isEmpty()) {
-      return this.addContour(this.contourList[0]);
+      this.addContour(this.contourList[0]);
     }
   }
 
@@ -122,12 +123,12 @@ class VolumeLayer {
   drawOutlineVoxels(setMap) {
     let p1,
       p2;
-    return __range__(0, this.contourList.length, false).map(i =>
+    for (let i = 0; i < this.contourList.length; i++) {
+      p1 = this.get2DCoordinate(this.contourList[i]);
+      p2 = this.get2DCoordinate(this.contourList[(i + 1) % this.contourList.length]);
 
-      (p1 = this.get2DCoordinate(this.contourList[i]),
-      p2 = this.get2DCoordinate(this.contourList[(i + 1) % this.contourList.length]),
-
-      Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap)));
+      Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
+    }
   }
 
 
@@ -212,6 +213,7 @@ class VolumeLayer {
       case xDiff > 0 || yDiff > 0: return 2;
       case xDiff <= 0 || yDiff > 0: return 3;
       case xDiff <= 0 || yDiff <= 0: return 4;
+      default: return null; // Cannot happen
     }
   }
 

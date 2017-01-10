@@ -47,9 +47,9 @@ ansiColor('xterm') {
 
       stage("Publish docker images") {
 
-        sh "docker tag scalableminds/oxalis:${env.BUILD_NUMBER} scalableminds/oxalis:branch-${env.BRANCH_NAME}"
-        sh "docker push scalableminds/oxalis:${env.BUILD_NUMBER}"
-        sh "docker push scalableminds/oxalis:branch-${env.BRANCH_NAME}"
+        sh "docker tag scalableminds/webknossos:${env.BUILD_NUMBER} scalableminds/webknossos:branch-${env.BRANCH_NAME}"
+        sh "docker push scalableminds/webknossos:${env.BUILD_NUMBER}"
+        sh "docker push scalableminds/webknossos:branch-${env.BRANCH_NAME}"
       }
 
 

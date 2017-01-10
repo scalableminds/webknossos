@@ -31,7 +31,9 @@ ansiColor('xterm') {
 
         sh "docker-compose run oxalis-frontend-linting"
         sh "docker-compose run oxalis-frontend-tests"
-        sh "docker-compose run oxalis-e2e-tests"
+        retry(3) {
+          sh "docker-compose run oxalis-e2e-tests"
+        }
       }
 
 
@@ -110,10 +112,26 @@ ansiColor('xterm') {
 }
 
 
-
+@NonCPS
+def retry(count, cl) {
+  def i = count
+  waitUntil {
+    try {
+      cl()
+      true
+    } catch (err) {
+      i = i - 1
+      if (i <= 0) {
+        throw err
+      } else {
+        false
+      }
+    }
+  }
+}
 
 @NonCPS
-formatChangeSets(changeSets) {
+def formatChangeSets(changeSets) {
   if (changeSets.isEmpty()) {
       return ""
   }
@@ -130,7 +148,7 @@ formatChangeSets(changeSets) {
 }
 
 @NonCPS
-formatDuration(duration) {
+def formatDuration(duration) {
   def sec_num = (duration / 1000).intValue()
   def hours = (sec_num / 3600).intValue()
   def minutes = ((sec_num - (hours * 3600)) / 60).intValue()

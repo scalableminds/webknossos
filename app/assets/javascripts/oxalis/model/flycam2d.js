@@ -46,10 +46,10 @@ class Flycam2d {
 
     // Fire changed event every time
     const trigger = this.trigger;
-    this.trigger = function () {
-      trigger.apply(this, arguments);
+    this.trigger = (...args) => {
+      trigger(...args);
       return trigger.call(this, "changed");
-    }.bind(this);
+    };
   }
 
 

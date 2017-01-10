@@ -315,13 +315,13 @@ class Model extends Backbone.Model {
     _.each(submodels, model => promises.push(model.save()));
 
     return Promise.all(promises).then(
-      function () {
+      (...args) => {
         Toast.success("Saved!");
-        return Promise.resolve(arguments);
+        return Promise.resolve(...args);
       },
-      function () {
+      (...args) => {
         Toast.error("Couldn't save. Please try again.");
-        return Promise.reject(arguments);
+        return Promise.reject(...args);
       });
   }
 

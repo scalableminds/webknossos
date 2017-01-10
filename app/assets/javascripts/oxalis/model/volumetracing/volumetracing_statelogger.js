@@ -10,19 +10,19 @@ class VolumeTracingStateLogger extends StateLogger {
   }
 
 
-  pushDiff(action, value, push = true) {
+  pushDiff(action, value, push = true, ...args) {
     this.pushQueue.pushImpl();
-    super.pushDiff(...arguments);
+    super.pushDiff(action, value, push, ...args);
 
     if (push) {
-      return this.pushImpl();
+      this.pushImpl();
     }
   }
 
 
-  pushNow() {
+  pushNow(...args) {
     const pushQueuePromise = this.pushQueue.pushImpl();
-    const stateLoggerPromise = super.pushNow(...arguments);
+    const stateLoggerPromise = super.pushNow(...args);
     return Promise.all([pushQueuePromise, stateLoggerPromise]);
   }
 

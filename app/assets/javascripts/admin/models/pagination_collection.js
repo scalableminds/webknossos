@@ -57,28 +57,28 @@ class PaginationCollection {
   }
 
 
-  add() {
-    return this.fullCollection.add.apply(this.fullCollection, arguments);
+  add(...args) {
+    return this.fullCollection.add(...args);
   }
 
-  remove() {
-    return this.fullCollection.remove.apply(this.fullCollection, arguments);
+  remove(...args) {
+    return this.fullCollection.remove(...args);
   }
 
-  set() {
-    return this.fullCollection.set.apply(this.fullCollection, arguments);
+  set(...args) {
+    return this.fullCollection.set(...args);
   }
 
-  fetch() {
-    return this.fullCollection.fetch.apply(this.fullCollection, arguments);
+  fetch(...args) {
+    return this.fullCollection.fetch(...args);
   }
 
-  create() {
-    return this.fullCollection.create.apply(this.fullCollection, arguments);
+  create(...args) {
+    return this.fullCollection.create(...args);
   }
 
-  reset() {
-    return this.fullCollection.reset.apply(this.fullCollection, arguments);
+  reset(...args) {
+    return this.fullCollection.reset(...args);
   }
 
 
@@ -265,8 +265,8 @@ class PaginationCollection {
   }
 
 
-  findWhere() {
-    return this.fullCollection.findWhere.apply(this.fullCollection, arguments);
+  findWhere(...args) {
+    return this.fullCollection.findWhere(...args);
   }
 }
 

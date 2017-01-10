@@ -8,8 +8,8 @@ import MultipartData from "../../../../libs/multipart_data";
 class WkLayer extends Layer {
 
 
-  constructor() {
-    super(...arguments);
+  constructor(...args) {
+    super(...args);
 
     if (this.dataStoreInfo.typ !== "webknossos-store") {
       throw new Error("WkLayer should only be instantiated with webknossos-store");

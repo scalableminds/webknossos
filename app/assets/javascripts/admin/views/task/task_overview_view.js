@@ -475,7 +475,7 @@ class TaskOverviewView extends Marionette.View {
       edges = edges.concat(_.flatten(selectedUserInfos.map((userInfo) => {
         user = userInfo.get("user");
         const taskTypes = userInfo.get("taskTypes");
-        if (this.doDrawUser(user)) { return taskTypes.map(taskType => this.edge(user.id, taskType._id.$oid, nodes)); }
+        return taskTypes.map(taskType => this.edge(user.id, taskType._id.$oid, nodes));
       },
       )));
 
@@ -484,8 +484,9 @@ class TaskOverviewView extends Marionette.View {
         user = userInfo.get("user");
         const futureTaskType = userInfo.get("futureTaskType");
         if (futureTaskType) {
-          if (this.doDrawUser(user)) { return this.edge(user.id, futureTaskType._id.$oid, nodes, this.FUTURE_TASK_EDGE_COLOR); }
+          return this.edge(user.id, futureTaskType._id.$oid, nodes, this.FUTURE_TASK_EDGE_COLOR);
         }
+        return null;
       },
       )));
     }
@@ -495,7 +496,7 @@ class TaskOverviewView extends Marionette.View {
       edges = edges.concat(_.flatten(selectedUserInfos.map((userInfo) => {
         user = userInfo.get("user");
         const projects = userInfo.get("projects");
-        if (this.doDrawUser(user)) { return projects.map(project => this.edge(user.id, project._id.$oid, nodes)); }
+        return projects.map(project => this.edge(user.id, project._id.$oid, nodes));
       },
       )));
     }

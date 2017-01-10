@@ -8,7 +8,6 @@ import _ from "lodash";
 class DispatchedWorker {
 
   constructor(workerClass) {
-
     this.worker = new workerClass();
 
     this.worker.onerror = err => __guard__(console, x => x.error(err));
@@ -17,15 +16,12 @@ class DispatchedWorker {
 
   // Returns a `$.Deferred` object representing the completion state.
   send(payload) {
-
     const deferred = new $.Deferred();
 
     _.defer(() => {
-
       const workerHandle = Math.random();
 
-      const workerMessageCallback = ({ data : packet }) => {
-
+      const workerMessageCallback = ({ data: packet }) => {
         if (packet.workerHandle === workerHandle) {
           this.worker.removeEventListener("message", workerMessageCallback, false);
           if (packet.error) {
@@ -38,7 +34,7 @@ class DispatchedWorker {
 
       this.worker.addEventListener("message", workerMessageCallback, false);
       return this.worker.postMessage({ workerHandle, payload });
-    }
+    },
     );
 
 
@@ -49,9 +45,7 @@ class DispatchedWorker {
 
 DispatchedWorker.Pool = class Pool {
 
-  constructor(workerClass, workerLimit) {
-
-    if (workerLimit == null) { workerLimit = 3; }
+  constructor(workerClass, workerLimit = 3) {
     this.workerClass = workerClass;
     this.workerLimit = workerLimit;
     this.queue = [];
@@ -60,11 +54,10 @@ DispatchedWorker.Pool = class Pool {
 
 
   send(data) {
-
     let worker;
-    for (let _worker of this.workers) {
-      if (!_worker.busy) {
-        worker = _worker;
+    for (const worker of this.workers) {
+      if (!worker.busy) {
+        worker = worker;
         break;
       }
     }
@@ -82,19 +75,16 @@ DispatchedWorker.Pool = class Pool {
 
 
   spawnWorker() {
-
     const worker = new DispatchedWorker(this.workerClass);
     worker.busy = false;
 
     const workerReset = () => {
-
       worker.busy = false;
       return this.queueShift(worker);
     };
 
 
-    worker.worker.onerror = function(err) {
-
+    worker.worker.onerror = function (err) {
       __guard__(console, x => x.error(err));
       return workerReset();
     };
@@ -109,7 +99,6 @@ DispatchedWorker.Pool = class Pool {
 
 
   queueShift(worker) {
-
     if (this.queue.length > 0 && !worker.busy) {
       const { data, deferred } = this.queue.shift();
       return worker.send(data)
@@ -120,7 +109,6 @@ DispatchedWorker.Pool = class Pool {
 
 
   queuePush(data) {
-
     const deferred = $.Deferred();
     return this.queue.push({ data, deferred });
   }
@@ -130,5 +118,5 @@ DispatchedWorker.Pool = class Pool {
 export default DispatchedWorker;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

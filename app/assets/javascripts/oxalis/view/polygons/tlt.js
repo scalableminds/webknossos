@@ -1,4 +1,4 @@
-//### Triangle Lookup Table
+// ### Triangle Lookup Table
 
 // The marching cube algorithm requires a
 // Triangle Lookup Table that holds the
@@ -263,7 +263,7 @@ const tlt = [
   [[[1, 0, 0.5], [0, 0, 0.5], [0, 0.5, 0]], [[1, 0.5, 0], [1, 0, 0.5], [0, 0.5, 0]]],  // 252
   [[[0.5, 0, 0], [1, 0.5, 0], [1, 0, 0.5]]],  // 253
   [[[0.5, 0, 0], [0, 0, 0.5], [0, 0.5, 0]]],  // 254
-  []  // 255
+  [],  // 255
 ];
 
 export default tlt;

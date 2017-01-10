@@ -2,21 +2,15 @@ import _ from "lodash";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import app from "app";
-import UserAnnotationCollection from "oxalis/model/skeletontracing/user_annotation_collection";
 import SelectionView from "admin/views/selection_view";
 import ModalView from "admin/views/modal_view";
-import UserCollection from "admin/models/user/user_collection";
-import TeamCollection from "admin/models/team/team_collection";
 import TaskTypeCollection from "admin/models/tasktype/task_type_collection";
 import ProjectCollection from "admin/models/project/project_collection";
-import ProjectModel from "admin/models/project/project_model";
-import jsRoutes from "routes";
 
 class MergeModalView extends ModalView {
   static initClass() {
-  
-    this.prototype.headerTemplate  = "<h4 class=\"modal-title\">Merge</h4>";
-    this.prototype.bodyTemplate  = _.template(`\
+    this.prototype.headerTemplate = "<h4 class=\"modal-title\">Merge</h4>";
+    this.prototype.bodyTemplate = _.template(`\
 <div class="form-group">
   <label for="task-type">Task type</label>
   <div class="row">
@@ -44,7 +38,7 @@ class MergeModalView extends ModalView {
           enctype="multipart/form-data"
           id="upload-and-explore-form"
           class="inline-block">
-  
+
           <div class="fileinput fileinput-new input-group" data-provides="fileinput">
             <div class="form-control" data-trigger="fileinput">
               <span class="fileinput-filename"></span>
@@ -90,65 +84,61 @@ class MergeModalView extends ModalView {
   The merged tracing will be saved as a new explorative tracing.
 </div>\
 `);
-  
-    this.prototype.regions  = {
-      "tasktype"    : ".task-type",
-      "project"     : ".project"
+
+    this.prototype.regions = {
+      tasktype: ".task-type",
+      project: ".project",
     };
-  
-    this.prototype.events  = {
-      "click #task-type-merge"          : "mergeTaskType",
-      "click #project-merge"            : "mergeProject",
-      "click #nml-merge"                : "mergeNml",
-      "change input[type=file]"         : "selectFiles",
-      "submit @ui.uploadAndExploreForm" : "uploadFiles",
-      "click #explorative-merge"        : "mergeExplorative",
-      "change.bs.fileinput"             : "selectFiles"
+
+    this.prototype.events = {
+      "click #task-type-merge": "mergeTaskType",
+      "click #project-merge": "mergeProject",
+      "click #nml-merge": "mergeNml",
+      "change input[type=file]": "selectFiles",
+      "submit @ui.uploadAndExploreForm": "uploadFiles",
+      "click #explorative-merge": "mergeExplorative",
+      "change.bs.fileinput": "selectFiles",
     };
-  
-    this.prototype.ui  = {
-      "tasktype"             : ".task-type",
-      "project"              : ".project",
-      "explorative"          : ".explorative",
-      "uploadAndExploreForm" : "#upload-and-explore-form",
-      "formSpinnerIcon"      : "#form-spinner-icon",
-      "formUploadIcon"       : "#form-upload-icon",
-      "fileInput"            : ":file"
+
+    this.prototype.ui = {
+      tasktype: ".task-type",
+      project: ".project",
+      explorative: ".explorative",
+      uploadAndExploreForm: "#upload-and-explore-form",
+      formSpinnerIcon: "#form-spinner-icon",
+      formUploadIcon: "#form-upload-icon",
+      fileInput: ":file",
     };
   }
 
 
   initialize() {
-
     return this.nml = undefined;
   }
 
 
   onRender() {
-
-    return Request.receiveJSON("/api/user").then( user => {
-
+    return Request.receiveJSON("/api/user").then(() => {
       this.taskTypeSelectionView = new SelectionView({
-        collection : new  TaskTypeCollection(),
-        childViewOptions : {
-          modelValue() { return `${this.model.get("summary")}`; }
-        }
+        collection: new TaskTypeCollection(),
+        childViewOptions: {
+          modelValue() { return `${this.model.get("summary")}`; },
+        },
       });
       this.projectSelectionView = new SelectionView({
-        collection : new  ProjectCollection(),
-        childViewOptions : {
-          modelValue() { return `${this.model.get("name")}`; }
-        }
+        collection: new ProjectCollection(),
+        childViewOptions: {
+          modelValue() { return `${this.model.get("name")}`; },
+        },
       });
 
       this.showChildView("tasktype", this.taskTypeSelectionView);
       return this.showChildView("project", this.projectSelectionView);
-    }
+    },
     );
   }
 
   mergeTaskType() {
-
     const taskTypeId = this.ui.tasktype.find("select :selected").prop("id");
     const url = `/annotations/CompoundTaskType/${taskTypeId}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
     return this.merge(url);
@@ -156,7 +146,6 @@ class MergeModalView extends ModalView {
 
 
   mergeProject() {
-
     const projectId = this.ui.project.find("select :selected").prop("value");
     const url = `/annotations/CompoundProject/${projectId}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
     return this.merge(url);
@@ -164,7 +153,6 @@ class MergeModalView extends ModalView {
 
 
   mergeNml() {
-
     if (this.nml) {
       const url = `/annotations/${this.nml.typ}/${this.nml.id}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
       return this.merge(url);
@@ -175,22 +163,19 @@ class MergeModalView extends ModalView {
 
 
   mergeExplorative() {
-
     const explorativeId = this.ui.explorative.find("input").val();
-    return this.validateId(explorativeId).then( () => {
+    return this.validateId(explorativeId).then(() => {
       const url = `/annotations/Explorational/${explorativeId}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
       return this.merge(url);
-    }
+    },
     );
   }
 
 
   merge(url) {
+    const readOnly = document.getElementById("checkbox-read-only").checked;
 
-    const readOnly = document.getElementById('checkbox-read-only').checked;
-
-    return Request.receiveJSON(`${url}/${readOnly}`).then( function(annotation) {
-
+    return Request.receiveJSON(`${url}/${readOnly}`).then((annotation) => {
       Toast.message(annotation.messages);
 
       const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
@@ -199,8 +184,7 @@ class MergeModalView extends ModalView {
   }
 
 
-  selectFiles(event) {
-
+  selectFiles() {
     if (this.ui.fileInput[0].files.length) {
       return this.ui.uploadAndExploreForm.submit();
     }
@@ -208,14 +192,12 @@ class MergeModalView extends ModalView {
 
 
   toggleIcon(state) {
-
     this.ui.formSpinnerIcon.toggleClass("hide", state);
     return this.ui.formUploadIcon.toggleClass("hide", !state);
   }
 
 
   uploadFiles(event) {
-
     event.preventDefault();
     this.toggleIcon(false);
 
@@ -224,19 +206,18 @@ class MergeModalView extends ModalView {
     return Request.always(
       Request.sendMultipartFormReceiveJSON(
         form.attr("action"),
-        {data : new FormData(form[0])}
-      ).then(data => {
+        { data: new FormData(form[0]) },
+      ).then((data) => {
         this.nml = data.annotation;
         return Toast.message(data.messages);
-      }
+      },
       ),
-      () => this.toggleIcon(true)
+      () => this.toggleIcon(true),
     );
   }
 
 
   validateId(id) {
-
     return Request.receiveJSON(`/api/find?q=${id}&type=id`);
   }
 }

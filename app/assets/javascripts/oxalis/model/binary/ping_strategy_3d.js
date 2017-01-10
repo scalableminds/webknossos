@@ -1,66 +1,60 @@
+import _ from "lodash";
+import { M4x4 } from "libs/mjs";
 import PolyhedronRasterizer from "./polyhedron_rasterizer";
-import { M4x4, V3 } from "libs/mjs";
 
 class PingStrategy3d {
   static initClass() {
+    this.prototype.velocityRangeStart = 0;
+    this.prototype.velocityRangeEnd = 0;
 
-    this.prototype.velocityRangeStart  = 0;
-    this.prototype.velocityRangeEnd  = 0;
+    this.prototype.roundTripTimeRangeStart = 0;
+    this.prototype.roundTripTimeRangeEnd = 0;
 
-    this.prototype.roundTripTimeRangeStart  = 0;
-    this.prototype.roundTripTimeRangeEnd  = 0;
+    this.prototype.contentTypes = [];
 
-    this.prototype.contentTypes  = [];
-
-    this.prototype.name  = 'Abstract';
+    this.prototype.name = "Abstract";
   }
 
 
   forContentType(contentType) {
-
     return _.isEmpty(this.contentTypes) || _.includes(this.contentTypes, contentType);
   }
 
 
   inVelocityRange(value) {
-
     return this.velocityRangeStart <= value && value <= this.velocityRangeEnd;
   }
 
 
   inRoundTripTimeRange(value) {
-
     return this.roundTripTimeRangeStart <= value && value <= this.roundTripTimeRangeEnd;
   }
 
 
   ping() {
-
-    throw "Needs to be implemented in subclass";
+    throw Error("Needs to be implemented in subclass");
   }
 
 
   getExtentObject(poly0, poly1, zoom0, zoom1) {
-
     return {
-      min_x : Math.min(poly0.min_x << zoom0, poly1.min_x << zoom1),
-      min_y : Math.min(poly0.min_y << zoom0, poly1.min_y << zoom1),
-      min_z : Math.min(poly0.min_z << zoom0, poly1.min_z << zoom1),
-      max_x : Math.max(poly0.max_x << zoom0, poly1.max_x << zoom1),
-      max_y : Math.max(poly0.max_y << zoom0, poly1.max_y << zoom1),
-      max_z : Math.max(poly0.max_z << zoom0, poly1.max_z << zoom1)
+      minX: Math.min(poly0.minX << zoom0, poly1.minX << zoom1),
+      minY: Math.min(poly0.minY << zoom0, poly1.minY << zoom1),
+      minZ: Math.min(poly0.minZ << zoom0, poly1.minZ << zoom1),
+      maxX: Math.max(poly0.maxX << zoom0, poly1.maxX << zoom1),
+      maxY: Math.max(poly0.maxY << zoom0, poly1.maxY << zoom1),
+      maxZ: Math.max(poly0.maxZ << zoom0, poly1.maxZ << zoom1),
     };
   }
 
 
   modifyMatrixForPoly(matrix, zoomStep) {
-
     matrix[12] >>= (5 + zoomStep);
     matrix[13] >>= (5 + zoomStep);
     matrix[14] >>= (5 + zoomStep);
     matrix[12] += 1;
     matrix[13] += 1;
-    return matrix[14] += 1;
+    matrix[14] += 1;
   }
 }
 PingStrategy3d.initClass();
@@ -68,24 +62,22 @@ PingStrategy3d.initClass();
 
 PingStrategy3d.DslSlow = class DslSlow extends PingStrategy3d {
   static initClass() {
+    this.prototype.velocityRangeStart = 0;
+    this.prototype.velocityRangeEnd = Infinity;
 
-    this.prototype.velocityRangeStart  = 0;
-    this.prototype.velocityRangeEnd  = Infinity;
+    this.prototype.roundTripTimeRangeStart = 0;
+    this.prototype.roundTripTimeRangeEnd = Infinity;
 
-    this.prototype.roundTripTimeRangeStart  = 0;
-    this.prototype.roundTripTimeRangeEnd  = Infinity;
+    this.prototype.name = "DSL_SLOW";
 
-    this.prototype.name  = 'DSL_SLOW';
-
-    this.prototype.pingPolyhedron  = PolyhedronRasterizer.Master.squareFrustum(
+    this.prototype.pingPolyhedron = PolyhedronRasterizer.Master.squareFrustum(
       5, 5, -0.5,
-      4, 4, 2
+      4, 4, 2,
     );
   }
 
 
   ping(matrix, zoomStep) {
-
     const pullQueue = [];
 
     const matrix0 = M4x4.clone(matrix);
@@ -97,11 +89,11 @@ PingStrategy3d.DslSlow = class DslSlow extends PingStrategy3d {
 
     let i = 0;
     while (i < testAddresses.length) {
-      const bucket_x = testAddresses[i++];
-      const bucket_y = testAddresses[i++];
-      const bucket_z = testAddresses[i++];
+      const bucketX = testAddresses[i++];
+      const bucketY = testAddresses[i++];
+      const bucketZ = testAddresses[i++];
 
-      pullQueue.push({bucket: [bucket_x, bucket_y, bucket_z, zoomStep], priority: 0});
+      pullQueue.push({ bucket: [bucketX, bucketY, bucketZ, zoomStep], priority: 0 });
     }
 
     return pullQueue;

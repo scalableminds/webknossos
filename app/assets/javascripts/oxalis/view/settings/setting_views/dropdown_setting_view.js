@@ -1,15 +1,12 @@
 import _ from "lodash";
-import Marionette from "backbone.marionette";
 import AbstractSettingView from "./abstract_setting_view";
 
 class DropdownSettingView extends AbstractSettingView {
   static initClass() {
-  
-  
-    this.prototype.className  = "dropdown-setting-view row";
-  
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "dropdown-setting-view row";
+
+
+    this.prototype.template = _.template(`\
 <div class="col-sm-5">
   <%- displayName %>
 </div>
@@ -21,21 +18,21 @@ class DropdownSettingView extends AbstractSettingView {
   </select>
 </div>\
 `);
-  
-  
-    this.prototype.templateContext  = {
+
+
+    this.prototype.templateContext = {
       isSelected(value, index) {
         return value === index ? "selected" : "";
-      }
+      },
     };
-  
-  
-    this.prototype.ui  =
-      {select : "select"};
-  
-  
-    this.prototype.events  =
-      {"change @ui.select" : "handleChange"};
+
+
+    this.prototype.ui =
+      { select: "select" };
+
+
+    this.prototype.events =
+      { "change @ui.select": "handleChange" };
   }
 
 
@@ -45,7 +42,6 @@ class DropdownSettingView extends AbstractSettingView {
 
 
   update(model, value) {
-
     return this.ui.select.val(parseInt(value, 10));
   }
 }

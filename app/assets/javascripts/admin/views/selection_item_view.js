@@ -3,24 +3,22 @@ import Marionette from "backbone.marionette";
 
 class SelectionItemView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.tagName  = "option";
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.tagName = "option";
+
+    this.prototype.template = _.template("\
 <%- label %>\
-`);
+");
   }
   attributes() {
-
     const defaults = {
-      id : this.model.get("id"),
-      value : this.options.modelValue()
+      id: this.model.get("id"),
+      value: this.options.modelValue(),
     };
 
     if (this.options.defaultItem) {
       const [[key, value]] = _.toPairs(this.options.defaultItem);
       if (this.model.get(key) === value) {
-        _.extend(defaults, {selected : true});
+        _.extend(defaults, { selected: true });
       }
     }
 
@@ -28,7 +26,6 @@ class SelectionItemView extends Marionette.View {
   }
 
   initialize(options) {
-
     // a function to retrieve the option's value
     this.modelValue = options.modelValue;
 
@@ -40,13 +37,12 @@ class SelectionItemView extends Marionette.View {
 
 
   serializeData() {
-
     const label = this.modelLabel ? this.modelLabel() : this.modelValue();
 
     return {
-      value : this.modelValue(),
+      value: this.modelValue(),
       label,
-      id : this.model.get("id")
+      id: this.model.get("id"),
     };
   }
 }

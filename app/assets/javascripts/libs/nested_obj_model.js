@@ -19,10 +19,8 @@ class NestedObjModel extends Backbone.Model {
   }
 
 
-  set(attributeString, val, options) {
-
+  set(attributeString, val, options = {}) {
     // We don't handle objects for now
-    if (options == null) { options = {}; }
     if (_.isObject(attributeString)) {
       return super.set(attributeString, val, options);
     }
@@ -32,9 +30,7 @@ class NestedObjModel extends Backbone.Model {
   }
 
 
-  deepSet(obj, attributeString, val, silent) {
-
-    if (silent == null) { silent = false; }
+  deepSet(obj, attributeString, val, silent = false) {
     const attributes = attributeString.split(".");
     return _.reduce(
       attributes,
@@ -44,17 +40,15 @@ class NestedObjModel extends Backbone.Model {
             value[attribute] = {};
           }
           return value[attribute];
-        } else {
+        } else if (value[attribute] !== val) {
           // Set the value if attribute is the last key in the attributeString
-          if (value[attribute] !== val) {
-            const oldVal = value[attribute];
-            value[attribute] = val;
+          const oldVal = value[attribute];
+          value[attribute] = val;
 
-            if (!silent) {
-              // Trigger the change in the model
-              this.triggerDeepChange(oldVal, val, attributeString);
-              return this.trigger("change", this);
-            }
+          if (!silent) {
+            // Trigger the change in the model
+            this.triggerDeepChange(oldVal, val, attributeString);
+            return this.trigger("change", this);
           }
         }
       },
@@ -63,14 +57,11 @@ class NestedObjModel extends Backbone.Model {
 
 
   triggerDeepChange(oldObj, newObj, deepKey) {
-
     // This method only triggers the change for those parts of the object
     // that actually changed (e.g. layers.color.brightness)
     if (_.isPlainObject(newObj)) {
       // Recursively call triggerDeepChange for each key
-      return _.forOwn(newObj, (value, key) => {
-        return this.triggerDeepChange(((oldObj != null) ? oldObj[key] : oldObj), newObj[key], `${deepKey}.${key}`);
-      }
+      return _.forOwn(newObj, (value, key) => this.triggerDeepChange(((oldObj != null) ? oldObj[key] : oldObj), newObj[key], `${deepKey}.${key}`),
       );
     } else if (oldObj !== newObj) {
       // Add the change to the changed object
@@ -84,5 +75,5 @@ class NestedObjModel extends Backbone.Model {
 export default NestedObjModel;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

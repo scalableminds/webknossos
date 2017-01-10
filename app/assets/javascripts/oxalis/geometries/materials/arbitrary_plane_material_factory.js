@@ -1,3 +1,4 @@
+import _ from "lodash";
 import THREE from "three";
 import AbstractPlaneMaterialFactory from "./abstract_plane_material_factory";
 
@@ -6,32 +7,29 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
   getColorName() {
     return this.sanitizeName(
-      this.model.getColorBinaries()[0].name
+      this.model.getColorBinaries()[0].name,
     );
   }
 
 
   createTextures() {
-
     this.textures = {};
     this.textures[this.getColorName()] = this.createDataTexture(this.tWidth, 1);
 
-    return this.uniforms[this.getColorName() + "_texture"] = {
-      type : "t",
-      value : this.textures[this.getColorName()]
+    return this.uniforms[`${this.getColorName()}_texture`] = {
+      type: "t",
+      value: this.textures[this.getColorName()],
     };
   }
 
 
   createDataTexture(width, bytes) {
-
     this.minFilter = THREE.LinearFilter;
     return super.createDataTexture(width, bytes);
   }
 
 
   getFragmentShader() {
-
     return _.template(
       `\
 uniform sampler2D <%= colorName %>_texture;
@@ -51,8 +49,8 @@ void main()
   /* Set frag color */
   gl_FragColor = vec4(color_value, color_value, color_value, 1.0);
 }\
-`
-    )({colorName : this.getColorName()});
+`,
+    )({ colorName: this.getColorName() });
   }
 }
 

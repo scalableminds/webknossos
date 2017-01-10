@@ -4,12 +4,9 @@ import TaskModel from "./task_model";
 
 class TaskCollection extends Backbone.Collection {
   static initClass() {
-  
     this.prototype.model = TaskModel;
   }
-  initialize(models, options) {
-
-    if (options == null) { options = {}; }
+  initialize(models, options = {}) {
     this.projectName = options.projectName;
     return this.taskTypeId = options.taskTypeId;
   }
@@ -25,13 +22,11 @@ class TaskCollection extends Backbone.Collection {
   }
 
   parse(responses) {
-
-    return responses.map(function(response) {
-
+    return responses.map((response) => {
       // apply some defaults
       response.type = {
-        summary : __guard__(response.type, x => x.summary) || "<deleted>",
-        id : __guard__(response.type, x1 => x1.id) || ""
+        summary: __guard__(response.type, x => x.summary) || "<deleted>",
+        id: __guard__(response.type, x1 => x1.id) || "",
       };
 
       if (response.tracingTime == null) { response.tracingTime = 0; }
@@ -39,10 +34,8 @@ class TaskCollection extends Backbone.Collection {
 
       // convert bounding box
       if (response.boundingBox != null) {
-
         const { topLeft, width, height, depth } = response.boundingBox;
         response.boundingBox = topLeft.concat([width, height, depth]);
-
       } else {
         response.boundingBox = [];
       }
@@ -52,7 +45,6 @@ class TaskCollection extends Backbone.Collection {
   }
 
   addObjects(objects) {
-
     return this.add(this.parse(objects));
   }
 }
@@ -61,5 +53,5 @@ TaskCollection.initClass();
 export default TaskCollection;
 
 function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
+  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
 }

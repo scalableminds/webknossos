@@ -43,4 +43,5 @@ export {
   WorkloadListView,
   WorkloadCollection,
   DatasetAddView,
+  DatasetListView
 };

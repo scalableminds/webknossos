@@ -3,9 +3,8 @@ import Marionette from "backbone.marionette";
 
 class HelpLogoView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.className  = "help-logo-view flex-column";
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "help-logo-view flex-column";
+    this.prototype.template = _.template(`\
 <div class="flex-overflow">
   <table class="table table-condensed table-nohead table-bordered">
     <tbody>

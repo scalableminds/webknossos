@@ -1,12 +1,12 @@
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
-import ProjectListItemView from "./project_list_item_view";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
+import ProjectListItemView from "./project_list_item_view";
 
 class ProjectListView extends Marionette.CompositeView {
   static initClass() {
-
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <h3>Projects</h3>
 <table class="table table-striped table-details sortable-table" id="projectlist-table">
   <thead>
@@ -25,29 +25,28 @@ class ProjectListView extends Marionette.CompositeView {
 <div id="modal-wrapper"></div>\
 `);
 
-    this.prototype.className  = "container wide project-administration";
-    this.prototype.childView  = ProjectListItemView;
-    this.prototype.childViewContainer  = "tbody";
+    this.prototype.className = "container wide project-administration";
+    this.prototype.childView = ProjectListItemView;
+    this.prototype.childViewContainer = "tbody";
 
-    this.prototype.behaviors  = {
+    this.prototype.behaviors = {
       SortTableBehavior: {
-        behaviorClass: SortTableBehavior
-      }
+        behaviorClass: SortTableBehavior,
+      },
     };
 
-    this.prototype.ui  =
-      {"modalWrapper" : "#modal-wrapper"};
+    this.prototype.ui =
+      { modalWrapper: "#modal-wrapper" };
 
-    this.prototype.behaviors  = {
+    this.prototype.behaviors = {
       SortTableBehavior: {
-        behaviorClass: SortTableBehavior
-      }
+        behaviorClass: SortTableBehavior,
+      },
     };
   }
 
 
   initialize() {
-
     this.collection.fetch();
     this.collection.setSorting("priority", "desc");
 
@@ -58,14 +57,12 @@ class ProjectListView extends Marionette.CompositeView {
 
 
   filterBySearch(searchQuery) {
-
     return this.collection.setFilter(["name", "team", "priority", "location"], searchQuery);
   }
 
 
   createProject() {
-
-    return app.router.navigate("/projects/create", {trigger : true});
+    return app.router.navigate("/projects/create", { trigger: true });
   }
 }
 ProjectListView.initClass();

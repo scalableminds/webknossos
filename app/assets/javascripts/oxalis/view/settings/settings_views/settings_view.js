@@ -5,9 +5,7 @@ import Subviews from "backbone-subviews";
 
 class SettingsView extends Marionette.View {
   static initClass() {
-  
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <div class="panel-group flex-overflow">
   
   <% _.forEach(subviewCreatorsList, function (key_value_pair) { %>
@@ -16,14 +14,13 @@ class SettingsView extends Marionette.View {
   
 </div>\
 `);
-  
-  
-    this.prototype.modelName  = null;
+
+
+    this.prototype.modelName = null;
   }
 
 
   initialize() {
-
     if (this.modelName != null) {
       this.model = this.model[this.modelName];
     }
@@ -37,7 +34,7 @@ class SettingsView extends Marionette.View {
     this.subviewCreators = _.transform(
       this.subviewCreatorsList,
       (result, [key, value]) => result[key] = value,
-      {}
+      {},
     );
 
     return Subviews.add(this);
@@ -45,7 +42,6 @@ class SettingsView extends Marionette.View {
 
 
   render() {
-
     if (this.model) {
       return super.render();
     } else {
@@ -55,7 +51,6 @@ class SettingsView extends Marionette.View {
 
 
   serializeData() {
-
     return { subviewCreatorsList: this.subviewCreatorsList };
   }
 }

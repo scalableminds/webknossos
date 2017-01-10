@@ -1,5 +1,5 @@
-import { indexOf } from "lodash"
-import Request from "../helpers/ajaxDownload"
+import { indexOf } from "lodash";
+import Request from "../helpers/ajaxDownload";
 
 export default class TeamPage {
 
@@ -12,26 +12,23 @@ export default class TeamPage {
 
   get() {
     browser
-      .url("/teams")
+      .url("/teams");
   }
 
 
   getTeamListEntryCount() {
-
     return browser
       .waitForExist(this.teamListRows)
-      .elements(this.teamListRows).then(response => response.value.length)
+      .elements(this.teamListRows).then(response => response.value.length);
   }
 
   async getTeamCountFromServer() {
-
-    const url = "/api/teams?isEditable=true"
-    return Request.json().from(url).then((teams) => teams.length)
+    const url = "/api/teams?isEditable=true";
+    return Request.json().from(url).then(teams => teams.length);
   }
 
 
   createTeam(teamName) {
-
     return browser
       .waitForExist(this.createTeamButton)
       .click(this.createTeamButton)
@@ -40,23 +37,22 @@ export default class TeamPage {
       .waitForExist(this.inputTeamName)
       .setValue(this.inputTeamName, teamName)
       .click(this.confirmButton)
-      .pause(500)  // Wait for DOM updates
+      .pause(500);  // Wait for DOM updates
   }
 
 
   async deleteTeam(teamName) {
-
     // The deletion link can not be clicked directly, so find the corresponding
     // row index
-    const teamNameSelector = "tbody td:first-child"
+    const teamNameSelector = "tbody td:first-child";
     const rowIndex = await browser
       .getText(teamNameSelector)
-      .then((teamNames) => indexOf(teamNames, teamName))
+      .then(teamNames => indexOf(teamNames, teamName));
 
-    const deletionSelector = `tbody tr:nth-child(${rowIndex + 1}) .delete`
+    const deletionSelector = `tbody tr:nth-child(${rowIndex + 1}) .delete`;
     return browser
       .click(deletionSelector)
       .alertAccept()
-      .pause(1000) // Wait for DOM updates
+      .pause(1000); // Wait for DOM updates
   }
 }

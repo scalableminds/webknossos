@@ -3,7 +3,11 @@ import $ from "jquery";
 import AirbrakeClient from "airbrake-js";
 import Toast from "./toast";
 
-const ErrorHandling = {
+class ErrorHandling {
+
+  constructor() {
+    this.assert = this.assertImpl.bind(this);
+  }
 
   initialize(options) {
     if (options == null) {
@@ -12,9 +16,8 @@ const ErrorHandling = {
     this.throwAssertions = options.throwAssertions;
     this.sendLocalErrors = options.sendLocalErrors;
 
-    return this.initializeAirbrake();
-  },
-
+    this.initializeAirbrake();
+  }
 
   initializeAirbrake() {
     // read Airbrake config from DOM
@@ -38,28 +41,25 @@ const ErrorHandling = {
       Airbrake.addFilter(() => location.hostname !== "127.0.0.1" && location.hostname !== "localhost");
     }
 
-    return window.onerror = function (message, file, line, colno, error) {
+    window.onerror = function (message, file, line, colno, error) {
       if (error == null) {
         // older browsers don't deliver the error parameter
         error = new Error(message, file, line);
       }
-
       console.error(error);
-      return Airbrake.notify(error);
+      Airbrake.notify(error);
     };
-  },
-
+  }
 
   assertExtendContext(additionalContext) {
     // since the context isn't displayed on Airbrake.io, we use the params-attribute
-    return Airbrake.addFilter((notice) => {
+    Airbrake.addFilter((notice) => {
       Object.assign(notice.context, additionalContext);
       return notice;
     });
-  },
+  }
 
-
-  assert: (bool, message, assertionContext) => {
+  assertImpl(bool, message, assertionContext) {
     if (bool) {
       return;
     }
@@ -76,31 +76,26 @@ const ErrorHandling = {
       throw error;
     } else {
       console.error(error);
-      return Airbrake.notify(error);
+      Airbrake.notify(error);
     }
-  },
-
+  }
 
   assertExists(variable, message, assertionContext) {
     if (variable != null) {
       return;
     }
-
-    return this.assert(false, `${message} (variable is ${variable})`, assertionContext);
-  },
-
+    this.assert(false, `${message} (variable is ${variable})`, assertionContext);
+  }
 
   assertEquals(actual, wanted, message, assertionContext) {
     if (actual === wanted) {
       return;
     }
-
-    return this.assert(false, `${message} (${actual} != ${wanted})`, assertionContext);
-  },
-
+    this.assert(false, `${message} (${actual} != ${wanted})`, assertionContext);
+  }
 
   setCurrentUser(user) {
-    return Airbrake.addFilter((notice) => {
+    Airbrake.addFilter((notice) => {
       notice.context.user = _.pick(user, [
         "id",
         "email",
@@ -110,12 +105,10 @@ const ErrorHandling = {
       ]);
       return notice;
     });
-  },
-
+  }
 
   trimCallstack(callstack) {
     // cut function calls caused by ErrorHandling so that Airbrake won't cluster all assertions into one group
-
     const trimmedCallstack = [];
 
     for (const line of callstack.split("\n")) {
@@ -125,8 +118,8 @@ const ErrorHandling = {
     }
 
     return trimmedCallstack.join("\n");
-  },
-};
+  }
+}
 
 
-export default ErrorHandling;
+export default new ErrorHandling();

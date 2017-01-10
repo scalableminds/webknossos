@@ -57,7 +57,7 @@ class Plane2D {
       this.NOT_LOADED_BUCKET_DATA[i] = this.NOT_LOADED_BUCKET_INTENSITY;
     }
 
-    this.forceRedraw = false;
+    this.needsRedraw = false;
 
     for (let i = 0; i <= this.cube.LOOKUP_DEPTH_DOWN; i++) {
       this.MAP_SIZE += 1 << (i << 1);
@@ -109,7 +109,7 @@ class Plane2D {
 
 
   forceRedraw() {
-    this.forceRedraw = true;
+    this.needsRedraw = true;
   }
 
 
@@ -155,7 +155,7 @@ class Plane2D {
     ];
 
     // If layer or zoomStep have changed, everything needs to be redrawn
-    if (this.forceRedraw || !_.isEqual(texture.layer, layer) || !_.isEqual(texture.zoomStep, zoomStep)) {
+    if (this.needsRedraw || !_.isEqual(texture.layer, layer) || !_.isEqual(texture.zoomStep, zoomStep)) {
       texture.layer = layer;
       texture.zoomStep = zoomStep;
       texture.topLeftBucket = topLeftBucket;
@@ -165,7 +165,7 @@ class Plane2D {
       texture.buffer = new Uint8Array(this.TEXTURE_SIZE);
       texture.ready = false;
 
-      this.forceRedraw = false;
+      this.needsRedraw = false;
     }
 
     // If the top-left-bucket has changed, still visible tiles are copied to their new location

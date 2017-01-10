@@ -1,6 +1,7 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import mockRequire from "mock-require";
 import sinon from "sinon";
+import _ from "lodash";
 import runAsync from "../../helpers/run-async";
 
 mockRequire.stopAll();
@@ -11,6 +12,12 @@ mockRequire("../../../oxalis/model/binary/pullqueue", {
     PRIORITY_HIGHEST: 123,
   },
 });
+mockRequire("../../../libs/error_handling", {
+  assertExists(expr) { this.assert(expr != null); },
+  assert(expr) { if (!expr) throw new Error("Assertion failed"); },
+});
+mockRequire("../../../libs/toast", { error: _.noop });
+
 
 const Cube = require("../../../oxalis/model/binary/cube").default;
 

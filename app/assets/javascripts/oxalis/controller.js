@@ -24,6 +24,7 @@ import VolumeTracingView from "./view/volumetracing/volumetracing_view";
 import constants from "./constants";
 import Input from "../libs/input";
 import Toast from "../libs/toast";
+import Model from "./model.js";
 
 import type {ToastType} from "../libs/toast";
 

@@ -1,5 +1,6 @@
 import _ from "lodash";
 import Backbone from "backbone";
+
 class SortedCollection extends Backbone.Collection {
 
   initialize() {

@@ -17,7 +17,7 @@ class DatasetUploadView extends Marionette.View {
       <div class="form-group">
         <label class="col-sm-3 control-label" for="name">Name</label>
         <div class="col-sm-9">
-        <input type="text" required name="name" value="" class="form-control" autofocus pattern="^[0-9a-zA-Z_\-]+$" title="Dataset names may only contain letters, numbers, _ and -">
+        <input type="text" required name="name" value="" class="form-control" autofocus pattern="^[0-9a-zA-Z_-]+$" title="Dataset names may only contain letters, numbers, _ and -">
           <span class="help-block errors"></span>
         </div>
       </div>
@@ -30,7 +30,7 @@ class DatasetUploadView extends Marionette.View {
       <div class="form-group">
         <label class="col-sm-3 control-label" for="scale_scale">Scale</label>
         <div class="col-sm-9">
-          <input type="text" required name="scale.scale" value="12.0, 12.0, 24.0" class="form-control" pattern="\\s*([0-9]+(?:\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?)\\s*" title="Specify dataset scale like &quot;XX, YY, ZZ&quot;">
+          <input type="text" required name="scale.scale" value="12.0, 12.0, 24.0" class="form-control" pattern="\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?)\\s*" title="Specify dataset scale like &quot;XX, YY, ZZ&quot;">
           <span class="help-block errors"></span>
         </div>
       </div>

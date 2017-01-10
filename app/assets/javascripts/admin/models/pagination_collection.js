@@ -131,7 +131,7 @@ class PaginationCollection {
       this.state.filter = null;
     } else {
       const words = _.map(query.split(" "),
-        element => element.toLowerCase().replace(/[\-\[\]{}()\*\+\?\.,\\\^\$\|\#\s]/g, "\\$&"));
+        element => element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"));
       const uniques = _.filter(_.uniq(words), element => element !== "");
       const pattern = `(${uniques.join("|")})`;
       const regexp = new RegExp(pattern, "igm");

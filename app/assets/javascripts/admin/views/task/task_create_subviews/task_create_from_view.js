@@ -279,7 +279,7 @@ class TaskCreateFromView extends Marionette.View {
     } else if (this.type === "from_nml") {
       this.createSubview = new TaskCreateFromNMLView({ model: this.model, parent: this });
     } else {
-      throw Error(`Type ${this.type} is not defined. Choose between \"from_form\" and \"from_nml\".`);
+      throw Error(`Type ${this.type} is not defined. Choose between "from_form" and "from_nml".`);
     }
 
     // render the create-subview

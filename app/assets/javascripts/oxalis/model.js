@@ -268,10 +268,10 @@ class Model extends Backbone.Model {
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {
-      const layer = _.find(layers, layer => layer.name === __guard__(userLayer.fallback, x => x.layerName));
+      const existingLayer = _.find(layers, layer => layer.name === __guard__(userLayer.fallback, x => x.layerName));
 
-      if (layer != null) {
-        _.extend(layer, userLayer);
+      if (existingLayer != null) {
+        _.extend(existingLayer, userLayer);
       } else {
         layers.push(userLayer);
       }

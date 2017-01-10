@@ -25,7 +25,7 @@ class Mappings {
 
   fetchMappings(mappingName) {
     const mappingChain = this.getMappingChain(mappingName);
-    const promises = _.map(mappingChain, mappingName => this.fetchMapping(mappingName));
+    const promises = _.map(mappingChain, curMappingName => this.fetchMapping(curMappingName));
     return Promise.all(promises);
   }
 

@@ -175,10 +175,10 @@ Input.Keyboard.initClass();
 
 // The mouse module.
 // Events: over, out, leftClick, rightClick, leftDownMove
-let MouseButton;
+let MouseButtonClass;
 Input.Mouse = class Mouse {
   static initClass() {
-    MouseButton = class MouseButton {
+    MouseButtonClass = class MouseButton {
       static initClass() {
         this.prototype.MOVE_DELTA_THRESHOLD = 30;
       }
@@ -200,7 +200,7 @@ Input.Mouse = class Mouse {
 
           this.down = true;
           this.moveDelta = 0;
-          return this.mouse.trigger(`${this.name}MouseDown`, this.mouse.lastPosition, this.id, event);
+          this.mouse.trigger(`${this.name}MouseDown`, this.mouse.lastPosition, this.id, event);
         }
       }
 
@@ -211,7 +211,7 @@ Input.Mouse = class Mouse {
           if (this.moveDelta <= this.MOVE_DELTA_THRESHOLD) {
             this.mouse.trigger(`${this.name}Click`, this.mouse.lastPosition, this.id, event);
           }
-          return this.down = false;
+          this.down = false;
         }
       }
 
@@ -219,11 +219,11 @@ Input.Mouse = class Mouse {
       handleMouseMove(event, delta) {
         if (this.down) {
           this.moveDelta += Math.abs(delta.x) + Math.abs(delta.y);
-          return this.mouse.trigger(`${this.name}DownMove`, delta, this.mouse.position, this.id, event);
+          this.mouse.trigger(`${this.name}DownMove`, delta, this.mouse.position, this.id, event);
         }
       }
     };
-    MouseButton.initClass();
+    MouseButtonClass.initClass();
   }
 
 
@@ -238,8 +238,8 @@ Input.Mouse = class Mouse {
     this.id = id;
     _.extend(this, Backbone.Events);
 
-    this.leftMouseButton = new MouseButton("left", 1, this, this.id);
-    this.rightMouseButton = new MouseButton("right", 3, this, this.id);
+    this.leftMouseButton = new MouseButtonClass("left", 1, this, this.id);
+    this.rightMouseButton = new MouseButtonClass("right", 3, this, this.id);
     this.isMouseOver = false;
     this.lastPosition = null;
 

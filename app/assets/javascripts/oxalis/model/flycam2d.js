@@ -40,9 +40,9 @@ class Flycam2d {
     // correct zoom values that are too high or too low
     this.user.set("zoom", Math.max(0.01, Math.min(this.user.get("zoom"), Math.floor(this.getMaxZoomStep()))));
 
-    this.listenTo(this.model.get("datasetConfiguration"), "change:quality", function (model, quality) { return this.setQuality(quality); });
+    this.listenTo(this.model.get("datasetConfiguration"), "change:quality", function (datasetModel, quality) { return this.setQuality(quality); });
     // TODO move zoom into tracing settings
-    this.listenTo(this.user, "change:zoom", function (model, zoomFactor) { return this.zoom(Math.log(zoomFactor) / Math.LN2); });
+    this.listenTo(this.user, "change:zoom", function (userModel, zoomFactor) { return this.zoom(Math.log(zoomFactor) / Math.LN2); });
 
     // Fire changed event every time
     const trigger = this.trigger;

@@ -97,12 +97,12 @@ class PlaneController {
 
 
   initMouse() {
-    for (let planeId = 0; planeId <= 2; planeId++) {
+    for (let id = 0; id <= 2; id++) {
       ((planeId) => {
         const inputcatcher = $(`#plane${constants.PLANE_NAMES[planeId]}`);
         return this.input.mouseControllers.push(
           new Input.Mouse(inputcatcher, this.getPlaneMouseControls(planeId), planeId));
-      })(planeId);
+      })(id);
     }
 
     return this.input.mouseControllers.push(

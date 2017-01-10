@@ -55,15 +55,15 @@ class VolumeTracingController {
     };
 
     for (const input in inputModeMapping) {
-      ((input) => {
-        $(input).on("focus", () => {
-          this.mergeMode = inputModeMapping[input];
+      ((inputId) => {
+        $(inputId).on("focus", () => {
+          this.mergeMode = inputModeMapping[inputId];
           console.log(this.mergeMode);
         },
         );
-        return $(input).keypress((event) => {
+        $(inputId).keypress((event) => {
           if (event.which === 13) {
-            return this.merge();
+            this.merge();
           }
         },
         );

@@ -245,14 +245,14 @@ const Request = {
 
             Toast.message(json.messages);
             return Promise.reject(json);
-          } catch (error) {
+          } catch (jsonError) {
             Toast.error(text);
             return Promise.reject(text);
           }
         },
-        (error) => {
-          Toast.error(error.toString());
-          return Promise.reject(error);
+        (textError) => {
+          Toast.error(textError.toString());
+          return Promise.reject(textError);
         });
     } else {
       Toast.error(error);

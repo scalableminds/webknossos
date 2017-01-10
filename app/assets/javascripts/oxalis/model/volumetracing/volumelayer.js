@@ -51,7 +51,6 @@ class VolumeLayer {
 
 
   getVoxelIterator() {
-    let y;
     if (this.isEmpty()) {
       return { hasNext: false };
     }
@@ -65,14 +64,14 @@ class VolumeLayer {
     const map = new Array(width);
     for (const x of __range__(0, width, false)) {
       map[x] = new Array(height);
-      for (y of __range__(0, height, false)) {
+      for (const y of __range__(0, height, false)) {
         map[x][y] = true;
       }
     }
 
     const setMap = function (x, y, value = true) {
       x = Math.floor(x); y = Math.floor(y);
-      return map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
+      map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
     };
 
 
@@ -97,12 +96,13 @@ class VolumeLayer {
       y: 0,
       getNext() {
         const res = this.get3DCoordinate([this.x + minCoord2d[0], this.y + minCoord2d[1]]);
-        while (true) {
+        let foundNext = false;
+        while (!foundNext) {
           this.x = (this.x + 1) % width;
           if (this.x === 0) { this.y++; }
           if (map[this.x][this.y] || this.y === height) {
             this.hasNext = this.y !== height;
-            break;
+            foundNext = true;
           }
         }
         return res;

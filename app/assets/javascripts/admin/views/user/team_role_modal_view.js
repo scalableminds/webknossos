@@ -94,16 +94,16 @@ class TeamRoleModalView extends ModalView {
     if (this.isValid()) {
       // Find all selected users that will be affected by the bulk action
       $("tbody input[type=checkbox]:checked").each(
-        (i, element) => {
+        (i, userEl) => {
           const user = this.userCollection.findWhere({
-            id: $(element).val(),
+            id: $(userEl).val(),
           });
 
           // Find all selected teams
-          let teams = _.map(this.$("input[type=checkbox]:checked"), (element) => {
-            const teamName = $(element).data("teamname");
+          let teams = _.map(this.$("input[type=checkbox]:checked"), (selectedTeamEl) => {
+            const teamName = $(selectedTeamEl).data("teamname");
             return {
-              team: $(element).val(),
+              team: $(selectedTeamEl).val(),
               role: {
                 name: this.$(`select[data-teamname="${teamName}"] :selected`).val(),
               },
@@ -112,7 +112,9 @@ class TeamRoleModalView extends ModalView {
           ) || [];
 
           // Find unselected teams
-          const removedTeamsNames = _.map(this.$("input[type=checkbox]:not(:checked)"), element => $(element).data("teamname")) || [];
+          const removedTeamsNames = _.map(this.$("input[type=checkbox]:not(:checked)"), (unselectedTeamEl) => {
+            $(unselectedTeamEl).data("teamname");
+          }) || [];
 
           // Add / remove teams
           const teamNames = _.map(teams, "team");

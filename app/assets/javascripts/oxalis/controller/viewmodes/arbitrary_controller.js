@@ -81,7 +81,7 @@ class ArbitraryController {
     this.crosshair = new Crosshair(this.cam, this.model.user.get("crosshairSize"));
     this.arbitraryView.addGeometry(this.crosshair);
 
-    this.listenTo(this.model.user, "change:displayCrosshair", function (model, value) {
+    this.listenTo(this.model.user, "change:displayCrosshair", function (userModel, value) {
       return this.crosshair.setVisibility(value);
     });
 

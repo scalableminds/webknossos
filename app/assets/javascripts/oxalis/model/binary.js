@@ -77,7 +77,7 @@ class Binary {
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {
       this.layer.setFourBit(this.model.get("datasetConfiguration").get("fourBit"));
       this.listenTo(this.model.get("datasetConfiguration"), "change:fourBit",
-                function (model, fourBit) { return this.layer.setFourBit(fourBit); });
+                function (datasetModel, fourBit) { return this.layer.setFourBit(fourBit); });
     }
 
     this.cube.on({

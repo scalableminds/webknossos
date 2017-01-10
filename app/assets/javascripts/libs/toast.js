@@ -46,7 +46,7 @@ const Toast = {
       }
     } else if (_.isArray(message)) {
       messages = message;
-      return (messages.map(message => this.message(type, message, sticky)));
+      return (messages.map(singleMessage => this.message(type, singleMessage, sticky)));
     } else if (shouldDisplayToast(type, message, sticky)) {
       let displayMessage;
       if (message.match(/<html[^>]*>/)) {

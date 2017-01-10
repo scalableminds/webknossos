@@ -37,8 +37,7 @@ class Model extends Backbone.Model {
 
 
   fetch() {
-    let datasetName,
-      infoUrl;
+    let infoUrl;
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
       // Include /readOnly part whenever it is in the pathname
       infoUrl = `${location.pathname}/info`;
@@ -53,7 +52,8 @@ class Model extends Backbone.Model {
       } else if (!tracing.content.dataSet) {
         error = "Selected dataset doesn't exist";
       } else if (!tracing.content.dataSet.dataLayers) {
-        if (datasetName = tracing.content.dataSet.name) {
+        const datasetName = tracing.content.dataSet.name;
+        if (datasetName) {
           error = `Please, double check if you have the dataset '${datasetName}' imported.`;
         } else {
           error = "Please, make sure you have a dataset imported.";

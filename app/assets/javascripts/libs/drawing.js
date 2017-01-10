@@ -11,11 +11,11 @@ const Drawing = {
   // Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
   drawLine2d(x, y, x1, y1, draw) {
     let d;
-    let dx;
-    let dy;
     let mode;
-    let incX = (dx = x1 - x) < 0 ? -1 : 1;
-    let incY = (dy = y1 - y) < 0 ? -1 : 1;
+    let dx = x1 - x;
+    let dy = y1 - y;
+    let incX = dx < 0 ? -1 : 1;
+    let incY = dy < 0 ? -1 : 1;
 
     dx = Math.abs(dx);
     dy = Math.abs(dy);

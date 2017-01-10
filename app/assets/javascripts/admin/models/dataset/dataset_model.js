@@ -31,8 +31,8 @@ class DatasetModel extends NestedObjModel {
 
 
   createThumbnailURL(datasetName, layers) {
-    let colorLayer;
-    if (colorLayer = _.find(layers, { category: "color" })) {
+    const colorLayer = _.find(layers, { category: "color" });
+    if (colorLayer) {
       return `/api/datasets/${datasetName}/layers/${colorLayer.name}/thumbnail`;
     }
   }

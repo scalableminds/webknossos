@@ -9,8 +9,8 @@ class UserModel extends Backbone.Model {
   }
 
   url() {
-    let userID;
-    if (userID = this.get("id")) {
+    const userID = this.get("id");
+    if (userID) {
       return `/api/users/${userID}`;
     }
     return "/api/user";
@@ -23,7 +23,7 @@ class UserModel extends Backbone.Model {
     // If we don't have a user ID, there is nothing to do and we trigger the
     // right events to the keep the control flow going
     if (!this.get("id")) {
-      return this.trigger("sync");
+      this.trigger("sync");
     }
   }
 }

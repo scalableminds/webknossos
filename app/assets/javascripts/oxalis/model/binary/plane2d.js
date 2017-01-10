@@ -445,8 +445,8 @@ class Plane2D {
       // use the first none-zero byte unless all are zero
       // assuming little endian order
       for (let b = 0; b < bytesSrcMapped; b++) {
-        let value;
-        if ((value = (sourceValue >> (b * 8)) % 256) || b === bytesSrcMapped - 1 || (!shorten)) {
+        const value = (sourceValue >> (b * 8)) % 256;
+        if (value || b === bytesSrcMapped - 1 || (!shorten)) {
           destination.buffer[dest++] = value;
           if (shorten) {
             break;

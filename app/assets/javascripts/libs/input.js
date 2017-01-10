@@ -350,8 +350,8 @@ Input.Mouse = class Mouse {
   isButtonPressed(event) {
     // Workaround for Firefox: event.which is not set properly
 
-    let b;
-    if ((b = __guard__(event.originalEvent, x => x.buttons)) != null) {
+    const b = __guard__(event.originalEvent, x => x.buttons);
+    if (b != null) {
       return b !== 0;
     }
     return event.which !== 0;

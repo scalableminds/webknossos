@@ -90,8 +90,8 @@ const Utils = {
 
     const result = [];
     for (const e of stringArray) {
-      let newEl;
-      if (!isNaN(newEl = parseFloat(e))) {
+      const newEl = parseFloat(e);
+      if (!isNaN(newEl)) {
         result.push(newEl);
       }
     }

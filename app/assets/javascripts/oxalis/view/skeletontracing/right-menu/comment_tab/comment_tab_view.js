@@ -60,12 +60,12 @@ class CommentTabView extends Marionette.View {
 
 
   initialize() {
-    let comment;
     this.activeComment = {};
     this.isSortedAscending = true;
 
     // select the activeNode if there is a comment...
-    if (comment = this.getCommentForNode(this.getActiveNodeId())) {
+    const comment = this.getCommentForNode(this.getActiveNodeId());
+    if (comment) {
       this.activeComment = this.makeComment(comment);
     } else {
       // make null comment
@@ -139,9 +139,9 @@ class CommentTabView extends Marionette.View {
 
   updateInputElement(nodeId) {
     // responds to activeNode:change event
-    let comment;
+    const comment = this.getCommentForNode(nodeId);
     let content = "";
-    if (comment = this.getCommentForNode(nodeId)) {
+    if (comment) {
       this.activeComment = this.makeComment(comment);
       ({ content } = comment);
     }
@@ -153,7 +153,6 @@ class CommentTabView extends Marionette.View {
 
 
   handleInput(evt) {
-    let comment;
     if (!this.model.skeletonTracing.restrictionHandler.updateAllowed()) { return; }
 
     // add, delete or update a comment
@@ -165,7 +164,8 @@ class CommentTabView extends Marionette.View {
     const tree = this.model.skeletonTracing.getActiveTree();
     const commentText = $(evt.target).val();
 
-    if (comment = this.getCommentForNode(nodeId)) {
+    let comment = this.getCommentForNode(nodeId);
+    if (comment) {
       if (commentText !== "") {
         comment.content = commentText;
       } else {

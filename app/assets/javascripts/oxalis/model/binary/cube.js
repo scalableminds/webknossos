@@ -138,8 +138,11 @@ class Cube {
 
 
   mapId(idToMap) {
-    let mappedId;
-    return (this.currentMapping != null) && ((mappedId = this.currentMapping[idToMap]) != null) ? mappedId : idToMap;
+    let mappedId = null;
+    if (this.currentMapping != null) {
+      mappedId = this.currentMapping[idToMap];
+    }
+    return mappedId != null ? mappedId : idToMap;
   }
 
 

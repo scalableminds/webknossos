@@ -202,17 +202,17 @@ class PolyhedronRasterizer {
   drawLine3d(x, y, z, x1, y1, z1) {
     // Source: https://sites.google.com/site/proyectosroboticos/bresenham-3d
 
-    let tmp,
-      d,
-      dx,
-      dy,
-      dz,
-      mode;
+    let tmp;
+    let d;
+    let mode;
+    let dx = x1 - x;
+    let dy = y1 - y;
+    let dz = z1 - z;
     const { shiftZ, buffer } = this;
 
-    let incX = (dx = x1 - x) < 0 ? -1 : 1;
-    let incY = (dy = y1 - y) < 0 ? -1 : 1;
-    let incZ = (dz = z1 - z) < 0 ? -1 : 1;
+    let incX = dx < 0 ? -1 : 1;
+    let incY = dy < 0 ? -1 : 1;
+    let incZ = dz < 0 ? -1 : 1;
 
     drawFunction(x, y, z, buffer, shiftZ);
 
@@ -300,13 +300,13 @@ class PolyhedronRasterizer {
     // Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
 
     let d;
-    let dx;
-    let dy;
     let mode;
+    let dx = x1 - x;
+    let dy = y1 - y;
     const { shiftZ, buffer } = this;
 
-    let incX = (dx = x1 - x) < 0 ? -1 : 1;
-    let incY = (dy = y1 - y) < 0 ? -1 : 1;
+    let incX = dx < 0 ? -1 : 1;
+    let incY = dy < 0 ? -1 : 1;
 
     dx = dx < 0 ? -dx : dx;
     dy = dy < 0 ? -dy : dy;
@@ -378,10 +378,12 @@ class PolyhedronRasterizer {
       let pointsPointer = 0;
       let indexY = z << shiftZ;
       for (let y = 0; y < deltaY; y++) {
-        if ((x0 = buffer[indexY++]) !== Int32MAX) {
+        x0 = buffer[indexY++];
+        if (x0 !== Int32MAX) {
           pointsBuffer[pointsPointer++] = y;
           pointsBuffer[pointsPointer++] = x0;
-          if ((x1 = buffer[indexY++]) !== x0) {
+          x1 = buffer[indexY++];
+          if (x1 !== x0) {
             pointsBuffer[pointsPointer++] = y;
             pointsBuffer[pointsPointer++] = x1;
           }

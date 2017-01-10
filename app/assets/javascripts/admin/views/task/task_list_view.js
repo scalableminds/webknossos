@@ -51,13 +51,14 @@ class TaskListView extends Marionette.CompositeView {
   templateContext() {
     return {
       getTitle: () => {
-        let id,
-          name;
-        if (name = this.collection.fullCollection.projectName) {
+        const id = this.collection.fullCollection.taskTypeId;
+        const name = this.collection.fullCollection.projectName;
+        if (name) {
           return `Tasks for Project ${name}`;
-        } else if (id = this.collection.fullCollection.taskTypeId) {
+        } else if (id) {
           return `Tasks for TaskType ${id}`;
         }
+        return "";
       },
     };
   }
@@ -73,12 +74,12 @@ class TaskListView extends Marionette.CompositeView {
 
 
   createNewTask() {
-    let id,
-      name,
-      urlParam;
-    if (name = this.collection.fullCollection.projectName) {
+    let urlParam;
+    const id = this.collection.fullCollection.taskTypeId;
+    const name = this.collection.fullCollection.projectName;
+    if (name) {
       urlParam = `?projectName=${name}`;
-    } else if (id = this.collection.fullCollection.taskTypeId) {
+    } else if (id) {
       urlParam = `?taskType=${id}`;
     } else {
       urlParam = "";

@@ -76,9 +76,9 @@ class SliderSettingView extends AbstractSettingView {
 
   resetValue() {
     if (this.model) {
-      let reset;
-      if (reset = this.model.reset) {
-        return reset();
+      const reset = this.model.reset;
+      if (reset) {
+        reset();
       }
     }
   }

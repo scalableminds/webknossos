@@ -50,7 +50,7 @@
   "scripts": {
     "test": "node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
-    "flow": "cd app/assets/javascripts; flow check; test $? -eq 0 -o $? -eq 2",
+    "flow": "flow check; test $? -eq 0 -o $? -eq 2",
     "lint": "./node_modules/.bin/eslint app/assets/javascripts/"
   },
   "dependencies": {

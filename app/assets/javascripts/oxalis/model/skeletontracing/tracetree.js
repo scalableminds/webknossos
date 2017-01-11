@@ -1,3 +1,5 @@
+import Utils from "libs/utils";
+
 class TraceTree {
 
   constructor(treeId, color, name, timestamp, comments = [], branchpoints = []) {
@@ -18,7 +20,7 @@ class TraceTree {
     updateTree |= this.removeCommentWithNodeId(id);
     updateTree |= this.removeBranchWithNodeId(id);
 
-    for (const i of __range__(0, this.nodes.length, false)) {
+    for (const i of Utils.__range__(0, this.nodes.length, false)) {
       if (this.nodes[i].id === id) {
         this.nodes.splice(i, 1);
         return updateTree;
@@ -28,7 +30,7 @@ class TraceTree {
 
 
   removeCommentWithNodeId(id) {
-    for (const i of __range__(0, this.comments.length, false)) {
+    for (const i of Utils.__range__(0, this.comments.length, false)) {
       if (this.comments[i].node === id) {
         this.comments.splice(i, 1);
         return true;
@@ -38,7 +40,7 @@ class TraceTree {
 
 
   removeBranchWithNodeId(id) {
-    for (const i of __range__(0, this.branchpoints.length, false)) {
+    for (const i of Utils.__range__(0, this.branchpoints.length, false)) {
       if (this.branchpoints[i].id === id) {
         this.branchpoints.splice(i, 1);
         return true;
@@ -76,13 +78,3 @@ class TraceTree {
 }
 
 export default TraceTree;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

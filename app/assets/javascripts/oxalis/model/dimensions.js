@@ -1,3 +1,4 @@
+import Utils from "libs/utils";
 import constants from "../constants";
 
 // This is a class with static methods dealing with dimensions and
@@ -63,7 +64,7 @@ const Dimensions = {
 
   roundCoordinate(coordinate) {
     const res = coordinate.slice();
-    for (const i of __range__(0, res.length, false)) {
+    for (const i of Utils.__range__(0, res.length, false)) {
       res[i] = this.round(res[i]);
     }
     return res;
@@ -72,7 +73,7 @@ const Dimensions = {
 
   distance(pos1, pos2) {
     let sumOfSquares = 0;
-    for (const i of __range__(0, pos1.length, false)) {
+    for (const i of Utils.__range__(0, pos1.length, false)) {
       const diff = pos1[i] - pos2[i];
       sumOfSquares += diff * diff;
     }
@@ -81,13 +82,3 @@ const Dimensions = {
 };
 
 export default Dimensions;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

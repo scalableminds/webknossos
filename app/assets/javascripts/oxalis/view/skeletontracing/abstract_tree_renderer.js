@@ -3,6 +3,7 @@ import Backbone from "backbone";
 import app from "app";
 import Constants from "oxalis/constants";
 import Toast from "libs/toast";
+import Utils from "libs/utils";
 
 
 class AbstractTreeRenderer {
@@ -216,7 +217,7 @@ class AbstractTreeRenderer {
   drawChainFromTo(top, left, tree, decision) {
     // Draw the chain and the tree, connect them.
     let node = tree;
-    for (const i of __range__(0, decision.chainCount, true)) {
+    for (const i of Utils.__range__(0, decision.chainCount, true)) {
       this.addNode(left, top + (i * this.nodeDistance), node.id);
       node = node.children[0];
       if (i !== 0) {
@@ -534,13 +535,3 @@ AbstractTreeRenderer.initClass();
 
 
 export default AbstractTreeRenderer;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

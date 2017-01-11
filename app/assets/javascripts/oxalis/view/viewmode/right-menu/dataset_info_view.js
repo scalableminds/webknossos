@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import app from "app";
 import constants from "oxalis/constants";
@@ -68,7 +69,7 @@ class DatasetInfoView extends Marionette.View {
       annotationType,
       zoomLevel: this.calculateZoomLevel(),
       dataSetName: this.model.get("dataset").get("name"),
-      treeCount: __guard__(this.model.skeletonTracing, x => x.trees.length),
+      treeCount: Utils.__guard__(this.model.skeletonTracing, x => x.trees.length),
     };
   }
 
@@ -99,7 +100,3 @@ class DatasetInfoView extends Marionette.View {
 DatasetInfoView.initClass();
 
 export default DatasetInfoView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

@@ -1,4 +1,5 @@
 import Drawing from "libs/drawing";
+import Utils from "libs/utils";
 import Dimensions from "../dimensions";
 
 
@@ -62,9 +63,9 @@ class VolumeLayer {
     const height = (maxCoord2d[1] - minCoord2d[1]) + 1;
 
     const map = new Array(width);
-    for (const x of __range__(0, width, false)) {
+    for (const x of Utils.__range__(0, width, false)) {
       map[x] = new Array(height);
-      for (const y of __range__(0, height, false)) {
+      for (const y of Utils.__range__(0, height, false)) {
         map[x][y] = true;
       }
     }
@@ -211,7 +212,7 @@ class VolumeLayer {
     let sumArea = 0;
     let sumCx = 0;
     let sumCy = 0;
-    for (const i of __range__(0, (this.contourList.length - 1), false)) {
+    for (const i of Utils.__range__(0, (this.contourList.length - 1), false)) {
       const [x, y] = this.get2DCoordinate(this.contourList[i]);
       const [x1, y1] = this.get2DCoordinate(this.contourList[i + 1]);
       sumArea += (x * y1) - (x1 * y);
@@ -228,13 +229,3 @@ class VolumeLayer {
 }
 
 export default VolumeLayer;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

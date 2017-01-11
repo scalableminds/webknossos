@@ -1,5 +1,6 @@
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 import THREE from "three";
 import Plane from "../geometries/plane";
@@ -128,8 +129,8 @@ class SceneController {
     let pos;
     this.cube.updateForCam(id);
     this.userBoundingBox.updateForCam(id);
-    __guard__(this.taskBoundingBox, x => x.updateForCam(id));
-    __guard__(this.skeleton, x1 => x1.updateForCam(id));
+    Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
+    Utils.__guard__(this.skeleton, x1 => x1.updateForCam(id));
 
     if (constants.ALL_PLANES.includes(id)) {
       let ind;
@@ -263,10 +264,10 @@ class SceneController {
     }
     this.cube.setVisibility(false);
     this.userBoundingBox.setVisibility(false);
-    __guard__(this.taskBoundingBox, x => x.setVisibility(false));
+    Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(false));
 
-    __guard__(this.skeleton, x1 => x1.restoreVisibility());
-    __guard__(this.skeleton, x2 => x2.setSizeAttenuation(true));
+    Utils.__guard__(this.skeleton, x1 => x1.restoreVisibility());
+    Utils.__guard__(this.skeleton, x2 => x2.setSizeAttenuation(true));
   }
 
 
@@ -276,9 +277,9 @@ class SceneController {
     }
     this.cube.setVisibility(true);
     this.userBoundingBox.setVisibility(true);
-    __guard__(this.taskBoundingBox, x => x.setVisibility(true));
+    Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(true));
 
-    __guard__(this.skeleton, x1 => x1.setSizeAttenuation(false));
+    Utils.__guard__(this.skeleton, x1 => x1.setSizeAttenuation(false));
   }
 
 
@@ -299,7 +300,3 @@ class SceneController {
 SceneController.initClass();
 
 export default SceneController;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

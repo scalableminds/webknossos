@@ -1,5 +1,5 @@
-/* eslint-disable no-underscore-dangle */
 import _ from "lodash";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 
 class PaginationCollection {
@@ -8,7 +8,7 @@ class PaginationCollection {
     let left;
     _.extend(this, Backbone.Events);
 
-    if (__guard__(options, x => x.fullCollection)) {
+    if (Utils.__guard__(options, x => x.fullCollection)) {
       this.fullCollection = options.fullCollection;
     } else {
       this.fullCollection = new Backbone.Collection(models, options);
@@ -276,7 +276,3 @@ class PaginationCollection {
 
 
 export default PaginationCollection;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

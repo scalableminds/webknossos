@@ -1,5 +1,6 @@
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import TemplateHelpers from "libs/template_helpers";
@@ -189,7 +190,7 @@ class DatasetListItemView extends Marionette.CompositeView {
       this.ui.importError.removeClass("hide");
 
       // apply single error
-      if (__guard__(__guard__(response.messages, x1 => x1[0]), x => x.error)) {
+      if (Utils.__guard__(Utils.__guard__(response.messages, x1 => x1[0]), x => x.error)) {
         this.ui.errorText.text(response.messages[0].error);
       }
     }
@@ -260,7 +261,3 @@ DatasetListItemView.initClass();
 
 
 export default DatasetListItemView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

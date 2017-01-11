@@ -1,5 +1,6 @@
 import $ from "jquery";
 import _ from "lodash";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 
 class BaseRouter {
@@ -16,7 +17,6 @@ class BaseRouter {
     _.extend(this, Backbone.Events);
     this.activeViews = [];
     this.routes = _.map(this.routes, (handler, route) => ({
-      // eslint-disable-next-line no-underscore-dangle
       route: Backbone.Router.prototype._routeToRegExp(route),
       handler: _.isString(handler) ? this[handler].bind(this) : handler,
     }),
@@ -151,8 +151,7 @@ class BaseRouter {
     // Triggers the registered `beforeunload` handlers and returns the first return value
     // Doesn't use Backbone's trigger because we need return values
 
-    // eslint-disable-next-line no-underscore-dangle
-    const handlers = __guard__(this._events, x => x.beforeunload) != null ? this._events.beforeunload : [];
+    const handlers = Utils.__guard__(this._events, x => x.beforeunload) != null ? this._events.beforeunload : [];
     const beforeunloadValue = _.find(
       handlers.map(handler => handler.callback.call(handler.ctx)),
       value => (value != null));
@@ -199,7 +198,3 @@ class BaseRouter {
 BaseRouter.initClass();
 
 export default BaseRouter;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

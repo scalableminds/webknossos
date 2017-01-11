@@ -1,3 +1,4 @@
+import Utils from "libs/utils";
 import $ from "jquery";
 
 // `WrappedDispatchedWorker` is a wrapper around the WebWorker API. First you
@@ -16,7 +17,7 @@ class WrappedDispatchedWorker {
     },
     );
 
-    this.worker.onerror = err => __guard__(console, x => x.error(err));
+    this.worker.onerror = err => Utils.__guard__(console, x => x.error(err));
   }
 
 
@@ -52,7 +53,3 @@ class WrappedDispatchedWorker {
 
 
 export default WrappedDispatchedWorker;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

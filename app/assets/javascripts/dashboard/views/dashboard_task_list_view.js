@@ -1,5 +1,6 @@
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 import DashboardTaskListItemView from "./dashboard_task_list_item_view";
@@ -127,14 +128,10 @@ class DashboardTaskListView extends Marionette.CompositeView {
   }
 
   onDestroy() {
-    return __guard__(this.modal, x => x.destroy());
+    return Utils.__guard__(this.modal, x => x.destroy());
   }
 }
 DashboardTaskListView.initClass();
 
 
 export default DashboardTaskListView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

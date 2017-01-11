@@ -1,5 +1,6 @@
 import _ from "lodash";
 import Backbone from "backbone";
+import Utils from "../../../libs/utils";
 import { Bucket, NullBucket } from "./bucket";
 import ArbitraryCubeAdapter from "./arbitrary_cube_adapter";
 import TemporalBucketManager from "./temporal_bucket_manager";
@@ -75,7 +76,7 @@ class Cube {
 
     this.arbitraryCube = new ArbitraryCubeAdapter(this, cubeBoundary.slice());
 
-    for (const i of __range__(0, this.ZOOM_STEP_COUNT, false)) {
+    for (const i of Utils.__range__(0, this.ZOOM_STEP_COUNT, false)) {
       this.cubes[i] = {};
       this.cubes[i].data = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]);
       this.cubes[i].boundary = cubeBoundary.slice();
@@ -300,7 +301,7 @@ class Cube {
 
       const labelFunc = data =>
         // Write label in little endian order
-        __range__(0, this.BYTE_OFFSET, false).forEach((i) => {
+        Utils.__range__(0, this.BYTE_OFFSET, false).forEach((i) => {
           data[voxelIndex + i] = (label >> (i * 8)) & 0xff;
         });
 
@@ -324,11 +325,11 @@ class Cube {
       const data = bucket.getData();
       let result = 0;
       // Assuming little endian byte order
-      for (const i of __range__(0, this.BYTE_OFFSET, false)) {
+      for (const i of Utils.__range__(0, this.BYTE_OFFSET, false)) {
         result += (1 << (8 * i)) * data[voxelIndex + i];
       }
 
-      if (__guard__(mapping, x => x[result]) != null) {
+      if (Utils.__guard__(mapping, x => x[result]) != null) {
         return mapping[result];
       }
 
@@ -364,16 +365,3 @@ class Cube {
 Cube.initClass();
 
 export default Cube;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

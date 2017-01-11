@@ -152,6 +152,22 @@ const Utils = {
 
     if (paramName) { return params[paramName]; } else { return params; }
   },
+
+
+  __range__(left, right, inclusive) {
+    const range = [];
+    const ascending = left < right;
+    // eslint-disable-next-line no-nested-ternary
+    const end = !inclusive ? right : ascending ? right + 1 : right - 1;
+    for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+      range.push(i);
+    }
+    return range;
+  },
+
+  __guard__(value, transform) {
+    return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
+  },
 };
 
 export default Utils;

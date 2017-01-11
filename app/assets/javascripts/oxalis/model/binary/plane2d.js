@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 import Dimensions from "../dimensions";
 
@@ -86,13 +87,13 @@ class Plane2D {
         const v = bucket[this.V] - this.dataTexture.topLeftBucket[this.V];
 
         // If the tile is part of the texture, mark it as changed
-        if ((__range__(0, this.BUCKETS_PER_ROW, false)).includes(u) &&
-            (__range__(0, this.BUCKETS_PER_ROW, false)).includes(v)) {
+        if ((Utils.__range__(0, this.BUCKETS_PER_ROW, false)).includes(u) &&
+            (Utils.__range__(0, this.BUCKETS_PER_ROW, false)).includes(v)) {
           const tile = [u, v];
           this.dataTexture.tiles[tileIndexByTileMacro(this, tile)] = false;
           this.dataTexture.ready &=
-            !((__range__(this.dataTexture.area[0], this.dataTexture.area[2], true)).includes(u) &&
-              (__range__(this.dataTexture.area[1], this.dataTexture.area[3], true)).includes(v));
+            !((Utils.__range__(this.dataTexture.area[0], this.dataTexture.area[2], true)).includes(u) &&
+              (Utils.__range__(this.dataTexture.area[1], this.dataTexture.area[3], true)).includes(v));
         }
       }
     });
@@ -472,13 +473,3 @@ class Plane2D {
 Plane2D.initClass();
 
 export default Plane2D;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

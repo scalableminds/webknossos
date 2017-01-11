@@ -1,4 +1,4 @@
-
+import Utils from "libs/utils";
 
 class ResizableBuffer {
   static initClass() {
@@ -131,9 +131,9 @@ class ResizableBuffer {
     const length = this.getLength();
     const result = [];
 
-    for (const i of __range__(0, length, false)) {
+    for (const i of Utils.__range__(0, length, false)) {
       const element = [];
-      for (const j of __range__(0, this.elementLength, false)) {
+      for (const j of Utils.__range__(0, this.elementLength, false)) {
         element.push(this.buffer[(i * this.elementLength) + j]);
       }
       result.push(`[ ${element.join(", ")} ]`);
@@ -146,13 +146,3 @@ ResizableBuffer.initClass();
 
 
 export default ResizableBuffer;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

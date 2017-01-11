@@ -33,9 +33,9 @@ class PlaneController {
           mouse.destroy();
         }
         this.mouseControllers = [];
-        __guard__(this.keyboard, x => x.destroy());
-        __guard__(this.keyboardNoLoop, x1 => x1.destroy());
-        __guard__(this.keyboardLoopDelayed, x2 => x2.destroy());
+        Utils.__guard__(this.keyboard, x => x.destroy());
+        Utils.__guard__(this.keyboardNoLoop, x1 => x1.destroy());
+        Utils.__guard__(this.keyboardLoopDelayed, x2 => x2.destroy());
       },
     };
   }
@@ -469,7 +469,3 @@ class PlaneController {
 PlaneController.initClass();
 
 export default PlaneController;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

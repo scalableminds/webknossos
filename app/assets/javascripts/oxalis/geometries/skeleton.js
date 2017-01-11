@@ -1,5 +1,6 @@
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 import ErrorHandling from "libs/error_handling";
 import constants from "../constants";
@@ -159,14 +160,14 @@ class Skeleton {
     let treeGeometry;
     if (this.lastActiveNode != null) {
       treeGeometry = this.getTreeGeometry(this.lastActiveNode.treeId);
-      __guard__(treeGeometry, x => x.updateNodeColor(this.lastActiveNode.id, false));
+      Utils.__guard__(treeGeometry, x => x.updateNodeColor(this.lastActiveNode.id, false));
     }
 
     const activeNode = this.model.skeletonTracing.getActiveNode();
     if (activeNode != null) {
       treeGeometry = this.getTreeGeometry(activeNode.treeId);
-      __guard__(treeGeometry, x1 => x1.updateNodeColor(activeNode.id, true));
-      __guard__(treeGeometry, x2 => x2.startNodeHighlightAnimation(activeNode.id));
+      Utils.__guard__(treeGeometry, x1 => x1.updateNodeColor(activeNode.id, true));
+      Utils.__guard__(treeGeometry, x2 => x2.startNodeHighlightAnimation(activeNode.id));
     }
 
     this.lastActiveNode = activeNode;
@@ -177,7 +178,7 @@ class Skeleton {
     const activeNode = this.model.skeletonTracing.getActiveNode();
     if (activeNode != null) {
       const treeGeometry = this.getTreeGeometry(activeNode.treeId);
-      __guard__(treeGeometry, x => x.updateNodeRadius(activeNode.id, activeNode.radius));
+      Utils.__guard__(treeGeometry, x => x.updateNodeRadius(activeNode.id, activeNode.radius));
       app.vent.trigger("rerender");
     }
   }
@@ -263,7 +264,3 @@ class Skeleton {
 Skeleton.initClass();
 
 export default Skeleton;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

@@ -1,6 +1,7 @@
 import _ from "lodash";
-import $ from "jquery";
 import app from "app";
+import Utils from "libs/utils";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 import DatasetListItemView from "./dataset_list_item_view";
@@ -90,13 +91,9 @@ class DatasetListView extends Marionette.CompositeView {
 
 
   onDestroy() {
-    __guard__(this.modalView, x => x.destroy());
+    Utils.__guard__(this.modalView, x => x.destroy());
   }
 }
 DatasetListView.initClass();
 
 export default DatasetListView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

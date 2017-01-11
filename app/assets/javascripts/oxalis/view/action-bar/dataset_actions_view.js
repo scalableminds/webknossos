@@ -1,6 +1,7 @@
 import _ from "lodash";
-import Marionette from "backbone.marionette";
 import app from "app";
+import Utils from "libs/utils";
+import Marionette from "backbone.marionette";
 import Request from "libs/request";
 import Constants from "oxalis/constants";
 import MergeModalView from "./merge_modal_view";
@@ -149,7 +150,7 @@ class DatasetActionsView extends Marionette.View {
         .then(() => Request.triggerRequest(finishUrl))
         .then(() => Request.receiveJSON(requestTaskUrl).then(
             (annotation) => {
-              const differentTaskType = annotation.task.type.id !== __guard__(this.model.tracing.task, x => x.type.id);
+              const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.model.tracing.task, x => x.type.id);
               const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
               const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
               return app.router.loadURL(newTaskUrl);
@@ -169,7 +170,3 @@ class DatasetActionsView extends Marionette.View {
 DatasetActionsView.initClass();
 
 export default DatasetActionsView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

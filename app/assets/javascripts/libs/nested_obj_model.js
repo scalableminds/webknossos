@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 
 class NestedObjModel extends Backbone.Model {
@@ -14,7 +15,7 @@ class NestedObjModel extends Backbone.Model {
     const valueObj = this.attributes;
     return _.reduce(
       attributes,
-      (value, attribute) => __guard__(value, x => x[attribute]),
+      (value, attribute) => Utils.__guard__(value, x => x[attribute]),
       valueObj);
   }
 
@@ -73,7 +74,3 @@ class NestedObjModel extends Backbone.Model {
 }
 
 export default NestedObjModel;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

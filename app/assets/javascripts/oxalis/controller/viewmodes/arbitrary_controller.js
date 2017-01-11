@@ -40,10 +40,10 @@ class ArbitraryController {
       keyboardOnce: null,
 
       destroy() {
-        __guard__(this.mouse, x => x.destroy());
-        __guard__(this.keyboard, x1 => x1.destroy());
-        __guard__(this.keyboardNoLoop, x2 => x2.destroy());
-        __guard__(this.keyboardOnce, x3 => x3.destroy());
+        Utils.__guard__(this.mouse, x => x.destroy());
+        Utils.__guard__(this.keyboard, x1 => x1.destroy());
+        Utils.__guard__(this.keyboardNoLoop, x2 => x2.destroy());
+        Utils.__guard__(this.keyboardOnce, x3 => x3.destroy());
       },
     };
   }
@@ -471,19 +471,15 @@ class ArbitraryController {
 
 
   isBranchpointvideoMode() {
-    return __guard__(this.model.tracing.task, x => x.type.summary) === "branchpointvideo";
+    return Utils.__guard__(this.model.tracing.task, x => x.type.summary) === "branchpointvideo";
   }
 
 
   isSynapseannotationMode() {
-    return __guard__(this.model.tracing.task, x => x.type.summary) === "synapseannotation";
+    return Utils.__guard__(this.model.tracing.task, x => x.type.summary) === "synapseannotation";
   }
 }
 ArbitraryController.initClass();
 
 
 export default ArbitraryController;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

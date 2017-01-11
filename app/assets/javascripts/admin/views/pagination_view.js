@@ -1,6 +1,7 @@
 import _ from "lodash";
-import $ from "jquery";
 import app from "app";
+import Utils from "libs/utils";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 
 class PaginationView extends Marionette.View {
@@ -88,28 +89,28 @@ class PaginationView extends Marionette.View {
 
 
   goFirst(evt) {
-    __guard__(evt, x => x.preventDefault());
+    Utils.__guard__(evt, x => x.preventDefault());
     return this.collection.getFirstPage();
   }
 
   goLast(evt) {
-    __guard__(evt, x => x.preventDefault());
+    Utils.__guard__(evt, x => x.preventDefault());
     return this.collection.getLastPage();
   }
 
   goBack(evt) {
-    __guard__(evt, x => x.preventDefault());
+    Utils.__guard__(evt, x => x.preventDefault());
     return this.collection.getPreviousPage();
   }
 
   goNext(evt) {
-    __guard__(evt, x => x.preventDefault());
+    Utils.__guard__(evt, x => x.preventDefault());
     return this.collection.getNextPage();
   }
 
 
   handleClickPage(evt) {
-    __guard__(evt, x => x.preventDefault());
+    Utils.__guard__(evt, x => x.preventDefault());
     const page = $(evt.target).text();
     return this.collection.getPage(parseInt(page) - 1);
   }
@@ -133,7 +134,6 @@ class PaginationView extends Marionette.View {
 
 
   render() {
-    /* eslint-disable no-underscore-dangle */
     this._ensureViewIsIntact();
     this.triggerMethod("before:render", this);
 
@@ -142,7 +142,6 @@ class PaginationView extends Marionette.View {
       this.$el.html(this.template(obj));
     }
     this._isRendered = true;
-    /* eslint-enable no-underscore-dangle */
 
     this.$el.find("ul.pagination").html(this.paginatorTemplate(obj));
     this.bindUIElements();
@@ -164,7 +163,3 @@ PaginationView.initClass();
 
 
 export default PaginationView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

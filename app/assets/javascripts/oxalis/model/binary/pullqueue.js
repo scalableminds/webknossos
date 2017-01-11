@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "../../../libs/utils";
 import Request from "../../../libs/request";
 
 class PullQueue {
@@ -125,7 +126,7 @@ class PullQueue {
     const allZero = _.reduce(bucketData, ((res, e) => res && e === 0), true);
 
     if (allZero) {
-      __range__(0, bucketData.length, false).forEach((i) => { bucketData[i] = 255; });
+      Utils.__range__(0, bucketData.length, false).forEach((i) => { bucketData[i] = 255; });
     }
   }
 }
@@ -133,13 +134,3 @@ PullQueue.initClass();
 
 
 export default PullQueue;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

@@ -1,5 +1,6 @@
-import Backbone from "backbone";
 import _ from "lodash";
+import Backbone from "backbone";
+import Utils from "../../../libs/utils";
 
 class Bucket {
   static initClass() {
@@ -134,12 +135,12 @@ class Bucket {
 
   merge(newData) {
     const voxelPerBucket = 1 << (this.BUCKET_SIZE_P * 3);
-    for (const i of __range__(0, voxelPerBucket, false)) {
-      const oldVoxel = (__range__(0, this.BYTE_OFFSET, false).map(j => this.data[(i * this.BYTE_OFFSET) + j]));
+    for (const i of Utils.__range__(0, voxelPerBucket, false)) {
+      const oldVoxel = (Utils.__range__(0, this.BYTE_OFFSET, false).map(j => this.data[(i * this.BYTE_OFFSET) + j]));
       const oldVoxelEmpty = _.reduce(oldVoxel, ((memo, v) => memo && v === 0), true);
 
       if (oldVoxelEmpty) {
-        __range__(0, this.BYTE_OFFSET, false).forEach((j) => {
+        Utils.__range__(0, this.BYTE_OFFSET, false).forEach((j) => {
           this.data[(i * this.BYTE_OFFSET) + j] = newData[(i * this.BYTE_OFFSET) + j];
         });
       }
@@ -174,13 +175,3 @@ NullBucket.initClass();
 
 
 export { Bucket, NullBucket };
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

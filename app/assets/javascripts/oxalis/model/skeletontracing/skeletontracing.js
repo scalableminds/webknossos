@@ -50,7 +50,7 @@ class SkeletonTracing {
 
     const tracingType = tracing.typ;
 
-    this.initializeTrees(tracingType, __guard__(tracing.task, x => x.id));
+    this.initializeTrees(tracingType, Utils.__guard__(tracing.task, x => x.id));
 
     if ((tracingType === "Task") && this.getNodeListOfAllTrees().length === 0) {
       this.addNode(tracing.content.editPosition, tracing.content.editRotation, 0, 0, 4, false);
@@ -59,7 +59,7 @@ class SkeletonTracing {
     this.branchPointsAllowed = tracing.content.settings.branchPointsAllowed;
     if (!this.branchPointsAllowed) {
       // calculate direction of first edge in nm
-      if (__guard__(this.data.trees[0], x1 => x1.edges) != null) {
+      if (Utils.__guard__(this.data.trees[0], x1 => x1.edges) != null) {
         for (const edge of this.data.trees[0].edges) {
           const sourceNode = this.findNodeInList(this.trees[0].nodes, edge.source).pos;
           const targetNode = this.findNodeInList(this.trees[0].nodes, edge.target).pos;
@@ -368,7 +368,7 @@ class SkeletonTracing {
   selectNextTree(forward) {
     let i;
     const trees = this.getTreesSorted(this.user.get("sortTreesByName"));
-    for (i of __range__(0, trees.length, false)) {
+    for (i of Utils.__range__(0, trees.length, false)) {
       if (this.activeTree.treeId === trees[i].treeId) {
         break;
       }
@@ -472,7 +472,7 @@ class SkeletonTracing {
         const newTrees = [];
         const oldActiveTreeId = this.activeTree.treeId;
 
-        for (const i of __range__(0, this.activeNode.neighbors.length, false)) {
+        for (const i of Utils.__range__(0, this.activeNode.neighbors.length, false)) {
           let node;
           if (i !== 0) {
             // create new tree for all neighbors, except the first
@@ -551,7 +551,7 @@ class SkeletonTracing {
     }
     const tree = this.getTree(id);
 
-    for (const i of __range__(0, this.trees.length, true)) {
+    for (const i of Utils.__range__(0, this.trees.length, true)) {
       if (this.trees[i].treeId === tree.treeId) {
         index = i;
         break;
@@ -729,16 +729,3 @@ SkeletonTracing.initClass();
 
 
 export default SkeletonTracing;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

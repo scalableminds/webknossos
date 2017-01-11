@@ -1,5 +1,6 @@
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import SelectAllRows from "libs/behaviors/select_all_rows_behavior";
@@ -102,13 +103,9 @@ class UserListView extends Marionette.CompositeView {
 
 
   onDestroy() {
-    __guard__(this.modalView, x => x.destroy());
+    Utils.__guard__(this.modalView, x => x.destroy());
   }
 }
 UserListView.initClass();
 
 export default UserListView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

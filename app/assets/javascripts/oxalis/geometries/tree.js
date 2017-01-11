@@ -1,4 +1,5 @@
 import app from "app";
+import Utils from "libs/utils";
 import ResizableBuffer from "libs/resizable_buffer";
 import ErrorHandling from "libs/error_handling";
 import THREE from "three";
@@ -92,7 +93,7 @@ class Tree {
     let found;
     const swapLast = (array, index) => {
       const lastElement = array.pop();
-      __range__(0, array.elementLength, false).forEach((i) => {
+      Utils.__range__(0, array.elementLength, false).forEach((i) => {
         array.getAllElements()[(index * array.elementLength) + i] = lastElement[i];
       });
     };
@@ -110,7 +111,7 @@ class Tree {
     // Delete Edge by finding it in the array
     const edgeArray = this.getEdgeArray(node, node.neighbors[0]);
 
-    for (const i of __range__(0, this.edgesBuffer.getLength(), false)) {
+    for (const i of Utils.__range__(0, this.edgesBuffer.getLength(), false)) {
       found = true;
       for (let j = 0; j <= 5; j++) {
         found &= Math.abs(this.edges.geometry.attributes.position.array[(6 * i) + j] - edgeArray[j]) < 0.5;
@@ -185,7 +186,7 @@ class Tree {
 
   updateNodesColors() {
     this.nodesColorBuffer.clear();
-    for (const i of __range__(0, this.nodeIDs.length, false)) {
+    for (const i of Utils.__range__(0, this.nodeIDs.length, false)) {
       this.nodesColorBuffer.push(this.getColor(this.nodeIDs.get(i)));
     }
 
@@ -292,7 +293,7 @@ class Tree {
 
 
   getNodeIndex(nodeId) {
-    for (const i of __range__(0, this.nodeIDs.length, true)) {
+    for (const i of Utils.__range__(0, this.nodeIDs.length, true)) {
       if (this.nodeIDs.get(i) === nodeId) {
         return i;
       }
@@ -340,13 +341,3 @@ class Tree {
 }
 
 export default Tree;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

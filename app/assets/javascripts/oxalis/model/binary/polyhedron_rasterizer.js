@@ -1,3 +1,4 @@
+import Utils from "libs/utils";
 import { M4x4 } from "libs/mjs";
 
 // Constants
@@ -422,7 +423,7 @@ class PolyhedronRasterizer {
         const x0 = buffer[index++];
         const x1 = buffer[index++];
         if (x0 !== Int32MAX) {
-          for (const x of __range__(x0, x1, true)) { output.push(x + minX, y + minY, z + minZ); }
+          for (const x of Utils.__range__(x0, x1, true)) { output.push(x + minX, y + minY, z + minZ); }
         }
       }
     }
@@ -462,7 +463,7 @@ class PolyhedronRasterizer {
         radiusStartZ = radiusMinZ;
       }
 
-      for (const z of __range__(radiusStartZ, radiusEndZ, true)) {
+      for (const z of Utils.__range__(radiusStartZ, radiusEndZ, true)) {
         for (let y = radiusMinY; y <= radiusMaxY; y++) {
           let index = ((z - minZ) << shiftZ) + ((y - minY) << 1);
           let x0 = buffer[index++];
@@ -470,7 +471,7 @@ class PolyhedronRasterizer {
           if (x0 !== Int32MAX) {
             x0 += minX;
             x1 += minX;
-            for (const x of __range__(Math.max(xs - radius, x0), Math.min(xs + radius, x1), true)) {
+            for (const x of Utils.__range__(Math.max(xs - radius, x0), Math.min(xs + radius, x1), true)) {
               if (x === xs - radius || x === xs + radius ||
               y === ys - radius || y === ys + radius ||
               z === zs - radius || z === zs + radius) {
@@ -554,13 +555,3 @@ PolyhedronRasterizer.Master = class Master {
 
 
 export default PolyhedronRasterizer;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

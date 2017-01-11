@@ -1,6 +1,7 @@
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 import Stats from "stats.js";
 import PlaneController from "./controller/viewmodes/plane_controller";
@@ -190,10 +191,10 @@ class Controller {
 
   loadMode(newMode, force = false) {
     if ((newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) && (this.model.allowedModes.includes(newMode) || force)) {
-      __guard__(this.planeController, x => x.stop());
+      Utils.__guard__(this.planeController, x => x.stop());
       this.arbitraryController.start(newMode);
     } else if ((newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) && (this.model.allowedModes.includes(newMode) || force)) {
-      __guard__(this.arbitraryController, x1 => x1.stop());
+      Utils.__guard__(this.arbitraryController, x1 => x1.stop());
       this.planeController.start(newMode);
     }
   }
@@ -241,7 +242,3 @@ class Controller {
 
 
 export default Controller;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

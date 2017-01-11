@@ -1,8 +1,8 @@
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
-import Utils from "libs/utils";
 import TaskListItemView from "./task_list_item_view";
 import AnonymousTaskLinkModal from "./anonymous_task_link_modal";
 
@@ -120,7 +120,7 @@ class TaskListView extends Marionette.CompositeView {
 
 
   onDestroy() {
-    __guard__(this.modalView, x => x.destroy());
+    Utils.__guard__(this.modalView, x => x.destroy());
   }
 
 
@@ -131,7 +131,3 @@ class TaskListView extends Marionette.CompositeView {
 TaskListView.initClass();
 
 export default TaskListView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

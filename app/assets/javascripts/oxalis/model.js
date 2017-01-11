@@ -1,6 +1,7 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import app from "app";
+import Utils from "../libs/utils";
 import Binary from "./model/binary";
 import SkeletonTracing from "./model/skeletontracing/skeletontracing";
 import User from "./model/user";
@@ -268,7 +269,7 @@ class Model extends Backbone.Model {
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {
-      const existingLayer = _.find(layers, layer => layer.name === __guard__(userLayer.fallback, x => x.layerName));
+      const existingLayer = _.find(layers, layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName));
 
       if (existingLayer != null) {
         _.extend(existingLayer, userLayer);
@@ -354,7 +355,7 @@ class Model extends Backbone.Model {
     }
 
     if (state.activeNode != null) {
-      __guard__(this.get("skeletonTracing"), x => x.setActiveNode(state.activeNode));
+      Utils.__guard__(this.get("skeletonTracing"), x => x.setActiveNode(state.activeNode));
     }
   }
 }
@@ -362,7 +363,3 @@ Model.initClass();
 
 
 export default Model;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

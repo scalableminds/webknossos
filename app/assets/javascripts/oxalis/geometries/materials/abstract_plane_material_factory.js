@@ -1,4 +1,5 @@
 import app from "app";
+import Utils from "libs/utils";
 import THREE from "three";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
@@ -36,8 +37,8 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
     this.material.setData = (name, data) => {
       const textureName = this.sanitizeName(name);
-      __guard__(this.textures[textureName], x => x.image.data.set(data));
-      __guard__(this.textures[textureName], (x1) => { x1.needsUpdate = true; });
+      Utils.__guard__(this.textures[textureName], x => x.image.data.set(data));
+      Utils.__guard__(this.textures[textureName], (x1) => { x1.needsUpdate = true; });
     };
   }
 
@@ -100,7 +101,3 @@ void main() {
 }
 
 export default AbstractPlaneMaterialFactory;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

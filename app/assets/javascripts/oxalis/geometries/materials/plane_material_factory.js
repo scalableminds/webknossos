@@ -1,5 +1,6 @@
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import THREE from "three";
 import AbstractPlaneMaterialFactory from "./abstract_plane_material_factory";
 
@@ -175,15 +176,11 @@ void main() {
     )({
       layers: colorLayerNames,
       hasSegmentation: (segmentationBinary != null),
-      segmentationName: this.sanitizeName(__guard__(segmentationBinary, x => x.name)),
-      isRgb: __guard__(this.model.binary.color, x1 => x1.targetBitDepth) === 24,
+      segmentationName: this.sanitizeName(Utils.__guard__(segmentationBinary, x => x.name)),
+      isRgb: Utils.__guard__(this.model.binary.color, x1 => x1.targetBitDepth) === 24,
     },
     );
   }
 }
 
 export default PlaneMaterialFactory;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

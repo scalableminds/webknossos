@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "libs/utils";
 import $ from "jquery";
 import Backbone from "backbone";
 import constants from "oxalis/constants";
@@ -322,7 +323,7 @@ Input.Mouse = class Mouse {
       };
     }
 
-    if (__guard__(delta, x => x.x) !== 0 || __guard__(delta, x1 => x1.y) !== 0) {
+    if (Utils.__guard__(delta, x => x.x) !== 0 || Utils.__guard__(delta, x1 => x1.y) !== 0) {
       this.handle("MouseMove", event, delta);
 
       this.lastPosition = this.position;
@@ -349,7 +350,7 @@ Input.Mouse = class Mouse {
   isButtonPressed(event) {
     // Workaround for Firefox: event.which is not set properly
 
-    const b = __guard__(event.originalEvent, x => x.buttons);
+    const b = Utils.__guard__(event.originalEvent, x => x.buttons);
     if (b != null) {
       return b !== 0;
     }
@@ -375,7 +376,3 @@ Input.Mouse.initClass();
 
 
 export default Input;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

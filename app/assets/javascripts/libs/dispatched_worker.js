@@ -1,5 +1,6 @@
 import $ from "jquery";
 import _ from "lodash";
+import Utils from "libs/utils";
 
 // `DispatchedWorker` is a wrapper around the WebWorker API. First you
 // initialize it providing a worker object of the javascript worker code.
@@ -10,7 +11,7 @@ class DispatchedWorker {
   constructor(WorkerClass) {
     this.worker = new WorkerClass();
 
-    this.worker.onerror = err => __guard__(console, x => x.error(err));
+    this.worker.onerror = err => Utils.__guard__(console, x => x.error(err));
   }
 
 
@@ -85,7 +86,7 @@ DispatchedWorker.Pool = class Pool {
 
 
     worker.worker.onerror = function (err) {
-      __guard__(console, x => x.error(err));
+      Utils.__guard__(console, x => x.error(err));
       return workerReset();
     };
 
@@ -116,7 +117,3 @@ DispatchedWorker.Pool = class Pool {
 
 
 export default DispatchedWorker;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

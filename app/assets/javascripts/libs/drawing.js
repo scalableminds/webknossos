@@ -1,3 +1,5 @@
+import Utils from "libs/utils";
+
 // This is a class with static methods and constants dealing with drawing
 // lines and filling polygons
 
@@ -138,13 +140,13 @@ const Drawing = {
     const a = this.alpha || SMOOTH_ALPHA;
 
     if (points.length > 2 + smoothLength) {
-      for (const i of __range__(0, smoothLength, false)) {
+      for (const i of Utils.__range__(0, smoothLength, false)) {
         const j = points.length - i - 2;
         const p0 = points[j];
         const p1 = points[j + 1];
 
         const p = [];
-        for (const k of __range__(0, p0.length, false)) {
+        for (const k of Utils.__range__(0, p0.length, false)) {
           p.push((p0[k] * (1 - a)) + (p1[k] * a));
         }
 
@@ -163,13 +165,3 @@ const Drawing = {
 };
 
 export default Drawing;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

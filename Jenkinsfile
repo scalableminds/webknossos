@@ -78,7 +78,7 @@ ansiColor('xterm') {
         sh "echo ${env.BRANCH_NAME} > .git/REAL_BRANCH"
         withEnv(["JOB_NAME=oxalis"]) {
           sh "./buildtools/publish_deb.py"
-          sh "./buildtools/report-build.sh"
+          sh "./buildtools/salt-redeploy-dev.sh"
         }
       }
 

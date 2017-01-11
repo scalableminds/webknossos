@@ -71,7 +71,7 @@ class UserListItemView extends Marionette.View {
 
   deactivate() {
     if (window.confirm("Do you really want to deactivate this user?")) {
-      return this.model.save({
+      this.model.save({
         isActive: false,
       });
     }

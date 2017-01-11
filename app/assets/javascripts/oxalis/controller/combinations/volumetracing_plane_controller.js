@@ -21,9 +21,9 @@ class VolumeTracingPlaneController extends PlaneController {
     this.listenTo(this.model.flycam, "zoomStepChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()),
     );
 
-    this.listenTo(this.model.user, "isosurfaceDisplayChanged", function () { return this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "isosurfaceBBsizeChanged", function () { return this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "isosurfaceResolutionChanged", function () { return this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.user, "isosurfaceDisplayChanged", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.user, "isosurfaceBBsizeChanged", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.user, "isosurfaceResolutionChanged", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
     this.listenTo(this.model.volumeTracing, "newActiveCell", function (id) {
       id = this.model.volumeTracing.getActiveCellId();
       if (id > 0) {
@@ -73,13 +73,13 @@ class VolumeTracingPlaneController extends PlaneController {
 
       leftDownMove: (delta, pos) => {
         if (this.model.volumeTracing.mode === Constants.VOLUME_MODE_MOVE) {
-          return this.move([
+          this.move([
             (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
             (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
             0,
           ]);
         }
-        return this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
+        this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
       },
 
       leftMouseDown: (pos, plane, event) => {
@@ -87,12 +87,12 @@ class VolumeTracingPlaneController extends PlaneController {
           this.volumeTracingController.enterDeleteMode();
         }
         this.model.volumeTracing.startEditing(plane);
-        return this.adjustSegmentationOpacity();
+        this.adjustSegmentationOpacity();
       },
 
       leftMouseUp: () => {
         this.model.volumeTracing.finishLayer();
-        return this.volumeTracingController.restoreAfterDeleteMode();
+        this.volumeTracingController.restoreAfterDeleteMode();
       },
 
       rightDownMove: (delta, pos) => this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos)),
@@ -100,18 +100,18 @@ class VolumeTracingPlaneController extends PlaneController {
       rightMouseDown: (pos, plane) => {
         this.volumeTracingController.enterDeleteMode();
         this.model.volumeTracing.startEditing(plane);
-        return this.adjustSegmentationOpacity();
+        this.adjustSegmentationOpacity();
       },
 
       rightMouseUp: () => {
         this.model.volumeTracing.finishLayer();
-        return this.volumeTracingController.restoreAfterDeleteMode();
+        this.volumeTracingController.restoreAfterDeleteMode();
       },
 
       leftClick: (pos) => {
         const cellId = this.model.getSegmentationBinary().cube.getDataValue(this.calculateGlobalPos(pos));
 
-        return this.volumeTracingController.handleCellSelection(cellId);
+        this.volumeTracingController.handleCellSelection(cellId);
       },
     },
     );
@@ -120,7 +120,7 @@ class VolumeTracingPlaneController extends PlaneController {
 
   adjustSegmentationOpacity() {
     if (this.model.user.get("segmentationOpacity") < 10) {
-      return this.model.user.set("segmentationOpacity", 50);
+      this.model.user.set("segmentationOpacity", 50);
     }
   }
 
@@ -136,7 +136,7 @@ class VolumeTracingPlaneController extends PlaneController {
 
   render3dCell(id) {
     if (!this.model.user.get("isosurfaceDisplay")) {
-      return this.sceneController.removeShapes();
+      this.sceneController.removeShapes();
     }
     const bb = this.model.flycam.getViewportBoundingBox();
     const res = this.model.user.get("isosurfaceResolution");

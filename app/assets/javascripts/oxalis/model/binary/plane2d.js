@@ -270,7 +270,7 @@ class Plane2D {
 
   renderSubTile(map, mapIndex, tile, tileZoomStep) {
     let tileSizeP;
-    if (!map[mapIndex]) { return; }
+    if (!map[mapIndex]) { return null; }
 
     if (map[mapIndex] === this.RECURSION_PLACEHOLDER) {
       const result = new Array(4);

@@ -69,7 +69,7 @@ class UserListView extends Marionette.CompositeView {
       data: "isEditable=true",
     });
 
-    return this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
+    this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
   }
 
 

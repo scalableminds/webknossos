@@ -83,7 +83,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
     this.collection = new UserTasksCollection([], { userID: this.options.userID });
     this.collection.fetch();
 
-    return this.listenTo(app.vent, "modal:destroy", this.refresh);
+    this.listenTo(app.vent, "modal:destroy", this.refresh);
   }
 
   filter(child) {
@@ -98,7 +98,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
     event.preventDefault();
 
     if (this.collection.filter(UserTasksCollection.prototype.unfinishedTasksFilter).length === 0 || confirm("Do you really want another task?")) {
-      return this.collection.getNewTask();
+      this.collection.getNewTask();
     }
   }
 
@@ -106,7 +106,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
   toggleFinished() {
     this.showFinishedTasks = !this.showFinishedTasks;
     this.collection.isFinished = this.showFinishedTasks;
-    return this.refresh();
+    this.refresh();
   }
 
 
@@ -118,17 +118,16 @@ class DashboardTaskListView extends Marionette.CompositeView {
     });
     const url = evt.target.href;
     this.modal = new TaskTransferModalView({ url });
-    return modalContainer.show(this.modal);
+    modalContainer.show(this.modal);
   }
 
 
   refresh() {
-    return this.collection.fetch().then(() => this.render(),
-    );
+    this.collection.fetch().then(() => this.render());
   }
 
   onDestroy() {
-    return Utils.__guard__(this.modal, x => x.destroy());
+    Utils.__guard__(this.modal, x => x.destroy());
   }
 }
 DashboardTaskListView.initClass();

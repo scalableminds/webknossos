@@ -13,7 +13,7 @@ class ArbitraryPlaneInfo extends Marionette.View {
 
     this.prototype.templateContext = {
       getCheckedStatus() {
-        if (this.flightmodeRecording) { return "checked"; }
+        return this.flightmodeRecording ? "checked" : "";
       },
     };
 

@@ -35,6 +35,7 @@ class DatasetModel extends NestedObjModel {
     if (colorLayer) {
       return `/api/datasets/${datasetName}/layers/${colorLayer.name}/thumbnail`;
     }
+    return "";
   }
 }
 DatasetModel.initClass();

@@ -109,7 +109,7 @@ class DatasetActionsView extends Marionette.View {
       evt.preventDefault();
     }
 
-    return this.model.save();
+    this.model.save();
   }
 
 

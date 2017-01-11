@@ -5,7 +5,7 @@ class SortedCollection extends Backbone.Collection {
 
   initialize() {
     if (this.sortAttribute) {
-      return this.setSort(this.sortAttribute, "asc");
+      this.setSort(this.sortAttribute, "asc");
     }
   }
 
@@ -37,7 +37,7 @@ class SortedCollection extends Backbone.Collection {
       return compValue;
     };
 
-    return this.sort();
+    this.sort();
   }
 }
 

@@ -20,9 +20,9 @@ class SkeletonTracingView extends View {
     const autoSaveFailureMessage = "Auto-Save failed!";
     this.listenTo(this.model.skeletonTracing.stateLogger, "pushFailed", function () {
       if (this.reloadDenied) {
-        return Toast.error(autoSaveFailureMessage, true);
+        Toast.error(autoSaveFailureMessage, true);
       } else {
-        return modal.show(
+        modal.show(
           "Several attempts to reach our server have failed. You should \
 reload the page to make sure that your work won't be lost.",
           "Connection error",
@@ -32,7 +32,7 @@ reload the page to make sure that your work won't be lost.",
               label: "OK, reload",
               callback() {
                 app.router.off("beforeunload");
-                return app.router.reload();
+                app.router.reload();
               },
             },
             {
@@ -49,7 +49,7 @@ reload the page to make sure that your work won't be lost.",
 
 
   showFirstVisToggle() {
-    return modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
+    modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
       "Skeleton visibility",
       [{ id: "ok-button", label: "OK, Got it." }],
     );

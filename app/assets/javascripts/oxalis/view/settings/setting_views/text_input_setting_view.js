@@ -28,7 +28,7 @@ class TextInputSettingView extends AbstractSettingView {
   initialize(options) {
     super.initialize(options);
 
-    return _.defaults(this.options, {
+    _.defaults(this.options, {
       pattern: "",
       title: "",
     },
@@ -42,12 +42,12 @@ class TextInputSettingView extends AbstractSettingView {
       if (!this.options.validate.call(this, value)) { return; }
     }
 
-    return this.model.set(this.options.name, value);
+    this.model.set(this.options.name, value);
   }
 
 
   update(model, value) {
-    return this.ui.text.val(value);
+    this.ui.text.val(value);
   }
 }
 TextInputSettingView.initClass();

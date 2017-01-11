@@ -12,7 +12,7 @@ class ActionBarView extends Marionette.View {
     this.prototype.className = "container-fluid";
 
     this.prototype.template = _.template(`\
-  
+
 <% if (isTraceMode && hasAdvancedOptions) { %>
   <a href="#" id="menu-toggle-button" class="btn btn-default"
     data-toggle="offcanvas"
@@ -22,19 +22,19 @@ class ActionBarView extends Marionette.View {
     data-autohide="false"
     data-disable-scrolling="false"><i class="fa fa-bars"></i>Menu</a>
 <% } %>
-  
+
 <% if (isTraceMode) { %>
   <div id="dataset-actions"></div>
 <% } %>
-  
+
 <% if (hasAdvancedOptions) { %>
   <div id="dataset-position"></div>
 <% } %>
-  
+
 <% if (isVolumeMode && hasAdvancedOptions) { %>
   <div id="volume-actions"></div>
 <% } %>
-  
+
 <% if (isTraceMode && hasAdvancedOptions) { %>
   <div id="view-modes"></div>
   <div id="skeleton-actions"></div>
@@ -75,7 +75,7 @@ class ActionBarView extends Marionette.View {
     }
 
 
-    return this.listenTo(this, "render", this.afterRender);
+    this.listenTo(this, "render", this.afterRender);
   }
 
 
@@ -89,10 +89,10 @@ class ActionBarView extends Marionette.View {
 
       if (this.hasAdvancedOptions()) {
         if (this.isVolumeMode()) {
-          return this.showChildView("volumeActions", this.volumeActionsView);
+          this.showChildView("volumeActions", this.volumeActionsView);
         } else {
           this.showChildView("viewModes", this.viewModesView);
-          return this.showChildView("skeletonActions", this.skeletonActionsView);
+          this.showChildView("skeletonActions", this.skeletonActionsView);
         }
       }
     }

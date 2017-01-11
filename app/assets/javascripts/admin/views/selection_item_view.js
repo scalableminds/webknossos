@@ -32,7 +32,7 @@ class SelectionItemView extends Marionette.View {
     // a function to retrieve the option's label (displayed text)
     this.modelLabel = options.modelLabel;
 
-    return this.listenTo(this, "render", this.afterRender);
+    this.listenTo(this, "render", this.afterRender);
   }
 
 

@@ -11,7 +11,7 @@ class DashboardTaskModel extends NestedObjModel {
     if (!task) {
       // This should never be the case unless tasks were deleted in the DB.
       console.warn(`[Dashboard Tasks] Annotation ${annotation.id} has no task assigned. Please inform your admin.`);
-      return;
+      return null;
     }
 
     if (!task.type) {

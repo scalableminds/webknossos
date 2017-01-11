@@ -87,13 +87,13 @@ class VolumeTracingController {
   handleCellSelection(cellId) {
     if (cellId > 0) {
       if (this.mergeMode === this.MERGE_MODE_NORMAL) {
-        return this.model.volumeTracing.setActiveCell(cellId);
+        this.model.volumeTracing.setActiveCell(cellId);
       } else if (this.mergeMode === this.MERGE_MODE_CELL1) {
         $("#merge-cell1").val(cellId);
-        return $("#merge-cell2").focus();
+        $("#merge-cell2").focus();
       } else if (this.mergeMode === this.MERGE_MODE_CELL2) {
         $("#merge-cell2").val(cellId);
-        return this.merge();
+        this.merge();
       }
     }
   }
@@ -118,7 +118,7 @@ class VolumeTracingController {
 
 
   drawVolume(pos) {
-    return this.model.volumeTracing.addToLayer(pos);
+    this.model.volumeTracing.addToLayer(pos);
   }
 }
 VolumeTracingController.initClass();

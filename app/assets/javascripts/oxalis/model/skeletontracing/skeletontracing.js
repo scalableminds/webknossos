@@ -130,7 +130,7 @@ class SkeletonTracing {
       offset += size;
     }
     this.trigger("reloadTrees");
-    return console.log(`[benchmark] done. Took me ${((new Date()).getTime() - startTime) / 1000} seconds.`);
+    console.log(`[benchmark] done. Took me ${((new Date()).getTime() - startTime) / 1000} seconds.`);
   }
 
 
@@ -151,7 +151,7 @@ class SkeletonTracing {
 
 
   popBranch() {
-    if (!this.restrictionHandler.updateAllowed()) { return; }
+    if (!this.restrictionHandler.updateAllowed()) { return Promise.resolve(); }
 
     const reallyPopBranch = (point, tree, resolve) => {
       tree.removeBranchWithNodeId(point.id);
@@ -451,7 +451,7 @@ class SkeletonTracing {
 
   deleteActiveNode() {
     let branchpoints;
-    if (!this.restrictionHandler.updateAllowed()) { return; }
+    if (!this.restrictionHandler.updateAllowed()) { return Promise.resolve(); }
 
     const reallyDeleteActiveNode = (resolve) => {
       for (const neighbor of this.activeNode.neighbors) {
@@ -511,7 +511,7 @@ class SkeletonTracing {
       } else {
         this.deleteTree(false);
       }
-      return resolve();
+      resolve();
     };
 
     return new Promise((resolve, reject) => {
@@ -611,7 +611,7 @@ class SkeletonTracing {
 
 
   updateTree(tree) {
-    return this.stateLogger.updateTree(tree);
+    this.stateLogger.updateTree(tree);
   }
 
 

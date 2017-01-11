@@ -45,6 +45,7 @@ const Toast = {
           return this.error(message.error);
         }
       }
+      return {};
     } else if (_.isArray(message)) {
       messages = message;
       return (messages.map(singleMessage => this.message(type, singleMessage, sticky)));
@@ -71,6 +72,8 @@ const Toast = {
       }
 
       return { remove() { return $closeButton.click(); } };
+    } else {
+      return {};
     }
   },
 

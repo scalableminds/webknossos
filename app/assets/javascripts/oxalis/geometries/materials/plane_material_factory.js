@@ -94,7 +94,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   setupChangeListeners() {
     super.setupChangeListeners();
 
-    return this.listenTo(this.model.datasetConfiguration, "change", function (model) {
+    this.listenTo(this.model.datasetConfiguration, "change", function (model) {
       const object = model.changed.layers || {};
       for (const binaryName of Object.keys(object)) {
         const changes = object[binaryName];
@@ -105,7 +105,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         }
       }
 
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     });
   }
 

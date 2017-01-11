@@ -96,14 +96,14 @@ class CommentTabView extends Marionette.View {
     }
 
     // scroll active comment into view
-    return this.ensureActiveCommentVisible();
+    this.ensureActiveCommentVisible();
   }
 
 
   updateState() {
     if (!this.commentList) { return; }
 
-    return this.commentList.setState({
+    this.commentList.setState({
       data: this.model.skeletonTracing.getTreesSortedBy("treeId", this.isSortedAscending),
       activeNodeId: this.getActiveNodeId(),
       activeTreeId: this.model.skeletonTracing.getActiveTreeId(),
@@ -115,7 +115,7 @@ class CommentTabView extends Marionette.View {
   ensureActiveCommentVisible() {
     const activeNodeId = this.getActiveNodeId();
     const comment = $(`#comment-tab-node-${activeNodeId}`)[0];
-    if (comment) { return scrollIntoViewIfNeeded(comment); }
+    if (comment) { scrollIntoViewIfNeeded(comment); }
   }
 
 
@@ -127,7 +127,7 @@ class CommentTabView extends Marionette.View {
   setActiveNode(comment, treeId) {
     this.activeComment = this.makeComment(comment, treeId);
     this.model.skeletonTracing.setActiveNode(comment.node);
-    return this.model.skeletonTracing.centerActiveNode();
+    this.model.skeletonTracing.centerActiveNode();
   }
 
 
@@ -148,7 +148,7 @@ class CommentTabView extends Marionette.View {
 
     // populate the input element
     this.ui.commentInput.val(content);
-    return this.updateState();
+    this.updateState();
   }
 
 
@@ -182,7 +182,7 @@ class CommentTabView extends Marionette.View {
       this.setActiveNode(comment, tree.treeId);
     }
 
-    return this.model.skeletonTracing.updateTree(tree);
+    this.model.skeletonTracing.updateTree(tree);
   }
 
 
@@ -219,19 +219,19 @@ class CommentTabView extends Marionette.View {
 
     // if a comment was found, make it active
     if (nextComment) {
-      return this.setActiveNode(nextComment, nextTree.treeId);
+      this.setActiveNode(nextComment, nextTree.treeId);
     }
   }
 
 
   previousComment() {
-    return this.nextComment(false);
+    this.nextComment(false);
   }
 
 
   sortComments() {
     this.isSortedAscending = !this.isSortedAscending;
-    return this.updateState();
+    this.updateState();
   }
 
 

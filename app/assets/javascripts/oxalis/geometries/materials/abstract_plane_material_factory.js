@@ -44,7 +44,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
 
   setupChangeListeners() {
-    return this.listenTo(this.model.datasetConfiguration, "change", function (model) {
+    this.listenTo(this.model.datasetConfiguration, "change", function (model) {
       const object = model.changed.layers || {};
       for (const binaryName of Object.keys(object)) {
         const changes = object[binaryName];
@@ -56,7 +56,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
           this.uniforms[`${name}_contrast`].value = changes.contrast;
         }
       }
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     });
   }
 
@@ -70,7 +70,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
     // Make sure name starts with a letter and contains
     // no "-" signs
 
-    if (name == null) { return; }
+    if (name == null) { return null; }
     return `binary_${name.replace(/-/g, "_")}`;
   }
 

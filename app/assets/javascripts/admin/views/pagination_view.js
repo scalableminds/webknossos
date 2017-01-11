@@ -84,7 +84,7 @@ class PaginationView extends Marionette.View {
   initialize(options) {
     this.options = options;
     this.listenToOnce(this.collection, "reset", this.searchByHash);
-    return this.listenTo(this.collection, "reset", this.render);
+    this.listenTo(this.collection, "reset", this.render);
   }
 
 
@@ -121,7 +121,7 @@ class PaginationView extends Marionette.View {
 
 
   addElement() {
-    return app.vent.trigger("paginationView:addElement");
+    app.vent.trigger("paginationView:addElement");
   }
 
 
@@ -129,7 +129,7 @@ class PaginationView extends Marionette.View {
     // implement actually filtering on the collection in each respective view
     // in order to set correct fields for filtering
     const filterQuery = this.ui.inputSearch.val();
-    return app.vent.trigger("paginationView:filter", filterQuery);
+    app.vent.trigger("paginationView:filter", filterQuery);
   }
 
 
@@ -155,7 +155,7 @@ class PaginationView extends Marionette.View {
     if (hash) {
       this.ui.inputSearch.val(hash);
       this.ui.inputSearch.focus();
-      return this.filterBySearch();
+      this.filterBySearch();
     }
   }
 }

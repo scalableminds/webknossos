@@ -40,7 +40,7 @@ class Mappings {
       ).then(
         (mapping) => {
           this.mappings[mappingName].mappingObject = mapping;
-          return console.log("Done downloading:", mappingName);
+          console.log("Done downloading:", mappingName);
         },
         error => console.error("Error downloading:", mappingName, error)),
     );

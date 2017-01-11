@@ -269,17 +269,14 @@ class Tree {
 
 
   updateGeometries() {
-    return [this.edges, this.nodes].map(mesh =>
-      (() => {
-        const result = [];
-        for (const attr of Object.keys(mesh.geometry.attributes)) {
-          const a = mesh.geometry.attributes[attr];
-          a.array = a.rBuffer.getBuffer();
-          a.numItems = a.rBuffer.getBufferLength();
-          result.push(a.needsUpdate = true);
-        }
-        return result;
-      })());
+    [this.edges, this.nodes].forEach((mesh) => {
+      for (const attr of Object.keys(mesh.geometry.attributes)) {
+        const a = mesh.geometry.attributes[attr];
+        a.array = a.rBuffer.getBuffer();
+        a.numItems = a.rBuffer.getBufferLength();
+        a.needsUpdate = true;
+      }
+    });
   }
 
 
@@ -298,13 +295,14 @@ class Tree {
         return i;
       }
     }
+    return null;
   }
 
 
   doWithNodeIndex(nodeId, f) {
     const index = this.getNodeIndex(nodeId);
     if (index == null) { return; }
-    return f(index);
+    f(index);
   }
 
 

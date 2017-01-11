@@ -35,7 +35,7 @@ class VolumeTracing {
     this.createCell(this.contentData.activeCell);
 
     this.listenTo(this.binary.cube, "newMapping", function () {
-      return this.trigger("newActiveCell", this.getActiveCellId());
+      this.trigger("newActiveCell", this.getActiveCellId());
     });
 
     // For testing
@@ -46,7 +46,7 @@ class VolumeTracing {
 
   setMode(mode) {
     this.mode = mode;
-    return this.trigger("change:mode", this.mode);
+    this.trigger("change:mode", this.mode);
   }
 
 
@@ -157,7 +157,7 @@ class VolumeTracing {
       this.createCell(id);
     }
 
-    return this.trigger("newActiveCell", id);
+    this.trigger("newActiveCell", id);
   }
 }
 

@@ -104,8 +104,6 @@ Input.Keyboard = class Keyboard {
         // if there is any browser action attached to this (as with Ctrl + S)
         // KeyboardJS does not receive the up event.
 
-        const returnValue = undefined;
-
         if (!this.isStarted) { return; }
         if (this.keyCallbackMap[key] != null) { return; }
         if ($(":focus").length) { return; }
@@ -123,8 +121,6 @@ Input.Keyboard = class Keyboard {
         if (this.delay >= 0) {
           setTimeout((() => { callback.delayed = false; }), this.delay);
         }
-
-        return returnValue;
       },
 
       () => {
@@ -138,7 +134,7 @@ Input.Keyboard = class Keyboard {
 
     KeyboardJS.bind(...binding);
 
-    return this.bindings.push(binding);
+    this.bindings.push(binding);
   }
 
 
@@ -160,7 +156,7 @@ Input.Keyboard = class Keyboard {
         }
       }
 
-      return setTimeout((() => this.buttonLoop()), this.DELAY);
+      setTimeout((() => this.buttonLoop()), this.DELAY);
     }
   }
 
@@ -266,7 +262,7 @@ Input.Mouse = class Mouse {
       mouseup: this.mouseUp,
     });
 
-    return this.$target.off({
+    this.$target.off({
       mousedown: this.mouseDown,
       mouseenter: this.mouseEnter,
       mouseleave: this.mouseLeave,
@@ -284,7 +280,7 @@ Input.Mouse = class Mouse {
   }
 
   handle(eventName, ...args) {
-    return [this.leftMouseButton, this.rightMouseButton].map(button =>
+    [this.leftMouseButton, this.rightMouseButton].forEach(button =>
       button[`handle${eventName}`](...args));
   }
 
@@ -296,7 +292,7 @@ Input.Mouse = class Mouse {
       y: event.pageY - this.$target.offset().top,
     };
 
-    return this.handle("MouseDown", event);
+    this.handle("MouseDown", event);
   }
 
 
@@ -305,7 +301,7 @@ Input.Mouse = class Mouse {
       if (!this.isHit(event)) { this.mouseLeave({ which: 0 }); }
     } else if (this.isHit(event)) { this.mouseEnter({ which: 0 }); }
 
-    return this.handle("MouseUp", event);
+    this.handle("MouseUp", event);
   }
 
 

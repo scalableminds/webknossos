@@ -13,7 +13,7 @@ class ProjectEditView extends Marionette.View {
       <div class="col-sm-9 col-sm-offset-2">
         <h3>Update project</h3>
       </div>
-  
+
       <form method="POST" class="form-horizontal">
         <div class="form-group">
           <label class="col-sm-2" for="team">Team</label>
@@ -61,7 +61,7 @@ class ProjectEditView extends Marionette.View {
 
   initialize() {
     this.listenTo(this.model, "sync", this.render);
-    return this.model.fetch();
+    this.model.fetch();
   }
 
 
@@ -76,7 +76,7 @@ class ProjectEditView extends Marionette.View {
     const formValues = FormSyphon.serialize(this.ui.form);
     formValues.owner = this.model.get("owner").id;
 
-    return this.model.save(formValues).then(
+    this.model.save(formValues).then(
       () => {},
       Toast.success("Saved!"),
       app.router.loadURL(`/projects#${this.model.get("name")}`),

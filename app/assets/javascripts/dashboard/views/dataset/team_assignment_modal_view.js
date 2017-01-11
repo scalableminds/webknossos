@@ -40,6 +40,7 @@ class TeamAssignmentModalView extends ModalView {
         if (_.includes(this.dataset.get("allowedTeams"), teamName)) {
           return "checked";
         }
+        return "";
       },
     };
   }
@@ -68,7 +69,7 @@ class TeamAssignmentModalView extends ModalView {
       { data: allowedTeams },
     );
 
-    return this.destroy();
+    this.destroy();
   }
 }
 TeamAssignmentModalView.initClass();

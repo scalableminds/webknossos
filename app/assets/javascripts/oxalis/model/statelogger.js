@@ -35,7 +35,7 @@ class StateLogger {
     // In order to assure that certain actions are atomic,
     // it is sometimes necessary not to push.
     if (push) {
-      return this.push();
+      this.push();
     }
   }
 
@@ -54,7 +54,7 @@ class StateLogger {
 
   push() {
     if (this.allowUpdate) {
-      return this.pushThrottled();
+      this.pushThrottled();
     }
   }
 
@@ -64,21 +64,21 @@ class StateLogger {
     // every 30 seconds.
 
     this.pushThrottled = _.throttle(this.mutexedPush, this.PUSH_THROTTLE_TIME);
-    return this.pushThrottled();
+    this.pushThrottled();
   }
 
 
   pushNow() {
    // Interface for view & controller
 
-    return this.mutexedPush(false);
+    this.mutexedPush(false);
   }
 
   // alias for `pushNow`
   // needed for save delegation by `Model`
   // see `model.coffee`
   save() {
-    return this.pushNow();
+    this.pushNow();
   }
 
 
@@ -105,7 +105,7 @@ class StateLogger {
       (response) => {
         this.newDiffs = this.newDiffs.slice(diffsCurrentLength);
         this.version = response.version;
-        return this.pushDoneCallback();
+        this.pushDoneCallback();
       },
       responseObject => this.pushFailCallback(responseObject, notifyOnFailure),
     );
@@ -130,14 +130,14 @@ In order to restore the current window, a reload is necessary.\
 
     setTimeout((() => this.pushNow()), this.SAVE_RETRY_WAITING_TIME);
     if (notifyOnFailure) {
-      return this.trigger("pushFailed");
+      this.trigger("pushFailed");
     }
   }
 
 
   pushDoneCallback() {
     this.trigger("pushDone");
-    return $("body").removeClass("save-error");
+    $("body").removeClass("save-error");
   }
 }
 StateLogger.initClass();

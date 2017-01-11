@@ -52,7 +52,7 @@ class MappingInfoView extends Marionette.View {
     this.listenTo(this.cube, "volumeLabeled", this.renderDebounced);
     this.listenTo(this.cube, "newMapping", this.render);
     this.listenTo(this.flycam, "positionChanged", this.renderDebounced);
-    return this.listenTo(this.model, "change:enableMapping", function () {
+    this.listenTo(this.model, "change:enableMapping", function () {
       return this.cube.setMappingEnabled(this.model.get("enableMapping"));
     });
   }

@@ -90,7 +90,7 @@ class ListTreeView extends Marionette.CompositeView {
     this.listenTo(this.model.skeletonTracing, "newNode", (id, treeId) => this.updateTreeWithId(treeId));
     this.listenTo(this.model.skeletonTracing, "newTreeColor", this.updateTreeWithId);
     this.listenTo(this.model.skeletonTracing, "newActiveTree", this.refresh);
-    return this.listenTo(this.model.skeletonTracing, "newActiveNode", this.updateName);
+    this.listenTo(this.model.skeletonTracing, "newActiveNode", this.updateName);
   }
 
 

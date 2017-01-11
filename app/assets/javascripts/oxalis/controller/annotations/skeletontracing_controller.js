@@ -28,12 +28,12 @@ class SkeletonTracingController {
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize);
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize);
 
-    return this.model.user.set("particleSize", (Number)(particleSize));
+    this.model.user.set("particleSize", (Number)(particleSize));
   }
 
 
   setRadius(delta) {
-    return this.model.skeletonTracing.setActiveNodeRadius(
+    this.model.skeletonTracing.setActiveNodeRadius(
       this.model.skeletonTracing.getActiveNodeRadius() * Math.pow(1.05, delta),
     );
   }
@@ -46,21 +46,21 @@ class SkeletonTracingController {
     if (this.model.user.get("firstVisToggle")) {
       this.skeletonTracingView.showFirstVisToggle();
       this.model.user.set("firstVisToggle", false);
-      return this.model.user.push();
+      this.model.user.push();
     }
   }
 
 
   setActiveNode(nodeId, merge = false, centered = false) {
     this.model.skeletonTracing.setActiveNode(nodeId, merge);
-    if (centered) { return this.model.skeletonTracing.centerActiveNode(); }
+    if (centered) { this.model.skeletonTracing.centerActiveNode(); }
   }
 
 
   centerActiveNode() {
     const position = this.model.skeletonTracing.getActiveNodePos();
     if (position) {
-      return this.model.flycam.setPosition(position);
+      this.model.flycam.setPosition(position);
     }
   }
 }

@@ -38,7 +38,7 @@ class StatisticView extends Marionette.View {
     this.statisticListView = new StatisticListView();
 
     this.listenTo(timeStatisticModel, "sync", this.showGraphView);
-    return this.listenTo(this, "render", this.showStatisticsListView);
+    this.listenTo(this, "render", this.showStatisticsListView);
   }
 
 

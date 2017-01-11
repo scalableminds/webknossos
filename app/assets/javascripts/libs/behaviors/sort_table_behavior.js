@@ -54,7 +54,7 @@ class SortTableBehavior extends Marionette.Behavior {
   sortTable($elem, sortAttribute) {
     const sortDirection = this.getSortDirection(sortAttribute);
     this.view.collection.setSort(sortAttribute, sortDirection);
-    return this.view.resortView();
+    this.view.resortView();
   }
 
 
@@ -62,7 +62,7 @@ class SortTableBehavior extends Marionette.Behavior {
     const $elem = _.includes(evt.target.className, "sort-icon") ? $(evt.target).closest("th") : $(evt.target);
     const elemData = $elem.data();
     if ("sort" in elemData) {
-      return this.sortTable($elem, elemData.sort);
+      this.sortTable($elem, elemData.sort);
     }
   }
 }

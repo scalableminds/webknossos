@@ -23,9 +23,11 @@ class TraceTree {
     for (const i of Utils.__range__(0, this.nodes.length, false)) {
       if (this.nodes[i].id === id) {
         this.nodes.splice(i, 1);
-        return updateTree;
+        break;
       }
     }
+
+    return updateTree;
   }
 
 
@@ -36,6 +38,7 @@ class TraceTree {
         return true;
       }
     }
+    return false;
   }
 
 
@@ -46,6 +49,7 @@ class TraceTree {
         return true;
       }
     }
+    return false;
   }
 
 

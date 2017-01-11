@@ -55,7 +55,7 @@ class Skeleton {
     const tree = new Tree(treeId, treeColor, this.model);
     this.treeGeometries.push(tree);
     this.setActiveNode();
-    return this.trigger("newGeometries", tree.getMeshes());
+    this.trigger("newGeometries", tree.getMeshes());
   }
 
 
@@ -93,7 +93,7 @@ class Skeleton {
 
     this.setActiveNode();
 
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -101,13 +101,13 @@ class Skeleton {
     const treeGeometry = this.getTreeGeometry(node.treeId);
     treeGeometry.updateNodeColor(node.id, null, isBranchPoint);
 
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
   updateTreeColor(treeId) {
     this.getTreeGeometry(treeId).updateTreeColor();
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -123,7 +123,7 @@ class Skeleton {
     const treeGeometry = this.getTreeGeometry(this.skeletonTracing.getTree().treeId);
 
     treeGeometry.addNode(this.skeletonTracing.getActiveNode());
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -133,7 +133,7 @@ class Skeleton {
     const treeGeometry = this.getTreeGeometry(treeId);
     treeGeometry.deleteNode(node);
 
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -152,7 +152,7 @@ class Skeleton {
     treeGeometry.dispose();
     this.treeGeometries.splice(index, 1);
 
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -206,13 +206,13 @@ class Skeleton {
     for (const mesh of this.getMeshes()) {
       mesh.visible = isVisible && ((mesh.isVisible != null) ? mesh.isVisible : true);
     }
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
   setVisibility(isVisible) {
     this.isVisible = isVisible;
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -252,7 +252,7 @@ class Skeleton {
     const treeGeometry = this.getTreeGeometry(this.skeletonTracing.getTree().treeId);
     treeGeometry.edges.isVisible = true;
     treeGeometry.nodes.isVisible = true;
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 

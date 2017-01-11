@@ -39,17 +39,17 @@ class SliderSettingView extends AbstractSettingView {
   handleSliderChange() {
     const value = this.getSliderValue();
     this.ui.text.val(value);
-    return this.model.set(this.options.name, value);
+    this.model.set(this.options.name, value);
   }
 
 
   handleTextboxChange(evt) {
     const value = parseFloat(evt.target.value);
     if (this.options.min <= value && value <= this.options.max) {
-      return this.model.set(this.options.name, value);
+      this.model.set(this.options.name, value);
     } else {
       // reset to slider value
-      return this.update(this.model, this.getSliderValue());
+      this.update(this.model, this.getSliderValue());
     }
   }
 
@@ -61,7 +61,7 @@ class SliderSettingView extends AbstractSettingView {
     if (this.options.logScaleBase) {
       value = Math.log(value) / Math.log(this.options.logScaleBase);
     }
-    return this.ui.slider.val(value);
+    this.ui.slider.val(value);
   }
 
 

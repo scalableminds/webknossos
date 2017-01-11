@@ -22,7 +22,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model {
       activeCellId: 0,
     });
 
-    return this.listenTo(this.oxalisModel, "sync", this.bind);
+    this.listenTo(this.oxalisModel, "sync", this.bind);
   }
 
 
@@ -48,14 +48,14 @@ class BackboneToOxalisAdapterModel extends Backbone.Model {
       // ####################################
       // Listen to changes in the OxalisModel
 
-      this.listenTo(this.skeletonTracingModel, "newTree", function (id) { return this.skeletonTracingAdapter.set("activeTreeId", id, { triggeredByModel: true }); });
-      this.listenTo(this.skeletonTracingModel, "newActiveTree", function (id) { return this.skeletonTracingAdapter.set("activeTreeId", id, { triggeredByModel: true }); });
+      this.listenTo(this.skeletonTracingModel, "newTree", function (id) { this.skeletonTracingAdapter.set("activeTreeId", id, { triggeredByModel: true }); });
+      this.listenTo(this.skeletonTracingModel, "newActiveTree", function (id) { this.skeletonTracingAdapter.set("activeTreeId", id, { triggeredByModel: true }); });
       this.listenTo(this.skeletonTracingModel, "newActiveNode", function (id) {
         this.skeletonTracingAdapter.set("activeNodeId", id, { triggeredByModel: true });
         // update node radius display accordingly
-        return this.skeletonTracingAdapter.set("radius", this.skeletonTracingModel.getActiveNodeRadius(), { triggeredByModel: true });
+        this.skeletonTracingAdapter.set("radius", this.skeletonTracingModel.getActiveNodeRadius(), { triggeredByModel: true });
       });
-      this.listenTo(this.skeletonTracingModel, "newActiveNodeRadius", function (id) { return this.skeletonTracingAdapter.set("radius", id, { triggeredByModel: true }); });
+      this.listenTo(this.skeletonTracingModel, "newActiveNodeRadius", function (id) { this.skeletonTracingAdapter.set("radius", id, { triggeredByModel: true }); });
 
 
       // ######################################
@@ -68,35 +68,35 @@ class BackboneToOxalisAdapterModel extends Backbone.Model {
       // model in the mean time.
       this.listenTo(this.skeletonTracingAdapter, "change:activeTreeId", function (model, id, options) {
         if (!options.triggeredByModel) {
-          return _.defer(() => this.skeletonTracingModel.setActiveTree(id));
+          _.defer(() => this.skeletonTracingModel.setActiveTree(id));
         }
       });
 
       this.listenTo(this.skeletonTracingAdapter, "change:somaClicking", function (model, bool) {
-        return this.oxalisModel.user.set("newNodeNewTree", bool);
+        this.oxalisModel.user.set("newNodeNewTree", bool);
       });
 
       this.listenTo(this.skeletonTracingAdapter, "change:activeNodeId", function (model, id, options) {
         if (!options.triggeredByModel) {
-          return _.defer(() => this.skeletonTracingModel.setActiveNode(id));
+          _.defer(() => this.skeletonTracingModel.setActiveNode(id));
         }
       });
 
       this.listenTo(this.skeletonTracingAdapter, "change:particleSize", (model, size) => _.defer(() => this.oxalisModel.user.set("particleSize", size)));
 
       this.listenTo(this.skeletonTracingAdapter, "change:overrideNodeRadius", function (model, bool) {
-        return this.oxalisModel.user.set("overrideNodeRadius", bool);
+        this.oxalisModel.user.set("overrideNodeRadius", bool);
       });
 
       this.listenTo(this.skeletonTracingAdapter, "change:radius", function (model, radius, options) {
         if (!options.triggeredByModel) {
-          return _.defer(() => this.skeletonTracingModel.setActiveNodeRadius(radius));
+          _.defer(() => this.skeletonTracingModel.setActiveNodeRadius(radius));
         }
       });
 
-      return this.listenTo(this.skeletonTracingAdapter, "change:boundingBox", function (model, string) {
+      this.listenTo(this.skeletonTracingAdapter, "change:boundingBox", function (model, string) {
         const bbArray = Utils.stringToNumberArray(string);
-        return this.oxalisModel.setUserBoundingBox(bbArray);
+        this.oxalisModel.setUserBoundingBox(bbArray);
       });
     } else if (this.oxalisModel.volumeTracing) {
       // Update values after OxalisModel is done syncing
@@ -109,14 +109,14 @@ class BackboneToOxalisAdapterModel extends Backbone.Model {
       // ####################################
       // Listen to changes in the OxalisModel
       this.listenTo(this.volumeTracingModel, "newActiveCell", function () {
-        return this.volumeTracingAdapter.set("mappedActiveCellId", this.volumeTracingModel.getMappedActiveCellId());
+        this.volumeTracingAdapter.set("mappedActiveCellId", this.volumeTracingModel.getMappedActiveCellId());
       });
 
 
       // ######################################
       // Listen to changes in the BackboneModel
-      return this.listenTo(this.volumeTracingAdapter, "change:mappedActiveCellId", function (model, id) {
-        return this.volumeTracingModel.setActiveCell(id);
+      this.listenTo(this.volumeTracingAdapter, "change:mappedActiveCellId", function (model, id) {
+        this.volumeTracingModel.setActiveCell(id);
       });
     }
   }

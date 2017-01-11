@@ -16,7 +16,7 @@ class DatasetConfiguration extends NestedObjModel {
     this.listenTo(this, "change", _.debounce(
       () => { if (app.currentUser != null) { this.save(); } },
       500));
-    return this.listenTo(this, "sync", () => this.setDefaultBinaryColors());
+    this.listenTo(this, "sync", () => this.setDefaultBinaryColors());
   }
 
 

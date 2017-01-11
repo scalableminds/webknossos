@@ -331,7 +331,7 @@ class Flycam2d {
 
 
   update() {
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 }
 Flycam2d.initClass();

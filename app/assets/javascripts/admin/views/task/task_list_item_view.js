@@ -94,31 +94,31 @@ class TaskListItemView extends Marionette.CompositeView {
     this.collection = new AnnotationCollection(this.model.get("id"));
 
     // minimize the toggle view on item deletion
-    return this.listenTo(this.collection, "remove", () => this.toggleDetails(),
+    this.listenTo(this.collection, "remove", () => this.toggleDetails(),
     );
   }
 
 
   deleteTask() {
     if (window.confirm("Do you really want to delete this task?")) {
-      return this.model.destroy();
+      this.model.destroy();
     }
   }
 
 
   toggleDetails() {
     if (this.ui.detailsRow.hasClass("hide")) {
-      return this.collection
+      this.collection
         .fetch()
         .then(() => {
           this.render();
           this.ui.detailsRow.removeClass("hide");
-          return this.ui.detailsToggle.addClass("open");
+          this.ui.detailsToggle.addClass("open");
         },
         );
     } else {
       this.ui.detailsRow.addClass("hide");
-      return this.ui.detailsToggle.removeClass("open");
+      this.ui.detailsToggle.removeClass("open");
     }
   }
 }

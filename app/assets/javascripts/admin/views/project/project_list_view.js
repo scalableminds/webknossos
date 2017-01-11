@@ -52,7 +52,7 @@ class ProjectsListView extends Marionette.CompositeView {
 
     this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
     this.listenTo(app.vent, "modal:destroy", this.render);
-    return this.listenTo(app.vent, "paginationView:addElement", this.createProject);
+    this.listenTo(app.vent, "paginationView:addElement", this.createProject);
   }
 
 

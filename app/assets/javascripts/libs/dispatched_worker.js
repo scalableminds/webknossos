@@ -26,15 +26,15 @@ class DispatchedWorker {
         if (packet.workerHandle === workerHandle) {
           this.worker.removeEventListener("message", workerMessageCallback, false);
           if (packet.error) {
-            return deferred.reject(packet.error);
+            deferred.reject(packet.error);
           } else {
-            return deferred.resolve(packet.payload);
+            deferred.resolve(packet.payload);
           }
         }
       };
 
       this.worker.addEventListener("message", workerMessageCallback, false);
-      return this.worker.postMessage({ workerHandle, payload });
+      this.worker.postMessage({ workerHandle, payload });
     },
     );
 
@@ -68,9 +68,9 @@ DispatchedWorker.Pool = class Pool {
     }
 
     if (freeWorker) {
-      return freeWorker.send(data);
+      freeWorker.send(data);
     } else {
-      return this.queuePush(data);
+      this.queuePush(data);
     }
   }
 
@@ -81,13 +81,13 @@ DispatchedWorker.Pool = class Pool {
 
     const workerReset = () => {
       worker.busy = false;
-      return this.queueShift(worker);
+      this.queueShift(worker);
     };
 
 
     worker.worker.onerror = function (err) {
       Utils.__guard__(console, x => x.error(err));
-      return workerReset();
+      workerReset();
     };
 
 
@@ -102,7 +102,7 @@ DispatchedWorker.Pool = class Pool {
   queueShift(worker) {
     if (this.queue.length > 0 && !worker.busy) {
       const { data, deferred } = this.queue.shift();
-      return worker.send(data)
+      worker.send(data)
         .done(response => deferred.resolve(response))
         .fail(err => deferred.reject(err));
     }
@@ -111,7 +111,7 @@ DispatchedWorker.Pool = class Pool {
 
   queuePush(data) {
     const deferred = $.Deferred();
-    return this.queue.push({ data, deferred });
+    this.queue.push({ data, deferred });
   }
 };
 

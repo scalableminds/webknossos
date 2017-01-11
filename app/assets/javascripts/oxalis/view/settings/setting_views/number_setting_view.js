@@ -38,7 +38,7 @@ class NumberSettingView extends AbstractSettingView {
 
 
   handleChange(evt) {
-    return this.model.set(this.options.name, (Number)(evt.target.value));
+    this.model.set(this.options.name, (Number)(evt.target.value));
   }
 
 

@@ -351,7 +351,7 @@ class TaskOverviewView extends Marionette.View {
       .enter().append("svg:path")
       .attr("class", "link")
       .attr("stroke", d => d.color)
-      .attr("stroke-dasharray", (d) => { if (d.color === this.FUTURE_TASK_EDGE_COLOR) { return "10,10"; } });
+      .attr("stroke-dasharray", d => (d.color === this.FUTURE_TASK_EDGE_COLOR) ? "10,10" : "");
 
     // append the container for the svg node elements
     this.svgNodes = this.svgNodes.data(nodes, d => d.id);

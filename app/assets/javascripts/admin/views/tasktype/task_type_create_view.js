@@ -143,8 +143,8 @@ class TaskTypeCreateView extends Marionette.View {
   templateContext() {
     return {
       getTitle: () => this.isEditingMode ? "Update" : "Create",
-      isChecked(bool) { if (bool) { return "checked"; } },
-      isSelected(bool) { if (bool) { return "selected"; } },
+      isChecked(bool) { return bool ? "checked" : ""; },
+      isSelected(bool) { return bool ? "selected" : ""; },
     };
   }
 
@@ -154,7 +154,7 @@ class TaskTypeCreateView extends Marionette.View {
 
     if (this.isEditingMode) {
       this.listenTo(this.model, "sync", this.render);
-      return this.model.fetch();
+      this.model.fetch();
     }
   }
 
@@ -179,7 +179,7 @@ class TaskTypeCreateView extends Marionette.View {
     }
 
 
-    return this.model.save(formValues).then(
+    this.model.save(formValues).then(
       () => app.router.navigate("/taskTypes", { trigger: true }));
   }
 
@@ -197,12 +197,12 @@ class TaskTypeCreateView extends Marionette.View {
     });
     this.showChildView("team", teamSelectionView);
 
-    return this.ui.multiselect.multiselect();
+    this.ui.multiselect.multiselect();
   }
 
 
   onBeforeDestroy() {
-    return this.ui.multiselect.multiselect("destroy");
+    this.ui.multiselect.multiselect("destroy");
   }
 }
 TaskTypeCreateView.initClass();

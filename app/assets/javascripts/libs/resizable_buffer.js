@@ -35,7 +35,7 @@ class ResizableBuffer {
   get(i) { return this.buffer[i]; }
 
   set(element, i) {
-    return this.buffer.set(element, i * this.elementLength);
+    this.buffer.set(element, i * this.elementLength);
   }
 
 
@@ -78,7 +78,7 @@ class ResizableBuffer {
 
   pop(r) {
     if (r == null) { r = new Array(this.elementLength); }
-    if (!this.length) { return; }
+    if (!this.length) { return null; }
 
     // eslint-disable-next-line prefer-const
     let { buffer, elementLength, length } = this;
@@ -95,7 +95,7 @@ class ResizableBuffer {
 
   top(r) {
     if (r == null) { r = new Array(this.elementLength); }
-    if (!this.length) { return; }
+    if (!this.length) { return null; }
 
     // eslint-disable-next-line no-unused-vars, prefer-const
     let { buffer, elementLength, length } = this;

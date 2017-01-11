@@ -56,6 +56,7 @@ class TeamRoleModalView extends ModalView {
             return "checked";
           }
         }
+        return "";
       },
 
       isSelected: (teamName, roleName) => {
@@ -66,6 +67,7 @@ class TeamRoleModalView extends ModalView {
             return "selected";
           }
         }
+        return "";
       },
     };
   }
@@ -134,9 +136,9 @@ class TeamRoleModalView extends ModalView {
         },
       );
 
-      return this.hide();
+      this.hide();
     } else {
-      return Toast.error("No role is selected!");
+      Toast.error("No role is selected!");
     }
   }
 

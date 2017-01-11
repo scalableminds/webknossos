@@ -31,8 +31,8 @@ class PaginationCollection {
     }
 
     this.currentModels = this.fullCollection.models.slice();
-    // eslint-disable-next-line no-cond-assign
-    this.state = _.defaults((left = _.clone(this.state)) != null ? left : {}, {
+    const clonedState = _.clone(this.state);
+    this.state = _.defaults(clonedState != null ? clonedState : {}, {
       pageSize: 10,
       currentPage: 0,
       sorting: null,

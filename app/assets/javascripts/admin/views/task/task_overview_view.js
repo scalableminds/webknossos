@@ -117,8 +117,9 @@ class TaskOverviewView extends Marionette.View {
   getMinMaxHours() {
     // This function calculates the min/max working hours of the users of the selected team
     if (_.isEmpty(this.minMaxHours)) {
-      const selectedUsers = this.collection.filter(userInfo => _.map(userInfo.get("user").teams, "team").includes(this.team));
-      let workingTimes = _.map(selectedUsers, userModel => userModel.get("workingTime"));
+      const selectedUsers = this.collection.filter(userInfo =>
+        _.map(userInfo.get("user").teams, "team").includes(this.team));
+      let workingTimes = selectedUsers.map(userModel => userModel.get("workingTime"));
 
       if (_.isEmpty(workingTimes)) { workingTimes = [0]; }
       const minTime = Math.min(...workingTimes);
@@ -288,7 +289,9 @@ class TaskOverviewView extends Marionette.View {
     return this.fetchPromise.then(() => {
       // { userInfos, taskTypes, projects } = @model.attributes
       // move workingTime to user object and convert to hours
-      this.collection.forEach((userInfoModel) => { userInfoModel.get("user").workingHours = Utils.roundTo(userInfoModel.get("workingTime") / this.MS_PER_HOUR, 2); });
+      this.collection.forEach((userInfoModel) => {
+        userInfoModel.get("user").workingHours = Utils.roundTo(userInfoModel.get("workingTime") / this.MS_PER_HOUR, 2);
+      });
 
       // extract users and add full names
       this.users = this.collection.pluck("user");
@@ -435,8 +438,7 @@ class TaskOverviewView extends Marionette.View {
       text: `${user.firstName} ${user.lastName}`,
       color: this.color((user.workingHours - this.chosenMinHours) / (this.chosenMaxHours - this.chosenMinHours)),
       type: "user",
-    }),
-    ));
+    })));
 
     if (this.doDrawTaskTypes()) {
       nodes = nodes.concat(taskTypes.map(taskType =>

@@ -87,13 +87,12 @@ class Plane2D {
         const v = bucket[this.V] - this.dataTexture.topLeftBucket[this.V];
 
         // If the tile is part of the texture, mark it as changed
-        if ((Utils.__range__(0, this.BUCKETS_PER_ROW, false)).includes(u) &&
-            (Utils.__range__(0, this.BUCKETS_PER_ROW, false)).includes(v)) {
+        if (u > 0 && u < this.BUCKETS_PER_ROW && v > 0 && v < this.BUCKETS_PER_ROW) {
           const tile = [u, v];
           this.dataTexture.tiles[tileIndexByTileMacro(this, tile)] = false;
           this.dataTexture.ready &=
-            !((Utils.__range__(this.dataTexture.area[0], this.dataTexture.area[2], true)).includes(u) &&
-              (Utils.__range__(this.dataTexture.area[1], this.dataTexture.area[3], true)).includes(v));
+            !(u > this.dataTexture.area[0] && u <= this.dataTexture.area[2] &&
+              v > this.dataTexture.area[1] && v <= this.dataTexture.area[3]);
         }
       }
     });

@@ -87,8 +87,8 @@ class DashboardTaskListItemView extends Marionette.View {
   cancelAnnotation() {
     if (confirm("Do you really want to cancel this annotation?")) {
       const annotation = this.model.get("annotation");
-      Request.triggerRequest(`/annotations/${annotation.typ}/${annotation.id}`, { method: "DELETE" }).then(() => this.model.collection.fetch(),
-      );
+      Request.triggerRequest(`/annotations/${annotation.typ}/${annotation.id}`, { method: "DELETE" }).then(() =>
+        this.model.collection.fetch());
     }
   }
 }

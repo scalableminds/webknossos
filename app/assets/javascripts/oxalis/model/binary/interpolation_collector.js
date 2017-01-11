@@ -1,7 +1,12 @@
 import _ from "lodash";
 
 const templateFill = function (str, params) {
-  params.forEach((param) => { str = str.replace(new RegExp(`([^a-zA-Z0-9_])${param}([^a-zA-Z0-9_])`, "gm"), (match, pre, post) => `${pre}<%= ${param} %>${post}`); });
+  params.forEach((param) => {
+    str = str.replace(
+      new RegExp(`([^a-zA-Z0-9_])${param}([^a-zA-Z0-9_])`, "gm"),
+      (match, pre, post) => `${pre}<%= ${param} %>${post}`,
+    );
+  });
   return str;
 };
 

@@ -36,7 +36,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     // create textures
     let shaderName;
     this.textures = {};
-    for (const name in this.model.binary) {
+    for (const name of Object.keys(this.model.binary)) {
       const binary = this.model.binary[name];
       const bytes = binary.targetBitDepth >> 3;
       shaderName = this.sanitizeName(name);
@@ -45,7 +45,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.textures[shaderName].binaryName = binary.name;
     }
 
-    for (shaderName in this.textures) {
+    for (shaderName of Object.keys(this.textures)) {
       const texture = this.textures[shaderName];
       this.uniforms[`${shaderName}_texture`] = {
         type: "t",
@@ -70,7 +70,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     super.makeMaterial(options);
 
     this.material.setColorInterpolation = (interpolation) => {
-      for (const name in this.textures) {
+      for (const name of Object.keys(this.textures)) {
         const texture = this.textures[name];
         if (texture.binaryCategory === "color") {
           texture.magFilter = interpolation;
@@ -95,7 +95,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     return this.listenTo(this.model.datasetConfiguration, "change", function (model) {
       const object = model.changed.layers || {};
-      for (const binaryName in object) {
+      for (const binaryName of Object.keys(object)) {
         const changes = object[binaryName];
         const name = this.sanitizeName(binaryName);
         if (changes.color != null) {

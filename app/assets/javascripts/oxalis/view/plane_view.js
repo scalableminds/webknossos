@@ -111,7 +111,7 @@ class PlaneView {
     // ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
 
     let modelChanged = false;
-    for (const name in this.model.binary) {
+    for (const name of Object.keys(this.model.binary)) {
       const binary = this.model.binary[name];
       for (const plane of binary.planes) {
         modelChanged |= plane.hasChanged();

@@ -52,7 +52,7 @@ const Request = {
     const toFormData = function (input, form, namespace) {
       const formData = form || new FormData();
 
-      for (const key in input) {
+      for (const key of Object.keys(input)) {
         let formKey;
         const value = input[key];
         if (namespace) {
@@ -186,7 +186,7 @@ const Request = {
 
 
     const headers = new Headers();
-    for (const name in options.headers) {
+    for (const name of Object.keys(options.headers)) {
       headers.set(name, options.headers[name]);
     }
     options.headers = headers;

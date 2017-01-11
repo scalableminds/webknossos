@@ -119,7 +119,7 @@ class Controller {
     this.initKeyboard();
     this.initTimeLimit();
 
-    for (const binaryName in this.model.binary) {
+    for (const binaryName of Object.keys(this.model.binary)) {
       this.listenTo(this.model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
     }
 

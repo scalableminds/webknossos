@@ -262,7 +262,7 @@ class ArbitraryController {
   bindToEvents() {
     this.listenTo(this.arbitraryView, "render", this.render);
 
-    for (const name in this.model.binary) {
+    for (const name of Object.keys(this.model.binary)) {
       const binary = this.model.binary[name];
       this.listenTo(binary.cube, "bucketLoaded", this.arbitraryView.draw);
     }

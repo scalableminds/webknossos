@@ -93,21 +93,15 @@ class PolygonFactory {
   updateTriangles(result, position) {
     const cubeIndices = this.getCubeIndices(position);
 
-    return (() => {
-      const result1 = [];
-      for (const cellId in cubeIndices) {
-        const cubeIndex = cubeIndices[cellId];
-        let item;
-        if (result[cellId] == null) {
-          result[cellId] = [];
-        }
-        if (cubeIndex !== 0 && cubeIndex !== 256) {
-          item = this.addNewTriangles(result[cellId], cubeIndex, position);
-        }
-        result1.push(item);
+    for (const cellId of Object.keys(cubeIndices)) {
+      const cubeIndex = cubeIndices[cellId];
+      if (result[cellId] == null) {
+        result[cellId] = [];
       }
-      return result1;
-    })();
+      if (cubeIndex !== 0 && cubeIndex !== 256) {
+        this.addNewTriangles(result[cellId], cubeIndex, position);
+      }
+    }
   }
 
 

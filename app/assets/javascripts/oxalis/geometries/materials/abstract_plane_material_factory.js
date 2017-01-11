@@ -45,7 +45,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
   setupChangeListeners() {
     return this.listenTo(this.model.datasetConfiguration, "change", function (model) {
       const object = model.changed.layers || {};
-      for (const binaryName in object) {
+      for (const binaryName of Object.keys(object)) {
         const changes = object[binaryName];
         const name = this.sanitizeName(binaryName);
         if (changes.brightness != null) {

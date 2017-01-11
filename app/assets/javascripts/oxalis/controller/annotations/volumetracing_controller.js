@@ -54,7 +54,7 @@ class VolumeTracingController {
       "#merge-cell2": this.MERGE_MODE_CELL2,
     };
 
-    for (const input in inputModeMapping) {
+    for (const input of Object.keys(inputModeMapping)) {
       ((inputId) => {
         $(inputId).on("focus", () => {
           this.mergeMode = inputModeMapping[inputId];

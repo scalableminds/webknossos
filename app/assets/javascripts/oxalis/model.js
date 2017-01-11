@@ -290,7 +290,7 @@ class Model extends Backbone.Model {
     this.lowerBoundary = [Infinity, Infinity, Infinity];
     this.upperBoundary = [-Infinity, -Infinity, -Infinity];
 
-    for (const key in this.binary) {
+    for (const key of Object.keys(this.binary)) {
       const binary = this.binary[key];
       for (let i = 0; i <= 2; i++) {
         this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]);

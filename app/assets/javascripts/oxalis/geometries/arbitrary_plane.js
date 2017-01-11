@@ -52,7 +52,7 @@ class ArbitraryPlane {
     this.listenTo(this.cam, "changed", function () { this.isDirty = true; });
     this.listenTo(this.model.flycam, "positionChanged", function () { this.isDirty = true; });
 
-    for (const name in this.model.binary) {
+    for (const name of Object.keys(this.model.binary)) {
       const binary = this.model.binary[name];
       binary.cube.on("bucketLoaded", () => { this.isDirty = true; });
     }

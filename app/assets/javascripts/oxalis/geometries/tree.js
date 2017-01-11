@@ -263,7 +263,7 @@ class Tree {
 
   showRadius(show) {
     this.edges.material.linewidth = this.getLineWidth();
-    return this.particleMaterial.setShowRadius(show);
+    this.particleMaterial.setShowRadius(show);
   }
 
 
@@ -271,7 +271,7 @@ class Tree {
     return [this.edges, this.nodes].map(mesh =>
       (() => {
         const result = [];
-        for (const attr in mesh.geometry.attributes) {
+        for (const attr of Object.keys(mesh.geometry.attributes)) {
           const a = mesh.geometry.attributes[attr];
           a.array = a.rBuffer.getBuffer();
           a.numItems = a.rBuffer.getBufferLength();
@@ -287,7 +287,7 @@ class Tree {
     console.log("nodeIDs", this.nodeIDs.toString());
     console.log("nodesBuffer", this.nodesBuffer.toString());
     console.log("edgesBuffer", this.edgesBuffer.toString());
-    return console.log("sizesBuffer", this.sizesBuffer.toString());
+    console.log("sizesBuffer", this.sizesBuffer.toString());
   }
 
 

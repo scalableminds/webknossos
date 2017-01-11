@@ -27,13 +27,9 @@ class User extends Backbone.Model {
 
 
   triggerAll() {
-    return (() => {
-      const result = [];
-      for (const property in this.attributes) {
-        result.push(this.trigger(`change:${property}`, this, this.get(property)));
-      }
-      return result;
-    })();
+    for (const property of Object.keys(this.attributes)) {
+      this.trigger(`change:${property}`, this, this.get(property));
+    }
   }
 }
 User.initClass();

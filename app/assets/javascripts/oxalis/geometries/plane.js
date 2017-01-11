@@ -92,7 +92,7 @@ class Plane {
   updateTexture() {
     const area = this.flycam.getArea(this.planeID);
     if (this.model != null) {
-      for (const name in this.model.binary) {
+      for (const name of Object.keys(this.model.binary)) {
         const binary = this.model.binary[name];
         const dataBuffer = binary.planes[this.planeID].get({
           position: this.flycam.getTexturePosition(this.planeID),

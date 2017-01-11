@@ -16,7 +16,8 @@
     "parser": "babel-eslint",
     "settings": {
       "import/resolver": "webpack",
-      "import/ignore": ["$three.*"]
+      "import/ignore": ["$three.*"],
+      "import/core-modules": ["three"]
     },
     "globals": {
       "ga": false,

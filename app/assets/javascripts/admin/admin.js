@@ -22,7 +22,7 @@ import WorkloadListView from "./views/workload/workload_list_view";
 import WorkloadCollection from "./models/workload/workload_collection";
 
 //
-// This exports all the modules listed above and mainly the serves the purpose of
+// This exports all the modules listed above and mainly serves the purpose of
 // waiting to be combinend and minified with rjs.
 //
 

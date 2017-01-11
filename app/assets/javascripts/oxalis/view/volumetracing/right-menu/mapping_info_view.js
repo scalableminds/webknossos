@@ -1,6 +1,6 @@
 import Backbone from "backbone";
 import Marionette from "backbone.marionette";
-import subviews from "backbone-subviews";
+import Subviews from "backbone-subviews";
 import _ from "lodash";
 import CheckboxSettingView from "oxalis/view/settings/setting_views/checkbox_setting_view";
 
@@ -38,7 +38,7 @@ class MappingInfoView extends Marionette.View {
 
 
   initialize({ model: oxalisModel }) {
-    Backbone.Subviews.add(this);
+    Subviews.add(this);
 
     this.model = new Backbone.Model();
     this.model.set("enableMapping", true);

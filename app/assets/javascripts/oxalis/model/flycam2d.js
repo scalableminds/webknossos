@@ -47,7 +47,7 @@ class Flycam2d {
     // Fire changed event every time
     const trigger = this.trigger;
     this.trigger = (...args) => {
-      trigger(...args);
+      trigger.apply(this, args);
       trigger.call(this, "changed");
     };
   }
@@ -197,7 +197,7 @@ class Flycam2d {
       // change direction of the value connected to space, based on the last direction
       p[Dimensions.getIndices(planeID)[2]] *= this.spaceDirection[Dimensions.getIndices(planeID)[2]];
     }
-    return this.setPosition([this.position[0] + p[0], this.position[1] + p[1], this.position[2] + p[2]]);
+    this.setPosition([this.position[0] + p[0], this.position[1] + p[1], this.position[2] + p[2]]);
   }
 
 

@@ -23,7 +23,7 @@ ansiColor('xterm') {
       stage("Build") {
 
         sh "docker-compose run oxalis-sbt clean compile stage"
-        sh "docker build -t scalableminds/webknossos:${env.BUILD_NUMBER} ."
+        sh "docker build -t scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
       }
 
 
@@ -35,7 +35,7 @@ ansiColor('xterm') {
           sh "docker-compose run oxalis-e2e-tests"
         }
         sh """
-          DOCKER_TAG=${env.BUILD_NUMBER} docker-compose up webknossos &
+          DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up webknossos &
           sleep 10
           ./test/infrastructure/deployment.bash
           docker-compose down
@@ -46,9 +46,9 @@ ansiColor('xterm') {
       stage("Publish docker images") {
 
         sh "docker login -u ${env.DOCKER_USER} -p ${env.DOCKER_PASS}"
-        sh "docker tag scalableminds/webknossos:${env.BUILD_NUMBER} scalableminds/webknossos:branch-${env.BRANCH_NAME}"
-        sh "docker push scalableminds/webknossos:${env.BUILD_NUMBER}"
-        sh "docker push scalableminds/webknossos:branch-${env.BRANCH_NAME}"
+        sh "docker tag scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} scalableminds/webknossos:${env.BRANCH_NAME}"
+        sh "docker push scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER}"
+        sh "docker push scalableminds/webknossos:${env.BRANCH_NAME}"
       }
 
 

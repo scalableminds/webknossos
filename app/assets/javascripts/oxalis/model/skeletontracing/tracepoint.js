@@ -20,8 +20,8 @@ class TracePoint {
 
 
   getNext(parent) {
-    let minN,
-      neighbor;
+    let minN;
+    let neighbor;
     if (parent != null) { minN = 2; } else { minN = 1; }
 
     if (this.neighbors.length < minN) {

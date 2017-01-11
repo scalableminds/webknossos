@@ -118,10 +118,10 @@ class PolyhedronRasterizer {
 
 
   calcExtent() {
-    let maxY,
-      maxZ,
-      minY,
-      minZ;
+    let maxY;
+    let maxZ;
+    let minY;
+    let minZ;
     let minX = minY = minZ = Int32MAX;
     let maxX = maxY = maxZ = Int32MIN;
 

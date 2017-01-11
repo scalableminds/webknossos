@@ -35,6 +35,7 @@
       "radix": "off",
       "no-bitwise": "off",
       "no-confusing-arrow":  "off",
+      "no-continue": "warn",
       "no-else-return": "off",
       "no-mixed-operators": "off",
       "no-multi-str": "off",

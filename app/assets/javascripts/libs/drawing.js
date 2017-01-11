@@ -68,73 +68,67 @@ const Drawing = {
   },
 
 
+  addNextLine(newY, isNext, downwards, minX, maxX, r, ranges, test, paint) {
+    let rMinX = minX;
+    let inRange = false;
+    let x = minX;
+
+    while (x <= maxX) {
+      // skip testing, if testing previous line within previous range
+      const empty = (isNext || (x < r[0] || x > r[1])) && test(x, newY);
+      if (!inRange && empty) {
+        rMinX = x;
+        inRange = true;
+      } else if (inRange && !empty) {
+        ranges.push([rMinX, x - 1, newY, downwards, rMinX === minX, false]);
+        inRange = false;
+      }
+      if (inRange) { paint(x, newY); }
+
+      // skip
+      if (!isNext && x === r[0]) { x = r[1]; }
+      x++;
+    }
+    if (inRange) { ranges.push([rMinX, x - 1, newY, downwards, rMinX === minX, true]); }
+  },
+
+
   // Source: http://will.thimbleby.net/scanline-flood-fill/
   fillArea(x, y, width, height, diagonal, test, paint) {
     // xMin, xMax, y, down[true] / up[false], extendLeft, extendRight
     const ranges = [[x, x, y, null, true, true]];
     paint(x, y);
-    return (() => {
-      const result = [];
-      while (ranges.length) {
-        let item;
-        const addNextLine = function (newY, isNext, downwards) {
-          let rMinX = minX;
-          let inRange = false;
-          x = minX;
-
-          while (x <= maxX) {
-            // skip testing, if testing previous line within previous range
-            const empty = (isNext || (x < r[0] || x > r[1])) && test(x, newY);
-            if (!inRange && empty) {
-              rMinX = x;
-              inRange = true;
-            } else if (inRange && !empty) {
-              ranges.push([rMinX, x - 1, newY, downwards, rMinX === minX, false]);
-              inRange = false;
-            }
-            if (inRange) { paint(x, newY); }
-
-            // skip
-            if (!isNext && x === r[0]) { x = r[1]; }
-            x++;
-          }
-          if (inRange) { return ranges.push([rMinX, x - 1, newY, downwards, rMinX === minX, true]); }
-        };
-
-
-        let r = ranges.pop();
-        let minX = r[0];
-        let maxX = r[1];
-        y = r[2];
-        const down = r[3] === true;
-        const up = r[3] === false;
-        const extendLeft = r[4];
-        const extendRight = r[5];
-        if (extendLeft) {
-          while (minX > 0 && test(minX - 1, y)) {
-            minX--;
-            paint(minX, y);
-          }
+    while (ranges.length) {
+      const r = ranges.pop();
+      let minX = r[0];
+      let maxX = r[1];
+      y = r[2];
+      const down = r[3] === true;
+      const up = r[3] === false;
+      const extendLeft = r[4];
+      const extendRight = r[5];
+      if (extendLeft) {
+        while (minX > 0 && test(minX - 1, y)) {
+          minX--;
+          paint(minX, y);
         }
-        if (extendRight) {
-          while (maxX < width - 1 && test(maxX + 1, y)) {
-            maxX++;
-            paint(maxX, y);
-          }
-        }
-        if (diagonal) {
-          if (minX > 0) { minX--; }
-          if (maxX < width - 1) { maxX++; }
-        } else {
-          r[0]--;
-          r[1]++;
-        }
-        if (y < height) { addNextLine(y + 1, !up, true); }
-        if (y > 0) { item = addNextLine(y - 1, !down, false); }
-        result.push(item);
       }
-      return result;
-    })();
+      if (extendRight) {
+        while (maxX < width - 1 && test(maxX + 1, y)) {
+          maxX++;
+          paint(maxX, y);
+        }
+      }
+      if (diagonal) {
+        if (minX > 0) { minX--; }
+        if (maxX < width - 1) { maxX++; }
+      } else {
+        r[0]--;
+        r[1]++;
+      }
+      if (y < height) { this.addNextLine(y + 1, !up, true, minX, maxX, r, ranges, test, paint); }
+      if (y > 0) { this.addNextLine(y - 1, !down, false, minX, maxX, r, ranges, test, paint); }
+    }
   },
 
 

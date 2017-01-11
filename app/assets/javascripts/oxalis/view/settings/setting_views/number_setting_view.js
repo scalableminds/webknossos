@@ -1,5 +1,5 @@
 import _ from "lodash";
-import AbstractSettingView from "./abstract_setting_view.js";
+import AbstractSettingView from "./abstract_setting_view";
 
 class NumberSettingView extends AbstractSettingView {
   static initClass() {

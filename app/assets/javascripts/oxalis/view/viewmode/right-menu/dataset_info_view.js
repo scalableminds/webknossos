@@ -41,7 +41,7 @@ class DatasetInfoView extends Marionette.View {
     if (this.model.skeletonTracing) {
       this.listenTo(this.model.skeletonTracing, "deleteTree", this.render);
       this.listenTo(this.model.skeletonTracing, "mergeTree", this.render);
-      return this.listenTo(this.model.skeletonTracing, "newTree", this.render);
+      this.listenTo(this.model.skeletonTracing, "newTree", this.render);
     }
   }
 
@@ -74,8 +74,8 @@ class DatasetInfoView extends Marionette.View {
 
 
   calculateZoomLevel() {
-    let width,
-      zoom;
+    let width;
+    let zoom;
     if (constants.MODES_PLANE.includes(this.model.mode)) {
       zoom = this.model.flycam.getPlaneScalingFactor();
       width = constants.PLANE_WIDTH;
@@ -93,7 +93,7 @@ class DatasetInfoView extends Marionette.View {
 
   onDestroy() {
     this.model.flycam3d.off("changed");
-    return this.model.flycam.off("zoomStepChanged");
+    this.model.flycam.off("zoomStepChanged");
   }
 }
 DatasetInfoView.initClass();

@@ -37,6 +37,7 @@ class TreeCommentList extends Component {
       "fa-chevron-down": !this.state.collapsed,
     });
 
+    /* eslint-disable jsx-a11y/no-static-element-interactions */
     // one tree and its comments
     return (
       <div>
@@ -47,6 +48,7 @@ class TreeCommentList extends Component {
         {commentNodes}
       </div>
     );
+    /* eslint-enable jsx-a11y/no-static-element-interactions */
   }
 }
 

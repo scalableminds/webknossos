@@ -172,33 +172,6 @@ class VolumeLayer {
   }
 
 
-  contains2dCoordinate(point, list) {
-    // Algorithm described in OX-322
-    if (list == null) { list = this.contourList; }
-    let totalDiff = 0;
-
-    for (const contour of list) {
-      const contour2d = this.get2DCoordinate(contour);
-      const newQuadrant = this.getQuadrantWithRespectToPoint(contour2d, point);
-      const prevQuadrant = (quadrant != null) ? quadrant : newQuadrant;
-      let quadrant = newQuadrant;
-
-      if (Math.abs(prevQuadrant - quadrant) === 2 || quadrant === 0) {
-        // point is on the edge, considered within the polygon
-        // console.log "Point is ON the edge", prevQuadrant, quadrant
-        return true;
-      }
-      let diff = quadrant - prevQuadrant;
-      // special cases if quadrants are 4 and 1
-      if (diff === 3) { diff = -1; }
-      if (diff === -3) { diff = 1; }
-      totalDiff -= diff;
-    }
-
-    return totalDiff !== 0;
-  }
-
-
   getQuadrantWithRespectToPoint(vertex, point) {
     const xDiff = vertex[0] - point[0];
     const yDiff = vertex[1] - point[1];

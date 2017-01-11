@@ -5,7 +5,6 @@ import Backbone from "backbone";
 class PaginationCollection {
 
   constructor(models, options) {
-    let left;
     _.extend(this, Backbone.Events);
 
     if (Utils.__guard__(options, x => x.fullCollection)) {

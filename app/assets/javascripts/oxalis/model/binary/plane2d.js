@@ -1,5 +1,4 @@
 import _ from "lodash";
-import Utils from "libs/utils";
 import Backbone from "backbone";
 import Dimensions from "../dimensions";
 

@@ -105,16 +105,19 @@ class PaginationCollection {
     this.state.sorting = function (left, right) {
       const leftValue = left.get(field);
       const rightValue = right.get(field);
-      return _.isString(leftValue) && _.isString(rightValue) ?
-          order > 0 ?
-            leftValue.localeCompare(rightValue)
-          :
-            rightValue.localeCompare(leftValue)
-        :
-          order > 0 ?
-            leftValue - rightValue
-          :
-            rightValue - leftValue;
+      let compValue;
+      if (_.isString(leftValue) && _.isString(rightValue)) {
+        if (order > 0) {
+          compValue = leftValue.localeCompare(rightValue);
+        } else {
+          compValue = rightValue.localeCompare(leftValue);
+        }
+      } else if (order > 0) {
+        compValue = leftValue - rightValue;
+      } else {
+        compValue = rightValue - leftValue;
+      }
+      return compValue;
     };
 
     this._reset();

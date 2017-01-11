@@ -301,7 +301,7 @@ class PlaneController {
 
 
   render() {
-    for (const dataLayerName in this.model.binary) {
+    for (const dataLayerName of Object.keys(this.model.binary)) {
       if (this.sceneController.pingDataLayer(dataLayerName)) {
         this.model.binary[dataLayerName].ping(this.flycam.getPosition(), {
           zoomStep: this.flycam.getIntegerZoomStep(),

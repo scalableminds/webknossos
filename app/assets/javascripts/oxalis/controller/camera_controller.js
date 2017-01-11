@@ -137,7 +137,7 @@ class CameraController {
       .onUpdate(this.updateCameraTDView)
       .start();
     } else {
-      for (const prop in from) {
+      for (const prop of Object.keys(from)) {
         if (to[prop] == null) {
           to[prop] = from[prop];
         }

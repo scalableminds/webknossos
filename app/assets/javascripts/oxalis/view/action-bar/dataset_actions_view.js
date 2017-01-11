@@ -72,8 +72,9 @@ class DatasetActionsView extends Marionette.View {
   updateSavedState() {
     if (this.model.annotationModel.stateLogger.stateSaved()) {
       this.ui.saveButton.text("Saved   ✓");
+    } else {
+      this.ui.saveButton.text("Save");
     }
-    this.ui.saveButton.text("Save");
   }
 
 

@@ -33,7 +33,7 @@ npm install -g yarn
 brew services start mongodb
 
 # Checkout the webKnossos git repository
-git clone git@github.com:scalableminds/oxalis.git
+git clone git@github.com:scalableminds/webknossos.git
 ```
 
 

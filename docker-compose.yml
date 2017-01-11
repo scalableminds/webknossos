@@ -34,7 +34,7 @@ services:
   oxalis-frontend-linting:
     extends:
       service: oxalis-sbt
-    command: bash -c "npm run lint || true"
+    command: bash -c "npm run lint"
 
   oxalis-frontend-tests:
     extends:

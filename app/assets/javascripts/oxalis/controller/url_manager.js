@@ -58,7 +58,7 @@ class UrlManager {
     this.listenTo(this.model, "change:mode", this.update);
 
     if (this.model.skeletonTracing) {
-      return this.listenTo(this.model.skeletonTracing, "newActiveNode", this.update);
+      this.listenTo(this.model.skeletonTracing, "newActiveNode", this.update);
     }
   }
 

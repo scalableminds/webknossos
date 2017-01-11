@@ -52,7 +52,7 @@ class Tree {
     this.sizesBuffer.clear();
     this.scalesBuffer.clear();
     this.nodeIDs.clear();
-    return this.updateNodesColors();
+    this.updateNodesColors();
   }
 
 
@@ -77,23 +77,24 @@ class Tree {
       }
     }
 
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
   addNodes(nodeList) {
-    return nodeList.map(node =>
+    nodeList.forEach(node =>
       this.addNode(node));
   }
 
 
   deleteNode(node) {
-    let edgesIndex,
-      found;
+    let edgesIndex;
+    let found;
     const swapLast = (array, index) => {
       const lastElement = array.pop();
-      return __range__(0, array.elementLength, false).map(i =>
-        array.getAllElements()[(index * array.elementLength) + i] = lastElement[i]);
+      __range__(0, array.elementLength, false).forEach((i) => {
+        array.getAllElements()[(index * array.elementLength) + i] = lastElement[i];
+      });
     };
 
     const nodesIndex = this.getNodeIndex(node.id);
@@ -124,7 +125,7 @@ class Tree {
 
     swapLast(this.edgesBuffer, edgesIndex);
 
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
   mergeTree(otherTree, lastNode, activeNode) {
@@ -139,7 +140,7 @@ class Tree {
     this.edgesBuffer.push(this.getEdgeArray(lastNode, activeNode));
 
     this.updateNodesColors();
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -156,7 +157,7 @@ class Tree {
 
   setSizeAttenuation(sizeAttenuation) {
     this.nodes.material.sizeAttenuation = sizeAttenuation;
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -165,7 +166,7 @@ class Tree {
     this.edges.material.color = new THREE.Color(this.darkenHex(newColor));
 
     this.updateNodesColors();
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -188,7 +189,7 @@ class Tree {
       this.nodesColorBuffer.push(this.getColor(this.nodeIDs.get(i)));
     }
 
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -196,7 +197,7 @@ class Tree {
     this.doWithNodeIndex(id, index => this.nodesColorBuffer.set(this.getColor(id, isActiveNode, isBranchPoint), index),
     );
 
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -204,7 +205,7 @@ class Tree {
     this.doWithNodeIndex(id, index => this.sizesBuffer.set([radius * 2], index),
     );
 
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -212,7 +213,7 @@ class Tree {
     const normal = 1.0;
     const highlighted = 2.0;
 
-    return this.doWithNodeIndex(nodeId, index => this.animateNodeScale(normal, highlighted, index, () => this.animateNodeScale(highlighted, normal, index),
+    this.doWithNodeIndex(nodeId, index => this.animateNodeScale(normal, highlighted, index, () => this.animateNodeScale(highlighted, normal, index),
       ),
     );
   }
@@ -223,14 +224,14 @@ class Tree {
     const setScaleFactor = factor => this.scalesBuffer.set([factor], index);
     const redraw = () => {
       this.updateGeometries();
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     };
     const onUpdate = function () {
       setScaleFactor(this.scaleFactor);
-      return redraw();
+      redraw();
     };
 
-    return (new TWEEN.Tween({ scaleFactor: from }))
+    (new TWEEN.Tween({ scaleFactor: from }))
       .to({ scaleFactor: to }, 100)
       .onUpdate(onUpdate)
       .onComplete(onComplete)

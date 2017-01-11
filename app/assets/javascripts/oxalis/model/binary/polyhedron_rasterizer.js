@@ -17,7 +17,7 @@ const drawFunction = function (x, y, z, buffer, shiftZ) {
   const __indexY = (z << shiftZ) + (y << 1);
 
   if (x < buffer[__indexY]) { buffer[__indexY] = x; }
-  if (x > buffer[__indexY + 1]) { return buffer[__indexY + 1] = x; }
+  if (x > buffer[__indexY + 1]) { buffer[__indexY + 1] = x; }
 };
 
 

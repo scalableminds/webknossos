@@ -27,7 +27,7 @@ class VolumeTracingPlaneController extends PlaneController {
     this.listenTo(this.model.volumeTracing, "newActiveCell", function (id) {
       id = this.model.volumeTracing.getActiveCellId();
       if (id > 0) {
-        return this.render3dCell(id);
+        this.render3dCell(id);
       }
     });
   }
@@ -140,7 +140,7 @@ class VolumeTracingPlaneController extends PlaneController {
     }
     const bb = this.model.flycam.getViewportBoundingBox();
     const res = this.model.user.get("isosurfaceResolution");
-    return this.sceneController.showShapes(this.scaleIsosurfaceBB(bb), res, id);
+    this.sceneController.showShapes(this.scaleIsosurfaceBB(bb), res, id);
   }
 
   scaleIsosurfaceBB(bb) {

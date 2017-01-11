@@ -120,8 +120,7 @@ Input.Keyboard = class Keyboard {
         if (this.keyPressedCount === 1) { this.buttonLoop(); }
 
         if (this.delay >= 0) {
-          setTimeout((() => callback.delayed = false
-            ), this.delay);
+          setTimeout((() => { callback.delayed = false; }), this.delay);
         }
 
         return returnValue;

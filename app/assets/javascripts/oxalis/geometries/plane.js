@@ -163,7 +163,7 @@ class Plane {
 
 
   setLinearInterpolationEnabled(enabled) {
-    return this.plane.material.setColorInterpolation(
+    this.plane.material.setColorInterpolation(
       enabled ? THREE.LinearFilter : THREE.NearestFilter,
     );
   }

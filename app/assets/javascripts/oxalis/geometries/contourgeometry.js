@@ -21,7 +21,7 @@ class ContourGeometry {
     this.listenTo(this.volumeTracing, "updateLayer", function (cellId, contourList) {
       this.color = cellId === 0 ? this.COLOR_DELETE : this.COLOR_NORMAL;
       this.reset();
-      return contourList.map(p =>
+      contourList.forEach(p =>
         this.addEdgePoint(p));
     });
 
@@ -37,14 +37,14 @@ class ContourGeometry {
     this.edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({ linewidth: 2 }), THREE.LineStrip);
     this.edge.vertexBuffer = new ResizableBuffer(3);
 
-    return this.reset();
+    this.reset();
   }
 
 
   reset() {
     this.edge.material.color = this.color;
     this.edge.vertexBuffer.clear();
-    return this.finalizeMesh(this.edge);
+    this.finalizeMesh(this.edge);
   }
 
 
@@ -62,7 +62,7 @@ class ContourGeometry {
     this.edge.vertexBuffer.push(edgePoint);
     this.finalizeMesh(this.edge);
 
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -71,7 +71,7 @@ class ContourGeometry {
 
     positionAttribute.array = mesh.vertexBuffer.getBuffer();
     positionAttribute.numItems = mesh.vertexBuffer.getLength() * 3;
-    return positionAttribute.needsUpdate = true;
+    positionAttribute.needsUpdate = true;
   }
 }
 ContourGeometry.initClass();

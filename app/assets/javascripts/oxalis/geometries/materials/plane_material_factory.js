@@ -9,7 +9,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   setupAttributesAndUniforms() {
     super.setupAttributesAndUniforms();
 
-    return this.uniforms = _.extend(this.uniforms, {
+    this.uniforms = _.extend(this.uniforms, {
       offset: {
         type: "v2",
         value: new THREE.Vector2(0, 0),
@@ -45,58 +45,48 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.textures[shaderName].binaryName = binary.name;
     }
 
-    return (() => {
-      const result = [];
-      for (shaderName in this.textures) {
-        const texture = this.textures[shaderName];
-        let item;
-        this.uniforms[`${shaderName}_texture`] = {
-          type: "t",
-          value: texture,
+    for (shaderName in this.textures) {
+      const texture = this.textures[shaderName];
+      this.uniforms[`${shaderName}_texture`] = {
+        type: "t",
+        value: texture,
+      };
+      if (texture.binaryCategory !== "segmentation") {
+        const color = this.convertColor(this.model.datasetConfiguration.get(`layers.${texture.binaryName}.color`));
+        this.uniforms[`${shaderName}_weight`] = {
+          type: "f",
+          value: 1,
         };
-        if (texture.binaryCategory !== "segmentation") {
-          const color = this.convertColor(this.model.datasetConfiguration.get(`layers.${texture.binaryName}.color`));
-          this.uniforms[`${shaderName}_weight`] = {
-            type: "f",
-            value: 1,
-          };
-          item = this.uniforms[`${shaderName}_color`] = {
-            type: "v3",
-            value: new THREE.Vector3(...color),
-          };
-        }
-        result.push(item);
+        this.uniforms[`${shaderName}_color`] = {
+          type: "v3",
+          value: new THREE.Vector3(...color),
+        };
       }
-      return result;
-    })();
+    }
   }
 
 
   makeMaterial(options) {
     super.makeMaterial(options);
 
-    this.material.setColorInterpolation = interpolation => (() => {
-      const result = [];
+    this.material.setColorInterpolation = (interpolation) => {
       for (const name in this.textures) {
         const texture = this.textures[name];
-        let item;
         if (texture.binaryCategory === "color") {
           texture.magFilter = interpolation;
-          item = texture.needsUpdate = true;
+          texture.needsUpdate = true;
         }
-        result.push(item);
       }
-      return result;
-    })();
+    };
 
     this.material.setScaleParams = ({ offset, repeat }) => {
       this.uniforms.offset.value.set(offset.x, offset.y);
-      return this.uniforms.repeat.value.set(repeat.x, repeat.y);
+      this.uniforms.repeat.value.set(repeat.x, repeat.y);
     };
 
-    this.material.setSegmentationAlpha = alpha => this.uniforms.alpha.value = alpha / 100;
+    this.material.setSegmentationAlpha = (alpha) => { this.uniforms.alpha.value = alpha / 100; };
 
-    return this.material.side = THREE.DoubleSide;
+    this.material.side = THREE.DoubleSide;
   }
 
 

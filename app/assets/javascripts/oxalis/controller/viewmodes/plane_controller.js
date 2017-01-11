@@ -35,7 +35,7 @@ class PlaneController {
         this.mouseControllers = [];
         __guard__(this.keyboard, x => x.destroy());
         __guard__(this.keyboardNoLoop, x1 => x1.destroy());
-        return __guard__(this.keyboardLoopDelayed, x2 => x2.destroy());
+        __guard__(this.keyboardLoopDelayed, x2 => x2.destroy());
       },
     };
   }
@@ -100,12 +100,12 @@ class PlaneController {
     for (let id = 0; id <= 2; id++) {
       ((planeId) => {
         const inputcatcher = $(`#plane${constants.PLANE_NAMES[planeId]}`);
-        return this.input.mouseControllers.push(
+        this.input.mouseControllers.push(
           new Input.Mouse(inputcatcher, this.getPlaneMouseControls(planeId), planeId));
       })(id);
     }
 
-    return this.input.mouseControllers.push(
+    this.input.mouseControllers.push(
       new Input.Mouse($("#TDView"), this.getTDViewMouseControls(), constants.TDView));
   }
 
@@ -130,7 +130,7 @@ class PlaneController {
 
       over: () => {
         $(":focus").blur();
-        return this.planeView.setActiveViewport(this.activeViewport = planeId);
+        this.planeView.setActiveViewport(this.activeViewport = planeId);
       },
 
       scroll: this.scrollPlanes,
@@ -174,7 +174,7 @@ class PlaneController {
       );
     });
 
-    return this.listenTo(this.cameraController, "cameraPositionChanged", this.controls.update);
+    this.listenTo(this.cameraController, "cameraPositionChanged", this.controls.update);
   }
 
 
@@ -221,7 +221,7 @@ class PlaneController {
     , this.model.user.get("keyboardDelay"),
     );
 
-    this.listenTo(this.model.user, "change:keyboardDelay", function (model, value) { return this.input.keyboardLoopDelayed.delay = value; });
+    this.listenTo(this.model.user, "change:keyboardDelay", function (model, value) { this.input.keyboardLoopDelayed.delay = value; });
 
     this.input.keyboardNoLoop = new Input.KeyboardNoLoop(this.getKeyboardControls());
   }
@@ -242,7 +242,7 @@ class PlaneController {
 
   init() {
     this.cameraController.setClippingDistance(this.model.user.get("clippingDistance"));
-    return this.sceneController.setClippingDistance(this.model.user.get("clippingDistance"));
+    this.sceneController.setClippingDistance(this.model.user.get("clippingDistance"));
   }
 
 
@@ -292,7 +292,7 @@ class PlaneController {
         list.map(geometry =>
           this.planeView.addGeometry(geometry)),
       );
-      return this.listenTo(this.sceneController.skeleton, "removeGeometries", list =>
+      this.listenTo(this.sceneController.skeleton, "removeGeometries", list =>
         list.map(geometry =>
           this.planeView.removeGeometry(geometry)),
       );
@@ -312,15 +312,15 @@ class PlaneController {
     }
 
     this.cameraController.update();
-    return this.sceneController.update();
+    this.sceneController.update();
   }
 
 
   move(v, increaseSpeedWithZoom = true) {
     if (([0, 1, 2]).includes(this.activeViewport)) {
-      return this.flycam.movePlane(v, this.activeViewport, increaseSpeedWithZoom);
+      this.flycam.movePlane(v, this.activeViewport, increaseSpeedWithZoom);
     }
-    return this.moveTDView({ x: -v[0], y: -v[1] });
+    this.moveTDView({ x: -v[0], y: -v[1] });
   }
 
 
@@ -347,9 +347,9 @@ class PlaneController {
 
   zoom(value, zoomToMouse) {
     if (([0, 1, 2]).includes(this.activeViewport)) {
-      return this.zoomPlanes(value, zoomToMouse);
+      this.zoomPlanes(value, zoomToMouse);
     } else {
-      return this.zoomTDView(value, zoomToMouse);
+      this.zoomTDView(value, zoomToMouse);
     }
   }
 
@@ -374,13 +374,13 @@ class PlaneController {
       zoomToPosition = this.input.mouseControllers[constants.TDView].position;
     }
 
-    return this.cameraController.zoomTDView(value, zoomToPosition, this.planeView.curWidth);
+    this.cameraController.zoomTDView(value, zoomToPosition, this.planeView.curWidth);
   }
 
 
   moveTDView(delta) {
     this.cameraController.moveTDViewX(delta.x * this.model.user.getMouseInversionX());
-    return this.cameraController.moveTDViewY(delta.y * this.model.user.getMouseInversionY());
+    this.cameraController.moveTDViewY(delta.y * this.model.user.getMouseInversionY());
   }
 
 
@@ -412,7 +412,7 @@ class PlaneController {
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
-    return this.model.user.set("moveValue", (Number)(moveValue));
+    this.model.user.set("moveValue", (Number)(moveValue));
   }
 
 
@@ -421,7 +421,7 @@ class PlaneController {
     scale = Math.min(constants.MAX_SCALE, scale);
     scale = Math.max(constants.MIN_SCALE, scale);
 
-    return this.model.user.set("scale", scale);
+    this.model.user.set("scale", scale);
   }
 
 

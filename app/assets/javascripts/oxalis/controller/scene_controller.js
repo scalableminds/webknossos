@@ -79,12 +79,12 @@ class SceneController {
 
     this.planes[constants.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
     this.planes[constants.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
-    return this.planes[constants.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
+    this.planes[constants.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
   }
 
 
   removeShapes() {
-    return this.trigger("removeGeometries", this.volumeMeshes);
+    this.trigger("removeGeometries", this.volumeMeshes);
   }
 
 
@@ -101,7 +101,7 @@ class SceneController {
       bb.min, bb.max, id,
     );
 
-    return this.polygonFactory.getTriangles().then((triangles) => {
+    this.polygonFactory.getTriangles().then((triangles) => {
       this.removeShapes();
       this.volumeMeshes = [];
 
@@ -113,7 +113,7 @@ class SceneController {
 
       this.trigger("newGeometries", this.volumeMeshes);
       app.vent.trigger("rerender");
-      return this.polygonFactory = null;
+      this.polygonFactory = null;
     },
     );
   }
@@ -124,8 +124,8 @@ class SceneController {
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
 
-    let mesh,
-      pos;
+    let mesh;
+    let pos;
     this.cube.updateForCam(id);
     this.userBoundingBox.updateForCam(id);
     __guard__(this.taskBoundingBox, x => x.updateForCam(id));
@@ -189,7 +189,7 @@ class SceneController {
     for (const plane of this.planes) {
       plane.setDisplayCrosshair(value);
     }
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -198,7 +198,7 @@ class SceneController {
     for (const i of constants.ALL_PLANES) {
       this.planeShift[i] = value * app.scaleInfo.voxelPerNM[i];
     }
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -206,7 +206,7 @@ class SceneController {
     for (const plane of this.planes) {
       plane.setLinearInterpolationEnabled(value);
     }
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -214,7 +214,7 @@ class SceneController {
     for (let i = 0; i <= 2; i++) {
       this.displayPlane[i] = value;
     }
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -235,7 +235,7 @@ class SceneController {
 
 
   setUserBoundingBox(bb) {
-    return this.userBoundingBox.setCorners(bb.min, bb.max);
+    this.userBoundingBox.setCorners(bb.min, bb.max);
   }
 
 
@@ -243,7 +243,7 @@ class SceneController {
     for (const plane of this.planes) {
       plane.setSegmentationAlpha(alpha);
     }
-    return this.pingBinarySeg = alpha !== 0;
+    this.pingBinarySeg = alpha !== 0;
   }
 
   pingDataLayer(dataLayerName) {
@@ -266,7 +266,7 @@ class SceneController {
     __guard__(this.taskBoundingBox, x => x.setVisibility(false));
 
     __guard__(this.skeleton, x1 => x1.restoreVisibility());
-    return __guard__(this.skeleton, x2 => x2.setSizeAttenuation(true));
+    __guard__(this.skeleton, x2 => x2.setSizeAttenuation(true));
   }
 
 
@@ -278,22 +278,22 @@ class SceneController {
     this.userBoundingBox.setVisibility(true);
     __guard__(this.taskBoundingBox, x => x.setVisibility(true));
 
-    return __guard__(this.skeleton, x1 => x1.setSizeAttenuation(false));
+    __guard__(this.skeleton, x1 => x1.setSizeAttenuation(false));
   }
 
 
   bindToEvents() {
     const { user } = this.model;
-    this.listenTo(this.model, "change:userBoundingBox", function (bb) { return this.setUserBoundingBox(bb); });
+    this.listenTo(this.model, "change:userBoundingBox", function (bb) { this.setUserBoundingBox(bb); });
     this.listenTo(user, "change:segmentationOpacity", function (model, opacity) {
-      return this.setSegmentationAlpha(opacity);
+      this.setSegmentationAlpha(opacity);
     });
-    this.listenTo(user, "change:clippingDistance", function (model, value) { return this.setClippingDistance(value); });
-    this.listenTo(user, "change:displayCrosshair", function (model, value) { return this.setDisplayCrosshair(value); });
+    this.listenTo(user, "change:clippingDistance", function (model, value) { this.setClippingDistance(value); });
+    this.listenTo(user, "change:displayCrosshair", function (model, value) { this.setDisplayCrosshair(value); });
     this.listenTo(this.model.datasetConfiguration, "change:interpolation", function (model, value) {
-      return this.setInterpolation(value);
+      this.setInterpolation(value);
     });
-    return this.listenTo(user, "change:tdViewDisplayPlanes", function (model, value) { return this.setDisplayPlanes(value); });
+    this.listenTo(user, "change:tdViewDisplayPlanes", function (model, value) { this.setDisplayPlanes(value); });
   }
 }
 SceneController.initClass();

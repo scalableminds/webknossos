@@ -46,7 +46,7 @@ class ResizableBuffer {
 
     buffer.set(element, length);
 
-    return this.length += elementLength;
+    this.length += elementLength;
   }
 
 
@@ -61,7 +61,7 @@ class ResizableBuffer {
       length += elementLength;
     }
 
-    return this.length += elements.length * elementLength;
+    this.length += elements.length * elementLength;
   }
 
   pushSubarray(subarray) {
@@ -72,7 +72,7 @@ class ResizableBuffer {
 
     buffer.set(subarray, length);
 
-    return this.length += subarray.length;
+    this.length += subarray.length;
   }
 
 

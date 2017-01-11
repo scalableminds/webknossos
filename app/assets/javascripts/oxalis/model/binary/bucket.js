@@ -49,7 +49,7 @@ class Bucket {
 
   label(labelFunc) {
     labelFunc(this.getOrCreateData());
-    return this.dirty = true;
+    this.dirty = true;
   }
 
 
@@ -79,7 +79,7 @@ class Bucket {
 
 
   pull() {
-    return this.state = (() => {
+    this.state = (() => {
       switch (this.state) {
         case this.STATE_UNREQUESTED: return this.STATE_REQUESTED;
         default: return this.unexpectedState();
@@ -89,7 +89,7 @@ class Bucket {
 
 
   pullFailed() {
-    return this.state = (() => {
+    this.state = (() => {
       switch (this.state) {
         case this.STATE_REQUESTED: return this.STATE_UNREQUESTED;
         default: return this.unexpectedState();
@@ -99,7 +99,7 @@ class Bucket {
 
 
   receiveData(data) {
-    return this.state = (() => {
+    this.state = (() => {
       switch (this.state) {
         case this.STATE_REQUESTED:
           if (this.dirty) {
@@ -119,9 +119,10 @@ class Bucket {
   push() {
     switch (this.state) {
       case this.STATE_LOADED:
-        return this.dirty = false;
+        this.dirty = false;
+        break;
       default:
-        return this.unexpectedState();
+        this.unexpectedState();
     }
   }
 
@@ -133,21 +134,16 @@ class Bucket {
 
   merge(newData) {
     const voxelPerBucket = 1 << (this.BUCKET_SIZE_P * 3);
-    return (() => {
-      const result = [];
-      for (const i of __range__(0, voxelPerBucket, false)) {
-        let item;
-        const oldVoxel = (__range__(0, this.BYTE_OFFSET, false).map(j => this.data[(i * this.BYTE_OFFSET) + j]));
-        const oldVoxelEmpty = _.reduce(oldVoxel, ((memo, v) => memo && v === 0), true);
+    for (const i of __range__(0, voxelPerBucket, false)) {
+      const oldVoxel = (__range__(0, this.BYTE_OFFSET, false).map(j => this.data[(i * this.BYTE_OFFSET) + j]));
+      const oldVoxelEmpty = _.reduce(oldVoxel, ((memo, v) => memo && v === 0), true);
 
-        if (oldVoxelEmpty) {
-          item = __range__(0, this.BYTE_OFFSET, false).map(j =>
-            this.data[(i * this.BYTE_OFFSET) + j] = newData[(i * this.BYTE_OFFSET) + j]);
-        }
-        result.push(item);
+      if (oldVoxelEmpty) {
+        __range__(0, this.BYTE_OFFSET, false).forEach((j) => {
+          this.data[(i * this.BYTE_OFFSET) + j] = newData[(i * this.BYTE_OFFSET) + j];
+        });
       }
-      return result;
-    })();
+    }
   }
 }
 Bucket.initClass();

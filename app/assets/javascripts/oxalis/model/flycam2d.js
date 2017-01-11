@@ -48,7 +48,7 @@ class Flycam2d {
     const trigger = this.trigger;
     this.trigger = (...args) => {
       trigger(...args);
-      return trigger.call(this, "changed");
+      trigger.call(this, "changed");
     };
   }
 
@@ -65,14 +65,14 @@ class Flycam2d {
 
 
   zoomByDelta(delta) {
-    return this.zoom(this.zoomStep - (delta * constants.ZOOM_DIFF));
+    this.zoom(this.zoomStep - (delta * constants.ZOOM_DIFF));
   }
 
 
   zoom(zoom) {
     // Make sure the max. zoom Step will not be exceded
     if (zoom < this.zoomStepCount + this.maxZoomStepDiff) {
-      return this.setZoomStep(zoom);
+      this.setZoomStep(zoom);
     }
   }
 
@@ -82,7 +82,7 @@ class Flycam2d {
 
     this.quality = value;
     this.updateStoredValues();
-    return this.update();
+    this.update();
   }
 
 
@@ -90,7 +90,7 @@ class Flycam2d {
     // round, because Model expects Integer
     this.integerZoomStep = Math.ceil((this.zoomStep - this.maxZoomStepDiff) + this.quality);
     this.integerZoomStep = Math.min(this.integerZoomStep, this.zoomStepCount);
-    return this.integerZoomStep = Math.max(this.integerZoomStep, 0);
+    this.integerZoomStep = Math.max(this.integerZoomStep, 0);
   }
 
 
@@ -103,7 +103,7 @@ class Flycam2d {
     this.zoomStep = zoomStep;
     this.update();
     this.updateStoredValues();
-    return this.trigger("zoomStepChanged", zoomStep);
+    this.trigger("zoomStepChanged", zoomStep);
   }
 
 
@@ -127,7 +127,7 @@ class Flycam2d {
 
   updateStoredValues() {
     this.calculateIntegerZoomStep();
-    return this.calculateBuffer();
+    this.calculateBuffer();
   }
 
 
@@ -158,13 +158,13 @@ class Flycam2d {
   setDirection(direction) {
     this.direction = direction;
     if (this.user.get("dynamicSpaceDirection")) {
-      return this.setSpaceDirection(direction);
+      this.setSpaceDirection(direction);
     }
   }
 
 
   setSpaceDirection(direction) {
-    return [0, 1, 2].forEach((index) => {
+    [0, 1, 2].forEach((index) => {
       if (direction[index] <= 0) {
         this.spaceDirection[index] = -1;
       } else {
@@ -190,9 +190,10 @@ class Flycam2d {
 
 
   move(p, planeID) {
-  // move by whatever is stored in this vector
+    // move by whatever is stored in p
 
-    if (planeID != null) {          // if planeID is given, use it to manipulate z
+    // if planeID is given, use it to manipulate z
+    if (planeID != null) {
       // change direction of the value connected to space, based on the last direction
       p[Dimensions.getIndices(planeID)[2]] *= this.spaceDirection[Dimensions.getIndices(planeID)[2]];
     }
@@ -201,7 +202,7 @@ class Flycam2d {
 
 
   movePlane(vector, planeID, increaseSpeedWithZoom) {
- // vector of voxels in BaseVoxels
+    // vector of voxels in BaseVoxels
 
     if (increaseSpeedWithZoom == null) { increaseSpeedWithZoom = true; }
     vector = Dimensions.transDim(vector, planeID);
@@ -210,7 +211,7 @@ class Flycam2d {
     const delta = [vector[0] * zoomFactor * scaleFactor[0],
       vector[1] * zoomFactor * scaleFactor[1],
       vector[2] * zoomFactor * scaleFactor[2]];
-    return this.move(delta, planeID);
+    this.move(delta, planeID);
   }
 
 
@@ -262,13 +263,13 @@ class Flycam2d {
     }
 
     this.position = position;
-    return this.update();
+    this.update();
   }
 
 
   setPosition(position) {
     this.setPositionSilent(position);
-    return this.trigger("positionChanged", position);
+    this.trigger("positionChanged", position);
   }
 
 
@@ -316,7 +317,7 @@ class Flycam2d {
 
   setRayThreshold(cameraRight, cameraLeft) {
     // in nm
-    return this.rayThreshold[constants.TDView] = (8 * (cameraRight - cameraLeft)) / 384;
+    this.rayThreshold[constants.TDView] = (8 * (cameraRight - cameraLeft)) / 384;
   }
 
 

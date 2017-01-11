@@ -27,11 +27,11 @@ class CategoryView extends Marionette.View {
   </div>
   <div id="user-settings-<%- tabId %>" class="panel-collapse collapse in">
     <div class="panel-body">
-  
+
       <% _.forEach(subviewCreatorsList, function (key_value_pair) { %>
         <div data-subview="<%- key_value_pair[0] %>"></div>
       <% }) %>
-  
+
     </div>
   </div>
 </div>\
@@ -48,7 +48,7 @@ class CategoryView extends Marionette.View {
     // subviewCreators hash needed for Subviews extension
     this.subviewCreators = _.transform(
       this.subviewCreatorsList,
-      (result, [key, value]) => result[key] = value,
+      (result, [key, value]) => { result[key] = value; },
       {},
     );
 

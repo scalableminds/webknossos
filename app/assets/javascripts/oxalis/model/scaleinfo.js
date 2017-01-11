@@ -33,9 +33,7 @@ class ScaleInfo {
 
 
   voxelToNm(posArray) {
-    const nmPos = posArray.slice();
-    return [0, 1, 2].map(i =>
-      nmPos[i] *= this.nmPerVoxel[i]);
+    return [0, 1, 2].map(i => posArray[i] * this.nmPerVoxel[i]);
   }
 
 

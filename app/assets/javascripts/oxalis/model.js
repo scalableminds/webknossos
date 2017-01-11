@@ -217,13 +217,13 @@ class Model extends Backbone.Model {
 
   setMode(mode) {
     this.set("mode", mode);
-    return this.trigger("change:mode", mode);
+    this.trigger("change:mode", mode);
   }
 
 
   setUserBoundingBox(bb) {
     this.userBoundingBox = this.computeBoundingBoxFromArray(bb);
-    return this.trigger("change:userBoundingBox", this.userBoundingBox);
+    this.trigger("change:userBoundingBox", this.userBoundingBox);
   }
 
 
@@ -242,7 +242,7 @@ class Model extends Backbone.Model {
     const segmentationBinary = this.getSegmentationBinary();
 
     if (segmentationBinary != null) {
-      return window.mappings = {
+      window.mappings = {
         getAll() { return segmentationBinary.mappings.getMappingNames(); },
         getActive() { return segmentationBinary.activeMapping; },
         activate(mapping) { return segmentationBinary.setActiveMapping(mapping); },
@@ -328,7 +328,7 @@ class Model extends Backbone.Model {
 
   // Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
   initSettersGetter() {
-    return _.forEach(this.attributes, (value, key) => Object.defineProperty(this, key, {
+    _.forEach(this.attributes, (value, key) => Object.defineProperty(this, key, {
       set(val) {
         return this.set(key, val);
       },
@@ -354,7 +354,7 @@ class Model extends Backbone.Model {
     }
 
     if (state.activeNode != null) {
-      return __guard__(this.get("skeletonTracing"), x => x.setActiveNode(state.activeNode));
+      __guard__(this.get("skeletonTracing"), x => x.setActiveNode(state.activeNode));
     }
   }
 }

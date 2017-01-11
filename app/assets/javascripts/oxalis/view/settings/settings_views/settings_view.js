@@ -7,11 +7,11 @@ class SettingsView extends Marionette.View {
   static initClass() {
     this.prototype.template = _.template(`\
 <div class="panel-group flex-overflow">
-  
+
   <% _.forEach(subviewCreatorsList, function (key_value_pair) { %>
     <div data-subview="<%- key_value_pair[0] %>"></div>
   <% }) %>
-  
+
 </div>\
 `);
 
@@ -33,7 +33,7 @@ class SettingsView extends Marionette.View {
     // subviewCreators hash needed for Subviews extension
     this.subviewCreators = _.transform(
       this.subviewCreatorsList,
-      (result, [key, value]) => result[key] = value,
+      (result, [key, value]) => { result[key] = value; },
       {},
     );
 

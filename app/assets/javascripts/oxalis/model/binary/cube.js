@@ -97,7 +97,7 @@ class Cube {
 
     this.pullQueue = pullQueue;
     this.pushQueue = pushQueue;
-    return this.temporalBucketManager = new TemporalBucketManager(this.pullQueue, this.pushQueue);
+    this.temporalBucketManager = new TemporalBucketManager(this.pullQueue, this.pushQueue);
   }
 
 
@@ -112,7 +112,7 @@ class Cube {
 
   setMappingEnabled(isEnabled) {
     this.currentMapping = isEnabled ? this.mapping : this.EMPTY_MAPPING;
-    return this.trigger("newMapping");
+    this.trigger("newMapping");
   }
 
 
@@ -133,7 +133,7 @@ class Cube {
     }
     this.mapping = newMapping;
 
-    return this.trigger("newMapping");
+    this.trigger("newMapping");
   }
 
 
@@ -283,7 +283,7 @@ class Cube {
     }
 
     this.pushQueue.push();
-    return this.trigger("volumeLabeled");
+    this.trigger("volumeLabeled");
   }
 
 
@@ -300,15 +300,16 @@ class Cube {
 
       const labelFunc = data =>
         // Write label in little endian order
-         __range__(0, this.BYTE_OFFSET, false).map(i =>
-          data[voxelIndex + i] = (label >> (i * 8)) & 0xff);
+        __range__(0, this.BYTE_OFFSET, false).forEach((i) => {
+          data[voxelIndex + i] = (label >> (i * 8)) & 0xff;
+        });
 
       bucket.label(labelFunc);
 
       // Push bucket if it's loaded, otherwise, TemporalBucketManager will push
       // it once it is.
       if (bucket.isLoaded()) {
-        return this.pushQueue.insert(address);
+        this.pushQueue.insert(address);
       }
     }
   }

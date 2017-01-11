@@ -38,7 +38,7 @@ reload the page to make sure that your work won't be lost.",
             {
               id: "cancel-button",
               label: "Cancel",
-              callback: () => this.reloadDenied = true,
+              callback: () => { this.reloadDenied = true; },
             },
           ],
         );

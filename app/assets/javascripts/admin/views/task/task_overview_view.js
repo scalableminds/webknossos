@@ -289,11 +289,11 @@ class TaskOverviewView extends Marionette.View {
     return this.fetchPromise.then(() => {
       // { userInfos, taskTypes, projects } = @model.attributes
       // move workingTime to user object and convert to hours
-      this.collection.forEach(userInfoModel => userInfoModel.get("user").workingHours = Utils.roundTo(userInfoModel.get("workingTime") / this.MS_PER_HOUR, 2));
+      this.collection.forEach((userInfoModel) => { userInfoModel.get("user").workingHours = Utils.roundTo(userInfoModel.get("workingTime") / this.MS_PER_HOUR, 2); });
 
       // extract users and add full names
       this.users = this.collection.pluck("user");
-      this.users.map(user => user.name = `${user.firstName} ${user.lastName}`);
+      this.users.forEach((user) => { user.name = `${user.firstName} ${user.lastName}`; });
 
       const taskTypes = _.flatten(this.collection.pluck("taskTypes"));
       const projects = _.flatten(this.collection.pluck("projects"));

@@ -99,7 +99,7 @@ class DatasetUploadView extends Marionette.View {
       data: "amIAnAdmin=true",
     });
 
-    return this.datastoreSelectionView = new SelectionView({
+    this.datastoreSelectionView = new SelectionView({
       collection: new DatastoreCollection(),
       name: "datastore",
       filter(item) { return item.get("url") !== null; },
@@ -113,7 +113,7 @@ class DatasetUploadView extends Marionette.View {
 
   onRender() {
     this.showChildView("team", this.teamSelectionView);
-    return this.showChildView("datastore", this.datastoreSelectionView);
+    this.showChildView("datastore", this.datastoreSelectionView);
   }
 
 
@@ -125,7 +125,7 @@ class DatasetUploadView extends Marionette.View {
       Toast.info("Uploading datasets", false);
       this.ui.spinner.removeClass("hidden");
 
-      return Request.receiveJSON("/api/dataToken/generate")
+      Request.receiveJSON("/api/dataToken/generate")
       .then(({ token }) =>
         Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
           data: new FormData(form),
@@ -135,7 +135,7 @@ class DatasetUploadView extends Marionette.View {
       .then(
         () => {
           Toast.success();
-          return app.router.navigate("/dashboard", { trigger: true });
+          app.router.navigate("/dashboard", { trigger: true });
         },
         () => {}, // NOOP
       )

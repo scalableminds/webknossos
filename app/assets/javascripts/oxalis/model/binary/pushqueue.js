@@ -32,14 +32,14 @@ class PushQueue {
   insert(bucket) {
     this.queue.push(bucket);
     this.removeDuplicates();
-    return this.push();
+    this.push();
   }
 
 
   insertFront(bucket) {
     this.queue.unshift(bucket);
     this.removeDuplicates();
-    return this.push();
+    this.push();
   }
 
 
@@ -52,17 +52,13 @@ class PushQueue {
     this.queue.sort(this.comparePositions);
 
     let i = 0;
-    return (() => {
-      const result = [];
-      while (i < this.queue.length - 1) {
-        if (this.comparePositions(this.queue[i], this.queue[i + 1]) === 0) {
-          result.push(this.queue.splice(i, 1));
-        } else {
-          result.push(i++);
-        }
+    while (i < this.queue.length - 1) {
+      if (this.comparePositions(this.queue[i], this.queue[i + 1]) === 0) {
+        this.queue.splice(i, 1);
+      } else {
+        i++;
       }
-      return result;
-    })();
+    }
   }
 
 
@@ -72,7 +68,7 @@ class PushQueue {
 
 
   print() {
-    return this.queue.map(e =>
+    this.queue.forEach(e =>
       console.log(e));
   }
 
@@ -96,7 +92,7 @@ class PushQueue {
 
   pushBatch(batch) {
     const getBucketData = bucket => this.cube.getBucket(bucket).getData();
-    return this.layer.sendToStore(batch, getBucketData);
+    this.layer.sendToStore(batch, getBucketData);
   }
 }
 PushQueue.initClass();

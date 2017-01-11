@@ -90,7 +90,7 @@ class Plane2D {
             (__range__(0, this.BUCKETS_PER_ROW, false)).includes(v)) {
           const tile = [u, v];
           this.dataTexture.tiles[tileIndexByTileMacro(this, tile)] = false;
-          return this.dataTexture.ready &=
+          this.dataTexture.ready &=
             !((__range__(this.dataTexture.area[0], this.dataTexture.area[2], true)).includes(u) &&
               (__range__(this.dataTexture.area[1], this.dataTexture.area[3], true)).includes(v));
         }

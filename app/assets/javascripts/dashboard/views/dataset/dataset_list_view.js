@@ -61,13 +61,13 @@ class DatasetListView extends Marionette.CompositeView {
     this.collection.setPageSize(this.DATASETS_PER_PAGE);
 
     this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
-    return this.listenTo(app.vent, "modal:destroy", this.render);
+    this.listenTo(app.vent, "modal:destroy", this.render);
   }
 
 
   toggleAllDetails() {
     this.ui.detailsToggle.toggleClass("open");
-    return app.vent.trigger("datasetListView:toggleDetails");
+    app.vent.trigger("datasetListView:toggleDetails");
   }
 
 
@@ -80,7 +80,7 @@ class DatasetListView extends Marionette.CompositeView {
     modalView.render();
     this.ui.modalWrapper.html(modalView.el);
     modalView.$el.modal("show");
-    return this.modalView = modalView;
+    this.modalView = modalView;
   }
 
 
@@ -90,7 +90,7 @@ class DatasetListView extends Marionette.CompositeView {
 
 
   onDestroy() {
-    return __guard__(this.modalView, x => x.destroy());
+    __guard__(this.modalView, x => x.destroy());
   }
 }
 DatasetListView.initClass();

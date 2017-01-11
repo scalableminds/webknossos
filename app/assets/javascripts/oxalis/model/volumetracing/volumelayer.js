@@ -109,7 +109,7 @@ class VolumeLayer {
       },
       initialize() {
         if (!map[0][0]) {
-          return this.getNext();
+          this.getNext();
         }
       },
       get3DCoordinate: arg => this.get3DCoordinate(arg),
@@ -121,8 +121,8 @@ class VolumeLayer {
 
 
   drawOutlineVoxels(setMap) {
-    let p1,
-      p2;
+    let p1;
+    let p2;
     for (let i = 0; i < this.contourList.length; i++) {
       p1 = this.get2DCoordinate(this.contourList[i]);
       p2 = this.get2DCoordinate(this.contourList[(i + 1) % this.contourList.length]);
@@ -133,7 +133,7 @@ class VolumeLayer {
 
 
   fillOutsideArea(map, width, height) {
-    const setMap = (x, y) => map[x][y] = false;
+    const setMap = (x, y) => { map[x][y] = false; };
     const isEmpty = (x, y) => map[x][y] === true;
 
     // Fill everything BUT the cell

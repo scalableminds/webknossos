@@ -37,7 +37,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
     this.material.setData = (name, data) => {
       const textureName = this.sanitizeName(name);
       __guard__(this.textures[textureName], x => x.image.data.set(data));
-      __guard__(this.textures[textureName], x1 => x1.needsUpdate = true);
+      __guard__(this.textures[textureName], (x1) => { x1.needsUpdate = true; });
     };
   }
 

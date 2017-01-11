@@ -70,17 +70,17 @@ class DatasetActionsView extends Marionette.View {
 
   updateSavedState() {
     if (this.model.annotationModel.stateLogger.stateSaved()) {
-      return this.ui.saveButton.text("Saved   ✓");
+      this.ui.saveButton.text("Saved   ✓");
     }
-    return this.ui.saveButton.text("Save");
+    this.ui.saveButton.text("Save");
   }
 
 
   finishTracing(evt) {
     evt.preventDefault();
-    return this.saveTracing().then(() => {
+    this.saveTracing().then(() => {
       if (confirm("Are you sure you want to permanently finish this tracing?")) {
-        return app.router.loadURL(evt.currentTarget.href);
+        app.router.loadURL(evt.currentTarget.href);
       }
     },
     );
@@ -91,9 +91,9 @@ class DatasetActionsView extends Marionette.View {
     evt.preventDefault();
     const win = window.open("about:blank", "_blank");
     win.document.body.innerHTML = "Please wait...";
-    return this.saveTracing().then(() => {
+    this.saveTracing().then(() => {
       win.location.href = this.model.tracing.downloadUrl;
-      return win.document.body.innerHTML = "You may close this window after the download has started.";
+      win.document.body.innerHTML = "You may close this window after the download has started.";
     },
       // setTimeout(
       //   -> win.close()
@@ -115,7 +115,7 @@ class DatasetActionsView extends Marionette.View {
   mergeTracing() {
     const modalView = new MergeModalView({ model: this.model });
     this.ui.modalWrapper.html(modalView.render().el);
-    return modalView.show();
+    modalView.show();
   }
 
 
@@ -126,7 +126,7 @@ class DatasetActionsView extends Marionette.View {
 
     const modalView = new ShareModalView({ model: this.model });
     this.ui.modalWrapper.html(modalView.render().el);
-    return modalView.show();
+    modalView.show();
   }
 
 
@@ -145,7 +145,7 @@ class DatasetActionsView extends Marionette.View {
     const finishUrl = `/annotations/${this.model.tracingType}/${this.model.tracingId}/finish`;
     const requestTaskUrl = "/user/tasks/request";
 
-    return model.stateLogger.save()
+    model.stateLogger.save()
         .then(() => Request.triggerRequest(finishUrl))
         .then(() => Request.receiveJSON(requestTaskUrl).then(
             (annotation) => {
@@ -163,7 +163,7 @@ class DatasetActionsView extends Marionette.View {
 
 
   onDestroy() {
-    return window.clearInterval(this.savedPollingInterval);
+    window.clearInterval(this.savedPollingInterval);
   }
 }
 DatasetActionsView.initClass();

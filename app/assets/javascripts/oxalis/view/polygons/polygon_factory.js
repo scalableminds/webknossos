@@ -32,7 +32,7 @@ class PolygonFactory {
 
 
   cancel() {
-    return this.isCancelled = true;
+    this.isCancelled = true;
   }
 
 
@@ -57,7 +57,7 @@ class PolygonFactory {
       position = this.getNextPosition(position);
     }
 
-    return this.deferred.resolve(result);
+    this.deferred.resolve(result);
   }
 
 

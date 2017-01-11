@@ -54,7 +54,7 @@ class ArbitraryPlane {
 
     for (const name in this.model.binary) {
       const binary = this.model.binary[name];
-      binary.cube.on("bucketLoaded", () => this.isDirty = true);
+      binary.cube.on("bucketLoaded", () => { this.isDirty = true; });
     }
 
     if ((Math.log(this.width) / Math.LN2) % 1 === 1) { throw new Error("width needs to be a power of 2"); }
@@ -75,7 +75,7 @@ class ArbitraryPlane {
 
 
   attachScene(scene) {
-    return scene.add(this.mesh);
+    scene.add(this.mesh);
   }
 
 
@@ -100,7 +100,7 @@ class ArbitraryPlane {
       mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
       mesh.matrixWorldNeedsUpdate = true;
 
-      return this.isDirty = false;
+      this.isDirty = false;
     }
   }
 
@@ -162,7 +162,7 @@ class ArbitraryPlane {
 
     if (this.x > 0.5 && this.x < 10) {
       this.mesh.scale.x = this.mesh.scale.y = this.mesh.scale.z = this.x;
-      return this.cam.update();
+      this.cam.update();
     }
   }
 

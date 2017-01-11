@@ -53,7 +53,7 @@ class Mappings {
       return mapping.mappingArray;
     }
 
-    return mapping.mappingArray = this.buildMappingArray(mappingName);
+    return (mapping.mappingArray = this.buildMappingArray(mappingName));
   }
 
 

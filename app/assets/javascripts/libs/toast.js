@@ -2,20 +2,21 @@ import _ from "lodash";
 import $ from "jquery";
 
 $.fn.alertWithTimeout = function (timeout = 3000) {
-  return this.each(function () {
+  this.each(function () {
     const $this = $(this);
     $this.alert();
     let timerId = -1;
 
     $this.hover(
       () => clearTimeout(timerId),
-      () =>
+      () => {
         timerId = setTimeout(
           () => $this.alert("close"),
           timeout,
-        ),
+        );
+      },
     );
-    return $(window).one("mousemove", () => $this.mouseout());
+    $(window).one("mousemove", () => $this.mouseout());
   });
 };
 
@@ -95,12 +96,12 @@ const Toast = {
 
 
   highlight(target) {
-    return target.addClass("alert-wiggle");
+    target.addClass("alert-wiggle");
   },
 
 
   delete(type, message) {
-    return getToasts(type, message).alert("close");
+    getToasts(type, message).alert("close");
   },
 };
 

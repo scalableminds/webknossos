@@ -176,7 +176,7 @@ class ProjectCreateView extends Marionette.View {
       name: "owner",
       data: "isAdmin=true",
     });
-    return this.teamSelectionView = new SelectionView({
+    this.teamSelectionView = new SelectionView({
       collection: new TeamCollection(),
       childViewOptions: {
         modelValue() { return `${this.model.get("name")}`; },
@@ -190,16 +190,16 @@ class ProjectCreateView extends Marionette.View {
   changeProjectType() {
     const projectType = this.ui.projectTypeInput.filter(":checked").val();
     if (projectType === "mturk") {
-      return this.ui.mturkSettingsInputs.prop("disabled", false);
+      this.ui.mturkSettingsInputs.prop("disabled", false);
     } else {
-      return this.ui.mturkSettingsInputs.prop("disabled", true);
+      this.ui.mturkSettingsInputs.prop("disabled", true);
     }
   }
 
 
   onRender() {
     this.showChildView("owner", this.userSelectionView);
-    return this.showChildView("team", this.teamSelectionView);
+    this.showChildView("team", this.teamSelectionView);
   }
 
 
@@ -208,10 +208,10 @@ class ProjectCreateView extends Marionette.View {
 
     if (this.ui.form[0].checkValidity()) {
       const formValues = FormSyphon.serialize(this.ui.form);
-      return this.model.save(formValues).then(
+      this.model.save(formValues).then(
         () => app.router.navigate("/projects", { trigger: true }));
     } else {
-      return this.ui.name.focus();
+      this.ui.name.focus();
     }
   }
 }

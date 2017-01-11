@@ -38,14 +38,14 @@ const ErrorHandling = {
       Airbrake.addFilter(() => location.hostname !== "127.0.0.1" && location.hostname !== "localhost");
     }
 
-    return window.onerror = function (message, file, line, colno, error) {
+    window.onerror = function (message, file, line, colno, error) {
       if (error == null) {
         // older browsers don't deliver the error parameter
         error = new Error(message, file, line);
       }
 
       console.error(error);
-      return Airbrake.notify(error);
+      Airbrake.notify(error);
     };
   },
 
@@ -76,7 +76,7 @@ const ErrorHandling = {
       throw error;
     } else {
       console.error(error);
-      return Airbrake.notify(error);
+      Airbrake.notify(error);
     }
   },
 
@@ -86,7 +86,7 @@ const ErrorHandling = {
       return;
     }
 
-    return this.assert(false, `${message} (variable is ${variable})`, assertionContext);
+    this.assert(false, `${message} (variable is ${variable})`, assertionContext);
   },
 
 
@@ -95,7 +95,7 @@ const ErrorHandling = {
       return;
     }
 
-    return this.assert(false, `${message} (${actual} != ${wanted})`, assertionContext);
+    this.assert(false, `${message} (${actual} != ${wanted})`, assertionContext);
   },
 
 

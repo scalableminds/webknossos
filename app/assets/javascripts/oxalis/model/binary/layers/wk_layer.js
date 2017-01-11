@@ -22,7 +22,7 @@ class WkLayer extends Layer {
   setFourBit(newFourBit) {
     // No op if this is not a color layer
     if (this.category === "color") {
-      return this.fourBit = newFourBit;
+      this.fourBit = newFourBit;
     }
   }
 

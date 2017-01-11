@@ -11,8 +11,8 @@ class User extends Backbone.Model {
 
 
   initialize() {
-    return this.listenTo(this, "change", _.debounce(
-      () => { if (app.currentUser != null) { return this.save(); } },
+    this.listenTo(this, "change", _.debounce(
+      () => { if (app.currentUser != null) { this.save(); } },
       500));
   }
 
@@ -25,29 +25,6 @@ class User extends Backbone.Model {
     return this.get("inverseY") ? 1 : -1;
   }
 
-
-  getOrCreateBrightnessContrastColorSettings(model) {
-    const settings = this.get("brightnessContrastColorSettings");
-    const datasetSettings = settings[model.datasetPostfix] || {};
-
-    for (const binary of model.getColorBinaries()) {
-      datasetSettings[binary.name] = datasetSettings[binary.name] || {};
-      _.defaults(datasetSettings[binary.name], settings.default);
-    }
-
-    return settings[model.datasetPostfix] = datasetSettings;
-  }
-
-
-  resetBrightnessContrastColorSettings(model) {
-    return Request.receiveJSON("/user/configuration/default").then((defaultData) => {
-      this.get("brightnessContrastColorSettings")[model.datasetPostfix] =
-        defaultData.brightnessContrastColorSettings[model.datasetPostfix];
-
-      return this.getOrCreateBrightnessContrastColorSettings(model);
-    },
-    );
-  }
 
   triggerAll() {
     return (() => {

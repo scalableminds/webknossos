@@ -8,7 +8,7 @@ class TaskCollection extends Backbone.Collection {
   }
   initialize(models, options = {}) {
     this.projectName = options.projectName;
-    return this.taskTypeId = options.taskTypeId;
+    this.taskTypeId = options.taskTypeId;
   }
 
   url() {

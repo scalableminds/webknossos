@@ -69,7 +69,7 @@ class TaskListView extends Marionette.CompositeView {
     this.listenTo(app.vent, "paginationView:addElement", this.createNewTask);
     this.listenTo(this.collection, "sync", this.showAnonymousLinks);
 
-    return this.collection.fetch();
+    this.collection.fetch();
   }
 
 
@@ -86,13 +86,13 @@ class TaskListView extends Marionette.CompositeView {
     }
 
     // The trailing '#' is important for routing
-    return app.router.navigate(`/tasks/create${urlParam}#`, { trigger: true });
+    app.router.navigate(`/tasks/create${urlParam}#`, { trigger: true });
   }
 
 
   toggleAllDetails() {
     this.ui.detailsToggle.toggleClass("open");
-    return app.vent.trigger("taskListView:toggleDetails");
+    app.vent.trigger("taskListView:toggleDetails");
   }
 
 
@@ -102,9 +102,9 @@ class TaskListView extends Marionette.CompositeView {
 
     const task = this.collection.findWhere({ id: anonymousTaskId });
     if (task && task.get("directLinks")) {
-      return this.showModal(task);
+      this.showModal(task);
     } else {
-      return Toast.error(`Unable to find anonymous links for task ${anonymousTaskId}.`);
+      Toast.error(`Unable to find anonymous links for task ${anonymousTaskId}.`);
     }
   }
 
@@ -115,12 +115,12 @@ class TaskListView extends Marionette.CompositeView {
     this.ui.modalWrapper.html(modalView.el);
 
     modalView.show();
-    return this.modalView = modalView;
+    this.modalView = modalView;
   }
 
 
   onDestroy() {
-    return __guard__(this.modalView, x => x.destroy());
+    __guard__(this.modalView, x => x.destroy());
   }
 
 

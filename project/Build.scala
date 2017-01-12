@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import play.sbt.routes.RoutesKeys._
 
 object Dependencies{
-  val braingamesVersion = "8.13.8"
+  val braingamesVersion = "9.0.0"
 
   val braingamesDataStore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
 
@@ -62,7 +62,7 @@ object ApplicationBuild extends Build with sbtassembly.AssemblyKeys {
     }
   )
 
-  lazy val standaloneDatastore: Project = Project("standalone-datastore", file("."))
+  lazy val standaloneDatastore: Project = Project("webknossos-datastore", file("."))
     .enablePlugins(play.PlayScala)
     .settings(datastoreSettings:_*)
 }

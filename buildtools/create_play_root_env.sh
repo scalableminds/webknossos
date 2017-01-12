@@ -4,7 +4,7 @@ set -ex
 cd $WORKSPACE
 
 APP_DIR_PREFIX="${1-.}"
-PROJECT=${JOB_NAME}
+PROJECT=standalone-datastore
 BRANCH=$(<${WORKSPACE}/.git/REAL_BRANCH)
 NAME=${PROJECT}-${BRANCH}
 

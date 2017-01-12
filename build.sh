@@ -3,7 +3,7 @@ set -ex
 ${HELPER_DIR}/correctBranch.sh
 export BRANCH=$(<${WORKSPACE}/.git/REAL_BRANCH)
 
-PROJECT=${JOB_NAME}
+PROJECT=standalone-datastore
 BRANCH=$(<${WORKSPACE}/.git/REAL_BRANCH)
 NAME=${PROJECT}-${BRANCH}
 MODE=prod

@@ -21,7 +21,7 @@ import play.api.data.Form
 import play.api.data.Forms.{mapping, nonEmptyText, text, tuple}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsError, JsString, JsSuccess, Json}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, Result}
 
 import scala.concurrent.Future
@@ -152,11 +152,23 @@ class DataSourceController @Inject()(val messagesApi: MessagesApi) extends Contr
       _ <- unzipDataSource(baseDir, upload.filePath).toFox
       dataSource = DataStorePlugin.binaryDataService.dataSourceInbox.handler.dataSourceFromFolder(baseDir, upload.team)
       oxalisServer <- DataStorePlugin.current.map(_.oxalisServer).toFox
+      _ = DataSourceDAO.updateDataSource(dataSource)
       _ <- oxalisServer.reportDataSouce(dataSource).toFox
       importingDataSource <- DataStorePlugin.binaryDataService.dataSourceInbox.importDataSource(dataSource)
-      usableDataSource <- importingDataSource
-      _ = DataSourceDAO.updateDataSource(usableDataSource)
-      _ <- oxalisServer.reportDataSouce(usableDataSource).toFox
-    } yield JsonOk(Messages("dataSet.upload.success"))
+    } yield {
+      importingDataSource.flatMap{ usableDataSource =>
+        DataSourceDAO.updateDataSource(usableDataSource)
+        oxalisServer.reportDataSouce(usableDataSource).toFox
+      }.futureBox.onComplete{ r => Box(r.toOption).flatMap(identity) match {
+        case Full(_) =>
+          logger.info(s"Completed import of dataset '${dataSource.id}'.")
+        case f: Failure =>
+          logger.error(s"Failed to import dataset '${dataSource.id}'. Error: $f")
+        case Empty =>
+          logger.warn(s"Empty result on dataset import of '${dataSource.id}'.")
+      }}
+
+      JsonOk(Messages("dataSet.upload.success"))
+    }
   }
 }

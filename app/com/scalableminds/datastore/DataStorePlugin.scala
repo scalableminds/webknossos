@@ -3,7 +3,6 @@
  */
 package com.scalableminds.datastore
 
-import java.io.File
 import javax.inject.Inject
 
 import akka.actor.ActorSystem
@@ -44,23 +43,9 @@ class DataStorePlugin @Inject()(implicit app: play.api.Application, messagesApi:
     oxalisStatusService.stop()
   }
 
-  private def createOxalisServer = {
-    val keyStoreInfo = if (confService.oxalis.secured && confService.oxalis.selfSigned) {
-      val keyStore = new File(confService.keyStore.path)
-      if (keyStore.isFile && keyStore.canRead)
-        Some(KeyStoreInfo(keyStore, confService.keyStore.password))
-      else
-        throw new Exception("Can't establish a self-signed secured connection without a valid key store")
-    } else {
-      None
-    }
-
-    val webSocketSecurityInfo =
-      WSSecurityInfo(confService.oxalis.secured, confService.oxalis.selfSigned, keyStoreInfo)
-
+  private def createOxalisServer =
     new OxalisServer(confService.oxalis.url, confService.dataStore.key,
-      confService.dataStore.name, webSocketSecurityInfo)
-  }
+      confService.dataStore.name, confService.oxalis.secured)
 }
 
 object DataStorePlugin {

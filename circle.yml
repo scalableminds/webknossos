@@ -21,7 +21,10 @@ dependencies:
 
 test:
   override:
-    - sleep 1
+    - DOCKER_TAG=$CIRCLE_BUILD_NUM docker-compose up -d webknossos-datastore:
+        background: true
+    - sleep 10
+    - curl http://localhost:9090/
 
 deployment:
   hub:

@@ -62,7 +62,7 @@ object ApplicationBuild extends Build with sbtassembly.AssemblyKeys {
     }
   )
 
-  lazy val standaloneDatastore: Project = Project("webknossos-datastore", file("."))
+  lazy val standaloneDatastore: Project = Project("standalone-datastore", file("."))
     .enablePlugins(play.PlayScala)
     .settings(datastoreSettings:_*)
 }

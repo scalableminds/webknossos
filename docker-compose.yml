@@ -2,14 +2,10 @@ version: '2'
 
 services:
 
-  time-tracker:
+  webknossos-datastore:
     image: scalableminds/webknossos-datastore:$DOCKER_TAG
     ports:
-      - "9000:9000"
-    environment:
-      - PORT=9000
-      - MODE=$MODE
-      - FLAGS=$FLAGS
+      - "9090:9090"
 
   sbt:
     image: scalableminds/sbt:$SBT_VERSION_TAG

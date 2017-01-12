@@ -7,8 +7,10 @@ import akka.agent.Agent
 import net.liftweb.common.Box
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
+
 import scala.collection.immutable.Queue
 import com.scalableminds.util.tools.ExtendedTypes._
+import com.typesafe.scalalogging.LazyLogging
 
 object ProgressTracking {
   trait ProgressTracker {
@@ -32,8 +34,10 @@ trait ProgressTracking {
 
   val Max = 50000
 
-  protected class ProgressTrackerImpl(key: String) extends ProgressTracker {
+  protected class ProgressTrackerImpl(key: String) extends ProgressTracker with LazyLogging {
     progress.send(_ + (key -> 0))
+    logger.debug(s"Added progress tracker for '$key'")
+
     def track(d: Double): Unit = {
       progress.send(_ + (key -> math.min(d, 1)))
     }

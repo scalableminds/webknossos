@@ -1,22 +1,34 @@
+/**
+ * volumetracing_controller.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import $ from "jquery";
 import Backbone from "backbone";
 import Input from "libs/input";
+import Model from "oxalis/model";
+import VolumeTracingView from "oxalis/view/volumetracing/volumetracing_view";
+import SceneController from "oxalis/controller/scene_controller";
 
 class VolumeTracingController {
-  static initClass() {
-    // See comment in Controller class on general controller architecture.
-    //
-    // Volume Tracing Controller:
-    // Add Volume Tracing controls that are not specific to the view mode.
-    // Also, this would be the place to define general Volume Tracing
-    // functions that can be called by the specific view mode controller.
+  // See comment in Controller class on general controller architecture.
+  //
+  // Volume Tracing Controller:
+  // Add Volume Tracing controls that are not specific to the view mode.
+  // Also, this would be the place to define general Volume Tracing
+  // functions that can be called by the specific view mode controller.
 
+  model: Model;
+  volumeTracingView: VolumeTracingView;
+  sceneController: SceneController;
+  inDeleteMode: boolean;
+  mergeMode: 0 | 1 | 2;
+  prevActiveCell: number;
 
-    this.prototype.MERGE_MODE_NORMAL = 0;
-    this.prototype.MERGE_MODE_CELL1 = 1;
-    this.prototype.MERGE_MODE_CELL2 = 2;
-  }
+  MERGE_MODE_NORMAL = 0;
+  MERGE_MODE_CELL1 = 1;
+  MERGE_MODE_CELL2 = 2;
 
   constructor(model, volumeTracingView, sceneController) {
     this.model = model;
@@ -32,7 +44,7 @@ class VolumeTracingController {
     // Keyboard shortcuts
     new Input.KeyboardNoLoop({
       w: () => this.model.volumeTracing.toggleMode(),
-      1: () => this.model.volumeTracing.toggleMode(),
+      "1": () => this.model.volumeTracing.toggleMode(),
     });
 
     // no merging for now
@@ -120,6 +132,5 @@ class VolumeTracingController {
     return this.model.volumeTracing.addToLayer(pos);
   }
 }
-VolumeTracingController.initClass();
 
 export default VolumeTracingController;

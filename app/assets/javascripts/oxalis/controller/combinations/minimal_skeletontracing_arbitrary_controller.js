@@ -1,3 +1,8 @@
+/**
+ * minimal_skeletontracing_arbitrary_controller.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Input from "libs/input";
 import Toast from "libs/toast";
@@ -13,8 +18,6 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
   constructor(...args) {
     super(...args);
-
-    this.setWaypoint = this.setWaypoint.bind(this);
     _.defer(() => this.setRecord(true));
   }
 
@@ -58,7 +61,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
 
   // make sure that it is not possible to keep nodes from being created
-  setWaypoint(...args) {
+  setWaypoint = (...args) => {
     if (this.isBranchpointvideoMode()) { return; }
     if (!this.model.get("flightmodeRecording")) {
       this.model.set("flightmodeRecording", true);

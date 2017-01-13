@@ -6,12 +6,12 @@ package models.binary
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.rest.RESTResponse
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.ws.WSResponse
 import reactivemongo.api.commands.WriteResult
 
 object DataSetService extends FoxImplicits with LazyLogging {
@@ -84,7 +84,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
     }
   }
 
-  def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[RESTResponse] = {
+  def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] = {
     DataStoreHandler.importDataSource(dataSet)
   }
 

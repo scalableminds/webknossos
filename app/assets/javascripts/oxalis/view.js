@@ -1,10 +1,21 @@
+/**
+ * view.js
+ * @flow weak
+ */
+
 import $ from "jquery";
 import app from "app";
 import THREE from "three";
 import constants from "./constants";
+import Model from "./model";
 import Toast from "../libs/toast";
 
 class View {
+
+  model: Model;
+  renderer: THREE.WebGLRenderer;
+  scene: THREE.Scene;
+  theme: 0 | 1;
 
   constructor(model) {
     this.model = model;

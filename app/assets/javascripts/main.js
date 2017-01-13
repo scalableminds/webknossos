@@ -1,3 +1,8 @@
+/**
+ * main.js
+ * @flow weak
+ */
+
 import $ from "jquery";
 import Backbone from "backbone";
 import ErrorHandling from "libs/error_handling";

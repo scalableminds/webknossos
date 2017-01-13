@@ -1,3 +1,8 @@
+/**
+ * app.js
+ * @flow weak
+ */
+
 import Marionette from "backbone.marionette";
 
 // eslint-disable-next-line no-unused-vars

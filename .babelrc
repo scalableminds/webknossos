@@ -18,6 +18,7 @@
   ],
   plugins: [
     "transform-async-to-generator",
-    "transform-class-properties"
+    "transform-class-properties",
+    "transform-flow-strip-types",
   ]
 }

@@ -3,14 +3,11 @@ package oxalis.jobs
 import akka.actor.Actor
 import com.scalableminds.util.mail.Send
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import controllers.{Application, TaskController}
+import com.typesafe.scalalogging.LazyLogging
+import models.project.Project
 import models.task.TaskService
 import models.user.User
 import oxalis.mail.DefaultMails
-import scala.concurrent.duration._
-
-import models.project.Project
-import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Akka
 
 
@@ -25,7 +22,6 @@ object AvailableTasksJob {
  */
 class AvailableTasksJob extends Actor with LazyLogging {
   import AvailableTasksJob._
-  import context.dispatcher
 
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")

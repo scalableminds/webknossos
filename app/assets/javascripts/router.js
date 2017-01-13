@@ -10,7 +10,7 @@ import $ from "jquery";
 import _ from "lodash";
 import constants from "oxalis/constants";
 import BaseRouter from "libs/base_router";
-import PaginationCollection from "./admin/models/pagination_collection";
+import PaginationCollection from "admin/models/pagination_collection";
 
 // #####
 // This Router contains all the routes for views that have been
@@ -50,7 +50,6 @@ class Router extends BaseRouter {
 
   constructor(...args) {
     super(...args);
-    this.dashboard = this.dashboardImpl.bind(this);
     this.$loadingSpinner = $("#loader");
     this.$mainContainer = $("#main-container");
     this.initialize();
@@ -259,7 +258,7 @@ class Router extends BaseRouter {
   }
 
 
-  dashboardImpl(userID) {
+  dashboard(userID) {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (DashboardView, UserModel) => {
       DashboardView = DashboardView.default;

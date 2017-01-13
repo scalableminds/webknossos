@@ -1,39 +1,65 @@
+/**
+ * url_manager.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Backbone from "backbone";
 import { V3 } from "libs/mjs";
 import constants from "../constants";
+import Model from "oxalis/model";
+
+import type {Vector3, ModeType} from "oxalis/constants";
+
+type State = {
+  position?: Vector3,
+  mode?: ModeType,
+  zoomStep?: number,
+  activeNode?: number,
+  rotation?: Vector3,
+};
 
 class UrlManager {
-  static initClass() {
-    this.prototype.MAX_UPDATE_INTERVAL = 1000;
-  }
+  baseUrl: string;
+  model: Model;
+  initialState: State;
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
+
+  MAX_UPDATE_INTERVAL = 1000;
 
   constructor(model) {
     this.model = model;
     this.baseUrl = document.location.pathname + document.location.search;
     this.initialState = this.parseUrl();
 
-    this.update = _.throttle(
-      () => location.replace(this.buildUrl()),
-      this.MAX_UPDATE_INTERVAL,
-    );
-
     _.extend(this, Backbone.Events);
   }
 
+  update = _.throttle(
+    () => location.replace(this.buildUrl()),
+    this.MAX_UPDATE_INTERVAL,
+  );
 
-  parseUrl() {
+  parseUrl(): State {
     // State string format:
     // x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
 
     const stateString = location.hash.slice(1);
-    const state = {};
+    const state: State = {};
 
     if (stateString) {
       const stateArray = stateString.split(",");
       if (stateArray.length >= 5) {
         state.position = _.map(stateArray.slice(0, 3), e => +e);
-        state.mode = +stateArray[3];
+
+        const modeNumber = [0, 1, 2, 3].find(el => el === +stateArray[3]);
+        if (modeNumber) {
+          state.mode = modeNumber;
+        } else {
+          // Let's default to MODE_PLANE_TRACING
+          state.mode = 0;
+        }
         state.zoomStep = +stateArray[4];
 
         if (stateArray.length >= 8) {
@@ -83,7 +109,6 @@ class UrlManager {
     return `${this.baseUrl}#${state.join(",")}`;
   }
 }
-UrlManager.initClass();
 
 export default UrlManager;
 

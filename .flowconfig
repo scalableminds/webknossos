@@ -22,3 +22,6 @@ module.name_mapper='backbone\.marionette' -> '<PROJECT_ROOT>/node_modules/backbo
 module.name_mapper='three' -> '<PROJECT_ROOT>/node_modules/three.js/build/three.js'
 module.name_mapper='^\([^.].*\)' -> '<PROJECT_ROOT>/app/assets/javascripts/\1'
 module.name_mapper.extension='less' -> '<PROJECT_ROOT>/app/assets/javascripts/flow/LESSFlowStub.js.flow'
+
+[libs]
+app/assets/javascripts/flow/custom-libdefs

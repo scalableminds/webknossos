@@ -1,3 +1,8 @@
+/**
+ * logged_time_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import c3 from "c3";

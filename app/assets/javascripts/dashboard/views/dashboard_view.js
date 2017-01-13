@@ -1,10 +1,14 @@
+/**
+ * dashboard_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import DashboardTaskListView from "./dashboard_task_list_view";
 import ExplorativeTracingListView from "./explorative_tracing_list_view";
 import LoggedTimeView from "./logged_time_view";
 import DatasetSwitchView from "./dataset/dataset_switch_view";
-
 
 class DashboardView extends Marionette.View {
   static initClass() {

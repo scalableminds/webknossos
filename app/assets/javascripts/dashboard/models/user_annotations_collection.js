@@ -1,3 +1,8 @@
+/**
+ * user_annotations_collection.js
+ * @flow weak
+ */
+
 import SortedCollection from "admin/models/sorted_collection";
 
 class UserAnnotationsCollection extends SortedCollection {

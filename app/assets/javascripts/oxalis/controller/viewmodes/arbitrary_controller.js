@@ -1,3 +1,8 @@
+/**
+ * arbitrary_controller.js
+ * @flow weak
+ */
+
 import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
@@ -12,8 +17,36 @@ import Crosshair from "../../geometries/crosshair";
 import ArbitraryView from "../../view/arbitrary_view";
 import ArbitraryPlaneInfo from "../../geometries/arbitrary_plane_info";
 import constants from "../../constants";
+import Model from "oxalis/model";
+import View from "oxalis/view";
+import SceneController from "oxalis/controller/scene_controller";
+import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
+import Flycam3d from "oxalis/model/flycam3d";
+
+import type {ModeType} from "oxalis/constants";
 
 class ArbitraryController {
+  arbitraryView: ArbitraryView;
+  model: Model;
+  view: View;
+  sceneController: SceneController;
+  skeletonTracingController: SkeletonTracingController;
+  isStarted: boolean;
+  canvas: any;
+  cam: Flycam3d;
+  plane: ArbitraryPlane;
+  infoPlane: ArbitraryPlaneInfo;
+  crosshair: Crosshair;
+  WIDTH: number;
+  TIMETOCENTER: number;
+  fullscreen: boolean;
+  lastNodeMatrix: ?Float32Array;
+  input: any;
+  mode: ModeType;
+
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
+
   static initClass() {
     // See comment in Controller class on general controller architecture.
     //
@@ -21,17 +54,7 @@ class ArbitraryController {
 
     this.prototype.WIDTH = 128;
     this.prototype.TIMETOCENTER = 200;
-
-
-    this.prototype.plane = null;
-    this.prototype.crosshair = null;
-    this.prototype.cam = null;
-
     this.prototype.fullscreen = false;
-    this.prototype.lastNodeMatrix = null;
-
-    this.prototype.model = null;
-    this.prototype.view = null;
 
     this.prototype.input = {
       mouse: null,
@@ -48,12 +71,13 @@ class ArbitraryController {
     };
   }
 
-
-  constructor(model, view, sceneController, skeletonTracingController) {
+  constructor(
+    model: Model,
+    view: View,
+    sceneController: SceneController,
+    skeletonTracingController: SkeletonTracingController,
+  ) {
     let canvas;
-    this.scroll = this.scroll.bind(this);
-    this.addNode = this.addNode.bind(this);
-    this.setWaypoint = this.setWaypoint.bind(this);
     this.model = model;
     this.view = view;
     this.sceneController = sceneController;
@@ -309,14 +333,14 @@ class ArbitraryController {
   }
 
 
-  scroll(delta, type) {
+  scroll = (delta, type) => {
     switch (type) {
       case "shift": return this.setParticleSize(Utils.clamp(-1, delta, 1));
     }
   }
 
 
-  addNode(position, rotation) {
+  addNode = (position, rotation) => {
     if (!this.isStarted) { return; }
     const datasetConfig = this.model.get("datasetConfiguration");
     const fourBit = datasetConfig.get("fourBit") ? 4 : 8;
@@ -326,7 +350,7 @@ class ArbitraryController {
   }
 
 
-  setWaypoint() {
+  setWaypoint = () => {
     if (!this.model.get("flightmodeRecording")) {
       return;
     }

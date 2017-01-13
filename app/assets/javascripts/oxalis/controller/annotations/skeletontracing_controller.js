@@ -1,6 +1,14 @@
+/**
+ * skeletontracing_controller.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Backbone from "backbone";
 import constants from "oxalis/constants";
+import Model from "oxalis/model";
+import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
+import SceneController from "oxalis/controller/scene_controller";
 
 class SkeletonTracingController {
 
@@ -11,11 +19,11 @@ class SkeletonTracingController {
   // Also, this would be the place to define general Skeleton Tracing
   // functions that can be called by the specific view mode controller.
 
+  model: Model;
+  skeletonTracingView: SkeletonTracingView;
+  sceneController: SceneController;
 
   constructor(model, skeletonTracingView, sceneController) {
-    this.setParticleSize = this.setParticleSize.bind(this);
-    this.toggleSkeletonVisibility = this.toggleSkeletonVisibility.bind(this);
-    this.centerActiveNode = this.centerActiveNode.bind(this);
     this.model = model;
     this.skeletonTracingView = skeletonTracingView;
     this.sceneController = sceneController;
@@ -23,7 +31,7 @@ class SkeletonTracingController {
   }
 
 
-  setParticleSize(delta) {
+  setParticleSize = (delta) => {
     let particleSize = this.model.user.get("particleSize") + delta;
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize);
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize);
@@ -39,7 +47,7 @@ class SkeletonTracingController {
   }
 
 
-  toggleSkeletonVisibility() {
+  toggleSkeletonVisibility = () => {
     this.sceneController.skeleton.toggleVisibility();
     // Show warning, if this is the first time to use
     // this function for this user
@@ -57,7 +65,7 @@ class SkeletonTracingController {
   }
 
 
-  centerActiveNode() {
+  centerActiveNode = () => {
     const position = this.model.skeletonTracing.getActiveNodePos();
     if (position) {
       return this.model.flycam.setPosition(position);
@@ -66,4 +74,3 @@ class SkeletonTracingController {
 }
 
 export default SkeletonTracingController;
-

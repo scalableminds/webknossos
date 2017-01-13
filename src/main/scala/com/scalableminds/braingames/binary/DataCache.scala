@@ -49,13 +49,13 @@ trait DataCache {
 
     cache.get(cachedBlockInfo) match {
       case Some(s) =>
-        NewRelic.incrementCounter("Custom/FileDataStore/cache-hit")
+        NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
         Fox.successful(s)
       case _ =>
         val p = loadF
         loadF.foreach { block: Array[Byte] =>
-          NewRelic.recordMetric("Custom/FileDataStore/cache-size", cache.size())
-          NewRelic.incrementCounter("Custom/FileDataStore/cache-miss")
+          NewRelic.recordMetric("Custom/FileDataStore/Cache/size", cache.size())
+          NewRelic.incrementCounter("Custom/FileDataStore/Cache/miss")
           cache.put(cachedBlockInfo, block)
         }
         p

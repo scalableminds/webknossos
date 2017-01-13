@@ -20,6 +20,10 @@ class LRUConcurrentCache[K, V](maxEntries: Int) {
     }
   }
 
+  def size(): Int = {
+    cache.size()
+  }
+
   def clear(): Unit = {
     cache.clear()
   }

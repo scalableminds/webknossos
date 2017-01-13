@@ -97,7 +97,9 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   scrollPlanes = (delta, type) => {
-    super.scrollPlanes(delta, type);
+    // TODO: Track this issue https://github.com/babel/babel/issues/5104
+    // to use a simple this.super call
+    PlaneController.prototype.scrollPlanes.call(this, delta, type);
 
     if (type === "shift") {
       return this.skeletonTracingController.setRadius(delta);

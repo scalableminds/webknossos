@@ -66,7 +66,9 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
     if (!this.model.get("flightmodeRecording")) {
       this.model.set("flightmodeRecording", true);
     }
-    return super.setWaypoint(...args);
+    // TODO: Track this issue https://github.com/babel/babel/issues/5104
+    // to use a simple this.super call
+    return ArbitraryController.prototype.setWaypoint.apply(this, args);
   }
 
 

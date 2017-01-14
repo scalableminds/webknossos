@@ -68,6 +68,8 @@ object DataLayer extends LazyLogging{
 
   val CompressedFileExtention = "sz"
 
+  val MappingFileExtention = "json"
+
   val COLOR =
     DataLayerType("color")
   val SEGMENTATION =

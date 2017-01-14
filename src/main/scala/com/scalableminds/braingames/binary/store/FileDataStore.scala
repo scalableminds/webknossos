@@ -78,6 +78,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
   }
 
   def load(request: MappingRequest): Fox[Array[Byte]] = {
+    logger.info("Loading mapping file: " + request.dataLayerMappingPath)
     load(Paths.get(request.dataLayerMappingPath), None)
   }
 
@@ -134,7 +135,7 @@ object FileDataStore {
 
   def byteArrayFromFile(file: File, fileSize: Option[Int]) = {
     FilenameUtils.getExtension(file.getAbsolutePath) match {
-      case DataLayer.KnossosFileExtention =>
+      case DataLayer.KnossosFileExtention | DataLayer.MappingFileExtention =>
         inputStreamToByteArray(new FileInputStream(file), fileSize.getOrElse(file.length().toInt))
       case DataLayer.CompressedFileExtention  =>
         inputStreamToByteArray(new SnappyFramedInputStream(new FileInputStream(file)))

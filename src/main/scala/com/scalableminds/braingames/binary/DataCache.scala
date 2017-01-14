@@ -3,6 +3,7 @@
  */
 package com.scalableminds.braingames.binary
 
+import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.Fox
 
@@ -48,10 +49,13 @@ trait DataCache {
 
     cache.get(cachedBlockInfo) match {
       case Some(s) =>
+        NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
         Fox.successful(s)
       case _ =>
         val p = loadF
         loadF.foreach { block: Array[Byte] =>
+          NewRelic.recordMetric("Custom/FileDataStore/Cache/size", cache.size())
+          NewRelic.incrementCounter("Custom/FileDataStore/Cache/miss")
           cache.put(cachedBlockInfo, block)
         }
         p

@@ -133,8 +133,8 @@ class DatasetUploadView extends Marionette.View {
         }),
       )
       .then(
-        () => {
-          Toast.success();
+        ({ messages }) => {
+          Toast.message(messages);
           return app.router.navigate("/dashboard", { trigger: true });
         },
         () => {}, // NOOP

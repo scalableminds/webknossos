@@ -6,7 +6,7 @@
     <title>webKnossos</title>
     <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
     <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("bundle/main.css")">
-
+    @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingHeader)
     <script type="text/javascript"
       data-airbrake-project-id=@play.api.Play.current.configuration.getString("airbrake.projectID")
       data-airbrake-project-key=@play.api.Play.current.configuration.getString("airbrake.projectKey")
@@ -44,5 +44,6 @@
 
     </script>
     }
+    @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingFooter)
   </body>
 </html>

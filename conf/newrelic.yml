@@ -239,7 +239,7 @@ common: &default_settings
     # See https://docs.newrelic.com/docs/java/real-user-monitoring-in-java#manual_instrumentation
     # for instructions to add these manually to your pages.
     # Set this attribute to false to turn off this behavior.
-    auto_instrument: true
+    auto_instrument: false
 
   class_transformer:
     # This instrumentation reports the name of the user principal returned from

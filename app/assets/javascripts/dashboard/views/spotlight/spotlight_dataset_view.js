@@ -4,10 +4,9 @@ import TemplateHelpers from "libs/template_helpers";
 
 class SpotlightDatasetView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.className  = "dataset panel panel-default";
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "dataset panel panel-default";
+
+    this.prototype.template = _.template(`\
 <div class="panel-body row">
   <div class="dataset-thumbnail col-sm-4">
     <img class="img-rounded" src="<%- thumbnailURL %>">
@@ -48,22 +47,21 @@ class SpotlightDatasetView extends Marionette.View {
   </div>
 </div>\
 `);
-  
-    this.prototype.templateContext  =
-      {TemplateHelpers};
-  
-    this.prototype.ui  = {
-      skeletonTraceLink : "#skeletonTraceLink",
-      volumeTraceLink : "#volumeTraceLink",
-      form : "form",
-      contentTypeInput : "#contentTypeInput"
+
+    this.prototype.templateContext =
+      { TemplateHelpers };
+
+    this.prototype.ui = {
+      skeletonTraceLink: "#skeletonTraceLink",
+      volumeTraceLink: "#volumeTraceLink",
+      form: "form",
+      contentTypeInput: "#contentTypeInput",
     };
   }
 
 
   onRender() {
-
-    this.$(".link-row > a").tooltip({placement : "bottom"});
+    this.$(".link-row > a").tooltip({ placement: "bottom" });
 
     this.ui.skeletonTraceLink.click(this.submitForm.bind(this, "skeletonTracing"));
     return this.ui.volumeTraceLink.click(this.submitForm.bind(this, "volumeTracing"));
@@ -71,7 +69,6 @@ class SpotlightDatasetView extends Marionette.View {
 
 
   submitForm(type, event) {
-
     event.preventDefault();
     this.ui.contentTypeInput.val(type);
     return this.ui.form.submit();

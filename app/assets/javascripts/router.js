@@ -1,6 +1,13 @@
+/**
+ * router.js
+ * @flow weak
+ */
+
+// Remove these linting rules after refactoring
+/* eslint-disable global-require, import/no-dynamic-require, no-param-reassign */
+
 import $ from "jquery";
 import _ from "lodash";
-import Backbone from "backbone";
 import constants from "oxalis/constants";
 import BaseRouter from "libs/base_router";
 import PaginationCollection from "admin/models/pagination_collection";
@@ -12,41 +19,40 @@ import PaginationCollection from "admin/models/pagination_collection";
 // #####
 class Router extends BaseRouter {
   static initClass() {
-
-    this.prototype.routes  = {
-      "/users"                             : "users",
-      "/teams"                             : "teams",
-      "/statistics"                        : "statistics",
-      "/tasks/create"                      : "taskCreate",
-      "/tasks/:id/edit"                    : "taskEdit",
-      "/projects"                          : "projects",
-      "/projects/create"                   : "projectCreate",
-      "/projects/:name/tasks"              : "projectTasks",
-      "/projects/:id/edit"                 : "projectEdit",
-      "/annotations/:type/:id(/readOnly)"  : "tracingView",
-      "/datasets/:id/view"                 : "tracingViewPublic",
-      "/dashboard"                         : "dashboard",
-      "/datasets"                          : "dashboard",
-      "/datasets/upload"                   : "datasetAdd",
-      "/datasets/:id/edit"                 : "datasetEdit",
-      "/users/:id/details"                 : "dashboard",
-      "/taskTypes"                         : "taskTypes",
-      "/taskTypes/create"                  : "taskTypesCreate",
-      "/taskTypes/:id/edit"                : "taskTypesCreate",
-      "/taskTypes/:id/tasks"               : "taskTypesTasks",
-      "/spotlight"                         : "spotlight",
-      "/tasks/overview"                    : "taskOverview",
-      "/admin/taskTypes"                   : "hideLoadingSpinner",
-      "/workload"                          : "workload",
-      "/tasks"                             : "taskQuery"
+    this.prototype.routes = {
+      "/users": "users",
+      "/teams": "teams",
+      "/statistics": "statistics",
+      "/tasks/create": "taskCreate",
+      "/tasks/:id/edit": "taskEdit",
+      "/projects": "projects",
+      "/projects/create": "projectCreate",
+      "/projects/:name/tasks": "projectTasks",
+      "/projects/:id/edit": "projectEdit",
+      "/annotations/:type/:id(/readOnly)": "tracingView",
+      "/datasets/:id/view": "tracingViewPublic",
+      "/dashboard": "dashboard",
+      "/datasets": "dashboard",
+      "/datasets/upload": "datasetAdd",
+      "/datasets/:id/edit": "datasetEdit",
+      "/users/:id/details": "dashboard",
+      "/taskTypes": "taskTypes",
+      "/taskTypes/create": "taskTypesCreate",
+      "/taskTypes/:id/edit": "taskTypesCreate",
+      "/taskTypes/:id/tasks": "taskTypesTasks",
+      "/spotlight": "spotlight",
+      "/tasks/overview": "taskOverview",
+      "/admin/taskTypes": "hideLoadingSpinner",
+      "/workload": "workload",
+      "/tasks": "taskQuery",
     };
   }
 
-  constructor() {
-    super(...arguments);
-    this.dashboard = this.dashboard.bind(this);
+  constructor(...args) {
+    super(...args);
     this.$loadingSpinner = $("#loader");
     this.$mainContainer = $("#main-container");
+    this.initialize();
   }
 
   showLoadingSpinner() {
@@ -65,8 +71,8 @@ class Router extends BaseRouter {
 
       const view = new TracingLayoutView({
         tracingType: type,
-        tracingId : id,
-        controlMode : constants.CONTROL_MODE_TRACE
+        tracingId: id,
+        controlMode: constants.CONTROL_MODE_TRACE,
       });
       view.forcePageReload = true;
       this.changeView(view);
@@ -82,8 +88,8 @@ class Router extends BaseRouter {
 
       const view = new TracingLayoutView({
         tracingType: "View",
-        tracingId : id,
-        controlMode : constants.CONTROL_MODE_VIEW
+        tracingId: id,
+        controlMode: constants.CONTROL_MODE_VIEW,
       });
       view.forcePageReload = true;
       this.changeView(view);
@@ -104,7 +110,7 @@ class Router extends BaseRouter {
       ProjectModel = ProjectModel.default;
 
       const model = new ProjectModel();
-      const view = new ProjectCreateView({model});
+      const view = new ProjectCreateView({ model });
 
       this.changeView(view);
       this.hideLoadingSpinner();
@@ -119,8 +125,8 @@ class Router extends BaseRouter {
       ProjectEditView = ProjectEditView.default;
       ProjectModel = ProjectModel.default;
 
-      const model = new ProjectModel({name : projectName});
-      const view = new ProjectEditView({model});
+      const model = new ProjectModel({ name: projectName });
+      const view = new ProjectEditView({ model });
 
       this.listenTo(model, "sync", function() {
         this.changeView(view);
@@ -147,10 +153,11 @@ class Router extends BaseRouter {
       DatasetEditView = DatasetEditView.default;
       DatasetModel = DatasetModel.default;
 
-      const model = new DatasetModel({name : datasetID});
-      const view = new DatasetEditView({model});
+      const model = new DatasetModel({ name: datasetID });
+      const view = new DatasetEditView({ model });
 
       this.listenTo(model, "sync", function() {
+
         this.changeView(view);
         this.hideLoadingSpinner();
       });
@@ -211,7 +218,7 @@ class Router extends BaseRouter {
       TaskModel = TaskModel.default;
 
       const model = new TaskModel();
-      const view = new TaskCreateView({model});
+      const view = new TaskCreateView({ model });
 
       this.changeView(view);
       this.hideLoadingSpinner();
@@ -225,11 +232,12 @@ class Router extends BaseRouter {
   taskEdit(taskID) {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TaskCreateFromView, TaskModel) => {
+
       TaskCreateFromView = TaskCreateFromView.default;
       TaskModel = TaskModel.default;
 
-      const model = new TaskModel({id : taskID});
-      const view = new TaskCreateFromView({model, type : "from_form"});
+      const model = new TaskModel({ id: taskID });
+      const view = new TaskCreateFromView({ model, type: "from_form" });
 
       this.changeView(view);
       this.hideLoadingSpinner();
@@ -244,8 +252,8 @@ class Router extends BaseRouter {
       TaskTypeCreateView = TaskTypeCreateView.default;
       TaskTypeModel = TaskTypeModel.default;
 
-      const model = new TaskTypeModel({id : taskTypeId});
-      const view = new TaskTypeCreateView({model});
+      const model = new TaskTypeModel({ id: taskTypeId });
+      const view = new TaskTypeCreateView({ model });
       this.changeView(view);
       this.hideLoadingSpinner();
     }
@@ -261,10 +269,10 @@ class Router extends BaseRouter {
 
       const isAdminView = userID !== null;
 
-      const model = new UserModel({id : userID});
-      const view = new DashboardView({ model, isAdminView, userID});
+      const model = new UserModel({ id: userID });
+      const view = new DashboardView({ model, isAdminView, userID });
 
-      this.listenTo(model, "sync", function() {
+      this.listenTo(model, "sync", function () {
         this.changeView(view);
         this.hideLoadingSpinner();
       });
@@ -282,8 +290,8 @@ class Router extends BaseRouter {
       DatasetCollection = DatasetCollection.default;
 
       const collection = new DatasetCollection();
-      const paginatedCollection = new PaginationCollection([], {fullCollection : collection});
-      const view = new SpotlightView({collection: paginatedCollection});
+      const paginatedCollection = new PaginationCollection([], { fullCollection: collection });
+      const view = new SpotlightView({ collection: paginatedCollection });
 
       this.changeView(view);
       this.listenTo(collection, "sync", this.hideLoadingSpinner);
@@ -299,7 +307,7 @@ class Router extends BaseRouter {
       TaskOverviewCollection = TaskOverviewCollection.default;
 
       const collection = new TaskOverviewCollection();
-      const view = new TaskOverviewView({collection});
+      const view = new TaskOverviewView({ collection });
 
       this.changeView(view);
       this.listenTo(collection, "sync", this.hideLoadingSpinner);
@@ -308,16 +316,15 @@ class Router extends BaseRouter {
   }
 
 
-  showWithPagination(view, collection, options) {
-    if (options == null) { options = {}; }
-    _.defaults(options, {addButtonText : null});
+  showWithPagination(view, collection, options = {}) {
+    _.defaults(options, { addButtonText: null });
 
     // Webpack `require` doesn't work with inline arrow functions
     const callback = admin => {
       collection = new admin[collection](null, options);
-      const paginatedCollection = new PaginationCollection([], {fullCollection : collection});
-      view = new admin[view]({collection : paginatedCollection});
-      const paginationView = new admin.PaginationView({collection : paginatedCollection, addButtonText : options.addButtonText});
+      const paginatedCollection = new PaginationCollection([], { fullCollection: collection });
+      view = new admin[view]({ collection: paginatedCollection });
+      const paginationView = new admin.PaginationView({ collection: paginatedCollection, addButtonText: options.addButtonText });
 
       this.changeView(paginationView, view);
       this.listenTo(collection, "sync", () => this.hideLoadingSpinner());
@@ -331,7 +338,7 @@ class Router extends BaseRouter {
     const callback = admin => {
       if (collection) {
         collection = new admin[collection]();
-        view = new admin[view]({collection});
+        view = new admin[view]({ collection });
         this.listenTo(collection, "sync", () => this.hideLoadingSpinner());
       } else {
         view = new admin[view]();
@@ -344,7 +351,6 @@ class Router extends BaseRouter {
   }
 
   changeView(...views) {
-
     if (_.isEqual(this.activeViews, views)) {
       return;
     }
@@ -353,15 +359,14 @@ class Router extends BaseRouter {
 
     // Add new views
     this.activeViews = views;
-    for (let view of views) {
+    for (const view of views) {
       this.$mainContainer.append(view.render().el);
     }
 
     // Google Analytics
-    if (typeof ga !== 'undefined' && ga !== null) {
-      ga("send", "pageview", location.pathname);
+    if (typeof window.ga !== "undefined" && window.ga !== null) {
+      window.ga("send", "pageview", location.pathname);
     }
-
   }
 }
 Router.initClass();

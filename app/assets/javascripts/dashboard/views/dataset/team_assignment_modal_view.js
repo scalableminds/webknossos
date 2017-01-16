@@ -1,16 +1,14 @@
 import _ from "lodash";
-import app from "app";
+import $ from "jquery";
 import Request from "libs/request";
-import Marionette from "backbone.marionette";
 import TeamCollection from "admin/models/team/team_collection";
 import ModalView from "admin/views/modal_view";
 
 
 class TeamAssignmentModalView extends ModalView {
   static initClass() {
-  
-    this.prototype.headerTemplate  = "<h3>Assign teams for this dataset</h3>";
-    this.prototype.bodyTemplate  = _.template(`\
+    this.prototype.headerTemplate = "<h3>Assign teams for this dataset</h3>";
+    this.prototype.bodyTemplate = _.template(`\
 <ul name="teams" class="team-list">
   <% items.forEach(function(team) { %>
     <li>
@@ -24,43 +22,41 @@ class TeamAssignmentModalView extends ModalView {
   <% }) %>
 </ul>\
 `);
-    this.prototype.footerTemplate  = `\
+    this.prototype.footerTemplate = `\
 <a class="btn btn-primary">Save</a>
 <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>\
 `;
-  
-    this.prototype.ui  =
-      {"teamList" : ".team-list"};
-  
-    this.prototype.events  =
-      {"click .btn-primary" : "submitTeams"};
+
+    this.prototype.ui =
+      { teamList: ".team-list" };
+
+    this.prototype.events =
+      { "click .btn-primary": "submitTeams" };
   }
 
   templateContext() {
     return {
-      isChecked : teamName => {
+      isChecked: (teamName) => {
         if (_.includes(this.dataset.get("allowedTeams"), teamName)) {
           return "checked";
         }
-      }
+      },
     };
   }
 
 
   initialize(args) {
-
     this.collection = new TeamCollection();
     this.listenTo(this.collection, "sync", this.render);
     this.collection.fetch({
-      data : "isEditable=true"
+      data: "isEditable=true",
     });
 
-    return this.dataset = args.dataset;
+    this.dataset = args.dataset;
   }
 
 
   submitTeams() {
-
     const $checkboxes = this.$("input:checked");
     const allowedTeams = _.map($checkboxes, checkbox => $(checkbox).parent().parent().text().trim());
 
@@ -68,7 +64,7 @@ class TeamAssignmentModalView extends ModalView {
 
     Request.sendJSONReceiveJSON(
       `/api/datasets/${this.dataset.get("name")}/teams`,
-      {data: allowedTeams}
+      { data: allowedTeams },
     );
 
     return this.destroy();

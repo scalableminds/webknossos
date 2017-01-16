@@ -1,26 +1,23 @@
 import _ from "lodash";
-import backbone from "backbone";
+import Backbone from "backbone";
 import moment from "moment";
 
 class TimeStatisticModel extends Backbone.Model {
   static initClass() {
-  
-    this.prototype.url  = "api/statistics/webknossos";
+    this.prototype.url = "api/statistics/webknossos";
   }
 
   initialize() {
-
     // set defaults
     return this.set("tracingTimes", new Backbone.Collection([{
-      start : moment().startOf("week"),
-      end : moment().endOf("week"),
-      tracingTime : 0}])
+      start: moment().startOf("week"),
+      end: moment().endOf("week"),
+      tracingTime: 0 }]),
     );
   }
 
 
   parse(response) {
-
     const timings = _.sortBy(response.tracingTimes, timeEntry => timeEntry.start);
     response.tracingTimes = new Backbone.Collection(timings);
 
@@ -30,5 +27,4 @@ class TimeStatisticModel extends Backbone.Model {
 TimeStatisticModel.initClass();
 
 export default TimeStatisticModel;
-
 

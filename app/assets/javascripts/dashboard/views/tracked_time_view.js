@@ -1,12 +1,9 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import DashboardTaskListItemView from "./dashboard_task_list_item_view";
-import routes from "routes";
 
 class TrackedTimeView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <h3>Tracked Time</h3>
 <table class="table table-striped">
   <thead>
@@ -28,8 +25,7 @@ class TrackedTimeView extends Marionette.View {
   }
 
 
-  initialize(options) {
-
+  initialize() {
     this.listenTo(this.model, "sync", this.render);
 
     return this.model.fetch();

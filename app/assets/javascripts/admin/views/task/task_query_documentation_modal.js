@@ -4,10 +4,9 @@ import Request from "libs/request";
 
 class TaskQueryDocumentationModal extends Marionette.View {
   static initClass() {
-  
-    this.prototype.tagName  = "div";
-    this.prototype.className  = "modal fade";
-    this.prototype.template  = _.template(`\
+    this.prototype.tagName = "div";
+    this.prototype.className = "modal fade";
+    this.prototype.template = _.template(`\
 <div class="modal-dialog">
   <div class="modal-content">
     <div class="modal-header">
@@ -35,14 +34,13 @@ class TaskQueryDocumentationModal extends Marionette.View {
   </div>
 </div>\
 `);
-  
-    this.prototype.ui  =
-      {properties : "#properties"};
+
+    this.prototype.ui =
+      { properties: "#properties" };
   }
 
   onRender() {
-    return Request.receiveJSON("api/descriptions/task").then(descriptions => {
-
+    return Request.receiveJSON("api/descriptions/task").then((descriptions) => {
       const tableHtml = _.template(
         `\
 <table style="width: 100%">
@@ -63,11 +61,11 @@ class TaskQueryDocumentationModal extends Marionette.View {
     <% }) %>
   </tbody>
 </table>\
-`
-      )({descriptions});
+`,
+      )({ descriptions });
 
       return this.ui.properties.html(tableHtml);
-    }
+    },
     );
   }
 }

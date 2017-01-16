@@ -1,5 +1,5 @@
 # webKnossos
-Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. Current solutions require an efficient integration of automated image analysis with massive manual data annotation. To scale such annotation efforts it is decisive to be able to crowd source data analysis online. Here we present **webKnossos** (former oxalis),
+Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. Current solutions require an efficient integration of automated image analysis with massive manual data annotation. To scale such annotation efforts it is decisive to be able to crowd source data analysis online. Here we present **webKnossos** (former oxalis).
 
 ![webKnossos logo](https://webknossos.brain.mpg.de/assets/images/oxalis.svg)
 
@@ -33,7 +33,7 @@ npm install -g yarn
 brew services start mongodb
 
 # Checkout the webKnossos git repository
-git clone git@github.com:scalableminds/oxalis.git
+git clone git@github.com:scalableminds/webknossos.git
 ```
 
 

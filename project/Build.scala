@@ -1,20 +1,18 @@
-import com.typesafe.sbt.web.Import._
-import sbt._
-import sbt.Keys._
-import play.sbt.Play.autoImport._
-import play.sbt.PlayImport
-import PlayKeys._
-import play.twirl.sbt.Import._
-import play.sbt.routes.RoutesKeys._
-import sbt.Task
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+import com.typesafe.sbt.web.Import._
+import play.sbt.Play.autoImport._
+import play.sbt.routes.RoutesKeys._
+import play.twirl.sbt.Import._
+import sbt.Keys._
+import sbt.{Task, _}
 
 object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
-  val braingamesVersion = "8.19.0"
+  val braingamesVersion = "9.0.3"
   val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
@@ -189,9 +187,9 @@ object AssetCompilation {
 }
 
 object ApplicationBuild extends Build {
+  import AssetCompilation.SettingsKeys._
   import Dependencies._
   import Resolvers._
-  import AssetCompilation.SettingsKeys._
 
   val appName =  "oxalis"
 

@@ -12,6 +12,16 @@ services:
       - PORT=9000
       - MODE=dev
 
+  webknossos:
+    image: scalableminds/webknossos:$DOCKER_TAG
+    ports:
+      - "9000:9000"
+    links:
+      - mongo
+    environment:
+      - PORT=9000
+      - MODE=dev
+
   oxalis-sbt:
     image: scalableminds/sbt:$SBT_VERSION_TAG
     volumes:
@@ -20,6 +30,16 @@ services:
       - "~/.ivy2:/root/.ivy2"
       - "~/.sbt:/root/.sbt"
       - "~/.yarn-cache:/root/.yarn-cache"
+
+  oxalis-frontend-linting:
+    extends:
+      service: oxalis-sbt
+    command: bash -c "npm run lint || true"
+
+  oxalis-frontend-flow:
+    extends:
+      service: oxalis-sbt
+    command: bash -c "npm run flow"
 
   oxalis-frontend-tests:
     extends:

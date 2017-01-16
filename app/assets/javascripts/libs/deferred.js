@@ -6,40 +6,35 @@ class Deferred {
   // ```
   // d = new Deferred()
   // setTimeout(
-  //   -> d.resolve()
+  //   -> d.internalResolve()
   //   1000
   // )
-  // return d.promise()
+  // return d.internalPromise()
   // ```
 
 
   constructor() {
-
-    this._resolve = null;
-    this._reject = null;
-    this._promise = new Promise((resolve, reject) => {
-      this._resolve = resolve;
-      return this._reject = reject;
-    }
-    );
+    this.internalResolve = null;
+    this.internalReject = null;
+    this.internalPromise = new Promise((resolve, reject) => {
+      this.internalResolve = resolve;
+      this.internalReject = reject;
+    });
   }
 
 
   resolve(arg) {
-
-    return this._resolve(arg);
+    return this.internalResolve(arg);
   }
 
 
   reject(arg) {
-
-    return this._reject(arg);
+    return this.internalReject(arg);
   }
 
 
   promise() {
-
-    return this._promise;
+    return this.internalPromise;
   }
 }
 

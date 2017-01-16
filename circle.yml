@@ -23,6 +23,7 @@ dependencies:
 
 test:
   override:
+    - docker-compose run oxalis-frontend-linting
     - docker-compose run oxalis-frontend-tests
     - docker-compose run oxalis-e2e-tests
     - DOCKER_TAG=$CIRCLE_BUILD_NUM docker-compose up -d oxalis:
@@ -34,9 +35,4 @@ deployment:
   hub:
     branch: /.*/
     commands:
-      - docker tag scalableminds/oxalis:$CIRCLE_BUILD_NUM scalableminds/oxalis:branch-$CIRCLE_BRANCH
-      - docker tag scalableminds/oxalis:$CIRCLE_BUILD_NUM scalableminds/oxalis:commit-$CIRCLE_SHA1
-      - docker push scalableminds/oxalis:$CIRCLE_BUILD_NUM
-      - docker push scalableminds/oxalis:branch-$CIRCLE_BRANCH
-      - docker push scalableminds/oxalis:commit-$CIRCLE_SHA1
       - docker logout

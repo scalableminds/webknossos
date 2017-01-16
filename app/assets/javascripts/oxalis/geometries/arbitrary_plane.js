@@ -1,5 +1,5 @@
 import _ from "lodash";
-import backbone from "backbone";
+import Backbone from "backbone";
 import THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";
@@ -25,25 +25,22 @@ import ArbitraryPlaneMaterialFactory from "./materials/arbitrary_plane_material_
 // for the flat surface
 class ArbitraryPlane {
   static initClass() {
-  
-    this.prototype.cam  = null;
-    this.prototype.model  = null;
-    this.prototype.controller  = null;
-  
-    this.prototype.mesh  = null;
-  
-    this.prototype.isDirty  = true;
-  
-    this.prototype.queryVertices  = null;
-    this.prototype.width  = 0;
-    this.prototype.height  = 0;
-    this.prototype.x  = 0;
+    this.prototype.cam = null;
+    this.prototype.model = null;
+    this.prototype.controller = null;
+
+    this.prototype.mesh = null;
+
+    this.prototype.isDirty = true;
+
+    this.prototype.queryVertices = null;
+    this.prototype.width = 0;
+    this.prototype.height = 0;
+    this.prototype.x = 0;
   }
 
 
-  constructor(cam, model, controller, width) {
-
-    if (width == null) { width = 128; }
+  constructor(cam, model, controller, width = 128) {
     this.cam = cam;
     this.model = model;
     this.controller = controller;
@@ -52,10 +49,10 @@ class ArbitraryPlane {
 
     this.mesh = this.createMesh();
 
-    this.listenTo(this.cam, "changed", function() { return this.isDirty = true; });
-    this.listenTo(this.model.flycam, "positionChanged", function() { return this.isDirty = true; });
+    this.listenTo(this.cam, "changed", function () { return this.isDirty = true; });
+    this.listenTo(this.model.flycam, "positionChanged", function () { return this.isDirty = true; });
 
-    for (let name in this.model.binary) {
+    for (const name in this.model.binary) {
       const binary = this.model.binary[name];
       binary.cube.on("bucketLoaded", () => this.isDirty = true);
     }
@@ -64,27 +61,25 @@ class ArbitraryPlane {
   }
 
 
-  setMode( mode, radius ) {
+  setMode(mode) {
+    this.queryVertices = (() => {
+      switch (mode) {
+        case constants.MODE_ARBITRARY: return this.calculateSphereVertices();
+        case constants.MODE_ARBITRARY_PLANE: return this.calculatePlaneVertices();
+      }
+    })();
 
-    this.queryVertices = (() => { switch (mode) {
-      case constants.MODE_ARBITRARY:       return this.calculateSphereVertices();
-      case constants.MODE_ARBITRARY_PLANE: return this.calculatePlaneVertices();
-    } })();
-
-    return this.isDirty = true;
+    this.isDirty = true;
   }
 
 
   attachScene(scene) {
-
     return scene.add(this.mesh);
   }
 
 
   update() {
-
     if (this.isDirty) {
-
       const { mesh, cam } = this;
 
       const matrix = cam.getZoomedMatrix();
@@ -109,26 +104,24 @@ class ArbitraryPlane {
   }
 
 
-  calculateSphereVertices( sphericalCapRadius ) {
-
+  calculateSphereVertices(sphericalCapRadius) {
     if (sphericalCapRadius == null) { sphericalCapRadius = this.cam.distance; }
     const queryVertices = new Float32Array(this.width * this.width * 3);
 
     // so we have Point [0, 0, 0] centered
     let currentIndex = 0;
 
-    const vertex        = [0, 0, 0];
-    let vector        = [0, 0, 0];
-    const centerVertex  = [0, 0, -sphericalCapRadius];
+    const vertex = [0, 0, 0];
+    let vector = [0, 0, 0];
+    const centerVertex = [0, 0, -sphericalCapRadius];
 
     // Transforming those normalVertices to become a spherical cap
     // which is better more smooth for querying.
     // http://en.wikipedia.org/wiki/Spherical_cap
     for (let y = 0; y < this.width; y++) {
       for (let x = 0; x < this.width; x++) {
-
-        vertex[0] = x - (Math.floor(this.width/2));
-        vertex[1] = y - (Math.floor(this.width/2));
+        vertex[0] = x - (Math.floor(this.width / 2));
+        vertex[1] = y - (Math.floor(this.width / 2));
         vertex[2] = 0;
 
         vector = V3.sub(vertex, centerVertex, vector);
@@ -146,7 +139,6 @@ class ArbitraryPlane {
 
 
   calculatePlaneVertices() {
-
     const queryVertices = new Float32Array(this.width * this.width * 3);
 
     // so we have Point [0, 0, 0] centered
@@ -154,9 +146,8 @@ class ArbitraryPlane {
 
     for (let y = 0; y < this.width; y++) {
       for (let x = 0; x < this.width; x++) {
-
-        queryVertices[currentIndex++] = x - (Math.floor(this.width/2));
-        queryVertices[currentIndex++] = y - (Math.floor(this.width/2));
+        queryVertices[currentIndex++] = x - (Math.floor(this.width / 2));
+        queryVertices[currentIndex++] = y - (Math.floor(this.width / 2));
         queryVertices[currentIndex++] = 0;
       }
     }
@@ -166,10 +157,9 @@ class ArbitraryPlane {
 
 
   applyScale(delta) {
-
     this.x = Number(this.mesh.scale.x) + Number(delta);
 
-    if (this.x > .5 && this.x < 10) {
+    if (this.x > 0.5 && this.x < 10) {
       this.mesh.scale.x = this.mesh.scale.y = this.mesh.scale.z = this.x;
       return this.cam.update();
     }
@@ -177,28 +167,24 @@ class ArbitraryPlane {
 
 
   createMesh() {
-
     if (this.controller.isBranchpointvideoMode()) {
-
       const options = {
-        polygonOffset : true,
-        polygonOffsetFactor : 10.0,
-        polygonOffsetUnits : 40.0
+        polygonOffset: true,
+        polygonOffsetFactor: 10.0,
+        polygonOffsetUnits: 40.0,
       };
 
       const factory = new ArbitraryPlaneMaterialFactory(this.model, this.width);
       factory.makeMaterial(options);
       this.textureMaterial = factory.getMaterial();
-
     } else {
-
       this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.model, this.width).getMaterial();
     }
 
     // create mesh
     const plane = new THREE.Mesh(
       new THREE.PlaneGeometry(this.width, this.width, 1, 1),
-      this.textureMaterial
+      this.textureMaterial,
     );
     plane.rotation.x = Math.PI;
     this.x = 1;

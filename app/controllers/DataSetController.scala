@@ -7,7 +7,6 @@ import scala.concurrent.duration._
 
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import models.binary._
 import models.team.TeamDAO
@@ -135,8 +134,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       result <- DataSetService.importDataSet(dataSet)
     } yield {
-      val status = result.status.toIntOpt.getOrElse(INTERNAL_SERVER_ERROR)
-      Status(status)(result.body)
+      Status(result.status)(result.body)
     }
   }
 
@@ -145,8 +143,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
       result <- DataStoreHandler.progressForImport(dataSet)
     } yield {
-      val status = result.status.toIntOpt.getOrElse(INTERNAL_SERVER_ERROR)
-      Status(status)(result.body)
+      Status(result.status)(result.body)
     }
   }
 

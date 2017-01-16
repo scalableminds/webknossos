@@ -1,6 +1,5 @@
-import Request from "libs/request";
 import _ from "lodash";
-import Backbone from "backbone";
+import app from "app";
 import NestedObjModel from "libs/nested_obj_model";
 
 
@@ -11,8 +10,7 @@ class DatasetConfiguration extends NestedObjModel {
     this.reset = this.reset.bind(this);
   }
 
-  initialize({datasetName, dataLayerNames}) {
-
+  initialize({ datasetName, dataLayerNames }) {
     this.dataLayerNames = dataLayerNames;
     this.url = `/api/dataSetConfigurations/${datasetName}`;
     this.listenTo(this, "change", _.debounce(
@@ -23,28 +21,20 @@ class DatasetConfiguration extends NestedObjModel {
 
 
   reset() {
-
     return this.setDefaultBinaryColors(true);
   }
 
 
   triggerAll() {
-
-    return (() => {
-      const result = [];
-      for (let property in this.attributes) {
-        result.push(this.trigger(`change:${property}`, this, this.get(property)));
-      }
-      return result;
-    })();
+    for (const property in this.attributes) {
+      this.trigger(`change:${property}`, this, this.get(property));
+    }
   }
 
 
-  setDefaultBinaryColors(forceDefault) {
-
+  setDefaultBinaryColors(forceDefault = false) {
     let defaultColors;
-    let defaults, layer;
-    if (forceDefault == null) { forceDefault = false; }
+    let layer;
     const layers = this.get("layers");
 
     if (this.dataLayerNames.length === 1) {
@@ -54,19 +44,21 @@ class DatasetConfiguration extends NestedObjModel {
                         [255, 255, 0], [0, 255, 255], [255, 0, 255]];
     }
 
-    return this.dataLayerNames.map((layerName, i) =>
-      (defaults = {
+    this.dataLayerNames.forEach((layerName, i) => {
+      const defaults = {
         color: defaultColors[i % defaultColors.length],
         brightness: 0,
-        contrast: 1
-      },
+        contrast: 1,
+      };
 
-      forceDefault || !layers[layerName] ?
-        layer = defaults
-      :
-        layer = _.defaults(layers[layerName], defaults),
+      if (forceDefault || !layers[layerName]) {
+        layer = defaults;
+      } else {
+        layer = _.defaults(layers[layerName], defaults);
+      }
 
-      this.set(`layers.${layerName}`, layer)));
+      this.set(`layers.${layerName}`, layer);
+    });
   }
 }
 

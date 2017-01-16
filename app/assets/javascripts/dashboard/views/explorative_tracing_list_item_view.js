@@ -1,15 +1,14 @@
 import _ from "lodash";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
-import routes from "routes";
 import Toast from "libs/toast";
 import HoverShowHide from "libs/behaviors/hover_show_hide_behavior";
 import Request from "libs/request";
 
 class ExplorativeTracingListItemView extends Marionette.View {
   static initClass() {
-
-    this.prototype.tagName  = "tr";
-    this.prototype.template  = _.template(`\
+    this.prototype.tagName = "tr";
+    this.prototype.template = _.template(`\
 <td>
   <div class="monospace-id">
     <%- id %>
@@ -68,47 +67,45 @@ class ExplorativeTracingListItemView extends Marionette.View {
 </td>\
 `);
 
-    this.prototype.events  = {
-      "submit #explorative-name-form" : "nameExplorativeAnnotation",
-      "click #finish-tracing" : "finishOrOpenTracing",
-      "click #reopen-tracing" : "finishOrOpenTracing",
-      "change @ui.explorativeNameInput" : "submitForm"
+    this.prototype.events = {
+      "submit #explorative-name-form": "nameExplorativeAnnotation",
+      "click #finish-tracing": "finishOrOpenTracing",
+      "click #reopen-tracing": "finishOrOpenTracing",
+      "change @ui.explorativeNameInput": "submitForm",
     };
 
-    this.prototype.ui  = {
-      "explorativeNameForm" : "#explorative-name-form",
-      "explorativeNameInput": "#explorative-name-input"
+    this.prototype.ui = {
+      explorativeNameForm: "#explorative-name-form",
+      explorativeNameInput: "#explorative-name-input",
     };
 
-    this.prototype.behaviors  = {
-      HoverShowHide : {
-        behaviorClass : HoverShowHide
-      }
+    this.prototype.behaviors = {
+      HoverShowHide: {
+        behaviorClass: HoverShowHide,
+      },
     };
   }
 
 
   submitForm() {
-
     return this.ui.explorativeNameForm.submit();
   }
 
 
   nameExplorativeAnnotation(event) {
-
     event.preventDefault();
     const target = $(event.target);
     const url = target.attr("action");
 
     return Request.sendUrlEncodedFormReceiveJSON(
       url,
-      {data: target}
-    ).then( response => {
+      { data: target },
+    ).then((response) => {
       Toast.message(response.messages);
       const newName = this.$("input[name='name']").val();
       this.model.set("name", newName);
       return this.render();
-    }
+    },
     );
   }
 
@@ -118,16 +115,15 @@ class ExplorativeTracingListItemView extends Marionette.View {
 
 
   finishOrOpenTracing(event) {
-
     event.preventDefault();
     const url = $(event.target).attr("href") || $(event.target.parentElement).attr("href");
 
-    return Request.receiveJSON(url).then( response => {
+    return Request.receiveJSON(url).then((response) => {
       Toast.message(response.messages);
       this.toggleState(this.model.attributes.state);
       this.model.collection.remove(this.model);
       return this.options.parent.render();
-    }
+    },
     );
   }
 }

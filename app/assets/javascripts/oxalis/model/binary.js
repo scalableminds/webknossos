@@ -57,7 +57,7 @@ class Binary {
     this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
     this.pushQueue = new PushQueue(datasetName, this.cube, this.layer, this.tracing.id, updatePipeline);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
-    this.mappings = new Mappings(datasetName, this.layer);
+    this.mappings = new Mappings(datastoreInfo, datasetName, this.layer);
     this.activeMapping = null;
 
     this.pingStrategies = [

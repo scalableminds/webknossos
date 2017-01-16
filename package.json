@@ -1,9 +1,9 @@
 {
   "name": "oxalis",
   "version": "0.17.146",
-  "license": "MIT",
+  "license": "AGPL-3.0",
   "engines": {
-    "node": "~0.12"
+    "node": ">=7"
   },
   "repository": {
     "type": "git",

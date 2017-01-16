@@ -110,6 +110,10 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
   initialize(options) {
     this.options = options;
     this.childViewOptions.parent = this;
+
+    app.router.showLoadingSpinner();
+    this.listenTo(this, "render", () => app.router.hideLoadingSpinner());
+
     this.collection = new UserAnnotationsCollection([], { userID: this.options.userID });
 
     this.showArchivedAnnotations = false;

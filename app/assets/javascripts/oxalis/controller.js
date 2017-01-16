@@ -27,7 +27,7 @@ import Input from "../libs/input";
 import Toast from "../libs/toast";
 import Model from "./model.js";
 
-import type {ToastType} from "../libs/toast";
+import type { ToastType } from "../libs/toast";
 
 class Controller {
 
@@ -111,8 +111,8 @@ class Controller {
       this.planeController = new SkeletonTracingPlaneController(
         this.model, this.view, this.sceneController, this.annotationController);
 
-      const ArbitraryController = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalArbitraryController;
-      this.arbitraryController = new ArbitraryController(
+      const ArbitraryControllerClass = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalArbitraryController;
+      this.arbitraryController = new ArbitraryControllerClass(
         this.model, this.view, this.sceneController, this.annotationController);
     } else if (this.model.volumeTracing != null) {
       this.view = new VolumeTracingView(this.model);

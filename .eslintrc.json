@@ -37,6 +37,7 @@
       "no-bitwise": "off",
       "no-confusing-arrow":  "off",
       "no-continue": "warn",
+      "no-duplicate-imports": "off",
       "no-else-return": "off",
       "no-mixed-operators": "off",
       "no-multi-str": "off",

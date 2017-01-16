@@ -5,9 +5,9 @@ import ErrorHandling from "libs/error_handling";
 class Mappings {
 
 
-  constructor(datasetName, layer) {
+  constructor(dataStoreInfo, datasetName, layer) {
     this.mappings = _.keyBy(layer.mappings, "name");
-    this.baseUrl = `/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
+    this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
     this.doWithToken = layer.doWithToken.bind(layer);
   }
 

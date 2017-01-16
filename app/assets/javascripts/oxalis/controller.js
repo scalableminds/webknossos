@@ -40,6 +40,7 @@ class Controller {
   planeController: PlaneController;
   arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
+  keyboardNoLoop: Input.KeyboardNoLoop;
 
   // Todo: The whole class is extended by Backbone.Events, which we should tell
   // Flow somehow

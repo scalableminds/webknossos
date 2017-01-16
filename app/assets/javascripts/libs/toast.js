@@ -1,6 +1,10 @@
 import _ from "lodash";
 import $ from "jquery";
 
+export type ToastType = {
+  remove: () => void
+};
+
 $.fn.alertWithTimeout = function (timeout = 3000) {
   this.each(function () {
     const $this = $(this);
@@ -106,10 +110,6 @@ const Toast = {
   delete(type, message) {
     getToasts(type, message).alert("close");
   },
-};
-
-export type ToastType = {
-  remove: () => void
 };
 
 export default Toast;

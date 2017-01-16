@@ -344,13 +344,9 @@ class PlaneController {
   }
 
 
-  moveX = (x) => {
-    return this.move([x, 0, 0]);
-  }
+  moveX = x => this.move([x, 0, 0]);
 
-  moveY = (y) => {
-    return this.move([0, y, 0]);
-  }
+  moveY = y => this.move([0, y, 0]);
 
   moveZ = (z, oneSlide) => {
     if (this.activeViewport === constants.TDView) {

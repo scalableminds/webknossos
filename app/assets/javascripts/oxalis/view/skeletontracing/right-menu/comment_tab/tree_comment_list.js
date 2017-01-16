@@ -11,8 +11,9 @@ class TreeCommentList extends Component {
     this.handleClick = this.handleClick.bind(this);
   }
 
-  handleClick() {
+  handleClick(evt) {
     this.setState({ collapsed: !this.state.collapsed });
+    evt.preventDefault();
   }
 
   render() {
@@ -37,18 +38,18 @@ class TreeCommentList extends Component {
       "fa-chevron-down": !this.state.collapsed,
     });
 
-    /* eslint-disable jsx-a11y/no-static-element-interactions */
     // one tree and its comments
     return (
       <div>
         <li className={liClassName}>
-          <i className={iClassName} onClick={this.handleClick} />
+          <a href="#toggle-comment" onClick={this.handleClick}>
+            <i className={iClassName} />
+          </a>
           {this.props.treeId} - {this.props.treeName}
         </li>
         {commentNodes}
       </div>
     );
-    /* eslint-enable jsx-a11y/no-static-element-interactions */
   }
 }
 

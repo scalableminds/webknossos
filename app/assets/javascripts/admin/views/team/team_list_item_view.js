@@ -36,7 +36,7 @@ class TeamListItemView extends Marionette.View {
   delete(evt) {
     evt.preventDefault();
     if (window.confirm("Do really want to delete this team?")) {
-      return this.model.destroy();
+      this.model.destroy();
     }
   }
 }

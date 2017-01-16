@@ -8,7 +8,7 @@ class AbstractSettingView extends Marionette.View {
     this.model = model;
     this.options = options;
     this.listenTo(this.model, `change:${this.options.name}`, this.update);
-    return this.options = _.defaults(this.options, { enabled: true });
+    this.options = _.defaults(this.options, { enabled: true });
   }
 
 

@@ -30,7 +30,7 @@ export default function (obj) {
     "message",
     (event) => {
       if (event.data) {
-        return execMessage(event.data);
+        execMessage(event.data);
       }
     },
 
@@ -38,7 +38,7 @@ export default function (obj) {
   );
 
 
-  return self.postMessage({
+  self.postMessage({
     type: "ready",
   });
 }

@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "libs/utils";
 
 class TracePoint {
 
@@ -20,8 +21,8 @@ class TracePoint {
 
 
   getNext(parent) {
-    let minN,
-      neighbor;
+    let minN;
+    let neighbor;
     if (parent != null) { minN = 2; } else { minN = 1; }
 
     if (this.neighbors.length < minN) {
@@ -69,7 +70,7 @@ class TracePoint {
     // to false for all nodes
     this.parent = parent;
     if (this.seen) {
-      throw "CyclicTree";
+      throw new Error("CyclicTree");
     }
     this.seen = true;
 
@@ -78,13 +79,13 @@ class TracePoint {
       this.children = [];
     }
     if (!_.isArray(this.children)) {
-      return this.children = [this.children];
+      this.children = [this.children];
     }
   }
 
 
   removeNeighbor(id) {
-    for (const i of __range__(0, this.neighbors.length, false)) {
+    for (const i of Utils.__range__(0, this.neighbors.length, false)) {
       if (this.neighbors[i].id === id) {
         // Remove neighbor
         this.neighbors.splice(i, 1);
@@ -95,13 +96,3 @@ class TracePoint {
 }
 
 export default TracePoint;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

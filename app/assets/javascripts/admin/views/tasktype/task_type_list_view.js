@@ -42,7 +42,7 @@ class TaskTypeListView extends Marionette.CompositeView {
     this.collection.fetch();
 
     this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
-    return this.listenTo(app.vent, "paginationView:addElement", this.createNewTaskType);
+    this.listenTo(app.vent, "paginationView:addElement", this.createNewTaskType);
   }
 
 

@@ -1,3 +1,4 @@
+import Utils from "libs/utils";
 import FormatUtils from "libs/format_utils";
 import Backbone from "backbone";
 import TaskModel from "./task_model";
@@ -8,7 +9,7 @@ class TaskCollection extends Backbone.Collection {
   }
   initialize(models, options = {}) {
     this.projectName = options.projectName;
-    return this.taskTypeId = options.taskTypeId;
+    this.taskTypeId = options.taskTypeId;
   }
 
   url() {
@@ -25,8 +26,8 @@ class TaskCollection extends Backbone.Collection {
     return responses.map((response) => {
       // apply some defaults
       response.type = {
-        summary: __guard__(response.type, x => x.summary) || "<deleted>",
-        id: __guard__(response.type, x1 => x1.id) || "",
+        summary: Utils.__guard__(response.type, x => x.summary) || "<deleted>",
+        id: Utils.__guard__(response.type, x1 => x1.id) || "",
       };
 
       if (response.tracingTime == null) { response.tracingTime = 0; }
@@ -51,7 +52,3 @@ class TaskCollection extends Backbone.Collection {
 TaskCollection.initClass();
 
 export default TaskCollection;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

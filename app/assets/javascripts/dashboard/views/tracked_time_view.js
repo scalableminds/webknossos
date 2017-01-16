@@ -33,7 +33,7 @@ class TrackedTimeView extends Marionette.View {
   initialize() {
     this.listenTo(this.model, "sync", this.render);
 
-    return this.model.fetch();
+    this.model.fetch();
   }
 }
 TrackedTimeView.initClass();

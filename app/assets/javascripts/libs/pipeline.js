@@ -59,8 +59,7 @@ class Pipeline {
   executePassAlongAction(action) {
     // For actions that don't return anything
 
-    const newAction = function () {
-      const args = arguments;
+    const newAction = function (...args) {
       return action(...args).then(() =>
         // TODO: Figure out how to pass along all arguments
         args[0]);
@@ -102,14 +101,14 @@ class Pipeline {
     if (currentAction != null) {
       this.running = true;
 
-      return currentAction(...this.nextArguments).then(
-        function (response) {
-          currentAction.deferred.resolve(response);
+      currentAction(...this.nextArguments).then(
+        (...args) => {
+          currentAction.deferred.resolve(args[0]);
 
-          this.nextArguments = arguments;
+          this.nextArguments = args;
           this.retryCount = 0;
-          return this.executeNext();
-        }.bind(this),
+          this.executeNext();
+        },
 
         (response) => {
           this.retryCount++;
@@ -117,14 +116,14 @@ class Pipeline {
 
           if (this.retryCount >= this.options.maxRetry) {
             this.failed = true;
-            return currentAction.deferred.reject(response);
+            currentAction.deferred.reject(response);
           } else {
-            return setTimeout(this.executeNext, this.options.retryTimeMs);
+            setTimeout(this.executeNext, this.options.retryTimeMs);
           }
         },
       );
     } else {
-      return this.running = false;
+      this.running = false;
     }
   }
 }

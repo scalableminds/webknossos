@@ -1,10 +1,11 @@
 import _ from "lodash";
 import Backbone from "backbone";
+
 class SortedCollection extends Backbone.Collection {
 
   initialize() {
     if (this.sortAttribute) {
-      return this.setSort(this.sortAttribute, "asc");
+      this.setSort(this.sortAttribute, "asc");
     }
   }
 
@@ -21,19 +22,22 @@ class SortedCollection extends Backbone.Collection {
     this.comparator = function (left, right) {
       const leftValue = left.get(field);
       const rightValue = right.get(field);
-      return _.isString(leftValue) && _.isString(rightValue) ?
-          sortDirection > 0 ?
-            leftValue.localeCompare(rightValue)
-          :
-            rightValue.localeCompare(leftValue)
-        :
-          sortDirection > 0 ?
-            leftValue - rightValue
-          :
-            rightValue - leftValue;
+      let compValue;
+      if (_.isString(leftValue) && _.isString(rightValue)) {
+        if (sortDirection > 0) {
+          compValue = leftValue.localeCompare(rightValue);
+        } else {
+          compValue = rightValue.localeCompare(leftValue);
+        }
+      } else if (sortDirection > 0) {
+        compValue = leftValue - rightValue;
+      } else {
+        compValue = rightValue - leftValue;
+      }
+      return compValue;
     };
 
-    return this.sort();
+    this.sort();
   }
 }
 

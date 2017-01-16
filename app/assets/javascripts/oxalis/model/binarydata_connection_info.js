@@ -29,7 +29,7 @@ class BinaryDataConnectionInfo {
     this.totalBytes += loadedBytes;
 
     this.roundTripTime = ((1 - this.ROUND_TRIP_TIME_SMOOTHER) * this.roundTripTime) + (this.ROUND_TRIP_TIME_SMOOTHER * roundTripTime);
-    return this.bandwidth = ((1 - this.BANDWIDTH_SMOOTHER) * this.bandwidth) + (this.BANDWIDTH_SMOOTHER * bandwidth);
+    this.bandwidth = ((1 - this.BANDWIDTH_SMOOTHER) * this.bandwidth) + (this.BANDWIDTH_SMOOTHER * bandwidth);
   }
 }
 BinaryDataConnectionInfo.initClass();

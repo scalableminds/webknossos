@@ -35,7 +35,7 @@ class VolumeTracing {
     this.createCell(this.contentData.activeCell);
 
     this.listenTo(this.binary.cube, "newMapping", function () {
-      return this.trigger("newActiveCell", this.getActiveCellId());
+      this.trigger("newActiveCell", this.getActiveCellId());
     });
 
     // For testing
@@ -46,7 +46,7 @@ class VolumeTracing {
 
   setMode(mode) {
     this.mode = mode;
-    return this.trigger("change:mode", this.mode);
+    this.trigger("change:mode", this.mode);
   }
 
 
@@ -68,7 +68,7 @@ class VolumeTracing {
 
     this.cells.push(newCell = new VolumeCell(id));
     this.setActiveCell(newCell.id);
-    return this.currentLayer = null;
+    this.currentLayer = null;
   }
 
 
@@ -96,7 +96,7 @@ class VolumeTracing {
     }
 
     this.currentLayer.addContour(pos);
-    return this.trigger("updateLayer", this.getActiveCellId(), this.currentLayer.getSmoothedContourList());
+    this.trigger("updateLayer", this.getActiveCellId(), this.currentLayer.getSmoothedContourList());
   }
 
 
@@ -117,7 +117,7 @@ class VolumeTracing {
     this.updateDirection(this.currentLayer.getCentroid());
     this.currentLayer = null;
 
-    return this.trigger("volumeAnnotated");
+    this.trigger("volumeAnnotated");
   }
 
 
@@ -129,7 +129,7 @@ class VolumeTracing {
         centroid[2] - this.lastCentroid[2],
       ]);
     }
-    return this.lastCentroid = centroid;
+    this.lastCentroid = centroid;
   }
 
 
@@ -157,7 +157,7 @@ class VolumeTracing {
       this.createCell(id);
     }
 
-    return this.trigger("newActiveCell", id);
+    this.trigger("newActiveCell", id);
   }
 }
 

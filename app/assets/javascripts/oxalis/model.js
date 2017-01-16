@@ -6,6 +6,7 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import app from "app";
+import Utils from "../libs/utils";
 import Binary from "./model/binary";
 import SkeletonTracing from "./model/skeletontracing/skeletontracing";
 import User from "./model/user";
@@ -43,8 +44,7 @@ class Model extends Backbone.Model {
 
 
   fetch() {
-    let datasetName,
-      infoUrl;
+    let infoUrl;
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
       // Include /readOnly part whenever it is in the pathname
       infoUrl = `${location.pathname}/info`;
@@ -59,7 +59,8 @@ class Model extends Backbone.Model {
       } else if (!tracing.content.dataSet) {
         error = "Selected dataset doesn't exist";
       } else if (!tracing.content.dataSet.dataLayers) {
-        if (datasetName = tracing.content.dataSet.name) {
+        const datasetName = tracing.content.dataSet.name;
+        if (datasetName) {
           error = `Please, double check if you have the dataset '${datasetName}' imported.`;
         } else {
           error = "Please, make sure you have a dataset imported.";
@@ -106,6 +107,7 @@ class Model extends Backbone.Model {
         switch (allowedMode) {
           case "flight": allowedModes.push(constants.MODE_ARBITRARY); break;
           case "oblique": allowedModes.push(constants.MODE_ARBITRARY_PLANE); break;
+          default: // ignore other modes for now
         }
       }
 
@@ -178,7 +180,7 @@ class Model extends Backbone.Model {
     const flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"));
     this.set("flycam", flycam);
     this.set("flycam3d", flycam3d);
-    this.listenTo(flycam3d, "changed", (matrix) => flycam.setPosition(matrix.slice(12, 15)));
+    this.listenTo(flycam3d, "changed", matrix => flycam.setPosition(matrix.slice(12, 15)));
     this.listenTo(flycam, { positionChanged(position) { return flycam3d.setPositionSilent(position); } });
 
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
@@ -222,13 +224,13 @@ class Model extends Backbone.Model {
 
   setMode(mode) {
     this.set("mode", mode);
-    return this.trigger("change:mode", mode);
+    this.trigger("change:mode", mode);
   }
 
 
   setUserBoundingBox(bb) {
     this.userBoundingBox = this.computeBoundingBoxFromArray(bb);
-    return this.trigger("change:userBoundingBox", this.userBoundingBox);
+    this.trigger("change:userBoundingBox", this.userBoundingBox);
   }
 
 
@@ -247,7 +249,7 @@ class Model extends Backbone.Model {
     const segmentationBinary = this.getSegmentationBinary();
 
     if (segmentationBinary != null) {
-      return window.mappings = {
+      window.mappings = {
         getAll() { return segmentationBinary.mappings.getMappingNames(); },
         getActive() { return segmentationBinary.activeMapping; },
         activate(mapping) { return segmentationBinary.setActiveMapping(mapping); },
@@ -273,10 +275,10 @@ class Model extends Backbone.Model {
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {
-      const layer = _.find(layers, layer => layer.name === __guard__(userLayer.fallback, x => x.layerName));
+      const existingLayer = _.find(layers, layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName));
 
-      if (layer != null) {
-        _.extend(layer, userLayer);
+      if (existingLayer != null) {
+        _.extend(existingLayer, userLayer);
       } else {
         layers.push(userLayer);
       }
@@ -295,34 +297,19 @@ class Model extends Backbone.Model {
     this.lowerBoundary = [Infinity, Infinity, Infinity];
     this.upperBoundary = [-Infinity, -Infinity, -Infinity];
 
-    return (() => {
-      const result = [];
-      for (const key in this.binary) {
-        const binary = this.binary[key];
-        result.push([0, 1, 2].map(i =>
-          (this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]),
-          this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]))));
+    for (const key of Object.keys(this.binary)) {
+      const binary = this.binary[key];
+      for (let i = 0; i <= 2; i++) {
+        this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]);
+        this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]);
       }
-      return result;
-    })();
+    }
   }
 
   // delegate save request to all submodules
   save() {
     const submodels = [];
     const promises = [];
-
-    if (this.user != null) {
-      submodels.push[this.user];
-    }
-
-    if (this.get("dataset") != null) {
-      submodels.push[this.get("dataset")];
-    }
-
-    if (this.get("datasetConfiguration") != null) {
-      submodels.push[this.get("datasetConfiguration")];
-    }
 
     if (this.get("volumeTracing") != null) {
       submodels.push(this.get("volumeTracing").stateLogger);
@@ -335,20 +322,20 @@ class Model extends Backbone.Model {
     _.each(submodels, model => promises.push(model.save()));
 
     return Promise.all(promises).then(
-      function () {
+      (...args) => {
         Toast.success("Saved!");
-        return Promise.resolve(arguments);
+        return Promise.resolve(...args);
       },
-      function () {
+      (...args) => {
         Toast.error("Couldn't save. Please try again.");
-        return Promise.reject(arguments);
+        return Promise.reject(...args);
       });
   }
 
 
   // Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
   initSettersGetter() {
-    return _.forEach(this.attributes, (value, key, ) => Object.defineProperty(this, key, {
+    _.forEach(this.attributes, (value, key) => Object.defineProperty(this, key, {
       set(val) {
         return this.set(key, val);
       },
@@ -374,7 +361,7 @@ class Model extends Backbone.Model {
     }
 
     if (state.activeNode != null) {
-      return __guard__(this.get("skeletonTracing"), x => x.setActiveNode(state.activeNode));
+      Utils.__guard__(this.get("skeletonTracing"), x => x.setActiveNode(state.activeNode));
     }
   }
 }
@@ -382,7 +369,3 @@ Model.initClass();
 
 
 export default Model;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

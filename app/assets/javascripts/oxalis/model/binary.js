@@ -27,7 +27,7 @@ class Binary {
 
     this.prototype.arbitraryPing = _.once(function (matrix, zoomStep) {
       this.arbitraryPing = _.throttle(this.arbitraryPingImpl, this.PING_THROTTLE_TIME);
-      return this.arbitraryPing(matrix, zoomStep);
+      this.arbitraryPing(matrix, zoomStep);
     });
   }
 
@@ -57,7 +57,7 @@ class Binary {
     this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
     this.pushQueue = new PushQueue(datasetName, this.cube, this.layer, this.tracing.id, updatePipeline);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
-    this.mappings = new Mappings(datasetName, this.layer);
+    this.mappings = new Mappings(datastoreInfo, datasetName, this.layer);
     this.activeMapping = null;
 
     this.pingStrategies = [
@@ -77,7 +77,7 @@ class Binary {
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {
       this.layer.setFourBit(this.model.get("datasetConfiguration").get("fourBit"));
       this.listenTo(this.model.get("datasetConfiguration"), "change:fourBit",
-                function (model, fourBit) { return this.layer.setFourBit(fourBit); });
+                function (datasetModel, fourBit) { this.layer.setFourBit(fourBit); });
     }
 
     this.cube.on({
@@ -89,7 +89,7 @@ class Binary {
 
 
   forcePlaneRedraw() {
-    return this.planes.map(plane =>
+    this.planes.forEach(plane =>
       plane.forceRedraw());
   }
 
@@ -99,18 +99,18 @@ class Binary {
 
     const setMapping = (mapping) => {
       this.cube.setMapping(mapping);
-      return this.model.flycam.update();
+      this.model.flycam.update();
     };
 
     if (mappingName != null) {
-      return this.mappings.getMappingArrayAsync(mappingName).then(setMapping);
+      this.mappings.getMappingArrayAsync(mappingName).then(setMapping);
     } else {
-      return setMapping([]);
+      setMapping([]);
     }
   }
 
   pingStop() {
-    return this.pullQueue.clearNormalPriorities();
+    this.pullQueue.clearNormalPriorities();
   }
 
 
@@ -138,7 +138,7 @@ class Binary {
         }
       }
 
-      return this.pullQueue.pull();
+      this.pullQueue.pull();
     }
   }
 
@@ -152,7 +152,7 @@ class Binary {
       }
     }
 
-    return this.pullQueue.pull();
+    this.pullQueue.pull();
   }
 
 

@@ -1,5 +1,6 @@
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import SelectAllRows from "libs/behaviors/select_all_rows_behavior";
@@ -28,7 +29,7 @@ class UserListView extends Marionette.CompositeView {
   </thead>
   <tbody></tbody>
 </table>
-  
+
 <div class="navbar navbar-default navbar-fixed-bottom">
   <div class="navbar-form">
     <div class="btn-group">
@@ -68,7 +69,7 @@ class UserListView extends Marionette.CompositeView {
       data: "isEditable=true",
     });
 
-    return this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
+    this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
   }
 
 
@@ -87,28 +88,24 @@ class UserListView extends Marionette.CompositeView {
   }
 
 
-  showModal(modalView) {
+  showModal(ModalView) {
     if (this.$("tbody input[type=checkbox]:checked").length > 0) {
-      modalView = new modalView({ userCollection: this.collection });
+      const modalView = new ModalView({ userCollection: this.collection });
       modalView.render();
       this.ui.modalWrapper.html(modalView.el);
 
       modalView.$el.modal("show");
-      return this.modalView = modalView;
+      this.modalView = modalView;
     } else {
-      return Toast.error("No user is selected.");
+      Toast.error("No user is selected.");
     }
   }
 
 
   onDestroy() {
-    return __guard__(this.modalView, x => x.destroy());
+    Utils.__guard__(this.modalView, x => x.destroy());
   }
 }
 UserListView.initClass();
 
 export default UserListView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

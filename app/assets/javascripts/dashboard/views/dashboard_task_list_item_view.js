@@ -78,13 +78,13 @@ class DashboardTaskListItemView extends Marionette.View {
 
   initialize(options) {
     this.model.set("isAdminView", options.isAdminView);
-    return this.listenTo(this.model, "change", this.render);
+    this.listenTo(this.model, "change", this.render);
   }
 
 
   finish() {
     if (confirm("Are you sure you want to permanently finish this tracing?")) {
-      return this.model.finish();
+      this.model.finish();
     }
   }
 
@@ -92,8 +92,8 @@ class DashboardTaskListItemView extends Marionette.View {
   cancelAnnotation() {
     if (confirm("Do you really want to cancel this annotation?")) {
       const annotation = this.model.get("annotation");
-      return Request.triggerRequest(`/annotations/${annotation.typ}/${annotation.id}`, { method: "DELETE" }).then(() => this.model.collection.fetch(),
-      );
+      Request.triggerRequest(`/annotations/${annotation.typ}/${annotation.id}`, { method: "DELETE" }).then(() =>
+        this.model.collection.fetch());
     }
   }
 }

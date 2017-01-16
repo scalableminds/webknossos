@@ -17,7 +17,7 @@ class DatasetUploadView extends Marionette.View {
       <div class="form-group">
         <label class="col-sm-3 control-label" for="name">Name</label>
         <div class="col-sm-9">
-        <input type="text" required name="name" value="" class="form-control" autofocus pattern="^[0-9a-zA-Z_\-]+$" title="Dataset names may only contain letters, numbers, _ and -">
+        <input type="text" required name="name" value="" class="form-control" autofocus pattern="^[0-9a-zA-Z_-]+$" title="Dataset names may only contain letters, numbers, _ and -">
           <span class="help-block errors"></span>
         </div>
       </div>
@@ -30,7 +30,7 @@ class DatasetUploadView extends Marionette.View {
       <div class="form-group">
         <label class="col-sm-3 control-label" for="scale_scale">Scale</label>
         <div class="col-sm-9">
-          <input type="text" required name="scale.scale" value="12.0, 12.0, 24.0" class="form-control" pattern="\\s*([0-9]+(?:\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?)\\s*" title="Specify dataset scale like &quot;XX, YY, ZZ&quot;">
+          <input type="text" required name="scale.scale" value="12.0, 12.0, 24.0" class="form-control" pattern="\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?)\\s*" title="Specify dataset scale like &quot;XX, YY, ZZ&quot;">
           <span class="help-block errors"></span>
         </div>
       </div>
@@ -99,7 +99,7 @@ class DatasetUploadView extends Marionette.View {
       data: "amIAnAdmin=true",
     });
 
-    return this.datastoreSelectionView = new SelectionView({
+    this.datastoreSelectionView = new SelectionView({
       collection: new DatastoreCollection(),
       name: "datastore",
       filter(item) { return item.get("url") !== null; },
@@ -113,7 +113,7 @@ class DatasetUploadView extends Marionette.View {
 
   onRender() {
     this.showChildView("team", this.teamSelectionView);
-    return this.showChildView("datastore", this.datastoreSelectionView);
+    this.showChildView("datastore", this.datastoreSelectionView);
   }
 
 
@@ -125,7 +125,7 @@ class DatasetUploadView extends Marionette.View {
       Toast.info("Uploading datasets", false);
       this.ui.spinner.removeClass("hidden");
 
-      return Request.receiveJSON("/api/dataToken/generate")
+      Request.receiveJSON("/api/dataToken/generate")
       .then(({ token }) =>
         Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
           data: new FormData(form),
@@ -135,7 +135,7 @@ class DatasetUploadView extends Marionette.View {
       .then(
         ({ messages }) => {
           Toast.message(messages);
-          return app.router.navigate("/dashboard", { trigger: true });
+          app.router.navigate("/dashboard", { trigger: true });
         },
         () => {}, // NOOP
       )

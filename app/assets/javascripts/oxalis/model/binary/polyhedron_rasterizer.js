@@ -1,3 +1,4 @@
+import Utils from "libs/utils";
 import { M4x4 } from "libs/mjs";
 
 // Constants
@@ -17,7 +18,7 @@ const drawFunction = function (x, y, z, buffer, shiftZ) {
   const __indexY = (z << shiftZ) + (y << 1);
 
   if (x < buffer[__indexY]) { buffer[__indexY] = x; }
-  if (x > buffer[__indexY + 1]) { return buffer[__indexY + 1] = x; }
+  if (x > buffer[__indexY + 1]) { buffer[__indexY + 1] = x; }
 };
 
 
@@ -118,10 +119,10 @@ class PolyhedronRasterizer {
 
 
   calcExtent() {
-    let maxY,
-      maxZ,
-      minY,
-      minZ;
+    let maxY;
+    let maxZ;
+    let minY;
+    let minZ;
     let minX = minY = minZ = Int32MAX;
     let maxX = maxY = maxZ = Int32MIN;
 
@@ -202,17 +203,17 @@ class PolyhedronRasterizer {
   drawLine3d(x, y, z, x1, y1, z1) {
     // Source: https://sites.google.com/site/proyectosroboticos/bresenham-3d
 
-    let tmp,
-      d,
-      dx,
-      dy,
-      dz,
-      mode;
+    let tmp;
+    let d;
+    let mode;
+    let dx = x1 - x;
+    let dy = y1 - y;
+    let dz = z1 - z;
     const { shiftZ, buffer } = this;
 
-    let incX = (dx = x1 - x) < 0 ? -1 : 1;
-    let incY = (dy = y1 - y) < 0 ? -1 : 1;
-    let incZ = (dz = z1 - z) < 0 ? -1 : 1;
+    let incX = dx < 0 ? -1 : 1;
+    let incY = dy < 0 ? -1 : 1;
+    let incZ = dz < 0 ? -1 : 1;
 
     drawFunction(x, y, z, buffer, shiftZ);
 
@@ -300,13 +301,13 @@ class PolyhedronRasterizer {
     // Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
 
     let d;
-    let dx;
-    let dy;
     let mode;
+    let dx = x1 - x;
+    let dy = y1 - y;
     const { shiftZ, buffer } = this;
 
-    let incX = (dx = x1 - x) < 0 ? -1 : 1;
-    let incY = (dy = y1 - y) < 0 ? -1 : 1;
+    let incX = dx < 0 ? -1 : 1;
+    let incY = dy < 0 ? -1 : 1;
 
     dx = dx < 0 ? -dx : dx;
     dy = dy < 0 ? -dy : dy;
@@ -378,10 +379,12 @@ class PolyhedronRasterizer {
       let pointsPointer = 0;
       let indexY = z << shiftZ;
       for (let y = 0; y < deltaY; y++) {
-        if ((x0 = buffer[indexY++]) !== Int32MAX) {
+        x0 = buffer[indexY++];
+        if (x0 !== Int32MAX) {
           pointsBuffer[pointsPointer++] = y;
           pointsBuffer[pointsPointer++] = x0;
-          if ((x1 = buffer[indexY++]) !== x0) {
+          x1 = buffer[indexY++];
+          if (x1 !== x0) {
             pointsBuffer[pointsPointer++] = y;
             pointsBuffer[pointsPointer++] = x1;
           }
@@ -420,7 +423,7 @@ class PolyhedronRasterizer {
         const x0 = buffer[index++];
         const x1 = buffer[index++];
         if (x0 !== Int32MAX) {
-          for (const x of __range__(x0, x1, true)) { output.push(x + minX, y + minY, z + minZ); }
+          for (const x of Utils.__range__(x0, x1, true)) { output.push(x + minX, y + minY, z + minZ); }
         }
       }
     }
@@ -460,7 +463,7 @@ class PolyhedronRasterizer {
         radiusStartZ = radiusMinZ;
       }
 
-      for (const z of __range__(radiusStartZ, radiusEndZ, true)) {
+      for (const z of Utils.__range__(radiusStartZ, radiusEndZ, true)) {
         for (let y = radiusMinY; y <= radiusMaxY; y++) {
           let index = ((z - minZ) << shiftZ) + ((y - minY) << 1);
           let x0 = buffer[index++];
@@ -468,7 +471,7 @@ class PolyhedronRasterizer {
           if (x0 !== Int32MAX) {
             x0 += minX;
             x1 += minX;
-            for (const x of __range__(Math.max(xs - radius, x0), Math.min(xs + radius, x1), true)) {
+            for (const x of Utils.__range__(Math.max(xs - radius, x0), Math.min(xs + radius, x1), true)) {
               if (x === xs - radius || x === xs + radius ||
               y === ys - radius || y === ys + radius ||
               z === zs - radius || z === zs + radius) {
@@ -552,13 +555,3 @@ PolyhedronRasterizer.Master = class Master {
 
 
 export default PolyhedronRasterizer;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

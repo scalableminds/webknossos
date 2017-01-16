@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "libs/utils";
 import $ from "jquery";
 import Backbone from "backbone";
 import constants from "oxalis/constants";
@@ -103,8 +104,6 @@ Input.Keyboard = class Keyboard {
         // if there is any browser action attached to this (as with Ctrl + S)
         // KeyboardJS does not receive the up event.
 
-        const returnValue = undefined;
-
         if (!this.isStarted) { return; }
         if (this.keyCallbackMap[key] != null) { return; }
         if ($(":focus").length) { return; }
@@ -120,11 +119,8 @@ Input.Keyboard = class Keyboard {
         if (this.keyPressedCount === 1) { this.buttonLoop(); }
 
         if (this.delay >= 0) {
-          setTimeout((() => callback.delayed = false
-            ), this.delay);
+          setTimeout((() => { callback.delayed = false; }), this.delay);
         }
-
-        return returnValue;
       },
 
       () => {
@@ -138,7 +134,7 @@ Input.Keyboard = class Keyboard {
 
     KeyboardJS.bind(...binding);
 
-    return this.bindings.push(binding);
+    this.bindings.push(binding);
   }
 
 
@@ -160,7 +156,7 @@ Input.Keyboard = class Keyboard {
         }
       }
 
-      return setTimeout((() => this.buttonLoop()), this.DELAY);
+      setTimeout((() => this.buttonLoop()), this.DELAY);
     }
   }
 
@@ -175,10 +171,10 @@ Input.Keyboard.initClass();
 
 // The mouse module.
 // Events: over, out, leftClick, rightClick, leftDownMove
-let MouseButton;
+let MouseButtonClass;
 Input.Mouse = class Mouse {
   static initClass() {
-    MouseButton = class MouseButton {
+    MouseButtonClass = class MouseButton {
       static initClass() {
         this.prototype.MOVE_DELTA_THRESHOLD = 30;
       }
@@ -200,7 +196,7 @@ Input.Mouse = class Mouse {
 
           this.down = true;
           this.moveDelta = 0;
-          return this.mouse.trigger(`${this.name}MouseDown`, this.mouse.lastPosition, this.id, event);
+          this.mouse.trigger(`${this.name}MouseDown`, this.mouse.lastPosition, this.id, event);
         }
       }
 
@@ -211,7 +207,7 @@ Input.Mouse = class Mouse {
           if (this.moveDelta <= this.MOVE_DELTA_THRESHOLD) {
             this.mouse.trigger(`${this.name}Click`, this.mouse.lastPosition, this.id, event);
           }
-          return this.down = false;
+          this.down = false;
         }
       }
 
@@ -219,11 +215,11 @@ Input.Mouse = class Mouse {
       handleMouseMove(event, delta) {
         if (this.down) {
           this.moveDelta += Math.abs(delta.x) + Math.abs(delta.y);
-          return this.mouse.trigger(`${this.name}DownMove`, delta, this.mouse.position, this.id, event);
+          this.mouse.trigger(`${this.name}DownMove`, delta, this.mouse.position, this.id, event);
         }
       }
     };
-    MouseButton.initClass();
+    MouseButtonClass.initClass();
   }
 
 
@@ -238,8 +234,8 @@ Input.Mouse = class Mouse {
     this.id = id;
     _.extend(this, Backbone.Events);
 
-    this.leftMouseButton = new MouseButton("left", 1, this, this.id);
-    this.rightMouseButton = new MouseButton("right", 3, this, this.id);
+    this.leftMouseButton = new MouseButtonClass("left", 1, this, this.id);
+    this.rightMouseButton = new MouseButtonClass("right", 3, this, this.id);
     this.isMouseOver = false;
     this.lastPosition = null;
 
@@ -266,7 +262,7 @@ Input.Mouse = class Mouse {
       mouseup: this.mouseUp,
     });
 
-    return this.$target.off({
+    this.$target.off({
       mousedown: this.mouseDown,
       mouseenter: this.mouseEnter,
       mouseleave: this.mouseLeave,
@@ -284,7 +280,7 @@ Input.Mouse = class Mouse {
   }
 
   handle(eventName, ...args) {
-    return [this.leftMouseButton, this.rightMouseButton].map(button =>
+    [this.leftMouseButton, this.rightMouseButton].forEach(button =>
       button[`handle${eventName}`](...args));
   }
 
@@ -296,7 +292,7 @@ Input.Mouse = class Mouse {
       y: event.pageY - this.$target.offset().top,
     };
 
-    return this.handle("MouseDown", event);
+    this.handle("MouseDown", event);
   }
 
 
@@ -305,7 +301,7 @@ Input.Mouse = class Mouse {
       if (!this.isHit(event)) { this.mouseLeave({ which: 0 }); }
     } else if (this.isHit(event)) { this.mouseEnter({ which: 0 }); }
 
-    return this.handle("MouseUp", event);
+    this.handle("MouseUp", event);
   }
 
 
@@ -323,7 +319,7 @@ Input.Mouse = class Mouse {
       };
     }
 
-    if (__guard__(delta, x => x.x) !== 0 || __guard__(delta, x1 => x1.y) !== 0) {
+    if (Utils.__guard__(delta, x => x.x) !== 0 || Utils.__guard__(delta, x1 => x1.y) !== 0) {
       this.handle("MouseMove", event, delta);
 
       this.lastPosition = this.position;
@@ -350,8 +346,8 @@ Input.Mouse = class Mouse {
   isButtonPressed(event) {
     // Workaround for Firefox: event.which is not set properly
 
-    let b;
-    if ((b = __guard__(event.originalEvent, x => x.buttons)) != null) {
+    const b = Utils.__guard__(event.originalEvent, x => x.buttons);
+    if (b != null) {
       return b !== 0;
     }
     return event.which !== 0;
@@ -376,7 +372,3 @@ Input.Mouse.initClass();
 
 
 export default Input;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

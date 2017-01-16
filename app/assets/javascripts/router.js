@@ -1,3 +1,8 @@
+/**
+ * router.js
+ * @flow weak
+ */
+
 // Remove these linting rules after refactoring
 /* eslint-disable global-require, import/no-dynamic-require, no-param-reassign */
 
@@ -45,9 +50,9 @@ class Router extends BaseRouter {
 
   constructor(...args) {
     super(...args);
-    this.dashboard = this.dashboard.bind(this);
     this.$loadingSpinner = $("#loader");
     this.$mainContainer = $("#main-container");
+    this.initialize();
   }
 
 
@@ -354,8 +359,8 @@ class Router extends BaseRouter {
     }
 
     // Google Analytics
-    if (typeof ga !== "undefined" && ga !== null) {
-      ga("send", "pageview", location.pathname);
+    if (typeof window.ga !== "undefined" && window.ga !== null) {
+      window.ga("send", "pageview", location.pathname);
     }
   }
 }

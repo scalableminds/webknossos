@@ -21,10 +21,10 @@ import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.thirdparty.BrainTracing
 
 object TimeSpanService extends FoxImplicits{
-  val MaxTracingPause =
+  private val MaxTracingPause =
     Play.current.configuration.getInt("oxalis.user.time.tracingPauseInSeconds").getOrElse(60).seconds.toMillis
 
-  lazy val timeSpanTracker = Akka.system.actorOf(Props[TimeSpanTracker])
+  private lazy val timeSpanTracker = Akka.system.actorOf(Props[TimeSpanTracker])
 
   def logUserInteraction(user: User, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
     val timestamp = System.currentTimeMillis
@@ -100,7 +100,7 @@ object TimeSpanService extends FoxImplicits{
   protected case class TrackTime(timestamp: Long, _user: BSONObjectID, annotation: Option[AnnotationLike], ctx: DBAccessContext)
 
   protected class TimeSpanTracker extends Actor{
-    val lastUserActivity = Agent[Map[BSONObjectID, TimeSpan]](Map.empty)
+    private val lastUserActivity = Agent[Map[BSONObjectID, TimeSpan]](Map.empty)
 
     private def isNotInterrupted(current: Long, last: TimeSpan) =
       current - last.lastUpdate < MaxTracingPause
@@ -114,7 +114,9 @@ object TimeSpanService extends FoxImplicits{
       timeSpan
     }
 
-    private def logTimeToAnnotation(duration: Long, annotation: Option[AnnotationLike]) = {
+    private def logTimeToAnnotation(
+      duration: Long,
+      annotation: Option[AnnotationLike]) = {
       // Log time to annotation
       annotation.map {
         case a: Annotation =>
@@ -124,14 +126,19 @@ object TimeSpanService extends FoxImplicits{
       }
     }
 
-    private def logTimeToTask(duration: Long, annotation: Option[AnnotationLike]) = {
+    private def logTimeToTask(
+      duration: Long,
+      annotation: Option[AnnotationLike]) = {
       // Log time to task
       annotation.flatMap(_._task).foreach{ taskId =>
         TaskService.logTime(duration, taskId)(GlobalAccessContext)
       }
     }
 
-    private def logTimeToUser(duration: Long, annotation: Option[AnnotationLike], _user: BSONObjectID) = {
+    private def logTimeToUser(
+      duration: Long,
+      annotation: Option[AnnotationLike],
+      _user: BSONObjectID) = {
       // Log time to user
       UserDAO.findOneById(_user)(GlobalAccessContext).map{ user =>
         BrainTracing.logTime(user, duration, annotation)(GlobalAccessContext)
@@ -139,7 +146,9 @@ object TimeSpanService extends FoxImplicits{
     }
 
     def receive = {
-      case TrackTime(timestamp, _user, annotation, ctx) =>
+      case TrackTime(timestamp, _user, _annotation, ctx) =>
+        // Only if the annotation belongs to the user, we are going to log the time on the annotation
+        val annotation = _annotation.filter(_._user.contains(_user))
         val timeSpan = lastUserActivity().get(_user) match {
           case Some(last) if isNotInterrupted(timestamp, last) =>
             val duration = timestamp - last.lastUpdate

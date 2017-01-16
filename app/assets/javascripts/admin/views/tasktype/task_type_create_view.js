@@ -22,7 +22,7 @@ class TaskTypeCreateView extends Marionette.View {
           <label class="col-sm-2 control-label" for="summary">Summary</label>
           <div class="col-sm-9">
           <input type="text" id="summary" name="summary" value="<%- summary %>" class="form-control"
-             required pattern=".{3,50}" title="Please use at least 3 characters.">
+             required pattern=".{3,}" title="Please use at least 3 characters.">
           </div>
         </div>
 

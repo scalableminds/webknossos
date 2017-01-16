@@ -4,7 +4,7 @@ import Marionette from "backbone.marionette";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 import ProjectListItemView from "./project_list_item_view";
 
-class ProjectsListView extends Marionette.CompositeView {
+class ProjectListView extends Marionette.CompositeView {
   static initClass() {
     this.prototype.template = _.template(`\
 <h3>Projects</h3>
@@ -65,6 +65,6 @@ class ProjectsListView extends Marionette.CompositeView {
     return app.router.navigate("/projects/create", { trigger: true });
   }
 }
-ProjectsListView.initClass();
+ProjectListView.initClass();
 
-export default ProjectsListView;
+export default ProjectListView;

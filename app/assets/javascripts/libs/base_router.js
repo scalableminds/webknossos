@@ -9,7 +9,7 @@ class BaseRouter {
     this.prototype.routes = {};
   }
 
-  constructor() {
+  initialize() {
     this.handlePopstate = this.handlePopstate.bind(this);
     this.handleRoute = this.handleRoute.bind(this);
     this.handleBeforeunload = this.handleBeforeunload.bind(this);

@@ -12,13 +12,9 @@ import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
-import net.liftweb.common.Full
-import oxalis.rest.WebSocketRESTServer
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.{Enumerator, Iteratee}
 import play.api.libs.json.{JsError, JsSuccess, Json}
-import play.api.mvc.WebSocket.FrameFormatter
 import play.api.mvc._
 
 class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
@@ -52,21 +48,6 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def backChannel(name: String, key: String) = WebSocket.tryAccept[Array[Byte]] { implicit request =>
-    logger.trace(s"Got a back channel request for $name.")
-
-    DataStoreDAO.findByKey(key)(GlobalAccessContext).futureBox.map {
-      case Full(dataStore) =>
-        val (iterator, enumerator, restChannel) = WebSocketRESTServer.create(dataStore.name)
-        WKStoreHandlingStrategy.register(dataStore.name, restChannel)
-        logger.info(s"Key ${dataStore.name} connected.")
-        Right(iterator, enumerator)
-      case _               =>
-        logger.warn(s"$name tried to connect with invalid key '$key'.")
-        Right(Iteratee.ignore[Array[Byte]], Enumerator.empty[Array[Byte]])
-    }
-  }(FrameFormatter.byteArrayFrame)
-
   def updateAll(name: String) = DataStoreAction(name)(parse.json) {
     implicit request =>
       request.body.validate[List[DataSourceLike]] match {
@@ -99,7 +80,6 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
       Ok(Json.toJson(layer))
     }
   }
-
 }
 
 trait WKDataStoreActionHelper extends FoxImplicits with Results with I18nSupport {
@@ -118,5 +98,4 @@ trait WKDataStoreActionHelper extends FoxImplicits with Results with I18nSupport
       .getOrElse(Forbidden(Messages("dataStore.notFound"))) // Default error
     }
   }
-
 }

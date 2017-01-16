@@ -36,6 +36,11 @@ services:
       service: oxalis-sbt
     command: bash -c "npm run lint"
 
+  oxalis-frontend-flow:
+    extends:
+      service: oxalis-sbt
+    command: bash -c "npm run flow"
+
   oxalis-frontend-tests:
     extends:
       service: oxalis-sbt

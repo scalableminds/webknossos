@@ -33,7 +33,7 @@ const shouldDisplayToast = (type, message, sticky) =>
 
 const Toast = {
 
-  message(type, message, sticky = false) {
+  message(type, message, sticky = false): ToastType {
     let messages;
     if (_.isArray(type) && (message == null)) {
       messages = type;
@@ -108,5 +108,8 @@ const Toast = {
   },
 };
 
+export type ToastType = {
+  remove: () => void
+};
 
 export default Toast;

@@ -49,15 +49,15 @@ class ArbitraryPlane {
 
     this.mesh = this.createMesh();
 
-    this.listenTo(this.cam, "changed", function () { return this.isDirty = true; });
-    this.listenTo(this.model.flycam, "positionChanged", function () { return this.isDirty = true; });
+    this.listenTo(this.cam, "changed", function () { this.isDirty = true; });
+    this.listenTo(this.model.flycam, "positionChanged", function () { this.isDirty = true; });
 
-    for (const name in this.model.binary) {
+    for (const name of Object.keys(this.model.binary)) {
       const binary = this.model.binary[name];
-      binary.cube.on("bucketLoaded", () => this.isDirty = true);
+      binary.cube.on("bucketLoaded", () => { this.isDirty = true; });
     }
 
-    if ((Math.log(this.width) / Math.LN2) % 1 === 1) { throw "width needs to be a power of 2"; }
+    if ((Math.log(this.width) / Math.LN2) % 1 === 1) { throw new Error("width needs to be a power of 2"); }
   }
 
 
@@ -66,6 +66,7 @@ class ArbitraryPlane {
       switch (mode) {
         case constants.MODE_ARBITRARY: return this.calculateSphereVertices();
         case constants.MODE_ARBITRARY_PLANE: return this.calculatePlaneVertices();
+        default: throw new Error("Unrecognized mode:", mode);
       }
     })();
 
@@ -74,7 +75,7 @@ class ArbitraryPlane {
 
 
   attachScene(scene) {
-    return scene.add(this.mesh);
+    scene.add(this.mesh);
   }
 
 
@@ -99,7 +100,7 @@ class ArbitraryPlane {
       mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
       mesh.matrixWorldNeedsUpdate = true;
 
-      return this.isDirty = false;
+      this.isDirty = false;
     }
   }
 
@@ -161,7 +162,7 @@ class ArbitraryPlane {
 
     if (this.x > 0.5 && this.x < 10) {
       this.mesh.scale.x = this.mesh.scale.y = this.mesh.scale.z = this.x;
-      return this.cam.update();
+      this.cam.update();
     }
   }
 

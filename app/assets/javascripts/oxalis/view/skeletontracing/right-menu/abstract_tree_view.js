@@ -35,13 +35,13 @@ class AbstractTreeView extends Marionette.View {
     this.listenTo(this.model.skeletonTracing, "updateComments", this.drawTree);
 
     this.initialized = false;
-    return $(window).on("resize", () => this.drawTree());
+    $(window).on("resize", () => this.drawTree());
   }
 
 
   resize() {
     this.initialized = true;
-    return this.render();
+    this.render();
   }
 
 
@@ -50,14 +50,14 @@ class AbstractTreeView extends Marionette.View {
     if (this.initialized) {
       this.abstractTreeRenderer = new AbstractTreeRenderer(this.ui.canvas);
     }
-    return this.drawTree();
+    this.drawTree();
   }
 
 
   drawTree() {
     if (this.model.skeletonTracing && this.abstractTreeRenderer) {
       this.abstractTreeRenderer.renderComments(this.model.user.get("renderComments"));
-      return this.abstractTreeRenderer.drawTree(
+      this.abstractTreeRenderer.drawTree(
         this.model.skeletonTracing.getTree(),
         this.model.skeletonTracing.getActiveNodeId());
     }
@@ -68,7 +68,7 @@ class AbstractTreeView extends Marionette.View {
     const id = this.abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY);
     if (id) {
       this.model.skeletonTracing.setActiveNode(id);
-      return this.model.skeletonTracing.centerActiveNode();
+      this.model.skeletonTracing.centerActiveNode();
     }
   }
 }

@@ -1,5 +1,6 @@
 import $ from "jquery";
 import _ from "lodash";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 
 class BaseRouter {
@@ -16,7 +17,6 @@ class BaseRouter {
     _.extend(this, Backbone.Events);
     this.activeViews = [];
     this.routes = _.map(this.routes, (handler, route) => ({
-      // eslint-disable-next-line no-underscore-dangle
       route: Backbone.Router.prototype._routeToRegExp(route),
       handler: _.isString(handler) ? this[handler].bind(this) : handler,
     }),
@@ -34,10 +34,9 @@ class BaseRouter {
   setupClickHandler() {
     // handle all links and manage page changes (rather the reloading the whole site)
     return $(document).on("click", "a", (evt) => {
-      let newWindow;
       const url = $(evt.currentTarget).attr("href") || "";
-
-      if (newWindow = $(evt.target).data("newwindow")) {
+      const newWindow = $(evt.target).data("newwindow");
+      if (newWindow) {
         const [width, height] = newWindow.split("x");
         window.open(url, "_blank", `width=${width},height=${height},location=no,menubar=no`);
         evt.preventDefault();
@@ -95,7 +94,7 @@ class BaseRouter {
   handleRoute() {
     const baseUrl = this.getBaseUrl();
 
-    for (let { route, handler } of this.routes) {
+    for (const { route, handler } of this.routes) {
       const match = baseUrl.match(route);
       if (match) {
         const args = Backbone.Router.prototype._extractParameters(route, baseUrl);
@@ -119,7 +118,7 @@ class BaseRouter {
 
 
   navigate(path, param = {}) {
-    let { trigger = true } = param;
+    const { trigger = true } = param;
     if (!this.shouldNavigate(path)) {
       // Do nothing
       return;
@@ -152,8 +151,7 @@ class BaseRouter {
     // Triggers the registered `beforeunload` handlers and returns the first return value
     // Doesn't use Backbone's trigger because we need return values
 
-    // eslint-disable-next-line no-underscore-dangle
-    const handlers = __guard__(this._events, x => x.beforeunload) != null ? this._events.beforeunload : [];
+    const handlers = Utils.__guard__(this._events, x => x.beforeunload) != null ? this._events.beforeunload : [];
     const beforeunloadValue = _.find(
       handlers.map(handler => handler.callback.call(handler.ctx)),
       value => (value != null));
@@ -200,7 +198,3 @@ class BaseRouter {
 BaseRouter.initClass();
 
 export default BaseRouter;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

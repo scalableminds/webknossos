@@ -62,7 +62,7 @@ class TaskCreateFromFormView extends Marionette.View {
   }
 
   initialize(options) {
-    return this.parent = options.parent;
+    this.parent = options.parent;
   }
 
 
@@ -111,7 +111,7 @@ class TaskCreateFromFormView extends Marionette.View {
       parentModel: this.model,
     });
 
-    return this.showChildView("dataSet", this.dataSetSelectionView);
+    this.showChildView("dataSet", this.dataSetSelectionView);
   }
 }
 TaskCreateFromFormView.initClass();

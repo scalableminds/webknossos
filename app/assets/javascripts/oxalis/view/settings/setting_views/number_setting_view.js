@@ -1,5 +1,5 @@
 import _ from "lodash";
-import AbstractSettingView from "./abstract_setting_view.js";
+import AbstractSettingView from "./abstract_setting_view";
 
 class NumberSettingView extends AbstractSettingView {
   static initClass() {
@@ -38,7 +38,7 @@ class NumberSettingView extends AbstractSettingView {
 
 
   handleChange(evt) {
-    return this.model.set(this.options.name, (Number)(evt.target.value));
+    this.model.set(this.options.name, (Number)(evt.target.value));
   }
 
 

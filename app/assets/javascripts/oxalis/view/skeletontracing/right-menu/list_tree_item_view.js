@@ -36,20 +36,20 @@ class ListTreeItemView extends Marionette.View {
 
   initialize(options) {
     this.activeTreeId = options.activeTreeId;
-    return this.parent = options.parent;
+    this.parent = options.parent;
   }
 
 
   setActive() {
     const id = this.model.get("treeId");
-    return this.parent.setActiveTree(id);
+    this.parent.setActiveTree(id);
   }
 
 
   onRender() {
     // scroll to active tree
     if (this.model.get("treeId") === this.activeTreeId) {
-      return scrollIntoViewIfNeeded(this.el);
+      scrollIntoViewIfNeeded(this.el);
     }
   }
 }

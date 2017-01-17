@@ -31,7 +31,7 @@ class ColorSettingView extends AbstractSettingView {
 
 
   handleChange(evt) {
-    return this.model.set(this.options.name, Utils.hexToRgb(evt.target.value));
+    this.model.set(this.options.name, Utils.hexToRgb(evt.target.value));
   }
 
 

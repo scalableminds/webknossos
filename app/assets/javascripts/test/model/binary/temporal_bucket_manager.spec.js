@@ -93,7 +93,7 @@ describe("TemporalBucketManager", () => {
 
     it("should be initially unresolved", (done) => {
       let resolved = false;
-      manager.getAllLoadedPromise().then(() => resolved = true);
+      manager.getAllLoadedPromise().then(() => { resolved = true; });
       runAsync([
         () => {
           expect(resolved).toBe(false);
@@ -104,7 +104,7 @@ describe("TemporalBucketManager", () => {
 
     it("should be unresolved when only one bucket is loaded", (done) => {
       let resolved = false;
-      manager.getAllLoadedPromise().then(() => resolved = true);
+      manager.getAllLoadedPromise().then(() => { resolved = true; });
       bucket1.receiveData(new Uint8Array(1 << 15));
 
       runAsync([
@@ -117,7 +117,7 @@ describe("TemporalBucketManager", () => {
 
     it("should be resolved when both buckets are loaded", (done) => {
       let resolved = false;
-      manager.getAllLoadedPromise().then(() => resolved = true);
+      manager.getAllLoadedPromise().then(() => { resolved = true; });
       bucket1.receiveData(new Uint8Array(1 << 15));
       bucket2.receiveData(new Uint8Array(1 << 15));
 

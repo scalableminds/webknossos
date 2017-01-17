@@ -38,7 +38,7 @@ class TaskModel extends NestedObjModel {
 
   destroy() {
     const options = { url: `/api/tasks/${this.get("id")}` };
-    return super.destroy(options);
+    super.destroy(options);
   }
 }
 TaskModel.initClass();

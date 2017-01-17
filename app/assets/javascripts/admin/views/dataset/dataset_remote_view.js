@@ -66,7 +66,7 @@ class DatasetRemoteView extends Marionette.View {
   }
 
   initialize() {
-    return this.teamSelectionView = new SelectionView({
+    this.teamSelectionView = new SelectionView({
       collection: new TeamCollection(),
       name: "team",
       childViewOptions: {
@@ -78,7 +78,7 @@ class DatasetRemoteView extends Marionette.View {
 
 
   onRender() {
-    return this.showChildView("team", this.teamSelectionView);
+    this.showChildView("team", this.teamSelectionView);
   }
 
 
@@ -87,13 +87,13 @@ class DatasetRemoteView extends Marionette.View {
     const { form } = this.ui;
 
     if (form[0].checkValidity()) {
-      return Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore",
+      Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore",
         { data: FormSyphon.serialize(form) },
       )
       .then(
         () => {
           Toast.success();
-          return app.router.navigate("/dashboard", { trigger: true });
+          app.router.navigate("/dashboard", { trigger: true });
         },
         () => {}, // NOOP
       );

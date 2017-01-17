@@ -1,6 +1,7 @@
 import _ from "lodash";
-import $ from "jquery";
 import app from "app";
+import Utils from "libs/utils";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 import DatasetListItemView from "./dataset_list_item_view";
@@ -61,13 +62,13 @@ class DatasetListView extends Marionette.CompositeView {
     this.collection.setPageSize(this.DATASETS_PER_PAGE);
 
     this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
-    return this.listenTo(app.vent, "modal:destroy", this.render);
+    this.listenTo(app.vent, "modal:destroy", this.render);
   }
 
 
   toggleAllDetails() {
     this.ui.detailsToggle.toggleClass("open");
-    return app.vent.trigger("datasetListView:toggleDetails");
+    app.vent.trigger("datasetListView:toggleDetails");
   }
 
 
@@ -80,7 +81,7 @@ class DatasetListView extends Marionette.CompositeView {
     modalView.render();
     this.ui.modalWrapper.html(modalView.el);
     modalView.$el.modal("show");
-    return this.modalView = modalView;
+    this.modalView = modalView;
   }
 
 
@@ -90,13 +91,9 @@ class DatasetListView extends Marionette.CompositeView {
 
 
   onDestroy() {
-    return __guard__(this.modalView, x => x.destroy());
+    Utils.__guard__(this.modalView, x => x.destroy());
   }
 }
 DatasetListView.initClass();
 
 export default DatasetListView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

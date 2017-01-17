@@ -69,7 +69,7 @@ class TracingParser {
     }
 
     if (this.data.activeNode && !this.activeNode) {
-      return Toast.error(`Node with id ${this.data.activeNode} doesn't exist. Ignored active node.`);
+      Toast.error(`Node with id ${this.data.activeNode} doesn't exist. Ignored active node.`);
     }
   }
 

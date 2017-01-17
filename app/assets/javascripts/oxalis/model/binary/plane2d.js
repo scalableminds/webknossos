@@ -86,19 +86,17 @@ class Plane2D {
         const v = bucket[this.V] - this.dataTexture.topLeftBucket[this.V];
 
         // If the tile is part of the texture, mark it as changed
-        if ((__range__(0, this.BUCKETS_PER_ROW, false)).includes(u) &&
-            (__range__(0, this.BUCKETS_PER_ROW, false)).includes(v)) {
+        if (u >= 0 && u < this.BUCKETS_PER_ROW && v >= 0 && v < this.BUCKETS_PER_ROW) {
           const tile = [u, v];
           this.dataTexture.tiles[tileIndexByTileMacro(this, tile)] = false;
-          return this.dataTexture.ready &=
-            !((__range__(this.dataTexture.area[0], this.dataTexture.area[2], true)).includes(u) &&
-              (__range__(this.dataTexture.area[1], this.dataTexture.area[3], true)).includes(v));
+          this.dataTexture.ready &=
+            !(u >= this.dataTexture.area[0] && u <= this.dataTexture.area[2] &&
+              v >= this.dataTexture.area[1] && v <= this.dataTexture.area[3]);
         }
       }
     });
 
     this.cube.on("volumeLabeled", () => this.reset());
-    this.cube.on("mappingChanged", () => this.reset());
   }
 
 
@@ -270,7 +268,7 @@ class Plane2D {
 
   renderSubTile(map, mapIndex, tile, tileZoomStep) {
     let tileSizeP;
-    if (!map[mapIndex]) { return; }
+    if (!map[mapIndex]) { return null; }
 
     if (map[mapIndex] === this.RECURSION_PLACEHOLDER) {
       const result = new Array(4);
@@ -446,8 +444,8 @@ class Plane2D {
       // use the first none-zero byte unless all are zero
       // assuming little endian order
       for (let b = 0; b < bytesSrcMapped; b++) {
-        let value;
-        if ((value = (sourceValue >> (b * 8)) % 256) || b === bytesSrcMapped - 1 || (!shorten)) {
+        const value = (sourceValue >> (b * 8)) % 256;
+        if (value || b === bytesSrcMapped - 1 || (!shorten)) {
           destination.buffer[dest++] = value;
           if (shorten) {
             break;
@@ -473,13 +471,3 @@ class Plane2D {
 Plane2D.initClass();
 
 export default Plane2D;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

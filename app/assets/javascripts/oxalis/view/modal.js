@@ -14,12 +14,12 @@ const Modal = {
       <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
       <h4 class="modal-title" id="myModalLabel">${title}</h4>
     </div>
-    <div class=\"modal-body\">
+    <div class="modal-body">
       <p>${text}</p>
     </div>`;
 
     html += "<div class=\"modal-footer\">";
-    for (var button of buttons) {
+    for (const button of buttons) {
       html += `<a href="#" id="${button.id}" class="btn btn-default">${
                     button.label}</a>`;
     }
@@ -27,7 +27,7 @@ const Modal = {
 
     $("#modal").html(html);
 
-    for (button of buttons) {
+    for (const button of buttons) {
       this.callbacks[button.id] = button.callback;
 
       $(`#${button.id}`).on("click", (evt) => {

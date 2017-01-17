@@ -1,4 +1,4 @@
-import utils from "./utils";
+import Utils from "./utils";
 
 
 const TemplateHelpers = {
@@ -22,8 +22,8 @@ const TemplateHelpers = {
 
 
   formatScale(scaleArr) {
-    if (__guard__(scaleArr, x => x.length) > 0) {
-      const scaleArrRounded = scaleArr.map(value => utils.roundTo(value, 2));
+    if (Utils.__guard__(scaleArr, x => x.length) > 0) {
+      const scaleArrRounded = scaleArr.map(value => Utils.roundTo(value, 2));
       return `(${scaleArrRounded.join(", ")})`;
     } else {
       return "";
@@ -32,7 +32,3 @@ const TemplateHelpers = {
 };
 
 export default TemplateHelpers;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

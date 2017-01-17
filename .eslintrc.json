@@ -16,7 +16,8 @@
     "parser": "babel-eslint",
     "settings": {
       "import/resolver": "webpack",
-      "import/ignore": ["$three.*"]
+      "import/ignore": ["$three.*"],
+      "import/core-modules": ["three"]
     },
     "globals": {
       "ga": false,
@@ -31,16 +32,24 @@
       "class-methods-use-this": "off",
       "operator-assignment": "warn",
       "react/jsx-filename-extension": "off",
+      "react/prop-types": "off",
       "radix": "off",
       "no-bitwise": "off",
+      "no-confusing-arrow":  "off",
+      "no-continue": "warn",
+      "no-duplicate-imports": "off",
+      "no-else-return": "off",
       "no-mixed-operators": "off",
-      "no-underscore-dangle": ["error", { "allow": ["__guard__", "__range__"] }],
-      "no-restricted-syntax": "warn",
-      "no-restricted-properties": ["off", {"object": "Math", "property": "pow"}],
-      "no-restricted-syntax": ["off", "ForInStatement", "ForOfStatement"],
+      "no-multi-str": "off",
       "no-param-reassign": "warn",
       "no-plusplus": "off",
+      "no-restricted-syntax": "warn",
+      "no-restricted-properties": ["off", {"object": "Math", "property": "pow"}],
+      "no-restricted-syntax": ["error", "ForInStatement"],
+      "no-underscore-dangle": "off",
       "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+      "no-use-before-define": ["error", { "functions": false }],
+      "one-var": ["error", "never"],
       "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
       "import/no-unresolved": "off"
     }

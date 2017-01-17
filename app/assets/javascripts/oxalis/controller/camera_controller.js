@@ -137,7 +137,7 @@ class CameraController {
       .onUpdate(this.updateCameraTDView)
       .start();
     } else {
-      for (const prop in from) {
+      for (const prop of Object.keys(from)) {
         if (to[prop] == null) {
           to[prop] = from[prop];
         }
@@ -165,7 +165,7 @@ class CameraController {
     this.flycam.setRayThreshold(this.camera.right, this.camera.left);
     this.camera.updateProjectionMatrix();
     this.notify();
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -200,7 +200,7 @@ class CameraController {
     camera.updateProjectionMatrix();
 
     this.flycam.setRayThreshold(camera.right, camera.left);
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -238,7 +238,7 @@ class CameraController {
     camera.top += moveVector.y;
     camera.bottom += moveVector.y;
     camera.updateProjectionMatrix();
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -272,13 +272,13 @@ class CameraController {
       this.cameras[i].right = this.cameras[i].top = boundary * scaleFactor;
       this.cameras[i].updateProjectionMatrix();
     }
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
   bindToEvents() {
     this.listenTo(this.model.user, "change:clippingDistance", function (model, value) { return this.setClippingDistance(value); });
-    this.listenTo(this.model.user, "change:zoom", function (model) { return this.updateCamViewport(); });
+    this.listenTo(this.model.user, "change:zoom", function () { return this.updateCamViewport(); });
   }
 }
 CameraController.initClass();

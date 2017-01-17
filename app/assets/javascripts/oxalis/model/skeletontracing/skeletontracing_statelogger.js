@@ -19,6 +19,7 @@ class SkeletonTracingStateLogger extends StateLogger {
   treeObject(tree, oldId) {
     const treeColor = new THREE.Color(tree.color);
     return {
+      // eslint-disable-next-line no-unneeded-ternary
       id: oldId ? oldId : tree.treeId,
       updatedId: oldId ? tree.treeId : undefined,
       color: [treeColor.r, treeColor.g, treeColor.b, 1],
@@ -50,7 +51,7 @@ class SkeletonTracingStateLogger extends StateLogger {
   mergeTree(sourceTree, targetTree, lastNodeId, activeNodeId) {
     // Make sure that those nodes exist
     let found = false; let treeIds = [];
-    for (var node of sourceTree.nodes) {
+    for (const node of sourceTree.nodes) {
       found |= (node.id === lastNodeId);
       treeIds.push(node.id);
     }
@@ -58,7 +59,7 @@ class SkeletonTracingStateLogger extends StateLogger {
       { sourceTreeNodeIds: treeIds, lastNodeId });
 
     found = false; treeIds = [];
-    for (node of targetTree.nodes) {
+    for (const node of targetTree.nodes) {
       found |= (node.id === activeNodeId);
       treeIds.push(node.id);
     }
@@ -114,13 +115,13 @@ class SkeletonTracingStateLogger extends StateLogger {
     const needsEdge = node.neighbors.length === 1;
     this.pushDiff("createNode", this.nodeObject(node, treeId), !needsEdge);
     if (needsEdge) {
-      return this.pushDiff("createEdge", this.edgeObject(node, treeId));
+      this.pushDiff("createEdge", this.edgeObject(node, treeId));
     }
   }
 
 
   updateNode(node, treeId) {
-    return this.pushDiff("updateNode", this.nodeObject(node, treeId));
+    this.pushDiff("updateNode", this.nodeObject(node, treeId));
   }
 
 
@@ -163,7 +164,7 @@ class SkeletonTracingStateLogger extends StateLogger {
       },
       false,
     );
-    return ErrorHandling.assert(this.newDiffs.length > 0, "newDiffs empty after concatUpdateTracing", {
+    ErrorHandling.assert(this.newDiffs.length > 0, "newDiffs empty after concatUpdateTracing", {
       newDiffs: this.newDiffs,
     });
   }

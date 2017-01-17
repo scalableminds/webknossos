@@ -14,9 +14,9 @@ class DatasetConfiguration extends NestedObjModel {
     this.dataLayerNames = dataLayerNames;
     this.url = `/api/dataSetConfigurations/${datasetName}`;
     this.listenTo(this, "change", _.debounce(
-      () => { if (app.currentUser != null) { return this.save(); } },
+      () => { if (app.currentUser != null) { this.save(); } },
       500));
-    return this.listenTo(this, "sync", () => this.setDefaultBinaryColors());
+    this.listenTo(this, "sync", () => this.setDefaultBinaryColors());
   }
 
 
@@ -26,7 +26,7 @@ class DatasetConfiguration extends NestedObjModel {
 
 
   triggerAll() {
-    for (const property in this.attributes) {
+    for (const property of Object.keys(this.attributes)) {
       this.trigger(`change:${property}`, this, this.get(property));
     }
   }

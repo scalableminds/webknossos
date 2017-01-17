@@ -11,6 +11,11 @@ class TreeCommentList extends Component {
     this.handleClick = this.handleClick.bind(this);
   }
 
+  handleClick(evt) {
+    this.setState({ collapsed: !this.state.collapsed });
+    evt.preventDefault();
+  }
+
   render() {
     const containsActiveNode = this.props.treeId === this.props.activeTreeId;
 
@@ -21,7 +26,7 @@ class TreeCommentList extends Component {
           key={comment.node}
           data={comment}
           treeId={this.props.treeId}
-          isActive={comment.node == this.props.activeNodeId}
+          isActive={comment.node === this.props.activeNodeId}
           onNewActiveNode={this.props.onNewActiveNode}
         />,
       ) :
@@ -37,17 +42,14 @@ class TreeCommentList extends Component {
     return (
       <div>
         <li className={liClassName}>
-          <i className={iClassName} onClick={this.handleClick} />
+          <a href="#toggle-comment" onClick={this.handleClick}>
+            <i className={iClassName} />
+          </a>
           {this.props.treeId} - {this.props.treeName}
         </li>
         {commentNodes}
       </div>
     );
-  }
-
-
-  handleClick() {
-    this.setState({ collapsed: !this.state.collapsed });
   }
 }
 

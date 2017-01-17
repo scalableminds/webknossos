@@ -34,7 +34,7 @@ class SpotlightView extends Marionette.View {
     this.creditsView = new CreditsView();
 
     this.collection.fetch({ data: "isActive=true" });
-    return this.listenTo(this.collection, "sync", function () {
+    this.listenTo(this.collection, "sync", function () {
       this.listenTo(this, "render", this.show);
       return this.show();
     });

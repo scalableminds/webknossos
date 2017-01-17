@@ -51,7 +51,7 @@
     "test": "node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
     "flow": "flow check; test $? -eq 0 -o $? -eq 2",
-    "lint": "./node_modules/.bin/eslint app/assets/javascripts/"
+    "lint": "./node_modules/.bin/eslint --quiet app/assets/javascripts/"
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",

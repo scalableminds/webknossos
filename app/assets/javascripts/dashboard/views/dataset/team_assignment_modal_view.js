@@ -40,6 +40,7 @@ class TeamAssignmentModalView extends ModalView {
         if (_.includes(this.dataset.get("allowedTeams"), teamName)) {
           return "checked";
         }
+        return "";
       },
     };
   }
@@ -58,6 +59,7 @@ class TeamAssignmentModalView extends ModalView {
 
   submitTeams() {
     const $checkboxes = this.$("input:checked");
+    // eslint-disable-next-line newline-per-chained-call
     const allowedTeams = _.map($checkboxes, checkbox => $(checkbox).parent().parent().text().trim());
 
     this.dataset.set("allowedTeams", allowedTeams);
@@ -67,7 +69,7 @@ class TeamAssignmentModalView extends ModalView {
       { data: allowedTeams },
     );
 
-    return this.destroy();
+    this.destroy();
   }
 }
 TeamAssignmentModalView.initClass();

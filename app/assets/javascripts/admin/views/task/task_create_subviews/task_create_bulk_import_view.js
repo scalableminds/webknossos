@@ -55,7 +55,7 @@ class TaskCreateBulkImportView extends Marionette.View {
 
     if (!this.isValidData(bulkText)) {
       this.showInvalidData();
-      return;
+      return false;
     }
 
     const tasks = this.parseText(bulkText);
@@ -86,19 +86,19 @@ class TaskCreateBulkImportView extends Marionette.View {
       Toast.success("All tasks were successfully created");
     }
 
-    return this.toggleSubmitButton(true);
+    this.toggleSubmitButton(true);
   }
 
 
   showSaveError() {
     Toast.error("The tasks could not be created due to server errors.");
 
-    return this.toggleSubmitButton(true);
+    this.toggleSubmitButton(true);
   }
 
 
   showInvalidData() {
-    return Toast.error("The form data is not correct.");
+    Toast.error("The form data is not correct.");
   }
 
 
@@ -122,13 +122,13 @@ class TaskCreateBulkImportView extends Marionette.View {
     errorMessages = errorMessages.map((text, i) => `Line ${i} : ${text}`);
 
     this.ui.bulkText.val(failedTasks.join("\n"));
-    return Toast.error(errorMessages.join("\n"));
+    Toast.error(errorMessages.join("\n"));
   }
 
 
   toggleSubmitButton(enabled) {
     this.ui.submitButton.prop("disabled", !enabled);
-    return this.ui.submitSpinner.toggleClass("hide", enabled);
+    this.ui.submitSpinner.toggleClass("hide", enabled);
   }
 
 

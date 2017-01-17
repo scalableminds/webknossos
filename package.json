@@ -51,7 +51,7 @@
     "test": "node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
     "flow": "flow check; test $? -eq 0 -o $? -eq 2",
-    "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i ./app/assets/javascripts/**/*.js -i ./app/assets/javascripts/**/*.jsx -x ./app/assets/javascripts/test/**/*.js -t html -t json -t text",
+    "flow-coverage": "node ./node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t json -t text",
     "lint": "./node_modules/.bin/eslint --quiet app/assets/javascripts/"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 export default class RegisterPage {
 
   signupButton = "button[type=submit]"
-  alertDanger =  ".alert-danger"
+  alertDanger = ".alert-danger"
   modalDescription = "#modalDescription > p"
 
 
@@ -10,7 +10,6 @@ export default class RegisterPage {
   }
 
   signUpWithCompleteForm() {
-
     return browser
       .waitForExist("input#email")
       .setValue("input#email", "myemail@mail.com")
@@ -19,32 +18,29 @@ export default class RegisterPage {
       .setValue("input#lastName", "LastName")
       .setValue("input#password_main", "password")
       .setValue("input#password_validation", "password")
-      .click(this.signupButton)
+      .click(this.signupButton);
   }
 
 
   signUpWithInclompleteForm() {
-
     return browser
       .waitForExist(this.signupButton)
-      .click(this.signupButton)
+      .click(this.signupButton);
   }
 
 
   getAlerts() {
-
     return browser
       .waitForExist(this.alertDanger)
-      .elements(this.alertDanger).then(elements => elements.value)
+      .elements(this.alertDanger).then(elements => elements.value);
   }
 
 
   getModalText() {
-
     return browser
       .waitForExist(this.modalDescription)
       .waitForVisible(this.modalDescription, 2000)
-      .getText(this.modalDescription)
+      .getText(this.modalDescription);
   }
 
 }

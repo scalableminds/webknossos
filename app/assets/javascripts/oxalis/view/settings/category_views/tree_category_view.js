@@ -4,38 +4,34 @@ import CategoryView from "./category_view";
 
 class TreeCategoryView extends CategoryView {
   static initClass() {
-  
-  
-    this.prototype.caption  = "Trees";
-  
-    this.prototype.subviewCreatorsList  = [
-  
+    this.prototype.caption = "Trees";
+
+    this.prototype.subviewCreatorsList = [
+
       [
-        "activeTree", function() {
-  
+        "activeTree", function () {
           return new NumberSettingView({
-            model : this.model,
-            options : {
-              name : "activeTreeId",
-              displayName : "Active Tree ID"
-            }
+            model: this.model,
+            options: {
+              name: "activeTreeId",
+              displayName: "Active Tree ID",
+            },
           });
-        }
+        },
       ],
-  
+
       [
-        "somaClicking", function() {
-  
+        "somaClicking", function () {
           return new CheckboxSettingView({
-            model : this.model,
-            options : {
-              enabled : this.model.get("somaClickingAllowed"),
-              name : "somaClicking",
-              displayName : "Soma Clicking"
-            }
+            model: this.model,
+            options: {
+              enabled: this.model.get("somaClickingAllowed"),
+              name: "somaClicking",
+              displayName: "Soma Clicking",
+            },
           });
-        }
-      ]
+        },
+      ],
     ];
   }
 }

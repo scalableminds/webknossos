@@ -1,5 +1,5 @@
 # webKnossos
-Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. Current solutions require an efficient integration of automated image analysis with massive manual data annotation. To scale such annotation efforts it is decisive to be able to crowd source data analysis online. Here we present **webKnossos** (former oxalis),
+Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. Current solutions require an efficient integration of automated image analysis with massive manual data annotation. To scale such annotation efforts it is decisive to be able to crowd source data analysis online. Here we present **webKnossos** (former oxalis).
 
 ![webKnossos logo](https://webknossos.brain.mpg.de/assets/images/oxalis.svg)
 
@@ -8,7 +8,7 @@ Cellular-resolution connectomics is currently substantially limited by the throu
 * [Oracle JDK 8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
 * [mongoDB 3+](http://www.mongodb.org/downloads)
-* [node.js 4+](http://nodejs.org/download/)
+* [node.js 7+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
@@ -33,7 +33,7 @@ npm install -g yarn
 brew services start mongodb
 
 # Checkout the webKnossos git repository
-git clone git@github.com:scalableminds/oxalis.git
+git clone git@github.com:scalableminds/webknossos.git
 ```
 
 
@@ -56,7 +56,7 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 This is the fastest way to try webKnossos. Docker 1.12+ and Docker Compose 1.8+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
 
 ```
-DOCKER_TAG=branch-master docker-compose up oxalis
+docker-compose up webknossos
 ```
 
 
@@ -75,7 +75,7 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
-* node version **4+ is required**
+* node version **7+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ### Run
@@ -94,8 +94,9 @@ npm test
 These tests are run on our CI server. Running the tests manually in not encouraged at this point.
 
 ## Credits
-scalable minds - http://scm.io
+* scalable minds - https://scm.io/
+* Max Planck Institute for Brain Research – https://brain.mpg.de/
 
 # License
-MIT
+AGPLv3
 

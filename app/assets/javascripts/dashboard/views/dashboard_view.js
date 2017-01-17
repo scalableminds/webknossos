@@ -1,3 +1,8 @@
+/**
+ * dashboard_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import DashboardTaskListView from "./dashboard_task_list_view";
@@ -5,13 +10,11 @@ import ExplorativeTracingListView from "./explorative_tracing_list_view";
 import LoggedTimeView from "./logged_time_view";
 import DatasetSwitchView from "./dataset/dataset_switch_view";
 
-
 class DashboardView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.className  = "container wide";
-    this.prototype.id  = "dashboard";
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "container wide";
+    this.prototype.id = "dashboard";
+    this.prototype.template = _.template(`\
 <% if (isAdminView) { %>
   <h3>User: <%- firstName %> <%- lastName %></h3>
 <% } %>
@@ -40,27 +43,26 @@ class DashboardView extends Marionette.View {
   </div>
 </div>\
 `);
-  
-    this.prototype.regions  =
-      {"tabPane" : ".tab-pane"};
-  
-  
-    this.prototype.events  = {
-      "click #tab-datasets" : "showDatasets",
-      "click #tab-tasks" : "showTasks",
-      "click #tab-explorative" : "showExplorative",
-      "click #tab-logged-time" : "showLoggedTime"
+
+    this.prototype.regions =
+      { tabPane: ".tab-pane" };
+
+
+    this.prototype.events = {
+      "click #tab-datasets": "showDatasets",
+      "click #tab-tasks": "showTasks",
+      "click #tab-explorative": "showExplorative",
+      "click #tab-logged-time": "showLoggedTime",
     };
   }
 
 
   templateContext() {
-    return {isAdminView : this.options.isAdminView};
+    return { isAdminView: this.options.isAdminView };
   }
 
 
   initialize(options) {
-
     this.options = options;
     if (this.options.isAdminView) {
       this.listenTo(this, "render", this.showTasks);
@@ -68,46 +70,41 @@ class DashboardView extends Marionette.View {
       this.listenTo(this, "render", this.showDatasets);
     }
 
-    return this.viewCache = {
-      datasetSwitchView : null,
-      taskListView : null,
-      explorativeTracingListView : null,
-      loggedTimeView : null
+    this.viewCache = {
+      datasetSwitchView: null,
+      taskListView: null,
+      explorativeTracingListView: null,
+      loggedTimeView: null,
     };
   }
 
 
   showDatasets() {
-
     return this.showTab("datasetSwitchView", DatasetSwitchView);
   }
 
 
   showTasks() {
-
     return this.showTab("taskListView", DashboardTaskListView);
   }
 
 
   showExplorative() {
-
     return this.showTab("explorativeTracingListView", ExplorativeTracingListView);
   }
 
 
   showLoggedTime() {
-
     return this.showTab("loggedTimeView", LoggedTimeView);
   }
 
 
-  showTab(viewName, viewClass) {
-
-    let view;
-    if (!(view = this.viewCache[viewName])) {
-      view = this.viewCache[viewName] = new viewClass(this.options);
+  showTab(viewName, ViewClass) {
+    let view = this.viewCache[viewName];
+    if (!view) {
+      view = this.viewCache[viewName] = new ViewClass(this.options);
     }
-    return this.showChildView("tabPane", view, {preventDestroy : true});
+    return this.showChildView("tabPane", view, { preventDestroy: true });
   }
 }
 DashboardView.initClass();

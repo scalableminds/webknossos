@@ -2,44 +2,43 @@ import _ from "lodash";
 import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
-import Multiselect from "bootstrap-multiselect";
+import "bootstrap-multiselect";
 import TeamCollection from "admin/models/team/team_collection";
 import SelectionView from "admin/views/selection_view";
 import Toast from "libs/toast";
 
 class TaskTypeCreateView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <div class="row">
   <div class="col-sm-12">
     <div class="well">
       <div class="col-sm-9 col-sm-offset-2">
         <h3><%- getTitle() %> TaskType</h3>
       </div>
-  
+
       <form method="POST" class="form-horizontal">
         <div class="form-group">
           <label class="col-sm-2 control-label" for="summary">Summary</label>
           <div class="col-sm-9">
           <input type="text" id="summary" name="summary" value="<%- summary %>" class="form-control"
-             required pattern=".{3,50}" title="Please use at least 3 characters.">
+             required pattern=".{3,}" title="Please use at least 3 characters.">
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label" for="team">Team</label>
           <div class="col-sm-9 team">
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label" for="description">Description</label>
           <div class="col-sm-9">
           <textarea id="description" name="description" class="form-control"><%- description %></textarea>
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label" for="allowedModes">Allowed Modes</label>
           <div class="col-sm-9">
@@ -50,28 +49,28 @@ class TaskTypeCreateView extends Marionette.View {
             </select>
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label">Settings</label>
           <div class="col-sm-9">
-  
+
             <label class="col-sm-3" for="somaClickingAllowed">
               <input type="checkbox" id="somaClickingAllowed" name="settings[somaClickingAllowed]" <%- isChecked(settings.somaClickingAllowed) %>>
               Allow Soma clicking
             </label>
-  
+
             <label class="col-sm-3" for="branchPointsAllowed">
               <input type="checkbox" id="branchPointsAllowed" name="settings[branchPointsAllowed]" <%- isChecked(settings.branchPointsAllowed) %>>
               Allow Branchpoints
             </label>
-  
+
             <label class="col-sm-3" for="advancedOptionsAllowed">
               <input type="checkbox" id="advancedOptionsAllowed" name="settings[advancedOptionsAllowed]" <%- isChecked(settings.advancedOptionsAllowed) %>>
               Advanced Tracing Options
             </label>
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label" for="preferredMode">Preferred Mode</label>
           <div class="col-sm-9">
@@ -83,7 +82,7 @@ class TaskTypeCreateView extends Marionette.View {
             </select>
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label" for="expectedTime_minTime">Expected Time (min)</label>
           <div class="col-sm-9">
@@ -94,7 +93,7 @@ class TaskTypeCreateView extends Marionette.View {
             </div>
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label" for="expectedTime_maxTime">Expected Time (max)</label>
           <div class="col-sm-9">
@@ -105,7 +104,7 @@ class TaskTypeCreateView extends Marionette.View {
             </div>
           </div>
         </div>
-  
+
         <div class="form-group">
           <label class="col-sm-2 control-label" for="expectedTime_maxHard">Time limit</label>
           <div class="col-sm-9">
@@ -116,7 +115,7 @@ class TaskTypeCreateView extends Marionette.View {
             </div>
           </div>
         </div>
-  
+
         <div class="form-group">
           <div class="col-sm-2 col-sm-offset-9">
           <button type="submit" class="form-control btn btn-primary"><%- getTitle() %></button>
@@ -127,42 +126,40 @@ class TaskTypeCreateView extends Marionette.View {
   </div>
 </div>\
 `);
-    this.prototype.className  = "container wide task-types-administration";
-  
-    this.prototype.regions  =
-      {"team" : ".team"};
-  
-    this.prototype.events  =
-      {"submit form" : "submitForm"};
-  
-    this.prototype.ui  = {
-      "form" : "form",
-      "multiselect" : "select[multiple='multiple']"
+    this.prototype.className = "container wide task-types-administration";
+
+    this.prototype.regions =
+      { team: ".team" };
+
+    this.prototype.events =
+      { "submit form": "submitForm" };
+
+    this.prototype.ui = {
+      form: "form",
+      multiselect: "select[multiple='multiple']",
     };
   }
 
   templateContext() {
     return {
-      getTitle : () => this.isEditingMode ? "Update" : "Create",
-      isChecked(bool) { if (bool) { return "checked"; } },
-      isSelected(bool) { if (bool) { return "selected"; } }
+      getTitle: () => this.isEditingMode ? "Update" : "Create",
+      isChecked(bool) { return bool ? "checked" : ""; },
+      isSelected(bool) { return bool ? "selected" : ""; },
     };
   }
 
 
   initialize() {
-
     this.isEditingMode = _.isString(this.model.id);
 
     if (this.isEditingMode) {
       this.listenTo(this.model, "sync", this.render);
-      return this.model.fetch();
+      this.model.fetch();
     }
   }
 
 
   submitForm(event) {
-
     event.preventDefault();
 
     if (!this.ui.form[0].checkValidity()) {
@@ -182,32 +179,30 @@ class TaskTypeCreateView extends Marionette.View {
     }
 
 
-    return this.model.save(formValues).then(
+    this.model.save(formValues).then(
       () => app.router.navigate("/taskTypes", { trigger: true }));
   }
 
 
   onRender() {
-
     const teamSelectionView = new SelectionView({
-      collection : new TeamCollection(),
-      childViewOptions : {
+      collection: new TeamCollection(),
+      childViewOptions: {
         modelValue() { return `${this.model.get("name")}`; },
-        defaultItem : {name : this.model.get("team")}
+        defaultItem: { name: this.model.get("team") },
       },
-      data : "amIAnAdmin=true",
-      name : "team",
-      required : true
+      data: "amIAnAdmin=true",
+      name: "team",
+      required: true,
     });
     this.showChildView("team", teamSelectionView);
 
-    return this.ui.multiselect.multiselect();
+    this.ui.multiselect.multiselect();
   }
 
 
   onBeforeDestroy() {
-
-    return this.ui.multiselect.multiselect("destroy");
+    this.ui.multiselect.multiselect("destroy");
   }
 }
 TaskTypeCreateView.initClass();

@@ -1,87 +1,84 @@
+import _ from "lodash";
 import app from "app";
-import THREE from "three";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
 class ParticleMaterialFactory extends AbstractMaterialFactory {
 
 
   setupAttributesAndUniforms() {
-
     super.setupAttributesAndUniforms();
 
     this.uniforms = _.extend(this.uniforms, {
-      zoomFactor : {
-        type : "f",
-        value : this.model.flycam.getPlaneScalingFactor()
+      zoomFactor: {
+        type: "f",
+        value: this.model.flycam.getPlaneScalingFactor(),
       },
-      baseVoxel : {
-        type : "f",
-        value : app.scaleInfo.baseVoxel
+      baseVoxel: {
+        type: "f",
+        value: app.scaleInfo.baseVoxel,
       },
-      particleSize : {
-        type : "f",
-        value : this.model.user.get("particleSize")
+      particleSize: {
+        type: "f",
+        value: this.model.user.get("particleSize"),
       },
-      scale : {
-        type : "f",
-        value : this.model.user.get("scale")
+      scale: {
+        type: "f",
+        value: this.model.user.get("scale"),
       },
-      showRadius : {
-        type : "i",
-        value : 1
+      showRadius: {
+        type: "i",
+        value: 1,
       },
-      devicePixelRatio : {
-        type : "f",
-        value : window.devicePixelRatio || 1
-      }
-    }
+      devicePixelRatio: {
+        type: "f",
+        value: window.devicePixelRatio || 1,
+      },
+    },
     );
 
-    return this.attributes = _.extend(this.attributes, {
-      sizeNm : {
-        type : "f"
+    this.attributes = _.extend(this.attributes, {
+      sizeNm: {
+        type: "f",
       },
-      nodeScaleFactor : {
-        type : "f"
-      }
-    }
+      nodeScaleFactor: {
+        type: "f",
+      },
+    },
     );
   }
 
 
   makeMaterial() {
+    super.makeMaterial({ vertexColors: true });
 
-    super.makeMaterial({ vertexColors : true });
-
-    return this.material.setShowRadius = showRadius => {
-      return this.uniforms.showRadius.value = showRadius ? 1 : 0;
+    this.material.setShowRadius = (showRadius) => {
+      const radius = this.uniforms.showRadius.value = showRadius ? 1 : 0;
+      return radius;
     };
   }
 
 
   setupChangeListeners() {
-
     super.setupChangeListeners();
 
-    this.listenTo(this.model.user, "change:particleSize", function(model, size) {
+    this.listenTo(this.model.user, "change:particleSize", function (model, size) {
       this.uniforms.particleSize.value = size;
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     });
-    this.listenTo(this.model.user, "change:scale", function(model, scale) {
+    this.listenTo(this.model.user, "change:scale", function (model, scale) {
       this.uniforms.scale.value = scale;
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     });
     this.listenTo(this.model.user, "change:overrideNodeRadius", () => app.vent.trigger("rerender"));
 
-    return this.listenTo(this.model.flycam, "zoomStepChanged", function() {
+    this.listenTo(this.model.flycam, "zoomStepChanged", function () {
       this.uniforms.zoomFactor.value = this.model.flycam.getPlaneScalingFactor();
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     });
   }
 
 
   getVertexShader() {
-
     return `\
 uniform float zoomFactor;
 uniform float baseVoxel;
@@ -111,7 +108,6 @@ void main()
 
 
   getFragmentShader() {
-
     return `\
 varying vec3 vColor;
 

@@ -1,14 +1,21 @@
+/**
+ * dataset_list_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
+import app from "app";
+import Utils from "libs/utils";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
+import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 import DatasetListItemView from "./dataset_list_item_view";
 import TeamAssignmentModalView from "./team_assignment_modal_view";
-import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 
 class DatasetListView extends Marionette.CompositeView {
   static initClass() {
-  
-    this.prototype.className  = "datasets";
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "datasets";
+    this.prototype.template = _.template(`\
 <table class="table table-double-striped table-details sortable-table">
   <thead>
     <tr>
@@ -29,78 +36,69 @@ class DatasetListView extends Marionette.CompositeView {
 </table>
 <div id="modal-wrapper"></div>\
 `);
-  
-  
-    this.prototype.events  = {
-      "click .team-label" : "showModal",
-      "click .details-toggle-all" : "toggleAllDetails"
+
+
+    this.prototype.events = {
+      "click .team-label": "showModal",
+      "click .details-toggle-all": "toggleAllDetails",
     };
-  
-  
-    this.prototype.ui  = {
-      "modalWrapper" : "#modal-wrapper",
-      "detailsToggle" : ".details-toggle-all"
+
+
+    this.prototype.ui = {
+      modalWrapper: "#modal-wrapper",
+      detailsToggle: ".details-toggle-all",
     };
-  
-    this.prototype.childView  = DatasetListItemView;
+
+    this.prototype.childView = DatasetListItemView;
     this.prototype.childViewContainer = "table";
-  
-    this.prototype.behaviors  = {
+
+    this.prototype.behaviors = {
       SortTableBehavior: {
-        behaviorClass: SortTableBehavior
-      }
+        behaviorClass: SortTableBehavior,
+      },
     };
-  
-    this.prototype.DATASETS_PER_PAGE  = 30;
+
+    this.prototype.DATASETS_PER_PAGE = 30;
   }
 
   initialize() {
-
     this.collection.setSorting("created", "desc");
     this.collection.setCollectionFilter(child => child.get("isEditable"));
     this.collection.setPageSize(this.DATASETS_PER_PAGE);
 
     this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
-    return this.listenTo(app.vent, "modal:destroy", this.render);
+    this.listenTo(app.vent, "modal:destroy", this.render);
   }
 
 
   toggleAllDetails() {
-
     this.ui.detailsToggle.toggleClass("open");
-    return app.vent.trigger("datasetListView:toggleDetails");
+    app.vent.trigger("datasetListView:toggleDetails");
   }
 
 
   showModal(evt) {
-
     const dataset = this.collection.findWhere({
-      name : $(evt.target).closest("tbody").data("dataset-name")
+      name: $(evt.target).closest("tbody").data("dataset-name"),
     });
 
-    const modalView = new TeamAssignmentModalView({dataset});
+    const modalView = new TeamAssignmentModalView({ dataset });
     modalView.render();
     this.ui.modalWrapper.html(modalView.el);
     modalView.$el.modal("show");
-    return this.modalView = modalView;
+    this.modalView = modalView;
   }
 
 
   filterBySearch(searchQuery) {
-
     return this.collection.setFilter(["name", "owningTeam"], searchQuery);
   }
 
 
   onDestroy() {
-
-    return __guard__(this.modalView, x => x.destroy());
+    Utils.__guard__(this.modalView, x => x.destroy());
   }
 }
 DatasetListView.initClass();
 
 export default DatasetListView;
-
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
-}

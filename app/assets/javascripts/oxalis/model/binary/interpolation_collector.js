@@ -1,8 +1,12 @@
 import _ from "lodash";
 
-const templateFill = function(str, params) {
-
-  params.forEach( param => str = str.replace(new RegExp(`([^a-zA-Z0-9_])${param}([^a-zA-Z0-9_])`, "gm"), (match, pre, post) => `${pre}<%= ${param} %>${post}`));
+const templateFill = function (str, params) {
+  params.forEach((param) => {
+    str = str.replace(
+      new RegExp(`([^a-zA-Z0-9_])${param}([^a-zA-Z0-9_])`, "gm"),
+      (match, pre, post) => `${pre}<%= ${param} %>${post}`,
+    );
+  });
   return str;
 };
 
@@ -26,8 +30,8 @@ pointIndex =
     ((x & coordMask) >> (zoomStep))
   ) >> 0;\
 `,
-    ["pointIndex", "x", "y", "z", "zoomStep"]
-  )
+    ["pointIndex", "x", "y", "z", "zoomStep"],
+  ),
 );
 
 // Finding points adjacent to the already found one.
@@ -125,7 +129,7 @@ if (isBucketMissing) {
   }
 }\
 `,
-  { imports : { pointIndexMacro } }
+  { imports: { pointIndexMacro } },
 );
 
 // Trilinear interpolation (Point is in a cube)
@@ -146,8 +150,8 @@ output =
   p111 * d0 * d1 * d2;
 \
 `,
-    ["output", "p000", "p100", "p010", "p110", "p001", "p101", "p011", "p111", "d0", "d1", "d2" ]
-  )
+    ["output", "p000", "p100", "p010", "p110", "p001", "p101", "p011", "p111", "d0", "d1", "d2"],
+  ),
 );
 
 
@@ -207,12 +211,13 @@ basePointIndex =
 }) %>
 buffer[j] = trilinearOutput;\
 `,
-    ["x", "y", "z", "buffer", "j", "buckets", "min_x", "min_y", "min_z", "max_x", "max_y", "max_z", "sizeZ", "sizeZY"]
+    ["x", "y", "z", "buffer", "j", "buckets", "min_x", "min_y", "min_z", "max_x", "max_y", "max_z", "sizeZ", "sizeZY"],
   ),
-  { imports : { trilinearMacro, subPointMacro } }
+  { imports: { trilinearMacro, subPointMacro } },
 );
 const InterpolationCollector = {
-  bulkCollect : new Function(
+  // eslint-disable-next-line no-new-func
+  bulkCollect: new Function(
     "vertices", "buckets",
     _.template(
       `\
@@ -277,9 +282,9 @@ return {
 };
 
 //# sourceURL=/oxalis/model/binary/interpolation_collector/bulkCollect\
-`
-    )({collectLoopMacro})
-  )
+`,
+    )({ collectLoopMacro }),
+  ),
 };
 
 

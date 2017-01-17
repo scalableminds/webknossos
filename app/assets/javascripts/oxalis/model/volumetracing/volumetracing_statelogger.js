@@ -10,42 +10,37 @@ class VolumeTracingStateLogger extends StateLogger {
   }
 
 
-  pushDiff(action, value, push) {
-
-    if (push == null) { push = true; }
+  pushDiff(action, value, push = true, ...args) {
     this.pushQueue.pushImpl();
-    super.pushDiff(...arguments);
+    super.pushDiff(action, value, push, ...args);
 
     if (push) {
-      return this.pushImpl();
+      this.pushImpl();
     }
   }
 
 
-  pushNow() {
-
+  pushNow(...args) {
     const pushQueuePromise = this.pushQueue.pushImpl();
-    const stateLoggerPromise = super.pushNow(...arguments);
+    const stateLoggerPromise = super.pushNow(...args);
     return Promise.all([pushQueuePromise, stateLoggerPromise]);
   }
 
 
   stateSaved(...args) {
-
     return super.stateSaved(...args) && this.pushQueue.stateSaved();
   }
 
 
   concatUpdateTracing() {
-
     return this.pushDiff(
       "updateTracing",
       {
-        activeCell : this.volumeTracing.getActiveCellId(),
-        editPosition : this.flycam.getPosition(),
-        nextCell : this.volumeTracing.idCount
+        activeCell: this.volumeTracing.getActiveCellId(),
+        editPosition: this.flycam.getPosition(),
+        nextCell: this.volumeTracing.idCount,
       },
-      false
+      false,
     );
   }
 }

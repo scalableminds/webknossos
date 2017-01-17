@@ -1,3 +1,4 @@
+import _ from "lodash";
 import Backbone from "backbone";
 import THREE from "three";
 
@@ -5,7 +6,6 @@ class AbstractMaterialFactory {
 
 
   constructor(model) {
-
     this.model = model;
     _.extend(this, Backbone.Events);
 
@@ -16,23 +16,20 @@ class AbstractMaterialFactory {
 
 
   setupAttributesAndUniforms() {
-
     this.uniforms = {};
-    return this.attributes = {};
+    this.attributes = {};
   }
 
 
-  makeMaterial(options) {
-
-    if (options == null) { options = {}; }
+  makeMaterial(options = {}) {
     options = _.extend(options, {
       uniforms: this.uniforms,
       attributes: this.attributes,
-      vertexShader   : this.getVertexShader(),
-      fragmentShader : this.getFragmentShader()
+      vertexShader: this.getVertexShader(),
+      fragmentShader: this.getFragmentShader(),
     });
 
-    return this.material = new THREE.ShaderMaterial(options);
+    this.material = new THREE.ShaderMaterial(options);
   }
 
 
@@ -40,7 +37,6 @@ class AbstractMaterialFactory {
 
 
   getMaterial() {
-
     return this.material;
   }
 

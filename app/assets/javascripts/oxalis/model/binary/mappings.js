@@ -5,84 +5,71 @@ import ErrorHandling from "libs/error_handling";
 class Mappings {
 
 
-  constructor(datasetName, layer) {
-
+  constructor(dataStoreInfo, datasetName, layer) {
     this.mappings = _.keyBy(layer.mappings, "name");
-    this.baseUrl = `/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
+    this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
     this.doWithToken = layer.doWithToken.bind(layer);
   }
 
 
   getMappingNames() {
-
     return _.keys(this.mappings);
   }
 
 
   getMappingArrayAsync(mappingName) {
-
-    return this.fetchMappings(mappingName).then( () => {
-      return this.getMappingArray(mappingName);
-    }
+    return this.fetchMappings(mappingName).then(() => this.getMappingArray(mappingName),
     );
   }
 
 
   fetchMappings(mappingName) {
-
     const mappingChain = this.getMappingChain(mappingName);
-    const promises = _.map(mappingChain, mappingName => this.fetchMapping(mappingName));
+    const promises = _.map(mappingChain, curMappingName => this.fetchMapping(curMappingName));
     return Promise.all(promises);
   }
 
 
   fetchMapping(mappingName) {
-
     if (this.mappings[mappingName].mappingObject != null) {
       return Promise.resolve();
     }
 
-    return this.doWithToken( token => {
-      return Request.receiveJSON(
-        this.baseUrl + mappingName + `?token=${token}`
+    return this.doWithToken(token => Request.receiveJSON(
+        `${this.baseUrl + mappingName}?token=${token}`,
       ).then(
-        mapping => {
+        (mapping) => {
           this.mappings[mappingName].mappingObject = mapping;
-          return console.log("Done downloading:", mappingName);
+          console.log("Done downloading:", mappingName);
         },
-        error => console.error("Error downloading:", mappingName, error));
-    }
+        error => console.error("Error downloading:", mappingName, error)),
     );
   }
 
 
   getMappingArray(mappingName) {
-
     const mapping = this.mappings[mappingName];
     if (mapping.mappingArray != null) {
       return mapping.mappingArray;
     }
 
-    return mapping.mappingArray = this.buildMappingArray(mappingName);
+    return (mapping.mappingArray = this.buildMappingArray(mappingName));
   }
 
 
   buildMappingArray(mappingName) {
-
     const mappingArray = [];
 
-    for (let currentMappingName of this.getMappingChain(mappingName)) {
-
+    for (const currentMappingName of this.getMappingChain(mappingName)) {
       const { mappingObject } = this.mappings[currentMappingName];
       ErrorHandling.assert(mappingObject,
           "mappingObject must have been fetched at this point");
 
-      for (let mappingClass of mappingObject.classes) {
-
+      for (const mappingClass of mappingObject.classes) {
         const minId = this.min(mappingClass);
         const mappedId = mappingArray[minId] || minId;
 
-        for (let id of mappingClass) {
+        for (const id of mappingClass) {
           mappingArray[id] = mappedId;
         }
       }
@@ -93,7 +80,6 @@ class Mappings {
 
 
   getMappingChain(mappingName) {
-
     const chain = [mappingName];
     let mapping = this.mappings[mappingName];
 
@@ -108,9 +94,8 @@ class Mappings {
 
   // Since Math.min(array...) does not scale
   min(array) {
-
     let min = Infinity;
-    for (let entry of array) {
+    for (const entry of array) {
       min = Math.min(min, entry);
     }
     return min;

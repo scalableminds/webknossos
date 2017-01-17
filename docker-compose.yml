@@ -1,9 +1,9 @@
-version: '2'
+version: '2.1'
 
 services:
 
-  oxalis:
-    image: scalableminds/oxalis:$DOCKER_TAG
+  webknossos:
+    image: scalableminds/webknossos:${DOCKER_TAG:-master}
     ports:
       - "9000:9000"
     links:
@@ -12,7 +12,7 @@ services:
       - PORT=9000
       - MODE=dev
 
-  oxalis-sbt:
+  sbt:
     image: scalableminds/sbt:$SBT_VERSION_TAG
     volumes:
       - ".:/project"
@@ -21,14 +21,24 @@ services:
       - "~/.sbt:/root/.sbt"
       - "~/.yarn-cache:/root/.yarn-cache"
 
-  oxalis-frontend-tests:
+  webknossos-frontend-linting:
     extends:
-      service: oxalis-sbt
+      service: sbt
+    command: bash -c "npm run lint"
+
+  webknossos-frontend-flow:
+    extends:
+      service: sbt
+    command: bash -c "npm run flow"
+
+  webknossos-frontend-tests:
+    extends:
+      service: sbt
     command: bash -c "npm test"
 
-  oxalis-e2e-tests:
+  webknossos-e2e-tests:
     extends:
-      service: oxalis-sbt
+      service: sbt
     command: >
       bash -c
       "service xvfb start &&
@@ -50,7 +60,7 @@ services:
     environment:
       - MONGO_HOST=mongo
       - MONGO_PORT=27017
-      - MONGO_DB=oxalis-testing
+      - MONGO_DB=webknossos-testing
       - PORT=9000
       - MODE=dev
 

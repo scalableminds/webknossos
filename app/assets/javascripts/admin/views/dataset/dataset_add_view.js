@@ -6,10 +6,9 @@ import DatasetRemoteView from "./dataset_remote_view";
 
 class DatasetAddView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.className  = "container";
-    this.prototype.id  = "dataset-add-view";
-    this.prototype.template  = _.template(`\
+    this.prototype.className = "container";
+    this.prototype.id = "dataset-add-view";
+    this.prototype.template = _.template(`\
 <div class="tabbable" id="tabbable-dataset-add">
   <div class="col-md-8">
     <ul class="nav nav-tabs">
@@ -26,33 +25,30 @@ class DatasetAddView extends Marionette.View {
   </div>
 </div>\
 `);
-  
-    this.prototype.regions  =
-      {"tabPane" : ".tab-pane"};
-  
-  
-    this.prototype.events  = {
-      "click #tab-upload-dataset" : "showUploadDataset",
-      "click #tab-remote-dataset" : "showRemoteDataset"
+
+    this.prototype.regions =
+      { tabPane: ".tab-pane" };
+
+
+    this.prototype.events = {
+      "click #tab-upload-dataset": "showUploadDataset",
+      "click #tab-remote-dataset": "showRemoteDataset",
     };
   }
 
 
   initialize(options) {
-
     this.options = options;
-    return this.listenTo(this, "render", this.showUploadDataset);
+    this.listenTo(this, "render", this.showUploadDataset);
   }
 
 
   showUploadDataset() {
-
     return this.showChildView("tabPane", new DatasetUploadView(this.options));
   }
 
 
   showRemoteDataset() {
-
     return this.showChildView("tabPane", new DatasetRemoteView(this.options));
   }
 }

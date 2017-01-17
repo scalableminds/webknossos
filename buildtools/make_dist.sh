@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -ex
 
 #check for existing environment variables
 : ${WORKSPACE:?"Need non-empty WORKSPACE variable"}
@@ -22,13 +22,6 @@ LOGDIR=/var/log/${NAME}
 #change to git root
 pushd ${WORKSPACE}
 
-if [ "$PROJECT" == "oxalis" ]; then
-  PROJECT_DIR="."
-else
-  PROJECT_DIR="${PROJECT}"
-fi
-
-pushd ${PROJECT_DIR}
 APP_DIR=target/universal/stage
 
 echo "creating root environment..."
@@ -40,9 +33,6 @@ rm ${ROOT_ENV}${INSTALL_DIR}/conf/newrelic.yml
 chmod +x ${ROOT_ENV}${INSTALL_DIR}/bin/${PROJECT}
 
 echo "building packages..."
-#go back to git root again
-popd
-
 for PKG_TYPE in "deb" "rpm"
 do
   if [ $PKG_TYPE = "deb" ]; then
@@ -62,7 +52,7 @@ do
     --template-value group="${PROJECT}" \
     --template-value user="${NAME}" \
     --template-value installdir="${INSTALL_DIR}" \
-    -C ${PROJECT_DIR}/${DIST_DIR}/rootenv usr/
+    -C ./${DIST_DIR}/rootenv usr/
 done
 
 popd

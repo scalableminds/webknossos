@@ -59,7 +59,7 @@ class GithubIssues @Inject() (val messagesApi: MessagesApi) extends Controller w
     authentication match {
       case Some(GithubAuth(ghuser, key)) =>
         WS
-          .url(githubUrl + "/repos/scalableminds/oxalis/issues")
+          .url(githubUrl + "/repos/scalableminds/webknossos/issues")
           .withAuth(ghuser, key, WSAuthScheme.BASIC)
           .post(issue).map { response =>
           response.status == CREATED

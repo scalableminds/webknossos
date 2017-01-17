@@ -1,20 +1,24 @@
+/**
+ * dataset_list_item_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import TemplateHelpers from "libs/template_helpers";
+import Request from "libs/request";
 import DatasetAccesslistCollection from "admin/models/dataset/dataset_accesslist_collection";
 import DatasetAccessView from "./dataset_access_view";
-import Request from "libs/request";
 
 
 class DatasetListItemView extends Marionette.CompositeView {
   static initClass() {
-  
-  
-    this.prototype.tagName  = "tbody";
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.tagName = "tbody";
+
+    this.prototype.template = _.template(`\
 <tr class="dataset-row">
   <td class="details-toggle" href="#">
     <i class="caret-right"></i>
@@ -101,41 +105,40 @@ class DatasetListItemView extends Marionette.CompositeView {
   </td>
 </tr>\
 `);
-  
-    this.prototype.childView  = DatasetAccessView;
-    this.prototype.childViewContainer  = "tbody";
-  
-    this.prototype.templateContext  =
-      {TemplateHelpers};
-  
-    this.prototype.events  = {
-      "click .import-dataset" : "startImport",
-      "click .details-toggle" : "toggleDetails",
-      "click #skeletonTraceLink" : "startSkeletonTracing",
-      "click #volumeTraceLink" : "startVolumeTracing"
+
+    this.prototype.childView = DatasetAccessView;
+    this.prototype.childViewContainer = "tbody";
+
+    this.prototype.templateContext =
+      { TemplateHelpers };
+
+    this.prototype.events = {
+      "click .import-dataset": "startImport",
+      "click .details-toggle": "toggleDetails",
+      "click #skeletonTraceLink": "startSkeletonTracing",
+      "click #volumeTraceLink": "startVolumeTracing",
     };
-  
-  
+
+
     this.prototype.ui = {
-      "row" : ".dataset-row",
-      "importError" : ".import-error",
-      "errorText" : ".import-error .text-danger",
-      "importLink" : ".import-dataset",
-      "progressbarContainer" : ".progress",
-      "progressBar" : ".progress-bar",
-      "detailsToggle" : ".details-toggle",
-      "detailsRow" : ".details-row",
-      "form" : "form",
-      "contentTypeInput" : "#contentTypeInput"
+      row: ".dataset-row",
+      importError: ".import-error",
+      errorText: ".import-error .text-danger",
+      importLink: ".import-dataset",
+      progressbarContainer: ".progress",
+      progressBar: ".progress-bar",
+      detailsToggle: ".details-toggle",
+      detailsRow: ".details-row",
+      form: "form",
+      contentTypeInput: "#contentTypeInput",
     };
   }
   attributes() {
-    return {"data-dataset-name" : this.model.get("name")};
+    return { "data-dataset-name": this.model.get("name") };
   }
 
 
   initialize() {
-
     // by default there is no import error
 
     this.listenTo(this.model, "change", this.render);
@@ -145,70 +148,64 @@ class DatasetListItemView extends Marionette.CompositeView {
     this.collection = new DatasetAccesslistCollection(this.model.get("name"));
 
     // In case the user reloads during an import, continue the progress bar
-    return this.listenToOnce(this, "render", function() {
+    this.listenToOnce(this, "render", function () {
       if (this.model.get("dataSource").needsImport) {
-        return this.startImport(null, "GET");
+        this.startImport(null, "GET");
       }
     });
   }
 
 
-  startImport(evt, method) {
-
-    if (method == null) { method = "POST"; }
+  startImport(evt, method = "POST") {
     if (evt) {
       evt.preventDefault();
     }
 
     return Request.receiveJSON(
-      this.importUrl,{
-      method,
-      doNotCatch: true
-    }
+      this.importUrl, {
+        method,
+        doNotCatch: true,
+      },
     )
-    .then( responseJSON => {
+    .then((responseJSON) => {
       if (responseJSON.status === "inProgress") {
-        this.ui.row.removeClass('import-failed');
+        this.ui.row.removeClass("import-failed");
         this.ui.importLink.hide();
         this.ui.progressbarContainer.removeClass("hide");
         this.ui.importError.addClass("hide");
         this.updateProgress();
       }
       if (responseJSON.status === "failed") {
-        return this.importFailed(responseJSON);
+        this.importFailed(responseJSON);
       }
-    }
+    },
     )
-    .catch( response => {
-      return response
+    .catch(response => response
         .json()
-        .then( json => this.importFailed(json));
-    }
+        .then(json => this.importFailed(json)),
     );
   }
 
 
   importFailed(response) {
-
     if (this.isRendered() && !this.isDestroyed()) {
       this.ui.importLink.show();
       this.ui.progressbarContainer.addClass("hide");
-      this.ui.row.addClass('import-failed');
+      this.ui.row.addClass("import-failed");
       this.ui.importError.removeClass("hide");
 
       // apply single error
-      if (__guard__(__guard__(response.messages, x1 => x1[0]), x => x.error)) {
-        return this.ui.errorText.text(response.messages[0].error);
+      if (Utils.__guard__(Utils.__guard__(response.messages, x1 => x1[0]), x => x.error)) {
+        this.ui.errorText.text(response.messages[0].error);
       }
     }
   }
 
 
   updateProgress() {
-
     return Request
       .receiveJSON(this.importUrl)
-      .then( responseJSON => {
+      .then((responseJSON) => {
         const value = responseJSON.progress * 100;
         if (value) {
           this.ui.progressBar.width(`${value}%`);
@@ -217,27 +214,30 @@ class DatasetListItemView extends Marionette.CompositeView {
         switch (responseJSON.status) {
           case "finished":
             this.model.fetch().then(this.render.bind(this));
-            return Toast.message(responseJSON.messages);
+            Toast.message(responseJSON.messages);
+            break;
           case "notStarted": case "inProgress":
-            return window.setTimeout((() => this.updateProgress()), 1000);
+            window.setTimeout((() => this.updateProgress()), 1000);
+            break;
           case "failed":
-            return this.importFailed(responseJSON);
+            this.importFailed(responseJSON);
+            break;
+          default:
+            console.error("Response JSON status of progress request not recognized:", responseJSON.status);
         }
-      }
+      },
       );
   }
 
   toggleDetails() {
-
     if (this.ui.detailsRow.hasClass("hide")) {
-
       return this.collection
         .fetch()
-        .then( () => {
+        .then(() => {
           this.render();
           this.ui.detailsRow.removeClass("hide");
           return this.ui.detailsToggle.addClass("open");
-        }
+        },
         );
     } else {
       this.ui.detailsRow.addClass("hide");
@@ -247,19 +247,16 @@ class DatasetListItemView extends Marionette.CompositeView {
 
 
   startSkeletonTracing(event) {
-
     return this.submitForm("skeletonTracing", event);
   }
 
 
   startVolumeTracing(event) {
-
     return this.submitForm("volumeTracing", event);
   }
 
 
   submitForm(type, event) {
-
     event.preventDefault();
     this.ui.contentTypeInput.val(type);
     return this.ui.form.submit();
@@ -269,7 +266,3 @@ DatasetListItemView.initClass();
 
 
 export default DatasetListItemView;
-
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
-}

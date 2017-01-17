@@ -4,8 +4,7 @@ import Toast from "libs/toast";
 
 class TaskTypeItemView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <td class="monospace-id"><%- id %></td>
 <td><%- team %></td>
 <td><%- summary %></td>
@@ -13,7 +12,7 @@ class TaskTypeItemView extends Marionette.View {
 <td>
   <% _.each(settings.allowedModes, function (mode) { %>
   <% var modename = mode[0].toUpperCase() + mode.slice(1); %>
-  <% if(mode == settings.preferredMode) { %>
+  <% if(mode == settings.preferredMode) { %>
     <span class="label label-primary" title="default mode"><%= modename %></span><br />
   <% } else { %>
     <span class="label label-default" ><%= modename %></span><br />
@@ -54,21 +53,18 @@ class TaskTypeItemView extends Marionette.View {
   </a>
 </td>\
 `);
-  
-    this.prototype.tagName  = "tr";
-  
-    this.prototype.events  =
-      {"click .delete" : "deleteTaskType"};
+
+    this.prototype.tagName = "tr";
+
+    this.prototype.events =
+      { "click .delete": "deleteTaskType" };
   }
 
   deleteTaskType(evt) {
-
     evt.preventDefault();
 
     if (window.confirm("Do you really want to delete this task type?")) {
-      return this.model.destroy().then(response => {
-        return Toast.message(response.messages);
-      }
+      this.model.destroy().then(response => Toast.message(response.messages),
       );
     }
   }

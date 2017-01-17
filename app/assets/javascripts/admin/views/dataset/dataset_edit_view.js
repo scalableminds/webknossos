@@ -1,20 +1,18 @@
 import _ from "lodash";
-import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 
 class DatasetEditView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <div class="row">
   <div class="col-sm-12">
     <div class="well">
       <div class="col-sm-9 col-sm-offset-2">
         <h3>Update dataset</h3>
       </div>
-  
+
       <form method="POST" class="form-horizontal">
         <div class="form-group">
           <label class="col-sm-2 control-label" for="name">Name</label>
@@ -44,30 +42,28 @@ class DatasetEditView extends Marionette.View {
   </div>
 </div>\
 `);
-  
-    this.prototype.className  = "container wide dataset-administration";
-  
-    this.prototype.events  =
-      {"submit form" : "submitForm"};
-  
-    this.prototype.ui  =
-      {"form" : "form"};
+
+    this.prototype.className = "container wide dataset-administration";
+
+    this.prototype.events =
+      { "submit form": "submitForm" };
+
+    this.prototype.ui =
+      { form: "form" };
   }
 
   templateContext() {
-    return {isChecked(bool) { if (bool) { return "checked"; } }};
+    return { isChecked(bool) { return bool ? "checked" : ""; } };
   }
 
 
   initialize() {
-
     this.listenTo(this.model, "sync", this.render);
-    return this.model.fetch();
+    this.model.fetch();
   }
 
 
   submitForm(event) {
-
     event.preventDefault();
 
     if (!this.ui.form[0].checkValidity()) {
@@ -77,7 +73,7 @@ class DatasetEditView extends Marionette.View {
 
     const formValues = FormSyphon.serialize(this.ui.form);
 
-    return this.model.save(formValues).then(
+    this.model.save(formValues).then(
       () => Toast.success("Saved!"));
   }
 }

@@ -1,16 +1,15 @@
-import backbone from "backbone";
+import Backbone from "backbone";
 import Marionette from "backbone.marionette";
-import subviews from "backbone-subviews";
+import Subviews from "backbone-subviews";
 import _ from "lodash";
 import CheckboxSettingView from "oxalis/view/settings/setting_views/checkbox_setting_view";
 
 class MappingInfoView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.RENDER_DEBOUNCE_TIME  = 200;
-  
-    this.prototype.id  = "volume-mapping-info";
-    this.prototype.template  = _.template(`\
+    this.prototype.RENDER_DEBOUNCE_TIME = 200;
+
+    this.prototype.id = "volume-mapping-info";
+    this.prototype.template = _.template(`\
 <div class="well">
   <% if (hasMapping) { %>
     <p>ID without mapping: <%- idWithoutMapping %></p>
@@ -23,27 +22,23 @@ class MappingInfoView extends Marionette.View {
   <div data-subview="enableMapping"></div>
 <% } %>\
 `);
-  
-  
-    this.prototype.subviewCreators  = {
-  
-      ["enableMapping"]() {
-  
-        return new CheckboxSettingView({
-          model : this.model,
-          options : {
-            name : "enableMapping",
-            displayName : "Enable Mapping"
-          }
-        });
-      }
+
+
+    this.prototype.subviewCreators = {
+
+      enableMapping: () => new CheckboxSettingView({
+        model: this.model,
+        options: {
+          name: "enableMapping",
+          displayName: "Enable Mapping",
+        },
+      }),
     };
   }
 
 
-  initialize({model : oxalisModel}) {
-
-    Backbone.Subviews.add(this);
+  initialize({ model: oxalisModel }) {
+    Subviews.add(this);
 
     this.model = new Backbone.Model();
     this.model.set("enableMapping", true);
@@ -57,20 +52,19 @@ class MappingInfoView extends Marionette.View {
     this.listenTo(this.cube, "volumeLabeled", this.renderDebounced);
     this.listenTo(this.cube, "newMapping", this.render);
     this.listenTo(this.flycam, "positionChanged", this.renderDebounced);
-    return this.listenTo(this.model, "change:enableMapping", function() {
+    this.listenTo(this.model, "change:enableMapping", function () {
       return this.cube.setMappingEnabled(this.model.get("enableMapping"));
     });
   }
 
 
   serializeData() {
-
     const pos = this.flycam.getPosition();
 
     return {
-      hasMapping : this.cube.hasMapping(),
-      idWithMapping : this.cube.getDataValue(pos, this.cube.mapping),
-      idWithoutMapping : this.cube.getDataValue(pos, this.cube.EMPTY_MAPPING)
+      hasMapping: this.cube.hasMapping(),
+      idWithMapping: this.cube.getDataValue(pos, this.cube.mapping),
+      idWithoutMapping: this.cube.getDataValue(pos, this.cube.EMPTY_MAPPING),
     };
   }
 }

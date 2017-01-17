@@ -1,9 +1,8 @@
 import _ from "lodash";
-import app from "app";
 import Input from "libs/input";
+import Toast from "libs/toast";
 import ArbitraryController from "../viewmodes/arbitrary_controller";
 import Constants from "../../constants";
-import Toast from "libs/toast";
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
@@ -13,7 +12,6 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
   // Extends Arbitrary controller to add controls that are specific to minimal Arbitrary mode.
 
   constructor(...args) {
-
     super(...args);
 
     this.setWaypoint = this.setWaypoint.bind(this);
@@ -22,42 +20,37 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
 
   initKeyboard() {
-
     this.input.keyboard = new Input.Keyboard({
 
-      "space"         : timeFactor => {
-        return this.move(timeFactor);
-      },
+      space: timeFactor => this.move(timeFactor),
 
-      //Zoom in/out
-      "i"             : timeFactor => this.cam.zoomIn(),
-      "o"             : timeFactor => this.cam.zoomOut(),
+      // Zoom in/out
+      i: () => this.cam.zoomIn(),
+      o: () => this.cam.zoomOut(),
 
-      //Rotate in distance
-      "left"          : timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
-      "right"         : timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
-      "up"            : timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
-      "down"          : timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY)
+      // Rotate in distance
+      left: timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
+      right: timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
+      up: timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
+      down: timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
     });
 
     this.input.keyboardNoLoop = new Input.KeyboardNoLoop({
 
-      //Branches
-      "b" : () => this.pushBranch(),
-      "j" : () => this.popBranch(),
+      // Branches
+      b: () => this.pushBranch(),
+      j: () => this.popBranch(),
 
-      //Branchpointvideo
-      "." : () => this.nextNode(true),
-      "," : () => this.nextNode(false)
+      // Branchpointvideo
+      ".": () => this.nextNode(true),
+      ",": () => this.nextNode(false),
 
     });
 
-    return this.input.keyboardOnce = new Input.Keyboard({
+    this.input.keyboardOnce = new Input.Keyboard({
 
-      //Delete active node and recenter last node
-      "shift + space" : () => {
-        return this.deleteActiveNode();
-      }
+      // Delete active node and recenter last node
+      "shift + space": () => this.deleteActiveNode(),
     }
 
     , -1);
@@ -65,25 +58,23 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
 
   // make sure that it is not possible to keep nodes from being created
-  setWaypoint() {
-
+  setWaypoint(...args) {
     if (this.isBranchpointvideoMode()) { return; }
     if (!this.model.get("flightmodeRecording")) {
       this.model.set("flightmodeRecording", true);
     }
-    return super.setWaypoint(...arguments);
+    super.setWaypoint(...args);
   }
 
 
   deleteActiveNode() {
-
     if (this.isBranchpointvideoMode()) { return; }
     const { skeletonTracing } = this.model;
     const activeNode = skeletonTracing.getActiveNode();
     if (activeNode.id === 1) {
-      return Toast.error("Unable: Attempting to delete first node");
+      Toast.error("Unable: Attempting to delete first node");
     } else {
-      return _.defer(() => this.model.skeletonTracing.deleteActiveNode().then( () => this.centerActiveNode() ));
+      _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(() => this.centerActiveNode()));
     }
   }
 }

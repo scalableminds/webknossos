@@ -1,5 +1,6 @@
 import $ from "jquery";
 import _ from "lodash";
+import Utils from "libs/utils";
 
 // `DispatchedWorker` is a wrapper around the WebWorker API. First you
 // initialize it providing a worker object of the javascript worker code.
@@ -7,38 +8,34 @@ import _ from "lodash";
 // using the returned deferred.
 class DispatchedWorker {
 
-  constructor(workerClass) {
+  constructor(WorkerClass) {
+    this.worker = new WorkerClass();
 
-    this.worker = new workerClass();
-
-    this.worker.onerror = err => __guard__(console, x => x.error(err));
+    this.worker.onerror = err => Utils.__guard__(console, x => x.error(err));
   }
 
 
   // Returns a `$.Deferred` object representing the completion state.
   send(payload) {
-
     const deferred = new $.Deferred();
 
     _.defer(() => {
-
       const workerHandle = Math.random();
 
-      const workerMessageCallback = ({ data : packet }) => {
-
+      const workerMessageCallback = ({ data: packet }) => {
         if (packet.workerHandle === workerHandle) {
           this.worker.removeEventListener("message", workerMessageCallback, false);
           if (packet.error) {
-            return deferred.reject(packet.error);
+            deferred.reject(packet.error);
           } else {
-            return deferred.resolve(packet.payload);
+            deferred.resolve(packet.payload);
           }
         }
       };
 
       this.worker.addEventListener("message", workerMessageCallback, false);
-      return this.worker.postMessage({ workerHandle, payload });
-    }
+      this.worker.postMessage({ workerHandle, payload });
+    },
     );
 
 
@@ -49,9 +46,7 @@ class DispatchedWorker {
 
 DispatchedWorker.Pool = class Pool {
 
-  constructor(workerClass, workerLimit) {
-
-    if (workerLimit == null) { workerLimit = 3; }
+  constructor(workerClass, workerLimit = 3) {
     this.workerClass = workerClass;
     this.workerLimit = workerLimit;
     this.queue = [];
@@ -60,43 +55,39 @@ DispatchedWorker.Pool = class Pool {
 
 
   send(data) {
-
-    let worker;
-    for (let _worker of this.workers) {
-      if (!_worker.busy) {
-        worker = _worker;
+    let freeWorker;
+    for (const worker of this.workers) {
+      if (!worker.busy) {
+        freeWorker = worker;
         break;
       }
     }
 
-    if (!worker && this.workers.length < this.workerLimit) {
-      worker = this.spawnWorker();
+    if (!freeWorker && this.workers.length < this.workerLimit) {
+      freeWorker = this.spawnWorker();
     }
 
-    if (worker) {
-      return worker.send(data);
+    if (freeWorker) {
+      freeWorker.send(data);
     } else {
-      return this.queuePush(data);
+      this.queuePush(data);
     }
   }
 
 
   spawnWorker() {
-
     const worker = new DispatchedWorker(this.workerClass);
     worker.busy = false;
 
     const workerReset = () => {
-
       worker.busy = false;
-      return this.queueShift(worker);
+      this.queueShift(worker);
     };
 
 
-    worker.worker.onerror = function(err) {
-
-      __guard__(console, x => x.error(err));
-      return workerReset();
+    worker.worker.onerror = function (err) {
+      Utils.__guard__(console, x => x.error(err));
+      workerReset();
     };
 
 
@@ -109,26 +100,20 @@ DispatchedWorker.Pool = class Pool {
 
 
   queueShift(worker) {
-
     if (this.queue.length > 0 && !worker.busy) {
       const { data, deferred } = this.queue.shift();
-      return worker.send(data)
-        .done(data => deferred.resolve(data))
+      worker.send(data)
+        .done(response => deferred.resolve(response))
         .fail(err => deferred.reject(err));
     }
   }
 
 
   queuePush(data) {
-
     const deferred = $.Deferred();
-    return this.queue.push({ data, deferred });
+    this.queue.push({ data, deferred });
   }
 };
 
 
 export default DispatchedWorker;
-
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
-}

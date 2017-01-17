@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 
 class NestedObjModel extends Backbone.Model {
@@ -14,15 +15,13 @@ class NestedObjModel extends Backbone.Model {
     const valueObj = this.attributes;
     return _.reduce(
       attributes,
-      (value, attribute) => __guard__(value, x => x[attribute]),
+      (value, attribute) => Utils.__guard__(value, x => x[attribute]),
       valueObj);
   }
 
 
-  set(attributeString, val, options) {
-
+  set(attributeString, val, options = {}) {
     // We don't handle objects for now
-    if (options == null) { options = {}; }
     if (_.isObject(attributeString)) {
       return super.set(attributeString, val, options);
     }
@@ -32,11 +31,9 @@ class NestedObjModel extends Backbone.Model {
   }
 
 
-  deepSet(obj, attributeString, val, silent) {
-
-    if (silent == null) { silent = false; }
+  deepSet(obj, attributeString, val, silent = false) {
     const attributes = attributeString.split(".");
-    return _.reduce(
+    _.reduce(
       attributes,
       (value, attribute, ind) => {
         if (ind < attributes.length - 1) {
@@ -44,45 +41,37 @@ class NestedObjModel extends Backbone.Model {
             value[attribute] = {};
           }
           return value[attribute];
-        } else {
+        } else if (value[attribute] !== val) {
           // Set the value if attribute is the last key in the attributeString
-          if (value[attribute] !== val) {
-            const oldVal = value[attribute];
-            value[attribute] = val;
+          const oldVal = value[attribute];
+          value[attribute] = val;
 
-            if (!silent) {
-              // Trigger the change in the model
-              this.triggerDeepChange(oldVal, val, attributeString);
-              return this.trigger("change", this);
-            }
+          if (!silent) {
+            // Trigger the change in the model
+            this.triggerDeepChange(oldVal, val, attributeString);
+            this.trigger("change", this);
           }
         }
+        return null;
       },
       obj);
   }
 
 
   triggerDeepChange(oldObj, newObj, deepKey) {
-
     // This method only triggers the change for those parts of the object
     // that actually changed (e.g. layers.color.brightness)
     if (_.isPlainObject(newObj)) {
       // Recursively call triggerDeepChange for each key
-      return _.forOwn(newObj, (value, key) => {
-        return this.triggerDeepChange(((oldObj != null) ? oldObj[key] : oldObj), newObj[key], `${deepKey}.${key}`);
-      }
+      _.forOwn(newObj, (value, key) => this.triggerDeepChange(((oldObj != null) ? oldObj[key] : oldObj), newObj[key], `${deepKey}.${key}`),
       );
     } else if (oldObj !== newObj) {
       // Add the change to the changed object
       this.deepSet(this.changed, deepKey, newObj, true);
       // Trigger the change
-      return this.trigger(`change:${deepKey}`, this, newObj);
+      this.trigger(`change:${deepKey}`, this, newObj);
     }
   }
 }
 
 export default NestedObjModel;
-
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
-}

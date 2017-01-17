@@ -1,15 +1,18 @@
+/**
+ * dashboard_task_list_item_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import Toast from "libs/toast";
 import Request from "libs/request";
 import moment from "moment";
 
 class DashboardTaskListItemView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.tagName  = "tr";
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.tagName = "tr";
+
+    this.prototype.template = _.template(`\
 <td>
   <div class="monospace-id">
     <%- id %>
@@ -54,50 +57,43 @@ class DashboardTaskListItemView extends Marionette.View {
   <% } %>
 </td>\
 `);
-  
-    this.prototype.templateContext  =
-      {moment};
-  
-    this.prototype.events  = {
-      "click #finish-task" : "finish",
-      "click #cancel-task" : "cancelAnnotation"
+
+    this.prototype.templateContext =
+      { moment };
+
+    this.prototype.events = {
+      "click #finish-task": "finish",
+      "click #cancel-task": "cancelAnnotation",
     };
   }
 
 
   className() {
-
     if (this.model.get("annotation.state.isFinished")) {
       return "finished";
-    } else {
-      return "unfinished";
     }
+    return "unfinished";
   }
 
 
   initialize(options) {
-
     this.model.set("isAdminView", options.isAdminView);
-    return this.listenTo(this.model, "change", this.render);
+    this.listenTo(this.model, "change", this.render);
   }
 
 
   finish() {
-
     if (confirm("Are you sure you want to permanently finish this tracing?")) {
-      return this.model.finish();
+      this.model.finish();
     }
   }
 
 
   cancelAnnotation() {
-
     if (confirm("Do you really want to cancel this annotation?")) {
       const annotation = this.model.get("annotation");
-      return Request.triggerRequest(`/annotations/${annotation.typ}/${annotation.id}`, {method : "DELETE"}).then( () => {
-        return this.model.collection.fetch();
-      }
-      );
+      Request.triggerRequest(`/annotations/${annotation.typ}/${annotation.id}`, { method: "DELETE" }).then(() =>
+        this.model.collection.fetch());
     }
   }
 }

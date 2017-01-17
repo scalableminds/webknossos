@@ -10,9 +10,8 @@ class TaskTypeListView extends Marionette.CompositeView {
   }
 
   static initClass() {
-  
-    this.prototype.className  = "container wide task-types-administration";
-    this.prototype.childView  = TaskTypeListItemView;
+    this.prototype.className = "container wide task-types-administration";
+    this.prototype.childView = TaskTypeListItemView;
     this.prototype.childViewContainer = "tbody";
   }
 
@@ -40,22 +39,19 @@ class TaskTypeListView extends Marionette.CompositeView {
 
 
   initialize() {
-
     this.collection.fetch();
 
     this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
-    return this.listenTo(app.vent, "paginationView:addElement", this.createNewTaskType);
+    this.listenTo(app.vent, "paginationView:addElement", this.createNewTaskType);
   }
 
 
   createNewTaskType() {
-
-    return app.router.navigate("/taskTypes/create", {trigger : true});
+    return app.router.navigate("/taskTypes/create", { trigger: true });
   }
 
 
   filterBySearch(searchQuery) {
-
     return this.collection.setFilter(["summary", "team", "description", "id"], searchQuery);
   }
 }

@@ -1,22 +1,21 @@
-import app from "app";
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
-import TaskListView from "./task_list_view";
-import TaskCollection from "admin/models/task/task_collection";
 import Request from "libs/request";
-import PaginationView from "admin/views/pagination_view";
 import Toast from "libs/toast";
+import TaskCollection from "admin/models/task/task_collection";
+import PaginationView from "admin/views/pagination_view";
 import PaginationCollection from "admin/models/pagination_collection";
-import TaskQueryDocumentationModal from "./task_query_documentation_modal";
 import ace from "brace";
-import 'brace/mode/javascript';
-import 'brace/mode/json';
-import 'brace/theme/clouds';
+import "brace/mode/javascript";
+import "brace/mode/json";
+import "brace/theme/clouds";
+import TaskListView from "./task_list_view";
+import TaskQueryDocumentationModal from "./task_query_documentation_modal";
 
 class TaskQueryView extends Marionette.View {
   static initClass() {
-
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <div class="container wide">
   <h3>Tasks</h3>
 
@@ -47,32 +46,31 @@ class TaskQueryView extends Marionette.View {
 <div id="modal-wrapper"></div>\
 `);
 
-    this.prototype.regions  = {
-      "paginator" : ".paginator",
-      "taskList" : ".taskList"
+    this.prototype.regions = {
+      paginator: ".paginator",
+      taskList: ".taskList",
     };
 
-    this.prototype.ui  = {
-      "taskList" : ".taskList",
-      "query" : "#query",
-      "modalWrapper" : "#modal-wrapper"
+    this.prototype.ui = {
+      taskList: ".taskList",
+      query: "#query",
+      modalWrapper: "#modal-wrapper",
     };
 
-    this.prototype.events  = {
-      "click .search-button" : "search",
-      "click .documentation-button" : "showDocumentation"
+    this.prototype.events = {
+      "click .search-button": "search",
+      "click .documentation-button": "showDocumentation",
     };
   }
 
   onRender() {
-
     this.collection = new TaskCollection(null);
-    const paginatedCollection = new PaginationCollection([], {fullCollection : this.collection});
-    this.taskListView = new TaskListView({collection: paginatedCollection});
+    const paginatedCollection = new PaginationCollection([], { fullCollection: this.collection });
+    this.taskListView = new TaskListView({ collection: paginatedCollection });
 
     app.router.hideLoadingSpinner();
 
-    const paginationView = new PaginationView({collection : paginatedCollection, addButtonText : "Create New Task"});
+    const paginationView = new PaginationView({ collection: paginatedCollection, addButtonText: "Create New Task" });
 
     this.showChildView("taskList", this.taskListView);
     this.showChildView("paginator", paginationView);
@@ -82,8 +80,8 @@ class TaskQueryView extends Marionette.View {
     this.ui.modalWrapper.html(this.documentationModal.el);
 
     this.editor = ace.edit(this.ui.query[0]);
-    this.editor.getSession().setMode('ace/mode/javascript');
-    this.editor.setTheme('ace/theme/clouds');
+    this.editor.getSession().setMode("ace/mode/javascript");
+    this.editor.setTheme("ace/theme/clouds");
     const defaultQuery = "{\n\t\"_id\": {\"$oid\": \"56cb594a16000045b4d0f273\"}\n}";
     this.editor.setValue(defaultQuery);
     this.editor.clearSelection();
@@ -92,18 +90,18 @@ class TaskQueryView extends Marionette.View {
 
 
   search() {
-
     let queryObject;
     const queryString = this.editor.getValue();
     try {
       queryObject = JSON.parse(queryString);
-    } catch (e) {
+    } catch (jsonError) {
       try {
         // This is an eval hack in order to allow JSON without quoted keys.
         // JS is only executed locally so it doesn't yield more power than the
         // browser console.
+        // eslint-disable-next-line no-eval
         queryObject = eval(`(function() { return eval(${queryString}); })()`);
-      } catch (e) {
+      } catch (evalError) {
         Toast.error("The task query couldn't be parsed. Ensure that the query is valid JSON.");
       }
     }
@@ -112,22 +110,21 @@ class TaskQueryView extends Marionette.View {
     return Request.sendJSONReceiveJSON(
       "/api/queries",
       {
-        params : {type : "task"},
-        data : queryObject
-      }
-    ).then(result => {
+        params: { type: "task" },
+        data: queryObject,
+      },
+    ).then((result) => {
       this.collection.reset();
       const defaultQueryLimit = 100;
       if (result.length === defaultQueryLimit) {
         Toast.warning(`Not all results are shown because there are more than ${defaultQueryLimit}. Try to narrow your query.`);
       }
       return this.collection.addObjects(result);
-    }
+    },
     );
   }
 
   showDocumentation() {
-
     return this.documentationModal.$el.modal("show");
   }
 }

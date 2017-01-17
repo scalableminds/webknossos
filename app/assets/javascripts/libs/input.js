@@ -1,3 +1,6 @@
+import _ from "lodash";
+import Utils from "libs/utils";
+import $ from "jquery";
 import Backbone from "backbone";
 import constants from "oxalis/constants";
 import KeyboardJS from "keyboardjs";
@@ -19,10 +22,10 @@ const Input = {};
 
 // Workaround: KeyboardJS fires event for "C" even if you press
 // "Ctrl + C".
-const shouldIgnore = function(event, key) {
-  const bindingHasCtrl  = key.toLowerCase().indexOf("ctrl") !== -1;
+const shouldIgnore = function (event, key) {
+  const bindingHasCtrl = key.toLowerCase().indexOf("ctrl") !== -1;
   const bindingHasShift = key.toLowerCase().indexOf("shift") !== -1;
-  const eventHasCtrl  = event.ctrlKey || event.metaKey;
+  const eventHasCtrl = event.ctrlKey || event.metaKey;
   const eventHasShift = event.shiftKey;
   return (eventHasCtrl && !bindingHasCtrl) ||
     (eventHasShift && !bindingHasShift);
@@ -35,11 +38,10 @@ const shouldIgnore = function(event, key) {
 Input.KeyboardNoLoop = class KeyboardNoLoop {
 
   constructor(initialBindings) {
-
     this.bindings = [];
     this.isStarted = true;
 
-    for (let key of Object.keys(initialBindings)) {
+    for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
       this.attach(key, callback);
     }
@@ -47,14 +49,13 @@ Input.KeyboardNoLoop = class KeyboardNoLoop {
 
 
   attach(key, callback) {
-
     const binding = [key,
-      event => {
+      (event) => {
         if (!this.isStarted) { return; }
         if ($(":focus").length) { return; }
         if (shouldIgnore(event, key)) { return; }
         callback(event);
-      }
+      },
     ];
 
     KeyboardJS.bind(...binding);
@@ -64,9 +65,8 @@ Input.KeyboardNoLoop = class KeyboardNoLoop {
 
 
   destroy() {
-
     this.isStarted = false;
-    for (let binding of this.bindings) { KeyboardJS.unbind(...binding); }
+    for (const binding of this.bindings) { KeyboardJS.unbind(...binding); }
   }
 };
 
@@ -76,20 +76,17 @@ Input.KeyboardNoLoop = class KeyboardNoLoop {
 // fire the attached callback.
 Input.Keyboard = class Keyboard {
   static initClass() {
-
-    this.prototype.DELAY  = 1000 / constants.FPS;
+    this.prototype.DELAY = 1000 / constants.FPS;
   }
 
-  constructor(initialBindings, delay) {
-
-    if (delay == null) { delay = 0; }
+  constructor(initialBindings, delay = 0) {
     this.delay = delay;
     this.keyCallbackMap = {};
     this.keyPressedCount = 0;
     this.bindings = [];
     this.isStarted = true;
 
-    for (let key of Object.keys(initialBindings)) {
+    for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
       this.attach(key, callback);
     }
@@ -97,9 +94,8 @@ Input.Keyboard = class Keyboard {
 
 
   attach(key, callback) {
-
     const binding = [key,
-      event => {
+      (event) => {
         // When first pressed, insert the callback into
         // keyCallbackMap and start the buttonLoop.
         // Then, ignore any other events fired from the operating
@@ -108,8 +104,6 @@ Input.Keyboard = class Keyboard {
         // if there is any browser action attached to this (as with Ctrl + S)
         // KeyboardJS does not receive the up event.
 
-        const returnValue = undefined;
-
         if (!this.isStarted) { return; }
         if (this.keyCallbackMap[key] != null) { return; }
         if ($(":focus").length) { return; }
@@ -117,69 +111,59 @@ Input.Keyboard = class Keyboard {
 
         callback(1, true);
         // reset lastTime
-        callback._lastTime   = null;
-        callback._delayed    = true;
+        callback.lastTime = null;
+        callback.delayed = true;
         this.keyCallbackMap[key] = callback;
 
         this.keyPressedCount++;
         if (this.keyPressedCount === 1) { this.buttonLoop(); }
 
         if (this.delay >= 0) {
-          setTimeout( (() => {
-            return callback._delayed = false;
-          }
-            ), this.delay );
+          setTimeout((() => { callback.delayed = false; }), this.delay);
         }
-
-        return returnValue;
       },
 
       () => {
-
         if (!this.isStarted) { return; }
         if (this.keyCallbackMap[key] != null) {
           this.keyPressedCount--;
           delete this.keyCallbackMap[key];
         }
-
-      }
+      },
     ];
 
     KeyboardJS.bind(...binding);
 
-    return this.bindings.push(binding);
+    this.bindings.push(binding);
   }
 
 
   // In order to continously fire callbacks we have to loop
   // through all the buttons that a marked as "pressed".
   buttonLoop() {
-
     if (!this.isStarted) { return; }
     if (this.keyPressedCount > 0) {
-      for (let key of Object.keys(this.keyCallbackMap)) {
+      for (const key of Object.keys(this.keyCallbackMap)) {
         const callback = this.keyCallbackMap[key];
-        if (!callback._delayed) {
-
-          const curTime  = (new Date()).getTime();
+        if (!callback.delayed) {
+          const curTime = (new Date()).getTime();
           // If no lastTime, assume that desired FPS is met
-          const lastTime = callback._lastTime || (curTime - (1000 / constants.FPS));
-          const elapsed  = curTime - lastTime;
-          callback._lastTime = curTime;
+          const lastTime = callback.lastTime || (curTime - (1000 / constants.FPS));
+          const elapsed = curTime - lastTime;
+          callback.lastTime = curTime;
 
           callback((elapsed / 1000) * constants.FPS, false);
         }
       }
 
-      return setTimeout( (() => this.buttonLoop()), this.DELAY );
+      setTimeout((() => this.buttonLoop()), this.DELAY);
     }
   }
 
 
   destroy() {
-
     this.isStarted = false;
-    for (let binding of this.bindings) { KeyboardJS.unbind(...binding); }
+    for (const binding of this.bindings) { KeyboardJS.unbind(...binding); }
   }
 };
 Input.Keyboard.initClass();
@@ -187,14 +171,12 @@ Input.Keyboard.initClass();
 
 // The mouse module.
 // Events: over, out, leftClick, rightClick, leftDownMove
-let MouseButton = undefined;
+let MouseButtonClass;
 Input.Mouse = class Mouse {
   static initClass() {
-
-    MouseButton = class MouseButton {
+    MouseButtonClass = class MouseButton {
       static initClass() {
-
-        this.prototype.MOVE_DELTA_THRESHOLD  = 30;
+        this.prototype.MOVE_DELTA_THRESHOLD = 30;
       }
 
       constructor(name, which, mouse, id) {
@@ -202,50 +184,46 @@ Input.Mouse = class Mouse {
         this.which = which;
         this.mouse = mouse;
         this.id = id;
-        this.down  = false;
-        this.drag  = false;
+        this.down = false;
+        this.drag = false;
         this.moveDelta = 0;
       }
 
 
       handleMouseDown(event) {
-
         if (event.which === this.which) {
           $(":focus").blur(); // see OX-159
 
           this.down = true;
           this.moveDelta = 0;
-          return this.mouse.trigger(this.name + "MouseDown", this.mouse.lastPosition, this.id, event);
+          this.mouse.trigger(`${this.name}MouseDown`, this.mouse.lastPosition, this.id, event);
         }
       }
 
 
       handleMouseUp(event) {
-
         if (event.which === this.which && this.down) {
-          this.mouse.trigger(this.name + "MouseUp", event);
+          this.mouse.trigger(`${this.name}MouseUp`, event);
           if (this.moveDelta <= this.MOVE_DELTA_THRESHOLD) {
-            this.mouse.trigger(this.name + "Click", this.mouse.lastPosition, this.id, event);
+            this.mouse.trigger(`${this.name}Click`, this.mouse.lastPosition, this.id, event);
           }
-          return this.down = false;
+          this.down = false;
         }
       }
 
 
       handleMouseMove(event, delta) {
-
         if (this.down) {
-          this.moveDelta += Math.abs( delta.x ) + Math.abs( delta.y );
-          return this.mouse.trigger(this.name + "DownMove", delta, this.mouse.position, this.id, event);
+          this.moveDelta += Math.abs(delta.x) + Math.abs(delta.y);
+          this.mouse.trigger(`${this.name}DownMove`, delta, this.mouse.position, this.id, event);
         }
       }
     };
-    MouseButton.initClass();
+    MouseButtonClass.initClass();
   }
 
 
   constructor($target, initialBindings, id) {
-
     this.mouseDown = this.mouseDown.bind(this);
     this.mouseUp = this.mouseUp.bind(this);
     this.mouseMove = this.mouseMove.bind(this);
@@ -256,21 +234,21 @@ Input.Mouse = class Mouse {
     this.id = id;
     _.extend(this, Backbone.Events);
 
-    this.leftMouseButton  = new MouseButton( "left",  1, this, this.id );
-    this.rightMouseButton = new MouseButton( "right", 3, this, this.id );
+    this.leftMouseButton = new MouseButtonClass("left", 1, this, this.id);
+    this.rightMouseButton = new MouseButtonClass("right", 3, this, this.id);
     this.isMouseOver = false;
     this.lastPosition = null;
 
     $(document).on({
-      "mousemove" : this.mouseMove,
-      "mouseup"   : this.mouseUp
+      mousemove: this.mouseMove,
+      mouseup: this.mouseUp,
     });
 
     this.$target.on({
-      "mousedown" : this.mouseDown,
-      "mouseenter" : this.mouseEnter,
-      "mouseleave" : this.mouseLeave,
-      "wheel" : this.mouseWheel
+      mousedown: this.mouseDown,
+      mouseenter: this.mouseEnter,
+      mouseleave: this.mouseLeave,
+      wheel: this.mouseWheel,
     });
 
     this.on(initialBindings);
@@ -279,23 +257,21 @@ Input.Mouse = class Mouse {
 
 
   destroy() {
-
     $(document).off({
-      "mousemove" : this.mouseMove,
-      "mouseup" : this.mouseUp
+      mousemove: this.mouseMove,
+      mouseup: this.mouseUp,
     });
 
-    return this.$target.off({
-      "mousedown" : this.mouseDown,
-      "mouseenter" : this.mouseEnter,
-      "mouseleave" : this.mouseLeave,
-      "wheel" : this.mouseWheel
+    this.$target.off({
+      mousedown: this.mouseDown,
+      mouseenter: this.mouseEnter,
+      mouseleave: this.mouseLeave,
+      wheel: this.mouseWheel,
     });
   }
 
 
   isHit(event) {
-
     const { pageX, pageY } = event;
     const { left, top } = this.$target.offset();
 
@@ -304,64 +280,54 @@ Input.Mouse = class Mouse {
   }
 
   handle(eventName, ...args) {
-
-    return [ this.leftMouseButton, this.rightMouseButton ].map((button) =>
-      button[`handle${eventName}`].apply( button, args ));
+    [this.leftMouseButton, this.rightMouseButton].forEach(button =>
+      button[`handle${eventName}`](...args));
   }
 
   mouseDown(event) {
-
     event.preventDefault();
 
     this.lastPosition = {
-      x : event.pageX - this.$target.offset().left,
-      y : event.pageY - this.$target.offset().top
+      x: event.pageX - this.$target.offset().left,
+      y: event.pageY - this.$target.offset().top,
     };
 
-    return this.handle("MouseDown", event);
+    this.handle("MouseDown", event);
   }
 
 
   mouseUp(event) {
-
     if (this.isMouseOver) {
-      if (!this.isHit(event)) { this.mouseLeave({which : 0}); }
-    } else {
-      if (this.isHit(event)) { this.mouseEnter({which : 0}); }
-    }
+      if (!this.isHit(event)) { this.mouseLeave({ which: 0 }); }
+    } else if (this.isHit(event)) { this.mouseEnter({ which: 0 }); }
 
-    return this.handle("MouseUp", event);
+    this.handle("MouseUp", event);
   }
 
 
   mouseMove(event) {
-
     let delta;
     this.position = {
-      x : event.pageX - this.$target.offset().left,
-      y : event.pageY - this.$target.offset().top
+      x: event.pageX - this.$target.offset().left,
+      y: event.pageY - this.$target.offset().top,
     };
 
     if (this.lastPosition != null) {
-
       delta = {
-        x : (this.position.x - this.lastPosition.x),
-        y : (this.position.y - this.lastPosition.y)
+        x: (this.position.x - this.lastPosition.x),
+        y: (this.position.y - this.lastPosition.y),
       };
     }
 
-    if (__guard__(delta, x => x.x) !== 0 || __guard__(delta, x1 => x1.y) !== 0) {
-
-      this.handle( "MouseMove", event, delta );
+    if (Utils.__guard__(delta, x => x.x) !== 0 || Utils.__guard__(delta, x1 => x1.y) !== 0) {
+      this.handle("MouseMove", event, delta);
 
       this.lastPosition = this.position;
     }
-
   }
 
 
   mouseEnter(event) {
-
     if (!this.isButtonPressed(event)) {
       this.isMouseOver = true;
       this.trigger("over");
@@ -370,7 +336,6 @@ Input.Mouse = class Mouse {
 
 
   mouseLeave(event) {
-
     if (!this.isButtonPressed(event)) {
       this.isMouseOver = false;
       this.trigger("out");
@@ -379,11 +344,10 @@ Input.Mouse = class Mouse {
 
 
   isButtonPressed(event) {
-
     // Workaround for Firefox: event.which is not set properly
 
-    let b;
-    if ((b = __guard__(event.originalEvent, x => x.buttons)) != null) {
+    const b = Utils.__guard__(event.originalEvent, x => x.buttons);
+    if (b != null) {
       return b !== 0;
     }
     return event.which !== 0;
@@ -391,7 +355,6 @@ Input.Mouse = class Mouse {
 
 
   mouseWheel(event) {
-
     event.preventDefault();
     const delta = -event.originalEvent.deltaY;
     if (event.shiftKey) {
@@ -403,14 +366,9 @@ Input.Mouse = class Mouse {
     } else {
       this.trigger("scroll", delta, null);
     }
-
   }
 };
 Input.Mouse.initClass();
 
 
 export default Input;
-
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
-}

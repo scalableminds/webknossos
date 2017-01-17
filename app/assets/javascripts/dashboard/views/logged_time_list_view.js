@@ -1,3 +1,8 @@
+/**
+ * logged_time_list_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import moment from "moment";
@@ -5,8 +10,7 @@ import FormatUtils from "libs/format_utils";
 
 class LoggedTimeListView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.template  = _.template(`\
+    this.prototype.template = _.template(`\
 <table class="table-striped table-hover table">
   <thead>
     <tr>
@@ -24,10 +28,10 @@ class LoggedTimeListView extends Marionette.View {
   </tbody>
 </table>\
 `);
-  
-    this.prototype.templateContext  = {
+
+    this.prototype.templateContext = {
       FormatUtils,
-      moment
+      moment,
     };
   }
 }

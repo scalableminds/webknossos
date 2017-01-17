@@ -1,6 +1,12 @@
+/**
+ * model.js
+ * @flow weak
+ */
+
 import Backbone from "backbone";
 import _ from "lodash";
 import app from "app";
+import Utils from "../libs/utils";
 import Binary from "./model/binary";
 import SkeletonTracing from "./model/skeletontracing/skeletontracing";
 import User from "./model/user";
@@ -23,40 +29,38 @@ import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 // All public operations are **asynchronous**. We return a promise
 // which you can react on.
 
+export type Boundary = [number, number, number];
 
 class Model extends Backbone.Model {
   static initClass() {
-    this.prototype.HANDLED_ERROR  = {};
+    this.prototype.HANDLED_ERROR = {};
   }
 
 
-  constructor() {
-    super(...arguments);
+  constructor(...args) {
+    super(...args);
     this.initialized = false;
   }
 
 
-  fetch(options) {
-
-    let datasetName, infoUrl;
+  fetch() {
+    let infoUrl;
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
       // Include /readOnly part whenever it is in the pathname
-      infoUrl = location.pathname + "/info";
+      infoUrl = `${location.pathname}/info`;
     } else {
-      infoUrl = `/annotations/${this.get('tracingType')}/${this.get('tracingId')}/info`;
+      infoUrl = `/annotations/${this.get("tracingType")}/${this.get("tracingId")}/info`;
     }
 
-    return Request.receiveJSON(infoUrl).then( tracing => {
-
+    return Request.receiveJSON(infoUrl).then((tracing) => {
       let error;
       if (tracing.error) {
         ({ error } = tracing);
-
       } else if (!tracing.content.dataSet) {
         error = "Selected dataset doesn't exist";
-
       } else if (!tracing.content.dataSet.dataLayers) {
-        if (datasetName = tracing.content.dataSet.name) {
+        const datasetName = tracing.content.dataSet.name;
+        if (datasetName) {
           error = `Please, double check if you have the dataset '${datasetName}' imported.`;
         } else {
           error = "Please, make sure you have a dataset imported.";
@@ -73,40 +77,37 @@ class Model extends Backbone.Model {
       this.set("datasetName", tracing.content.dataSet.name);
 
       return this.user.fetch().then(() => Promise.resolve(tracing));
-    }
+    },
 
-    ).then( tracing => {
-
+    ).then((tracing) => {
       this.set("dataset", new Backbone.Model(tracing.content.dataSet));
-      const colorLayers = _.filter( this.get("dataset").get("dataLayers"),
+      const colorLayers = _.filter(this.get("dataset").get("dataLayers"),
                               layer => layer.category === "color");
       this.set("datasetConfiguration", new DatasetConfiguration({
-        datasetName : this.get("datasetName"),
-        dataLayerNames : _.map(colorLayers, "name")
+        datasetName: this.get("datasetName"),
+        dataLayerNames: _.map(colorLayers, "name"),
       }));
       return this.get("datasetConfiguration").fetch().then(() => Promise.resolve(tracing));
-    }
+    },
 
-    ).then( tracing => {
-
+    ).then((tracing) => {
       const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
       return this.initializeWithData(tracing, layerInfos);
-    }
+    },
 
     );
   }
 
 
   determineAllowedModes() {
-
     const allowedModes = [];
     const settings = this.get("settings");
-    for (let allowedMode of settings.allowedModes) {
-
+    for (const allowedMode of settings.allowedModes) {
       if (this.getColorBinaries()[0].cube.BIT_DEPTH === 8) {
         switch (allowedMode) {
           case "flight": allowedModes.push(constants.MODE_ARBITRARY); break;
           case "oblique": allowedModes.push(constants.MODE_ARBITRARY_PLANE); break;
+          default: // ignore other modes for now
         }
       }
 
@@ -128,22 +129,22 @@ class Model extends Backbone.Model {
 
 
   initializeWithData(tracing, layerInfos) {
-
-    let bb;
     const { dataStore } = tracing.content.dataSet;
     const dataset = this.get("dataset");
 
-    const LayerClass = (() => { switch (dataStore.typ) {
-      case "webknossos-store": return WkLayer;
-      case "ndstore": return NdStoreLayer;
-      default: throw new Error(`Unknown datastore type: ${dataStore.typ}`);
-    } })();
+    const LayerClass = (() => {
+      switch (dataStore.typ) {
+        case "webknossos-store": return WkLayer;
+        case "ndstore": return NdStoreLayer;
+        default: throw new Error(`Unknown datastore type: ${dataStore.typ}`);
+      }
+    })();
 
     const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataset.get("name"), dataStore));
 
     ErrorHandling.assertExtendContext({
-      task : this.get("tracingId"),
-      dataSet : dataset.get("name")
+      task: this.get("tracingId"),
+      dataSet: dataset.get("name"),
     });
 
     console.log("tracing", tracing);
@@ -152,7 +153,8 @@ class Model extends Backbone.Model {
     const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
     app.scaleInfo = new ScaleInfo(dataset.get("scale"));
 
-    if ((bb = tracing.content.boundingBox) != null) {
+    const bb = tracing.content.boundingBox;
+    if (bb != null) {
       this.taskBoundingBox = this.computeBoundingBoxFromArray(bb.topLeft.concat([bb.width, bb.height, bb.depth]));
     }
 
@@ -161,7 +163,7 @@ class Model extends Backbone.Model {
 
     let maxZoomStep = -Infinity;
 
-    for (let layer of layers) {
+    for (const layer of layers) {
       const maxLayerZoomStep = Math.log(Math.max(...layer.resolutions)) / Math.LN2;
       this.binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, this.connectionInfo);
       maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep);
@@ -178,14 +180,13 @@ class Model extends Backbone.Model {
     const flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"));
     this.set("flycam", flycam);
     this.set("flycam3d", flycam3d);
-    this.listenTo(flycam3d, "changed", (matrix, zoomStep) => flycam.setPosition(matrix.slice(12, 15)));
-    this.listenTo(flycam, {["positionChanged"](position) { return flycam3d.setPositionSilent(position); }});
+    this.listenTo(flycam3d, "changed", matrix => flycam.setPosition(matrix.slice(12, 15)));
+    this.listenTo(flycam, { positionChanged(position) { return flycam3d.setPositionSilent(position); } });
 
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
-
       if (isVolumeTracing) {
-        ErrorHandling.assert( (this.getSegmentationBinary() != null),
-          "Volume is allowed, but segmentation does not exist" );
+        ErrorHandling.assert((this.getSegmentationBinary() != null),
+          "Volume is allowed, but segmentation does not exist");
         this.set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, this.getSegmentationBinary()));
         this.annotationModel = this.get("volumeTracing");
       } else {
@@ -222,53 +223,47 @@ class Model extends Backbone.Model {
 
 
   setMode(mode) {
-
     this.set("mode", mode);
-    return this.trigger("change:mode", mode);
+    this.trigger("change:mode", mode);
   }
 
 
   setUserBoundingBox(bb) {
-
     this.userBoundingBox = this.computeBoundingBoxFromArray(bb);
-    return this.trigger("change:userBoundingBox", this.userBoundingBox);
+    this.trigger("change:userBoundingBox", this.userBoundingBox);
   }
 
 
   computeBoundingBoxFromArray(bb) {
-
     const [x, y, z, width, height, depth] = bb;
 
     return {
-      min : [x, y, z],
-      max : [x + width, y + height, z + depth]
+      min: [x, y, z],
+      max: [x + width, y + height, z + depth],
     };
   }
 
 
   // For now, since we have no UI for this
   buildMappingsObject() {
-
     const segmentationBinary = this.getSegmentationBinary();
 
     if (segmentationBinary != null) {
-      return window.mappings = {
+      window.mappings = {
         getAll() { return segmentationBinary.mappings.getMappingNames(); },
         getActive() { return segmentationBinary.activeMapping; },
-        activate(mapping) { return segmentationBinary.setActiveMapping(mapping); }
+        activate(mapping) { return segmentationBinary.setActiveMapping(mapping); },
       };
     }
   }
 
 
   getColorBinaries() {
-
     return _.filter(this.binary, binary => binary.category === "color");
   }
 
 
   getSegmentationBinary() {
-
     return _.find(this.binary, binary => binary.category === "segmentation");
   }
 
@@ -279,12 +274,11 @@ class Model extends Backbone.Model {
     const layers = this.get("dataset").get("dataLayers");
     if (userLayers == null) { return layers; }
 
-    for (let userLayer of userLayers) {
+    for (const userLayer of userLayers) {
+      const existingLayer = _.find(layers, layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName));
 
-      const layer = _.find(layers, layer => layer.name === __guard__(userLayer.fallback, x => x.layerName));
-
-      if (layer != null) {
-        _.extend(layer, userLayer);
+      if (existingLayer != null) {
+        _.extend(existingLayer, userLayer);
       } else {
         layers.push(userLayer);
       }
@@ -295,45 +289,27 @@ class Model extends Backbone.Model {
 
 
   canDisplaySegmentationData() {
-
     return !this.flycam.getIntegerZoomStep() > 0 || !this.getSegmentationBinary();
   }
 
 
   computeBoundaries() {
-
-    this.lowerBoundary = [ Infinity,  Infinity,  Infinity];
+    this.lowerBoundary = [Infinity, Infinity, Infinity];
     this.upperBoundary = [-Infinity, -Infinity, -Infinity];
 
-    return (() => {
-      const result = [];
-      for (let key in this.binary) {
-        const binary = this.binary[key];
-        result.push([0, 1, 2].map((i) =>
-          (this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]),
-          this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]))));
+    for (const key of Object.keys(this.binary)) {
+      const binary = this.binary[key];
+      for (let i = 0; i <= 2; i++) {
+        this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]);
+        this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]);
       }
-      return result;
-    })();
+    }
   }
 
   // delegate save request to all submodules
   save() {
-
     const submodels = [];
     const promises = [];
-
-    if (this.user != null) {
-      submodels.push[this.user];
-    }
-
-    if (this.get("dataset") != null) {
-      submodels.push[this.get("dataset")];
-    }
-
-    if (this.get("datasetConfiguration") != null) {
-      submodels.push[this.get("datasetConfiguration")];
-    }
 
     if (this.get("volumeTracing") != null) {
       submodels.push(this.get("volumeTracing").stateLogger);
@@ -343,45 +319,40 @@ class Model extends Backbone.Model {
       submodels.push(this.get("skeletonTracing").stateLogger);
     }
 
-    _.each(submodels, model => promises.push( model.save() ));
+    _.each(submodels, model => promises.push(model.save()));
 
     return Promise.all(promises).then(
-      function() {
+      (...args) => {
         Toast.success("Saved!");
-        return Promise.resolve(arguments);
+        return Promise.resolve(...args);
       },
-      function() {
+      (...args) => {
         Toast.error("Couldn't save. Please try again.");
-        return Promise.reject(arguments);
-    });
+        return Promise.reject(...args);
+      });
   }
 
 
   // Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
   initSettersGetter() {
-
-    return _.forEach(this.attributes, (value, key, attribute) => {
-
-      return Object.defineProperty(this, key, {
-        set(val) {
-          return this.set(key, val);
-        }
-        , get() {
-          return this.get(key);
-        }
-      }
-      );
-    }
+    _.forEach(this.attributes, (value, key) => Object.defineProperty(this, key, {
+      set(val) {
+        return this.set(key, val);
+      },
+      get() {
+        return this.get(key);
+      },
+    },
+      ),
     );
   }
 
 
   applyState(state, tracing) {
-
     this.get("flycam").setPosition(state.position || tracing.content.editPosition);
     if (state.zoomStep != null) {
       this.get("user").set("zoom", Math.exp(Math.LN2 * state.zoomStep));
-      this.get("flycam3d").setZoomStep( state.zoomStep );
+      this.get("flycam3d").setZoomStep(state.zoomStep);
     }
 
     const rotation = state.rotation || tracing.content.editRotation;
@@ -390,7 +361,7 @@ class Model extends Backbone.Model {
     }
 
     if (state.activeNode != null) {
-      return __guard__(this.get("skeletonTracing"), x => x.setActiveNode(state.activeNode));
+      Utils.__guard__(this.get("skeletonTracing"), x => x.setActiveNode(state.activeNode));
     }
   }
 }
@@ -398,7 +369,3 @@ Model.initClass();
 
 
 export default Model;
-
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
-}

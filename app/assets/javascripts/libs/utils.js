@@ -5,14 +5,11 @@ const Utils = {
 
 
   clamp(a, x, b) {
-
     return Math.max(a, Math.min(b, x));
   },
 
 
-  zeroPad(num, zeros) {
-
-    if (zeros == null) { zeros = 0; }
+  zeroPad(num, zeros = 0) {
     num = `${num}`;
     while (num.length < zeros) {
       num = `0${num}`;
@@ -22,50 +19,41 @@ const Utils = {
 
 
   unflatten(array, tupleSize) {
-
-    return (() => {
-      const result = [];
-      for (let i = 0; i < array.length; i += step) {
-        result.push(array.slice(i, i + tupleSize));
-      }
-      return result;
-    })();
+    const result = [];
+    for (let i = 0; i < array.length; i += tupleSize) {
+      result.push(array.slice(i, i + tupleSize));
+    }
+    return result;
   },
 
 
   // sums up an array
   sum(array, iterator) {
-
     if (_.isString(iterator) || _.isNumber(iterator)) {
-      return array.reduce(( (r, a) => r + a[iterator]), 0);
+      return array.reduce(((r, a) => r + a[iterator]), 0);
     } else {
-      return array.reduce(( (r, a) => r + a), 0);
+      return array.reduce(((r, a) => r + a), 0);
     }
   },
 
 
   roundTo(value, digits) {
-
     const digitMultiplier = Math.pow(10, digits);
     return Math.round(value * digitMultiplier) / digitMultiplier;
   },
 
 
-  intToHex(int, digits) {
-
-    if (digits == null) { digits = 6; }
-    return (_.repeat("0", digits) + int.toString( 16 )).slice(-digits);
+  intToHex(int, digits = 6) {
+    return (_.repeat("0", digits) + int.toString(16)).slice(-digits);
   },
 
 
   rgbToHex(color) {
-
-    return `#${color.map( int => Utils.intToHex(int, 2)).join("")}`;
+    return `#${color.map(int => Utils.intToHex(int, 2)).join("")}`;
   },
 
 
   hexToRgb(hex) {
-
     const bigint = parseInt(hex.slice(1), 16);
     const r = (bigint >> 16) & 255;
     const g = (bigint >> 8) & 255;
@@ -75,13 +63,12 @@ const Utils = {
   },
 
 
-  compareBy(key, isSortedAscending) {
+  compareBy(key, isSortedAscending = true) {
     // generic key comparator for array.prototype.sort
 
-    if (isSortedAscending == null) { isSortedAscending = true; }
-    return function(a, b) {
+    return function (a, b) {
       if (!isSortedAscending) {
-        [a,b] = [b,a];
+        [a, b] = [b, a];
       }
       if (a[key] < b[key]) {
         return -1;
@@ -95,7 +82,6 @@ const Utils = {
 
 
   stringToNumberArray(s) {
-
     // remove leading/trailing whitespaces
     s = s.trim();
     // replace remaining whitespaces with commata
@@ -103,9 +89,9 @@ const Utils = {
     const stringArray = s.split(",");
 
     const result = [];
-    for (let e of stringArray) {
-      let newEl;
-      if (!isNaN(newEl = parseFloat(e))) {
+    for (const e of stringArray) {
+      const newEl = parseFloat(e);
+      if (!isNaN(newEl)) {
         result.push(newEl);
       }
     }
@@ -115,7 +101,6 @@ const Utils = {
 
 
   loaderTemplate() {
-
     return `\
 <div id="loader-icon">
   <i class="fa fa-spinner fa-spin fa-4x"></i>
@@ -125,9 +110,8 @@ const Utils = {
 
 
   isElementInViewport(el) {
-
-    //special bonus for those using jQuery
-    if (typeof jQuery === "function" && el instanceof jQuery) {
+    // special bonus for those using jQuery
+    if (typeof $ === "function" && el instanceof $) {
       el = el[0];
     }
 
@@ -155,8 +139,8 @@ const Utils = {
 
   getUrlParams(paramName) {
     // Parse the URL parameters as objects and return it or just a single param
-    const params = window.location.search.substring(1).split("&").reduce(function(result, value) {
-      const parts = value.split('=');
+    const params = window.location.search.substring(1).split("&").reduce((result, value) => {
+      const parts = value.split("=");
       if (parts[0]) {
         const key = decodeURIComponent(parts[0]);
         value = parts[1] ? decodeURIComponent(parts[1]) : true;
@@ -167,7 +151,23 @@ const Utils = {
     , {});
 
     if (paramName) { return params[paramName]; } else { return params; }
-  }
+  },
+
+
+  __range__(left, right, inclusive) {
+    const range = [];
+    const ascending = left < right;
+    // eslint-disable-next-line no-nested-ternary
+    const end = !inclusive ? right : ascending ? right + 1 : right - 1;
+    for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
+      range.push(i);
+    }
+    return range;
+  },
+
+  __guard__(value, transform) {
+    return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
+  },
 };
 
 export default Utils;

@@ -5,13 +5,13 @@ var fs = require("fs");
 var path = require("path");
 
 var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
-var nodePath = __dirname + "/node_modules/";
+var nodePath = path.join(__dirname, "node_modules/");
 var scriptPaths = {
-  "three"                 : nodePath + "three.js/build/three",
-  "three.color"           : nodePath + "three.js/examples/js/math/ColorConverter",
-  "three.trackball"       : nodePath + "three.js/examples/js/controls/TrackballControls",
-  "jasny-bootstrap"       : nodePath + "jasny-bootstrap/dist/js/jasny-bootstrap",
-  "bootstrap-multiselect" : nodePath + "bootstrap-multiselect/dist/js/bootstrap-multiselect",
+  "three":                 `${nodePath}three.js/build/three`,
+  "three.color":           `${nodePath}three.js/examples/js/math/ColorConverter`,
+  "three.trackball":       `${nodePath}three.js/examples/js/controls/TrackballControls`,
+  "jasny-bootstrap":       `${nodePath}jasny-bootstrap/dist/js/jasny-bootstrap`,
+  "bootstrap-multiselect": `${nodePath}bootstrap-multiselect/dist/js/bootstrap-multiselect`,
 };
 
 module.exports = {
@@ -19,10 +19,10 @@ module.exports = {
     main: "main.js",
   },
   output: {
-    path:              __dirname + "/public/bundle",
-    filename:          "[name].js",
+    path: __dirname + "/public/bundle",
+    filename: "[name].js",
     sourceMapFilename: "[file].map",
-    publicPath:        "/assets/bundle/"
+    publicPath: "/assets/bundle/",
   },
   module: {
     // Reduce compilation time by telling webpack to not parse these libraries.
@@ -31,44 +31,51 @@ module.exports = {
       /lodash/,
       /\/jquery\//,
     ],
-    rules: [{
-      test: /\.js$/,
-      exclude: /(node_modules|bower_components)/,
-      use: "babel-loader",
-    }, {
-      test: scriptPaths["three.color"],
-      use: [{
-        loader: "imports-loader",
-        options: { "THREE": "three" },
+    rules: [
+      {
+        test: /\.js$/,
+        exclude: /(node_modules|bower_components)/,
+        use: "babel-loader",
       }, {
-        loader: "exports-loader",
-        options: { "THREE.ColorConverter": "THREE.ColorConverter" },
-      }],
-    }, {
-      test: scriptPaths["three.trackball"],
-      use: { loader: "imports-loader", options: { "THREE": "three" } },
-    }, {
-      test: scriptPaths["three"],
-      use: { loader: "exports-loader", options: { "THREE": "THREE" } },
-    },
-    { test: /\.css$/, use: "css-loader" },
-    { test: /\.less$/, use: ["style-loader", "css-loader", "less-loader"] },
-    {
-      test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-      use: {
-        loader: "url-loader",
-        options: {
-          limit: 10000,
-          mimetype: "application/font-woff",
-        },
+        test: scriptPaths["three.color"],
+        use: [{
+          loader: "imports-loader",
+          options: { "THREE": "three" },
+        }, {
+          loader: "exports-loader",
+          options: { "THREE.ColorConverter": "THREE.ColorConverter" },
+        }],
+      }, {
+        test: scriptPaths["three.trackball"],
+        use: "imports-loader?THREE=three",
+      }, {
+        test: scriptPaths["three"],
+        use: "exports-loader?THREE=THREE",
       },
-    }, {
-      test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-      use: "file-loader",
-    },
-    { test: /\.png$/, use: { loader: "url-loader", options: { limit: 100000 } } },
-    { test: /\.jpg$/, use: "file-loader" },
-  ]},
+      {
+        test: /\.less$/,
+        use: ExtractTextPlugin.extract({
+          fallbackLoader: "style-loader",
+          loader: ["css-loader", "less-loader"],
+        }),
+      },
+      {
+        test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+        use: {
+          loader: "url-loader",
+          options: {
+            limit: 10000,
+            mimetype: "application/font-woff",
+          },
+        },
+      }, {
+        test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+        use: "file-loader",
+      },
+      { test: /\.png$/, use: { loader: "url-loader", options: { limit: 100000 } } },
+      { test: /\.jpg$/, use: "file-loader" },
+    ],
+  },
   resolve: {
     modules: [
       srcPath,
@@ -77,21 +84,23 @@ module.exports = {
     alias: scriptPaths,
   },
   externals: [
-    { "routes": "var jsRoutes" }
+    { "routes": "var jsRoutes" },
   ],
+  devtool: "cheap-source-map",
   plugins: [
+    new ExtractTextPlugin("main.css"),
     new webpack.DefinePlugin({
       "process.env": {
         NODE_ENV: process.env.NODE_ENV ? JSON.stringify(process.env.NODE_ENV) : undefined,
       },
     }),
     new webpack.ProvidePlugin({
-      $ : "jquery",
-      jQuery : "jquery",
-      "window.jQuery" : "jquery",
-      _ : "lodash"
+      $: "jquery",
+      jQuery: "jquery",
+      "window.jQuery": "jquery",
+      _: "lodash",
     }),
-  ]
+  ],
 };
 
 fs.writeFileSync("target/webpack.pid", process.pid, "utf8");

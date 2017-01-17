@@ -4,9 +4,8 @@ import TemplateHelpers from "libs/template_helpers";
 
 class TeamListItemView extends Marionette.View {
   static initClass() {
-  
-    this.prototype.tagName  = "tr";
-    this.prototype.template  = _.template(`\
+    this.prototype.tagName = "tr";
+    this.prototype.template = _.template(`\
 <td><%- name %></td>
 <td><% if(parent){ %><%- parent %><% } %></td>
 <td><% if(owner){ %> <%- owner.firstName %> <%- owner.lastName %> (<%- owner.email %>)<% }else{ %> - <% } %></td>
@@ -22,23 +21,22 @@ class TeamListItemView extends Marionette.View {
   <% } %>
 </td>\
 `);
-  
-    this.prototype.templateContext  =
-      {TemplateHelpers};
-  
-    this.prototype.events  =
-      {"click .delete" : "delete"};
-  
-    this.prototype.modelEvents  =
-      {"change" : "render"};
+
+    this.prototype.templateContext =
+      { TemplateHelpers };
+
+    this.prototype.events =
+      { "click .delete": "delete" };
+
+    this.prototype.modelEvents =
+      { change: "render" };
   }
 
 
   delete(evt) {
-
     evt.preventDefault();
     if (window.confirm("Do really want to delete this team?")) {
-      return this.model.destroy();
+      this.model.destroy();
     }
   }
 }

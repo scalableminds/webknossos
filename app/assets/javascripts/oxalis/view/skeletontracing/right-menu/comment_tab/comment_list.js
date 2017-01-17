@@ -11,17 +11,15 @@ class CommentList extends Component {
     this.state = {
       data: [],
       activeNodeId: 0,
-      isSortedAscending: true
+      isSortedAscending: true,
     };
   }
 
   render() {
-
     if (!this.state.data.length) { return null; }
 
     // create comment lists grouped by trees
-    let commentAndTreeNodes = _.map(this.state.data, tree => {
-
+    const commentAndTreeNodes = _.map(this.state.data, (tree) => {
       // do not render tree if it has no comments
       if (!tree.comments.length) { return null; }
 

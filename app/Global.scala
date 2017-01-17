@@ -1,26 +1,25 @@
-import akka.actor.{PoisonPill, Props}
-import akka.routing.RoundRobinPool
-import com.newrelic.api.agent.NewRelic
-import com.scalableminds.util.reactivemongo.GlobalDBAccess
-import com.scalableminds.util.security.SCrypt
-import models.binary.{DataStore, DataStoreDAO, WebKnossosStore}
-import models.team._
-import net.liftweb.common.Full
-import oxalis.jobs.AvailableTasksJob
-import play.api._
-import play.api.libs.concurrent._
-import models.user._
-import models.task._
-import com.scalableminds.util.mail.Mailer
-import play.api.libs.concurrent.Execution.Implicits._
-import com.typesafe.config.Config
-import models.annotation.AnnotationStore
-import oxalis.mturk.MTurkNotificationReceiver
-import play.api.libs.json.Json
-import play.api.mvc._
 import scala.concurrent.duration._
 
+import akka.actor.Props
+import com.newrelic.api.agent.NewRelic
+import com.scalableminds.util.mail.Mailer
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, GlobalDBAccess}
+import com.scalableminds.util.security.SCrypt
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
+import models.binary._
+import models.task._
+import models.team._
+import models.user._
+import net.liftweb.common.Full
+import oxalis.cleanup.CleanUpService
+import oxalis.jobs.AvailableTasksJob
+import oxalis.mturk.MTurkNotificationReceiver
+import play.api._
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.concurrent._
+import play.api.libs.json.Json
+import play.api.mvc._
 
 object Global extends GlobalSettings with LazyLogging{
 
@@ -33,6 +32,11 @@ object Global extends GlobalSettings with LazyLogging{
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
       InitialData.insert()
     }
+
+    CleanUpService.register("deletion of expired dataTokens", DataToken.expirationTime){
+      DataTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
+    }
+
     super.onStart(app)
   }
 

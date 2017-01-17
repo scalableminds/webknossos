@@ -1,6 +1,6 @@
 import React, { Component } from "react";
-import Comment from "./comment";
 import classNames from "classnames";
+import Comment from "./comment";
 
 
 class TreeCommentList extends Component {
@@ -11,44 +11,45 @@ class TreeCommentList extends Component {
     this.handleClick = this.handleClick.bind(this);
   }
 
-  render() {
+  handleClick(evt) {
+    this.setState({ collapsed: !this.state.collapsed });
+    evt.preventDefault();
+  }
 
-    let containsActiveNode = this.props.treeId === this.props.activeTreeId;
+  render() {
+    const containsActiveNode = this.props.treeId === this.props.activeTreeId;
 
     // don't render the comment nodes if the tree is collapsed
-    let commentNodes = !this.state.collapsed ?
+    const commentNodes = !this.state.collapsed ?
       this.props.comments.map(comment =>
         <Comment
           key={comment.node}
           data={comment}
           treeId={this.props.treeId}
-          isActive={comment.node == this.props.activeNodeId}
+          isActive={comment.node === this.props.activeNodeId}
           onNewActiveNode={this.props.onNewActiveNode}
-        />
+        />,
       ) :
       null;
 
-    let liClassName = classNames({ "bold" : containsActiveNode });
-    let iClassName = classNames("fa", "fa-fw", {
-      "fa-chevron-right" : this.state.collapsed,
-      "fa-chevron-down" : !this.state.collapsed,
+    const liClassName = classNames({ bold: containsActiveNode });
+    const iClassName = classNames("fa", "fa-fw", {
+      "fa-chevron-right": this.state.collapsed,
+      "fa-chevron-down": !this.state.collapsed,
     });
 
     // one tree and its comments
     return (
       <div>
         <li className={liClassName}>
-          <i className={iClassName} onClick={this.handleClick}></i>
+          <a href="#toggle-comment" onClick={this.handleClick}>
+            <i className={iClassName} />
+          </a>
           {this.props.treeId} - {this.props.treeName}
         </li>
         {commentNodes}
       </div>
     );
-  }
-
-
-  handleClick() {
-    this.setState({ collapsed : !this.state.collapsed });
   }
 }
 

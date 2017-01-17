@@ -3,8 +3,8 @@
     ["env", {
       "targets": {
         "browsers": [
-          "last 2 Chrome versions",
-          "last 2 Firefox versions",
+          "last 3 Chrome versions",
+          "last 3 Firefox versions",
           "last 2 Edge versions",
           "last 1 Safari versions",
           "last 1 iOS versions"
@@ -18,6 +18,7 @@
   ],
   plugins: [
     "transform-async-to-generator",
-    "transform-class-properties"
-  ]
+    "transform-class-properties",
+    "transform-flow-strip-types",
+  ],
 }

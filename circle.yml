@@ -1,6 +1,6 @@
 machine:
   environment:
-    SBT_VERSION_TAG: sbt-0.13.9_mongo-3.2.1_node-6.x_jdk-8
+    SBT_VERSION_TAG: sbt-0.13.9_mongo-3.2.1_node-7.x_jdk-8
 
 dependencies:
   pre:
@@ -18,14 +18,15 @@ dependencies:
     - "node_modules"
   override:
     - docker pull scalableminds/sbt:$SBT_VERSION_TAG
-    - docker-compose run oxalis-sbt clean compile stage
-    - docker build -t scalableminds/oxalis:$CIRCLE_BUILD_NUM .
+    - docker-compose run sbt clean compile stage
+    - docker build -t scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} .
 
 test:
   override:
-    - docker-compose run oxalis-frontend-tests
-    - docker-compose run oxalis-e2e-tests
-    - DOCKER_TAG=$CIRCLE_BUILD_NUM docker-compose up -d oxalis:
+    - docker-compose run webknossos-frontend-linting
+    - docker-compose run webknossos-frontend-tests
+    - docker-compose run webknossos-e2e-tests
+    - DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos:
         background: true
     - sleep 10
     - ./test/infrastructure/deployment.bash
@@ -34,9 +35,4 @@ deployment:
   hub:
     branch: /.*/
     commands:
-      - docker tag scalableminds/oxalis:$CIRCLE_BUILD_NUM scalableminds/oxalis:branch-$CIRCLE_BRANCH
-      - docker tag scalableminds/oxalis:$CIRCLE_BUILD_NUM scalableminds/oxalis:commit-$CIRCLE_SHA1
-      - docker push scalableminds/oxalis:$CIRCLE_BUILD_NUM
-      - docker push scalableminds/oxalis:branch-$CIRCLE_BRANCH
-      - docker push scalableminds/oxalis:commit-$CIRCLE_SHA1
       - docker logout

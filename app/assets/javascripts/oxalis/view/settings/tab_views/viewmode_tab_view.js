@@ -8,23 +8,23 @@ class ViewmodeTabView extends AbstractTabView {
   getTabs() {
     return [
       {
-        id : "help-tab",
-        name : "Help",
-        active : true,
-        viewClass : HelpLogoView
+        id: "help-tab",
+        name: "Help",
+        active: true,
+        viewClass: HelpLogoView,
       },
       {
-        id : "dataset-settings-tab",
-        name : "Dataset",
-        iconClass : "fa fa-cogs",
-        viewClass : DatasetSettingsView
+        id: "dataset-settings-tab",
+        name: "Dataset",
+        iconClass: "fa fa-cogs",
+        viewClass: DatasetSettingsView,
       },
       {
-        id : "user-settings-tab",
-        name : "User",
-        iconClass : "fa fa-cogs",
-        viewClass : PlaneUserSettingsView
-      }
+        id: "user-settings-tab",
+        name: "User",
+        iconClass: "fa fa-cogs",
+        viewClass: PlaneUserSettingsView,
+      },
     ];
   }
 }

@@ -8,25 +8,23 @@ import Constants from "../constants";
 
 class ArbitraryView {
   static initClass() {
+    this.prototype.DEFAULT_SCALE = 1.35;
+    this.prototype.MAX_SCALE = 3;
+    this.prototype.MIN_SCALE = 1;
 
-    this.prototype.DEFAULT_SCALE   = 1.35;
-    this.prototype.MAX_SCALE       = 3;
-    this.prototype.MIN_SCALE       = 1;
+    this.prototype.forceUpdate = false;
+    this.prototype.geometries = [];
+    this.prototype.additionalInfo = "";
 
-    this.prototype.forceUpdate  = false;
-    this.prototype.geometries  = [];
-    this.prototype.additionalInfo  = "";
+    this.prototype.isRunning = true;
+    this.prototype.animationRequestId = undefined;
 
-    this.prototype.isRunning  = true;
-    this.prototype.animationRequestId  = undefined;
-
-    this.prototype.scene  = null;
-    this.prototype.camera  = null;
-    this.prototype.cameraPosition  = null;
+    this.prototype.scene = null;
+    this.prototype.camera = null;
+    this.prototype.cameraPosition = null;
   }
 
   constructor(canvas, dataCam, view, width) {
-
     let camera;
     this.animate = this.animate.bind(this);
     this.resize = this.resize.bind(this);
@@ -39,12 +37,12 @@ class ArbitraryView {
     // CAM_DISTANCE has to be calculates such that with cam
     // angle 45°, the plane of width 128 fits exactly in the
     // viewport.
-    this.CAM_DISTANCE = width / 2 / Math.tan( ((Math.PI / 180) * 45) / 2 );
+    this.CAM_DISTANCE = width / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
 
     // The "render" div serves as a container for the canvas, that is
     // attached to it once a renderer has been initalized.
     this.container = $(canvas);
-    this.width  = this.container.width();
+    this.width = this.container.width();
     this.height = this.container.height();
     this.deviceScaleFactor = window.devicePixelRatio || 1;
 
@@ -59,7 +57,7 @@ class ArbitraryView {
 
     this.cameraPosition = [0, 0, this.CAM_DISTANCE];
 
-    this.group = new THREE.Object3D;
+    this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
     this.group.scale = new THREE.Vector3(...app.scaleInfo.nmPerVoxel);
     // Add scene to the group, all Geometries are then added to group
@@ -69,29 +67,27 @@ class ArbitraryView {
 
 
   start() {
-
     if (!this.isRunning) {
       this.isRunning = true;
 
-      for (let element of this.group.children) {
-        element.setVisibility = element.setVisibility || function(v) { return this.visible = v; };
+      for (const element of this.group.children) {
+        element.setVisibility = element.setVisibility || function (v) { this.visible = v; };
         element.setVisibility(true);
       }
 
-      $('.skeleton-arbitrary-controls').show();
+      $(".skeleton-arbitrary-controls").show();
       $("#arbitrary-info-canvas").show();
 
       this.resize();
       // start the rendering loop
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
-      return $(window).on("resize", this.resize);
+      $(window).on("resize", this.resize);
     }
   }
 
 
   stop() {
-
     if (this.isRunning) {
       this.isRunning = false;
       if (this.animationRequestId != null) {
@@ -99,21 +95,20 @@ class ArbitraryView {
         this.animationRequestId = undefined;
       }
 
-      for (let element of this.group.children) {
-        element.setVisibility = element.setVisibility || function(v) { return this.visible = v; };
+      for (const element of this.group.children) {
+        element.setVisibility = element.setVisibility || function (v) { this.visible = v; };
         element.setVisibility(false);
       }
 
       $(window).off("resize", this.resize);
 
-      $('.skeleton-arbitrary-controls').hide();
-      return $("#arbitrary-info-canvas").hide();
+      $(".skeleton-arbitrary-controls").hide();
+      $("#arbitrary-info-canvas").hide();
     }
   }
 
 
   animate() {
-
     this.animationRequestId = undefined;
     if (!this.isRunning) { return; }
 
@@ -123,7 +118,7 @@ class ArbitraryView {
 
     const { camera, geometries, renderer, scene } = this;
 
-    for (let geometry of geometries) {
+    for (const geometry of geometries) {
       if (geometry.update != null) {
         geometry.update();
       }
@@ -131,8 +126,8 @@ class ArbitraryView {
 
     const m = this.dataCam.getZoomedMatrix();
 
-    camera.matrix.set(m[0], m[4], m[8],  m[12],
-                      m[1], m[5], m[9],  m[13],
+    camera.matrix.set(m[0], m[4], m[8], m[12],
+                      m[1], m[5], m[9], m[13],
                       m[2], m[6], m[10], m[14],
                       m[3], m[7], m[11], m[15]);
 
@@ -153,13 +148,12 @@ class ArbitraryView {
 
     this.forceUpdate = false;
 
-    return this.animationRequestId = window.requestAnimationFrame(this.animate);
+    this.animationRequestId = window.requestAnimationFrame(this.animate);
   }
 
 
   draw() {
-
-    return this.forceUpdate = true;
+    this.forceUpdate = true;
   }
 
 
@@ -177,9 +171,9 @@ class ArbitraryView {
 
     this.resizeThrottled = _.throttle(
       () => this.resize(),
-      Constants.RESIZE_THROTTLE_TIME
+      Constants.RESIZE_THROTTLE_TIME,
     );
-    return this.resizeThrottled();
+    this.resizeThrottled();
   }
 
 
@@ -187,41 +181,38 @@ class ArbitraryView {
     // Call this after the canvas was resized to fix the viewport
     // Needs to be bound
 
-    this.width  = this.container.width();
+    this.width = this.container.width();
     this.height = this.container.height();
 
     this.renderer.setSize(this.width, this.height);
 
     this.camera.aspect = this.width / this.height;
     this.camera.updateProjectionMatrix();
-    return this.draw();
+    this.draw();
   }
 
 
   applyScale(delta) {
-
     if (!this.scaleFactor) { this.scaleFactor = this.DEFAULT_SCALE; }
 
-    if ((this.scaleFactor+delta > this.MIN_SCALE) && (this.scaleFactor+delta < this.MAX_SCALE)) {
+    if ((this.scaleFactor + delta > this.MIN_SCALE) && (this.scaleFactor + delta < this.MAX_SCALE)) {
       this.scaleFactor += Number(delta);
       this.width = this.height = this.scaleFactor * Constants.VIEWPORT_WIDTH;
       this.container.width(this.width);
       this.container.height(this.height);
 
-      return this.resizeThrottled();
+      this.resizeThrottled();
     }
   }
 
   setClippingDistance(value) {
-
     this.camera.near = this.CAM_DISTANCE - value;
-    return this.camera.updateProjectionMatrix();
+    this.camera.updateProjectionMatrix();
   }
 
 
   setAdditionalInfo(info) {
-
-    return this.additionalInfo = info;
+    this.additionalInfo = info;
   }
 }
 ArbitraryView.initClass();

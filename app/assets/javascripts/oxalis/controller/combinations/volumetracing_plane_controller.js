@@ -1,7 +1,6 @@
 import _ from "lodash";
 import Constants from "oxalis/constants";
 import PlaneController from "../viewmodes/plane_controller";
-import VolumeTracingController from "../annotations/volumetracing_controller";
 
 class VolumeTracingPlaneController extends PlaneController {
 
@@ -17,32 +16,28 @@ class VolumeTracingPlaneController extends PlaneController {
     this.volumeTracingController = volumeTracingController;
 
     this.simulateTracing = this.simulateTracing.bind(this);
-    this.listenTo(this.model.flycam, "positionChanged", () => {
-      return this.render3dCell(this.model.volumeTracing.getActiveCellId());
-    }
+    this.listenTo(this.model.flycam, "positionChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()),
     );
-    this.listenTo(this.model.flycam, "zoomStepChanged", () => {
-      return this.render3dCell(this.model.volumeTracing.getActiveCellId());
-    }
+    this.listenTo(this.model.flycam, "zoomStepChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()),
     );
 
-    this.listenTo(this.model.user, "isosurfaceDisplayChanged", function() { return this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "isosurfaceBBsizeChanged", function() { return this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "isosurfaceResolutionChanged", function() { return this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.volumeTracing, "newActiveCell", function(id) {
+    this.listenTo(this.model.user, "isosurfaceDisplayChanged", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.user, "isosurfaceBBsizeChanged", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.user, "isosurfaceResolutionChanged", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.volumeTracing, "newActiveCell", function (id) {
       id = this.model.volumeTracing.getActiveCellId();
       if (id > 0) {
-        return this.render3dCell(id);
-      }});
+        this.render3dCell(id);
+      }
+    });
   }
 
 
   simulateTracing() {
-
     this.model.volumeTracing.setMode(Constants.VOLUME_MODE_TRACE);
 
     const controls = this.getPlaneMouseControls();
-    let pos = (x, y) => ({x, y});
+    let pos = (x, y) => ({ x, y });
 
     controls.leftMouseDown(pos(100, 100), 0, {});
 
@@ -60,110 +55,92 @@ class VolumeTracingPlaneController extends PlaneController {
               pos[2]++;
               this.model.flycam.setPosition(pos);
               return _.defer(this.simulateTracing);
-            }
+            },
             );
-          }
+          },
           );
-        }
+        },
         );
-      }
+      },
       );
-    }
+    },
     );
   }
 
 
   getPlaneMouseControls(planeId) {
-
     return _.extend(super.getPlaneMouseControls(planeId), {
 
-      leftDownMove : (delta, pos, plane, event) => {
-
+      leftDownMove: (delta, pos) => {
         if (this.model.volumeTracing.mode === Constants.VOLUME_MODE_MOVE) {
-          return this.move([
+          this.move([
             (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
             (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
-            0
+            0,
           ]);
-        } else {
-          return this.model.volumeTracing.addToLayer( this.calculateGlobalPos(pos));
         }
+        this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
       },
 
-      leftMouseDown : (pos, plane, event) => {
-
+      leftMouseDown: (pos, plane, event) => {
         if (event.shiftKey) {
           this.volumeTracingController.enterDeleteMode();
         }
         this.model.volumeTracing.startEditing(plane);
-        return this.adjustSegmentationOpacity();
+        this.adjustSegmentationOpacity();
       },
 
-      leftMouseUp : () => {
-
+      leftMouseUp: () => {
         this.model.volumeTracing.finishLayer();
-        return this.volumeTracingController.restoreAfterDeleteMode();
+        this.volumeTracingController.restoreAfterDeleteMode();
       },
 
-      rightDownMove : (delta, pos, plane, event) => {
+      rightDownMove: (delta, pos) => this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos)),
 
-        return this.model.volumeTracing.addToLayer( this.calculateGlobalPos(pos));
-      },
-
-      rightMouseDown : (pos, plane, event) => {
-
+      rightMouseDown: (pos, plane) => {
         this.volumeTracingController.enterDeleteMode();
         this.model.volumeTracing.startEditing(plane);
-        return this.adjustSegmentationOpacity();
+        this.adjustSegmentationOpacity();
       },
 
-      rightMouseUp : () => {
-
+      rightMouseUp: () => {
         this.model.volumeTracing.finishLayer();
-        return this.volumeTracingController.restoreAfterDeleteMode();
+        this.volumeTracingController.restoreAfterDeleteMode();
       },
 
-      leftClick : (pos, plane, event) => {
+      leftClick: (pos) => {
+        const cellId = this.model.getSegmentationBinary().cube.getDataValue(this.calculateGlobalPos(pos));
 
-        const cellId = this.model.getSegmentationBinary().cube.getDataValue(
-                  this.calculateGlobalPos( pos ));
-
-        return this.volumeTracingController.handleCellSelection( cellId );
-      }
-    }
+        this.volumeTracingController.handleCellSelection(cellId);
+      },
+    },
     );
   }
 
 
   adjustSegmentationOpacity() {
-
     if (this.model.user.get("segmentationOpacity") < 10) {
-      return this.model.user.set("segmentationOpacity", 50);
+      this.model.user.set("segmentationOpacity", 50);
     }
   }
 
 
   getKeyboardControls() {
-
     return _.extend(super.getKeyboardControls(), {
 
-      "c" : () => {
-        return this.model.volumeTracing.createCell();
-      }
-    }
+      c: () => this.model.volumeTracing.createCell(),
+    },
     );
   }
 
 
   render3dCell(id) {
-
     if (!this.model.user.get("isosurfaceDisplay")) {
-      return this.sceneController.removeShapes();
-    } else {
-      const bb = this.model.flycam.getViewportBoundingBox();
-      const res = this.model.user.get("isosurfaceResolution");
-      return this.sceneController.showShapes(this.scaleIsosurfaceBB(bb), res, id);
+      this.sceneController.removeShapes();
     }
+    const bb = this.model.flycam.getViewportBoundingBox();
+    const res = this.model.user.get("isosurfaceResolution");
+    this.sceneController.showShapes(this.scaleIsosurfaceBB(bb), res, id);
   }
 
   scaleIsosurfaceBB(bb) {

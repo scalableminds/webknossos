@@ -94,10 +94,8 @@ class SkeletonTracingPlaneController extends PlaneController {
   )
 
 
-  scrollPlanes = (delta, type) => {
-    // TODO: Track this issue https://github.com/babel/babel/issues/5104
-    // to use a simple this.super call
-    PlaneController.prototype.scrollPlanes.call(this, delta, type);
+  scrollPlanes(delta, type) {
+    super.scrollPlanes(delta, type);
 
     if (type === "shift") {
       this.skeletonTracingController.setRadius(delta);
@@ -156,7 +154,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  setWaypoint = (position, ctrlPressed) => {
+  setWaypoint(position, ctrlPressed) {
     const activeNode = this.model.skeletonTracing.getActiveNode();
     // set the new trace direction
     if (activeNode) {

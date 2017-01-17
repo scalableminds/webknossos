@@ -61,14 +61,12 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
 
   // make sure that it is not possible to keep nodes from being created
-  setWaypoint = (...args) => {
+  setWaypoint(...args) {
     if (this.isBranchpointvideoMode()) { return; }
     if (!this.model.get("flightmodeRecording")) {
       this.model.set("flightmodeRecording", true);
     }
-    // TODO: Track this issue https://github.com/babel/babel/issues/5104
-    // to use a simple this.super call
-    ArbitraryController.prototype.setWaypoint.apply(this, args);
+    super.setWaypoint(...args);
   }
 
 

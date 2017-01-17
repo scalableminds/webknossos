@@ -349,7 +349,7 @@ class ArbitraryController {
   }
 
 
-  setWaypoint = () => {
+  setWaypoint() {
     if (!this.model.get("flightmodeRecording")) {
       return;
     }

@@ -152,7 +152,7 @@ class PlaneController {
         this.planeView.setActiveViewport(this.activeViewport = planeId);
       },
 
-      scroll: this.scrollPlanes,
+      scroll: this.scrollPlanes.bind(this),
     };
   }
 
@@ -444,7 +444,7 @@ class PlaneController {
   }
 
 
-  scrollPlanes = (delta, type) => {
+  scrollPlanes(delta, type) {
     switch (type) {
       case null:
         this.moveZ(delta, true);

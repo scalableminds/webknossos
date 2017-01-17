@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 
 class NestedObjModel extends Backbone.Model {
@@ -14,7 +15,7 @@ class NestedObjModel extends Backbone.Model {
     const valueObj = this.attributes;
     return _.reduce(
       attributes,
-      (value, attribute) => __guard__(value, x => x[attribute]),
+      (value, attribute) => Utils.__guard__(value, x => x[attribute]),
       valueObj);
   }
 
@@ -32,7 +33,7 @@ class NestedObjModel extends Backbone.Model {
 
   deepSet(obj, attributeString, val, silent = false) {
     const attributes = attributeString.split(".");
-    return _.reduce(
+    _.reduce(
       attributes,
       (value, attribute, ind) => {
         if (ind < attributes.length - 1) {
@@ -48,9 +49,10 @@ class NestedObjModel extends Backbone.Model {
           if (!silent) {
             // Trigger the change in the model
             this.triggerDeepChange(oldVal, val, attributeString);
-            return this.trigger("change", this);
+            this.trigger("change", this);
           }
         }
+        return null;
       },
       obj);
   }
@@ -61,19 +63,15 @@ class NestedObjModel extends Backbone.Model {
     // that actually changed (e.g. layers.color.brightness)
     if (_.isPlainObject(newObj)) {
       // Recursively call triggerDeepChange for each key
-      return _.forOwn(newObj, (value, key) => this.triggerDeepChange(((oldObj != null) ? oldObj[key] : oldObj), newObj[key], `${deepKey}.${key}`),
+      _.forOwn(newObj, (value, key) => this.triggerDeepChange(((oldObj != null) ? oldObj[key] : oldObj), newObj[key], `${deepKey}.${key}`),
       );
     } else if (oldObj !== newObj) {
       // Add the change to the changed object
       this.deepSet(this.changed, deepKey, newObj, true);
       // Trigger the change
-      return this.trigger(`change:${deepKey}`, this, newObj);
+      this.trigger(`change:${deepKey}`, this, newObj);
     }
   }
 }
 
 export default NestedObjModel;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

@@ -60,12 +60,12 @@ class CommentTabView extends Marionette.View {
 
 
   initialize() {
-    let comment;
     this.activeComment = {};
     this.isSortedAscending = true;
 
     // select the activeNode if there is a comment...
-    if (comment = this.getCommentForNode(this.getActiveNodeId())) {
+    const comment = this.getCommentForNode(this.getActiveNodeId());
+    if (comment) {
       this.activeComment = this.makeComment(comment);
     } else {
       // make null comment
@@ -96,14 +96,14 @@ class CommentTabView extends Marionette.View {
     }
 
     // scroll active comment into view
-    return this.ensureActiveCommentVisible();
+    this.ensureActiveCommentVisible();
   }
 
 
   updateState() {
     if (!this.commentList) { return; }
 
-    return this.commentList.setState({
+    this.commentList.setState({
       data: this.model.skeletonTracing.getTreesSortedBy("treeId", this.isSortedAscending),
       activeNodeId: this.getActiveNodeId(),
       activeTreeId: this.model.skeletonTracing.getActiveTreeId(),
@@ -115,7 +115,7 @@ class CommentTabView extends Marionette.View {
   ensureActiveCommentVisible() {
     const activeNodeId = this.getActiveNodeId();
     const comment = $(`#comment-tab-node-${activeNodeId}`)[0];
-    if (comment) { return scrollIntoViewIfNeeded(comment); }
+    if (comment) { scrollIntoViewIfNeeded(comment); }
   }
 
 
@@ -127,7 +127,7 @@ class CommentTabView extends Marionette.View {
   setActiveNode(comment, treeId) {
     this.activeComment = this.makeComment(comment, treeId);
     this.model.skeletonTracing.setActiveNode(comment.node);
-    return this.model.skeletonTracing.centerActiveNode();
+    this.model.skeletonTracing.centerActiveNode();
   }
 
 
@@ -139,21 +139,20 @@ class CommentTabView extends Marionette.View {
 
   updateInputElement(nodeId) {
     // responds to activeNode:change event
-    let comment;
+    const comment = this.getCommentForNode(nodeId);
     let content = "";
-    if (comment = this.getCommentForNode(nodeId)) {
+    if (comment) {
       this.activeComment = this.makeComment(comment);
       ({ content } = comment);
     }
 
     // populate the input element
     this.ui.commentInput.val(content);
-    return this.updateState();
+    this.updateState();
   }
 
 
   handleInput(evt) {
-    let comment;
     if (!this.model.skeletonTracing.restrictionHandler.updateAllowed()) { return; }
 
     // add, delete or update a comment
@@ -165,7 +164,8 @@ class CommentTabView extends Marionette.View {
     const tree = this.model.skeletonTracing.getActiveTree();
     const commentText = $(evt.target).val();
 
-    if (comment = this.getCommentForNode(nodeId)) {
+    let comment = this.getCommentForNode(nodeId);
+    if (comment) {
       if (commentText !== "") {
         comment.content = commentText;
       } else {
@@ -182,7 +182,7 @@ class CommentTabView extends Marionette.View {
       this.setActiveNode(comment, tree.treeId);
     }
 
-    return this.model.skeletonTracing.updateTree(tree);
+    this.model.skeletonTracing.updateTree(tree);
   }
 
 
@@ -219,19 +219,19 @@ class CommentTabView extends Marionette.View {
 
     // if a comment was found, make it active
     if (nextComment) {
-      return this.setActiveNode(nextComment, nextTree.treeId);
+      this.setActiveNode(nextComment, nextTree.treeId);
     }
   }
 
 
   previousComment() {
-    return this.nextComment(false);
+    this.nextComment(false);
   }
 
 
   sortComments() {
     this.isSortedAscending = !this.isSortedAscending;
-    return this.updateState();
+    this.updateState();
   }
 
 

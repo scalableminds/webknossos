@@ -36,8 +36,8 @@ class TracingView extends Marionette.View {
   }
 
   initialize() {
-    return this.listenTo(this.model.flycam, "zoomStepChanged", function () {
-      return this.$el.toggleClass("zoomstep-warning",
+    this.listenTo(this.model.flycam, "zoomStepChanged", function () {
+      this.$el.toggleClass("zoomstep-warning",
         (this.model.volumeTracing != null) && !this.model.canDisplaySegmentationData());
     });
   }
@@ -52,7 +52,7 @@ class TracingView extends Marionette.View {
   onRender() {
     // Hide the input catchers arbitrary model
     if (Constants.MODES_ARBITRARY.includes(this.model.get("mode"))) {
-      return this.ui.inputcatchers.hide();
+      this.ui.inputcatchers.hide();
     }
   }
 }

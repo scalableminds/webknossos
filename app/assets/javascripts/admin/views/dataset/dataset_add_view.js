@@ -39,7 +39,7 @@ class DatasetAddView extends Marionette.View {
 
   initialize(options) {
     this.options = options;
-    return this.listenTo(this, "render", this.showUploadDataset);
+    this.listenTo(this, "render", this.showUploadDataset);
   }
 
 

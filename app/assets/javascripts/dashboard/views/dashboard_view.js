@@ -1,10 +1,14 @@
+/**
+ * dashboard_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import DashboardTaskListView from "./dashboard_task_list_view";
 import ExplorativeTracingListView from "./explorative_tracing_list_view";
 import LoggedTimeView from "./logged_time_view";
 import DatasetSwitchView from "./dataset/dataset_switch_view";
-
 
 class DashboardView extends Marionette.View {
   static initClass() {
@@ -66,7 +70,7 @@ class DashboardView extends Marionette.View {
       this.listenTo(this, "render", this.showDatasets);
     }
 
-    return this.viewCache = {
+    this.viewCache = {
       datasetSwitchView: null,
       taskListView: null,
       explorativeTracingListView: null,
@@ -95,10 +99,10 @@ class DashboardView extends Marionette.View {
   }
 
 
-  showTab(viewName, viewClass) {
-    let view;
-    if (!(view = this.viewCache[viewName])) {
-      view = this.viewCache[viewName] = new viewClass(this.options);
+  showTab(viewName, ViewClass) {
+    let view = this.viewCache[viewName];
+    if (!view) {
+      view = this.viewCache[viewName] = new ViewClass(this.options);
     }
     return this.showChildView("tabPane", view, { preventDestroy: true });
   }

@@ -113,12 +113,12 @@ class MergeModalView extends ModalView {
 
 
   initialize() {
-    return this.nml = undefined;
+    this.nml = undefined;
   }
 
 
   onRender() {
-    return Request.receiveJSON("/api/user").then(() => {
+    Request.receiveJSON("/api/user").then(() => {
       this.taskTypeSelectionView = new SelectionView({
         collection: new TaskTypeCollection(),
         childViewOptions: {
@@ -133,7 +133,7 @@ class MergeModalView extends ModalView {
       });
 
       this.showChildView("tasktype", this.taskTypeSelectionView);
-      return this.showChildView("project", this.projectSelectionView);
+      this.showChildView("project", this.projectSelectionView);
     },
     );
   }
@@ -141,32 +141,32 @@ class MergeModalView extends ModalView {
   mergeTaskType() {
     const taskTypeId = this.ui.tasktype.find("select :selected").prop("id");
     const url = `/annotations/CompoundTaskType/${taskTypeId}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
-    return this.merge(url);
+    this.merge(url);
   }
 
 
   mergeProject() {
     const projectId = this.ui.project.find("select :selected").prop("value");
     const url = `/annotations/CompoundProject/${projectId}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
-    return this.merge(url);
+    this.merge(url);
   }
 
 
   mergeNml() {
     if (this.nml) {
       const url = `/annotations/${this.nml.typ}/${this.nml.id}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
-      return this.merge(url);
+      this.merge(url);
     } else {
-      return Toast.error("Please upload NML file");
+      Toast.error("Please upload NML file");
     }
   }
 
 
   mergeExplorative() {
     const explorativeId = this.ui.explorative.find("input").val();
-    return this.validateId(explorativeId).then(() => {
+    this.validateId(explorativeId).then(() => {
       const url = `/annotations/Explorational/${explorativeId}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
-      return this.merge(url);
+      this.merge(url);
     },
     );
   }
@@ -175,25 +175,25 @@ class MergeModalView extends ModalView {
   merge(url) {
     const readOnly = document.getElementById("checkbox-read-only").checked;
 
-    return Request.receiveJSON(`${url}/${readOnly}`).then((annotation) => {
+    Request.receiveJSON(`${url}/${readOnly}`).then((annotation) => {
       Toast.message(annotation.messages);
 
       const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
-      return app.router.loadURL(redirectUrl);
+      app.router.loadURL(redirectUrl);
     });
   }
 
 
   selectFiles() {
     if (this.ui.fileInput[0].files.length) {
-      return this.ui.uploadAndExploreForm.submit();
+      this.ui.uploadAndExploreForm.submit();
     }
   }
 
 
   toggleIcon(state) {
     this.ui.formSpinnerIcon.toggleClass("hide", state);
-    return this.ui.formUploadIcon.toggleClass("hide", !state);
+    this.ui.formUploadIcon.toggleClass("hide", !state);
   }
 
 
@@ -203,13 +203,13 @@ class MergeModalView extends ModalView {
 
     const form = this.ui.uploadAndExploreForm;
 
-    return Request.always(
+    Request.always(
       Request.sendMultipartFormReceiveJSON(
         form.attr("action"),
         { data: new FormData(form[0]) },
       ).then((data) => {
         this.nml = data.annotation;
-        return Toast.message(data.messages);
+        Toast.message(data.messages);
       },
       ),
       () => this.toggleIcon(true),

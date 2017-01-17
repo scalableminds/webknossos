@@ -3,6 +3,10 @@
  * @flow weak
  */
 
+export type ModeType = 0 | 1 | 2 | 3;
+export type ViewType = 0 | 1 | 2 | 3;
+export type Vector3 = [number, number, number];
+
 const Constants = {
 
   PLANE_XY: 0,

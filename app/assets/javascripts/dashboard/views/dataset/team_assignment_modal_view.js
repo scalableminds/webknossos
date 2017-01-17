@@ -1,9 +1,13 @@
+/**
+ * team_assignment_modal_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import $ from "jquery";
 import Request from "libs/request";
 import TeamCollection from "admin/models/team/team_collection";
 import ModalView from "admin/views/modal_view";
-
 
 class TeamAssignmentModalView extends ModalView {
   static initClass() {
@@ -40,6 +44,7 @@ class TeamAssignmentModalView extends ModalView {
         if (_.includes(this.dataset.get("allowedTeams"), teamName)) {
           return "checked";
         }
+        return "";
       },
     };
   }
@@ -58,6 +63,7 @@ class TeamAssignmentModalView extends ModalView {
 
   submitTeams() {
     const $checkboxes = this.$("input:checked");
+    // eslint-disable-next-line newline-per-chained-call
     const allowedTeams = _.map($checkboxes, checkbox => $(checkbox).parent().parent().text().trim());
 
     this.dataset.set("allowedTeams", allowedTeams);
@@ -67,7 +73,7 @@ class TeamAssignmentModalView extends ModalView {
       { data: allowedTeams },
     );
 
-    return this.destroy();
+    this.destroy();
   }
 }
 TeamAssignmentModalView.initClass();

@@ -1,6 +1,6 @@
 import Backbone from "backbone";
 import Marionette from "backbone.marionette";
-import subviews from "backbone-subviews";
+import Subviews from "backbone-subviews";
 import _ from "lodash";
 import CheckboxSettingView from "oxalis/view/settings/setting_views/checkbox_setting_view";
 
@@ -38,7 +38,7 @@ class MappingInfoView extends Marionette.View {
 
 
   initialize({ model: oxalisModel }) {
-    Backbone.Subviews.add(this);
+    Subviews.add(this);
 
     this.model = new Backbone.Model();
     this.model.set("enableMapping", true);
@@ -52,7 +52,7 @@ class MappingInfoView extends Marionette.View {
     this.listenTo(this.cube, "volumeLabeled", this.renderDebounced);
     this.listenTo(this.cube, "newMapping", this.render);
     this.listenTo(this.flycam, "positionChanged", this.renderDebounced);
-    return this.listenTo(this.model, "change:enableMapping", function () {
+    this.listenTo(this.model, "change:enableMapping", function () {
       return this.cube.setMappingEnabled(this.model.get("enableMapping"));
     });
   }

@@ -1,4 +1,4 @@
-
+import Utils from "libs/utils";
 
 class ResizableBuffer {
   static initClass() {
@@ -35,7 +35,7 @@ class ResizableBuffer {
   get(i) { return this.buffer[i]; }
 
   set(element, i) {
-    return this.buffer.set(element, i * this.elementLength);
+    this.buffer.set(element, i * this.elementLength);
   }
 
 
@@ -46,13 +46,14 @@ class ResizableBuffer {
 
     buffer.set(element, length);
 
-    return this.length += elementLength;
+    this.length += elementLength;
   }
 
 
   pushMany(elements) {
     this.ensureCapacity(this.length + (elements.length * this.elementLength));
 
+    // eslint-disable-next-line prefer-const
     let { buffer, elementLength, length } = this;
 
     for (const element of elements) {
@@ -60,7 +61,7 @@ class ResizableBuffer {
       length += elementLength;
     }
 
-    return this.length += elements.length * elementLength;
+    this.length += elements.length * elementLength;
   }
 
   pushSubarray(subarray) {
@@ -71,14 +72,15 @@ class ResizableBuffer {
 
     buffer.set(subarray, length);
 
-    return this.length += subarray.length;
+    this.length += subarray.length;
   }
 
 
   pop(r) {
     if (r == null) { r = new Array(this.elementLength); }
-    if (!this.length) { return; }
+    if (!this.length) { return null; }
 
+    // eslint-disable-next-line prefer-const
     let { buffer, elementLength, length } = this;
 
     for (let i = elementLength - 1; i >= 0; i--) {
@@ -93,9 +95,9 @@ class ResizableBuffer {
 
   top(r) {
     if (r == null) { r = new Array(this.elementLength); }
-    if (!this.length) { return; }
+    if (!this.length) { return null; }
 
-    // eslint-disable-next-line no-unused-vars
+    // eslint-disable-next-line no-unused-vars, prefer-const
     let { buffer, elementLength, length } = this;
 
     for (let i = elementLength - 1; i >= 0; i--) {
@@ -120,7 +122,7 @@ class ResizableBuffer {
 
       newBuffer.set(buffer);
 
-      return this.buffer = newBuffer;
+      this.buffer = newBuffer;
     }
   }
 
@@ -129,9 +131,9 @@ class ResizableBuffer {
     const length = this.getLength();
     const result = [];
 
-    for (const i of __range__(0, length, false)) {
+    for (const i of Utils.__range__(0, length, false)) {
       const element = [];
-      for (const j of __range__(0, this.elementLength, false)) {
+      for (const j of Utils.__range__(0, this.elementLength, false)) {
         element.push(this.buffer[(i * this.elementLength) + j]);
       }
       result.push(`[ ${element.join(", ")} ]`);
@@ -144,13 +146,3 @@ ResizableBuffer.initClass();
 
 
 export default ResizableBuffer;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

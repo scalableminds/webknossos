@@ -1,3 +1,8 @@
+/**
+ * user_tasks_collection.js
+ * @flow weak
+ */
+
 import SortedCollection from "admin/models/sorted_collection";
 import DashboardTaskModel from "./dashboard_task_model";
 

@@ -22,12 +22,12 @@ _.mixin({
         promise = internalPromise = func.apply(this, args);
         if (timeout >= 0) {
           setTimeout((() => {
-            if (promise === internalPromise) { return promise = null; }
+            if (promise === internalPromise) { promise = null; }
           }), timeout);
         }
         promise.then(
-          () => promise = null,
-          () => promise = null);
+          () => { promise = null; },
+          () => { promise = null; });
         return promise;
       } else {
         return Promise.reject("mutex");

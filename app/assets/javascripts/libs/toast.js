@@ -1,21 +1,26 @@
 import _ from "lodash";
 import $ from "jquery";
 
+export type ToastType = {
+  remove: () => void
+};
+
 $.fn.alertWithTimeout = function (timeout = 3000) {
-  return this.each(function () {
+  this.each(function () {
     const $this = $(this);
     $this.alert();
     let timerId = -1;
 
     $this.hover(
       () => clearTimeout(timerId),
-      () =>
+      () => {
         timerId = setTimeout(
           () => $this.alert("close"),
           timeout,
-        ),
+        );
+      },
     );
-    return $(window).one("mousemove", () => $this.mouseout());
+    $(window).one("mousemove", () => $this.mouseout());
   });
 };
 
@@ -44,9 +49,10 @@ const Toast = {
           return this.error(message.error);
         }
       }
+      return {};
     } else if (_.isArray(message)) {
       messages = message;
-      return (messages.map(message => this.message(type, message, sticky)));
+      return (messages.map(singleMessage => this.message(type, singleMessage, sticky)));
     } else if (shouldDisplayToast(type, message, sticky)) {
       let displayMessage;
       if (message.match(/<html[^>]*>/)) {
@@ -70,6 +76,8 @@ const Toast = {
       }
 
       return { remove() { return $closeButton.click(); } };
+    } else {
+      return {};
     }
   },
 
@@ -95,17 +103,13 @@ const Toast = {
 
 
   highlight(target) {
-    return target.addClass("alert-wiggle");
+    target.addClass("alert-wiggle");
   },
 
 
   delete(type, message) {
-    return getToasts(type, message).alert("close");
+    getToasts(type, message).alert("close");
   },
-};
-
-export type ToastType = {
-  remove: () => void
 };
 
 export default Toast;

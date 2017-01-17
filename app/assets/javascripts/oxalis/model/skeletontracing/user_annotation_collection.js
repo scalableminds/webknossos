@@ -7,7 +7,7 @@ class UserAnnotationCollection extends Backbone.Collection {
 
   initialize(models, options) {
     this.userId = options.userId;
-    return this.dataSetName = options.dataSetName;
+    this.dataSetName = options.dataSetName;
   }
 
   parse(response) {

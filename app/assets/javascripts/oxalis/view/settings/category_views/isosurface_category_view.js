@@ -57,7 +57,7 @@ class IsosurfaceCategoryView extends CategoryView {
 
   initialize() {
     super.initialize();
-    if (app.oxalis.model.volumeTracing == null) { return this.hide(); }
+    if (app.oxalis.model.volumeTracing == null) { this.hide(); }
   }
 }
 IsosurfaceCategoryView.initClass();

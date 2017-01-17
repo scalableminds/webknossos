@@ -1,3 +1,8 @@
+/**
+ * explorative_tracing_list_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import app from "app";
@@ -113,13 +118,13 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
     this.collection = new UserAnnotationsCollection([], { userID: this.options.userID });
 
     this.showArchivedAnnotations = false;
-    return this.collection.fetch();
+    this.collection.fetch();
   }
 
 
   selectFiles() {
     if (this.ui.uploadFileInput[0].files.length) {
-      return this.ui.uploadAndExploreForm.submit();
+      this.ui.uploadAndExploreForm.submit();
     }
   }
 
@@ -129,14 +134,14 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
 
     const form = this.ui.uploadAndExploreForm;
 
-    return Request.sendMultipartFormReceiveJSON(
+    Request.sendMultipartFormReceiveJSON(
       form.attr("action"),
       { data: new FormData(form[0]) },
     ).then(
       (data) => {
         const url = `/annotations/${data.annotation.typ}/${data.annotation.id}`;
         app.router.loadURL(url);
-        return Toast.message(data.messages);
+        Toast.message(data.messages);
       },
       () => this.ui.fileinput.fileinput("clear"),
     );
@@ -149,7 +154,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
     }
 
     const unarchivedAnnoationIds = this.collection.pluck("id");
-    return Request.sendJSONReceiveJSON(
+    Request.sendJSONReceiveJSON(
       jsRoutes.controllers.AnnotationController.finishAll("Explorational").url,
       {
         method: "POST",
@@ -161,7 +166,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
       (data) => {
         Toast.message(data.messages);
         this.collection.reset();
-        return this.render();
+        this.render();
       },
     );
   }
@@ -170,14 +175,14 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
     this.ui.toggleViewSpinner.toggleClass("hide", false);
     this.showArchivedAnnotations = true;
     this.collection.isFinished = true;
-    return this.collection.fetch().then(() => this.render());
+    this.collection.fetch().then(() => this.render());
   }
 
   fetchOpenAnnotations() {
     this.ui.toggleViewSpinner.toggleClass("hide", false);
     this.showArchivedAnnotations = false;
     this.collection.isFinished = false;
-    return this.collection.fetch().then(() => this.render());
+    this.collection.fetch().then(() => this.render());
   }
 
   toggleViewArchivedText() {

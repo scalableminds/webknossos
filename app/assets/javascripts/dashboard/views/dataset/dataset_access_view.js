@@ -1,3 +1,8 @@
+/**
+ * dataset_access_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import TemplateHelpers from "libs/template_helpers";

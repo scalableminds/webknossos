@@ -1,3 +1,8 @@
+/**
+ * explorative_tracing_list_item_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
@@ -88,7 +93,7 @@ class ExplorativeTracingListItemView extends Marionette.View {
 
 
   submitForm() {
-    return this.ui.explorativeNameForm.submit();
+    this.ui.explorativeNameForm.submit();
   }
 
 
@@ -97,20 +102,20 @@ class ExplorativeTracingListItemView extends Marionette.View {
     const target = $(event.target);
     const url = target.attr("action");
 
-    return Request.sendUrlEncodedFormReceiveJSON(
+    Request.sendUrlEncodedFormReceiveJSON(
       url,
       { data: target },
     ).then((response) => {
       Toast.message(response.messages);
       const newName = this.$("input[name='name']").val();
       this.model.set("name", newName);
-      return this.render();
+      this.render();
     },
     );
   }
 
   toggleState(state) {
-    return state.isFinished = !state.isFinished;
+    state.isFinished = !state.isFinished;
   }
 
 
@@ -118,11 +123,11 @@ class ExplorativeTracingListItemView extends Marionette.View {
     event.preventDefault();
     const url = $(event.target).attr("href") || $(event.target.parentElement).attr("href");
 
-    return Request.receiveJSON(url).then((response) => {
+    Request.receiveJSON(url).then((response) => {
       Toast.message(response.messages);
       this.toggleState(this.model.attributes.state);
       this.model.collection.remove(this.model);
-      return this.options.parent.render();
+      this.options.parent.render();
     },
     );
   }

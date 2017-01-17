@@ -37,7 +37,7 @@ class StatisticListView extends Marionette.CompositeView {
     this.collection = new UserStatisticCollection();
     this.fetchData();
 
-    return this.listenTo(app.vent, "graphView:updatedSelection", this.update);
+    this.listenTo(app.vent, "graphView:updatedSelection", this.update);
   }
 
 

@@ -24,7 +24,7 @@ services:
   webknossos-frontend-linting:
     extends:
       service: sbt
-    command: bash -c "npm run lint || true"
+    command: bash -c "npm run lint"
 
   webknossos-frontend-flow:
     extends:

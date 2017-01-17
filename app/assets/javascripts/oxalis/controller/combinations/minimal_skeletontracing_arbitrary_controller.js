@@ -63,7 +63,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
     if (!this.model.get("flightmodeRecording")) {
       this.model.set("flightmodeRecording", true);
     }
-    return super.setWaypoint(...args);
+    super.setWaypoint(...args);
   }
 
 

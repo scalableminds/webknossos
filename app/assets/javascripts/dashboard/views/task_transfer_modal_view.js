@@ -1,3 +1,8 @@
+/**
+ * task_transfer_modal_view.js
+ * @flow weak
+ */
+
 // eslint-disable-next-line no-unused-vars
 import $ from "jquery";
 import _ from "lodash";

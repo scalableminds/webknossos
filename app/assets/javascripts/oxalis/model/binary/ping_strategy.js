@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "libs/utils";
 import Dimensions from "../dimensions";
 
 class PingStrategy {
@@ -52,8 +53,8 @@ class PingStrategy {
     const uOffset = Math.ceil(width / 2);
     const vOffset = Math.ceil(height / 2);
 
-    for (const u of __range__(-uOffset, uOffset, true)) {
-      for (const v of __range__(-vOffset, vOffset, true)) {
+    for (const u of Utils.__range__(-uOffset, uOffset, true)) {
+      for (const v of Utils.__range__(-vOffset, vOffset, true)) {
         const bucket = center.slice(0);
         bucket[this.u] += u;
         bucket[this.v] += v;
@@ -109,7 +110,7 @@ PingStrategy.BaseStrategy = class BaseStrategy extends PingStrategy {
           pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority });
           if (plane === activePlane) {
             // preload only for active plane
-            for (const slide of __range__(0, this.preloadingSlides, false)) {
+            for (const slide of Utils.__range__(0, this.preloadingSlides, false)) {
               if (direction[this.w] >= 0) { bucket[this.w]++; } else { bucket[this.w]--; }
               const preloadingPriority = (priority << (slide + 1)) + this.preloadingPriorityOffset;
               pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: preloadingPriority });
@@ -149,13 +150,3 @@ PingStrategy.Volume.initClass();
 
 
 export default PingStrategy;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

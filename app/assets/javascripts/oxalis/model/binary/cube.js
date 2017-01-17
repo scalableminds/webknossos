@@ -1,5 +1,6 @@
 import _ from "lodash";
 import Backbone from "backbone";
+import Utils from "../../../libs/utils";
 import { Bucket, NullBucket } from "./bucket";
 import ArbitraryCubeAdapter from "./arbitrary_cube_adapter";
 import TemporalBucketManager from "./temporal_bucket_manager";
@@ -75,7 +76,7 @@ class Cube {
 
     this.arbitraryCube = new ArbitraryCubeAdapter(this, cubeBoundary.slice());
 
-    for (const i of __range__(0, this.ZOOM_STEP_COUNT, false)) {
+    for (const i of Utils.__range__(0, this.ZOOM_STEP_COUNT, false)) {
       this.cubes[i] = {};
       this.cubes[i].data = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]);
       this.cubes[i].boundary = cubeBoundary.slice();
@@ -97,7 +98,7 @@ class Cube {
 
     this.pullQueue = pullQueue;
     this.pushQueue = pushQueue;
-    return this.temporalBucketManager = new TemporalBucketManager(this.pullQueue, this.pushQueue);
+    this.temporalBucketManager = new TemporalBucketManager(this.pullQueue, this.pushQueue);
   }
 
 
@@ -110,15 +111,9 @@ class Cube {
   }
 
 
-  setMapping(mapping) {
-    this.mapping = mapping;
-    return this.trigger("mappingChanged");
-  }
-
-
   setMappingEnabled(isEnabled) {
     this.currentMapping = isEnabled ? this.mapping : this.EMPTY_MAPPING;
-    return this.trigger("newMapping");
+    this.trigger("newMapping");
   }
 
 
@@ -139,13 +134,16 @@ class Cube {
     }
     this.mapping = newMapping;
 
-    return this.trigger("newMapping");
+    this.trigger("newMapping");
   }
 
 
   mapId(idToMap) {
-    let mappedId;
-    return (this.currentMapping != null) && ((mappedId = this.currentMapping[idToMap]) != null) ? mappedId : idToMap;
+    let mappedId = null;
+    if (this.currentMapping != null) {
+      mappedId = this.currentMapping[idToMap];
+    }
+    return mappedId != null ? mappedId : idToMap;
   }
 
 
@@ -235,7 +233,7 @@ class Cube {
 
   addBucketToGarbageCollection(bucket) {
     if (this.bucketCount >= this.MAXIMUM_BUCKET_COUNT) {
-      for (const i of __range__(0, (2 * this.bucketCount), false)) {
+      for (let i = 0; i < 2 * this.bucketCount; i++) {
         this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
         if (this.buckets[this.bucketIterator].shouldCollect()) { break; }
       }
@@ -286,7 +284,7 @@ class Cube {
     }
 
     this.pushQueue.push();
-    return this.trigger("volumeLabeled");
+    this.trigger("volumeLabeled");
   }
 
 
@@ -303,15 +301,16 @@ class Cube {
 
       const labelFunc = data =>
         // Write label in little endian order
-         __range__(0, this.BYTE_OFFSET, false).map(i =>
-          data[voxelIndex + i] = (label >> (i * 8)) & 0xff);
+        Utils.__range__(0, this.BYTE_OFFSET, false).forEach((i) => {
+          data[voxelIndex + i] = (label >> (i * 8)) & 0xff;
+        });
 
       bucket.label(labelFunc);
 
       // Push bucket if it's loaded, otherwise, TemporalBucketManager will push
       // it once it is.
       if (bucket.isLoaded()) {
-        return this.pushQueue.insert(address);
+        this.pushQueue.insert(address);
       }
     }
   }
@@ -326,11 +325,11 @@ class Cube {
       const data = bucket.getData();
       let result = 0;
       // Assuming little endian byte order
-      for (const i of __range__(0, this.BYTE_OFFSET, false)) {
+      for (const i of Utils.__range__(0, this.BYTE_OFFSET, false)) {
         result += (1 << (8 * i)) * data[voxelIndex + i];
       }
 
-      if (__guard__(mapping, x => x[result]) != null) {
+      if (Utils.__guard__(mapping, x => x[result]) != null) {
         return mapping[result];
       }
 
@@ -366,16 +365,3 @@ class Cube {
 Cube.initClass();
 
 export default Cube;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

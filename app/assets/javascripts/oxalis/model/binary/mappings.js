@@ -5,9 +5,9 @@ import ErrorHandling from "libs/error_handling";
 class Mappings {
 
 
-  constructor(datasetName, layer) {
+  constructor(dataStoreInfo, datasetName, layer) {
     this.mappings = _.keyBy(layer.mappings, "name");
-    this.baseUrl = `/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
+    this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
     this.doWithToken = layer.doWithToken.bind(layer);
   }
 
@@ -25,7 +25,7 @@ class Mappings {
 
   fetchMappings(mappingName) {
     const mappingChain = this.getMappingChain(mappingName);
-    const promises = _.map(mappingChain, mappingName => this.fetchMapping(mappingName));
+    const promises = _.map(mappingChain, curMappingName => this.fetchMapping(curMappingName));
     return Promise.all(promises);
   }
 
@@ -40,7 +40,7 @@ class Mappings {
       ).then(
         (mapping) => {
           this.mappings[mappingName].mappingObject = mapping;
-          return console.log("Done downloading:", mappingName);
+          console.log("Done downloading:", mappingName);
         },
         error => console.error("Error downloading:", mappingName, error)),
     );
@@ -53,7 +53,7 @@ class Mappings {
       return mapping.mappingArray;
     }
 
-    return mapping.mappingArray = this.buildMappingArray(mappingName);
+    return (mapping.mappingArray = this.buildMappingArray(mappingName));
   }
 
 

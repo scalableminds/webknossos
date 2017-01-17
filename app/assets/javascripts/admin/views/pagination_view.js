@@ -1,6 +1,7 @@
 import _ from "lodash";
-import $ from "jquery";
 import app from "app";
+import Utils from "libs/utils";
+import $ from "jquery";
 import Marionette from "backbone.marionette";
 
 class PaginationView extends Marionette.View {
@@ -83,33 +84,33 @@ class PaginationView extends Marionette.View {
   initialize(options) {
     this.options = options;
     this.listenToOnce(this.collection, "reset", this.searchByHash);
-    return this.listenTo(this.collection, "reset", this.render);
+    this.listenTo(this.collection, "reset", this.render);
   }
 
 
   goFirst(evt) {
-    __guard__(evt, x => x.preventDefault());
+    Utils.__guard__(evt, x => x.preventDefault());
     return this.collection.getFirstPage();
   }
 
   goLast(evt) {
-    __guard__(evt, x => x.preventDefault());
+    Utils.__guard__(evt, x => x.preventDefault());
     return this.collection.getLastPage();
   }
 
   goBack(evt) {
-    __guard__(evt, x => x.preventDefault());
+    Utils.__guard__(evt, x => x.preventDefault());
     return this.collection.getPreviousPage();
   }
 
   goNext(evt) {
-    __guard__(evt, x => x.preventDefault());
+    Utils.__guard__(evt, x => x.preventDefault());
     return this.collection.getNextPage();
   }
 
 
   handleClickPage(evt) {
-    __guard__(evt, x => x.preventDefault());
+    Utils.__guard__(evt, x => x.preventDefault());
     const page = $(evt.target).text();
     return this.collection.getPage(parseInt(page) - 1);
   }
@@ -120,7 +121,7 @@ class PaginationView extends Marionette.View {
 
 
   addElement() {
-    return app.vent.trigger("paginationView:addElement");
+    app.vent.trigger("paginationView:addElement");
   }
 
 
@@ -128,12 +129,11 @@ class PaginationView extends Marionette.View {
     // implement actually filtering on the collection in each respective view
     // in order to set correct fields for filtering
     const filterQuery = this.ui.inputSearch.val();
-    return app.vent.trigger("paginationView:filter", filterQuery);
+    app.vent.trigger("paginationView:filter", filterQuery);
   }
 
 
   render() {
-    /* eslint-disable no-underscore-dangle */
     this._ensureViewIsIntact();
     this.triggerMethod("before:render", this);
 
@@ -142,7 +142,6 @@ class PaginationView extends Marionette.View {
       this.$el.html(this.template(obj));
     }
     this._isRendered = true;
-    /* eslint-enable no-underscore-dangle */
 
     this.$el.find("ul.pagination").html(this.paginatorTemplate(obj));
     this.bindUIElements();
@@ -156,7 +155,7 @@ class PaginationView extends Marionette.View {
     if (hash) {
       this.ui.inputSearch.val(hash);
       this.ui.inputSearch.focus();
-      return this.filterBySearch();
+      this.filterBySearch();
     }
   }
 }
@@ -164,7 +163,3 @@ PaginationView.initClass();
 
 
 export default PaginationView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

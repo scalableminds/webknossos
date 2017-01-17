@@ -150,7 +150,7 @@ class TaskCreateFromView extends Marionette.View {
 
     if (this.isEditingMode) {
       this.listenTo(this.model, "sync", this.render);
-      return this.model.fetch();
+      this.model.fetch();
     }
   }
 
@@ -169,13 +169,13 @@ class TaskCreateFromView extends Marionette.View {
     this.toggleSubmitButton(true);
 
     // send form data to server
-    return this.createSubview.submit();
+    this.createSubview.submit();
   }
 
 
   toggleSubmitButton(state) {
     this.ui.submitButton.prop("disabled", state);
-    return this.ui.submitButton.toggleClass("disabled", state);
+    this.ui.submitButton.toggleClass("disabled", state);
   }
 
 
@@ -191,7 +191,7 @@ class TaskCreateFromView extends Marionette.View {
 
 
   parseBoundingBox(string) {
-    if (_.isEmpty(string)) { return; }
+    if (_.isEmpty(string)) { return null; }
 
       // split string by comma delimiter, trim whitespace and cast to integer
       // access from subview
@@ -215,18 +215,18 @@ class TaskCreateFromView extends Marionette.View {
 
     const url = `/projects/${task.get("projectName")}/tasks`;
 
-    return app.router.navigate(`${url}#${task.id}`, { trigger: true });
+    app.router.navigate(`${url}#${task.id}`, { trigger: true });
   }
 
 
   showSaveError() {
     this.toggleSubmitButton(false);
-    return Toast.error(`The task could not be ${this.getActionName().toLowerCase()}d due to server errors.`);
+    Toast.error(`The task could not be ${this.getActionName().toLowerCase()}d due to server errors.`);
   }
 
 
   showInvalidData() {
-    return Toast.error("The form data is not correct.");
+    Toast.error("The form data is not correct.");
   }
 
 
@@ -279,11 +279,11 @@ class TaskCreateFromView extends Marionette.View {
     } else if (this.type === "from_nml") {
       this.createSubview = new TaskCreateFromNMLView({ model: this.model, parent: this });
     } else {
-      throw Error(`Type ${this.type} is not defined. Choose between \"from_form\" and \"from_nml\".`);
+      throw Error(`Type ${this.type} is not defined. Choose between "from_form" and "from_nml".`);
     }
 
     // render the create-subview
-    return this.showChildView("subview", this.createSubview);
+    this.showChildView("subview", this.createSubview);
   }
 }
 TaskCreateFromView.initClass();

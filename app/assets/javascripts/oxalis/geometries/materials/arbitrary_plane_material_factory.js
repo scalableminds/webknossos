@@ -16,7 +16,7 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     this.textures = {};
     this.textures[this.getColorName()] = this.createDataTexture(this.tWidth, 1);
 
-    return this.uniforms[`${this.getColorName()}_texture`] = {
+    this.uniforms[`${this.getColorName()}_texture`] = {
       type: "t",
       value: this.textures[this.getColorName()],
     };

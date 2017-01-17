@@ -1,5 +1,6 @@
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import THREE from "three";
 import AbstractPlaneMaterialFactory from "./abstract_plane_material_factory";
 
@@ -9,7 +10,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   setupAttributesAndUniforms() {
     super.setupAttributesAndUniforms();
 
-    return this.uniforms = _.extend(this.uniforms, {
+    this.uniforms = _.extend(this.uniforms, {
       offset: {
         type: "v2",
         value: new THREE.Vector2(0, 0),
@@ -36,7 +37,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     // create textures
     let shaderName;
     this.textures = {};
-    for (const name in this.model.binary) {
+    for (const name of Object.keys(this.model.binary)) {
       const binary = this.model.binary[name];
       const bytes = binary.targetBitDepth >> 3;
       shaderName = this.sanitizeName(name);
@@ -45,67 +46,57 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.textures[shaderName].binaryName = binary.name;
     }
 
-    return (() => {
-      const result = [];
-      for (shaderName in this.textures) {
-        const texture = this.textures[shaderName];
-        let item;
-        this.uniforms[`${shaderName}_texture`] = {
-          type: "t",
-          value: texture,
+    for (shaderName of Object.keys(this.textures)) {
+      const texture = this.textures[shaderName];
+      this.uniforms[`${shaderName}_texture`] = {
+        type: "t",
+        value: texture,
+      };
+      if (texture.binaryCategory !== "segmentation") {
+        const color = this.convertColor(this.model.datasetConfiguration.get(`layers.${texture.binaryName}.color`));
+        this.uniforms[`${shaderName}_weight`] = {
+          type: "f",
+          value: 1,
         };
-        if (texture.binaryCategory !== "segmentation") {
-          const color = this.convertColor(this.model.datasetConfiguration.get(`layers.${texture.binaryName}.color`));
-          this.uniforms[`${shaderName}_weight`] = {
-            type: "f",
-            value: 1,
-          };
-          item = this.uniforms[`${shaderName}_color`] = {
-            type: "v3",
-            value: new THREE.Vector3(...color),
-          };
-        }
-        result.push(item);
+        this.uniforms[`${shaderName}_color`] = {
+          type: "v3",
+          value: new THREE.Vector3(...color),
+        };
       }
-      return result;
-    })();
+    }
   }
 
 
   makeMaterial(options) {
     super.makeMaterial(options);
 
-    this.material.setColorInterpolation = interpolation => (() => {
-      const result = [];
-      for (const name in this.textures) {
+    this.material.setColorInterpolation = (interpolation) => {
+      for (const name of Object.keys(this.textures)) {
         const texture = this.textures[name];
-        let item;
         if (texture.binaryCategory === "color") {
           texture.magFilter = interpolation;
-          item = texture.needsUpdate = true;
+          texture.needsUpdate = true;
         }
-        result.push(item);
       }
-      return result;
-    })();
+    };
 
     this.material.setScaleParams = ({ offset, repeat }) => {
       this.uniforms.offset.value.set(offset.x, offset.y);
-      return this.uniforms.repeat.value.set(repeat.x, repeat.y);
+      this.uniforms.repeat.value.set(repeat.x, repeat.y);
     };
 
-    this.material.setSegmentationAlpha = alpha => this.uniforms.alpha.value = alpha / 100;
+    this.material.setSegmentationAlpha = (alpha) => { this.uniforms.alpha.value = alpha / 100; };
 
-    return this.material.side = THREE.DoubleSide;
+    this.material.side = THREE.DoubleSide;
   }
 
 
   setupChangeListeners() {
     super.setupChangeListeners();
 
-    return this.listenTo(this.model.datasetConfiguration, "change", function (model) {
+    this.listenTo(this.model.datasetConfiguration, "change", function (model) {
       const object = model.changed.layers || {};
-      for (const binaryName in object) {
+      for (const binaryName of Object.keys(object)) {
         const changes = object[binaryName];
         const name = this.sanitizeName(binaryName);
         if (changes.color != null) {
@@ -114,7 +105,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         }
       }
 
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     });
   }
 
@@ -185,15 +176,11 @@ void main() {
     )({
       layers: colorLayerNames,
       hasSegmentation: (segmentationBinary != null),
-      segmentationName: this.sanitizeName(__guard__(segmentationBinary, x => x.name)),
-      isRgb: __guard__(this.model.binary.color, x1 => x1.targetBitDepth) === 24,
+      segmentationName: this.sanitizeName(Utils.__guard__(segmentationBinary, x => x.name)),
+      isRgb: Utils.__guard__(this.model.binary.color, x1 => x1.targetBitDepth) === 24,
     },
     );
   }
 }
 
 export default PlaneMaterialFactory;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

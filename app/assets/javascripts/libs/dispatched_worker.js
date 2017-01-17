@@ -1,5 +1,6 @@
 import $ from "jquery";
 import _ from "lodash";
+import Utils from "libs/utils";
 
 // `DispatchedWorker` is a wrapper around the WebWorker API. First you
 // initialize it providing a worker object of the javascript worker code.
@@ -7,10 +8,10 @@ import _ from "lodash";
 // using the returned deferred.
 class DispatchedWorker {
 
-  constructor(workerClass) {
-    this.worker = new workerClass();
+  constructor(WorkerClass) {
+    this.worker = new WorkerClass();
 
-    this.worker.onerror = err => __guard__(console, x => x.error(err));
+    this.worker.onerror = err => Utils.__guard__(console, x => x.error(err));
   }
 
 
@@ -25,15 +26,15 @@ class DispatchedWorker {
         if (packet.workerHandle === workerHandle) {
           this.worker.removeEventListener("message", workerMessageCallback, false);
           if (packet.error) {
-            return deferred.reject(packet.error);
+            deferred.reject(packet.error);
           } else {
-            return deferred.resolve(packet.payload);
+            deferred.resolve(packet.payload);
           }
         }
       };
 
       this.worker.addEventListener("message", workerMessageCallback, false);
-      return this.worker.postMessage({ workerHandle, payload });
+      this.worker.postMessage({ workerHandle, payload });
     },
     );
 
@@ -54,22 +55,22 @@ DispatchedWorker.Pool = class Pool {
 
 
   send(data) {
-    let worker;
+    let freeWorker;
     for (const worker of this.workers) {
       if (!worker.busy) {
-        worker = worker;
+        freeWorker = worker;
         break;
       }
     }
 
-    if (!worker && this.workers.length < this.workerLimit) {
-      worker = this.spawnWorker();
+    if (!freeWorker && this.workers.length < this.workerLimit) {
+      freeWorker = this.spawnWorker();
     }
 
-    if (worker) {
-      return worker.send(data);
+    if (freeWorker) {
+      freeWorker.send(data);
     } else {
-      return this.queuePush(data);
+      this.queuePush(data);
     }
   }
 
@@ -80,13 +81,13 @@ DispatchedWorker.Pool = class Pool {
 
     const workerReset = () => {
       worker.busy = false;
-      return this.queueShift(worker);
+      this.queueShift(worker);
     };
 
 
     worker.worker.onerror = function (err) {
-      __guard__(console, x => x.error(err));
-      return workerReset();
+      Utils.__guard__(console, x => x.error(err));
+      workerReset();
     };
 
 
@@ -101,8 +102,8 @@ DispatchedWorker.Pool = class Pool {
   queueShift(worker) {
     if (this.queue.length > 0 && !worker.busy) {
       const { data, deferred } = this.queue.shift();
-      return worker.send(data)
-        .done(data => deferred.resolve(data))
+      worker.send(data)
+        .done(response => deferred.resolve(response))
         .fail(err => deferred.reject(err));
     }
   }
@@ -110,13 +111,9 @@ DispatchedWorker.Pool = class Pool {
 
   queuePush(data) {
     const deferred = $.Deferred();
-    return this.queue.push({ data, deferred });
+    this.queue.push({ data, deferred });
   }
 };
 
 
 export default DispatchedWorker;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

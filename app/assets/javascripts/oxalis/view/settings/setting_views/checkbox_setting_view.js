@@ -37,7 +37,7 @@ class CheckboxSettingView extends AbstractSettingView {
 
 
   handleChange(evt) {
-    return this.model.set(this.options.name, evt.target.checked);
+    this.model.set(this.options.name, evt.target.checked);
   }
 
 

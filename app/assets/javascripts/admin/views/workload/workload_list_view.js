@@ -41,7 +41,7 @@ class WorkloadListView extends Marionette.CompositeView {
     this.collection.fetch().then(() => this.collection.setSorting("availableTaskCount", 1),
     );
 
-    return this.listenTo(app.vent, "paginationView:filter", this.filterByQuery);
+    this.listenTo(app.vent, "paginationView:filter", this.filterByQuery);
   }
 
 

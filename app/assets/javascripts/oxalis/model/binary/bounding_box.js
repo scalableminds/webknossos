@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "../../../libs/utils";
 
 class BoundingBox {
 
@@ -69,9 +70,9 @@ class BoundingBox {
 
     const baseVoxel = _.map(bucket.slice(0, 3), e => e << (this.BUCKET_SIZE_P + bucket[3]));
 
-    for (const dx of __range__(0, (1 << this.BUCKET_SIZE_P), false)) {
-      for (const dy of __range__(0, (1 << this.BUCKET_SIZE_P), false)) {
-        for (const dz of __range__(0, (1 << this.BUCKET_SIZE_P), false)) {
+    for (const dx of Utils.__range__(0, (1 << this.BUCKET_SIZE_P), false)) {
+      for (const dy of Utils.__range__(0, (1 << this.BUCKET_SIZE_P), false)) {
+        for (const dz of Utils.__range__(0, (1 << this.BUCKET_SIZE_P), false)) {
           const x = baseVoxel[0] + (dx << bucket[3]);
           const y = baseVoxel[1] + (dy << bucket[3]);
           const z = baseVoxel[2] + (dz << bucket[3]);
@@ -85,7 +86,7 @@ class BoundingBox {
           }
 
           const index = this.cube.getVoxelIndexByVoxelOffset([dx, dy, dz]);
-          for (const b of __range__(0, this.BYTE_OFFSET, false)) {
+          for (const b of Utils.__range__(0, this.BYTE_OFFSET, false)) {
             bucketData[index + b] = 0;
           }
         }
@@ -95,13 +96,3 @@ class BoundingBox {
 }
 
 export default BoundingBox;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

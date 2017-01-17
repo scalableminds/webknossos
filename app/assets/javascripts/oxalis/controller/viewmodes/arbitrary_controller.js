@@ -12,18 +12,17 @@ import Input from "libs/input";
 import { V3 } from "libs/mjs";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
-import ArbitraryPlane from "../../geometries/arbitrary_plane";
-import Crosshair from "../../geometries/crosshair";
-import ArbitraryView from "../../view/arbitrary_view";
-import ArbitraryPlaneInfo from "../../geometries/arbitrary_plane_info";
-import constants from "../../constants";
+import type { ModeType } from "oxalis/constants";
 import Model from "oxalis/model";
 import View from "oxalis/view";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import Flycam3d from "oxalis/model/flycam3d";
-
-import type {ModeType} from "oxalis/constants";
+import ArbitraryPlane from "../../geometries/arbitrary_plane";
+import Crosshair from "../../geometries/crosshair";
+import ArbitraryView from "../../view/arbitrary_view";
+import ArbitraryPlaneInfo from "../../geometries/arbitrary_plane_info";
+import constants from "../../constants";
 
 class ArbitraryController {
   arbitraryView: ArbitraryView;

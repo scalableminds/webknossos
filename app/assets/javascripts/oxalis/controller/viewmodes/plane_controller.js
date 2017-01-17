@@ -11,16 +11,15 @@ import "three.trackball";
 import Utils from "libs/utils";
 import Input from "libs/input";
 import THREE from "three";
-import CameraController from "../camera_controller";
-import Dimensions from "../../model/dimensions";
-import PlaneView from "../../view/plane_view";
-import constants from "../../constants";
 import Model from "oxalis/model";
 import View from "oxalis/view";
 import SceneController from "oxalis/controller/scene_controller";
 import Flycam2d from "oxalis/model/flycam2d";
-
-import type {Vector3, ViewType} from "oxalis/constants";
+import type { Vector3, ViewType } from "oxalis/constants";
+import CameraController from "../camera_controller";
+import Dimensions from "../../model/dimensions";
+import PlaneView from "../../view/plane_view";
+import constants from "../../constants";
 
 class PlaneController {
   planeView: PlaneView;

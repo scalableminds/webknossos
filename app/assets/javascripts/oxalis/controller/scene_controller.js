@@ -8,6 +8,9 @@ import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 import THREE from "three";
+import Flycam2d from "oxalis/model/flycam2d";
+import Model from "oxalis/model";
+import type { Boundary } from "oxalis/model";
 import Plane from "../geometries/plane";
 import Skeleton from "../geometries/skeleton";
 import Cube from "../geometries/cube";
@@ -16,10 +19,6 @@ import VolumeGeometry from "../geometries/volumegeometry";
 import Dimensions from "../model/dimensions";
 import constants from "../constants";
 import PolygonFactory from "../view/polygons/polygon_factory";
-import Flycam2d from "oxalis/model/flycam2d";
-import Model from "oxalis/model";
-
-import type {Boundary} from "oxalis/model";
 
 class SceneController {
   skeleton: Skeleton;

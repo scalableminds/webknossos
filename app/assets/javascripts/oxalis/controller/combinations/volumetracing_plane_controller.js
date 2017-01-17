@@ -5,8 +5,8 @@
 
 import _ from "lodash";
 import Constants from "oxalis/constants";
-import PlaneController from "../viewmodes/plane_controller";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
+import PlaneController from "../viewmodes/plane_controller";
 
 class VolumeTracingPlaneController extends PlaneController {
 

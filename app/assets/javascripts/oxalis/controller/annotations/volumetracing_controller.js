@@ -25,6 +25,7 @@ class VolumeTracingController {
   inDeleteMode: boolean;
   mergeMode: 0 | 1 | 2;
   prevActiveCell: number;
+  keyboardNoLoop: Input.KeyboardNoLoop;
 
   MERGE_MODE_NORMAL = 0;
   MERGE_MODE_CELL1 = 1;

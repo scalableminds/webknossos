@@ -8,10 +8,10 @@ import app from "app";
 import THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
+import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import PlaneController from "../viewmodes/plane_controller";
 import constants from "../../constants";
 import dimensions from "../../model/dimensions";
-import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 
 class SkeletonTracingPlaneController extends PlaneController {
 
@@ -85,15 +85,13 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  popBranch = () => {
-    return _.defer(
-      () => {
-        this.model.skeletonTracing.popBranch().then(
-          id => this.skeletonTracingController.setActiveNode(id, false, true),
-        );
-      }
-    );
-  }
+  popBranch = () => _.defer(
+    () => {
+      this.model.skeletonTracing.popBranch().then(
+        id => this.skeletonTracingController.setActiveNode(id, false, true),
+      );
+    },
+  )
 
 
   scrollPlanes = (delta, type) => {

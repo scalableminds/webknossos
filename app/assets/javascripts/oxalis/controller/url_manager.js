@@ -7,10 +7,9 @@ import _ from "lodash";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 import { V3 } from "libs/mjs";
-import constants from "../constants";
 import Model from "oxalis/model";
-
-import type {Vector3, ModeType} from "oxalis/constants";
+import type { Vector3, ModeType } from "oxalis/constants";
+import constants from "../constants";
 
 type State = {
   position?: Vector3,

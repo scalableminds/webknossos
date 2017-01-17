@@ -8,12 +8,11 @@ import app from "app";
 import Backbone from "backbone";
 import THREE from "three";
 import TWEEN from "tween.js";
-import Dimensions from "../model/dimensions";
-import constants from "../constants";
 import Flycam2d from "oxalis/model/flycam2d";
 import Model from "oxalis/model";
-
-import type {Vector3} from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
+import Dimensions from "../model/dimensions";
+import constants from "../constants";
 
 type TweenState = {
   notify: () => void,
@@ -193,10 +192,16 @@ class CameraController {
 
   degToRad(deg) { return (deg / 180) * Math.PI; }
 
-  changeTDViewXY = () => { return this.changeTDView(constants.PLANE_XY); }
-  changeTDViewYZ = () => { return this.changeTDView(constants.PLANE_YZ); }
-  changeTDViewXZ = () => { return this.changeTDView(constants.PLANE_XZ); }
-  changeTDViewDiagonal = (animate) => { if (animate == null) { animate = true; } return this.changeTDView(constants.TDView, animate); }
+  changeTDViewXY = () => this.changeTDView(constants.PLANE_XY)
+  changeTDViewYZ = () => this.changeTDView(constants.PLANE_YZ)
+  changeTDViewXZ = () => this.changeTDView(constants.PLANE_XZ)
+
+  changeTDViewDiagonal = (animate) => {
+    if (animate == null) {
+      animate = true;
+    }
+    return this.changeTDView(constants.TDView, animate);
+  }
 
   updateCameraTDView(tweenState: TweenState) {
     const p = tweenState.getConvertedPosition();
@@ -249,16 +254,14 @@ class CameraController {
   }
 
 
-  moveTDViewX = (x) => {
-    return this.moveTDViewRaw(
-      new THREE.Vector2((x * this.TDViewportSize()) / constants.VIEWPORT_WIDTH, 0));
-  }
+  moveTDViewX = x => this.moveTDViewRaw(
+    new THREE.Vector2((x * this.TDViewportSize()) / constants.VIEWPORT_WIDTH, 0),
+  )
 
 
-  moveTDViewY = (y) => {
-    return this.moveTDViewRaw(
-      new THREE.Vector2(0, (-y * this.TDViewportSize()) / constants.VIEWPORT_WIDTH));
-  }
+  moveTDViewY = y => this.moveTDViewRaw(
+    new THREE.Vector2(0, (-y * this.TDViewportSize()) / constants.VIEWPORT_WIDTH),
+  )
 
 
   moveTDView(nmVector) {

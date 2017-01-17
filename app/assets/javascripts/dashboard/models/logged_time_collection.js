@@ -1,3 +1,8 @@
+/**
+ * logged_time_collection.js
+ * @flow weak
+ */
+
 import Backbone from "backbone";
 import moment from "moment";
 

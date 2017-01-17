@@ -1,3 +1,8 @@
+/**
+ * dashboard_task_list_item_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Request from "libs/request";

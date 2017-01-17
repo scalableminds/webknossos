@@ -1,3 +1,8 @@
+/**
+ * dashboard_task_model.js
+ * @flow weak
+ */
+
 import NestedObjModel from "libs/nested_obj_model";
 import Request from "libs/request";
 

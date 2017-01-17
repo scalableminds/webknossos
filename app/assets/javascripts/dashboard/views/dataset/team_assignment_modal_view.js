@@ -1,9 +1,13 @@
+/**
+ * team_assignment_modal_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import $ from "jquery";
 import Request from "libs/request";
 import TeamCollection from "admin/models/team/team_collection";
 import ModalView from "admin/views/modal_view";
-
 
 class TeamAssignmentModalView extends ModalView {
   static initClass() {

@@ -1,3 +1,8 @@
+/**
+ * plane_controller.js
+ * @flow weak
+ */
+
 import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
@@ -6,21 +11,42 @@ import "three.trackball";
 import Utils from "libs/utils";
 import Input from "libs/input";
 import THREE from "three";
+import Model from "oxalis/model";
+import View from "oxalis/view";
+import SceneController from "oxalis/controller/scene_controller";
+import Flycam2d from "oxalis/model/flycam2d";
+import type { Vector3, ViewType } from "oxalis/constants";
 import CameraController from "../camera_controller";
 import Dimensions from "../../model/dimensions";
 import PlaneView from "../../view/plane_view";
 import constants from "../../constants";
 
 class PlaneController {
+  planeView: PlaneView;
+  model: Model;
+  view: View;
+  input: any;
+  sceneController: SceneController;
+  isStarted: boolean;
+  flycam: Flycam2d;
+  oldNmPos: Vector3;
+  planeView: PlaneView;
+  activeViewport: ViewType;
+  cameraController: CameraController;
+  zoomPos: Vector3;
+  controls: THREE.TrackballControls;
+  canvasesAndNav: any;
+  TDViewControls: any;
+  bindings: Array<any>;
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
+
   static initClass() {
     // See comment in Controller class on general controller architecture.
     //
     // Plane Controller: Responsible for Plane Modes
 
-
     this.prototype.bindings = [];
-    this.prototype.model = null;
-    this.prototype.view = null;
 
     this.prototype.input = {
       mouseControllers: [],
@@ -42,13 +68,6 @@ class PlaneController {
 
 
   constructor(model, view, sceneController) {
-    this.move = this.move.bind(this);
-    this.moveX = this.moveX.bind(this);
-    this.moveY = this.moveY.bind(this);
-    this.moveZ = this.moveZ.bind(this);
-    this.finishZoom = this.finishZoom.bind(this);
-    this.scrollPlanes = this.scrollPlanes.bind(this);
-    this.calculateGlobalPos = this.calculateGlobalPos.bind(this);
     this.model = model;
     this.view = view;
     this.sceneController = sceneController;
@@ -316,7 +335,7 @@ class PlaneController {
   }
 
 
-  move(v, increaseSpeedWithZoom = true) {
+  move = (v, increaseSpeedWithZoom = true) => {
     if (([0, 1, 2]).includes(this.activeViewport)) {
       this.flycam.movePlane(v, this.activeViewport, increaseSpeedWithZoom);
     }
@@ -324,11 +343,11 @@ class PlaneController {
   }
 
 
-  moveX(x) { this.move([x, 0, 0]); }
+  moveX = x => this.move([x, 0, 0]);
 
-  moveY(y) { this.move([0, y, 0]); }
+  moveY = y => this.move([0, y, 0]);
 
-  moveZ(z, oneSlide) {
+  moveZ = (z, oneSlide) => {
     if (this.activeViewport === constants.TDView) {
       return;
     }
@@ -384,7 +403,7 @@ class PlaneController {
   }
 
 
-  finishZoom() {
+  finishZoom = () => {
     // Move the plane so that the mouse is at the same position as
     // before the zoom
     if (this.isMouseOver()) {
@@ -425,7 +444,7 @@ class PlaneController {
   }
 
 
-  scrollPlanes(delta, type) {
+  scrollPlanes = (delta, type) => {
     switch (type) {
       case null:
         this.moveZ(delta, true);
@@ -438,7 +457,7 @@ class PlaneController {
   }
 
 
-  calculateGlobalPos(clickPos) {
+  calculateGlobalPos = (clickPos) => {
     let position;
     const curGlobalPos = this.flycam.getPosition();
     const zoomFactor = this.flycam.getPlaneScalingFactor();

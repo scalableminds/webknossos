@@ -1,8 +1,16 @@
+/**
+ * scene_controller.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 import THREE from "three";
+import Flycam2d from "oxalis/model/flycam2d";
+import Model from "oxalis/model";
+import type { Boundary } from "oxalis/model";
 import Plane from "../geometries/plane";
 import Skeleton from "../geometries/skeleton";
 import Cube from "../geometries/cube";
@@ -13,6 +21,28 @@ import constants from "../constants";
 import PolygonFactory from "../view/polygons/polygon_factory";
 
 class SceneController {
+  skeleton: Skeleton;
+  CUBE_COLOR: number;
+  upperBoundary: Boundary;
+  flycam: Flycam2d;
+  model: Model;
+  current: number;
+  displayPlane: [boolean, boolean, boolean];
+  planeShift: [number, number, number];
+  pingBinary: boolean;
+  pingBinarySeg: boolean;
+  volumeMeshes: any;
+  polygonFactory: PolygonFactory;
+  cube: Cube;
+  userBoundingBox: Cube;
+  taskBoundingBox: Cube;
+  contour: ContourGeometry;
+  planes: [Plane, Plane, Plane];
+
+  // Copied from backbone events (TODO: handle this better)
+  trigger: Function;
+  listenTo: Function;
+
   static initClass() {
     // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
     // element depending on the provided flycam.
@@ -21,10 +51,6 @@ class SceneController {
   }
 
   constructor(upperBoundary, flycam, model) {
-    this.updateSceneForCam = this.updateSceneForCam.bind(this);
-    this.update = this.update.bind(this);
-    this.setDisplayPlanes = this.setDisplayPlanes.bind(this);
-    this.getMeshes = this.getMeshes.bind(this);
     this.upperBoundary = upperBoundary;
     this.flycam = flycam;
     this.model = model;
@@ -120,7 +146,7 @@ class SceneController {
   }
 
 
-  updateSceneForCam(id) {
+  updateSceneForCam = (id) => {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
@@ -165,7 +191,7 @@ class SceneController {
   }
 
 
-  update() {
+  update = () => {
     const gPos = this.flycam.getPosition();
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = this.flycam.getPlaneScalingFactor();
@@ -211,7 +237,7 @@ class SceneController {
   }
 
 
-  setDisplayPlanes(value) {
+  setDisplayPlanes = (value) => {
     for (let i = 0; i <= 2; i++) {
       this.displayPlane[i] = value;
     }
@@ -219,7 +245,7 @@ class SceneController {
   }
 
 
-  getMeshes() {
+  getMeshes = () => {
     let result = [];
     for (const plane of this.planes) {
       result = result.concat(plane.getMeshes());

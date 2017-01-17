@@ -29,6 +29,7 @@ import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 // All public operations are **asynchronous**. We return a promise
 // which you can react on.
 
+export type Boundary = [number, number, number];
 
 class Model extends Backbone.Model {
   static initClass() {

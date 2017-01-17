@@ -1,5 +1,5 @@
 /**
- * model.js
+ * controller.js
  * @flow weak
  */
 
@@ -42,8 +42,7 @@ class Controller {
   zoomStepWarningToast: ToastType;
   keyboardNoLoop: Input.KeyboardNoLoop;
 
-  // Todo: The whole class is extended by Backbone.Events, which we should tell
-  // Flow somehow
+  // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
   // Main controller, responsible for setting modes and everything

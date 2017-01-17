@@ -1,3 +1,8 @@
+/**
+ * explorative_tracing_list_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import app from "app";

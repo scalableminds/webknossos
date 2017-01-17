@@ -1,3 +1,8 @@
+/**
+ * dataset_switch_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Utils from "libs/utils";

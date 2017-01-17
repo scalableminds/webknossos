@@ -1,3 +1,8 @@
+/**
+ * user_model.js
+ * @flow weak
+ */
+
 import Backbone from "backbone";
 
 class UserModel extends Backbone.Model {

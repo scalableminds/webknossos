@@ -14,7 +14,6 @@ import UserTasksCollection from "../models/user_tasks_collection";
 
 class DashboardTaskListView extends Marionette.CompositeView {
   static initClass() {
-
     this.prototype.template = _.template(`\
 <h3>Tasks</h3>
 <% if (isAdminView) { %>

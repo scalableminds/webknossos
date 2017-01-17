@@ -56,7 +56,7 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 This is the fastest way to try webKnossos. Docker 1.12+ and Docker Compose 1.8+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
 
 ```
-DOCKER_TAG=master docker-compose up oxalis
+docker-compose up webknossos
 ```
 
 

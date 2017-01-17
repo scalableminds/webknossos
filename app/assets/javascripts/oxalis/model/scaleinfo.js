@@ -1,3 +1,4 @@
+import Utils from "libs/utils";
 import THREE from "three";
 // This class encapsulates any conversions between the nm and voxel
 // coordinate system.
@@ -8,7 +9,7 @@ class ScaleInfo {
     this.nmPerVoxel = scale;
 
     this.voxelPerNM = [0, 0, 0];
-    for (const i of __range__(0, (this.nmPerVoxel.length - 1), true)) {
+    for (const i of Utils.__range__(0, (this.nmPerVoxel.length - 1), true)) {
       this.voxelPerNM[i] = 1 / this.nmPerVoxel[i];
     }
 
@@ -33,9 +34,7 @@ class ScaleInfo {
 
 
   voxelToNm(posArray) {
-    const nmPos = posArray.slice();
-    return [0, 1, 2].map(i =>
-      nmPos[i] *= this.nmPerVoxel[i]);
+    return [0, 1, 2].map(i => posArray[i] * this.nmPerVoxel[i]);
   }
 
 
@@ -49,13 +48,3 @@ class ScaleInfo {
 }
 
 export default ScaleInfo;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

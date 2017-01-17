@@ -1,3 +1,8 @@
+/**
+ * tracked_time_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 
@@ -28,7 +33,7 @@ class TrackedTimeView extends Marionette.View {
   initialize() {
     this.listenTo(this.model, "sync", this.render);
 
-    return this.model.fetch();
+    this.model.fetch();
   }
 }
 TrackedTimeView.initClass();

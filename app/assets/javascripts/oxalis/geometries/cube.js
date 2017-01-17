@@ -1,5 +1,6 @@
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import THREE from "three";
 import Backbone from "backbone";
 import constants from "../constants";
@@ -91,7 +92,7 @@ class Cube {
     for (const i of constants.ALL_PLANES) {
       const thirdDim = dimensions.thirdDimensionForPlane(i);
       const geo = this.crossSections[i].geometry;
-      for (const j of __range__(0, geo.vertices.length, false)) {
+      for (const j of Utils.__range__(0, geo.vertices.length, false)) {
         const array = geo.vertices[j].toArray();
         array[thirdDim] = position[thirdDim];
         geo.vertices[j] = new THREE.Vector3(array[0], array[1], array[2]);
@@ -130,13 +131,3 @@ class Cube {
 
 
 export default Cube;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

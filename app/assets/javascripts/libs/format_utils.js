@@ -6,16 +6,17 @@ class FormatUtils {
     const t = moment.duration(durationSeconds, "seconds");
     const [days, hours, minutes, seconds] = [t.days(), t.hours(), t.minutes(), t.seconds()];
 
-    return (
-      days === 0 && hours === 0 && minutes === 0 ?
-        `${seconds}s`
-      : days === 0 && hours === 0 ?
-        `${minutes}m ${seconds}s`
-      : days === 0 ?
-        `${hours}h ${minutes}m ${seconds}s`
-      :
-        `${days}d ${hours}h ${minutes}m ${seconds}s`
-    );
+    let timeString;
+    if (days === 0 && hours === 0 && minutes === 0) {
+      timeString = `${seconds}s`;
+    } else if (days === 0 && hours === 0) {
+      timeString = `${minutes}m ${seconds}s`;
+    } else if (days === 0) {
+      timeString = `${hours}h ${minutes}m ${seconds}s`;
+    } else {
+      timeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    }
+    return timeString;
   }
 
 

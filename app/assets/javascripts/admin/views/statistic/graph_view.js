@@ -14,7 +14,7 @@ class GraphView extends Marionette.View {
 
 
   initialize() {
-    return this.listenTo(this, "attach", this.addGraph);
+    this.listenTo(this, "attach", this.addGraph);
   }
 
 
@@ -56,7 +56,7 @@ class GraphView extends Marionette.View {
 
 
   selectDataPoint(data) {
-    return app.vent.trigger("graphView:updatedSelection", data);
+    app.vent.trigger("graphView:updatedSelection", data);
   }
 }
 GraphView.initClass();

@@ -1,14 +1,13 @@
-/* eslint-disable no-underscore-dangle */
 import _ from "lodash";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 
 class PaginationCollection {
 
   constructor(models, options) {
-    let left;
     _.extend(this, Backbone.Events);
 
-    if (__guard__(options, x => x.fullCollection)) {
+    if (Utils.__guard__(options, x => x.fullCollection)) {
       this.fullCollection = options.fullCollection;
     } else {
       this.fullCollection = new Backbone.Collection(models, options);
@@ -31,7 +30,8 @@ class PaginationCollection {
     }
 
     this.currentModels = this.fullCollection.models.slice();
-    this.state = _.defaults((left = _.clone(this.state)) != null ? left : {}, {
+    const clonedState = _.clone(this.state);
+    this.state = _.defaults(clonedState != null ? clonedState : {}, {
       pageSize: 10,
       currentPage: 0,
       sorting: null,
@@ -57,28 +57,28 @@ class PaginationCollection {
   }
 
 
-  add() {
-    return this.fullCollection.add.apply(this.fullCollection, arguments);
+  add(...args) {
+    return this.fullCollection.add(...args);
   }
 
-  remove() {
-    return this.fullCollection.remove.apply(this.fullCollection, arguments);
+  remove(...args) {
+    return this.fullCollection.remove(...args);
   }
 
-  set() {
-    return this.fullCollection.set.apply(this.fullCollection, arguments);
+  set(...args) {
+    return this.fullCollection.set(...args);
   }
 
-  fetch() {
-    return this.fullCollection.fetch.apply(this.fullCollection, arguments);
+  fetch(...args) {
+    return this.fullCollection.fetch(...args);
   }
 
-  create() {
-    return this.fullCollection.create.apply(this.fullCollection, arguments);
+  create(...args) {
+    return this.fullCollection.create(...args);
   }
 
-  reset() {
-    return this.fullCollection.reset.apply(this.fullCollection, arguments);
+  reset(...args) {
+    return this.fullCollection.reset(...args);
   }
 
 
@@ -104,16 +104,19 @@ class PaginationCollection {
     this.state.sorting = function (left, right) {
       const leftValue = left.get(field);
       const rightValue = right.get(field);
-      return _.isString(leftValue) && _.isString(rightValue) ?
-          order > 0 ?
-            leftValue.localeCompare(rightValue)
-          :
-            rightValue.localeCompare(leftValue)
-        :
-          order > 0 ?
-            leftValue - rightValue
-          :
-            rightValue - leftValue;
+      let compValue;
+      if (_.isString(leftValue) && _.isString(rightValue)) {
+        if (order > 0) {
+          compValue = leftValue.localeCompare(rightValue);
+        } else {
+          compValue = rightValue.localeCompare(leftValue);
+        }
+      } else if (order > 0) {
+        compValue = leftValue - rightValue;
+      } else {
+        compValue = rightValue - leftValue;
+      }
+      return compValue;
     };
 
     this._reset();
@@ -131,7 +134,7 @@ class PaginationCollection {
       this.state.filter = null;
     } else {
       const words = _.map(query.split(" "),
-        element => element.toLowerCase().replace(/[\-\[\]{}()\*\+\?\.,\\\^\$\|\#\s]/g, "\\$&"));
+        element => element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"));
       const uniques = _.filter(_.uniq(words), element => element !== "");
       const pattern = `(${uniques.join("|")})`;
       const regexp = new RegExp(pattern, "igm");
@@ -265,14 +268,10 @@ class PaginationCollection {
   }
 
 
-  findWhere() {
-    return this.fullCollection.findWhere.apply(this.fullCollection, arguments);
+  findWhere(...args) {
+    return this.fullCollection.findWhere(...args);
   }
 }
 
 
 export default PaginationCollection;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

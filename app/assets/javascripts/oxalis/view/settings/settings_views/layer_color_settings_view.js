@@ -80,7 +80,7 @@ class LayerColorSettingsView extends Marionette.View {
     // subviewCreators hash needed for Subviews extension
     this.subviewCreators = _.transform(
       this.subviewCreatorsList,
-      (result, [key, value]) => result[key] = value,
+      (result, [key, value]) => { result[key] = value; },
       {},
     );
 

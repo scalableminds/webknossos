@@ -32,12 +32,12 @@ class ViewModesView extends Marionette.View {
 
   initialize() {
     this.listenTo(this.model, "change:mode", this.updateForMode);
-    return this.listenTo(this, "attach", this.afterAttach);
+    this.listenTo(this, "attach", this.afterAttach);
   }
 
 
   afterAttach() {
-    for (const mode in this.modeMapping) {
+    for (const mode of Object.keys(this.modeMapping)) {
       const modeValue = this.modeMapping[mode];
       $(`#${mode}`).attr("disabled", !this.model.get("allowedModes").includes(modeValue));
     }
@@ -49,7 +49,7 @@ class ViewModesView extends Marionette.View {
   changeMode(evt) {
     evt.target.blur();
     const mode = this.modeMapping[evt.target.id];
-    return this.model.setMode(mode);
+    this.model.setMode(mode);
   }
 
 
@@ -57,7 +57,7 @@ class ViewModesView extends Marionette.View {
     this.$("button").removeClass("btn-primary");
 
     const buttonId = _.invert(this.modeMapping)[mode];
-    return this.$(`#${buttonId}`).addClass("btn-primary");
+    this.$(`#${buttonId}`).addClass("btn-primary");
   }
 }
 ViewModesView.initClass();

@@ -78,7 +78,7 @@ class ModalView extends Marionette.View {
     // The event is neccesarry due to the 300ms CSS transition
     this.$el.on("hidden.bs.modal", () => {
       this.$el.off("hidden.bs.modal");
-      return app.vent.trigger("modal:destroyed");
+      app.vent.trigger("modal:destroyed");
     }, // update pagination
     );
     return this.$el.modal("hide");

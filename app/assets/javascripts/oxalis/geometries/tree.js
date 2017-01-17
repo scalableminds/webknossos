@@ -1,4 +1,5 @@
 import app from "app";
+import Utils from "libs/utils";
 import ResizableBuffer from "libs/resizable_buffer";
 import ErrorHandling from "libs/error_handling";
 import THREE from "three";
@@ -52,7 +53,7 @@ class Tree {
     this.sizesBuffer.clear();
     this.scalesBuffer.clear();
     this.nodeIDs.clear();
-    return this.updateNodesColors();
+    this.updateNodesColors();
   }
 
 
@@ -77,23 +78,24 @@ class Tree {
       }
     }
 
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
   addNodes(nodeList) {
-    return nodeList.map(node =>
+    nodeList.forEach(node =>
       this.addNode(node));
   }
 
 
   deleteNode(node) {
-    let edgesIndex,
-      found;
+    let edgesIndex;
+    let found;
     const swapLast = (array, index) => {
       const lastElement = array.pop();
-      return __range__(0, array.elementLength, false).map(i =>
-        array.getAllElements()[(index * array.elementLength) + i] = lastElement[i]);
+      Utils.__range__(0, array.elementLength, false).forEach((i) => {
+        array.getAllElements()[(index * array.elementLength) + i] = lastElement[i];
+      });
     };
 
     const nodesIndex = this.getNodeIndex(node.id);
@@ -109,7 +111,7 @@ class Tree {
     // Delete Edge by finding it in the array
     const edgeArray = this.getEdgeArray(node, node.neighbors[0]);
 
-    for (const i of __range__(0, this.edgesBuffer.getLength(), false)) {
+    for (const i of Utils.__range__(0, this.edgesBuffer.getLength(), false)) {
       found = true;
       for (let j = 0; j <= 5; j++) {
         found &= Math.abs(this.edges.geometry.attributes.position.array[(6 * i) + j] - edgeArray[j]) < 0.5;
@@ -124,7 +126,7 @@ class Tree {
 
     swapLast(this.edgesBuffer, edgesIndex);
 
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
   mergeTree(otherTree, lastNode, activeNode) {
@@ -139,7 +141,7 @@ class Tree {
     this.edgesBuffer.push(this.getEdgeArray(lastNode, activeNode));
 
     this.updateNodesColors();
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -156,7 +158,7 @@ class Tree {
 
   setSizeAttenuation(sizeAttenuation) {
     this.nodes.material.sizeAttenuation = sizeAttenuation;
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -165,7 +167,7 @@ class Tree {
     this.edges.material.color = new THREE.Color(this.darkenHex(newColor));
 
     this.updateNodesColors();
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -175,20 +177,20 @@ class Tree {
 
 
   dispose() {
-    return this.getMeshes().map(geometry =>
-
-      (geometry.geometry.dispose(),
-      geometry.material.dispose()));
+    for (const geometry of this.getMeshes()) {
+      geometry.geometry.dispose();
+      geometry.material.dispose();
+    }
   }
 
 
   updateNodesColors() {
     this.nodesColorBuffer.clear();
-    for (const i of __range__(0, this.nodeIDs.length, false)) {
+    for (const i of Utils.__range__(0, this.nodeIDs.length, false)) {
       this.nodesColorBuffer.push(this.getColor(this.nodeIDs.get(i)));
     }
 
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -196,7 +198,7 @@ class Tree {
     this.doWithNodeIndex(id, index => this.nodesColorBuffer.set(this.getColor(id, isActiveNode, isBranchPoint), index),
     );
 
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -204,7 +206,7 @@ class Tree {
     this.doWithNodeIndex(id, index => this.sizesBuffer.set([radius * 2], index),
     );
 
-    return this.updateGeometries();
+    this.updateGeometries();
   }
 
 
@@ -212,7 +214,7 @@ class Tree {
     const normal = 1.0;
     const highlighted = 2.0;
 
-    return this.doWithNodeIndex(nodeId, index => this.animateNodeScale(normal, highlighted, index, () => this.animateNodeScale(highlighted, normal, index),
+    this.doWithNodeIndex(nodeId, index => this.animateNodeScale(normal, highlighted, index, () => this.animateNodeScale(highlighted, normal, index),
       ),
     );
   }
@@ -223,14 +225,14 @@ class Tree {
     const setScaleFactor = factor => this.scalesBuffer.set([factor], index);
     const redraw = () => {
       this.updateGeometries();
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     };
     const onUpdate = function () {
       setScaleFactor(this.scaleFactor);
-      return redraw();
+      redraw();
     };
 
-    return (new TWEEN.Tween({ scaleFactor: from }))
+    (new TWEEN.Tween({ scaleFactor: from }))
       .to({ scaleFactor: to }, 100)
       .onUpdate(onUpdate)
       .onComplete(onComplete)
@@ -262,22 +264,19 @@ class Tree {
 
   showRadius(show) {
     this.edges.material.linewidth = this.getLineWidth();
-    return this.particleMaterial.setShowRadius(show);
+    this.particleMaterial.setShowRadius(show);
   }
 
 
   updateGeometries() {
-    return [this.edges, this.nodes].map(mesh =>
-      (() => {
-        const result = [];
-        for (const attr in mesh.geometry.attributes) {
-          const a = mesh.geometry.attributes[attr];
-          a.array = a.rBuffer.getBuffer();
-          a.numItems = a.rBuffer.getBufferLength();
-          result.push(a.needsUpdate = true);
-        }
-        return result;
-      })());
+    [this.edges, this.nodes].forEach((mesh) => {
+      for (const attr of Object.keys(mesh.geometry.attributes)) {
+        const a = mesh.geometry.attributes[attr];
+        a.array = a.rBuffer.getBuffer();
+        a.numItems = a.rBuffer.getBufferLength();
+        a.needsUpdate = true;
+      }
+    });
   }
 
 
@@ -286,23 +285,24 @@ class Tree {
     console.log("nodeIDs", this.nodeIDs.toString());
     console.log("nodesBuffer", this.nodesBuffer.toString());
     console.log("edgesBuffer", this.edgesBuffer.toString());
-    return console.log("sizesBuffer", this.sizesBuffer.toString());
+    console.log("sizesBuffer", this.sizesBuffer.toString());
   }
 
 
   getNodeIndex(nodeId) {
-    for (const i of __range__(0, this.nodeIDs.length, true)) {
+    for (const i of Utils.__range__(0, this.nodeIDs.length, true)) {
       if (this.nodeIDs.get(i) === nodeId) {
         return i;
       }
     }
+    return null;
   }
 
 
   doWithNodeIndex(nodeId, f) {
     const index = this.getNodeIndex(nodeId);
     if (index == null) { return; }
-    return f(index);
+    f(index);
   }
 
 
@@ -339,13 +339,3 @@ class Tree {
 }
 
 export default Tree;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

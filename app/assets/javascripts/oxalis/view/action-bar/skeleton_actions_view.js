@@ -23,7 +23,7 @@ class SkeletonActionsView extends Marionette.View {
   }
 
   initialize() {
-    return this.listenTo(this.model, "change:mode", this.render);
+    this.listenTo(this.model, "change:mode", this.render);
   }
 
 

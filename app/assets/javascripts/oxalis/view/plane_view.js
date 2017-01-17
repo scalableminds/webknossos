@@ -11,8 +11,8 @@ import constants from "../constants";
 class PlaneView {
 
   constructor(model, view) {
-    let HEIGHT,
-      WIDTH;
+    let HEIGHT;
+    let WIDTH;
     this.resize = this.resize.bind(this);
     this.scaleTrianglesPlane = this.scaleTrianglesPlane.bind(this);
     this.setActiveViewport = this.setActiveViewport.bind(this);
@@ -87,7 +87,7 @@ class PlaneView {
     this.newTextures = [true, true, true, true];
 
     this.needsRerender = true;
-    app.vent.on("rerender", () => this.needsRerender = true);
+    app.vent.on("rerender", () => { this.needsRerender = true; });
   }
 
 
@@ -96,7 +96,7 @@ class PlaneView {
 
     this.renderFunction();
 
-    return window.requestAnimationFrame(() => this.animate());
+    window.requestAnimationFrame(() => this.animate());
   }
 
   renderFunction() {
@@ -111,7 +111,7 @@ class PlaneView {
     // ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
 
     let modelChanged = false;
-    for (const name in this.model.binary) {
+    for (const name of Object.keys(this.model.binary)) {
       const binary = this.model.binary[name];
       for (const plane of binary.planes) {
         modelChanged |= plane.hasChanged();
@@ -133,7 +133,7 @@ class PlaneView {
         this.renderer.setViewport(x, y, width, width);
         this.renderer.setScissor(x, y, width, width);
         this.renderer.enableScissorTest(true);
-        return this.renderer.setClearColor(color, 1);
+        this.renderer.setClearColor(color, 1);
       };
 
       setupRenderArea(0, 0, this.renderer.domElement.width, 0xffffff);
@@ -150,7 +150,7 @@ class PlaneView {
         this.renderer.render(this.scene, this.camera[i]);
       }
 
-      return this.needsRerender = false;
+      this.needsRerender = false;
     }
   }
 
@@ -158,17 +158,17 @@ class PlaneView {
     // Adds a new Three.js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
 
-    return this.group.add(geometry);
+    this.group.add(geometry);
   }
 
 
   removeGeometry(geometry) {
-    return this.group.remove(geometry);
+    this.group.remove(geometry);
   }
 
 
   draw() {
-    return app.vent.trigger("rerender");
+    app.vent.trigger("rerender");
   }
 
 
@@ -177,11 +177,11 @@ class PlaneView {
     this.resizeThrottled = _.throttle(
       () => {
         this.resize();
-        return app.vent.trigger("planes:resize");
+        app.vent.trigger("planes:resize");
       },
       constants.RESIZE_THROTTLE_TIME,
     );
-    return this.resizeThrottled();
+    this.resizeThrottled();
   }
 
 
@@ -196,13 +196,13 @@ class PlaneView {
       this.camera[i].aspect = WIDTH / HEIGHT;
       this.camera[i].updateProjectionMatrix();
     }
-    return this.draw();
+    this.draw();
   }
 
 
   scaleTrianglesPlane(scale) {
-    let HEIGHT,
-      WIDTH;
+    let HEIGHT;
+    let WIDTH;
     this.scaleFactor = scale;
     this.curWidth = WIDTH = HEIGHT = Math.round(this.scaleFactor * constants.VIEWPORT_WIDTH);
     const canvas = $("#render-canvas");
@@ -217,7 +217,7 @@ class PlaneView {
         height: HEIGHT,
       });
 
-    return this.resizeThrottled();
+    this.resizeThrottled();
   }
 
 
@@ -230,7 +230,7 @@ class PlaneView {
       }
     }
 
-    return this.draw();
+    this.draw();
   }
 
 
@@ -240,7 +240,7 @@ class PlaneView {
 
 
   showBranchModalDouble(callback) {
-    return modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+    modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
       "Jump again?",
       [{ id: "jump-button", label: "Jump again", callback },
        { id: "cancel-button", label: "Cancel" }]);
@@ -248,7 +248,7 @@ class PlaneView {
 
 
   showBranchModalDelete(callback) {
-    return modal.show("You are about to delete an unused branchpoint, are you sure?",
+    modal.show("You are about to delete an unused branchpoint, are you sure?",
       "Delete branchpoint?",
       [{ id: "delete-button", label: "Delete branchpoint", callback },
        { id: "cancel-button", label: "Cancel" }]);
@@ -262,8 +262,8 @@ class PlaneView {
       this.listenTo(this.model.skeletonTracing, "mergeDifferentTrees", () => Toast.error("You can't merge nodes within the same tree", false));
     }
 
-    return this.listenTo(this.model.user, "change:scale", function (model, scale) {
-      if (this.running) { return this.scaleTrianglesPlane(scale); }
+    this.listenTo(this.model.user, "change:scale", function (model, scale) {
+      if (this.running) { this.scaleTrianglesPlane(scale); }
     });
   }
 
@@ -271,7 +271,7 @@ class PlaneView {
   stop() {
     $(".inputcatcher").hide();
 
-    return this.running = false;
+    this.running = false;
   }
 
 
@@ -281,7 +281,7 @@ class PlaneView {
     $(".inputcatcher").show();
     this.scaleTrianglesPlane(this.model.user.get("scale"));
 
-    return this.animate();
+    this.animate();
   }
 }
 

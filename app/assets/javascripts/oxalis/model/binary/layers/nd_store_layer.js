@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "libs/utils";
 import Layer from "./layer";
 import Request from "../../../../libs/request";
 import ErrorHandling from "../../../../libs/error_handling";
@@ -57,9 +58,9 @@ class NdStoreLayer extends Layer {
 
         // copy the ndstore response into the new array, respecting the bounds of the dataset
         let index = 0;
-        for (const z of __range__(bucketBounds[2], bucketBounds[5], false)) {
-          for (const y of __range__(bucketBounds[1], bucketBounds[4], false)) {
-            for (const x of __range__(bucketBounds[0], bucketBounds[3], false)) {
+        for (const z of Utils.__range__(bucketBounds[2], bucketBounds[5], false)) {
+          for (const y of Utils.__range__(bucketBounds[1], bucketBounds[4], false)) {
+            for (const x of Utils.__range__(bucketBounds[0], bucketBounds[3], false)) {
               buffer[(z * bucketSize * bucketSize) + (y * bucketSize) + x] = dataView.getUint8(index++);
             }
           }
@@ -108,13 +109,3 @@ class NdStoreLayer extends Layer {
 
 
 export default NdStoreLayer;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

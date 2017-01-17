@@ -37,7 +37,7 @@ class DropdownSettingView extends AbstractSettingView {
 
 
   handleChange(evt) {
-    return this.model.set(this.options.name, parseInt(evt.target.value, 10));
+    this.model.set(this.options.name, parseInt(evt.target.value, 10));
   }
 
 

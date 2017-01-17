@@ -1,5 +1,11 @@
+/**
+ * dashboard_task_list_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 import DashboardTaskListItemView from "./dashboard_task_list_item_view";
@@ -81,9 +87,9 @@ class DashboardTaskListView extends Marionette.CompositeView {
     this.options = options;
     this.showFinishedTasks = false;
 
-    app.router.showLoadingSpinner()
     this.collection = new UserTasksCollection([], { userID: this.options.userID });
-    this.listenTo(this.collection, "sync", () => app.router.hideLoadingSpinner())
+    this.listenTo(this.collection, "fetch", () => app.router.showLoadingSpinner());
+    this.listenTo(this.collection, "sync", () => app.router.hideLoadingSpinner());
 
     this.collection.fetch();
 
@@ -102,7 +108,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
     event.preventDefault();
 
     if (this.collection.filter(UserTasksCollection.prototype.unfinishedTasksFilter).length === 0 || confirm("Do you really want another task?")) {
-      return this.collection.getNewTask();
+      this.collection.getNewTask();
     }
   }
 
@@ -110,7 +116,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
   toggleFinished() {
     this.showFinishedTasks = !this.showFinishedTasks;
     this.collection.isFinished = this.showFinishedTasks;
-    return this.refresh();
+    this.refresh();
   }
 
 
@@ -122,26 +128,19 @@ class DashboardTaskListView extends Marionette.CompositeView {
     });
     const url = evt.target.href;
     this.modal = new TaskTransferModalView({ url });
-    return modalContainer.show(this.modal);
+    modalContainer.show(this.modal);
   }
 
 
   refresh() {
-
-    app.router.showLoadingSpinner()
-    this.collection.fetch().then(() => this.render(),
-    );
+    this.collection.fetch().then(() => this.render());
   }
 
   onDestroy() {
-    return __guard__(this.modal, x => x.destroy());
+    Utils.__guard__(this.modal, x => x.destroy());
   }
 }
 DashboardTaskListView.initClass();
 
 
 export default DashboardTaskListView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

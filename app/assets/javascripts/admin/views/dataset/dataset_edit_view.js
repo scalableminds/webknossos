@@ -53,13 +53,13 @@ class DatasetEditView extends Marionette.View {
   }
 
   templateContext() {
-    return { isChecked(bool) { if (bool) { return "checked"; } } };
+    return { isChecked(bool) { return bool ? "checked" : ""; } };
   }
 
 
   initialize() {
     this.listenTo(this.model, "sync", this.render);
-    return this.model.fetch();
+    this.model.fetch();
   }
 
 
@@ -73,7 +73,7 @@ class DatasetEditView extends Marionette.View {
 
     const formValues = FormSyphon.serialize(this.ui.form);
 
-    return this.model.save(formValues).then(
+    this.model.save(formValues).then(
       () => Toast.success("Saved!"));
   }
 }

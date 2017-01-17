@@ -3,6 +3,7 @@ import Backbone from "backbone";
 import app from "app";
 import Constants from "oxalis/constants";
 import Toast from "libs/toast";
+import Utils from "libs/utils";
 
 
 class AbstractTreeRenderer {
@@ -92,7 +93,7 @@ class AbstractTreeRenderer {
     this.drawTreeWithWidths(root, this.NODE_RADIUS, this.canvas.width() - this.NODE_RADIUS, this.nodeDistance / 2, mode);
 
     // because of z layering all nodes have to be drawn last
-    return this.drawAllNodes();
+    this.drawAllNodes();
   }
 
 
@@ -216,19 +217,13 @@ class AbstractTreeRenderer {
   drawChainFromTo(top, left, tree, decision) {
     // Draw the chain and the tree, connect them.
     let node = tree;
-    return (() => {
-      const result = [];
-      for (const i of __range__(0, decision.chainCount, true)) {
-        let item;
-        this.addNode(left, top + (i * this.nodeDistance), node.id);
-        node = node.children[0];
-        if (i !== 0) {
-          item = this.drawEdge(left, top + ((i - 1) * this.nodeDistance), left, top + (i * this.nodeDistance));
-        }
-        result.push(item);
+    for (const i of Utils.__range__(0, decision.chainCount, true)) {
+      this.addNode(left, top + (i * this.nodeDistance), node.id);
+      node = node.children[0];
+      if (i !== 0) {
+        this.drawEdge(left, top + ((i - 1) * this.nodeDistance), left, top + (i * this.nodeDistance));
       }
-      return result;
-    })();
+    }
   }
 
 
@@ -244,7 +239,7 @@ class AbstractTreeRenderer {
     this.drawEdge(middle, top, middle, top + (0.5 * this.nodeDistance));
     this.drawChainIndicator(middle, top + (0.5 * this.nodeDistance), top + (1.5 * this.nodeDistance), decision.hasActiveNode);
     this.drawEdge(middle, top + (1.5 * this.nodeDistance), middle, top + (2 * this.nodeDistance));
-    return this.addNode(middle, top + (2 * this.nodeDistance), decision.node.id);
+    this.addNode(middle, top + (2 * this.nodeDistance), decision.node.id);
   }
 
 
@@ -287,6 +282,8 @@ class AbstractTreeRenderer {
     } else if (mode === this.MODE_NOCHAIN) {
       return top + (2 * this.nodeDistance);
     }
+    // TODO: Remove once flow is integrated, as mode can only be @MODE_NORMAL or @MODE_NOCHAIN
+    return null;
   }
 
 
@@ -309,7 +306,7 @@ class AbstractTreeRenderer {
    * @param {Number} id TracePoint id
   */
   addNode(x, y, id) {
-    return this.nodeList.push({ x, y, id });
+    this.nodeList.push({ x, y, id });
   }
 
 
@@ -317,7 +314,7 @@ class AbstractTreeRenderer {
    * Iterate the node list and draw all nodes onto the canvas.
   */
   drawAllNodes() {
-    return this.nodeList.map(({ x, y, id }) =>
+    this.nodeList.map(({ x, y, id }) =>
       this.drawNode(x, y, id));
   }
 
@@ -339,11 +336,11 @@ class AbstractTreeRenderer {
 
     let radius = this.NODE_RADIUS;
     if (id === this.activeNodeId) {
-      radius = 2 * radius;
+      radius *= 2;
     }
 
     this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
-    return this.ctx.fill();
+    this.ctx.fill();
   }
 
 
@@ -360,7 +357,7 @@ class AbstractTreeRenderer {
     this.ctx.strokeStyle = this.vgColor;
     this.ctx.moveTo(x1, y1);
     this.ctx.lineTo(x2, y2);
-    return this.ctx.stroke();
+    this.ctx.stroke();
   }
 
 
@@ -384,7 +381,7 @@ class AbstractTreeRenderer {
       this.ctx.lineTo(x, top + (((2 * i) + 2) * dashLength));
     }
     this.ctx.stroke();
-    return this.ctx.lineWidth = 1;
+    this.ctx.lineWidth = 1;
   }
 
 
@@ -478,12 +475,15 @@ class AbstractTreeRenderer {
    * @return {Number}   TracePoint id
   */
   getIdFromPos(x, y) {
+    let id;
     for (const entry of this.nodeList) {
       if (Math.abs(x - entry.x) <= this.CLICK_TRESHOLD &&
           Math.abs(y - entry.y) <= this.CLICK_TRESHOLD) {
-        return entry.id;
+        id = entry.id;
+        break;
       }
     }
+    return id;
   }
 
 
@@ -504,10 +504,10 @@ class AbstractTreeRenderer {
     // apply color scheme
     if (app.oxalis.view.theme === Constants.THEME_BRIGHT) {
       this.vgColor = "black";
-      return this.commentColor = "red";
+      this.commentColor = "red";
     } else {
       this.vgColor = "white";
-      return this.commentColor = "blue";
+      this.commentColor = "blue";
     }
   }
 
@@ -517,7 +517,7 @@ class AbstractTreeRenderer {
    * @param  {Boolean} renderComments true, if abstract tree should show comments
   */
   renderComments(renderComments) {
-    return this.RENDER_COMMENTS = renderComments;
+    this.RENDER_COMMENTS = renderComments;
   }
 
 
@@ -528,20 +528,10 @@ class AbstractTreeRenderer {
   */
   setDimensions(width, height) {
     this.canvas[0].width = width;
-    return this.canvas[0].height = height;
+    this.canvas[0].height = height;
   }
 }
 AbstractTreeRenderer.initClass();
 
 
 export default AbstractTreeRenderer;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

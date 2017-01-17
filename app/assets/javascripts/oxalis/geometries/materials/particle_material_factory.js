@@ -63,17 +63,17 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
 
     this.listenTo(this.model.user, "change:particleSize", function (model, size) {
       this.uniforms.particleSize.value = size;
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     });
     this.listenTo(this.model.user, "change:scale", function (model, scale) {
       this.uniforms.scale.value = scale;
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     });
     this.listenTo(this.model.user, "change:overrideNodeRadius", () => app.vent.trigger("rerender"));
 
-    return this.listenTo(this.model.flycam, "zoomStepChanged", function () {
+    this.listenTo(this.model.flycam, "zoomStepChanged", function () {
       this.uniforms.zoomFactor.value = this.model.flycam.getPlaneScalingFactor();
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     });
   }
 

@@ -98,7 +98,7 @@ class TracingLayoutView extends Marionette.View {
       .removeClass("hide")
       .on("click", this.showUserScriptsModal.bind(this));
 
-    return app.oxalis = new OxalisController(this.options);
+    app.oxalis = new OxalisController(this.options);
   }
 
 
@@ -115,7 +115,7 @@ class TracingLayoutView extends Marionette.View {
       const newWidth = window.innerWidth - menuPosition.left - slidingCanvasOffset - this.MARGIN;
 
       if (menuPosition.left < window.innerWidth && newWidth > 350) {
-        return this.ui.rightMenu.width(newWidth);
+        this.ui.rightMenu.width(newWidth);
       }
     }
   }
@@ -145,7 +145,7 @@ class TracingLayoutView extends Marionette.View {
 
     this.showChildView("rightMenu", this.rightMenuView);
     this.renderSettings();
-    return this.maybeShowNewTaskTypeModal();
+    this.maybeShowNewTaskTypeModal();
   }
 
 
@@ -170,7 +170,7 @@ class TracingLayoutView extends Marionette.View {
     } else {
       text = "You are now tracing a new task with no description.";
     }
-    return Modal.show(text, title);
+    Modal.show(text, title);
   }
 
 
@@ -181,15 +181,15 @@ class TracingLayoutView extends Marionette.View {
     if (!this.model.initialized) { return; }
 
     if (this.isSkeletonMode()) {
-      const settingsTabClass = this.isArbitraryMode() ? SkeletonArbitraryTabView : SkeletonPlaneTabView;
-      settingsTabView = new settingsTabClass(this.options);
+      const SettingsTabClass = this.isArbitraryMode() ? SkeletonArbitraryTabView : SkeletonPlaneTabView;
+      settingsTabView = new SettingsTabClass(this.options);
     } else if (this.isVolumeMode()) {
       settingsTabView = new VolumeTabView(this.options);
     } else {
       settingsTabView = new ViewmodeTabView(this.options);
     }
 
-    return this.showChildView("settings", settingsTabView);
+    this.showChildView("settings", settingsTabView);
   }
 
 
@@ -217,7 +217,7 @@ class TracingLayoutView extends Marionette.View {
     $("#add-script-link")
       .addClass("hide")
       .off("click");
-    return app.oxalis = null;
+    app.oxalis = null;
   }
 }
 TracingLayoutView.initClass();

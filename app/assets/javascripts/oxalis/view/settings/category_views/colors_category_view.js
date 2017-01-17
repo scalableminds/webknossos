@@ -26,12 +26,12 @@ class ColorsCategoryView extends CategoryView {
 
   initialize() {
     for (const key of this.model.get("dataLayerNames")) {
-      (key => this.subviewCreatorsList.push([key, function () {
+      (layerName => this.subviewCreatorsList.push([layerName, function () {
         return new LayerColorSettingsView({
           model: this.model,
           options: {
-            name: `layers.${key}`,
-            displayName: `Layer: ${key}`,
+            name: `layers.${layerName}`,
+            displayName: `Layer: ${layerName}`,
           },
         });
       }]))(key);

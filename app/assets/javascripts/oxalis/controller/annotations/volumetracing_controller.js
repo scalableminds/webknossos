@@ -30,7 +30,7 @@ class VolumeTracingController {
     );
 
     // Keyboard shortcuts
-    new Input.KeyboardNoLoop({
+    this.keyboardNoLoop = new Input.KeyboardNoLoop({
       w: () => this.model.volumeTracing.toggleMode(),
       1: () => this.model.volumeTracing.toggleMode(),
     });
@@ -45,7 +45,7 @@ class VolumeTracingController {
       $("#merge").css({
         visibility: isMergeVisible() ? "hidden" : "visible" });
       if (isMergeVisible()) {
-        return $("#merge-cell1").focus();
+        $("#merge-cell1").focus();
       }
     });
 
@@ -54,16 +54,16 @@ class VolumeTracingController {
       "#merge-cell2": this.MERGE_MODE_CELL2,
     };
 
-    for (const input in inputModeMapping) {
-      ((input) => {
-        $(input).on("focus", () => {
-          this.mergeMode = inputModeMapping[input];
-          return console.log(this.mergeMode);
+    for (const input of Object.keys(inputModeMapping)) {
+      ((inputId) => {
+        $(inputId).on("focus", () => {
+          this.mergeMode = inputModeMapping[inputId];
+          console.log(this.mergeMode);
         },
         );
-        return $(input).keypress((event) => {
+        $(inputId).keypress((event) => {
           if (event.which === 13) {
-            return this.merge();
+            this.merge();
           }
         },
         );
@@ -77,22 +77,23 @@ class VolumeTracingController {
     $("#merge").css({ visibility: "hidden" });
     console.log("Merge:", $("#merge-cell1").val(), $("#merge-cell2").val());
 
-    return inputs.map(input =>
-      (input.blur(),
-      input.val("")));
+    for (const input of inputs) {
+      input.blur();
+      input.val("");
+    }
   }
 
 
   handleCellSelection(cellId) {
     if (cellId > 0) {
       if (this.mergeMode === this.MERGE_MODE_NORMAL) {
-        return this.model.volumeTracing.setActiveCell(cellId);
+        this.model.volumeTracing.setActiveCell(cellId);
       } else if (this.mergeMode === this.MERGE_MODE_CELL1) {
         $("#merge-cell1").val(cellId);
-        return $("#merge-cell2").focus();
+        $("#merge-cell2").focus();
       } else if (this.mergeMode === this.MERGE_MODE_CELL2) {
         $("#merge-cell2").val(cellId);
-        return this.merge();
+        this.merge();
       }
     }
   }
@@ -117,7 +118,7 @@ class VolumeTracingController {
 
 
   drawVolume(pos) {
-    return this.model.volumeTracing.addToLayer(pos);
+    this.model.volumeTracing.addToLayer(pos);
   }
 }
 VolumeTracingController.initClass();

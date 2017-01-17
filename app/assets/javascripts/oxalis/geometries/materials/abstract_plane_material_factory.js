@@ -1,4 +1,5 @@
 import app from "app";
+import Utils from "libs/utils";
 import THREE from "three";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
@@ -36,16 +37,16 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
     this.material.setData = (name, data) => {
       const textureName = this.sanitizeName(name);
-      __guard__(this.textures[textureName], x => x.image.data.set(data));
-      __guard__(this.textures[textureName], x1 => x1.needsUpdate = true);
+      Utils.__guard__(this.textures[textureName], x => x.image.data.set(data));
+      Utils.__guard__(this.textures[textureName], (x1) => { x1.needsUpdate = true; });
     };
   }
 
 
   setupChangeListeners() {
-    return this.listenTo(this.model.datasetConfiguration, "change", function (model) {
+    this.listenTo(this.model.datasetConfiguration, "change", function (model) {
       const object = model.changed.layers || {};
-      for (const binaryName in object) {
+      for (const binaryName of Object.keys(object)) {
         const changes = object[binaryName];
         const name = this.sanitizeName(binaryName);
         if (changes.brightness != null) {
@@ -55,7 +56,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
           this.uniforms[`${name}_contrast`].value = changes.contrast;
         }
       }
-      return app.vent.trigger("rerender");
+      app.vent.trigger("rerender");
     });
   }
 
@@ -69,7 +70,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
     // Make sure name starts with a letter and contains
     // no "-" signs
 
-    if (name == null) { return; }
+    if (name == null) { return null; }
     return `binary_${name.replace(/-/g, "_")}`;
   }
 
@@ -100,7 +101,3 @@ void main() {
 }
 
 export default AbstractPlaneMaterialFactory;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

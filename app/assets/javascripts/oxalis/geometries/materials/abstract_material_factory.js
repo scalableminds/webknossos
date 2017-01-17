@@ -17,7 +17,7 @@ class AbstractMaterialFactory {
 
   setupAttributesAndUniforms() {
     this.uniforms = {};
-    return this.attributes = {};
+    this.attributes = {};
   }
 
 
@@ -29,7 +29,7 @@ class AbstractMaterialFactory {
       fragmentShader: this.getFragmentShader(),
     });
 
-    return this.material = new THREE.ShaderMaterial(options);
+    this.material = new THREE.ShaderMaterial(options);
   }
 
 

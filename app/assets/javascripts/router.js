@@ -66,7 +66,7 @@ class Router extends BaseRouter {
 
   tracingView(type, id) {
     // Webpack `require` doesn't work with inline arrow functions
-    const callback = TracingLayoutView => {
+    const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
 
       const view = new TracingLayoutView({
@@ -83,7 +83,7 @@ class Router extends BaseRouter {
 
   tracingViewPublic(id) {
     // Webpack `require` doesn't work with inline arrow functions
-    const callback = TracingLayoutView => {
+    const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
 
       const view = new TracingLayoutView({
@@ -93,13 +93,13 @@ class Router extends BaseRouter {
       });
       view.forcePageReload = true;
       this.changeView(view);
-    }
+    };
     require(["oxalis/view/tracing_layout_view"], callback);
   }
 
 
   projects() {
-    this.showWithPagination("ProjectListView", "ProjectCollection", { addButtonText : "Create New Project" });
+    this.showWithPagination("ProjectListView", "ProjectCollection", { addButtonText: "Create New Project" });
   }
 
 
@@ -128,7 +128,7 @@ class Router extends BaseRouter {
       const model = new ProjectModel({ name: projectName });
       const view = new ProjectEditView({ model });
 
-      this.listenTo(model, "sync", function() {
+      this.listenTo(model, "sync", () => {
         this.changeView(view);
         this.hideLoadingSpinner();
       });
@@ -156,12 +156,11 @@ class Router extends BaseRouter {
       const model = new DatasetModel({ name: datasetID });
       const view = new DatasetEditView({ model });
 
-      this.listenTo(model, "sync", function() {
-
+      this.listenTo(model, "sync", () => {
         this.changeView(view);
         this.hideLoadingSpinner();
       });
-    }
+    };
     require(["admin/views/dataset/dataset_edit_view", "admin/models/dataset/dataset_model"], callback);
   }
 
@@ -172,7 +171,7 @@ class Router extends BaseRouter {
 
 
   teams() {
-    this.showWithPagination("TeamListView", "TeamCollection", {addButtonText : "Add New Team"});
+    this.showWithPagination("TeamListView", "TeamCollection", { addButtonText: "Add New Team" });
   }
 
 
@@ -183,19 +182,19 @@ class Router extends BaseRouter {
 
       const view = new TaskQueryView();
       this.changeView(view);
-    }
+    };
     require(["admin/views/task/task_query_view"], callback);
   }
 
 
   projectTasks(projectName) {
-     this.showWithPagination("TaskListView", "TaskCollection", {projectName, addButtonText : "Create New Task"});
-   }
+    this.showWithPagination("TaskListView", "TaskCollection", { projectName, addButtonText: "Create New Task" });
+  }
 
 
   taskTypesTasks(taskTypeId) {
-     this.showWithPagination("TaskListView", "TaskCollection", {taskTypeId, addButtonText : "Create New Task"});
-   }
+    this.showWithPagination("TaskListView", "TaskCollection", { taskTypeId, addButtonText: "Create New Task" });
+  }
 
 
   workload() {
@@ -204,7 +203,7 @@ class Router extends BaseRouter {
 
 
   taskTypes() {
-    this.showWithPagination("TaskTypeListView", "TaskTypeCollection", {addButtonText : "Create New TaskType"});
+    this.showWithPagination("TaskTypeListView", "TaskTypeCollection", { addButtonText: "Create New TaskType" });
   }
 
 
@@ -222,7 +221,7 @@ class Router extends BaseRouter {
 
       this.changeView(view);
       this.hideLoadingSpinner();
-    }
+    };
     require(["admin/views/task/task_create_view", "admin/models/task/task_model"], callback);
   }
 
@@ -232,7 +231,6 @@ class Router extends BaseRouter {
   taskEdit(taskID) {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TaskCreateFromView, TaskModel) => {
-
       TaskCreateFromView = TaskCreateFromView.default;
       TaskModel = TaskModel.default;
 
@@ -241,7 +239,7 @@ class Router extends BaseRouter {
 
       this.changeView(view);
       this.hideLoadingSpinner();
-    }
+    };
     require(["admin/views/task/task_create_subviews/task_create_from_view", "admin/models/task/task_model"], callback);
   }
 
@@ -256,7 +254,7 @@ class Router extends BaseRouter {
       const view = new TaskTypeCreateView({ model });
       this.changeView(view);
       this.hideLoadingSpinner();
-    }
+    };
     require(["admin/views/tasktype/task_type_create_view", "admin/models/tasktype/task_type_model"], callback);
   }
 
@@ -272,13 +270,13 @@ class Router extends BaseRouter {
       const model = new UserModel({ id: userID });
       const view = new DashboardView({ model, isAdminView, userID });
 
-      this.listenTo(model, "sync", function () {
+      this.listenTo(model, "sync", () => {
         this.changeView(view);
         this.hideLoadingSpinner();
       });
 
       model.fetch();
-    }
+    };
     require(["dashboard/views/dashboard_view", "dashboard/models/user_model"], callback);
   }
 
@@ -295,7 +293,7 @@ class Router extends BaseRouter {
 
       this.changeView(view);
       this.listenTo(collection, "sync", this.hideLoadingSpinner);
-    }
+    };
     require(["dashboard/views/spotlight/spotlight_view", "admin/models/dataset/dataset_collection"], callback);
   }
 
@@ -311,7 +309,7 @@ class Router extends BaseRouter {
 
       this.changeView(view);
       this.listenTo(collection, "sync", this.hideLoadingSpinner);
-    }
+    };
     require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_collection"], callback);
   }
 
@@ -320,7 +318,7 @@ class Router extends BaseRouter {
     _.defaults(options, { addButtonText: null });
 
     // Webpack `require` doesn't work with inline arrow functions
-    const callback = admin => {
+    const callback = (admin) => {
       collection = new admin[collection](null, options);
       const paginatedCollection = new PaginationCollection([], { fullCollection: collection });
       view = new admin[view]({ collection: paginatedCollection });
@@ -335,7 +333,7 @@ class Router extends BaseRouter {
 
   showAdminView(view, collection) {
     // Webpack `require` doesn't work with inline arrow functions
-    const callback = admin => {
+    const callback = (admin) => {
       if (collection) {
         collection = new admin[collection]();
         view = new admin[view]({ collection });

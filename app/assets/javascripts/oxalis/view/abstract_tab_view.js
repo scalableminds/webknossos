@@ -41,13 +41,14 @@ class AbstractTabView extends Marionette.View {
         this.activeTabIndex = index;
       }
 
+      // eslint-disable-next-line new-cap
       tab.view = new tab.viewClass(tab.options || options);
-      tab.iconString = tab.iconClass ? `<i class=\"${tab.iconClass}\"></i>` : "";
+      tab.iconString = tab.iconClass ? `<i class="${tab.iconClass}"></i>` : "";
 
-      return regions[tab.id] = `#${tab.id}`;
+      regions[tab.id] = `#${tab.id}`;
     },
     );
-    return this.addRegions(regions);
+    this.addRegions(regions);
   }
 
 

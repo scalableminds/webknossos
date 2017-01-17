@@ -64,7 +64,7 @@ class DatasetPositionView extends Marionette.View {
 
     // TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
     this.listenTo(this.model.get("flycam3d"), "changed", this.render);
-    return this.listenTo(this.model.get("flycam"), "positionChanged", this.render);
+    this.listenTo(this.model.get("flycam"), "positionChanged", this.render);
   }
 
 
@@ -104,13 +104,13 @@ class DatasetPositionView extends Marionette.View {
     evt.preventDefault();
 
     const positionString = this.ui.positionInput.val();
-    return Clipboard.copy(positionString).then(
+    Clipboard.copy(positionString).then(
       () => Toast.success("Position copied to clipboard"));
   }
 
   onDestroy() {
     this.model.flycam3d.off("changed");
-    return this.model.flycam.off("positionChanged");
+    this.model.flycam.off("positionChanged");
   }
 }
 DatasetPositionView.initClass();

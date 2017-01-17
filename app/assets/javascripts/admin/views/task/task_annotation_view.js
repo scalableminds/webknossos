@@ -53,10 +53,10 @@ class TaskAnnotationView extends Marionette.View {
   callAjax(evt) {
     evt.preventDefault();
 
-    return Request.receiveJSON($(evt.target).prop("href")).then((jsonData) => {
+    Request.receiveJSON($(evt.target).prop("href")).then((jsonData) => {
       this.model.set(jsonData);
       const message = jsonData.messages;
-      return Toast.message(message);
+      Toast.message(message);
     },
     );
   }
@@ -64,7 +64,7 @@ class TaskAnnotationView extends Marionette.View {
 
   cancelAnnotation() {
     if (window.confirm("Do you really want to cancel this annotation?")) {
-      return this.model.destroy();
+      this.model.destroy();
     }
   }
 }

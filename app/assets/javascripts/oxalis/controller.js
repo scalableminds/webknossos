@@ -1,11 +1,12 @@
 /**
- * model.js
+ * controller.js
  * @flow weak
  */
 
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 import Stats from "stats.js";
 import PlaneController from "./controller/viewmodes/plane_controller";
@@ -26,7 +27,7 @@ import Input from "../libs/input";
 import Toast from "../libs/toast";
 import Model from "./model.js";
 
-import type {ToastType} from "../libs/toast";
+import type { ToastType } from "../libs/toast";
 
 class Controller {
 
@@ -39,9 +40,9 @@ class Controller {
   planeController: PlaneController;
   arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
+  keyboardNoLoop: Input.KeyboardNoLoop;
 
-  // Todo: The whole class is extended by Backbone.Events, which we should tell
-  // Flow somehow
+  // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
   // Main controller, responsible for setting modes and everything
@@ -93,6 +94,7 @@ class Controller {
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.";
         }
       }
+      return null;
     },
     );
 
@@ -109,8 +111,8 @@ class Controller {
       this.planeController = new SkeletonTracingPlaneController(
         this.model, this.view, this.sceneController, this.annotationController);
 
-      const ArbitraryController = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalArbitraryController;
-      this.arbitraryController = new ArbitraryController(
+      const ArbitraryControllerClass = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalArbitraryController;
+      this.arbitraryController = new ArbitraryControllerClass(
         this.model, this.view, this.sceneController, this.annotationController);
     } else if (this.model.volumeTracing != null) {
       this.view = new VolumeTracingView(this.model);
@@ -119,7 +121,7 @@ class Controller {
       this.planeController = new VolumeTracingPlaneController(
         this.model, this.view, this.sceneController, this.annotationController);
     } else {
- // View mode
+      // View mode
 
       this.view = new View(this.model);
       this.planeController = new PlaneController(
@@ -135,7 +137,7 @@ class Controller {
     this.initKeyboard();
     this.initTimeLimit();
 
-    for (const binaryName in this.model.binary) {
+    for (const binaryName of Object.keys(this.model.binary)) {
       this.listenTo(this.model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
     }
 
@@ -146,16 +148,16 @@ class Controller {
 
     // Zoom step warning
     this.zoomStepWarningToast = null;
-    return this.model.flycam.on({
+    this.model.flycam.on({
       zoomStepChanged: () => {
         const shouldWarn = !this.model.canDisplaySegmentationData();
         if (shouldWarn && (this.zoomStepWarningToast == null)) {
           const toastType = (this.model.volumeTracing != null) ? "danger" : "info";
-          return this.zoomStepWarningToast = Toast.message(toastType,
+          this.zoomStepWarningToast = Toast.message(toastType,
             "Segmentation data is only fully supported at a smaller zoom level.", true);
         } else if (!shouldWarn && (this.zoomStepWarningToast != null)) {
           this.zoomStepWarningToast.remove();
-          return this.zoomStepWarningToast = null;
+          this.zoomStepWarningToast = null;
         }
       },
     });
@@ -180,40 +182,37 @@ class Controller {
         t: () => this.view.toggleTheme(),
 
         m: () => {
- // rotate allowed modes
-
+          // rotate allowed modes
           const index = (this.model.allowedModes.indexOf(this.model.get("mode")) + 1) % this.model.allowedModes.length;
-          return this.model.setMode(this.model.allowedModes[index]);
+          this.model.setMode(this.model.allowedModes[index]);
         },
 
         "super + s": (event) => {
           event.preventDefault();
           event.stopPropagation();
-          return this.model.save();
+          this.model.save();
         },
 
         "ctrl + s": (event) => {
           event.preventDefault();
           event.stopPropagation();
-          return this.model.save();
+          this.model.save();
         },
 
       });
     }
 
-    return new Input.KeyboardNoLoop(keyboardControls);
+    this.keyboardNoLoop = new Input.KeyboardNoLoop(keyboardControls);
   }
 
 
   loadMode(newMode, force = false) {
     if ((newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) && (this.model.allowedModes.includes(newMode) || force)) {
-      __guard__(this.planeController, x => x.stop());
-      return this.arbitraryController.start(newMode);
+      Utils.__guard__(this.planeController, x => x.stop());
+      this.arbitraryController.start(newMode);
     } else if ((newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) && (this.model.allowedModes.includes(newMode) || force)) {
-      __guard__(this.arbitraryController, x1 => x1.stop());
-      return this.planeController.start(newMode);
-    } else { // newMode not allowed or invalid
-
+      Utils.__guard__(this.arbitraryController, x1 => x1.stop());
+      this.planeController.start(newMode);
     }
   }
 
@@ -231,9 +230,9 @@ class Controller {
       model = this.model;
 
       const tracingType = model.skeletonTracing || model.volumeTracing;
-      return tracingType.stateLogger.pushNow().then(() => {
+      tracingType.stateLogger.pushNow().then(() => {
         const url = `/annotations/${model.tracingType}/${model.tracingId}/finishAndRedirect`;
-        return app.router.loadURL(url);
+        app.router.loadURL(url);
       });
     };
 
@@ -249,9 +248,9 @@ class Controller {
     console.log(`TimeLimit is ${timeLimit / 60 / 1000} min`);
 
     if (timeLimit) {
-      return setTimeout(() => {
+      setTimeout(() => {
         window.alert("Time limit is reached, thanks for tracing!");
-        return finishTracing();
+        finishTracing();
       }
       , timeLimit);
     }
@@ -260,7 +259,3 @@ class Controller {
 
 
 export default Controller;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

@@ -43,7 +43,7 @@ class ExperienceModalView extends ModalView {
 
 
   initialize(options) {
-    return this.userCollection = options.userCollection;
+    this.userCollection = options.userCollection;
   }
 
 

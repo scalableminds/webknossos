@@ -52,7 +52,7 @@ const Request = {
     const toFormData = function (input, form, namespace) {
       const formData = form || new FormData();
 
-      for (const key in input) {
+      for (const key of Object.keys(input)) {
         let formKey;
         const value = input[key];
         if (namespace) {
@@ -186,7 +186,7 @@ const Request = {
 
 
     const headers = new Headers();
-    for (const name in options.headers) {
+    for (const name of Object.keys(options.headers)) {
       headers.set(name, options.headers[name]);
     }
     options.headers = headers;
@@ -215,12 +215,12 @@ const Request = {
 
 
   timeoutPromise(timeout) {
-    return new Promise((resolve, reject) =>
+    return new Promise((resolve) => {
       setTimeout(
         () => resolve("timeout"),
         timeout,
-      ),
-    );
+      );
+    });
   },
 
 
@@ -245,14 +245,14 @@ const Request = {
 
             Toast.message(json.messages);
             return Promise.reject(json);
-          } catch (error) {
+          } catch (jsonError) {
             Toast.error(text);
             return Promise.reject(text);
           }
         },
-        (error) => {
-          Toast.error(error.toString());
-          return Promise.reject(error);
+        (textError) => {
+          Toast.error(textError.toString());
+          return Promise.reject(textError);
         });
     } else {
       Toast.error(error);

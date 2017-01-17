@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "../../../libs/utils";
 
 class ArbitraryCubeAdapter {
   static initClass() {
@@ -14,7 +15,7 @@ class ArbitraryCubeAdapter {
         0,
       ];
 
-      for (const zoomStep of __range__(0, this.ARBITRARY_MAX_ZOOMSTEP, true)) {
+      for (const zoomStep of Utils.__range__(0, this.ARBITRARY_MAX_ZOOMSTEP, true)) {
         const bucket = this.cube.getBucket(bucketAddress);
 
         if (bucket.isOutOfBoundingBox) {
@@ -48,7 +49,7 @@ class ArbitraryCubeAdapter {
     this.sizeZ = this.boundary[2];
 
     this.NOT_LOADED_BUCKET_DATA = new Uint8Array(this.cube.BUCKET_LENGTH);
-    for (const i of __range__(0, this.NOT_LOADED_BUCKET_DATA.length, false)) {
+    for (const i of Utils.__range__(0, this.NOT_LOADED_BUCKET_DATA.length, false)) {
       this.NOT_LOADED_BUCKET_DATA[i] = this.NOT_LOADED_BUCKET_INTENSITY;
     }
     this.NOT_LOADED_BUCKET_DATA.zoomStep = 0;
@@ -69,13 +70,3 @@ ArbitraryCubeAdapter.initClass();
 
 
 export default ArbitraryCubeAdapter;
-
-function __range__(left, right, inclusive) {
-  const range = [];
-  const ascending = left < right;
-  const end = !inclusive ? right : ascending ? right + 1 : right - 1;
-  for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
-    range.push(i);
-  }
-  return range;
-}

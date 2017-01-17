@@ -1,5 +1,11 @@
+/**
+ * dataset_list_item_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import TemplateHelpers from "libs/template_helpers";
@@ -142,9 +148,9 @@ class DatasetListItemView extends Marionette.CompositeView {
     this.collection = new DatasetAccesslistCollection(this.model.get("name"));
 
     // In case the user reloads during an import, continue the progress bar
-    return this.listenToOnce(this, "render", function () {
+    this.listenToOnce(this, "render", function () {
       if (this.model.get("dataSource").needsImport) {
-        return this.startImport(null, "GET");
+        this.startImport(null, "GET");
       }
     });
   }
@@ -170,7 +176,7 @@ class DatasetListItemView extends Marionette.CompositeView {
         this.updateProgress();
       }
       if (responseJSON.status === "failed") {
-        return this.importFailed(responseJSON);
+        this.importFailed(responseJSON);
       }
     },
     )
@@ -189,8 +195,8 @@ class DatasetListItemView extends Marionette.CompositeView {
       this.ui.importError.removeClass("hide");
 
       // apply single error
-      if (__guard__(__guard__(response.messages, x1 => x1[0]), x => x.error)) {
-        return this.ui.errorText.text(response.messages[0].error);
+      if (Utils.__guard__(Utils.__guard__(response.messages, x1 => x1[0]), x => x.error)) {
+        this.ui.errorText.text(response.messages[0].error);
       }
     }
   }
@@ -208,11 +214,16 @@ class DatasetListItemView extends Marionette.CompositeView {
         switch (responseJSON.status) {
           case "finished":
             this.model.fetch().then(this.render.bind(this));
-            return Toast.message(responseJSON.messages);
+            Toast.message(responseJSON.messages);
+            break;
           case "notStarted": case "inProgress":
-            return window.setTimeout((() => this.updateProgress()), 1000);
+            window.setTimeout((() => this.updateProgress()), 1000);
+            break;
           case "failed":
-            return this.importFailed(responseJSON);
+            this.importFailed(responseJSON);
+            break;
+          default:
+            console.error("Response JSON status of progress request not recognized:", responseJSON.status);
         }
       },
       );
@@ -255,7 +266,3 @@ DatasetListItemView.initClass();
 
 
 export default DatasetListItemView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

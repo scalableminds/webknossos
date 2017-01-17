@@ -1,4 +1,5 @@
 import _ from "lodash";
+import Utils from "libs/utils";
 import Backbone from "backbone";
 import { V3 } from "libs/mjs";
 import constants from "../constants";
@@ -58,7 +59,7 @@ class UrlManager {
     this.listenTo(this.model, "change:mode", this.update);
 
     if (this.model.skeletonTracing) {
-      return this.listenTo(this.model.skeletonTracing, "newActiveNode", this.update);
+      this.listenTo(this.model.skeletonTracing, "newActiveNode", this.update);
     }
   }
 
@@ -76,7 +77,7 @@ class UrlManager {
       state = state.concat([flycam.getZoomStep().toFixed(2)]);
     }
 
-    if (__guard__(this.model.skeletonTracing, x => x.getActiveNodeId()) != null) {
+    if (Utils.__guard__(this.model.skeletonTracing, x => x.getActiveNodeId()) != null) {
       state.push(this.model.skeletonTracing.getActiveNodeId());
     }
 
@@ -86,7 +87,3 @@ class UrlManager {
 UrlManager.initClass();
 
 export default UrlManager;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

@@ -1,8 +1,8 @@
 import _ from "lodash";
 import app from "app";
+import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
-import Utils from "libs/utils";
 import TaskListItemView from "./task_list_item_view";
 import AnonymousTaskLinkModal from "./anonymous_task_link_modal";
 
@@ -51,13 +51,14 @@ class TaskListView extends Marionette.CompositeView {
   templateContext() {
     return {
       getTitle: () => {
-        let id,
-          name;
-        if (name = this.collection.fullCollection.projectName) {
+        const id = this.collection.fullCollection.taskTypeId;
+        const name = this.collection.fullCollection.projectName;
+        if (name) {
           return `Tasks for Project ${name}`;
-        } else if (id = this.collection.fullCollection.taskTypeId) {
+        } else if (id) {
           return `Tasks for TaskType ${id}`;
         }
+        return "";
       },
     };
   }
@@ -68,30 +69,30 @@ class TaskListView extends Marionette.CompositeView {
     this.listenTo(app.vent, "paginationView:addElement", this.createNewTask);
     this.listenTo(this.collection, "sync", this.showAnonymousLinks);
 
-    return this.collection.fetch();
+    this.collection.fetch();
   }
 
 
   createNewTask() {
-    let id,
-      name,
-      urlParam;
-    if (name = this.collection.fullCollection.projectName) {
+    let urlParam;
+    const id = this.collection.fullCollection.taskTypeId;
+    const name = this.collection.fullCollection.projectName;
+    if (name) {
       urlParam = `?projectName=${name}`;
-    } else if (id = this.collection.fullCollection.taskTypeId) {
+    } else if (id) {
       urlParam = `?taskType=${id}`;
     } else {
       urlParam = "";
     }
 
     // The trailing '#' is important for routing
-    return app.router.navigate(`/tasks/create${urlParam}#`, { trigger: true });
+    app.router.navigate(`/tasks/create${urlParam}#`, { trigger: true });
   }
 
 
   toggleAllDetails() {
     this.ui.detailsToggle.toggleClass("open");
-    return app.vent.trigger("taskListView:toggleDetails");
+    app.vent.trigger("taskListView:toggleDetails");
   }
 
 
@@ -101,9 +102,9 @@ class TaskListView extends Marionette.CompositeView {
 
     const task = this.collection.findWhere({ id: anonymousTaskId });
     if (task && task.get("directLinks")) {
-      return this.showModal(task);
+      this.showModal(task);
     } else {
-      return Toast.error(`Unable to find anonymous links for task ${anonymousTaskId}.`);
+      Toast.error(`Unable to find anonymous links for task ${anonymousTaskId}.`);
     }
   }
 
@@ -114,12 +115,12 @@ class TaskListView extends Marionette.CompositeView {
     this.ui.modalWrapper.html(modalView.el);
 
     modalView.show();
-    return this.modalView = modalView;
+    this.modalView = modalView;
   }
 
 
   onDestroy() {
-    return __guard__(this.modalView, x => x.destroy());
+    Utils.__guard__(this.modalView, x => x.destroy());
   }
 
 
@@ -130,7 +131,3 @@ class TaskListView extends Marionette.CompositeView {
 TaskListView.initClass();
 
 export default TaskListView;
-
-function __guard__(value, transform) {
-  return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
-}

@@ -23,8 +23,8 @@ const RequestMock = {
   receiveJSON: sinon.stub(),
 };
 mockRequire("../../../../libs/request", RequestMock);
-mockRequire.reRequire("../../../../libs/request").default;
-mockRequire.reRequire("../../../../oxalis/model/binary/layers/layer").default;
+mockRequire.reRequire("../../../../libs/request");
+mockRequire.reRequire("../../../../oxalis/model/binary/layers/layer");
 
 const WkLayer = require("../../../../oxalis/model/binary/layers/wk_layer").default;
 
@@ -101,10 +101,10 @@ describe("WkLayer", () => {
 
           expect(RequestMock.sendArraybufferReceiveArraybuffer.callCount).toBe(2);
 
-          const [url, ] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args;
+          const url = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args[0];
           expect(url).toBe("url/data/datasets/dataSet/layers/layername/data?token=token");
 
-          const [url2, ] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(1).args;
+          const url2 = RequestMock.sendArraybufferReceiveArraybuffer.getCall(1).args[0];
           expect(url2).toBe("url/data/datasets/dataSet/layers/layername/data?token=token2");
 
           return layer.tokenPromise;

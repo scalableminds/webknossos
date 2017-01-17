@@ -15,7 +15,7 @@ class MultipartData {
 
 
   addPart(headers, body) {
-    for (const name in headers) {
+    for (const name of Object.keys(headers)) {
       const value = headers[name];
       this.data.push(`${name}: ${value}\r\n`);
     }

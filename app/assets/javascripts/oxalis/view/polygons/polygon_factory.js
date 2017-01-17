@@ -32,7 +32,7 @@ class PolygonFactory {
 
 
   cancel() {
-    return this.isCancelled = true;
+    this.isCancelled = true;
   }
 
 
@@ -57,7 +57,7 @@ class PolygonFactory {
       position = this.getNextPosition(position);
     }
 
-    return this.deferred.resolve(result);
+    this.deferred.resolve(result);
   }
 
 
@@ -93,21 +93,15 @@ class PolygonFactory {
   updateTriangles(result, position) {
     const cubeIndices = this.getCubeIndices(position);
 
-    return (() => {
-      const result1 = [];
-      for (const cellId in cubeIndices) {
-        const cubeIndex = cubeIndices[cellId];
-        let item;
-        if (result[cellId] == null) {
-          result[cellId] = [];
-        }
-        if (cubeIndex !== 0 && cubeIndex !== 256) {
-          item = this.addNewTriangles(result[cellId], cubeIndex, position);
-        }
-        result1.push(item);
+    for (const cellId of Object.keys(cubeIndices)) {
+      const cubeIndex = cubeIndices[cellId];
+      if (result[cellId] == null) {
+        result[cellId] = [];
       }
-      return result1;
-    })();
+      if (cubeIndex !== 0 && cubeIndex !== 256) {
+        this.addNewTriangles(result[cellId], cubeIndex, position);
+      }
+    }
   }
 
 
@@ -146,16 +140,18 @@ class PolygonFactory {
 
 
   addNewTriangles(triangleList, cubeIndex, [x, y, z]) {
-    let vertices;
-    return tlt[cubeIndex].map(triangle =>
-        (vertices = [],
+    for (const triangle of Array.from(tlt[cubeIndex])) {
+      const vertices = [];
 
-        triangle.map(vertex =>
-          vertices.push([(vertex[0] * this.voxelsToSkip) + x,
-            (vertex[1] * this.voxelsToSkip) + y,
-            (vertex[2] * this.voxelsToSkip) + z])),
+      for (const vertex of Array.from(triangle)) {
+        vertices.push([
+          (vertex[0] * this.voxelsToSkip) + x,
+          (vertex[1] * this.voxelsToSkip) + y,
+          (vertex[2] * this.voxelsToSkip) + z]);
+      }
 
-        triangleList.push(vertices)));
+      triangleList.push(vertices);
+    }
   }
 }
 

@@ -71,7 +71,7 @@ class ArbitraryView {
       this.isRunning = true;
 
       for (const element of this.group.children) {
-        element.setVisibility = element.setVisibility || function (v) { return this.visible = v; };
+        element.setVisibility = element.setVisibility || function (v) { this.visible = v; };
         element.setVisibility(true);
       }
 
@@ -82,7 +82,7 @@ class ArbitraryView {
       // start the rendering loop
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
-      return $(window).on("resize", this.resize);
+      $(window).on("resize", this.resize);
     }
   }
 
@@ -96,14 +96,14 @@ class ArbitraryView {
       }
 
       for (const element of this.group.children) {
-        element.setVisibility = element.setVisibility || function (v) { return this.visible = v; };
+        element.setVisibility = element.setVisibility || function (v) { this.visible = v; };
         element.setVisibility(false);
       }
 
       $(window).off("resize", this.resize);
 
       $(".skeleton-arbitrary-controls").hide();
-      return $("#arbitrary-info-canvas").hide();
+      $("#arbitrary-info-canvas").hide();
     }
   }
 
@@ -148,12 +148,12 @@ class ArbitraryView {
 
     this.forceUpdate = false;
 
-    return this.animationRequestId = window.requestAnimationFrame(this.animate);
+    this.animationRequestId = window.requestAnimationFrame(this.animate);
   }
 
 
   draw() {
-    return this.forceUpdate = true;
+    this.forceUpdate = true;
   }
 
 
@@ -173,7 +173,7 @@ class ArbitraryView {
       () => this.resize(),
       Constants.RESIZE_THROTTLE_TIME,
     );
-    return this.resizeThrottled();
+    this.resizeThrottled();
   }
 
 
@@ -188,7 +188,7 @@ class ArbitraryView {
 
     this.camera.aspect = this.width / this.height;
     this.camera.updateProjectionMatrix();
-    return this.draw();
+    this.draw();
   }
 
 
@@ -201,18 +201,18 @@ class ArbitraryView {
       this.container.width(this.width);
       this.container.height(this.height);
 
-      return this.resizeThrottled();
+      this.resizeThrottled();
     }
   }
 
   setClippingDistance(value) {
     this.camera.near = this.CAM_DISTANCE - value;
-    return this.camera.updateProjectionMatrix();
+    this.camera.updateProjectionMatrix();
   }
 
 
   setAdditionalInfo(info) {
-    return this.additionalInfo = info;
+    this.additionalInfo = info;
   }
 }
 ArbitraryView.initClass();

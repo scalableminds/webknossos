@@ -43,7 +43,7 @@
     "wdio-selenium-standalone-service": "0.0.7",
     "wdio-spec-reporter": "0.0.3",
     "webdriverio": "^4.4.0",
-    "webpack": "^2.2.0-rc.7",
+    "webpack": "2.2.0",
     "worker-loader": "^0.7.1"
   },
   "scripts": {

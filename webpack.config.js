@@ -54,9 +54,11 @@ module.exports = {
       },
       {
         test: /\.less$/,
-        use: ExtractTextPlugin.extract({
+        // This needs to be `loader` until `extract-text-webpack-plugin` is fixed
+        // Ref: https://github.com/webpack/extract-text-webpack-plugin/issues/250
+        loader: ExtractTextPlugin.extract({
           fallbackLoader: "style-loader",
-          loader: ["css-loader", "less-loader"],
+          loader: "css-loader!less-loader",
         }),
       },
       {

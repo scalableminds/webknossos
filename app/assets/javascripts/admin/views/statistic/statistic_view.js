@@ -1,5 +1,6 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
+import app from "app";
 import TimeStatisticModel from "admin/models/statistic/time_statistic_model";
 import GraphView from "./graph_view";
 import StatisticListView from "./statistic_list_view";
@@ -7,7 +8,6 @@ import AchievementView from "./achievement_view";
 
 class StatisticView extends Marionette.View {
   static initClass() {
-
     this.prototype.className = "statistics container wide";
     this.prototype.template = _.template(`\
 <div class="row-fluid">
@@ -29,8 +29,7 @@ class StatisticView extends Marionette.View {
   }
 
   initialize() {
-
-    app.router.showLoadingSpinner()
+    app.router.showLoadingSpinner();
 
     const timeStatisticModel = new TimeStatisticModel();
     timeStatisticModel.fetch({
@@ -47,7 +46,6 @@ class StatisticView extends Marionette.View {
 
 
   showStatisticsListView() {
-
     this.showChildView("timings", this.statisticListView);
   }
 
@@ -55,7 +53,7 @@ class StatisticView extends Marionette.View {
   showGraphView() {
     this.showChildView("graph", this.graphView);
     this.showChildView("achievements", this.achievementView);
-    app.router.hideLoadingSpinner()
+    app.router.hideLoadingSpinner();
   }
 }
 StatisticView.initClass();

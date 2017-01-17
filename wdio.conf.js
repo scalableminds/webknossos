@@ -182,7 +182,7 @@ exports.config = {
   before: function (capabilities, specs) {
 
     const mongoURL = `${process.env.MONGO_HOST || "localhost"}:${process.env.MONGO_PORT || "27017"}`;
-    const mongoDB = process.env.MONGO_DB || "oxalis-testing";
+    const mongoDB = process.env.MONGO_DB || "webknossos-testing";
 
     child_process.execFileSync("./tools/import_export/import.sh",
                  [mongoDB, "testdb", mongoURL],

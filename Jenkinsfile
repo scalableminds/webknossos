@@ -22,18 +22,18 @@ ansiColor('xterm') {
 
       stage("Build") {
 
-        sh "docker-compose run oxalis-sbt clean compile stage"
+        sh "docker-compose run sbt clean compile stage"
         sh "docker build -t scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
       }
 
 
       stage("Test") {
 
-        sh "docker-compose run oxalis-frontend-linting"
-        sh "docker-compose run oxalis-frontend-flow"
-        sh "docker-compose run oxalis-frontend-tests"
+        sh "docker-compose run webknossos-frontend-linting"
+        sh "docker-compose run webknossos-frontend-flow"
+        sh "docker-compose run webknossos-frontend-tests"
         retry(3) {
-          sh "docker-compose run oxalis-e2e-tests"
+          sh "docker-compose run webknossos-e2e-tests"
         }
         sh """
           DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up webknossos &
@@ -176,5 +176,5 @@ def notifyBuild(String buildStatus = 'STARTED') {
 
   def message = "${env.JOB_NAME} #${env.BUILD_NUMBER} - ${subject} (<${env.BUILD_URL}|Open>)"
   // Send notifications
-  slackSend(channel: '#oxalis', color: colorCode, message: message)
+  slackSend(channel: '#webknossos-bots', color: colorCode, message: message)
 }

@@ -41,3 +41,4 @@ public/bundle
 conf/github.conf
 tmp/
 errorShots/
+flow-coverage/

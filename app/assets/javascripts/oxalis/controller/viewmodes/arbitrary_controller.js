@@ -39,7 +39,7 @@ class ArbitraryController {
   WIDTH: number;
   TIMETOCENTER: number;
   fullscreen: boolean;
-  lastNodeMatrix: ?Float32Array;
+  lastNodeMatrix: Float32Array;
   input: any;
   mode: ModeType;
 

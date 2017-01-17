@@ -1,3 +1,8 @@
+/**
+ * skeletontracing_plane_controller.js
+ * @flow weak
+ */
+
 import $ from "jquery";
 import app from "app";
 import THREE from "three";
@@ -6,6 +11,7 @@ import _ from "lodash";
 import PlaneController from "../viewmodes/plane_controller";
 import constants from "../../constants";
 import dimensions from "../../model/dimensions";
+import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 
 class SkeletonTracingPlaneController extends PlaneController {
 
@@ -15,16 +21,11 @@ class SkeletonTracingPlaneController extends PlaneController {
   // Extends Plane controller to add controls that are specific to Skeleton
   // Tracing.
 
+  skeletonTracingController: SkeletonTracingController;
 
   constructor(model, view, sceneController, skeletonTracingController) {
     super(model, view, sceneController);
     this.skeletonTracingController = skeletonTracingController;
-
-    this.popBranch = this.popBranch.bind(this);
-    this.scrollPlanes = this.scrollPlanes.bind(this);
-    this.onClick = this.onClick.bind(this);
-    this.setWaypoint = this.setWaypoint.bind(this);
-    this.addNode = this.addNode.bind(this);
   }
 
 
@@ -64,8 +65,8 @@ class SkeletonTracingPlaneController extends PlaneController {
   getKeyboardControls() {
     return _.extend(super.getKeyboardControls(), {
 
-      1: () => this.skeletonTracingController.toggleSkeletonVisibility(),
-      2: () => this.sceneController.skeleton.toggleInactiveTreeVisibility(),
+      "1": () => this.skeletonTracingController.toggleSkeletonVisibility(),
+      "2": () => this.sceneController.skeleton.toggleInactiveTreeVisibility(),
 
       // Delete active node
       delete: () => _.defer(() => this.model.skeletonTracing.deleteActiveNode()),
@@ -84,15 +85,21 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  popBranch() {
-    return _.defer(() => this.model.skeletonTracing.popBranch().then(id => this.skeletonTracingController.setActiveNode(id, false, true),
-    ),
+  popBranch = () => {
+    return _.defer(
+      () => {
+        this.model.skeletonTracing.popBranch().then(
+          id => this.skeletonTracingController.setActiveNode(id, false, true),
+        );
+      }
     );
   }
 
 
-  scrollPlanes(delta, type) {
-    super.scrollPlanes(delta, type);
+  scrollPlanes = (delta, type) => {
+    // TODO: Track this issue https://github.com/babel/babel/issues/5104
+    // to use a simple this.super call
+    PlaneController.prototype.scrollPlanes.call(this, delta, type);
 
     if (type === "shift") {
       this.skeletonTracingController.setRadius(delta);
@@ -100,7 +107,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  onClick(position, shiftPressed, altPressed, plane) {
+  onClick = (position, shiftPressed, altPressed, plane) => {
     if (!shiftPressed) { // do nothing
       return;
     }
@@ -151,7 +158,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  setWaypoint(position, ctrlPressed) {
+  setWaypoint = (position, ctrlPressed) => {
     const activeNode = this.model.skeletonTracing.getActiveNode();
     // set the new trace direction
     if (activeNode) {
@@ -173,7 +180,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  addNode(position, rotation, centered) {
+  addNode = (position, rotation, centered) => {
     if (this.model.settings.somaClickingAllowed && this.model.user.get("newNodeNewTree")) {
       this.model.skeletonTracing.createNewTree();
     }

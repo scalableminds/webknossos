@@ -71,14 +71,14 @@ class StateLogger {
   pushNow() {
    // Interface for view & controller
 
-    this.mutexedPush(false);
+    return this.mutexedPush(false);
   }
 
   // alias for `pushNow`
   // needed for save delegation by `Model`
   // see `model.coffee`
   save() {
-    this.pushNow();
+    return this.pushNow();
   }
 
 

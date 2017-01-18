@@ -40,6 +40,7 @@ class PullQueue {
     this.queue = _.sortBy(this.queue, item => item.priority);
 
     // Starting to download some buckets
+    const promises = [];
     while (this.batchCount < this.BATCH_LIMIT && this.queue.length) {
       const batch = [];
       while (batch.length < this.BATCH_SIZE && this.queue.length) {
@@ -54,9 +55,10 @@ class PullQueue {
       }
 
       if (batch.length > 0) {
-        this.pullBatch(batch);
+        promises.push(this.pullBatch(batch));
       }
     }
+    return promises;
   }
 
 

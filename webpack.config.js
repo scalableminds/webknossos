@@ -38,19 +38,16 @@ module.exports = {
         use: "babel-loader",
       }, {
         test: scriptPaths["three.color"],
-        use: [{
-          loader: "imports-loader",
-          options: { "THREE": "three" },
-        }, {
-          loader: "exports-loader",
-          options: { "THREE.ColorConverter": "THREE.ColorConverter" },
-        }],
+        use: [
+          "imports-loader?THREE=three",
+          "exports-loader?THREE.ColorConverter",
+        ],
       }, {
         test: scriptPaths["three.trackball"],
         use: "imports-loader?THREE=three",
       }, {
         test: scriptPaths["three"],
-        use: "exports-loader?THREE=THREE",
+        use: "exports-loader?THREE",
       },
       {
         test: /\.less$/,

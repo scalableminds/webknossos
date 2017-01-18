@@ -297,7 +297,8 @@ class TaskOverviewView extends Marionette.View {
       this.users = this.collection.pluck("user");
       this.users.forEach((user) => { user.name = `${user.firstName} ${user.lastName}`; });
 
-      const taskTypes = _.flatten(this.collection.pluck("taskTypes"));
+      const taskTypes = _.flatten(this.collection.pluck("taskTypes"))
+        .concat(_.compact(this.collection.pluck("futureTaskType")));
       const projects = _.flatten(this.collection.pluck("projects"));
 
       const nodes = this.buildNodes(taskTypes, projects);

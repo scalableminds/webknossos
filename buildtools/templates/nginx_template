@@ -13,6 +13,12 @@ server {
   access_log  /var/log/nginx/{{name}}.access.log;
   proxy_read_timeout 3600s;
 
+  error_page 502 /50x.html;
+  location = /50x.html {
+    root /usr/lib/{{name}};
+    internal;
+  }
+
   location / {
     {% if project != "director" and not (project == "oxalis" and branch == "dev") %}
     auth_basic            "Restricted";
@@ -38,6 +44,12 @@ server {
   listen 443 ssl http2;
   server_name  {{https_url_string}};
   access_log  /var/log/nginx/{{name}}.access.log;
+
+  error_page 502 /50x.html;
+  location = /50x.html {
+    root /usr/lib/{{name}};
+    internal;
+  }
 
   proxy_read_timeout 3600s;
 

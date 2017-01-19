@@ -1,14 +1,33 @@
+/**
+ * cube.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
 import THREE from "three";
 import Backbone from "backbone";
+import Model from "oxalis/model";
 import constants from "../constants";
 import dimensions from "../model/dimensions";
+import type { Boundary } from "oxalis/model";
 
 class Cube {
 
-  constructor(model, properties) {
+  model: Model;
+  crossSections: Array<THREE.Line>;
+  cube: THREE.Line;
+  min: Boundary;
+  max: Boundary;
+  showCrossSections: boolean;
+  initialized: boolean;
+  visible: boolean;
+
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
+
+  constructor(model: Model, properties) {
     this.model = model;
     this.min = properties.min || [0, 0, 0];
     this.max = properties.max;

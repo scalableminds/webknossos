@@ -1,28 +1,38 @@
+/**
+ * crosshair.js
+ * @flow weak
+ */
+
 import THREE from "three";
+import Flycam3d from "oxalis/model/flycam3d";
 
 class Crosshair {
-  static initClass() {
-    this.prototype.WIDTH = 200;
-    this.prototype.COLOR = "#2895FF";
 
-    this.prototype.SCALE_MIN = 0.01;
-    this.prototype.SCALE_MAX = 1;
+  mesh: THREE.Mesh;
+  WIDTH: number;
+  COLOR: string;
+  SCALE_MIN: number;
+  SCALE_MAX: number;
 
-    this.prototype.context = null;
-    this.prototype.mesh = null;
-    this.prototype.scale = 0;
+  context: CanvasRenderingContext2D;
+  scale: number;
+  cam: Flycam3d;
 
-    this.prototype.isDirty = true;
-  }
-
+  isDirty: boolean;
 
   constructor(cam, scale) {
+    this.WIDTH = 200;
+    this.COLOR = "#2895FF";
+    this.SCALE_MIN = 0.01;
+    this.SCALE_MAX = 1;
+    this.scale = 0;
+    this.isDirty = true;
+
     this.cam = cam;
-    const { WIDTH } = this;
 
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = WIDTH;
-    this.context = canvas.getContext("2d");
+    canvas.width = canvas.height = this.WIDTH;
+    this.context = this.getContext(canvas);
 
     this.mesh = this.createMesh(canvas);
 
@@ -43,6 +53,13 @@ class Crosshair {
     this.setScale(scale);
   }
 
+  getContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      return ctx;
+    }
+    throw new Error("Could not retrieve 2d context");
+  }
 
   setVisibility(v) {
     this.mesh.setVisibilityEnabled(v);
@@ -51,7 +68,7 @@ class Crosshair {
 
   update() {
     // eslint-disable-next-line no-unused-vars
-    const { isDirty, context, WIDTH, COLOR, texture, mesh, cam } = this;
+    const { isDirty, context, WIDTH, COLOR, mesh, cam } = this;
 
     if (this.isDirty) {
       context.clearRect(0, 0, WIDTH, WIDTH);
@@ -128,6 +145,5 @@ class Crosshair {
     return mesh;
   }
 }
-Crosshair.initClass();
 
 export default Crosshair;

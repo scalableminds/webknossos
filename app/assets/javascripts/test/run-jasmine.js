@@ -1,5 +1,5 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-require("babel-register");
+require("babel-register")({ presets: [["env", { targets: { node: "current" } }]] });
 
 const Jasmine = require("jasmine");
 

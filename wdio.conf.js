@@ -1,4 +1,4 @@
-require("babel-register");
+require("babel-register")({ presets: [["env", { targets: { node: "current" } }]] });
 
 const path = require("path");
 const child_process = require("child_process")

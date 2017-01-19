@@ -9,8 +9,7 @@ import Backbone from "backbone";
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
 import type { Vector3, ModeType } from "oxalis/constants";
-import { ModeValues } from "oxalis/constants";
-import constants from "../constants";
+import constants, { ModeValues } from "oxalis/constants";
 
 type State = {
   position?: Vector3,

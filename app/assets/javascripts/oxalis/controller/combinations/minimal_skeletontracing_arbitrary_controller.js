@@ -18,6 +18,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
   constructor(...args) {
     super(...args);
+
     _.defer(() => this.setRecord(true));
   }
 

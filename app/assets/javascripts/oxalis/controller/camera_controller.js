@@ -106,7 +106,7 @@ class CameraController {
     };
     this.tween = new TWEEN.Tween(from);
 
-    let to;
+    let to: TweenState;
     if (id === constants.TDView) {
       const diagonal = Math.sqrt((b[0] * b[0]) + (b[1] * b[1]));
       padding = 0.05 * diagonal;

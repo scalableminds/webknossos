@@ -9,6 +9,7 @@ import Backbone from "backbone";
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
 import type { Vector3, ModeType } from "oxalis/constants";
+import { ModeValues } from "oxalis/constants";
 import constants from "../constants";
 
 type State = {
@@ -53,7 +54,7 @@ class UrlManager {
       if (stateArray.length >= 5) {
         state.position = _.map(stateArray.slice(0, 3), e => +e);
 
-        const modeNumber = [0, 1, 2, 3].find(el => el === +stateArray[3]);
+        const modeNumber = ModeValues.find(el => el === +stateArray[3]);
         if (modeNumber) {
           state.mode = modeNumber;
         } else {

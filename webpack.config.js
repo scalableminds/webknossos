@@ -7,9 +7,6 @@ var path = require("path");
 var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
 var nodePath = path.join(__dirname, "node_modules/");
 var scriptPaths = {
-  "three":                 `${nodePath}three.js/build/three`,
-  "three.color":           `${nodePath}three.js/examples/js/math/ColorConverter`,
-  "three.trackball":       `${nodePath}three.js/examples/js/controls/TrackballControls`,
   "jasny-bootstrap":       `${nodePath}jasny-bootstrap/dist/js/jasny-bootstrap`,
   "bootstrap-multiselect": `${nodePath}bootstrap-multiselect/dist/js/bootstrap-multiselect`,
 };
@@ -36,18 +33,6 @@ module.exports = {
         test: /\.js$/,
         exclude: /(node_modules|bower_components)/,
         use: "babel-loader",
-      }, {
-        test: scriptPaths["three.color"],
-        use: [
-          "imports-loader?THREE=three",
-          "exports-loader?THREE.ColorConverter",
-        ],
-      }, {
-        test: scriptPaths["three.trackball"],
-        use: "imports-loader?THREE=three",
-      }, {
-        test: scriptPaths["three"],
-        use: "exports-loader?THREE",
       },
       {
         test: /\.less$/,

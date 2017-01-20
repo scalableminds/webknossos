@@ -4458,9 +4458,9 @@ text-table@~0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/text-table/-/text-table-0.2.0.tgz#7f5ee823ae805207c00af2df4a84ec3fcfa570b4"
 
-three.js@georgwiese/three.js#scm_oxalis:
-  version "0.0.65"
-  resolved "https://codeload.github.com/georgwiese/three.js/tar.gz/79142491970dd1bb4b1f996b68f5474a04564e08"
+three@^0.84.0:
+  version "0.84.0"
+  resolved "https://registry.yarnpkg.com/three/-/three-0.84.0.tgz#95be85a55a0fa002aa625ed559130957dcffd918"
 
 through@^2.3.6:
   version "2.3.8"

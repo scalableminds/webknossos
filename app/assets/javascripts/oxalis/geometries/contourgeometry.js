@@ -2,7 +2,7 @@ import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
 import ResizableBuffer from "libs/resizable_buffer";
-import THREE from "three";
+import * as THREE from "three";
 
 class ContourGeometry {
   static initClass() {
@@ -31,8 +31,9 @@ class ContourGeometry {
 
   createMeshes() {
     const edgeGeometry = new THREE.BufferGeometry();
-    edgeGeometry.addAttribute("position", Float32Array, 0, 3);
-    edgeGeometry.dynamic = true;
+    const positionAttribute = new THREE.BufferAttribute(new Float32Array(), 3);
+    positionAttribute.setDynamic(true);
+    edgeGeometry.addAttribute( 'position', positionAttribute);
 
     this.edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({ linewidth: 2 }), THREE.LineStrip);
     this.edge.vertexBuffer = new ResizableBuffer(3);

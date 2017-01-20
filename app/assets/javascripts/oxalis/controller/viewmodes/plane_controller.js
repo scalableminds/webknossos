@@ -7,10 +7,9 @@ import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
 import _ from "lodash";
-import "three.trackball";
 import Utils from "libs/utils";
 import Input from "libs/input";
-import THREE from "three";
+import * as THREE from "three";
 import Model from "oxalis/model";
 import View from "oxalis/view";
 import SceneController from "oxalis/controller/scene_controller";
@@ -158,42 +157,44 @@ class PlaneController {
 
 
   initTrackballControls() {
-    const view = $("#TDView")[0];
-    const pos = app.scaleInfo.voxelToNm(this.flycam.getPosition());
-    this.controls = new THREE.TrackballControls(
-      this.planeView.getCameras()[constants.TDView],
-      view,
-      new THREE.Vector3(...pos),
-      () => app.vent.trigger("rerender"));
+    // TODO: Implement
 
-    this.controls.noZoom = true;
-    this.controls.noPan = true;
-    this.controls.staticMoving = true;
+    // const view = $("#TDView")[0];
+    // const pos = app.scaleInfo.voxelToNm(this.flycam.getPosition());
+    // this.controls = new THREE.TrackballControls(
+    //   this.planeView.getCameras()[constants.TDView],
+    //   view,
+    //   new THREE.Vector3(...pos),
+    //   () => app.vent.trigger("rerender"));
 
-    this.controls.target.set(
-      ...app.scaleInfo.voxelToNm(this.flycam.getPosition()));
+    // this.controls.noZoom = true;
+    // this.controls.noPan = true;
+    // this.controls.staticMoving = true;
 
-    this.listenTo(this.flycam, "positionChanged", function (position) {
-      const nmPosition = app.scaleInfo.voxelToNm(position);
+    // this.controls.target.set(
+    //   ...app.scaleInfo.voxelToNm(this.flycam.getPosition()));
 
-      this.controls.target.set(...nmPosition);
-      this.controls.update();
+    // this.listenTo(this.flycam, "positionChanged", function (position) {
+    //   const nmPosition = app.scaleInfo.voxelToNm(position);
 
-      // As the previous step will also move the camera, we need to
-      // fix this by offsetting the viewport
+    //   this.controls.target.set(...nmPosition);
+    //   this.controls.update();
 
-      const invertedDiff = [];
-      for (let i = 0; i <= 2; i++) {
-        invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
-      }
-      this.oldNmPos = nmPosition;
+    //   // As the previous step will also move the camera, we need to
+    //   // fix this by offsetting the viewport
 
-      return this.cameraController.moveTDView(
-        new THREE.Vector3(...invertedDiff),
-      );
-    });
+    //   const invertedDiff = [];
+    //   for (let i = 0; i <= 2; i++) {
+    //     invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
+    //   }
+    //   this.oldNmPos = nmPosition;
 
-    this.listenTo(this.cameraController, "cameraPositionChanged", this.controls.update);
+    //   return this.cameraController.moveTDView(
+    //     new THREE.Vector3(...invertedDiff),
+    //   );
+    // });
+
+    // this.listenTo(this.cameraController, "cameraPositionChanged", this.controls.update);
   }
 
 

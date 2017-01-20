@@ -1,4 +1,4 @@
-import THREE from "three";
+import * as THREE from "three";
 import Deferred from "../../libs/deferred";
 
 // This loads and caches meshes.

@@ -1,7 +1,7 @@
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
-import THREE from "three";
+import * as THREE from "three";
 import TWEEN from "tween.js";
 import Dimensions from "../model/dimensions";
 import constants from "../constants";
@@ -49,9 +49,9 @@ class CameraController {
     const gPos = this.flycam.getPosition();
     // camera porition's unit is nm, so convert it.
     const cPos = app.scaleInfo.voxelToNm(gPos);
-    this.cameras[constants.PLANE_XY].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
-    this.cameras[constants.PLANE_YZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
-    this.cameras[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
+    this.cameras[constants.PLANE_XY].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
+    this.cameras[constants.PLANE_YZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
+    this.cameras[constants.PLANE_XZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
   }
 
 

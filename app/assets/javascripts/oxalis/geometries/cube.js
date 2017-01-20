@@ -1,7 +1,7 @@
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
-import THREE from "three";
+import * as THREE from "three";
 import Backbone from "backbone";
 import constants from "../constants";
 import dimensions from "../model/dimensions";

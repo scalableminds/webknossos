@@ -1,6 +1,6 @@
 import $ from "jquery";
 import app from "app";
-import THREE from "three";
+import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 import PlaneController from "../viewmodes/plane_controller";

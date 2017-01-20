@@ -1,6 +1,6 @@
 import app from "app";
 import Utils from "libs/utils";
-import THREE from "three";
+import * as THREE from "three";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
 class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
@@ -15,8 +15,8 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
   }
 
 
-  setupAttributesAndUniforms() {
-    super.setupAttributesAndUniforms();
+  setupUniforms() {
+    super.setupUniforms();
 
     for (const binary of this.model.getColorBinaries()) {
       const name = this.sanitizeName(binary.name);
@@ -81,7 +81,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
     return new THREE.DataTexture(
       new Uint8Array(bytes * width * width), width, width,
       format, THREE.UnsignedByteType,
-      new THREE.UVMapping(),
+      THREE.UVMapping,
       THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping,
       this.minFilter, this.maxFilter,
     );

@@ -1,5 +1,5 @@
 import _ from "lodash";
-import THREE from "three";
+import * as THREE from "three";
 import AbstractPlaneMaterialFactory from "./abstract_plane_material_factory";
 
 class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {

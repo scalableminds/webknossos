@@ -103,7 +103,7 @@ ansiColor('xterm') {
         notifyBuild(currentBuild.result)
 
         // Clean directory with docker for file permissions
-        sh "docker run -v \$(pwd):/workspace -w /workspace -it alpine sh -c \"find . -mindepth 1 -delete\""
+        sh "docker run -v \$(pwd):/workspace -w /workspace alpine sh -c \"find . -mindepth 1 -delete\""
       }
     }
 

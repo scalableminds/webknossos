@@ -244,7 +244,7 @@ object ApplicationBuild extends Build {
     scalacOptions += "-target:jvm-1.8",
     version := appVersion,
     webpackPath := (Path("node_modules") / ".bin" / "webpack").getPath,
-    npmPath := "yarn",
+    npmPath := "npm",
     routesGenerator := InjectedRoutesGenerator,
     libraryDependencies ++= oxalisDependencies,
     resolvers ++= dependencyResolvers,

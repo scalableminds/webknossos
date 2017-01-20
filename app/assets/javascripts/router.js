@@ -55,9 +55,12 @@ class Router extends BaseRouter {
     this.initialize();
   }
 
+  showLoadingSpinner() {
+    this.$loadingSpinner.removeClass("hidden");
+  }
 
   hideLoadingSpinner() {
-    return this.$loadingSpinner.addClass("hidden");
+    this.$loadingSpinner.addClass("hidden");
   }
 
 
@@ -344,7 +347,7 @@ class Router extends BaseRouter {
       return;
     }
 
-    this.$loadingSpinner.removeClass("hidden");
+    this.hideLoadingSpinner();
 
     // Add new views
     this.activeViews = views;

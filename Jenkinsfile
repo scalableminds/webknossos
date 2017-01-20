@@ -101,8 +101,9 @@ ansiColor('xterm') {
         sh 'docker-compose down || echo "Can not run docker-compose down"'
 
         notifyBuild(currentBuild.result)
-        // deleteDir()
-        // sh "find . -mindepth 1 -delete"
+
+        // Clean directory with docker for file permissions
+        sh "docker run -v $(pwd):/workspace -w /workspace -it alpine sh -c \"find . -mindepth 1 -delete\""
       }
     }
 

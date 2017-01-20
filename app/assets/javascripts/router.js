@@ -62,36 +62,32 @@ class Router extends BaseRouter {
 
 
   tracingView(type, id) {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (TracingLayoutView) => {
-      TracingLayoutView = TracingLayoutView.default;
-
-      const view = new TracingLayoutView({
-        tracingType: type,
-        tracingId: id,
-        controlMode: constants.CONTROL_MODE_TRACE,
+    // We can't use async/await just yet. Bug:
+    // https://github.com/webpack/webpack/issues/3925
+    import("oxalis/view/tracing_layout_view")
+      .then(({ default: TracingLayoutView }) => {
+        const view = new TracingLayoutView({
+          tracingType: type,
+          tracingId: id,
+          controlMode: constants.CONTROL_MODE_TRACE,
+        });
+        view.forcePageReload = true;
+        this.changeView(view);
       });
-      view.forcePageReload = true;
-      this.changeView(view);
-    };
-    require(["oxalis/view/tracing_layout_view"], callback);
   }
 
 
   tracingViewPublic(id) {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (TracingLayoutView) => {
-      TracingLayoutView = TracingLayoutView.default;
-
-      const view = new TracingLayoutView({
-        tracingType: "View",
-        tracingId: id,
-        controlMode: constants.CONTROL_MODE_VIEW,
+    import("oxalis/view/tracing_layout_view")
+      .then(({ default: TracingLayoutView }) => {
+        const view = new TracingLayoutView({
+          tracingType: "View",
+          tracingId: id,
+          controlMode: constants.CONTROL_MODE_VIEW,
+        });
+        view.forcePageReload = true;
+        this.changeView(view);
       });
-      view.forcePageReload = true;
-      this.changeView(view);
-    };
-    require(["oxalis/view/tracing_layout_view"], callback);
   }
 
 
@@ -101,18 +97,16 @@ class Router extends BaseRouter {
 
 
   projectCreate() {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (ProjectCreateView, ProjectModel) => {
-      ProjectCreateView = ProjectCreateView.default;
-      ProjectModel = ProjectModel.default;
-
+    Promise.all([
+      import("admin/views/project/project_create_view"),
+      import("admin/models/project/project_model"),
+    ]).then(({ default: ProjectCreateView }, { default: ProjectModel }) => {
       const model = new ProjectModel();
       const view = new ProjectCreateView({ model });
 
       this.changeView(view);
       this.hideLoadingSpinner();
-    };
-    require(["admin/views/project/project_create_view", "admin/models/project/project_model"], callback);
+    });
   }
 
 

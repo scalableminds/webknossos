@@ -9,9 +9,9 @@ import Utils from "libs/utils";
 import THREE from "three";
 import Backbone from "backbone";
 import Model from "oxalis/model";
+import type { Boundary } from "oxalis/model";
 import constants from "../constants";
 import dimensions from "../model/dimensions";
-import type { Boundary } from "oxalis/model";
 
 class Cube {
 

@@ -9,7 +9,7 @@ import THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";
 import Flycam3d from "oxalis/model/flycam3d";
-import ArbitraryController   from "oxalis/controller/viewmodes/arbitrary_controller";
+import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import Model from "oxalis/model";
 
 import ArbitraryPlaneMaterialFactory from "./materials/arbitrary_plane_material_factory";

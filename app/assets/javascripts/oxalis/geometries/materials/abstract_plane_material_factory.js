@@ -6,8 +6,8 @@
 import app from "app";
 import Utils from "libs/utils";
 import THREE from "three";
-import AbstractMaterialFactory from "./abstract_material_factory";
 import Model from "oxalis/model";
+import AbstractMaterialFactory from "./abstract_material_factory";
 
 class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 

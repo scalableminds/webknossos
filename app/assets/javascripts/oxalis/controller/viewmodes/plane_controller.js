@@ -338,8 +338,9 @@ class PlaneController {
   move = (v, increaseSpeedWithZoom = true) => {
     if (([0, 1, 2]).includes(this.activeViewport)) {
       this.flycam.movePlane(v, this.activeViewport, increaseSpeedWithZoom);
+    } else {
+      this.moveTDView({ x: -v[0], y: -v[1] });
     }
-    this.moveTDView({ x: -v[0], y: -v[1] });
   }
 
 

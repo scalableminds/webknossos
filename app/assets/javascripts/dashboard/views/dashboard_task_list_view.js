@@ -85,7 +85,11 @@ class DashboardTaskListView extends Marionette.CompositeView {
   initialize(options) {
     this.options = options;
     this.showFinishedTasks = false;
+
     this.collection = new UserTasksCollection([], { userID: this.options.userID });
+    this.listenTo(this.collection, "fetch", () => app.router.showLoadingSpinner());
+    this.listenTo(this.collection, "sync", () => app.router.hideLoadingSpinner());
+
     this.collection.fetch();
 
     this.listenTo(app.vent, "modal:destroy", this.refresh);

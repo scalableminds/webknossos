@@ -75,6 +75,7 @@ class CommentTabView extends Marionette.View {
     // events
     this.listenTo(this.model.skeletonTracing, "newActiveNode", this.updateInputElement);
     this.listenTo(this.model.skeletonTracing, "reloadTrees", this.updateState);
+    this.listenTo(this.model.skeletonTracing, "setComment", this.setComment);
 
     // keyboard shortcuts
     return new Input.KeyboardNoLoop({
@@ -155,6 +156,12 @@ class CommentTabView extends Marionette.View {
   handleInput(evt) {
     if (!this.model.skeletonTracing.restrictionHandler.updateAllowed()) { return; }
 
+    const commentText = $(evt.target).val();
+    this.setComment(commentText);
+  }
+
+
+  setComment(commentText) {
     // add, delete or update a comment
     const nodeId = this.getActiveNodeId();
 
@@ -162,7 +169,6 @@ class CommentTabView extends Marionette.View {
     if (!nodeId) { return; }
 
     const tree = this.model.skeletonTracing.getActiveTree();
-    const commentText = $(evt.target).val();
 
     let comment = this.getCommentForNode(nodeId);
     if (comment) {

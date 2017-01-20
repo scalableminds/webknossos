@@ -400,7 +400,10 @@ class ArbitraryController {
       if (id === 1) {
         this.cam.yaw(Math.PI);
         Toast.warning("Reached initial node, view reversed");
-        this.model.commentTabView.appendComment("reversed");
+        // This line is broken at the moment, anyway. Merging it with PR #1639
+        // will lead to a merge conflict.
+        // Use the line from the other PR when resolving.
+        // this.model.commentTabView.appendComment("reversed");
       }
     }));
   }

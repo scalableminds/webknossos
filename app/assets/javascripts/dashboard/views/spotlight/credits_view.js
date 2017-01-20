@@ -30,13 +30,14 @@ class CreditsView extends Marionette.View {
         <li>Dominic Bräunlein</li>
         <li>Johannes Frohnhofen</li>
         <li>Tom Herold</li>
+        <li>Sven Mischkewitz</li>
         <li>Philipp Otto</li>
+        <li>Nico Ring</li>
         <li>Norman Rzepka</li>
+        <li>Jonathan Striebel</li>
         <li>Thomas Werkmeister</li>
         <li>Daniel Werner</li>
         <li>Georg Wiese</li>
-        <li>Sven Mischkewitz</li>
-        <li>Nico Ring</li>
       </ul>
     </div>
     <div class="col-sm-3">

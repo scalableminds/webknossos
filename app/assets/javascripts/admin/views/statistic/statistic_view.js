@@ -1,5 +1,6 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
+import app from "app";
 import TimeStatisticModel from "admin/models/statistic/time_statistic_model";
 import GraphView from "./graph_view";
 import StatisticListView from "./statistic_list_view";
@@ -28,6 +29,8 @@ class StatisticView extends Marionette.View {
   }
 
   initialize() {
+    app.router.showLoadingSpinner();
+
     const timeStatisticModel = new TimeStatisticModel();
     timeStatisticModel.fetch({
       data: "interval=week",
@@ -43,13 +46,14 @@ class StatisticView extends Marionette.View {
 
 
   showStatisticsListView() {
-    return this.showChildView("timings", this.statisticListView);
+    this.showChildView("timings", this.statisticListView);
   }
 
 
   showGraphView() {
     this.showChildView("graph", this.graphView);
-    return this.showChildView("achievements", this.achievementView);
+    this.showChildView("achievements", this.achievementView);
+    app.router.hideLoadingSpinner();
   }
 }
 StatisticView.initClass();

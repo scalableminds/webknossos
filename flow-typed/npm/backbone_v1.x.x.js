@@ -4,6 +4,7 @@
 declare module 'backbone' {
   declare var $: any; // @TODO this is no correct, but it is difficult to require another definition from here.
   declare var _: any; // @TODO this is no correct, but it is difficult to require another definition from here.
+  declare var Radio: any; // @TODO this is not correct, but it is difficult to require another definition from here.
   declare var version: string;
 
   declare type eventCallback = (event: Event) => void | mixed;
@@ -56,6 +57,7 @@ declare module 'backbone' {
     sync: sync;
     set(attrs: Attrs, options?: Object): this;
     set(attr: string, value: mixed, options?: Object): this;
+    get(attr: string): any;
     has(attr: string): boolean;
     unset(attr: string, options?: { unset?: boolean }): this;
     clear(options?: Object): this;
@@ -152,7 +154,7 @@ declare module 'backbone' {
     pluck(attribute: string): Array<TModel>;
     where(attributes: {[attributeName: string]: mixed}): Array<TModel>;
     findWhere(attributes: {[attributeName: string]: mixed}): TModel;
-    url: () => string | string;
+    +url: () => string | string;
     parse(response: Object, options: Object): Object;
     clone(): this;
     fetch(options?: Object): void;
@@ -227,6 +229,7 @@ declare module 'backbone' {
   declare class Backbone {
     Events: typeof Events;
     Model: typeof Model;
+    Radio: typeof Radio;
     Collection: typeof Collection;
     Router: typeof Router;
     History: typeof History;

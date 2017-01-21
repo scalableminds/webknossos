@@ -52,7 +52,8 @@
     "test": "node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
     "flow": "node_modules/.bin/flow check",
-    "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/"
+    "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
+    "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text"
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",
@@ -70,6 +71,7 @@
     "clipboard-js": "^0.2.0",
     "d3": "^3.5.12",
     "es6-promise": "^3.0.2",
+    "flow-coverage-report": "^0.2.0",
     "font-awesome": "^4.5.0",
     "form-syphon": "0.0.5",
     "jasny-bootstrap": "^3.1.3",

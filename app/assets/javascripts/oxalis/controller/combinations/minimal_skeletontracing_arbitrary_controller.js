@@ -1,3 +1,8 @@
+/**
+ * minimal_skeletontracing_arbitrary_controller.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Input from "libs/input";
 import Toast from "libs/toast";
@@ -14,7 +19,6 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
   constructor(...args) {
     super(...args);
 
-    this.setWaypoint = this.setWaypoint.bind(this);
     _.defer(() => this.setRecord(true));
   }
 

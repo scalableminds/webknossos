@@ -1,5 +1,11 @@
+/**
+ * volumetracing_plane_controller.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Constants from "oxalis/constants";
+import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import PlaneController from "../viewmodes/plane_controller";
 
 class VolumeTracingPlaneController extends PlaneController {
@@ -10,12 +16,12 @@ class VolumeTracingPlaneController extends PlaneController {
   // Extends Plane controller to add controls that are specific to Volume
   // Tracing.
 
+  volumeTracingController: VolumeTracingController;
 
   constructor(model, view, sceneController, volumeTracingController) {
     super(model, view, sceneController);
     this.volumeTracingController = volumeTracingController;
 
-    this.simulateTracing = this.simulateTracing.bind(this);
     this.listenTo(this.model.flycam, "positionChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()),
     );
     this.listenTo(this.model.flycam, "zoomStepChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()),
@@ -33,7 +39,7 @@ class VolumeTracingPlaneController extends PlaneController {
   }
 
 
-  simulateTracing() {
+  simulateTracing = () => {
     this.model.volumeTracing.setMode(Constants.VOLUME_MODE_TRACE);
 
     const controls = this.getPlaneMouseControls();

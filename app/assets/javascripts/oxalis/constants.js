@@ -3,6 +3,7 @@
  * @flow weak
  */
 
+export const ModeValues = [0, 1, 2, 3];
 export type ModeType = 0 | 1 | 2 | 3;
 export type ViewType = 0 | 1 | 2 | 3;
 export type Vector3 = [number, number, number];

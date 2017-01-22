@@ -1,3 +1,8 @@
+/**
+ * skeletontracing_arbitrary_controller.js
+ * @flow weak
+ */
+
 import ArbitraryController from "../viewmodes/arbitrary_controller";
 
 class SkeletonTracingArbitraryController extends ArbitraryController {}

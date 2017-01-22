@@ -1,3 +1,4 @@
+// Configure babel for node. This is different than the global config for browsers.
 require("babel-register")({ presets: [["env", { targets: { node: "current" } }]] });
 
 const path = require("path");

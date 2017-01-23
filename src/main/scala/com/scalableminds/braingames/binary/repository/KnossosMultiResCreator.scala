@@ -5,7 +5,7 @@ package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.Path
 
-import com.scalableminds.braingames.binary.DataRequester
+import com.scalableminds.braingames.binary.requester.DataRequester
 import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
 import com.scalableminds.braingames.binary.store.FileDataStore
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}

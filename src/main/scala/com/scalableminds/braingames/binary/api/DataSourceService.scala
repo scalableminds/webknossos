@@ -10,7 +10,6 @@ import com.scalableminds.braingames.binary.models._
 import java.util.UUID
 import java.util.zip.ZipFile
 
-import com.scalableminds.braingames.binary.SaveBlock
 import com.typesafe.config.Config
 import com.scalableminds.util.tools.{Fox, FoxImplicits, ProgressState}
 import com.scalableminds.braingames.binary.repository.DataSourceInbox

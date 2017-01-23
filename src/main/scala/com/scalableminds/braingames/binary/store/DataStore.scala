@@ -5,18 +5,11 @@ package com.scalableminds.braingames.binary.store
 
 import java.nio.file.{Path, Paths}
 
-import com.scalableminds.util.io.PathUtils
-
-import scala.concurrent.Future
-import akka.actor.Actor
-
-import scala.util._
-import scala.concurrent.ExecutionContext.Implicits._
-import com.scalableminds.braingames.binary.{DataStoreBlock, LoadBlock, MappingRequest, SaveBlock}
-import net.liftweb.common.{Box, Empty, Full}
+import com.scalableminds.braingames.binary.MappingRequest
 import com.scalableminds.util.geometry.Point3D
 import java.io.{File, FilenameFilter}
 
+import com.scalableminds.braingames.binary.models.{DataStoreBlock, LoadBlock, SaveBlock}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString

@@ -7,12 +7,12 @@ import java.io.{File, FileInputStream, FileNotFoundException, FileOutputStream, 
 import java.nio.file.{Files, Path, Paths}
 
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.braingames.binary.models.DataLayer
+import com.scalableminds.braingames.binary.models.{DataLayer, LoadBlock, SaveBlock}
 import com.scalableminds.util.io.PathUtils
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
-import com.scalableminds.braingames.binary.{LoadBlock, MappingRequest, SaveBlock}
+import com.scalableminds.braingames.binary.MappingRequest
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

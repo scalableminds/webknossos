@@ -1,9 +1,10 @@
 /*
  * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary
+package com.scalableminds.braingames.binary.requester
 
 import com.newrelic.api.agent.NewRelic
+import com.scalableminds.braingames.binary.models.{DataStoreBlock, LoadBlock}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.Fox
 

@@ -1,10 +1,9 @@
 /*
  * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary
+package com.scalableminds.braingames.binary.models
 
-import com.scalableminds.braingames.binary.models._
-import java.io.OutputStream
+import com.scalableminds.braingames.binary.requester.Cuboid
 
 trait AbstractDataRequest
 

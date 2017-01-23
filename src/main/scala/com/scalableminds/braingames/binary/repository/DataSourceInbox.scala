@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common._
 import com.scalableminds.braingames.binary.models.UnusableDataSource
 import akka.actor.ActorSystem
-import com.scalableminds.braingames.binary.DataRequester
+import com.scalableminds.braingames.binary.requester.DataRequester
 import com.typesafe.scalalogging.LazyLogging
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._

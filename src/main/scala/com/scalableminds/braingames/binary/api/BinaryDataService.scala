@@ -7,10 +7,12 @@ import java.nio.file.Paths
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.util.Timeout
-import com.scalableminds.braingames.binary._
+import com.scalableminds.braingames.binary.{requester, _}
+import com.scalableminds.braingames.binary.requester.CachedBlock
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.braingames.binary.watcher._
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.Fox
@@ -23,7 +25,7 @@ import scala.concurrent.duration._
 
 trait BinaryDataService
   extends DataSourceService
-    with BinaryDataHelpers
+    with BinaryDataRequestBuilder
     with DataLayerMappingHelpers
     with DataDownloadHelper
     with I18nSupport
@@ -53,7 +55,7 @@ trait BinaryDataService
     new LRUConcurrentCache[CachedBlock, Array[Byte]](config.getInt("braingames.binary.cacheMaxSize"))
 
   private lazy val dataRequester =
-    new DataRequester(config.getConfig("braingames.binary"), binDataCache, dataSourceRepository)
+    new requester.DataRequester(config.getConfig("braingames.binary"), binDataCache, dataSourceRepository)
 
   lazy val dataSourceInbox: DataSourceInbox =
     DataSourceInbox.create(dataSourceRepository, serverUrl, dataRequester, system)(messagesApi)
@@ -76,8 +78,13 @@ trait BinaryDataService
     repositoryWatchActor ! DirectoryWatcherActor.StartWatching
   }
 
+  private def requestCollection(coll: DataRequestCollection[DataRequest]): Fox[Array[Byte]] = {
+    val resultsPromise = Fox.combined(coll.requests.map(dataRequester.load))
+    resultsPromise.map(_.appendArrays)
+  }
+
   def handleDataRequest(coll: DataRequestCollection[DataRequest]): Fox[Array[Byte]] = {
-    dataRequester.requestCollection(coll)
+    requestCollection(coll)
   }
 
   def handleDataRequest(readRequest: DataReadRequest): Fox[Array[Byte]] = {

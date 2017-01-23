@@ -9,7 +9,7 @@ import java.nio.file.{Files, Path}
 import javax.imageio.ImageIO
 import javax.imageio.spi.IIORegistry
 
-import com.scalableminds.braingames.binary.DataRequester
+import com.scalableminds.braingames.binary.requester.DataRequester
 import com.scalableminds.braingames.binary.models.{UnusableDataSource, _}
 import com.scalableminds.braingames.binary.store.DataStore
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}

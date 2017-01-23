@@ -6,7 +6,7 @@ package com.scalableminds.braingames.binary.repository
 import java.nio.file.Path
 import javax.inject.Inject
 
-import com.scalableminds.braingames.binary.DataRequester
+import com.scalableminds.braingames.binary.requester.DataRequester
 import com.scalableminds.braingames.binary.models.{DataSource, UnusableDataSource}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker

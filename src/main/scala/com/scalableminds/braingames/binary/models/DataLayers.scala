@@ -5,6 +5,7 @@ package com.scalableminds.braingames.binary.models
 
 import play.api.libs.json._
 import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.braingames.binary.requester.handlers.{BlockHandler, KnossosBlockHandler}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.Try
@@ -60,6 +61,8 @@ case class DataLayer(
   val maxCoordinates = BoundingBox.hull(sections.map(_.bboxBig))
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.bboxBig))
+
+  lazy val blockHandler: BlockHandler = new KnossosBlockHandler()
 }
 
 object DataLayer extends LazyLogging{

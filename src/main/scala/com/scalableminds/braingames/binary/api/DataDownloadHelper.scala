@@ -1,19 +1,19 @@
 /*
  * Copyright (C) 2011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary
+package com.scalableminds.braingames.binary.api
 
-import scala.collection.JavaConversions._
-import java.io.{ByteArrayInputStream, File, FileInputStream, OutputStream}
-import java.nio.charset.StandardCharsets
+import java.io.{File, OutputStream}
 import java.nio.file.Paths
 
-import org.apache.commons.io.{FileUtils, FilenameUtils}
-import org.apache.commons.io.filefilter.{SuffixFileFilter, TrueFileFilter}
-import com.scalableminds.util.io.{NamedFileStream, ZipIO}
 import com.scalableminds.braingames.binary.models.DataLayer
 import com.scalableminds.braingames.binary.store.FileDataStore
+import com.scalableminds.util.io.{NamedFileStream, ZipIO}
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.io.filefilter.{SuffixFileFilter, TrueFileFilter}
+import org.apache.commons.io.{FileUtils, FilenameUtils}
+
+import scala.collection.JavaConversions._
 
 trait DataDownloadHelper extends LazyLogging{
 

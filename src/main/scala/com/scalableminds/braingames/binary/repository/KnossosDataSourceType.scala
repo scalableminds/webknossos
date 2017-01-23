@@ -6,7 +6,7 @@ package com.scalableminds.braingames.binary.repository
 import java.io.FileWriter
 import java.nio.file.{Files, Path}
 
-import com.scalableminds.braingames.binary.DataRequester
+import com.scalableminds.braingames.binary.requester.DataRequester
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.repository.mapping.{MappingParser, MappingPrinter}
 import com.scalableminds.util.geometry.{BoundingBox, Scale}

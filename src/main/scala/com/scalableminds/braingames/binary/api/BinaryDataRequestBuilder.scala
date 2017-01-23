@@ -3,11 +3,12 @@
  */
 package com.scalableminds.braingames.binary.api
 
-import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
-import com.scalableminds.braingames.binary.{Cuboid, DataReadRequest, DataRequestSettings, DataWriteRequest}
+import com.scalableminds.braingames.binary.requester.Cuboid
+import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.models.{DataRequestSettings, DataWriteRequest}
 import com.scalableminds.util.geometry.Point3D
 
-trait BinaryDataHelpers {
+trait BinaryDataRequestBuilder {
 
   private def resolutionFromExponent(resolutionExponent: Int) =
     math.pow(2, resolutionExponent).toInt

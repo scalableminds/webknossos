@@ -1,5 +1,13 @@
+/**
+ * cube.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Backbone from "backbone";
+import type { Vector3, Vector4 } from "oxalis/constants";
+import PullQueue from "oxalis/model/binary/pullqueue";
+import PushQueue from "oxalis/model/binary/pushqueue";
 import Utils from "../../../libs/utils";
 import { Bucket, NullBucket } from "./bucket";
 import ArbitraryCubeAdapter from "./arbitrary_cube_adapter";
@@ -7,7 +15,49 @@ import TemporalBucketManager from "./temporal_bucket_manager";
 import BoundingBox from "./bounding_box";
 import ErrorHandling from "../../../libs/error_handling";
 
+type CubeType = {
+  data: Array<number>;
+  boundary: Vector3;
+}
+
+type MappingType = {
+  [key: number]: number;
+}
+
 class Cube {
+  BUCKET_SIZE_P: number;
+  CUBE_SIZE_P: number;
+  LOCAL_ID_SIZE_P: number;
+  BUCKET_LENGTH: number;
+  ZOOM_STEP_COUNT: number;
+  LOOKUP_DEPTH_UP: number;
+  LOOKUP_DEPTH_DOWN: number;
+  MAXIMUM_BUCKET_COUNT: number;
+  ARBITRARY_MAX_ZOOMSTEP: number;
+  arbitraryCube: ArbitraryCubeAdapter;
+  upperBoundary: Vector3;
+  buckets: Array<Bucket>;
+  bucketIterator: number;
+  bucketCount: number;
+  BIT_DEPTH: number;
+  NULL_BUCKET_OUT_OF_BB: NullBucket;
+  NULL_BUCKET: NullBucket;
+  LOOKUP_DEPTH_UP: number;
+  MAX_ZOOM_STEP: number;
+  BUCKET_LENGTH: number;
+  BYTE_OFFSET: number;
+  cubes: Array<CubeType>;
+  boundingBox: BoundingBox;
+  pullQueue: PullQueue;
+  pushQueue: PushQueue;
+  temporalBucketManager: TemporalBucketManager;
+  // If the mapping is enabled, this.currentMapping === this.mapping
+  // Otherwise, it's null
+  currentMapping: ?MappingType;
+  mapping: ?MappingType;
+  // Copied from backbone events (TODO: handle this better)
+  trigger: Function;
+
   static initClass() {
     // Constants
     this.prototype.BUCKET_SIZE_P = 5;
@@ -20,13 +70,6 @@ class Cube {
     this.prototype.MAXIMUM_BUCKET_COUNT = 5000;
     this.prototype.ARBITRARY_MAX_ZOOMSTEP = 2;
 
-    this.prototype.EMPTY_MAPPING = null;
-
-    this.prototype.arbitraryCube = null;
-    this.prototype.dataCubes = null;
-    this.prototype.upperBoundary = null;
-
-    this.prototype.buckets = null;
     this.prototype.bucketIterator = 0;
     this.prototype.bucketCount = 0;
   }
@@ -47,7 +90,7 @@ class Cube {
   // It is then removed from the cube.
 
 
-  constructor(globalBoundingBox, upperBoundary, ZOOM_STEP_COUNT, BIT_DEPTH) {
+  constructor(globalBoundingBox, upperBoundary: Vector3, ZOOM_STEP_COUNT, BIT_DEPTH) {
     this.upperBoundary = upperBoundary;
     this.ZOOM_STEP_COUNT = ZOOM_STEP_COUNT;
     this.BIT_DEPTH = BIT_DEPTH;
@@ -64,8 +107,8 @@ class Cube {
     this.cubes = [];
     this.buckets = new Array(this.MAXIMUM_BUCKET_COUNT);
 
-    this.mapping = this.EMPTY_MAPPING;
-    this.currentMapping = this.mapping;
+    this.mapping = null;
+    this.currentMapping = null;
 
     // Initializing the cube-arrays with boundaries
     let cubeBoundary = [
@@ -77,9 +120,10 @@ class Cube {
     this.arbitraryCube = new ArbitraryCubeAdapter(this, cubeBoundary.slice());
 
     for (const i of Utils.__range__(0, this.ZOOM_STEP_COUNT, false)) {
-      this.cubes[i] = {};
-      this.cubes[i].data = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]);
-      this.cubes[i].boundary = cubeBoundary.slice();
+      this.cubes[i] = {
+        data: new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]),
+        boundary: cubeBoundary.slice(),
+      };
 
       cubeBoundary = [
         (cubeBoundary[0] + 1) >> 1,
@@ -92,7 +136,7 @@ class Cube {
   }
 
 
-  initializeWithQueues(pullQueue, pushQueue) {
+  initializeWithQueues(pullQueue: PullQueue, pushQueue: PushQueue): void {
     // Due to cyclic references, this method has to be called before the cube is
     // used with the instantiated queues
 
@@ -112,17 +156,17 @@ class Cube {
 
 
   setMappingEnabled(isEnabled) {
-    this.currentMapping = isEnabled ? this.mapping : this.EMPTY_MAPPING;
+    this.currentMapping = isEnabled ? this.mapping : null;
     this.trigger("newMapping");
   }
 
 
   hasMapping() {
-    return (this.mapping != null);
+    return this.mapping != null;
   }
 
 
-  setMapping(newMapping) {
+  setMapping(newMapping: MappingType): void {
     // Generate fake mapping
     // if not newMapping.length
     //  newMapping = new newMapping.constructor(1 << @BIT_DEPTH)
@@ -147,7 +191,7 @@ class Cube {
   }
 
 
-  getArbitraryCube() {
+  getArbitraryCube(): ArbitraryCubeAdapter {
     return this.arbitraryCube;
   }
 
@@ -176,7 +220,7 @@ class Cube {
   }
 
 
-  getBucketIndex([x, y, z, zoomStep]) {
+  getBucketIndex([x, y, z, zoomStep]: Vector4) {
     ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
 
     const { boundary } = this.cubes[zoomStep];
@@ -291,7 +335,7 @@ class Cube {
   labelVoxel(voxel, label) {
     let voxelInCube = true;
     for (let i = 0; i <= 2; i++) {
-      voxelInCube &= voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
+      voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
     }
 
     if (voxelInCube) {
@@ -316,8 +360,7 @@ class Cube {
   }
 
 
-  getDataValue(voxel, mapping) {
-    if (mapping == null) { mapping = this.EMPTY_MAPPING; }
+  getDataValue(voxel: Vector3, mapping: ?MappingType) {
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel));
     const voxelIndex = this.getVoxelIndex(voxel);
 
@@ -325,11 +368,11 @@ class Cube {
       const data = bucket.getData();
       let result = 0;
       // Assuming little endian byte order
-      for (const i of Utils.__range__(0, this.BYTE_OFFSET, false)) {
+      for (let i = 0; i < this.BYTE_OFFSET; i++) {
         result += (1 << (8 * i)) * data[voxelIndex + i];
       }
 
-      if (Utils.__guard__(mapping, x => x[result]) != null) {
+      if (mapping && mapping[result] != null) {
         return mapping[result];
       }
 
@@ -340,18 +383,18 @@ class Cube {
   }
 
 
-  getMappedDataValue(voxel) {
+  getMappedDataValue(voxel: Vector3) {
     return this.getDataValue(voxel, this.currentMapping);
   }
 
 
-  getVoxelIndex(voxel) {
+  getVoxelIndex(voxel: Vector3) {
     const voxelOffset = voxel.map(v => v & 0b11111);
     return this.getVoxelIndexByVoxelOffset(voxelOffset);
   }
 
 
-  positionToZoomedAddress([x, y, z], zoomStep = 0) {
+  positionToZoomedAddress([x, y, z]: Vector3, zoomStep: number = 0): Vector4 {
     // return the bucket a given voxel lies in
 
     return [

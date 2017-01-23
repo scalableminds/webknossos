@@ -16,7 +16,6 @@ class Skeleton {
 
   constructor(model) {
     this.getMeshes = this.getMeshes.bind(this);
-    this.setWaypoint = this.setWaypoint.bind(this);
     this.model = model;
     _.extend(this, Backbone.Events);
 
@@ -40,7 +39,7 @@ class Skeleton {
     this.listenTo(this.skeletonTracing, "deleteTree", this.deleteTree);
     this.listenTo(this.skeletonTracing, "deleteActiveNode", this.deleteNode);
     this.listenTo(this.skeletonTracing, "mergeTree", this.mergeTree);
-    this.listenTo(this.skeletonTracing, "newNode", this.setWaypoint);
+    this.listenTo(this.skeletonTracing, "newNode", this.setWaypoint.bind(this));
     this.listenTo(this.skeletonTracing, "setBranch", this.setBranch);
     this.listenTo(this.skeletonTracing, "newTreeColor", this.updateTreeColor);
     this.listenTo(this.skeletonTracing, "reloadTrees", this.loadSkeletonFromModel);

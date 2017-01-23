@@ -1,3 +1,8 @@
+/**
+ * utils.js
+ * @flow weak
+ */
+
 import $ from "jquery";
 import _ from "lodash";
 
@@ -9,7 +14,7 @@ const Utils = {
   },
 
 
-  zeroPad(num, zeros = 0) {
+  zeroPad(num, zeros: number = 0) {
     num = `${num}`;
     while (num.length < zeros) {
       num = `0${num}`;
@@ -154,7 +159,7 @@ const Utils = {
   },
 
 
-  __range__(left, right, inclusive) {
+  __range__(left: number, right: number, inclusive: boolean): Array<number> {
     const range = [];
     const ascending = left < right;
     // eslint-disable-next-line no-nested-ternary

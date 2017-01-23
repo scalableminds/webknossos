@@ -1,10 +1,23 @@
+/**
+ * bounding_box.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Utils from "../../../libs/utils";
+import Cube from "oxalis/model/binary/cube";
+import type { BoundingBoxType } from "oxalis/model";
+import type { Vector3 } from "oxalis/constants";
 
 class BoundingBox {
+  boundingBox: BoundingBox;
+  cube: Cube;
+  BUCKET_SIZE_P: number;
+  BYTE_OFFSET: number;
+  min: Vector3;
+  max: Vector3;
 
-
-  constructor(boundingBox, cube) {
+  constructor(boundingBox: BoundingBox, cube: Cube) {
     this.boundingBox = boundingBox;
     this.cube = cube;
     this.BUCKET_SIZE_P = this.cube.BUCKET_SIZE_P;

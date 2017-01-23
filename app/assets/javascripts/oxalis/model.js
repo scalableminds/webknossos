@@ -31,7 +31,7 @@ import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 // which you can react on.
 
 export type Boundary = [number, number, number];
-type BoundingBox = {
+export type BoundingBoxType = {
   min: [number, number, number],
   max: [number, number, number],
 };
@@ -84,8 +84,8 @@ class Model extends Backbone.Model {
   binary: {
     [key: string]: Binary,
   };
-  taskBoundingBox: BoundingBox;
-  userBoundingBox: BoundingBox;
+  taskBoundingBox: BoundingBoxType;
+  userBoundingBox: BoundingBoxType;
   annotationModel: SkeletonTracing | VolumeTracing;
   lowerBoundary: Boundary;
   upperBoundary: Boundary;
@@ -296,7 +296,7 @@ class Model extends Backbone.Model {
   }
 
 
-  computeBoundingBoxFromArray(bb: Array<number>): BoundingBox {
+  computeBoundingBoxFromArray(bb: Array<number>): BoundingBoxType {
     const [x, y, z, width, height, depth] = bb;
 
     return {

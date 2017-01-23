@@ -1,8 +1,33 @@
+/**
+ * bucket.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Backbone from "backbone";
 import Utils from "../../../libs/utils";
+import type { Vector4 } from "oxalis/constants";
+import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 
 class Bucket {
+  STATE_UNREQUESTED: 0;
+  STATE_REQUESTED: 1;
+  STATE_LOADED: 2;
+  STATE_NAMES: ["unrequested", "requested", "loaded"];
+  BUCKET_SIZE_P: number;
+  BIT_DEPTH: number;
+  BUCKET_LENGTH: number;
+  BYTE_OFFSET: number;
+
+  state: 0 | 1 | 2;
+  dirty: boolean;
+  accessed: boolean;
+  data: ?Uint8Array;
+  temporalBucketManager: TemporalBucketManager;
+  zoomedAddress: Vector4;
+  // Copied from backbone events (TODO: handle this better)
+  trigger: Function;
+
   static initClass() {
     this.prototype.STATE_UNREQUESTED = 0;
     this.prototype.STATE_REQUESTED = 1;
@@ -14,7 +39,7 @@ class Bucket {
   }
 
 
-  constructor(BIT_DEPTH, zoomedAddress, temporalBucketManager) {
+  constructor(BIT_DEPTH: number, zoomedAddress: Vector4, temporalBucketManager: TemporalBucketManager) {
     this.BIT_DEPTH = BIT_DEPTH;
     this.zoomedAddress = zoomedAddress;
     this.temporalBucketManager = temporalBucketManager;
@@ -134,15 +159,20 @@ class Bucket {
 
 
   merge(newData) {
+    if (this.data == null) {
+      throw new Error("Bucket.merge() called, but data does not exist.");
+    }
+    const data = this.data;
+
     const voxelPerBucket = 1 << (this.BUCKET_SIZE_P * 3);
-    for (const i of Utils.__range__(0, voxelPerBucket, false)) {
-      const oldVoxel = (Utils.__range__(0, this.BYTE_OFFSET, false).map(j => this.data[(i * this.BYTE_OFFSET) + j]));
+    for (let i = 0; i < voxelPerBucket; i++) {
+      const oldVoxel = (Utils.__range__(0, this.BYTE_OFFSET, false).map(j => data[(i * this.BYTE_OFFSET) + j]));
       const oldVoxelEmpty = _.reduce(oldVoxel, ((memo, v) => memo && v === 0), true);
 
       if (oldVoxelEmpty) {
-        Utils.__range__(0, this.BYTE_OFFSET, false).forEach((j) => {
-          this.data[(i * this.BYTE_OFFSET) + j] = newData[(i * this.BYTE_OFFSET) + j];
-        });
+        for (let j = 0; j < this.BYTE_OFFSET; j++) {
+          data[(i * this.BYTE_OFFSET) + j] = newData[(i * this.BYTE_OFFSET) + j];
+        }
       }
     }
   }
@@ -151,11 +181,15 @@ Bucket.initClass();
 
 
 class NullBucket {
+  TYPE_OUT_OF_BOUNDING_BOX: 1;
+  TYPE_OTHER: 2;
+  isNullBucket: boolean;
+  isOutOfBoundingBox: boolean;
+
   static initClass() {
     // A NullBucket represents a bucket that does not exist, e.g. because it's
     // outside the dataset's bounding box. It supports only a small subset of
     // Bucket's methods.
-
 
     this.prototype.TYPE_OUT_OF_BOUNDING_BOX = 1;
     this.prototype.TYPE_OTHER = 2;

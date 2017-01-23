@@ -8,11 +8,10 @@ import javax.inject.Inject
 import play.api.libs.json._
 import com.scalableminds.util.geometry.Point3D
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
-import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.models.{DataRequestSettings, _}
 import com.scalableminds.datastore.models._
 import com.scalableminds.braingames.binary._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.braingames.binary.DataRequestSettings
 import com.scalableminds.braingames.binary.MappingRequest
 
 import scala.concurrent.Future

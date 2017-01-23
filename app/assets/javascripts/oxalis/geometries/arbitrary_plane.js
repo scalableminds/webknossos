@@ -54,6 +54,7 @@ class ArbitraryPlane {
     this.cam = cam;
     this.model = model;
     this.controller = controller;
+    this.height = 0;
     this.width = width;
     _.extend(this, Backbone.Events);
 

@@ -1,16 +1,45 @@
+/**
+ * layer.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import BucketBuilder from "./bucket_builder";
 import Request from "../../../../libs/request";
+import type { Vector3 } from "oxalis/constants";
+
+type LayerInfoType = {
+  name: string;
+  category: string; // Can we be more precise like "color" | ... ?
+  elementClass: string; // Can we be more precise like "uint16" | "Uint32"
+}
 
 // Abstract class that defines the Layer interface and implements common
 // functionality.
 class Layer {
+  REQUEST_TIMEOUT: number;
+  fourBit: boolean;
+  dataStoreInfo: {
+    typ: string;
+    url: string;
+    accessToken: string;
+  };
+  name: string;
+  dataSetName: string;
+  bitDepth: number;
+  tokenPromise: Promise<string>;
+  tokenRequestPromise: ?Promise<string>;
+  category: string;
+  elementClass: string;
+  lowerBoundary: Vector3;
+  upperBoundary: Vector3;
+
   static initClass() {
     this.prototype.REQUEST_TIMEOUT = 10000;
   }
 
 
-  constructor(layerInfo, dataSetName, dataStoreInfo) {
+  constructor(layerInfo: LayerInfoType, dataSetName, dataStoreInfo) {
     this.dataSetName = dataSetName;
     this.dataStoreInfo = dataStoreInfo;
     _.extend(this, layerInfo);

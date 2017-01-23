@@ -1,3 +1,8 @@
+/**
+ * bucket_builder.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Cube from "../cube";
 

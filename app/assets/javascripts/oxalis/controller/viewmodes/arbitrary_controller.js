@@ -400,7 +400,7 @@ class ArbitraryController {
       if (id === 1) {
         this.cam.yaw(Math.PI);
         Toast.warning("Reached initial node, view reversed");
-        this.model.commentTabView.appendComment("reversed");
+        this.model.skeletonTracing.setComment("reversed");
       }
     }));
   }

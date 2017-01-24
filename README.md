@@ -10,8 +10,8 @@ Datastore component for webKnossos intended for deployment on storage servers.
 ### Prepare file system
 webKnossos expects the following file structure:
 ```
-binaryData/
-    <Team name>/
+binaryData/ # Needs to be writable by docker user (uid=1000 gid=1000)
+    <Team name>/ 
         <Dataset 1>/ # Can be converted from image stack with webknossos-cuber
             color/
                 layer.json
@@ -21,7 +21,7 @@ binaryData/
                 ...
             settings.json
         ...
-userBinaryData/
+userBinaryData/ # Needs to be writable by docker user (uid=1000 gid=1000)
 ```
 
 ### Configure datastore
@@ -29,34 +29,31 @@ Create a config file `docker.conf` like this:
 ```
 include "application.conf"
 
-datastore{
+http.uri = "<public datastore uri, e.g. https://datastore-0.mylab.com"
+datastore {
   name = "<unique datastore name, e.g. datastore-mylab-0>"
   key = "<secret key>"
-  oxalis{
+  oxalis {
     uri = "<webknossos uri, e.g. demo.webknossos.org>"
     secured = true
   }
 }
 
-http {
-  address = "0.0.0.0"
-  uri = "<public datastore uri, e.g. https://datastore-0.mylab.com"
-}
+braingames.binary.cacheMaxSize = 1000 # in entries (each cache entry is 2 MB)
 ```
 
 ### Create and run Docker image
 ```
 docker create \
-  --rm \
   --name webknossos-datastore \
   -v /path/to/binaryData:/srv/webknossos-datastore/binaryData \
   -v /path/to/userBinaryData:/srv/webknossos-datastore/userBinaryData \
   -v /path/to/docker.conf:/srv/webknossos-datastore/conf/docker.conf \
-  -p 9000:9000 \
+  -p 9090:9090 \
   scalableminds/webknossos-datastore:master \
   -J-Xmx10G \
   -J-Xms1G \
-  -Dhttp.port=9000 \
+  -Dhttp.port=9090 \
   -Dlogger.file=conf/logback-docker.xml \
   -Dconfig.file=conf/docker.conf \
   -Djava.io.tmpdir=disk
@@ -64,18 +61,20 @@ docker create \
 docker start webknossos-datastore
 
 docker stop webknossos-datastore
+
+docker rm webknossos-datastore
 ```
 You may want to create systemd configuration for `docker start/stop`, [reference](https://docs.docker.com/engine/admin/host_integration/).
 
 
 ### Setup a reverse proxy
 * Install nginx
-* Configure it as a reverse proxy for `localhost:9000`, [reference](https://www.digitalocean.com/community/tutorials/understanding-nginx-http-proxying-load-balancing-buffering-and-caching)
+* Configure it as a reverse proxy for `localhost:9090`, [reference](https://www.digitalocean.com/community/tutorials/understanding-nginx-http-proxying-load-balancing-buffering-and-caching)
 
 Example configuration:
 ```
 upstream webknossos-datastore-0 {
-  server localhost:9000;
+  server localhost:9090;
 }
 
 server {

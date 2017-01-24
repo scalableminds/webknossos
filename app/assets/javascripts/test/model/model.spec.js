@@ -80,6 +80,8 @@ describe("Model", () => {
   beforeEach(() => {
     model = new Model();
     model.set("state", { position: [1, 2, 3] });
+    model.set("tracingType", "tracingTypeValue");
+    model.set("tracingId", "tracingIdValue");
   });
 
 
@@ -102,7 +104,7 @@ describe("Model", () => {
     });
 
     describe("Error handling", () => {
-      it("should throw a Model.prototype.HANDLED_ERROR for missing dataset", (done) => {
+      it("should throw a model.HANDLED_ERROR for missing dataset", (done) => {
         const tracingObject = _.clone(TRACING_OBJECT);
         delete tracingObject.content.dataSet;
         Request.receiveJSON.returns(Promise.resolve(tracingObject));
@@ -112,7 +114,7 @@ describe("Model", () => {
             fail("Promise should not have been resolved.");
             done();
           }).catch((error) => {
-            expect(error).toBe(Model.prototype.HANDLED_ERROR);
+            expect(error).toBe(model.HANDLED_ERROR);
             done();
           });
       });
@@ -132,4 +134,3 @@ describe("Model", () => {
     });
   });
 });
-

@@ -154,14 +154,14 @@ class CommentTabView extends Marionette.View {
 
 
   handleInput(evt) {
-    if (!this.model.skeletonTracing.restrictionHandler.updateAllowed()) { return; }
-
     const commentText = $(evt.target).val();
     this.setComment(commentText);
   }
 
 
   setComment(commentText) {
+    if (!this.model.skeletonTracing.restrictionHandler.updateAllowed()) { return; }
+
     // add, delete or update a comment
     const nodeId = this.getActiveNodeId();
 

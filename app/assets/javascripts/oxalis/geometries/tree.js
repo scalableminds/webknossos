@@ -181,7 +181,7 @@ class Tree {
 
 
   getMeshes() {
-    return [this.nodes];
+    return [this.nodes, this.edges];
   }
 
 
@@ -284,14 +284,18 @@ class Tree {
       nodeScaleFactor: [1, this.scalesBuffer],
       color: [3, this.nodesColorBuffer],
     });
+
+    this.updateGeometry(this.edges, {
+      position: [3, this.edgesBuffer],
+    }, 2);
   }
 
 
-  updateGeometry(mesh, attribute2buffer) {
+  updateGeometry(mesh, attribute2buffer, itemsPerElement=1) {
     let length = -1;
     let needsToRebuildGeometry = false;
     for (const attribute of Object.keys(attribute2buffer)) {
-      const [itemSize, rBuffer] = attribute2buffer[attribute];
+      const [_, rBuffer] = attribute2buffer[attribute];
 
       if (length === -1) {
         length = rBuffer.getLength();
@@ -313,7 +317,7 @@ class Tree {
       }
     }
     mesh.geometry.computeBoundingSphere();
-    mesh.geometry.setDrawRange(0, length);
+    mesh.geometry.setDrawRange(0, length * itemsPerElement);
   }
 
 

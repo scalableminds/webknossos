@@ -68,14 +68,7 @@ class ContourGeometry {
 
 
   addEdgePoint(pos) {
-    // pos might be integer, but the third dimension needs to be exact.
-    const globalPos = this.flycam.getPosition();
     const edgePoint = pos.slice();
-
-    // TODO: Where is thirdDimension supposed to come from?
-    const thirdDimension = undefined;
-    edgePoint[thirdDimension] = globalPos[thirdDimension];
-
     this.edge.vertexBuffer.push(edgePoint);
     this.finalizeMesh(this.edge);
 

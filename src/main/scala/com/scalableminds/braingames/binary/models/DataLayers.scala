@@ -5,8 +5,9 @@ package com.scalableminds.braingames.binary.models
 
 import play.api.libs.json._
 import com.scalableminds.util.geometry.BoundingBox
-import com.scalableminds.braingames.binary.requester.handlers.{BlockHandler, KnossosBlockHandler}
+import com.scalableminds.braingames.binary.requester.handlers.{BlockHandler, KnossosBlockHandler, WebKnossosWrapBlockHandler}
 import com.typesafe.scalalogging.LazyLogging
+import java.lang.Exception
 
 import scala.util.Try
 
@@ -41,7 +42,8 @@ case class DataLayer(
                       fallback: Option[FallbackLayer] = None,
                       sections: List[DataLayerSection] = Nil,
                       nextSegmentationId: Option[Long] = None,
-                      mappings: List[DataLayerMapping] = List()
+                      mappings: List[DataLayerMapping] = List(),
+                      sourceType: Option[String] = Some("knossos")
   ) extends DataLayerLike {
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
@@ -62,7 +64,14 @@ case class DataLayer(
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.bboxBig))
 
-  lazy val blockHandler: BlockHandler = new KnossosBlockHandler()
+  lazy val blockHandler: BlockHandler = sourceType.getOrElse("knossos") match {
+    case "knossos" =>
+      new KnossosBlockHandler()
+    case "webKnossosWrap" =>
+      new WebKnossosWrapBlockHandler()
+    case _ =>
+      throw new Exception("Unexpected data layer type")
+  }
 }
 
 object DataLayer extends LazyLogging{

@@ -33,7 +33,13 @@ trait DataSourceTypeGuesser {
 }
 
 class DataSourceTypeGuessers(val messagesApi: MessagesApi) extends LazyLogging{
-  val types = List(new KnossosDataSourceType(messagesApi), TiffDataSourceType, PngDataSourceType, JpegDataSourceType)
+  val types = List(
+    new KnossosDataSourceType(messagesApi),
+    new WebKnossosWrapDataSourceType(messagesApi),
+    TiffDataSourceType,
+    PngDataSourceType,
+    JpegDataSourceType
+  )
   
   def lazyFileFinder(source: Path, excludeDirs: Seq[String]): Stream[Path] = {
     def isTraversableDirectory(source: Path) = {

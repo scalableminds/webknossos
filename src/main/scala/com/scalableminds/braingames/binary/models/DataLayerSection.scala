@@ -4,7 +4,6 @@
 package com.scalableminds.braingames.binary.models
 
 import play.api.libs.json.Json
-import java.io.File
 import com.scalableminds.util.geometry.{Point3D, BoundingBox}
 
 /**

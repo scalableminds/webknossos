@@ -7,7 +7,7 @@ import java.nio.file.Paths
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.util.Timeout
-import com.scalableminds.braingames.binary.{requester, _}
+import com.scalableminds.braingames.binary.requester
 import com.scalableminds.braingames.binary.requester.CachedBlock
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.repository.DataSourceInbox

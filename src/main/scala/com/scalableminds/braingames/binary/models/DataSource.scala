@@ -18,7 +18,9 @@ case class DataSource(
   baseDir: String,
   scale: Scale,
   priority: Int = 0,
-  dataLayers: List[DataLayer] = Nil
+  dataLayers: List[DataLayer] = Nil,
+  sourceType: Option[String] = Some("knossos"),
+  blockLengthOpt: Option[Int] = Some(128)
   ) {
 
   def getDataLayer(name: String) =
@@ -31,7 +33,7 @@ case class DataSource(
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
-  val blockLength = 128
+  def blockLength: Int = blockLengthOpt.getOrElse(128)
 
   val blockSize = blockLength * blockLength * blockLength
 

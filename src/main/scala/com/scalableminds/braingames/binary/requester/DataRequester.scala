@@ -153,7 +153,7 @@ class DataRequester(
             Fox.successful(byteArray)
           case f: Failure =>
             logger.error(s"DataStore Failure: ${f.msg}")
-            Future.successful(f)
+            Fox.successful(Array.empty[Byte])
           case _ =>
             loadFromSections(tail)
         }

@@ -172,7 +172,7 @@ describe("Cube", () => {
         cube.labelVoxel([0, 0, 0], 42);
         cube.labelVoxel([1, 1, 1], 43);
 
-        const mapping = { 42: 1 };
+        const mapping = { "42": 1 };
 
         expect(cube.getDataValue([0, 0, 0], mapping)).toBe(1);
         expect(cube.getDataValue([1, 1, 1], mapping)).toBe(43);

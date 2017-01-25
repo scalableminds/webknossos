@@ -1,30 +1,52 @@
+/**
+ * camera_controller.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
+import Flycam2d from "oxalis/model/flycam2d";
+import Model from "oxalis/model";
+import type { Vector3 } from "oxalis/constants";
 import Dimensions from "../model/dimensions";
 import constants from "../constants";
 
-class CameraController {
-  static initClass() {
-    // The Sceleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
-    // View. It provides methods to set a certain View (animated).
+type TweenState = {
+  notify: () => void,
+  getConvertedPosition: () => Vector3,
+  upX: number,
+  upY: number,
+  upZ: number,
+  camera: THREE.OrthographicCamera,
+  flycam: Flycam2d,
+  dx: number,
+  dy: number,
+  dz: number,
+  l: number,
+  r: number,
+  t: number,
+  b: number,
+};
 
-    this.prototype.cameras = null;
-    this.prototype.flycam = null;
-    this.prototype.model = null;
-  }
+class CameraController {
+  // The Sceleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
+  // View. It provides methods to set a certain View (animated).
+
+  cameras: Array<THREE.OrthographicCamera>;
+  camera: THREE.OrthographicCamera;
+  flycam: Flycam2d;
+  model: Model;
+  tween: TWEEN.Tween;
+  camDistance: number;
+
+  // Copied from backbone events (TODO: handle this better)
+  trigger: Function;
+  listenTo: Function;
 
   constructor(cameras, flycam, model) {
-    this.update = this.update.bind(this);
-    this.changeTDViewXY = this.changeTDViewXY.bind(this);
-    this.changeTDViewYZ = this.changeTDViewYZ.bind(this);
-    this.changeTDViewXZ = this.changeTDViewXZ.bind(this);
-    this.changeTDViewDiagonal = this.changeTDViewDiagonal.bind(this);
-    this.zoomTDView = this.zoomTDView.bind(this);
-    this.moveTDViewX = this.moveTDViewX.bind(this);
-    this.moveTDViewY = this.moveTDViewY.bind(this);
     this.cameras = cameras;
     this.flycam = flycam;
     this.model = model;
@@ -45,7 +67,7 @@ class CameraController {
     this.bindToEvents();
   }
 
-  update() {
+  update = () => {
     const gPos = this.flycam.getPosition();
     // camera porition's unit is nm, so convert it.
     const cPos = app.scaleInfo.voxelToNm(gPos);
@@ -62,9 +84,10 @@ class CameraController {
 
     const pos = app.scaleInfo.voxelToNm(this.model.flycam.getPosition());
     const time = 800;
-    let to = {};
+
     const notify = () => this.trigger("cameraPositionChanged");
     const getConvertedPosition = () => app.scaleInfo.voxelToNm(this.model.flycam.getPosition());
+
     const from = {
       notify,
       getConvertedPosition,
@@ -79,9 +102,11 @@ class CameraController {
       l: camera.left,
       r: camera.right,
       t: camera.top,
-      b: camera.bottom };
+      b: camera.bottom,
+    };
     this.tween = new TWEEN.Tween(from);
 
+    let to: TweenState;
     if (id === constants.TDView) {
       const diagonal = Math.sqrt((b[0] * b[0]) + (b[1] * b[1]));
       padding = 0.05 * diagonal;
@@ -102,7 +127,12 @@ class CameraController {
 
       // Calulate the x coordinate so that the vector from the camera to the cube's middle point is
       // perpendicular to the vector going from (0, b[1], 0) to (b[0], 0, 0).
+
       to = {
+        camera,
+        notify,
+        getConvertedPosition,
+        flycam: this.flycam,
         dx: b[1] / diagonal,
         dy: b[0] / diagonal,
         dz: -1 / 2,
@@ -112,7 +142,8 @@ class CameraController {
         l: -distance - padding,
         r: (diagonal - distance) + padding,
         t: (diagonal / 2) + padding + yOffset,
-        b: ((-diagonal / 2) - padding) + yOffset };
+        b: ((-diagonal / 2) - padding) + yOffset,
+      };
     } else {
       const ind = Dimensions.getIndices(id);
       const width = Math.max(b[ind[0]], b[ind[1]] * 1.12) * 1.1;
@@ -124,57 +155,76 @@ class CameraController {
       const positionOffset = [[0, 0, -1], [1, 0, 0], [0, 1, 0]];
       const upVector = [[0, -1, 0], [0, -1, 0], [0, 0, -1]];
 
-      to.dx = positionOffset[id][0];
-      to.dy = positionOffset[id][1];
-      to.dz = positionOffset[id][2];
-      to.upX = upVector[id][0]; to.upY = upVector[id][1]; to.upZ = upVector[id][2];
-      to.l = -offsetX; to.t = offsetY;
-      to.r = to.l + width; to.b = to.t - width;
+      const l = -offsetX;
+      const t = offsetY;
+      to = {
+        camera,
+        notify,
+        getConvertedPosition,
+        flycam: this.flycam,
+        dx: positionOffset[id][0],
+        dy: positionOffset[id][1],
+        dz: positionOffset[id][2],
+        upX: upVector[id][0],
+        upY: upVector[id][1],
+        upZ: upVector[id][2],
+        l,
+        t,
+        r: l + width,
+        b: t - width,
+      };
     }
 
     if (animate) {
+      const _this = this;
       return this.tween.to(to, time)
-      .onUpdate(this.updateCameraTDView)
-      .start();
+        .onUpdate(function updater() {
+          // TweenJS passes the current state via the `this` object.
+          // However, for easier type checking, we pass it as an explicit
+          // parameter.
+          _this.updateCameraTDView(this);
+        })
+        .start();
     } else {
-      for (const prop of Object.keys(from)) {
-        if (to[prop] == null) {
-          to[prop] = from[prop];
-        }
-      }
-      return this.updateCameraTDView.call(to);
+      return this.updateCameraTDView(to);
     }
   }
 
   degToRad(deg) { return (deg / 180) * Math.PI; }
 
-  changeTDViewXY() { return this.changeTDView(constants.PLANE_XY); }
-  changeTDViewYZ() { return this.changeTDView(constants.PLANE_YZ); }
-  changeTDViewXZ() { return this.changeTDView(constants.PLANE_XZ); }
-  changeTDViewDiagonal(animate) { if (animate == null) { animate = true; } return this.changeTDView(constants.TDView, animate); }
+  changeTDViewXY = () => this.changeTDView(constants.PLANE_XY)
+  changeTDViewYZ = () => this.changeTDView(constants.PLANE_YZ)
+  changeTDViewXZ = () => this.changeTDView(constants.PLANE_XZ)
 
-  updateCameraTDView() {
-    const p = this.getConvertedPosition();
-    this.camera.position.set(this.dx + p[0], this.dy + p[1], this.dz + p[2]);
-    this.camera.left = this.l;
-    this.camera.right = this.r;
-    this.camera.top = this.t;
-    this.camera.bottom = this.b;
-    this.camera.up = new THREE.Vector3(this.upX, this.upY, this.upZ);
+  changeTDViewDiagonal = (animate) => {
+    if (animate == null) {
+      animate = true;
+    }
+    return this.changeTDView(constants.TDView, animate);
+  }
 
-    this.flycam.setRayThreshold(this.camera.right, this.camera.left);
-    this.camera.updateProjectionMatrix();
-    this.notify();
+  updateCameraTDView(tweenState: TweenState) {
+    const p = tweenState.getConvertedPosition();
+    tweenState.camera.position.set(tweenState.dx + p[0], tweenState.dy + p[1], tweenState.dz + p[2]);
+    tweenState.camera.left = tweenState.l;
+    tweenState.camera.right = tweenState.r;
+    tweenState.camera.top = tweenState.t;
+    tweenState.camera.bottom = tweenState.b;
+    tweenState.camera.up = new THREE.Vector3(tweenState.upX, tweenState.upY, tweenState.upZ);
+
+    tweenState.flycam.setRayThreshold(tweenState.camera.right, tweenState.camera.left);
+    tweenState.camera.updateProjectionMatrix();
+    tweenState.notify();
     app.vent.trigger("rerender");
   }
 
-
   TDViewportSize() {
+    // always quadratic
     return (this.cameras[constants.TDView].right - this.cameras[constants.TDView].left);
-  }         // always quadratic
+  }
 
 
-  zoomTDView(value, position, curWidth) {
+  zoomTDView = (value, position, curWidth) => {
     let offsetX;
     let offsetY;
     const camera = this.cameras[constants.TDView];
@@ -204,16 +254,14 @@ class CameraController {
   }
 
 
-  moveTDViewX(x) {
-    return this.moveTDViewRaw(
-      new THREE.Vector2((x * this.TDViewportSize()) / constants.VIEWPORT_WIDTH, 0));
-  }
+  moveTDViewX = x => this.moveTDViewRaw(
+    new THREE.Vector2((x * this.TDViewportSize()) / constants.VIEWPORT_WIDTH, 0),
+  )
 
 
-  moveTDViewY(y) {
-    return this.moveTDViewRaw(
-      new THREE.Vector2(0, (-y * this.TDViewportSize()) / constants.VIEWPORT_WIDTH));
-  }
+  moveTDViewY = y => this.moveTDViewRaw(
+    new THREE.Vector2(0, (-y * this.TDViewportSize()) / constants.VIEWPORT_WIDTH),
+  )
 
 
   moveTDView(nmVector) {
@@ -281,7 +329,5 @@ class CameraController {
     this.listenTo(this.model.user, "change:zoom", function () { return this.updateCamViewport(); });
   }
 }
-CameraController.initClass();
-
 
 export default CameraController;

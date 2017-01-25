@@ -365,6 +365,11 @@ class SkeletonTracing {
   }
 
 
+  setComment(commentText) {
+    this.trigger("setComment", commentText);
+  }
+
+
   selectNextTree(forward) {
     let i;
     const trees = this.getTreesSorted(this.user.get("sortTreesByName"));

@@ -15,18 +15,6 @@ class Tree {
     const edgeGeometry = new THREE.BufferGeometry();
     const nodeGeometry = new THREE.BufferGeometry();
 
-    function makeDynamicFloatAttribute(itemSize) {
-      const attr = new THREE.BufferAttribute(new Float32Array(), itemSize);
-      attr.setDynamic(true);
-      return attr;
-    }
-
-    edgeGeometry.addAttribute("position", makeDynamicFloatAttribute(3));
-    nodeGeometry.addAttribute("position", makeDynamicFloatAttribute(3));
-    nodeGeometry.addAttribute("sizeNm", makeDynamicFloatAttribute(1));
-    nodeGeometry.addAttribute("nodeScaleFactor", makeDynamicFloatAttribute(1));
-    nodeGeometry.addAttribute("color", makeDynamicFloatAttribute(3));
-
     this.nodeIDs = new ResizableBuffer(1, 100, Int32Array);
     this.edgesBuffer = new ResizableBuffer(6);
     this.nodesBuffer = new ResizableBuffer(3);
@@ -34,18 +22,37 @@ class Tree {
     this.scalesBuffer = new ResizableBuffer(1);
     this.nodesColorBuffer = new ResizableBuffer(3);
 
+    edgeGeometry.addAttribute("position", this.makeDynamicFloatAttribute(3, this.edgesBuffer));
+    nodeGeometry.addAttribute("position", this.makeDynamicFloatAttribute(3, this.nodesBuffer));
+    nodeGeometry.addAttribute("sizeNm", this.makeDynamicFloatAttribute(1, this.sizesBuffer));
+    nodeGeometry.addAttribute("nodeScaleFactor", this.makeDynamicFloatAttribute(1, this.scalesBuffer));
+    nodeGeometry.addAttribute("nodeColor", this.makeDynamicFloatAttribute(3, this.nodesColorBuffer));
+
     this.edges = new THREE.Line(
       edgeGeometry,
       new THREE.LineBasicMaterial({
         color: this.darkenHex(treeColor),
-        linewidth: this.getLineWidth() }),
+        linewidth: this.getLineWidth()}),
       THREE.LineSegments,
     );
 
     this.particleMaterial = new ParticleMaterialFactory(this.model).getMaterial();
+
+    const debugParticleMaterial = new THREE.PointsMaterial({
+      color: 0xff0000,
+      sizeAttenuation: false,
+      size: 10,
+    });
+
     this.nodes = new THREE.Points(nodeGeometry, this.particleMaterial);
 
     this.id = treeId;
+  }
+
+  makeDynamicFloatAttribute(itemSize, resizableBuffer) {
+    const attr = new THREE.BufferAttribute(resizableBuffer.getBuffer(), itemSize);
+    attr.setDynamic(true);
+    return attr;
   }
 
 
@@ -174,7 +181,7 @@ class Tree {
 
 
   getMeshes() {
-    return [this.edges, this.nodes];
+    return [this.nodes];
   }
 
 
@@ -272,18 +279,19 @@ class Tree {
 
   updateGeometries() {
     this.updateGeometry(this.nodes, {
-      position: this.nodesBuffer,
-      sizeNm: this.sizesBuffer,
-      nodeScaleFactor: this.scalesBuffer,
-      color: this.nodesColorBuffer,
+      position: [3, this.nodesBuffer],
+      sizeNm: [1, this.sizesBuffer],
+      nodeScaleFactor: [1, this.scalesBuffer],
+      nodeColor: [3, this.nodesColorBuffer],
     });
   }
 
 
   updateGeometry(mesh, attribute2buffer) {
     let length = -1;
+    let needsToRebuildGeometry = false;
     for (const attribute of Object.keys(attribute2buffer)) {
-      const rBuffer = attribute2buffer[attribute];
+      const [itemSize, rBuffer] = attribute2buffer[attribute];
 
       if (length === -1) {
         length = rBuffer.getLength();
@@ -292,10 +300,19 @@ class Tree {
           "All attribute lengths should be equal.");
       }
 
-      mesh.geometry.attributes[attribute].setArray(rBuffer.getBuffer());
+      if (mesh.geometry.attributes[attribute].array !== rBuffer.getBuffer()) {
+        needsToRebuildGeometry = true;
+      }
       mesh.geometry.attributes[attribute].needsUpdate = true;
     }
 
+    if (needsToRebuildGeometry) {
+      for (const attribute of Object.keys(attribute2buffer)) {
+        const [itemSize, rBuffer] = attribute2buffer[attribute];
+        mesh.geometry.addAttribute(attribute, this.makeDynamicFloatAttribute(itemSize, rBuffer));
+      }
+    }
+    mesh.geometry.computeBoundingSphere();
     mesh.geometry.setDrawRange(0, length);
   }
 
@@ -315,7 +332,6 @@ class Tree {
         return i;
       }
     }
-    return null;
   }
 
 

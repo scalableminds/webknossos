@@ -26,7 +26,7 @@ class Tree {
     nodeGeometry.addAttribute("position", this.makeDynamicFloatAttribute(3, this.nodesBuffer));
     nodeGeometry.addAttribute("sizeNm", this.makeDynamicFloatAttribute(1, this.sizesBuffer));
     nodeGeometry.addAttribute("nodeScaleFactor", this.makeDynamicFloatAttribute(1, this.scalesBuffer));
-    nodeGeometry.addAttribute("nodeColor", this.makeDynamicFloatAttribute(3, this.nodesColorBuffer));
+    nodeGeometry.addAttribute("color", this.makeDynamicFloatAttribute(3, this.nodesColorBuffer));
 
     this.edges = new THREE.Line(
       edgeGeometry,
@@ -282,7 +282,7 @@ class Tree {
       position: [3, this.nodesBuffer],
       sizeNm: [1, this.sizesBuffer],
       nodeScaleFactor: [1, this.scalesBuffer],
-      nodeColor: [3, this.nodesColorBuffer],
+      color: [3, this.nodesColorBuffer],
     });
   }
 

@@ -40,15 +40,16 @@ git clone git@github.com:scalableminds/webknossos.git
 #### Ubuntu 16.04 LTS
 
 ```
-# Adding repositories for sbt and nodejs
+# Adding repositories for sbt, nodejs and yarn
 echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
 curl -sL https://deb.nodesource.com/setup_7.x | sudo -E bash -
+curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 # Installing everything
 sudo apt-get update
-sudo apt-get install -y git mongodb-server nodejs scala npm sbt openjdk-8-jdk
-sudo npm install -g yarn
+sudo apt-get install -y git mongodb-server nodejs scala sbt openjdk-8-jdk yarn
 ```
 
 On older Ubuntu distributions: Please make sure to have the correct versions of node, mongoDB and java installed.

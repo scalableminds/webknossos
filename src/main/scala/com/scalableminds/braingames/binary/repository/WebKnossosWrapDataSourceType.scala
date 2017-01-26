@@ -9,7 +9,6 @@ import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.geometry.BoundingBox
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.webknossos.wrap.{WebKnossosWrapDataLayerSettings, WebKnossosWrapDataSource}
 import net.liftweb.common.Box
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits._

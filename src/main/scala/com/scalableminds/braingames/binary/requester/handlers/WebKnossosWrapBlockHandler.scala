@@ -5,7 +5,6 @@ package com.scalableminds.braingames.binary.requester.handlers
 
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.wrap.WebKnossosWrapDataSource
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current

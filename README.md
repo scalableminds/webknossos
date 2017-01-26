@@ -40,13 +40,14 @@ git clone git@github.com:scalableminds/webknossos.git
 #### Ubuntu 16.04 LTS
 
 ```
-# Adding repository for sbt
+# Adding repositories for sbt and nodejs
 echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
+curl -sL https://deb.nodesource.com/setup_7.x | sudo -E bash -
 
 # Installing everything
 sudo apt-get update
-sudo apt-get install -y git mongodb-server nodejs nodejs-legacy scala npm sbt openjdk-8-jdk
+sudo apt-get install -y git mongodb-server nodejs scala npm sbt openjdk-8-jdk
 sudo npm install -g yarn
 ```
 

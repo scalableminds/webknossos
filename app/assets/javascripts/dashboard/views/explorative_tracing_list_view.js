@@ -9,6 +9,7 @@ import app from "app";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
+import EmptyView from "admin/views/empty_view.js";
 import ExplorativeTracingListItemView from "./explorative_tracing_list_item_view";
 import UserAnnotationsCollection from "../models/user_annotations_collection";
 
@@ -73,8 +74,8 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
 
     this.prototype.childView = ExplorativeTracingListItemView;
     this.prototype.childViewContainer = "tbody";
-    this.prototype.childViewOptions =
-      { parent: null };
+    this.prototype.childViewOptions = { parent: null };
+    this.prototype.emptyView = EmptyView;
 
     this.prototype.events = {
       "change.bs.fileinput .fileinput": "selectFiles",
@@ -120,6 +121,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
 
     // Show a loading spinner for long running requests
     this.listenTo(this.collection, "request", () => app.router.showLoadingSpinner());
+    this.listenTo(this, "render:empty", () => app.router.hideLoadingSpinner());
     this.listenTo(this, "add:child", () => app.router.hideLoadingSpinner());
 
     this.showArchivedAnnotations = false;

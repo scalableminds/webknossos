@@ -40,7 +40,7 @@ ansiColor('xterm') {
           DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up webknossos &
           sleep 10
           ./test/infrastructure/deployment.bash
-          docker-compose down
+          docker-compose down --volumes --remove-orphans
         """
       }
 
@@ -100,6 +100,8 @@ ansiColor('xterm') {
 
         archiveArtifacts(artifacts: 'packages/*,errorShots/*', fingerprint: true)
         sh 'docker-compose down --volumes --remove-orphans || echo "Can not run docker-compose down"'
+        sh 'docker rmi scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER}'
+        sh 'docker rmi scalableminds/webknossos:${env.BRANCH_NAME} || echo "Can not remove this image"'
 
         notifyBuild(currentBuild.result)
 

@@ -1,20 +1,34 @@
+/**
+ * contourgeometry.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
 import ResizableBuffer from "libs/resizable_buffer";
 import THREE from "three";
+import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
+import Flycam2d from "oxalis/model/flycam2d";
 
 class ContourGeometry {
-  static initClass() {
-    this.prototype.COLOR_NORMAL = new THREE.Color(0x0000ff);
-    this.prototype.COLOR_DELETE = new THREE.Color(0xff0000);
-  }
+  volumeTracing: VolumeTracing;
+  flycam: Flycam2d;
+  color: THREE.Color;
+  COLOR_NORMAL: THREE.Color;
+  COLOR_DELETE: THREE.Color;
+  edge: THREE.Line;
 
-  constructor(volumeTracing, flycam) {
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
+
+  constructor(volumeTracing: VolumeTracing, flycam: Flycam2d) {
     this.volumeTracing = volumeTracing;
     this.flycam = flycam;
     _.extend(this, Backbone.Events);
 
+    this.COLOR_NORMAL = new THREE.Color(0x0000ff);
+    this.COLOR_DELETE = new THREE.Color(0xff0000);
     this.color = this.COLOR_NORMAL;
 
     this.listenTo(this.volumeTracing, "volumeAnnotated", this.reset);
@@ -54,11 +68,7 @@ class ContourGeometry {
 
 
   addEdgePoint(pos) {
-    // pos might be integer, but the third dimension needs to be exact.
-    const globalPos = this.flycam.getPosition();
     const edgePoint = pos.slice();
-    edgePoint[this.thirdDimension] = globalPos[this.thirdDimension];
-
     this.edge.vertexBuffer.push(edgePoint);
     this.finalizeMesh(this.edge);
 
@@ -74,6 +84,5 @@ class ContourGeometry {
     positionAttribute.needsUpdate = true;
   }
 }
-ContourGeometry.initClass();
 
 export default ContourGeometry;

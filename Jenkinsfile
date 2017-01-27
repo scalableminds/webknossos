@@ -15,8 +15,9 @@ ansiColor('xterm') {
         def commit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
         echo "Branch: ${env.BRANCH_NAME}\nCommit: ${commit}\nAuthors: ${formatChangeSets(currentBuild.changeSets)}"
 
-        env.SBT_VERSION_TAG = "sbt-0.13.9_mongo-3.2.1_node-7.x_jdk-8"
-        sh "docker pull scalableminds/sbt:${env.SBT_VERSION_TAG}"
+        env.DOCKER_CACHE_PREFIX = "~/.webknossos-build-cache"
+        sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
+        sh "docker-compose pull sbt"
       }
 
 
@@ -39,7 +40,7 @@ ansiColor('xterm') {
           DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up webknossos &
           sleep 10
           ./test/infrastructure/deployment.bash
-          docker-compose down
+          docker-compose down --volumes --remove-orphans
         """
       }
 
@@ -97,12 +98,15 @@ ansiColor('xterm') {
 
       stage("Cleanup") {
 
-        archiveArtifacts(artifacts: 'packages/*,errorShots/*', fingerprint: true)
-        sh 'docker-compose down || echo "Can not run docker-compose down"'
+        archiveArtifacts(artifacts: "packages/*,errorShots/*", fingerprint: true)
+        sh "docker-compose down --volumes --remove-orphans || echo \"Can not run docker-compose down\""
+        sh "docker rmi scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER}"
+        sh "docker rmi scalableminds/webknossos:${env.BRANCH_NAME} || echo\"Can not remove this image\""
 
         notifyBuild(currentBuild.result)
-        // deleteDir()
-        // sh "find . -mindepth 1 -delete"
+
+        // Clean directory with docker for file permissions
+        sh "docker run -v \$(pwd):/workspace -w /workspace alpine sh -c \"find . -mindepth 1 -delete\""
       }
     }
 

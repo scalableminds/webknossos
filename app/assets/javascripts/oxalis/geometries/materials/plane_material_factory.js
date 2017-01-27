@@ -1,3 +1,8 @@
+/**
+ * plane_material_factory.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";

@@ -1,14 +1,16 @@
+/**
+ * mesh.js
+ * @flow weak
+ */
+
 import THREE from "three";
 import Deferred from "../../libs/deferred";
 
 // This loads and caches meshes.
 
 class Mesh {
-  static initClass() {
-    this.LOAD_TIMEOUT = 30000;
-
-    this.prototype.mesh = null;
-  }
+  static LOAD_TIMEOUT = 30000;
+  mesh: THREE.Mesh;
 
   constructor(geometry) {
     this.mesh = new THREE.Mesh(
@@ -47,6 +49,5 @@ class Mesh {
     return deferred.promise();
   }
 }
-Mesh.initClass();
 
 export default Mesh;

@@ -1,8 +1,17 @@
+/**
+ * arbitrary_plane.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Backbone from "backbone";
 import THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";
+import Flycam3d from "oxalis/model/flycam3d";
+import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import Model from "oxalis/model";
+
 import ArbitraryPlaneMaterialFactory from "./materials/arbitrary_plane_material_factory";
 
 // Let's set up our trianglesplane.
@@ -24,26 +33,28 @@ import ArbitraryPlaneMaterialFactory from "./materials/arbitrary_plane_material_
 // normalVertices: (depricated) holds the vertex postion
 // for the flat surface
 class ArbitraryPlane {
-  static initClass() {
-    this.prototype.cam = null;
-    this.prototype.model = null;
-    this.prototype.controller = null;
 
-    this.prototype.mesh = null;
+  cam: Flycam3d;
+  model: Model;
+  controller: ArbitraryController;
+  mesh: THREE.Mesh;
+  isDirty: boolean;
+  queryVertices: Float32Array;
+  width: number;
+  // TODO: Probably unused? Recheck when flow coverage is higher
+  height: number;
+  x: number;
+  textureMaterial: THREE.ShaderMaterial;
 
-    this.prototype.isDirty = true;
-
-    this.prototype.queryVertices = null;
-    this.prototype.width = 0;
-    this.prototype.height = 0;
-    this.prototype.x = 0;
-  }
-
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
 
   constructor(cam, model, controller, width = 128) {
+    this.isDirty = true;
     this.cam = cam;
     this.model = model;
     this.controller = controller;
+    this.height = 0;
     this.width = width;
     _.extend(this, Backbone.Events);
 
@@ -196,6 +207,5 @@ class ArbitraryPlane {
     return plane;
   }
 }
-ArbitraryPlane.initClass();
 
 export default ArbitraryPlane;

@@ -138,12 +138,32 @@ class Router extends BaseRouter {
 
 
   statistics() {
-    this.showAdminView("StatisticView");
+    // Webpack `require` doesn't work with inline arrow functions
+    const callback = (StatisticsView, TimeStatisticModel) => {
+      StatisticsView = StatisticsView.default;
+      TimeStatisticModel = TimeStatisticModel.default;
+
+      const model = new TimeStatisticModel();
+      const view = new StatisticsView({ model });
+
+      this.changeView(view);
+      this.listenTo(model, "sync", () => this.hideLoadingSpinner());
+    };
+    require(["admin/views/statistic/statistic_view", "admin/models/statistic/time_statistic_model"], callback);
   }
 
 
   datasetAdd() {
-    this.showAdminView("DatasetAddView");
+    // Webpack `require` doesn't work with inline arrow functions
+    const callback = (DatasetAddView) => {
+      DatasetAddView = DatasetAddView.default;
+
+      const view = new DatasetAddView();
+
+      this.changeView(view);
+      this.hideLoadingSpinner();
+    };
+    require(["admin/views/dataset/dataset_add_view"], callback);
   }
 
 
@@ -330,30 +350,10 @@ class Router extends BaseRouter {
     require(["admin/admin"], callback);
   }
 
-
-  showAdminView(view, collection) {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
-      if (collection) {
-        collection = new admin[collection]();
-        view = new admin[view]({ collection });
-        this.listenTo(collection, "sync", () => this.hideLoadingSpinner());
-      } else {
-        view = new admin[view]();
-        setTimeout((() => this.hideLoadingSpinner()), 200);
-      }
-
-      this.changeView(view);
-    };
-    require(["admin/admin"], callback);
-  }
-
   changeView(...views) {
     if (_.isEqual(this.activeViews, views)) {
       return;
     }
-
-    this.hideLoadingSpinner();
 
     // Add new views
     this.activeViews = views;

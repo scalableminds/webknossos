@@ -28,10 +28,13 @@ class StatisticView extends Marionette.View {
     };
   }
 
-  initialize() {
-    app.router.showLoadingSpinner();
+  initialize(options) {
+    const timeStatisticModel = options.model;
 
-    const timeStatisticModel = new TimeStatisticModel();
+    this.listenTo(timeStatisticModel, "sync", this.showGraphView);
+    this.listenTo(timeStatisticModel, "request", () => app.router.showLoadingSpinner());
+    this.listenTo(this, "render", this.showStatisticsListView);
+
     timeStatisticModel.fetch({
       data: "interval=week",
     });
@@ -39,9 +42,6 @@ class StatisticView extends Marionette.View {
     this.graphView = new GraphView({ model: timeStatisticModel });
     this.achievementView = new AchievementView({ model: timeStatisticModel });
     this.statisticListView = new StatisticListView();
-
-    this.listenTo(timeStatisticModel, "sync", this.showGraphView);
-    this.listenTo(this, "render", this.showStatisticsListView);
   }
 
 
@@ -53,7 +53,6 @@ class StatisticView extends Marionette.View {
   showGraphView() {
     this.showChildView("graph", this.graphView);
     this.showChildView("achievements", this.achievementView);
-    app.router.hideLoadingSpinner();
   }
 }
 StatisticView.initClass();

@@ -120,11 +120,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
 
     // Show a loading spinner for long running requests
     this.listenTo(this.collection, "request", () => app.router.showLoadingSpinner());
-    this.listenTo(this.collection, "sync", () => app.router.hideLoadingSpinner());
-
-    // Show a loading spinner while rendering
-    this.listenTo(this, "before:render", () => app.router.showLoadingSpinner());
-    this.listenTo(this, "render", () => app.router.hideLoadingSpinner());
+    this.listenTo(this, "add:child", () => app.router.hideLoadingSpinner());
 
     this.showArchivedAnnotations = false;
     this.collection.fetch();

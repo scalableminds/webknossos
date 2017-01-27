@@ -1,12 +1,27 @@
+/**
+ * abstract_plane_material_factory.js
+ * @flow weak
+ */
+
 import app from "app";
 import Utils from "libs/utils";
 import THREE from "three";
+import Model from "oxalis/model";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
 class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
+  textures: {
+    [key: string]: THREE.DataTexture;
+  }
+  minFilter: THREE.NearestFilter;
+  maxFilter: THREE.NearestFilter;
+  tWidth: number;
 
-  constructor(model, tWidth) {
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
+
+  constructor(model: Model, tWidth: number) {
     super(model);
     this.tWidth = tWidth;
     this.minFilter = THREE.NearestFilter;

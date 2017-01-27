@@ -67,8 +67,7 @@ class Crosshair {
 
 
   update() {
-    // eslint-disable-next-line no-unused-vars
-    const { isDirty, context, WIDTH, COLOR, mesh, cam } = this;
+    const { context, WIDTH, COLOR, mesh } = this;
 
     if (this.isDirty) {
       context.clearRect(0, 0, WIDTH, WIDTH);

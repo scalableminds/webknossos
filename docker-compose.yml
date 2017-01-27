@@ -19,7 +19,7 @@ services:
       - "~/.m2:/root/.m2"
       - "~/.ivy2:/root/.ivy2"
       - "~/.sbt:/root/.sbt"
-      - "~/.yarn-cache:/root/.yarn-cache"
+      - "~/.yarn-cache:/usr/local/share/.cache/yarn"
 
   webknossos-frontend-linting:
     extends:

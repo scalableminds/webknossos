@@ -10,8 +10,8 @@ import type { Vector3 } from "oxalis/constants";
 
 type LayerInfoType = {
   name: string;
-  category: string; // Can we be more precise like "color" | ... ?
-  elementClass: string; // Can we be more precise like "uint16" | "Uint32"
+  category: string; // TODO: Can/should we be more precise like "color" | ... ?
+  elementClass: string; // TODO: Can/should we be more precise like "uint16" | "Uint32"?
 }
 
 // Abstract class that defines the Layer interface and implements common

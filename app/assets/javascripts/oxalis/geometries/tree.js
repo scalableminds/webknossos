@@ -28,6 +28,8 @@ class Tree {
     nodeGeometry.addAttribute("nodeScaleFactor", this.makeDynamicFloatAttribute(1, this.scalesBuffer));
     nodeGeometry.addAttribute("color", this.makeDynamicFloatAttribute(3, this.nodesColorBuffer));
 
+    nodeGeometry.nodeIDs = this.nodeIDs;
+
     this.edges = new THREE.Line(
       edgeGeometry,
       new THREE.LineBasicMaterial({

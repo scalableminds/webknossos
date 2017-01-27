@@ -91,7 +91,7 @@ class SkeletonTracingPlaneController extends PlaneController {
         id => this.skeletonTracingController.setActiveNode(id, false, true),
       );
     },
-  )
+  );
 
 
   scrollPlanes(delta, type) {
@@ -111,17 +111,18 @@ class SkeletonTracingPlaneController extends PlaneController {
     const { scaleFactor } = this.planeView;
     const camera = this.planeView.getCameras()[plane];
     // vector with direction from camera position to click position
-    const vector = new THREE.Vector3(((position.x / (384 * scaleFactor)) * 2) - 1, (-(position.y / (384 * scaleFactor)) * 2) + 1, 0.5);
+    const vector = new THREE.Vector2(((position.x / (384 * scaleFactor)) * 2) - 1, (-(position.y / (384 * scaleFactor)) * 2) + 1);
 
     // create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
-    const projector = new THREE.Projector();
-    const raycaster = projector.pickingRay(vector, camera);
-    raycaster.ray.threshold = this.model.flycam.getRayThreshold(plane);
-
-    raycaster.ray.__scalingFactors = app.scaleInfo.nmPerVoxel;
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(vector, camera);
+    raycaster.params.Points.threshold = this.model.flycam.getRayThreshold(plane);
 
     // identify clicked object
-    const intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());
+    let intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());
+    intersects = _.sortBy(intersects, (intersect) => intersect.distanceToRay);
+
+    console.log(intersects);
 
     for (const intersect of intersects) {
       const { index } = intersect;
@@ -151,7 +152,7 @@ class SkeletonTracingPlaneController extends PlaneController {
         break;
       }
     }
-  }
+  };
 
 
   setWaypoint(position, ctrlPressed) {

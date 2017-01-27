@@ -323,7 +323,7 @@ class Flycam2d {
 
   getRayThreshold(planeID) {
     if (planeID < 3) {
-      return this.rayThreshold[planeID] * Math.pow(2, this.zoomStep) * app.scaleInfo.baseVoxel;
+      return this.rayThreshold[planeID] * Math.pow(2, this.zoomStep);
     } else {
       return this.rayThreshold[planeID];
     }

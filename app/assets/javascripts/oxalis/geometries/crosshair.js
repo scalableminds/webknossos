@@ -67,7 +67,7 @@ class Crosshair {
 
 
   update() {
-    const { isDirty, context, WIDTH, COLOR, mesh, cam } = this;
+    const { context, WIDTH, COLOR, mesh } = this;
 
     if (this.isDirty) {
       context.clearRect(0, 0, WIDTH, WIDTH);

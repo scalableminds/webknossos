@@ -30,10 +30,10 @@ import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 // All public operations are **asynchronous**. We return a promise
 // which you can react on.
 
-export type Boundary = [number, number, number];
-export type BoundingBoxType = {
-  min: [number, number, number],
-  max: [number, number, number],
+export type Boundary = Vector3;
+export type BoundingBox = {
+  min: Vector3,
+  max: Vector3,
 };
 type Settings = {
   advancedOptionsAllowed: boolean,
@@ -98,6 +98,8 @@ class Model extends Backbone.Model {
   mode: ModeType;
   allowedModes: Array<ModeType>;
   settings: Settings;
+  tracingId: string;
+  tracingType: "Explorational" | "Task";
 
   constructor(...args) {
     super(...args);
@@ -111,7 +113,7 @@ class Model extends Backbone.Model {
       // Include /readOnly part whenever it is in the pathname
       infoUrl = `${location.pathname}/info`;
     } else {
-      infoUrl = `/annotations/${this.get("tracingType").toString()}/${this.get("tracingId").toString()}/info`;
+      infoUrl = `/annotations/${this.tracingType}/${this.tracingId}/info`;
     }
 
     return Request.receiveJSON(infoUrl).then((tracing: Tracing) => {

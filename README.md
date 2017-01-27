@@ -3,7 +3,10 @@ Cellular-resolution connectomics is currently substantially limited by the throu
 
 ![webKnossos logo](https://webknossos.brain.mpg.de/assets/images/oxalis.svg)
 
-## Dependencies
+## Development setup
+If you are installing *webKnossos* in a virtual machine, please make sure you allocated **enough memory**. A good value is 5 GB.
+
+### Dependencies
 
 * [Oracle JDK 8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
@@ -12,10 +15,7 @@ Cellular-resolution connectomics is currently substantially limited by the throu
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
-## Installation
-If you are installing *webKnossos* in a virtual machine, please make sure you allocated **enough memory**. A good value is 5 GB.
-
-#### OS X
+### OS X
 If you are using OS X try using this awesome installer:
 https://gist.github.com/normanrz/9128496
 
@@ -37,7 +37,7 @@ git clone git@github.com:scalableminds/webknossos.git
 ```
 
 
-#### Ubuntu 16.04 LTS
+### Ubuntu 16.04 LTS
 
 ```
 # Adding repositories for sbt, nodejs and yarn
@@ -54,15 +54,15 @@ sudo apt-get install -y git mongodb-server nodejs scala sbt openjdk-8-jdk yarn
 
 On older Ubuntu distributions: Please make sure to have the correct versions of node, mongoDB and java installed.
 
-#### Docker
-This is the fastest way to try webKnossos. Docker 1.12+ and Docker Compose 1.8+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
+### Docker
+This is the fastest way to try webKnossos. Docker 1.13+ and Docker Compose 1.10+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
 
 ```
 docker-compose up webknossos
 ```
 
 
-#### Manual Installation
+### Manual Installation
 
 ##### Java
 * Install Java JDK 8 (from Oracle or OpenJDK)
@@ -80,12 +80,22 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 * node version **7+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
-### Run
+### Run locally
 ```bash
 sbt run
 ```
-
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000. Make sure that the mongoDB service is running before you start sbt.
+
+### Run on a remote machine
+```bash
+sbt "run -Dhttp.uri=http://<remote address>:9000"
+```
+Will fetch all Scala, Java and node dependencies and run the application on Port 9000. Make sure that the mongoDB service is running before you start sbt.
+
+Make sure to open port `9000` in our firewall. This is only recommended for development purposes. See below for a recommended production setup.
+
+## Production setup
+[See wiki](https://github.com/scalableminds/webknossos/wiki/Production-setup) for recommended production setup.
 
 ## Test
 ```bash

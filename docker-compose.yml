@@ -13,13 +13,13 @@ services:
       - MODE=dev
 
   sbt:
-    image: scalableminds/sbt:$SBT_VERSION_TAG
+    image: scalableminds/sbt:${SBT_VERSION_TAG:-sbt-0.13.9_mongo-3.2.1_node-7.x_jdk-8}
     volumes:
       - ".:/project"
-      - "~/.m2:/root/.m2"
-      - "~/.ivy2:/root/.ivy2"
-      - "~/.sbt:/root/.sbt"
-      - "~/.yarn-cache:/usr/local/share/.cache/yarn"
+      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/root/.ivy2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
+      - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
 
   webknossos-frontend-linting:
     extends:

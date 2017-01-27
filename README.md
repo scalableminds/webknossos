@@ -55,7 +55,7 @@ sudo apt-get install -y git mongodb-server nodejs scala sbt openjdk-8-jdk yarn
 On older Ubuntu distributions: Please make sure to have the correct versions of node, mongoDB and java installed.
 
 ### Docker
-This is the fastest way to try webKnossos. Docker 1.12+ and Docker Compose 1.8+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
+This is the fastest way to try webKnossos. Docker 1.13+ and Docker Compose 1.10+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
 
 ```
 docker-compose up webknossos

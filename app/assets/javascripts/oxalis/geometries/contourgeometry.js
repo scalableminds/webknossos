@@ -4,22 +4,22 @@ import Backbone from "backbone";
 import ResizableBuffer from "libs/resizable_buffer";
 import * as THREE from "three";
 
+const COLOR_NORMAL = new THREE.Color(0x0000ff);
+const COLOR_DELETE = new THREE.Color(0xff0000);
+
+
 class ContourGeometry {
-  static initClass() {
-    this.prototype.COLOR_NORMAL = new THREE.Color(0x0000ff);
-    this.prototype.COLOR_DELETE = new THREE.Color(0xff0000);
-  }
 
   constructor(volumeTracing, flycam) {
     this.volumeTracing = volumeTracing;
     this.flycam = flycam;
     _.extend(this, Backbone.Events);
 
-    this.color = this.COLOR_NORMAL;
+    this.color = COLOR_NORMAL;
 
     this.listenTo(this.volumeTracing, "volumeAnnotated", this.reset);
     this.listenTo(this.volumeTracing, "updateLayer", function (cellId, contourList) {
-      this.color = cellId === 0 ? this.COLOR_DELETE : this.COLOR_NORMAL;
+      this.color = cellId === 0 ? COLOR_DELETE : COLOR_NORMAL;
       this.reset();
       contourList.forEach(p =>
         this.addEdgePoint(p));
@@ -33,7 +33,7 @@ class ContourGeometry {
     const edgeGeometry = new THREE.BufferGeometry();
     const positionAttribute = new THREE.BufferAttribute(new Float32Array(), 3);
     positionAttribute.setDynamic(true);
-    edgeGeometry.addAttribute( 'position', positionAttribute);
+    edgeGeometry.addAttribute("position", positionAttribute);
 
     this.edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({ linewidth: 2 }), THREE.LineStrip);
     this.edge.vertexBuffer = new ResizableBuffer(3);
@@ -55,12 +55,7 @@ class ContourGeometry {
 
 
   addEdgePoint(pos) {
-    // pos might be integer, but the third dimension needs to be exact.
-    const globalPos = this.flycam.getPosition();
-    const edgePoint = pos.slice();
-    edgePoint[this.thirdDimension] = globalPos[this.thirdDimension];
-
-    this.edge.vertexBuffer.push(edgePoint);
+    this.edge.vertexBuffer.push(pos);
     this.finalizeMesh(this.edge);
 
     app.vent.trigger("rerender");
@@ -68,13 +63,19 @@ class ContourGeometry {
 
 
   finalizeMesh(mesh) {
-    const positionAttribute = mesh.geometry.attributes.position;
+    if (mesh.geometry.attributes.position.array !== mesh.vertexBuffer.getBuffer()) {
+      // Need to rebuild Geometry
+      const positionAttribute = new THREE.BufferAttribute(mesh.vertexBuffer.getBuffer(), 3);
+      positionAttribute.setDynamic(true);
 
-    positionAttribute.array = mesh.vertexBuffer.getBuffer();
-    positionAttribute.numItems = mesh.vertexBuffer.getLength() * 3;
-    positionAttribute.needsUpdate = true;
+      mesh.geometry.dispose();
+      mesh.geometry.addAttribute("position", positionAttribute);
+    }
+
+    mesh.geometry.attributes.position.needsUpdate = true;
+    mesh.geometry.setDrawRange(0, mesh.vertexBuffer.getLength());
+    mesh.geometry.computeBoundingSphere();
   }
 }
-ContourGeometry.initClass();
 
 export default ContourGeometry;

@@ -305,14 +305,19 @@ class Tree {
       }
 
       if (mesh.geometry.attributes[attribute].array !== rBuffer.getBuffer()) {
+        // The reference of the underlying buffer has changes. Unfortunately,
+        // this means that we have to re-create all of the attributes.
         needsToRebuildGeometry = true;
       }
       mesh.geometry.attributes[attribute].needsUpdate = true;
     }
 
     if (needsToRebuildGeometry) {
+      // Free any memory allocated on the GPU
+      mesh.geometry.dispose();
       for (const attribute of Object.keys(attribute2buffer)) {
         const [itemSize, rBuffer] = attribute2buffer[attribute];
+        mesh.geometry.removeAttribute(attribute);
         mesh.geometry.addAttribute(attribute, this.makeDynamicFloatAttribute(itemSize, rBuffer));
       }
     }

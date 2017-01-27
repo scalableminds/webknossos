@@ -1,9 +1,16 @@
+/**
+ * particle_material_factory.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
 class ParticleMaterialFactory extends AbstractMaterialFactory {
 
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
 
   setupUniforms() {
     super.setupUniforms();

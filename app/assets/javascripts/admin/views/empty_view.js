@@ -8,9 +8,7 @@ import Marionette from "backbone.marionette";
 
 class EmptyView extends Marionette.View {
   static initClass() {
-    this.prototype.template = _.template(`\
-      <h4>There is no data for this view yet.</h4>\
-    `);
+    this.prototype.template = _.template("<h4>There is no data for this view yet.</h4>");
   }
 }
 EmptyView.initClass();

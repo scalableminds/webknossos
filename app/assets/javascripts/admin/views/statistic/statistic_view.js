@@ -1,7 +1,6 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import app from "app";
-import TimeStatisticModel from "admin/models/statistic/time_statistic_model";
 import GraphView from "./graph_view";
 import StatisticListView from "./statistic_list_view";
 import AchievementView from "./achievement_view";

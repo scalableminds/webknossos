@@ -87,6 +87,13 @@ sbt run
 
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000. Make sure that the mongoDB service is running before you start sbt.
 
+### Run on EC2 or other virtual machine
+Open port 9000
+Set URI in `conf/application.conf`, e.g.
+```
+http.uri = "http://ec2-52-26-116-51.us-west-2.compute.amazonaws.com:9000"
+```
+
 ## Test
 ```bash
 sbt test

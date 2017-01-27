@@ -51,6 +51,7 @@
       "no-use-before-define": ["error", { "functions": false }],
       "one-var": ["error", "never"],
       "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
-      "import/no-unresolved": "off"
+      "import/no-unresolved": "off",
+      "quote-props": ["error", "as-needed", {"numbers": true}]
     }
 }

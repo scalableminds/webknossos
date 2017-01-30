@@ -4,10 +4,10 @@
  */
 
 import _ from "lodash";
-import Utils from "../../../libs/utils";
 import Cube from "oxalis/model/binary/cube";
 import type { BoundingBoxType } from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
+import Utils from "../../../libs/utils";
 
 class BoundingBox {
   boundingBox: BoundingBoxType;

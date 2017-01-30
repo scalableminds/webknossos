@@ -5,8 +5,8 @@
 
 import _ from "lodash";
 import BucketBuilder from "./bucket_builder";
-import Request from "../../../../libs/request";
 import type { Vector3 } from "oxalis/constants";
+import Request from "../../../../libs/request";
 
 type LayerInfoType = {
   name: string;

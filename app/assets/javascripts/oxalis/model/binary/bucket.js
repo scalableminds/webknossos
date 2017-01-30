@@ -5,9 +5,9 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import Utils from "../../../libs/utils";
 import type { Vector4 } from "oxalis/constants";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
+import Utils from "../../../libs/utils";
 
 export const BucketStateEnum = {
   UNREQUESTED: 0,

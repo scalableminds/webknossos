@@ -332,6 +332,11 @@ class Model extends Backbone.Model {
   }
 
 
+  getBinaryByName(name) {
+    return _.find(this.binary, binary => binary.name === name);
+  }
+
+
   getLayerInfos(userLayers) {
     // Overwrite or extend layers with userLayers
 

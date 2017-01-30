@@ -4,6 +4,7 @@ import Marionette from "backbone.marionette";
 import app from "app";
 import OxalisController from "oxalis/controller";
 import OxalisModel from "oxalis/model";
+import OxalisApi from "oxalis/api";
 import Constants from "oxalis/constants";
 import BackboneToOxalisAdapterModel from "oxalis/model/settings/backbone_to_oxalis_adapter_model";
 import Modal from "oxalis/view/modal";
@@ -99,6 +100,7 @@ class TracingLayoutView extends Marionette.View {
       .on("click", this.showUserScriptsModal.bind(this));
 
     app.oxalis = new OxalisController(this.options);
+    window.webknossos = new OxalisApi(this.model);
   }
 
 

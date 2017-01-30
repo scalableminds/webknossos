@@ -161,6 +161,8 @@ class Controller {
         }
       },
     });
+
+    app.vent.trigger("webknossos:ready")
   }
 
 

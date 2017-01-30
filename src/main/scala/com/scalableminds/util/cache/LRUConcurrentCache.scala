@@ -3,14 +3,29 @@
  */
 package com.scalableminds.util.cache
 
-class LRUConcurrentCache[K, V](maxEntries: Int) {
+import play.api.libs
+
+trait LRUConcurrentCache[K, V] {
+  def maxEntries: Int
+
   private val cache = new java.util.LinkedHashMap[K, V]() {
-    override def removeEldestEntry(eldest: java.util.Map.Entry[K, V]): Boolean = size > maxEntries
+    override def removeEldestEntry(eldest: java.util.Map.Entry[K, V]): Boolean = {
+      if(size > maxEntries){
+        onElementRemoval(eldest.getKey, eldest.getValue)
+        true
+      } else {
+        false
+      }
+    }
   }
 
-  def put(key: K, value: V) {
+  def onElementRemoval(key: K, value: V): Unit = {}
+
+  def put(key: K, value: V): Unit =  {
     cache.synchronized {
-      cache.put(key, value)
+      val previous = cache.put(key, value)
+      if(previous != null)
+        onElementRemoval(key, previous)
     }
   }
 

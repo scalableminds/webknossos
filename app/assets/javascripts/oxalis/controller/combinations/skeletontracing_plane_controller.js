@@ -28,6 +28,14 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
+  simulateTracing() {
+    // For debugging purposes.
+    const [x, y, z] = this.flycam.getPosition();
+    this.setWaypoint([x + 1, y + 1, z], false);
+    _.defer(() => this.simulateTracing());
+  }
+
+
   start() {
     super.start();
     return $(".skeleton-plane-controls").show();
@@ -111,8 +119,8 @@ class SkeletonTracingPlaneController extends PlaneController {
     const camera = this.planeView.getCameras()[plane];
     // vector with direction from camera position to click position
     const normalizedMousePos = new THREE.Vector2(
-        ((position.x / (384 * scaleFactor)) * 2) - 1,
-        (-(position.y / (384 * scaleFactor)) * 2) + 1);
+        ((position.x / (constants.VIEWPORT_WIDTH * scaleFactor)) * 2) - 1,
+        (-(position.y / (constants.VIEWPORT_WIDTH * scaleFactor)) * 2) + 1);
 
     // create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     const raycaster = new THREE.Raycaster();

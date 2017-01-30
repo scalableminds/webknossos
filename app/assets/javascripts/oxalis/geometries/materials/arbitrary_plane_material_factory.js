@@ -44,9 +44,12 @@ varying vec2 vUv;
 void main()
 {
   float color_value = 0.0;
+  
+  // Need to mirror y for some reason.
+  vec2 texture_pos = vec2(vUv.x, 1.0 - vUv.y);
 
   /* Get grayscale value */
-  color_value = texture2D( <%= colorName %>_texture, vUv).r;
+  color_value = texture2D( <%= colorName %>_texture, texture_pos).r;
 
   /* Brightness / Contrast Transformation */
   color_value = (color_value + <%= colorName %>_brightness - 0.5) * <%= colorName %>_contrast + 0.5;

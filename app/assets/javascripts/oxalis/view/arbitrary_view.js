@@ -58,7 +58,7 @@ class ArbitraryView {
 
     this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale.clone(new THREE.Vector3(...app.scaleInfo.nmPerVoxel));
+    this.group.scale.copy(new THREE.Vector3(...app.scaleInfo.nmPerVoxel));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.group);
     this.group.add(camera);

@@ -4,14 +4,17 @@
  */
 
 import _ from "lodash";
-import BucketBuilder from "./bucket_builder";
 import type { Vector3 } from "oxalis/constants";
+import BucketBuilder from "./bucket_builder";
 import Request from "../../../../libs/request";
+
+type CategoryType = "color" | "segmentation";
+type ElementClassType = string; // TODO: Can/should we be more precise like "uint16" | "Uint32"?
 
 type LayerInfoType = {
   name: string;
-  category: string; // TODO: Can/should we be more precise like "color" | ... ?
-  elementClass: string; // TODO: Can/should we be more precise like "uint16" | "Uint32"?
+  category: CategoryType;
+  elementClass: ElementClassType;
 }
 
 // Abstract class that defines the Layer interface and implements common
@@ -29,8 +32,8 @@ class Layer {
   bitDepth: number;
   tokenPromise: Promise<string>;
   tokenRequestPromise: ?Promise<string>;
-  category: string;
-  elementClass: string;
+  category: CategoryType;
+  elementClass: ElementClassType;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
 
@@ -42,7 +45,10 @@ class Layer {
   constructor(layerInfo: LayerInfoType, dataSetName, dataStoreInfo) {
     this.dataSetName = dataSetName;
     this.dataStoreInfo = dataStoreInfo;
-    _.extend(this, layerInfo);
+
+    this.name = layerInfo.name;
+    this.category = layerInfo.category;
+    this.elementClass = layerInfo.elementClass;
 
     this.bitDepth = parseInt(this.elementClass.substring(4));
     this.tokenPromise = this.requestDataToken();

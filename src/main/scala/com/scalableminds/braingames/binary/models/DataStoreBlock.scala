@@ -22,6 +22,7 @@ case class LoadBlock(
                       dataLayer: DataLayer,
                       dataLayerSection: DataLayerSection,
                       resolution: Int,
+                      settings: DataRequestSettings,
                       block: Point3D) extends DataStoreBlock
 
 case class SaveBlock(

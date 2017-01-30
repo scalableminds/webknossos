@@ -7,7 +7,7 @@ import java.nio.file.{Path, Paths}
 
 import com.scalableminds.braingames.binary.MappingRequest
 import com.scalableminds.util.geometry.Point3D
-import java.io.{File, FilenameFilter}
+import java.io.{File, FilenameFilter, RandomAccessFile}
 
 import com.scalableminds.braingames.binary.models.{DataStoreBlock, LoadBlock, SaveBlock}
 import com.scalableminds.util.tools.Fox
@@ -24,7 +24,7 @@ trait DataStore {
   /**
     * Loads the data of a given point from the data source
     */
-  def load(dataInfo: LoadBlock): Fox[Array[Byte]]
+  def load(dataInfo: LoadBlock): Fox[RandomAccessFile]
 
   /**
     * Saves the data of a given point to the data source

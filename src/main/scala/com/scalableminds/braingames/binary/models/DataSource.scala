@@ -9,72 +9,95 @@ import com.scalableminds.util.geometry.{BoundingBox, Scale, Point3D}
 import play.api.libs.json._
 
 case class DataSourceSettings(
-  id: Option[String],
-  scale: Scale,
-  priority: Option[Int])
+                               id: Option[String],
+                               scale: Scale,
+                               priority: Option[Int])
 
 case class DataSource(
-  id: String,
-  baseDir: String,
-  scale: Scale,
-  priority: Int = 0,
-  dataLayers: List[DataLayer] = Nil,
-  sourceType: Option[String] = Some("knossos"),
-  blockLengthOpt: Option[Int] = Some(128)
-  ) {
+                       id: String,
+                       baseDir: String,
+                       scale: Scale,
+                       priority: Int = 0,
+                       dataLayers: List[DataLayer] = Nil,
+                       sourceType: Option[String] = Some("knossos"),
+                       blockLengthOpt: Option[Int] = Some(128)
+                     ) {
 
-  def getDataLayer(name: String) =
+  //  lazy val sourceFolder: Path =
+  //    Paths.get(baseDir)
+
+  /**
+    * Number of voxels per dimension in the storage format
+    */
+  val blockLength: Int =
+    blockLengthOpt.getOrElse(128)
+
+  /**
+    * Defines the size of the buckets loaded from files. This is the minimal size that can be loaded from a file.
+    */
+  val lengthOfLoadedCubes: Int = 32
+
+  /**
+    * Size of a single stored block in storage
+    */
+  val blockSize: Int =
+    blockLength * blockLength * blockLength
+
+  /**
+    * Boundary of the data source
+    */
+  lazy val boundingBox: BoundingBox =
+    BoundingBox.combine(dataLayers.map(_.boundingBox))
+
+  def getDataLayer(name: String): Option[DataLayer] =
     dataLayers.find(_.name == name)
 
-  def getByCategory(category: String) =
+  def getByCategory(category: String): Option[DataLayer] =
     dataLayers.find(_.category == category)
 
-  def sourceFolder = Paths.get(baseDir)
+  def relativeBaseDir(binaryBase: String): String =
+    baseDir.replace(binaryBase, "")
 
-  def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
-
-  def blockLength: Int = blockLengthOpt.getOrElse(128)
-
-  val blockSize = blockLength * blockLength * blockLength
-
-  lazy val boundingBox = BoundingBox.combine(dataLayers.map(_.boundingBox))
-
-  def pointToBlock(point: Point3D, resolution: Int) =
+  def pointToBlock(point: Point3D, resolution: Int): Point3D =
     Point3D(
       point.x / blockLength / resolution,
       point.y / blockLength / resolution,
       point.z / blockLength / resolution)
 
-  def applyResolution(point: Point3D, resolution: Int) =
+  def applyResolution(point: Point3D, resolution: Int): Point3D =
     Point3D(
       point.x / resolution,
       point.y / resolution,
       point.z / resolution)
 
-  override def toString() = {
+  override def toString: String =
     s"""$id (${dataLayers.map(_.name).mkString(", ")})"""
-  }
 }
 
-object DataSource{
-  implicit val dataSourceFormat = Json.format[DataSource]
+object DataSource {
+  implicit val dataSourceFormat: Format[DataSource] =
+    Json.format[DataSource]
 }
 
-object DataSourceSettings extends SettingsFile[DataSourceSettings]{
+object DataSourceSettings extends SettingsFile[DataSourceSettings] {
 
-  implicit val dataSourceSettingsFormat = Json.format[DataSourceSettings]
+  implicit val dataSourceSettingsFormat: Format[DataSourceSettings] =
+    Json.format[DataSourceSettings]
 
-  val settingsFileName = "settings.json"
+  val settingsFileName: String =
+    "settings.json"
 
-  val settingsFileReads = dataSourceSettingsFormat
+  val settingsFileReads: Format[DataSourceSettings] =
+    dataSourceSettingsFormat
 
-  def fromDataSource(dataSource: DataSource) = DataSourceSettings(
-    Some(dataSource.id),
-    dataSource.scale,
-    Some(dataSource.priority)
-  )
+  def fromDataSource(dataSource: DataSource): DataSourceSettings =
+    DataSourceSettings(
+      Some(dataSource.id),
+      dataSource.scale,
+      Some(dataSource.priority)
+    )
 
-  def writeToFolder(dataSource: DataSource, path: Path) = {
+  def writeToFolder(dataSource: DataSource, path: Path): Unit = {
     val settings = fromDataSource(dataSource)
     writeSettingsToFile(settings, settingsFileInFolder(path))
   }

@@ -8,7 +8,7 @@ import java.nio.file.Paths
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.util.Timeout
 import com.scalableminds.braingames.binary.requester
-import com.scalableminds.braingames.binary.requester.CachedBlock
+import com.scalableminds.braingames.binary.requester.{CachedBlock, DataCubeCache}
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.braingames.binary.watcher._
@@ -52,7 +52,7 @@ trait BinaryDataService
     PathUtils.ensureDirectory(Paths.get(config.getString("braingames.binary.baseFolder")))
 
   private val binDataCache =
-    new LRUConcurrentCache[CachedBlock, Array[Byte]](config.getInt("braingames.binary.cacheMaxSize"))
+    new DataCubeCache(config.getInt("braingames.binary.cacheMaxSize"))
 
   private lazy val dataRequester =
     new requester.DataRequester(config.getConfig("braingames.binary"), binDataCache, dataSourceRepository)

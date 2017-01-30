@@ -63,15 +63,6 @@ case class DataLayer(
   val maxCoordinates = BoundingBox.hull(sections.map(_.bboxBig))
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.bboxBig))
-
-  lazy val blockHandler: BlockHandler = sourceType.getOrElse("knossos") match {
-    case "knossos" =>
-      new KnossosBlockHandler()
-    case "webKnossosWrap" =>
-      new WebKnossosWrapBlockHandler()
-    case _ =>
-      throw new Exception("Unexpected data layer type")
-  }
 }
 
 object DataLayer extends LazyLogging{

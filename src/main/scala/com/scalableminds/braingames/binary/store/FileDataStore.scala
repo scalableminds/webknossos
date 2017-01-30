@@ -3,7 +3,7 @@
  */
 package com.scalableminds.braingames.binary.store
 
-import java.io.{File, FileInputStream, FileNotFoundException, FileOutputStream, InputStream, OutputStream}
+import java.io._
 import java.nio.file.{Files, Path, Paths}
 
 import com.newrelic.api.agent.NewRelic
@@ -32,7 +32,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  def load(dataInfo: LoadBlock): Fox[Array[Byte]] = {
+  def load(dataInfo: LoadBlock): Fox[RandomAccessFile] = {
     val fileSize = dataInfo.dataSource.blockSize * dataInfo.dataLayer.bytesPerElement
     load(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.resolution,
       dataInfo.block, fileSize, dataInfo.dataLayer.isCompressed)
@@ -43,7 +43,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
            resolution: Int,
            block: Point3D,
            fileSize: Int,
-           isCompressed: Boolean): Fox[Array[Byte]] = {
+           isCompressed: Boolean): Fox[RandomAccessFile] = {
     val ext = DataLayer.fileExt(isCompressed)
     lazy val fallback =
       fuzzyKnossosFile(dataSetDir, dataSetId, resolution, block, DataLayer.supportedFileExt)
@@ -51,7 +51,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     load(knossosFilePath(dataSetDir, dataSetId, resolution, block, ext), fallback, Some(fileSize))
   }
 
-  def load(path: Path, fallback: => Option[File], fileSize: Option[Int] = None): Fox[Array[Byte]] = {
+  def load(path: Path, fallback: => Option[File], fileSize: Option[Int] = None): Fox[RandomAccessFile] = {
     Future {
       try {
         Box(PathUtils.fileOption(path)
@@ -59,7 +59,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
           .orElse(fallback)
           .map { file =>
             val t = System.currentTimeMillis
-            val r = byteArrayFromFile(file, fileSize)
+            val r = new RandomAccessFile(file, "r") //byteArrayFromFile(file, fileSize)
             NewRelic.recordResponseTimeMetric("Custom/FileDataStore/files-response-time", System.currentTimeMillis - t)
             NewRelic.incrementCounter("Custom/FileDataStore/files-loaded")
             r
@@ -79,7 +79,11 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
 
   def load(request: MappingRequest): Fox[Array[Byte]] = {
     logger.info("Loading mapping file: " + request.dataLayerMappingPath)
-    load(Paths.get(request.dataLayerMappingPath), None)
+    load(Paths.get(request.dataLayerMappingPath), None).map{ f =>
+      val document = new Array[Byte](f.length.toInt)
+      f.readFully(document)
+      document
+    }
   }
 
   def createOutputStream(path: Path, compressionAllowed: Boolean) = {

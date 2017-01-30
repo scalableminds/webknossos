@@ -22,6 +22,8 @@ case class Cuboid(
   val depth = resolution * _depth
 
   val bottomRight = topLeft.dz(depth - 1).dx(width - 1).dy(height - 1)
+
+  val voxelVolume = width * height * depth
 }
 
 trait CubeIterator {

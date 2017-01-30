@@ -6,12 +6,11 @@ package com.scalableminds.braingames.binary.repository
 import java.nio.file.Path
 
 import com.scalableminds.braingames.binary.requester.DataRequester
-import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
+import com.scalableminds.braingames.binary.models.{DataLayer, DataRequestSettings, DataSource}
 import com.scalableminds.braingames.binary.store.FileDataStore
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.tools.{BlockedArray3D, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.annotation.tailrec
@@ -95,33 +94,32 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
       val targetResolution = resolution * 2
       logger.info(s"About to create resolution $targetResolution for ${dataSource.id}")
       val dataStore = new FileDataStore
+      val cubeLength = dataSource.lengthOfLoadedCubes
       val points = for {
-        x <- boundingBox.topLeft.x.to(boundingBox.bottomRight.x, dataSource.blockLength * targetResolution)
-        y <- boundingBox.topLeft.y.to(boundingBox.bottomRight.y, dataSource.blockLength * targetResolution)
-        z <- boundingBox.topLeft.z.to(boundingBox.bottomRight.z, dataSource.blockLength * targetResolution)
+        x <- boundingBox.topLeft.x.to(boundingBox.bottomRight.x, cubeLength * targetResolution)
+        y <- boundingBox.topLeft.y.to(boundingBox.bottomRight.y, cubeLength * targetResolution)
+        z <- boundingBox.topLeft.z.to(boundingBox.bottomRight.z, cubeLength * targetResolution)
       } yield Point3D(x, y, z)
 
-      val baseScale = 1.toFloat / dataSource.blockLength / resolution
-      val targetScale = 1.toFloat / dataSource.blockLength / targetResolution
+      val baseScale = 1.toFloat / cubeLength / resolution
+      val targetScale = 1.toFloat / cubeLength / targetResolution
 
-      points.foldLeft(Fox.successful(true)) {
-        case (f, p) => f.flatMap { _ =>
-          val minBlock = p.scale(baseScale)
-          val maxBlock = p.scale(baseScale).move(1, 1, 1)
-          val goal = p.scale(targetScale)
-          val combinedF: Fox[Array[Array[Byte]]] =
-            Fox.combined(dataRequester.loadBlocks(
-              minBlock, maxBlock, dataSource, None, resolution, layer, useCache = true))
+      Fox.serialCombined(points.toList){ p =>
+        val minBlock = p.scale(baseScale)
+        val maxBlock = p.scale(baseScale).move(1, 1, 1)
+        val goal = p.scale(targetScale)
+        val combinedF: Fox[Array[Array[Byte]]] =
+          Fox.combined(dataRequester.loadBlocks(
+            minBlock, maxBlock, dataSource, None, resolution, DataRequestSettings(false), layer, useCache = true))
 
-          combinedF.flatMap { cubes =>
-            val block = BlockedArray3D[Byte](
-              cubes, dataSource.blockLength, dataSource.blockLength,
-              dataSource.blockLength, 2, 2, 2, layer.bytesPerElement, 0)
-            val data = downScale(
-              block, dataSource.blockLength, dataSource.blockLength,
-              dataSource.blockLength, layer.bytesPerElement)
-            dataStore.save(target, dataSource.id, targetResolution, goal, data, shouldBeCompressed = false)
-          }
+        combinedF.flatMap { cubes =>
+          val block = BlockedArray3D[Byte](
+            cubes, dataSource.blockLength, dataSource.blockLength,
+            dataSource.blockLength, 2, 2, 2, layer.bytesPerElement, 0)
+          val data = downScale(
+            block, dataSource.blockLength, dataSource.blockLength,
+            dataSource.blockLength, layer.bytesPerElement)
+          dataStore.save(target, dataSource.id, targetResolution, goal, data, shouldBeCompressed = false)
         }
       } .map { r =>
         logger.info("Finished creating resolutions! Time: " + ((System.currentTimeMillis() - s) / 1000).toInt + " s")

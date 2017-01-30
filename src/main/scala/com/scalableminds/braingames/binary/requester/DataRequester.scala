@@ -4,6 +4,7 @@
 package com.scalableminds.braingames.binary.requester
 
 import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.requester.handlers.{BlockHandler, KnossosBlockHandler, WebKnossosWrapBlockHandler}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{BlockedArray3D, Fox, FoxImplicits}
@@ -20,7 +21,7 @@ class LayerLocker extends FoxImplicits {
 
   case class LockObject(id: String)
 
-  val lockObjects = mutable.HashMap.empty[String, LockObject]
+  private val lockObjects = mutable.HashMap.empty[String, LockObject]
 
   private def layer2String(dataSource: DataSource, layer: DataLayer) = {
     dataSource.id + "_#_" + layer.name
@@ -41,19 +42,33 @@ class LayerLocker extends FoxImplicits {
   }
 }
 
+class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedBlock, Cube] {
+  override def onElementRemoval(key: CachedBlock, value: Cube): Unit = {
+    value.scheduleForRemoval()
+  }
+}
+
 class DataRequester(
                      val conf: Config,
-                     val cache: LRUConcurrentCache[CachedBlock, Array[Byte]],
+                     val cache: DataCubeCache,
                      dataSourceRepository: DataSourceRepository)
-  extends DataCache
-          with FoxImplicits
-          with LazyLogging {
+  extends FoxImplicits
+    with LazyLogging {
 
   val layerLocker = new LayerLocker
 
-  implicit val dataBlockLoadTimeout = conf.getInt("loadTimeout").seconds
+  private implicit val dataBlockLoadTimeout = conf.getInt("loadTimeout").seconds
 
-  implicit val dataBlockSaveTimeout = conf.getInt("saveTimeout").seconds
+  private implicit val dataBlockSaveTimeout = conf.getInt("saveTimeout").seconds
+
+  def blockHandler(sourceType: Option[String]): BlockHandler = sourceType.getOrElse("knossos") match {
+    case "knossos" =>
+      new KnossosBlockHandler(cache)
+    case "webKnossosWrap" =>
+      new WebKnossosWrapBlockHandler(cache)
+    case _ =>
+      throw new Exception("Unexpected data layer type")
+  }
 
   def fallbackForLayer(layer: DataLayer): Future[List[(DataLayerSection, DataLayer)]] = {
     layer.fallback.toFox.flatMap { fallback =>
@@ -62,7 +77,9 @@ class DataRequester(
           d.getDataLayer(fallback.layerName).map {
             fallbackLayer =>
               if (layer.isCompatibleWith(fallbackLayer))
-                fallbackLayer.sections.map { (_, fallbackLayer) }
+                fallbackLayer.sections.map {
+                  (_, fallbackLayer)
+                }
               else {
                 logger.error(s"Incompatible fallback layer. $layer is not compatible with $fallbackLayer")
                 Nil
@@ -73,49 +90,42 @@ class DataRequester(
   }
 
   def load(dataRequest: DataRequest): Fox[Array[Byte]] = {
-
-    val cube = dataRequest.cuboid
-    val dataSource = dataRequest.dataSource
-    val layer = dataRequest.dataLayer
-    val maxCorner = cube.bottomRight
-    val minCorner = cube.topLeft
-
-    val minPoint = Point3D(math.max(minCorner.x, 0), math.max(minCorner.y, 0), math.max(minCorner.z, 0))
-    val minBlock = dataSource.pointToBlock(minPoint, dataRequest.resolution)
-    val maxBlock = dataSource.pointToBlock(maxCorner, dataRequest.resolution)
-
-    val pointOffset = minBlock.scale(dataSource.blockLength)
-
     dataRequest match {
       case request: DataReadRequest =>
-        val combinedF: Fox[Array[Array[Byte]]] = Fox.combined(loadBlocks(minBlock, maxBlock, dataRequest, layer))
-        combinedF.map {
-          blocks =>
-            BlockedArray3D(
-                            blocks,
-                            dataSource.blockLength, dataSource.blockLength, dataSource.blockLength,
-                            maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
-                            layer.bytesPerElement,
-                            0.toByte)
-        }.map {
-          block =>
-            new DataBlockCutter(block, request, layer, pointOffset).cutOutRequestedData
+        val point = request.cuboid.topLeft
+        if (point.x < 0 || point.y < 0 || point.z < 0) {
+          Fox.successful(new Array[Byte](request.cuboid.voxelVolume * request.dataLayer.bytesPerElement))
+        } else {
+          loadBlock(point, dataRequest, dataRequest.dataLayer)
         }
       case request: DataWriteRequest =>
-        Future(blocking(layerLocker.withLockFor(dataSource, layer)(() => synchronousSave(request,
-                                                                                   layer,
-                                                                                   minBlock,
-                                                                                   maxBlock,
-                                                                                   pointOffset))))
+        Future(blocking(layerLocker.withLockFor(dataRequest.dataSource, dataRequest.dataLayer)(() =>
+          synchronousSave(request, dataRequest.dataLayer, dataRequest.cuboid.topLeft))))
     }
   }
 
-  def loadBlocks(minBlock: Point3D,
-                 maxBlock: Point3D,
-                 dataRequest: DataRequest,
-                 layer: DataLayer,
-                 useCache: Boolean = true): Array[Fox[Array[Byte]]] = {
-    loadBlocks(minBlock, maxBlock, dataRequest.dataSource, dataRequest.dataSection, dataRequest.resolution, layer, useCache)
+  def loadBlock(topLeft: Point3D,
+                dataRequest: DataRequest,
+                layer: DataLayer,
+                useCache: Boolean = true): Fox[Array[Byte]] = {
+    loadBlock(topLeft, dataRequest.dataSource, dataRequest.dataSection, dataRequest.resolution, dataRequest.settings, layer, useCache)
+  }
+
+  def loadBlock(topLeft: Point3D,
+                dataSource: DataSource,
+                dataSection: Option[String],
+                resolution: Int,
+                settings: DataRequestSettings,
+                layer: DataLayer,
+                useCache: Boolean): Fox[Array[Byte]] = {
+    loadFromSomewhere(
+      dataSource,
+      layer,
+      dataSection,
+      resolution,
+      settings,
+      topLeft,
+      useCache)
   }
 
   def loadBlocks(minBlock: Point3D,
@@ -123,31 +133,36 @@ class DataRequester(
                  dataSource: DataSource,
                  dataSection: Option[String],
                  resolution: Int,
+                 settings: DataRequestSettings,
                  layer: DataLayer,
                  useCache: Boolean): Array[Fox[Array[Byte]]] = {
-    (minBlock to maxBlock).toArray.map{
+    (minBlock to maxBlock).toArray.map {
       p =>
         loadFromSomewhere(
           dataSource,
           layer,
           dataSection,
           resolution,
+          settings,
           p,
           useCache)
     }
   }
 
-  def loadFromSomewhere(dataSource: DataSource,
+
+    def loadFromSomewhere(dataSource: DataSource,
                         layer: DataLayer,
                         requestedSection: Option[String],
                         resolution: Int,
+                        settings: DataRequestSettings,
                         block: Point3D,
                         useCache: Boolean): Fox[Array[Byte]] = {
     var lastSection: Option[DataLayerSection] = None
+
     def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Fox[Array[Byte]] = sections match {
-      case (section, layer) #:: tail =>
+      case (section, layerOfSection) #:: tail =>
         lastSection = Some(section)
-        val loadBlock = LoadBlock(dataSource, layer, section, resolution, block)
+        val loadBlock = LoadBlock(dataSource, layerOfSection, section, resolution, settings, block)
         loadFromLayer(loadBlock, useCache).futureBox.flatMap {
           case Full(byteArray) =>
             Fox.successful(byteArray)
@@ -162,7 +177,9 @@ class DataRequester(
         Fox.successful(Array.empty[Byte])
     }
 
-    val sections = Stream(layer.sections.map { (_, layer) }.filter {
+    val sections = Stream(layer.sections.map {
+      (_, layer)
+    }.filter {
       section =>
         requestedSection.forall(_ == section._1.sectionId)
     }: _*).append(Await.result(fallbackForLayer(layer), 5.seconds))
@@ -171,12 +188,9 @@ class DataRequester(
   }
 
   def loadFromLayer(loadBlock: LoadBlock, useCache: Boolean): Fox[Array[Byte]] = {
-    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSource.blockLength, loadBlock.resolution)) {
-      if (useCache && !loadBlock.dataLayer.isUserDataLayer) {
-        withCache(loadBlock)(loadBlock.dataLayer.blockHandler.load(loadBlock, dataBlockLoadTimeout))
-      } else {
-        loadBlock.dataLayer.blockHandler.load(loadBlock, dataBlockLoadTimeout)
-      }
+    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block)) {
+      val shouldCache = useCache && !loadBlock.dataLayer.isUserDataLayer
+      blockHandler(loadBlock.dataLayer.sourceType).load(loadBlock, dataBlockLoadTimeout, shouldCache)
     } else {
       Fox.empty
     }
@@ -185,24 +199,9 @@ class DataRequester(
   def synchronousSave(
                        request: DataWriteRequest,
                        layer: DataLayer,
-                       minBlock: Point3D,
-                       maxBlock: Point3D,
-                       pointOffset: Point3D): Box[Array[Byte]] = {
+                       block: Point3D): Box[Array[Byte]] = {
     try {
-      val blockLength = request.dataSource.blockLength
-      val f = Fox.combined(loadBlocks(minBlock, maxBlock, request, layer, useCache = false)).map {
-        blocks =>
-          BlockedArray3D(
-                          blocks,
-                          blockLength, blockLength, blockLength,
-                          maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
-                          layer.bytesPerElement,
-                          0.toByte)
-      }.flatMap {
-        block =>
-          val blocks = new DataBlockWriter(block, request, layer, pointOffset).writeSuppliedData
-          saveBlocks(minBlock, maxBlock, request, layer, blocks).map(_ => Array.empty[Byte])
-      }.futureBox
+      val f = saveBlock(block, request, layer, request.data).map(_ => Array.empty[Byte]).futureBox
 
       // We will never wait here for ever, since all parts of the feature are upper bounded by Await.result on their own
       Await.result(f, Duration.Inf)
@@ -214,38 +213,15 @@ class DataRequester(
     }
   }
 
-  def saveBlocks(
-                  minBlock: Point3D,
-                  maxBlock: Point3D,
-                  dataRequest: DataRequest,
-                  layer: DataLayer,
-                  blocks: Array[Array[Byte]]): Future[List[Box[Boolean]]] = {
-
-    Fox.serialSequence((minBlock to maxBlock, blocks).zipped.toList) { case (point, block) =>
-      if(block.length > 0) {
-        saveToSomewhere(
-                         dataRequest.dataSource,
-                         layer,
-                         dataRequest.dataSection,
-                         dataRequest.resolution,
-                         point,
-                         block)
-      } else
-        Fox.successful(true)
-    }
-  }
-
-  def saveToSomewhere(
-                       dataSource: DataSource,
-                       layer: DataLayer,
-                       requestedSection: Option[String],
-                       resolution: Int,
-                       block: Point3D,
-                       data: Array[Byte]): Fox[Boolean] = {
+  def saveBlock(
+                 block: Point3D,
+                 request: DataRequest,
+                 layer: DataLayer,
+                 modifiedData: Array[Byte]): Fox[Boolean] = {
 
     def saveToSections(sections: List[DataLayerSection]): Fox[Boolean] = sections match {
       case section :: tail =>
-        val saveBlock = SaveBlock(dataSource, layer, section, resolution, block, data)
+        val saveBlock = SaveBlock(request.dataSource, layer, section, request.resolution, block, modifiedData)
         saveToLayer(saveBlock).futureBox.flatMap {
           case Full(r) => Future.successful(Full(r))
           case _ => saveToSections(tail)
@@ -255,14 +231,14 @@ class DataRequester(
         Fox.failure("dataStore.save.failedAllSections")
     }
 
-    val sections = layer.sections.filter(section => requestedSection.forall(_ == section.sectionId))
+    val sections = layer.sections.filter(section => request.dataSection.forall(_ == section.sectionId))
 
     saveToSections(sections)
   }
 
   def saveToLayer(saveBlock: SaveBlock): Fox[Boolean] = {
-    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block, saveBlock.dataSource.blockLength, saveBlock.resolution)) {
-      saveBlock.dataLayer.blockHandler.save(saveBlock, dataBlockSaveTimeout)
+    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block)) {
+      blockHandler(saveBlock.dataLayer.sourceType).save(saveBlock, dataBlockSaveTimeout)
     } else {
       Fox.empty
     }

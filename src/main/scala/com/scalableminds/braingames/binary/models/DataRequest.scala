@@ -13,7 +13,8 @@ trait DataRequest extends AbstractDataRequest {
   def dataSection: Option[String]
   def resolution: Int
   def cuboid: Cuboid
-  }
+  def settings: DataRequestSettings
+}
 
 case class DataReadRequest(
   dataSource: DataSource,
@@ -36,7 +37,9 @@ case class DataWriteRequest(
   dataSection: Option[String],
   resolution: Int,
   cuboid: Cuboid,
-  data: Array[Byte]) extends DataRequest
+  data: Array[Byte]) extends DataRequest {
+  val settings = DataRequestSettings(useHalfByte = false)
+}
 
 case class DataRequestCollection[+A <: DataRequest](requests: List[A]) extends AbstractDataRequest
 

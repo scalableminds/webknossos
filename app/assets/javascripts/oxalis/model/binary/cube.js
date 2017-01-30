@@ -91,10 +91,10 @@ class Cube {
   // It is then removed from the cube.
 
 
-  constructor(globalBoundingBox: BoundingBoxType, upperBoundary: Vector3, zoom_step_count: number, bit_depth: number) {
+  constructor(globalBoundingBox: BoundingBoxType, upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
     this.upperBoundary = upperBoundary;
-    this.ZOOM_STEP_COUNT = zoom_step_count;
-    this.BIT_DEPTH = bit_depth;
+    this.ZOOM_STEP_COUNT = zoomStepCount;
+    this.BIT_DEPTH = bitDepth;
     _.extend(this, Backbone.Events);
 
     this.NULL_BUCKET_OUT_OF_BB = new NullBucket(NullBucket.prototype.TYPE_OUT_OF_BOUNDING_BOX);

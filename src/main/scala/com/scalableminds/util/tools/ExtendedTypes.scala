@@ -3,6 +3,7 @@
 */
 package com.scalableminds.util.tools
 
+import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 
 import play.api.libs.ws.{WSAuthScheme, WSRequest}
@@ -226,6 +227,20 @@ object ExtendedTypes {
       var ret = q.enqueue(elem)
       while (ret.size > maxSize) { ret = ret.dequeue._2 }
       ret
+    }
+  }
+
+  implicit class ExtendedRandomAccessFile(f: RandomAccessFile){
+    def isClosed: Boolean = {
+      val method = f.getClass.getDeclaredField("closed")
+      method.setAccessible(true)
+      method.getBoolean(f)
+    }
+
+    def getPath: String = {
+      val method2 = f.getClass.getDeclaredField("path")
+      method2.setAccessible(true)
+      method2.get(f).asInstanceOf[String]
     }
   }
 

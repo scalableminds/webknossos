@@ -60,7 +60,7 @@ trait CollectionHelpers[T]
   }
 
   def findOrderedBy(attribute: String, desc: Int, limit: Int = 1)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find().sort(Json.obj(attribute -> desc)).cursor[T].collect[List](limit)
+    find().sort(Json.obj(attribute -> desc)).cursor[T]().collect[List](limit)
   }
 
   private def findByAttribute(attribute: String, value: JsValue)(implicit ctx: DBAccessContext) = {
@@ -68,7 +68,7 @@ trait CollectionHelpers[T]
   }
 
   def find[V](attribute: String, value: V)(implicit w: Writes[V], ctx: DBAccessContext): Cursor[T] = {
-    findByAttribute(attribute, w.writes(value)).cursor[T]
+    findByAttribute(attribute, w.writes(value)).cursor[T]()
   }
 
   //  def find(query: JsObject)(implicit ctx: DBAccessContext) = {
@@ -94,12 +94,12 @@ trait CollectionHelpers[T]
     q
       .options(options)
       .sort(document)
-      .cursor[T]
+      .cursor[T]()
       .collect[List](limit)
   }
 
   def findAll(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find(Json.obj()).cursor[T].collect[List]()
+    find(Json.obj()).cursor[T]().collect[List]()
   }
 
   def toMongoObjectIdString(id: String) =

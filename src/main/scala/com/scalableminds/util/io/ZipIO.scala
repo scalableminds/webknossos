@@ -17,6 +17,7 @@ import com.scalableminds.util.tools.Fox
 import com.sun.org.apache.xpath.internal.operations.Bool
 import net.liftweb.common.Full
 import org.apache.commons.io.IOUtils
+import views.html.helper.input
 
 import scala.concurrent.Future
 
@@ -51,7 +52,9 @@ object ZipIO {
   def zip(sources: List[NamedStream], out: OutputStream) = {
     if (sources.nonEmpty){
       val zip = startZip(out)
-      Fox.serialSequence(sources){s => zip.withFile(s.normalizedName)(s.writeTo)}.map{ _ =>
+      Fox.serialSequence(sources){s =>
+        zip.withFile(s.normalizedName)(s.writeTo)
+      }.map{ _ =>
         zip.close()
       }
     } else
@@ -64,35 +67,24 @@ object ZipIO {
 
   def gzip(source: InputStream, out: OutputStream) = {
     val gout = new GZIPOutputStream(out, Deflater.BEST_COMPRESSION)
-    val buffer = new Array[Byte](1024)
-    var len = 0
-    do {
-      len = source.read(buffer)
-      if (len > 0)
-        gout.write(buffer, 0, len)
-    } while (len > 0)
-    source.close()
-    gout.close()
+    try {
+      val buffer = new Array[Byte](1024)
+      var len = 0
+      do {
+        len = source.read(buffer)
+        if (len > 0)
+          gout.write(buffer, 0, len)
+      } while (len > 0)
+    } finally {
+      source.close()
+      gout.close()
+    }
   }
 
   def gzipToTempFile(f: File) = {
     val gzipped = File.createTempFile("temp", System.nanoTime().toString + "_" + f.getName)
     gzip(new FileInputStream(f), new FileOutputStream(gzipped))
     gzipped
-  }
-
-  def unzip(file: File, includeHiddenFiles: Boolean = false): List[InputStream] = {
-    unzip(new java.util.zip.ZipFile(file), includeHiddenFiles)
-  }
-
-  def unzip(zip: ZipFile, includeHiddenFiles: Boolean): List[InputStream] = {
-    import collection.JavaConverters._
-    zip
-      .entries
-      .asScala
-      .filter(e => !e.isDirectory && (includeHiddenFiles || !isHiddenFile(e.getName)))
-      .map(entry => zip.getInputStream(entry))
-      .toList
   }
 
   def withUnziped[A](file: File, includeHiddenFiles: Boolean, fileExtensionFilter: String)(f: (String, InputStream) => A): List[A] = {
@@ -113,7 +105,17 @@ object ZipIO {
       .asScala
       .filter(e => !e.isDirectory && (includeHiddenFiles || !isHiddenFile(e.getName)))
       .filter(customFilter)
-      .map(entry => f(entry.getName, zip.getInputStream(entry)))
+      .map { entry =>
+        var input: InputStream = null
+        try{
+          input = zip.getInputStream(entry)
+          val result = f(entry.getName, input)
+          input.close()
+          result
+        } finally {
+          if(input != null) input.close()
+        }
+      }
       .toList
 
     zip.close()

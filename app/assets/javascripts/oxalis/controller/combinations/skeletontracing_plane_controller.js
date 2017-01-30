@@ -4,7 +4,6 @@
  */
 
 import $ from "jquery";
-import app from "app";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
@@ -128,7 +127,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     raycaster.ray.direction.multiplyScalar(-1);
     intersects = intersects.concat(raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes()));
 
-    intersects = _.sortBy(intersects, (intersect) => intersect.distanceToRay);
+    intersects = _.sortBy(intersects, intersect => intersect.distanceToRay);
 
     for (const intersect of intersects) {
       const { index } = intersect;

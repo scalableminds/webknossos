@@ -34,17 +34,12 @@ class Tree {
       edgeGeometry,
       new THREE.LineBasicMaterial({
         color: this.darkenHex(treeColor),
-        linewidth: this.getLineWidth()}),
+        linewidth: this.getLineWidth(),
+      }),
       THREE.LineSegments,
     );
 
     this.particleMaterial = new ParticleMaterialFactory(this.model).getMaterial();
-
-    const debugParticleMaterial = new THREE.PointsMaterial({
-      color: 0xff0000,
-      sizeAttenuation: false,
-      size: 10,
-    });
 
     this.nodes = new THREE.Points(nodeGeometry, this.particleMaterial);
 
@@ -293,11 +288,11 @@ class Tree {
   }
 
 
-  updateGeometry(mesh, attribute2buffer, itemsPerElement=1) {
+  updateGeometry(mesh, attribute2buffer, itemsPerElement = 1) {
     let length = -1;
     let needsToRebuildGeometry = false;
     for (const attribute of Object.keys(attribute2buffer)) {
-      const [_, rBuffer] = attribute2buffer[attribute];
+      const rBuffer = attribute2buffer[attribute][1];
 
       if (length === -1) {
         length = rBuffer.getLength();
@@ -338,11 +333,12 @@ class Tree {
 
 
   getNodeIndex(nodeId) {
-    for (const i of Utils.__range__(0, this.nodeIDs.length, true)) {
+    for (let i = 0; i < this.nodeIDs.length; i++) {
       if (this.nodeIDs.get(i) === nodeId) {
         return i;
       }
     }
+    return null;
   }
 
 

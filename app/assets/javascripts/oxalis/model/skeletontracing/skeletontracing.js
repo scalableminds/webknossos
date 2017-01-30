@@ -365,8 +365,24 @@ class SkeletonTracing {
   }
 
 
-  setComment(commentText) {
-    this.trigger("setComment", commentText);
+  setCommentForNode(commentText, node) {
+    this.trigger("setComment", commentText, node);
+  }
+
+
+  getCommentForNode(nodeId, tree) {
+    let trees;
+    if (tree === undefined) {
+      trees = this.getTrees();
+    } else {
+      trees = [tree];
+    }
+
+    for (const curTree of trees) {
+      const found = _.find(curTree.comments, { node: nodeId });
+      if (found) { return found; }
+    }
+    return null;
   }
 
 

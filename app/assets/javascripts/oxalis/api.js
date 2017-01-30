@@ -7,6 +7,8 @@ import _ from "lodash";
 import app from "app";
 import OxalisModel from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
+import TracePoint from "oxalis/model/skeletontracing/tracepoint";
+import TraceTree from "oxalis/model/skeletontracing/tracetree";
 
 
 class TracingApi {
@@ -27,6 +29,19 @@ class TracingApi {
 
   setActiveNode(id: number) {
     this.model.skeletonTracing.setActiveNode(id);
+  }
+
+  getAllNodes(): [TracePoint] {
+    return this.model.skeletonTracing.getNodeListOfAllTrees();
+  }
+
+  setCommentForNode(commentText: string, node: TracePoint | number): void {
+    if (_.isNumber(node)) { node = this.model.skeletonTracing.getNode(node); }
+    this.model.skeletonTracing.setCommentForNode(commentText, node);
+  }
+
+  getCommentForNode(nodeId: number, tree: ?TraceTree): string {
+    return this.model.skeletonTracing.getCommentForNode(nodeId, tree);
   }
 
 }

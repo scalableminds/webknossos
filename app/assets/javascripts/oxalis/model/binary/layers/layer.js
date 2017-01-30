@@ -3,7 +3,6 @@
  * @flow weak
  */
 
-import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import BucketBuilder from "./bucket_builder";
 import Request from "../../../../libs/request";

@@ -212,7 +212,7 @@ class CameraController {
     tweenState.camera.bottom = tweenState.b;
     tweenState.camera.up = new THREE.Vector3(tweenState.upX, tweenState.upY, tweenState.upZ);
 
-    tweenState.flycam.setRayThreshold(tweenState.camera.right, tweenState.camera.left);
+    tweenState.flycam.update3DViewSize(tweenState.camera.right, tweenState.camera.left);
     tweenState.camera.updateProjectionMatrix();
     tweenState.notify();
     app.vent.trigger("rerender");
@@ -249,7 +249,7 @@ class CameraController {
     camera.bottom = (middleY - baseOffset) + offsetY;
     camera.updateProjectionMatrix();
 
-    this.flycam.setRayThreshold(camera.right, camera.left);
+    this.flycam.update3DViewSize(camera.right, camera.left);
     app.vent.trigger("rerender");
   }
 

@@ -111,18 +111,24 @@ class SkeletonTracingPlaneController extends PlaneController {
     const { scaleFactor } = this.planeView;
     const camera = this.planeView.getCameras()[plane];
     // vector with direction from camera position to click position
-    const vector = new THREE.Vector2(((position.x / (384 * scaleFactor)) * 2) - 1, (-(position.y / (384 * scaleFactor)) * 2) + 1);
+    const normalizedMousePos = new THREE.Vector2(
+        ((position.x / (384 * scaleFactor)) * 2) - 1,
+        (-(position.y / (384 * scaleFactor)) * 2) + 1);
 
     // create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(vector, camera);
+    raycaster.setFromCamera(normalizedMousePos, camera);
     raycaster.params.Points.threshold = this.model.flycam.getRayThreshold(plane);
 
     // identify clicked object
     let intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());
-    intersects = _.sortBy(intersects, (intersect) => intersect.distanceToRay);
 
-    console.log(intersects);
+    // Also look backwards: We want to detect object even when they are behind
+    // the camera. Later, we filter out invisible objects.
+    raycaster.ray.direction.multiplyScalar(-1);
+    intersects = intersects.concat(raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes()));
+
+    intersects = _.sortBy(intersects, (intersect) => intersect.distanceToRay);
 
     for (const intersect of intersects) {
       const { index } = intersect;

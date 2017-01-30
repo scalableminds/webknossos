@@ -61,7 +61,7 @@ class DataRequester(
 
   private implicit val dataBlockSaveTimeout = conf.getInt("saveTimeout").seconds
 
-  def blockHandler(sourceType: Option[String]): BlockHandler = sourceType.getOrElse("knossos") match {
+  private def blockHandler(sourceType: Option[String]): BlockHandler = sourceType.getOrElse("knossos") match {
     case "knossos" =>
       new KnossosBlockHandler(cache)
     case "webKnossosWrap" =>
@@ -70,7 +70,7 @@ class DataRequester(
       throw new Exception("Unexpected data layer type")
   }
 
-  def fallbackForLayer(layer: DataLayer): Future[List[(DataLayerSection, DataLayer)]] = {
+  private def fallbackForLayer(layer: DataLayer): Future[List[(DataLayerSection, DataLayer)]] = {
     layer.fallback.toFox.flatMap { fallback =>
       dataSourceRepository.findUsableDataSource(fallback.dataSourceName).flatMap {
         d =>
@@ -89,43 +89,24 @@ class DataRequester(
     }.getOrElse(Nil)
   }
 
+  private def emptyResult(request: DataRequest) =
+    Fox.successful(new Array[Byte](request.cuboid.voxelVolume * request.dataLayer.bytesPerElement))
+
   def load(dataRequest: DataRequest): Fox[Array[Byte]] = {
     dataRequest match {
       case request: DataReadRequest =>
         val point = request.cuboid.topLeft
         if (point.x < 0 || point.y < 0 || point.z < 0) {
-          Fox.successful(new Array[Byte](request.cuboid.voxelVolume * request.dataLayer.bytesPerElement))
+          emptyResult(request)
         } else {
-          loadBlock(point, dataRequest, dataRequest.dataLayer)
+          loadBlock(
+            request.dataSource, request.dataLayer, request.dataSection,
+            request.resolution, request.settings, point, useCache = true)
         }
       case request: DataWriteRequest =>
         Future(blocking(layerLocker.withLockFor(dataRequest.dataSource, dataRequest.dataLayer)(() =>
           synchronousSave(request, dataRequest.dataLayer, dataRequest.cuboid.topLeft))))
     }
-  }
-
-  def loadBlock(topLeft: Point3D,
-                dataRequest: DataRequest,
-                layer: DataLayer,
-                useCache: Boolean = true): Fox[Array[Byte]] = {
-    loadBlock(topLeft, dataRequest.dataSource, dataRequest.dataSection, dataRequest.resolution, dataRequest.settings, layer, useCache)
-  }
-
-  def loadBlock(topLeft: Point3D,
-                dataSource: DataSource,
-                dataSection: Option[String],
-                resolution: Int,
-                settings: DataRequestSettings,
-                layer: DataLayer,
-                useCache: Boolean): Fox[Array[Byte]] = {
-    loadFromSomewhere(
-      dataSource,
-      layer,
-      dataSection,
-      resolution,
-      settings,
-      topLeft,
-      useCache)
   }
 
   def loadBlocks(minBlock: Point3D,
@@ -138,7 +119,7 @@ class DataRequester(
                  useCache: Boolean): Array[Fox[Array[Byte]]] = {
     (minBlock to maxBlock).toArray.map {
       p =>
-        loadFromSomewhere(
+        loadBlock(
           dataSource,
           layer,
           dataSection,
@@ -150,13 +131,13 @@ class DataRequester(
   }
 
 
-    def loadFromSomewhere(dataSource: DataSource,
-                        layer: DataLayer,
-                        requestedSection: Option[String],
-                        resolution: Int,
-                        settings: DataRequestSettings,
-                        block: Point3D,
-                        useCache: Boolean): Fox[Array[Byte]] = {
+  def loadBlock(dataSource: DataSource,
+                layer: DataLayer,
+                requestedSection: Option[String],
+                resolution: Int,
+                settings: DataRequestSettings,
+                block: Point3D,
+                useCache: Boolean): Fox[Array[Byte]] = {
     var lastSection: Option[DataLayerSection] = None
 
     def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Fox[Array[Byte]] = sections match {

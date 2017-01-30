@@ -112,10 +112,12 @@ trait BinaryDataReadController extends BinaryDataCommonController {
    * POST body is specified in the DataProtocol.readRequestParser BodyParser.
    */
 
-  def requestViaAjax(dataSetName: String, dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async(DataProtocol.readRequestParser) {
+  def requestViaAjax(
+                      dataSetName: String,
+                      dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async(DataProtocol.readRequestParser) {
     
     def validateRequests(requests: Seq[Box[DataProtocolReadRequest]]) = {
-      requests.find(!_.isDefined) match {
+      requests.find(_.isEmpty) match {
         case Some(Failure(msg, _, _)) => Failure(msg)
         case None => Full(requests.flatten.toList)
         case _ => Empty
@@ -137,7 +139,12 @@ trait BinaryDataReadController extends BinaryDataCommonController {
    * Handles a request for binary data via a HTTP GET. Mostly used by knossos.
    */
 
-  def requestViaKnossos(dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
+  def requestViaKnossos(
+                         dataSetName: String,
+                         dataLayerName: String,
+                         resolution: Int,
+                         x: Int, y: Int, z: Int,
+                         cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
       AllowRemoteOrigin {
         val logRes = (math.log(resolution) / math.log(2)).toInt
@@ -323,7 +330,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
       params = ImageCreatorParameters(dataLayer.bytesPerElement, settings.useHalfByte, width, height, imagesPerRow, blackAndWhite = blackAndWhite)
       data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
-      firstSheet <- spriteSheet.pages.headOption ?~> "Couldn'T create spritesheet"
+      firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {
       new JPEGWriter().writeToFile(firstSheet.image)
     }

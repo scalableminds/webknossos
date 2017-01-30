@@ -4,11 +4,15 @@
  */
 
 import _ from "lodash";
-import Utils from "../../../libs/utils";
 import Cube from "oxalis/model/binary/cube";
 import type { Vector3 } from "oxalis/constants";
+import Utils from "../../../libs/utils";
 
 // TODO: This should be refactored into composition instead of inheritance
+// Try to not use this type unless flow forces you to do that because you are
+// trying to access "zoomStep" or "isTemporalData" of an Uint8Array.
+// When we flowed everything we can refactor all occurences of BucketData into
+// composition.
 class BucketData extends Uint8Array {
   zoomStep: number;
   isTemporalData: boolean;

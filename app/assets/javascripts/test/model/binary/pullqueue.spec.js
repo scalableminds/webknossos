@@ -3,7 +3,7 @@ import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import runAsync from "../../helpers/run-async";
-import { Bucket } from "../../../oxalis/model/binary/bucket";
+import { Bucket, BucketStateEnum } from "../../../oxalis/model/binary/bucket";
 
 mockRequire.stopAll();
 
@@ -72,8 +72,8 @@ describe("PullQueue", () => {
 
       runAsync([
         () => {
-          expect(buckets[0].state).toBe(Bucket.prototype.STATE_LOADED);
-          expect(buckets[1].state).toBe(Bucket.prototype.STATE_LOADED);
+          expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+          expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
           expect(buckets[0].getData()).toEqual(new Uint8Array(bucketData1));
           expect(buckets[1].getData()).toEqual(new Uint8Array(bucketData2));
           done();

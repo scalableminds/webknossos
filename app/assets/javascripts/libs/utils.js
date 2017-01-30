@@ -14,12 +14,12 @@ const Utils = {
   },
 
 
-  zeroPad(num, zeros: number = 0) {
-    num = `${num}`;
-    while (num.length < zeros) {
-      num = `0${num}`;
+  zeroPad(num: number, zeros: number = 0): string {
+    let paddedNum = `${num.toString()}`;
+    while (paddedNum.length < zeros) {
+      paddedNum = `0${paddedNum}`;
     }
-    return num;
+    return paddedNum;
   },
 
 

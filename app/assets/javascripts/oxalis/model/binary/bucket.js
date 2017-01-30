@@ -9,11 +9,14 @@ import Utils from "../../../libs/utils";
 import type { Vector4 } from "oxalis/constants";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 
+export const BucketStateEnum = {
+  UNREQUESTED: 0,
+  REQUESTED: 1,
+  LOADED: 2,
+};
+const BucketStateNames = ["unrequested", "requested", "loaded"];
+
 class Bucket {
-  STATE_UNREQUESTED: 0;
-  STATE_REQUESTED: 1;
-  STATE_LOADED: 2;
-  STATE_NAMES: ["unrequested", "requested", "loaded"];
   BUCKET_SIZE_P: number;
   BIT_DEPTH: number;
   BUCKET_LENGTH: number;
@@ -29,12 +32,6 @@ class Bucket {
   trigger: Function;
 
   static initClass() {
-    this.prototype.STATE_UNREQUESTED = 0;
-    this.prototype.STATE_REQUESTED = 1;
-    this.prototype.STATE_LOADED = 2;
-
-    this.prototype.STATE_NAMES = ["unrequested", "requested", "loaded"];
-
     this.prototype.BUCKET_SIZE_P = 5;
   }
 
@@ -48,7 +45,7 @@ class Bucket {
     this.BUCKET_LENGTH = (1 << (this.BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
     this.BYTE_OFFSET = (this.BIT_DEPTH >> 3);
 
-    this.state = this.STATE_UNREQUESTED;
+    this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
     this.accessed = true;
 
@@ -57,19 +54,19 @@ class Bucket {
 
 
   shouldCollect() {
-    const collect = !this.accessed && !this.dirty && this.state !== this.STATE_REQUESTED;
+    const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
     this.accessed = false;
     return collect;
   }
 
 
   needsRequest() {
-    return this.state === this.STATE_UNREQUESTED;
+    return this.state === BucketStateEnum.UNREQUESTED;
   }
 
 
   isLoaded() {
-    return this.state === this.STATE_LOADED;
+    return this.state === BucketStateEnum.LOADED;
   }
 
 
@@ -107,7 +104,7 @@ class Bucket {
   pull() {
     this.state = (() => {
       switch (this.state) {
-        case this.STATE_UNREQUESTED: return this.STATE_REQUESTED;
+        case BucketStateEnum.UNREQUESTED: return BucketStateEnum.REQUESTED;
         default: return this.unexpectedState();
       }
     })();
@@ -117,7 +114,7 @@ class Bucket {
   pullFailed() {
     this.state = (() => {
       switch (this.state) {
-        case this.STATE_REQUESTED: return this.STATE_UNREQUESTED;
+        case BucketStateEnum.REQUESTED: return BucketStateEnum.UNREQUESTED;
         default: return this.unexpectedState();
       }
     })();
@@ -127,14 +124,14 @@ class Bucket {
   receiveData(data) {
     this.state = (() => {
       switch (this.state) {
-        case this.STATE_REQUESTED:
+        case BucketStateEnum.REQUESTED:
           if (this.dirty) {
             this.merge(data);
           } else {
             this.data = data;
           }
           this.trigger("bucketLoaded");
-          return this.STATE_LOADED;
+          return BucketStateEnum.LOADED;
         default:
           return this.unexpectedState();
       }
@@ -144,7 +141,7 @@ class Bucket {
 
   push() {
     switch (this.state) {
-      case this.STATE_LOADED:
+      case BucketStateEnum.LOADED:
         this.dirty = false;
         break;
       default:
@@ -154,7 +151,7 @@ class Bucket {
 
 
   unexpectedState() {
-    throw new Error(`Unexpected state: ${this.STATE_NAMES[this.state]}`);
+    throw new Error(`Unexpected state: ${BucketStateNames[this.state]}`);
   }
 
 

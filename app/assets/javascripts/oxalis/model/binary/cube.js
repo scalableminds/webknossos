@@ -8,6 +8,7 @@ import Backbone from "backbone";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
+import type { BoundingBoxType } from "oxalis/model";
 import Utils from "../../../libs/utils";
 import { Bucket, NullBucket } from "./bucket";
 import ArbitraryCubeAdapter from "./arbitrary_cube_adapter";
@@ -90,10 +91,10 @@ class Cube {
   // It is then removed from the cube.
 
 
-  constructor(globalBoundingBox, upperBoundary: Vector3, ZOOM_STEP_COUNT, BIT_DEPTH) {
+  constructor(globalBoundingBox: BoundingBoxType, upperBoundary: Vector3, zoom_step_count: number, bit_depth: number) {
     this.upperBoundary = upperBoundary;
-    this.ZOOM_STEP_COUNT = ZOOM_STEP_COUNT;
-    this.BIT_DEPTH = BIT_DEPTH;
+    this.ZOOM_STEP_COUNT = zoom_step_count;
+    this.BIT_DEPTH = bit_depth;
     _.extend(this, Backbone.Events);
 
     this.NULL_BUCKET_OUT_OF_BB = new NullBucket(NullBucket.prototype.TYPE_OUT_OF_BOUNDING_BOX);
@@ -119,7 +120,7 @@ class Cube {
 
     this.arbitraryCube = new ArbitraryCubeAdapter(this, cubeBoundary.slice());
 
-    for (const i of Utils.__range__(0, this.ZOOM_STEP_COUNT, false)) {
+    for (let i = 0; i < this.ZOOM_STEP_COUNT; i++) {
       this.cubes[i] = {
         data: new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]),
         boundary: cubeBoundary.slice(),

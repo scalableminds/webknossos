@@ -3,7 +3,7 @@
  */
 package com.scalableminds.datastore.controllers
 
-import java.io.{File, FileOutputStream}
+import java.io.{File, FileOutputStream, InputStream}
 import java.nio.file.{Path, Paths}
 import javax.inject.Inject
 
@@ -91,6 +91,16 @@ class DataSourceController @Inject()(val messagesApi: MessagesApi) extends Contr
       }
   }
 
+  private def copyInputToFile(in: InputStream, path: Path): Unit = {
+    var out: FileOutputStream = null
+    try {
+      out = new FileOutputStream(path.toFile)
+      IOUtils.copy(in, out)
+    } finally {
+      if(out != null) out.close()
+    }
+  }
+
   private def unzipDataSource(baseDir: Path, filePath: String): Box[Boolean] = {
     try {
       logger.warn(s"Unzipping uploaded dataset: $filePath")
@@ -98,9 +108,7 @@ class DataSourceController @Inject()(val messagesApi: MessagesApi) extends Contr
         val path = baseDir.resolve(Paths.get(name))
         if (path.getParent != null)
           PathUtils.ensureDirectory(path.getParent)
-        val out = new FileOutputStream(new File(path.toString))
-        IOUtils.copy(in, out)
-        out.close()
+        copyInputToFile(in, path)
       }
       Full(true)
     } catch {

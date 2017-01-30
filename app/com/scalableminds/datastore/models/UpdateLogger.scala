@@ -3,6 +3,7 @@
  */
 package com.scalableminds.datastore.models
 
+import java.io.OutputStream
 import java.nio.file.{Files, Paths}
 import java.util.UUID
 
@@ -28,17 +29,19 @@ object VolumeUpdateService extends LazyLogging with FoxImplicits{
   private def writeDataToFile(data: Array[Byte]): Fox[String] = {
     Future {
       blocking {
+        var os: OutputStream = null
         try {
           val userBackupFolder = PathUtils.ensureDirectory(Paths.get("userBinaryData").resolve("logging"))
           val backupFile = userBackupFolder.resolve(UUID.randomUUID().toString + ".raw")
-          val os = Files.newOutputStream(backupFile)
+          os = Files.newOutputStream(backupFile)
           os.write(data)
-          os.close()
           Full(backupFile.toString)
         } catch {
           case e: Exception =>
             logger.error("Failed to write volume update to backup folder. Error: " + e)
             Failure("Failed to write volume update to backup folder.", Full(e), Empty)
+        } finally {
+          if(os != null) os.close()
         }
       }
     }

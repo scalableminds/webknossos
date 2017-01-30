@@ -7,6 +7,7 @@ import play.api.libs.json._
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.braingames.binary.requester.handlers.{BlockHandler, KnossosBlockHandler, WebKnossosWrapBlockHandler}
 import com.typesafe.scalalogging.LazyLogging
+import com.scalableminds.braingames.binary.repository.{KnossosDataSourceType, WebKnossosWrapDataSourceType}
 import java.lang.Exception
 
 import scala.util.Try
@@ -43,7 +44,7 @@ case class DataLayer(
                       sections: List[DataLayerSection] = Nil,
                       nextSegmentationId: Option[Long] = None,
                       mappings: List[DataLayerMapping] = List(),
-                      sourceType: Option[String] = Some("knossos")
+                      sourceType: Option[String] = Some(KnossosDataSourceType.name)
   ) extends DataLayerLike {
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
@@ -64,10 +65,10 @@ case class DataLayer(
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.bboxBig))
 
-  lazy val blockHandler: BlockHandler = sourceType.getOrElse("knossos") match {
-    case "knossos" =>
+  lazy val blockHandler: BlockHandler = sourceType.getOrElse(KnossosDataSourceType.name) match {
+    case KnossosDataSourceType.name =>
       new KnossosBlockHandler()
-    case "webKnossosWrap" =>
+    case WebKnossosWrapDataSourceType.name =>
       new WebKnossosWrapBlockHandler()
     case _ =>
       throw new Exception("Unexpected data layer type")

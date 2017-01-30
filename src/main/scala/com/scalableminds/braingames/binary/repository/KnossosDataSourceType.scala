@@ -21,6 +21,10 @@ import scala.concurrent.ExecutionContext.Implicits._
 
 
 class KnossosDataSourceType(val messagesApi: MessagesApi) extends DataSourceType with KnossosDataSourceTypeHandler {
+  val name = KnossosDataSourceType.name
+}
+
+object KnossosDataSourceType {
   val name = "knossos"
 }
 

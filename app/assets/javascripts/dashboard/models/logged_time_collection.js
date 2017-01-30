@@ -8,9 +8,11 @@ import moment from "moment";
 
 class LoggedTimeCollection extends Backbone.Collection {
 
+  userID: string;
+
   comparator(model) { return -model.get("interval"); }
 
-  url() {
+  url(): string {
     if (this.userID) {
       return `/api/users/${this.userID}/loggedTime`;
     }

@@ -50,12 +50,14 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
         Fox.serialSequence(entries) { e =>
           val fileName = e.getName
           val stream = zip.getInputStream(e)
-          DataStore.knossosDirToCube(dataInfo, Paths.get(fileName)).map {
+          val result = DataStore.knossosDirToCube(dataInfo, Paths.get(fileName)).map {
             case (resolution, point) =>
               val currentBlock = dataInfo.copy(
                 block = point, resolution = resolution, data = IOUtils.toByteArray(stream))
               dataStore.save(currentBlock).map(_ => resolution)
           }.getOrElse(Fox.empty)
+          result.onComplete( _ => stream.close())
+          result
         }
       }
       resolutions.map{ res =>

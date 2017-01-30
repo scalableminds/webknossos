@@ -1,4 +1,4 @@
-Mailable description of changes (needs to be understandable bei webknossos mailing list people):
+Mailable description of changes (needs to be understandable by webknossos mailing list people):
 - abc
 
 Steps to test:

@@ -44,7 +44,7 @@ def publish_deb_packages(mode, packages):
       if os.path.exists(pkg) or os.path.lexists(pkg):
         symlinks_new = False
       else:
-        os.symlink(target, pkg)
+        shutil.copyfile(target, pkg)
 
     if symlinks_new:
       packages_file = gzip.open("Packages.gz", "a")

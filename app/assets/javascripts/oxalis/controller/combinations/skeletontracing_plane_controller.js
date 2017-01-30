@@ -206,7 +206,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     if (centered) {
       this.centerPositionAnimated(this.model.skeletonTracing.getActiveNodePos());
     }
-  }
+  };
 
 
   centerPositionAnimated(position) {

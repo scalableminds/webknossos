@@ -32,7 +32,7 @@ type TweenState = {
 };
 
 class CameraController {
-  // The Sceleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
+  // The Skeleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
   // View. It provides methods to set a certain View (animated).
 
   cameras: Array<THREE.OrthographicCamera>;
@@ -74,7 +74,7 @@ class CameraController {
     this.cameras[constants.PLANE_XY].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
     this.cameras[constants.PLANE_YZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
     this.cameras[constants.PLANE_XZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
-  }
+  };
 
 
   changeTDView(id, animate = true) {
@@ -192,16 +192,16 @@ class CameraController {
 
   degToRad(deg) { return (deg / 180) * Math.PI; }
 
-  changeTDViewXY = () => this.changeTDView(constants.PLANE_XY)
-  changeTDViewYZ = () => this.changeTDView(constants.PLANE_YZ)
-  changeTDViewXZ = () => this.changeTDView(constants.PLANE_XZ)
+  changeTDViewXY = () => this.changeTDView(constants.PLANE_XY);
+  changeTDViewYZ = () => this.changeTDView(constants.PLANE_YZ);
+  changeTDViewXZ = () => this.changeTDView(constants.PLANE_XZ);
 
   changeTDViewDiagonal = (animate) => {
     if (animate == null) {
       animate = true;
     }
     return this.changeTDView(constants.TDView, animate);
-  }
+  };
 
   updateCameraTDView(tweenState: TweenState) {
     const p = tweenState.getConvertedPosition();
@@ -211,6 +211,7 @@ class CameraController {
     tweenState.camera.top = tweenState.t;
     tweenState.camera.bottom = tweenState.b;
     tweenState.camera.up = new THREE.Vector3(tweenState.upX, tweenState.upY, tweenState.upZ);
+    tweenState.camera.lookAt(new THREE.Vector3(p[0], p[1], p[2]));
 
     tweenState.flycam.update3DViewSize(tweenState.camera.right, tweenState.camera.left);
     tweenState.camera.updateProjectionMatrix();
@@ -251,17 +252,17 @@ class CameraController {
 
     this.flycam.update3DViewSize(camera.right, camera.left);
     app.vent.trigger("rerender");
-  }
+  };
 
 
   moveTDViewX = x => this.moveTDViewRaw(
     new THREE.Vector2((x * this.TDViewportSize()) / constants.VIEWPORT_WIDTH, 0),
-  )
+  );
 
 
   moveTDViewY = y => this.moveTDViewRaw(
     new THREE.Vector2(0, (-y * this.TDViewportSize()) / constants.VIEWPORT_WIDTH),
-  )
+  );
 
 
   moveTDView(nmVector) {

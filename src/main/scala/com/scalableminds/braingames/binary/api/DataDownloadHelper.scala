@@ -27,7 +27,9 @@ trait DataDownloadHelper extends LazyLogging{
           file =>
             val name = FilenameUtils.removeExtension(file.getAbsolutePath) + "." + DataLayer.KnossosFileExtention
             val path = basePath.relativize(Paths.get(name))
-            new NamedFileStream(file, path.toString){ override def stream() = FileDataStore.inputStreamFromDataFile(file)}
+            new NamedFileStream(file, path.toString){
+              override def stream() = FileDataStore.inputStreamFromDataFile(file)
+            }
         },
         outputStream)
     } catch {

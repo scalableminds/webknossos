@@ -8,7 +8,6 @@ import app from "app";
 import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
-import EmptyView from "admin/views/empty_view.js";
 import DashboardTaskListItemView from "./dashboard_task_list_item_view";
 import TaskTransferModalView from "./task_transfer_modal_view";
 import UserTasksCollection from "../models/user_tasks_collection";
@@ -53,7 +52,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
 
     this.prototype.childViewContainer = "tbody";
     this.prototype.childView = DashboardTaskListItemView;
-    this.prototype.emptyView = EmptyView;
+
 
     this.prototype.ui =
       { modalContainer: ".modal-container" };

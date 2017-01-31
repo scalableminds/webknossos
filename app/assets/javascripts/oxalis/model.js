@@ -99,7 +99,7 @@ class Model extends Backbone.Model {
   allowedModes: Array<ModeType>;
   settings: Settings;
   tracingId: string;
-  tracingType: "Explorational" | "Task";
+  tracingType: "Explorational" | "Task" | "View";
 
   constructor(...args) {
     super(...args);
@@ -113,7 +113,7 @@ class Model extends Backbone.Model {
       // Include /readOnly part whenever it is in the pathname
       infoUrl = `${location.pathname}/info`;
     } else {
-      infoUrl = `/annotations/${this.tracingType}/${this.tracingId}/info`;
+      infoUrl = `/annotations/${this.get("tracingType")}/${this.get("tracingId")}/info`;
     }
 
     return Request.receiveJSON(infoUrl).then((tracing: Tracing) => {

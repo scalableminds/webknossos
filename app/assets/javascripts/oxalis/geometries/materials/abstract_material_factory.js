@@ -1,11 +1,30 @@
+/**
+ * abstract_material_factory.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Backbone from "backbone";
 import THREE from "three";
+import Model from "oxalis/model";
+
+type Uniform = {
+  type: string,
+  value: any,
+};
+
+type Uniforms = {
+  [key: string]: Uniform,
+};
 
 class AbstractMaterialFactory {
 
+  model: Model;
+  material: THREE.ShaderMaterial;
+  uniforms: Uniforms;
+  attributes: Object;
 
-  constructor(model) {
+  constructor(model: Model) {
     this.model = model;
     _.extend(this, Backbone.Events);
 

@@ -17,6 +17,7 @@ import ScaleInfo from "./model/scaleinfo";
 import Flycam2d from "./model/flycam2d";
 import Flycam3d from "./model/flycam3d";
 import constants from "./constants";
+import type { ModeType, Vector3 } from "./constants";
 import Request from "../libs/request";
 import Toast from "../libs/toast";
 import ErrorHandling from "../libs/error_handling";
@@ -29,13 +30,76 @@ import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 // All public operations are **asynchronous**. We return a promise
 // which you can react on.
 
-export type Boundary = [number, number, number];
+export type Boundary = Vector3;
+type BoundingBox = {
+  min: Vector3,
+  max: Vector3,
+};
+type Settings = {
+  advancedOptionsAllowed: boolean,
+  allowedModes: "orthogonal" | "oblique" | "flight" | "volume",
+  branchPointsAllowed: boolean,
+  somaClickingAllowed: boolean,
+};
+type Tracing = {
+  actions: Array<any>,
+  content: {
+    boundingBox: {
+      topLeft: Vector3,
+      width: number,
+      height: number,
+      depth: number,
+    },
+    contentData: Object,
+    contentType: string,
+    dataSet: Object,
+    editPosition: Vector3,
+    editRotation: Vector3,
+    settings: Settings,
+  },
+  contentType: string,
+  created: string,
+  dataSetName: string,
+  downloadUrl: string,
+  formattedHash: string,
+  id: string,
+  name: string,
+  restrictions: any,
+  state: any,
+  stateLabel: string,
+  stats: any,
+  task: any,
+  tracingTime: number,
+  typ: string,
+  user: any,
+  version: number,
+};
 
 class Model extends Backbone.Model {
-  static initClass() {
-    this.prototype.HANDLED_ERROR = {};
-  }
+  HANDLED_ERROR = "error_was_handled";
 
+  initialized: boolean;
+  user: User;
+  connectionInfo: ConnectionInfo;
+  binary: {
+    [key: string]: Binary,
+  };
+  taskBoundingBox: BoundingBox;
+  userBoundingBox: BoundingBox;
+  annotationModel: SkeletonTracing | VolumeTracing;
+  lowerBoundary: Boundary;
+  upperBoundary: Boundary;
+  flycam: Flycam2d;
+  flycam3d: Flycam3d;
+  volumeTracing: VolumeTracing;
+  skeletonTracing: SkeletonTracing;
+  datasetConfiguration: DatasetConfiguration;
+  tracing: Tracing;
+  mode: ModeType;
+  allowedModes: Array<ModeType>;
+  settings: Settings;
+  tracingId: string;
+  tracingType: "Explorational" | "Task";
 
   constructor(...args) {
     super(...args);
@@ -49,10 +113,10 @@ class Model extends Backbone.Model {
       // Include /readOnly part whenever it is in the pathname
       infoUrl = `${location.pathname}/info`;
     } else {
-      infoUrl = `/annotations/${this.get("tracingType")}/${this.get("tracingId")}/info`;
+      infoUrl = `/annotations/${this.tracingType}/${this.tracingId}/info`;
     }
 
-    return Request.receiveJSON(infoUrl).then((tracing) => {
+    return Request.receiveJSON(infoUrl).then((tracing: Tracing) => {
       let error;
       if (tracing.error) {
         ({ error } = tracing);
@@ -79,7 +143,7 @@ class Model extends Backbone.Model {
       return this.user.fetch().then(() => Promise.resolve(tracing));
     },
 
-    ).then((tracing) => {
+    ).then((tracing: Tracing) => {
       this.set("dataset", new Backbone.Model(tracing.content.dataSet));
       const colorLayers = _.filter(this.get("dataset").get("dataLayers"),
                               layer => layer.category === "color");
@@ -90,7 +154,7 @@ class Model extends Backbone.Model {
       return this.get("datasetConfiguration").fetch().then(() => Promise.resolve(tracing));
     },
 
-    ).then((tracing) => {
+    ).then((tracing: Tracing) => {
       const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
       return this.initializeWithData(tracing, layerInfos);
     },
@@ -128,7 +192,7 @@ class Model extends Backbone.Model {
   }
 
 
-  initializeWithData(tracing, layerInfos) {
+  initializeWithData(tracing: Tracing, layerInfos) {
     const { dataStore } = tracing.content.dataSet;
     const dataset = this.get("dataset");
 
@@ -181,7 +245,7 @@ class Model extends Backbone.Model {
     this.set("flycam", flycam);
     this.set("flycam3d", flycam3d);
     this.listenTo(flycam3d, "changed", matrix => flycam.setPosition(matrix.slice(12, 15)));
-    this.listenTo(flycam, { positionChanged(position) { return flycam3d.setPositionSilent(position); } });
+    this.listenTo(flycam, "positionChanged", position => flycam3d.setPositionSilent(position));
 
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
       if (isVolumeTracing) {
@@ -222,19 +286,19 @@ class Model extends Backbone.Model {
   }
 
 
-  setMode(mode) {
+  setMode(mode: ModeType) {
     this.set("mode", mode);
     this.trigger("change:mode", mode);
   }
 
 
-  setUserBoundingBox(bb) {
+  setUserBoundingBox(bb: Array<number>) {
     this.userBoundingBox = this.computeBoundingBoxFromArray(bb);
     this.trigger("change:userBoundingBox", this.userBoundingBox);
   }
 
 
-  computeBoundingBoxFromArray(bb) {
+  computeBoundingBoxFromArray(bb: Array<number>): BoundingBox {
     const [x, y, z, width, height, depth] = bb;
 
     return {
@@ -365,7 +429,5 @@ class Model extends Backbone.Model {
     }
   }
 }
-Model.initClass();
-
 
 export default Model;

@@ -51,7 +51,6 @@ trait Cube extends LazyLogging{
   def finishAccess(): Unit = {
     // Check if we are the last one to use this cube, if that is the case and the cube needs to be removed -> remove it
     val currentUsers = accessCounter.decrementAndGet()
-    logger.warn("Current users: " + currentUsers)
     if(currentUsers == 0 && scheduledForRemoval.get())
       onFinalize()
   }
@@ -83,18 +82,18 @@ trait DataCache {
       case Some(cube) =>
         cube.startAccess()
         NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
-        val r = f(cube)
+        val result = f(cube)
         cube.finishAccess()
-        Fox.successful(r)
+        Fox.successful(result)
       case _ =>
         loadF{ cube: Cube =>
           NewRelic.recordMetric("Custom/FileDataStore/Cache/size", cache.size())
           NewRelic.incrementCounter("Custom/FileDataStore/Cache/miss")
           cube.startAccess()
           cache.put(cachedBlockInfo, cube)
-          val r = f(cube)
+          val result = f(cube)
           cube.finishAccess()
-          r
+          result
         }
     }
   }

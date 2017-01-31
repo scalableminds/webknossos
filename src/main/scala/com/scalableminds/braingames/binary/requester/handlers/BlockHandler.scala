@@ -75,7 +75,8 @@ trait BlockHandler extends DataCache with LazyLogging {
             y % cubeLength * cubeLength +
             z % cubeLength * cubeLength * cubeLength) * bytesPerElement
         if (!cube.copyTo(cubeOffset, result, idx, bucketLength * bytesPerElement))
-          logger.warn("Failed to copy piece. ")
+          logger.warn(s"Failed to copy from cube to bucket. " +
+            s"DS: ${requestedCube.dataSource.id}/${requestedCube.dataLayer.name} Bucket: ${requestedCube.block}")
         idx += bucketLength * bytesPerElement
         y += 1
       }

@@ -302,7 +302,7 @@ class Tree {
       }
 
       if (mesh.geometry.attributes[attribute].array !== rBuffer.getBuffer()) {
-        // The reference of the underlying buffer has changes. Unfortunately,
+        // The reference of the underlying buffer has changed. Unfortunately,
         // this means that we have to re-create all of the attributes.
         needsToRebuildGeometry = true;
       }
@@ -313,8 +313,8 @@ class Tree {
       // Free any memory allocated on the GPU
       mesh.geometry.dispose();
       for (const attribute of Object.keys(attribute2buffer)) {
+        // Recreate attribute
         const [itemSize, rBuffer] = attribute2buffer[attribute];
-        mesh.geometry.removeAttribute(attribute);
         mesh.geometry.addAttribute(attribute, this.makeDynamicFloatAttribute(itemSize, rBuffer));
       }
     }
@@ -364,7 +364,7 @@ class Tree {
 
   darkenHex(hexColor) {
     const hslColor = new THREE.Color(hexColor).getHSL();
-    hslColor.l = 0.6;
+    hslColor.l = 0.25;
     return new THREE.Color().setHSL(hslColor.h, hslColor.s, hslColor.l).getHex();
   }
 

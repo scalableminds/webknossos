@@ -28,11 +28,16 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  simulateTracing() {
+  simulateTracing(nodesPerTree = -1, nodesAlreadySet = 0) {
     // For debugging purposes.
+    if (nodesPerTree === nodesAlreadySet) {
+      this.model.skeletonTracing.createNewTree();
+      nodesAlreadySet = 0;
+    }
+
     const [x, y, z] = this.flycam.getPosition();
     this.setWaypoint([x + 1, y + 1, z], false);
-    _.defer(() => this.simulateTracing());
+    _.defer(() => this.simulateTracing(nodesPerTree, nodesAlreadySet + 1));
   }
 
 

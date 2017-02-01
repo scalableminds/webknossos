@@ -163,6 +163,7 @@ class PlaneView {
 
   removeGeometry(geometry) {
     this.group.remove(geometry);
+    this.draw();
   }
 
 

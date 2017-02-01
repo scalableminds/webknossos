@@ -27,9 +27,9 @@ class VolumeTracingPlaneController extends PlaneController {
     this.listenTo(this.model.flycam, "zoomStepChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()),
     );
 
-    this.listenTo(this.model.user, "isosurfaceDisplayChanged", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "isosurfaceBBsizeChanged", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "isosurfaceResolutionChanged", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.user, "change:isosurfaceDisplay", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.user, "change:isosurfaceBBsize", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.user, "change:isosurfaceResolution", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
     this.listenTo(this.model.volumeTracing, "newActiveCell", function (id) {
       id = this.model.volumeTracing.getActiveCellId();
       if (id > 0) {
@@ -71,7 +71,7 @@ class VolumeTracingPlaneController extends PlaneController {
       );
     },
     );
-  }
+  };
 
 
   getPlaneMouseControls(planeId) {
@@ -133,16 +133,15 @@ class VolumeTracingPlaneController extends PlaneController {
 
   getKeyboardControls() {
     return _.extend(super.getKeyboardControls(), {
-
       c: () => this.model.volumeTracing.createCell(),
-    },
-    );
+    });
   }
 
 
   render3dCell(id) {
     if (!this.model.user.get("isosurfaceDisplay")) {
       this.sceneController.removeShapes();
+      return;
     }
     const bb = this.model.flycam.getViewportBoundingBox();
     const res = this.model.user.get("isosurfaceResolution");

@@ -11,8 +11,28 @@ import com.scalableminds.util.tools.Fox
 trait DataImageService {
   this: BinaryDataService =>
 
+  def requestImageData(
+    dataSource: DataSource,
+    dataLayer: DataLayer,
+    cuboid: Cuboid,
+    settings: DataRequestSettings): Fox[Array[Byte]] = {
+
+    val position = dataSource.applyResolution(cuboid.topLeft, cuboid.resolution)
+    val cuboidWithResolution = cuboid.copy(topLeft = position)
+    val minBucket = bucketOfPosition(position, dataSource.lengthOfLoadedBuckets)
+    val maxPosition = position.move(cuboid.width, cuboid.height, cuboid.depth)
+
+    val bucketQueue = allBucketsInCuboid(minBucket, maxPosition, cuboid.resolution, dataSource)
+
+    loadAllBuckets(bucketQueue, dataSource, dataLayer, cuboid.resolutionExponent, settings).map { rs =>
+      // after we have loaded all buckets that 'touch' our cuboid we want to retrieve, we need to cut the data from
+      // the loaded buckets
+      cutOutCuboid(rs, cuboidWithResolution, dataLayer.bytesPerElement, dataSource, maxPosition)
+    }
+  }
+
   /**
-    * Given a list of loaded buckets, cutout the cuboid defined by topLeft, width, heigth, depth
+    * Given a list of loaded buckets, cutout the data of the cuboid
     */
   private def cutOutCuboid(
     rs: List[(DataReadRequest, Array[Byte])],
@@ -90,24 +110,4 @@ trait DataImageService {
     */
   private def bucketOfPosition(position: Point3D, bucketLength: Int) =
     position.move(-position.x % bucketLength, -position.y % bucketLength, -position.z % bucketLength)
-
-  def requestImageData(
-    dataSource: DataSource,
-    dataLayer: DataLayer,
-    cuboid: Cuboid,
-    settings: DataRequestSettings): Fox[Array[Byte]] = {
-
-    val position = dataSource.applyResolution(cuboid.topLeft, cuboid.resolution)
-    val cuboidWithResolution = cuboid.copy(topLeft = position)
-    val minBucket = bucketOfPosition(position, dataSource.lengthOfLoadedBuckets)
-    val maxPosition = position.move(cuboid.width, cuboid.height, cuboid.depth)
-
-    val bucketQueue = allBucketsInCuboid(minBucket, maxPosition, cuboid.resolution, dataSource)
-
-    loadAllBuckets(bucketQueue, dataSource, dataLayer, cuboid.resolutionExponent, settings).map { rs =>
-      // after we have loaded all buckets that 'touch' our cuboid we want to retrieve, we need to cut the data from
-      // the loaded buckets
-      cutOutCuboid(rs, cuboidWithResolution, dataLayer.bytesPerElement, dataSource, maxPosition)
-    }
-  }
 }

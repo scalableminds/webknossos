@@ -94,7 +94,7 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
       val targetResolution = resolution * 2
       logger.info(s"About to create resolution $targetResolution for ${dataSource.id}")
       val dataStore = new FileDataStore
-      val cubeLength = dataSource.lengthOfLoadedCubes
+      val cubeLength = dataSource.lengthOfLoadedBuckets
       val points = for {
         x <- boundingBox.topLeft.x.to(boundingBox.bottomRight.x, cubeLength * targetResolution)
         y <- boundingBox.topLeft.y.to(boundingBox.bottomRight.y, cubeLength * targetResolution)

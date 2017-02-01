@@ -35,7 +35,7 @@ case class DataSource(
   /**
     * Defines the size of the buckets loaded from files. This is the minimal size that can be loaded from a file.
     */
-  val lengthOfLoadedCubes: Int = 32
+  val lengthOfLoadedBuckets: Int = 32
 
   /**
     * Size of a single stored block in storage
@@ -69,6 +69,12 @@ case class DataSource(
       point.x / resolution,
       point.y / resolution,
       point.z / resolution)
+
+  def unapplyResolution(point: Point3D, resolution: Int): Point3D =
+    Point3D(
+      point.x * resolution,
+      point.y * resolution,
+      point.z * resolution)
 
   override def toString: String =
     s"""$id (${dataLayers.map(_.name).mkString(", ")})"""

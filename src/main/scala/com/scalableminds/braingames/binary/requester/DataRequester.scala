@@ -99,9 +99,7 @@ class DataRequester(
         if (point.x < 0 || point.y < 0 || point.z < 0) {
           emptyResult(request)
         } else {
-          loadBlock(
-            request.dataSource, request.dataLayer, request.dataSection,
-            request.resolution, request.settings, point, useCache = true)
+          loadBlock(request, useCache = true)
         }
       case request: DataWriteRequest =>
         Future(blocking(layerLocker.withLockFor(dataRequest.dataSource, dataRequest.dataLayer)(() =>
@@ -119,56 +117,49 @@ class DataRequester(
                  useCache: Boolean): Array[Fox[Array[Byte]]] = {
     (minBlock to maxBlock).toArray.map {
       p =>
-        loadBlock(
-          dataSource,
-          layer,
-          dataSection,
-          resolution,
-          settings,
-          p,
-          useCache)
+        val cuboid = Cuboid(
+          dataSource.lengthOfLoadedBuckets, dataSource.lengthOfLoadedBuckets, dataSource.lengthOfLoadedBuckets,
+          resolution, p)
+        val request = DataReadRequest(dataSource, layer, dataSection, resolution, cuboid, settings)
+        loadBlock(request, useCache)
     }
   }
 
 
-  def loadBlock(dataSource: DataSource,
-                layer: DataLayer,
-                requestedSection: Option[String],
-                resolution: Int,
-                settings: DataRequestSettings,
-                block: Point3D,
+  def loadBlock(request: DataRequest,
                 useCache: Boolean): Fox[Array[Byte]] = {
     var lastSection: Option[DataLayerSection] = None
 
     def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Fox[Array[Byte]] = sections match {
       case (section, layerOfSection) #:: tail =>
         lastSection = Some(section)
-        val loadBlock = LoadBlock(dataSource, layerOfSection, section, resolution, settings, block)
+        val block = request.cuboid.topLeft
+        val loadBlock = LoadBlock(request.dataSource, layerOfSection, section, request.resolution, request.settings, block)
         loadFromLayer(loadBlock, useCache).futureBox.flatMap {
           case Full(byteArray) =>
             Fox.successful(byteArray)
           case f: Failure =>
             logger.error(s"DataStore Failure: ${f.msg}")
-            Fox.successful(Array.empty[Byte])
+            emptyResult(request)
           case _ =>
             loadFromSections(tail)
         }
       case _ =>
         // We couldn't find the data in any section. Hence let's assume there is none
-        Fox.successful(Array.empty[Byte])
+        emptyResult(request)
     }
 
-    val sections = Stream(layer.sections.map {
-      (_, layer)
+    val sections = Stream(request.dataLayer.sections.map {
+      (_, request.dataLayer)
     }.filter {
       section =>
-        requestedSection.forall(_ == section._1.sectionId)
-    }: _*).append(Await.result(fallbackForLayer(layer), 5.seconds))
+        request.dataSection.forall(_ == section._1.sectionId)
+    }: _*).append(Await.result(fallbackForLayer(request.dataLayer), 5.seconds))
 
     loadFromSections(sections)
   }
 
-  def loadFromLayer(loadBlock: LoadBlock, useCache: Boolean): Fox[Array[Byte]] = {
+  private def loadFromLayer(loadBlock: LoadBlock, useCache: Boolean): Fox[Array[Byte]] = {
     if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block)) {
       val shouldCache = useCache && !loadBlock.dataLayer.isUserDataLayer
       blockHandler(loadBlock.dataLayer.sourceType).load(loadBlock, dataBlockLoadTimeout, shouldCache)

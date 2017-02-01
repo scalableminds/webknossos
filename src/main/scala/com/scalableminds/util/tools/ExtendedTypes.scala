@@ -15,6 +15,7 @@ import scala.concurrent.ExecutionContext.Implicits._
 import scala.collection.immutable.Queue
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.Math._
+import org.apache.commons.lang3.ArrayUtils
 
 object ExtendedTypes {
 
@@ -49,10 +50,12 @@ object ExtendedTypes {
       else {
         val size = as.map(_.length).sum
         val combined = new Array[T](size)
-        as.foldLeft(0) {
-          case (idx, a) =>
-            Array.copy(a, 0, combined, idx, a.length)
-            idx + a.length
+        var idx = 0
+        var i = 0
+        while(i < as.length){
+          Array.copy(as(i), 0, combined, idx, as(i).length)
+          idx += as(i).length
+          i += 1
         }
         combined
       }

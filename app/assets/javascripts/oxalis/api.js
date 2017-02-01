@@ -36,12 +36,17 @@ class TracingApi {
     return this.model.skeletonTracing.getNodeListOfAllTrees();
   }
 
+  // TODO discuss interface, supplying the node provides performance boost
   setCommentForNode(commentText: string, node: TracePoint | number): void {
+    // Convert nodeId to node
     if (_.isNumber(node)) { node = this.model.skeletonTracing.getNode(node); }
     this.model.skeletonTracing.setCommentForNode(commentText, node);
   }
 
-  getCommentForNode(nodeId: number, tree: ?TraceTree): ?string {
+  // TODO discuss interface, supplying the tree provides performance boost
+  getCommentForNode(nodeId: number, tree: ?(TraceTree | number)): ?string {
+    // Convert treeId to tree
+    if (_.isNumber(tree)) { tree = this.model.skeletonTracing.getTree(tree); }
     const comment = this.model.skeletonTracing.getCommentForNode(nodeId, tree);
     return comment ? comment.content : null;
   }
@@ -120,7 +125,7 @@ class UtilsApi {
   }
 
   registerKeyHandler(key: string, handler: () => void): Handler {
-    // TODO
+    // TODO implement
     console.log("Attach handler", handler, "to key", key);
     return { unregister: () => {} };
   }
@@ -162,9 +167,13 @@ class Api {
     });
   }
 
+  // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
+  // webknossos.registerOverwrite("addNode", b)
+  // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
+  // TODO: where should this method be accessible from, probably api.utils
   registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T) => void, args: T) => void): void {
-    const oldFunc = this.model.skeletonTracing[funcName];
-    this.model.skeletonTracing[funcName] = (...args) => newFunc(oldFunc, ...args);
+    const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);
+    this.model.skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
   }
 
 }

@@ -9,6 +9,7 @@ import OxalisModel from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
+import Binary from "oxalis/model/binary";
 
 
 class TracingApi {
@@ -40,8 +41,9 @@ class TracingApi {
     this.model.skeletonTracing.setCommentForNode(commentText, node);
   }
 
-  getCommentForNode(nodeId: number, tree: ?TraceTree): string {
-    return this.model.skeletonTracing.getCommentForNode(nodeId, tree);
+  getCommentForNode(nodeId: number, tree: ?TraceTree): ?string {
+    const comment = this.model.skeletonTracing.getCommentForNode(nodeId, tree);
+    return comment ? comment.content : null;
   }
 
 }
@@ -55,22 +57,34 @@ class DataApi {
     this.model = model;
   }
 
+  __getLayer(layerName: string): Binary {
+    const layer = this.model.getBinaryByName(layerName);
+    if (layer === undefined) throw Error(`Layer with name ${layerName} was not found.`);
+    return layer;
+  }
+
   getLayerNames(): [string] {
     return _.map(this.model.binary, "name");
   }
 
   setMapping(layerName: string, mapping: [number]) {
-    const layer = this.model.getBinaryByName(layerName);
-    if (layer === undefined) throw Error(`Layer with name ${layerName} was not found.`);
+    const layer = this.__getLayer(layerName);
 
     layer.cube.setMapping(mapping);
   }
 
   getBoundingBox(layerName: string): [Vector3, Vector3] {
-    const layer = this.model.getBinaryByName(layerName);
-    if (layer === undefined) throw Error(`Layer with name ${layerName} was not found.`);
+    const layer = this.__getLayer(layerName);
 
     return [layer.lowerBoundary, layer.upperBoundary];
+  }
+
+  getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
+    const layer = this.__getLayer(layerName);
+    const bucket = layer.cube.positionToZoomedAddress(position, zoomStep);
+
+    layer.pullQueue.add({ bucket, priority: -1 });
+    return Promise.all(layer.pullQueue.pull()).then(() => layer.cube.getDataValue(position));
   }
 }
 

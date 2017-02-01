@@ -166,7 +166,7 @@ class CommentTabView extends Marionette.View {
   setComment(commentText, node, silent = false) {
     if (!this.model.skeletonTracing.restrictionHandler.updateAllowed()) { return; }
 
-    if (!node) { node = this.getActiveNode(); }
+    if (!node) { node = this.model.skeletonTracing.getActiveNode(); }
 
     // don't add a comment if there is no node
     if (!node) { return; }
@@ -182,7 +182,6 @@ class CommentTabView extends Marionette.View {
       } else {
         tree.removeCommentWithNodeId(nodeId);
       }
-      this.updateState();
     } else if (commentText !== "") {
       comment = {
         node: nodeId,
@@ -194,6 +193,8 @@ class CommentTabView extends Marionette.View {
         this.setActiveNode(comment, tree.treeId);
       }
     }
+
+    this.updateState();
 
     this.model.skeletonTracing.updateTree(tree);
   }

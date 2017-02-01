@@ -21,12 +21,16 @@ class ImageWriter(imageType: String, imageExt: String) {
 
   def writeToFile(buffered: BufferedImage, file: File) = {
     if (file.exists) file.delete
-    val output = new FileImageOutputStream(file)
-    writer.setOutput(output)
-    val image = new IIOImage(buffered, null, null)
-    writer.write(null, image, iwp)
-    writer.reset()
-    output.close()
+    var output: FileImageOutputStream = null
+    try {
+      output = new FileImageOutputStream(file)
+      writer.setOutput(output)
+      val image = new IIOImage(buffered, null, null)
+      writer.write(null, image, iwp)
+      writer.reset()
+    } finally{
+      if(output != null) output.close()
+    }
     file
   }
 }
@@ -51,11 +55,16 @@ class WebPWriter {
     writeToFile(buffered, file)
   }
 
-  def writeToFile(buffered: BufferedImage, file: File) = {
+  def writeToFile(buffered: BufferedImage, file: File): File = {
     if (file.exists) file.delete
-    val output = new FileOutputStream(file)
-    val data = buffered.getData().getDataBuffer().asInstanceOf[DataBufferByte].getData()
-    output.write(webPEncode(data, buffered.getWidth(), buffered.getHeight(), imageQuality * 100, buffered.getType()))
+    var output: FileOutputStream = null
+    try {
+      output = new FileOutputStream(file)
+      val data = buffered.getData.getDataBuffer.asInstanceOf[DataBufferByte].getData
+      output.write(webPEncode(data, buffered.getWidth, buffered.getHeight, imageQuality * 100, buffered.getType))
+    } finally {
+      if(output != null) output.close()
+    }
     file
   }
 }

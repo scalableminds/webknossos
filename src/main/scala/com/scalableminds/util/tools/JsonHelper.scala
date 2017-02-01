@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.libs.json._
 
-import scala.io.Source
+import scala.io.{BufferedSource, Source}
 
 object JsonHelper extends LazyLogging {
 
@@ -21,21 +21,26 @@ object JsonHelper extends LazyLogging {
       Failure("Invalid path for json parsing.")
   }
 
-  private def parseJsonFromFile(path: Path, rootPath: Path): Box[JsValue] =
+  private def parseJsonFromFile(path: Path, rootPath: Path): Box[JsValue] = {
+    var buffer: BufferedSource = null
     try {
-      Full(Json.parse(Source.fromFile(path.toFile).getLines.mkString))
+      buffer = Source.fromFile(path.toFile)
+      Full(Json.parse(buffer.getLines.mkString))
     } catch {
       case e: java.io.EOFException =>
         logger.error(s"EOFException in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
-        Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString }")
-      case _ : AccessDeniedException | _: FileNotFoundException =>
+        Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString}")
+      case _: AccessDeniedException | _: FileNotFoundException =>
         logger.error(s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
-        Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString }'. Access denied.")
+        Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Access denied.")
       case e: com.fasterxml.jackson.databind.JsonMappingException =>
         logger.warn(s"Exception in JsonHelper while trying to extract json from file. Path: $path. Json Mapping issue.")
-        Failure(s"Json mapping issue in '${rootPath.relativize(path).toString }'. Cause: ${e.getCause }")
+        Failure(s"Json mapping issue in '${rootPath.relativize(path).toString}'. Cause: ${e.getCause}")
       case e: Exception =>
         logger.error(s"Exception in JsonHelper while trying to extract json from file. Path: $path. Cause: ${e.getCause}")
-        Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString }'. Cause: ${e.getCause }")
+        Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Cause: ${e.getCause}")
+    } finally {
+      if(buffer != null) buffer.close()
     }
+  }
 }

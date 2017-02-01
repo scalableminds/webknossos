@@ -10,19 +10,19 @@ import com.scalableminds.util.geometry.{BoundingBox, Scale, Point3D}
 import play.api.libs.json._
 
 case class DataSourceSettings(
-                               id: Option[String],
-                               scale: Scale,
-                               priority: Option[Int])
+  id: Option[String],
+  scale: Scale,
+  priority: Option[Int])
 
 case class DataSource(
-                       id: String,
-                       baseDir: String,
-                       scale: Scale,
-                       priority: Int = 0,
-                       dataLayers: List[DataLayer] = Nil,
-                       sourceType: Option[String] = Some(KnossosDataSourceType.name),
-                       blockLengthOpt: Option[Int] = Some(128)
-                     ) {
+  id: String,
+  baseDir: String,
+  scale: Scale,
+  priority: Int = 0,
+  dataLayers: List[DataLayer] = Nil,
+  sourceType: Option[String] = Some(KnossosDataSourceType.name),
+  blockLengthOpt: Option[Int] = Some(128)
+) {
 
   //  lazy val sourceFolder: Path =
   //    Paths.get(baseDir)

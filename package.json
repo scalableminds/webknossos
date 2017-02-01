@@ -54,7 +54,8 @@
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
     "flow": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
-    "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text"
+    "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
+    "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api.js --format html --output docs/frontend "
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",

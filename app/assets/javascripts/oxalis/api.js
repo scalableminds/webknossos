@@ -1,6 +1,5 @@
-/**
+/*
  * api.js
- * @ignore
  * @flow weak
  */
 
@@ -14,13 +13,13 @@ import Binary from "oxalis/model/binary";
 
 /**
  * All tracing related API methods.
+ * @class
  */
 class TracingApi {
 
   model: OxalisModel;
 
  /**
-  * sdfsdf
   * @private
   */
   constructor(model: OxalisModel) {
@@ -78,7 +77,9 @@ class TracingApi {
 
 }
 
-
+/**
+ * All binary data / layer related API methods.
+ */
 class DataApi {
 
   model: OxalisModel;
@@ -93,22 +94,34 @@ class DataApi {
     return layer;
   }
 
+ /**
+  * Returns the names of all available layers of the current tracing.
+  */
   getLayerNames(): [string] {
     return _.map(this.model.binary, "name");
   }
 
+ /**
+  * Sets a mapping for a given layer.
+  */
   setMapping(layerName: string, mapping: [number]) {
     const layer = this.__getLayer(layerName);
 
     layer.cube.setMapping(mapping);
   }
 
+ /**
+  * Returns the bounding box for a given layer name.
+  */
   getBoundingBox(layerName: string): [Vector3, Vector3] {
     const layer = this.__getLayer(layerName);
 
     return [layer.lowerBoundary, layer.upperBoundary];
   }
 
+ /**
+  * Returns raw binary data for a given layer, position and zoom level.
+  */
   getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
     const layer = this.__getLayer(layerName);
     const bucket = layer.cube.positionToZoomedAddress(position, zoomStep);
@@ -118,7 +131,9 @@ class DataApi {
   }
 }
 
-
+/**
+ * All user configuration related API methods.
+ */
 class UserApi {
 
   model: OxalisModel;
@@ -127,10 +142,16 @@ class UserApi {
     this.model = oxalisModel;
   }
 
+ /**
+  * Returns the user's setting for the tracing view.
+  */
   getConfiguration(key: string) {
     return this.model.user.get(key);
   }
 
+ /**
+  * Set the user's setting for the tracing view.
+  */
   setConfiguration(key: string, value) {
     this.model.user.set(key, value);
   }
@@ -141,6 +162,9 @@ type Handler = {
     unregister(): void,
 };
 
+/**
+ * Utility API methods to control wK.
+ */
 class UtilsApi {
 
   model: OxalisModel;
@@ -149,6 +173,9 @@ class UtilsApi {
     this.model = oxalisModel;
   }
 
+ /**
+  * Sets a custom handler function for a keyboard shortcut.
+  */
   registerKeyHandler(key: string, handler: () => void): Handler {
     // TODO implement
     console.log("Attach handler", handler, "to key", key);
@@ -167,7 +194,9 @@ type ApiInterface = {
 /**
  * webKnossos Public Frontend API.
  * @author scalabe minds
- * @version 1.0.0
+ * @version 1
+ * @module Api
+ *
  *
  * @property {TracingApi} tracing - All methods related to getting tracings.
  * @property {DataApi} data - All methods related to getting binary data / layers.
@@ -176,7 +205,8 @@ type ApiInterface = {
  *
  * @example
  * import api from "api.js"
- * api.apiReady(1, ???).then((api) => {
+ *
+ * api.apiReady(1, (api) => {
  *     const nodes = api.tracing.getAllNodes();
  *     const dataLayerNames = api.data.getLayerNames();
  *     const userConfiguration = api.user.getConfiguration();
@@ -208,13 +238,13 @@ class Api {
   }
 
  // TODO This breaks documentationjs. Try back later
- // *
+ // /**
  //  * API initializer. Will be called as soon as the webKnossos API is ready.
  //  * @method apiReady
  //  * param {number} version
  //  * param {number} ApiInterface
  //  * return {void}
-
+ //  */
   apiReady(version: number, callback: (ApiInterface) => void) {
     // TODO: version check
     this.readyPromise.then(() => {
@@ -227,7 +257,7 @@ class Api {
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
   // TODO: where should this method be accessible from, probably api.utils
  /**
-  * sdf
+  * Overwrite existing wK methods.
   */
   registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T) => void, args: T) => void): void {
     const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);

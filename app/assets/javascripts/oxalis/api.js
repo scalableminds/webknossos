@@ -237,14 +237,12 @@ class Api {
     this.model = oxalisModel;
   }
 
- // TODO This breaks documentationjs. Try back later
- // /**
- //  * API initializer. Will be called as soon as the webKnossos API is ready.
- //  * @method apiReady
- //  * param {number} version
- //  * param {number} ApiInterface
- //  * return {void}
- //  */
+ /**
+  * API initializer. Will be called as soon as the webKnossos API is ready.
+  * @name apiReady
+  * @param {number} version
+  * @param {number} ApiInterface
+  */
   apiReady(version: number, callback: (ApiInterface) => void) {
     // TODO: version check
     this.readyPromise.then(() => {

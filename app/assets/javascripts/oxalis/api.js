@@ -1,5 +1,6 @@
 /**
  * api.js
+ * @ignore
  * @flow weak
  */
 
@@ -11,31 +12,52 @@ import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
 import Binary from "oxalis/model/binary";
 
-
+/**
+ * All tracing related API methods.
+ */
 class TracingApi {
 
   model: OxalisModel;
 
+ /**
+  * sdfsdf
+  * @private
+  */
   constructor(model: OxalisModel) {
     this.model = model;
   }
 
+ /**
+  * Returns the id of the current active node.
+  */
   getActiveNodeId(): ?number {
     return this.model.skeletonTracing.getActiveNodeId();
   }
 
+ /**
+  * Returns the id of the current active tree.
+  */
   getActiveTreeId(): ?number {
     return this.model.skeletonTracing.getActiveTreeId();
   }
 
+ /**
+  * Sets the active node given a node id.
+  */
   setActiveNode(id: number) {
     this.model.skeletonTracing.setActiveNode(id);
   }
 
+ /**
+  * Returns all nodes belonging to a tracing.
+  */
   getAllNodes(): [TracePoint] {
     return this.model.skeletonTracing.getNodeListOfAllTrees();
   }
 
+ /**
+  * Sets the comment for a node.
+  */
   // TODO discuss interface, supplying the node provides performance boost
   setCommentForNode(commentText: string, node: TracePoint | number): void {
     // Convert nodeId to node
@@ -43,6 +65,9 @@ class TracingApi {
     this.model.skeletonTracing.setCommentForNode(commentText, node);
   }
 
+ /**
+  * Returns the comment for a given node and tree.
+  */
   // TODO discuss interface, supplying the tree provides performance boost
   getCommentForNode(nodeId: number, tree: ?(TraceTree | number)): ?string {
     // Convert treeId to tree
@@ -139,12 +164,34 @@ type ApiInterface = {
   utils: UtilsApi,
 };
 
+/**
+ * webKnossos Public Frontend API.
+ * @author scalabe minds
+ * @version 1.0.0
+ *
+ * @property {TracingApi} tracing - All methods related to getting tracings.
+ * @property {DataApi} data - All methods related to getting binary data / layers.
+ * @property {UserApi} user - All methods related to getting / setting the user's personal tracing configuration.
+ * @property {UtilsApi} utils - Utitility methods for controlling wK.
+ *
+ * @example
+ * import api from "api.js"
+ * api.apiReady(1, ???).then((api) => {
+ *     const nodes = api.tracing.getAllNodes();
+ *     const dataLayerNames = api.data.getLayerNames();
+ *     const userConfiguration = api.user.getConfiguration();
+ *     const keyHandler = api.utils.registerKeyHandler("enter", () => console.log("Welcome"));
+ *  });
+ */
 class Api {
 
   readyPromise: Promise<void>;
   apiInterface: ApiInterface;
   model: OxalisModel;
 
+ /**
+  * @private
+  */
   constructor(oxalisModel: OxalisModel) {
     this.readyPromise = new Promise((resolve) => {
       app.vent.listenTo(app.vent, "webknossos:ready", resolve);
@@ -160,6 +207,14 @@ class Api {
     this.model = oxalisModel;
   }
 
+ // TODO This breaks documentationjs. Try back later
+ // *
+ //  * API initializer. Will be called as soon as the webKnossos API is ready.
+ //  * @method apiReady
+ //  * param {number} version
+ //  * param {number} ApiInterface
+ //  * return {void}
+
   apiReady(version: number, callback: (ApiInterface) => void) {
     // TODO: version check
     this.readyPromise.then(() => {
@@ -171,6 +226,9 @@ class Api {
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
   // TODO: where should this method be accessible from, probably api.utils
+ /**
+  * sdf
+  */
   registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T) => void, args: T) => void): void {
     const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);
     this.model.skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);

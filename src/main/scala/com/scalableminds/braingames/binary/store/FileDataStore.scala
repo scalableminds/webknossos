@@ -107,13 +107,11 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     Future {
       val path = knossosFilePath(dataSetDir, dataSetId, resolution, block, DataLayer.fileExt(shouldBeCompressed))
       var binaryStream: OutputStream = null
-      logger.info(s"Attempting write to: $path")
       try {
         PathUtils.parent(path.toAbsolutePath).map(p => Files.createDirectories(p))
         binaryStream = createOutputStream(path, shouldBeCompressed)
-        logger.info("Created FileOutputStream")
         byteArrayToOutputStream(binaryStream, data)
-        logger.info("Data was written")
+        logger.trace(s"Data was saved. block: $block Compressed: $shouldBeCompressed Location: $path")
         Full(true)
       } catch {
         case e: FileNotFoundException =>

@@ -10,9 +10,6 @@ import com.scalableminds.util.geometry.Point3D
 
 trait BinaryDataRequestBuilder {
 
-  private def resolutionFromExponent(resolutionExponent: Int) =
-    math.pow(2, resolutionExponent).toInt
-
   def createDataReadRequest(
                              dataSource: DataSource,
                              dataLayer: DataLayer,
@@ -24,10 +21,8 @@ trait BinaryDataRequestBuilder {
                              resolutionExponent: Int,
                              settings: DataRequestSettings): DataReadRequest = {
 
-    val resolution = resolutionFromExponent(resolutionExponent)
-    val cuboid = Cuboid(width, height, depth, resolution, position)
-
-    DataReadRequest(dataSource, dataLayer, dataSection, resolution, cuboid, settings)
+    val cuboid = Cuboid(position, width, height, depth, resolutionExponent)
+    DataReadRequest(dataSource, dataLayer, dataSection, cuboid, settings)
   }
 
   def createDataWriteRequest(
@@ -41,9 +36,7 @@ trait BinaryDataRequestBuilder {
                               resolutionExponent: Int,
                               data: Array[Byte]): DataWriteRequest = {
 
-    val resolution = resolutionFromExponent(resolutionExponent)
-    val cuboid = Cuboid(width, height, depth, resolution, position)
-
-    DataWriteRequest(dataSource, dataLayer, dataSection, resolution, cuboid, data)
+    val cuboid = Cuboid(position, width, height, depth, resolutionExponent)
+    DataWriteRequest(dataSource, dataLayer, dataSection, cuboid, data)
   }
 }

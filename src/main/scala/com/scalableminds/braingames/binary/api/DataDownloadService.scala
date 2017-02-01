@@ -15,7 +15,7 @@ import org.apache.commons.io.{FileUtils, FilenameUtils}
 
 import scala.collection.JavaConversions._
 
-trait DataDownloadHelper extends LazyLogging{
+trait DataDownloadService extends LazyLogging{
 
   def downloadDataLayer(dataLayer: DataLayer, outputStream: OutputStream): Unit = {
     try {

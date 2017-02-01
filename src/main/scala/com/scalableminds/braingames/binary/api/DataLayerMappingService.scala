@@ -7,7 +7,7 @@ import com.scalableminds.braingames.binary.MappingRequest
 import com.scalableminds.braingames.binary.store.FileDataStore
 import com.scalableminds.util.tools.Fox
 
-trait DataLayerMappingHelpers {
+trait DataLayerMappingService {
 
   lazy val dataStore = new FileDataStore()
 

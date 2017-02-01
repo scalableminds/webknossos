@@ -11,16 +11,15 @@ import scala.reflect.ClassTag
   * A cuboid data model defines which binary data is responded given a viewpoint and an axis
   */
 case class Cuboid(
-                   _width: Int,
-                   _height: Int,
-                   _depth: Int,
-                   resolution: Int = 1,
-                   topLeft: Point3D) {
+  topLeft: Point3D,
+  width: Int,
+  height: Int,
+  depth: Int,
+  resolutionExponent: Int = 0) {
 
-  val width: Int = resolution * _width
-  val height: Int = resolution * _height
-  val depth: Int = resolution * _depth
+  lazy val resolution: Int =
+    math.pow(2, resolutionExponent).toInt
 
   val voxelVolume: Int =
-    _width * _height * _depth
+    width * height * depth
 }

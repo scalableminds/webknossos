@@ -119,10 +119,10 @@ class DataRequester(
                  useCache: Boolean): Array[Fox[Array[Byte]]] = {
     (minBlock to maxBlock).toArray.map {
       p =>
-        val cuboid = Cuboid(
+        val cuboid = Cuboid(p,
           dataSource.lengthOfLoadedBuckets, dataSource.lengthOfLoadedBuckets, dataSource.lengthOfLoadedBuckets,
-          resolution, p)
-        val request = DataReadRequest(dataSource, layer, dataSection, resolution, cuboid, settings)
+          resolution)
+        val request = DataReadRequest(dataSource, layer, dataSection, cuboid, settings)
         loadBlock(request, useCache)
     }
   }
@@ -136,7 +136,7 @@ class DataRequester(
       case (section, layerOfSection) #:: tail =>
         lastSection = Some(section)
         val block = request.cuboid.topLeft
-        val loadBlock = LoadBlock(request.dataSource, layerOfSection, section, request.resolution, request.settings, block)
+        val loadBlock = LoadBlock(request.dataSource, layerOfSection, section, request.cuboid.resolution, request.settings, block)
         loadFromLayer(loadBlock, useCache).futureBox.flatMap {
           case Full(byteArray) =>
             Fox.successful(byteArray)
@@ -195,7 +195,7 @@ class DataRequester(
 
     def saveToSections(sections: List[DataLayerSection]): Fox[Boolean] = sections match {
       case section :: tail =>
-        val saveBlock = SaveBlock(request.dataSource, layer, section, request.resolution, block, modifiedData)
+        val saveBlock = SaveBlock(request.dataSource, layer, section, request.cuboid.resolution, block, modifiedData)
         saveToLayer(saveBlock).futureBox.flatMap {
           case Full(r) => Future.successful(Full(r))
           case _ => saveToSections(tail)

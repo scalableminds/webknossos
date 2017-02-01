@@ -89,9 +89,10 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
                         resolutions: Int,
                         boundingBox: BoundingBox,
                         progressHook: Double => Unit): Future[_] = {
-    def createNextResolution(resolution: Int) = {
+    def createNextResolution(resolutionExponent: Int) = {
       val s = System.currentTimeMillis()
-      val targetResolution = resolution * 2
+      val targetResolution = math.pow(2, resolutionExponent + 1).toInt
+      val resolution = math.pow(2, resolutionExponent).toInt
       logger.info(s"About to create resolution $targetResolution for ${dataSource.id}")
       val dataStore = new FileDataStore
       val cubeLength = dataSource.lengthOfLoadedBuckets
@@ -110,7 +111,7 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
         val goal = p.scale(targetScale)
         val combinedF: Fox[Array[Array[Byte]]] =
           Fox.combined(dataRequester.loadBlocks(
-            minBlock, maxBlock, dataSource, None, resolution, DataRequestSettings(false), layer, useCache = true))
+            minBlock, maxBlock, dataSource, None, resolutionExponent, DataRequestSettings(false), layer, useCache = true))
 
         combinedF.flatMap { cubes =>
           val block = BlockedArray3D[Byte](

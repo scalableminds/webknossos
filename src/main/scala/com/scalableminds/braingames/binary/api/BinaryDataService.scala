@@ -26,8 +26,9 @@ import scala.concurrent.duration._
 trait BinaryDataService
   extends DataSourceService
     with BinaryDataRequestBuilder
-    with DataLayerMappingHelpers
-    with DataDownloadHelper
+    with DataLayerMappingService
+    with DataDownloadService
+    with DataImageService
     with I18nSupport
     with LazyLogging {
 

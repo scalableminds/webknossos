@@ -3,7 +3,9 @@
  */
 package com.scalableminds.braingames.binary.models
 
+
 import com.scalableminds.braingames.binary.requester.Cuboid
+import com.scalableminds.braingames.binary.models._
 
 trait AbstractDataRequest
 

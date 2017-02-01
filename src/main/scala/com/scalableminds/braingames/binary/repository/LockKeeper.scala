@@ -17,6 +17,7 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent.duration._
+import scala.io.BufferedSource
 
 trait LockKeeperHelper extends LockKeeperImpl {
   def withLock[T](folder: Path)(f: => T): Fox[T] = {
@@ -154,13 +155,19 @@ class LockKeeperActor extends Actor with LazyLogging {
     folder.resolve(LockFileName)
 
   private def parseLockFile(folder: Path) = {
-    PathUtils.fileOption(folder).flatMap {
-      file =>
-        if (file.exists) {
-          val lockFileContent = scala.io.Source.fromFile(file).mkString.trim
-          LockFileContent.parse(lockFileContent)
-        } else
-          None
+    var buffer: BufferedSource = null
+    try {
+      PathUtils.fileOption(folder).flatMap {
+        file =>
+          if (file.exists) {
+            buffer = scala.io.Source.fromFile(file)
+            val lockFileContent = buffer.mkString.trim
+            LockFileContent.parse(lockFileContent)
+          } else
+            None
+      }
+    } finally {
+      if(buffer != null) buffer.close()
     }
   }
 

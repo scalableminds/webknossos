@@ -3,7 +3,8 @@
  */
 package com.scalableminds.braingames.binary.models
 
-import java.nio.file.{Paths, Files, Path}
+import java.nio.file.{Paths, Path}
+import com.scalableminds.braingames.binary.repository.KnossosDataSourceType
 
 import com.scalableminds.util.geometry.{BoundingBox, Scale, Point3D}
 import play.api.libs.json._
@@ -19,7 +20,7 @@ case class DataSource(
                        scale: Scale,
                        priority: Int = 0,
                        dataLayers: List[DataLayer] = Nil,
-                       sourceType: Option[String] = Some("knossos"),
+                       sourceType: Option[String] = Some(KnossosDataSourceType.name),
                        blockLengthOpt: Option[Int] = Some(128)
                      ) {
 

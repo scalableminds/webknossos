@@ -4,6 +4,7 @@
 package com.scalableminds.braingames.binary.requester
 
 import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.repository.{KnossosDataSourceType, WebKnossosWrapDataSourceType}
 import com.scalableminds.braingames.binary.requester.handlers.{BlockHandler, KnossosBlockHandler, WebKnossosWrapBlockHandler}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Point3D
@@ -61,14 +62,15 @@ class DataRequester(
 
   private implicit val dataBlockSaveTimeout = conf.getInt("saveTimeout").seconds
 
-  private def blockHandler(sourceType: Option[String]): BlockHandler = sourceType.getOrElse("knossos") match {
-    case "knossos" =>
-      new KnossosBlockHandler(cache)
-    case "webKnossosWrap" =>
-      new WebKnossosWrapBlockHandler(cache)
-    case _ =>
-      throw new Exception("Unexpected data layer type")
-  }
+  private def blockHandler(sourceType: Option[String]): BlockHandler =
+    sourceType.getOrElse(KnossosDataSourceType.name) match {
+      case KnossosDataSourceType.name =>
+        new KnossosBlockHandler(cache)
+      case WebKnossosWrapDataSourceType.name =>
+        new WebKnossosWrapBlockHandler(cache)
+      case _ =>
+        throw new Exception("Unexpected data layer type")
+    }
 
   private def fallbackForLayer(layer: DataLayer): Future[List[(DataLayerSection, DataLayer)]] = {
     layer.fallback.toFox.flatMap { fallback =>

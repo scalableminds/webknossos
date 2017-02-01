@@ -7,6 +7,7 @@ import play.api.libs.json._
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.braingames.binary.requester.handlers.{BlockHandler, KnossosBlockHandler, WebKnossosWrapBlockHandler}
 import com.typesafe.scalalogging.LazyLogging
+import com.scalableminds.braingames.binary.repository.{KnossosDataSourceType, WebKnossosWrapDataSourceType}
 import java.lang.Exception
 
 import scala.util.Try
@@ -43,7 +44,7 @@ case class DataLayer(
                       sections: List[DataLayerSection] = Nil,
                       nextSegmentationId: Option[Long] = None,
                       mappings: List[DataLayerMapping] = List(),
-                      sourceType: Option[String] = Some("knossos")
+                      sourceType: Option[String] = Some(KnossosDataSourceType.name)
   ) extends DataLayerLike {
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")

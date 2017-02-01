@@ -86,7 +86,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     }
   }
 
-  def createOutputStream(path: Path, compressionAllowed: Boolean) = {
+  private def createOutputStream(path: Path, compressionAllowed: Boolean) = {
     if(compressionAllowed)
       new SnappyFramedOutputStream(Files.newOutputStream(path))
     else
@@ -106,10 +106,11 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
            shouldBeCompressed: Boolean): Fox[Boolean] = {
     Future {
       val path = knossosFilePath(dataSetDir, dataSetId, resolution, block, DataLayer.fileExt(shouldBeCompressed))
+      var binaryStream: OutputStream = null
       logger.info(s"Attempting write to: $path")
       try {
         PathUtils.parent(path.toAbsolutePath).map(p => Files.createDirectories(p))
-        val binaryStream = createOutputStream(path, shouldBeCompressed)
+        binaryStream = createOutputStream(path, shouldBeCompressed)
         logger.info("Created FileOutputStream")
         byteArrayToOutputStream(binaryStream, data)
         logger.info("Data was written")
@@ -121,6 +122,8 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
         case e: Exception =>
           logger.error("Unhandled exception while writing to file: " + e)
           Failure("Unhandled exception while writing to file: " + e)
+      } finally {
+        if(binaryStream != null) binaryStream.close()
       }
     }.recover{
       case e =>
@@ -133,11 +136,13 @@ object FileDataStore {
   /**
     * Read file contents to a byte array
     */
-  def inputStreamToByteArray(is: InputStream) = {
-    IOUtils.toByteArray(is)
+  def inputStreamToByteArray(is: InputStream): Array[Byte] = {
+    val result = IOUtils.toByteArray(is)
+    is.close()
+    result
   }
 
-  def byteArrayFromFile(file: File, fileSize: Option[Int]) = {
+  def byteArrayFromFile(file: File, fileSize: Option[Int]): Array[Byte] = {
     FilenameUtils.getExtension(file.getAbsolutePath) match {
       case DataLayer.KnossosFileExtention | DataLayer.MappingFileExtention =>
         inputStreamToByteArray(new FileInputStream(file), fileSize.getOrElse(file.length().toInt))
@@ -146,7 +151,7 @@ object FileDataStore {
     }
   }
 
-  def inputStreamFromDataFile(file: File) = {
+  def inputStreamFromDataFile(file: File): InputStream = {
     FilenameUtils.getExtension(file.getAbsolutePath) match {
       case DataLayer.KnossosFileExtention =>
         new FileInputStream(file)
@@ -155,7 +160,7 @@ object FileDataStore {
     }
   }
 
-  def inputStreamToByteArray(is: InputStream, size: Int) = {
+  def inputStreamToByteArray(is: InputStream, size: Int): Array[Byte] = {
     val byteArray = new Array[Byte](size)
     IOUtils.read(is, byteArray, 0, size)
     is.close()
@@ -167,6 +172,5 @@ object FileDataStore {
     */
   def byteArrayToOutputStream(os: OutputStream, data: Array[Byte]): Unit = {
     IOUtils.write(data, os)
-    os.close()
   }
 }

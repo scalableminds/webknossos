@@ -20,7 +20,7 @@ class WebKnossosWrapDataSourceType(val messagesApi: MessagesApi) extends DataSou
   with FoxImplicits
   with LazyLogging {
 
-  val name = "webKnossosWrap"
+  val name = WebKnossosWrapDataSourceType.name
 
   private val maxRecursiveLayerDepth = 2
 
@@ -78,4 +78,8 @@ class WebKnossosWrapDataSourceType(val messagesApi: MessagesApi) extends DataSou
       )
     }
   }
+}
+
+object WebKnossosWrapDataSourceType {
+  val name = "webKnossosWrap"
 }

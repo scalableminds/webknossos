@@ -39,7 +39,7 @@ class KnossosCube(file: RandomAccessFile) extends Cube with LazyLogging {
   }
 
   override protected def onFinalize(): Unit = {
-    logger.debug(s"Closed file '${file.getPath}'")
+    logger.trace(s"Closed file '${file.getPath}'")
     file.close()
   }
 }

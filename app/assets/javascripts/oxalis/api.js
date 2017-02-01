@@ -20,21 +20,26 @@ class TracingApi {
     this.model = model;
   }
 
+
   getActiveNodeId(): ?number {
     return this.model.skeletonTracing.getActiveNodeId();
   }
+
 
   getActiveTreeId(): ?number {
     return this.model.skeletonTracing.getActiveTreeId();
   }
 
+
   setActiveNode(id: number) {
     this.model.skeletonTracing.setActiveNode(id);
   }
 
+
   getAllNodes(): [TracePoint] {
     return this.model.skeletonTracing.getNodeListOfAllTrees();
   }
+
 
   // TODO discuss interface, supplying the node provides performance boost
   setCommentForNode(commentText: string, node: TracePoint | number): void {
@@ -42,6 +47,7 @@ class TracingApi {
     if (_.isNumber(node)) { node = this.model.skeletonTracing.getNode(node); }
     this.model.skeletonTracing.setCommentForNode(commentText, node);
   }
+
 
   // TODO discuss interface, supplying the tree provides performance boost
   getCommentForNode(nodeId: number, tree: ?(TraceTree | number)): ?string {
@@ -62,27 +68,32 @@ class DataApi {
     this.model = model;
   }
 
+
   __getLayer(layerName: string): Binary {
     const layer = this.model.getBinaryByName(layerName);
     if (layer === undefined) throw Error(`Layer with name ${layerName} was not found.`);
     return layer;
   }
 
+
   getLayerNames(): [string] {
     return _.map(this.model.binary, "name");
   }
 
-  setMapping(layerName: string, mapping: [number]) {
+
+  setMapping(layerName: string, mapping: {number: number}) {
     const layer = this.__getLayer(layerName);
 
     layer.cube.setMapping(mapping);
   }
+
 
   getBoundingBox(layerName: string): [Vector3, Vector3] {
     const layer = this.__getLayer(layerName);
 
     return [layer.lowerBoundary, layer.upperBoundary];
   }
+
 
   getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
     const layer = this.__getLayer(layerName);
@@ -102,9 +113,11 @@ class UserApi {
     this.model = oxalisModel;
   }
 
+
   getConfiguration(key: string) {
     return this.model.user.get(key);
   }
+
 
   setConfiguration(key: string, value) {
     this.model.user.set(key, value);
@@ -123,6 +136,21 @@ class UtilsApi {
   constructor(oxalisModel: OxalisModel) {
     this.model = oxalisModel;
   }
+
+
+  sleep(milliseconds: number) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+  }
+
+
+  // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
+  // webknossos.registerOverwrite("addNode", b)
+  // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
+  registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T) => void, args: T) => void): void {
+    const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);
+    this.model.skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
+  }
+
 
   registerKeyHandler(key: string, handler: () => void): Handler {
     // TODO implement
@@ -160,20 +188,12 @@ class Api {
     this.model = oxalisModel;
   }
 
+
   apiReady(version: number, callback: (ApiInterface) => void) {
     // TODO: version check
     this.readyPromise.then(() => {
       callback(this.apiInterface);
     });
-  }
-
-  // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
-  // webknossos.registerOverwrite("addNode", b)
-  // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
-  // TODO: where should this method be accessible from, probably api.utils
-  registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T) => void, args: T) => void): void {
-    const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);
-    this.model.skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
   }
 
 }

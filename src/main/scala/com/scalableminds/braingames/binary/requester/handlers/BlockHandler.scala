@@ -10,13 +10,21 @@ import com.scalableminds.braingames.binary.requester.{Cube, DataCache}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
+import play.api.libs
 
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.FiniteDuration
 
 trait BlockHandler extends DataCache with LazyLogging {
   protected def loadFromUnderlying[T](loadBlock: LoadBlock, timeout: FiniteDuration)(f: Cube => T): Fox[T]
 
-  def save(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean]
+  protected def saveToUnderlying(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean]
+
+  def save(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean] = {
+    val cubePosition = saveBlock.dataSource.pointToBlock(saveBlock.block, saveBlock.resolution)
+    val storageCube = saveBlock.copy(block = cubePosition)
+    saveToUnderlying(storageCube, timeout)
+  }
 
   def load(loadBlock: LoadBlock, timeout: FiniteDuration, useCache: Boolean): Fox[Array[Byte]] = {
     val cubePosition = loadBlock.dataSource.pointToBlock(loadBlock.block, loadBlock.resolution)

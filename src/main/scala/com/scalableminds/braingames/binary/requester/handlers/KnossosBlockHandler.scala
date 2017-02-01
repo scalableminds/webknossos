@@ -109,7 +109,7 @@ class KnossosBlockHandler(val cache: DataCubeCache)
     result
   }
 
-  def save(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean] = {
+  override def saveToUnderlying(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean] = {
     Future {
       blocking {
         val saveResult = dataStore.save(saveBlock).futureBox

@@ -22,6 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.datastore.DataStorePlugin
 import java.io.File
 
+import com.scalableminds.braingames.binary.requester.Cuboid
 import org.apache.commons.io.FileUtils
 import org.apache.commons.codec.binary.Base64
 import play.api.libs.iteratee.Enumerator
@@ -298,81 +299,6 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     }
   }
 
-  def requestImageData(
-                        dataSetName: String,
-                        dataLayerName: String,
-                        startPoint: Point3D,
-                        width: Int,
-                        height: Int,
-                        depth: Int,
-                        resolutionExponent: Int,
-                        settings: DataRequestSettings): Fox[Array[Byte]] = {
-    getDataSourceAndDataLayer(dataSetName, dataLayerName).flatMap {
-      case (dataSource, dataLayer) =>
-        val dataRequestTemplate = DataStorePlugin.binaryDataService.createDataReadRequest(
-          dataSource, dataLayer, None,
-          dataSource.lengthOfLoadedBuckets, dataSource.lengthOfLoadedBuckets, dataSource.lengthOfLoadedBuckets,
-          startPoint, resolutionExponent, settings)
-        val resolution = dataRequestTemplate.resolution
-        val position = dataSource.applyResolution(startPoint, resolution)
-        val bytesPerElement = dataLayer.bytesPerElement
-        val result = new Array[Byte](width * height * depth * bytesPerElement)
-        val bucketLength = dataSource.lengthOfLoadedBuckets
-        val minBucket = position.move(-position.x % bucketLength, -position.y % bucketLength, -position.z % bucketLength)
-        val maxPosition = position.move(width, height, depth)
-
-        val bucketQueue = for {
-          x <- minBucket.x.until(maxPosition.x, bucketLength)
-          y <- minBucket.y.until(maxPosition.y, bucketLength)
-          z <- minBucket.z.until(maxPosition.z, bucketLength)
-        } yield dataSource.unapplyResolution(Point3D(x, y, z), resolution)
-
-        val bucketResults = Fox.serialCombined(bucketQueue.toList) { bucket =>
-          val dataRequest = dataRequestTemplate.copy(cuboid = dataRequestTemplate.cuboid.copy(topLeft = bucket))
-          DataStorePlugin.binaryDataService.handleDataRequest(dataRequest).map(r => dataRequest -> r)
-        }
-
-        bucketResults.map { rs =>
-          rs.foreach {
-            case (request, data) =>
-              val bucket = dataSource.applyResolution(request.cuboid.topLeft, resolution)
-              val x = math.max(position.x, bucket.x)
-              var y = math.max(position.y, bucket.y)
-              var z = math.max(position.z, bucket.z)
-
-              val xMax = math.min(bucket.x + bucketLength, maxPosition.x)
-              val yMax = math.min(bucket.y + bucketLength, maxPosition.y)
-              val zMax = math.min(bucket.z + bucketLength, maxPosition.z)
-
-              while (z < zMax) {
-                y = math.max(position.y, bucket.y)
-                while (y < yMax) {
-                  val dataOffset =
-                    (x % bucketLength +
-                      y % bucketLength * bucketLength +
-                      z % bucketLength * bucketLength * bucketLength) * bytesPerElement
-                  val rx = x - position.x
-                  val ry = y - position.y
-                  val rz = z - position.z
-
-                  val resultOffset = (rx + ry * width + rz * width * height) * bytesPerElement
-                  try {
-                    System.arraycopy(data, dataOffset, result, resultOffset, (xMax - x) * bytesPerElement)
-                  } catch {
-                    case e: Exception =>
-                      logger.warn("Oh oh, going to break...")
-                      throw e
-                  }
-                  y += 1
-                }
-                z += 1
-              }
-          }
-          result
-        }
-    }
-  }
-
   protected def requestImageThumbnail(
                                        dataSetName: String,
                                        dataLayerName: String,
@@ -402,8 +328,12 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                                         blackAndWhite: Boolean): Fox[File] = {
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-      params = ImageCreatorParameters(dataLayer.bytesPerElement, settings.useHalfByte, width, height, imagesPerRow, blackAndWhite = blackAndWhite)
-      data <- requestImageData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
+      params = ImageCreatorParameters(
+        dataLayer.bytesPerElement, settings.useHalfByte, width, height, imagesPerRow, blackAndWhite = blackAndWhite)
+      startPoint = Point3D(x, y, z)
+      cuboid = Cuboid(startPoint, width, height, depth, resolution)
+      data <- DataStorePlugin.binaryDataService.requestImageData(
+        dataSource, dataLayer, cuboid, settings) ?~> Messages("binary.data.notFound")
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {

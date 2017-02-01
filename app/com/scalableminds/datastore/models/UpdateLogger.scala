@@ -22,7 +22,6 @@ case class VolumeUpdate(
                          dataSource: DataSource,
                          dataLayer: DataLayer,
                          dataSection: Option[String],
-                         resolution: Int,
                          cuboid: Cuboid,
                          dataFile: String)
 
@@ -54,7 +53,6 @@ object VolumeUpdateService extends LazyLogging with FoxImplicits{
         request.dataSource,
         request.dataLayer,
         request.dataSection,
-        request.resolution,
         request.cuboid,
         backupLocation)
       logger.info(s"Volume update: $update")

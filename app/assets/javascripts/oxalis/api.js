@@ -6,8 +6,8 @@
 import _ from "lodash";
 import app from "app";
 import OxalisModel from "oxalis/model";
-import type { Vector3 } from "oxalis/constants";
-import TracePoint from "oxalis/model/skeletontracing/tracepoint";
+import type { Vector3 } from "./constants";
+import TracePoint from "./model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
 import Binary from "oxalis/model/binary";
 
@@ -56,6 +56,10 @@ class TracingApi {
 
  /**
   * Sets the comment for a node.
+  *
+  * @example
+  * const activeNodeId = api.tracing.getActiveNodeId();
+  * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
   */
   // TODO discuss interface, supplying the node provides performance boost
   setCommentForNode(commentText: string, node: TracePoint | number): void {
@@ -65,7 +69,14 @@ class TracingApi {
   }
 
  /**
-  * Returns the comment for a given node and tree.
+  * Returns the comment for a given node and tree (optional).
+  * @param tree - Supplying the tree will provide a performance boost for looking up a comment.
+  *
+  * @example
+  * const comment = api.tracing.getCommentForNode(23);
+  *
+  * @example // Provide a tree for lookup speed boost
+  * const comment = api.tracing.getCommentForNode(23, api.getActiveTreeid());
   */
   // TODO discuss interface, supplying the tree provides performance boost
   getCommentForNode(nodeId: number, tree: ?(TraceTree | number)): ?string {
@@ -103,6 +114,14 @@ class DataApi {
 
  /**
   * Sets a mapping for a given layer.
+  *
+  * @example
+  * const position = [123, 123, 123];
+  * const segmentId = await api.data.getDataValue("segmentation", position);
+  * const treeId = api.tracing.getActiveTreeId();
+  * const mapping = {[segmentId]: treeId}
+  *
+  * api.setMapping("segmentation", mapping);
   */
   setMapping(layerName: string, mapping: [number]) {
     const layer = this.__getLayer(layerName);
@@ -121,6 +140,16 @@ class DataApi {
 
  /**
   * Returns raw binary data for a given layer, position and zoom level.
+  *
+  * @example // Return the greyscale value for a bucket
+  * const position = [123, 123, 123];
+  * api.data.getDataValue("binary", position).then((greyscaleColor) => ...);
+  *
+  * @example // Using the await keyword instead of the promise syntax
+  * const greyscaleColor = await api.data.getDataValue("binary", position);
+  *
+  * @example // Get the segmentation id for a segementation layer
+  * const segmentId = await api.data.getDataValue("segmentation", position);
   */
   getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
     const layer = this.__getLayer(layerName);
@@ -144,6 +173,10 @@ class UserApi {
 
  /**
   * Returns the user's setting for the tracing view.
+  * @param key - One of the following keys: moveValue, moveValue3d, rotateValue, crosshairSize, scaleValue, mouseRotateValue, clippingDistance, clippingDistanceArbitrary, dynamicSpaceDirection, displayCrosshair, zoom, scale, tdViewDisplayPlanes, isosurfaceDisplay, isosurfaceBBsize, isosurfaceResolution, newNodeNewTree, inverseX, inverseY, keyboardDelay, mouseActive, keyboardActive, gamepadActive, motionsensorActive, firstVisToggle, particleSize, overrideNodeRadius, sortTreesByName, sortCommentsAsc, segmentationOpacity, sphericalCapRadius, renderComments
+  *
+  * @example
+  * const segmentationOpacity = api.user.getConfiguration("segmentationOpacity");
   */
   getConfiguration(key: string) {
     return this.model.user.get(key);
@@ -151,6 +184,10 @@ class UserApi {
 
  /**
   * Set the user's setting for the tracing view.
+  * @param key - Same keys as for getConfiguration()
+  *
+  * @example
+  * api.user.setConfiguration("moveValue", 20);
   */
   setConfiguration(key: string, value) {
     this.model.user.set(key, value);
@@ -240,8 +277,17 @@ class Api {
  /**
   * API initializer. Will be called as soon as the webKnossos API is ready.
   * @name apiReady
+  * @memberof Api
+  * @instance
   * @param {number} version
-  * @param {number} ApiInterface
+  * @param {function} callback with your script
+  *
+  * @example
+  * api.apiReady(1, (api) => {
+  *   // Your cool user script / wK plugin
+  *   const nodes = api.tracing.getAllNodes();
+  *   ...
+  * });
   */
   apiReady(version: number, callback: (ApiInterface) => void) {
     // TODO: version check
@@ -256,6 +302,15 @@ class Api {
   // TODO: where should this method be accessible from, probably api.utils
  /**
   * Overwrite existing wK methods.
+  * @param {string}  funcName - The method name you wish to override. Must be a skeletonTracing method.
+  * @param {function} newFunc - Your new implementation for the method in question. Receives the original function as first argument.
+  *
+  * @example
+  * api.registerOverwrite("mergeTree", (oldMergeTreeFunc) => {
+  *   // ... do stuff before the original function...
+  *   oldMergeTreeFunc(sourceTree, targetTree, lastNodeId, activeNodeId);
+  *   // ... do something after the original function ...
+  * });
   */
   registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T) => void, args: T) => void): void {
     const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);

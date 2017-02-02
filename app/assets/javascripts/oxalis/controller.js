@@ -162,7 +162,7 @@ class Controller {
       },
     });
 
-    app.vent.trigger("webknossos:ready")
+    app.vent.trigger("webknossos:ready");
   }
 
 

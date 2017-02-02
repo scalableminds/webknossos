@@ -3,13 +3,14 @@
  * @flow weak
  */
 
+// only relative imports are followed by documentationjs
 import _ from "lodash";
 import app from "app";
 import OxalisModel from "oxalis/model";
+import Binary from "oxalis/model/binary";
 import type { Vector3 } from "./constants";
 import TracePoint from "./model/skeletontracing/tracepoint";
-import TraceTree from "oxalis/model/skeletontracing/tracetree";
-import Binary from "oxalis/model/binary";
+import TraceTree from "./model/skeletontracing/tracetree";
 
 /**
  * All tracing related API methods.
@@ -119,7 +120,7 @@ class DataApi {
   * const position = [123, 123, 123];
   * const segmentId = await api.data.getDataValue("segmentation", position);
   * const treeId = api.tracing.getActiveTreeId();
-  * const mapping = {[segmentId]: treeId}
+  * const mapping = {[segmentId]: [treeId]}
   *
   * api.setMapping("segmentation", mapping);
   */
@@ -241,9 +242,7 @@ type ApiInterface = {
  * @property {UtilsApi} utils - Utitility methods for controlling wK.
  *
  * @example
- * import api from "api.js"
- *
- * api.apiReady(1, (api) => {
+ * window.webknossos.apiReady(1, (api) => {
  *     const nodes = api.tracing.getAllNodes();
  *     const dataLayerNames = api.data.getLayerNames();
  *     const userConfiguration = api.user.getConfiguration();
@@ -283,7 +282,7 @@ class Api {
   * @param {function} callback with your script
   *
   * @example
-  * api.apiReady(1, (api) => {
+  * window.webknossos.apiReady(1, (api) => {
   *   // Your cool user script / wK plugin
   *   const nodes = api.tracing.getAllNodes();
   *   ...

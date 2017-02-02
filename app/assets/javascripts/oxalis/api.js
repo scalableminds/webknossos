@@ -146,7 +146,7 @@ class UtilsApi {
   // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
-  registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T) => void, args: T) => void): void {
+  registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T[]) => void, args: T) => void): void {
     const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);
     this.model.skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
   }

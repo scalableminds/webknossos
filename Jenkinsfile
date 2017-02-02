@@ -18,6 +18,8 @@ ansiColor('xterm') {
         env.DOCKER_CACHE_PREFIX = "~/.webknossos-build-cache"
         sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
         sh "docker-compose pull sbt"
+
+        sh "echo ${commit} > public/commit.txt"
       }
 
 
@@ -59,9 +61,12 @@ ansiColor('xterm') {
         env.VERSION = readFile('version').trim()
         sh "./buildtools/make_dist.sh oxalis ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
 
-        def base_port = 10000
-        def ports_per_project = 2000
-        def port = base_port + (env.BUILD_NUMBER as Integer) % ports_per_project
+        def base_port = 11000
+        def port = base_port + sh(returnStdout: true, script: """
+          grep -nx "${BRANCH_NAME}" /var/lib/jenkins/jobs/webknossos/branches.txt > /dev/null || \
+            echo "${BRANCH_NAME}" >> /var/lib/jenkins/jobs/webknossos/branches.txt
+          grep -nx "${BRANCH_NAME}" /var/lib/jenkins/jobs/webknossos/branches.txt | grep -Eo '^[^:]+' | head -n1
+          """).trim().toInteger()
 
         def modes = ["dev", "prod"]
         def pkg_types = ["deb", "rpm"]

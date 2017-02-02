@@ -19,7 +19,6 @@ import TraceTree from "./model/skeletontracing/tracetree";
 class TracingApi {
 
   model: OxalisModel;
-
  /**
   * @private
   */
@@ -100,6 +99,7 @@ class DataApi {
     this.model = model;
   }
 
+
   __getLayer(layerName: string): Binary {
     const layer = this.model.getBinaryByName(layerName);
     if (layer === undefined) throw Error(`Layer with name ${layerName} was not found.`);
@@ -120,11 +120,11 @@ class DataApi {
   * const position = [123, 123, 123];
   * const segmentId = await api.data.getDataValue("segmentation", position);
   * const treeId = api.tracing.getActiveTreeId();
-  * const mapping = {[segmentId]: [treeId]}
+  * const mapping = {[segmentId]: treeId}
   *
   * api.setMapping("segmentation", mapping);
   */
-  setMapping(layerName: string, mapping: [number]) {
+  setMapping(layerName: string, mapping: {number: number}) {
     const layer = this.__getLayer(layerName);
 
     layer.cube.setMapping(mapping);
@@ -212,6 +212,32 @@ class UtilsApi {
   }
 
  /**
+  * Wait for some milliseconds before continuing the control flow.
+  */
+  sleep(milliseconds: number) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+  }
+
+ /**
+  * Overwrite existing wK methods.
+  * @param {string}  funcName - The method name you wish to override. Must be a skeletonTracing method.
+  * @param {function} newFunc - Your new implementation for the method in question. Receives the original function as first argument.
+  *
+  * @example
+  * api.registerOverwrite("mergeTree", (oldMergeTreeFunc) => {
+  *   // ... do stuff before the original function...
+  *   oldMergeTreeFunc(sourceTree, targetTree, lastNodeId, activeNodeId);
+  *   // ... do something after the original function ...
+  * });
+  */
+  // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
+  // webknossos.registerOverwrite("addNode", b)
+  // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
+  registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T) => void, args: T) => void): void {
+    const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);
+    this.model.skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
+  }
+ /**
   * Sets a custom handler function for a keyboard shortcut.
   */
   registerKeyHandler(key: string, handler: () => void): Handler {
@@ -254,7 +280,6 @@ class Api {
   readyPromise: Promise<void>;
   apiInterface: ApiInterface;
   model: OxalisModel;
-
  /**
   * @private
   */
@@ -294,28 +319,6 @@ class Api {
       callback(this.apiInterface);
     });
   }
-
-  // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
-  // webknossos.registerOverwrite("addNode", b)
-  // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
-  // TODO: where should this method be accessible from, probably api.utils
- /**
-  * Overwrite existing wK methods.
-  * @param {string}  funcName - The method name you wish to override. Must be a skeletonTracing method.
-  * @param {function} newFunc - Your new implementation for the method in question. Receives the original function as first argument.
-  *
-  * @example
-  * api.registerOverwrite("mergeTree", (oldMergeTreeFunc) => {
-  *   // ... do stuff before the original function...
-  *   oldMergeTreeFunc(sourceTree, targetTree, lastNodeId, activeNodeId);
-  *   // ... do something after the original function ...
-  * });
-  */
-  registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T) => void, args: T) => void): void {
-    const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);
-    this.model.skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
-  }
-
 }
 
 export default Api;

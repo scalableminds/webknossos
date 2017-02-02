@@ -27,11 +27,11 @@ class KnossosCube(file: RandomAccessFile) extends Cube with LazyLogging {
       file.seek(offset)
       numReadBytes = file.read(buffer)
     }
-    if (numReadBytes == length) {
-      System.arraycopy(buffer, 0, other, destPos, length)
+    if (numReadBytes > -1 ) {
+      System.arraycopy(buffer, 0, other, destPos, numReadBytes)
       true
     } else {
-      logger.error(s"Failed to read data! Expected length '$length' " +
+      logger.trace(s"Failed to read data! Expected length '$length' " +
         s"got '$numReadBytes'. File: ${file.length} " +
         s"Closed? ${file.isClosed} Offset: $offset Path: ${file.getPath}")
       false
@@ -98,7 +98,7 @@ class KnossosBlockHandler(val cache: DataCubeCache)
             y % cubeLength * cubeLength +
             z % cubeLength * cubeLength * cubeLength) * bytesPerElement
         if (!cube.copyTo(cubeOffset, result, idx, bucketLength * bytesPerElement))
-          logger.warn(s"Failed to copy from cube to bucket. " +
+          logger.trace(s"Failed to copy from cube to bucket. " +
             s"DS: ${requestedCube.dataSource.id}/${requestedCube.dataLayer.name} Bucket: ${requestedCube.block}")
         idx += bucketLength * bytesPerElement
         y += 1
@@ -109,10 +109,10 @@ class KnossosBlockHandler(val cache: DataCubeCache)
     result
   }
 
-  override def saveToUnderlying(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean] = {
+  override def saveToUnderlying(saveBlock: SaveBlock, bucket: Point3D, timeout: FiniteDuration): Fox[Boolean] = {
     Future {
       blocking {
-        val saveResult = dataStore.save(saveBlock).futureBox
+        val saveResult = dataStore.save(saveBlock, bucket).futureBox
         Await.result(saveResult, timeout)
       }
     }.recover {

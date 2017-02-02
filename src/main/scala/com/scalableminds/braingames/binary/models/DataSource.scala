@@ -59,11 +59,17 @@ case class DataSource(
   def relativeBaseDir(binaryBase: String): String =
     baseDir.replace(binaryBase, "")
 
-  def pointToBlock(point: Point3D, resolution: Int): Point3D =
+  def pointToCube(point: Point3D, resolution: Int): Point3D =
     Point3D(
       point.x / blockLength / resolution,
       point.y / blockLength / resolution,
       point.z / blockLength / resolution)
+
+  def pointToBucket(point: Point3D, resolution: Int): Point3D =
+    Point3D(
+      point.x / lengthOfLoadedBuckets / resolution,
+      point.y / lengthOfLoadedBuckets / resolution,
+      point.z / lengthOfLoadedBuckets / resolution)
 
   def applyResolution(point: Point3D, resolution: Int): Point3D =
     Point3D(

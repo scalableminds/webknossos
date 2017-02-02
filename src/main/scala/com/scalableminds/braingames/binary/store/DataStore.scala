@@ -29,7 +29,7 @@ trait DataStore {
   /**
     * Saves the data of a given point to the data source
     */
-  def save(dataInfo: SaveBlock): Fox[Boolean]
+  def save(dataInfo: SaveBlock, bucket: Point3D): Fox[Boolean]
 
   def load(request: MappingRequest): Fox[Array[Byte]]
 }

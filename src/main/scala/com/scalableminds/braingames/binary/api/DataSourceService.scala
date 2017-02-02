@@ -43,6 +43,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
 
     val dataStore = new FileDataStore
     try {
+      val bucket = Point3D(0,0,0) // HACKY: we are saving a whole cube here not only a bucket...
       val dataInfo = SaveBlock(baseDataSource, dataLayer, section, 1, Point3D(0,0,0), Array.empty)
       val zip = new ZipFile(file)
       val resolutions = ZipIO.withUnziped(zip, includeHiddenFiles = false) { entries =>
@@ -53,7 +54,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
             case (resolution, point) =>
               val currentBlock = dataInfo.copy(
                 block = point, resolution = resolution, data = IOUtils.toByteArray(stream))
-              dataStore.save(currentBlock).map(_ => resolution)
+              dataStore.save(currentBlock, bucket).map(_ => resolution)
           }.getOrElse(Fox.empty)
           result.onComplete( _ => stream.close())
           result
@@ -83,7 +84,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
       None,
       fallbackLayer.map(l => l.elementClass).getOrElse(DataLayer.SEGMENTATION.defaultElementClass),
       isWritable = true,
-      _isCompressed = Some(true),
+      _isCompressed = Some(false),
       fallback = fallbackLayer.map(l => FallbackLayer(baseDataSource.id, l.name)),
       sections = List(section),
       nextSegmentationId = baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId),

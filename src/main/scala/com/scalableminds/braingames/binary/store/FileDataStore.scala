@@ -19,6 +19,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.{FilenameUtils, IOUtils}
 import org.xerial.snappy.{SnappyFramedInputStream, SnappyFramedOutputStream}
+import play.api.data
 
 /**
   * A data store implementation which uses the hdd as data storage
@@ -58,6 +59,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
           .filter(_.exists())
           .orElse(fallback)
           .map { file =>
+            logger.trace("Accessing file: " + path)
             val t = System.currentTimeMillis
             val r = new RandomAccessFile(file, "r") //byteArrayFromFile(file, fileSize)
             NewRelic.recordResponseTimeMetric("Custom/FileDataStore/files-response-time", System.currentTimeMillis - t)
@@ -93,25 +95,40 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
       Files.newOutputStream(path)
   }
 
-  def save(dataInfo: SaveBlock): Fox[Boolean] = {
-    save(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.resolution, dataInfo.block,
-      dataInfo.data, dataInfo.dataLayer.isCompressed)
+  def save(dataInfo: SaveBlock, bucket: Point3D): Fox[Boolean] = {
+    save(knossosBaseDir(dataInfo), dataInfo, bucket)
   }
 
   def save(dataSetDir: Path,
-           dataSetId: String,
-           resolution: Int,
-           block: Point3D,
-           data: Array[Byte],
-           shouldBeCompressed: Boolean): Fox[Boolean] = {
+          dataInfo: SaveBlock,
+           bucket: Point3D): Fox[Boolean] = {
     Future {
-      val path = knossosFilePath(dataSetDir, dataSetId, resolution, block, DataLayer.fileExt(shouldBeCompressed))
-      var binaryStream: OutputStream = null
+      val path = knossosFilePath(dataSetDir, dataInfo.dataSource.id, dataInfo.resolution, dataInfo.block, DataLayer.fileExt(dataInfo.dataLayer.isCompressed))
+      var outputFile: RandomAccessFile = null
       try {
         PathUtils.parent(path.toAbsolutePath).map(p => Files.createDirectories(p))
-        binaryStream = createOutputStream(path, shouldBeCompressed)
-        byteArrayToOutputStream(binaryStream, data)
-        logger.trace(s"Data was saved. block: $block Compressed: $shouldBeCompressed Location: $path")
+        outputFile = new RandomAccessFile(path.toFile, "rwd")
+        val bucketLength = dataInfo.dataSource.lengthOfLoadedBuckets
+        val bucketsPerDim = dataInfo.dataSource.blockLength / dataInfo.dataSource.lengthOfLoadedBuckets
+        val bucketOffset = (bucket.x % bucketsPerDim * bucketLength +
+          bucket.y % bucketsPerDim * bucketsPerDim * bucketLength * bucketLength +
+          bucket.z % bucketsPerDim * bucketsPerDim * bucketsPerDim * bucketLength * bucketLength * bucketLength) * dataInfo.dataLayer.bytesPerElement
+        var y = 0
+        var z = 0
+        while (z < bucketLength) {
+          y = 0
+          while (y < bucketLength) {
+            val offset = bucketOffset +
+              (y * bucketsPerDim * bucketLength +
+                z * bucketsPerDim * bucketsPerDim * bucketLength * bucketLength) * dataInfo.dataLayer.bytesPerElement
+            outputFile.seek(offset)
+            val dataOffset = (bucketLength * y + bucketLength * bucketLength * z) * dataInfo.dataLayer.bytesPerElement
+            outputFile.write(dataInfo.data, dataOffset, bucketLength * dataInfo.dataLayer.bytesPerElement)
+            y += 1
+          }
+          z += 1
+        }
+        logger.trace(s"Data was saved. block: $bucket Compressed: false Size: ${dataInfo.data.length} Location: $path")
         Full(true)
       } catch {
         case e: FileNotFoundException =>
@@ -121,7 +138,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
           logger.error("Unhandled exception while writing to file: " + e)
           Failure("Unhandled exception while writing to file: " + e)
       } finally {
-        if(binaryStream != null) binaryStream.close()
+        if(outputFile != null) outputFile.close()
       }
     }.recover{
       case e =>

@@ -95,40 +95,48 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
       Files.newOutputStream(path)
   }
 
-  def save(dataInfo: SaveBlock, bucket: Point3D): Fox[Boolean] = {
-    save(knossosBaseDir(dataInfo), dataInfo, bucket)
+  def save(dataInfo: SaveBlock): Fox[Boolean] = {
+    save(knossosBaseDir(dataInfo), dataInfo)
   }
 
-  def save(dataSetDir: Path,
-          dataInfo: SaveBlock,
-           bucket: Point3D): Fox[Boolean] = {
+
+
+  private def copyBucketToCube(outputFile: RandomAccessFile, dataInfo: SaveBlock) = {
+    val bucketPosition = dataInfo.dataSource.applyResolution(dataInfo.block, dataInfo.resolution)
+    val bucketLength = dataInfo.dataSource.lengthOfLoadedBuckets
+    val blockLength = dataInfo.dataSource.blockLength
+    val bytesPerElement = dataInfo.dataLayer.bytesPerElement
+    val bucketOffset = (bucketPosition.x % blockLength +
+      bucketPosition.y % blockLength * blockLength +
+      bucketPosition.z % blockLength * blockLength * blockLength) * bytesPerElement
+    var y = 0
+    var z = 0
+    while (z < bucketLength) {
+      y = 0
+      while (y < bucketLength) {
+        val offsetInCubeFile = bucketOffset + (y * blockLength + z * blockLength * blockLength) * bytesPerElement
+        outputFile.seek(offsetInCubeFile)
+        val dataOffset = (bucketLength * y + bucketLength * bucketLength * z) * bytesPerElement
+        outputFile.write(dataInfo.data, dataOffset, bucketLength * bytesPerElement)
+        y += 1
+      }
+      z += 1
+    }
+  }
+
+  def save(dataSetDir: Path, dataInfo: SaveBlock): Fox[Boolean] = {
     Future {
-      val path = knossosFilePath(dataSetDir, dataInfo.dataSource.id, dataInfo.resolution, dataInfo.block, DataLayer.fileExt(dataInfo.dataLayer.isCompressed))
+      val cubePosition = dataInfo.dataSource.pointToCube(dataInfo.block, dataInfo.resolution)
+
+      val path = knossosFilePath(dataSetDir, dataInfo.dataSource.id, dataInfo.resolution,
+        cubePosition, DataLayer.fileExt(dataInfo.dataLayer.isCompressed))
       var outputFile: RandomAccessFile = null
       try {
         PathUtils.parent(path.toAbsolutePath).map(p => Files.createDirectories(p))
         outputFile = new RandomAccessFile(path.toFile, "rwd")
-        val bucketLength = dataInfo.dataSource.lengthOfLoadedBuckets
-        val bucketsPerDim = dataInfo.dataSource.blockLength / dataInfo.dataSource.lengthOfLoadedBuckets
-        val bucketOffset = (bucket.x % bucketsPerDim * bucketLength +
-          bucket.y % bucketsPerDim * bucketsPerDim * bucketLength * bucketLength +
-          bucket.z % bucketsPerDim * bucketsPerDim * bucketsPerDim * bucketLength * bucketLength * bucketLength) * dataInfo.dataLayer.bytesPerElement
-        var y = 0
-        var z = 0
-        while (z < bucketLength) {
-          y = 0
-          while (y < bucketLength) {
-            val offset = bucketOffset +
-              (y * bucketsPerDim * bucketLength +
-                z * bucketsPerDim * bucketsPerDim * bucketLength * bucketLength) * dataInfo.dataLayer.bytesPerElement
-            outputFile.seek(offset)
-            val dataOffset = (bucketLength * y + bucketLength * bucketLength * z) * dataInfo.dataLayer.bytesPerElement
-            outputFile.write(dataInfo.data, dataOffset, bucketLength * dataInfo.dataLayer.bytesPerElement)
-            y += 1
-          }
-          z += 1
-        }
-        logger.trace(s"Data was saved. block: $bucket Compressed: false Size: ${dataInfo.data.length} Location: $path")
+
+        copyBucketToCube(outputFile, dataInfo)
+        logger.trace(s"Data was saved. Compressed: false Size: ${dataInfo.data.length} Location: $path")
         Full(true)
       } catch {
         case e: FileNotFoundException =>

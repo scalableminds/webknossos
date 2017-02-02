@@ -79,7 +79,7 @@ class WebKnossosWrapBlockHandler(val cache: DataCubeCache) extends BlockHandler
     result
   }
 
-  override def saveToUnderlying(saveBlock: SaveBlock, bucket: Point3D, timeout: FiniteDuration): Fox[Boolean] = {
+  override def saveToUnderlying(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean] = {
     logger.error("WebKnossosWrap does not support saving data yet.")
     Fox.successful(false)
   }

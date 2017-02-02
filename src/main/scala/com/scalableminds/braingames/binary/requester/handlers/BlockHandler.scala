@@ -18,13 +18,10 @@ import scala.concurrent.duration.FiniteDuration
 trait BlockHandler extends DataCache with LazyLogging {
   protected def loadFromUnderlying[T](loadBlock: LoadBlock, timeout: FiniteDuration)(f: Cube => T): Fox[T]
 
-  protected def saveToUnderlying(saveBlock: SaveBlock, bucket: Point3D, timeout: FiniteDuration): Fox[Boolean]
+  protected def saveToUnderlying(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean]
 
   def save(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean] = {
-    val cubePosition = saveBlock.dataSource.pointToCube(saveBlock.block, saveBlock.resolution)
-    val storageCube = saveBlock.copy(block = cubePosition)
-    val bucket = saveBlock.dataSource.pointToBucket(saveBlock.block, saveBlock.resolution)
-    saveToUnderlying(storageCube, bucket, timeout)
+    saveToUnderlying(saveBlock, timeout)
   }
 
   def load(loadBlock: LoadBlock, timeout: FiniteDuration, useCache: Boolean): Fox[Array[Byte]] = {

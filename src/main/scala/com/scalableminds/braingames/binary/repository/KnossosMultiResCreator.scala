@@ -120,9 +120,8 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
           val data = downScale(
             block, dataSource.blockLength, dataSource.blockLength,
             dataSource.blockLength, layer.bytesPerElement)
-          val bucket = Point3D(0,0,0) // HACKY: we are writing a whole cube here not a bucket... --> needs fixing
           val request = SaveBlock(dataSource, layer, layer.sections.head, targetResolution, goal, data)
-          dataStore.save(target, request, bucket)
+          dataStore.save(target, request)
         }
       } .map { r =>
         logger.info("Finished creating resolutions! Time: " + ((System.currentTimeMillis() - s) / 1000).toInt + " s")

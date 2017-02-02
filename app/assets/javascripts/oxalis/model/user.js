@@ -7,7 +7,7 @@ class User extends Backbone.Model {
     this.prototype.url = "/api/user/userConfiguration";
   }
   // To add any user setting, you must define default values in
-  // UserSettings.scala
+  // UserConfiguration.scala
 
 
   initialize() {

@@ -91,7 +91,7 @@ class SkeletonTracingPlaneController extends PlaneController {
         id => this.skeletonTracingController.setActiveNode(id, false, true),
       );
     },
-  )
+  );
 
 
   scrollPlanes(delta, type) {
@@ -151,7 +151,7 @@ class SkeletonTracingPlaneController extends PlaneController {
         break;
       }
     }
-  }
+  };
 
 
   setWaypoint(position, ctrlPressed) {
@@ -199,7 +199,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     if (centered) {
       this.centerPositionAnimated(this.model.skeletonTracing.getActiveNodePos());
     }
-  }
+  };
 
 
   centerPositionAnimated(position) {

@@ -537,7 +537,7 @@ class SkeletonTracing {
 
     return new Promise((resolve, reject) => {
       if (this.activeNode) {
-        if (this.getBranchpointsForNodes(this.activeTree.branchpoints, this.activeNode).length) {
+        if (this.getBranchpointsForNodes(this.activeTree.branchpoints, [this.activeNode]).length) {
           this.trigger("deleteBranch", () => reallyDeleteActiveNode(resolve));
         } else {
           reallyDeleteActiveNode(resolve);

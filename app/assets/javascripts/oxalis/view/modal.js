@@ -42,6 +42,9 @@ const Modal = {
       this.callbacks[button.id] = button.callback;
 
       $(`#${button.id}`).on("click", (evt) => {
+        if(!(evt instanceof window.HTMLElement)){
+          return
+        }
         const callback = this.callbacks[evt.target.id];
         if (callback != null) {
           callback();

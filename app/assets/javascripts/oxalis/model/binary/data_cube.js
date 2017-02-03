@@ -10,44 +10,42 @@ import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import type { BoundingBoxType } from "oxalis/model";
 import Utils from "../../../libs/utils";
-import { Bucket, NullBucket } from "./bucket";
+import { Bucket, NULL_BUCKET, NULL_BUCKET_OUT_OF_BB, BUCKET_SIZE_P } from "./bucket";
 import ArbitraryCubeAdapter from "./arbitrary_cube_adapter";
 import TemporalBucketManager from "./temporal_bucket_manager";
 import BoundingBox from "./bounding_box";
 import ErrorHandling from "../../../libs/error_handling";
 
-type CubeType = {
+class CubeEntry {
   data: Array<number>;
   boundary: Vector3;
+
+  constructor(data: Array<number>, boundary: Vector3) {
+    this.data = data;
+    this.boundary = boundary;
+  }
 }
 
 type MappingType = {
   [key: number]: number;
 }
 
-class Cube {
-  BUCKET_SIZE_P: number;
-  CUBE_SIZE_P: number;
-  LOCAL_ID_SIZE_P: number;
+const MAXIMUM_BUCKET_COUNT = 5000;
+
+class DataCube {
   BUCKET_LENGTH: number;
   ZOOM_STEP_COUNT: number;
-  LOOKUP_DEPTH_UP: number;
+  LOOKUP_DEPTH_UP: number = 0;
   LOOKUP_DEPTH_DOWN: number;
-  MAXIMUM_BUCKET_COUNT: number;
-  ARBITRARY_MAX_ZOOMSTEP: number;
   arbitraryCube: ArbitraryCubeAdapter;
   upperBoundary: Vector3;
   buckets: Array<Bucket>;
-  bucketIterator: number;
-  bucketCount: number;
+  bucketIterator: number = 0;
+  bucketCount: number = 0;
   BIT_DEPTH: number;
-  NULL_BUCKET_OUT_OF_BB: NullBucket;
-  NULL_BUCKET: NullBucket;
-  LOOKUP_DEPTH_UP: number;
   MAX_ZOOM_STEP: number;
-  BUCKET_LENGTH: number;
   BYTE_OFFSET: number;
-  cubes: Array<CubeType>;
+  cubes: Array<?CubeEntry>;
   boundingBox: BoundingBox;
   pullQueue: PullQueue;
   pushQueue: PushQueue;
@@ -58,22 +56,6 @@ class Cube {
   mapping: ?MappingType;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
-
-  static initClass() {
-    // Constants
-    this.prototype.BUCKET_SIZE_P = 5;
-    this.prototype.CUBE_SIZE_P = 7;
-    this.prototype.LOCAL_ID_SIZE_P = 16;
-    this.prototype.BUCKET_LENGTH = 0;
-    this.prototype.ZOOM_STEP_COUNT = 0;
-    this.prototype.LOOKUP_DEPTH_UP = 0;
-    this.prototype.LOOKUP_DEPTH_DOWN = 1;
-    this.prototype.MAXIMUM_BUCKET_COUNT = 5000;
-    this.prototype.ARBITRARY_MAX_ZOOMSTEP = 2;
-
-    this.prototype.bucketIterator = 0;
-    this.prototype.bucketCount = 0;
-  }
 
 
   // The cube stores the buckets in a seperate array for each zoomStep. For each
@@ -97,34 +79,30 @@ class Cube {
     this.BIT_DEPTH = bitDepth;
     _.extend(this, Backbone.Events);
 
-    this.NULL_BUCKET_OUT_OF_BB = new NullBucket(NullBucket.prototype.TYPE_OUT_OF_BOUNDING_BOX);
-    this.NULL_BUCKET = new NullBucket(NullBucket.prototype.TYPE_OTHER);
-
     this.LOOKUP_DEPTH_UP = this.ZOOM_STEP_COUNT - 1;
     this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
-    this.BUCKET_LENGTH = (1 << (this.BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
+    this.BUCKET_LENGTH = (1 << (BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
     this.BYTE_OFFSET = (this.BIT_DEPTH >> 3);
 
     this.cubes = [];
-    this.buckets = new Array(this.MAXIMUM_BUCKET_COUNT);
+    this.buckets = new Array(MAXIMUM_BUCKET_COUNT);
 
     this.mapping = null;
     this.currentMapping = null;
 
     // Initializing the cube-arrays with boundaries
     let cubeBoundary = [
-      Math.ceil(this.upperBoundary[0] / (1 << this.BUCKET_SIZE_P)),
-      Math.ceil(this.upperBoundary[1] / (1 << this.BUCKET_SIZE_P)),
-      Math.ceil(this.upperBoundary[2] / (1 << this.BUCKET_SIZE_P)),
+      Math.ceil(this.upperBoundary[0] / (1 << BUCKET_SIZE_P)),
+      Math.ceil(this.upperBoundary[1] / (1 << BUCKET_SIZE_P)),
+      Math.ceil(this.upperBoundary[2] / (1 << BUCKET_SIZE_P)),
     ];
 
     this.arbitraryCube = new ArbitraryCubeAdapter(this, cubeBoundary.slice());
 
     for (let i = 0; i < this.ZOOM_STEP_COUNT; i++) {
-      this.cubes[i] = {
-        data: new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]),
-        boundary: cubeBoundary.slice(),
-      };
+      this.cubes[i] = new CubeEntry(
+        new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]),
+        cubeBoundary.slice());
 
       cubeBoundary = [
         (cubeBoundary[0] + 1) >> 1,
@@ -147,22 +125,22 @@ class Cube {
   }
 
 
-  getNullBucket(bucket) {
+  getNullBucket(bucket): Bucket {
     if (this.boundingBox.containsBucket(bucket)) {
-      return this.NULL_BUCKET;
+      return NULL_BUCKET;
     } else {
-      return this.NULL_BUCKET_OUT_OF_BB;
+      return NULL_BUCKET_OUT_OF_BB;
     }
   }
 
 
-  setMappingEnabled(isEnabled) {
+  setMappingEnabled(isEnabled): void {
     this.currentMapping = isEnabled ? this.mapping : null;
     this.trigger("newMapping");
   }
 
 
-  hasMapping() {
+  hasMapping(): boolean {
     return this.mapping != null;
   }
 
@@ -183,7 +161,7 @@ class Cube {
   }
 
 
-  mapId(idToMap) {
+  mapId(idToMap): number {
     let mappedId = null;
     if (this.currentMapping != null) {
       mappedId = this.currentMapping[idToMap];
@@ -197,13 +175,13 @@ class Cube {
   }
 
 
-  getVoxelIndexByVoxelOffset([x, y, z]) {
+  getVoxelIndexByVoxelOffset([x, y, z]): number {
     return this.BYTE_OFFSET *
-      (x + (y * (1 << this.BUCKET_SIZE_P)) + (z * (1 << (this.BUCKET_SIZE_P * 2))));
+      (x + (y * (1 << BUCKET_SIZE_P)) + (z * (1 << (BUCKET_SIZE_P * 2))));
   }
 
 
-  isWithinBounds([x, y, z, zoomStep]) {
+  isWithinBounds([x, y, z, zoomStep]): boolean {
     if (zoomStep >= this.ZOOM_STEP_COUNT) {
       return false;
     }
@@ -221,18 +199,21 @@ class Cube {
   }
 
 
-  getBucketIndex([x, y, z, zoomStep]: Vector4) {
+  getBucketIndex([x, y, z, zoomStep]: Vector4): ?number {
     ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
 
-    const { boundary } = this.cubes[zoomStep];
-    return (x * boundary[2] * boundary[1]) + (y * boundary[2]) + z;
+    if (this.cubes[zoomStep] != null) {
+      const { boundary } = this.cubes[zoomStep];
+      return (x * boundary[2] * boundary[1]) + (y * boundary[2]) + z;
+    }
+    return null;
   }
 
 
   // Either returns the existing bucket or creates a new one. Only returns
   // NULL_BUCKET if the bucket cannot possibly exist, e.g. because it is
   // outside the dataset's bounding box.
-  getOrCreateBucket(address) {
+  getOrCreateBucket(address): Bucket {
     if (!this.isWithinBounds(address)) {
       return this.getNullBucket(address);
     }
@@ -247,7 +228,7 @@ class Cube {
 
 
   // Returns the Bucket object if it exists, or NULL_BUCKET otherwise.
-  getBucket(address) {
+  getBucket(address): Bucket {
     if (!this.isWithinBounds(address)) {
       return this.getNullBucket(address);
     }
@@ -263,7 +244,7 @@ class Cube {
   }
 
 
-  createBucket(address) {
+  createBucket(address): Bucket {
     const bucket = new Bucket(this.BIT_DEPTH, address, this.temporalBucketManager);
     bucket.on({
       bucketLoaded: () => this.trigger("bucketLoaded", address),
@@ -276,10 +257,10 @@ class Cube {
   }
 
 
-  addBucketToGarbageCollection(bucket) {
-    if (this.bucketCount >= this.MAXIMUM_BUCKET_COUNT) {
+  addBucketToGarbageCollection(bucket): void {
+    if (this.bucketCount >= MAXIMUM_BUCKET_COUNT) {
       for (let i = 0; i < 2 * this.bucketCount; i++) {
-        this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
+        this.bucketIterator = ++this.bucketIterator % MAXIMUM_BUCKET_COUNT;
         if (this.buckets[this.bucketIterator].shouldCollect()) { break; }
       }
 
@@ -293,11 +274,11 @@ class Cube {
 
     this.bucketCount++;
     this.buckets[this.bucketIterator] = bucket;
-    this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
+    this.bucketIterator = ++this.bucketIterator % MAXIMUM_BUCKET_COUNT;
   }
 
 
-  collectBucket(bucket) {
+  collectBucket(bucket): void {
     const address = bucket.zoomedAddress;
     const bucketIndex = this.getBucketIndex(address);
     const cube = this.cubes[address[3]].data;
@@ -305,7 +286,7 @@ class Cube {
   }
 
 
-  labelTestShape() {
+  labelTestShape(): void {
     // draw a sqhere, centered at (100, 100, 100) with radius 50
 
     for (let x = 80; x <= 120; x++) {
@@ -322,7 +303,7 @@ class Cube {
   }
 
 
-  labelVoxels(iterator, label) {
+  labelVoxels(iterator, label): void {
     while (iterator.hasNext) {
       const voxel = iterator.getNext();
       this.labelVoxel(voxel, label);
@@ -333,7 +314,7 @@ class Cube {
   }
 
 
-  labelVoxel(voxel, label) {
+  labelVoxel(voxel, label): void {
     let voxelInCube = true;
     for (let i = 0; i <= 2; i++) {
       voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
@@ -361,7 +342,7 @@ class Cube {
   }
 
 
-  getDataValue(voxel: Vector3, mapping: ?MappingType) {
+  getDataValue(voxel: Vector3, mapping: ?MappingType): number {
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel));
     const voxelIndex = this.getVoxelIndex(voxel);
 
@@ -384,12 +365,12 @@ class Cube {
   }
 
 
-  getMappedDataValue(voxel: Vector3) {
+  getMappedDataValue(voxel: Vector3): number {
     return this.getDataValue(voxel, this.currentMapping);
   }
 
 
-  getVoxelIndex(voxel: Vector3) {
+  getVoxelIndex(voxel: Vector3): number {
     const voxelOffset = voxel.map(v => v & 0b11111);
     return this.getVoxelIndexByVoxelOffset(voxelOffset);
   }
@@ -399,13 +380,12 @@ class Cube {
     // return the bucket a given voxel lies in
 
     return [
-      x >> (this.BUCKET_SIZE_P + zoomStep),
-      y >> (this.BUCKET_SIZE_P + zoomStep),
-      z >> (this.BUCKET_SIZE_P + zoomStep),
+      x >> (BUCKET_SIZE_P + zoomStep),
+      y >> (BUCKET_SIZE_P + zoomStep),
+      z >> (BUCKET_SIZE_P + zoomStep),
       zoomStep,
     ];
   }
 }
-Cube.initClass();
 
-export default Cube;
+export default DataCube;

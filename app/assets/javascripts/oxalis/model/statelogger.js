@@ -1,15 +1,38 @@
+/**
+ * statelogger.js
+ * @flow weak
+ */
+
 import Backbone from "backbone";
 import _ from "lodash";
 import $ from "jquery";
 import app from "app";
 import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
+import Flycam2D from "oxalis/model/flycam2d";
+
+const PUSH_THROTTLE_TIME = 30000; // 30s
+const SAVE_RETRY_WAITING_TIME = 5000;
+
+type DiffType = {
+  action: string;
+  value: Object;
+};
 
 class StateLogger {
-  static initClass() {
-    this.prototype.PUSH_THROTTLE_TIME = 30000; // 30s
-    this.prototype.SAVE_RETRY_WAITING_TIME = 5000;
-  }
+
+  flycam: Flycam2D;
+  version: number;
+  tracingId: string;
+  tracingType: string;
+  allowUpdate: boolean;
+  newDiffs: Array<DiffType>;
+
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
+  trigger: Function;
+  on: Function;
+
 
   constructor(flycam, version, tracingId, tracingType, allowUpdate) {
     this.flycam = flycam;
@@ -18,7 +41,6 @@ class StateLogger {
     this.tracingType = tracingType;
     this.allowUpdate = allowUpdate;
     _.extend(this, Backbone.Events);
-    this.mutexedPush = _.mutexPromise(this.pushImpl, -1);
 
     this.newDiffs = [];
 
@@ -59,13 +81,7 @@ class StateLogger {
   }
 
 
-  pushThrottled() {
-    // Pushes the buffered tracing to the server. Pushing happens at most
-    // every 30 seconds.
-
-    this.pushThrottled = _.throttle(this.mutexedPush, this.PUSH_THROTTLE_TIME);
-    this.pushThrottled();
-  }
+  pushThrottled = _.throttle(this.mutexedPush, PUSH_THROTTLE_TIME);
 
 
   pushNow() {
@@ -80,6 +96,9 @@ class StateLogger {
   save() {
     return this.pushNow();
   }
+
+
+  mutexedPush = _.mutexPromise(this.pushImpl, -1);
 
 
   pushImpl(notifyOnFailure) {
@@ -128,7 +147,7 @@ In order to restore the current window, a reload is necessary.\
     }
 
 
-    setTimeout((() => this.pushNow()), this.SAVE_RETRY_WAITING_TIME);
+    setTimeout((() => this.pushNow()), SAVE_RETRY_WAITING_TIME);
     if (notifyOnFailure) {
       this.trigger("pushFailed");
     }
@@ -140,7 +159,6 @@ In order to restore the current window, a reload is necessary.\
     $("body").removeClass("save-error");
   }
 }
-StateLogger.initClass();
 
 
 export default StateLogger;

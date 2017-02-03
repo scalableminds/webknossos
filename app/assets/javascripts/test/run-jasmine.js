@@ -7,9 +7,9 @@ const Jasmine = require("jasmine");
 const jasmine = new Jasmine();
 
 jasmine.loadConfig({
-  spec_dir: "app/assets/javascripts/test",
+  spec_dir: "app/assets/javascripts",
   spec_files: [
-    "**/*[sS]pec.js",
+    "test/**/*[sS]pec.js",
   ],
 });
 

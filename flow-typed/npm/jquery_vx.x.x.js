@@ -1181,6 +1181,8 @@ declare class JQueryStatic {
  * The jQuery instance members
  */
 declare class JQuery {
+  // Functions added by Bootstrap
+  modal: Function;
   /**
    * Register a handler to be called when Ajax requests complete. This is an AjaxEvent.
    *

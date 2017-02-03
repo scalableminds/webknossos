@@ -52,6 +52,7 @@
       "one-var": ["error", "never"],
       "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
       "import/no-unresolved": "off",
-      "quote-props": ["error", "as-needed", {"numbers": true}]
+      "quote-props": ["error", "as-needed", {"numbers": true}],
+      "react/sort-comp": "off"
     }
 }

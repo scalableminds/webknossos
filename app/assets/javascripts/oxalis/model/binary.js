@@ -3,7 +3,7 @@ import Backbone from "backbone";
 import Pipeline from "libs/pipeline";
 import InterpolationCollector from "./binary/interpolation_collector";
 import Cube from "./binary/cube";
-import PullQueue from "./binary/pullqueue";
+import PullQueue, { PullQueueConstants } from "./binary/pullqueue";
 import PushQueue from "./binary/pushqueue";
 import Plane2D from "./binary/plane2d";
 import PingStrategy from "./binary/ping_strategy";
@@ -168,7 +168,7 @@ class Binary {
       bucket =>
         ({
           bucket,
-          priority: PullQueue.prototype.PRIORITY_HIGHEST,
+          priority: PullQueueConstants.PRIORITY_HIGHEST,
         }),
     ));
     this.pullQueue.pull();

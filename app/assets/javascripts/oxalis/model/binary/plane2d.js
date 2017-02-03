@@ -48,7 +48,7 @@ class Plane2D {
   NOT_LOADED_BUCKET_INTENSITY: number = 100;
   NOT_LOADED_BUCKET_DATA: Uint8Array;
   needsRedraw: boolean;
-  MAP_SIZE: number;
+  MAP_SIZE: number = 0;
   U: number = 0;
   V: number = 0;
   W: number = 0;

@@ -1,3 +1,8 @@
+/**
+ * viewmode_right_menu_view.js
+ * @flow weak
+ */
+
 import AbstractTabView from "../abstract_tab_view";
 import DatasetInfoView from "./right-menu/dataset_info_view";
 

@@ -6,8 +6,8 @@ import Cube from "./binary/cube";
 import PullQueue from "./binary/pullqueue";
 import PushQueue from "./binary/pushqueue";
 import Plane2D from "./binary/plane2d";
-import PingStrategy from "./binary/ping_strategy";
-import PingStrategy3d from "./binary/ping_strategy_3d";
+import * as PingStrategy from "./binary/ping_strategy";
+import * as PingStrategy3d from "./binary/ping_strategy_3d";
 import Mappings from "./binary/mappings";
 import constants from "../constants";
 

@@ -1,3 +1,8 @@
+/**
+ * mapping_info_view.js
+ * @flow weak
+ */
+
 import Backbone from "backbone";
 import Marionette from "backbone.marionette";
 import Subviews from "backbone-subviews";

@@ -1,3 +1,8 @@
+/**
+ * dataset_info_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
@@ -80,11 +85,11 @@ class DatasetInfoView extends Marionette.View {
     if (constants.MODES_PLANE.includes(this.model.mode)) {
       zoom = this.model.flycam.getPlaneScalingFactor();
       width = constants.PLANE_WIDTH;
-    }
-
-    if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
+    } else if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
       zoom = this.model.flycam3d.zoomStep;
       width = ArbitraryController.prototype.WIDTH;
+    } else {
+      throw Error("Model mode not recognized:", this.model.mode);
     }
 
     // unit is nm

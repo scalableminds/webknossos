@@ -1,21 +1,36 @@
+/**
+ * skeleton.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 import ErrorHandling from "libs/error_handling";
+import Model from "oxalis/model";
+import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
+import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import constants from "../constants";
 import Tree from "./tree";
 
 class Skeleton {
-  static initClass() {
-    // This class is supposed to collect all the Geometries that belong to the skeleton, like
-    // nodes, edges and trees
+  // This class is supposed to collect all the Geometries that belong to the skeleton, like
+  // nodes, edges and trees
 
-    this.prototype.COLOR_ACTIVE = 0xff0000;
-  }
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
+  trigger: Function;
+
+  model: Model;
+  isVisible: boolean;
+  skeletonTracing: SkeletonTracing;
+  treeGeometries: Array<Tree>;
+  showInactiveTrees: boolean;
+  lastActiveNode: TracePoint;
+
 
   constructor(model) {
-    this.getMeshes = this.getMeshes.bind(this);
     this.model = model;
     _.extend(this, Backbone.Events);
 
@@ -44,11 +59,11 @@ class Skeleton {
     this.listenTo(this.skeletonTracing, "newTreeColor", this.updateTreeColor);
     this.listenTo(this.skeletonTracing, "reloadTrees", this.loadSkeletonFromModel);
 
-    this.listenTo(this.model.user, "change:particleSize", this.setParticleSize);
     this.listenTo(this.model.user, "change:overrideNodeRadius", () => this.treeGeometries.map(tree =>
       tree.showRadius(!this.model.user.get("overrideNodeRadius"))),
     );
   }
+
 
   createNewTree(treeId, treeColor) {
     const tree = new Tree(treeId, treeColor, this.model);
@@ -110,7 +125,7 @@ class Skeleton {
   }
 
 
-  getMeshes() {
+  getMeshes = () => {
     let meshes = [];
     for (const tree of this.treeGeometries) {
       meshes = meshes.concat(tree.getMeshes());
@@ -260,6 +275,5 @@ class Skeleton {
       tree.setSizeAttenuation(sizeAttenuation));
   }
 }
-Skeleton.initClass();
 
 export default Skeleton;

@@ -1,35 +1,55 @@
+/**
+ * binary.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Backbone from "backbone";
 import Pipeline from "libs/pipeline";
-import InterpolationCollector from "./binary/interpolation_collector";
-import Cube from "./binary/cube";
-import PullQueue from "./binary/pullqueue";
-import PushQueue from "./binary/pushqueue";
-import Plane2D from "./binary/plane2d";
-import PingStrategy from "./binary/ping_strategy";
-import PingStrategy3d from "./binary/ping_strategy_3d";
-import Mappings from "./binary/mappings";
-import constants from "../constants";
+import InterpolationCollector from "oxalis/model/binary/interpolation_collector";
+import Cube from "oxalis/model/binary/cube";
+import PullQueue from "oxalis/model/binary/pullqueue";
+import PushQueue from "oxalis/model/binary/pushqueue";
+import Plane2D from "oxalis/model/binary/plane2d";
+import PingStrategy from "oxalis/model/binary/ping_strategy";
+import PingStrategy3d from "oxalis/model/binary/ping_strategy_3d";
+import Mappings from "oxalis/model/binary/mappings";
+import constants from "oxalis/constants";
+import Model from "oxalis/model";
+import ConnectionInfo from "oxalis/model/binarydata_connection_info";
+
+import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Tracing } from "oxalis/model";
+
+const PING_THROTTLE_TIME = 50;
+const DIRECTION_VECTOR_SMOOTHER = 0.125;
 
 class Binary {
-  static initClass() {
-    // Constants
-    this.prototype.PING_THROTTLE_TIME = 50;
-    this.prototype.DIRECTION_VECTOR_SMOOTHER = 0.125;
-    this.prototype.TEXTURE_SIZE_P = 0;
 
-    this.prototype.cube = null;
-    this.prototype.pullQueue = null;
-    this.prototype.planes = [];
+  model: Model;
+  cube: Cube;
+  tracing: Tracing;
+  layer: Object;
+  category: String;
+  name: String;
+  targetBitDepth: number;
+  lowerBoundary: Vector3;
+  upperBoundary: Vector3;
+  connectionInfo: ConnectionInfo;
+  pullQueue: PullQueue;
+  pushQueue: PushQueue;
+  mappings: Mappings;
+  pingStrategies: Array<PingStrategy>;
+  pingStrategies3d: Array<PingStrategy3d>;
+  planes: Array<Plane2D>;
+  direction: Vector3;
+  activeMapping: String | null;
+  lastPosition: Vector3 | null;
+  lastZoomStep: number | null;
+  lastAreas: Array<Vector4> | null;
 
-    this.prototype.direction = [0, 0, 0];
-
-
-    this.prototype.arbitraryPing = _.once(function (matrix, zoomStep) {
-      this.arbitraryPing = _.throttle(this.arbitraryPingImpl, this.PING_THROTTLE_TIME);
-      this.arbitraryPing(matrix, zoomStep);
-    });
-  }
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
 
   constructor(model, tracing, layer, maxZoomStep, connectionInfo) {
     this.model = model;
@@ -38,7 +58,6 @@ class Binary {
     this.connectionInfo = connectionInfo;
     _.extend(this, Backbone.Events);
 
-    this.TEXTURE_SIZE_P = constants.TEXTURE_SIZE_P;
     this.category = this.layer.category;
     this.name = this.layer.name;
 
@@ -61,8 +80,8 @@ class Binary {
     this.activeMapping = null;
 
     this.pingStrategies = [
-      new PingStrategy.Skeleton(this.cube, this.TEXTURE_SIZE_P),
-      new PingStrategy.Volume(this.cube, this.TEXTURE_SIZE_P),
+      new PingStrategy.Skeleton(this.cube, constants.TEXTURE_SIZE_P),
+      new PingStrategy.Volume(this.cube, constants.TEXTURE_SIZE_P),
     ];
     this.pingStrategies3d = [
       new PingStrategy3d.DslSlow(),
@@ -70,7 +89,7 @@ class Binary {
 
     this.planes = [];
     for (const planeId of constants.ALL_PLANES) {
-      this.planes.push(new Plane2D(planeId, this.cube, this.pullQueue, this.TEXTURE_SIZE_P, this.layer.bitDepth, this.targetBitDepth,
+      this.planes.push(new Plane2D(planeId, this.cube, this.pullQueue, constants.TEXTURE_SIZE_P, this.layer.bitDepth, this.targetBitDepth,
                                 32, this.category === "segmentation"));
     }
 
@@ -83,8 +102,6 @@ class Binary {
     this.cube.on({
       newMapping: () => this.forcePlaneRedraw(),
     });
-
-    this.ping = _.throttle(this.pingImpl, this.PING_THROTTLE_TIME);
   }
 
 
@@ -109,24 +126,28 @@ class Binary {
     }
   }
 
+
   pingStop() {
     this.pullQueue.clearNormalPriorities();
   }
 
 
-  pingImpl(position, { zoomStep, area, activePlane }) {
+  ping = _.throttle(this.pingImpl, PING_THROTTLE_TIME);
+
+
+  pingImpl(position, { zoomStep, areas, activePlane }) {
     if (this.lastPosition != null) {
       this.direction = [
-        ((1 - this.DIRECTION_VECTOR_SMOOTHER) * this.direction[0]) + (this.DIRECTION_VECTOR_SMOOTHER * (position[0] - this.lastPosition[0])),
-        ((1 - this.DIRECTION_VECTOR_SMOOTHER) * this.direction[1]) + (this.DIRECTION_VECTOR_SMOOTHER * (position[1] - this.lastPosition[1])),
-        ((1 - this.DIRECTION_VECTOR_SMOOTHER) * this.direction[2]) + (this.DIRECTION_VECTOR_SMOOTHER * (position[2] - this.lastPosition[2])),
+        ((1 - DIRECTION_VECTOR_SMOOTHER) * this.direction[0]) + (DIRECTION_VECTOR_SMOOTHER * (position[0] - this.lastPosition[0])),
+        ((1 - DIRECTION_VECTOR_SMOOTHER) * this.direction[1]) + (DIRECTION_VECTOR_SMOOTHER * (position[1] - this.lastPosition[1])),
+        ((1 - DIRECTION_VECTOR_SMOOTHER) * this.direction[2]) + (DIRECTION_VECTOR_SMOOTHER * (position[2] - this.lastPosition[2])),
       ];
     }
 
-    if (!_.isEqual(position, this.lastPosition) || zoomStep !== this.lastZoomStep || !_.isEqual(area, this.lastArea)) {
+    if (!_.isEqual(position, this.lastPosition) || zoomStep !== this.lastZoomStep || !_.isEqual(areas, this.lastAreas)) {
       this.lastPosition = position.slice();
       this.lastZoomStep = zoomStep;
-      this.lastArea = area.slice();
+      this.lastAreas = areas.slice();
 
       for (const strategy of this.pingStrategies) {
         if (strategy.forContentType(this.tracing.contentType) && strategy.inVelocityRange(this.connectionInfo.bandwidth) && strategy.inRoundTripTimeRange(this.connectionInfo.roundTripTime)) {
@@ -156,6 +177,12 @@ class Binary {
   }
 
 
+  arbitraryPing = _.once(function (matrix, zoomStep) {
+    this.arbitraryPing = _.throttle(this.arbitraryPingImpl, PING_THROTTLE_TIME);
+    this.arbitraryPing(matrix, zoomStep);
+  });
+
+
   getByVerticesSync(vertices) {
     // A synchronized implementation of `get`. Cuz its faster.
 
@@ -176,6 +203,5 @@ class Binary {
     return buffer;
   }
 }
-Binary.initClass();
 
 export default Binary;

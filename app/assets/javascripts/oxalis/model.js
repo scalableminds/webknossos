@@ -40,7 +40,7 @@ type Settings = {
   branchPointsAllowed: boolean,
   somaClickingAllowed: boolean,
 };
-type Tracing = {
+export type Tracing = {
   actions: Array<any>,
   content: {
     boundingBox: {

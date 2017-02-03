@@ -40,16 +40,32 @@ type Settings = {
   branchPointsAllowed: boolean,
   somaClickingAllowed: boolean,
 };
+
+type BoundingBoxObjectType = {
+  topLeft: Vector3,
+  width: number,
+  height: number,
+  depth: number,
+}
+
+export type SkeletonContentDataType = {
+  activeNode: null | number;
+  trees: Array<Object>;
+  zoomLevel: number;
+};
+
+export type VolumeContentDataType = {
+  activeCell: null | number;
+  customLayers: Array<Object>;
+  maxCoordinates: BoundingBoxObjectType;
+  name: string;
+};
+
 export type Tracing = {
   actions: Array<any>,
   content: {
-    boundingBox: {
-      topLeft: Vector3,
-      width: number,
-      height: number,
-      depth: number,
-    },
-    contentData: Object,
+    boundingBox: BoundingBoxObjectType,
+    contentData: VolumeContentDataType | SkeletonContentDataType,
     contentType: string,
     dataSet: Object,
     editPosition: Vector3,

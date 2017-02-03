@@ -1,3 +1,8 @@
+/**
+ * abstract_tree_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import $ from "jquery";
 import app from "app";

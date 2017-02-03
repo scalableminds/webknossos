@@ -1,7 +1,6 @@
 version: '2.1'
 
 services:
-
   webknossos:
     image: scalableminds/webknossos:${DOCKER_TAG:-master}
     ports:
@@ -17,6 +16,7 @@ services:
       service: sbt
     ports:
       - "9000:9000"
+      - "5005:5005"
     links:
       - mongo-dev
     command: >

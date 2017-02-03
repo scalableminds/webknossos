@@ -43,3 +43,4 @@ conf/github.conf
 tmp/
 errorShots/
 flow-coverage/
+public/docs/frontend-api

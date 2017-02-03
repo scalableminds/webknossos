@@ -12,8 +12,6 @@ class User extends Backbone.Model {
   push: Function;
   save: Function;
 
-  static url = "/api/user/userConfiguration";
-
   // To add any user setting, you must define default values in
   // UserConfiguration.scala
 
@@ -22,6 +20,7 @@ class User extends Backbone.Model {
     this.listenTo(this, "change", _.debounce(
       () => { if (app.currentUser != null) { this.save(); } },
       500));
+    this.urlRoot = "/api/user/userConfiguration";
   }
 
   getMouseInversionX() {

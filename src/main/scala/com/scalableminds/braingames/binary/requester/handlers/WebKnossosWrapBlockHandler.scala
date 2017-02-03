@@ -7,18 +7,14 @@ import java.nio.file.Paths
 
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.requester.{Cube, DataCubeCache}
-import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
-import play.api.i18n.Messages.Implicits._
-import java.nio.file.Paths
-
-import com.scalableminds.braingames.binary.requester.{CachedBlock, Cube, DataCache, DataCubeCache}
-import com.scalableminds.util.cache.LRUConcurrentCache
 
 import scala.concurrent.duration.FiniteDuration
+import play.api.i18n.Messages.Implicits._
+import play.api.Play.current
+import java.nio.file.Paths
 
 class WebKnossosWrapCube(underlying: Array[Byte]) extends Cube{
   def cutOutBucket(requestedCube: LoadBlock): Array[Byte] = {

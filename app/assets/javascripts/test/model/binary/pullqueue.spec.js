@@ -98,8 +98,8 @@ describe("PullQueue", () => {
       runAsync([
         () => {
           expect(layer.requestFromStore.callCount).toBe(1);
-          expect(buckets[0].state).toBe(Bucket.prototype.STATE_UNREQUESTED);
-          expect(buckets[1].state).toBe(Bucket.prototype.STATE_UNREQUESTED);
+          expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
+          expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
           done();
         },
       ]);
@@ -113,8 +113,8 @@ describe("PullQueue", () => {
       runAsync([
         () => {
           expect(layer.requestFromStore.callCount).toBe(2);
-          expect(buckets[0].state).toBe(Bucket.prototype.STATE_LOADED);
-          expect(buckets[1].state).toBe(Bucket.prototype.STATE_UNREQUESTED);
+          expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+          expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
           done();
         },
       ]);

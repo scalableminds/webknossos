@@ -21,20 +21,30 @@ services:
       - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
       - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
 
+  webknossos-frontend-dependencies:
+    extends:
+      service: sbt
+    command: bash -c "yarn install"
+
   webknossos-frontend-linting:
     extends:
       service: sbt
-    command: bash -c "npm run lint"
+    command: bash -c "yarn run lint"
 
   webknossos-frontend-flow:
     extends:
       service: sbt
-    command: bash -c "npm run flow"
+    command: bash -c "yarn run flow"
 
   webknossos-frontend-tests:
     extends:
       service: sbt
-    command: bash -c "npm test"
+    command: bash -c "yarn test"
+
+  webknossos-frontend-docs:
+    extends:
+      service: sbt
+    command: bash -c "yarn run docs"
 
   webknossos-e2e-tests:
     extends:

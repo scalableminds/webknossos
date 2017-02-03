@@ -41,12 +41,16 @@ type Settings = {
   branchPointsAllowed: boolean,
   somaClickingAllowed: boolean,
 };
+export type CommentType = {
+  node: number;
+  comment: string;
+};
 export type TreeData = {
   id: number;
   color: Vector4;
   name: string;
   timestamp: number;
-  comments: Array<string>;
+  comments: Array<CommentType>;
   branchPoints: Array<Tracepoint>;
   edges: Array<{source: number, target: number}>;
   nodes: Array<Tracepoint>;

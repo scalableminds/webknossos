@@ -45,13 +45,11 @@ class TracingParser {
 
       // Initialize nodes
       for (const node of treeData.nodes) {
-        const metaInfo = _.pick(node,
-          "timestamp", "viewport", "resolution", "bitDepth", "interpolation");
 
         tree.nodes.push(
           new TracePoint(
             node.id, node.position, node.radius, treeData.id,
-            metaInfo, node.rotation));
+            node.rotation, node.timestamp));
 
         // idCount should be bigger than any other id
         this.idCount = Math.max(node.id + 1, this.idCount);

@@ -3,6 +3,7 @@
 * @flow weak
 */
 import Utils from "libs/utils";
+import type { CommentType } from "oxalis/model";
 import Tracepoint from "./tracepoint";
 
 /**
@@ -15,11 +16,11 @@ class TraceTree {
   color: string;
   name: string;
   timestamp: number;
-  comments: Array<string>;
+  comments: Array<CommentType>;
   branchPoints: Array<Tracepoint>;
   nodes: Array<Tracepoint>;
 
-  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<string> = [], branchPoints: Array<Tracepoint> = []) {
+  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<CommentType> = [], branchPoints: Array<Tracepoint> = []) {
     this.treeId = treeId;
     this.color = color;
     this.name = name;
@@ -60,7 +61,7 @@ class TraceTree {
 
 
   removeBranchWithNodeId(id) {
-    for (const i of Utils.__range__(0, this.branchPoints.length, false)) {
+    for (let i = 0; i < this.branchPoints.length; i++) {
       if (this.branchPoints[i].id === id) {
         this.branchPoints.splice(i, 1);
         return true;

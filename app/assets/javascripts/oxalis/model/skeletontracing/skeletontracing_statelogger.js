@@ -26,7 +26,7 @@ class SkeletonTracingStateLogger extends StateLogger {
       name: tree.name,
       timestamp: tree.timestamp,
       comments: tree.comments,
-      branchPoints: tree.branchpoints,
+      branchPoints: tree.branchPoints,
     };
   }
 
@@ -78,19 +78,6 @@ class SkeletonTracingStateLogger extends StateLogger {
 
 
   // ### NODES and EDGED
-
-  nodeObject(node, treeId) {
-    return _.extend(node.metaInfo, {
-      treeId,
-      id: node.id,
-      radius: node.radius,
-      position: V3.floor(node.pos),
-      rotation: node.rotation,
-    },
-    );
-  }
-
-
   edgeObject(node, treeId) {
     ErrorHandling.assert(node.neighbors.length === 1,
       "Node has to have exactly one neighbor", node.neighbors.length);
@@ -113,15 +100,15 @@ class SkeletonTracingStateLogger extends StateLogger {
     }
 
     const needsEdge = node.neighbors.length === 1;
-    this.pushDiff("createNode", this.nodeObject(node, treeId), !needsEdge);
+    this.pushDiff("createNode", node.toJSON(), !needsEdge);
     if (needsEdge) {
       this.pushDiff("createEdge", this.edgeObject(node, treeId));
     }
   }
 
 
-  updateNode(node, treeId) {
-    this.pushDiff("updateNode", this.nodeObject(node, treeId));
+  updateNode(node) {
+    this.pushDiff("updateNode", node.toJSON());
   }
 
 

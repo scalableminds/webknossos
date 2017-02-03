@@ -1,3 +1,8 @@
+/**
+ * nd_store_layer.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Utils from "libs/utils";
 import Layer from "./layer";

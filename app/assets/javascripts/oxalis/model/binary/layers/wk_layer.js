@@ -1,12 +1,15 @@
+/**
+ * wk_layer.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Layer from "./layer";
 import BucketBuilder from "./bucket_builder";
 import Request from "../../../../libs/request";
 import MultipartData from "../../../../libs/multipart_data";
 
-
 class WkLayer extends Layer {
-
 
   constructor(...args) {
     super(...args);

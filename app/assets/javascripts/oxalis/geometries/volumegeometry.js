@@ -1,8 +1,15 @@
+/**
+ * volumegeometry.js
+ * @flow weak
+ */
+
 import THREE from "three";
 import ColorGenerator from "libs/color_generator";
 
 class VolumeGeometry {
 
+  id: number;
+  mesh: THREE.Mesh;
 
   constructor(triangles, id) {
     this.id = id;

@@ -34,6 +34,13 @@ export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
 };
+export type LayerType = WkLayer | NdStoreLayer;
+export type RestrictionsType = {
+  allowAccess: boolean,
+  allowUpdate: boolean,
+  allowFinish: boolean,
+  allowDownload: boolean,
+};
 type Settings = {
   advancedOptionsAllowed: boolean,
   allowedModes: "orthogonal" | "oblique" | "flight" | "volume",
@@ -63,7 +70,7 @@ type Tracing = {
   formattedHash: string,
   id: string,
   name: string,
-  restrictions: any,
+  restrictions: RestrictionsType,
   state: any,
   stateLabel: string,
   stats: any,

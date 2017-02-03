@@ -1,3 +1,7 @@
+/**
+ * plane_view.js
+ * @flow
+ */
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
@@ -5,31 +9,50 @@ import Backbone from "backbone";
 import THREE from "three";
 import TWEEN from "tween.js";
 import Constants from "../constants";
+import Flycam3d from "../model/flycam3d";
+import View from "../view";
 
 class ArbitraryView {
-  static initClass() {
-    this.prototype.DEFAULT_SCALE = 1.35;
-    this.prototype.MAX_SCALE = 3;
-    this.prototype.MIN_SCALE = 1;
 
-    this.prototype.forceUpdate = false;
-    this.prototype.geometries = [];
-    this.prototype.additionalInfo = "";
+  // Copied form backbone events (TODO: handle this better)
+  trigger: Function;
+  on: Function;
+  listenTo: Function;
 
-    this.prototype.isRunning = true;
-    this.prototype.animationRequestId = undefined;
+  animate: () => void;
+  resize: () => void;
+  applyScale: (delta: number) => void;
+  setClippingDistance: (value: number) => void;
 
-    this.prototype.scene = null;
-    this.prototype.camera = null;
-    this.prototype.cameraPosition = null;
-  }
+  DEFAULT_SCALE: number = 1.35;
+  MAX_SCALE: number = 3;
+  MIN_SCALE: number = 1;
+  CAM_DISTANCE: number;
+  forceUpdate: boolean = false;
+  additionalInfo: string = "";
+  isRunning: boolean = true;
+  animationRequestId: number = 0;
 
-  constructor(canvas, dataCam, view, width) {
-    let camera;
-    this.animate = this.animate.bind(this);
-    this.resize = this.resize.bind(this);
-    this.applyScale = this.applyScale.bind(this);
-    this.setClippingDistance = this.setClippingDistance.bind(this);
+  width: number;
+  height: number;
+  deviceScaleFactor: number;
+  scaleFactor: number;
+
+  scene: THREE.Scene = null;
+  camera: THREE.PerspectiveCamera = null;
+  renderer: THREE.WebGLRenderer;
+  geometries: Array<THREE.Geometry> = [];
+  group: THREE.Object3D;
+  dataCam: Flycam3d;
+  cameraPosition: Array<number>;
+  container: JQuery;
+  view: View;
+
+  constructor(canvas: JQuery, dataCam: Flycam3d, view: View, width: number) {
+    this.animate = this.animateImpl.bind(this);
+    this.resize = this.resizeImpl.bind(this);
+    this.applyScale = this.applyScaleImpl.bind(this);
+    this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
     this.dataCam = dataCam;
     this.view = view;
     _.extend(this, Backbone.Events);
@@ -51,9 +74,9 @@ class ArbitraryView {
 
     // Initialize main THREE.js components
 
-    this.camera = camera = new THREE.PerspectiveCamera(45, this.width / this.height, 50, 1000);
-    camera.matrixAutoUpdate = false;
-    camera.aspect = this.width / this.height;
+    this.camera = new THREE.PerspectiveCamera(45, this.width / this.height, 50, 1000);
+    this.camera.matrixAutoUpdate = false;
+    this.camera.aspect = this.width / this.height;
 
     this.cameraPosition = [0, 0, this.CAM_DISTANCE];
 
@@ -62,11 +85,11 @@ class ArbitraryView {
     this.group.scale = new THREE.Vector3(...app.scaleInfo.nmPerVoxel);
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.group);
-    this.group.add(camera);
+    this.group.add(this.camera);
   }
 
 
-  start() {
+  start(): void {
     if (!this.isRunning) {
       this.isRunning = true;
 
@@ -87,12 +110,12 @@ class ArbitraryView {
   }
 
 
-  stop() {
+  stop(): void {
     if (this.isRunning) {
       this.isRunning = false;
-      if (this.animationRequestId != null) {
+      if (this.animationRequestId != 0) {
         window.cancelAnimationFrame(this.animationRequestId);
-        this.animationRequestId = undefined;
+        this.animationRequestId = 0;
       }
 
       for (const element of this.group.children) {
@@ -108,8 +131,8 @@ class ArbitraryView {
   }
 
 
-  animate() {
-    this.animationRequestId = undefined;
+  animateImpl(): void {
+    this.animationRequestId = 0;
     if (!this.isRunning) { return; }
 
     TWEEN.update();
@@ -152,12 +175,12 @@ class ArbitraryView {
   }
 
 
-  draw() {
+  draw(): void {
     this.forceUpdate = true;
   }
 
 
-  addGeometry(geometry) {
+  addGeometry(geometry: THREE.Geometry): void {
     // Adds a new Three.js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
 
@@ -165,19 +188,14 @@ class ArbitraryView {
     geometry.attachScene(this.group);
   }
 
-
-  resizeThrottled() {
-    // throttle resize to avoid annoying flickering
-
-    this.resizeThrottled = _.throttle(
-      () => this.resize(),
-      Constants.RESIZE_THROTTLE_TIME,
-    );
-    this.resizeThrottled();
-  }
+  // throttle resize to avoid annoying flickering
+  resizeThrottled = _.throttle(
+    () => this.resize(),
+    Constants.RESIZE_THROTTLE_TIME,
+  );
 
 
-  resize() {
+  resizeImpl(): void {
     // Call this after the canvas was resized to fix the viewport
     // Needs to be bound
 
@@ -192,7 +210,7 @@ class ArbitraryView {
   }
 
 
-  applyScale(delta) {
+  applyScaleImpl(delta: number): void {
     if (!this.scaleFactor) { this.scaleFactor = this.DEFAULT_SCALE; }
 
     if ((this.scaleFactor + delta > this.MIN_SCALE) && (this.scaleFactor + delta < this.MAX_SCALE)) {
@@ -205,16 +223,15 @@ class ArbitraryView {
     }
   }
 
-  setClippingDistance(value) {
+  setClippingDistanceImpl(value: number): void {
     this.camera.near = this.CAM_DISTANCE - value;
     this.camera.updateProjectionMatrix();
   }
 
 
-  setAdditionalInfo(info) {
+  setAdditionalInfo(info: string): void {
     this.additionalInfo = info;
   }
 }
-ArbitraryView.initClass();
 
 export default ArbitraryView;

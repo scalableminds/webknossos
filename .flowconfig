@@ -9,7 +9,6 @@
 <PROJECT_ROOT>/userBinaryData/.*
 <PROJECT_ROOT>/binaryData/.*
 <PROJECT_ROOT>/conf/.*
-<PROJECT_ROOT>/dummy-db/.*
 <PROJECT_ROOT>/lib/.*
 <PROJECT_ROOT>/public/.*
 <PROJECT_ROOT>/test/.*

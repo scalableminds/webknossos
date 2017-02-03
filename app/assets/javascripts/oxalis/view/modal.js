@@ -1,10 +1,21 @@
+/**
+ * modal.js
+ * @flow
+ */
+
 import $ from "jquery";
+
+type ButtonType = {
+  id: string;
+  label: string;
+  callback: ()=>void
+}
 
 const Modal = {
 
   callbacks: {},
 
-  show(text, title = "Ups...", buttons = [{ id: "ok-button", label: "OK" }]) {
+  show(text: string, title: string = "Ups...", buttons:Array<ButtonType> = [{ id: "ok-button", label: "OK", callback: () => {} }]) {
     // buttons: [{id:..., label:..., callback:...}, ...]
 
     let html = `\

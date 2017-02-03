@@ -151,9 +151,9 @@ class Binary {
 
       for (const strategy of this.pingStrategies) {
         if (strategy.forContentType(this.tracing.contentType) && strategy.inVelocityRange(this.connectionInfo.bandwidth) && strategy.inRoundTripTimeRange(this.connectionInfo.roundTripTime)) {
-          if ((zoomStep != null) && (area != null) && (activePlane != null)) {
+          if ((zoomStep != null) && (areas != null) && (activePlane != null)) {
             this.pullQueue.clearNormalPriorities();
-            this.pullQueue.addAll(strategy.ping(position, this.direction, zoomStep, area, activePlane));
+            this.pullQueue.addAll(strategy.ping(position, this.direction, zoomStep, areas, activePlane));
           }
           break;
         }

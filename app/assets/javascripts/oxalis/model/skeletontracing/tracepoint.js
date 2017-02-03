@@ -28,6 +28,7 @@ class TracePoint {
   treeId: number;
   metaInfo: MetaInfo;
   rotation: Vector3;
+  position: Vector3;
   neighbors: Array<TracePoint>;
   parent: TracePoint;
   seen: boolean;

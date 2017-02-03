@@ -1,11 +1,25 @@
+/*
+* traceparser.js
+* @flow weak
+*/
+
 import _ from "lodash";
 import THREE from "three";
 import Toast from "libs/toast";
-import TracePoint from "./tracepoint";
-import TraceTree from "./tracetree";
+import TracePoint from "oxalis/model/skeletonTracing/tracepoint";
+import TraceTree from "oxalis/model/skeletonTracing/tracetree";
+import SkeletonTracing from "oxalis/model/skeletonTracing/skeletonTracing";
+import type { ContentData, TreeData } from "oxalis/model";
 
 class TracingParser {
 
+  skeletonTracing: SkeletonTracing;
+  data: ContentData;
+  idCount: number;
+  treeIdCount: number;
+  trees: Array<TreeData>;
+  activeNode: ?TracePoint;
+  activeTree: ?TraceTree;
 
   constructor(skeletonTracing, data) {
     this.skeletonTracing = skeletonTracing;

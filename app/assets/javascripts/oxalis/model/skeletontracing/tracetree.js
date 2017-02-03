@@ -16,16 +16,16 @@ class TraceTree {
   name: string;
   timestamp: number;
   comments: Array<string>;
-  branchpoints: Array<Tracepoint>;
+  branchPoints: Array<Tracepoint>;
   nodes: Array<Tracepoint>;
 
-  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<string> = [], branchpoints: Array<Tracepoint> = []) {
+  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<string> = [], branchPoints: Array<Tracepoint> = []) {
     this.treeId = treeId;
     this.color = color;
     this.name = name;
     this.timestamp = timestamp;
     this.comments = comments;
-    this.branchpoints = branchpoints;
+    this.branchPoints = branchPoints;
     this.nodes = [];
   }
 
@@ -60,9 +60,9 @@ class TraceTree {
 
 
   removeBranchWithNodeId(id) {
-    for (const i of Utils.__range__(0, this.branchpoints.length, false)) {
-      if (this.branchpoints[i].id === id) {
-        this.branchpoints.splice(i, 1);
+    for (const i of Utils.__range__(0, this.branchPoints.length, false)) {
+      if (this.branchPoints[i].id === id) {
+        this.branchPoints.splice(i, 1);
         return true;
       }
     }
@@ -71,7 +71,7 @@ class TraceTree {
 
 
   isBranchPoint(id) {
-    return (this.branchpoints.map(node => node.id)).includes(id);
+    return (this.branchPoints.map(node => node.id)).includes(id);
   }
 
 

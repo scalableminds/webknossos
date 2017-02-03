@@ -17,12 +17,13 @@ import ScaleInfo from "./model/scaleinfo";
 import Flycam2d from "./model/flycam2d";
 import Flycam3d from "./model/flycam3d";
 import constants from "./constants";
-import type { ModeType, Vector3 } from "./constants";
+import type { ModeType, Vector3, Vector4 } from "./constants";
 import Request from "../libs/request";
 import Toast from "../libs/toast";
 import ErrorHandling from "../libs/error_handling";
 import WkLayer from "./model/binary/layers/wk_layer";
 import NdStoreLayer from "./model/binary/layers/nd_store_layer";
+import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 
 // This is THE model. It takes care of the data including the
 // communication with the server.
@@ -40,6 +41,22 @@ type Settings = {
   branchPointsAllowed: boolean,
   somaClickingAllowed: boolean,
 };
+export type TreeData = {
+  id: number;
+  color: Vector4;
+  name: string;
+  timestamp: number;
+  comments: Array<string>;
+  branchPoints: Array<Tracepoint>;
+  edges: Array<{source: number, target: number}>;
+  nodes: Array<Tracepoint>;
+};
+export type ContentData = {
+  activeNode: number;
+  trees: Array<TreeData>;
+  zoomLevel: number;
+  customLayers: any;
+};
 type Tracing = {
   actions: Array<any>,
   content: {
@@ -49,7 +66,7 @@ type Tracing = {
       height: number,
       depth: number,
     },
-    contentData: Object,
+    contentData: ContentData,
     contentType: string,
     dataSet: Object,
     editPosition: Vector3,

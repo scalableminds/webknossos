@@ -1,5 +1,5 @@
 /**
- * plane_view.js
+ * arbitrary_view.js
  * @flow
  */
 import $ from "jquery";

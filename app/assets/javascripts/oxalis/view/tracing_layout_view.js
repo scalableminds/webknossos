@@ -25,10 +25,6 @@ import UserScriptsModalView from "./user_scripts_modal";
 import TracingView from "./tracing_view";
 
 class TracingLayoutView extends Marionette.View {
-  constructor(...args) {
-    super(...args);
-  }
-
   static initClass() {
     this.prototype.MARGIN = 40;
 

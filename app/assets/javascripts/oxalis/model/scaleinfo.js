@@ -6,7 +6,7 @@
 import Utils from "libs/utils";
 import THREE from "three";
 
-import type { Vector3 } from "../constants"
+import type { Vector3 } from "../constants";
 
 // This class encapsulates any conversions between the nm and voxel
 // coordinate system.

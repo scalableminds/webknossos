@@ -8,14 +8,14 @@ import $ from "jquery";
 type ButtonType = {
   id: string;
   label: string;
-  callback: ()=>void
+  callback?: (()=>void);
 }
 
 const Modal = {
 
   callbacks: {},
 
-  show(text: string, title: string = "Ups...", buttons:Array<ButtonType> = [{ id: "ok-button", label: "OK", callback: () => {} }]) {
+  show(text: string, title: string = "Ups...", buttons:Array<ButtonType> = [{ id: "ok-button", label: "OK" }]) {
     // buttons: [{id:..., label:..., callback:...}, ...]
 
     let html = `\

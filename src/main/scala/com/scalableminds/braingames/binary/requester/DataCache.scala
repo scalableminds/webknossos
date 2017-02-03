@@ -42,7 +42,7 @@ trait Cube extends LazyLogging{
   private val accessCounter = new AtomicInteger()
   private val scheduledForRemoval = new AtomicBoolean()
 
-  def copyTo(offset: Long, other: Array[Byte], destPos: Int, length: Int): Boolean
+  def cutOutBucket(requestedCube: LoadBlock): Array[Byte]
 
   def startAccess(): Unit = {
     accessCounter.incrementAndGet()

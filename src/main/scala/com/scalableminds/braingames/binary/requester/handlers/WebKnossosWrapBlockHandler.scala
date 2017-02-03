@@ -21,10 +21,8 @@ import com.scalableminds.util.cache.LRUConcurrentCache
 import scala.concurrent.duration.FiniteDuration
 
 class WebKnossosWrapCube(underlying: Array[Byte]) extends Cube{
-  override def copyTo(offset: Long, other: Array[Byte], destPos: Int, length: Int): Boolean = {
-    // TODO: FIX. convert to long !!!!!
-    System.arraycopy(underlying, offset.toInt, other, destPos, length)
-    true
+  def cutOutBucket(requestedCube: LoadBlock): Array[Byte] = {
+    underlying
   }
 }
 
@@ -41,42 +39,6 @@ class WebKnossosWrapBlockHandler(val cache: DataCubeCache) extends BlockHandler
     } yield {
       f(new WebKnossosWrapCube(data))
     }
-  }
-
-  // TODO: remove as soon as we do not load 128 sized buckets anymore but 32 sized cubes on demand
-  protected def cutOutBucket(requestedCube: LoadBlock, cube: Cube): Array[Byte] = {
-    val offset: Point3D = requestedCube.block
-    val bytesPerElement: Int = requestedCube.dataLayer.bytesPerElement
-    val bucketLength: Int = requestedCube.dataSource.lengthOfLoadedBuckets
-    val cubeLength: Int = requestedCube.dataSource.blockLength
-    val bucketSize = bytesPerElement * bucketLength * bucketLength * bucketLength
-    val result = new Array[Byte](bucketSize)
-
-    val x = offset.x
-    var y = offset.y
-    var z = offset.z
-
-    val yMax = offset.y + bucketLength
-    val zMax = offset.z + bucketLength
-
-    var idx = 0
-    while (z < zMax) {
-      y = offset.y
-      while (y < yMax) {
-        val cubeOffset =
-          (x % cubeLength +
-            y % cubeLength * cubeLength +
-            z % cubeLength * cubeLength * cubeLength) * bytesPerElement
-        if (!cube.copyTo(cubeOffset, result, idx, bucketLength * bytesPerElement))
-          logger.warn(s"Failed to copy from cube to bucket. " +
-            s"DS: ${requestedCube.dataSource.id}/${requestedCube.dataLayer.name} Bucket: ${requestedCube.block}")
-        idx += bucketLength * bytesPerElement
-        y += 1
-      }
-      z += 1
-    }
-
-    result
   }
 
   override def saveToUnderlying(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean] = {

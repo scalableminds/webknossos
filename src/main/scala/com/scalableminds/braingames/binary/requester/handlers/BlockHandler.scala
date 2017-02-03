@@ -3,16 +3,12 @@
  */
 package com.scalableminds.braingames.binary.requester.handlers
 
-import java.util.concurrent.atomic.AtomicInteger
 
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.requester.{Cube, DataCache}
-import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.FiniteDuration
 
 trait BlockHandler extends DataCache with LazyLogging {
@@ -34,7 +30,7 @@ trait BlockHandler extends DataCache with LazyLogging {
       else
         loadFromUnderlying[Array[Byte]](requestedCube, timeout) _
     withCubeResource { cube =>
-      val bucket = cutOutBucket(requestedBucket, cube)
+      val bucket = cube.cutOutBucket(requestedBucket)
       if (requestedBucket.settings.useHalfByte)
         convertToHalfByte(bucket)
       else
@@ -56,6 +52,4 @@ trait BlockHandler extends DataCache with LazyLogging {
     }
     compressed
   }
-
-  protected def cutOutBucket(requestedCube: LoadBlock, cube: Cube): Array[Byte]
 }

@@ -70,8 +70,7 @@ class Binary {
 
     this.planes = [];
     for (const planeId of constants.ALL_PLANES) {
-      this.planes.push(new Plane2D(planeId, this.cube, this.pullQueue, this.TEXTURE_SIZE_P, this.layer.bitDepth, this.targetBitDepth,
-                                32, this.category === "segmentation"));
+      this.planes.push(new Plane2D(planeId, this.cube, this.layer.bitDepth, this.targetBitDepth, 32, this.category === "segmentation"));
     }
 
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {

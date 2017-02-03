@@ -58,6 +58,7 @@ class Cube {
   mapping: ?MappingType;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
+  on: Function;
 
   static initClass() {
     // Constants

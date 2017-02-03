@@ -29,18 +29,19 @@ export class Bucket {
   data: ?Uint8Array;
   temporalBucketManager: TemporalBucketManager;
   zoomedAddress: Vector4;
+  isNullBucket = false;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
 
 
   constructor(BIT_DEPTH: number, zoomedAddress: Vector4, temporalBucketManager: TemporalBucketManager) {
-    this.BIT_DEPTH = BIT_DEPTH;
-    this.zoomedAddress = zoomedAddress;
-    this.temporalBucketManager = temporalBucketManager;
     _.extend(this, Backbone.Events);
-
+    this.BIT_DEPTH = BIT_DEPTH;
     this.BUCKET_LENGTH = (1 << (BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
     this.BYTE_OFFSET = (this.BIT_DEPTH >> 3);
+
+    this.zoomedAddress = zoomedAddress;
+    this.temporalBucketManager = temporalBucketManager;
 
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
@@ -174,20 +175,17 @@ export class Bucket {
 
 
 export class NullBucket {
-  static TYPE_OUT_OF_BOUNDING_BOX = 1;
-  static TYPE_OTHER = 2;
-
-  isNullBucket: boolean;
+  isNullBucket = true;
   isOutOfBoundingBox: boolean;
 
-  constructor(type) {
-    this.isNullBucket = true;
-    this.isOutOfBoundingBox = type === NullBucket.TYPE_OUT_OF_BOUNDING_BOX;
+  constructor(isOutOfBoundingBox) {
+    this.isOutOfBoundingBox = isOutOfBoundingBox;
   }
 
   hasData() { return false; }
   needsRequest() { return false; }
 }
-export const NULL_BUCKET_OUT_OF_BB = new NullBucket(NullBucket.TYPE_OUT_OF_BOUNDING_BOX);
-export const NULL_BUCKET = new NullBucket(NullBucket.TYPE_OTHER);
+
+export const NULL_BUCKET = new NullBucket(false);
+export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
 

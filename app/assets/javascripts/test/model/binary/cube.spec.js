@@ -19,7 +19,7 @@ mockRequire("../../../libs/error_handling", {
 mockRequire("../../../libs/toast", { error: _.noop });
 
 
-const Cube = require("../../../oxalis/model/binary/cube").default;
+const Cube = require("../../../oxalis/model/binary/data_cube").default;
 
 describe("Cube", () => {
   let cube = null;
@@ -49,7 +49,7 @@ describe("Cube", () => {
       expect(cube.bucketCount).toBe(0);
 
       const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
-      expect(bucket.isNullBucket).toBe(undefined);
+      expect(bucket.isNullBucket).toBe(false);
       expect(cube.bucketCount).toBe(1);
     });
 
@@ -172,7 +172,8 @@ describe("Cube", () => {
         cube.labelVoxel([0, 0, 0], 42);
         cube.labelVoxel([1, 1, 1], 43);
 
-        const mapping = { "42": 1 };
+        const mapping = new Map();
+        mapping.set(42, 1);
 
         expect(cube.getDataValue([0, 0, 0], mapping)).toBe(1);
         expect(cube.getDataValue([1, 1, 1], mapping)).toBe(43);
@@ -182,7 +183,8 @@ describe("Cube", () => {
 
   describe("Garbage Collection", () => {
     beforeEach(() => {
-      Cube.prototype.MAXIMUM_BUCKET_COUNT = 3;
+      cube.MAXIMUM_BUCKET_COUNT = 3;
+      cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
     });
 
 

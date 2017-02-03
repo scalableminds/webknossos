@@ -1,10 +1,11 @@
 import _ from "lodash";
 import Backbone from "backbone";
 import Dimensions from "../dimensions";
+import { BUCKET_SIZE_P } from "./bucket";
 
 // Macros
 // should work as normal functions, as well
-const tileIndexByTileMacro = (_this, tile) => (tile[0] * (1 << (_this.TEXTURE_SIZE_P - _this.cube.BUCKET_SIZE_P))) + tile[1];
+const tileIndexByTileMacro = (_this, tile) => (tile[0] * (1 << (_this.TEXTURE_SIZE_P - BUCKET_SIZE_P))) + tile[1];
 
 
 const subTileMacro = (tile, index) => [(tile[0] << 1) + (index % 2), (tile[1] << 1) + (index >> 1)];
@@ -46,7 +47,7 @@ class Plane2D {
     this.MAPPED_DATA_BIT_DEPTH = MAPPED_DATA_BIT_DEPTH;
     _.extend(this, Backbone.Events);
 
-    this.BUCKETS_PER_ROW = 1 << (this.TEXTURE_SIZE_P - this.cube.BUCKET_SIZE_P);
+    this.BUCKETS_PER_ROW = 1 << (this.TEXTURE_SIZE_P - BUCKET_SIZE_P);
     this.TEXTURE_SIZE = (1 << (this.TEXTURE_SIZE_P << 1)) * (this.TEXTURE_BIT_DEPTH >> 3);
 
     if (isSegmentation) {
@@ -79,7 +80,7 @@ class Plane2D {
       }
 
       // Checking, whether the new bucket intersects with the current layer
-      if (this.dataTexture.layer >> (this.cube.BUCKET_SIZE_P + bucket[3]) === bucket[this.W] &&
+      if (this.dataTexture.layer >> (BUCKET_SIZE_P + bucket[3]) === bucket[this.W] &&
           (this.dataTexture.topLeftBucket != null)) {
         // Get the tile, the bucket would be drawn to
         const u = bucket[this.U] - this.dataTexture.topLeftBucket[this.U];
@@ -146,10 +147,10 @@ class Plane2D {
 
     // Converting area from voxels to buckets
     area = [
-      area[0] >> this.cube.BUCKET_SIZE_P,
-      area[1] >> this.cube.BUCKET_SIZE_P,
-      (area[2] - 1) >> this.cube.BUCKET_SIZE_P,
-      (area[3] - 1) >> this.cube.BUCKET_SIZE_P,
+      area[0] >> BUCKET_SIZE_P,
+      area[1] >> BUCKET_SIZE_P,
+      (area[2] - 1) >> BUCKET_SIZE_P,
+      (area[3] - 1) >> BUCKET_SIZE_P,
     ];
 
     // If layer or zoomStep have changed, everything needs to be redrawn
@@ -176,8 +177,8 @@ class Plane2D {
       texture.ready = false;
 
       // Calculating boundaries for copying
-      const width = (1 << (this.TEXTURE_SIZE_P - this.cube.BUCKET_SIZE_P)) - Math.abs(texture.topLeftBucket[this.U] - oldTopLeftBucket[this.U]);
-      const height = (1 << (this.TEXTURE_SIZE_P - this.cube.BUCKET_SIZE_P)) - Math.abs(texture.topLeftBucket[this.V] - oldTopLeftBucket[this.V]);
+      const width = (1 << (this.TEXTURE_SIZE_P - BUCKET_SIZE_P)) - Math.abs(texture.topLeftBucket[this.U] - oldTopLeftBucket[this.U]);
+      const height = (1 << (this.TEXTURE_SIZE_P - BUCKET_SIZE_P)) - Math.abs(texture.topLeftBucket[this.V] - oldTopLeftBucket[this.V]);
       const oldOffset = [
         Math.max(texture.topLeftBucket[this.U] - oldTopLeftBucket[this.U], 0),
         Math.max(texture.topLeftBucket[this.V] - oldTopLeftBucket[this.V], 0),
@@ -232,14 +233,14 @@ class Plane2D {
 
 
   copyTile(destTile, sourceTile, destBuffer, sourceBuffer) {
-    const destOffset = bufferOffsetByTileMacro(this, destTile, this.cube.BUCKET_SIZE_P);
-    const sourceOffset = bufferOffsetByTileMacro(this, sourceTile, this.cube.BUCKET_SIZE_P);
+    const destOffset = bufferOffsetByTileMacro(this, destTile, BUCKET_SIZE_P);
+    const sourceOffset = bufferOffsetByTileMacro(this, sourceTile, BUCKET_SIZE_P);
 
     return this.renderToBuffer(
       {
         buffer: destBuffer,
         offset: destOffset,
-        widthP: this.cube.BUCKET_SIZE_P,
+        widthP: BUCKET_SIZE_P,
         rowDelta: 1 << this.TEXTURE_SIZE_P,
       },
       {
@@ -278,7 +279,7 @@ class Plane2D {
       }
       return result;
     } else if (map[mapIndex] === this.NOT_LOADED_BUCKET_PLACEHOLDER) {
-      tileSizeP = this.cube.BUCKET_SIZE_P - (this.dataTexture.zoomStep - tileZoomStep);
+      tileSizeP = BUCKET_SIZE_P - (this.dataTexture.zoomStep - tileZoomStep);
       return this.renderToBuffer(
         {
           buffer: this.dataTexture.buffer,
@@ -299,18 +300,18 @@ class Plane2D {
     } else {
       const bucket = map[mapIndex];
       const bucketZoomStep = bucket[3];
-      tileSizeP = this.cube.BUCKET_SIZE_P - (this.dataTexture.zoomStep - tileZoomStep);
+      tileSizeP = BUCKET_SIZE_P - (this.dataTexture.zoomStep - tileZoomStep);
       const skipP = Math.max(this.dataTexture.zoomStep - bucketZoomStep, 0);
       const repeatP = Math.max(bucketZoomStep - this.dataTexture.zoomStep, 0);
       const destOffset = bufferOffsetByTileMacro(this, tile, tileSizeP);
 
       const offsetMask = (1 << (bucketZoomStep - tileZoomStep)) - 1;
-      const scaleFactorP = this.cube.BUCKET_SIZE_P - (bucketZoomStep - tileZoomStep);
+      const scaleFactorP = BUCKET_SIZE_P - (bucketZoomStep - tileZoomStep);
 
       const sourceOffsets = [
         (((this.dataTexture.topLeftBucket[this.U] << (this.dataTexture.zoomStep - tileZoomStep)) + tile[0]) & offsetMask) << scaleFactorP,
         (((this.dataTexture.topLeftBucket[this.V] << (this.dataTexture.zoomStep - tileZoomStep)) + tile[1]) & offsetMask) << scaleFactorP,
-        (this.dataTexture.layer >> bucketZoomStep) & ((1 << this.cube.BUCKET_SIZE_P) - 1),
+        (this.dataTexture.layer >> bucketZoomStep) & ((1 << BUCKET_SIZE_P) - 1),
       ];
 
       const sourceOffset =
@@ -391,7 +392,7 @@ class Plane2D {
       map[mapIndex] = fallback;
     }
 
-    const dw = (this.dataTexture.layer >> ((this.cube.BUCKET_SIZE_P + zoomStep) - 1)) & 0b1;
+    const dw = (this.dataTexture.layer >> ((BUCKET_SIZE_P + zoomStep) - 1)) & 0b1;
 
     let recursive = false;
 

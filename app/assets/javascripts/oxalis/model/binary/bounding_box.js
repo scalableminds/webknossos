@@ -49,8 +49,7 @@ class BoundingBox {
         }
 
         return res;
-      },
-      ),
+      }),
     };
   }
 

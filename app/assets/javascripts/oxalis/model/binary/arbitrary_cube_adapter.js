@@ -23,7 +23,6 @@ const NOT_LOADED_BUCKET_INTENSITY = 100;
 
 class ArbitraryCubeAdapter {
 
-  NOT_LOADED_BUCKET_INTENSITY: number;
   cube: DataCube;
   boundary: Vector3;
   sizeZYX: number;
@@ -41,7 +40,7 @@ class ArbitraryCubeAdapter {
 
     this.NOT_LOADED_BUCKET_DATA = new BucketData(this.cube.BUCKET_LENGTH);
     for (let i = 0; i < this.NOT_LOADED_BUCKET_DATA.length; i++) {
-      this.NOT_LOADED_BUCKET_DATA[i] = this.NOT_LOADED_BUCKET_INTENSITY;
+      this.NOT_LOADED_BUCKET_DATA[i] = NOT_LOADED_BUCKET_INTENSITY;
     }
     this.NOT_LOADED_BUCKET_DATA.zoomStep = 0;
     this.NOT_LOADED_BUCKET_DATA.isTemporalData = true;

@@ -6,6 +6,7 @@
 import type { Vector3 } from "oxalis/constants";
 import BucketBuilder from "./bucket_builder";
 import Request from "../../../../libs/request";
+import type { MappingType } from "oxalis/model/binary/mappings";
 
 type CategoryType = "color" | "segmentation";
 type ElementClassType = string; // TODO: Can/should we be more precise like "uint16" | "Uint32"?
@@ -23,12 +24,6 @@ type DataStoreInfoType = {
   accessToken: string;
 };
 
-type MappingType = {
-  name: string;
-  parent: ?string;
-  classes: Array<Array<number>>;
-};
-
 type LayerInfoType = {
   name: string;
   category: CategoryType;
@@ -38,10 +33,11 @@ type LayerInfoType = {
   resolutions: Array<number>;
 }
 
+export const REQUEST_TIMEOUT = 10000;
+
 // Abstract class that defines the Layer interface and implements common
 // functionality.
 class Layer {
-  REQUEST_TIMEOUT: number;
   fourBit: boolean;
   dataStoreInfo: DataStoreInfoType;
   name: string;
@@ -56,10 +52,6 @@ class Layer {
   mappings: Array<MappingType>;
   maxCoordinates: BoundingBoxType;
   resolutions: Array<number>;
-
-  static initClass() {
-    this.prototype.REQUEST_TIMEOUT = 10000;
-  }
 
 
   constructor(layerInfo: LayerInfoType, dataSetName: string, dataStoreInfo: DataStoreInfoType) {
@@ -93,7 +85,7 @@ class Layer {
   }
 
 
-  doWithToken(fn) {
+  doWithToken<T>(fn: (token: string) => T): Promise<T> {
     return this.tokenPromise
         .then(fn)
         .catch((error) => {
@@ -102,10 +94,8 @@ class Layer {
             this.tokenPromise = this.requestDataToken();
             return this.doWithToken(fn);
           }
-
           throw error;
-        },
-        );
+        });
   }
 
 
@@ -140,7 +130,6 @@ class Layer {
     throw new Error("Subclass responsibility");
   }
 }
-Layer.initClass();
 
 
 export default Layer;

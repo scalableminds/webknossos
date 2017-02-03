@@ -1,9 +1,39 @@
+/*
+* tracepoint.js
+* @flow weak
+*/
+
 import _ from "lodash";
 import Utils from "libs/utils";
+import type { Vector3 } from "oxalis/constants";
 
+export type MetaInfo = {
+  timestamp: number;
+  viewport: number;
+  resolution: number;
+  bitDepth: number;
+  interpolation: boolean;
+}
+
+/**
+* A node in a skeleton tracing.
+* @class
+*/
 class TracePoint {
 
-  constructor(id, pos, radius, treeId, metaInfo, rotation) {
+  setChildRelation: Function;
+  id: number;
+  pos: Vector3;
+  radius: number;
+  treeId: number;
+  metaInfo: MetaInfo;
+  rotation: Vector3;
+  neighbors: Array<TracePoint>;
+  parent: TracePoint;
+  seen: boolean;
+  children: any;
+
+  constructor(id: number, pos: Vector3, radius:number, treeId: number, metaInfo: MetaInfo, rotation:Vector3) {
     this.setChildRelation = this.setChildRelation.bind(this);
     this.id = id;
     this.pos = pos;
@@ -22,7 +52,6 @@ class TracePoint {
 
   getNext(parent) {
     let minN;
-    let neighbor;
     if (parent != null) { minN = 2; } else { minN = 1; }
 
     if (this.neighbors.length < minN) {
@@ -30,20 +59,14 @@ class TracePoint {
     }
 
     if (this.neighbors.length === minN) {
-      for (neighbor of this.neighbors) {
+      for (const neighbor of this.neighbors) {
         if (neighbor !== parent) {
           return neighbor;
         }
       }
     }
 
-    const res = [];
-    for (neighbor of this.neighbors) {
-      if (neighbor !== parent) {
-        res.push(neighbor);
-      }
-    }
-    return res;
+    return this.neighbors.filter(neighbor => neighbor !== parent);
   }
 
 

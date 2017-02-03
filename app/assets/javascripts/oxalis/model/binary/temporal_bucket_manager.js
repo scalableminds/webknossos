@@ -1,5 +1,11 @@
+/**
+ * temporal_bucket_manager.js
+ * @flow weak
+ */
+
 import _ from "lodash";
-import PullQueue from "./pullqueue";
+import PullQueue from "oxalis/model/binary/pullqueue";
+import PushQueue from "oxalis/model/binary/pushqueue";
 
 
 class TemporalBucketManager {
@@ -7,6 +13,9 @@ class TemporalBucketManager {
   // the original bucket has not arrived from the server yet) and handles
   // their special treatment.
 
+  pullQueue: PullQueue;
+  pushQueue: PushQueue;
+  loadedPromises: Array<Promise<void>>;
 
   constructor(pullQueue, pushQueue) {
     this.pullQueue = pullQueue;

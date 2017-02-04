@@ -47,7 +47,7 @@ class TracingParser {
         tree.nodes.push(
           new TracePoint(
             node.id, node.position, node.radius, treeData.id,
-            node.rotation, node.timestamp));
+            node.rotation, node.timestamp, node.viewport, node.resolution, node.bitDepth, node.interpolation));
 
         // idCount should be bigger than any other id
         this.idCount = Math.max(node.id + 1, this.idCount);

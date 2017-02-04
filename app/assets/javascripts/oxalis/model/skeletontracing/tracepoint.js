@@ -117,7 +117,7 @@ class TracePoint {
 
 
   removeNeighbor(id) {
-    for (const i of Utils.__range__(0, this.neighbors.length, false)) {
+    for (let i = 0; this.neighbors.length; i++) {
       if (this.neighbors[i].id === id) {
         // Remove neighbor
         this.neighbors.splice(i, 1);

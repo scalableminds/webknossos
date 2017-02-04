@@ -1,5 +1,5 @@
 import _ from "lodash";
-import THREE from "three";
+import * as THREE from "three";
 import Toast from "libs/toast";
 import TracePoint from "./tracepoint";
 import TraceTree from "./tracetree";

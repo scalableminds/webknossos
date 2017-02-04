@@ -199,7 +199,7 @@ class PlaneView {
       constants.RESIZE_THROTTLE_TIME,
     );
     this.resizeThrottled();
-  }
+  };
 
 
   resize = () => {
@@ -214,7 +214,7 @@ class PlaneView {
       this.cameras[i].updateProjectionMatrix();
     }
     this.draw();
-  }
+  };
 
 
   scaleTrianglesPlane = (scale: number): void => {
@@ -235,7 +235,7 @@ class PlaneView {
       });
 
     this.resizeThrottled();
-  }
+  };
 
 
   setActiveViewport = (viewportID: number): void => {
@@ -248,10 +248,10 @@ class PlaneView {
     }
 
     this.draw();
-  }
+  };
 
 
-  getCameras = () => {
+  getCameras() {
     return this.cameras;
   }
 

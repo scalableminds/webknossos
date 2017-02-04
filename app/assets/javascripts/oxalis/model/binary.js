@@ -78,6 +78,7 @@ class Binary {
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
     this.mappings = new Mappings(datastoreInfo, datasetName, this.layer);
     this.activeMapping = null;
+    this.direction = [0, 0, 0];
 
     this.pingStrategies = [
       new PingStrategy.Skeleton(this.cube, constants.TEXTURE_SIZE_P),

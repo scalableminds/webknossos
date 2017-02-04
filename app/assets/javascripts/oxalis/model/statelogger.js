@@ -107,9 +107,6 @@ class StateLogger {
   }
 
 
-  pushThrottled = _.throttle(this.mutexedPush, PUSH_THROTTLE_TIME);
-
-
   pushNow() {
    // Interface for view & controller
 
@@ -118,13 +115,14 @@ class StateLogger {
 
   // alias for `pushNow`
   // needed for save delegation by `Model`
-  // see `model.coffee`
+  // see `model.js`
   save() {
     return this.pushNow();
   }
 
 
   mutexedPush = mutexPromise(this.pushImpl, -1);
+  pushThrottled = _.throttle(this.mutexedPush, PUSH_THROTTLE_TIME);
 
 
   pushImpl(notifyOnFailure) {

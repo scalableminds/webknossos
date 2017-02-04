@@ -1,14 +1,13 @@
+/**
+ * dataset_configuration.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
 import NestedObjModel from "libs/nested_obj_model";
 
-
 class DatasetConfiguration extends NestedObjModel {
-
-  constructor(...args) {
-    super(...args);
-    this.reset = this.reset.bind(this);
-  }
 
   initialize({ datasetName, dataLayerNames }) {
     this.dataLayerNames = dataLayerNames;
@@ -20,9 +19,7 @@ class DatasetConfiguration extends NestedObjModel {
   }
 
 
-  reset() {
-    return this.setDefaultBinaryColors(true);
-  }
+  reset = () => this.setDefaultBinaryColors(true)
 
 
   triggerAll() {

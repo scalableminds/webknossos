@@ -1,17 +1,41 @@
+/**
+ * flycam2d.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
+import Model from "oxalis/model";
+import User from "oxalis/model/user";
 import Dimensions from "./dimensions";
 import constants from "../constants";
+import type { Vector3, Vector4 } from "../constants";
+
+const Flycam2dConstants = {
+  MAX_TEXTURE_OFFSET: 31,
+  MAX_ZOOM_THRESHOLD: 2,
+};
 
 class Flycam2d {
-  static initClass() {
-    this.prototype.TEXTURE_WIDTH = 512;
-    this.prototype.MAX_TEXTURE_OFFSET = 31;     // maximum difference between requested coordinate and actual texture position
-    this.prototype.MAX_ZOOM_THRESHOLD = 2;
 
-    this.prototype.viewportWidth = 0;
-  }
+  viewportWidth: number;
+  zoomStepCount: number;
+  model: Model;
+  user: User;
+  maxZoomStepDiff: number;
+  zoomStep: number;
+  integerZoomStep: number;
+  buffer: Array<Array<number>>
+  position: Vector3;
+  direction: Vector3;
+  rayThreshold: Vector4;
+  spaceDirection: Vector3;
+  quality: number;
+
+  // Copied from backbone events (TODO: handle this better)
+  trigger: Function;
+  listenTo: Function;
 
   constructor(viewportWidth, zoomStepCount, model) {
     this.viewportWidth = viewportWidth;
@@ -57,8 +81,8 @@ class Flycam2d {
     // Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
 
     const zoomThreshold = Math.min(
-      this.MAX_ZOOM_THRESHOLD,
-      (this.TEXTURE_WIDTH - this.MAX_TEXTURE_OFFSET) / this.viewportWidth,
+      Flycam2dConstants.MAX_ZOOM_THRESHOLD,
+      (constants.TEXTURE_WIDTH - Flycam2dConstants.MAX_TEXTURE_OFFSET) / this.viewportWidth,
     );
     return Math.log(zoomThreshold) / Math.LN2;
   }
@@ -119,8 +143,8 @@ class Flycam2d {
     return [0, 1, 2].forEach((planeID) => {
       scaleArray = Dimensions.transDim(app.scaleInfo.baseVoxelFactors, planeID);
       pixelNeeded = this.viewportWidth * this.getTextureScalingFactor();
-      this.buffer[planeID] = [this.TEXTURE_WIDTH - (pixelNeeded * scaleArray[0]),
-        this.TEXTURE_WIDTH - (pixelNeeded * scaleArray[1])];
+      this.buffer[planeID] = [constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[0]),
+        constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[1])];
     });
   }
 
@@ -276,7 +300,7 @@ class Flycam2d {
   needsUpdate(planeID) {
     const area = this.getArea(planeID);
     // const ind = Dimensions.getIndices(planeID);
-    const res = ((area[0] < 0) || (area[1] < 0) || (area[2] > this.TEXTURE_WIDTH) || (area[3] > this.TEXTURE_WIDTH) ||
+    const res = ((area[0] < 0) || (area[1] < 0) || (area[2] > constants.TEXTURE_WIDTH) || (area[3] > constants.TEXTURE_WIDTH) ||
     // (@position[ind[2]] != @getTexturePosition(planeID)[ind[2]]) or # TODO: always false
     (this.zoomStep - (this.integerZoomStep - 1)) < this.maxZoomStepDiff) ||
     (this.zoomStep - this.integerZoomStep > this.maxZoomStepDiff);
@@ -334,6 +358,5 @@ class Flycam2d {
     app.vent.trigger("rerender");
   }
 }
-Flycam2d.initClass();
 
 export default Flycam2d;

@@ -1,3 +1,8 @@
+/**
+ * abstract_tab_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";

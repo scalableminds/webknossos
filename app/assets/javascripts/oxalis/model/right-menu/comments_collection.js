@@ -1,7 +1,13 @@
+/**
+ * comments_collection.js
+ * @flow weak
+ */
+
 import Backbone from "backbone";
 
 class CommentsCollection extends Backbone.Collection {
 
+  coefficient: number;
 
   intitalize() {
     this.coefficient = 1;

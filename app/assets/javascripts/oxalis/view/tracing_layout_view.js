@@ -1,6 +1,8 @@
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
+import { render } from "react-dom";
+import React from "react";
 import app from "app";
 import OxalisController from "oxalis/controller";
 import OxalisModel from "oxalis/model";
@@ -18,6 +20,7 @@ import VolumeTracingRightMenuView from "./volumetracing/volumetracing_right_menu
 import ViewmodeRightMenuView from "./viewmode/viewmode_right_menu_view";
 import UserScriptsModalView from "./user_scripts_modal";
 import TracingView from "./tracing_view";
+import SettingsView from "oxalis/view/settings/settings_view";
 
 class TracingLayoutView extends Marionette.View {
   constructor(...args) {
@@ -53,13 +56,13 @@ class TracingLayoutView extends Marionette.View {
     this.prototype.ui = {
       rightMenu: "#right-menu",
       slidingCanvas: "#sliding-canvas",
+      settings: "#settings-menu",
     };
 
     this.prototype.regions = {
       actionBar: "#action-bar",
       rightMenu: "#right-menu",
       tracingContainer: "#tracing",
-      settings: "#settings-menu",
       modalWrapper: ".modal-wrapper",
     };
 
@@ -189,7 +192,11 @@ class TracingLayoutView extends Marionette.View {
       settingsTabView = new ViewmodeTabView(this.options);
     }
 
-    this.showChildView("settings", settingsTabView);
+    render(
+      <SettingsView />,
+      this.ui.settings[0],
+    );
+    // this.showChildView("settings", settingsTabView);
   }
 
 

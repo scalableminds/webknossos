@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import THREE from "three";
+import * as THREE from "three";
 import Model from "oxalis/model";
 
 type Uniform = {
@@ -28,22 +28,20 @@ class AbstractMaterialFactory {
     this.model = model;
     _.extend(this, Backbone.Events);
 
-    this.setupAttributesAndUniforms();
+    this.setupUniforms();
     this.makeMaterial();
     this.setupChangeListeners();
   }
 
 
-  setupAttributesAndUniforms() {
+  setupUniforms() {
     this.uniforms = {};
-    this.attributes = {};
   }
 
 
   makeMaterial(options = {}) {
     options = _.extend(options, {
       uniforms: this.uniforms,
-      attributes: this.attributes,
       vertexShader: this.getVertexShader(),
       fragmentShader: this.getFragmentShader(),
     });

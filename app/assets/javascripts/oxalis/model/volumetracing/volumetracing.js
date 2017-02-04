@@ -28,10 +28,10 @@ class VolumeTracing {
   restrictionHandler: RestrictionHandler;
   mode: VolumeModeType;
   cells: Array<VolumeCell>;
-  activeCell: VolumeCell;
-  currentLayer: VolumeLayer | null;
+  activeCell: ?VolumeCell;
+  currentLayer: ?VolumeLayer;
   idCount: number;
-  lastCentroid: null | Vector3;
+  lastCentroid: ?Vector3;
   stateLogger: VolumeTracingStateLogger;
 
   // Copied from backbone events (TODO: handle this better)

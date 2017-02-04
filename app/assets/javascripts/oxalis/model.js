@@ -52,12 +52,14 @@ export type SkeletonContentDataType = {
   activeNode: null | number;
   trees: Array<Object>;
   zoomLevel: number;
+  customLayers: null;
 };
 
 export type VolumeContentDataType = {
   activeCell: null | number;
   customLayers: Array<Object>;
   maxCoordinates: BoundingBoxObjectType;
+  customLayers: ?Array<Object>;
   name: string;
 };
 

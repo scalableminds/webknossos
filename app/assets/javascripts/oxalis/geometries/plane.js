@@ -57,7 +57,7 @@ class Plane {
       crosshairGeometries[i].vertices.push(new THREE.Vector3(-25 * i, -25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3(25 * i, 25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3((pWidth / 2) * i, (pWidth / 2) * (1 - i), 0));
-      this.crosshair[i] = new THREE.Line(crosshairGeometries[i], new THREE.LineBasicMaterial({ color: this.CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 }), THREE.LineSegments);
+      this.crosshair[i] = new THREE.LineSegments(crosshairGeometries[i], new THREE.LineBasicMaterial({ color: this.CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 }));
     }
 
     // create borders

@@ -72,7 +72,7 @@ class Mappings {
     for (const currentMappingName of this.getMappingChain(mappingName)) {
       const mappingObject = this.mappings[currentMappingName];
       ErrorHandling.assert(mappingObject.classes,
-          "mappingObject must have been fetched at this point");
+          "mappingObject classes must have been fetched at this point");
       if (mappingObject.classes) {
         for (const mappingClass of mappingObject.classes) {
           const minId = _.min(mappingClass);

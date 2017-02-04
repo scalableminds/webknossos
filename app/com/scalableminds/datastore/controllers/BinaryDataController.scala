@@ -331,7 +331,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
       params = ImageCreatorParameters(
         dataLayer.bytesPerElement, settings.useHalfByte, width, height, imagesPerRow, blackAndWhite = blackAndWhite)
-      position = new VoxelPosition(x, y, z, math.pow(2,resolution).toInt)
+      position = new VoxelPosition(x, y, z, math.pow(2, resolution).toInt)
       data <- requestData(dataSetName, dataLayerName, position, width, height, depth, settings) ?~> Messages("binary.data.notFound")
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")

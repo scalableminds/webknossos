@@ -8,7 +8,7 @@ import Backbone from "backbone";
 import Pipeline from "libs/pipeline";
 import InterpolationCollector from "oxalis/model/binary/interpolation_collector";
 import Cube from "oxalis/model/binary/cube";
-import PullQueue from "oxalis/model/binary/pullqueue";
+import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import Plane2D from "oxalis/model/binary/plane2d";
 import PingStrategy from "oxalis/model/binary/ping_strategy";
@@ -196,7 +196,7 @@ class Binary {
       bucket =>
         ({
           bucket,
-          priority: PullQueue.prototype.PRIORITY_HIGHEST,
+          priority: PullQueueConstants.PRIORITY_HIGHEST,
         }),
     ));
     this.pullQueue.pull();

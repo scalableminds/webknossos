@@ -46,22 +46,22 @@ services:
       - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
       - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
 
-  webknossos-frontend-linting:
+  frontend-linting:
     extends:
       service: sbt
     command: bash -c "npm run lint"
 
-  webknossos-frontend-flow:
+  frontend-flow:
     extends:
       service: sbt
     command: bash -c "npm run flow"
 
-  webknossos-frontend-tests:
+  frontend-tests:
     extends:
       service: sbt
     command: bash -c "npm test"
 
-  webknossos-e2e-tests:
+  e2e-tests:
     extends:
       service: sbt
     command: >

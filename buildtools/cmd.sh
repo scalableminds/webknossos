@@ -23,4 +23,3 @@ fi
 echo bin/oxalis ${ARGS[@]}
 
 exec bin/oxalis ${ARGS[@]}
-

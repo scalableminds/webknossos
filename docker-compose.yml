@@ -1,7 +1,6 @@
 version: '2.1'
 
 services:
-
   webknossos:
     image: scalableminds/webknossos:${DOCKER_TAG:-master}
     ports:
@@ -12,8 +11,34 @@ services:
       - PORT=9000
       - MODE=dev
 
+  dev:
+    extends:
+      service: sbt
+    ports:
+      - "9000:9000"
+      - "5005:5005"
+    links:
+      - mongo-dev
+    command: >
+      bash -c
+      "sbt -v -d -jvm-debug 5005 \"run
+      -Djava.net.preferIPv4Stack=true
+      -Dhttp.address=0.0.0.0
+      -Dhttp.port=$${PORT}
+      -Dmongodb.db=$${MONGO_DB}
+      -Dmongodb.url=$${MONGO_HOST}
+      -Dmongodb.port=$${MONGO_PORT}
+      -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}
+      \""
+    environment:
+      - PORT=9000
+      - MONGO_HOST=mongo-dev
+      - MONGO_PORT=27017
+      - MONGO_DB=webknossos-dev
+    stdin_open: true
+
   sbt:
-    image: scalableminds/sbt:${SBT_VERSION_TAG:-sbt-0.13.9_mongo-3.2.1_node-7.x_jdk-8}
+    image: scalableminds/sbt:sbt-0.13.9_mongo-3.2.1_node-7.x_jdk-8
     volumes:
       - ".:/project"
       - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
@@ -66,3 +91,11 @@ services:
 
   mongo:
     image: mongo
+
+  mongo-dev:
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - "./dev-db/configdb:/data/configdb"
+      - "./dev-db/db:/data/db"

@@ -4,7 +4,7 @@
 package com.scalableminds.braingames.binary.models
 
 import play.api.libs.json.Json
-import com.scalableminds.util.geometry.{Point3D, BoundingBox}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 
 /**
  * Company: scalableminds
@@ -29,8 +29,8 @@ trait DataLayerSectionLike {
   /**
    * Checks if a point is inside the whole data set boundary.
    */
-  def doesContainBlock(point: Point3D): Boolean = {
-    bboxBig.contains(point)
+  def doesContainBucket(point: BucketPosition): Boolean = {
+    bboxBig.contains(point.topLeft.toHighestRes)
   }
 }
 

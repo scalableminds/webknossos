@@ -6,12 +6,14 @@ package com.scalableminds.braingames.binary.requester
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.braingames.binary.models.{DataStoreBlock, LoadBlock}
+import com.scalableminds.braingames.binary.models.{BucketReadInstruction, CubeReadInstruction}
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box
 
 import scala.concurrent.ExecutionContext.Implicits._
+import scala.concurrent.Future
 
 case class Data(value: Array[Byte]) extends AnyVal
 
@@ -26,23 +28,23 @@ case class CachedBlock(
                         z: Int)
 
 object CachedBlock {
-  def from(b: DataStoreBlock): CachedBlock =
+  def from(b: CubeReadInstruction): CachedBlock =
     CachedBlock(
                  b.dataSource.id,
                  b.dataLayerSection.sectionId,
                  b.dataLayer.name,
                  b.dataLayer.baseDir,
-                 b.resolution,
-                 b.block.x,
-                 b.block.y,
-                 b.block.z)
+                 b.position.resolution,
+                 b.position.x,
+                 b.position.y,
+                 b.position.z)
 }
 
 trait Cube extends LazyLogging{
   private val accessCounter = new AtomicInteger()
   private val scheduledForRemoval = new AtomicBoolean()
 
-  def cutOutBucket(requestedCube: LoadBlock): Array[Byte]
+  def cutOutBucket(requestedCube: BucketReadInstruction): Box[Array[Byte]]
 
   def startAccess(): Unit = {
     accessCounter.incrementAndGet()
@@ -68,14 +70,14 @@ trait Cube extends LazyLogging{
 /**
   * A data store implementation which uses the hdd as data storage
   */
-trait DataCache {
+trait DataCache extends FoxImplicits{
   def cache: LRUConcurrentCache[CachedBlock, Cube]
 
   /**
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  def withCache[T](blockInfo: LoadBlock)(loadF: (Cube => T) => Fox[T])(f: Cube => T): Fox[T] = {
+  def withCache[T](blockInfo: CubeReadInstruction)(loadF: (Cube => Box[T]) => Fox[T])(f: Cube => Box[T]): Fox[T] = {
     val cachedBlockInfo = CachedBlock.from(blockInfo)
 
     cache.get(cachedBlockInfo) match {
@@ -84,7 +86,7 @@ trait DataCache {
         NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
         val result = f(cube)
         cube.finishAccess()
-        Fox.successful(result)
+        result.toFox
       case _ =>
         loadF{ cube: Cube =>
           NewRelic.recordMetric("Custom/FileDataStore/Cache/size", cache.size())

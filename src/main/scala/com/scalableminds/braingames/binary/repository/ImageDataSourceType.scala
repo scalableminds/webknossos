@@ -359,15 +359,15 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     }
   }
 
-  private class KnossosWriterCache(id: String, resolution: Int, folder: Path) {
+  private class KnossosWriterCache(id: String, folder: Path) {
     val knossosExtension = "raw"
 
-    def get(block: Point3D): FileOutputStream = {
-      fileForPosition(block)
+    def get(cube: CubePosition): FileOutputStream = {
+      fileForPosition(cube)
     }
 
-    private def fileForPosition(block: Point3D): FileOutputStream = {
-      val path = DataStore.knossosFilePath(folder, id, resolution, block, knossosExtension)
+    private def fileForPosition(cube: CubePosition): FileOutputStream = {
+      val path = DataStore.knossosFilePath(folder, id, cube, knossosExtension)
       Files.createDirectories(path.getParent)
       PathUtils.createFile(path, failIfExists = false)
       PathUtils.fileOption(path) match {
@@ -390,7 +390,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
     val CubeSize = 128
 
     def convertToCubes(cubeSize: Int = 128): Unit = {
-      val fileCache = new KnossosWriterCache(id, 1, target)
+      val fileCache = new KnossosWriterCache(id, target)
       tiles.zipWithIndex.foreach {
         case (tile, idx) =>
           writeTile(tile, idx, fileCache)
@@ -457,7 +457,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
         case (cubeData, idx) =>
           val x = idx % xs
           val y = idx / xs
-          val file = files.get(Point3D(x, y, layerNumber / CubeSize))
+          val file = files.get(new CubePosition(x, y, layerNumber / CubeSize, 1, CubeSize))
           file.write(cubeData)
           file.close()
       }

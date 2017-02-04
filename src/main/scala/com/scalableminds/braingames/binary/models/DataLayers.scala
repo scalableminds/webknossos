@@ -5,7 +5,7 @@ package com.scalableminds.braingames.binary.models
 
 import play.api.libs.json._
 import com.scalableminds.util.geometry.BoundingBox
-import com.scalableminds.braingames.binary.requester.handlers.{BlockHandler, KnossosBlockHandler, WebKnossosWrapBlockHandler}
+import com.scalableminds.braingames.binary.requester.handlers.{BucketHandler, KnossosBucketHandler, WebKnossosWrapBucketHandler}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.braingames.binary.repository.{KnossosDataSourceType, WebKnossosWrapDataSourceType}
 import java.lang.Exception

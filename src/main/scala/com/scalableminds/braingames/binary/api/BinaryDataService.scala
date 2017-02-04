@@ -28,7 +28,6 @@ trait BinaryDataService
     with BinaryDataRequestBuilder
     with DataLayerMappingService
     with DataDownloadService
-    with DataImageService
     with I18nSupport
     with LazyLogging {
 
@@ -79,16 +78,19 @@ trait BinaryDataService
     repositoryWatchActor ! DirectoryWatcherActor.StartWatching
   }
 
-  private def requestCollection(coll: DataRequestCollection[DataRequest]): Fox[Array[Byte]] = {
-    val resultsPromise = Fox.combined(coll.requests.map(dataRequester.load))
+  def handleRequests[T <: DataRequest](coll: DataRequestCollection[T]): Fox[Array[Byte]] = {
+    val resultsPromise = Fox.combined(coll.requests.map{
+      case r: DataReadRequest => handleReadRequest(r)
+      case w: DataWriteRequest => handleWriteRequest(w)
+    })
     resultsPromise.map(_.appendArrays)
   }
 
-  def handleDataRequest(coll: DataRequestCollection[DataRequest]): Fox[Array[Byte]] = {
-    requestCollection(coll)
+  def handleWriteRequest(request: DataWriteRequest): Fox[Array[Byte]] = {
+    dataRequester.handleWriteRequest(request)
   }
 
-  def handleDataRequest(readRequest: DataReadRequest): Fox[Array[Byte]] = {
-    dataRequester.load(readRequest)
+  def handleReadRequest(request: DataReadRequest): Fox[Array[Byte]] = {
+    dataRequester.handleReadRequest(request)
   }
 }

@@ -8,33 +8,33 @@ import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.requester.{Cube, DataCache}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box
 
 import scala.concurrent.duration.FiniteDuration
 
-trait BlockHandler extends DataCache with LazyLogging {
-  protected def loadFromUnderlying[T](loadBlock: LoadBlock, timeout: FiniteDuration)(f: Cube => T): Fox[T]
+trait BucketHandler extends DataCache with LazyLogging {
+  protected def loadFromUnderlying[T](loadCube: CubeReadInstruction, timeout: FiniteDuration)(f: Cube => Box[T]): Fox[T]
 
-  protected def saveToUnderlying(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean]
+  protected def saveToUnderlying(saveBlock: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean]
 
-  def save(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean] = {
+  def save(saveBlock: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {
     saveToUnderlying(saveBlock, timeout)
   }
 
-  def load(loadBlock: LoadBlock, timeout: FiniteDuration, useCache: Boolean): Fox[Array[Byte]] = {
-    val cubePosition = loadBlock.dataSource.pointToCube(loadBlock.block, loadBlock.resolution)
-    val requestedCube = loadBlock.copy(block = cubePosition)
-    val requestedBucket = loadBlock.copy(block = loadBlock.dataSource.applyResolution(loadBlock.block, loadBlock.resolution))
+  def load(loadBucket: BucketReadInstruction, timeout: FiniteDuration, useCache: Boolean): Fox[Array[Byte]] = {
+    val requestedCube = loadBucket.toCubeReadInstruction(loadBucket.dataSource.cubeLength)
     val withCubeResource =
       if (useCache)
         withCache[Array[Byte]](requestedCube)(loadFromUnderlying(requestedCube, timeout)) _
       else
         loadFromUnderlying[Array[Byte]](requestedCube, timeout) _
     withCubeResource { cube =>
-      val bucket = cube.cutOutBucket(requestedBucket)
-      if (requestedBucket.settings.useHalfByte)
-        convertToHalfByte(bucket)
-      else
-        bucket
+      cube.cutOutBucket(loadBucket).map { bucket =>
+        if (loadBucket.settings.useHalfByte)
+          convertToHalfByte(bucket)
+        else
+          bucket
+      }
     }
   }
 

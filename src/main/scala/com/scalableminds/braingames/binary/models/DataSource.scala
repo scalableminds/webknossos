@@ -30,7 +30,7 @@ case class DataSource(
   /**
     * Number of voxels per dimension in the storage format
     */
-  val blockLength: Int =
+  val cubeLength: Int =
     blockLengthOpt.getOrElse(128)
 
   /**
@@ -42,7 +42,7 @@ case class DataSource(
     * Size of a single stored block in storage
     */
   val blockSize: Int =
-    blockLength * blockLength * blockLength
+    cubeLength * cubeLength * cubeLength
 
   /**
     * Boundary of the data source
@@ -61,15 +61,15 @@ case class DataSource(
 
   def pointToCube(point: Point3D, resolution: Int): Point3D =
     Point3D(
-      point.x / blockLength / resolution,
-      point.y / blockLength / resolution,
-      point.z / blockLength / resolution)
+      point.x / cubeLength / resolution,
+      point.y / cubeLength / resolution,
+      point.z / cubeLength / resolution)
 
   def pointToBucket(point: Point3D, resolution: Int): Point3D =
     Point3D(
       point.x / lengthOfLoadedBuckets / resolution,
       point.y / lengthOfLoadedBuckets / resolution,
-      point.z / lengthOfLoadedBuckets / resolution)
+      point.z / cubeLength / resolution)
 
   def applyResolution(point: Point3D, resolution: Int): Point3D =
     Point3D(

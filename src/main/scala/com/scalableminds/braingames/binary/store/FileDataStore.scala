@@ -7,7 +7,7 @@ import java.io._
 import java.nio.file.{Files, Path, Paths}
 
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.braingames.binary.models.{DataLayer, LoadBlock, SaveBlock}
+import com.scalableminds.braingames.binary.models._
 import com.scalableminds.util.io.PathUtils
 
 import scala.concurrent.Future
@@ -33,26 +33,28 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  def load(dataInfo: LoadBlock): Fox[RandomAccessFile] = {
+  def load(dataInfo: CubeReadInstruction): Fox[RandomAccessFile] = {
     val fileSize = dataInfo.dataSource.blockSize * dataInfo.dataLayer.bytesPerElement
-    load(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.resolution,
-      dataInfo.block, fileSize, dataInfo.dataLayer.isCompressed)
+    load(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.position, fileSize, dataInfo.dataLayer.isCompressed)
   }
 
   def load(dataSetDir: Path,
            dataSetId: String,
-           resolution: Int,
-           block: Point3D,
+           cube: CubePosition,
            fileSize: Int,
            isCompressed: Boolean): Fox[RandomAccessFile] = {
     val ext = DataLayer.fileExt(isCompressed)
     lazy val fallback =
-      fuzzyKnossosFile(dataSetDir, dataSetId, resolution, block, DataLayer.supportedFileExt)
+      fuzzyKnossosFile(dataSetDir, dataSetId, cube, DataLayer.supportedFileExt)
 
-    load(knossosFilePath(dataSetDir, dataSetId, resolution, block, ext), fallback, Some(fileSize))
+    load(knossosFilePath(dataSetDir, dataSetId, cube, ext), fallback, Some(fileSize))
   }
 
-  def load(path: Path, fallback: => Option[File], fileSize: Option[Int] = None): Fox[RandomAccessFile] = {
+  private def load(
+    path: Path,
+    fallback: => Option[File],
+    fileSize: Option[Int] = None): Fox[RandomAccessFile] = {
+
     Future {
       try {
         Box(PathUtils.fileOption(path)
@@ -88,23 +90,21 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     }
   }
 
-  private def createOutputStream(path: Path, compressionAllowed: Boolean) = {
-    if(compressionAllowed)
-      new SnappyFramedOutputStream(Files.newOutputStream(path))
-    else
-      Files.newOutputStream(path)
-  }
+//  private def createOutputStream(path: Path, compressionAllowed: Boolean) = {
+//    if(compressionAllowed)
+//      new SnappyFramedOutputStream(Files.newOutputStream(path))
+//    else
+//      Files.newOutputStream(path)
+//  }
 
-  def save(dataInfo: SaveBlock): Fox[Boolean] = {
+  def save(dataInfo: BucketWriteInstruction): Fox[Boolean] = {
     save(knossosBaseDir(dataInfo), dataInfo)
   }
 
-
-
-  private def copyBucketToCube(outputFile: RandomAccessFile, dataInfo: SaveBlock) = {
-    val bucketPosition = dataInfo.dataSource.applyResolution(dataInfo.block, dataInfo.resolution)
+  private def copyBucketToCube(outputFile: RandomAccessFile, dataInfo: BucketWriteInstruction) = {
+    val bucketPosition = dataInfo.position.topLeft
     val bucketLength = dataInfo.dataSource.lengthOfLoadedBuckets
-    val blockLength = dataInfo.dataSource.blockLength
+    val blockLength = dataInfo.dataSource.cubeLength
     val bytesPerElement = dataInfo.dataLayer.bytesPerElement
     val bucketOffset = (bucketPosition.x % blockLength +
       bucketPosition.y % blockLength * blockLength +
@@ -124,11 +124,11 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     }
   }
 
-  def save(dataSetDir: Path, dataInfo: SaveBlock): Fox[Boolean] = {
+  def save(dataSetDir: Path, dataInfo: BucketWriteInstruction): Fox[Boolean] = {
     Future {
-      val cubePosition = dataInfo.dataSource.pointToCube(dataInfo.block, dataInfo.resolution)
+      val cubePosition = dataInfo.position.toCube(dataInfo.dataSource.cubeLength)
 
-      val path = knossosFilePath(dataSetDir, dataInfo.dataSource.id, dataInfo.resolution,
+      val path = knossosFilePath(dataSetDir, dataInfo.dataSource.id,
         cubePosition, DataLayer.fileExt(dataInfo.dataLayer.isCompressed))
       var outputFile: RandomAccessFile = null
       try {

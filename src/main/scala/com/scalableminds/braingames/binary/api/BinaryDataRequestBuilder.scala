@@ -17,11 +17,10 @@ trait BinaryDataRequestBuilder {
                              width: Int,
                              height: Int,
                              depth: Int,
-                             position: Point3D,
-                             resolutionExponent: Int,
+                             position: VoxelPosition,
                              settings: DataRequestSettings): DataReadRequest = {
 
-    val cuboid = Cuboid(position, width, height, depth, resolutionExponent)
+    val cuboid = Cuboid(position, width, height, depth)
     DataReadRequest(dataSource, dataLayer, dataSection, cuboid, settings)
   }
 
@@ -32,11 +31,10 @@ trait BinaryDataRequestBuilder {
                               width: Int,
                               height: Int,
                               depth: Int,
-                              position: Point3D,
-                              resolutionExponent: Int,
+                              position: VoxelPosition,
                               data: Array[Byte]): DataWriteRequest = {
 
-    val cuboid = Cuboid(position, width, height, depth, resolutionExponent)
+    val cuboid = Cuboid(position, width, height, depth)
     DataWriteRequest(dataSource, dataLayer, dataSection, cuboid, data)
   }
 }

@@ -5,7 +5,7 @@ package com.scalableminds.braingames.binary.requester
 
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.repository.{KnossosDataSourceType, WebKnossosWrapDataSourceType}
-import com.scalableminds.braingames.binary.requester.handlers.{BlockHandler, KnossosBlockHandler, WebKnossosWrapBlockHandler}
+import com.scalableminds.braingames.binary.requester.handlers.{BucketHandler, KnossosBucketHandler, WebKnossosWrapBucketHandler}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{BlockedArray3D, Fox, FoxImplicits}
@@ -50,10 +50,11 @@ class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedBlock,
 }
 
 class DataRequester(
-                     val conf: Config,
-                     val cache: DataCubeCache,
-                     dataSourceRepository: DataSourceRepository)
-  extends FoxImplicits
+  val conf: Config,
+  val cache: DataCubeCache,
+  dataSourceRepository: DataSourceRepository)
+  extends DataReadRequester
+    with FoxImplicits
     with LazyLogging {
 
   val layerLocker = new LayerLocker
@@ -62,12 +63,12 @@ class DataRequester(
 
   private implicit val dataBlockSaveTimeout = conf.getInt("saveTimeout").seconds
 
-  private def blockHandler(sourceType: Option[String]): BlockHandler =
+  private def blockHandler(sourceType: Option[String]): BucketHandler =
     sourceType.getOrElse(KnossosDataSourceType.name) match {
       case KnossosDataSourceType.name =>
-        new KnossosBlockHandler(cache)
+        new KnossosBucketHandler(cache)
       case WebKnossosWrapDataSourceType.name =>
-        new WebKnossosWrapBlockHandler(cache)
+        new WebKnossosWrapBucketHandler(cache)
       case _ =>
         throw new Exception("Unexpected data layer type")
     }
@@ -91,52 +92,51 @@ class DataRequester(
     }.getOrElse(Nil)
   }
 
-  private def emptyResult(request: DataRequest) =
-    Fox.successful(new Array[Byte](request.cuboid.voxelVolume * request.dataLayer.bytesPerElement))
+  private def emptyResult(request: DataReadRequest) =
+    Fox.successful(new Array[Byte](request.cuboid.volume * request.dataLayer.bytesPerElement))
 
-  def load(dataRequest: DataRequest): Fox[Array[Byte]] = {
-    dataRequest match {
-      case request: DataReadRequest =>
-        val point = request.cuboid.topLeft
-        if (point.x < 0 || point.y < 0 || point.z < 0) {
-          emptyResult(request)
-        } else {
-          loadBlock(request, useCache = true)
-        }
-      case request: DataWriteRequest =>
-        Future(blocking(layerLocker.withLockFor(dataRequest.dataSource, dataRequest.dataLayer)(() =>
-          synchronousSave(request, dataRequest.dataLayer, dataRequest.cuboid.topLeft))))
+  protected def handleBucketReadRequest(bucket: BucketPosition, request: DataReadRequest) = {
+    val point = request.cuboid.topLeft
+    if (point.x < 0 || point.y < 0 || point.z < 0) {
+      emptyResult(request)
+    } else {
+      loadBucketOfRequest(bucket, request, useCache = true)
     }
   }
 
-  def loadBlocks(minBlock: Point3D,
-                 maxBlock: Point3D,
-                 dataSource: DataSource,
-                 dataSection: Option[String],
-                 resolution: Int,
-                 settings: DataRequestSettings,
-                 layer: DataLayer,
-                 useCache: Boolean): Array[Fox[Array[Byte]]] = {
-    (minBlock to maxBlock).toArray.map {
-      p =>
-        val cuboid = Cuboid(p,
-          dataSource.lengthOfLoadedBuckets, dataSource.lengthOfLoadedBuckets, dataSource.lengthOfLoadedBuckets,
-          resolution)
-        val request = DataReadRequest(dataSource, layer, dataSection, cuboid, settings)
-        loadBlock(request, useCache)
+  def handleReadRequest(request: DataReadRequest): Fox[Array[Byte]] = {
+    def isSingleBucketRequest = {
+      request.cuboid.width == request.dataSource.lengthOfLoadedBuckets &&
+        request.cuboid.height == request.dataSource.lengthOfLoadedBuckets &&
+        request.cuboid.depth == request.dataSource.lengthOfLoadedBuckets &&
+        request.cuboid.topLeft == request.cuboid.topLeft.toBucket(request.dataSource.lengthOfLoadedBuckets).topLeft
+    }
+
+    if (isSingleBucketRequest) {
+      request.cuboid.allBucketsInCuboid(request.dataSource.lengthOfLoadedBuckets).headOption.toFox.flatMap { bucket =>
+        handleBucketReadRequest(bucket, request)
+      }
+    } else {
+      requestCuboidData(request)
     }
   }
 
+  def handleWriteRequest(request: DataWriteRequest): Fox[Array[Byte]] = {
+    Future(blocking(layerLocker.withLockFor(request.dataSource, request.dataLayer){() =>
+      // TODO: hacky (we are not using bucket length here)!!!!
+      val bucket = request.cuboid.topLeft.toBucket(request.cuboid.width)
+      synchronousSave(request, request.dataLayer, bucket)
+    }))
+  }
 
-  def loadBlock(request: DataRequest,
-                useCache: Boolean): Fox[Array[Byte]] = {
+
+  def loadBucketOfRequest(bucket: BucketPosition, request: DataReadRequest, useCache: Boolean): Fox[Array[Byte]] = {
     var lastSection: Option[DataLayerSection] = None
 
     def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Fox[Array[Byte]] = sections match {
       case (section, layerOfSection) #:: tail =>
         lastSection = Some(section)
-        val block = request.cuboid.topLeft
-        val loadBlock = LoadBlock(request.dataSource, layerOfSection, section, request.cuboid.resolution, request.settings, block)
+        val loadBlock = BucketReadInstruction(request.dataSource, layerOfSection, section, bucket, request.settings)
         loadFromLayer(loadBlock, useCache).futureBox.flatMap {
           case Full(byteArray) =>
             Fox.successful(byteArray)
@@ -161,8 +161,8 @@ class DataRequester(
     loadFromSections(sections)
   }
 
-  private def loadFromLayer(loadBlock: LoadBlock, useCache: Boolean): Fox[Array[Byte]] = {
-    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block)) {
+  private def loadFromLayer(loadBlock: BucketReadInstruction, useCache: Boolean): Fox[Array[Byte]] = {
+    if (loadBlock.dataLayerSection.doesContainBucket(loadBlock.position)) {
       val shouldCache = useCache && !loadBlock.dataLayer.isUserDataLayer
       blockHandler(loadBlock.dataLayer.sourceType).load(loadBlock, dataBlockLoadTimeout, shouldCache)
     } else {
@@ -171,11 +171,12 @@ class DataRequester(
   }
 
   def synchronousSave(
-                       request: DataWriteRequest,
-                       layer: DataLayer,
-                       block: Point3D): Box[Array[Byte]] = {
+    request: DataWriteRequest,
+    layer: DataLayer,
+    bucket: BucketPosition): Box[Array[Byte]] = {
+
     try {
-      val f = saveBlock(block, request, layer, request.data).map(_ => Array.empty[Byte]).futureBox
+      val f = saveBlock(bucket, request, layer, request.data).map(_ => Array.empty[Byte]).futureBox
 
       // We will never wait here for ever, since all parts of the feature are upper bounded by Await.result on their own
       Await.result(f, Duration.Inf)
@@ -188,14 +189,15 @@ class DataRequester(
   }
 
   def saveBlock(
-                 block: Point3D,
-                 request: DataRequest,
-                 layer: DataLayer,
-                 modifiedData: Array[Byte]): Fox[Boolean] = {
+    bucket: BucketPosition,
+    request: DataWriteRequest,
+    layer: DataLayer,
+    modifiedData: Array[Byte]): Fox[Boolean] = {
 
     def saveToSections(sections: List[DataLayerSection]): Fox[Boolean] = sections match {
       case section :: tail =>
-        val saveBlock = SaveBlock(request.dataSource, layer, section, request.cuboid.resolution, block, modifiedData)
+        val saveBlock = BucketWriteInstruction(
+          request.dataSource, layer, section, bucket, modifiedData)
         saveToLayer(saveBlock).futureBox.flatMap {
           case Full(r) => Future.successful(Full(r))
           case _ => saveToSections(tail)
@@ -210,11 +212,75 @@ class DataRequester(
     saveToSections(sections)
   }
 
-  def saveToLayer(saveBlock: SaveBlock): Fox[Boolean] = {
-    if (saveBlock.dataLayerSection.doesContainBlock(saveBlock.block)) {
+  def saveToLayer(saveBlock: BucketWriteInstruction): Fox[Boolean] = {
+    if (saveBlock.dataLayerSection.doesContainBucket(saveBlock.position)) {
       blockHandler(saveBlock.dataLayer.sourceType).save(saveBlock, dataBlockSaveTimeout)
     } else {
       Fox.empty
+    }
+  }
+}
+
+trait DataReadRequester {
+  this: DataRequester =>
+
+  def requestCuboidData[T](request: DataReadRequest): Fox[Array[Byte]] = {
+
+    val bucketQueue = request.cuboid.allBucketsInCuboid(request.dataSource.lengthOfLoadedBuckets)
+
+    loadAllBucketsOfRequest(bucketQueue, request).map { rs =>
+      // after we have loaded all buckets that 'touch' our cuboid we want to retrieve, we need to cut the data from
+      // the loaded buckets
+      cutOutCuboid(rs, request)
+    }
+  }
+
+  /**
+    * Given a list of loaded buckets, cutout the data of the cuboid
+    */
+  private def cutOutCuboid(rs: List[(BucketPosition, Array[Byte])], request: DataReadRequest) = {
+    val bytesPerElement = request.dataLayer.bytesPerElement
+    val cuboid = request.cuboid
+    val result = new Array[Byte](cuboid.width * cuboid.height * cuboid.depth * bytesPerElement)
+    val bucketLength = request.dataSource.lengthOfLoadedBuckets
+
+    rs.foreach {
+      case (bucket, data) =>
+        val x = math.max(cuboid.topLeft.x, bucket.topLeft.x)
+        var y = math.max(cuboid.topLeft.y, bucket.topLeft.y)
+        var z = math.max(cuboid.topLeft.z, bucket.topLeft.z)
+
+        val xMax = math.min(bucket.topLeft.x + bucketLength, cuboid.bottomRight.x)
+        val yMax = math.min(bucket.topLeft.y + bucketLength, cuboid.bottomRight.y)
+        val zMax = math.min(bucket.topLeft.z + bucketLength, cuboid.bottomRight.z)
+
+        while (z < zMax) {
+          y = math.max(cuboid.topLeft.y, bucket.topLeft.y)
+          while (y < yMax) {
+            val dataOffset =
+              (x % bucketLength +
+                y % bucketLength * bucketLength +
+                z % bucketLength * bucketLength * bucketLength) * bytesPerElement
+            val rx = x - cuboid.topLeft.x
+            val ry = y - cuboid.topLeft.y
+            val rz = z - cuboid.topLeft.z
+
+            val resultOffset = (rx + ry * cuboid.width + rz * cuboid.width * cuboid.height) * bytesPerElement
+            System.arraycopy(data, dataOffset, result, resultOffset, (xMax - x) * bytesPerElement)
+            y += 1
+          }
+          z += 1
+        }
+    }
+    result
+  }
+
+  /**
+    * Loads all the buckets (where each position is the top-left of the bucket) from the passed layer.
+    */
+  private def loadAllBucketsOfRequest(buckets: Seq[BucketPosition], request: DataReadRequest) = {
+    Fox.serialCombined(buckets.toList) { bucket =>
+      handleBucketReadRequest(bucket, request).map(r => bucket -> r)
     }
   }
 }

@@ -5,30 +5,35 @@ package com.scalableminds.braingames.binary.models
 
 import com.scalableminds.util.geometry.Point3D
 
-trait DataStoreBlock {
+trait DataAccessInstruction {
   def dataSource: DataSource
 
   def dataLayer: DataLayer
 
   def dataLayerSection: DataLayerSection
-
-  def resolution: Int
-
-  def block: Point3D
 }
 
-case class LoadBlock(
-                      dataSource: DataSource,
-                      dataLayer: DataLayer,
-                      dataLayerSection: DataLayerSection,
-                      resolution: Int,
-                      settings: DataRequestSettings,
-                      block: Point3D) extends DataStoreBlock
+case class CubeReadInstruction(
+  dataSource: DataSource,
+  dataLayer: DataLayer,
+  dataLayerSection: DataLayerSection,
+  position: CubePosition,
+  settings: DataRequestSettings) extends DataAccessInstruction
 
-case class SaveBlock(
-                      dataSource: DataSource,
-                      dataLayer: DataLayer,
-                      dataLayerSection: DataLayerSection,
-                      resolution: Int,
-                      block: Point3D,
-                      data: Array[Byte]) extends DataStoreBlock
+case class BucketReadInstruction(
+  dataSource: DataSource,
+  dataLayer: DataLayer,
+  dataLayerSection: DataLayerSection,
+  position: BucketPosition,
+  settings: DataRequestSettings) extends DataAccessInstruction {
+
+  def toCubeReadInstruction(cubeLength: Int) =
+    CubeReadInstruction(dataSource, dataLayer, dataLayerSection, position.toCube(cubeLength), settings)
+}
+
+case class BucketWriteInstruction(
+  dataSource: DataSource,
+  dataLayer: DataLayer,
+  dataLayerSection: DataLayerSection,
+  position: BucketPosition,
+  data: Array[Byte]) extends DataAccessInstruction

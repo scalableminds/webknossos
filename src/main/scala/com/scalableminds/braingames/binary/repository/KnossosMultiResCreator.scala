@@ -5,8 +5,8 @@ package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.Path
 
-import com.scalableminds.braingames.binary.requester.DataRequester
-import com.scalableminds.braingames.binary.models.{DataLayer, DataRequestSettings, DataSource, SaveBlock}
+import com.scalableminds.braingames.binary.requester.{Cuboid, DataRequester}
+import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.store.FileDataStore
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.tools.{BlockedArray3D, Fox, FoxImplicits}
@@ -23,7 +23,7 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
 
   val Parallelism = 4
 
-  private def downScale(data: BlockedArray3D[Byte], width: Int, height: Int, depth: Int, bytesPerElement: Int) = {
+  private def downScale(data: Array[Byte], width: Int, height: Int, depth: Int, bytesPerElement: Int): Array[Byte] = {
     @inline
     def byteToUnsignedInt(b: Byte): Int = 0xff & b.asInstanceOf[Int]
 
@@ -62,11 +62,11 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
         val yi = y + ((i / 2) % 2)
         val zi = z + i / 2 / 2
         if(xi >= 0 && yi >= 0 && zi >= 0){
-          val blockIdx = data.calculateBlockIdx(xi, yi, zi)
-          if(data.exists(blockIdx)) {
-            val d = data.getBytes(xi, yi, zi, data.underlying(blockIdx))
-            sum ::= d
-          }
+          val address = (x + y * width + z * height * width) * bytesPerElement
+
+          val bytes = new Array[Byte](bytesPerElement)
+          Array.copy(data, address, bytes, 0, bytesPerElement)
+          sum ::= bytes
         }
         i += 1
       }
@@ -106,21 +106,16 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
       val targetScale = 1.toFloat / cubeLength / targetResolution
 
       Fox.serialCombined(points.toList){ p =>
-        val minBlock = p.scale(baseScale)
-        val maxBlock = p.scale(baseScale).move(1, 1, 1)
-        val goal = p.scale(targetScale)
-        val combinedF: Fox[Array[Array[Byte]]] =
-          Fox.combined(dataRequester.loadBlocks(
-            minBlock, maxBlock, dataSource, None, resolutionExponent, DataRequestSettings(false), layer, useCache = true))
-
-        combinedF.flatMap { cubes =>
-          val block = BlockedArray3D[Byte](
-            cubes, dataSource.blockLength, dataSource.blockLength,
-            dataSource.blockLength, 2, 2, 2, layer.bytesPerElement, 0)
-          val data = downScale(
-            block, dataSource.blockLength, dataSource.blockLength,
-            dataSource.blockLength, layer.bytesPerElement)
-          val request = SaveBlock(dataSource, layer, layer.sections.head, targetResolution, goal, data)
+        val targetCubePosition = new BucketPosition(p.x, p.y, p.z, targetResolution, cubeLength) // TODO: hacky!!!!!
+        val length = cubeLength + dataSource.lengthOfLoadedBuckets
+        val cuboid = Cuboid(new VoxelPosition(p.x, p.y, p.z, resolution), length, length, length)
+        val request = DataReadRequest(dataSource, layer, None, cuboid, DataRequestSettings(false))
+        dataRequester.handleReadRequest(request).flatMap { loadedData =>
+          val scaledData = downScale(
+            loadedData, dataSource.cubeLength, dataSource.cubeLength,
+            dataSource.cubeLength, layer.bytesPerElement)
+          val request = BucketWriteInstruction(
+            dataSource, layer, layer.sections.head, targetCubePosition, scaledData)
           dataStore.save(target, request)
         }
       } .map { r =>

@@ -13,18 +13,18 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedRandomAccessFile
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Failure
+import net.liftweb.common.{Box, Failure, Full}
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent._
 import scala.concurrent.duration.FiniteDuration
 
 class KnossosCube(file: RandomAccessFile) extends Cube with LazyLogging {
-  def cutOutBucket(requestedCube: LoadBlock): Array[Byte] = {
-    val offset: Point3D = requestedCube.block
-    val bytesPerElement: Int = requestedCube.dataLayer.bytesPerElement
-    val bucketLength: Int = requestedCube.dataSource.lengthOfLoadedBuckets
-    val cubeLength: Int = requestedCube.dataSource.blockLength
+  def cutOutBucket(requestedBucket: BucketReadInstruction): Box[Array[Byte]] = {
+    val offset: VoxelPosition = requestedBucket.position.topLeft
+    val bytesPerElement: Int = requestedBucket.dataLayer.bytesPerElement
+    val bucketLength: Int = requestedBucket.dataSource.lengthOfLoadedBuckets
+    val cubeLength: Int = requestedBucket.dataSource.cubeLength
     val bucketSize = bytesPerElement * bucketLength * bucketLength * bucketLength
     val result = new Array[Byte](bucketSize)
 
@@ -45,14 +45,14 @@ class KnossosCube(file: RandomAccessFile) extends Cube with LazyLogging {
             z % cubeLength * cubeLength * cubeLength) * bytesPerElement
         if (!copyTo(cubeOffset, result, idx, bucketLength * bytesPerElement))
           logger.trace(s"Failed to copy from cube to bucket. " +
-            s"DS: ${requestedCube.dataSource.id}/${requestedCube.dataLayer.name} Bucket: ${requestedCube.block}")
+            s"DS: ${requestedBucket.dataSource.id}/${requestedBucket.dataLayer.name} Bucket: ${requestedBucket.position}")
         idx += bucketLength * bytesPerElement
         y += 1
       }
       z += 1
     }
 
-    result
+    Full(result)
   }
 
   override protected def onFinalize(): Unit = {
@@ -79,37 +79,37 @@ class KnossosCube(file: RandomAccessFile) extends Cube with LazyLogging {
   }
 }
 
-class KnossosBlockHandler(val cache: DataCubeCache)
-  extends BlockHandler
+class KnossosBucketHandler(val cache: DataCubeCache)
+  extends BucketHandler
     with FoxImplicits
     with LazyLogging {
 
   lazy val dataStore = new FileDataStore
 
-  def loadFromUnderlying[T](loadBlock: LoadBlock, timeout: FiniteDuration)(f: Cube => T): Fox[T] = {
+  def loadFromUnderlying[T](loadCube: CubeReadInstruction, timeout: FiniteDuration)(f: Cube => Box[T]): Fox[T] = {
     Future {
       blocking {
-        val bucket = dataStore.load(loadBlock)
+        val bucket = dataStore.load(loadCube)
           .futureBox
           .map {
             case f: Failure =>
               f.exception.map(e => logger.warn("Load from store failed: " + f.msg, e))
               f
             case x =>
-              x.map(data => f(new KnossosCube(data)))
+              x.flatMap(data => f(new KnossosCube(data)))
           }
         Await.result(bucket, timeout)
       }
     }.recover {
       case _: TimeoutException | _: InterruptedException =>
         logger.warn(s"Load from DS timed out. " +
-          s"(${loadBlock.dataSource.id}/${loadBlock.dataLayerSection.baseDir}, " +
-          s"Block: ${loadBlock.block})")
+          s"(${loadCube.dataSource.id}/${loadCube.dataLayerSection.baseDir}, " +
+          s"Block: (${loadCube.position.x},${loadCube.position.y},${loadCube.position.z})")
         Failure("dataStore.load.timeout")
     }
   }
 
-  override def saveToUnderlying(saveBlock: SaveBlock, timeout: FiniteDuration): Fox[Boolean] = {
+  override def saveToUnderlying(saveBlock: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {
     Future {
       blocking {
         val saveResult = dataStore.save(saveBlock).futureBox
@@ -118,7 +118,7 @@ class KnossosBlockHandler(val cache: DataCubeCache)
     }.recover {
       case _: TimeoutException | _: InterruptedException =>
         logger.warn(s"No response in time for block during save: " +
-          s"(${saveBlock.dataSource.id}/${saveBlock.dataLayerSection.baseDir} ${saveBlock.block})")
+          s"(${saveBlock.dataSource.id}/${saveBlock.dataLayerSection.baseDir} ${saveBlock.position})")
         Failure("dataStore.save.timeout")
     }
   }

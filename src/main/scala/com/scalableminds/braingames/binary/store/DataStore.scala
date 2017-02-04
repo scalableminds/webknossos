@@ -9,7 +9,7 @@ import com.scalableminds.braingames.binary.MappingRequest
 import com.scalableminds.util.geometry.Point3D
 import java.io.{File, FilenameFilter, RandomAccessFile}
 
-import com.scalableminds.braingames.binary.models.{DataStoreBlock, LoadBlock, SaveBlock}
+import com.scalableminds.braingames.binary.models.{BucketWriteInstruction, CubePosition, CubeReadInstruction, DataAccessInstruction}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
@@ -24,23 +24,23 @@ trait DataStore {
   /**
     * Loads the data of a given point from the data source
     */
-  def load(dataInfo: LoadBlock): Fox[RandomAccessFile]
+  def load(dataInfo: CubeReadInstruction): Fox[RandomAccessFile]
 
   /**
     * Saves the data of a given point to the data source
     */
-  def save(dataInfo: SaveBlock): Fox[Boolean]
+  def save(dataInfo: BucketWriteInstruction): Fox[Boolean]
 
   def load(request: MappingRequest): Fox[Array[Byte]]
 }
 
 object DataStore extends LazyLogging{
 
-  def knossosBaseDir(dataInfo: DataStoreBlock): Path =
+  def knossosBaseDir(dataInfo: DataAccessInstruction): Path =
     Paths.get(dataInfo.dataLayer.baseDir).resolve(dataInfo.dataLayerSection.baseDir)
 
 
-  def knossosDirToCube(dataInfo: DataStoreBlock, path: Path): Option[(Int, Point3D)] = {
+  def knossosDirToCube(dataInfo: DataAccessInstruction, path: Path): Option[(Int, Point3D)] = {
     val rel = Paths.get(dataInfo.dataLayerSection.baseDir).relativize(path)
     if(rel.getNameCount >= 5){
       for{
@@ -54,23 +54,23 @@ object DataStore extends LazyLogging{
     }
   }
 
-  private def knossosDir(dataSetDir: Path, resolution: Int, block: Point3D) = {
+  private def knossosDir(dataSetDir: Path, block: CubePosition) = {
     val x = "x%04d".format(block.x)
     val y = "y%04d".format(block.y)
     val z = "z%04d".format(block.z)
-    dataSetDir.resolve(resolution.toString).resolve(x).resolve(y).resolve(z)
+    dataSetDir.resolve(block.resolution.toString).resolve(x).resolve(y).resolve(z)
   }
 
-  def knossosFilePath(dataSetDir: Path, id: String, resolution: Int, block: Point3D, fileExt: String): Path = {
+  def knossosFilePath(dataSetDir: Path, id: String, block: CubePosition, fileExt: String): Path = {
     val x = "x%04d".format(block.x)
     val y = "y%04d".format(block.y)
     val z = "z%04d".format(block.z)
-    val fileName = s"${id}_mag${resolution}_${x}_${y}_${z}.$fileExt"
-    knossosDir(dataSetDir, resolution, block).resolve(fileName)
+    val fileName = s"${id}_mag${block.resolution}_${x}_${y}_${z}.$fileExt"
+    knossosDir(dataSetDir, block).resolve(fileName)
   }
 
-  def fuzzyKnossosFile(dataSetDir: Path, id: String, resolution: Int, block: Point3D, extensions: List[String]): Option[File] = {
-    val dir = knossosDir(dataSetDir, resolution, block)
+  def fuzzyKnossosFile(dataSetDir: Path, id: String, block: CubePosition, extensions: List[String]): Option[File] = {
+    val dir = knossosDir(dataSetDir, block)
     Option(dir.toFile.listFiles(new FilenameFilter() {
       override def accept(dir: File, name: String): Boolean = {
         extensions.exists(e => name.endsWith(s".$e"))

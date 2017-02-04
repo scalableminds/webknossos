@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import Cube from "../../model/binary/cube";
+import DataCube from "../../model/binary/data_cube";
 import tlt from "./tlt";
 import Deferred from "../../../libs/deferred";
 
@@ -18,7 +18,7 @@ class PolygonFactory {
   endZ: number;
   id: number;
   isCancelled: boolean;
-  modelCube: Cube;
+  modelCube: DataCube;
   startX: number;
   startY: number;
   startZ: number;

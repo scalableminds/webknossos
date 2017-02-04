@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import Cube from "./cube";
+import DataCube from "./data_cube";
 import Dimensions from "../dimensions";
 import { BUCKET_SIZE_P } from "./bucket";
 
@@ -40,7 +40,7 @@ const Plane2DConstants = {
 
 class Plane2D {
   index: number;
-  cube: Cube;
+  cube: DataCube;
   DATA_BIT_DEPTH: number;
   TEXTURE_BIT_DEPTH: number;
   MAPPED_DATA_BIT_DEPTH: number;

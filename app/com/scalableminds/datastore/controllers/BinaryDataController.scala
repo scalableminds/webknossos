@@ -100,8 +100,9 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     implicit request =>
       AllowRemoteOrigin {
         val settings = DataRequestSettings(useHalfByte = halfByte)
+        val position = new VoxelPosition(x, y, z, math.pow(2, resolution).toInt)
         for {
-          data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), cubeSize, cubeSize, cubeSize, resolution, settings)
+          data <- requestData(dataSetName, dataLayerName, position, cubeSize, cubeSize, cubeSize, settings)
         } yield {
           Ok(data)
         }
@@ -148,10 +149,13 @@ trait BinaryDataReadController extends BinaryDataCommonController {
                          cubeSize: Int) = TokenSecuredAction(dataSetName, dataLayerName).async {
     implicit request =>
       AllowRemoteOrigin {
-        val logRes = (math.log(resolution) / math.log(2)).toInt
-        val position = Point3D(x * cubeSize * resolution, y * cubeSize * resolution, z * cubeSize * resolution)
+        val position = new VoxelPosition(
+          x * cubeSize * resolution,
+          y * cubeSize * resolution,
+          z * cubeSize * resolution,
+          resolution)
         for {
-          data <- requestData(dataSetName, dataLayerName, position, cubeSize, cubeSize, cubeSize, logRes) ?~> Messages("binary.data.notFound")
+          data <- requestData(dataSetName, dataLayerName, position, cubeSize, cubeSize, cubeSize) ?~> Messages("binary.data.notFound")
         } yield {
           Ok(data)
         }
@@ -257,8 +261,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
           r.cubeSize,
           r.cubeSize,
           r.cubeSize,
-          r.position,
-          r.zoomStep,
+          new VoxelPosition(r.position.x, r.position.y, r.position.z, math.pow(2,r.zoomStep).toInt),
           DataRequestSettings(r.fourBit getOrElse false)))
       DataRequestCollection(dataRequests)
     }
@@ -266,7 +269,7 @@ trait BinaryDataReadController extends BinaryDataCommonController {
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
       dataRequestCollection = createRequestCollection(dataSource, dataLayer, requests)
-      data <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
+      data <- DataStorePlugin.binaryDataService.handleRequests(dataRequestCollection) ?~> "Data request couldn't get handled"
     } yield {
       data
     }
@@ -275,11 +278,10 @@ trait BinaryDataReadController extends BinaryDataCommonController {
   protected def requestData(
                              dataSetName: String,
                              dataLayerName: String,
-                             position: Point3D,
+                             position: VoxelPosition,
                              width: Int,
                              height: Int,
                              depth: Int,
-                             resolutionExponent: Int,
                              settings: DataRequestSettings = DataRequestSettings.default): Fox[Array[Byte]] = {
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
@@ -291,9 +293,8 @@ trait BinaryDataReadController extends BinaryDataCommonController {
         height,
         depth,
         position,
-        resolutionExponent,
         settings)
-      data <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
+      data <- DataStorePlugin.binaryDataService.handleReadRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
     } yield {
       data
     }
@@ -330,10 +331,8 @@ trait BinaryDataReadController extends BinaryDataCommonController {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
       params = ImageCreatorParameters(
         dataLayer.bytesPerElement, settings.useHalfByte, width, height, imagesPerRow, blackAndWhite = blackAndWhite)
-      startPoint = Point3D(x, y, z)
-      cuboid = Cuboid(startPoint, width, height, depth, resolution)
-      data <- DataStorePlugin.binaryDataService.requestImageData(
-        dataSource, dataLayer, cuboid, settings) ?~> Messages("binary.data.notFound")
+      position = new VoxelPosition(x, y, z, math.pow(2,resolution).toInt)
+      data <- requestData(dataSetName, dataLayerName, position, width, height, depth, settings) ?~> Messages("binary.data.notFound")
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {
@@ -370,8 +369,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
         r.header.cubeSize,
         r.header.cubeSize,
         r.header.cubeSize,
-        r.header.position,
-        r.header.zoomStep,
+        new VoxelPosition(r.header.position.x, r.header.position.y, r.header.position.z, math.pow(2,r.header.zoomStep).toInt),
         r.data))
     DataRequestCollection(dataRequests)
   }
@@ -400,7 +398,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
           requests <- validateRequests(request.body.files.map(_.ref), dataLayer).toFox
           dataRequestCollection = createRequestCollection(dataSource, dataLayer, requests)
           _ <- Fox.combined(dataRequestCollection.requests.map(VolumeUpdateService.store))
-          _ <- DataStorePlugin.binaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
+          _ <- DataStorePlugin.binaryDataService.handleRequests(dataRequestCollection) ?~> "Data request couldn't get handled"
         } yield Ok
       }
   }

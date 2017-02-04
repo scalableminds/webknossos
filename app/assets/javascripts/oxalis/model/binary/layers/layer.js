@@ -4,9 +4,9 @@
  */
 
 import type { Vector3 } from "oxalis/constants";
+import type { MappingType } from "oxalis/model/binary/mappings";
 import BucketBuilder from "./bucket_builder";
 import Request from "../../../../libs/request";
-import type { MappingType } from "oxalis/model/binary/mappings";
 
 type CategoryType = "color" | "segmentation";
 type ElementClassType = string; // TODO: Can/should we be more precise like "uint16" | "Uint32"?

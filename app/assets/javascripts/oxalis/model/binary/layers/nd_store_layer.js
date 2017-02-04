@@ -5,10 +5,10 @@
 
 import _ from "lodash";
 import Utils from "libs/utils";
+import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import Layer from "./layer";
 import Request from "../../../../libs/request";
 import ErrorHandling from "../../../../libs/error_handling";
-import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 
 
 class NdStoreLayer extends Layer {

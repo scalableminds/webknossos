@@ -6,7 +6,6 @@
 import _ from "lodash";
 import DataCube from "oxalis/model/binary/data_cube";
 import type { Vector3 } from "oxalis/constants";
-import Utils from "../../../libs/utils";
 
 // TODO: This should be refactored into composition instead of inheritance
 // Try to not use this type unless flow forces you to do that because you are

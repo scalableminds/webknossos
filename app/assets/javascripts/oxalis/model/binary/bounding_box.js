@@ -7,7 +7,6 @@ import _ from "lodash";
 import DataCube from "oxalis/model/binary/data_cube";
 import type { BoundingBoxType } from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
-import Utils from "../../../libs/utils";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 
 class BoundingBox {

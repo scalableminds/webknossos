@@ -8,14 +8,13 @@ import Backbone from "backbone";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
+import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { BoundingBoxType } from "oxalis/model";
-import Utils from "../../../libs/utils";
 import { Bucket, NULL_BUCKET, NULL_BUCKET_OUT_OF_BB, BUCKET_SIZE_P } from "./bucket";
 import ArbitraryCubeAdapter from "./arbitrary_cube_adapter";
 import TemporalBucketManager from "./temporal_bucket_manager";
 import BoundingBox from "./bounding_box";
 import ErrorHandling from "../../../libs/error_handling";
-import type { MappingArray } from "oxalis/model/binary/mappings";
 
 class CubeEntry {
   data: Map<number, Bucket>;

@@ -10,7 +10,7 @@ import _ from "lodash";
 import Utils from "libs/utils";
 import Input from "libs/input";
 import * as THREE from "three";
-import TrackballControls from "oxalis/controller/trackball_controls";
+import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
 import View from "oxalis/view";
 import SceneController from "oxalis/controller/scene_controller";

@@ -186,7 +186,7 @@ exports.config = {
     const mongoDB = process.env.MONGO_DB || "webknossos-testing";
 
     child_process.execFileSync("./tools/import_export/import.sh",
-                 [mongoDB, "testdb", mongoURL],
+                 [mongoDB, "test/db", mongoURL],
                  {stdio : "ignore"})
 
     browser.setViewportSize({

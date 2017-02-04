@@ -49,7 +49,7 @@ class ContourGeometry {
     positionAttribute.setDynamic(true);
     edgeGeometry.addAttribute("position", positionAttribute);
 
-    this.edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({ linewidth: 2 }), THREE.LineStrip);
+    this.edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({ linewidth: 2 }));
     this.edge.vertexBuffer = new ResizableBuffer(3);
 
     this.reset();

@@ -588,9 +588,7 @@ class SkeletonTracing {
     const tree = this.getTree(id);
 
     const index = _.findIndex(this.trees, t => t.treeId === tree.treeId);
-    if (index) {
-      this.trees.splice(index, 1);
-    }
+    this.trees.splice(index, 1);
 
     if (notifyServer) {
       this.stateLogger.deleteTree(tree);

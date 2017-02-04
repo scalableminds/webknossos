@@ -30,13 +30,12 @@ class Tree {
 
     nodeGeometry.nodeIDs = this.nodeIDs;
 
-    this.edges = new THREE.Line(
+    this.edges = new THREE.LineSegments(
       edgeGeometry,
       new THREE.LineBasicMaterial({
         color: this.darkenHex(treeColor),
         linewidth: this.getLineWidth(),
       }),
-      THREE.LineSegments,
     );
 
     this.particleMaterial = new ParticleMaterialFactory(this.model).getMaterial();

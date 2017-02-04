@@ -49,7 +49,7 @@
     "worker-loader": "^0.7.1"
   },
   "scripts": {
-    "test": "node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
+    "test": "export NODE_PATH=app/assets/javascripts && node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
     "flow": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",

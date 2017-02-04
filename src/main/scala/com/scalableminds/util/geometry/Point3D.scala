@@ -9,6 +9,12 @@ import play.api.libs.json.Reads._
 import play.api.libs.json.Writes._
 import play.api.data.validation.ValidationError
 
+trait GenericPosition {
+  def x: Int
+  def y: Int
+  def z: Int
+}
+
 case class Point3D(x: Int, y: Int, z: Int) {
   def scale(f: (Int, Int) => Int) =
     Point3D(f(x, 0), f(y, 1), f(z, 2))

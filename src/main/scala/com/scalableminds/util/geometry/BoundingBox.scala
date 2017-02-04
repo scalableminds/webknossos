@@ -9,7 +9,7 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
 
   val bottomRight = topLeft.move(width, height, depth)
 
-  def contains(p: Point3D): Boolean = {
+  def contains(p: GenericPosition): Boolean = {
     p.x >= topLeft.x && p.y >= topLeft.y && p.z >= topLeft.z &&
       p.x <= bottomRight.x && p.y <= bottomRight.y && p.z <= bottomRight.z
   }

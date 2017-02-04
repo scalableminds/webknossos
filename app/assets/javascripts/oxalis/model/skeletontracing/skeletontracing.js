@@ -188,7 +188,7 @@ class SkeletonTracing {
       this.doubleBranchPop = true;
       const activeNode = this.activeNode;
       if (activeNode) {
-        return resolve(activeNode.id);
+        resolve(activeNode.id);
       }
     };
 
@@ -582,14 +582,12 @@ class SkeletonTracing {
   reallyDeleteTree(id, notifyServer = true) {
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
-    debugger
     if (!id) {
       id = this.activeTree.treeId;
     }
     const tree = this.getTree(id);
 
     const index = _.findIndex(this.trees, t => t.treeId === tree.treeId);
-    console.log(index)
     if (index) {
       this.trees.splice(index, 1);
     }
@@ -597,7 +595,7 @@ class SkeletonTracing {
     if (notifyServer) {
       this.stateLogger.deleteTree(tree);
     }
-    this.trigger("deleteTree", index);
+    this.trigger("deleteTree", id);
 
     // Because we always want an active tree, check if we need
     // to create one.

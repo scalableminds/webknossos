@@ -20,7 +20,7 @@ class Skeleton {
     _.extend(this, Backbone.Events);
 
     this.skeletonTracing = this.model.skeletonTracing;
-    this.treeGeometries = [];
+    this.treeGeometries = {};
     this.isVisible = true;
 
     this.showInactiveTrees = true;
@@ -45,14 +45,15 @@ class Skeleton {
     this.listenTo(this.skeletonTracing, "reloadTrees", this.loadSkeletonFromModel);
 
     this.listenTo(this.model.user, "change:particleSize", this.setParticleSize);
-    this.listenTo(this.model.user, "change:overrideNodeRadius", () => this.treeGeometries.map(tree =>
-      tree.showRadius(!this.model.user.get("overrideNodeRadius"))),
+    this.listenTo(this.model.user, "change:overrideNodeRadius", () => (
+      _.map(this.treeGeometries, tree =>
+        tree.showRadius(!this.model.user.get("overrideNodeRadius")))),
     );
   }
 
   createNewTree(treeId, treeColor) {
     const tree = new Tree(treeId, treeColor, this.model);
-    this.treeGeometries.push(tree);
+    this.treeGeometries[treeId] = tree;
     this.setActiveNode();
     this.trigger("newGeometries", tree.getMeshes());
   }
@@ -62,12 +63,12 @@ class Skeleton {
   // This needs to be done at initialization
 
   reset() {
-    for (const tree of this.treeGeometries) {
+    for (const tree of _.values(this.treeGeometries)) {
       this.trigger("removeGeometries", tree.getMeshes());
       tree.dispose();
     }
 
-    this.treeGeometries = [];
+    this.treeGeometries = {};
 
     for (const tree of this.skeletonTracing.getTrees()) {
       this.createNewTree(tree.treeId, tree.color);
@@ -112,7 +113,7 @@ class Skeleton {
 
   getMeshes() {
     let meshes = [];
-    for (const tree of this.treeGeometries) {
+    for (const tree of _.values(this.treeGeometries)) {
       meshes = meshes.concat(tree.getMeshes());
     }
     return meshes;
@@ -144,12 +145,12 @@ class Skeleton {
   }
 
 
-  deleteTree(index) {
-    const treeGeometry = this.treeGeometries[index];
+  deleteTree(treeId) {
+    const treeGeometry = this.treeGeometries[treeId];
 
     this.trigger("removeGeometries", treeGeometry.getMeshes());
     treeGeometry.dispose();
-    this.treeGeometries.splice(index, 1);
+    delete this.treeGeometries[treeId];
 
     app.vent.trigger("rerender");
   }
@@ -184,7 +185,7 @@ class Skeleton {
 
 
   getAllNodes() {
-    return (this.treeGeometries.map(tree => tree.nodes));
+    return _.map(this.treeGeometries, tree => tree.nodes);
   }
 
 
@@ -192,12 +193,7 @@ class Skeleton {
     if (!treeId) {
       ({ treeId } = this.skeletonTracing.getTree());
     }
-    for (const tree of this.treeGeometries) {
-      if (tree.id === treeId) {
-        return tree;
-      }
-    }
-    return null;
+    return this.treeGeometries[treeId];
   }
 
 
@@ -226,7 +222,7 @@ class Skeleton {
 
 
   updateForCam(id) {
-    for (const tree of this.treeGeometries) {
+    for (const tree of _.values(this.treeGeometries)) {
       tree.showRadius(id !== constants.TDView &&
         !this.model.user.get("overrideNodeRadius"));
     }
@@ -256,7 +252,7 @@ class Skeleton {
 
 
   setSizeAttenuation(sizeAttenuation) {
-    return this.treeGeometries.map(tree =>
+    return _.map(this.treeGeometries, tree =>
       tree.setSizeAttenuation(sizeAttenuation));
   }
 }

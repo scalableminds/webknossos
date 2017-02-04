@@ -1,5 +1,4 @@
-import _ from "lodash";
-import THREE from "three";
+import * as THREE from "three";
 import { V3 } from "libs/mjs";
 import ErrorHandling from "libs/error_handling";
 import StateLogger from "../statelogger";

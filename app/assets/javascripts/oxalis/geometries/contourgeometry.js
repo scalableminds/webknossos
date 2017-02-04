@@ -7,16 +7,18 @@ import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
 import ResizableBuffer from "libs/resizable_buffer";
-import THREE from "three";
+import * as THREE from "three";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import Flycam2d from "oxalis/model/flycam2d";
+
+const COLOR_NORMAL = new THREE.Color(0x0000ff);
+const COLOR_DELETE = new THREE.Color(0xff0000);
+
 
 class ContourGeometry {
   volumeTracing: VolumeTracing;
   flycam: Flycam2d;
   color: THREE.Color;
-  COLOR_NORMAL: THREE.Color;
-  COLOR_DELETE: THREE.Color;
   edge: THREE.Line;
 
   // Copied from backbone events (TODO: handle this better)
@@ -27,13 +29,11 @@ class ContourGeometry {
     this.flycam = flycam;
     _.extend(this, Backbone.Events);
 
-    this.COLOR_NORMAL = new THREE.Color(0x0000ff);
-    this.COLOR_DELETE = new THREE.Color(0xff0000);
-    this.color = this.COLOR_NORMAL;
+    this.color = COLOR_NORMAL;
 
     this.listenTo(this.volumeTracing, "volumeAnnotated", this.reset);
     this.listenTo(this.volumeTracing, "updateLayer", function (cellId, contourList) {
-      this.color = cellId === 0 ? this.COLOR_DELETE : this.COLOR_NORMAL;
+      this.color = cellId === 0 ? COLOR_DELETE : COLOR_NORMAL;
       this.reset();
       contourList.forEach(p =>
         this.addEdgePoint(p));
@@ -45,8 +45,9 @@ class ContourGeometry {
 
   createMeshes() {
     const edgeGeometry = new THREE.BufferGeometry();
-    edgeGeometry.addAttribute("position", Float32Array, 0, 3);
-    edgeGeometry.dynamic = true;
+    const positionAttribute = new THREE.BufferAttribute(new Float32Array(), 3);
+    positionAttribute.setDynamic(true);
+    edgeGeometry.addAttribute("position", positionAttribute);
 
     this.edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({ linewidth: 2 }), THREE.LineStrip);
     this.edge.vertexBuffer = new ResizableBuffer(3);
@@ -68,8 +69,7 @@ class ContourGeometry {
 
 
   addEdgePoint(pos) {
-    const edgePoint = pos.slice();
-    this.edge.vertexBuffer.push(edgePoint);
+    this.edge.vertexBuffer.push(pos);
     this.finalizeMesh(this.edge);
 
     app.vent.trigger("rerender");
@@ -77,11 +77,18 @@ class ContourGeometry {
 
 
   finalizeMesh(mesh) {
-    const positionAttribute = mesh.geometry.attributes.position;
+    if (mesh.geometry.attributes.position.array !== mesh.vertexBuffer.getBuffer()) {
+      // Need to rebuild Geometry
+      const positionAttribute = new THREE.BufferAttribute(mesh.vertexBuffer.getBuffer(), 3);
+      positionAttribute.setDynamic(true);
 
-    positionAttribute.array = mesh.vertexBuffer.getBuffer();
-    positionAttribute.numItems = mesh.vertexBuffer.getLength() * 3;
-    positionAttribute.needsUpdate = true;
+      mesh.geometry.dispose();
+      mesh.geometry.addAttribute("position", positionAttribute);
+    }
+
+    mesh.geometry.attributes.position.needsUpdate = true;
+    mesh.geometry.setDrawRange(0, mesh.vertexBuffer.getLength());
+    mesh.geometry.computeBoundingSphere();
   }
 }
 

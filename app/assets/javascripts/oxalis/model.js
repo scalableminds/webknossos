@@ -6,6 +6,7 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import app from "app";
+import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import Utils from "../libs/utils";
 import Binary from "./model/binary";
 import SkeletonTracing from "./model/skeletontracing/skeletontracing";
@@ -23,7 +24,6 @@ import Toast from "../libs/toast";
 import ErrorHandling from "../libs/error_handling";
 import WkLayer from "./model/binary/layers/wk_layer";
 import NdStoreLayer from "./model/binary/layers/nd_store_layer";
-import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 
 // This is THE model. It takes care of the data including the
 // communication with the server.

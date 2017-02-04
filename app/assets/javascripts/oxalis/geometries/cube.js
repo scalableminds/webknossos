@@ -6,7 +6,7 @@
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
-import THREE from "three";
+import * as THREE from "three";
 import Backbone from "backbone";
 import Model from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";

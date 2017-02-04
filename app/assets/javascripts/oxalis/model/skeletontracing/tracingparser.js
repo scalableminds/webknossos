@@ -3,8 +3,7 @@
 * @flow weak
 */
 
-import _ from "lodash";
-import THREE from "three";
+import * as THREE from "three";
 import Toast from "libs/toast";
 import TracePoint from "oxalis/model/skeletonTracing/tracepoint";
 import TraceTree from "oxalis/model/skeletonTracing/tracetree";
@@ -45,7 +44,6 @@ class TracingParser {
 
       // Initialize nodes
       for (const node of treeData.nodes) {
-
         tree.nodes.push(
           new TracePoint(
             node.id, node.position, node.radius, treeData.id,

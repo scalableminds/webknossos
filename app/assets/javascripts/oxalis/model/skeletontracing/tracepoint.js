@@ -47,7 +47,7 @@ class TracePoint {
 
   toJSON() {
     const serverNode = _.clone(this);
-    serverNode.position = V3.floor(this.position), // server expects integer positions :-P
+    serverNode.position = V3.floor(this.position); // server expects integer positions :-P
     delete serverNode.neighbors;
     delete serverNode.children;
 

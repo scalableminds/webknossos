@@ -18,7 +18,7 @@ type BoundingBoxType = {
   topLeft: Vector3,
 };
 
-type DataStoreInfoType = {
+export type DataStoreInfoType = {
   typ: string;
   url: string;
   accessToken: string;

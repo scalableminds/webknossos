@@ -1,12 +1,12 @@
 /**
  * mappings.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
-import Layer from "oxalis/model/binary/layers/layer";
+import type Layer, { DataStoreInfoType } from "oxalis/model/binary/layers/layer";
 
 export type MappingArray = Array<number>;
 
@@ -24,7 +24,7 @@ class Mappings {
   baseUrl: string;
   doWithToken: Function;
 
-  constructor(dataStoreInfo, datasetName: string, layer: Layer) {
+  constructor(dataStoreInfo: DataStoreInfoType, datasetName: string, layer: Layer) {
     this.mappings = _.transform(layer.mappings, (result, mappingObject) => {
       result[mappingObject.name] = mappingObject;
     }, {});
@@ -44,7 +44,7 @@ class Mappings {
   }
 
 
-  fetchMappings(mappingName: string): Promise<Array<MappingType>> {
+  fetchMappings(mappingName: string): Promise<*> {
     const mappingChain = this.getMappingChain(mappingName);
     return Promise.all(mappingChain.map(curMappingName => this.fetchMapping(curMappingName)));
   }

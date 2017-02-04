@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import THREE from "three";
+import * as THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";
 import Flycam3d from "oxalis/model/flycam3d";

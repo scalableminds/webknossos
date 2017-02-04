@@ -64,7 +64,7 @@ class MappingInfoView extends Marionette.View {
     return {
       hasMapping: this.cube.hasMapping(),
       idWithMapping: this.cube.getDataValue(pos, this.cube.mapping),
-      idWithoutMapping: this.cube.getDataValue(pos, this.cube.EMPTY_MAPPING),
+      idWithoutMapping: this.cube.getDataValue(pos, null),
     };
   }
 }

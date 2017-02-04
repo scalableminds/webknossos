@@ -3,13 +3,14 @@
 * @flow weak
 */
 import Utils from "libs/utils";
-import type { CommentType } from "oxalis/model";
+import type { CommentType, BranchPoint } from "oxalis/model";
 import Tracepoint from "./tracepoint";
 
 /**
 * A single tree of skeleton tracing nodes.
 * @class
 */
+
 class TraceTree {
 
   treeId: number;
@@ -17,10 +18,10 @@ class TraceTree {
   name: string;
   timestamp: number;
   comments: Array<CommentType>;
-  branchPoints: Array<Tracepoint>;
+  branchPoints: Array<BranchPoint>;
   nodes: Array<Tracepoint>;
 
-  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<CommentType> = [], branchPoints: Array<Tracepoint> = []) {
+  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<CommentType> = [], branchPoints: Array<BranchPoint> = []) {
     this.treeId = treeId;
     this.color = color;
     this.name = name;

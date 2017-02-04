@@ -163,8 +163,10 @@ class SkeletonTracing {
 
     if (this.branchPointsAllowed) {
       if (this.activeNode) {
-        const newPoint = _.cloneDeep(this.activeNode);
-        newPoint.timestamp = Date.now();
+        const newPoint = {
+          id: this.activeNode.id,
+          timestamp: Date.now(),
+        };
         this.activeTree.branchPoints.push(newPoint);
         this.stateLogger.updateTree(this.activeTree);
 

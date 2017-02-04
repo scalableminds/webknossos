@@ -31,6 +31,10 @@ import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 // All public operations are **asynchronous**. We return a promise
 // which you can react on.
 
+export type BranchPoint = {
+  id: number;
+  timestamp: number;
+}
 export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
@@ -51,7 +55,7 @@ export type TreeData = {
   name: string;
   timestamp: number;
   comments: Array<CommentType>;
-  branchPoints: Array<Tracepoint>;
+  branchPoints: Array<BranchPoint>;
   edges: Array<{source: number, target: number}>;
   nodes: Array<Tracepoint>;
 };

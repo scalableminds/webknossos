@@ -5,9 +5,10 @@
 
 import type { Vector3 } from "oxalis/constants";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
-import Request from "../../../../libs/request";
 
 import type { BoundingBoxObjectType } from "oxalis/model";
+
+import Request from "../../../../libs/request";
 
 type CategoryType = "color" | "segmentation";
 type ElementClassType = string; // TODO: Can/should we be more precise like "uint16" | "Uint32"?

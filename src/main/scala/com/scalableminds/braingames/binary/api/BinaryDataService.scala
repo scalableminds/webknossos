@@ -45,9 +45,6 @@ trait BinaryDataService
   var repositoryWatcher: Option[ActorRef] =
     None
 
-  private lazy implicit val timeout =
-    Timeout(config.getInt("braingames.binary.loadTimeout").seconds)
-
   private lazy val dataSourceRepositoryDir =
     PathUtils.ensureDirectory(Paths.get(config.getString("braingames.binary.baseFolder")))
 

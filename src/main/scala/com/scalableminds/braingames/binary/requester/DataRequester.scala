@@ -123,7 +123,7 @@ class DataRequester(
 
   def handleWriteRequest(request: DataWriteRequest): Fox[Array[Byte]] = {
     Future(blocking(layerLocker.withLockFor(request.dataSource, request.dataLayer){() =>
-      // TODO: hacky (we are not using bucket length here)!!!!
+      // TODO: hacky (we are not using bucket length here). This assumes the data requester can handle the request!
       val bucket = request.cuboid.topLeft.toBucket(request.cuboid.width)
       synchronousSave(request, request.dataLayer, bucket)
     }))
@@ -241,10 +241,10 @@ trait DataReadRequester {
   private def cutOutCuboid(rs: List[(BucketPosition, Array[Byte])], request: DataReadRequest) = {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val cuboid = request.cuboid
-    val result = new Array[Byte](cuboid.width * cuboid.height * cuboid.depth * bytesPerElement)
+    val result = new Array[Byte](cuboid.volume * bytesPerElement)
     val bucketLength = request.dataSource.lengthOfLoadedBuckets
 
-    rs.foreach {
+    rs.reverse.foreach {
       case (bucket, data) =>
         val x = math.max(cuboid.topLeft.x, bucket.topLeft.x)
         var y = math.max(cuboid.topLeft.y, bucket.topLeft.y)

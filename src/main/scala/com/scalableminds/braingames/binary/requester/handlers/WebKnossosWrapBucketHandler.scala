@@ -17,11 +17,14 @@ import play.api.Play.current
 import java.nio.file.Paths
 
 import com.scalableminds.webknossos.wrap.WKWFile
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Failure}
 
 class WebKnossosWrapCube(wkwFile: WKWFile) extends Cube {
   def cutOutBucket(requestedBucket: BucketReadInstruction): Box[Array[Byte]] = {
-    assert(requestedBucket.dataSource.lengthOfLoadedBuckets ==  wkwFile.header.numVoxelsPerBlockDimension)
+    if(requestedBucket.dataSource.lengthOfLoadedBuckets !=  wkwFile.header.numVoxelsPerBlockDimension){
+      return Failure(s"Invalid bucket length. ${requestedBucket.dataSource.lengthOfLoadedBuckets}, " +
+        s"${wkwFile.header.numVoxelsPerBlockDimension}")
+    }
 
     val numBlocksPerCubeDimension = wkwFile.header.numBlocksPerCubeDimension
     val blockOffsetX = requestedBucket.position.x % numBlocksPerCubeDimension

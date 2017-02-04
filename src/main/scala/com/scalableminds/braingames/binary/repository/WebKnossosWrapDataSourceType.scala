@@ -22,8 +22,6 @@ class WebKnossosWrapDataSourceType(val messagesApi: MessagesApi) extends DataSou
 
   val name = WebKnossosWrapDataSourceType.name
 
-  private val maxRecursiveLayerDepth = 2
-
   private val DEFAULT_PRIORITY = 0
 
   def fileExtension = "wkw"
@@ -44,7 +42,7 @@ class WebKnossosWrapDataSourceType(val messagesApi: MessagesApi) extends DataSou
         settings.priority.getOrElse(DEFAULT_PRIORITY),
         layers,
         Some(name),
-        Some(32))
+        Some(1024))
     }
   }
 

@@ -21,7 +21,7 @@ case class DataSource(
   priority: Int = 0,
   dataLayers: List[DataLayer] = Nil,
   sourceType: Option[String] = Some(KnossosDataSourceType.name),
-  blockLengthOpt: Option[Int] = Some(128)
+  cubeLengthOpt: Option[Int] = Some(128)
 ) {
 
   //  lazy val sourceFolder: Path =
@@ -31,7 +31,7 @@ case class DataSource(
     * Number of voxels per dimension in the storage format
     */
   val cubeLength: Int =
-    blockLengthOpt.getOrElse(128)
+    cubeLengthOpt.getOrElse(128)
 
   /**
     * Defines the size of the buckets loaded from files. This is the minimal size that can be loaded from a file.
@@ -52,30 +52,6 @@ case class DataSource(
 
   def relativeBaseDir(binaryBase: String): String =
     baseDir.replace(binaryBase, "")
-
-  def pointToCube(point: Point3D, resolution: Int): Point3D =
-    Point3D(
-      point.x / cubeLength / resolution,
-      point.y / cubeLength / resolution,
-      point.z / cubeLength / resolution)
-
-  def pointToBucket(point: Point3D, resolution: Int): Point3D =
-    Point3D(
-      point.x / lengthOfLoadedBuckets / resolution,
-      point.y / lengthOfLoadedBuckets / resolution,
-      point.z / cubeLength / resolution)
-
-  def applyResolution(point: Point3D, resolution: Int): Point3D =
-    Point3D(
-      point.x / resolution,
-      point.y / resolution,
-      point.z / resolution)
-
-  def unapplyResolution(point: Point3D, resolution: Int): Point3D =
-    Point3D(
-      point.x * resolution,
-      point.y * resolution,
-      point.z * resolution)
 
   override def toString: String =
     s"""$id (${dataLayers.map(_.name).mkString(", ")})"""

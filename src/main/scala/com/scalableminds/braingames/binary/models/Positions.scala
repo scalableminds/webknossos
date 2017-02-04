@@ -63,23 +63,23 @@ class BucketPosition(
     new CubePosition(globalX, globalY, globalZ, resolution, cubeLength)
 
   def topLeft: VoxelPosition = {
-    val tlx: Int = globalX - globalX % bucketLength
-    val tly: Int = globalY - globalY % bucketLength
-    val tlz: Int = globalZ - globalZ % bucketLength
+    val tlx: Int = globalX - globalX % (bucketLength * resolution)
+    val tly: Int = globalY - globalY % (bucketLength * resolution)
+    val tlz: Int = globalZ - globalZ % (bucketLength * resolution)
 
     new VoxelPosition(tlx, tly, tlz, resolution)
   }
 
   def nextBucketInX: BucketPosition = {
-    new BucketPosition(globalX + bucketLength, globalY, globalZ, resolution, bucketLength)
+    new BucketPosition(globalX + (bucketLength * resolution), globalY, globalZ, resolution, bucketLength)
   }
 
   def nextBucketInY: BucketPosition = {
-    new BucketPosition(globalX, globalY + bucketLength, globalZ, resolution, bucketLength)
+    new BucketPosition(globalX, globalY + (bucketLength * resolution), globalZ, resolution, bucketLength)
   }
 
   def nextBucketInZ: BucketPosition = {
-    new BucketPosition(globalX, globalY, globalZ + bucketLength, resolution, bucketLength)
+    new BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution), resolution, bucketLength)
   }
 }
 
@@ -96,5 +96,9 @@ class CubePosition(
   val y: Int = globalY / cubeLength / resolution
 
   val z: Int = globalZ / cubeLength / resolution
+
+  override def toString: String = {
+    s"CPos($x,$y,$z,res=$resolution)"
+  }
 }
 

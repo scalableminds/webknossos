@@ -102,9 +102,6 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
         z <- boundingBox.topLeft.z.to(boundingBox.bottomRight.z, cubeLength * targetResolution)
       } yield Point3D(x, y, z)
 
-      val baseScale = 1.toFloat / cubeLength / resolution
-      val targetScale = 1.toFloat / cubeLength / targetResolution
-
       Fox.serialCombined(points.toList){ p =>
         val targetCubePosition = new BucketPosition(p.x, p.y, p.z, targetResolution, cubeLength) // TODO: hacky!!!!!
         val length = cubeLength + dataSource.lengthOfLoadedBuckets

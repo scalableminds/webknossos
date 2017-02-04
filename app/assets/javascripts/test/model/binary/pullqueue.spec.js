@@ -22,7 +22,6 @@ describe("PullQueue", () => {
     requestFromStore: sinon.stub(),
   };
   const cube = {
-    BUCKET_SIZE_P: 5,
     BUCKET_LENGTH: 32 * 32 * 32,
     getBucket: sinon.stub(),
     getOrCreateBucket: sinon.stub(),

@@ -73,7 +73,7 @@ protected class DataSourceInboxChangeHandler(dataSourceRepository: DataSourceRep
       .jsonFromFile(path.resolve("datasource.json"), path)
       .flatMap(json => json.validate(FiledDataSource.filedDataSourceFormat).asOpt) match {
       case Full(filedDataSource) =>
-        filedDataSource.toUsable(serverUrl)
+        filedDataSource.toUsable(serverUrl, team)
       case _ =>
         UnusableDataSource(serverUrl,
                            path.getFileName.toString,

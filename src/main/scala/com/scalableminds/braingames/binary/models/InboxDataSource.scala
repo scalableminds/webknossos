@@ -34,7 +34,7 @@ object DataSourceLike{
   }
 }
 
-case class UnusableDataSource(serverUrl: String, id: String, baseDir: String, owningTeam: String, sourceType: String) extends DataSourceLike{
+case class UnusableDataSource(serverUrl: String, id: String, baseDir: String, owningTeam: String, sourceType: String) extends DataSourceLike {
   def sourceFolder: Path = Paths.get(baseDir)
 
   def source = None
@@ -46,7 +46,7 @@ object UnusableDataSource{
   implicit val unusableDataSourceFormat = Json.format[UnusableDataSource]
 }
 
-case class UsableDataSource(serverUrl: String, owningTeam: String, sourceType: String, dataSource: DataSource) extends DataSourceLike{
+case class UsableDataSource(serverUrl: String, owningTeam: String, sourceType: String, dataSource: DataSource) extends DataSourceLike {
   val id = dataSource.id
 
   val isUsable = true
@@ -61,8 +61,8 @@ object UsableDataSource{
   implicit val usableDataSourceFormat = Json.format[UsableDataSource]
 }
 
-case class FiledDataSource(owningTeam: String, sourceType: String, dataSource: DataSource) {
-  def toUsable(serverUrl: String) =
+case class FiledDataSource(sourceType: String, dataSource: DataSource) {
+  def toUsable(serverUrl: String, owningTeam: String) =
     UsableDataSource(serverUrl, owningTeam, sourceType, dataSource)
 }
 

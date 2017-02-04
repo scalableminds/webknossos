@@ -5,9 +5,9 @@
 
 import * as THREE from "three";
 import Toast from "libs/toast";
-import TracePoint from "oxalis/model/skeletonTracing/tracepoint";
-import TraceTree from "oxalis/model/skeletonTracing/tracetree";
-import SkeletonTracing from "oxalis/model/skeletonTracing/skeletonTracing";
+import TracePoint from "oxalis/model/skeletontracing/tracepoint";
+import TraceTree from "oxalis/model/skeletontracing/tracetree";
+import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
 import type { ContentData, TreeData } from "oxalis/model";
 
 class TracingParser {

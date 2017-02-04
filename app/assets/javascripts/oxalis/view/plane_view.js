@@ -14,8 +14,6 @@ import constants from "../constants";
 import Model from "../model";
 import View from "../view";
 
-type CallbackType = () => void;
-
 class PlaneView {
 
   // Copied form backbone events (TODO: handle this better)
@@ -258,7 +256,7 @@ class PlaneView {
   }
 
 
-  showBranchModalDouble(callback: CallbackType) {
+  showBranchModalDouble(callback: () => void) {
     modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
       "Jump again?",
       [{ id: "jump-button", label: "Jump again", callback },
@@ -266,7 +264,7 @@ class PlaneView {
   }
 
 
-  showBranchModalDelete(callback: CallbackType) {
+  showBranchModalDelete(callback: () => void) {
     modal.show("You are about to delete an unused branchpoint, are you sure?",
       "Delete branchpoint?",
       [{ id: "delete-button", label: "Delete branchpoint", callback },

@@ -86,7 +86,7 @@ class Skeleton {
       treeGeometry.clear();
       treeGeometry.addNodes(tree.nodes);
 
-      for (const branchpoint of tree.branchpoints) {
+      for (const branchpoint of tree.branchPoints) {
         treeGeometry.updateNodeColor(branchpoint.id, null, true);
       }
     }

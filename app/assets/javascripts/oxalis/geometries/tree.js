@@ -68,7 +68,7 @@ class Tree {
 
 
   addNode(node) {
-    this.nodesBuffer.push(node.pos);
+    this.nodesBuffer.push(node.position);
     this.sizesBuffer.push([node.radius * 2]);
     this.scalesBuffer.push([1.0]);
     this.nodeIDs.push([node.id]);
@@ -79,7 +79,7 @@ class Tree {
     //             greater id as its neighbor
     for (const neighbor of node.neighbors) {
       if (neighbor.id < node.id) {
-        this.edgesBuffer.push(neighbor.pos.concat(node.pos));
+        this.edgesBuffer.push(neighbor.position.concat(node.position));
       }
     }
 
@@ -154,9 +154,9 @@ class Tree {
     // ASSUMPTION: edges always go from smaller ID to bigger ID
 
     if (node1.id < node2.id) {
-      return node1.pos.concat(node2.pos);
+      return node1.position.concat(node2.position);
     } else {
-      return node2.pos.concat(node1.pos);
+      return node2.position.concat(node1.position);
     }
   }
 

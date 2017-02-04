@@ -6,6 +6,7 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import app from "app";
+import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import Utils from "../libs/utils";
 import Binary from "./model/binary";
 import SkeletonTracing from "./model/skeletontracing/skeletontracing";
@@ -17,7 +18,7 @@ import ScaleInfo from "./model/scaleinfo";
 import Flycam2d from "./model/flycam2d";
 import Flycam3d from "./model/flycam3d";
 import constants from "./constants";
-import type { ModeType, Vector3 } from "./constants";
+import type { ModeType, Vector3, Vector4 } from "./constants";
 import Request from "../libs/request";
 import Toast from "../libs/toast";
 import ErrorHandling from "../libs/error_handling";
@@ -30,6 +31,10 @@ import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 // All public operations are **asynchronous**. We return a promise
 // which you can react on.
 
+export type BranchPoint = {
+  id: number;
+  timestamp: number;
+}
 export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
@@ -47,17 +52,31 @@ type Settings = {
   branchPointsAllowed: boolean,
   somaClickingAllowed: boolean,
 };
+export type CommentType = {
+  node: number;
+  comment: string;
+};
+export type TreeData = {
+  id: number;
+  color: Vector4;
+  name: string;
+  timestamp: number;
+  comments: Array<CommentType>;
+  branchPoints: Array<BranchPoint>;
+  edges: Array<{source: number, target: number}>;
+  nodes: Array<Tracepoint>;
+};
 
 export type BoundingBoxObjectType = {
   topLeft: Vector3,
   width: number,
   height: number,
   depth: number,
-}
+};
 
 export type SkeletonContentDataType = {
   activeNode: null | number;
-  trees: Array<Object>;
+  trees: Array<TreeData>;
   zoomLevel: number;
   customLayers: null;
 };

@@ -41,7 +41,7 @@ type Settings = {
   somaClickingAllowed: boolean,
 };
 
-type BoundingBoxObjectType = {
+export type BoundingBoxObjectType = {
   topLeft: Vector3,
   width: number,
   height: number,

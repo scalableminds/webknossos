@@ -4,18 +4,13 @@
  */
 
 import type { Vector3 } from "oxalis/constants";
-import BucketBuilder from "./bucket_builder";
-import Request from "../../../../libs/request";
+import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
+import Request from "libs/request";
+
+import type { BoundingBoxObjectType } from "oxalis/model";
 
 type CategoryType = "color" | "segmentation";
 type ElementClassType = string; // TODO: Can/should we be more precise like "uint16" | "Uint32"?
-
-type BoundingBoxType = {
-  depth: number,
-  height: number,
-  width: number,
-  topLeft: Vector3,
-};
 
 type DataStoreInfoType = {
   typ: string;
@@ -34,7 +29,7 @@ type LayerInfoType = {
   category: CategoryType;
   elementClass: ElementClassType;
   mappings: Array<MappingType>;
-  maxCoordinates: BoundingBoxType;
+  maxCoordinates: BoundingBoxObjectType;
   resolutions: Array<number>;
 }
 
@@ -54,7 +49,7 @@ class Layer {
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
   mappings: Array<MappingType>;
-  maxCoordinates: BoundingBoxType;
+  maxCoordinates: BoundingBoxObjectType;
   resolutions: Array<number>;
 
   static initClass() {

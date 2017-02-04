@@ -40,8 +40,8 @@ object DataStore extends LazyLogging{
     Paths.get(dataInfo.dataLayer.baseDir).resolve(dataInfo.dataLayerSection.baseDir)
 
 
-  def knossosDirToCube(dataInfo: DataAccessInstruction, path: Path): Option[(Int, Point3D)] = {
-    val rel = Paths.get(dataInfo.dataLayerSection.baseDir).relativize(path)
+  def knossosDirToCube(baseDir: String, path: Path): Option[(Int, Point3D)] = {
+    val rel = Paths.get(baseDir).relativize(path)
     if(rel.getNameCount >= 5){
       for{
         resolution <- rel.getName(rel.getNameCount - 5).toString.toIntOpt
@@ -54,23 +54,23 @@ object DataStore extends LazyLogging{
     }
   }
 
-  private def knossosDir(dataSetDir: Path, block: CubePosition) = {
-    val x = "x%04d".format(block.x)
-    val y = "y%04d".format(block.y)
-    val z = "z%04d".format(block.z)
-    dataSetDir.resolve(block.resolution.toString).resolve(x).resolve(y).resolve(z)
+  private def knossosDir(dataSetDir: Path, cube: CubePosition) = {
+    val x = "x%04d".format(cube.x)
+    val y = "y%04d".format(cube.y)
+    val z = "z%04d".format(cube.z)
+    dataSetDir.resolve(cube.resolution.toString).resolve(x).resolve(y).resolve(z)
   }
 
-  def knossosFilePath(dataSetDir: Path, id: String, block: CubePosition, fileExt: String): Path = {
-    val x = "x%04d".format(block.x)
-    val y = "y%04d".format(block.y)
-    val z = "z%04d".format(block.z)
-    val fileName = s"${id}_mag${block.resolution}_${x}_${y}_${z}.$fileExt"
-    knossosDir(dataSetDir, block).resolve(fileName)
+  def knossosFilePath(dataSetDir: Path, id: String, cube: CubePosition, fileExt: String): Path = {
+    val x = "x%04d".format(cube.x)
+    val y = "y%04d".format(cube.y)
+    val z = "z%04d".format(cube.z)
+    val fileName = s"${id}_mag${cube.resolution}_${x}_${y}_${z}.$fileExt"
+    knossosDir(dataSetDir, cube).resolve(fileName)
   }
 
-  def fuzzyKnossosFile(dataSetDir: Path, id: String, block: CubePosition, extensions: List[String]): Option[File] = {
-    val dir = knossosDir(dataSetDir, block)
+  def fuzzyKnossosFile(dataSetDir: Path, id: String, cube: CubePosition, extensions: List[String]): Option[File] = {
+    val dir = knossosDir(dataSetDir, cube)
     Option(dir.toFile.listFiles(new FilenameFilter() {
       override def accept(dir: File, name: String): Boolean = {
         extensions.exists(e => name.endsWith(s".$e"))

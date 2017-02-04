@@ -15,10 +15,10 @@ import scala.concurrent.duration.FiniteDuration
 trait BucketHandler extends DataCache with LazyLogging {
   protected def loadFromUnderlying[T](loadCube: CubeReadInstruction, timeout: FiniteDuration)(f: Cube => Box[T]): Fox[T]
 
-  protected def saveToUnderlying(saveBlock: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean]
+  protected def saveToUnderlying(saveBucket: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean]
 
-  def save(saveBlock: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {
-    saveToUnderlying(saveBlock, timeout)
+  def save(saveBucket: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {
+    saveToUnderlying(saveBucket, timeout)
   }
 
   def load(loadBucket: BucketReadInstruction, timeout: FiniteDuration, useCache: Boolean): Fox[Array[Byte]] = {

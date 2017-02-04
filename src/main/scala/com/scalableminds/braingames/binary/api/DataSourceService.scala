@@ -43,18 +43,17 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
 
     val dataStore = new FileDataStore
     try {
-      val bucket = new BucketPosition(-1,-1,-1,-1, -1) // TODO: HACKY!!!!
-      val dataInfoTemplate = BucketWriteInstruction(baseDataSource, dataLayer, section, bucket, Array.empty)
       val zip = new ZipFile(file)
       val resolutions = ZipIO.withUnziped(zip, includeHiddenFiles = false) { entries =>
         Fox.serialSequence(entries) { e =>
           val fileName = e.getName
           val stream = zip.getInputStream(e)
-          val result = DataStore.knossosDirToCube(dataInfoTemplate, Paths.get(fileName)).map {
+          val result = DataStore.knossosDirToCube(section.baseDir, Paths.get(fileName)).map {
             case (resolution, point) =>
               val bucket = new BucketPosition(point.x, point.y, point.z, resolution, baseDataSource.cubeLength) // TODO: HACKY!!!!
-              val currentBlock = dataInfoTemplate.copy(position = bucket, data = IOUtils.toByteArray(stream))
-              dataStore.save(currentBlock).map(_ => resolution)
+              val writeBucket = BucketWriteInstruction(
+                baseDataSource, dataLayer, section, bucket, IOUtils.toByteArray(stream))
+              dataStore.save(writeBucket).map(_ => resolution)
           }.getOrElse(Fox.empty)
           result.onComplete( _ => stream.close())
           result

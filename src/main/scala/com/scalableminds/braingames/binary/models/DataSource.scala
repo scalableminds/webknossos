@@ -39,12 +39,6 @@ case class DataSource(
   val lengthOfLoadedBuckets: Int = 32
 
   /**
-    * Size of a single stored block in storage
-    */
-  val blockSize: Int =
-    cubeLength * cubeLength * cubeLength
-
-  /**
     * Boundary of the data source
     */
   lazy val boundingBox: BoundingBox =

@@ -21,7 +21,7 @@ import net.liftweb.common.Box
 
 class WebKnossosWrapCube(wkwFile: WKWFile) extends Cube {
   def cutOutBucket(requestedBucket: BucketReadInstruction): Box[Array[Byte]] = {
-    assert(requestedBucket.dataSource.blockSize ==  wkwFile.header.numVoxelsPerBlockDimension)
+    assert(requestedBucket.dataSource.lengthOfLoadedBuckets ==  wkwFile.header.numVoxelsPerBlockDimension)
 
     val numBlocksPerCubeDimension = wkwFile.header.numBlocksPerCubeDimension
     val blockOffsetX = requestedBucket.position.x % numBlocksPerCubeDimension

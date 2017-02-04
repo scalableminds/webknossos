@@ -17,7 +17,7 @@ import scala.concurrent.Future
 
 case class Data(value: Array[Byte]) extends AnyVal
 
-case class CachedBlock(
+case class CachedCube(
                         id: String,
                         dataLayerId: String,
                         dataLayerName: String,
@@ -27,9 +27,9 @@ case class CachedBlock(
                         y: Int,
                         z: Int)
 
-object CachedBlock {
-  def from(b: CubeReadInstruction): CachedBlock =
-    CachedBlock(
+object CachedCube {
+  def from(b: CubeReadInstruction): CachedCube =
+    CachedCube(
                  b.dataSource.id,
                  b.dataLayerSection.sectionId,
                  b.dataLayer.name,
@@ -71,14 +71,14 @@ trait Cube extends LazyLogging{
   * A data store implementation which uses the hdd as data storage
   */
 trait DataCache extends FoxImplicits{
-  def cache: LRUConcurrentCache[CachedBlock, Cube]
+  def cache: LRUConcurrentCache[CachedCube, Cube]
 
   /**
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
   def withCache[T](blockInfo: CubeReadInstruction)(loadF: (Cube => Box[T]) => Fox[T])(f: Cube => Box[T]): Fox[T] = {
-    val cachedBlockInfo = CachedBlock.from(blockInfo)
+    val cachedBlockInfo = CachedCube.from(blockInfo)
 
     cache.get(cachedBlockInfo) match {
       case Some(cube) =>

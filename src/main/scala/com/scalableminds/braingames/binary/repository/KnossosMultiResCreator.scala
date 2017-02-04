@@ -9,7 +9,7 @@ import com.scalableminds.braingames.binary.requester.{Cuboid, DataRequester}
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.store.FileDataStore
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
-import com.scalableminds.util.tools.{BlockedArray3D, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 

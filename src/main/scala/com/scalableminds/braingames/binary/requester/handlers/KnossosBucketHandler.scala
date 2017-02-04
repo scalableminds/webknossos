@@ -109,16 +109,16 @@ class KnossosBucketHandler(val cache: DataCubeCache)
     }
   }
 
-  override def saveToUnderlying(saveBlock: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {
+  override def saveToUnderlying(saveBucket: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {
     Future {
       blocking {
-        val saveResult = dataStore.save(saveBlock).futureBox
+        val saveResult = dataStore.save(saveBucket).futureBox
         Await.result(saveResult, timeout)
       }
     }.recover {
       case _: TimeoutException | _: InterruptedException =>
         logger.warn(s"No response in time for block during save: " +
-          s"(${saveBlock.dataSource.id}/${saveBlock.dataLayerSection.baseDir} ${saveBlock.position})")
+          s"(${saveBucket.dataSource.id}/${saveBucket.dataLayerSection.baseDir} ${saveBucket.position})")
         Failure("dataStore.save.timeout")
     }
   }

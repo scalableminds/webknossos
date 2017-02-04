@@ -14,12 +14,10 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
 import com.scalableminds.braingames.binary.MappingRequest
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.{FilenameUtils, IOUtils}
-import org.xerial.snappy.{SnappyFramedInputStream, SnappyFramedOutputStream}
-import play.api.data
+import org.xerial.snappy.SnappyFramedInputStream
 
 /**
   * A data store implementation which uses the hdd as data storage
@@ -34,26 +32,23 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     * returns it.
     */
   def load(dataInfo: CubeReadInstruction): Fox[RandomAccessFile] = {
-    val fileSize = dataInfo.dataSource.blockSize * dataInfo.dataLayer.bytesPerElement
-    load(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.position, fileSize, dataInfo.dataLayer.isCompressed)
+    load(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.position, dataInfo.dataLayer.isCompressed)
   }
 
   def load(dataSetDir: Path,
            dataSetId: String,
            cube: CubePosition,
-           fileSize: Int,
            isCompressed: Boolean): Fox[RandomAccessFile] = {
     val ext = DataLayer.fileExt(isCompressed)
     lazy val fallback =
       fuzzyKnossosFile(dataSetDir, dataSetId, cube, DataLayer.supportedFileExt)
 
-    load(knossosFilePath(dataSetDir, dataSetId, cube, ext), fallback, Some(fileSize))
+    load(knossosFilePath(dataSetDir, dataSetId, cube, ext), fallback)
   }
 
   private def load(
     path: Path,
-    fallback: => Option[File],
-    fileSize: Option[Int] = None): Fox[RandomAccessFile] = {
+    fallback: => Option[File]): Fox[RandomAccessFile] = {
 
     Future {
       try {
@@ -104,17 +99,17 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
   private def copyBucketToCube(outputFile: RandomAccessFile, dataInfo: BucketWriteInstruction) = {
     val bucketPosition = dataInfo.position.topLeft
     val bucketLength = dataInfo.dataSource.lengthOfLoadedBuckets
-    val blockLength = dataInfo.dataSource.cubeLength
+    val cubeLength = dataInfo.dataSource.cubeLength
     val bytesPerElement = dataInfo.dataLayer.bytesPerElement
-    val bucketOffset = (bucketPosition.x % blockLength +
-      bucketPosition.y % blockLength * blockLength +
-      bucketPosition.z % blockLength * blockLength * blockLength) * bytesPerElement
+    val bucketOffset = (bucketPosition.x % cubeLength +
+      bucketPosition.y % cubeLength * cubeLength +
+      bucketPosition.z % cubeLength * cubeLength * cubeLength) * bytesPerElement
     var y = 0
     var z = 0
     while (z < bucketLength) {
       y = 0
       while (y < bucketLength) {
-        val offsetInCubeFile = bucketOffset + (y * blockLength + z * blockLength * blockLength) * bytesPerElement
+        val offsetInCubeFile = bucketOffset + (y * cubeLength + z * cubeLength * cubeLength) * bytesPerElement
         outputFile.seek(offsetInCubeFile)
         val dataOffset = (bucketLength * y + bucketLength * bucketLength * z) * bytesPerElement
         outputFile.write(dataInfo.data, dataOffset, bucketLength * bytesPerElement)

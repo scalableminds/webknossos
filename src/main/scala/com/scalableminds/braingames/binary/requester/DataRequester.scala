@@ -8,7 +8,7 @@ import com.scalableminds.braingames.binary.repository.{KnossosDataSourceType, We
 import com.scalableminds.braingames.binary.requester.handlers.{BucketHandler, KnossosBucketHandler, WebKnossosWrapBucketHandler}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.util.tools.{BlockedArray3D, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -43,8 +43,8 @@ class LayerLocker extends FoxImplicits {
   }
 }
 
-class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedBlock, Cube] {
-  override def onElementRemoval(key: CachedBlock, value: Cube): Unit = {
+class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, Cube] {
+  override def onElementRemoval(key: CachedCube, value: Cube): Unit = {
     value.scheduleForRemoval()
   }
 }
@@ -59,11 +59,11 @@ class DataRequester(
 
   val layerLocker = new LayerLocker
 
-  private implicit val dataBlockLoadTimeout = conf.getInt("loadTimeout").seconds
+  private implicit val dataLoadTimeout = conf.getInt("loadTimeout").seconds
 
-  private implicit val dataBlockSaveTimeout = conf.getInt("saveTimeout").seconds
+  private implicit val dataSaveTimeout = conf.getInt("saveTimeout").seconds
 
-  private def blockHandler(sourceType: Option[String]): BucketHandler =
+  private def bucketHandler(sourceType: Option[String]): BucketHandler =
     sourceType.getOrElse(KnossosDataSourceType.name) match {
       case KnossosDataSourceType.name =>
         new KnossosBucketHandler(cache)
@@ -136,8 +136,8 @@ class DataRequester(
     def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Fox[Array[Byte]] = sections match {
       case (section, layerOfSection) #:: tail =>
         lastSection = Some(section)
-        val loadBlock = BucketReadInstruction(request.dataSource, layerOfSection, section, bucket, request.settings)
-        loadFromLayer(loadBlock, useCache).futureBox.flatMap {
+        val bucketRead = BucketReadInstruction(request.dataSource, layerOfSection, section, bucket, request.settings)
+        loadFromLayer(bucketRead, useCache).futureBox.flatMap {
           case Full(byteArray) =>
             Fox.successful(byteArray)
           case f: Failure =>
@@ -161,10 +161,10 @@ class DataRequester(
     loadFromSections(sections)
   }
 
-  private def loadFromLayer(loadBlock: BucketReadInstruction, useCache: Boolean): Fox[Array[Byte]] = {
-    if (loadBlock.dataLayerSection.doesContainBucket(loadBlock.position)) {
-      val shouldCache = useCache && !loadBlock.dataLayer.isUserDataLayer
-      blockHandler(loadBlock.dataLayer.sourceType).load(loadBlock, dataBlockLoadTimeout, shouldCache)
+  private def loadFromLayer(bucketRead: BucketReadInstruction, useCache: Boolean): Fox[Array[Byte]] = {
+    if (bucketRead.dataLayerSection.doesContainBucket(bucketRead.position)) {
+      val shouldCache = useCache && !bucketRead.dataLayer.isUserDataLayer
+      bucketHandler(bucketRead.dataLayer.sourceType).load(bucketRead, dataLoadTimeout, shouldCache)
     } else {
       Fox.empty
     }
@@ -176,7 +176,7 @@ class DataRequester(
     bucket: BucketPosition): Box[Array[Byte]] = {
 
     try {
-      val f = saveBlock(bucket, request, layer, request.data).map(_ => Array.empty[Byte]).futureBox
+      val f = saveBucket(bucket, request, layer, request.data).map(_ => Array.empty[Byte]).futureBox
 
       // We will never wait here for ever, since all parts of the feature are upper bounded by Await.result on their own
       Await.result(f, Duration.Inf)
@@ -188,7 +188,7 @@ class DataRequester(
     }
   }
 
-  def saveBlock(
+  def saveBucket(
     bucket: BucketPosition,
     request: DataWriteRequest,
     layer: DataLayer,
@@ -196,9 +196,9 @@ class DataRequester(
 
     def saveToSections(sections: List[DataLayerSection]): Fox[Boolean] = sections match {
       case section :: tail =>
-        val saveBlock = BucketWriteInstruction(
+        val saveBucket = BucketWriteInstruction(
           request.dataSource, layer, section, bucket, modifiedData)
-        saveToLayer(saveBlock).futureBox.flatMap {
+        saveToLayer(saveBucket).futureBox.flatMap {
           case Full(r) => Future.successful(Full(r))
           case _ => saveToSections(tail)
         }
@@ -212,9 +212,9 @@ class DataRequester(
     saveToSections(sections)
   }
 
-  def saveToLayer(saveBlock: BucketWriteInstruction): Fox[Boolean] = {
-    if (saveBlock.dataLayerSection.doesContainBucket(saveBlock.position)) {
-      blockHandler(saveBlock.dataLayer.sourceType).save(saveBlock, dataBlockSaveTimeout)
+  def saveToLayer(saveBucket: BucketWriteInstruction): Fox[Boolean] = {
+    if (saveBucket.dataLayerSection.doesContainBucket(saveBucket.position)) {
+      bucketHandler(saveBucket.dataLayer.sourceType).save(saveBucket, dataSaveTimeout)
     } else {
       Fox.empty
     }

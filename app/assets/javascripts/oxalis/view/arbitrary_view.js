@@ -113,7 +113,7 @@ class ArbitraryView {
   stop(): void {
     if (this.isRunning) {
       this.isRunning = false;
-      if (this.animationRequestId != 0) {
+      if (this.animationRequestId !== 0) {
         window.cancelAnimationFrame(this.animationRequestId);
         this.animationRequestId = 0;
       }

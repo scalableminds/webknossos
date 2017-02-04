@@ -42,8 +42,8 @@ const Modal = {
       this.callbacks[button.id] = button.callback;
 
       $(`#${button.id}`).on("click", (evt) => {
-        if(!(evt.target instanceof window.HTMLElement)){
-          return
+        if (!(evt.target instanceof window.HTMLElement)) {
+          throw new Error("event target is not a HTMLElement!");
         }
         const callback = this.callbacks[evt.target.id];
         if (callback != null) {

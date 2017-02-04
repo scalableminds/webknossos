@@ -12,6 +12,11 @@ import Constants from "../constants";
 import Flycam3d from "../model/flycam3d";
 import View from "../view";
 
+
+const DEFAULT_SCALE: number = 1.35;
+const MAX_SCALE: number = 3;
+const MIN_SCALE: number = 1;
+
 class ArbitraryView {
 
   // Copied form backbone events (TODO: handle this better)
@@ -24,10 +29,7 @@ class ArbitraryView {
   applyScale: (delta: number) => void;
   setClippingDistance: (value: number) => void;
 
-  DEFAULT_SCALE: number = 1.35;
-  MAX_SCALE: number = 3;
-  MIN_SCALE: number = 1;
-  CAM_DISTANCE: number;
+
   forceUpdate: boolean = false;
   additionalInfo: string = "";
   isRunning: boolean = true;
@@ -37,6 +39,7 @@ class ArbitraryView {
   height: number;
   deviceScaleFactor: number;
   scaleFactor: number;
+  camDistance: number;
 
   scene: THREE.Scene = null;
   camera: THREE.PerspectiveCamera = null;
@@ -57,10 +60,10 @@ class ArbitraryView {
     this.view = view;
     _.extend(this, Backbone.Events);
 
-    // CAM_DISTANCE has to be calculates such that with cam
+    // camDistance has to be calculates such that with cam
     // angle 45°, the plane of width 128 fits exactly in the
     // viewport.
-    this.CAM_DISTANCE = width / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
+    this.camDistance = width / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
 
     // The "render" div serves as a container for the canvas, that is
     // attached to it once a renderer has been initalized.
@@ -77,7 +80,7 @@ class ArbitraryView {
     this.camera.matrixAutoUpdate = false;
     this.camera.aspect = this.width / this.height;
 
-    this.cameraPosition = [0, 0, this.CAM_DISTANCE];
+    this.cameraPosition = [0, 0, this.camDistance];
 
     this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
@@ -206,9 +209,9 @@ class ArbitraryView {
 
 
   applyScaleImpl(delta: number): void {
-    if (!this.scaleFactor) { this.scaleFactor = this.DEFAULT_SCALE; }
+    if (!this.scaleFactor) { this.scaleFactor = DEFAULT_SCALE; }
 
-    if ((this.scaleFactor + delta > this.MIN_SCALE) && (this.scaleFactor + delta < this.MAX_SCALE)) {
+    if ((this.scaleFactor + delta > MIN_SCALE) && (this.scaleFactor + delta < MAX_SCALE)) {
       this.scaleFactor += Number(delta);
       this.width = this.height = this.scaleFactor * Constants.VIEWPORT_WIDTH;
       this.container.width(this.width);
@@ -219,7 +222,7 @@ class ArbitraryView {
   }
 
   setClippingDistanceImpl(value: number): void {
-    this.camera.near = this.CAM_DISTANCE - value;
+    this.camera.near = this.camDistance - value;
     this.camera.updateProjectionMatrix();
   }
 

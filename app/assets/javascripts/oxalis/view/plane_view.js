@@ -18,12 +18,6 @@ type CallbackType = () => void;
 
 class PlaneView {
 
-  resize: () => void;
-  resizeThrottled: () => void;
-  scaleTrianglesPlane: (scale: number) => void;
-  setActiveViewport: (id: number) => void;
-  getCameras: () => Array<THREE.OrthographicCamera>;
-
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -45,10 +39,6 @@ class PlaneView {
   constructor(model: Model, view: View) {
     let HEIGHT;
     let WIDTH;
-    this.resize = this.resizeImpl.bind(this);
-    this.scaleTrianglesPlane = this.scaleTrianglesPlaneImpl.bind(this);
-    this.setActiveViewport = this.setActiveViewportImpl.bind(this);
-    this.getCameras = this.getCamerasImpl.bind(this);
     this.model = model;
     this.view = view;
     _.extend(this, Backbone.Events);
@@ -201,7 +191,7 @@ class PlaneView {
   }
 
 
-  resizeThrottled() {
+  resizeThrottled = () => {
     // throttle resize to avoid annoying flickering
     this.resizeThrottled = _.throttle(
       () => {
@@ -214,7 +204,7 @@ class PlaneView {
   }
 
 
-  resizeImpl() {
+  resize = () => {
     // Call this after the canvas was resized to fix the viewport
     const canvas = $("#render-canvas");
     const WIDTH = (canvas.width() - 20) / 2;
@@ -229,7 +219,7 @@ class PlaneView {
   }
 
 
-  scaleTrianglesPlaneImpl(scale: number): void {
+  scaleTrianglesPlane = (scale: number): void => {
     let HEIGHT;
     let WIDTH;
     this.scaleFactor = scale;
@@ -250,7 +240,7 @@ class PlaneView {
   }
 
 
-  setActiveViewportImpl(viewportID: number): void {
+  setActiveViewport = (viewportID: number): void => {
     for (let i = 0; i <= 3; i++) {
       if (i === viewportID) {
         $(".inputcatcher").eq(i).removeClass("inactive").addClass("active");
@@ -263,7 +253,7 @@ class PlaneView {
   }
 
 
-  getCamerasImpl() {
+  getCameras = () => {
     return this.cameras;
   }
 

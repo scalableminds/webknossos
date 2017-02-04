@@ -1,6 +1,6 @@
 /**
  * arbitrary_cube_adapter.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -28,7 +28,7 @@ class ArbitraryCubeAdapter {
   sizeZY: number;
   sizeZ: number;
   NOT_LOADED_BUCKET_DATA: BucketData;
-  getBucket: (bucketIndex: number) => ?Uint8Array | number;
+  getBucket = _.memoize(this.getBucketImpl);
 
   constructor(cube: DataCube, boundary: Vector3) {
     this.cube = cube;
@@ -43,21 +43,19 @@ class ArbitraryCubeAdapter {
     }
     this.NOT_LOADED_BUCKET_DATA.zoomStep = 0;
     this.NOT_LOADED_BUCKET_DATA.isTemporalData = true;
-
-    this.getBucket = _.memoize(this.getBucketImpl);
   }
 
 
-  isValidBucket(bucketIndex): boolean {
+  isValidBucket(bucketIndex: number): boolean {
     return bucketIndex < this.sizeZYX;
   }
 
 
-  reset() {
+  reset(): void {
     return this.getBucket.cache.clear();
   }
 
-  getBucketImpl(bucketIndex): ?BucketData {
+  getBucketImpl(bucketIndex: number): ?BucketData {
     let bucketAddress = [
       Math.floor(bucketIndex / this.sizeZY),
       Math.floor((bucketIndex % this.sizeZY) / this.sizeZ),

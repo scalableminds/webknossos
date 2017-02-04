@@ -5,7 +5,7 @@
 
 import type { Vector3 } from "oxalis/constants";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
-import Request from "libs/request";
+import Request from "../../../../libs/request";
 
 import type { BoundingBoxObjectType } from "oxalis/model";
 

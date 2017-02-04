@@ -6,92 +6,303 @@
  * Repo: http://github.com/joarwilk/flowgen
  */
 
-import * as Backbone from "./backbone_v1.x.x";
 import * as JQuery from "./jquery_vx.x.x";
 
-declare module 'backbone' {
-  declare class ChildViewContainer<TView>{
-    constructor(initialViews?: any[]): this;
-    add(view: TView, customIndex?: number): void;
-    findByModel<TModel>(model: TModel): TView;
-    findByModelCid(modelCid: string): TView;
-    findByCustom(index: number): TView;
-    findByIndex(index: number): TView;
-    findByCid(cid: string): TView;
-    remove(view: TView): void;
-    call(method: any): void;
-    apply(method: any, args?: any[]): void;
-    all(iterator: (element: TView, index: number) => boolean, context?: any): boolean;
-    any(iterator: (element: TView, index: number) => boolean, context?: any): boolean;
-    contains(value: any): boolean;
-    detect(iterator: (item: any) => boolean, context?: any): any;
-    each(
-      iterator: (element: TView, index: number, list?: any) => void,
-      context?: any): any;
-    every(iterator: (element: TView, index: number) => boolean, context?: any): boolean;
-    filter(iterator: (element: TView, index: number) => boolean, context?: any): TView[];
-    find(iterator: (element: TView, index: number) => boolean, context?: any): TView;
-    first(): TView;
-    forEach(
-      iterator: (element: TView, index: number, list?: any) => void,
-      context?: any): void;
-    include(value: any): boolean;
-    initial(): TView;
-    initial(n: number): TView[];
-    invoke(methodName: string, args?: any[]): any;
-    isEmpty(object: any): boolean;
-    last(): TView;
-    last(n: number): TView[];
-    lastIndexOf(element: TView, fromIndex?: number): number;
-    map<U>(
-      iterator: (element: TView, index: number, context?: any) => U,
-      context?: any): U[];
-    pluck(attribute: string): any[];
-    reject(iterator: (element: TView, index: number) => boolean, context?: any): TView[];
-    rest(): TView;
-    rest(n: number): TView[];
-    select(iterator: any, context?: any): any[];
-    some(iterator: (element: TView, index: number) => boolean, context?: any): boolean;
-    toArray(): any[];
-    without(...values: any[]): TView[]
-  }
 
 
-  declare class Handlers mixins Backbone.Events {
-    constructor(options?: any): this;
-    options: any;
-    setHandler(name: string, handler: any, context?: any): void;
-    hasHandler(name: string): boolean;
-    getHandler(name: string): Function;
-    removeHandler(name: string): void;
-    removeAllHandlers(): void
-  }
+/*
+  BACKBONE as imports don't seem to work
+*/
 
-  declare class CommandStorage {
-    constructor(options?: any): this;
-    getCommands(commandName: string): any;
-    addCommand(commandName: string, args: any): void;
-    clearCommands(commandName: string): void
-  }
 
-  declare class Commands mixins Handlers {
-    constructor(options?: any): this;
-    storageType: any;
-    execute(name: string, ...args: any[]): void
-  }
 
-  declare class RequestResponse mixins Handlers {
-    constructor(options?: any): this;
-    request(...args: any[]): any
-  }
+declare var $: any; // @TODO this is no correct, but it is difficult to require another definition from here.
+declare var _: any; // @TODO this is no correct, but it is difficult to require another definition from here.
+declare var Radio: any; // @TODO this is not correct, but it is difficult to require another definition from here.
+declare var version: string;
 
-  declare class EventAggregator mixins Backbone.Events {
-    constructor(options?: any): this
-  }
+declare type eventCallback = (event: Event) => void | mixed;
+declare type Attrs = {[name: string]: mixed};
+declare type CRUDMethod = 'create' | 'read' | 'update' | 'delete';
+
+/**
+ * Events Module - http://backbonejs.org/#Events
+ */
+declare class BackboneEvents {
+  // Not sure the best way of adding these to the declaration files
+  on(event: string, callback: eventCallback, context?: Object): void;
+  bind(event: string, callback: eventCallback, context?: Object): void;
+  off(event: ?string, callback?: ?eventCallback, context?: Object): void;
+  unbind(event: ?string, callback?: ?eventCallback, context?: Object): void;
+  trigger(event: string, ...args?: Array<mixed>): void;
+  listenTo(other: Object, event: string, callback: eventCallback): void;
+  listenToOnce(other: Object, event: string, callback: eventCallback): void;
+  stopListening(other: BackboneEvents, callback?: ?eventCallback, context?: Object): void;
+  static on(event: string, callback: eventCallback, context?: Object): void;
+  static bind(event: string, callback: eventCallback, context?: Object): void;
+  static off(event: ?string, callback?: ?eventCallback, context?: Object): void;
+  static unbind(event: ?string, callback?: ?eventCallback, context?: Object): void;
+  static trigger(event: string, ...args?: Array<mixed>): void;
+  static listenTo(other: BackboneEvents, event: string, callback: eventCallback): void;
+  static stopListening(other: BackboneEvents, callback?: ?eventCallback, context?: Object): void;
 }
 
-// TODO Change this back to 'backbone.marionette' and fix it
-declare module 'backbone.marionette-notworking' {
+/**
+ * Model Class - http://backbonejs.org/#Model
+ */
+declare type ModelOpts = {
+  collection?: Collection<*>,
+  parse?: Function,
+  [optionName: string]: mixed
+};
+
+declare class BackboneModel mixins BackboneEvents {
+  static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<BackboneModel & P> & CP;
+  constructor(attributes?: Attrs, options?: ModelOpts): void;
+  static initialize(attributes?: Attrs, options?: ModelOpts): void;
+  idAttribute: string;
+  id: string | number;
+  attributes: Attrs;
+  cid: string;
+  cidPrefix: string;
+  chagned: ?Object,
+  validationError: ?Object;
+  initialize(): void;
+  toJSON(): Attrs;
+  sync: sync;
+  set(attrs: Attrs, options?: Object): this;
+  set(attr: string, value: mixed, options?: Object): this;
+  get(attr: string): any;
+  has(attr: string): boolean;
+  unset(attr: string, options?: { unset?: boolean }): this;
+  clear(options?: Object): this;
+  escape(attr: string): mixed;
+  previous(attr: string): mixed;
+  previousAttributes(): Attrs;
+  // @TODO should return a jQuery XHR, but I cannot define this without the dependency on jquery lib def.
+  fetch(options?: Object): Promise<*>;
+  // Start Underscore methods
+  // @TODO Underscore Methods should be defined by the library definition
+  keys(): string[];
+  values(): mixed[];
+  pairs: Function;
+  invert: Function;
+  pick: Function;
+  omit: Function;
+  chain(): Function;
+  isEmpty(): boolean;
+  // End underscore methods
+  isValid(): boolean;
+  url(): string;
+  urlRoot: string | () => string,
+  clone: this;
+  isNew: boolean;
+  hasChanged(attribute?: string): boolean;
+  chagnedAttributes(attributes?: {[attr: string]: mixed}): boolean;
+  previous(attribute: string): mixed;
+  previousAttirbutes(): Attrs;
+}
+
+/**
+ * Collection Class - http://backbonejs.org/#Collection
+ */
+declare class Collection<TModel> mixins BackboneEvents {
+  static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<Collection<*> & P> & CP;
+  constructor(models?: Array<TModel>, options?: Object): this;
+  initialize(models?: Array<TModel>, options?: Object): this;
+  model: TModel;
+  modelId(attributes: TModel): string;
+  models: TModel[];
+  toJSON(options?: Object): TModel[];
+  sync: sync;
+  // Underscore Methods
+  // @TODO should be defined by the underscore library defintion and not as generic functions.
+  forEach: Function; //(each)
+  map: Function; //(collect)
+  reduce: Function; // (foldl, inject)
+  reduceRight: Function; //(foldr)
+  find: Function; // (detect)
+  findIndex: Function;
+  findLastIndex: Function;
+  filter: Function; //(select)
+  reject: Function;
+  every: Function; //(all)
+  some: Function; //(any)
+  contains: Function; //(includes)
+  invoke: Function;
+  max: Function;
+  min: Function;
+  sortBy: Function;
+  groupBy: Function;
+  shuffle: Function;
+  toArray: Function;
+  size: Function;
+  first: Function; //(head, take)
+  initial: Function;
+  rest: Function; //(tail, drop)
+  last: Function;
+  without: Function;
+  indexOf: Function;
+  lastIndexOf: Function;
+  isEmpty: Function;
+  chain: Function;
+  difference: Function;
+  sample: Function;
+  partition: Function;
+  countBy: Function;
+  indexBy: Function;
+  // end underscore methods
+  add(models: Array<TModel>, options?: Object): void;
+  remove(models: Array<TModel>, options?: Object): void;
+  reset(models?: Array<TModel>, options?: Object): void;
+  set(models: Array<TModel>, options?: Object): void;
+  get(id: string): ?TModel;
+  at(index: number): ?TModel;
+  push(model: TModel, options?: Object): void;
+  pop(otions?: Object): void;
+  unshift(model: TModel, options?: Object): void;
+  unshift(model: TModel, options?: Object): void;
+  shift(options?: Object): TModel;
+  slice(begin: number, end: number): Array<TModel>;
+  length: number;
+  sort(options?: Object): Array<TModel>;
+  pluck(attribute: string): Array<TModel>;
+  where(attributes: {[attributeName: string]: mixed}): Array<TModel>;
+  findWhere(attributes: {[attributeName: string]: mixed}): TModel;
+  +url: () => string | string;
+  parse(response: Object, options: Object): Object;
+  clone(): this;
+  fetch(options?: Object): Promise<*>;
+  create(attributes: Object, options?: Object): void;
+}
+
+
+/**
+ * Router Class http://backbonejs.org/#Router
+ */
+declare class BackboneRouter mixins BackboneEvents {
+    static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<BackboneRouter & P> & CP;
+    routes: {
+      [route: string]: string | ((e: Event) => mixed | void);
+    };
+    constructor(options?: Object): this;
+    initialize(options?: Object): this;
+    route(route: string, name: string, callback?: (e: Event) => mixed | void): this;
+    navigate(fragment: string, options?: { trigger?: boolean, replace?:  boolean}): this;
+    execute(callback: Function, args: Array<mixed>, name: string): void | mixed;
+}
+
+/**
+ * History - http://backbonejs.org/#History
+ */
+declare class History mixins BackboneEvents {
+  static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<History & P> & CP;
+  static started: boolean;
+  constructor(options?: Object): this;
+  initialize(options?: Object): this;
+  start(options?: { pushState?: boolean, hashChange?: boolean, root?: string}): this;
+}
+declare var history: History;
+
+/**
+ * Sync - http://backbonejs.org/#Sync
+ */
+declare function sync(method: CRUDMethod, model: BackboneModel, options?: Object):  any; // Should really be a jQuery XHR.
+declare function ajax(request: Object): any;
+declare var emulateHTTP: boolean;
+declare var emulateJSON: boolean;
+
+/**
+ * View -
+ */
+declare type AttributesHasMap = {
+    [attribute: string]: mixed
+};
+declare type EventsHash = {
+    [event: string]: string | Function
+};
+declare class BackboneView<TModel> mixins BackboneEvents {
+  static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<BackboneView<TModel> & P> & CP;
+  constructor(): this;
+  initialize(options?: Object): this;
+  el: HTMLElement;
+  $el: any;
+  setElement(el: HTMLElement): this;
+  attributes: AttributesHasMap | () => AttributesHasMap;
+  $: typeof $;
+  -template: (data: Object) => string;
+  render(): this | mixed;
+  remove(): this;
+  events: EventsHash | () => EventsHash;
+  delegateEvents(events?: EventsHash): this;
+  undelegateEvents(): this;
+  tagName: string | () => string;
+  className: string | () => string;
+  id: string;
+}
+
+
+
+/*
+  Babysitter
+*/
+
+
+
+declare class BackboneChildViewContainer<TView>{
+  constructor(initialViews?: any[]): this;
+  add(view: TView, customIndex?: number): void;
+  findByModel<TModel>(model: TModel): TView;
+  findByModelCid(modelCid: string): TView;
+  findByCustom(index: number): TView;
+  findByIndex(index: number): TView;
+  findByCid(cid: string): TView;
+  remove(view: TView): void;
+  call(method: any): void;
+  apply(method: any, args?: any[]): void;
+  all(iterator: (element: TView, index: number) => boolean, context?: any): boolean;
+  any(iterator: (element: TView, index: number) => boolean, context?: any): boolean;
+  contains(value: any): boolean;
+  detect(iterator: (item: any) => boolean, context?: any): any;
+  each(
+    iterator: (element: TView, index: number, list?: any) => void,
+    context?: any): any;
+  every(iterator: (element: TView, index: number) => boolean, context?: any): boolean;
+  filter(iterator: (element: TView, index: number) => boolean, context?: any): TView[];
+  find(iterator: (element: TView, index: number) => boolean, context?: any): TView;
+  first(): TView;
+  forEach(
+    iterator: (element: TView, index: number, list?: any) => void,
+    context?: any): void;
+  include(value: any): boolean;
+  initial(): TView;
+  initial(n: number): TView[];
+  invoke(methodName: string, args?: any[]): any;
+  isEmpty(object: any): boolean;
+  last(): TView;
+  last(n: number): TView[];
+  lastIndexOf(element: TView, fromIndex?: number): number;
+  map<U>(
+    iterator: (element: TView, index: number, context?: any) => U,
+    context?: any): U[];
+  pluck(attribute: string): any[];
+  reject(iterator: (element: TView, index: number) => boolean, context?: any): TView[];
+  rest(): TView;
+  rest(n: number): TView[];
+  select(iterator: any, context?: any): any[];
+  some(iterator: (element: TView, index: number) => boolean, context?: any): boolean;
+  toArray(): any[];
+  without(...values: any[]): TView[]
+}
+
+
+/*
+  Marionette
+*/
+
+
+
+declare module 'backbone.marionette' {
   /**
    * Retrieve an object's attribute either directly from the object, or
    * from the object's this.options, with this.options taking precedence.
@@ -119,13 +330,13 @@ declare module 'backbone.marionette-notworking' {
    * Monitor a view's state, and after it has been rendered and shown in the DOM,
    * trigger a "dom:refresh" event every time it is re-rendered.
    */
-  declare function MonitorDOMRefresh(view: Backbone.View<Backbone.Model>): void;
+  declare function MonitorDOMRefresh(view: BackboneView<BackboneModel>): void;
 
 
   /**
    * This method is used to bind a backbone "entity" (collection/model) to methods on a target object.
    * @param target An object that must have a listenTo method from the EventBinder object.
-   * @param entity The entity (Backbone.Model or Backbone.Collection) to bind the events from.
+   * @param entity The entity (BackboneModel or Backbone.Collection) to bind the events from.
    * @param bindings a hash of { "event:name": "eventHandler" } configuration. Multiple handlers can be separated by a space. A function can be supplied instead of a string handler name.
    */
   declare function bindEntityEvents(target: any, entity: any, bindings: any): void;
@@ -134,7 +345,7 @@ declare module 'backbone.marionette-notworking' {
   /**
    * This method can be used to unbind callbacks from entities' (collection/model) events. It's the opposite of bindEntityEvents
    * @param target An object that must have a listenTo method from the EventBinder object.
-   * @param entity The entity (Backbone.Model or Backbone.Collection) to bind the events from.
+   * @param entity The entity (BackboneModel or Backbone.Collection) to bind the events from.
    * @param bindings a hash of { "event:name": "eventHandler" } configuration. Multiple handlers can be separated by a space. A function can be supplied instead of a string handler name.
    */
   declare function unbindEntityEvents(target: any, entity: any, bindings: any): void;
@@ -148,9 +359,9 @@ declare module 'backbone.marionette-notworking' {
 
   /**
    * A base class which other classes can extend from. Object incorporates many
-   * backbone conventions and utilities like initialize and Backbone.Events.
+   * backbone conventions and utilities like initialize and BackboneEvents.
    */
-  declare class Object mixins Backbone.Events {
+  declare class Object mixins BackboneEvents {
 
     /**
      * Initialize is called immediately after the Object has been instantiated,
@@ -181,7 +392,7 @@ declare module 'backbone.marionette-notworking' {
    * A Controller is an object used in the Marionette Router. Controllers are
    * where you store your Router's callbacks.
    */
-  declare class Controller mixins Backbone.Events {
+  declare class Controller mixins BackboneEvents {
 
     /**
      *
@@ -307,7 +518,7 @@ declare module 'backbone.marionette-notworking' {
      * @param view the view to display.
      */
     show<TModel>(
-      view: Backbone.View<TModel>,
+      view: BackboneView<TModel>,
       options?: RegionShowOptions): void;
 
     /**
@@ -315,14 +526,14 @@ declare module 'backbone.marionette-notworking' {
      * and without replacing the HTML content of the region.
      */
     attachView<TModel>(
-      view: Backbone.View<TModel>,
+      view: BackboneView<TModel>,
       options?: RegionShowOptions): any;
 
     /**
      * Override this method to change how the new view is
      * appended to the `$el` that the region is managing
      */
-    attachHtml<TModel>(view: Backbone.View<TModel>): void;
+    attachHtml<TModel>(view: BackboneView<TModel>): void;
 
     /**
      * A region can be reset at any time. This destroys any existing view
@@ -345,7 +556,7 @@ declare module 'backbone.marionette-notworking' {
      *
      * @returns  view that this region has.
      */
-    currentView: Backbone.View<Backbone.Model >
+    currentView: BackboneView<BackboneModel >
   }
 
   declare interface RegionDefaults {
@@ -697,8 +908,8 @@ declare module 'backbone.marionette-notworking' {
   exists as a base view for other view classes to be extended from, and to
   provide a common location for behaviors that are shared across all views.
   */
-  declare class View<TModel>mixins Backbone.View<TModel>{
-    constructor(options?: Backbone.ViewOptions<TModel>): this;
+  declare class View<TModel> extends BackboneView<TModel>{
+    constructor(options?: BackboneViewOptions<TModel>): this;
 
     /**
      * Defines behaviors attached to this view.
@@ -741,6 +952,16 @@ declare module 'backbone.marionette-notworking' {
     */
     ui: any;
 
+
+    model: TModel;
+    regions: Object;
+    options: Object;
+    collection: Collection<TModel>;
+
+    showChildView(regionName: string, view: any, options?: RegionShowOptions): void;
+    addRegions(regions: any): any;
+    serializeCollection: () => Object;
+
     /**
      * There may be some cases where you need to change the template that is
      * used for a view, based on some simple logic such as the value of a
@@ -749,6 +970,8 @@ declare module 'backbone.marionette-notworking' {
     that you need.
     */
     getTemplate(): any;
+
+    templateContext: Object | () => Object;
 
     /**
      * Retrieve an object's attribute either directly from the object, or
@@ -820,19 +1043,24 @@ declare module 'backbone.marionette-notworking' {
     /**
      * Internal properties extended in Marionette.View.
      */
-    isDestroyed: boolean;
+    isDestroyed(): boolean;
+    isRendered(): boolean;
     supportsRenderLifecycle: boolean;
     supportsDestroyLifecycle: boolean
+  }
+
+  declare type BackboneViewOptions<TModel>= {
+
   }
 
 
   /**
    * An ItemView is a view that represents a single item. That item may be
-   * a Backbone.Model or may be a Backbone.Collection. Whichever it is though,
+   * a BackboneModel or may be a Backbone.Collection. Whichever it is though,
   it will be treated as a single item.
   */
   declare class ItemView<TModel>mixins View<TModel>{
-    constructor(options?: Backbone.ViewOptions<TModel>): this;
+    constructor(options?: BackboneViewOptions<TModel>): this;
 
     /**
      * Item views will serialize a model or collection, by default, by calling
@@ -904,15 +1132,15 @@ declare module 'backbone.marionette-notworking' {
   DOM. This behavior can be disabled by specifying {sort: false} on
   initialize.
   */
-  declare class CollectionView<TModel, TView>mixins View<TModel>{
+  declare class CollectionView<TModel, TView> extends View<TModel>{
     constructor(options?: CollectionViewOptions<TModel>): this;
 
     /**
      * Specify a childView in your collection view definition. This must be a
      * Backbone view object definition, not an instance. It can be any
-    Backbone.View or be derived from Marionette.ItemView
+    BackboneView or be derived from Marionette.ItemView
     */
-    childView: (...args: any[]) => TView;
+    childView: any;
 
     /**
      * There may be scenarios where you need to pass data from your parent
@@ -966,7 +1194,7 @@ declare module 'backbone.marionette-notworking' {
     collection view, iterate them, find them by a given indexer such as the
     view's model or collection, and more.
     */
-    children: Backbone.ChildViewContainer<TView>;
+    children: BackboneChildViewContainer<TView>;
 
     /**
      * The render method of the collection view is responsible for rendering the
@@ -1018,7 +1246,7 @@ declare module 'backbone.marionette-notworking' {
      * Destroy the child views that this collection view
      * is holding on to, if any. This returns destroyed children.
      */
-    destroyChildren(): Backbone.ChildViewContainer<TView>;
+    destroyChildren(): BackboneChildViewContainer<TView>;
 
     /**
      * By default the CollectionView will maintain the order of its collection
@@ -1061,11 +1289,6 @@ declare module 'backbone.marionette-notworking' {
      * getEmptyView.
      */
     getEmptyView(): any;
-
-    /**
-     * Serialize a collection by serializing each of its models.
-     */
-    serializeCollection(): any;
 
     /**
      * Attaches the content of a given view.
@@ -1155,7 +1378,7 @@ declare module 'backbone.marionette-notworking' {
   structure, or for scenarios where a collection needs to be rendered within
   a wrapper template.
   */
-  declare class CompositeView<TModel, TView>mixins CollectionView<TModel, TView>{
+  declare class CompositeView<TModel, TView> extends CollectionView<TModel, TView>{
     constructor(options?: CollectionViewOptions<TModel>): this;
 
     /**
@@ -1163,7 +1386,7 @@ declare module 'backbone.marionette-notworking' {
      * CompositeView's template is rendered and the childView's templates are
     added to this.
     */
-    childView: (...args: any[]) => TView;
+    childView: any;
 
     /**
      * By default the composite view uses the same attachHtml method that the
@@ -1301,7 +1524,7 @@ declare module 'backbone.marionette-notworking' {
      * Get the current view that is shown in the region specified by
      * `regionName`.
      */
-    getChildView(regionName: string): Backbone.View<TModel>;
+    getChildView(regionName: string): BackboneView<TModel>;
 
     /**
      * Returns all regions from the layout view. The results contains an
@@ -1337,7 +1560,7 @@ declare module 'backbone.marionette-notworking' {
    * single method on another object. Have your routers configured to call
   the method on your object, directly.
   */
-  declare class AppRouter mixins Backbone.Router {
+  declare class AppRouter mixins BackboneRouter {
 
     /**
      * Configure an AppRouter with appRoutes. The route definition
@@ -1373,7 +1596,7 @@ declare module 'backbone.marionette-notworking' {
   prefer to go that route. The Application is meant to be instantiated
   directly, although you can extend it to add your own functionality.
   */
-  declare class Application mixins Backbone.Events {
+  declare class Application mixins BackboneEvents {
     constructor(options?: any): this;
 
     /**
@@ -1453,7 +1676,7 @@ declare module 'backbone.marionette-notworking' {
     onStart(options?: any): void
   }
 
-  declare class Module mixins Backbone.Events {
+  declare class Module mixins BackboneEvents {
     constructor(moduleName: string, app: Application): this;
     submodules: any;
     triggerMethod(name: string, ...args: any[]): any;
@@ -1508,7 +1731,7 @@ declare module 'backbone.marionette-notworking' {
      * defaults can be a hash or function to define the default options for
      * your behavior. The default options will be overridden depending on
     what you set as the options per behavior (this works just like a
-    backbone.model).
+    BackboneModel).
     */
     defaults: any;
 
@@ -1560,6 +1783,7 @@ declare module 'backbone.marionette-notworking' {
   //   Behaviors: typeof Behaviors;
   //   View: typeof View;
   //   CompositeView: typeof CompositeView;
+  //   CollectionView: typeof CollectionView;
   //   Application: typeof Application;
   // }
 

@@ -34,7 +34,7 @@ class LoggedTimeView extends Marionette.View {
 
   initialize(options) {
     this.options = options;
-    this.collection = new LoggedTimeCollection([], { userID: this.options.userID });
+    const collection = new LoggedTimeCollection([], { userID: this.options.userID });
     this.listenTo(this.collection, "sync", this.render);
     return this.collection.fetch();
   }

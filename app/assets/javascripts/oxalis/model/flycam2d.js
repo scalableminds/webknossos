@@ -8,6 +8,7 @@ import app from "app";
 import Backbone from "backbone";
 import Model from "oxalis/model";
 import User from "oxalis/model/user";
+import scaleInfo from "oxalis/model/scaleinfo";
 import Dimensions from "./dimensions";
 import constants from "../constants";
 import type { Vector3, Vector4 } from "../constants";
@@ -141,7 +142,7 @@ class Flycam2d {
     let pixelNeeded;
     let scaleArray;
     return [0, 1, 2].forEach((planeID) => {
-      scaleArray = Dimensions.transDim(app.scaleInfo.baseVoxelFactors, planeID);
+      scaleArray = Dimensions.transDim(scaleInfo.baseVoxelFactors, planeID);
       pixelNeeded = this.viewportWidth * this.getTextureScalingFactor();
       this.buffer[planeID] = [constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[0]),
         constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[1])];
@@ -231,7 +232,7 @@ class Flycam2d {
     if (increaseSpeedWithZoom == null) { increaseSpeedWithZoom = true; }
     vector = Dimensions.transDim(vector, planeID);
     const zoomFactor = increaseSpeedWithZoom ? Math.pow(2, this.zoomStep) : 1;
-    const scaleFactor = app.scaleInfo.baseVoxelFactors;
+    const scaleFactor = scaleInfo.baseVoxelFactors;
     const delta = [vector[0] * zoomFactor * scaleFactor[0],
       vector[1] * zoomFactor * scaleFactor[1],
       vector[2] * zoomFactor * scaleFactor[2]];
@@ -257,8 +258,8 @@ class Flycam2d {
     const max = [];
 
     for (let i = 0; i <= 2; i++) {
-      min.push(position[i] - (offset * app.scaleInfo.baseVoxelFactors[i]));
-      max.push(position[i] + (offset * app.scaleInfo.baseVoxelFactors[i]));
+      min.push(position[i] - (offset * scaleInfo.baseVoxelFactors[i]));
+      max.push(position[i] + (offset * scaleInfo.baseVoxelFactors[i]));
     }
 
     return { min, max };
@@ -321,7 +322,7 @@ class Flycam2d {
     // returns [left, top, right, bottom] array
 
     // convert scale vector to array in order to be able to use getIndices()
-    const scaleArray = Dimensions.transDim(app.scaleInfo.baseVoxelFactors, planeID);
+    const scaleArray = Dimensions.transDim(scaleInfo.baseVoxelFactors, planeID);
     const offsets = this.getOffsets(planeID);
     const size = this.getTextureScalingFactor() * this.viewportWidth;
     // two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
@@ -347,7 +348,7 @@ class Flycam2d {
 
   getRayThreshold(planeID) {
     if (planeID < 3) {
-      return this.rayThreshold[planeID] * Math.pow(2, this.zoomStep) * app.scaleInfo.baseVoxel;
+      return this.rayThreshold[planeID] * Math.pow(2, this.zoomStep) * scaleInfo.baseVoxel;
     } else {
       return this.rayThreshold[planeID];
     }

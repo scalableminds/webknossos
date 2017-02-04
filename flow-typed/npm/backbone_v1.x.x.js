@@ -93,8 +93,8 @@ declare module 'backbone' {
    */
   declare class Collection<TModel> mixins Events {
     static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<Collection<*> & P> & CP;
-    constructor(models?: TModel, options?: Object): this;
-    initialize(models?: TModel, options?: Object): this;
+    constructor(models?: Array<TModel>, options?: Object): this;
+    initialize(models?: Array<TModel>, options?: Object): this;
     model: TModel;
     modelId(attributes: TModel): string;
     models: TModel[];

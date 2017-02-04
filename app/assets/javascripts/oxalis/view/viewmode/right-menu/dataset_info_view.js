@@ -6,7 +6,7 @@
 import _ from "lodash";
 import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
-import app from "app";
+import scaleInfo from "oxalis/model/scaleinfo";
 import constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 
@@ -40,7 +40,6 @@ class DatasetInfoView extends Marionette.View {
 
 
   initialize() {
-    this.render = _.throttle(this.render, 100);
     this.listenTo(this.model.flycam3d, "changed", this.render);
     this.listenTo(this.model.flycam, "zoomStepChanged", this.render);
 
@@ -50,6 +49,8 @@ class DatasetInfoView extends Marionette.View {
       this.listenTo(this.model.skeletonTracing, "newTree", this.render);
     }
   }
+
+  render = _.throttle(this.render, 100);
 
 
   // Rendering performance optimization
@@ -93,7 +94,7 @@ class DatasetInfoView extends Marionette.View {
     }
 
     // unit is nm
-    return zoom * width * app.scaleInfo.baseVoxel;
+    return zoom * width * scaleInfo.baseVoxel;
   }
 
 

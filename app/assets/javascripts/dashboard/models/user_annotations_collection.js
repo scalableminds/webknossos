@@ -7,6 +7,8 @@ import SortedCollection from "admin/models/sorted_collection";
 
 class UserAnnotationsCollection extends SortedCollection {
 
+  isFinished: boolean;
+
   comparator(a, b) {
     return b.get("created").localeCompare(a.get("created"));
   }
@@ -14,9 +16,9 @@ class UserAnnotationsCollection extends SortedCollection {
 
   url() {
     if (this.userID) {
-      return `/api/users/${this.userID}/annotations?isFinished=${this.isFinished}`;
+      return `/api/users/${this.userID}/annotations?isFinished=${this.isFinished.toString()}`;
     } else {
-      return `/api/user/annotations?isFinished=${this.isFinished}`;
+      return `/api/user/annotations?isFinished=${this.isFinished.toString()}`;
     }
   }
 

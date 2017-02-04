@@ -1,5 +1,6 @@
 import app from "app";
 import THREE from "three";
+import scaleInfo from "oxalis/model/scaleinfo";
 import PlaneMaterialFactory from "./materials/plane_material_factory";
 import Dimensions from "../model/dimensions";
 import constants from "../constants";
@@ -35,8 +36,8 @@ class Plane {
     // planeWidth means that the plane should be that many voxels wide in the
     // dimension with the highest resolution. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
-    // --> app.scaleInfo.baseVoxel
-    const scaleArray = Dimensions.transDim(app.scaleInfo.baseVoxelFactors, this.planeID);
+    // --> scaleInfo.baseVoxel
+    const scaleArray = Dimensions.transDim(scaleInfo.baseVoxelFactors, this.planeID);
     this.scaleVector = new THREE.Vector3(...scaleArray);
 
     this.createMeshes(planeWidth, textureWidth);

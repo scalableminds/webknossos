@@ -11,6 +11,7 @@ import TWEEN from "tween.js";
 import Flycam2d from "oxalis/model/flycam2d";
 import Model from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
+import scaleInfo from "oxalis/model/scaleinfo";
 import Dimensions from "../model/dimensions";
 import constants from "../constants";
 
@@ -70,7 +71,7 @@ class CameraController {
   update = () => {
     const gPos = this.flycam.getPosition();
     // camera porition's unit is nm, so convert it.
-    const cPos = app.scaleInfo.voxelToNm(gPos);
+    const cPos = scaleInfo.voxelToNm(gPos);
     this.cameras[constants.PLANE_XY].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
     this.cameras[constants.PLANE_YZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
     this.cameras[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
@@ -80,13 +81,13 @@ class CameraController {
   changeTDView(id, animate = true) {
     let padding;
     const camera = this.cameras[constants.TDView];
-    const b = app.scaleInfo.voxelToNm(this.model.upperBoundary);
+    const b = scaleInfo.voxelToNm(this.model.upperBoundary);
 
-    const pos = app.scaleInfo.voxelToNm(this.model.flycam.getPosition());
+    const pos = scaleInfo.voxelToNm(this.model.flycam.getPosition());
     const time = 800;
 
     const notify = () => this.trigger("cameraPositionChanged");
-    const getConvertedPosition = () => app.scaleInfo.voxelToNm(this.model.flycam.getPosition());
+    const getConvertedPosition = () => scaleInfo.voxelToNm(this.model.flycam.getPosition());
 
     const from = {
       notify,
@@ -307,12 +308,12 @@ class CameraController {
 
 
   getClippingDistance(planeID) {
-    return this.camDistance * app.scaleInfo.voxelPerNM[planeID];
+    return this.camDistance * scaleInfo.voxelPerNM[planeID];
   }
 
 
   updateCamViewport() {
-    const scaleFactor = app.scaleInfo.baseVoxel;
+    const scaleFactor = scaleInfo.baseVoxel;
     const boundary = (constants.VIEWPORT_WIDTH / 2) * this.model.user.get("zoom");
     for (const i of [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]) {
       this.cameras[i].near = -this.camDistance;

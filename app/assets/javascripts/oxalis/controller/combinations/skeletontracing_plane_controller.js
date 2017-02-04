@@ -4,11 +4,11 @@
  */
 
 import $ from "jquery";
-import app from "app";
 import THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
+import scaleInfo from "oxalis/model/scaleinfo";
 import PlaneController from "../viewmodes/plane_controller";
 import constants from "../../constants";
 import dimensions from "../../model/dimensions";
@@ -118,7 +118,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     const raycaster = projector.pickingRay(vector, camera);
     raycaster.ray.threshold = this.model.flycam.getRayThreshold(plane);
 
-    raycaster.ray.__scalingFactors = app.scaleInfo.nmPerVoxel;
+    raycaster.ray.__scalingFactors = scaleInfo.nmPerVoxel;
 
     // identify clicked object
     const intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());

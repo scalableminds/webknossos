@@ -15,6 +15,9 @@ import DatasetAccessView from "./dataset_access_view";
 
 
 class DatasetListItemView extends Marionette.CompositeView {
+
+  importUrl: string;
+
   static initClass() {
     this.prototype.tagName = "tbody";
 
@@ -133,7 +136,8 @@ class DatasetListItemView extends Marionette.CompositeView {
       contentTypeInput: "#contentTypeInput",
     };
   }
-  attributes() {
+  // Cannot be ES6 style function, as these are covariant by default
+  attributes = function attributes() {
     return { "data-dataset-name": this.model.get("name") };
   }
 

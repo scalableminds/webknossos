@@ -158,7 +158,7 @@ class DataCube {
   mapId(idToMap: number): number {
     let mappedId = null;
     if (this.currentMapping != null) {
-      mappedId = this.currentMapping.get(idToMap);
+      mappedId = this.currentMapping[idToMap];
     }
     return mappedId != null ? mappedId : idToMap;
   }
@@ -356,7 +356,7 @@ class DataCube {
       }
 
       if (mapping) {
-        const mappedValue = mapping.get(result);
+        const mappedValue = mapping[result];
         if (mappedValue != null) {
           return mappedValue;
         }

@@ -8,30 +8,25 @@ import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
 import Layer from "oxalis/model/binary/layers/layer";
 
-export type MappingArray = Map<number, number>;
+export type MappingArray = Array<number>;
 
 export type MappingType = {
   parent: ?string;
   name: string;
-  classes: MappingArray;
+  classes: ?Array<Array<number>>;
 };
 
 class Mappings {
 
   mappings: {
-    [key: string]: {
-      mappingArray: ?MappingArray,
-      mappingObject: MappingType,
-    },
-  };
+    [key: string]: MappingType,
+  } = {};
   baseUrl: string;
   doWithToken: Function;
 
   constructor(dataStoreInfo, datasetName: string, layer: Layer) {
-    this.mappings = _.transform(layer.mappings, (result, mapping) => {
-      result[mapping.name] = {
-        mappingObject: mapping,
-      };
+    this.mappings = _.transform(layer.mappings, (result, mappingObject) => {
+      result[mappingObject.name] = mappingObject;
     }, {});
     this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
     this.doWithToken = layer.doWithToken.bind(layer);
@@ -43,56 +38,48 @@ class Mappings {
   }
 
 
-  getMappingArrayAsync(mappingName): Promise<Array<MappingArray>> {
-    return this.fetchMappings(mappingName).then(() => this.getMappingArray(mappingName));
+  async getMappingArrayAsync(mappingName: string): Promise<MappingArray> {
+    await this.fetchMappings(mappingName);
+    return this.buildMappingArray(mappingName);
   }
 
 
   fetchMappings(mappingName: string): Promise<Array<MappingType>> {
     const mappingChain = this.getMappingChain(mappingName);
-    const promises = _.map(mappingChain, curMappingName => this.fetchMapping(curMappingName));
-    return Promise.all(promises);
+    return Promise.all(mappingChain.map(curMappingName => this.fetchMapping(curMappingName)));
   }
 
 
   fetchMapping(mappingName: string): Promise<?MappingType> {
-    if (this.mappings[mappingName].mappingObject != null) {
-      return Promise.resolve();
+    const mappingObject = this.mappings[mappingName];
+    if (mappingObject != null && mappingObject.classes != null) {
+      return Promise.resolve(mappingObject);
     }
     return this.doWithToken((token: string) => Request.receiveJSON(
         `${this.baseUrl + mappingName}?token=${token}`,
       ).then((mapping: MappingType) => {
-        this.mappings[mappingName].mappingObject = mapping;
+        this.mappings[mappingName] = mapping;
         console.log("Done downloading:", mappingName);
+        return mapping;
       }, error => console.error("Error downloading:", mappingName, error)),
     );
   }
 
 
-  getMappingArray(mappingName: string): MappingArray {
-    const mapping = this.mappings[mappingName];
-    if (mapping.mappingArray != null) {
-      return mapping.mappingArray;
-    }
-    mapping.mappingArray = this.buildMappingArray(mappingName);
-    return mapping.mappingArray;
-  }
-
-
   buildMappingArray(mappingName: string): MappingArray {
-    const mappingArray: MappingArray = new Map();
+    const mappingArray: MappingArray = [];
 
     for (const currentMappingName of this.getMappingChain(mappingName)) {
-      const { mappingObject } = this.mappings[currentMappingName];
-      ErrorHandling.assert(mappingObject,
+      const mappingObject = this.mappings[currentMappingName];
+      ErrorHandling.assert(mappingObject.classes,
           "mappingObject must have been fetched at this point");
-
-      for (const mappingClass of mappingObject.classes) {
-        const minId = _.min(mappingClass);
-        const mappedId = mappingArray.get(minId) || minId;
-
-        for (const id of mappingClass) {
-          mappingArray.set(id, mappedId);
+      if (mappingObject.classes) {
+        for (const mappingClass of mappingObject.classes) {
+          const minId = _.min(mappingClass);
+          const mappedId = mappingArray[minId] || minId;
+          for (const id of mappingClass) {
+            mappingArray[id] = mappedId;
+          }
         }
       }
     }
@@ -103,18 +90,12 @@ class Mappings {
 
   getMappingChain(mappingName: string): Array<string> {
     const chain = [mappingName];
-    let { mappingObject } = this.mappings[mappingName];
-    let parentMappingName = mappingObject.parent;
+    const mappingObject = this.mappings[mappingName];
+    const parentMappingName = mappingObject.parent;
 
-    while (mappingObject != null && parentMappingName != null) {
-      chain.push(parentMappingName);
-      const parentMapping = this.mappings[parentMappingName];
-      if (parentMapping !== null) {
-        mappingObject = parentMapping.mappingObject;
-        parentMappingName = mappingObject.parent;
-      }
+    if (parentMappingName != null) {
+      return chain.concat(this.getMappingChain(parentMappingName));
     }
-
     return chain;
   }
 }

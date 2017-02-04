@@ -85,8 +85,8 @@ class PushQueue {
 
   push = _.debounce(this.pushImpl, DEBOUNCE_TIME);
 
-  pushImpl = () => {
-    return this.cube.temporalBucketManager.getAllLoadedPromise().then(() => {
+  pushImpl = () => this.cube.temporalBucketManager.getAllLoadedPromise().then(
+    () => {
       if (!this.sendData) {
         return Promise.resolve();
       }
@@ -98,8 +98,8 @@ class PushQueue {
       }
 
       return this.updatePipeline.getLastActionPromise();
-    });
-  }
+    }
+  )
 
 
   pushBatch(batch) {

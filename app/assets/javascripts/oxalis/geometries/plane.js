@@ -27,7 +27,7 @@ class Plane {
   textureWidth: number;
   displayCosshair: boolean;
   scaleVector: THREE.Vector3;
-  crosshair: Array<THREE.Line>;
+  crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
 
   constructor(planeWidth: number, textureWidth: number, flycam: Flycam2d, planeID: ModeType, model: Model) {
@@ -135,10 +135,9 @@ class Plane {
   }
 
 
-  setRotation = (rotVec) => {
-    return [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]].map(mesh =>
-      mesh.setRotationFromEuler(rotVec));
-  }
+  setRotation = rotVec =>
+    [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]]
+      .map(mesh => mesh.setRotationFromEuler(rotVec));
 
 
   setPosition = (posVec) => {
@@ -168,9 +167,7 @@ class Plane {
   }
 
 
-  getMeshes = () => {
-    return [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
-  }
+  getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]]
 
 
   setLinearInterpolationEnabled = (enabled) => {

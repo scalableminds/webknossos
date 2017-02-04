@@ -99,9 +99,7 @@ class SceneController {
     }
 
     // create Meshes
-    const createPlane = (planeIndex) => {
-      return new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, this.flycam, planeIndex, this.model);
-    };
+    const createPlane = planeIndex => new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, this.flycam, planeIndex, this.model);
 
     this.planes = [
       createPlane(constants.PLANE_XY),

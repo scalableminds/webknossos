@@ -4,7 +4,6 @@
 */
 
 import _ from "lodash";
-import Utils from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 

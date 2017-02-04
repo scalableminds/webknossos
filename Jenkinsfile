@@ -35,9 +35,9 @@ ansiColor('xterm') {
         sh "docker-compose run webknossos-frontend-linting"
         sh "docker-compose run webknossos-frontend-flow"
         sh "docker-compose run webknossos-frontend-tests"
-        retry(3) {
-          sh "docker-compose run webknossos-e2e-tests"
-        }
+        // retry(3) {
+        //  sh "docker-compose run webknossos-e2e-tests"
+        // }
         sh """
           DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up webknossos &
           sleep 10

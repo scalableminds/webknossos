@@ -6,14 +6,14 @@
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
-import THREE from "three";
+import * as THREE from "three";
 import AbstractPlaneMaterialFactory from "./abstract_plane_material_factory";
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
 
-  setupAttributesAndUniforms() {
-    super.setupAttributesAndUniforms();
+  setupUniforms() {
+    super.setupUniforms();
 
     this.uniforms = _.extend(this.uniforms, {
       offset: {
@@ -146,21 +146,24 @@ vec3 hsv_to_rgb(vec4 HSV)
 void main() {
   float golden_ratio = 0.618033988749895;
   float color_value  = 0.0;
+  vec2 texture_pos = vUv * repeat + offset;
+  // Need to mirror y for some reason.
+  texture_pos = vec2(texture_pos.x, 1.0 - texture_pos.y);
   <% if (hasSegmentation) { %>
-    vec4 volume_color = texture2D(<%= segmentationName %>_texture, vUv * repeat + offset);
+    vec4 volume_color = texture2D(<%= segmentationName %>_texture, texture_pos);
     float id = (volume_color.r * 255.0);
   <% } else { %>
     float id = 0.0;
   <% } %>
   /* Get Color Value(s) */
   <% if (isRgb) { %>
-    vec3 data_color = texture2D( <%= layers[0] %>_texture, vUv * repeat + offset).xyz;
+    vec3 data_color = texture2D( <%= layers[0] %>_texture, texture_pos).xyz;
     data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
   <% } else { %>
     vec3 data_color = vec3(0.0, 0.0, 0.0);
     <% _.each(layers, function(name){ %>
       /* Get grayscale value */
-      color_value = texture2D( <%= name %>_texture, vUv * repeat + offset).r;
+      color_value = texture2D( <%= name %>_texture, texture_pos).r;
       /* Brightness / Contrast Transformation */
       color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 

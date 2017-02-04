@@ -1,7 +1,0 @@
-{ "_id" : { "$oid" : "5301a808ee7d7aab4053980f" }, "name" : "Structure of Neocortical Circuits Group", "roles" : [ { "name" : "admin" }, { "name" : "user" } ] }
-{ "_id" : { "$oid" : "5301a808ee7d7aab40539810" }, "name" : "005", "parent" : "Structure of Neocortical Circuits Group", "roles" : [ { "name" : "admin" }, { "name" : "user" } ] }
-{ "_id" : { "$oid" : "5301d524f0c76a253718fca9" }, "name" : "Thal", "parent" : "Structure of Neocortical Circuits Group", "roles" : [ { "name" : "admin" }, { "name" : "user" } ] }
-{ "_id" : { "$oid" : "53147f464200003b01f21b61" }, "name" : "eliot", "owner" : { "$oid" : "510a8613e4b0d636137f32dd" }, "parent" : "Structure of Neocortical Circuits Group", "roles" : [ { "name" : "admin" }, { "name" : "user" } ] }
-{ "_id" : { "$oid" : "532ed5cf450000f20fe9908f" }, "name" : "test test", "owner" : { "$oid" : "510a8613e4b0d636137f32dd" }, "parent" : "Structure of Neocortical Circuits Group", "roles" : [ { "name" : "admin" }, { "name" : "user" } ] }
-{ "_id" : { "$oid" : "53301f2c4d0000130d387ff4" }, "name" : "xyz", "owner" : { "$oid" : "510a8613e4b0d636137f32dd" }, "parent" : "Structure of Neocortical Circuits Group", "roles" : [ { "name" : "admin" }, { "name" : "user" } ] }
-{ "_id" : { "$oid" : "5342a3d02c000052a443b6d9" }, "name" : "turtlecortex", "owner" : { "$oid" : "510a8613e4b0d636137f32dd" }, "parent" : "Structure of Neocortical Circuits Group", "roles" : [ { "name" : "admin" }, { "name" : "user" } ] }

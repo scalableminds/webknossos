@@ -1,10 +1,19 @@
+/**
+ * skeletontracing_statelogger.js
+ * @flow weak
+ */
+
 import * as THREE from "three";
 import { V3 } from "libs/mjs";
 import ErrorHandling from "libs/error_handling";
-import StateLogger from "../statelogger";
+import StateLogger from "oxalis/model/statelogger";
+import Flycam3D from "oxalis/model/flycam3d";
+import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
 
 class SkeletonTracingStateLogger extends StateLogger {
 
+  flycam3d: Flycam3D;
+  skeletonTracing: SkeletonTracing;
 
   constructor(flycam, flycam3d, version, tracingId, tracingType, allowUpdate, skeletonTracing) {
     super(flycam, version, tracingId, tracingType, allowUpdate);
@@ -51,7 +60,7 @@ class SkeletonTracingStateLogger extends StateLogger {
     // Make sure that those nodes exist
     let found = false; let treeIds = [];
     for (const node of sourceTree.nodes) {
-      found |= (node.id === lastNodeId);
+      found = found || (node.id === lastNodeId);
       treeIds.push(node.id);
     }
     ErrorHandling.assert(found, "lastNodeId not in sourceTree",
@@ -59,7 +68,7 @@ class SkeletonTracingStateLogger extends StateLogger {
 
     found = false; treeIds = [];
     for (const node of targetTree.nodes) {
-      found |= (node.id === activeNodeId);
+      found = found || (node.id === activeNodeId);
       treeIds.push(node.id);
     }
     ErrorHandling.assert(found, "activeNodeId not in targetTree",

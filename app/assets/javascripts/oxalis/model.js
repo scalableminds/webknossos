@@ -39,6 +39,13 @@ export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
 };
+export type LayerType = WkLayer | NdStoreLayer;
+export type RestrictionsType = {
+  allowAccess: boolean,
+  allowUpdate: boolean,
+  allowFinish: boolean,
+  allowDownload: boolean,
+};
 type Settings = {
   advancedOptionsAllowed: boolean,
   allowedModes: "orthogonal" | "oblique" | "flight" | "volume",
@@ -59,22 +66,34 @@ export type TreeData = {
   edges: Array<{source: number, target: number}>;
   nodes: Array<Tracepoint>;
 };
-export type ContentData = {
-  activeNode: number;
+
+export type BoundingBoxObjectType = {
+  topLeft: Vector3,
+  width: number,
+  height: number,
+  depth: number,
+};
+
+export type SkeletonContentDataType = {
+  activeNode: null | number;
   trees: Array<TreeData>;
   zoomLevel: number;
-  customLayers: any;
+  customLayers: null;
 };
-type Tracing = {
+
+export type VolumeContentDataType = {
+  activeCell: null | number;
+  customLayers: Array<Object>;
+  maxCoordinates: BoundingBoxObjectType;
+  customLayers: ?Array<Object>;
+  name: string;
+};
+
+export type Tracing = {
   actions: Array<any>,
   content: {
-    boundingBox: {
-      topLeft: Vector3,
-      width: number,
-      height: number,
-      depth: number,
-    },
-    contentData: ContentData,
+    boundingBox: BoundingBoxObjectType,
+    contentData: VolumeContentDataType | SkeletonContentDataType,
     contentType: string,
     dataSet: Object,
     editPosition: Vector3,
@@ -88,7 +107,7 @@ type Tracing = {
   formattedHash: string,
   id: string,
   name: string,
-  restrictions: any,
+  restrictions: RestrictionsType,
   state: any,
   stateLabel: string,
   stats: any,

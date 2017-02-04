@@ -8,12 +8,12 @@ import Toast from "libs/toast";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
 import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
-import type { ContentData, TreeData } from "oxalis/model";
+import type { SkeletonContentDataType, TreeData } from "oxalis/model";
 
 class TracingParser {
 
   skeletonTracing: SkeletonTracing;
-  data: ContentData;
+  data: SkeletonContentDataType;
   idCount: number;
   treeIdCount: number;
   trees: Array<TreeData>;

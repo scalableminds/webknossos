@@ -11,7 +11,7 @@ import type { Vector3 } from "oxalis/constants";
 import Flycam from "oxalis/model/flycam2d";
 import Flycam3d from "oxalis/model/flycam3d";
 import User from "oxalis/model/user";
-import type { ContentData } from "oxalis/model";
+import type { SkeletonContentDataType } from "oxalis/model";
 import TracePoint from "./tracepoint";
 import TraceTree from "./tracetree";
 import SkeletonTracingStateLogger from "./skeletontracing_statelogger";
@@ -32,7 +32,7 @@ class SkeletonTracing {
   activeTree: TraceTree;
   firstEdgeDirection: Vector3;
   doubleBranchPop: boolean;
-  data: ContentData;
+  data: SkeletonContentDataType;
   restrictionHandler: RestrictionHandler;
   stateLogger: SkeletonTracingStateLogger;
   trigger: Function;

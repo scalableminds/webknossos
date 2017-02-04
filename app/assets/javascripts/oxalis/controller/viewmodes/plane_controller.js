@@ -324,7 +324,7 @@ class PlaneController {
       if (this.sceneController.pingDataLayer(dataLayerName)) {
         this.model.binary[dataLayerName].ping(this.flycam.getPosition(), {
           zoomStep: this.flycam.getIntegerZoomStep(),
-          area: this.flycam.getAreas(),
+          areas: this.flycam.getAreas(),
           activePlane: this.activeViewport,
         });
       }

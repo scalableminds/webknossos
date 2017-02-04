@@ -47,7 +47,7 @@ class VolumeLayer {
     }
 
     this.minCoord = minCoord;
-    this.maxCoord = maxCoord
+    this.maxCoord = maxCoord;
   }
 
 

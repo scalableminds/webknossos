@@ -39,8 +39,8 @@ class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll
     try {
       logger.warn(s"About to drop database: $mongoDb")
       s"./tools/dropDB.sh $mongoDb $mongoHost $mongoPort".run(getProcessIO).exitValue()
-      s"./tools/import_export/import.sh $mongoDb testdb $mongoHost $mongoPort".run(getProcessIO).exitValue()
-      logger.info("Successfully dropped the database and imported testdb")
+      s"./tools/import_export/import.sh $mongoDb test/db $mongoHost $mongoPort".run(getProcessIO).exitValue()
+      logger.info("Successfully dropped the database and imported test/db")
     } catch {
       case e: Exception =>
         throw new Error(s"An exception occured while dropping the database: ${e.toString}")

@@ -6,7 +6,7 @@ import $ from "jquery";
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
-import THREE from "three";
+import * as THREE from "three";
 import TWEEN from "tween.js";
 import Constants from "../constants";
 import Flycam3d from "../model/flycam3d";
@@ -67,7 +67,6 @@ class ArbitraryView {
     this.container = $(canvas);
     this.width = this.container.width();
     this.height = this.container.height();
-    this.deviceScaleFactor = window.devicePixelRatio || 1;
 
     this.renderer = this.view.renderer;
     this.scene = this.view.scene;
@@ -82,7 +81,7 @@ class ArbitraryView {
 
     this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale = new THREE.Vector3(...app.scaleInfo.nmPerVoxel);
+    this.group.scale.copy(new THREE.Vector3(...app.scaleInfo.nmPerVoxel));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.group);
     this.group.add(this.camera);
@@ -158,13 +157,9 @@ class ArbitraryView {
     camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
     camera.matrixWorldNeedsUpdate = true;
 
-    renderer.setViewport(0, 0,
-                         this.width * this.deviceScaleFactor,
-                         this.height * this.deviceScaleFactor);
-    renderer.setScissor(0, 0,
-                        this.width * this.deviceScaleFactor,
-                        this.height * this.deviceScaleFactor);
-    renderer.enableScissorTest(true);
+    renderer.setViewport(0, 0, this.width, this.height);
+    renderer.setScissor(0, 0, this.width, this.height);
+    renderer.setScissorTest(true);
     renderer.setClearColor(0xFFFFFF, 1);
 
     renderer.render(scene, camera);

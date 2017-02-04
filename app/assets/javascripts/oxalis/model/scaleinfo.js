@@ -1,5 +1,5 @@
 import Utils from "libs/utils";
-import THREE from "three";
+import * as THREE from "three";
 // This class encapsulates any conversions between the nm and voxel
 // coordinate system.
 

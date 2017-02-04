@@ -1,6 +1,6 @@
 import _ from "lodash";
 import Backbone from "backbone";
-import THREE from "three";
+import * as THREE from "three";
 import { M4x4 } from "libs/mjs";
 
 const updateMacro = function (_this) {

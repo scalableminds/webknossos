@@ -7,7 +7,7 @@ import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
 import TWEEN from "tween.js";
-import THREE from "three";
+import * as THREE from "three";
 import modal from "./modal";
 import Toast from "../../libs/toast";
 import constants from "../constants";
@@ -64,7 +64,6 @@ class PlaneView {
     // Create a 4x4 grid
     this.curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH;
     this.scaleFactor = 1;
-    this.deviceScaleFactor = window.devicePixelRatio || 1;
 
     // Initialize main THREE.js components
     this.cameras = new Array(4);
@@ -76,10 +75,11 @@ class PlaneView {
       this.scene.add(this.cameras[i]);
     }
 
+
     this.cameras[constants.PLANE_XY].position.z = -1;
     this.cameras[constants.PLANE_YZ].position.x = 1;
     this.cameras[constants.PLANE_XZ].position.y = 1;
-    this.cameras[constants.TDView].position = new THREE.Vector3(10, 10, -10);
+    this.cameras[constants.TDView].position.copy(new THREE.Vector3(10, 10, -10));
     this.cameras[constants.PLANE_XY].up = new THREE.Vector3(0, -1, 0);
     this.cameras[constants.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
     this.cameras[constants.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
@@ -95,7 +95,7 @@ class PlaneView {
     // scene.scale does not have an effect.
     this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale = app.scaleInfo.getNmPerVoxelVector();
+    this.group.scale.copy(app.scaleInfo.getNmPerVoxelVector());
     // Add scene to the group, all Geometries are than added to group
     this.scene.add(this.group);
 
@@ -160,7 +160,7 @@ class PlaneView {
       const setupRenderArea = (x, y, width, color) => {
         this.renderer.setViewport(x, y, width, width);
         this.renderer.setScissor(x, y, width, width);
-        this.renderer.enableScissorTest(true);
+        this.renderer.setScissorTest(true);
         this.renderer.setClearColor(color, 1);
       };
 
@@ -170,9 +170,9 @@ class PlaneView {
       for (const i of constants.ALL_VIEWPORTS) {
         this.trigger("renderCam", i);
         setupRenderArea(
-          viewport[i][0] * this.deviceScaleFactor,
-          viewport[i][1] * this.deviceScaleFactor,
-          this.curWidth * this.deviceScaleFactor,
+          viewport[i][0],
+          viewport[i][1],
+          this.curWidth,
           constants.PLANE_COLORS[i],
         );
         this.renderer.render(this.scene, this.cameras[i]);

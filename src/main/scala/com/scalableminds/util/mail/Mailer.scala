@@ -47,9 +47,6 @@ class Mailer(conf: Config) extends Actor {
    */
   def send(mail: Mail) = {
     if (enabled) {
-      // Content type
-      val contentType = mail.contentType getOrElse guessContentType(mail)
-
       val multiPartMail: MultiPartEmail = createEmail(mail)
 
       setAddress(mail.from)(multiPartMail.setFrom _)

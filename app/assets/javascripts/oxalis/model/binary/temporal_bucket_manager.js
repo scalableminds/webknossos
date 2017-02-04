@@ -1,5 +1,5 @@
 import _ from "lodash";
-import PullQueue from "./pullqueue";
+import { PullQueueConstants } from "./pullqueue";
 
 
 class TemporalBucketManager {
@@ -29,7 +29,7 @@ class TemporalBucketManager {
   pullBucket(bucket) {
     this.pullQueue.add({
       bucket: bucket.zoomedAddress,
-      priority: PullQueue.prototype.PRIORITY_HIGHEST,
+      priority: PullQueueConstants.PRIORITY_HIGHEST,
     });
     return this.pullQueue.pull();
   }

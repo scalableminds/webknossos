@@ -4,9 +4,9 @@
  */
 
 import _ from "lodash";
+import DataCube from "oxalis/model/binary/data_cube";
 import BinaryDataConnectionInfo from "../binarydata_connection_info";
 import { Bucket } from "./bucket";
-import Cube from "./cube";
 import Layer from "./layers/layer";
 import Utils from "../../../libs/utils";
 import Request from "../../../libs/request";
@@ -31,7 +31,7 @@ export const PullQueueConstants = {
 class PullQueue {
 
   BATCH_SIZE: number;
-  cube: Cube;
+  cube: DataCube;
   queue: Array<PullQueueItemType>;
   batchCount: number;
   roundTripTime: number;

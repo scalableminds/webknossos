@@ -1,3 +1,8 @@
+/**
+ * tracing_layout_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
@@ -20,11 +25,6 @@ import UserScriptsModalView from "./user_scripts_modal";
 import TracingView from "./tracing_view";
 
 class TracingLayoutView extends Marionette.View {
-  constructor(...args) {
-    super(...args);
-    this.showUserScriptsModal = this.showUserScriptsModal.bind(this);
-  }
-
   static initClass() {
     this.prototype.MARGIN = 40;
 
@@ -96,7 +96,7 @@ class TracingLayoutView extends Marionette.View {
 
     $("#add-script-link")
       .removeClass("hide")
-      .on("click", this.showUserScriptsModal.bind(this));
+      .on("click", this.showUserScriptsModal);
 
     app.oxalis = new OxalisController(this.options);
   }
@@ -149,7 +149,7 @@ class TracingLayoutView extends Marionette.View {
   }
 
 
-  showUserScriptsModal(event) {
+  showUserScriptsModal = (event) => {
     event.preventDefault();
     const modalView = new UserScriptsModalView();
     this.showChildView("modalWrapper", modalView);

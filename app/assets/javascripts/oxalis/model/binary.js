@@ -7,7 +7,7 @@ import _ from "lodash";
 import Backbone from "backbone";
 import Pipeline from "libs/pipeline";
 import InterpolationCollector from "oxalis/model/binary/interpolation_collector";
-import Cube from "oxalis/model/binary/cube";
+import DataCube from "oxalis/model/binary/data_cube";
 import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import Plane2D from "oxalis/model/binary/plane2d";
@@ -28,7 +28,7 @@ const DIRECTION_VECTOR_SMOOTHER = 0.125;
 class Binary {
 
   model: Model;
-  cube: Cube;
+  cube: DataCube;
   tracing: Tracing;
   layer: Object;
   category: CategoryType;
@@ -68,7 +68,7 @@ class Binary {
     this.lowerBoundary = this.layer.lowerBoundary = topLeft;
     this.upperBoundary = this.layer.upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
 
-    this.cube = new Cube(this.model.taskBoundingBox, this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
+    this.cube = new DataCube(this.model.taskBoundingBox, this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
 
     const updatePipeline = new Pipeline([this.tracing.version]);
 
@@ -91,7 +91,7 @@ class Binary {
 
     this.planes = [];
     for (const planeId of constants.ALL_PLANES) {
-      this.planes.push(new Plane2D(planeId, this.cube, this.pullQueue, constants.TEXTURE_SIZE_P, this.layer.bitDepth, this.targetBitDepth,
+      this.planes.push(new Plane2D(planeId, this.cube, this.layer.bitDepth, this.targetBitDepth,
                                 32, this.category === "segmentation"));
     }
 

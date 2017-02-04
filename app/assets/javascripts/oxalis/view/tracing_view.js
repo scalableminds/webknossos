@@ -1,3 +1,8 @@
+/**
+ * tracing_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Constants from "../constants";

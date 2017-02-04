@@ -1,11 +1,17 @@
+/**
+ * user.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Backbone from "backbone";
 import app from "app";
 
 class User extends Backbone.Model {
-  static initClass() {
-    this.prototype.url = "/api/user/userConfiguration";
-  }
+  // Copied from backbone model (TODO: handle this better)
+  push: Function;
+  save: Function;
+
   // To add any user setting, you must define default values in
   // UserConfiguration.scala
 
@@ -14,6 +20,7 @@ class User extends Backbone.Model {
     this.listenTo(this, "change", _.debounce(
       () => { if (app.currentUser != null) { this.save(); } },
       500));
+    this.urlRoot = "/api/user/userConfiguration";
   }
 
   getMouseInversionX() {
@@ -32,6 +39,5 @@ class User extends Backbone.Model {
     }
   }
 }
-User.initClass();
 
 export default User;

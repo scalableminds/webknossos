@@ -32,7 +32,7 @@ class SceneController {
   pingBinary: boolean;
   pingBinarySeg: boolean;
   volumeMeshes: any;
-  polygonFactory: PolygonFactory;
+  polygonFactory: ?PolygonFactory;
   cube: Cube;
   userBoundingBox: Cube;
   taskBoundingBox: Cube;

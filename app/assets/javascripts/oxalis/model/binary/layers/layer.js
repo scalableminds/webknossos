@@ -10,7 +10,7 @@ import type { BoundingBoxObjectType } from "oxalis/model";
 
 import Request from "../../../../libs/request";
 
-type CategoryType = "color" | "segmentation";
+export type CategoryType = "color" | "segmentation";
 type ElementClassType = string; // TODO: Can/should we be more precise like "uint16" | "Uint32"?
 
 type DataStoreInfoType = {

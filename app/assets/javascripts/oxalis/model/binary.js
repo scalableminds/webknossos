@@ -20,6 +20,7 @@ import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { Tracing } from "oxalis/model";
+import type { CategoryType } from "oxalis/model/binary/layers/layer";
 
 const PING_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -30,7 +31,7 @@ class Binary {
   cube: Cube;
   tracing: Tracing;
   layer: Object;
-  category: String;
+  category: CategoryType;
   name: String;
   targetBitDepth: number;
   lowerBoundary: Vector3;

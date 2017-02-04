@@ -21,9 +21,9 @@ type PullQueueItemType = {
   bucket: Bucket,
 };
 
-// For buckets that should be loaded immediately and
-// should never be removed from the queue
 export const PullQueueConstants = {
+  // For buckets that should be loaded immediately and
+  // should never be removed from the queue
   PRIORITY_HIGHEST: -1,
   BATCH_LIMIT: 6,
 };

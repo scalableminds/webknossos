@@ -1,30 +1,36 @@
+/**
+ * plane.js
+ * @flow weak
+ */
+
 import app from "app";
 import * as THREE from "three";
+import Model from "oxalis/model";
+import Flycam2d from "oxalis/model/flycam2d";
 import PlaneMaterialFactory from "./materials/plane_material_factory";
 import Dimensions from "../model/dimensions";
 import constants from "../constants";
+import type { ModeType } from "../constants";
+
+const CROSSHAIR_COLORS = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]];
+const GRAY_CH_COLOR = 0x222222;
 
 class Plane {
-  static initClass() {
-    // This class is supposed to collect all the Geometries that belong to one single plane such as
-    // the plane itself, its texture, borders and crosshairs.
+  // This class is supposed to collect all the Geometries that belong to one single plane such as
+  // the plane itself, its texture, borders and crosshairs.
 
-    this.prototype.CROSSHAIR_COLORS = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]];
-    this.prototype.GRAY_CH_COLOR = 0x222222;
-  }
+  plane: THREE.Mesh;
+  flycam: Flycam2d;
+  planeID: ModeType;
+  model: Model;
+  planeWidth: number;
+  textureWidth: number;
+  displayCosshair: boolean;
+  scaleVector: THREE.Vector3;
+  crosshair: Array<THREE.LineSegments>;
+  TDViewBorders: THREE.Line;
 
-
-  constructor(planeWidth, textureWidth, flycam, planeID, model) {
-    this.setDisplayCrosshair = this.setDisplayCrosshair.bind(this);
-    this.setOriginalCrosshairColor = this.setOriginalCrosshairColor.bind(this);
-    this.setGrayCrosshairColor = this.setGrayCrosshairColor.bind(this);
-    this.updateTexture = this.updateTexture.bind(this);
-    this.setScale = this.setScale.bind(this);
-    this.setRotation = this.setRotation.bind(this);
-    this.setPosition = this.setPosition.bind(this);
-    this.setVisible = this.setVisible.bind(this);
-    this.getMeshes = this.getMeshes.bind(this);
-    this.setLinearInterpolationEnabled = this.setLinearInterpolationEnabled.bind(this);
+  constructor(planeWidth: number, textureWidth: number, flycam: Flycam2d, planeID: ModeType, model: Model) {
     this.flycam = flycam;
     this.planeID = planeID;
     this.model = model;
@@ -57,7 +63,7 @@ class Plane {
       crosshairGeometries[i].vertices.push(new THREE.Vector3(-25 * i, -25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3(25 * i, 25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3((pWidth / 2) * i, (pWidth / 2) * (1 - i), 0));
-      this.crosshair[i] = new THREE.LineSegments(crosshairGeometries[i], new THREE.LineBasicMaterial({ color: this.CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 }));
+      this.crosshair[i] = new THREE.LineSegments(crosshairGeometries[i], new THREE.LineBasicMaterial({ color: CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 }));
     }
 
     // create borders
@@ -71,20 +77,20 @@ class Plane {
   }
 
 
-  setDisplayCrosshair(value) {
+  setDisplayCrosshair = (value) => {
     this.displayCosshair = value;
   }
 
 
-  setOriginalCrosshairColor() {
+  setOriginalCrosshairColor = () => {
     [0, 1].forEach((i) => {
-      this.crosshair[i].material = new THREE.LineBasicMaterial({ color: this.CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 });
+      this.crosshair[i].material = new THREE.LineBasicMaterial({ color: CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 });
     });
   }
 
-  setGrayCrosshairColor() {
+  setGrayCrosshairColor = () => {
     [0, 1].forEach((i) => {
-      this.crosshair[i].material = new THREE.LineBasicMaterial({ color: this.GRAY_CH_COLOR, linewidth: 1 });
+      this.crosshair[i].material = new THREE.LineBasicMaterial({ color: GRAY_CH_COLOR, linewidth: 1 });
     });
   }
 
@@ -120,7 +126,7 @@ class Plane {
   }
 
 
-  setScale(factor) {
+  setScale = (factor) => {
     const scaleVec = new THREE.Vector3().multiplyVectors(new THREE.Vector3(factor, factor, factor), this.scaleVector);
     this.plane.scale.copy(scaleVec);
     this.TDViewBorders.scale.copy(scaleVec);
@@ -129,13 +135,12 @@ class Plane {
   }
 
 
-  setRotation(rotVec) {
-    return [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]].map(mesh =>
-      mesh.setRotationFromEuler(rotVec));
-  }
+  setRotation = rotVec =>
+    [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]]
+      .map(mesh => mesh.setRotationFromEuler(rotVec));
 
 
-  setPosition(posVec) {
+  setPosition = (posVec) => {
     this.TDViewBorders.position.copy(posVec);
     this.crosshair[0].position.copy(posVec);
     this.crosshair[1].position.copy(posVec);
@@ -150,7 +155,7 @@ class Plane {
   }
 
 
-  setVisible(visible) {
+  setVisible = (visible) => {
     this.plane.visible = this.TDViewBorders.visible = visible;
     this.crosshair[0].visible = this.crosshair[1].visible = visible && this.displayCosshair;
   }
@@ -162,17 +167,14 @@ class Plane {
   }
 
 
-  getMeshes() {
-    return [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
-  }
+  getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]]
 
 
-  setLinearInterpolationEnabled(enabled) {
+  setLinearInterpolationEnabled = (enabled) => {
     this.plane.material.setColorInterpolation(
       enabled ? THREE.LinearFilter : THREE.NearestFilter,
     );
   }
 }
-Plane.initClass();
 
 export default Plane;

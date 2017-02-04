@@ -3,7 +3,7 @@
  * @flow weak
  */
 
-import THREE from "three";
+import * as THREE from "three";
 import ColorGenerator from "libs/color_generator";
 
 class VolumeGeometry {

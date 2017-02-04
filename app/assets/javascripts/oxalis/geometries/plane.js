@@ -4,7 +4,7 @@
  */
 
 import app from "app";
-import THREE from "three";
+import * as THREE from "three";
 import Model from "oxalis/model";
 import Flycam2d from "oxalis/model/flycam2d";
 import PlaneMaterialFactory from "./materials/plane_material_factory";
@@ -63,7 +63,7 @@ class Plane {
       crosshairGeometries[i].vertices.push(new THREE.Vector3(-25 * i, -25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3(25 * i, 25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3((pWidth / 2) * i, (pWidth / 2) * (1 - i), 0));
-      this.crosshair[i] = new THREE.Line(crosshairGeometries[i], new THREE.LineBasicMaterial({ color: CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 }), THREE.LinePieces);
+      this.crosshair[i] = new THREE.LineSegments(crosshairGeometries[i], new THREE.LineBasicMaterial({ color: CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 }));
     }
 
     // create borders
@@ -128,7 +128,10 @@ class Plane {
 
   setScale = (factor) => {
     const scaleVec = new THREE.Vector3().multiplyVectors(new THREE.Vector3(factor, factor, factor), this.scaleVector);
-    this.plane.scale = this.TDViewBorders.scale = this.crosshair[0].scale = this.crosshair[1].scale = scaleVec;
+    this.plane.scale.copy(scaleVec);
+    this.TDViewBorders.scale.copy(scaleVec);
+    this.crosshair[0].scale.copy(scaleVec);
+    this.crosshair[1].scale.copy(scaleVec);
   }
 
 
@@ -139,7 +142,9 @@ class Plane {
 
 
   setPosition = (posVec) => {
-    this.TDViewBorders.position = this.crosshair[0].position = this.crosshair[1].position = posVec;
+    this.TDViewBorders.position.copy(posVec);
+    this.crosshair[0].position.copy(posVec);
+    this.crosshair[1].position.copy(posVec);
 
     const offset = new THREE.Vector3(0, 0, 0);
     if (this.planeID === constants.PLANE_XY) {
@@ -147,7 +152,7 @@ class Plane {
     } else if (this.planeID === constants.PLANE_YZ) {
       offset.x = -1;
     } else if (this.planeID === constants.PLANE_XZ) { offset.y = -1; }
-    this.plane.position = offset.addVectors(posVec, offset);
+    this.plane.position.copy(offset.addVectors(posVec, offset));
   }
 
 

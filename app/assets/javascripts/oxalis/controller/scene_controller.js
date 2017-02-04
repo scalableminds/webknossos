@@ -7,7 +7,7 @@ import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
-import THREE from "three";
+import * as THREE from "three";
 import Flycam2d from "oxalis/model/flycam2d";
 import Model from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";

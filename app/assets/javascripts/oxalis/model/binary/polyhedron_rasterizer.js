@@ -82,7 +82,7 @@ class PolyhedronRasterizer {
   static Master: PolyhedronRasterizer.Master;
 
   // Orientation of transformed polyhedron 1 if z orientation is positive else -1
-  orientation: number = 1;
+  orientation: 1 | -1 = 1;
 
   bufferLength: number;
   buffer: Int32Array;

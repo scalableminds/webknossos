@@ -7,7 +7,7 @@ import _ from "lodash";
 import type { LayerType } from "oxalis/model";
 import Pipeline from "libs/pipeline";
 import type { Vector4 } from "oxalis/constants";
-import Cube from "./cube";
+import DataCube from "./data_cube";
 
 const BATCH_SIZE = 32;
 const DEBOUNCE_TIME = 1000;
@@ -15,14 +15,14 @@ const DEBOUNCE_TIME = 1000;
 class PushQueue {
 
   dataSetName: string;
-  cube: Cube;
+  cube: DataCube;
   layer: LayerType;
   tracingId: string;
   updatePipeline: Pipeline;
   sendData: boolean;
   queue: Array<Vector4>;
 
-  constructor(dataSetName: string, cube: Cube, layer: LayerType, tracingId: string, updatePipeline: Pipeline, sendData = true) {
+  constructor(dataSetName: string, cube: DataCube, layer: LayerType, tracingId: string, updatePipeline: Pipeline, sendData = true) {
     this.dataSetName = dataSetName;
     this.cube = cube;
     this.layer = layer;

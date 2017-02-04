@@ -7,11 +7,6 @@ import runAsync from "../../helpers/run-async";
 mockRequire.stopAll();
 
 mockRequire("jquery", { fn: {} });
-mockRequire("../../../oxalis/model/binary/pullqueue", {
-  prototype: {
-    PRIORITY_HIGHEST: 123,
-  },
-});
 mockRequire("../../../libs/error_handling", {
   assertExists(expr) { this.assert(expr != null); },
   assert(expr) { if (!expr) throw new Error("Assertion failed"); },
@@ -70,7 +65,7 @@ describe("Cube", () => {
           () => {
             expect(pullQueue.add.calledWith({
               bucket: [0, 0, 0, 0],
-              priority: 123 }),
+              priority: -1 }),
             ).toBe(true);
 
             expect(pullQueue.pull.called).toBe(true);

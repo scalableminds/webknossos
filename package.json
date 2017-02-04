@@ -86,7 +86,7 @@
     "react-dom": "^15.1.0",
     "scroll-into-view-if-needed": "^1.0.2",
     "stats.js": "^1.0.0",
-    "three.js": "georgwiese/three.js#scm_oxalis",
+    "three": "^0.84.0",
     "tween.js": "^16.3.1",
     "underscore": "^1.8.3",
     "webcola": "3.3.0",

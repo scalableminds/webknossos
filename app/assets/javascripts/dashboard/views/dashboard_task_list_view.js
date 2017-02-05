@@ -31,7 +31,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
 <% } %>
 <div class="divider-vertical"></div>
 <a href="#" id="toggle-finished" class="btn btn-default">
-  Show <%= getFinishVerb() %> tasks only
+  Show <%- getFinishVerb() %> tasks only
 </a>
 <table class="table table-striped sortable-table">
   <thead>

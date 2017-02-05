@@ -34,7 +34,7 @@ class MappingInfoView extends Marionette.View {
     <p>ID at current position: <%- idWithoutMapping %></p>
   <% } %>
 </div>
-<% if (true) { %>
+<% if (hasMapping) { %>
   <div data-subview="enableMapping"></div>
 <% } %>\
 `);

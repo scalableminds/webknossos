@@ -62,7 +62,7 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
         val yi = y + ((i / 2) % 2)
         val zi = z + i / 2 / 2
         if(xi >= 0 && yi >= 0 && zi >= 0){
-          val address = (x + y * width + z * height * width) * bytesPerElement
+          val address = (xi + yi * width + zi * height * width) * bytesPerElement
 
           val bytes = new Array[Byte](bytesPerElement)
           Array.copy(data, address, bytes, 0, bytesPerElement)
@@ -89,13 +89,12 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
                         resolutions: Int,
                         boundingBox: BoundingBox,
                         progressHook: Double => Unit): Future[_] = {
-    def createNextResolution(resolutionExponent: Int) = {
+    def createNextResolution(resolution: Int) = {
       val s = System.currentTimeMillis()
-      val targetResolution = math.pow(2, resolutionExponent + 1).toInt
-      val resolution = math.pow(2, resolutionExponent).toInt
+      val targetResolution = resolution + 1
       logger.info(s"About to create resolution $targetResolution for ${dataSource.id}")
       val dataStore = new FileDataStore
-      val cubeLength = dataSource.lengthOfLoadedBuckets
+      val cubeLength = dataSource.cubeLength
       val points = for {
         x <- boundingBox.topLeft.x.to(boundingBox.bottomRight.x, cubeLength * targetResolution)
         y <- boundingBox.topLeft.y.to(boundingBox.bottomRight.y, cubeLength * targetResolution)
@@ -104,7 +103,7 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
 
       Fox.serialCombined(points.toList){ p =>
         val targetCubePosition = new BucketPosition(p.x, p.y, p.z, targetResolution, cubeLength) // TODO: hacky!!!!!
-        val length = cubeLength + dataSource.lengthOfLoadedBuckets
+        val length = cubeLength * 2 + dataSource.lengthOfLoadedBuckets
         val cuboid = Cuboid(new VoxelPosition(p.x, p.y, p.z, resolution), length, length, length)
         val request = DataReadRequest(dataSource, layer, None, cuboid, DataRequestSettings(false))
         dataRequester.handleReadRequest(request).flatMap { loadedData =>

@@ -457,7 +457,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
         case (cubeData, idx) =>
           val x = idx % xs
           val y = idx / xs
-          val file = files.get(new CubePosition(x, y, layerNumber / CubeSize, 1, CubeSize))
+          val file = files.get(new CubePosition(x * CubeSize, y * CubeSize, layerNumber, 1, CubeSize))
           file.write(cubeData)
           file.close()
       }

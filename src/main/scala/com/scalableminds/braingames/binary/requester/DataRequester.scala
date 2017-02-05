@@ -92,13 +92,13 @@ class DataRequester(
     }.getOrElse(Nil)
   }
 
-  private def emptyResult(request: DataReadRequest) =
-    Fox.successful(new Array[Byte](request.cuboid.volume * request.dataLayer.bytesPerElement))
+  private def emptyResult(bucket: BucketPosition, request: DataReadRequest) =
+    Fox.successful(new Array[Byte](bucket.volume * request.dataLayer.bytesPerElement))
 
   protected def handleBucketReadRequest(bucket: BucketPosition, request: DataReadRequest) = {
     val point = request.cuboid.topLeft
     if (point.x < 0 || point.y < 0 || point.z < 0) {
-      emptyResult(request)
+      emptyResult(bucket, request)
     } else {
       loadBucketOfRequest(bucket, request, useCache = true)
     }
@@ -142,13 +142,13 @@ class DataRequester(
             Fox.successful(byteArray)
           case f: Failure =>
             logger.error(s"DataStore Failure: ${f.msg}")
-            emptyResult(request)
+            emptyResult(bucket, request)
           case _ =>
             loadFromSections(tail)
         }
       case _ =>
         // We couldn't find the data in any section. Hence let's assume there is none
-        emptyResult(request)
+        emptyResult(bucket, request)
     }
 
     val sections = Stream(request.dataLayer.sections.map {

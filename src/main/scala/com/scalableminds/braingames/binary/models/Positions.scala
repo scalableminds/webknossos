@@ -59,6 +59,8 @@ class BucketPosition(
 
   val z: Int = globalZ / bucketLength / resolution
 
+  def volume = bucketLength * bucketLength * bucketLength
+
   def toCube(cubeLength: Int): CubePosition =
     new CubePosition(globalX, globalY, globalZ, resolution, cubeLength)
 

@@ -68,7 +68,7 @@ object ImageCreator extends LazyLogging {
       val subpartWidth = params.slideWidth
       val subpartHeight = params.slideHeight
 
-      val imagesPerPage = params.imagesPerColumn * params.imagesPerRow
+      val imagesPerPage = math.min(params.imagesPerColumn.toLong * params.imagesPerRow, Int.MaxValue).toInt
       val pages = bufferedImages.sliding(imagesPerPage, imagesPerPage).zipWithIndex.map {
         case (pageImages, page) =>
           val depth = math.ceil(pageImages.size.toFloat / params.imagesPerRow).toInt

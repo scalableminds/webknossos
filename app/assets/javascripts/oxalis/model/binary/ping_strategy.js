@@ -11,7 +11,7 @@ import { BUCKET_SIZE_P } from "./bucket";
 
 const MAX_ZOOM_STEP_DIFF = 1;
 
-export class PingStrategy {
+class PingStrategy {
 
   cube: Cube;
   velocityRangeStart: number;
@@ -164,3 +164,5 @@ export class Volume extends BaseStrategy {
     this.preloadingPriorityOffset = 80;
   }
 }
+
+export default PingStrategy;

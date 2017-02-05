@@ -21,9 +21,9 @@ class Tree {
   sizesBuffer: ResizableBuffer;
   scalesBuffer: ResizableBuffer;
   nodesColorBuffer: ResizableBuffer;
-  edges: THREE.Line;
+  edges: THREE.LineSegments;
   particleMaterial: THREE.ShaderMaterial;
-  nodes: THREE.ParticleSystem;
+  nodes: THREE.Points;
   id: number;
 
   constructor(treeId, treeColor, model) {

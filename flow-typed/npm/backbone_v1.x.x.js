@@ -21,7 +21,8 @@ declare module 'backbone' {
     off(event: ?string, callback?: ?eventCallback, context?: Object): void;
     unbind(event: ?string, callback?: ?eventCallback, context?: Object): void;
     trigger(event: string, ...args?: Array<mixed>): void;
-    listenTo(other: Events, event: string, callback: eventCallback): void;
+    listenTo(other: Object, event: string, callback: eventCallback): void;
+    listenToOnce(other: Object, event: string, callback: eventCallback): void;
     stopListening(other: Events, callback?: ?eventCallback, context?: Object): void;
     static on(event: string, callback: eventCallback, context?: Object): void;
     static bind(event: string, callback: eventCallback, context?: Object): void;
@@ -36,14 +37,14 @@ declare module 'backbone' {
    * Model Class - http://backbonejs.org/#Model
    */
   declare type ModelOpts = {
-    collection?: Collection<*>,
+    collection?: Collection,
     parse?: Function,
     [optionName: string]: mixed
   };
 
   declare class Model mixins Events {
     static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<Model & P> & CP;
-    constructor(attributes?: Attrs, options?: ModelOpts): void;
+    constructor(attributes?: Attrs, options?: ModelOpts): this;
     static initialize(attributes?: Attrs, options?: ModelOpts): void;
     idAttribute: string;
     id: string | number;
@@ -65,7 +66,7 @@ declare module 'backbone' {
     previous(attr: string): mixed;
     previousAttributes(): Attrs;
     // @TODO should return a jQuery XHR, but I cannot define this without the dependency on jquery lib def.
-    fetch(options?: Object): any;
+    fetch(options?: Object): Promise<*>;
     // Start Underscore methods
     // @TODO Underscore Methods should be defined by the library definition
     keys(): string[];
@@ -86,20 +87,22 @@ declare module 'backbone' {
     chagnedAttributes(attributes?: {[attr: string]: mixed}): boolean;
     previous(attribute: string): mixed;
     previousAttirbutes(): Attrs;
+    save: Function;
   }
 
   /**
    * Collection Class - http://backbonejs.org/#Collection
    */
-  declare class Collection<TModel> mixins Events {
-    static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<Collection<*> & P> & CP;
-    constructor(models?: Array<TModel>, options?: Object): this;
-    initialize(models?: Array<TModel>, options?: Object): this;
-    model: TModel;
-    modelId(attributes: TModel): string;
-    models: TModel[];
-    toJSON(options?: Object): TModel[];
+  declare class Collection mixins Events {
+    static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<Collection & P> & CP;
+    constructor(models?: Array<Model>, options?: Object): this;
+    initialize(models?: Array<Model>, options?: Object): this;
+    model: Model;
+    modelId(attributes: Model): string;
+    models: Model[];
+    toJSON(options?: Object): Model[];
     sync: sync;
+    defaults: Object;
     // Underscore Methods
     // @TODO should be defined by the underscore library defintion and not as generic functions.
     forEach: Function; //(each)
@@ -136,28 +139,29 @@ declare module 'backbone' {
     partition: Function;
     countBy: Function;
     indexBy: Function;
+    comparator: Function;
     // end underscore methods
-    add(models: Array<TModel>, options?: Object): void;
-    remove(models: Array<TModel>, options?: Object): void;
-    reset(models?: Array<TModel>, options?: Object): void;
-    set(models: Array<TModel>, options?: Object): void;
-    get(id: string): ?TModel;
-    at(index: number): ?TModel;
-    push(model: TModel, options?: Object): void;
+    add(models: Array<Model>, options?: Object): void;
+    remove(models: Array<Model>, options?: Object): void;
+    reset(models?: Array<Model>, options?: Object): void;
+    set(models: Array<Model>, options?: Object): void;
+    get(id: string): ?Model;
+    at(index: number): ?Model;
+    push(model: Model, options?: Object): void;
     pop(otions?: Object): void;
-    unshift(model: TModel, options?: Object): void;
-    unshift(model: TModel, options?: Object): void;
-    shift(options?: Object): TModel;
-    slice(begin: number, end: number): Array<TModel>;
+    unshift(model: Model, options?: Object): void;
+    unshift(model: Model, options?: Object): void;
+    shift(options?: Object): Model;
+    slice(begin: number, end: number): Array<Model>;
     length: number;
-    sort(options?: Object): Array<TModel>;
-    pluck(attribute: string): Array<TModel>;
-    where(attributes: {[attributeName: string]: mixed}): Array<TModel>;
-    findWhere(attributes: {[attributeName: string]: mixed}): TModel;
+    sort(options?: Object): Array<Model>;
+    pluck(attribute: string): Array<Model>;
+    where(attributes: {[attributeName: string]: mixed}): Array<Model>;
+    findWhere(attributes: {[attributeName: string]: mixed}): Model;
     +url: () => string | string;
     parse(response: Object, options: Object): Object;
     clone(): this;
-    fetch(options?: Object): void;
+    fetch(options?: Object): Promise<*>;
     create(attributes: Object, options?: Object): void;
   }
 

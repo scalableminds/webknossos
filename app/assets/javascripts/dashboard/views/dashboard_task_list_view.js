@@ -94,7 +94,9 @@ class DashboardTaskListView extends Marionette.CompositeView {
     this.options = options;
     this.showFinishedTasks = false;
 
-    this.collection = new UserTasksCollection([], { userID: this.options.userID });
+    // If you know how to do this better, do it. Backbones Collection type is not compatible to Marionettes
+    // Collection type according to flow - although they actually should be...
+    this.collection = ((new UserTasksCollection([], { userID: this.options.userID }): any): Marionette.Collection);
     this.listenTo(this.collection, "fetch", () => app.router.showLoadingSpinner());
     this.listenTo(this.collection, "sync", () => app.router.hideLoadingSpinner());
 

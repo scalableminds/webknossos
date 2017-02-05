@@ -119,7 +119,9 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
     this.options = options;
     this.childViewOptions.parent = this;
 
-    this.collection = new UserAnnotationsCollection([], { userID: this.options.userID });
+    // If you know how to do this better, do it. Backbones Collection type is not compatible to Marionettes
+    // Collection type according to flow - although they actually should be...
+    this.collection = ((new UserAnnotationsCollection([], { userID: this.options.userID }): any): Marionette.Collection);
 
     // Show a loading spinner for long running requests
     this.listenTo(this.collection, "request", () => app.router.showLoadingSpinner());

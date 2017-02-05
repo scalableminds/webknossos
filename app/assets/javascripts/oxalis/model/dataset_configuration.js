@@ -9,14 +9,20 @@ import NestedObjModel from "libs/nested_obj_model";
 
 class DatasetConfiguration extends NestedObjModel {
 
+  dataLayerNames: Array<string>;
+  datasetName: string;
+
   initialize({ datasetName, dataLayerNames }) {
     this.dataLayerNames = dataLayerNames;
-    this.url = `/api/dataSetConfigurations/${datasetName}`;
+    this.datasetName = datasetName;
     this.listenTo(this, "change", _.debounce(
       () => { if (app.currentUser != null) { this.save(); } },
       500));
     this.listenTo(this, "sync", () => this.setDefaultBinaryColors());
   }
+
+
+  url = () => `/api/dataSetConfigurations/${this.datasetName}`
 
 
   reset = () => this.setDefaultBinaryColors(true)

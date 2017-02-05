@@ -28,7 +28,7 @@ declare type CRUDMethod = 'create' | 'read' | 'update' | 'delete';
 /**
  * Events Module - http://backbonejs.org/#Events
  */
-declare class BackboneEvents {
+declare class Events {
   // Not sure the best way of adding these to the declaration files
   on(event: string, callback: eventCallback, context?: Object): void;
   bind(event: string, callback: eventCallback, context?: Object): void;
@@ -37,28 +37,28 @@ declare class BackboneEvents {
   trigger(event: string, ...args?: Array<mixed>): void;
   listenTo(other: Object, event: string, callback: eventCallback): void;
   listenToOnce(other: Object, event: string, callback: eventCallback): void;
-  stopListening(other: BackboneEvents, callback?: ?eventCallback, context?: Object): void;
+  stopListening(other: Events, callback?: ?eventCallback, context?: Object): void;
   static on(event: string, callback: eventCallback, context?: Object): void;
   static bind(event: string, callback: eventCallback, context?: Object): void;
   static off(event: ?string, callback?: ?eventCallback, context?: Object): void;
   static unbind(event: ?string, callback?: ?eventCallback, context?: Object): void;
   static trigger(event: string, ...args?: Array<mixed>): void;
-  static listenTo(other: BackboneEvents, event: string, callback: eventCallback): void;
-  static stopListening(other: BackboneEvents, callback?: ?eventCallback, context?: Object): void;
+  static listenTo(other: Events, event: string, callback: eventCallback): void;
+  static stopListening(other: Events, callback?: ?eventCallback, context?: Object): void;
 }
 
 /**
  * Model Class - http://backbonejs.org/#Model
  */
 declare type ModelOpts = {
-  collection?: Collection<*>,
+  collection?: Collection,
   parse?: Function,
   [optionName: string]: mixed
 };
 
-declare class BackboneModel mixins BackboneEvents {
-  static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<BackboneModel & P> & CP;
-  constructor(attributes?: Attrs, options?: ModelOpts): void;
+declare class Model mixins Events {
+  static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<Model & P> & CP;
+  constructor(attributes?: Attrs, options?: ModelOpts): this;
   static initialize(attributes?: Attrs, options?: ModelOpts): void;
   idAttribute: string;
   id: string | number;
@@ -106,15 +106,16 @@ declare class BackboneModel mixins BackboneEvents {
 /**
  * Collection Class - http://backbonejs.org/#Collection
  */
-declare class Collection<TModel> mixins BackboneEvents {
-  static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<Collection<*> & P> & CP;
-  constructor(models?: Array<TModel>, options?: Object): this;
-  initialize(models?: Array<TModel>, options?: Object): this;
-  model: TModel;
-  modelId(attributes: TModel): string;
-  models: TModel[];
-  toJSON(options?: Object): TModel[];
+declare class Collection mixins Events {
+  static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<Collection & P> & CP;
+  constructor(models?: Array<Model>, options?: Object): this;
+  initialize(models?: Array<Model>, options?: Object): this;
+  model: Model;
+  modelId(attributes: Model): string;
+  models: Model[];
+  toJSON(options?: Object): Model[];
   sync: sync;
+  defaults: Object;
   // Underscore Methods
   // @TODO should be defined by the underscore library defintion and not as generic functions.
   forEach: Function; //(each)
@@ -151,24 +152,25 @@ declare class Collection<TModel> mixins BackboneEvents {
   partition: Function;
   countBy: Function;
   indexBy: Function;
+  comparator: Function;
   // end underscore methods
-  add(models: Array<TModel>, options?: Object): void;
-  remove(models: Array<TModel>, options?: Object): void;
-  reset(models?: Array<TModel>, options?: Object): void;
-  set(models: Array<TModel>, options?: Object): void;
-  get(id: string): ?TModel;
-  at(index: number): ?TModel;
-  push(model: TModel, options?: Object): void;
+  add(models: Array<Model>, options?: Object): void;
+  remove(models: Array<Model>, options?: Object): void;
+  reset(models?: Array<Model>, options?: Object): void;
+  set(models: Array<Model>, options?: Object): void;
+  get(id: string): ?Model;
+  at(index: number): ?Model;
+  push(model: Model, options?: Object): void;
   pop(otions?: Object): void;
-  unshift(model: TModel, options?: Object): void;
-  unshift(model: TModel, options?: Object): void;
-  shift(options?: Object): TModel;
-  slice(begin: number, end: number): Array<TModel>;
+  unshift(model: Model, options?: Object): void;
+  unshift(model: Model, options?: Object): void;
+  shift(options?: Object): Model;
+  slice(begin: number, end: number): Array<Model>;
   length: number;
-  sort(options?: Object): Array<TModel>;
-  pluck(attribute: string): Array<TModel>;
-  where(attributes: {[attributeName: string]: mixed}): Array<TModel>;
-  findWhere(attributes: {[attributeName: string]: mixed}): TModel;
+  sort(options?: Object): Array<Model>;
+  pluck(attribute: string): Array<Model>;
+  where(attributes: {[attributeName: string]: mixed}): Array<Model>;
+  findWhere(attributes: {[attributeName: string]: mixed}): Model;
   +url: () => string | string;
   parse(response: Object, options: Object): Object;
   clone(): this;
@@ -180,7 +182,7 @@ declare class Collection<TModel> mixins BackboneEvents {
 /**
  * Router Class http://backbonejs.org/#Router
  */
-declare class BackboneRouter mixins BackboneEvents {
+declare class BackboneRouter mixins Events {
     static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<BackboneRouter & P> & CP;
     routes: {
       [route: string]: string | ((e: Event) => mixed | void);
@@ -195,7 +197,7 @@ declare class BackboneRouter mixins BackboneEvents {
 /**
  * History - http://backbonejs.org/#History
  */
-declare class History mixins BackboneEvents {
+declare class History mixins Events {
   static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<History & P> & CP;
   static started: boolean;
   constructor(options?: Object): this;
@@ -207,7 +209,7 @@ declare var history: History;
 /**
  * Sync - http://backbonejs.org/#Sync
  */
-declare function sync(method: CRUDMethod, model: BackboneModel, options?: Object):  any; // Should really be a jQuery XHR.
+declare function sync(method: CRUDMethod, model: Model, options?: Object):  any; // Should really be a jQuery XHR.
 declare function ajax(request: Object): any;
 declare var emulateHTTP: boolean;
 declare var emulateJSON: boolean;
@@ -221,7 +223,7 @@ declare type AttributesHasMap = {
 declare type EventsHash = {
     [event: string]: string | Function
 };
-declare class BackboneView<TModel> mixins BackboneEvents {
+declare class BackboneView<TModel> mixins Events {
   static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<BackboneView<TModel> & P> & CP;
   constructor(): this;
   initialize(options?: Object): this;
@@ -330,13 +332,13 @@ declare module 'backbone.marionette' {
    * Monitor a view's state, and after it has been rendered and shown in the DOM,
    * trigger a "dom:refresh" event every time it is re-rendered.
    */
-  declare function MonitorDOMRefresh(view: BackboneView<BackboneModel>): void;
+  declare function MonitorDOMRefresh(view: BackboneView<Model>): void;
 
 
   /**
    * This method is used to bind a backbone "entity" (collection/model) to methods on a target object.
    * @param target An object that must have a listenTo method from the EventBinder object.
-   * @param entity The entity (BackboneModel or Backbone.Collection) to bind the events from.
+   * @param entity The entity (Model or Backbone.Collection) to bind the events from.
    * @param bindings a hash of { "event:name": "eventHandler" } configuration. Multiple handlers can be separated by a space. A function can be supplied instead of a string handler name.
    */
   declare function bindEntityEvents(target: any, entity: any, bindings: any): void;
@@ -345,7 +347,7 @@ declare module 'backbone.marionette' {
   /**
    * This method can be used to unbind callbacks from entities' (collection/model) events. It's the opposite of bindEntityEvents
    * @param target An object that must have a listenTo method from the EventBinder object.
-   * @param entity The entity (BackboneModel or Backbone.Collection) to bind the events from.
+   * @param entity The entity (Model or Backbone.Collection) to bind the events from.
    * @param bindings a hash of { "event:name": "eventHandler" } configuration. Multiple handlers can be separated by a space. A function can be supplied instead of a string handler name.
    */
   declare function unbindEntityEvents(target: any, entity: any, bindings: any): void;
@@ -359,9 +361,9 @@ declare module 'backbone.marionette' {
 
   /**
    * A base class which other classes can extend from. Object incorporates many
-   * backbone conventions and utilities like initialize and BackboneEvents.
+   * backbone conventions and utilities like initialize and Events.
    */
-  declare class Object mixins BackboneEvents {
+  declare class Object mixins Events {
 
     /**
      * Initialize is called immediately after the Object has been instantiated,
@@ -392,7 +394,7 @@ declare module 'backbone.marionette' {
    * A Controller is an object used in the Marionette Router. Controllers are
    * where you store your Router's callbacks.
    */
-  declare class Controller mixins BackboneEvents {
+  declare class Controller mixins Events {
 
     /**
      *
@@ -556,7 +558,7 @@ declare module 'backbone.marionette' {
      *
      * @returns  view that this region has.
      */
-    currentView: BackboneView<BackboneModel >
+    currentView: BackboneView<Model >
   }
 
   declare interface RegionDefaults {
@@ -956,7 +958,7 @@ declare module 'backbone.marionette' {
     model: TModel;
     regions: Object;
     options: Object;
-    collection: Collection<TModel>;
+    collection: Collection;
 
     showChildView(regionName: string, view: any, options?: RegionShowOptions): void;
     addRegions(regions: any): any;
@@ -1056,7 +1058,7 @@ declare module 'backbone.marionette' {
 
   /**
    * An ItemView is a view that represents a single item. That item may be
-   * a BackboneModel or may be a Backbone.Collection. Whichever it is though,
+   * a Model or may be a Backbone.Collection. Whichever it is though,
   it will be treated as a single item.
   */
   declare class ItemView<TModel>mixins View<TModel>{
@@ -1596,7 +1598,7 @@ declare module 'backbone.marionette' {
   prefer to go that route. The Application is meant to be instantiated
   directly, although you can extend it to add your own functionality.
   */
-  declare class Application mixins BackboneEvents {
+  declare class Application mixins Events {
     constructor(options?: any): this;
 
     /**
@@ -1676,7 +1678,7 @@ declare module 'backbone.marionette' {
     onStart(options?: any): void
   }
 
-  declare class Module mixins BackboneEvents {
+  declare class Module mixins Events {
     constructor(moduleName: string, app: Application): this;
     submodules: any;
     triggerMethod(name: string, ...args: any[]): any;
@@ -1731,7 +1733,7 @@ declare module 'backbone.marionette' {
      * defaults can be a hash or function to define the default options for
      * your behavior. The default options will be overridden depending on
     what you set as the options per behavior (this works just like a
-    BackboneModel).
+    Model).
     */
     defaults: any;
 
@@ -1779,13 +1781,16 @@ declare module 'backbone.marionette' {
     getBehaviorClass(options: any, key: string): any
   }
 
-  // declare class Marionette {
-  //   Behaviors: typeof Behaviors;
-  //   View: typeof View;
-  //   CompositeView: typeof CompositeView;
-  //   CollectionView: typeof CollectionView;
-  //   Application: typeof Application;
-  // }
+  declare class Marionette {
+    Behaviors: typeof Behaviors;
+    View: typeof View;
+    CollectionView: typeof CollectionView;
+    CompositeView: typeof CompositeView;
+    Model: typeof Model;
+    Collection: typeof Collection;
+    Application: typeof Application;
+    Region: typeof Region;
+  }
 
-  // declare var exports: Marionette;
+  declare var exports: Marionette;
 }

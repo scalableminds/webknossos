@@ -369,7 +369,7 @@ class Model extends Backbone.Model {
   }
 
   // delegate save request to all submodules
-  save() {
+  save = function save() {
     const submodels = [];
     const promises = [];
 

@@ -4,21 +4,29 @@
  */
 
 import SortedCollection from "admin/models/sorted_collection";
+import Backbone from "backbone";
 import DashboardTaskModel from "./dashboard_task_model";
 
+const NEW_TASK_URL = "/user/tasks/request";
+
 class UserTasksCollection extends SortedCollection {
+
+  isFinished: boolean;
+  userID: string;
+
   static initClass() {
-    this.prototype.model = DashboardTaskModel;
-    this.prototype.newTaskUrl = "/user/tasks/request";
+    // If you know how to do this better, do it. Backbones Model type is not compatible to Marionettes
+    // Model type according to flow - although they actually should be...
+    this.prototype.model = ((DashboardTaskModel: any): Backbone.Model);
     this.prototype.defaults =
         { showFinishedTasks: false };
   }
 
   url() {
     if (this.userID) {
-      return `/api/users/${this.userID}/tasks?isFinished=${this.isFinished}`;
+      return `/api/users/${this.userID}/tasks?isFinished=${this.isFinished.toString()}`;
     }
-    return `/api/user/tasks?isFinished=${this.isFinished}`;
+    return `/api/user/tasks?isFinished=${this.isFinished.toString()}`;
   }
 
 
@@ -37,7 +45,7 @@ class UserTasksCollection extends SortedCollection {
     const newTask = new DashboardTaskModel();
 
     return newTask.fetch({
-      url: this.newTaskUrl,
+      url: NEW_TASK_URL,
       success: () => this.add(newTask),
     });
   }

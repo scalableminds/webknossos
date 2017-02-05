@@ -14,7 +14,7 @@ class CommentsCollection extends Backbone.Collection {
   }
 
 
-  comparator(model) {
+  comparator = function comparator(model) {
     return model.get("node") * this.coefficient;
   }
 

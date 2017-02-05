@@ -121,9 +121,11 @@ class Plane2D {
         if (u >= 0 && u < this.BUCKETS_PER_ROW && v >= 0 && v < this.BUCKETS_PER_ROW) {
           const tile = [u, v];
           this.dataTexture.tiles[tileIndexByTileMacro(this, tile)] = false;
-          this.dataTexture.ready = this.dataTexture.ready &&
-            !(u >= this.dataTexture.area[0] && u <= this.dataTexture.area[2] &&
-              v >= this.dataTexture.area[1] && v <= this.dataTexture.area[3]);
+
+          if ((u >= this.dataTexture.area[0] || u <= this.dataTexture.area[2] ||
+              v >= this.dataTexture.area[1] || v <= this.dataTexture.area[3])) {
+            this.dataTexture.ready = false;
+          }
         }
       }
     });
@@ -293,7 +295,6 @@ class Plane2D {
     bucket[this.V] += tile[1];
 
     const map = this.generateRenderMap(bucket);
-
     return this.renderSubTile(map, 0, tile, this.dataTexture.zoomStep);
   }
 
@@ -435,7 +436,9 @@ class Plane2D {
           subBucket[this.V] += dv;
           subBucket[this.W] += dw;
 
-          recursive = recursive || this.enhanceRenderMap(map, (mapIndex << 2) + (2 * dv) + du + 1, subBucket, map[mapIndex], level - 1);
+          if (this.enhanceRenderMap(map, (mapIndex << 2) + (2 * dv) + du + 1, subBucket, map[mapIndex], level - 1)) {
+            recursive = true;
+          }
         }
       }
     }

@@ -4,11 +4,10 @@
  */
 
 import $ from "jquery";
-import THREE from "three";
+import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
-import scaleInfo from "oxalis/model/scaleinfo";
 import PlaneController from "../viewmodes/plane_controller";
 import constants from "../../constants";
 import dimensions from "../../model/dimensions";
@@ -26,6 +25,19 @@ class SkeletonTracingPlaneController extends PlaneController {
   constructor(model, view, sceneController, skeletonTracingController) {
     super(model, view, sceneController);
     this.skeletonTracingController = skeletonTracingController;
+  }
+
+
+  simulateTracing(nodesPerTree = -1, nodesAlreadySet = 0) {
+    // For debugging purposes.
+    if (nodesPerTree === nodesAlreadySet) {
+      this.model.skeletonTracing.createNewTree();
+      nodesAlreadySet = 0;
+    }
+
+    const [x, y, z] = this.flycam.getPosition();
+    this.setWaypoint([x + 1, y + 1, z], false);
+    _.defer(() => this.simulateTracing(nodesPerTree, nodesAlreadySet + 1));
   }
 
 
@@ -111,17 +123,24 @@ class SkeletonTracingPlaneController extends PlaneController {
     const { scaleFactor } = this.planeView;
     const camera = this.planeView.getCameras()[plane];
     // vector with direction from camera position to click position
-    const vector = new THREE.Vector3(((position.x / (384 * scaleFactor)) * 2) - 1, (-(position.y / (384 * scaleFactor)) * 2) + 1, 0.5);
+    const normalizedMousePos = new THREE.Vector2(
+        ((position.x / (constants.VIEWPORT_WIDTH * scaleFactor)) * 2) - 1,
+        (-(position.y / (constants.VIEWPORT_WIDTH * scaleFactor)) * 2) + 1);
 
     // create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
-    const projector = new THREE.Projector();
-    const raycaster = projector.pickingRay(vector, camera);
-    raycaster.ray.threshold = this.model.flycam.getRayThreshold(plane);
-
-    raycaster.ray.__scalingFactors = scaleInfo.nmPerVoxel;
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(normalizedMousePos, camera);
+    raycaster.params.Points.threshold = this.model.flycam.getRayThreshold(plane);
 
     // identify clicked object
-    const intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());
+    let intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());
+
+    // Also look backwards: We want to detect object even when they are behind
+    // the camera. Later, we filter out invisible objects.
+    raycaster.ray.direction.multiplyScalar(-1);
+    intersects = intersects.concat(raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes()));
+
+    intersects = _.sortBy(intersects, intersect => intersect.distanceToRay);
 
     for (const intersect of intersects) {
       const { index } = intersect;
@@ -159,9 +178,9 @@ class SkeletonTracingPlaneController extends PlaneController {
     // set the new trace direction
     if (activeNode) {
       this.model.flycam.setDirection([
-        position[0] - activeNode.pos[0],
-        position[1] - activeNode.pos[1],
-        position[2] - activeNode.pos[2],
+        position[0] - activeNode.position[0],
+        position[1] - activeNode.position[1],
+        position[2] - activeNode.position[2],
       ]);
     }
 

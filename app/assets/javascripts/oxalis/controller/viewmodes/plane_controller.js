@@ -7,10 +7,10 @@ import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
 import _ from "lodash";
-import "three.trackball";
 import Utils from "libs/utils";
 import Input from "libs/input";
-import THREE from "three";
+import * as THREE from "three";
+import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
 import View from "oxalis/view";
 import SceneController from "oxalis/controller/scene_controller";
@@ -35,7 +35,7 @@ class PlaneController {
   activeViewport: ViewType;
   cameraController: CameraController;
   zoomPos: Vector3;
-  controls: THREE.TrackballControls;
+  controls: TrackballControls;
   canvasesAndNav: any;
   TDViewControls: any;
   bindings: Array<any>;
@@ -161,7 +161,7 @@ class PlaneController {
   initTrackballControls() {
     const view = $("#TDView")[0];
     const pos = scaleInfo.voxelToNm(this.flycam.getPosition());
-    this.controls = new THREE.TrackballControls(
+    this.controls = new TrackballControls(
       this.planeView.getCameras()[constants.TDView],
       view,
       new THREE.Vector3(...pos),
@@ -325,7 +325,7 @@ class PlaneController {
       if (this.sceneController.pingDataLayer(dataLayerName)) {
         this.model.binary[dataLayerName].ping(this.flycam.getPosition(), {
           zoomStep: this.flycam.getIntegerZoomStep(),
-          area: this.flycam.getAreas(),
+          areas: this.flycam.getAreas(),
           activePlane: this.activeViewport,
         });
       }

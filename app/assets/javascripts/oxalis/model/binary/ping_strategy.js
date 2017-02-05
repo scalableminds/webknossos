@@ -5,12 +5,13 @@
 
 import _ from "lodash";
 import Utils from "libs/utils";
-import Cube from "oxalis/model/binary/cube";
+import Cube from "oxalis/model/binary/data_cube";
 import Dimensions from "../dimensions";
+import { BUCKET_SIZE_P } from "./bucket";
 
 const MAX_ZOOM_STEP_DIFF = 1;
 
-class PingStrategy {
+export class PingStrategy {
 
   cube: Cube;
   velocityRangeStart: number;
@@ -62,8 +63,8 @@ class PingStrategy {
     const uOffset = Math.ceil(width / 2);
     const vOffset = Math.ceil(height / 2);
 
-    for (const u of Utils.__range__(-uOffset, uOffset, true)) {
-      for (const v of Utils.__range__(-vOffset, vOffset, true)) {
+    for (let u = -uOffset; u <= uOffset; u++) {
+      for (let v = -vOffset; v <= vOffset; v++) {
         const bucket = center.slice(0);
         bucket[this.u] += u;
         bucket[this.v] += v;
@@ -110,10 +111,10 @@ class BaseStrategy extends PingStrategy {
 
       // Converting area from voxels to buckets
       const bucketArea = [
-        areas[plane][0] >> this.cube.BUCKET_SIZE_P,
-        areas[plane][1] >> this.cube.BUCKET_SIZE_P,
-        (areas[plane][2] - 1) >> this.cube.BUCKET_SIZE_P,
-        (areas[plane][3] - 1) >> this.cube.BUCKET_SIZE_P,
+        areas[plane][0] >> BUCKET_SIZE_P,
+        areas[plane][1] >> BUCKET_SIZE_P,
+        (areas[plane][2] - 1) >> BUCKET_SIZE_P,
+        (areas[plane][3] - 1) >> BUCKET_SIZE_P,
       ];
       const width = (bucketArea[2] - bucketArea[0]) << zoomStepDiff;
       const height = (bucketArea[3] - bucketArea[1]) << zoomStepDiff;
@@ -163,5 +164,3 @@ export class Volume extends BaseStrategy {
     this.preloadingPriorityOffset = 80;
   }
 }
-
-export default PingStrategy;

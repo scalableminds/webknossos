@@ -24,7 +24,8 @@
       "browser": false,
       "Airbrake": false,
       "routes": false,
-      "jsRoutes": false
+      "jsRoutes": false,
+      "JQuery": false
     },
     "rules": {
       "quotes": ["error", "double"],
@@ -52,6 +53,7 @@
       "one-var": ["error", "never"],
       "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
       "import/no-unresolved": "off",
-      "quote-props": ["error", "as-needed", {"numbers": true}]
+      "quote-props": ["error", "as-needed", {"numbers": true}],
+      "react/sort-comp": ["error", {"order": ["type-annotations", "static-methods", "lifecycle", "everything-else", "render"]}]
     }
 }

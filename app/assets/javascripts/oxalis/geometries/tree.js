@@ -7,9 +7,8 @@ import app from "app";
 import Utils from "libs/utils";
 import ResizableBuffer from "libs/resizable_buffer";
 import ErrorHandling from "libs/error_handling";
-import THREE from "three";
+import * as THREE from "three";
 import TWEEN from "tween.js";
-import ColorConverter from "three.color";
 import Model from "oxalis/model";
 import ParticleMaterialFactory from "./materials/particle_material_factory";
 
@@ -34,34 +33,40 @@ class Tree {
     const edgeGeometry = new THREE.BufferGeometry();
     const nodeGeometry = new THREE.BufferGeometry();
 
-    edgeGeometry.addAttribute("position", Float32Array, 0, 3);
-    nodeGeometry.addAttribute("position", Float32Array, 0, 3);
-    nodeGeometry.addAttribute("sizeNm", Float32Array, 0, 1);
-    nodeGeometry.addAttribute("nodeScaleFactor", Float32Array, 0, 1);
-    nodeGeometry.addAttribute("color", Float32Array, 0, 3);
+    this.nodeIDs = new ResizableBuffer(1, 100, Int32Array);
+    this.edgesBuffer = new ResizableBuffer(6);
+    this.nodesBuffer = new ResizableBuffer(3);
+    this.sizesBuffer = new ResizableBuffer(1);
+    this.scalesBuffer = new ResizableBuffer(1);
+    this.nodesColorBuffer = new ResizableBuffer(3);
 
-    this.nodeIDs = nodeGeometry.nodeIDs = new ResizableBuffer(1, 100, Int32Array);
-    edgeGeometry.dynamic = true;
-    nodeGeometry.dynamic = true;
+    edgeGeometry.addAttribute("position", this.makeDynamicFloatAttribute(3, this.edgesBuffer));
+    nodeGeometry.addAttribute("position", this.makeDynamicFloatAttribute(3, this.nodesBuffer));
+    nodeGeometry.addAttribute("sizeNm", this.makeDynamicFloatAttribute(1, this.sizesBuffer));
+    nodeGeometry.addAttribute("nodeScaleFactor", this.makeDynamicFloatAttribute(1, this.scalesBuffer));
+    nodeGeometry.addAttribute("color", this.makeDynamicFloatAttribute(3, this.nodesColorBuffer));
 
-    this.edgesBuffer = edgeGeometry.attributes.position.rBuffer = new ResizableBuffer(6);
-    this.nodesBuffer = nodeGeometry.attributes.position.rBuffer = new ResizableBuffer(3);
-    this.sizesBuffer = nodeGeometry.attributes.sizeNm.rBuffer = new ResizableBuffer(1);
-    this.scalesBuffer = nodeGeometry.attributes.nodeScaleFactor.rBuffer = new ResizableBuffer(1);
-    this.nodesColorBuffer = nodeGeometry.attributes.color.rBuffer = new ResizableBuffer(3);
+    nodeGeometry.nodeIDs = this.nodeIDs;
 
-    this.edges = new THREE.Line(
+    this.edges = new THREE.LineSegments(
       edgeGeometry,
       new THREE.LineBasicMaterial({
         color: this.darkenHex(treeColor),
-        linewidth: this.getLineWidth() }),
-      THREE.LinePieces,
+        linewidth: this.getLineWidth(),
+      }),
     );
 
     this.particleMaterial = new ParticleMaterialFactory(this.model).getMaterial();
-    this.nodes = new THREE.ParticleSystem(nodeGeometry, this.particleMaterial);
+
+    this.nodes = new THREE.Points(nodeGeometry, this.particleMaterial);
 
     this.id = treeId;
+  }
+
+  makeDynamicFloatAttribute(itemSize, resizableBuffer) {
+    const attr = new THREE.BufferAttribute(resizableBuffer.getBuffer(), itemSize);
+    attr.setDynamic(true);
+    return attr;
   }
 
 
@@ -81,7 +86,7 @@ class Tree {
 
 
   addNode(node) {
-    this.nodesBuffer.push(node.pos);
+    this.nodesBuffer.push(node.position);
     this.sizesBuffer.push([node.radius * 2]);
     this.scalesBuffer.push([1.0]);
     this.nodeIDs.push([node.id]);
@@ -92,7 +97,7 @@ class Tree {
     //             greater id as its neighbor
     for (const neighbor of node.neighbors) {
       if (neighbor.id < node.id) {
-        this.edgesBuffer.push(neighbor.pos.concat(node.pos));
+        this.edgesBuffer.push(neighbor.position.concat(node.position));
       }
     }
 
@@ -169,9 +174,9 @@ class Tree {
     // ASSUMPTION: edges always go from smaller ID to bigger ID
 
     if (node1.id < node2.id) {
-      return node1.pos.concat(node2.pos);
+      return node1.position.concat(node2.position);
     } else {
-      return node2.pos.concat(node1.pos);
+      return node2.position.concat(node1.position);
     }
   }
 
@@ -192,7 +197,7 @@ class Tree {
 
 
   getMeshes() {
-    return [this.edges, this.nodes];
+    return [this.nodes, this.edges];
   }
 
 
@@ -289,14 +294,51 @@ class Tree {
 
 
   updateGeometries() {
-    [this.edges, this.nodes].forEach((mesh) => {
-      for (const attr of Object.keys(mesh.geometry.attributes)) {
-        const a = mesh.geometry.attributes[attr];
-        a.array = a.rBuffer.getBuffer();
-        a.numItems = a.rBuffer.getBufferLength();
-        a.needsUpdate = true;
-      }
+    this.updateGeometry(this.nodes, {
+      position: [3, this.nodesBuffer],
+      sizeNm: [1, this.sizesBuffer],
+      nodeScaleFactor: [1, this.scalesBuffer],
+      color: [3, this.nodesColorBuffer],
     });
+
+    this.updateGeometry(this.edges, {
+      position: [3, this.edgesBuffer],
+    }, 2);
+  }
+
+
+  updateGeometry(mesh, attribute2buffer, itemsPerElement = 1) {
+    let length = -1;
+    let needsToRebuildGeometry = false;
+    for (const attribute of Object.keys(attribute2buffer)) {
+      const rBuffer = attribute2buffer[attribute][1];
+
+      if (length === -1) {
+        length = rBuffer.getLength();
+      } else {
+        ErrorHandling.assertEquals(rBuffer.getLength(), length,
+          "All attribute lengths should be equal.");
+      }
+
+      if (mesh.geometry.attributes[attribute].array !== rBuffer.getBuffer()) {
+        // The reference of the underlying buffer has changed. Unfortunately,
+        // this means that we have to re-create all of the attributes.
+        needsToRebuildGeometry = true;
+      }
+      mesh.geometry.attributes[attribute].needsUpdate = true;
+    }
+
+    if (needsToRebuildGeometry) {
+      // Free any memory allocated on the GPU
+      mesh.geometry.dispose();
+      for (const attribute of Object.keys(attribute2buffer)) {
+        // Recreate attribute
+        const [itemSize, rBuffer] = attribute2buffer[attribute];
+        mesh.geometry.addAttribute(attribute, this.makeDynamicFloatAttribute(itemSize, rBuffer));
+      }
+    }
+    mesh.geometry.computeBoundingSphere();
+    mesh.geometry.setDrawRange(0, length * itemsPerElement);
   }
 
 
@@ -310,7 +352,7 @@ class Tree {
 
 
   getNodeIndex(nodeId) {
-    for (const i of Utils.__range__(0, this.nodeIDs.length, true)) {
+    for (let i = 0; i < this.nodeIDs.length; i++) {
       if (this.nodeIDs.get(i) === nodeId) {
         return i;
       }
@@ -340,16 +382,16 @@ class Tree {
 
 
   darkenHex(hexColor) {
-    const hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor));
-    hsvColor.v = 0.6;
-    return ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex();
+    const hslColor = new THREE.Color(hexColor).getHSL();
+    hslColor.l = 0.25;
+    return new THREE.Color().setHSL(hslColor.h, hslColor.s, hslColor.l).getHex();
   }
 
 
   shiftHex(hexColor, shiftValue) {
-    const hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor));
-    hsvColor.h = (hsvColor.h + shiftValue) % 1;
-    return ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex();
+    const hslColor = new THREE.Color(hexColor).getHSL();
+    hslColor.h = (hslColor.h + shiftValue) % 1;
+    return new THREE.Color().setHSL(hslColor.h, hslColor.s, hslColor.l).getHex();
   }
 
 

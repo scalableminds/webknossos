@@ -14,8 +14,10 @@ import constants from "../constants";
 import type { Vector3, Vector4 } from "../constants";
 
 const Flycam2dConstants = {
+  // maximum difference between requested coordinate and actual texture position
   MAX_TEXTURE_OFFSET: 31,
   MAX_ZOOM_THRESHOLD: 2,
+  PIXEL_RAY_THRESHOLD: 10,
 };
 
 class Flycam2d {
@@ -33,6 +35,7 @@ class Flycam2d {
   rayThreshold: Vector4;
   spaceDirection: Vector3;
   quality: number;
+  voxelPerPixel3DView: number;
 
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
@@ -56,7 +59,7 @@ class Flycam2d {
     this.buffer = [[0, 0], [0, 0], [0, 0]];
     this.position = [0, 0, 0];
     this.direction = [0, 0, 1];
-    this.rayThreshold = [10, 10, 10, 100];
+    this.voxelPerPixel3DView = 100;
     this.spaceDirection = [1, 1, 1];
     this.quality = 0; // offset of integer zoom step to the best-quality zoom level
 
@@ -340,17 +343,17 @@ class Flycam2d {
   }
 
 
-  setRayThreshold(cameraRight, cameraLeft) {
-    // in nm
-    this.rayThreshold[constants.TDView] = (8 * (cameraRight - cameraLeft)) / 384;
+  update3DViewSize(cameraRight, cameraLeft) {
+    this.voxelPerPixel3DView = (cameraRight - cameraLeft) / constants.VIEWPORT_WIDTH / scaleInfo.baseVoxel;
   }
 
 
   getRayThreshold(planeID) {
+    // Voxel threshold used for ray tracing
     if (planeID < 3) {
-      return this.rayThreshold[planeID] * Math.pow(2, this.zoomStep) * scaleInfo.baseVoxel;
+      return Flycam2dConstants.PIXEL_RAY_THRESHOLD * Math.pow(2, this.zoomStep);
     } else {
-      return this.rayThreshold[planeID];
+      return Flycam2dConstants.PIXEL_RAY_THRESHOLD * this.voxelPerPixel3DView;
     }
   }
 

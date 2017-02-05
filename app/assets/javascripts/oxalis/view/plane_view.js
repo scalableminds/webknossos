@@ -1,23 +1,43 @@
+/**
+ * plane_view.js
+ * @flow
+ */
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
 import TWEEN from "tween.js";
-import THREE from "three";
 import scaleInfo from "oxalis/model/scaleinfo";
+import * as THREE from "three";
 import modal from "./modal";
 import Toast from "../../libs/toast";
 import constants from "../constants";
+import Model from "../model";
+import View from "../view";
 
 class PlaneView {
 
-  constructor(model, view) {
+  // Copied form backbone events (TODO: handle this better)
+  trigger: Function;
+  on: Function;
+  listenTo: Function;
+
+  model: Model;
+  view: View;
+  renderer: THREE.WebGLRenderer;
+  cameras: Array<THREE.OrthographicCamera>;
+  group: THREE.Object3D;
+  scene: THREE.Scene;
+
+  running: boolean;
+  needsRerender: boolean;
+  curWidth: number;
+  deviceScaleFactor: number;
+  scaleFactor: number;
+
+  constructor(model: Model, view: View) {
     let HEIGHT;
     let WIDTH;
-    this.resize = this.resize.bind(this);
-    this.scaleTrianglesPlane = this.scaleTrianglesPlane.bind(this);
-    this.setActiveViewport = this.setActiveViewport.bind(this);
-    this.getCameras = this.getCameras.bind(this);
     this.model = model;
     this.view = view;
     _.extend(this, Backbone.Events);
@@ -33,28 +53,27 @@ class PlaneView {
     // Create a 4x4 grid
     this.curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH;
     this.scaleFactor = 1;
-    this.deviceScaleFactor = window.devicePixelRatio || 1;
 
     // Initialize main THREE.js components
-    this.camera = new Array(4);
-    this.lights = new Array(3);
+    this.cameras = new Array(4);
 
     for (const i of constants.ALL_VIEWPORTS) {
       // Let's set up cameras
-      // No need to set any properties, because the camera controller will deal with that
-      this.camera[i] = new THREE.OrthographicCamera(0, 0, 0, 0);
-      this.scene.add(this.camera[i]);
+      // No need to set any properties, because the cameras controller will deal with that
+      this.cameras[i] = new THREE.OrthographicCamera(0, 0, 0, 0);
+      this.scene.add(this.cameras[i]);
     }
 
-    this.camera[constants.PLANE_XY].position.z = -1;
-    this.camera[constants.PLANE_YZ].position.x = 1;
-    this.camera[constants.PLANE_XZ].position.y = 1;
-    this.camera[constants.TDView].position = new THREE.Vector3(10, 10, -10);
-    this.camera[constants.PLANE_XY].up = new THREE.Vector3(0, -1, 0);
-    this.camera[constants.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
-    this.camera[constants.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
-    this.camera[constants.TDView].up = new THREE.Vector3(0, 0, -1);
-    for (const cam of this.camera) {
+
+    this.cameras[constants.PLANE_XY].position.z = -1;
+    this.cameras[constants.PLANE_YZ].position.x = 1;
+    this.cameras[constants.PLANE_XZ].position.y = 1;
+    this.cameras[constants.TDView].position.copy(new THREE.Vector3(10, 10, -10));
+    this.cameras[constants.PLANE_XY].up = new THREE.Vector3(0, -1, 0);
+    this.cameras[constants.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
+    this.cameras[constants.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
+    this.cameras[constants.TDView].up = new THREE.Vector3(0, 0, -1);
+    for (const cam of this.cameras) {
       cam.lookAt(new THREE.Vector3(0, 0, 0));
     }
 
@@ -65,7 +84,7 @@ class PlaneView {
     // scene.scale does not have an effect.
     this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale = scaleInfo.getNmPerVoxelVector();
+    this.group.scale.copy(scaleInfo.getNmPerVoxelVector());
     // Add scene to the group, all Geometries are than added to group
     this.scene.add(this.group);
 
@@ -83,9 +102,6 @@ class PlaneView {
     container.append(this.renderer.domElement);
 
     this.setActiveViewport(constants.PLANE_XY);
-
-    this.first = true;
-    this.newTextures = [true, true, true, true];
 
     this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
@@ -111,11 +127,11 @@ class PlaneView {
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
 
-    let modelChanged = false;
+    let modelChanged: boolean = false;
     for (const name of Object.keys(this.model.binary)) {
       const binary = this.model.binary[name];
       for (const plane of binary.planes) {
-        modelChanged |= plane.hasChanged();
+        modelChanged = modelChanged || plane.hasChanged();
       }
     }
 
@@ -133,7 +149,7 @@ class PlaneView {
       const setupRenderArea = (x, y, width, color) => {
         this.renderer.setViewport(x, y, width, width);
         this.renderer.setScissor(x, y, width, width);
-        this.renderer.enableScissorTest(true);
+        this.renderer.setScissorTest(true);
         this.renderer.setClearColor(color, 1);
       };
 
@@ -143,19 +159,19 @@ class PlaneView {
       for (const i of constants.ALL_VIEWPORTS) {
         this.trigger("renderCam", i);
         setupRenderArea(
-          viewport[i][0] * this.deviceScaleFactor,
-          viewport[i][1] * this.deviceScaleFactor,
-          this.curWidth * this.deviceScaleFactor,
+          viewport[i][0],
+          viewport[i][1],
+          this.curWidth,
           constants.PLANE_COLORS[i],
         );
-        this.renderer.render(this.scene, this.camera[i]);
+        this.renderer.render(this.scene, this.cameras[i]);
       }
 
       this.needsRerender = false;
     }
   }
 
-  addGeometry(geometry) {
+  addGeometry(geometry: THREE.Geometry): void {
     // Adds a new Three.js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
 
@@ -163,7 +179,7 @@ class PlaneView {
   }
 
 
-  removeGeometry(geometry) {
+  removeGeometry(geometry: THREE.Geometry): void {
     this.group.remove(geometry);
     this.draw();
   }
@@ -174,7 +190,7 @@ class PlaneView {
   }
 
 
-  resizeThrottled() {
+  resizeThrottled = () => {
     // throttle resize to avoid annoying flickering
     this.resizeThrottled = _.throttle(
       () => {
@@ -184,10 +200,10 @@ class PlaneView {
       constants.RESIZE_THROTTLE_TIME,
     );
     this.resizeThrottled();
-  }
+  };
 
 
-  resize() {
+  resize = () => {
     // Call this after the canvas was resized to fix the viewport
     const canvas = $("#render-canvas");
     const WIDTH = (canvas.width() - 20) / 2;
@@ -195,14 +211,14 @@ class PlaneView {
 
     this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
     for (const i of constants.ALL_VIEWPORTS) {
-      this.camera[i].aspect = WIDTH / HEIGHT;
-      this.camera[i].updateProjectionMatrix();
+      this.cameras[i].aspect = WIDTH / HEIGHT;
+      this.cameras[i].updateProjectionMatrix();
     }
     this.draw();
-  }
+  };
 
 
-  scaleTrianglesPlane(scale) {
+  scaleTrianglesPlane = (scale: number): void => {
     let HEIGHT;
     let WIDTH;
     this.scaleFactor = scale;
@@ -220,10 +236,10 @@ class PlaneView {
       });
 
     this.resizeThrottled();
-  }
+  };
 
 
-  setActiveViewport(viewportID) {
+  setActiveViewport = (viewportID: number): void => {
     for (let i = 0; i <= 3; i++) {
       if (i === viewportID) {
         $(".inputcatcher").eq(i).removeClass("inactive").addClass("active");
@@ -233,15 +249,15 @@ class PlaneView {
     }
 
     this.draw();
-  }
+  };
 
 
   getCameras() {
-    return this.camera;
+    return this.cameras;
   }
 
 
-  showBranchModalDouble(callback) {
+  showBranchModalDouble(callback: () => void) {
     modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
       "Jump again?",
       [{ id: "jump-button", label: "Jump again", callback },
@@ -249,7 +265,7 @@ class PlaneView {
   }
 
 
-  showBranchModalDelete(callback) {
+  showBranchModalDelete(callback: () => void) {
     modal.show("You are about to delete an unused branchpoint, are you sure?",
       "Delete branchpoint?",
       [{ id: "delete-button", label: "Delete branchpoint", callback },

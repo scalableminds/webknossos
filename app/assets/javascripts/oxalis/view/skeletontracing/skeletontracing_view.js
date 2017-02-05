@@ -1,3 +1,8 @@
+/**
+ * skeletontracing_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
@@ -6,6 +11,8 @@ import modal from "../modal";
 import View from "../../view";
 
 class SkeletonTracingView extends View {
+  // Copied from backbone events (TODO: handle this better)
+  listenTo: Function;
 
   constructor(model) {
     super(model);

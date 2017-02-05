@@ -7,7 +7,7 @@ import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
-import THREE from "three";
+import * as THREE from "three";
 import Flycam2d from "oxalis/model/flycam2d";
 import Model from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
@@ -33,7 +33,7 @@ class SceneController {
   pingBinary: boolean;
   pingBinarySeg: boolean;
   volumeMeshes: any;
-  polygonFactory: PolygonFactory;
+  polygonFactory: ?PolygonFactory;
   cube: Cube;
   userBoundingBox: Cube;
   taskBoundingBox: Cube;
@@ -100,10 +100,13 @@ class SceneController {
     }
 
     // create Meshes
-    this.planes = new Array(3);
-    for (const i of [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]) {
-      this.planes[i] = new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, this.flycam, i, this.model);
-    }
+    const createPlane = planeIndex => new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, this.flycam, planeIndex, this.model);
+
+    this.planes = [
+      createPlane(constants.PLANE_XY),
+      createPlane(constants.PLANE_YZ),
+      createPlane(constants.PLANE_XZ),
+    ];
 
     this.planes[constants.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
     this.planes[constants.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));

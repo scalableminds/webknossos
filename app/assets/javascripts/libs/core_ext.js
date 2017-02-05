@@ -1,41 +1,5 @@
 import Backbone from "backbone";
-import _ from "lodash";
 import Request from "./request";
-
-_.mixin({
-
-  toCamelCase(string) {
-    return `${string[0].toLowerCase}${string.substring(1)}`;
-  },
-
-
-  // Returns a wrapper function that rejects all invocations while an
-  // instance of the function is still running. The mutex can be
-  // cleared with a predefined timeout. The wrapped function is
-  // required to return a `Promise` at all times.
-  mutexPromise(func, timeout = 20000) {
-    let promise = null;
-
-    return function (...args) {
-      if (!promise) {
-        let internalPromise;
-        promise = internalPromise = func.apply(this, args);
-        if (timeout >= 0) {
-          setTimeout((() => {
-            if (promise === internalPromise) { promise = null; }
-          }), timeout);
-        }
-        promise.then(
-          () => { promise = null; },
-          () => { promise = null; });
-        return promise;
-      } else {
-        return Promise.reject("mutex");
-      }
-    };
-  },
-});
-
 
 // changes Backbone ajax to use Request library instead of jquery ajax
 Backbone.ajax = function (options) {
@@ -44,7 +8,6 @@ Backbone.ajax = function (options) {
     options.params = options.data;
     delete options.data;
   }
-
 
   return Request.sendJSONReceiveJSON(
     options.url, {

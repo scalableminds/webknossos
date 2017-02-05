@@ -1,10 +1,23 @@
+/**
+ * comment_list.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Utils from "libs/utils";
 import React, { Component } from "react";
+import TraceTree from "oxalis/model/skeletontracing/tracetree";
 import TreeCommentList from "./tree_comment_list";
 
+type StateType = {
+  data: Array<TraceTree>;
+  activeNodeId: number;
+  activeTreeId?: number;
+  isSortedAscending: boolean;
+};
 
 class CommentList extends Component {
+  state: StateType
 
   constructor() {
     super();

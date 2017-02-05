@@ -1,11 +1,22 @@
+/**
+ * scaleinfo.js
+ * @flow weak
+ */
+
 import Utils from "libs/utils";
-import THREE from "three";
+import * as THREE from "three";
+import type { Vector3 } from "../constants";
+
 // This class encapsulates any conversions between the nm and voxel
 // coordinate system.
 // It is a Singleton that is initalized once.
 // Include with import scaleInfo from "oxalis/model/scaleinfo"
 
 class ScaleInfo {
+  baseVoxel: number;
+  baseVoxelFactors: Vector3;
+  nmPerVoxel: Vector3;
+  voxelPerNM: Vector3;
 
   initialize(scale) {
     this.nmPerVoxel = scale;
@@ -37,15 +48,6 @@ class ScaleInfo {
 
   voxelToNm(posArray) {
     return [0, 1, 2].map(i => posArray[i] * this.nmPerVoxel[i]);
-  }
-
-
-  baseVoxelToVoxel(baseVoxel) {
-    let res = this.baseVoxelFactors.slice();
-    for (let i = 0; i <= 2; i++) {
-      res *= baseVoxel;
-    }
-    return res;
   }
 }
 

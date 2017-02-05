@@ -9,7 +9,7 @@ import Subviews from "backbone-subviews";
 import _ from "lodash";
 import CheckboxSettingView from "oxalis/view/settings/setting_views/checkbox_setting_view";
 import Binary from "oxalis/model/binary";
-import Cube from "oxalis/model/binary/cube";
+import Cube from "oxalis/model/binary/data_cube";
 import Flycam2d from "oxalis/model/flycam2d";
 
 const RENDER_DEBOUNCE_TIME = 200;

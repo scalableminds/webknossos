@@ -5,6 +5,7 @@
 
 import Backbone from "backbone";
 import _ from "lodash";
+import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import Utils from "../libs/utils";
 import Binary from "./model/binary";
 import SkeletonTracing from "./model/skeletontracing/skeletontracing";
@@ -16,7 +17,7 @@ import scaleInfo from "./model/scaleinfo";
 import Flycam2d from "./model/flycam2d";
 import Flycam3d from "./model/flycam3d";
 import constants from "./constants";
-import type { ModeType, Vector3 } from "./constants";
+import type { ModeType, Vector3, Vector4 } from "./constants";
 import Request from "../libs/request";
 import Toast from "../libs/toast";
 import ErrorHandling from "../libs/error_handling";
@@ -29,9 +30,20 @@ import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 // All public operations are **asynchronous**. We return a promise
 // which you can react on.
 
+export type BranchPoint = {
+  id: number;
+  timestamp: number;
+}
 export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
+};
+export type LayerType = WkLayer | NdStoreLayer;
+export type RestrictionsType = {
+  allowAccess: boolean,
+  allowUpdate: boolean,
+  allowFinish: boolean,
+  allowDownload: boolean,
 };
 type Settings = {
   advancedOptionsAllowed: boolean,
@@ -39,16 +51,48 @@ type Settings = {
   branchPointsAllowed: boolean,
   somaClickingAllowed: boolean,
 };
-type Tracing = {
+export type CommentType = {
+  node: number;
+  comment: string;
+};
+export type TreeData = {
+  id: number;
+  color: Vector4;
+  name: string;
+  timestamp: number;
+  comments: Array<CommentType>;
+  branchPoints: Array<BranchPoint>;
+  edges: Array<{source: number, target: number}>;
+  nodes: Array<Tracepoint>;
+};
+
+export type BoundingBoxObjectType = {
+  topLeft: Vector3,
+  width: number,
+  height: number,
+  depth: number,
+};
+
+export type SkeletonContentDataType = {
+  activeNode: null | number;
+  trees: Array<TreeData>;
+  zoomLevel: number;
+  customLayers: null;
+};
+
+export type VolumeContentDataType = {
+  activeCell: null | number;
+  customLayers: Array<Object>;
+  maxCoordinates: BoundingBoxObjectType;
+  customLayers: ?Array<Object>;
+  name: string;
+};
+
+export type Tracing = {
   actions: Array<any>,
   content: {
-    boundingBox: {
-      topLeft: Vector3,
-      width: number,
-      height: number,
-      depth: number,
-    },
-    contentData: Object,
+    boundingBox: BoundingBoxObjectType,
+    contentData: VolumeContentDataType | SkeletonContentDataType,
     contentType: string,
     dataSet: Object,
     editPosition: Vector3,
@@ -62,7 +106,7 @@ type Tracing = {
   formattedHash: string,
   id: string,
   name: string,
-  restrictions: any,
+  restrictions: RestrictionsType,
   state: any,
   stateLabel: string,
   stats: any,

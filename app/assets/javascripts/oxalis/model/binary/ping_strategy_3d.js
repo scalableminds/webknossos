@@ -5,9 +5,9 @@
 
 import { M4x4 } from "libs/mjs";
 import PolyhedronRasterizer from "./polyhedron_rasterizer";
-import PingStrategy from "./ping_strategy";
+import { PingStrategy } from "./ping_strategy";
 
-class PingStrategy3d extends PingStrategy {
+export class PingStrategy3d extends PingStrategy {
 
   static DslSlow : PingStrategy3d.DslSlow;
 
@@ -77,5 +77,3 @@ export class DslSlow extends PingStrategy3d {
     return pullQueue;
   }
 }
-
-export default PingStrategy3d;

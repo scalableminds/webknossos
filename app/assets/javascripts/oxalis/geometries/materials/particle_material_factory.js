@@ -13,8 +13,8 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  setupAttributesAndUniforms() {
-    super.setupAttributesAndUniforms();
+  setupUniforms() {
+    super.setupUniforms();
 
     this.uniforms = _.extend(this.uniforms, {
       zoomFactor: {
@@ -36,20 +36,6 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
       showRadius: {
         type: "i",
         value: 1,
-      },
-      devicePixelRatio: {
-        type: "f",
-        value: window.devicePixelRatio || 1,
-      },
-    },
-    );
-
-    this.attributes = _.extend(this.attributes, {
-      sizeNm: {
-        type: "f",
-      },
-      nodeScaleFactor: {
-        type: "f",
       },
     },
     );
@@ -93,7 +79,6 @@ uniform float baseVoxel;
 uniform float particleSize;
 uniform float scale;
 uniform int   showRadius;
-uniform float devicePixelRatio;
 varying vec3 vColor;
 attribute float sizeNm;
 attribute float nodeScaleFactor;
@@ -106,7 +91,7 @@ void main()
       gl_PointSize = max(
           sizeNm / zoomFactor / baseVoxel,
           particleSize
-        ) * devicePixelRatio * scale * nodeScaleFactor;
+        ) * scale * nodeScaleFactor;
     else
       gl_PointSize = particleSize * nodeScaleFactor;
     gl_Position = projectionMatrix * mvPosition;

@@ -18,7 +18,7 @@ type UserType = {
 class OxalisApplication extends Marionette.Application {
 
   router: Router;
-  oxalis: OxalisController;
+  oxalis: ?OxalisController;
   currentUser: UserType;
 }
 

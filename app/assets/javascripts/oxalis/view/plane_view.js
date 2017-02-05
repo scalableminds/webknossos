@@ -7,6 +7,7 @@ import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
 import TWEEN from "tween.js";
+import scaleInfo from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import modal from "./modal";
 import Toast from "../../libs/toast";
@@ -83,7 +84,7 @@ class PlaneView {
     // scene.scale does not have an effect.
     this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale.copy(app.scaleInfo.getNmPerVoxelVector());
+    this.group.scale.copy(scaleInfo.getNmPerVoxelVector());
     // Add scene to the group, all Geometries are than added to group
     this.scene.add(this.group);
 

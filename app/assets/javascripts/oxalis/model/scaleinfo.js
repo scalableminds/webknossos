@@ -9,6 +9,8 @@ import type { Vector3 } from "../constants";
 
 // This class encapsulates any conversions between the nm and voxel
 // coordinate system.
+// It is a Singleton that is initalized once.
+// Include with import scaleInfo from "oxalis/model/scaleinfo"
 
 class ScaleInfo {
   baseVoxel: number;
@@ -16,7 +18,7 @@ class ScaleInfo {
   nmPerVoxel: Vector3;
   voxelPerNM: Vector3;
 
-  constructor(scale) {
+  initialize(scale) {
     this.nmPerVoxel = scale;
 
     this.voxelPerNM = [0, 0, 0];
@@ -49,4 +51,4 @@ class ScaleInfo {
   }
 }
 
-export default ScaleInfo;
+export default new ScaleInfo();

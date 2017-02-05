@@ -18,6 +18,9 @@ const Request = { receiveJSON: sinon.stub() };
 const ErrorHandling = {
   assertExtendContext: _.noop,
 };
+const scaleInfo = {
+  initialize: _.noop,
+};
 
 class Binary {
   category = "color"
@@ -38,7 +41,7 @@ mockRequire("../../libs/request", Request);
 mockRequire("../../libs/error_handling", ErrorHandling);
 mockRequire("app", {});
 mockRequire("../../oxalis/model/binary", Binary);
-mockRequire("../../oxalis/model/scaleinfo", _.noop);
+mockRequire("../../oxalis/model/scaleinfo", scaleInfo);
 mockRequire("../../oxalis/model/flycam2d", Flycam2d);
 mockRequire("../../oxalis/model/flycam3d", _.noop);
 mockRequire("../../oxalis/model/skeletontracing/skeletontracing", _.noop);

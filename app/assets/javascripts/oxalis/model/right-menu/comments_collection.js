@@ -1,14 +1,20 @@
+/**
+ * comments_collection.js
+ * @flow weak
+ */
+
 import Backbone from "backbone";
 
 class CommentsCollection extends Backbone.Collection {
 
+  coefficient: number;
 
   intitalize() {
     this.coefficient = 1;
   }
 
 
-  comparator(model) {
+  comparator = function comparator(model) {
     return model.get("node") * this.coefficient;
   }
 

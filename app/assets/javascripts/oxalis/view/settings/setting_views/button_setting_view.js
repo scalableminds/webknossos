@@ -29,7 +29,11 @@ class ButtonSettingView extends Marionette.View {
 
 
   handleClick() {
-    return this.model[this.options.callbackName]();
+    if (this.options.callbackName) {
+      this.model[this.options.callbackName]();
+    } else if (this.options.eventName) {
+      this.model.trigger(this.options.eventName);
+    }
   }
 }
 ButtonSettingView.initClass();

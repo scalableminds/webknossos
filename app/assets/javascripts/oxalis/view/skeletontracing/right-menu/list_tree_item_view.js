@@ -7,8 +7,13 @@ import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
+import ListTreeView from "./list_tree_view";
 
 class ListTreeItemView extends Marionette.View {
+
+  activeTreeId: number;
+  parent: ListTreeView;
+
   static initClass() {
     this.prototype.tagName = "li";
     this.prototype.template = _.template(`\
@@ -24,7 +29,7 @@ class ListTreeItemView extends Marionette.View {
       { "click a": "setActive" };
   }
 
-  templateContext() {
+  templateContext = function templateContext() {
     return {
       getIcon: () => {
         if (this.model.get("treeId") === this.activeTreeId) {

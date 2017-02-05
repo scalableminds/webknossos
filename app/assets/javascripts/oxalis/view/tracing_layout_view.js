@@ -24,10 +24,15 @@ import ViewmodeRightMenuView from "./viewmode/viewmode_right_menu_view";
 import UserScriptsModalView from "./user_scripts_modal";
 import TracingView from "./tracing_view";
 
-class TracingLayoutView extends Marionette.View {
-  static initClass() {
-    this.prototype.MARGIN = 40;
+const MARGIN = 40;
 
+class TracingLayoutView extends Marionette.View {
+
+  traceTemplate: (data: Object) => string;
+  viewTemplate: (data: Object) => string;
+  rightMenuView: Marionette.View<*>;
+
+  static initClass() {
     this.prototype.className = "text-nowrap";
 
     this.prototype.traceTemplate = _.template(`\
@@ -88,7 +93,6 @@ class TracingLayoutView extends Marionette.View {
     this.model = this.options.model;
     this.options.adapterModel = new BackboneToOxalisAdapterModel(this.model);
 
-    this.listenTo(this, "render", this.afterRender);
     this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
     this.listenTo(this.model, "change:mode", this.renderSettings);
     this.listenTo(this.model, "sync", this.renderRegions);
@@ -112,7 +116,7 @@ class TracingLayoutView extends Marionette.View {
       const menuPosition = this.ui.rightMenu.position();
       const slidingCanvasOffset = this.ui.slidingCanvas.position().left;
 
-      const newWidth = window.innerWidth - menuPosition.left - slidingCanvasOffset - this.MARGIN;
+      const newWidth = window.innerWidth - menuPosition.left - slidingCanvasOffset - MARGIN;
 
       if (menuPosition.left < window.innerWidth && newWidth > 350) {
         this.ui.rightMenu.width(newWidth);

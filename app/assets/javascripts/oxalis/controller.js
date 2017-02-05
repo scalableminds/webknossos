@@ -148,18 +148,16 @@ class Controller {
 
     // Zoom step warning
     this.zoomStepWarningToast = null;
-    this.model.flycam.on({
-      zoomStepChanged: () => {
-        const shouldWarn = !this.model.canDisplaySegmentationData();
-        if (shouldWarn && (this.zoomStepWarningToast == null)) {
-          const toastType = (this.model.volumeTracing != null) ? "danger" : "info";
-          this.zoomStepWarningToast = Toast.message(toastType,
-            "Segmentation data is only fully supported at a smaller zoom level.", true);
-        } else if (!shouldWarn && (this.zoomStepWarningToast != null)) {
-          this.zoomStepWarningToast.remove();
-          this.zoomStepWarningToast = null;
-        }
-      },
+    this.listenTo(this.model.flycam, "zoomStepChanged", () => {
+      const shouldWarn = !this.model.canDisplaySegmentationData();
+      if (shouldWarn && (this.zoomStepWarningToast == null)) {
+        const toastType = (this.model.volumeTracing != null) ? "danger" : "info";
+        this.zoomStepWarningToast = Toast.message(toastType,
+          "Segmentation data is only fully supported at a smaller zoom level.", true);
+      } else if (!shouldWarn && (this.zoomStepWarningToast != null)) {
+        this.zoomStepWarningToast.remove();
+        this.zoomStepWarningToast = null;
+      }
     });
   }
 

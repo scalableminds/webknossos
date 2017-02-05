@@ -7,6 +7,7 @@ import Backbone from "backbone";
 import _ from "lodash";
 import Utils from "libs/utils";
 import ColorGenerator from "libs/color_generator";
+import scaleInfo from "oxalis/model/scaleinfo";
 import type { Vector3 } from "oxalis/constants";
 import Flycam from "oxalis/model/flycam2d";
 import Flycam3d from "oxalis/model/flycam3d";
@@ -239,7 +240,7 @@ class SkeletonTracing {
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if (this.ensureDirection(position)) {
-      let radius = 10 * app.scaleInfo.baseVoxel;
+      let radius = 10 * scaleInfo.baseVoxel;
       if (this.activeNode) {
         radius = this.activeNode.radius;
       }
@@ -277,8 +278,8 @@ class SkeletonTracing {
   ensureDirection(position) {
     if (!this.branchPointsAllowed && this.activeTree.nodes.length === 2 &&
         this.firstEdgeDirection && this.activeTree.treeId === this.trees[0].treeId) {
-      const sourceNodeNm = app.scaleInfo.voxelToNm(this.activeTree.nodes[1].position);
-      const targetNodeNm = app.scaleInfo.voxelToNm(position);
+      const sourceNodeNm = scaleInfo.voxelToNm(this.activeTree.nodes[1].position);
+      const targetNodeNm = scaleInfo.voxelToNm(position);
       const secondEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
         targetNodeNm[1] - sourceNodeNm[1],
         targetNodeNm[2] - sourceNodeNm[2]];
@@ -306,7 +307,7 @@ class SkeletonTracing {
 
 
   getActiveNodeRadius() {
-    if (this.activeNode) { return this.activeNode.radius; } else { return 10 * app.scaleInfo.baseVoxel; }
+    if (this.activeNode) { return this.activeNode.radius; } else { return 10 * scaleInfo.baseVoxel; }
   }
 
 

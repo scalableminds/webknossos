@@ -83,7 +83,6 @@ class PushQueue {
       console.log(e));
   }
 
-  push = _.debounce(this.pushImpl, DEBOUNCE_TIME);
 
   pushImpl = () => this.cube.temporalBucketManager.getAllLoadedPromise().then(
     () => {
@@ -100,6 +99,9 @@ class PushQueue {
       return this.updatePipeline.getLastActionPromise();
     },
   )
+
+
+  push = _.debounce(this.pushImpl, DEBOUNCE_TIME);
 
 
   pushBatch(batch) {

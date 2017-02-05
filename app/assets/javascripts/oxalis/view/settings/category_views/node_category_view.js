@@ -71,7 +71,7 @@ class NodeCategoryView extends CategoryView {
             model: this.model,
             options: {
               displayName: "Delete Active Node",
-              callbackName: "deleteActiveNode",
+              eventName: "deleteActiveNode",
             },
           });
         },

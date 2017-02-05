@@ -4,10 +4,10 @@
  */
 import $ from "jquery";
 import _ from "lodash";
-import app from "app";
 import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
+import scaleInfo from "oxalis/model/scaleinfo";
 import Constants from "../constants";
 import Flycam3d from "../model/flycam3d";
 import View from "../view";
@@ -84,7 +84,7 @@ class ArbitraryView {
 
     this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale.copy(new THREE.Vector3(...app.scaleInfo.nmPerVoxel));
+    this.group.scale.copy(new THREE.Vector3(...scaleInfo.nmPerVoxel));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.group);
     this.group.add(this.camera);

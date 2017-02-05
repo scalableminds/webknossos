@@ -1,12 +1,30 @@
+/**
+ * tree.js
+ * @flow weak
+ */
+
 import app from "app";
 import Utils from "libs/utils";
 import ResizableBuffer from "libs/resizable_buffer";
 import ErrorHandling from "libs/error_handling";
 import * as THREE from "three";
 import TWEEN from "tween.js";
+import Model from "oxalis/model";
 import ParticleMaterialFactory from "./materials/particle_material_factory";
 
 class Tree {
+
+  model: Model;
+  nodeIDs: ResizableBuffer;
+  edgesBuffer: ResizableBuffer;
+  nodesBuffer: ResizableBuffer;
+  sizesBuffer: ResizableBuffer;
+  scalesBuffer: ResizableBuffer;
+  nodesColorBuffer: ResizableBuffer;
+  edges: THREE.LineSegments;
+  particleMaterial: THREE.ShaderMaterial;
+  nodes: THREE.Points;
+  id: number;
 
   constructor(treeId, treeColor, model) {
     // create skeletonTracing to show in TDView and pre-allocate buffers
@@ -119,7 +137,7 @@ class Tree {
     for (const i of Utils.__range__(0, this.edgesBuffer.getLength(), false)) {
       found = true;
       for (let j = 0; j <= 5; j++) {
-        found &= Math.abs(this.edges.geometry.attributes.position.array[(6 * i) + j] - edgeArray[j]) < 0.5;
+        found = found && Math.abs(this.edges.geometry.attributes.position.array[(6 * i) + j] - edgeArray[j]) < 0.5;
       }
       if (found) {
         edgesIndex = i;
@@ -135,14 +153,16 @@ class Tree {
   }
 
   mergeTree(otherTree, lastNode, activeNode) {
-    const merge = property => this[property].pushSubarray(otherTree[property].getAllElements());
+    const merge = (bufferA, bufferB) => {
+      bufferA.pushSubarray(bufferB.getAllElements());
+    };
 
     // merge IDs, nodes and edges
-    merge("nodeIDs");
-    merge("nodesBuffer");
-    merge("edgesBuffer");
-    merge("sizesBuffer");
-    merge("scalesBuffer");
+    merge(this.nodeIDs, otherTree.nodeIDs);
+    merge(this.nodesBuffer, otherTree.nodesBuffer);
+    merge(this.edgesBuffer, otherTree.edgesBuffer);
+    merge(this.sizesBuffer, otherTree.sizesBuffer);
+    merge(this.scalesBuffer, otherTree.scalesBuffer);
     this.edgesBuffer.push(this.getEdgeArray(lastNode, activeNode));
 
     this.updateNodesColors();

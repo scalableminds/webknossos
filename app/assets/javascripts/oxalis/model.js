@@ -5,7 +5,6 @@
 
 import Backbone from "backbone";
 import _ from "lodash";
-import app from "app";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import Utils from "../libs/utils";
 import Binary from "./model/binary";
@@ -14,7 +13,7 @@ import User from "./model/user";
 import DatasetConfiguration from "./model/dataset_configuration";
 import VolumeTracing from "./model/volumetracing/volumetracing";
 import ConnectionInfo from "./model/binarydata_connection_info";
-import ScaleInfo from "./model/scaleinfo";
+import scaleInfo from "./model/scaleinfo";
 import Flycam2d from "./model/flycam2d";
 import Flycam3d from "./model/flycam3d";
 import constants from "./constants";
@@ -258,7 +257,7 @@ class Model extends Backbone.Model {
     console.log("user", this.user);
 
     const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
-    app.scaleInfo = new ScaleInfo(dataset.get("scale"));
+    scaleInfo.initialize(dataset.get("scale"));
 
     const bb = tracing.content.boundingBox;
     if (bb != null) {
@@ -414,7 +413,7 @@ class Model extends Backbone.Model {
   }
 
   // delegate save request to all submodules
-  save() {
+  save = function save() {
     const submodels = [];
     const promises = [];
 

@@ -10,6 +10,7 @@ import type { Vector3 } from "oxalis/constants";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
 import Binary from "oxalis/model/binary";
+import Input from "libs/input";
 
 
 class TracingApi {
@@ -153,9 +154,9 @@ class UtilsApi {
 
 
   registerKeyHandler(key: string, handler: () => void): Handler {
-    // TODO implement
-    console.log("Attach handler", handler, "to key", key);
-    return { unregister: () => {} };
+    // TODO: this way you cannot overwrite existing key handlers, just register new ones
+    const keyboard = new Input.KeyboardNoLoop({ [key]: handler });
+    return { unregister: keyboard.destroy.bind(keyboard) };
   }
 }
 
@@ -189,11 +190,10 @@ class Api {
   }
 
 
-  apiReady(version: number, callback: (ApiInterface) => void) {
+  apiReady(version: number = 1): Promise<ApiInterface> {
     // TODO: version check
-    this.readyPromise.then(() => {
-      callback(this.apiInterface);
-    });
+    console.log("Requested api version:", version);
+    return this.readyPromise.then(() => this.apiInterface);
   }
 
 }

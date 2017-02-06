@@ -1,13 +1,23 @@
+/**
+ * error_handling.js
+ * @flow weak
+ */
 import _ from "lodash";
 import $ from "jquery";
 import AirbrakeClient from "airbrake-js";
 import Toast from "./toast";
 
+class ErrorWithParams extends Error {
+  params: ?mixed;
+}
+
+
 class ErrorHandling {
 
-  constructor() {
-    this.assert = this.assertImpl.bind(this);
-  }
+  throwAssertions: boolean;
+  sendLocalErrors: boolean;
+  commitHash: ?string;
+  airbrake: AirbrakeClient;
 
   initialize(options) {
     if (options == null) {
@@ -15,6 +25,10 @@ class ErrorHandling {
     }
     this.throwAssertions = options.throwAssertions;
     this.sendLocalErrors = options.sendLocalErrors;
+
+    fetch("/assets/commit.txt")
+      .then(res => res.text())
+      .then((commitHash) => { this.commitHash = commitHash.trim(); });
 
     this.initializeAirbrake();
   }
@@ -27,44 +41,47 @@ class ErrorHandling {
     const projectKey = $scriptTag.data("airbrake-project-key");
     const envName = $scriptTag.data("airbrake-environment-name");
 
-    window.Airbrake = new AirbrakeClient({
+    this.airbrake = new AirbrakeClient({
       projectId,
       projectKey,
     });
 
-    Airbrake.addFilter((notice) => {
+    this.airbrake.addFilter((notice) => {
       notice.context.environment = envName;
+      if (this.commitHash != null) {
+        notice.context.version = this.commitHash;
+      }
       return notice;
     });
 
     if (!this.sendLocalErrors) {
-      Airbrake.addFilter(() => location.hostname !== "127.0.0.1" && location.hostname !== "localhost");
+      this.airbrake.addFilter(() => location.hostname !== "127.0.0.1" && location.hostname !== "localhost");
     }
 
-    window.onerror = function (message, file, line, colno, error) {
+    window.onerror = (message, file, line, colno, error) => {
       if (error == null) {
         // older browsers don't deliver the error parameter
         error = new Error(message, file, line);
       }
       console.error(error);
-      Airbrake.notify(error);
+      this.airbrake.notify(error);
     };
   }
 
   assertExtendContext(additionalContext) {
     // since the context isn't displayed on Airbrake.io, we use the params-attribute
-    Airbrake.addFilter((notice) => {
+    this.airbrake.addFilter((notice) => {
       Object.assign(notice.context, additionalContext);
       return notice;
     });
   }
 
-  assertImpl(bool, message, assertionContext) {
+  assert = (bool, message, assertionContext) => {
     if (bool) {
       return;
     }
 
-    const error = new Error(`Assertion violated - ${message}`);
+    const error: ErrorWithParams = new ErrorWithParams(`Assertion violated - ${message}`);
 
     error.params = assertionContext;
     error.stack = this.trimCallstack(error.stack);
@@ -76,7 +93,7 @@ class ErrorHandling {
       throw error;
     } else {
       console.error(error);
-      Airbrake.notify(error);
+      this.airbrake.notify(error);
     }
   }
 
@@ -95,7 +112,7 @@ class ErrorHandling {
   }
 
   setCurrentUser(user) {
-    Airbrake.addFilter((notice) => {
+    this.airbrake.addFilter((notice) => {
       notice.context.user = _.pick(user, [
         "id",
         "email",

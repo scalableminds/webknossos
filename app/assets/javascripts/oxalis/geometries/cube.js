@@ -6,10 +6,10 @@
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
-import THREE from "three";
+import * as THREE from "three";
 import Backbone from "backbone";
 import Model from "oxalis/model";
-import type { Boundary } from "oxalis/model";
+import type { Vector3 } from "oxalis/constants";
 import constants from "../constants";
 import dimensions from "../model/dimensions";
 
@@ -18,8 +18,8 @@ class Cube {
   model: Model;
   crossSections: Array<THREE.Line>;
   cube: THREE.Line;
-  min: Boundary;
-  max: Boundary;
+  min: Vector3;
+  max: Vector3;
   showCrossSections: boolean;
   initialized: boolean;
   visible: boolean;

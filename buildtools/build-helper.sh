@@ -147,17 +147,6 @@ fi
   project=\"$PROJECT\", branch=\"$BRANCH\", port=\"$PORT\", mode=\"$MODE\", loggerXML=\"$LOGGER_XML_ABSPATH\", \
   jmx_port=$JMX_PORT , app_version=\"$APP_VERSION\", newrelic_agent_version=\"$NEWRELIC_AGENT_VERSION\")" > $INIT_SCRIPT
 
-#start script with dummy db import
-if [ $PROJECT == "oxalis" -a $MODE == "dev" -a $BRANCH == "dummy-db" ]; then
-  DUMMY_START_SCRIPT=${ROOT_ENV}/${APP_INSTALL_DIR}/bin/startWithDummyDB.sh
-  mkdir -p `dirname $DUMMY_START_SCRIPT`
-  TEMPLATE=$(< ${TEMPLATE_DIR}/startWithDummyDB.sh)
-  python2.7 -c "import jinja2; print jinja2.Template(\"\"\"$TEMPLATE\"\"\").render(name=\"$NAME\")" > $DUMMY_START_SCRIPT
-  chmod +x $DUMMY_START_SCRIPT
-
-  cp -r dummy-db ${ROOT_ENV}/${APP_INSTALL_DIR}
-fi
-
 if [ "$PKG_TYPE" = "deb" ]; then
   chmod +x ${INIT_SCRIPT}
 fi

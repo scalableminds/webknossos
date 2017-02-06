@@ -66,7 +66,7 @@ services:
       service: sbt
     command: bash -c "yarn test"
 
-  webknossos-frontend-docs:
+  frontend-docs:
     extends:
       service: sbt
     command: bash -c "yarn run docs"

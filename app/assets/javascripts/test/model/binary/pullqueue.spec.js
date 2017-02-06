@@ -3,7 +3,7 @@ import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import runAsync from "../../helpers/run-async";
-import { Bucket } from "../../../oxalis/model/binary/bucket";
+import { Bucket, BucketStateEnum } from "../../../oxalis/model/binary/bucket";
 
 mockRequire.stopAll();
 
@@ -72,8 +72,8 @@ describe("PullQueue", () => {
 
       runAsync([
         () => {
-          expect(buckets[0].state).toBe(Bucket.prototype.STATE_LOADED);
-          expect(buckets[1].state).toBe(Bucket.prototype.STATE_LOADED);
+          expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+          expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
           expect(buckets[0].getData()).toEqual(new Uint8Array(bucketData1));
           expect(buckets[1].getData()).toEqual(new Uint8Array(bucketData2));
           done();
@@ -98,8 +98,8 @@ describe("PullQueue", () => {
       runAsync([
         () => {
           expect(layer.requestFromStore.callCount).toBe(1);
-          expect(buckets[0].state).toBe(Bucket.prototype.STATE_UNREQUESTED);
-          expect(buckets[1].state).toBe(Bucket.prototype.STATE_UNREQUESTED);
+          expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
+          expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
           done();
         },
       ]);
@@ -113,8 +113,8 @@ describe("PullQueue", () => {
       runAsync([
         () => {
           expect(layer.requestFromStore.callCount).toBe(2);
-          expect(buckets[0].state).toBe(Bucket.prototype.STATE_LOADED);
-          expect(buckets[1].state).toBe(Bucket.prototype.STATE_UNREQUESTED);
+          expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
+          expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
           done();
         },
       ]);

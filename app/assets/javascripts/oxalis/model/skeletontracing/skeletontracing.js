@@ -565,7 +565,6 @@ class SkeletonTracing {
 
 
   reallyDeleteTree(id, notifyServer = true) {
-    let index;
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if (!id) {
@@ -573,18 +572,20 @@ class SkeletonTracing {
     }
     const tree = this.getTree(id);
 
-    for (const i of Utils.__range__(0, this.trees.length, true)) {
+    let index;
+    for (let i = 0; i < this.trees.length; i++) {
       if (this.trees[i].treeId === tree.treeId) {
         index = i;
         break;
       }
     }
+
     this.trees.splice(index, 1);
 
     if (notifyServer) {
       this.stateLogger.deleteTree(tree);
     }
-    this.trigger("deleteTree", index);
+    this.trigger("deleteTree", id);
 
     // Because we always want an active tree, check if we need
     // to create one.

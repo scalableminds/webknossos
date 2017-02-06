@@ -30,8 +30,7 @@ import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 // All public operations are **asynchronous**. We return a promise
 // which you can react on.
 
-export type Boundary = Vector3;
-type BoundingBox = {
+export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
 };
@@ -84,11 +83,11 @@ class Model extends Backbone.Model {
   binary: {
     [key: string]: Binary,
   };
-  taskBoundingBox: BoundingBox;
-  userBoundingBox: BoundingBox;
+  taskBoundingBox: BoundingBoxType;
+  userBoundingBox: BoundingBoxType;
   annotationModel: SkeletonTracing | VolumeTracing;
-  lowerBoundary: Boundary;
-  upperBoundary: Boundary;
+  lowerBoundary: Vector3;
+  upperBoundary: Vector3;
   flycam: Flycam2d;
   flycam3d: Flycam3d;
   volumeTracing: VolumeTracing;
@@ -298,7 +297,7 @@ class Model extends Backbone.Model {
   }
 
 
-  computeBoundingBoxFromArray(bb: Array<number>): BoundingBox {
+  computeBoundingBoxFromArray(bb: Array<number>): BoundingBoxType {
     const [x, y, z, width, height, depth] = bb;
 
     return {

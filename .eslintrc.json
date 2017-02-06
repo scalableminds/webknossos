@@ -22,7 +22,6 @@
     "globals": {
       "ga": false,
       "browser": false,
-      "Airbrake": false,
       "routes": false,
       "jsRoutes": false
     },

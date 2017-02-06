@@ -50,7 +50,7 @@
     "worker-loader": "^0.7.1"
   },
   "scripts": {
-    "test": "node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
+    "test": "export NODE_PATH=app/assets/javascripts && node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
     "flow": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
@@ -88,7 +88,7 @@
     "react-dom": "^15.1.0",
     "scroll-into-view-if-needed": "^1.0.2",
     "stats.js": "^1.0.0",
-    "three.js": "georgwiese/three.js#scm_oxalis",
+    "three": "^0.84.0",
     "tween.js": "^16.3.1",
     "underscore": "^1.8.3",
     "webcola": "3.3.0",

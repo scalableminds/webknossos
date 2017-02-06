@@ -11,6 +11,7 @@ import Binary from "oxalis/model/binary";
 import type { Vector3 } from "./constants";
 import TracePoint from "./model/skeletontracing/tracepoint";
 import TraceTree from "./model/skeletontracing/tracetree";
+import Input from "libs/input";
 
 /**
  * All tracing related API methods.
@@ -241,9 +242,9 @@ class UtilsApi {
   * Sets a custom handler function for a keyboard shortcut.
   */
   registerKeyHandler(key: string, handler: () => void): Handler {
-    // TODO implement
-    console.log("Attach handler", handler, "to key", key);
-    return { unregister: () => {} };
+    // TODO: this way you cannot overwrite existing key handlers, just register new ones
+    const keyboard = new Input.KeyboardNoLoop({ [key]: handler });
+    return { unregister: keyboard.destroy.bind(keyboard) };
   }
 }
 
@@ -268,7 +269,7 @@ type ApiInterface = {
  * @property {UtilsApi} utils - Utitility methods for controlling wK.
  *
  * @example
- * window.webknossos.apiReady(1, (api) => {
+ * window.webknossos.apiReady(1).then((api) => {
  *     const nodes = api.tracing.getAllNodes();
  *     const dataLayerNames = api.data.getLayerNames();
  *     const userConfiguration = api.user.getConfiguration();
@@ -304,20 +305,18 @@ class Api {
   * @memberof Api
   * @instance
   * @param {number} version
-  * @param {function} callback with your script
   *
   * @example
-  * window.webknossos.apiReady(1, (api) => {
+  * window.webknossos.apiReady(1).then((api) => {
   *   // Your cool user script / wK plugin
   *   const nodes = api.tracing.getAllNodes();
   *   ...
   * });
   */
-  apiReady(version: number, callback: (ApiInterface) => void) {
+  apiReady(version: number = 1): Promise<ApiInterface> {
     // TODO: version check
-    this.readyPromise.then(() => {
-      callback(this.apiInterface);
-    });
+    console.log("Requested api version:", version);
+    return this.readyPromise.then(() => this.apiInterface);
   }
 }
 

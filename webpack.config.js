@@ -1,4 +1,4 @@
-/* eslint no-var:0 */
+/* eslint no-var:0, import/no-extraneous-dependencies:0 */
 var webpack = require("webpack");
 var ExtractTextPlugin = require("extract-text-webpack-plugin");
 var fs = require("fs");
@@ -7,10 +7,7 @@ var path = require("path");
 var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
 var nodePath = path.join(__dirname, "node_modules/");
 var scriptPaths = {
-  "three":                 `${nodePath}three.js/build/three`,
-  "three.color":           `${nodePath}three.js/examples/js/math/ColorConverter`,
-  "three.trackball":       `${nodePath}three.js/examples/js/controls/TrackballControls`,
-  "jasny-bootstrap":       `${nodePath}jasny-bootstrap/dist/js/jasny-bootstrap`,
+  "jasny-bootstrap": `${nodePath}jasny-bootstrap/dist/js/jasny-bootstrap`,
   "bootstrap-multiselect": `${nodePath}bootstrap-multiselect/dist/js/bootstrap-multiselect`,
 };
 
@@ -19,7 +16,7 @@ module.exports = {
     main: "main.js",
   },
   output: {
-    path: __dirname + "/public/bundle",
+    path: `${__dirname}/public/bundle`,
     filename: "[name].js",
     sourceMapFilename: "[file].map",
     publicPath: "/assets/bundle/",
@@ -37,18 +34,6 @@ module.exports = {
         test: /\.js$/,
         exclude: /(node_modules|bower_components)/,
         use: "babel-loader",
-      }, {
-        test: scriptPaths["three.color"],
-        use: [
-          "imports-loader?THREE=three",
-          "exports-loader?THREE.ColorConverter",
-        ],
-      }, {
-        test: scriptPaths["three.trackball"],
-        use: "imports-loader?THREE=three",
-      }, {
-        test: scriptPaths["three"],
-        use: "exports-loader?THREE",
       },
       {
         test: /\.less$/,
@@ -84,7 +69,7 @@ module.exports = {
     alias: scriptPaths,
   },
   externals: [
-    { "routes": "var jsRoutes" },
+    { routes: "var jsRoutes" },
   ],
   devtool: "cheap-source-map",
   plugins: [
@@ -103,4 +88,4 @@ module.exports = {
   ],
 };
 
-fs.writeFileSync("target/webpack.pid", process.pid, "utf8");
+fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), process.pid, "utf8");

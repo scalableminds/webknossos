@@ -3,7 +3,7 @@
  * @flow weak
  */
 
-import THREE from "three";
+import * as THREE from "three";
 import Flycam3d from "oxalis/model/flycam3d";
 
 class Crosshair {

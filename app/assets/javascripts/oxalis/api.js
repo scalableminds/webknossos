@@ -6,12 +6,13 @@
 // only relative imports are followed by documentationjs
 import _ from "lodash";
 import app from "app";
+import Input from "libs/input";
 import OxalisModel from "oxalis/model";
 import Binary from "oxalis/model/binary";
-import type { Vector3 } from "./constants";
-import TracePoint from "./model/skeletontracing/tracepoint";
-import TraceTree from "./model/skeletontracing/tracetree";
-import Input from "libs/input";
+import TracePoint from "oxalis/model/skeletontracing/tracepoint";
+import TraceTree from "oxalis/model/skeletontracing/tracetree";
+
+import type { Vector3 } from "oxalis/constants";
 
 /**
  * All tracing related API methods.

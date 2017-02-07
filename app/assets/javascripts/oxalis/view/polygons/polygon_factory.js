@@ -1,13 +1,30 @@
+/**
+ * polygon_factory.js
+ * @flow weak
+ */
+
 import _ from "lodash";
+import DataCube from "../../model/binary/data_cube";
 import tlt from "./tlt";
 import Deferred from "../../../libs/deferred";
 
 // This class is capable of turning voxel data into triangles
 // Based on the marching cubes algorithm
 class PolygonFactory {
+  chunkSize: number;
+  deferred: Deferred;
+  endX: number;
+  endY: number;
+  endZ: number;
+  id: number;
+  isCancelled: boolean;
+  modelCube: DataCube;
+  startX: number;
+  startY: number;
+  startZ: number;
+  voxelsToSkip: number;
 
   constructor(modelCube, resolution, min, max, id) {
-    this.calculateTrianglesAsync = this.calculateTrianglesAsync.bind(this);
     this.modelCube = modelCube;
     this.id = id;
     this.voxelsToSkip = Math.ceil((max[0] - min[0]) / resolution) || 1;
@@ -15,9 +32,12 @@ class PolygonFactory {
 
     const round = number => Math.floor(number / this.voxelsToSkip) * this.voxelsToSkip;
 
-    [this.startX, this.endX] = [round(min[0]), round(max[0]) + this.voxelsToSkip];
-    [this.startY, this.endY] = [round(min[1]), round(max[1]) + this.voxelsToSkip];
-    [this.startZ, this.endZ] = [round(min[2]), round(max[2]) + this.voxelsToSkip];
+    this.startX = round(min[0]);
+    this.endX = round(max[0]) + this.voxelsToSkip;
+    this.startY = round(min[1]);
+    this.endY = round(max[1]) + this.voxelsToSkip;
+    this.startZ = round(min[2]);
+    this.endZ = round(max[2]) + this.voxelsToSkip;
   }
 
 
@@ -36,7 +56,7 @@ class PolygonFactory {
   }
 
 
-  calculateTrianglesAsync(result, lastPosition) {
+  calculateTrianglesAsync = (result, lastPosition) => {
     if (this.isCancelled) {
       return;
     }

@@ -27,7 +27,7 @@ class CellCategoryView extends CategoryView {
             model: this.model,
             options: {
               displayName: "Create new Cell",
-              callbackName: "createCell",
+              eventName: "createCell",
             },
           });
         },

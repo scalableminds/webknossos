@@ -13,6 +13,7 @@ import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
 
 import type { Vector3 } from "oxalis/constants";
+import type { MappingArray } from "oxalis/model/binary/mappings";
 
 /**
  * All tracing related API methods.
@@ -66,6 +67,7 @@ class TracingApi {
   setCommentForNode(commentText: string, node: TracePoint | number): void {
     // Convert nodeId to node
     if (_.isNumber(node)) { node = this.model.skeletonTracing.getNode(node); }
+    if (!(node instanceof TracePoint)) throw Error("No node found.");
     this.model.skeletonTracing.setCommentForNode(commentText, node);
   }
 
@@ -82,6 +84,7 @@ class TracingApi {
   getCommentForNode(nodeId: number, tree: ?(TraceTree | number)): ?string {
     // Convert treeId to tree
     if (_.isNumber(tree)) { tree = this.model.skeletonTracing.getTree(tree); }
+    if (!(tree instanceof TraceTree)) throw Error("No tree found.");
     const comment = this.model.skeletonTracing.getCommentForNode(nodeId, tree);
     return comment ? comment.content : null;
   }
@@ -124,7 +127,7 @@ class DataApi {
   *
   * api.setMapping("segmentation", mapping);
   */
-  setMapping(layerName: string, mapping: {number: number}) {
+  setMapping(layerName: string, mapping: MappingArray) {
     const layer = this.__getLayer(layerName);
 
     layer.cube.setMapping(mapping);
@@ -270,6 +273,7 @@ class UtilsApi {
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
   registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T[]) => void, args: T[]) => void): void {
+    if (funcName !== "addNode") throw Error("The su");
     const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);
     this.model.skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
   }

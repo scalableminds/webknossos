@@ -67,8 +67,8 @@ class DashboardTaskListItemView extends Marionette.View {
     };
   }
 
-
-  className() {
+  // Cannot be ES6 style function, as these are covariant by default
+  className = function className() {
     if (this.model.get("annotation.state.isFinished")) {
       return "finished";
     }

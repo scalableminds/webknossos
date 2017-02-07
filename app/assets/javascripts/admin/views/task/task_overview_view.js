@@ -520,7 +520,7 @@ class TaskOverviewView extends Marionette.View {
   setupPopovers() {
     this.users.forEach(user => $(`#${user.id}`).popover({
       title: `${user.firstName} ${user.lastName}`,
-      html: true,
+      html: false,
       trigger: "hover",
       content: this.createUserTooltip(user),
       container: "body",
@@ -532,8 +532,8 @@ class TaskOverviewView extends Marionette.View {
   createUserTooltip(user) {
     return [`Working time: ${user.workingHours}h`,
       "Experiences:",
-      _.map(user.experiences, (domain, value) => `${domain} : ${value}`).join("<br />"),
-    ].join("<br />");
+      _.map(user.experiences, (domain, value) => `${domain} : ${value}`).join("\n"),
+    ].join("\n");
   }
 
 

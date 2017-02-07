@@ -1,4 +1,4 @@
-import app from "app";
+import scaleInfo from "oxalis/model/scaleinfo";
 import CheckboxSettingView from "../setting_views/checkbox_setting_view";
 import SliderSettingView from "../setting_views/slider_setting_view";
 import CategoryView from "./category_view";
@@ -64,7 +64,7 @@ class ViewportCategoryView extends CategoryView {
               name: "clippingDistance",
               displayName: "Clipping Distance",
               min: 1,
-              max: 1000 * app.scaleInfo.baseVoxel,
+              max: 1000 * scaleInfo.baseVoxel,
               step: 1,
             },
           });

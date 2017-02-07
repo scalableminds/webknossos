@@ -1,3 +1,8 @@
+/**
+ * polyhedron_rasterizer.js
+ * @flow weak
+ */
+
 import Utils from "libs/utils";
 import { M4x4 } from "libs/mjs";
 
@@ -74,11 +79,26 @@ const nextFreeBit = function (x) {
 // collected points.
 //
 class PolyhedronRasterizer {
-  static initClass() {
-    // Orientation of transformed polyhedron 1 if z orientation is positive else -1
-    this.prototype.orientation = 1;
-  }
+  static Master: PolyhedronRasterizer.Master;
 
+  // Orientation of transformed polyhedron 1 if z orientation is positive else -1
+  orientation: 1 | -1 = 1;
+
+  bufferLength: number;
+  buffer: Int32Array;
+  deltaX: number;
+  deltaY: number;
+  deltaZ: number;
+  indices: Array<number>;
+  maxX: number;
+  maxY: number;
+  maxZ: number;
+  minX: number;
+  minY: number;
+  minZ: number;
+  pointsBuffer: Int32Array;
+  shiftZ: number;
+  vertices: Array<number>;
 
   constructor(vertices1, indices) {
     let buffer;
@@ -488,9 +508,10 @@ class PolyhedronRasterizer {
     return outputBuffer.subarray(0, outputLength);
   }
 }
-PolyhedronRasterizer.initClass();
 
 PolyhedronRasterizer.Master = class Master {
+  indices: Array<number>;
+  vertices: Array<number>;
 
   // Works just like a regular mesh in WebGL.
   constructor(vertices, indices) {

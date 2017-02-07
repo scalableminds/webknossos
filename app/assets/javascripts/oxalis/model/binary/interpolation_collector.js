@@ -14,7 +14,7 @@ const templateFill = function (str, params) {
 // This provides interpolation mechanics. It's a lot of code. But it
 // should run fast.
 
-// See model/binary/cube to find out how this works
+// See model/binary/data_cube to find out how this works
 // Parameters: pointIndex, x, y, z, zoomStep
 // Locals: coordMask
 const pointIndexMacro = _.template(

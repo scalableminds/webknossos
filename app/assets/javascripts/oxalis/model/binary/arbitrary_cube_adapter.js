@@ -1,12 +1,11 @@
 /**
  * arbitrary_cube_adapter.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
-import Cube from "oxalis/model/binary/cube";
+import DataCube from "oxalis/model/binary/data_cube";
 import type { Vector3 } from "oxalis/constants";
-import Utils from "../../../libs/utils";
 
 // TODO: This should be refactored into composition instead of inheritance
 // Try to not use this type unless flow forces you to do that because you are
@@ -18,57 +17,20 @@ class BucketData extends Uint8Array {
   isTemporalData: boolean;
 }
 
+const ARBITRARY_MAX_ZOOMSTEP = 2;
+const NOT_LOADED_BUCKET_INTENSITY = 100;
+
 class ArbitraryCubeAdapter {
 
-  ARBITRARY_MAX_ZOOMSTEP: number;
-  NOT_LOADED_BUCKET_INTENSITY: number;
-  cube: Cube;
+  cube: DataCube;
   boundary: Vector3;
   sizeZYX: number;
   sizeZY: number;
   sizeZ: number;
   NOT_LOADED_BUCKET_DATA: BucketData;
-  getBucket: (bucketIndex: number) => ?Uint8Array | number;
+  getBucket = _.memoize(this.getBucketImpl);
 
-  static initClass() {
-    this.prototype.ARBITRARY_MAX_ZOOMSTEP = 2;
-    this.prototype.NOT_LOADED_BUCKET_INTENSITY = 100;
-
-    this.prototype.getBucket = _.memoize(function (bucketIndex) {
-      let bucketAddress = [
-        Math.floor(bucketIndex / this.sizeZY),
-        Math.floor((bucketIndex % this.sizeZY) / this.sizeZ),
-        bucketIndex % this.sizeZ,
-        0,
-      ];
-
-      for (const zoomStep of Utils.__range__(0, this.ARBITRARY_MAX_ZOOMSTEP, true)) {
-        const bucket = this.cube.getBucket(bucketAddress);
-
-        if (bucket.isOutOfBoundingBox) {
-          return null;
-        }
-
-        if (bucket.hasData()) {
-          const bucketData = this.cube.getBucket(bucketAddress).getData();
-          bucketData.zoomStep = zoomStep;
-          return bucketData;
-        }
-
-        bucketAddress = [
-          bucketAddress[0] >> 1,
-          bucketAddress[1] >> 1,
-          bucketAddress[2] >> 1,
-          bucketAddress[3] + 1,
-        ];
-      }
-
-      return this.NOT_LOADED_BUCKET_DATA;
-    });
-  }
-
-
-  constructor(cube, boundary) {
+  constructor(cube: DataCube, boundary: Vector3) {
     this.cube = cube;
     this.boundary = boundary;
     this.sizeZYX = this.boundary[0] * this.boundary[1] * this.boundary[2];
@@ -76,24 +38,54 @@ class ArbitraryCubeAdapter {
     this.sizeZ = this.boundary[2];
 
     this.NOT_LOADED_BUCKET_DATA = new BucketData(this.cube.BUCKET_LENGTH);
-    for (const i of Utils.__range__(0, this.NOT_LOADED_BUCKET_DATA.length, false)) {
-      this.NOT_LOADED_BUCKET_DATA[i] = this.NOT_LOADED_BUCKET_INTENSITY;
+    for (let i = 0; i < this.NOT_LOADED_BUCKET_DATA.length; i++) {
+      this.NOT_LOADED_BUCKET_DATA[i] = NOT_LOADED_BUCKET_INTENSITY;
     }
     this.NOT_LOADED_BUCKET_DATA.zoomStep = 0;
     this.NOT_LOADED_BUCKET_DATA.isTemporalData = true;
   }
 
 
-  isValidBucket(bucketIndex) {
+  isValidBucket(bucketIndex: number): boolean {
     return bucketIndex < this.sizeZYX;
   }
 
 
-  reset() {
+  reset(): void {
     return this.getBucket.cache.clear();
   }
-}
-ArbitraryCubeAdapter.initClass();
 
+  getBucketImpl(bucketIndex: number): ?BucketData {
+    let bucketAddress = [
+      Math.floor(bucketIndex / this.sizeZY),
+      Math.floor((bucketIndex % this.sizeZY) / this.sizeZ),
+      bucketIndex % this.sizeZ,
+      0,
+    ];
+
+    for (let zoomStep = 0; zoomStep <= ARBITRARY_MAX_ZOOMSTEP; zoomStep++) {
+      const bucket = this.cube.getBucket(bucketAddress);
+
+      if (bucket.isOutOfBoundingBox) {
+        return null;
+      }
+
+      if (bucket.hasData()) {
+        const bucketData = this.cube.getBucket(bucketAddress).getData();
+        bucketData.zoomStep = zoomStep;
+        return bucketData;
+      }
+
+      bucketAddress = [
+        bucketAddress[0] >> 1,
+        bucketAddress[1] >> 1,
+        bucketAddress[2] >> 1,
+        bucketAddress[3] + 1,
+      ];
+    }
+
+    return this.NOT_LOADED_BUCKET_DATA;
+  }
+}
 
 export default ArbitraryCubeAdapter;

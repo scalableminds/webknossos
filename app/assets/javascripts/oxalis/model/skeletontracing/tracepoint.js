@@ -1,19 +1,57 @@
-import _ from "lodash";
-import Utils from "libs/utils";
+/*
+* tracepoint.js
+* @flow weak
+*/
 
+import _ from "lodash";
+import type { Vector3 } from "oxalis/constants";
+import { V3 } from "libs/mjs";
+
+/**
+* A node in a skeleton tracing.
+* @class
+*/
 class TracePoint {
 
-  constructor(id, pos, radius, treeId, metaInfo, rotation) {
+  setChildRelation: Function;
+  id: number;
+  radius: number;
+  treeId: number;
+  rotation: Vector3;
+  position: Vector3;
+  neighbors: Array<TracePoint>;
+  parent: TracePoint;
+  seen: boolean;
+  children: any;
+  timestamp: number;
+  viewport: number;
+  resolution: number;
+  bitDepth: number;
+  interpolation: boolean
+
+  constructor(id: number, position: Vector3, radius:number, treeId: number, rotation:Vector3, timestamp: number, viewport: ?number, resolution: ?number, bitDepth: ?number, interpolation: ?boolean) {
     this.setChildRelation = this.setChildRelation.bind(this);
     this.id = id;
-    this.pos = pos;
+    this.position = position;
     this.radius = radius;
     this.treeId = treeId;
-    this.metaInfo = metaInfo;
     this.rotation = rotation;
     this.neighbors = [];
+    this.timestamp = timestamp;
+    this.viewport = viewport || 0;
+    this.resolution = resolution || 0;
+    this.bitDepth = bitDepth || 0;
+    this.interpolation = interpolation || false;
   }
 
+  toJSON() {
+    const serverNode = _.clone(this);
+    serverNode.position = V3.floor(this.position); // server expects integer positions :-P
+    delete serverNode.neighbors;
+    delete serverNode.children;
+
+    return serverNode;
+  }
 
   appendNext(next) {
     return this.neighbors.push(next);
@@ -22,7 +60,6 @@ class TracePoint {
 
   getNext(parent) {
     let minN;
-    let neighbor;
     if (parent != null) { minN = 2; } else { minN = 1; }
 
     if (this.neighbors.length < minN) {
@@ -30,20 +67,14 @@ class TracePoint {
     }
 
     if (this.neighbors.length === minN) {
-      for (neighbor of this.neighbors) {
+      for (const neighbor of this.neighbors) {
         if (neighbor !== parent) {
           return neighbor;
         }
       }
     }
 
-    const res = [];
-    for (neighbor of this.neighbors) {
-      if (neighbor !== parent) {
-        res.push(neighbor);
-      }
-    }
-    return res;
+    return this.neighbors.filter(neighbor => neighbor !== parent);
   }
 
 
@@ -85,7 +116,7 @@ class TracePoint {
 
 
   removeNeighbor(id) {
-    for (const i of Utils.__range__(0, this.neighbors.length, false)) {
+    for (let i = 0; i < this.neighbors.length; i++) {
       if (this.neighbors[i].id === id) {
         // Remove neighbor
         this.neighbors.splice(i, 1);

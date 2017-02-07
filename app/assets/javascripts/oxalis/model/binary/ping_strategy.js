@@ -1,30 +1,40 @@
+/**
+ * ping_strategy.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Utils from "libs/utils";
+import Cube from "oxalis/model/binary/data_cube";
 import Dimensions from "../dimensions";
+import { BUCKET_SIZE_P } from "./bucket";
+
+const MAX_ZOOM_STEP_DIFF = 1;
 
 class PingStrategy {
-  static initClass() {
-    // Constants
-    this.prototype.TEXTURE_SIZE_P = 0;
-    this.prototype.MAX_ZOOM_STEP_DIFF = 1;
 
-    this.prototype.velocityRangeStart = 0;
-    this.prototype.velocityRangeEnd = 0;
+  cube: Cube;
+  velocityRangeStart: number;
+  velocityRangeEnd: number;
+  roundTripTimeRangeStart: number;
+  roundTripTimeRangeEnd: number;
+  contentTypes: Array<string>;
+  name: string;
+  u: number;
+  v: number;
+  static BaseStrategy: BaseStrategy;
+  static Skeleton: Skeleton;
+  static Volume: Volume;
 
-    this.prototype.roundTripTimeRangeStart = 0;
-    this.prototype.roundTripTimeRangeEnd = 0;
-
-    this.prototype.contentTypes = [];
-
-    this.prototype.cube = null;
-
-    this.prototype.name = "ABSTRACT";
-  }
-
-
-  constructor(cube, TEXTURE_SIZE_P) {
+  constructor(cube) {
     this.cube = cube;
-    this.TEXTURE_SIZE_P = TEXTURE_SIZE_P;
+
+    this.velocityRangeStart = 0;
+    this.velocityRangeEnd = 0;
+    this.roundTripTimeRangeStart = 0;
+    this.roundTripTimeRangeEnd = 0;
+    this.contentTypes = [];
+    this.name = "ABSTRACT";
   }
 
 
@@ -33,12 +43,12 @@ class PingStrategy {
   }
 
 
-  inVelocityRange(value) {
+  inVelocityRange(value: number) {
     return this.velocityRangeStart <= value && value <= this.velocityRangeEnd;
   }
 
 
-  inRoundTripTimeRange(value) {
+  inRoundTripTimeRange(value: number) {
     return this.roundTripTimeRangeStart <= value && value <= this.roundTripTimeRangeEnd;
   }
 
@@ -53,8 +63,8 @@ class PingStrategy {
     const uOffset = Math.ceil(width / 2);
     const vOffset = Math.ceil(height / 2);
 
-    for (const u of Utils.__range__(-uOffset, uOffset, true)) {
-      for (const v of Utils.__range__(-vOffset, vOffset, true)) {
+    for (let u = -uOffset; u <= uOffset; u++) {
+      for (let v = -vOffset; v <= vOffset; v++) {
         const bucket = center.slice(0);
         bucket[this.u] += u;
         bucket[this.v] += v;
@@ -65,19 +75,24 @@ class PingStrategy {
     return buckets;
   }
 }
-PingStrategy.initClass();
 
 
-PingStrategy.BaseStrategy = class BaseStrategy extends PingStrategy {
-  static initClass() {
-    this.prototype.velocityRangeStart = 0;
-    this.prototype.velocityRangeEnd = Infinity;
+class BaseStrategy extends PingStrategy {
 
-    this.prototype.roundTripTimeRangeStart = 0;
-    this.prototype.roundTripTimeRangeEnd = Infinity;
+  preloadingSlides: number;
+  preloadingPriorityOffset: number;
+  w: number;
 
-    this.prototype.preloadingSlides = 0;
-    this.prototype.preloadingPriorityOffset = 0;
+  constructor(...args) {
+    super(...args);
+    this.velocityRangeStart = 0;
+    this.velocityRangeEnd = Infinity;
+
+    this.roundTripTimeRangeStart = 0;
+    this.roundTripTimeRangeEnd = Infinity;
+
+    this.preloadingSlides = 0;
+    this.preloadingPriorityOffset = 0;
   }
 
 
@@ -86,17 +101,20 @@ PingStrategy.BaseStrategy = class BaseStrategy extends PingStrategy {
     const zoomStepDiff = requestedZoomStep - zoomStep;
     const pullQueue = [];
 
-    if (zoomStepDiff > this.MAX_ZOOM_STEP_DIFF) { return pullQueue; }
+    if (zoomStepDiff > MAX_ZOOM_STEP_DIFF) { return pullQueue; }
 
     for (let plane = 0; plane <= 2; plane++) {
-      [this.u, this.v, this.w] = Dimensions.getIndices(plane);
+      const indices = Dimensions.getIndices(plane);
+      this.u = indices[0];
+      this.v = indices[1];
+      this.w = indices[2];
 
       // Converting area from voxels to buckets
       const bucketArea = [
-        areas[plane][0] >> this.cube.BUCKET_SIZE_P,
-        areas[plane][1] >> this.cube.BUCKET_SIZE_P,
-        (areas[plane][2] - 1) >> this.cube.BUCKET_SIZE_P,
-        (areas[plane][3] - 1) >> this.cube.BUCKET_SIZE_P,
+        areas[plane][0] >> BUCKET_SIZE_P,
+        areas[plane][1] >> BUCKET_SIZE_P,
+        (areas[plane][2] - 1) >> BUCKET_SIZE_P,
+        (areas[plane][3] - 1) >> BUCKET_SIZE_P,
       ];
       const width = (bucketArea[2] - bucketArea[0]) << zoomStepDiff;
       const height = (bucketArea[3] - bucketArea[1]) << zoomStepDiff;
@@ -122,31 +140,29 @@ PingStrategy.BaseStrategy = class BaseStrategy extends PingStrategy {
 
     return pullQueue;
   }
-};
-PingStrategy.BaseStrategy.initClass();
+}
 
 
-PingStrategy.Skeleton = class Skeleton extends PingStrategy.BaseStrategy {
-  static initClass() {
-    this.prototype.contentTypes = ["skeletonTracing"];
+export class Skeleton extends BaseStrategy {
+  constructor(...args) {
+    super(...args);
+    this.contentTypes = ["skeletonTracing"];
 
-    this.prototype.name = "SKELETON";
-    this.prototype.preloadingSlides = 2;
+    this.name = "SKELETON";
+    this.preloadingSlides = 2;
   }
-};
-PingStrategy.Skeleton.initClass();
+}
 
 
-PingStrategy.Volume = class Volume extends PingStrategy.BaseStrategy {
-  static initClass() {
-    this.prototype.contentTypes = ["volumeTracing"];
+export class Volume extends BaseStrategy {
+  constructor(...args) {
+    super(...args);
+    this.contentTypes = ["volumeTracing"];
 
-    this.prototype.name = "VOLUME";
-    this.prototype.preloadingSlides = 1;
-    this.prototype.preloadingPriorityOffset = 80;
+    this.name = "VOLUME";
+    this.preloadingSlides = 1;
+    this.preloadingPriorityOffset = 80;
   }
-};
-PingStrategy.Volume.initClass();
-
+}
 
 export default PingStrategy;

@@ -9,7 +9,10 @@ import type { OxalisState } from "oxalis/store";
 const SettingsReducer = (state: OxalisState, action: SettingActionTypes) => {
   switch (action.type) {
     case "UPDATE_SETTING":
-      return Object.assign({}, state, { [action.propertyName]: [action.value] });
+      return Object.assign({}, state, { [action.propertyName]: action.value });
+
+    case "INITIALIZE_SETTINGS":
+      return action.initialState;
 
     default:
       return state;

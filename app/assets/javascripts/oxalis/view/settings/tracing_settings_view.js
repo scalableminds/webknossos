@@ -6,15 +6,17 @@
 import _ from "lodash";
 import React, { Component } from "react";
 import { connect } from "react-redux";
+import Utils from "libs/utils";
+import Toast from "libs/toast";
 import { updateSettingAction } from "oxalis/model/actions/settings_actions";
 import { deleteActiveNodeAction } from "oxalis/model/actions/skeleton_actions";
-import { Collapse, Row, Col, Slider, InputNumber, Switch, Button } from "antd";
+import { Collapse, Row, Col, Slider, InputNumber, Switch, Button, Tooltip, Input } from "antd";
 
 const Panel = Collapse.Panel;
 
 function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }) {
   return (
-    <Row>
+    <Row className="settings-row">
       <Col span={8}>{label}</Col>
       <Col span={8}>
         <Slider min={min} max={max} onChange={onChange} value={value} step={step} />
@@ -33,7 +35,7 @@ function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 })
 
 function SwitchSetting({ onChange, value, label }) {
   return (
-    <Row>
+    <Row className="settings-row">
       <Col span={8}>{label}</Col>
       <Col span={16}>
         <Switch onChange={onChange} defaultChecked={value} />
@@ -44,18 +46,69 @@ function SwitchSetting({ onChange, value, label }) {
 
 function NumberInputSetting({ onChange, value, label, max, min = 1, step = 1 }) {
   return (
-    <Row gutter={16}>
+    <Row className="settings-row">
       <Col span={8}>{label}</Col>
       <Col span={16}>
-        <InputNumber min={min} max={max} onChange={onChange} value={value} step={step}/>
+        <InputNumber min={min} max={max} onChange={onChange} value={value} step={step} />
       </Col>
     </Row>
   );
 }
 
+class BoundingBoxSetting extends React.Component {
+
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      isValid: false,
+      text: props.value,
+    };
+    this.inputRegex = new RegExp(/(\d+| |,)/, "g");
+  }
+  inputRegex: RegExp;
+
+  validate = (evt) => {
+    const text = evt.target.value;
+
+    if (this.inputRegex.test(text)) {
+      this.setState(Object.assign({}, this.state, { text }));
+    }
+
+    const boundingBox = Utils.stringToNumberArray(text);
+    // eslint-disable-next-line no-unused-vars
+    const [minX, minY, minZ, width, height, depth] = boundingBox;
+
+    // Width, height and depth of 0 should be allowed as a non-existing bounding box equals 0,0,0,0,0,0
+    const isInvalid = boundingBox.length < 6 || width < 0 || height < 0 || depth < 0;
+    if (isInvalid) {
+      Toast.error("Bounding Box: Width, height and depth must be >= 0.", false);
+    } else {
+      this.props.onChange(boundingBox);
+    }
+  };
+
+  render() {
+    return (
+      <Row className="settings-row">
+        <Col span={8}>{this.props.label}</Col>
+        <Col span={16}>
+          <Tooltip
+            trigger={["focus"]}
+            title="Format: minX, minY, minZ, width, height, depth"
+            placement="topLeft"
+          >
+            <Input onChange={this.validate} value={this.state.text} defaultValue={this.state.text} />
+          </Tooltip>
+        </Col>
+      </Row>
+    );
+  }
+}
+
 function ButtonSetting({ onClick, label }) {
   return (
-    <Row>
+    <Row className="settings-row">
       <Col span={24}>
         <Button onClick={onClick}>{label}</Button>
       </Col>
@@ -80,6 +133,7 @@ class TracingSettingsView extends Component {
           <ButtonSetting label="Delete Active Node" onClick={this.props.handleDeleteActiveNode} />
         </Panel>
         <Panel header="Bounding Box" key="3">
+          <BoundingBoxSetting label="Bounding Box" value={this.props.boundingBox} onChange={_.partial(this.props.onChange, "boundingBox")} />
         </Panel>
       </Collapse>
     );

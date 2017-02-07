@@ -9,17 +9,22 @@ import Tracepoint from "./tracepoint";
 * A single tree of skeleton tracing nodes.
 * @class
 */
+type CommentType = {
+  node: number;
+  comment: string;
+};
+
 class TraceTree {
 
   treeId: number;
   color: string;
   name: string;
   timestamp: number;
-  comments: Array<string>;
+  comments: Array<CommentType>;
   branchpoints: Array<Tracepoint>;
   nodes: Array<Tracepoint>;
 
-  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<string> = [], branchpoints: Array<Tracepoint> = []) {
+  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<CommentType> = [], branchpoints: Array<Tracepoint> = []) {
     this.treeId = treeId;
     this.color = color;
     this.name = name;

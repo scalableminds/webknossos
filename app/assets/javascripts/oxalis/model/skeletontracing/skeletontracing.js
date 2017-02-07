@@ -366,12 +366,12 @@ class SkeletonTracing {
   }
 
 
-  setCommentForNode(commentText, node) {
+  setCommentForNode(commentText: string, node: TracePoint) {
     this.trigger("setComment", commentText, node);
   }
 
 
-  getCommentForNode(nodeId, tree) {
+  getCommentForNode(nodeId: number, tree: ?TraceTree) {
     let trees;
     if (tree === undefined) {
       trees = this.getTrees();

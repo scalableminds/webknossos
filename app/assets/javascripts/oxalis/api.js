@@ -1,6 +1,6 @@
 /*
  * api.js
- * @flow weak
+ * @flow strict
  */
 
 // only relative imports are followed by documentationjs
@@ -63,7 +63,6 @@ class TracingApi {
   * const activeNodeId = api.tracing.getActiveNodeId();
   * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
   */
-  // TODO discuss interface, supplying the node provides performance boost
   setCommentForNode(commentText: string, node: TracePoint | number): void {
     // Convert nodeId to node
     if (_.isNumber(node)) { node = this.model.skeletonTracing.getNode(node); }
@@ -80,7 +79,6 @@ class TracingApi {
   * @example // Provide a tree for lookup speed boost
   * const comment = api.tracing.getCommentForNode(23, api.getActiveTreeid());
   */
-  // TODO discuss interface, supplying the tree provides performance boost
   getCommentForNode(nodeId: number, tree: ?(TraceTree | number)): ?string {
     // Convert treeId to tree
     if (_.isNumber(tree)) { tree = this.model.skeletonTracing.getTree(tree); }
@@ -247,6 +245,9 @@ class UtilsApi {
 
  /**
   * Wait for some milliseconds before continuing the control flow.
+  *
+  * @example // Wait for 5 seconds
+  * await api.utils.sleep(5000);
   */
   sleep(milliseconds: number) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
@@ -255,19 +256,20 @@ class UtilsApi {
  /**
   * Overwrite existing wK methods.
   * @param {string}  funcName - The method name you wish to override. Must be a skeletonTracing method.
-  * @param {function} newFunc - Your new implementation for the method in question. Receives the original function as first argument.
+  * @param {function} newFunc - Your new implementation for the method in question. Receives the original function as the first argument
+  * and the original parameters in an array as the second argument
   *
   * @example
-  * api.registerOverwrite("mergeTree", (oldMergeTreeFunc) => {
+  * api.registerOverwrite("mergeTree", (oldMergeTreeFunc, args) => {
   *   // ... do stuff before the original function...
-  *   oldMergeTreeFunc(sourceTree, targetTree, lastNodeId, activeNodeId);
+  *   oldMergeTreeFunc(...args);
   *   // ... do something after the original function ...
   * });
   */
   // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
-  registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T[]) => void, args: T) => void): void {
+  registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T[]) => void, args: T[]) => void): void {
     const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);
     this.model.skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
   }
@@ -275,7 +277,6 @@ class UtilsApi {
   * Sets a custom handler function for a keyboard shortcut.
   */
   registerKeyHandler(key: string, handler: () => void): Handler {
-    // TODO: this way you cannot overwrite existing key handlers, just register new ones
     const keyboard = new Input.KeyboardNoLoop({ [key]: handler });
     return { unregister: keyboard.destroy.bind(keyboard) };
   }

@@ -332,7 +332,7 @@ class Model extends Backbone.Model {
 
 
   getBinaryByName(name) {
-    return _.find(this.binary, binary => binary.name === name);
+    return this.binary[name];
   }
 
 

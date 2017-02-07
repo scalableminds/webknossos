@@ -176,7 +176,39 @@ class UserApi {
 
  /**
   * Returns the user's setting for the tracing view.
-  * @param key - One of the following keys: moveValue, moveValue3d, rotateValue, crosshairSize, scaleValue, mouseRotateValue, clippingDistance, clippingDistanceArbitrary, dynamicSpaceDirection, displayCrosshair, zoom, scale, tdViewDisplayPlanes, isosurfaceDisplay, isosurfaceBBsize, isosurfaceResolution, newNodeNewTree, inverseX, inverseY, keyboardDelay, mouseActive, keyboardActive, gamepadActive, motionsensorActive, firstVisToggle, particleSize, overrideNodeRadius, sortTreesByName, sortCommentsAsc, segmentationOpacity, sphericalCapRadius, renderComments
+  * @param key - One of the following keys:
+    - moveValue
+    - moveValue3d
+    - rotateValue
+    - crosshairSize
+    - scaleValue
+    - mouseRotateValue
+    - clippingDistance
+    - clippingDistanceArbitrary
+    - dynamicSpaceDirection
+    - displayCrosshair
+    - zoom
+    - scale
+    - tdViewDisplayPlanes
+    - isosurfaceDisplay
+    - isosurfaceBBsize
+    - isosurfaceResolution
+    - newNodeNewTree
+    - inverseX
+    - inverseY
+    - keyboardDelay
+    - mouseActive
+    - keyboardActive
+    - gamepadActive
+    - motionsensorActive
+    - firstVisToggle
+    - particleSize
+    - overrideNodeRadius
+    - sortTreesByName
+    - sortCommentsAsc
+    - segmentationOpacity
+    - sphericalCapRadius
+    - renderComments
   *
   * @example
   * const segmentationOpacity = api.user.getConfiguration("segmentationOpacity");
@@ -259,7 +291,6 @@ type ApiInterface = {
 
 /**
  * webKnossos Public Frontend API.
- * @author scalabe minds
  * @version 1
  * @module Api
  *

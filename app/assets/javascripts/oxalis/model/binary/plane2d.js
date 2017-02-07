@@ -41,6 +41,20 @@ type RenderBufferSource = {
   mapping: ?Array<number>;
 };
 
+type BucketPlaceholder = {
+  type: "RECURSION_PLACEHOLDER";
+} | {
+  type: "NOT_LOADED_BUCKET_PLACEHOLDER";
+};
+
+type RenderMapDescriptor = null | Vector4 | BucketPlaceholder;
+
+const Plane2DConstants = {
+  DELTA: [0, 5, 10],
+  RECURSION_PLACEHOLDER: { type: "RECURSION_PLACEHOLDER" },
+  NOT_LOADED_BUCKET_PLACEHOLDER: { type: "NOT_LOADED_BUCKET_PLACEHOLDER" },
+};
+
 // Helper functions
 function tileIndexByTile(tile: Vector2): number {
   return (tile[0] * (1 << (constants.TEXTURE_SIZE_P - BUCKET_SIZE_P))) + tile[1];
@@ -53,20 +67,6 @@ function subTileMacro(tile: Vector2, index: number): Vector2 {
 function bufferOffsetByTile(tile: Vector2, tileSize: number): number {
   return (tile[0] * (1 << tileSize)) + (tile[1] * (1 << tileSize) * (1 << constants.TEXTURE_SIZE_P));
 }
-
-type BucketPlaceholder = {
-  type: "RECURSION_PLACEHOLDER";
-} | {
-  type: "NOT_LOADED_BUCKET_PLACEHOLDER";
-};
-
-const Plane2DConstants = {
-  DELTA: [0, 5, 10],
-  RECURSION_PLACEHOLDER: { type: "RECURSION_PLACEHOLDER" },
-  NOT_LOADED_BUCKET_PLACEHOLDER: { type: "NOT_LOADED_BUCKET_PLACEHOLDER" },
-};
-
-type RenderMapDescriptor = null | Vector4 | BucketPlaceholder;
 
 class Plane2D {
   index: number;

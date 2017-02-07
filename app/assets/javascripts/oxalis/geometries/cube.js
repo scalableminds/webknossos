@@ -5,7 +5,6 @@
 
 import _ from "lodash";
 import app from "app";
-import Utils from "libs/utils";
 import * as THREE from "three";
 import Backbone from "backbone";
 import Model from "oxalis/model";

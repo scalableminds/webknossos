@@ -1,18 +1,29 @@
+/**
+ * tracing_settings_view.js
+ * @flow
+ */
+
 import _ from "lodash";
 import React, { Component } from "react";
-import { Collapse, Row, Col, Slider, InputNumber, Switch, Number, Button } from "antd";
+import { connect } from "react-redux";
+import { updateSettingAction } from "oxalis/model/actions/settings_actions";
+import { deleteActiveNodeAction } from "oxalis/model/actions/skeleton_actions";
+import { Collapse, Row, Col, Slider, InputNumber, Switch, Button } from "antd";
 
 const Panel = Collapse.Panel;
 
-function NumberSliderSetting({onChange, value, label, max, min=1, step=1}) {
+function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }) {
   return (
     <Row>
       <Col span={8}>{label}</Col>
       <Col span={8}>
-        <Slider min={min} max={max} onChange={onChange} value={value} step={step}/>
+        <Slider min={min} max={max} onChange={onChange} value={value} step={step} />
       </Col>
       <Col span={6}>
-        <InputNumber min={min} max={max} style={{ marginLeft: 16 }}
+        <InputNumber
+          min={min}
+          max={max}
+          style={{ marginLeft: 16 }}
           value={value} onChange={onChange}
         />
       </Col>
@@ -20,7 +31,7 @@ function NumberSliderSetting({onChange, value, label, max, min=1, step=1}) {
   );
 }
 
-function SwitchSetting({onChange, value, label}) {
+function SwitchSetting({ onChange, value, label }) {
   return (
     <Row>
       <Col span={8}>{label}</Col>
@@ -31,7 +42,7 @@ function SwitchSetting({onChange, value, label}) {
   );
 }
 
-function NumberInputSetting({onChange, value, label, max, min=1, step=1}) {
+function NumberInputSetting({ onChange, value, label, max, min = 1, step = 1 }) {
   return (
     <Row gutter={16}>
       <Col span={8}>{label}</Col>
@@ -42,7 +53,7 @@ function NumberInputSetting({onChange, value, label, max, min=1, step=1}) {
   );
 }
 
-function ButtonSetting({onClick, value, label}) {
+function ButtonSetting({ onClick, label }) {
   return (
     <Row>
       <Col span={24}>
@@ -54,47 +65,34 @@ function ButtonSetting({onClick, value, label}) {
 
 class TracingSettingsView extends Component {
 
-  // intital state should come from store
-  state = {
-    radius: 1, // this.props.settingsState...
-    overrideNodeRadius: true,
-    particleSize: 1,
-    activeNodeId: 0,
-    somaClickingAllowed: false,
-    boundingBox: [],
-  };
-
-  onChange = (propertyName, value) => {
-    // this.dispatch(action.updateRadius)
-    const newState = Object.assign({}, this.state, {
-      [propertyName]: value,
-    });
-    this.setState(newState);
-  }
-
-  handleDeleteActiveNode = () => {
-    this.dispatch(action.deleteActiveNode);
-  }
-
-  render () {
-    return(
-      <Collapse defaultActiveKey={['1', '2', '3']}>
+  render() {
+    return (
+      <Collapse defaultActiveKey={["1", "2", "3"]}>
         <Panel header="Trees" key="1">
-          <NumberInputSetting label="Active Node ID" max={5000} value={this.state.activeNodeId} onChange={_.partial(this.onChange, "activeNodeId")} />
-          <SwitchSetting label="Soma Clicking" value={this.state.somaClickingAllowed} onChange={_.partial(this.onChange, "somaClickingAllowed")} />
+          <NumberInputSetting label="Active Node ID" max={5000} value={this.props.activeNodeId} onChange={_.partial(this.props.onChange, "activeNodeId")} />
+          <SwitchSetting label="Soma Clicking" value={this.props.somaClickingAllowed} onChange={_.partial(this.props.onChange, "somaClickingAllowed")} />
         </Panel>
         <Panel header="Nodes" key="2">
-          <NumberInputSetting label="Active Node ID" max={5000} value={this.state.activeNodeId} onChange={_.partial(this.onChange, "activeNodeId")} />
-          <NumberSliderSetting label="Radius" max={5000} value={this.state.radius} onChange={_.partial(this.onChange, "radius")} />
-          <NumberSliderSetting label="Particle Size" max={20} step={0.1} value={this.state.particleSize} onChange={_.partial(this.onChange, "particleSize")} />
-          <SwitchSetting label="Override Radius" value={this.state.overrideNodeRadius} onChange={_.partial(this.onChange, "overrideNodeRadius")} />
-          <ButtonSetting label="Delete Active Node" onClick={this.handleDeleteActiveNode} />
+          <NumberInputSetting label="Active Node ID" max={5000} value={this.props.activeNodeId} onChange={_.partial(this.props.onChange, "activeNodeId")} />
+          <NumberSliderSetting label="Radius" max={5000} value={this.props.radius} onChange={_.partial(this.props.onChange, "radius")} />
+          <NumberSliderSetting label="Particle Size" max={20} step={0.1} value={this.props.particleSize} onChange={_.partial(this.props.onChange, "particleSize")} />
+          <SwitchSetting label="Override Radius" value={this.props.overrideNodeRadius} onChange={_.partial(this.props.onChange, "overrideNodeRadius")} />
+          <ButtonSetting label="Delete Active Node" onClick={this.props.handleDeleteActiveNode} />
         </Panel>
         <Panel header="Bounding Box" key="3">
         </Panel>
       </Collapse>
     );
   }
-};
+}
 
-export default TracingSettingsView;
+const mapStateToProps = state => (
+  state
+);
+
+const mapDispatchToProps = dispatch => ({
+  onChange(propertyName, value) { dispatch(updateSettingAction(propertyName, value)); },
+  handleDeleteActiveNode() { dispatch(deleteActiveNodeAction); },
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(TracingSettingsView);

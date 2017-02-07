@@ -1,9 +1,11 @@
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
-import { render } from "react-dom";
 import React from "react";
+import { render } from "react-dom";
+import { Provider } from "react-redux";
 import app from "app";
+import store from "oxalis/store";
 import OxalisController from "oxalis/controller";
 import OxalisModel from "oxalis/model";
 import Constants from "oxalis/constants";
@@ -193,7 +195,9 @@ class TracingLayoutView extends Marionette.View {
     }
 
     render(
-      <SettingsView />,
+      <Provider store={store}>
+        <SettingsView />
+      </Provider>,
       this.ui.settings[0],
     );
     // this.showChildView("settings", settingsTabView);

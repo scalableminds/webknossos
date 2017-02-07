@@ -1,14 +1,33 @@
+/*
+* tracetree.js
+* @flow weak
+*/
 import Utils from "libs/utils";
+import type { CommentType, BranchPoint } from "oxalis/model";
+import Tracepoint from "./tracepoint";
+
+/**
+* A single tree of skeleton tracing nodes.
+* @class
+*/
 
 class TraceTree {
 
-  constructor(treeId, color, name, timestamp, comments = [], branchpoints = []) {
+  treeId: number;
+  color: string;
+  name: string;
+  timestamp: number;
+  comments: Array<CommentType>;
+  branchPoints: Array<BranchPoint>;
+  nodes: Array<Tracepoint>;
+
+  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<CommentType> = [], branchPoints: Array<BranchPoint> = []) {
     this.treeId = treeId;
     this.color = color;
     this.name = name;
     this.timestamp = timestamp;
     this.comments = comments;
-    this.branchpoints = branchpoints;
+    this.branchPoints = branchPoints;
     this.nodes = [];
   }
 
@@ -17,8 +36,8 @@ class TraceTree {
     // return whether a comment or branchpoint was deleted
     // as a result of the removal of this node
     let updateTree = false;
-    updateTree |= this.removeCommentWithNodeId(id);
-    updateTree |= this.removeBranchWithNodeId(id);
+    updateTree = updateTree || this.removeCommentWithNodeId(id);
+    updateTree = updateTree || this.removeBranchWithNodeId(id);
 
     for (const i of Utils.__range__(0, this.nodes.length, false)) {
       if (this.nodes[i].id === id) {
@@ -31,7 +50,7 @@ class TraceTree {
   }
 
 
-  removeCommentWithNodeId(id) {
+  removeCommentWithNodeId(id): boolean {
     for (const i of Utils.__range__(0, this.comments.length, false)) {
       if (this.comments[i].node === id) {
         this.comments.splice(i, 1);
@@ -43,9 +62,9 @@ class TraceTree {
 
 
   removeBranchWithNodeId(id) {
-    for (const i of Utils.__range__(0, this.branchpoints.length, false)) {
-      if (this.branchpoints[i].id === id) {
-        this.branchpoints.splice(i, 1);
+    for (let i = 0; i < this.branchPoints.length; i++) {
+      if (this.branchPoints[i].id === id) {
+        this.branchPoints.splice(i, 1);
         return true;
       }
     }
@@ -54,7 +73,7 @@ class TraceTree {
 
 
   isBranchPoint(id) {
-    return (this.branchpoints.map(node => node.id)).includes(id);
+    return (this.branchPoints.map(node => node.id)).includes(id);
   }
 
 

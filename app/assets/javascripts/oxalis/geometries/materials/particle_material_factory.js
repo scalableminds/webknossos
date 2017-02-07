@@ -5,6 +5,7 @@
 
 import _ from "lodash";
 import app from "app";
+import scaleInfo from "oxalis/model/scaleinfo";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
 class ParticleMaterialFactory extends AbstractMaterialFactory {
@@ -22,7 +23,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
       },
       baseVoxel: {
         type: "f",
-        value: app.scaleInfo.baseVoxel,
+        value: scaleInfo.baseVoxel,
       },
       particleSize: {
         type: "f",

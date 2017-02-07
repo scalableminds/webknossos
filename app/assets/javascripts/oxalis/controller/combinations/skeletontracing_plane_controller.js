@@ -178,9 +178,9 @@ class SkeletonTracingPlaneController extends PlaneController {
     // set the new trace direction
     if (activeNode) {
       this.model.flycam.setDirection([
-        position[0] - activeNode.pos[0],
-        position[1] - activeNode.pos[1],
-        position[2] - activeNode.pos[2],
+        position[0] - activeNode.position[0],
+        position[1] - activeNode.position[1],
+        position[2] - activeNode.position[2],
       ]);
     }
 

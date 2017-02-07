@@ -19,7 +19,7 @@ class UserModel extends Backbone.Model {
     };
   }
 
-  url() {
+  url = function url() {
     const userID = this.get("id");
     if (userID) {
       return `/api/users/${userID}`;

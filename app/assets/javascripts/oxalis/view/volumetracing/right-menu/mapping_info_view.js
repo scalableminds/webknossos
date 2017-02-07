@@ -1,13 +1,29 @@
+/**
+ * mapping_info_view.js
+ * @flow weak
+ */
+
 import Backbone from "backbone";
 import Marionette from "backbone.marionette";
 import Subviews from "backbone-subviews";
 import _ from "lodash";
 import CheckboxSettingView from "oxalis/view/settings/setting_views/checkbox_setting_view";
+import Binary from "oxalis/model/binary";
+import Cube from "oxalis/model/binary/data_cube";
+import Flycam2d from "oxalis/model/flycam2d";
+
+const RENDER_DEBOUNCE_TIME = 200;
 
 class MappingInfoView extends Marionette.View {
-  static initClass() {
-    this.prototype.RENDER_DEBOUNCE_TIME = 200;
 
+  subviewCreators: Object;
+  model: Backbone.Model;
+  binary: Binary;
+  cube: Cube;
+  flycam: Flycam2d;
+  renderDebounced: Function;
+
+  static initClass() {
     this.prototype.id = "volume-mapping-info";
     this.prototype.template = _.template(`\
 <div class="well">
@@ -26,13 +42,15 @@ class MappingInfoView extends Marionette.View {
 
     this.prototype.subviewCreators = {
 
-      enableMapping: () => new CheckboxSettingView({
-        model: this.model,
-        options: {
-          name: "enableMapping",
-          displayName: "Enable Mapping",
-        },
-      }),
+      enableMapping() {
+        return new CheckboxSettingView({
+          model: this.model,
+          options: {
+            name: "enableMapping",
+            displayName: "Enable Mapping",
+          },
+        });
+      },
     };
   }
 
@@ -47,7 +65,7 @@ class MappingInfoView extends Marionette.View {
     this.cube = this.binary.cube;
     this.flycam = oxalisModel.flycam;
 
-    this.renderDebounced = _.debounce(this.render, this.RENDER_DEBOUNCE_TIME);
+    this.renderDebounced = _.debounce(this.render, RENDER_DEBOUNCE_TIME);
     this.listenTo(this.cube, "bucketLoaded", this.renderDebounced);
     this.listenTo(this.cube, "volumeLabeled", this.renderDebounced);
     this.listenTo(this.cube, "newMapping", this.render);

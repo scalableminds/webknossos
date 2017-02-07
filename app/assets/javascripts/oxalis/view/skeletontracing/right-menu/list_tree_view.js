@@ -1,3 +1,8 @@
+/**
+ * list_tree_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import $ from "jquery";
 import Utils from "libs/utils";
@@ -67,7 +72,7 @@ class ListTreeView extends Marionette.CompositeView {
       sortTimeIcon: "#sort-time-icon",
     };
   }
-  childViewOptions() {
+  childViewOptions = function childViewOptions() {
     return {
       parent: this,
       activeTreeId: this.getActiveTree().treeId,
@@ -76,7 +81,9 @@ class ListTreeView extends Marionette.CompositeView {
 
 
   initialize() {
-    this.collection = new Backbone.Collection();
+    // If you know how to do this better, do it. Backbones Collection type is not compatible to Marionettes
+    // Collection type according to flow - although they actually should be...
+    this.collection = ((new Backbone.Collection(): any): Marionette.Collection);
 
     this.listenTo(this, "render", this.updateSortIndicator);
     this.listenTo(this, "render", this.refresh);

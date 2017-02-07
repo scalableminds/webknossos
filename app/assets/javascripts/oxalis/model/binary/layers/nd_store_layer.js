@@ -5,10 +5,10 @@
 
 import _ from "lodash";
 import Utils from "libs/utils";
+import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import Layer from "./layer";
 import Request from "../../../../libs/request";
 import ErrorHandling from "../../../../libs/error_handling";
-import Cube from "../cube";
 
 
 class NdStoreLayer extends Layer {
@@ -80,7 +80,7 @@ class NdStoreLayer extends Layer {
     const min = this.lowerBoundary;
     const max = this.upperBoundary;
 
-    const cubeSize = 1 << (Cube.prototype.BUCKET_SIZE_P + zoomStep);
+    const cubeSize = 1 << (BUCKET_SIZE_P + zoomStep);
 
     const [x, y, z] = position;
     return [
@@ -97,15 +97,15 @@ class NdStoreLayer extends Layer {
   getMaxCoordinatesAsBucket(bounds, bucket) {
     // transform bounds in zoom-step-0 voxels to bucket coordinates between 0 and BUCKET_SIZE_P
     const bucketBounds = _.map(bounds, (coordinate) => {
-      const cubeSize = 1 << (Cube.prototype.BUCKET_SIZE_P + bucket.zoomStep);
+      const cubeSize = 1 << (BUCKET_SIZE_P + bucket.zoomStep);
       return (coordinate % cubeSize) >> bucket.zoomStep;
     },
     );
 
     // as the upper bound for bucket coordinates is exclusive, the % cubeSize of it is 0
-    // but we want it to be 1 << Cube::BUCKET_SIZE_P
+    // but we want it to be 1 << BUCKET_SIZE_P
     for (let i = 3; i <= 5; i++) {
-      bucketBounds[i] = bucketBounds[i] || (1 << Cube.prototype.BUCKET_SIZE_P);
+      bucketBounds[i] = bucketBounds[i] || (1 << BUCKET_SIZE_P);
     }
 
     return bucketBounds;

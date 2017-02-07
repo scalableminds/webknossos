@@ -53,7 +53,7 @@ class ArbitraryPlaneInfo extends Marionette.View {
 
     // Set a inital waypoint when enabling flight mode
     // TODO: use the offical wK API
-    if (value === true) {
+    if (value === true && app.oxalis) {
       app.oxalis.arbitraryController.setWaypoint();
     }
   }

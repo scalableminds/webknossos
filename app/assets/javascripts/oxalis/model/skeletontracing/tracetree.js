@@ -1,8 +1,30 @@
+/*
+* tracetree.js
+* @flow weak
+*/
 import Utils from "libs/utils";
+import Tracepoint from "./tracepoint";
+
+/**
+* A single tree of skeleton tracing nodes.
+* @class
+*/
+type CommentType = {
+  node: number;
+  comment: string;
+};
 
 class TraceTree {
 
-  constructor(treeId, color, name, timestamp, comments = [], branchpoints = []) {
+  treeId: number;
+  color: string;
+  name: string;
+  timestamp: number;
+  comments: Array<CommentType>;
+  branchpoints: Array<Tracepoint>;
+  nodes: Array<Tracepoint>;
+
+  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<CommentType> = [], branchpoints: Array<Tracepoint> = []) {
     this.treeId = treeId;
     this.color = color;
     this.name = name;
@@ -17,8 +39,8 @@ class TraceTree {
     // return whether a comment or branchpoint was deleted
     // as a result of the removal of this node
     let updateTree = false;
-    updateTree |= this.removeCommentWithNodeId(id);
-    updateTree |= this.removeBranchWithNodeId(id);
+    updateTree = updateTree || this.removeCommentWithNodeId(id);
+    updateTree = updateTree || this.removeBranchWithNodeId(id);
 
     for (const i of Utils.__range__(0, this.nodes.length, false)) {
       if (this.nodes[i].id === id) {
@@ -31,7 +53,7 @@ class TraceTree {
   }
 
 
-  removeCommentWithNodeId(id) {
+  removeCommentWithNodeId(id): boolean {
     for (const i of Utils.__range__(0, this.comments.length, false)) {
       if (this.comments[i].node === id) {
         this.comments.splice(i, 1);

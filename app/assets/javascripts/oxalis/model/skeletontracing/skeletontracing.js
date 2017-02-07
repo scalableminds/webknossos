@@ -4,6 +4,7 @@ import _ from "lodash";
 import Utils from "libs/utils";
 import ColorGenerator from "libs/color_generator";
 import TracePoint from "./tracepoint";
+import type { MetaInfo } from "./tracepoint";
 import TraceTree from "./tracetree";
 import SkeletonTracingStateLogger from "./skeletontracing_statelogger";
 import RestrictionHandler from "../helpers/restriction_handler";
@@ -213,7 +214,7 @@ class SkeletonTracing {
         radius = this.activeNode.radius;
       }
 
-      const metaInfo = {
+      const metaInfo: MetaInfo = {
         timestamp: (new Date()).getTime(),
         viewport,
         resolution,

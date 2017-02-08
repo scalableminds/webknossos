@@ -1,5 +1,5 @@
 import React from "react";
-import { Row, Col, Slider, InputNumber, Switch, Button, Tooltip, Input } from "antd";
+import { Row, Col, Slider, InputNumber, Switch, Button, Tooltip, Input, Select } from "antd";
 import Utils from "libs/utils";
 
 export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }) {
@@ -102,6 +102,30 @@ export function ButtonSetting({ onClick, label }) {
     <Row className="settings-row">
       <Col span={24}>
         <Button onClick={onClick}>{label}</Button>
+      </Col>
+    </Row>
+  );
+}
+
+// export function ColorSetting({ onChange, label, value }) {
+//   return (
+//     <Row className="settings-row">
+//       <Col span={8}>{label}</Col>
+//       <Col span={16}>
+//         <ColorPicker onChange={onChange} value={value} defaultValue={value} />
+//       </Col>
+//     </Row>
+//   );
+// }
+
+export function DropdownSetting({ onChange, label, value, children }) {
+  return (
+    <Row className="settings-row">
+      <Col span={8}>{label}</Col>
+      <Col span={16}>
+        <Select onChange={onChange} value={value.toString()} defaultValue={value.toString()} >
+          {children}
+        </Select>
       </Col>
     </Row>
   );

@@ -1,4 +1,4 @@
-import { takeEvery, call, select, put } from "redux-saga/effects";
+import { throttle, call, select, put } from "redux-saga/effects";
 import Request from "libs/request";
 import { initializeUserSettingsAction, initializeDatasetSettingsAction } from "oxalis/model/actions/settings_actions";
 
@@ -21,15 +21,16 @@ function* pushUserSettingsAsync() {
 }
 
 function* pushDatasetSettingsAsync() {
+  const datasetName = yield select(state => state.datasetName);
   const payload = yield select(state => state.datasetConfiguration);
-  yield call(Request.sendJSONReceiveJSON.bind(Request), "/api/user/dataSetConfigurations", { data: payload });
+  yield call(Request.sendJSONReceiveJSON.bind(Request), `/api/dataSetConfigurations/${datasetName}`, { data: payload });
 }
 
 export function* watchPushSettingsAsync() {
   yield [
-    takeEvery("UPDATE_USER_SETTING", pushUserSettingsAsync),
-    takeEvery("UPDATE_DATASET_SETTING", pushDatasetSettingsAsync),
-    takeEvery("UPDATE_LAYER_SETTING", pushDatasetSettingsAsync),
+    throttle(500, "UPDATE_USER_SETTING", pushUserSettingsAsync),
+    throttle(500, "UPDATE_DATASET_SETTING", pushDatasetSettingsAsync),
+    throttle(500, "UPDATE_LAYER_SETTING", pushDatasetSettingsAsync),
   ];
 }
 

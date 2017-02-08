@@ -21,7 +21,7 @@ const SettingsReducer = (state: Object = {}, action: SettingActionTypes) => {
 
     case "UPDATE_LAYER_SETTING": {
       const { layerName, propertyName, value } = action;
-      return update(state, { datasetConfiguration: { $merge: { layers: { [layerName]: { [propertyName]: value } } } } });
+      return update(state, { datasetConfiguration: { layers: { [layerName]: { [propertyName]: { $set: value } } } } });
     }
 
     case "INITIALIZE_USER_SETTINGS": {

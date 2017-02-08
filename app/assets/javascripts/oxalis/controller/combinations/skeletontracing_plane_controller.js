@@ -7,6 +7,7 @@ import $ from "jquery";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
+import Store from "oxalis/store";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import PlaneController from "../viewmodes/plane_controller";
 import constants from "../../constants";
@@ -204,15 +205,15 @@ class SkeletonTracingPlaneController extends PlaneController {
       centered = true;
     }
 
-    const datasetConfig = this.model.get("datasetConfiguration");
+    const datasetConfig = Store.getState().datasetConfiguration;
 
     this.model.skeletonTracing.addNode(
       position,
       rotation,
       this.activeViewport,
       this.model.flycam.getIntegerZoomStep(),
-      datasetConfig.get("fourBit") ? 4 : 8,
-      datasetConfig.get("interpolation"),
+      datasetConfig.fourBit ? 4 : 8,
+      datasetConfig.interpolation,
     );
 
     if (centered) {

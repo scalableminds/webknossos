@@ -107,7 +107,6 @@ class PlaneController {
     }
 
     this.model.user.triggerAll();
-    this.model.datasetConfiguration.triggerAll();
 
     this.initTrackballControls();
     this.bindToEvents();

@@ -1,5 +1,6 @@
 import _ from "lodash";
 import Backbone from "backbone";
+import Store from "oxalis/store";
 import Pipeline from "libs/pipeline";
 import InterpolationCollector from "./binary/interpolation_collector";
 import Cube from "./binary/cube";
@@ -75,9 +76,8 @@ class Binary {
     }
 
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {
-      this.layer.setFourBit(this.model.get("datasetConfiguration").get("fourBit"));
-      this.listenTo(this.model.get("datasetConfiguration"), "change:fourBit",
-                function (datasetModel, fourBit) { this.layer.setFourBit(fourBit); });
+      this.layer.setFourBit(Store.getState().datasetConfiguration.fourBit);
+      Store.subscribe(() => { this.layer.setFourBit(Store.getState().datasetConfiguration.fourBit); });
     }
 
     this.cube.on({

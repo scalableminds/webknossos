@@ -1,6 +1,7 @@
 import _ from "lodash";
-import app from "app";
 import Backbone from "backbone";
+import app from "app";
+import Store from "oxalis/store";
 import Dimensions from "./dimensions";
 import constants from "../constants";
 
@@ -40,7 +41,7 @@ class Flycam2d {
     // correct zoom values that are too high or too low
     this.user.set("zoom", Math.max(0.01, Math.min(this.user.get("zoom"), Math.floor(this.getMaxZoomStep()))));
 
-    this.listenTo(this.model.get("datasetConfiguration"), "change:quality", function (datasetModel, quality) { return this.setQuality(quality); });
+    Store.subscribe(() => { this.setQuality(Store.getState().datasetConfiguration.quality); });
     // TODO move zoom into tracing settings
     this.listenTo(this.user, "change:zoom", function (userModel, zoomFactor) { return this.zoom(Math.log(zoomFactor) / Math.LN2); });
 

@@ -15,6 +15,7 @@ import Toast from "libs/toast";
 import type { ModeType } from "oxalis/constants";
 import Model from "oxalis/model";
 import View from "oxalis/view";
+import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import Flycam3d from "oxalis/model/flycam3d";
@@ -120,7 +121,7 @@ class ArbitraryController {
   render() {
     const matrix = this.cam.getMatrix();
     this.model.getColorBinaries().forEach(binary =>
-      binary.arbitraryPing(matrix, this.model.datasetConfiguration.get("quality")));
+      binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality));
   }
 
 
@@ -341,9 +342,9 @@ class ArbitraryController {
 
   addNode = (position, rotation) => {
     if (!this.isStarted) { return; }
-    const datasetConfig = this.model.get("datasetConfiguration");
-    const fourBit = datasetConfig.get("fourBit") ? 4 : 8;
-    const interpolation = datasetConfig.get("interpolation");
+    const datasetConfig = Store.getState().datasetConfiguration;
+    const fourBit = datasetConfig.fourBit ? 4 : 8;
+    const interpolation = datasetConfig.interpolation;
 
     this.model.skeletonTracing.addNode(position, rotation, constants.ARBITRARY_VIEW, 0, fourBit, interpolation);
   }

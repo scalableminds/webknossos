@@ -1,4 +1,4 @@
-import { throttle, call, select, put } from "redux-saga/effects";
+import { throttle, call, select, put, take } from "redux-saga/effects";
 import Request from "libs/request";
 import { initializeUserSettingsAction, initializeDatasetSettingsAction } from "oxalis/model/actions/settings_actions";
 
@@ -9,6 +9,7 @@ export function* initializeUserSettingsAsync() {
 }
 
 export function* initializeDatasetSettingsAsync() {
+  yield take("SET_DATASET_NAME");
   const datasetName = yield select(state => state.datasetName);
   const initialDatasetSettings = yield call(Request.receiveJSON.bind(Request), `/api/dataSetConfigurations/${datasetName}`);
   const action = initializeDatasetSettingsAction(initialDatasetSettings);

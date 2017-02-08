@@ -3,10 +3,12 @@
  * @flow weak
  */
 
+import _ from "lodash";
+import * as THREE from "three";
 import app from "app";
 import Utils from "libs/utils";
-import * as THREE from "three";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
 class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
@@ -33,15 +35,16 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
   setupUniforms() {
     super.setupUniforms();
 
+    const layerSettings = Store.getState().datasetConfiguration.layers;
     for (const binary of this.model.getColorBinaries()) {
       const name = this.sanitizeName(binary.name);
       this.uniforms[`${name}_brightness`] = {
         type: "f",
-        value: this.model.datasetConfiguration.get(`layers.${binary.name}.brightness`) / 255,
+        value: layerSettings[binary.name].brightness / 255,
       };
       this.uniforms[`${name}_contrast`] = {
         type: "f",
-        value: this.model.datasetConfiguration.get(`layers.${binary.name}.contrast`),
+        value: layerSettings[binary.name].contrast,
       };
     }
   }
@@ -59,18 +62,14 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
 
   setupChangeListeners() {
-    this.listenTo(this.model.datasetConfiguration, "change", function (model) {
-      const object = model.changed.layers || {};
-      for (const binaryName of Object.keys(object)) {
-        const changes = object[binaryName];
-        const name = this.sanitizeName(binaryName);
-        if (changes.brightness != null) {
-          this.uniforms[`${name}_brightness`].value = changes.brightness / 255;
-        }
-        if (changes.contrast != null) {
-          this.uniforms[`${name}_contrast`].value = changes.contrast;
-        }
-      }
+    Store.subscribe(() => {
+      const layerSettings = Store.getState().datasetConfiguration.layers;
+      _.forEach(layerSettings, (settings, layerName) => {
+        const name = this.sanitizeName(layerName);
+        this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
+        this.uniforms[`${name}_contrast`].value = settings.contrast;
+      });
+
       app.vent.trigger("rerender");
     });
   }

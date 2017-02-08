@@ -6,11 +6,12 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import app from "app";
+import Store from "oxalis/store";
+import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 import Utils from "../libs/utils";
 import Binary from "./model/binary";
 import SkeletonTracing from "./model/skeletontracing/skeletontracing";
 import User from "./model/user";
-import DatasetConfiguration from "./model/dataset_configuration";
 import VolumeTracing from "./model/volumetracing/volumetracing";
 import ConnectionInfo from "./model/binarydata_connection_info";
 import ScaleInfo from "./model/scaleinfo";
@@ -146,14 +147,9 @@ class Model extends Backbone.Model {
       this.set("dataset", new Backbone.Model(tracing.content.dataSet));
       const colorLayers = _.filter(this.get("dataset").get("dataLayers"),
                               layer => layer.category === "color");
-      this.set("datasetConfiguration", new DatasetConfiguration({
-        datasetName: this.get("datasetName"),
-        dataLayerNames: _.map(colorLayers, "name"),
-      }));
-      return this.get("datasetConfiguration").fetch().then(() => Promise.resolve(tracing));
-    },
-
-    ).then((tracing: Tracing) => {
+      Store.dispatch(setDatasetAction(this.get("datasetName"), _.map(colorLayers, "name")));
+      return tracing;
+    }).then((tracing: Tracing) => {
       const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
       return this.initializeWithData(tracing, layerInfos);
     },

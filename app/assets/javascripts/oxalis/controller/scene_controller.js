@@ -10,6 +10,7 @@ import Backbone from "backbone";
 import * as THREE from "three";
 import Flycam2d from "oxalis/model/flycam2d";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import Plane from "../geometries/plane";
 import Skeleton from "../geometries/skeleton";
@@ -317,9 +318,7 @@ class SceneController {
     });
     this.listenTo(user, "change:clippingDistance", function (model, value) { this.setClippingDistance(value); });
     this.listenTo(user, "change:displayCrosshair", function (model, value) { this.setDisplayCrosshair(value); });
-    this.listenTo(this.model.datasetConfiguration, "change:interpolation", function (model, value) {
-      this.setInterpolation(value);
-    });
+    Store.subscribe(() => { this.setInterpolation(Store.getState().datasetConfiguration.interpolation); });
     this.listenTo(user, "change:tdViewDisplayPlanes", function (model, value) { this.setDisplayPlanes(value); });
   }
 }

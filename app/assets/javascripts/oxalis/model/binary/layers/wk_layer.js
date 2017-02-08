@@ -4,6 +4,7 @@
  */
 
 import _ from "lodash";
+import Store from "oxalis/store";
 import Layer from "./layer";
 import BucketBuilder from "./bucket_builder";
 import Request from "../../../../libs/request";
@@ -46,8 +47,9 @@ class WkLayer extends Layer {
       });
     }
 
+    const datasetName = Store.getState().dataset.name;
     return requestData.dataPromise().then(data => Request.sendArraybufferReceiveArraybuffer(
-        `${this.dataStoreInfo.url}/data/datasets/${this.dataSetName}/layers/${this.name}/data?token=${token}`,
+        `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`,
       {
         data,
         headers: {
@@ -95,8 +97,9 @@ class WkLayer extends Layer {
         getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)));
     }
 
+    const datasetName = Store.getState().dataset.name;
     return transmitData.dataPromise().then(data => Request.sendArraybufferReceiveArraybuffer(
-        `${this.dataStoreInfo.url}/data/datasets/${this.dataSetName}/layers/${this.name}/data?token=${token}`, {
+        `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`, {
           method: "PUT",
           data,
           headers: {

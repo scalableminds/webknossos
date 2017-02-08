@@ -9,8 +9,7 @@ class PushQueue {
   }
 
 
-  constructor(dataSetName, cube, layer, tracingId, updatePipeline, sendData = true) {
-    this.dataSetName = dataSetName;
+  constructor(cube, layer, tracingId, updatePipeline, sendData = true) {
     this.cube = cube;
     this.layer = layer;
     this.tracingId = tracingId;

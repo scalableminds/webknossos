@@ -15,7 +15,7 @@ export type OxalisState = {
 const defaultState: OxalisState = {
   datasetConfiguration: {},
   userConfiguration: {},
-  datasetName: "",
+  dataset: {},
 };
 
 const sagaMiddleware = createSagaMiddleware();

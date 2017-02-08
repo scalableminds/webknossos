@@ -9,8 +9,8 @@ export function* initializeUserSettingsAsync() {
 }
 
 export function* initializeDatasetSettingsAsync() {
-  yield take("SET_DATASET_NAME");
-  const datasetName = yield select(state => state.datasetName);
+  yield take("SET_DATASET");
+  const datasetName = yield select(state => state.dataset.name);
   const initialDatasetSettings = yield call(Request.receiveJSON.bind(Request), `/api/dataSetConfigurations/${datasetName}`);
   const action = initializeDatasetSettingsAction(initialDatasetSettings);
   yield put(action);

@@ -3,6 +3,7 @@
  * @flow weak
  */
 
+import Store from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import BucketBuilder from "./bucket_builder";
 import Request from "../../../../libs/request";
@@ -45,7 +46,6 @@ class Layer {
   fourBit: boolean;
   dataStoreInfo: DataStoreInfoType;
   name: string;
-  dataSetName: string;
   bitDepth: number;
   tokenPromise: Promise<string>;
   tokenRequestPromise: ?Promise<string>;
@@ -62,8 +62,7 @@ class Layer {
   }
 
 
-  constructor(layerInfo: LayerInfoType, dataSetName: string, dataStoreInfo: DataStoreInfoType) {
-    this.dataSetName = dataSetName;
+  constructor(layerInfo: LayerInfoType, dataStoreInfo: DataStoreInfoType) {
     this.dataStoreInfo = dataStoreInfo;
 
     this.name = layerInfo.name;
@@ -81,8 +80,9 @@ class Layer {
   requestDataToken() {
     if (this.tokenRequestPromise) { return this.tokenRequestPromise; }
 
+    const datasetName = Store.getState().dataset.name;
     this.tokenRequestPromise = Request.receiveJSON(
-      `/dataToken/generate?dataSetName=${this.dataSetName}&dataLayerName=${this.name}`,
+      `/dataToken/generate?dataSetName=${datasetName}&dataLayerName=${this.name}`,
     ).then((dataStore) => {
       this.tokenRequestPromise = null;
       return dataStore.token;

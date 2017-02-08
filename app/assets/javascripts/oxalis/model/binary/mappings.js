@@ -1,12 +1,14 @@
 import _ from "lodash";
+import Store from "oxalis/store";
 import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
 
 class Mappings {
 
 
-  constructor(dataStoreInfo, datasetName, layer) {
+  constructor(dataStoreInfo, layer) {
     this.mappings = _.keyBy(layer.mappings, "name");
+    const datasetName = Store.getState().dataset.name;
     this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
     this.doWithToken = layer.doWithToken.bind(layer);
   }

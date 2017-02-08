@@ -32,9 +32,9 @@ const SettingsReducer = (state: Object = {}, action: SettingActionTypes) => {
       return update(state, { datasetConfiguration: { $set: action.initialState } });
     }
 
-    case "SET_DATASET_NAME": {
+    case "SET_DATASET": {
       return update(state, {
-        datasetName: { $set: action.datasetName },
+        dataset: { $set: action.dataset },
         datasetConfiguration: { dataLayerNames: { $set: action.dataLayerNames } },
       });
     }

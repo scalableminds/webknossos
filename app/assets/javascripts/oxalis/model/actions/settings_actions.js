@@ -10,7 +10,7 @@ type UpdateDatasetSettingActionType = {type: "UPDATE_DATASET_SETTING", propertyN
 type UpdateLayerSettingActionType = {type: "UPDATE_LAYER_SETTING", layerName:string, propertyName: string, value: any};
 type InitializeUserSettingsAction = {type: "INITIALIZE_USER_SETTINGS", initialState: Object};
 type InitializeDatasetSettingsAction = {type: "INITIALIZE_DATASET_SETTINGS", initialState: Object};
-type SetDatasetAction = {type: "SET_DATASET_NAME", datasetName: string, dataLayerNames: Array<string>};
+type SetDatasetAction = {type: "SET_DATASET", dataset: Object, dataLayerNames: Array<string>};
 
 export type SettingActionTypes = (
   UpdateUserSettingActionType |
@@ -39,9 +39,9 @@ export const updateLayerSettingAction = (layerName: string, propertyName: string
   value,
 });
 
-export const setDatasetAction = (datasetName: string, dataLayerNames: Array<string>): SetDatasetAction => ({
-  type: "SET_DATASET_NAME",
-  datasetName,
+export const setDatasetAction = (dataset: Object, dataLayerNames: Array<string>): SetDatasetAction => ({
+  type: "SET_DATASET",
+  dataset,
   dataLayerNames,
 });
 

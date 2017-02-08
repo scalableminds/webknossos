@@ -53,12 +53,11 @@ class Binary {
 
     const updatePipeline = new Pipeline([this.tracing.version]);
 
-    const datasetName = this.model.get("dataset").get("name");
-    const datastoreInfo = this.model.get("dataset").get("dataStore");
+    const datastoreInfo = Store.getState().dataset.dataStore;
     this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
-    this.pushQueue = new PushQueue(datasetName, this.cube, this.layer, this.tracing.id, updatePipeline);
+    this.pushQueue = new PushQueue(this.cube, this.layer, this.tracing.id, updatePipeline);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
-    this.mappings = new Mappings(datastoreInfo, datasetName, this.layer);
+    this.mappings = new Mappings(datastoreInfo, this.layer);
     this.activeMapping = null;
 
     this.pingStrategies = [

@@ -13,8 +13,8 @@ mockRequire("../../../libs/error_handling", {
 });
 mockRequire("../../../libs/toast", { error: _.noop });
 
-
-const Cube = require("../../../oxalis/model/binary/data_cube").default;
+// Avoid node caching and make sure all mockRequires are applied
+const Cube = mockRequire.reRequire("../../../oxalis/model/binary/data_cube").default;
 
 describe("Cube", () => {
   let cube = null;

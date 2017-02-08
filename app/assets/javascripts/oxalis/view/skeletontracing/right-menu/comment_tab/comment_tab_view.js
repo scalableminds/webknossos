@@ -75,7 +75,7 @@ class CommentTabView extends Marionette.View {
     // events
     this.listenTo(this.model.skeletonTracing, "newActiveNode", this.updateInputElement);
     this.listenTo(this.model.skeletonTracing, "reloadTrees", this.updateState);
-    this.listenTo(this.model.skeletonTracing, "setComment", (...args) => this.setComment(...args, true));
+    this.listenTo(this.model.skeletonTracing, "newComment", this.updateState);
 
     // keyboard shortcuts
     return new Input.KeyboardNoLoop({
@@ -124,13 +124,19 @@ class CommentTabView extends Marionette.View {
     return this.model.skeletonTracing.getActiveNodeId();
   }
 
+
   getActiveTreeId() {
     return this.model.skeletonTracing.getActiveTreeId();
   }
 
 
-  setActiveNode(comment, treeId) {
+  setActiveComment(comment, treeId) {
     this.activeComment = this.makeComment(comment, treeId);
+  }
+
+
+  setActiveNode(comment, treeId) {
+    this.setActiveComment(comment, treeId);
     this.model.skeletonTracing.setActiveNode(comment.node);
     this.model.skeletonTracing.centerActiveNode();
   }
@@ -163,40 +169,15 @@ class CommentTabView extends Marionette.View {
   }
 
 
-  setComment(commentText, node, silent = false) {
+  setComment(commentText, node) {
     if (!this.model.skeletonTracing.restrictionHandler.updateAllowed()) { return; }
-
     if (!node) { node = this.model.skeletonTracing.getActiveNode(); }
-
     // don't add a comment if there is no node
     if (!node) { return; }
 
-    // add, delete or update a comment
-    const nodeId = node.id;
-    const tree = this.model.skeletonTracing.getTree(node.treeId);
-
-    let comment = this.getCommentForNode(nodeId, tree);
-    if (comment) {
-      if (commentText !== "") {
-        comment.content = commentText;
-      } else {
-        tree.removeCommentWithNodeId(nodeId);
-      }
-    } else if (commentText !== "") {
-      comment = {
-        node: nodeId,
-        content: commentText,
-      };
-      tree.comments.push(comment);
-
-      if (!silent) {
-        this.setActiveNode(comment, tree.treeId);
-      }
-    }
+    this.model.skeletonTracing.setCommentForNode(commentText, node);
 
     this.updateState();
-
-    this.model.skeletonTracing.updateTree(tree);
   }
 
 

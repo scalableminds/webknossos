@@ -397,7 +397,27 @@ class SkeletonTracing {
 
 
   setCommentForNode(commentText: string, node: TracePoint) {
-    this.trigger("setComment", commentText, node);
+    // add, delete or update a comment
+    const nodeId = node.id;
+    const tree = this.getTree(node.treeId);
+
+    let comment = this.getCommentForNode(nodeId, tree);
+    if (comment) {
+      if (commentText !== "") {
+        comment.content = commentText;
+      } else {
+        tree.removeCommentWithNodeId(nodeId);
+      }
+    } else if (commentText !== "") {
+      comment = {
+        node: nodeId,
+        content: commentText,
+      };
+      tree.comments.push(comment);
+    }
+
+    this.stateLogger.updateTree(tree);
+    this.trigger("newComment");
   }
 
 
@@ -657,11 +677,6 @@ class SkeletonTracing {
         this.trigger("mergeDifferentTrees");
       }
     }
-  }
-
-
-  updateTree(tree) {
-    this.stateLogger.updateTree(tree);
   }
 
 

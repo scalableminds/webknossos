@@ -66,8 +66,13 @@ class TracingApi {
   */
   setCommentForNode(commentText: string, node: TracePoint | number): void {
     // Convert nodeId to node
-    if (_.isNumber(node)) { node = this.model.skeletonTracing.getNode(node); }
-    if (!(node instanceof TracePoint)) throw Error("No node found.");
+    if (_.isNumber(node)) {
+      node = this.model.skeletonTracing.getNode(node);
+      if (node == null) throw Error("The supplied nodeId is not valid.");
+    } else if (!(node instanceof TracePoint)) {
+      throw Error("Supply either a nodeId or a node.");
+    }
+
     this.model.skeletonTracing.setCommentForNode(commentText, node);
   }
 
@@ -83,8 +88,13 @@ class TracingApi {
   */
   getCommentForNode(nodeId: number, tree: ?(TraceTree | number)): ?string {
     // Convert treeId to tree
-    if (_.isNumber(tree)) { tree = this.model.skeletonTracing.getTree(tree); }
-    if (!(tree instanceof TraceTree)) throw Error("No tree found.");
+    if (_.isNumber(tree)) {
+      tree = this.model.skeletonTracing.getTree(tree);
+      if (tree == null) throw Error("The supplied treeId is not valid.");
+    } else if (!(tree instanceof TraceTree || tree == null)) {
+      throw Error("Supply either a treeId, a tree or nothing.");
+    }
+
     const comment = this.model.skeletonTracing.getCommentForNode(nodeId, tree);
     return comment ? comment.content : null;
   }

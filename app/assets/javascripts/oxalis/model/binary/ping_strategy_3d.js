@@ -1,40 +1,15 @@
-import _ from "lodash";
+/**
+ * ping_strategy_3d.js
+ * @flow weak
+ */
+
 import { M4x4 } from "libs/mjs";
 import PolyhedronRasterizer from "./polyhedron_rasterizer";
+import PingStrategy from "./ping_strategy";
 
-class PingStrategy3d {
-  static initClass() {
-    this.prototype.velocityRangeStart = 0;
-    this.prototype.velocityRangeEnd = 0;
+class PingStrategy3d extends PingStrategy {
 
-    this.prototype.roundTripTimeRangeStart = 0;
-    this.prototype.roundTripTimeRangeEnd = 0;
-
-    this.prototype.contentTypes = [];
-
-    this.prototype.name = "Abstract";
-  }
-
-
-  forContentType(contentType) {
-    return _.isEmpty(this.contentTypes) || _.includes(this.contentTypes, contentType);
-  }
-
-
-  inVelocityRange(value) {
-    return this.velocityRangeStart <= value && value <= this.velocityRangeEnd;
-  }
-
-
-  inRoundTripTimeRange(value) {
-    return this.roundTripTimeRangeStart <= value && value <= this.roundTripTimeRangeEnd;
-  }
-
-
-  ping() {
-    throw Error("Needs to be implemented in subclass");
-  }
-
+  static DslSlow : PingStrategy3d.DslSlow;
 
   getExtentObject(poly0, poly1, zoom0, zoom1) {
     return {
@@ -57,20 +32,23 @@ class PingStrategy3d {
     matrix[14] += 1;
   }
 }
-PingStrategy3d.initClass();
 
 
-PingStrategy3d.DslSlow = class DslSlow extends PingStrategy3d {
-  static initClass() {
-    this.prototype.velocityRangeStart = 0;
-    this.prototype.velocityRangeEnd = Infinity;
+export class DslSlow extends PingStrategy3d {
 
-    this.prototype.roundTripTimeRangeStart = 0;
-    this.prototype.roundTripTimeRangeEnd = Infinity;
+  pingPolyhedron: PolyhedronRasterizer.Master;
 
-    this.prototype.name = "DSL_SLOW";
+  constructor(...args) {
+    super(...args);
+    this.velocityRangeStart = 0;
+    this.velocityRangeEnd = Infinity;
 
-    this.prototype.pingPolyhedron = PolyhedronRasterizer.Master.squareFrustum(
+    this.roundTripTimeRangeStart = 0;
+    this.roundTripTimeRangeEnd = Infinity;
+
+    this.name = "DSL_SLOW";
+
+    this.pingPolyhedron = PolyhedronRasterizer.Master.squareFrustum(
       5, 5, -0.5,
       4, 4, 2,
     );
@@ -98,9 +76,6 @@ PingStrategy3d.DslSlow = class DslSlow extends PingStrategy3d {
 
     return pullQueue;
   }
-};
-PingStrategy3d.DslSlow.initClass();
-    // priority 0 is highest
-
+}
 
 export default PingStrategy3d;

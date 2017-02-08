@@ -10,7 +10,7 @@ class SpotlightDatasetView extends Marionette.View {
 <div class="panel-body row">
   <div class="dataset-thumbnail col-sm-4">
     <img class="img-rounded" src="<%- thumbnailURL %>">
-  
+
     <div class="link-row">
       <a href="/datasets/<%- name %>/view" title="View dataset">
         <img src="/assets/images/eye.svg">
@@ -25,18 +25,18 @@ class SpotlightDatasetView extends Marionette.View {
       <% } %>
     </div>
   </div>
-  
+
   <form action="<%- jsRoutes.controllers.AnnotationController.createExplorational().url %>" method="POST">
     <input type="hidden" name="dataSetName" value="<%- name %>" />
     <input type="hidden" name="contentType" id="contentTypeInput" />
   </form>
-  
+
   <div class="dataset-description col-sm-8">
     <h3><%- name %></h3>
-  
+
     <p>Scale: <%- TemplateHelpers.formatScale(dataSource.scale) %></p>
     <% if(description) { %>
-      <p><%= description %></p>
+      <p><%- description %></p>
     <% } else { %>
       <% if(hasSegmentation) { %>
         <p>Original data and segmentation</p>

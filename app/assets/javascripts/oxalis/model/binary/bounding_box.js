@@ -4,23 +4,21 @@
  */
 
 import _ from "lodash";
-import Cube from "oxalis/model/binary/cube";
+import DataCube from "oxalis/model/binary/data_cube";
 import type { BoundingBoxType } from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
-import Utils from "../../../libs/utils";
+import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 
 class BoundingBox {
   boundingBox: BoundingBoxType;
-  cube: Cube;
-  BUCKET_SIZE_P: number;
+  cube: DataCube;
   BYTE_OFFSET: number;
   min: Vector3;
   max: Vector3;
 
-  constructor(boundingBox: BoundingBoxType, cube: Cube) {
+  constructor(boundingBox: BoundingBoxType, cube: DataCube) {
     this.boundingBox = boundingBox;
     this.cube = cube;
-    this.BUCKET_SIZE_P = this.cube.BUCKET_SIZE_P;
     this.BYTE_OFFSET = this.cube.BYTE_OFFSET;
     // Min is including
     this.min = [0, 0, 0];
@@ -38,9 +36,9 @@ class BoundingBox {
 
   getBoxForZoomStep(zoomStep) {
     return {
-      min: _.map(this.min, e => e >> (this.BUCKET_SIZE_P + zoomStep)),
+      min: _.map(this.min, e => e >> (BUCKET_SIZE_P + zoomStep)),
       max: _.map(this.max, (e) => {
-        const shift = this.BUCKET_SIZE_P + zoomStep;
+        const shift = BUCKET_SIZE_P + zoomStep;
         let res = e >> shift;
 
         // Computing ceil(e / 2^shift)
@@ -50,8 +48,7 @@ class BoundingBox {
         }
 
         return res;
-      },
-      ),
+      }),
     };
   }
 
@@ -81,11 +78,11 @@ class BoundingBox {
   removeOutsideArea(bucket, bucketData) {
     if (this.containsFullBucket(bucket)) { return; }
 
-    const baseVoxel = _.map(bucket.slice(0, 3), e => e << (this.BUCKET_SIZE_P + bucket[3]));
+    const baseVoxel = _.map(bucket.slice(0, 3), e => e << (BUCKET_SIZE_P + bucket[3]));
 
-    for (const dx of Utils.__range__(0, (1 << this.BUCKET_SIZE_P), false)) {
-      for (const dy of Utils.__range__(0, (1 << this.BUCKET_SIZE_P), false)) {
-        for (const dz of Utils.__range__(0, (1 << this.BUCKET_SIZE_P), false)) {
+    for (let dx = 0; dx < (1 << BUCKET_SIZE_P); dx++) {
+      for (let dy = 0; dy < (1 << BUCKET_SIZE_P); dy++) {
+        for (let dz = 0; dz < (1 << BUCKET_SIZE_P); dz++) {
           const x = baseVoxel[0] + (dx << bucket[3]);
           const y = baseVoxel[1] + (dy << bucket[3]);
           const z = baseVoxel[2] + (dz << bucket[3]);
@@ -99,7 +96,7 @@ class BoundingBox {
           }
 
           const index = this.cube.getVoxelIndexByVoxelOffset([dx, dy, dz]);
-          for (const b of Utils.__range__(0, this.BYTE_OFFSET, false)) {
+          for (let b = 0; b < this.BYTE_OFFSET; b++) {
             bucketData[index + b] = 0;
           }
         }

@@ -1,11 +1,19 @@
-import _ from "lodash";
+/**
+ * skeletontracing_statelogger.js
+ * @flow weak
+ */
+
 import * as THREE from "three";
 import { V3 } from "libs/mjs";
 import ErrorHandling from "libs/error_handling";
-import StateLogger from "../statelogger";
+import StateLogger from "oxalis/model/statelogger";
+import Flycam3D from "oxalis/model/flycam3d";
+import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
 
 class SkeletonTracingStateLogger extends StateLogger {
 
+  flycam3d: Flycam3D;
+  skeletonTracing: SkeletonTracing;
 
   constructor(flycam, flycam3d, version, tracingId, tracingType, allowUpdate, skeletonTracing) {
     super(flycam, version, tracingId, tracingType, allowUpdate);
@@ -26,7 +34,7 @@ class SkeletonTracingStateLogger extends StateLogger {
       name: tree.name,
       timestamp: tree.timestamp,
       comments: tree.comments,
-      branchPoints: tree.branchpoints,
+      branchPoints: tree.branchPoints,
     };
   }
 
@@ -52,7 +60,7 @@ class SkeletonTracingStateLogger extends StateLogger {
     // Make sure that those nodes exist
     let found = false; let treeIds = [];
     for (const node of sourceTree.nodes) {
-      found |= (node.id === lastNodeId);
+      found = found || (node.id === lastNodeId);
       treeIds.push(node.id);
     }
     ErrorHandling.assert(found, "lastNodeId not in sourceTree",
@@ -60,7 +68,7 @@ class SkeletonTracingStateLogger extends StateLogger {
 
     found = false; treeIds = [];
     for (const node of targetTree.nodes) {
-      found |= (node.id === activeNodeId);
+      found = found || (node.id === activeNodeId);
       treeIds.push(node.id);
     }
     ErrorHandling.assert(found, "activeNodeId not in targetTree",
@@ -78,19 +86,6 @@ class SkeletonTracingStateLogger extends StateLogger {
 
 
   // ### NODES and EDGED
-
-  nodeObject(node, treeId) {
-    return _.extend(node.metaInfo, {
-      treeId,
-      id: node.id,
-      radius: node.radius,
-      position: V3.floor(node.pos),
-      rotation: node.rotation,
-    },
-    );
-  }
-
-
   edgeObject(node, treeId) {
     ErrorHandling.assert(node.neighbors.length === 1,
       "Node has to have exactly one neighbor", node.neighbors.length);
@@ -113,15 +108,15 @@ class SkeletonTracingStateLogger extends StateLogger {
     }
 
     const needsEdge = node.neighbors.length === 1;
-    this.pushDiff("createNode", this.nodeObject(node, treeId), !needsEdge);
+    this.pushDiff("createNode", node.toJSON(), !needsEdge);
     if (needsEdge) {
       this.pushDiff("createEdge", this.edgeObject(node, treeId));
     }
   }
 
 
-  updateNode(node, treeId) {
-    this.pushDiff("updateNode", this.nodeObject(node, treeId));
+  updateNode(node) {
+    this.pushDiff("updateNode", node.toJSON());
   }
 
 

@@ -6,7 +6,7 @@
 import _ from "lodash";
 import DataCube from "oxalis/model/binary/data_cube";
 import type { BoundingBoxType } from "oxalis/model";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 
 class BoundingBox {
@@ -34,7 +34,7 @@ class BoundingBox {
   }
 
 
-  getBoxForZoomStep(zoomStep) {
+  getBoxForZoomStep(zoomStep: number): BoundingBoxType {
     return {
       min: _.map(this.min, e => e >> (BUCKET_SIZE_P + zoomStep)),
       max: _.map(this.max, (e) => {
@@ -53,7 +53,7 @@ class BoundingBox {
   }
 
 
-  containsBucket([x, y, z, zoomStep]) {
+  containsBucket([x, y, z, zoomStep]: Vector4): boolean {
     const { min, max } = this.getBoxForZoomStep(zoomStep);
 
     return (
@@ -64,7 +64,7 @@ class BoundingBox {
   }
 
 
-  containsFullBucket([x, y, z, zoomStep]) {
+  containsFullBucket([x, y, z, zoomStep]: Vector4): boolean {
     const { min, max } = this.getBoxForZoomStep(zoomStep);
 
     return (
@@ -75,10 +75,11 @@ class BoundingBox {
   }
 
 
-  removeOutsideArea(bucket, bucketData) {
+  removeOutsideArea(bucket: Vector4, bucketData: Uint8Array): void {
     if (this.containsFullBucket(bucket)) { return; }
 
-    const baseVoxel = _.map(bucket.slice(0, 3), e => e << (BUCKET_SIZE_P + bucket[3]));
+    const baseVoxel = bucket.slice(0, 3)
+      .map(e => e << (BUCKET_SIZE_P + bucket[3]));
 
     for (let dx = 0; dx < (1 << BUCKET_SIZE_P); dx++) {
       for (let dy = 0; dy < (1 << BUCKET_SIZE_P); dy++) {

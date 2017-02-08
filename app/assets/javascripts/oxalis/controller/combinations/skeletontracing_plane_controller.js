@@ -1,6 +1,6 @@
 /**
  * skeletontracing_plane_controller.js
- * @flow weak
+ * @flow
  */
 
 import $ from "jquery";
@@ -8,9 +8,13 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
-import PlaneController from "../viewmodes/plane_controller";
-import constants from "../../constants";
-import dimensions from "../../model/dimensions";
+import PlaneController from "oxalis/controller/viewmodes/plane_controller";
+import constants from "oxalis/constants";
+import dimensions from "oxalis/model/dimensions";
+import type Model from "oxalis/model";
+import type View from "oxalis/view";
+import type SceneController from "oxalis/controller/scene_controller";
+import type { Point2, Vector3, PlaneType } from "oxalis/constants";
 
 class SkeletonTracingPlaneController extends PlaneController {
 
@@ -22,13 +26,18 @@ class SkeletonTracingPlaneController extends PlaneController {
 
   skeletonTracingController: SkeletonTracingController;
 
-  constructor(model, view, sceneController, skeletonTracingController) {
+  constructor(
+    model: Model,
+    view: View,
+    sceneController: SceneController,
+    skeletonTracingController: SkeletonTracingController,
+  ) {
     super(model, view, sceneController);
     this.skeletonTracingController = skeletonTracingController;
   }
 
 
-  simulateTracing(nodesPerTree = -1, nodesAlreadySet = 0) {
+  simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0): void {
     // For debugging purposes.
     if (nodesPerTree === nodesAlreadySet) {
       this.model.skeletonTracing.createNewTree();
@@ -41,40 +50,37 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  start() {
+  start(): void {
     super.start();
-    return $(".skeleton-plane-controls").show();
+    $(".skeleton-plane-controls").show();
   }
 
 
-  stop() {
+  stop(): void {
     super.stop();
-    return $(".skeleton-plane-controls").hide();
+    $(".skeleton-plane-controls").hide();
   }
 
 
-  getPlaneMouseControls(planeId) {
+  getPlaneMouseControls(planeId: PlaneType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
-
-      leftClick: (pos, plane, event) => this.onClick(pos, event.shiftKey, event.altKey, plane),
-
-
-      rightClick: (pos, plane, event) => this.setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
-    },
-    );
+      leftClick: (pos, plane, event) =>
+        this.onClick(pos, event.shiftKey, event.altKey, plane),
+      rightClick: (pos, plane, event) =>
+        this.setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
+    });
   }
 
 
-  getTDViewMouseControls() {
+  getTDViewMouseControls(): Object {
     return _.extend(super.getTDViewMouseControls(), {
-
-      leftClick: (position, plane, event) => this.onClick(position, event.shiftKey, event.altKey, constants.TDView),
-    },
-    );
+      leftClick: (position, plane, event) =>
+        this.onClick(position, event.shiftKey, event.altKey, constants.TDView),
+    });
   }
 
 
-  getKeyboardControls() {
+  getKeyboardControls(): Object {
     return _.extend(super.getKeyboardControls(), {
 
       "1": () => this.skeletonTracingController.toggleSkeletonVisibility(),
@@ -92,21 +98,20 @@ class SkeletonTracingPlaneController extends PlaneController {
         this.skeletonTracingController.centerActiveNode();
         return this.cameraController.centerTDView();
       },
-    },
-    );
+    });
   }
 
 
-  popBranch = () => _.defer(
-    () => {
+  popBranch = (): void => {
+    _.defer(() => {
       this.model.skeletonTracing.popBranch().then(
         id => this.skeletonTracingController.setActiveNode(id, false, true),
       );
-    },
-  );
+    });
+  };
 
 
-  scrollPlanes(delta, type) {
+  scrollPlanes(delta: number, type: ?string): void {
     super.scrollPlanes(delta, type);
 
     if (type === "shift") {
@@ -115,7 +120,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  onClick = (position, shiftPressed, altPressed, plane) => {
+  onClick = (position: Point2, shiftPressed: boolean, altPressed: boolean, plane: PlaneType): void => {
     if (!shiftPressed) { // do nothing
       return;
     }
@@ -173,7 +178,11 @@ class SkeletonTracingPlaneController extends PlaneController {
   };
 
 
-  setWaypoint(position, ctrlPressed) {
+  setWaypoint(position: Vector3, ctrlPressed: boolean): void {
+    const { activeViewport } = this;
+    if (activeViewport === 3) { // TDView == 3
+      return;
+    }
     const activeNode = this.model.skeletonTracing.getActiveNode();
     // set the new trace direction
     if (activeNode) {
@@ -184,7 +193,7 @@ class SkeletonTracingPlaneController extends PlaneController {
       ]);
     }
 
-    const rotation = this.model.flycam.getRotation(this.activeViewport);
+    const rotation = this.model.flycam.getRotation(activeViewport);
     this.addNode(position, rotation, !ctrlPressed);
 
     // Strg + Rightclick to set new not active branchpoint
@@ -195,7 +204,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  addNode = (position, rotation, centered) => {
+  addNode = (position: Vector3, rotation: Vector3, centered: boolean): void => {
     if (this.model.settings.somaClickingAllowed && this.model.user.get("newNodeNewTree")) {
       this.model.skeletonTracing.createNewTree();
     }
@@ -221,13 +230,13 @@ class SkeletonTracingPlaneController extends PlaneController {
   };
 
 
-  centerPositionAnimated(position) {
+  centerPositionAnimated(position: Vector3): void {
     // Let the user still manipulate the "third dimension" during animation
     const dimensionToSkip = dimensions.thirdDimensionForPlane(this.activeViewport);
 
     const curGlobalPos = this.flycam.getPosition();
 
-    return (new TWEEN.Tween({
+    (new TWEEN.Tween({
       globalPosX: curGlobalPos[0],
       globalPosY: curGlobalPos[1],
       globalPosZ: curGlobalPos[2],

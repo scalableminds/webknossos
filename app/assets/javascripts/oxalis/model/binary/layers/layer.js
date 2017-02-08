@@ -120,6 +120,10 @@ class Layer {
     throw new Error("Subclass responsibility");
   }
 
+  // eslint-disable-next-line no-unused-vars
+  setFourBit(newFourBit: boolean): void {
+    throw new Error("Subclass responsibility");
+  }
 
   // eslint-disable-next-line no-unused-vars
   sendToStoreImpl(batch, getBucketData, token) {

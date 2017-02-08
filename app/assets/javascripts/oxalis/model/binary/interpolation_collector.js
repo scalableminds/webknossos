@@ -1,6 +1,18 @@
-import _ from "lodash";
+/**
+ * interpolation_collector.js
+ * @flow
+ */
 
-const templateFill = function (str, params) {
+import _ from "lodash";
+import type ArbitraryCubeAdapter from "oxalis/model/binary/arbitrary_cube_adapter";
+import type { Vector4 } from "oxalis/constants";
+
+export type CollectedVertices = {
+  buffer: Uint8Array;
+  missingBuckets: Array<Vector4>;
+};
+
+function templateFill(str: string, params: Array<string>): string {
   params.forEach((param) => {
     str = str.replace(
       new RegExp(`([^a-zA-Z0-9_])${param}([^a-zA-Z0-9_])`, "gm"),
@@ -8,7 +20,7 @@ const templateFill = function (str, params) {
     );
   });
   return str;
-};
+}
 
 
 // This provides interpolation mechanics. It's a lot of code. But it
@@ -215,9 +227,9 @@ buffer[j] = trilinearOutput;\
   ),
   { imports: { trilinearMacro, subPointMacro } },
 );
-const InterpolationCollector = {
+class InterpolationCollector {
   // eslint-disable-next-line no-new-func
-  bulkCollect: new Function(
+  _bulkCollect: Function = new Function(
     "vertices", "buckets",
     _.template(
       `\
@@ -280,12 +292,12 @@ return {
   buffer : buffer,
   missingBuckets : missingBuckets
 };
+`)({ collectLoopMacro }));
 
-//# sourceURL=/oxalis/model/binary/interpolation_collector/bulkCollect\
-`,
-    )({ collectLoopMacro }),
-  ),
-};
+  bulkCollect(vertices: Array<number>, buckets: ArbitraryCubeAdapter): CollectedVertices {
+    return this._bulkCollect(vertices, buckets);
+  }
+}
 
 
-export default InterpolationCollector;
+export default new InterpolationCollector();

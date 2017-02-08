@@ -1,14 +1,55 @@
 /**
  * volumelayer.js
- * @flow weak
+ * @flow
  */
 
 import Drawing from "libs/drawing";
 import Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 
-import type { PlaneType, Vector3 } from "oxalis/constants";
+import type { PlaneType, Vector2, Vector3 } from "oxalis/constants";
 
+export class VoxelIterator {
+  hasNext: boolean = true;
+  map: boolean[][];
+  x = 0;
+  y = 0;
+  width: number;
+  height: number;
+  minCoord2d: Vector2;
+  get3DCoordinate: (Vector2) => Vector3;
+
+  static finished(): VoxelIterator {
+    const iterator = new VoxelIterator([], 0, 0, [0, 0]);
+    iterator.hasNext = false;
+    return iterator;
+  }
+
+  constructor(map: boolean[][], width: number, height: number, minCoord2d: Vector2) {
+    this.map = map;
+    this.width = width;
+    this.height = height;
+    this.minCoord2d = minCoord2d;
+    if (!this.map[0][0]) {
+      this.getNext();
+    }
+  }
+
+  getNext() {
+    const res = this.get3DCoordinate([this.x + this.minCoord2d[0], this.y + this.minCoord2d[1]]);
+    let foundNext = false;
+    while (!foundNext) {
+      this.x = (this.x + 1) % this.width;
+      if (this.x === 0) { this.y++; }
+      if (this.map[this.x][this.y] || this.y === this.height) {
+        this.hasNext = this.y !== this.height;
+        foundNext = true;
+      }
+    }
+    return res;
+  }
+
+}
 
 class VolumeLayer {
 
@@ -18,7 +59,7 @@ class VolumeLayer {
   maxCoord: ?Vector3;
   minCoord: ?Vector3;
 
-  constructor(plane, thirdDimensionValue) {
+  constructor(plane: PlaneType, thirdDimensionValue: number) {
     this.plane = plane;
     this.thirdDimensionValue = thirdDimensionValue;
     this.contourList = [];
@@ -27,13 +68,13 @@ class VolumeLayer {
   }
 
 
-  addContour(pos) {
+  addContour(pos: Vector3): void {
     this.contourList.push(pos);
-    return this.updateArea(pos);
+    this.updateArea(pos);
   }
 
 
-  updateArea(pos: Vector3) {
+  updateArea(pos: Vector3): void {
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
     if (maxCoord == null || minCoord == null) {
@@ -56,39 +97,47 @@ class VolumeLayer {
   }
 
 
-  finish() {
+  finish(): void {
     if (!this.isEmpty()) {
       this.addContour(this.contourList[0]);
     }
   }
 
 
-  isEmpty() {
+  isEmpty(): boolean {
     return this.contourList.length === 0;
   }
 
 
-  getVoxelIterator() {
+  getVoxelIterator(): VoxelIterator {
     if (this.isEmpty()) {
-      return { hasNext: false };
+      return VoxelIterator.finished();
     }
 
+    if (this.minCoord == null) {
+      return VoxelIterator.finished();
+    }
     const minCoord2d = this.get2DCoordinate(this.minCoord);
+
+    if (this.maxCoord == null) {
+      return VoxelIterator.finished();
+    }
     const maxCoord2d = this.get2DCoordinate(this.maxCoord);
 
     const width = (maxCoord2d[0] - minCoord2d[0]) + 1;
     const height = (maxCoord2d[1] - minCoord2d[1]) + 1;
 
     const map = new Array(width);
-    for (const x of Utils.__range__(0, width, false)) {
+    for (let x = 0; x < width; x++) {
       map[x] = new Array(height);
-      for (const y of Utils.__range__(0, height, false)) {
+      for (let y = 0; y < height; y++) {
         map[x][y] = true;
       }
     }
 
-    const setMap = function (x, y, value = true) {
-      x = Math.floor(x); y = Math.floor(y);
+    const setMap = function (x: number, y: number, value = true): void {
+      x = Math.floor(x);
+      y = Math.floor(y);
       map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
     };
 
@@ -108,37 +157,11 @@ class VolumeLayer {
     this.fillOutsideArea(map, width, height);
     this.drawOutlineVoxels(setMap);
 
-    const iterator = {
-      hasNext: true,
-      x: 0,
-      y: 0,
-      getNext() {
-        const res = this.get3DCoordinate([this.x + minCoord2d[0], this.y + minCoord2d[1]]);
-        let foundNext = false;
-        while (!foundNext) {
-          this.x = (this.x + 1) % width;
-          if (this.x === 0) { this.y++; }
-          if (map[this.x][this.y] || this.y === height) {
-            this.hasNext = this.y !== height;
-            foundNext = true;
-          }
-        }
-        return res;
-      },
-      initialize() {
-        if (!map[0][0]) {
-          this.getNext();
-        }
-      },
-      get3DCoordinate: arg => this.get3DCoordinate(arg),
-    };
-    iterator.initialize();
-
-    return iterator;
+    return new VoxelIterator(map, width, height, minCoord2d);
   }
 
 
-  drawOutlineVoxels(setMap) {
+  drawOutlineVoxels(setMap: (number, number) => void): void {
     let p1;
     let p2;
     for (let i = 0; i < this.contourList.length; i++) {
@@ -150,7 +173,7 @@ class VolumeLayer {
   }
 
 
-  fillOutsideArea(map, width, height) {
+  fillOutsideArea(map: boolean[][], width: number, height: number) {
     const setMap = (x, y) => { map[x][y] = false; };
     const isEmpty = (x, y) => map[x][y] === true;
 
@@ -159,20 +182,19 @@ class VolumeLayer {
   }
 
 
-  get2DCoordinate(coord3d) {
+  get2DCoordinate(coord3d: Vector3): Vector2 {
     // Throw out 'thirdCoordinate' which is equal anyways
-
     const result = [];
     for (let i = 0; i <= 2; i++) {
       if (i !== Dimensions.thirdDimensionForPlane(this.plane)) {
         result.push(coord3d[i]);
       }
     }
-    return result;
+    return result.slice(0, 2);
   }
 
 
-  get3DCoordinate(coord2d) {
+  get3DCoordinate(coord2d: Vector2): Vector3 {
     // Put thirdCoordinate back in
     const index = Dimensions.thirdDimensionForPlane(this.plane);
     let index2d = 0;
@@ -190,7 +212,7 @@ class VolumeLayer {
   }
 
 
-  getQuadrantWithRespectToPoint(vertex, point) {
+  getQuadrantWithRespectToPoint(vertex: Vector2, point: Vector2): ?number {
     const xDiff = vertex[0] - point[0];
     const yDiff = vertex[1] - point[1];
 
@@ -209,20 +231,20 @@ class VolumeLayer {
   }
 
 
-  calculateDistance(p1, p2) {
+  calculateDistance(p1: Vector3, p2: Vector3): number {
     const diff = [p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]];
     return Math.sqrt((diff[0] * diff[0]) + (diff[1] * diff[1]) + (diff[2] * diff[2]));
   }
 
 
-  interpolatePositions(pos1, pos2, f) {
+  interpolatePositions(pos1: Vector3, pos2: Vector3, f: number): Vector3 {
     const sPos1 = [pos1[0] * (1 - f), pos1[1] * (1 - f), pos1[2] * (1 - f)];
     const sPos2 = [pos2[0] * f, pos2[1] * f, pos2[2] * f];
     return [sPos1[0] + sPos2[0], sPos1[1] + sPos2[1], sPos1[2] + sPos2[2]];
   }
 
 
-  getCentroid() {
+  getCentroid(): Vector3 {
     // Formula:
     // https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
 

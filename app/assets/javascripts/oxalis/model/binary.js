@@ -1,6 +1,6 @@
 /**
  * binary.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -19,20 +19,27 @@ import Model from "oxalis/model";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 
 import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Matrix4x4 } from "libs/mjs";
 import type { Tracing } from "oxalis/model";
-import type { CategoryType } from "oxalis/model/binary/layers/layer";
+import type Layer, { CategoryType } from "oxalis/model/binary/layers/layer";
 
 const PING_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
+
+type PingOptions = {
+  zoomStep: number;
+  areas: [Vector4, Vector4, Vector4];
+  activePlane: number;
+};
 
 class Binary {
 
   model: Model;
   cube: DataCube;
   tracing: Tracing;
-  layer: Object;
+  layer: Layer;
   category: CategoryType;
-  name: String;
+  name: string;
   targetBitDepth: number;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
@@ -44,7 +51,7 @@ class Binary {
   pingStrategies3d: Array<PingStrategy3dBase>;
   planes: Array<Plane2D>;
   direction: Vector3;
-  activeMapping: String | null;
+  activeMapping: string | null;
   lastPosition: Vector3 | null;
   lastZoomStep: number | null;
   lastAreas: Array<Vector4> | null;
@@ -52,7 +59,7 @@ class Binary {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(model, tracing, layer, maxZoomStep, connectionInfo) {
+  constructor(model: Model, tracing: Tracing, layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
     this.model = model;
     this.tracing = tracing;
     this.layer = layer;
@@ -98,7 +105,7 @@ class Binary {
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {
       this.layer.setFourBit(this.model.get("datasetConfiguration").get("fourBit"));
       this.listenTo(this.model.get("datasetConfiguration"), "change:fourBit",
-                function (datasetModel, fourBit) { this.layer.setFourBit(fourBit); });
+                (datasetModel, fourBit) => { this.layer.setFourBit(fourBit); });
     }
 
     this.cube.on({
@@ -107,13 +114,13 @@ class Binary {
   }
 
 
-  forcePlaneRedraw() {
+  forcePlaneRedraw(): void {
     this.planes.forEach(plane =>
       plane.forceRedraw());
   }
 
 
-  setActiveMapping(mappingName) {
+  setActiveMapping(mappingName: string): void {
     this.activeMapping = mappingName;
 
     const setMapping = (mapping) => {
@@ -129,7 +136,7 @@ class Binary {
   }
 
 
-  pingStop() {
+  pingStop(): void {
     this.pullQueue.clearNormalPriorities();
   }
 
@@ -137,7 +144,7 @@ class Binary {
   ping = _.throttle(this.pingImpl, PING_THROTTLE_TIME);
 
 
-  pingImpl(position, { zoomStep, areas, activePlane }) {
+  pingImpl(position: Vector3, { zoomStep, areas, activePlane }: PingOptions): void {
     if (this.lastPosition != null) {
       this.direction = [
         ((1 - DIRECTION_VECTOR_SMOOTHER) * this.direction[0]) + (DIRECTION_VECTOR_SMOOTHER * (position[0] - this.lastPosition[0])),
@@ -166,7 +173,7 @@ class Binary {
   }
 
 
-  arbitraryPingImpl(matrix, zoomStep) {
+  arbitraryPingImpl(matrix: Matrix4x4, zoomStep: number): void {
     for (const strategy of this.pingStrategies3d) {
       if (strategy.forContentType(this.tracing.contentType) && strategy.inVelocityRange(1) && strategy.inRoundTripTimeRange(this.pullQueue.roundTripTime)) {
         this.pullQueue.clearNormalPriorities();
@@ -179,13 +186,13 @@ class Binary {
   }
 
 
-  arbitraryPing = _.once(function (matrix, zoomStep) {
+  arbitraryPing = _.once(function (matrix: Matrix4x4, zoomStep: number) {
     this.arbitraryPing = _.throttle(this.arbitraryPingImpl, PING_THROTTLE_TIME);
     this.arbitraryPing(matrix, zoomStep);
   });
 
 
-  getByVerticesSync(vertices) {
+  getByVerticesSync(vertices: Array<number>): Uint8Array {
     // A synchronized implementation of `get`. Cuz its faster.
 
     const { buffer, missingBuckets } = InterpolationCollector.bulkCollect(

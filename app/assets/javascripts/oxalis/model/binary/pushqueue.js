@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import type { LayerType } from "oxalis/model";
+import type Layer from "oxalis/model/binary/layers/layer";
 import Pipeline from "libs/pipeline";
 import type { Vector4 } from "oxalis/constants";
 import DataCube from "./data_cube";
@@ -16,13 +16,13 @@ class PushQueue {
 
   dataSetName: string;
   cube: DataCube;
-  layer: LayerType;
+  layer: Layer;
   tracingId: string;
   updatePipeline: Pipeline;
   sendData: boolean;
   queue: Array<Vector4>;
 
-  constructor(dataSetName: string, cube: DataCube, layer: LayerType, tracingId: string, updatePipeline: Pipeline, sendData = true) {
+  constructor(dataSetName: string, cube: DataCube, layer: Layer, tracingId: string, updatePipeline: Pipeline, sendData = true) {
     this.dataSetName = dataSetName;
     this.cube = cube;
     this.layer = layer;

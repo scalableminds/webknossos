@@ -1,7 +1,21 @@
+/**
+ * mjs.js
+ * @flow
+ */
+
+import type { Vector3 } from "oxalis/constants";
+
 const { M4x4, V2, V3 } = require("mjs")(Float32Array);
 
+export type Matrix4x4 = [
+  number, number, number, number,
+  number, number, number, number,
+  number, number, number, number,
+  number, number, number, number,
+] | Float32Array;
+
 // Applies an affine transformation matrix on an array of points.
-M4x4.transformPointsAffine = function (m, points, r) {
+M4x4.transformPointsAffine = function transformPointsAffine(m: Matrix4x4, points: number[], r: ?Float32Array): Float32Array {
   if (r == null) { r = new Float32Array(points.length); }
   const m00 = m[0];
   const m01 = m[1];
@@ -31,7 +45,7 @@ M4x4.transformPointsAffine = function (m, points, r) {
 
 
 // Applies a transformation matrix on an array of points.
-M4x4.transformPoints = function (m, points, r) {
+M4x4.transformPoints = function transformPoints(m: Matrix4x4, points: number[], r: ?Float32Array): Float32Array {
   if (r == null) { r = new Float32Array(points.length); }
   for (let i = 0; i < points.length; i += 3) {
     const v0 = points[i];
@@ -54,7 +68,7 @@ M4x4.transformPoints = function (m, points, r) {
 };
 
 
-M4x4.inverse = function (mat, dest) {
+M4x4.inverse = function inverse(mat: Matrix4x4, dest: Matrix4x4): Matrix4x4 {
   // cache matrix values
   if (dest == null) { dest = new Float32Array(16); }
   const a00 = mat[0];
@@ -89,7 +103,6 @@ M4x4.inverse = function (mat, dest) {
   // calculate determinant
   const invDet = 1 / (((((b00 * b11) - (b01 * b10)) + (b02 * b09) + (b03 * b08)) - (b04 * b07)) + (b05 * b06));
 
-  dest = [];
   dest[0] = (((a11 * b11) - (a12 * b10)) + (a13 * b09)) * invDet;
   dest[1] = (((-a01 * b11) + (a02 * b10)) - (a03 * b09)) * invDet;
   dest[2] = (((a31 * b05) - (a32 * b04)) + (a33 * b03)) * invDet;
@@ -111,7 +124,7 @@ M4x4.inverse = function (mat, dest) {
 };
 
 
-M4x4.extractTranslation = function (m, r) {
+M4x4.extractTranslation = function extractTranslation(m: Matrix4x4, r: ?Float32Array): Float32Array {
   if (r == null) { r = new Float32Array(3); }
   r[0] = m[12];
   r[1] = m[13];
@@ -120,7 +133,7 @@ M4x4.extractTranslation = function (m, r) {
 };
 
 
-V3.round = function (v, r) {
+V3.round = function round(v: Vector3 | Float32Array, r: ?Float32Array): Float32Array {
   if (r == null) { r = new Float32Array(3); }
   r[0] = Math.round(v[0]);
   r[1] = Math.round(v[1]);

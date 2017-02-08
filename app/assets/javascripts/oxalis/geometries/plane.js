@@ -11,7 +11,7 @@ import Flycam2d from "oxalis/model/flycam2d";
 import PlaneMaterialFactory from "./materials/plane_material_factory";
 import Dimensions from "../model/dimensions";
 import constants from "../constants";
-import type { ModeType } from "../constants";
+import type { PlaneType } from "../constants";
 
 const CROSSHAIR_COLORS = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]];
 const GRAY_CH_COLOR = 0x222222;
@@ -22,7 +22,7 @@ class Plane {
 
   plane: THREE.Mesh;
   flycam: Flycam2d;
-  planeID: ModeType;
+  planeID: PlaneType;
   model: Model;
   planeWidth: number;
   textureWidth: number;
@@ -31,7 +31,7 @@ class Plane {
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
 
-  constructor(planeWidth: number, textureWidth: number, flycam: Flycam2d, planeID: ModeType, model: Model) {
+  constructor(planeWidth: number, textureWidth: number, flycam: Flycam2d, planeID: PlaneType, model: Model) {
     this.flycam = flycam;
     this.planeID = planeID;
     this.model = model;

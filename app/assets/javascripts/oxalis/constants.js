@@ -1,6 +1,6 @@
 /**
  * constants.js
- * @flow weak
+ * @flow
  */
 
 export const ModeValues = [0, 1, 2, 3];
@@ -11,9 +11,9 @@ export type ViewType = 0 | 1 | 2 | 3;
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
+export type Point2 = { x: number, y: number };
 
 const Constants = {
-
   PLANE_XY: 0,
   PLANE_YZ: 1,
   PLANE_XZ: 2,

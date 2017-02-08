@@ -18,11 +18,12 @@ import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import Flycam3d from "oxalis/model/flycam3d";
 import scaleInfo from "oxalis/model/scaleinfo";
-import ArbitraryPlane from "../../geometries/arbitrary_plane";
-import Crosshair from "../../geometries/crosshair";
-import ArbitraryView from "../../view/arbitrary_view";
-import ArbitraryPlaneInfo from "../../geometries/arbitrary_plane_info";
-import constants from "../../constants";
+import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import Crosshair from "oxalis/geometries/crosshair";
+import ArbitraryView from "oxalis/view/arbitrary_view";
+import ArbitraryPlaneInfo from "oxalis/geometries/arbitrary_plane_info";
+import constants from "oxalis/constants";
+import type { Matrix4x4 } from "libs/mjs";
 
 class ArbitraryController {
   arbitraryView: ArbitraryView;
@@ -39,7 +40,7 @@ class ArbitraryController {
   WIDTH: number;
   TIMETOCENTER: number;
   fullscreen: boolean;
-  lastNodeMatrix: Float32Array;
+  lastNodeMatrix: Matrix4x4;
   input: any;
   mode: ModeType;
 

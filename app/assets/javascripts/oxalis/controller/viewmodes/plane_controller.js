@@ -1,6 +1,6 @@
 /**
  * plane_controller.js
- * @flow weak
+ * @flow
  */
 
 import app from "app";
@@ -15,12 +15,12 @@ import Model from "oxalis/model";
 import View from "oxalis/view";
 import SceneController from "oxalis/controller/scene_controller";
 import Flycam2d from "oxalis/model/flycam2d";
-import type { Vector3, ViewType } from "oxalis/constants";
 import scaleInfo from "oxalis/model/scaleinfo";
-import CameraController from "../camera_controller";
-import Dimensions from "../../model/dimensions";
-import PlaneView from "../../view/plane_view";
-import constants from "../../constants";
+import CameraController from "oxalis/controller/camera_controller";
+import Dimensions from "oxalis/model/dimensions";
+import PlaneView from "oxalis/view/plane_view";
+import constants from "oxalis/constants";
+import type { Point2, Vector3, ViewType, PlaneType } from "oxalis/constants";
 
 class PlaneController {
   planeView: PlaneView;
@@ -68,11 +68,15 @@ class PlaneController {
   }
 
 
-  constructor(model, view, sceneController) {
+  constructor(
+    model: Model,
+    view: View,
+    sceneController: SceneController,
+  ) {
+    _.extend(this, Backbone.Events);
     this.model = model;
     this.view = view;
     this.sceneController = sceneController;
-    _.extend(this, Backbone.Events);
 
     this.isStarted = false;
 
@@ -98,8 +102,7 @@ class PlaneController {
       this.cameraController.changeTDViewYZ,
       this.cameraController.changeTDViewXZ,
     ];
-    $("#TDViewControls button").each((i, element) => $(element).on("click", callbacks[i]),
-    );
+    $("#TDViewControls button").each((i, element) => $(element).on("click", callbacks[i]));
 
     const meshes = this.sceneController.getMeshes();
 
@@ -116,13 +119,11 @@ class PlaneController {
   }
 
 
-  initMouse() {
-    for (let id = 0; id <= 2; id++) {
-      ((planeId) => {
-        const inputcatcher = $(`#plane${constants.PLANE_NAMES[planeId]}`);
-        this.input.mouseControllers.push(
-          new Input.Mouse(inputcatcher, this.getPlaneMouseControls(planeId), planeId));
-      })(id);
+  initMouse(): void {
+    for (const id of [0, 1, 2]) {
+      const inputcatcher = $(`#plane${constants.PLANE_NAMES[id]}`);
+      this.input.mouseControllers.push(
+        new Input.Mouse(inputcatcher, this.getPlaneMouseControls(id), id));
     }
 
     this.input.mouseControllers.push(
@@ -130,7 +131,7 @@ class PlaneController {
   }
 
 
-  getTDViewMouseControls() {
+  getTDViewMouseControls(): Object {
     return {
       leftDownMove: delta => this.moveTDView(delta),
       scroll: value => this.zoomTDView(Utils.clamp(-1, value, 1), true),
@@ -139,9 +140,8 @@ class PlaneController {
   }
 
 
-  getPlaneMouseControls(planeId) {
+  getPlaneMouseControls(planeId: PlaneType): Object {
     return {
-
       leftDownMove: delta => this.move([
         (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
         (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
@@ -158,7 +158,7 @@ class PlaneController {
   }
 
 
-  initTrackballControls() {
+  initTrackballControls(): void {
     const view = $("#TDView")[0];
     const pos = scaleInfo.voxelToNm(this.flycam.getPosition());
     this.controls = new TrackballControls(
@@ -174,7 +174,7 @@ class PlaneController {
     this.controls.target.set(
       ...scaleInfo.voxelToNm(this.flycam.getPosition()));
 
-    this.listenTo(this.flycam, "positionChanged", function (position) {
+    this.listenTo(this.flycam, "positionChanged", (position) => {
       const nmPosition = scaleInfo.voxelToNm(position);
 
       this.controls.target.set(...nmPosition);
@@ -198,10 +198,12 @@ class PlaneController {
   }
 
 
-  initKeyboard() {
+  initKeyboard(): void {
     // avoid scrolling while pressing space
     $(document).keydown((event) => {
-      if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) { event.preventDefault(); }
+      if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) {
+        event.preventDefault();
+      }
     });
 
     const getMoveValue = (timeFactor) => {
@@ -212,7 +214,6 @@ class PlaneController {
     };
 
     this.input.keyboard = new Input.Keyboard({
-
       // ScaleTrianglesPlane
       l: timeFactor => this.scaleTrianglesPlane(-this.model.user.get("scaleValue") * timeFactor),
       k: timeFactor => this.scaleTrianglesPlane(this.model.user.get("scaleValue") * timeFactor),
@@ -222,11 +223,9 @@ class PlaneController {
       right: timeFactor => this.moveX(getMoveValue(timeFactor)),
       up: timeFactor => this.moveY(-getMoveValue(timeFactor)),
       down: timeFactor => this.moveY(getMoveValue(timeFactor)),
-
     });
 
     this.input.keyboardLoopDelayed = new Input.Keyboard({
-
       // KeyboardJS is sensitive to ordering (complex combos first)
       "shift + f": (timeFactor, first) => this.moveZ(getMoveValue(timeFactor) * 5, first),
       "shift + d": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor) * 5, first),
@@ -236,18 +235,16 @@ class PlaneController {
       space: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
       f: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
       d: (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
-    }
+    }, this.model.user.get("keyboardDelay"));
 
-    , this.model.user.get("keyboardDelay"),
-    );
-
-    this.listenTo(this.model.user, "change:keyboardDelay", function (model, value) { this.input.keyboardLoopDelayed.delay = value; });
+    this.listenTo(this.model.user, "change:keyboardDelay",
+      (model, value) => { this.input.keyboardLoopDelayed.delay = value; });
 
     this.input.keyboardNoLoop = new Input.KeyboardNoLoop(this.getKeyboardControls());
   }
 
 
-  getKeyboardControls() {
+  getKeyboardControls(): Object {
     return {
       // Zoom in/out
       i: () => this.zoom(1, false),
@@ -260,13 +257,13 @@ class PlaneController {
   }
 
 
-  init() {
+  init(): void {
     this.cameraController.setClippingDistance(this.model.user.get("clippingDistance"));
     this.sceneController.setClippingDistance(this.model.user.get("clippingDistance"));
   }
 
 
-  start() {
+  start(): void {
     this.stop();
 
     this.sceneController.start();
@@ -280,7 +277,7 @@ class PlaneController {
   }
 
 
-  stop() {
+  stop(): void {
     if (this.isStarted) {
       this.input.destroy();
     }
@@ -291,7 +288,7 @@ class PlaneController {
     this.isStarted = false;
   }
 
-  bindToEvents() {
+  bindToEvents(): void {
     this.planeView.bindToEvents();
 
     this.listenTo(this.planeView, "render", this.render);
@@ -320,7 +317,7 @@ class PlaneController {
   }
 
 
-  render() {
+  render(): void {
     for (const dataLayerName of Object.keys(this.model.binary)) {
       if (this.sceneController.pingDataLayer(dataLayerName)) {
         this.model.binary[dataLayerName].ping(this.flycam.getPosition(), {
@@ -336,21 +333,23 @@ class PlaneController {
   }
 
 
-  move = (v, increaseSpeedWithZoom = true) => {
-    if (([0, 1, 2]).includes(this.activeViewport)) {
-      this.flycam.movePlane(v, this.activeViewport, increaseSpeedWithZoom);
+  move = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
+    const { activeViewport } = this;
+    if (activeViewport !== 3) { // 3 == TDView
+      this.flycam.movePlane(v, activeViewport, increaseSpeedWithZoom);
     } else {
       this.moveTDView({ x: -v[0], y: -v[1] });
     }
   }
 
 
-  moveX = x => this.move([x, 0, 0]);
+  moveX = (x: number): void => { this.move([x, 0, 0]); };
 
-  moveY = y => this.move([0, y, 0]);
+  moveY = (y: number): void => { this.move([0, y, 0]); };
 
-  moveZ = (z, oneSlide) => {
-    if (this.activeViewport === constants.TDView) {
+  moveZ = (z: number, oneSlide: boolean): void => {
+    const { activeViewport } = this;
+    if (activeViewport === 3) { // 3 == TDView
       return;
     }
 
@@ -358,15 +357,15 @@ class PlaneController {
       this.flycam.move(
         Dimensions.transDim(
           [0, 0, (z < 0 ? -1 : 1) << this.flycam.getIntegerZoomStep()],
-          this.activeViewport),
-        this.activeViewport);
+          activeViewport),
+        activeViewport);
     } else {
       this.move([0, 0, z], false);
     }
   }
 
 
-  zoom(value, zoomToMouse) {
+  zoom(value: number, zoomToMouse: boolean): void {
     if (([0, 1, 2]).includes(this.activeViewport)) {
       this.zoomPlanes(value, zoomToMouse);
     } else {
@@ -375,7 +374,7 @@ class PlaneController {
   }
 
 
-  zoomPlanes(value, zoomToMouse) {
+  zoomPlanes(value: number, zoomToMouse: boolean): void {
     if (zoomToMouse) {
       this.zoomPos = this.getMousePosition();
     }
@@ -389,46 +388,46 @@ class PlaneController {
   }
 
 
-  zoomTDView(value, zoomToMouse) {
+  zoomTDView(value: number, zoomToMouse: boolean = true): void {
     let zoomToPosition;
     if (zoomToMouse) {
       zoomToPosition = this.input.mouseControllers[constants.TDView].position;
     }
-
     this.cameraController.zoomTDView(value, zoomToPosition, this.planeView.curWidth);
   }
 
 
-  moveTDView(delta) {
+  moveTDView(delta: Point2): void {
     this.cameraController.moveTDViewX(delta.x * this.model.user.getMouseInversionX());
     this.cameraController.moveTDViewY(delta.y * this.model.user.getMouseInversionY());
   }
 
 
-  finishZoom = () => {
+  finishZoom = (): void => {
     // Move the plane so that the mouse is at the same position as
     // before the zoom
-    if (this.isMouseOver()) {
+    const { activeViewport } = this;
+    if (this.isMouseOver() && activeViewport !== 3) { // 3 == TDView
       const mousePos = this.getMousePosition();
       const moveVector = [this.zoomPos[0] - mousePos[0],
         this.zoomPos[1] - mousePos[1],
         this.zoomPos[2] - mousePos[2]];
-      this.flycam.move(moveVector, this.activeViewport);
+      this.flycam.move(moveVector, activeViewport);
     }
   }
 
-  getMousePosition() {
+  getMousePosition(): Vector3 {
     const pos = this.input.mouseControllers[this.activeViewport].position;
     return this.calculateGlobalPos(pos);
   }
 
 
-  isMouseOver() {
+  isMouseOver(): boolean {
     return this.input.mouseControllers[this.activeViewport].isMouseOver;
   }
 
 
-  changeMoveValue(delta) {
+  changeMoveValue(delta: number): void {
     let moveValue = this.model.user.get("moveValue") + delta;
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
@@ -437,7 +436,7 @@ class PlaneController {
   }
 
 
-  scaleTrianglesPlane(delta) {
+  scaleTrianglesPlane(delta: number): void {
     let scale = this.model.user.get("scale") + delta;
     scale = Math.min(constants.MAX_SCALE, scale);
     scale = Math.max(constants.MIN_SCALE, scale);
@@ -446,7 +445,7 @@ class PlaneController {
   }
 
 
-  scrollPlanes(delta, type) {
+  scrollPlanes(delta: number, type: ?string): void {
     switch (type) {
       case null:
         this.moveZ(delta, true);
@@ -459,7 +458,7 @@ class PlaneController {
   }
 
 
-  calculateGlobalPos = (clickPos) => {
+  calculateGlobalPos = (clickPos: Point2): Vector3 => {
     let position;
     const curGlobalPos = this.flycam.getPosition();
     const zoomFactor = this.flycam.getPlaneScalingFactor();

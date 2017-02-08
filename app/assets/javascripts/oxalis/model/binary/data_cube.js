@@ -1,6 +1,6 @@
 /**
  * cube.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -10,6 +10,7 @@ import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { BoundingBoxType } from "oxalis/model";
+import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
 import { Bucket, NULL_BUCKET, NULL_BUCKET_OUT_OF_BB, BUCKET_SIZE_P } from "./bucket";
 import ArbitraryCubeAdapter from "./arbitrary_cube_adapter";
 import TemporalBucketManager from "./temporal_bucket_manager";
@@ -304,7 +305,7 @@ class DataCube {
   }
 
 
-  labelVoxels(iterator, label): void {
+  labelVoxels(iterator: VoxelIterator, label: number): void {
     while (iterator.hasNext) {
       const voxel = iterator.getNext();
       this.labelVoxel(voxel, label);
@@ -315,7 +316,7 @@ class DataCube {
   }
 
 
-  labelVoxel(voxel, label): void {
+  labelVoxel(voxel: Vector3, label: number): void {
     let voxelInCube = true;
     for (let i = 0; i <= 2; i++) {
       voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];

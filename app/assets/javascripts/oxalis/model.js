@@ -394,8 +394,8 @@ class Model extends Backbone.Model {
   }
 
 
-  canDisplaySegmentationData() {
-    return !this.flycam.getIntegerZoomStep() > 0 || !this.getSegmentationBinary();
+  canDisplaySegmentationData(): boolean {
+    return !(this.flycam.getIntegerZoomStep() > 0) || !this.getSegmentationBinary();
   }
 
 

@@ -1,17 +1,18 @@
 /**
  * flycam2d.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
-import Model from "oxalis/model";
+import type { BoundingBoxType } from "oxalis/model";
 import User from "oxalis/model/user";
 import scaleInfo from "oxalis/model/scaleinfo";
-import Dimensions from "./dimensions";
-import constants from "../constants";
-import type { Vector3, Vector4 } from "../constants";
+import Dimensions from "oxalis/model/dimensions";
+import constants from "oxalis/constants";
+import type { Vector2, Vector3, Vector4, PlaneType } from "oxalis/constants";
+import Model from "oxalis/model";
 
 const Flycam2dConstants = {
   // maximum difference between requested coordinate and actual texture position
@@ -41,7 +42,7 @@ class Flycam2d {
   trigger: Function;
   listenTo: Function;
 
-  constructor(viewportWidth, zoomStepCount, model) {
+  constructor(viewportWidth: number, zoomStepCount: number, model: Model) {
     this.viewportWidth = viewportWidth;
     this.zoomStepCount = zoomStepCount;
     this.model = model;
@@ -68,9 +69,9 @@ class Flycam2d {
     // correct zoom values that are too high or too low
     this.user.set("zoom", Math.max(0.01, Math.min(this.user.get("zoom"), Math.floor(this.getMaxZoomStep()))));
 
-    this.listenTo(this.model.get("datasetConfiguration"), "change:quality", function (datasetModel, quality) { return this.setQuality(quality); });
+    this.listenTo(this.model.get("datasetConfiguration"), "change:quality", (datasetModel, quality) => { this.setQuality(quality); });
     // TODO move zoom into tracing settings
-    this.listenTo(this.user, "change:zoom", function (userModel, zoomFactor) { return this.zoom(Math.log(zoomFactor) / Math.LN2); });
+    this.listenTo(this.user, "change:zoom", (userModel, zoomFactor) => { this.zoom(Math.log(zoomFactor) / Math.LN2); });
 
     // Fire changed event every time
     const trigger = this.trigger;
@@ -81,7 +82,7 @@ class Flycam2d {
   }
 
 
-  calculateMaxZoomStepDiff() {
+  calculateMaxZoomStepDiff(): number {
     // Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
 
     const zoomThreshold = Math.min(
@@ -92,12 +93,12 @@ class Flycam2d {
   }
 
 
-  zoomByDelta(delta) {
+  zoomByDelta(delta: number): void {
     this.zoom(this.zoomStep - (delta * constants.ZOOM_DIFF));
   }
 
 
-  zoom(zoom) {
+  zoom(zoom: number): void {
     // Make sure the max. zoom Step will not be exceded
     if (zoom < this.zoomStepCount + this.maxZoomStepDiff) {
       this.setZoomStep(zoom);
@@ -105,7 +106,7 @@ class Flycam2d {
   }
 
 
-  setQuality(value) {
+  setQuality(value: number): void {
     // Set offset to the best-possible zoom step
 
     this.quality = value;
@@ -114,7 +115,7 @@ class Flycam2d {
   }
 
 
-  calculateIntegerZoomStep() {
+  calculateIntegerZoomStep(): void {
     // round, because Model expects Integer
     this.integerZoomStep = Math.ceil((this.zoomStep - this.maxZoomStepDiff) + this.quality);
     this.integerZoomStep = Math.min(this.integerZoomStep, this.zoomStepCount);
@@ -122,12 +123,12 @@ class Flycam2d {
   }
 
 
-  getZoomStep() {
+  getZoomStep(): number {
     return this.zoomStep;
   }
 
 
-  setZoomStep(zoomStep) {
+  setZoomStep(zoomStep: number): void {
     this.zoomStep = zoomStep;
     this.update();
     this.updateStoredValues();
@@ -135,13 +136,13 @@ class Flycam2d {
   }
 
 
-  getMaxZoomStep() {
+  getMaxZoomStep(): number {
     const maxZoomStep = this.zoomStepCount - 1;
     return Math.pow(2, maxZoomStep + this.maxZoomStepDiff);
   }
 
 
-  calculateBuffer() {
+  calculateBuffer(): void {
     let pixelNeeded;
     let scaleArray;
     return [0, 1, 2].forEach((planeID) => {
@@ -153,13 +154,13 @@ class Flycam2d {
   }
 
 
-  updateStoredValues() {
+  updateStoredValues(): void {
     this.calculateIntegerZoomStep();
     this.calculateBuffer();
   }
 
 
-  getIntegerZoomStep() {
+  getIntegerZoomStep(): number {
     if (!this.integerZoomStep) {
       this.calculateIntegerZoomStep();
     }
@@ -168,22 +169,22 @@ class Flycam2d {
   }
 
 
-  getTextureScalingFactor() {
+  getTextureScalingFactor(): number {
     return Math.pow(2, this.zoomStep) / Math.pow(2, this.integerZoomStep);
   }
 
 
-  getPlaneScalingFactor() {
+  getPlaneScalingFactor(): number {
     return Math.pow(2, this.zoomStep);
   }
 
 
-  getDirection() {
+  getDirection(): Vector3 {
     return this.direction;
   }
 
 
-  setDirection(direction) {
+  setDirection(direction: Vector3): void {
     this.direction = direction;
     if (this.user.get("dynamicSpaceDirection")) {
       this.setSpaceDirection(direction);
@@ -191,7 +192,7 @@ class Flycam2d {
   }
 
 
-  setSpaceDirection(direction) {
+  setSpaceDirection(direction: Vector3): void {
     [0, 1, 2].forEach((index) => {
       if (direction[index] <= 0) {
         this.spaceDirection[index] = -1;
@@ -202,12 +203,12 @@ class Flycam2d {
   }
 
 
-  getSpaceDirection() {
+  getSpaceDirection(): Vector3 {
     return this.spaceDirection;
   }
 
 
-  getRotation(planeID) {
+  getRotation(planeID: PlaneType): Vector3 {
     switch (planeID) {
       case constants.PLANE_YZ: return [0, 270, 0];
       case constants.PLANE_XZ: return [90, 0, 0];
@@ -217,7 +218,7 @@ class Flycam2d {
   }
 
 
-  move(p, planeID) {
+  move(p: Vector3, planeID: PlaneType): void {
     // move by whatever is stored in p
 
     // if planeID is given, use it to manipulate z
@@ -229,10 +230,8 @@ class Flycam2d {
   }
 
 
-  movePlane(vector, planeID, increaseSpeedWithZoom) {
+  movePlane(vector: Vector3, planeID: PlaneType, increaseSpeedWithZoom: boolean = true) {
     // vector of voxels in BaseVoxels
-
-    if (increaseSpeedWithZoom == null) { increaseSpeedWithZoom = true; }
     vector = Dimensions.transDim(vector, planeID);
     const zoomFactor = increaseSpeedWithZoom ? Math.pow(2, this.zoomStep) : 1;
     const scaleFactor = scaleInfo.baseVoxelFactors;
@@ -243,33 +242,33 @@ class Flycam2d {
   }
 
 
-  toString() {
+  toString(): string {
     const { position } = this;
     return `(x, y, z) = (${position[0]}, ${position[1]}, ${position[2]})`;
   }
 
 
-  getPosition() {
+  getPosition(): Vector3 {
     return this.position;
   }
 
 
-  getViewportBoundingBox() {
+  getViewportBoundingBox(): BoundingBoxType {
     const position = this.getPosition();
     const offset = (this.getPlaneScalingFactor() * this.viewportWidth) / 2;
-    const min = [];
-    const max = [];
+    const min = [0, 0, 0];
+    const max = [0, 0, 0];
 
     for (let i = 0; i <= 2; i++) {
-      min.push(position[i] - (offset * scaleInfo.baseVoxelFactors[i]));
-      max.push(position[i] + (offset * scaleInfo.baseVoxelFactors[i]));
+      min[i] = position[i] - (offset * scaleInfo.baseVoxelFactors[i]);
+      max[i] = position[i] + (offset * scaleInfo.baseVoxelFactors[i]);
     }
 
     return { min, max };
   }
 
 
-  getTexturePosition(planeID) {
+  getTexturePosition(planeID: PlaneType): Vector3 {
     const texturePosition = this.position.slice();    // copy that position
     // As the Model does not render textures for exact positions, the last 5 bits of
     // the X and Y coordinates for each texture have to be set to 0
@@ -283,7 +282,7 @@ class Flycam2d {
   }
 
 
-  setPositionSilent(position) {
+  setPositionSilent(position: Vector3): void {
     for (let i = 0; i <= 2; i++) {
       if (position[i] == null) {
         position[i] = this.position[i];
@@ -295,13 +294,13 @@ class Flycam2d {
   }
 
 
-  setPosition(position) {
+  setPosition(position: Vector3): void {
     this.setPositionSilent(position);
     this.trigger("positionChanged", position);
   }
 
 
-  needsUpdate(planeID) {
+  needsUpdate(planeID: PlaneType): boolean {
     const area = this.getArea(planeID);
     // const ind = Dimensions.getIndices(planeID);
     const res = ((area[0] < 0) || (area[1] < 0) || (area[2] > constants.TEXTURE_WIDTH) || (area[3] > constants.TEXTURE_WIDTH) ||
@@ -312,7 +311,7 @@ class Flycam2d {
   }
 
 
-  getOffsets(planeID) {
+  getOffsets(planeID: PlaneType): Vector2 {
     // return the coordinate of the upper left corner of the viewport as texture-relative coordinate
 
     const ind = Dimensions.getIndices(planeID);
@@ -321,7 +320,7 @@ class Flycam2d {
   }
 
 
-  getArea(planeID) {
+  getArea(planeID: PlaneType): Vector4 {
     // returns [left, top, right, bottom] array
 
     // convert scale vector to array in order to be able to use getIndices()
@@ -334,21 +333,21 @@ class Flycam2d {
   }
 
 
-  getAreas() {
-    const result = [];
-    for (let i = 0; i <= 2; i++) {
-      result.push(this.getArea(i));
-    }
-    return result;
+  getAreas(): [Vector4, Vector4, Vector4] {
+    return [
+      this.getArea(0),
+      this.getArea(1),
+      this.getArea(2),
+    ];
   }
 
 
-  update3DViewSize(cameraRight, cameraLeft) {
+  update3DViewSize(cameraRight: number, cameraLeft: number): void {
     this.voxelPerPixel3DView = (cameraRight - cameraLeft) / constants.VIEWPORT_WIDTH / scaleInfo.baseVoxel;
   }
 
 
-  getRayThreshold(planeID) {
+  getRayThreshold(planeID: PlaneType): number {
     // Voxel threshold used for ray tracing
     if (planeID < 3) {
       return Flycam2dConstants.PIXEL_RAY_THRESHOLD * Math.pow(2, this.zoomStep);
@@ -358,7 +357,7 @@ class Flycam2d {
   }
 
 
-  update() {
+  update(): void {
     app.vent.trigger("rerender");
   }
 }

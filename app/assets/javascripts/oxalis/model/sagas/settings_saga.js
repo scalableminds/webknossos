@@ -4,7 +4,6 @@ import { initializeSettingsAction } from "oxalis/model/actions/settings_actions"
 
 export function* initializeSettingsAsync() {
   const initialUserSettings = yield call(Request.receiveJSON.bind(Request), "/api/user/userConfiguration");
-  debugger
   const action = initializeSettingsAction(initialUserSettings);
   yield put(action);
 }

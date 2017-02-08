@@ -57,46 +57,49 @@ function NumberInputSetting({ onChange, value, label, max, min = 1, step = 1 }) 
 
 class BoundingBoxSetting extends React.Component {
 
-
   constructor(props) {
     super(props);
     this.state = {
-      isValid: false,
+      isValid: true,
       text: props.value,
     };
-    this.inputRegex = new RegExp(/(\d+| |,)/, "g");
   }
-  inputRegex: RegExp;
+  state: {isValid: boolean, text: string};
 
   validate = (evt) => {
     const text = evt.target.value;
 
-    if (this.inputRegex.test(text)) {
-      this.setState(Object.assign({}, this.state, { text }));
+    const isValidInput = new RegExp(/^[\d ,]+$/, "g").test(text);  // only allow numbers, spaces and comma as input
+    const isValidFormat = new RegExp(/(\d+\s*,\s*){5}\d+/).test(text); // BB should look like 0,0,0,0,0,0
+
+    if (isValidFormat) {
+      // Width, height and depth of 0 should be allowed as a non-existing bounding box equals 0,0,0,0,0,0
+      const boundingBox = Utils.stringToNumberArray(text);
+      if (boundingBox[3] > 0 || boundingBox[4] > 0 || boundingBox[5] > 0) {
+        this.props.onChange(boundingBox);
+      }
     }
 
-    const boundingBox = Utils.stringToNumberArray(text);
-    // eslint-disable-next-line no-unused-vars
-    const [minX, minY, minZ, width, height, depth] = boundingBox;
-
-    // Width, height and depth of 0 should be allowed as a non-existing bounding box equals 0,0,0,0,0,0
-    const isInvalid = boundingBox.length < 6 || width < 0 || height < 0 || depth < 0;
-    if (isInvalid) {
-      Toast.error("Bounding Box: Width, height and depth must be >= 0.", false);
-    } else {
-      this.props.onChange(boundingBox);
-    }
+    this.setState(Object.assign({}, this.state, {
+      text: isValidInput ? text : this.state.text,
+      isValid: isValidFormat,
+    }));
   };
 
   render() {
+    const tooltipPrefix = this.state.isValid ? "" : "Invalid ";
+    const tooltipTitle = `${tooltipPrefix} Format: minX, minY, minZ, width, height, depth`;
+    const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
+
     return (
       <Row className="settings-row">
         <Col span={8}>{this.props.label}</Col>
         <Col span={16}>
           <Tooltip
             trigger={["focus"]}
-            title="Format: minX, minY, minZ, width, height, depth"
+            title={tooltipTitle}
             placement="topLeft"
+            overlayStyle={tooltipStyle}
           >
             <Input onChange={this.validate} value={this.state.text} defaultValue={this.state.text} />
           </Tooltip>
@@ -122,7 +125,7 @@ class TracingSettingsView extends Component {
     return (
       <Collapse defaultActiveKey={["1", "2", "3"]}>
         <Panel header="Trees" key="1">
-          <NumberInputSetting label="Active Node ID" max={5000} value={this.props.activeNodeId} onChange={_.partial(this.props.onChange, "activeNodeId")} />
+          <NumberInputSetting label="Active Tree ID" max={5000} value={this.props.activeTreeId} onChange={_.partial(this.props.onChange, "activeTreeId")} />
           <SwitchSetting label="Soma Clicking" value={this.props.somaClickingAllowed} onChange={_.partial(this.props.onChange, "somaClickingAllowed")} />
         </Panel>
         <Panel header="Nodes" key="2">

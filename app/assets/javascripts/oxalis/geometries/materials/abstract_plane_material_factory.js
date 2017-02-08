@@ -35,16 +35,15 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
   setupUniforms() {
     super.setupUniforms();
 
-    const layerSettings = Store.getState().datasetConfiguration.layers;
     for (const binary of this.model.getColorBinaries()) {
       const name = this.sanitizeName(binary.name);
       this.uniforms[`${name}_brightness`] = {
         type: "f",
-        value: layerSettings[binary.name].brightness / 255,
+        value: 1.0,
       };
       this.uniforms[`${name}_contrast`] = {
         type: "f",
-        value: layerSettings[binary.name].contrast,
+        value: 1.0,
       };
     }
   }

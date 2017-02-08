@@ -59,15 +59,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: texture,
       };
       if (texture.binaryCategory !== "segmentation") {
-        debugger
-        const color = this.convertColor(Store.getState().datasetConfiguration.layers[texture.binaryName].color);
         this.uniforms[`${shaderName}_weight`] = {
           type: "f",
           value: 1,
         };
         this.uniforms[`${shaderName}_color`] = {
           type: "v3",
-          value: new THREE.Vector3(...color),
+          value: new THREE.Vector3([255, 255, 255]),
         };
       }
     }

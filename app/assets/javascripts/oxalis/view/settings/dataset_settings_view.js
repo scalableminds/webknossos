@@ -23,8 +23,8 @@ class DatasetSettings extends Component {
         <Row>
           <Col span={24}><label>{layerName}</label></Col>
         </Row>
-        <NumberSliderSetting label="Brightness" min={0} max={500} value={layer.brightness} onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")} />
-        <NumberSliderSetting label="Contrast" min={0} max={500} value={layer.contrast} onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")} />
+        <NumberSliderSetting label="Brightness" min={-255} max={255} step={5} value={layer.brightness} onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")} />
+        <NumberSliderSetting label="Contrast" min={0.5} max={5} step={0.1} value={layer.contrast} onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")} />
       </div>
     )
   }

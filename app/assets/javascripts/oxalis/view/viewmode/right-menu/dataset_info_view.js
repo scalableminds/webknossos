@@ -1,12 +1,7 @@
-/**
- * dataset_info_view.js
- * @flow weak
- */
-
 import _ from "lodash";
 import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
-import scaleInfo from "oxalis/model/scaleinfo";
+import app from "app";
 import constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 
@@ -40,6 +35,7 @@ class DatasetInfoView extends Marionette.View {
 
 
   initialize() {
+    this.render = _.throttle(this.render, 100);
     this.listenTo(this.model.flycam3d, "changed", this.render);
     this.listenTo(this.model.flycam, "zoomStepChanged", this.render);
 
@@ -49,8 +45,6 @@ class DatasetInfoView extends Marionette.View {
       this.listenTo(this.model.skeletonTracing, "newTree", this.render);
     }
   }
-
-  render = _.throttle(this.render, 100);
 
 
   // Rendering performance optimization
@@ -86,15 +80,15 @@ class DatasetInfoView extends Marionette.View {
     if (constants.MODES_PLANE.includes(this.model.mode)) {
       zoom = this.model.flycam.getPlaneScalingFactor();
       width = constants.PLANE_WIDTH;
-    } else if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
+    }
+
+    if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
       zoom = this.model.flycam3d.zoomStep;
       width = ArbitraryController.prototype.WIDTH;
-    } else {
-      throw Error("Model mode not recognized:", this.model.mode);
     }
 
     // unit is nm
-    return zoom * width * scaleInfo.baseVoxel;
+    return zoom * width * app.scaleInfo.baseVoxel;
   }
 
 

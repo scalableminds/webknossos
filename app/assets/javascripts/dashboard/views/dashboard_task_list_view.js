@@ -13,10 +13,6 @@ import TaskTransferModalView from "./task_transfer_modal_view";
 import UserTasksCollection from "../models/user_tasks_collection";
 
 class DashboardTaskListView extends Marionette.CompositeView {
-
-  showFinishedTasks: boolean;
-  modal: TaskTransferModalView;
-
   static initClass() {
     this.prototype.template = _.template(`\
 <h3>Tasks</h3>
@@ -35,7 +31,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
 <% } %>
 <div class="divider-vertical"></div>
 <a href="#" id="toggle-finished" class="btn btn-default">
-  Show <%- getFinishVerb() %> tasks only
+  Show <%= getFinishVerb() %> tasks only
 </a>
 <table class="table table-striped sortable-table">
   <thead>
@@ -73,16 +69,12 @@ class DashboardTaskListView extends Marionette.CompositeView {
       },
     };
   }
-
-
-  // Cannot be ES6 style function, as these are covariant by default
-  childViewOptions = function childViewOptions() {
+  childViewOptions() {
     return { isAdminView: this.options.isAdminView };
   }
 
 
-  // Cannot be ES6 style function, as these are covariant by default
-  templateContext = function templateContext() {
+  templateContext() {
     return {
       isAdminView: this.options.isAdminView,
       getFinishVerb: () => this.showFinishedTasks ? "unfinished" : "finished",
@@ -94,9 +86,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
     this.options = options;
     this.showFinishedTasks = false;
 
-    // If you know how to do this better, do it. Backbones Collection type is not compatible to Marionettes
-    // Collection type according to flow - although they actually should be...
-    this.collection = ((new UserTasksCollection([], { userID: this.options.userID }): any): Marionette.Collection);
+    this.collection = new UserTasksCollection([], { userID: this.options.userID });
     this.listenTo(this.collection, "fetch", () => app.router.showLoadingSpinner());
     this.listenTo(this.collection, "sync", () => app.router.hideLoadingSpinner());
 
@@ -117,22 +107,14 @@ class DashboardTaskListView extends Marionette.CompositeView {
     event.preventDefault();
 
     if (this.collection.filter(UserTasksCollection.prototype.unfinishedTasksFilter).length === 0 || confirm("Do you really want another task?")) {
-      // Need to make sure this.collection is a UserTasksCollection with the getNewTask
-      // method, otherwise flow complains
-      if (this.collection instanceof UserTasksCollection) {
-        this.collection.getNewTask();
-      }
+      this.collection.getNewTask();
     }
   }
 
 
   toggleFinished() {
     this.showFinishedTasks = !this.showFinishedTasks;
-    // Need to make sure this.collection is a UserTasksCollection with the isFinished
-    // attribute, otherwise flow complains
-    if (this.collection instanceof UserTasksCollection) {
-      this.collection.isFinished = this.showFinishedTasks;
-    }
+    this.collection.isFinished = this.showFinishedTasks;
     this.refresh();
   }
 

@@ -50,8 +50,8 @@ class DatasetSwitchView extends Marionette.View {
     };
   }
 
-  // Cannot be ES6 style function, as these are covariant by default
-  templateContext = function templateContext() {
+
+  templateContext() {
     return { isAdmin: Utils.isUserAdmin(this.model) };
   }
 

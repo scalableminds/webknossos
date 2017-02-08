@@ -1,21 +1,10 @@
-/**
- * modal.js
- * @flow
- */
-
 import $ from "jquery";
-
-type ButtonType = {
-  id: string;
-  label: string;
-  callback?: (()=>void);
-}
 
 const Modal = {
 
   callbacks: {},
 
-  show(text: string, title: string = "Ups...", buttons:Array<ButtonType> = [{ id: "ok-button", label: "OK" }]) {
+  show(text, title = "Ups...", buttons = [{ id: "ok-button", label: "OK" }]) {
     // buttons: [{id:..., label:..., callback:...}, ...]
 
     let html = `\
@@ -42,9 +31,6 @@ const Modal = {
       this.callbacks[button.id] = button.callback;
 
       $(`#${button.id}`).on("click", (evt) => {
-        if (!(evt.target instanceof window.HTMLElement)) {
-          throw new Error("event target is not a HTMLElement!");
-        }
         const callback = this.callbacks[evt.target.id];
         if (callback != null) {
           callback();

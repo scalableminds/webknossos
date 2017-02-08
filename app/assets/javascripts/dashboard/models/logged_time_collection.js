@@ -7,9 +7,10 @@ import Backbone from "backbone";
 import moment from "moment";
 
 class LoggedTimeCollection extends Backbone.Collection {
+
   userID: string;
 
-  comparator = function comparator(model) { return -model.get("interval"); }
+  comparator(model) { return -model.get("interval"); }
 
   url(): string {
     if (this.userID) {

@@ -5,7 +5,7 @@
 
 import Backbone from "backbone";
 import _ from "lodash";
-import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
+import app from "app";
 import Utils from "../libs/utils";
 import Binary from "./model/binary";
 import SkeletonTracing from "./model/skeletontracing/skeletontracing";
@@ -13,11 +13,11 @@ import User from "./model/user";
 import DatasetConfiguration from "./model/dataset_configuration";
 import VolumeTracing from "./model/volumetracing/volumetracing";
 import ConnectionInfo from "./model/binarydata_connection_info";
-import scaleInfo from "./model/scaleinfo";
+import ScaleInfo from "./model/scaleinfo";
 import Flycam2d from "./model/flycam2d";
 import Flycam3d from "./model/flycam3d";
 import constants from "./constants";
-import type { ModeType, Vector3, Vector4 } from "./constants";
+import type { ModeType, Vector3 } from "./constants";
 import Request from "../libs/request";
 import Toast from "../libs/toast";
 import ErrorHandling from "../libs/error_handling";
@@ -30,20 +30,9 @@ import NdStoreLayer from "./model/binary/layers/nd_store_layer";
 // All public operations are **asynchronous**. We return a promise
 // which you can react on.
 
-export type BranchPoint = {
-  id: number;
-  timestamp: number;
-}
 export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
-};
-export type LayerType = WkLayer | NdStoreLayer;
-export type RestrictionsType = {
-  allowAccess: boolean,
-  allowUpdate: boolean,
-  allowFinish: boolean,
-  allowDownload: boolean,
 };
 type Settings = {
   advancedOptionsAllowed: boolean,
@@ -51,48 +40,16 @@ type Settings = {
   branchPointsAllowed: boolean,
   somaClickingAllowed: boolean,
 };
-export type CommentType = {
-  node: number;
-  comment: string;
-};
-export type TreeData = {
-  id: number;
-  color: Vector4;
-  name: string;
-  timestamp: number;
-  comments: Array<CommentType>;
-  branchPoints: Array<BranchPoint>;
-  edges: Array<{source: number, target: number}>;
-  nodes: Array<Tracepoint>;
-};
-
-export type BoundingBoxObjectType = {
-  topLeft: Vector3,
-  width: number,
-  height: number,
-  depth: number,
-};
-
-export type SkeletonContentDataType = {
-  activeNode: null | number;
-  trees: Array<TreeData>;
-  zoomLevel: number;
-  customLayers: null;
-};
-
-export type VolumeContentDataType = {
-  activeCell: null | number;
-  customLayers: Array<Object>;
-  maxCoordinates: BoundingBoxObjectType;
-  customLayers: ?Array<Object>;
-  name: string;
-};
-
-export type Tracing = {
+type Tracing = {
   actions: Array<any>,
   content: {
-    boundingBox: BoundingBoxObjectType,
-    contentData: VolumeContentDataType | SkeletonContentDataType,
+    boundingBox: {
+      topLeft: Vector3,
+      width: number,
+      height: number,
+      depth: number,
+    },
+    contentData: Object,
     contentType: string,
     dataSet: Object,
     editPosition: Vector3,
@@ -106,7 +63,7 @@ export type Tracing = {
   formattedHash: string,
   id: string,
   name: string,
-  restrictions: RestrictionsType,
+  restrictions: any,
   state: any,
   stateLabel: string,
   stats: any,
@@ -257,7 +214,7 @@ class Model extends Backbone.Model {
     console.log("user", this.user);
 
     const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
-    scaleInfo.initialize(dataset.get("scale"));
+    app.scaleInfo = new ScaleInfo(dataset.get("scale"));
 
     const bb = tracing.content.boundingBox;
     if (bb != null) {
@@ -418,7 +375,7 @@ class Model extends Backbone.Model {
   }
 
   // delegate save request to all submodules
-  save = function save() {
+  save() {
     const submodels = [];
     const promises = [];
 

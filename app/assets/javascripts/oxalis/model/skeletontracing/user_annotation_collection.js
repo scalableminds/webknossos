@@ -1,15 +1,7 @@
-/**
- * user_annotation_collection.js
- * @flow weak
- */
-
 import _ from "lodash";
 import Backbone from "backbone";
 
 class UserAnnotationCollection extends Backbone.Collection {
-
-  userId: string;
-  dataSetName: string;
 
   url() { return `/api/users/${this.userId}/annotations`; }
 

@@ -7,6 +7,11 @@ import runAsync from "../../helpers/run-async";
 mockRequire.stopAll();
 
 mockRequire("jquery", { fn: {} });
+mockRequire("../../../oxalis/model/binary/pullqueue", {
+  prototype: {
+    PRIORITY_HIGHEST: 123,
+  },
+});
 mockRequire("../../../libs/error_handling", {
   assertExists(expr) { this.assert(expr != null); },
   assert(expr) { if (!expr) throw new Error("Assertion failed"); },
@@ -14,7 +19,7 @@ mockRequire("../../../libs/error_handling", {
 mockRequire("../../../libs/toast", { error: _.noop });
 
 
-const Cube = require("../../../oxalis/model/binary/data_cube").default;
+const Cube = require("../../../oxalis/model/binary/cube").default;
 
 describe("Cube", () => {
   let cube = null;
@@ -44,7 +49,7 @@ describe("Cube", () => {
       expect(cube.bucketCount).toBe(0);
 
       const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
-      expect(bucket.isNullBucket).toBe(false);
+      expect(bucket.isNullBucket).toBe(undefined);
       expect(cube.bucketCount).toBe(1);
     });
 
@@ -65,7 +70,7 @@ describe("Cube", () => {
           () => {
             expect(pullQueue.add.calledWith({
               bucket: [0, 0, 0, 0],
-              priority: -1 }),
+              priority: 123 }),
             ).toBe(true);
 
             expect(pullQueue.pull.called).toBe(true);
@@ -167,8 +172,7 @@ describe("Cube", () => {
         cube.labelVoxel([0, 0, 0], 42);
         cube.labelVoxel([1, 1, 1], 43);
 
-        const mapping = [];
-        mapping[42] = 1;
+        const mapping = { "42": 1 };
 
         expect(cube.getDataValue([0, 0, 0], mapping)).toBe(1);
         expect(cube.getDataValue([1, 1, 1], mapping)).toBe(43);
@@ -178,8 +182,7 @@ describe("Cube", () => {
 
   describe("Garbage Collection", () => {
     beforeEach(() => {
-      cube.MAXIMUM_BUCKET_COUNT = 3;
-      cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
+      Cube.prototype.MAXIMUM_BUCKET_COUNT = 3;
     });
 
 

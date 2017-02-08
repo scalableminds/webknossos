@@ -11,9 +11,6 @@ import LoggedTimeView from "./logged_time_view";
 import DatasetSwitchView from "./dataset/dataset_switch_view";
 
 class DashboardView extends Marionette.View {
-
-  viewCache: Object;
-
   static initClass() {
     this.prototype.className = "container wide";
     this.prototype.id = "dashboard";
@@ -59,8 +56,8 @@ class DashboardView extends Marionette.View {
     };
   }
 
-  // Cannot be ES6 style function, as these are covariant by default
-  templateContext = function templateContext() {
+
+  templateContext() {
     return { isAdminView: this.options.isAdminView };
   }
 

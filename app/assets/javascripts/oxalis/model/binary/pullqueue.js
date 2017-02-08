@@ -1,46 +1,21 @@
-/**
- * pullqueue.js
- * @flow weak
- */
-
 import _ from "lodash";
-import DataCube from "oxalis/model/binary/data_cube";
-import BinaryDataConnectionInfo from "../binarydata_connection_info";
-import { Bucket } from "./bucket";
-import Layer from "./layers/layer";
 import Utils from "../../../libs/utils";
 import Request from "../../../libs/request";
 
-type DatastoreInfoType = {
-  url: string,
-  typ: string,
-};
-
-type PullQueueItemType = {
-  priority: number,
-  bucket: Bucket,
-};
-
-export const PullQueueConstants = {
-  // For buckets that should be loaded immediately and
-  // should never be removed from the queue
-  PRIORITY_HIGHEST: -1,
-  BATCH_LIMIT: 6,
-};
-
 class PullQueue {
-
-  BATCH_SIZE: number;
-  cube: DataCube;
-  queue: Array<PullQueueItemType>;
-  batchCount: number;
-  roundTripTime: number;
-  layer: Layer;
-  whitenEmptyBuckets: boolean;
-  connectionInfo: BinaryDataConnectionInfo;
-  datastoreInfo: DatastoreInfoType;
-
   static initClass() {
+    // Constants
+    this.prototype.BATCH_LIMIT = 6;
+
+    // For buckets that should be loaded immediately and
+    // should never be removed from the queue
+    this.prototype.PRIORITY_HIGHEST = -1;
+
+    this.prototype.cube = null;
+    this.prototype.queue = null;
+
+    this.prototype.batchCount = 0;
+    this.prototype.roundTripTime = 0;
   }
 
 
@@ -51,8 +26,6 @@ class PullQueue {
     this.datastoreInfo = datastoreInfo;
     this.queue = [];
     this.BATCH_SIZE = this.isNDstore() ? 1 : 3;
-    this.batchCount = 0;
-    this.roundTripTime = 0;
 
     // Debug option.
     // If true, buckets of all 0 will be transformed to have 255 bytes everywhere.
@@ -68,7 +41,7 @@ class PullQueue {
 
     // Starting to download some buckets
     const promises = [];
-    while (this.batchCount < PullQueueConstants.BATCH_LIMIT && this.queue.length) {
+    while (this.batchCount < this.BATCH_LIMIT && this.queue.length) {
       const batch = [];
       while (batch.length < this.BATCH_SIZE && this.queue.length) {
         const address = this.queue.shift().bucket;
@@ -114,7 +87,7 @@ class PullQueue {
           const bucket = this.cube.getBucket(bucketAddress);
           bucket.pullFailed();
           if (bucket.dirty) {
-            this.add({ bucket: bucketAddress, priority: PullQueueConstants.PRIORITY_HIGHEST });
+            this.add({ bucket: bucketAddress, priority: this.PRIORITY_HIGHEST });
           }
         }
 
@@ -130,7 +103,7 @@ class PullQueue {
 
 
   clearNormalPriorities() {
-    this.queue = _.filter(this.queue, e => e.priority === PullQueueConstants.PRIORITY_HIGHEST);
+    this.queue = _.filter(this.queue, e => e.priority === this.PRIORITY_HIGHEST);
   }
 
 

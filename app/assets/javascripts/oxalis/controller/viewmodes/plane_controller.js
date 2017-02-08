@@ -16,7 +16,6 @@ import View from "oxalis/view";
 import SceneController from "oxalis/controller/scene_controller";
 import Flycam2d from "oxalis/model/flycam2d";
 import type { Vector3, ViewType } from "oxalis/constants";
-import scaleInfo from "oxalis/model/scaleinfo";
 import CameraController from "../camera_controller";
 import Dimensions from "../../model/dimensions";
 import PlaneView from "../../view/plane_view";
@@ -78,7 +77,7 @@ class PlaneController {
 
     this.flycam = this.model.flycam;
 
-    this.oldNmPos = scaleInfo.voxelToNm(this.flycam.getPosition());
+    this.oldNmPos = app.scaleInfo.voxelToNm(this.flycam.getPosition());
 
     this.planeView = new PlaneView(this.model, this.view);
 
@@ -160,7 +159,7 @@ class PlaneController {
 
   initTrackballControls() {
     const view = $("#TDView")[0];
-    const pos = scaleInfo.voxelToNm(this.flycam.getPosition());
+    const pos = app.scaleInfo.voxelToNm(this.flycam.getPosition());
     this.controls = new TrackballControls(
       this.planeView.getCameras()[constants.TDView],
       view,
@@ -172,10 +171,10 @@ class PlaneController {
     this.controls.staticMoving = true;
 
     this.controls.target.set(
-      ...scaleInfo.voxelToNm(this.flycam.getPosition()));
+      ...app.scaleInfo.voxelToNm(this.flycam.getPosition()));
 
     this.listenTo(this.flycam, "positionChanged", function (position) {
-      const nmPosition = scaleInfo.voxelToNm(position);
+      const nmPosition = app.scaleInfo.voxelToNm(position);
 
       this.controls.target.set(...nmPosition);
       this.controls.update();
@@ -206,7 +205,7 @@ class PlaneController {
 
     const getMoveValue = (timeFactor) => {
       if (([0, 1, 2]).includes(this.activeViewport)) {
-        return (this.model.user.get("moveValue") * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
+        return (this.model.user.get("moveValue") * timeFactor) / app.scaleInfo.baseVoxel / constants.FPS;
       }
       return (constants.TDView_MOVE_SPEED * timeFactor) / constants.FPS;
     };
@@ -325,7 +324,7 @@ class PlaneController {
       if (this.sceneController.pingDataLayer(dataLayerName)) {
         this.model.binary[dataLayerName].ping(this.flycam.getPosition(), {
           zoomStep: this.flycam.getIntegerZoomStep(),
-          areas: this.flycam.getAreas(),
+          area: this.flycam.getAreas(),
           activePlane: this.activeViewport,
         });
       }
@@ -464,7 +463,7 @@ class PlaneController {
     const curGlobalPos = this.flycam.getPosition();
     const zoomFactor = this.flycam.getPlaneScalingFactor();
     const { scaleFactor } = this.planeView;
-    const planeRatio = scaleInfo.baseVoxelFactors;
+    const planeRatio = app.scaleInfo.baseVoxelFactors;
     switch (this.activeViewport) {
       case constants.PLANE_XY:
         position = [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),

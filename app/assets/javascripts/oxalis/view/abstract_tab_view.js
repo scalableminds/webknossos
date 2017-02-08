@@ -1,20 +1,11 @@
-/**
- * abstract_tab_view.js
- * @flow weak
- */
-
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
-import BackboneToOxalisAdapterModel from "oxalis/model/settings/backbone_to_oxalis_adapter_model";
 
 class AbstractTabView extends Marionette.View {
-
-  activeTabIndex: number;
-  adapterModel: BackboneToOxalisAdapterModel;
-  tabs: Array<Object>;
-
   static initClass() {
+    this.prototype.MARGIN = 40;
+
     this.prototype.className = "flex-column";
     this.prototype.template = _.template(`\
 <ul class="nav nav-tabs">

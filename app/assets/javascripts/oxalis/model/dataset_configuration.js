@@ -1,20 +1,18 @@
-/**
- * dataset_configuration.js
- * @flow weak
- */
-
 import _ from "lodash";
 import app from "app";
 import NestedObjModel from "libs/nested_obj_model";
 
+
 class DatasetConfiguration extends NestedObjModel {
 
-  dataLayerNames: Array<string>;
-  datasetName: string;
+  constructor(...args) {
+    super(...args);
+    this.reset = this.reset.bind(this);
+  }
 
   initialize({ datasetName, dataLayerNames }) {
     this.dataLayerNames = dataLayerNames;
-    this.datasetName = datasetName;
+    this.url = `/api/dataSetConfigurations/${datasetName}`;
     this.listenTo(this, "change", _.debounce(
       () => { if (app.currentUser != null) { this.save(); } },
       500));
@@ -22,10 +20,9 @@ class DatasetConfiguration extends NestedObjModel {
   }
 
 
-  url = () => `/api/dataSetConfigurations/${this.datasetName}`
-
-
-  reset = () => this.setDefaultBinaryColors(true)
+  reset() {
+    return this.setDefaultBinaryColors(true);
+  }
 
 
   triggerAll() {

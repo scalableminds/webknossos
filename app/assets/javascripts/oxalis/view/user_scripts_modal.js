@@ -1,8 +1,3 @@
-/**
- * user_scripts_modal.js
- * @flow weak
- */
-
 /* eslint-disable no-eval, no-alert */
 import _ from "lodash";
 import Marionette from "backbone.marionette";

@@ -1,8 +1,3 @@
-/**
- * dimensions.js
- * @flow weak
- */
-
 import Utils from "libs/utils";
 import constants from "../constants";
 

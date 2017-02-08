@@ -1,24 +1,11 @@
-/*
-* traceparser.js
-* @flow weak
-*/
-
+import _ from "lodash";
 import * as THREE from "three";
 import Toast from "libs/toast";
-import TracePoint from "oxalis/model/skeletontracing/tracepoint";
-import TraceTree from "oxalis/model/skeletontracing/tracetree";
-import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
-import type { SkeletonContentDataType, TreeData } from "oxalis/model";
+import TracePoint from "./tracepoint";
+import TraceTree from "./tracetree";
 
 class TracingParser {
 
-  skeletonTracing: SkeletonTracing;
-  data: SkeletonContentDataType;
-  idCount: number;
-  treeIdCount: number;
-  trees: Array<TreeData>;
-  activeNode: ?TracePoint;
-  activeTree: ?TraceTree;
 
   constructor(skeletonTracing, data) {
     this.skeletonTracing = skeletonTracing;
@@ -44,10 +31,13 @@ class TracingParser {
 
       // Initialize nodes
       for (const node of treeData.nodes) {
+        const metaInfo = _.pick(node,
+          "timestamp", "viewport", "resolution", "bitDepth", "interpolation");
+
         tree.nodes.push(
           new TracePoint(
             node.id, node.position, node.radius, treeData.id,
-            node.rotation, node.timestamp, node.viewport, node.resolution, node.bitDepth, node.interpolation));
+            metaInfo, node.rotation));
 
         // idCount should be bigger than any other id
         this.idCount = Math.max(node.id + 1, this.idCount);

@@ -1,64 +1,15 @@
-/**
- * statelogger.js
- * @flow weak
- */
-
 import Backbone from "backbone";
 import _ from "lodash";
 import $ from "jquery";
 import app from "app";
 import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
-import Flycam2D from "oxalis/model/flycam2d";
-
-const PUSH_THROTTLE_TIME = 30000; // 30s
-const SAVE_RETRY_WAITING_TIME = 5000;
-
-type DiffType = {
-  action: string;
-  value: Object;
-};
-
-// Returns a wrapper function that rejects all invocations while an
-// instance of the function is still running. The mutex can be
-// cleared with a predefined timeout. The wrapped function is
-// required to return a `Promise` at all times.
-function mutexPromise(func, timeout = 20000) {
-  let promise = null;
-
-  return function (...args) {
-    if (!promise) {
-      let internalPromise;
-      promise = internalPromise = func.apply(this, args);
-      if (timeout >= 0) {
-        setTimeout((() => {
-          if (promise === internalPromise) { promise = null; }
-        }), timeout);
-      }
-      promise.then(
-        () => { promise = null; },
-        () => { promise = null; });
-      return promise;
-    } else {
-      return Promise.reject("mutex");
-    }
-  };
-}
 
 class StateLogger {
-
-  flycam: Flycam2D;
-  version: number;
-  tracingId: string;
-  tracingType: string;
-  allowUpdate: boolean;
-  newDiffs: Array<DiffType>;
-
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-  trigger: Function;
-  on: Function;
-
+  static initClass() {
+    this.prototype.PUSH_THROTTLE_TIME = 30000; // 30s
+    this.prototype.SAVE_RETRY_WAITING_TIME = 5000;
+  }
 
   constructor(flycam, version, tracingId, tracingType, allowUpdate) {
     this.flycam = flycam;
@@ -67,6 +18,7 @@ class StateLogger {
     this.tracingType = tracingType;
     this.allowUpdate = allowUpdate;
     _.extend(this, Backbone.Events);
+    this.mutexedPush = _.mutexPromise(this.pushImpl, -1);
 
     this.newDiffs = [];
 
@@ -107,6 +59,15 @@ class StateLogger {
   }
 
 
+  pushThrottled() {
+    // Pushes the buffered tracing to the server. Pushing happens at most
+    // every 30 seconds.
+
+    this.pushThrottled = _.throttle(this.mutexedPush, this.PUSH_THROTTLE_TIME);
+    this.pushThrottled();
+  }
+
+
   pushNow() {
    // Interface for view & controller
 
@@ -115,14 +76,10 @@ class StateLogger {
 
   // alias for `pushNow`
   // needed for save delegation by `Model`
-  // see `model.js`
+  // see `model.coffee`
   save() {
     return this.pushNow();
   }
-
-
-  mutexedPush = mutexPromise(this.pushImpl, -1);
-  pushThrottled = _.throttle(this.mutexedPush, PUSH_THROTTLE_TIME);
 
 
   pushImpl(notifyOnFailure) {
@@ -171,7 +128,7 @@ In order to restore the current window, a reload is necessary.\
     }
 
 
-    setTimeout((() => this.pushNow()), SAVE_RETRY_WAITING_TIME);
+    setTimeout((() => this.pushNow()), this.SAVE_RETRY_WAITING_TIME);
     if (notifyOnFailure) {
       this.trigger("pushFailed");
     }
@@ -183,6 +140,7 @@ In order to restore the current window, a reload is necessary.\
     $("body").removeClass("save-error");
   }
 }
+StateLogger.initClass();
 
 
 export default StateLogger;

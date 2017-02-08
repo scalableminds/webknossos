@@ -1,43 +1,14 @@
-/**
- * volumetracing.js
- * @flow weak
- */
-
 import _ from "lodash";
 import Backbone from "backbone";
 import Drawing from "libs/drawing";
-import VolumeCell from "oxalis/model/volumetracing/volumecell";
-import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
-import VolumeTracingStateLogger from "oxalis/model/volumetracing/volumetracing_statelogger";
-import Dimensions from "oxalis/model/dimensions";
-import RestrictionHandler from "oxalis/model/helpers/restriction_handler";
-import Constants from "oxalis/constants";
-import Flycam2D from "oxalis/model/flycam2d";
-import Flycam3D from "oxalis/model/flycam3d";
-import Binary from "oxalis/model/binary";
-
-import type { Vector3, VolumeModeType } from "oxalis/constants";
-import type { VolumeContentDataType } from "oxalis/model";
+import VolumeCell from "./volumecell";
+import VolumeLayer from "./volumelayer";
+import VolumeTracingStateLogger from "./volumetracing_statelogger";
+import Dimensions from "../dimensions";
+import RestrictionHandler from "../helpers/restriction_handler";
+import Constants from "../../constants";
 
 class VolumeTracing {
-
-  flycam: Flycam2D;
-  flycam3d: Flycam3D;
-  binary: Binary;
-  contentData: VolumeContentDataType;
-  restrictionHandler: RestrictionHandler;
-  mode: VolumeModeType;
-  cells: Array<VolumeCell>;
-  activeCell: ?VolumeCell;
-  currentLayer: ?VolumeLayer;
-  idCount: number;
-  lastCentroid: ?Vector3;
-  stateLogger: VolumeTracingStateLogger;
-
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-  trigger: Function;
-  on: Function;
 
   constructor(tracing, flycam, flycam3d, binary) {
     this.flycam = flycam;
@@ -120,34 +91,30 @@ class VolumeTracing {
   addToLayer(pos) {
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
-    const currentLayer = this.currentLayer;
-
-    if (currentLayer == null) {
+    if (this.currentLayer == null) {
       return;
     }
 
-    currentLayer.addContour(pos);
-    this.trigger("updateLayer", this.getActiveCellId(), currentLayer.getSmoothedContourList());
+    this.currentLayer.addContour(pos);
+    this.trigger("updateLayer", this.getActiveCellId(), this.currentLayer.getSmoothedContourList());
   }
 
 
   finishLayer() {
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
-    const currentLayer = this.currentLayer;
-
-    if ((currentLayer == null) || currentLayer.isEmpty()) {
+    if ((this.currentLayer == null) || this.currentLayer.isEmpty()) {
       return;
     }
 
     const start = (new Date()).getTime();
-    currentLayer.finish();
-    const iterator = currentLayer.getVoxelIterator();
+    this.currentLayer.finish();
+    const iterator = this.currentLayer.getVoxelIterator();
     const labelValue = this.activeCell ? this.activeCell.id : 0;
     this.binary.cube.labelVoxels(iterator, labelValue);
     console.log("Labeling time:", ((new Date()).getTime() - start));
 
-    this.updateDirection(currentLayer.getCentroid());
+    this.updateDirection(this.currentLayer.getCentroid());
     this.currentLayer = null;
 
     this.trigger("volumeAnnotated");

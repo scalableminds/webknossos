@@ -1,13 +1,7 @@
-/**
- * flycam3d.js
- * @flow weak
- */
-
 import _ from "lodash";
 import Backbone from "backbone";
 import * as THREE from "three";
 import { M4x4 } from "libs/mjs";
-import type { Vector3 } from "oxalis/constants";
 
 const updateMacro = function (_this) {
   _this.trigger("changed", _this.currentMatrix, _this.zoomStep);
@@ -22,18 +16,17 @@ const transformationWithDistanceMacro = function (_this, transformationFn, trans
   M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix);
 };
 
-const ZOOM_STEP_INTERVAL = 1.1;
-const ZOOM_STEP_MIN = 0.5;
-const ZOOM_STEP_MAX = 5;
-
 class Flycam3d {
-  zoomStep = 1.3;
-  hasChanged = true;
-  scale: Vector3;
-  currentMatrix: Array<number>;
-  distance: number;
-  distanceVecNegative: Vector3;
-  distanceVecPositive: Vector3;
+  static initClass() {
+    this.prototype.ZOOM_STEP_INTERVAL = 1.1;
+    this.prototype.ZOOM_STEP_MIN = 0.5;
+    this.prototype.ZOOM_STEP_MAX = 5;
+
+    this.prototype.zoomStep = 1.3;
+    this.prototype.hasChanged = true;
+    this.prototype.scale = null;
+    this.prototype.currentMatrix = null;
+  }
 
   constructor(distance, scale) {
     this.distance = distance;
@@ -52,7 +45,7 @@ class Flycam3d {
   }
 
 
-  calculateScaleValues(scale): Vector3 {
+  calculateScaleValues(scale) {
     scale = [1 / scale[0], 1 / scale[1], 1 / scale[2]];
     const maxScale = Math.max(scale[0], scale[1], scale[2]);
     const multi = 1 / maxScale;
@@ -103,14 +96,14 @@ class Flycam3d {
 
 
   zoomIn() {
-    this.zoomStep = Math.max(this.zoomStep / ZOOM_STEP_INTERVAL, ZOOM_STEP_MIN);
+    this.zoomStep = Math.max(this.zoomStep / this.ZOOM_STEP_INTERVAL, this.ZOOM_STEP_MIN);
     this.calculateDistanceVectors(this.zoomStep);
     return updateMacro(this);
   }
 
 
   zoomOut() {
-    this.zoomStep = Math.min(this.zoomStep * ZOOM_STEP_INTERVAL, ZOOM_STEP_MAX);
+    this.zoomStep = Math.min(this.zoomStep * this.ZOOM_STEP_INTERVAL, this.ZOOM_STEP_MAX);
     this.calculateDistanceVectors(this.zoomStep);
     return updateMacro(this);
   }
@@ -122,7 +115,7 @@ class Flycam3d {
 
 
   setZoomStep(zoomStep) {
-    this.zoomStep = Math.min(ZOOM_STEP_MAX, Math.max(ZOOM_STEP_MIN, zoomStep));
+    this.zoomStep = Math.min(this.ZOOM_STEP_MAX, Math.max(this.ZOOM_STEP_MIN, zoomStep));
   }
 
 
@@ -291,5 +284,6 @@ class Flycam3d {
     return [matrix[0], matrix[1], matrix[2]];
   }
 }
+Flycam3d.initClass();
 
 export default Flycam3d;

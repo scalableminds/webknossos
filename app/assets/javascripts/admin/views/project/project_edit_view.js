@@ -18,25 +18,25 @@ class ProjectEditView extends Marionette.View {
         <div class="form-group">
           <label class="col-sm-2" for="team">Team</label>
           <div class="col-sm-10 team">
-            <input type="text" class="form-control" name="team" value="<%- team %>" required autofocus disabled>
+            <input type="text" class="form-control" name="team" value="<%= team %>" required autofocus disabled>
           </div>
         </div>
         <div class="form-group">
           <label class="col-sm-2 for="name">Project Name</label>
           <div class="col-sm-10">
-            <input type="text" class="form-control" name="name" value="<%- name %>" required autofocus disabled>
+            <input type="text" class="form-control" name="name" value="<%= name %>" required autofocus disabled>
           </div>
         </div>
         <div class="form-group">
           <label class="col-sm-2 for="owner">Owner</label>
           <div class="col-sm-10 owner">
-            <input type="text" class="form-control" name="owner" value="<%- owner.firstName %> <%- owner.lastName %>" required autofocus disabled>
+            <input type="text" class="form-control" name="owner" value="<%= owner.firstName %> <%= owner.lastName %>" required autofocus disabled>
           </div>
         </div>
         <div class="form-group">
           <label class="col-sm-2 for="priority">Priority</label>
           <div class="col-sm-10">
-            <input type="number" class="form-control" name="priority" value="<%- priority %>" required>
+            <input type="number" class="form-control" name="priority" value="<%= priority %>" required>
           </div>
         </div>
         <div class="form-group">

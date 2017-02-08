@@ -1,20 +1,13 @@
-/**
- * nested_obj_model.js
- * @flow weak
- */
-
 import _ from "lodash";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 
 class NestedObjModel extends Backbone.Model {
-
-  changed: Object;
-  superSetFunction: (attributeString: string, val: any, options: Object) => any;
-
   constructor(...args) {
     super(...args);
-    this.superSetFunction = super.set;
+    this.set = this.set.bind(this);
+    this.deepSet = this.deepSet.bind(this);
+    this.triggerDeepChange = this.triggerDeepChange.bind(this);
   }
 
   get(attributeString) {
@@ -27,10 +20,10 @@ class NestedObjModel extends Backbone.Model {
   }
 
 
-  set = (attributeString: string, val: any, options: Object = {}) => {
+  set(attributeString, val, options = {}) {
     // We don't handle objects for now
     if (_.isObject(attributeString)) {
-      return this.superSetFunction(attributeString, val, options);
+      return super.set(attributeString, val, options);
     }
 
     this.changed = {};
@@ -38,7 +31,7 @@ class NestedObjModel extends Backbone.Model {
   }
 
 
-  deepSet = (obj, attributeString, val, silent = false) => {
+  deepSet(obj, attributeString, val, silent = false) {
     const attributes = attributeString.split(".");
     _.reduce(
       attributes,
@@ -65,7 +58,7 @@ class NestedObjModel extends Backbone.Model {
   }
 
 
-  triggerDeepChange = (oldObj, newObj, deepKey) => {
+  triggerDeepChange(oldObj, newObj, deepKey) {
     // This method only triggers the change for those parts of the object
     // that actually changed (e.g. layers.color.brightness)
     if (_.isPlainObject(newObj)) {

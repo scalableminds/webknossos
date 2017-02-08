@@ -27,7 +27,7 @@ class TaskQueryDocumentationModal extends Marionette.View {
           </a>
         </li>
       </ul>
-
+  
       <h3>Available Task Properties</h3>
       <div id="properties" />
     </div>
@@ -54,9 +54,9 @@ class TaskQueryDocumentationModal extends Marionette.View {
   <tbody>
     <% _.each(descriptions ,function(item, key){ %>
       <tr>
-        <td><%- item.name %></td>
-        <td><%- item.typ %></td>
-        <td><%- item.info %></td>
+        <td><%= item.name %></td>
+        <td><%= item.typ %></td>
+        <td><%= item.info %></td>
       </tr>
     <% }) %>
   </tbody>

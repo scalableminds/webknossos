@@ -1,22 +1,9 @@
-/**
- * backbone_to_oxalis_adapter_model.js
- * @flow weak
- */
-
 import _ from "lodash";
 import Backbone from "backbone";
 import Utils from "libs/utils";
-import Model from "oxalis/model";
-import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
-import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
+
 
 class BackboneToOxalisAdapterModel extends Backbone.Model {
-
-  oxalisModel: Model;
-  skeletonTracingAdapter: Backbone.Model;
-  volumeTracingAdapter: Backbone.Model;
-  skeletonTracingModel: SkeletonTracing;
-  volumeTracingModel: VolumeTracing;
 
   initialize(oxalisModel) {
     // Default Values for inital setup / rendering
@@ -49,8 +36,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model {
       this.skeletonTracingAdapter.set("radius", this.skeletonTracingModel.getActiveNodeRadius());
       this.skeletonTracingAdapter.set("overrideNodeRadius", this.oxalisModel.user.get("overrideNodeRadius"));
       this.skeletonTracingAdapter.set("particleSize", this.oxalisModel.user.get("particleSize"));
-      // This is the callback for the deleteActiveNode button
-      this.listenTo(this.skeletonTracingAdapter, "deleteActiveNode", this.skeletonTracingModel.deleteActiveNode.bind(this.skeletonTracingModel));
+      this.skeletonTracingAdapter.deleteActiveNode = this.skeletonTracingModel.deleteActiveNode.bind(this.skeletonTracingModel);
 
       const { somaClickingAllowed } = this.oxalisModel.settings;
       this.skeletonTracingAdapter.set("somaClickingAllowed", somaClickingAllowed);
@@ -117,7 +103,7 @@ class BackboneToOxalisAdapterModel extends Backbone.Model {
       this.volumeTracingModel = this.oxalisModel.volumeTracing;
 
       this.volumeTracingAdapter.set("mappedActiveCellId", this.volumeTracingModel.getMappedActiveCellId());
-      this.listenTo(this.volumeTracingAdapter, "createCell", this.volumeTracingModel.createCell.bind(this.volumeTracingModel));
+      this.volumeTracingAdapter.createCell = this.volumeTracingModel.createCell.bind(this.volumeTracingModel);
 
 
       // ####################################

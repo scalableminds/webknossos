@@ -1,8 +1,3 @@
-/**
- * tlt.js
- * @flow weak
- */
-
 // ### Triangle Lookup Table
 
 // The marching cube algorithm requires a

@@ -1,3 +1,8 @@
+/**
+ * dataset_list_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
@@ -7,10 +12,7 @@ import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 import DatasetListItemView from "./dataset_list_item_view";
 import TeamAssignmentModalView from "./team_assignment_modal_view";
 
-const DATASETS_PER_PAGE = 30;
-
 class DatasetListView extends Marionette.CompositeView {
-
   static initClass() {
     this.prototype.className = "datasets";
     this.prototype.template = _.template(`\
@@ -55,12 +57,14 @@ class DatasetListView extends Marionette.CompositeView {
         behaviorClass: SortTableBehavior,
       },
     };
+
+    this.prototype.DATASETS_PER_PAGE = 30;
   }
 
   initialize() {
     this.collection.setSorting("created", "desc");
     this.collection.setCollectionFilter(child => child.get("isEditable"));
-    this.collection.setPageSize(DATASETS_PER_PAGE);
+    this.collection.setPageSize(this.DATASETS_PER_PAGE);
 
     this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
     this.listenTo(app.vent, "modal:destroy", this.render);

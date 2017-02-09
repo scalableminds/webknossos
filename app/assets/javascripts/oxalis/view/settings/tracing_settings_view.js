@@ -20,7 +20,7 @@ class TracingSettingsView extends Component {
       <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header="Trees" key="1">
           <NumberInputSetting label="Active Tree ID" max={5000} value={this.props.activeTreeId} onChange={_.partial(this.props.onChange, "activeTreeId")} />
-          <SwitchSetting label="Soma Clicking" value={this.props.somaClickingAllowed} onChange={_.partial(this.props.onChange, "somaClickingAllowed")} />
+          <SwitchSetting label="Soma Clicking" value={this.props.newNodeNewTree} onChange={_.partial(this.props.onChange, "newNodeNewTree")} />
         </Panel>
         <Panel header="Nodes" key="2">
           <NumberInputSetting label="Active Node ID" max={5000} value={this.props.activeNodeId} onChange={_.partial(this.props.onChange, "activeNodeId")} />

@@ -44,12 +44,6 @@ class Skeleton {
     this.listenTo(this.skeletonTracing, "setBranch", this.setBranch);
     this.listenTo(this.skeletonTracing, "newTreeColor", this.updateTreeColor);
     this.listenTo(this.skeletonTracing, "reloadTrees", this.loadSkeletonFromModel);
-
-    Store.subscribe(() => {
-      const { overrideNodeRadius, setParticleSize } = Store.getState().userConfiguration;
-      this.setParticleSize(setParticleSize);
-      _.map(this.treeGeometries, tree => tree.showRadius(!overrideNodeRadius));
-    });
   }
 
   createNewTree(treeId, treeColor) {

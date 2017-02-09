@@ -106,10 +106,6 @@ class ArbitraryController {
     this.crosshair = new Crosshair(this.cam, Store.getState().userConfiguration.crosshairSize);
     this.arbitraryView.addGeometry(this.crosshair);
 
-    Store.subscribe(() => {
-      this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
-    });
-
     this.bindToEvents();
     this.arbitraryView.draw();
 
@@ -298,11 +294,12 @@ class ArbitraryController {
     }
 
     Store.subscribe(() => {
-      const { sphericalCapRadius, clippingDistanceArbitrary } = Store.getState().userConfiguration;
+      const { sphericalCapRadius, clippingDistanceArbitrary, displayCrosshair } = Store.getState().userConfiguration;
       this.crosshair.setScale(sphericalCapRadius);
       this.model.flycam3d.distance = sphericalCapRadius;
-      this.plane.setMode(this.mode);
+      // this.plane.setMode(this.mode);
       this.setClippingDistance(clippingDistanceArbitrary);
+      this.crosshair.setVisibility(displayCrosshair);
     });
   }
 

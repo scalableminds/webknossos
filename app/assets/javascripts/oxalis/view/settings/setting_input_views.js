@@ -26,7 +26,7 @@ export function SwitchSetting({ onChange, value, label }) {
     <Row className="settings-row">
       <Col span={8}>{label}</Col>
       <Col span={16}>
-        <Switch onChange={onChange} defaultChecked={value} />
+        <Switch onChange={onChange} checked={value} defaultChecked={value} />
       </Col>
     </Row>
   );

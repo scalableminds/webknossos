@@ -44,6 +44,11 @@ class Tree {
     this.nodes = new THREE.Points(nodeGeometry, this.particleMaterial);
 
     this.id = treeId;
+
+    Store.subscribe(() => {
+      const { overrideNodeRadius } = Store.getState().userConfiguration;
+      this.showRadius(!overrideNodeRadius);
+    });
   }
 
   makeDynamicFloatAttribute(itemSize, resizableBuffer) {

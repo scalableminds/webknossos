@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import Store from "oxalis/store";
-import Layer from "./layer";
+import Layer, { REQUEST_TIMEOUT } from "./layer";
 import BucketBuilder from "./bucket_builder";
 import Request from "../../../../libs/request";
 import MultipartData from "../../../../libs/multipart_data";
@@ -55,7 +55,7 @@ class WkLayer extends Layer {
         headers: {
           "Content-Type": `multipart/mixed; boundary=${requestData.boundary}`,
         },
-        timeout: this.REQUEST_TIMEOUT,
+        timeout: REQUEST_TIMEOUT,
         compress: true,
         doNotCatch: true,
       },
@@ -105,7 +105,7 @@ class WkLayer extends Layer {
           headers: {
             "Content-Type": `multipart/mixed; boundary=${transmitData.boundary}`,
           },
-          timeout: this.REQUEST_TIMEOUT,
+          timeout: REQUEST_TIMEOUT,
           compress: true,
           doNotCatch: true,
         },

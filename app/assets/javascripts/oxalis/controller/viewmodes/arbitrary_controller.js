@@ -3,7 +3,6 @@
  * @flow weak
  */
 
-import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
 import _ from "lodash";
@@ -20,6 +19,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import Flycam3d from "oxalis/model/flycam3d";
+import scaleInfo from "oxalis/model/scaleinfo";
 import ArbitraryPlane from "../../geometries/arbitrary_plane";
 import Crosshair from "../../geometries/crosshair";
 import ArbitraryView from "../../view/arbitrary_view";
@@ -266,7 +266,7 @@ class ArbitraryController {
 
   getVoxelOffset(timeFactor) {
     const moveValue3d = Store.getState().userConfiguration.moveValue3d;
-    return (moveValue3d * timeFactor) / app.scaleInfo.baseVoxel / constants.FPS;
+    return (moveValue3d * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
   }
 
 

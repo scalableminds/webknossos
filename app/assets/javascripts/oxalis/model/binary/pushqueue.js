@@ -1,23 +1,34 @@
+/**
+ * pushqueue.js
+ * @flow weak
+ */
+
 import _ from "lodash";
+import type { LayerType } from "oxalis/model";
+import Pipeline from "libs/pipeline";
+import type { Vector4 } from "oxalis/constants";
+import DataCube from "./data_cube";
+
+const BATCH_SIZE = 32;
+const DEBOUNCE_TIME = 1000;
 
 class PushQueue {
-  static initClass() {
-    this.prototype.BATCH_LIMIT = 1;
-    this.prototype.BATCH_SIZE = 32;
-    this.prototype.DEBOUNCE_TIME = 1000;
-    this.prototype.MESSAGE_TIMEOUT = 10000;
-  }
 
+  dataSetName: string;
+  cube: DataCube;
+  layer: LayerType;
+  tracingId: string;
+  updatePipeline: Pipeline;
+  sendData: boolean;
+  queue: Array<Vector4>;
 
-  constructor(cube, layer, tracingId, updatePipeline, sendData = true) {
+  constructor(cube: DataCube, layer: LayerType, tracingId: string, updatePipeline: Pipeline, sendData = true) {
     this.cube = cube;
     this.layer = layer;
     this.tracingId = tracingId;
     this.updatePipeline = updatePipeline;
     this.sendData = sendData;
     this.queue = [];
-    this.pushImpl = this.pushImpl.bind(this);
-    this.push = _.debounce(this.pushImpl, this.DEBOUNCE_TIME);
   }
 
 
@@ -28,15 +39,15 @@ class PushQueue {
   }
 
 
-  insert(bucket) {
-    this.queue.push(bucket);
+  insert(bucketAddress: Vector4) {
+    this.queue.push(bucketAddress);
     this.removeDuplicates();
     this.push();
   }
 
 
-  insertFront(bucket) {
-    this.queue.unshift(bucket);
+  insertFront(bucketAddress: Vector4) {
+    this.queue.unshift(bucketAddress);
     this.removeDuplicates();
     this.push();
   }
@@ -72,21 +83,24 @@ class PushQueue {
   }
 
 
-  pushImpl() {
-    return this.cube.temporalBucketManager.getAllLoadedPromise().then(() => {
+  pushImpl = () => this.cube.temporalBucketManager.getAllLoadedPromise().then(
+    () => {
       if (!this.sendData) {
         return Promise.resolve();
       }
 
       while (this.queue.length) {
-        const batchSize = Math.min(this.BATCH_SIZE, this.queue.length);
+        const batchSize = Math.min(BATCH_SIZE, this.queue.length);
         const batch = this.queue.splice(0, batchSize);
         this.pushBatch(batch);
       }
 
       return this.updatePipeline.getLastActionPromise();
-    });
-  }
+    },
+  )
+
+
+  push = _.debounce(this.pushImpl, DEBOUNCE_TIME);
 
 
   pushBatch(batch) {
@@ -94,7 +108,6 @@ class PushQueue {
     this.layer.sendToStore(batch, getBucketData);
   }
 }
-PushQueue.initClass();
 
 
 export default PushQueue;

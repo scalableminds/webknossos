@@ -1,19 +1,45 @@
+/**
+ * flycam2d.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Backbone from "backbone";
 import app from "app";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import Model from "oxalis/model";
+import scaleInfo from "oxalis/model/scaleinfo";
 import Dimensions from "./dimensions";
 import constants from "../constants";
+import type { Vector3, Vector4 } from "../constants";
 
-
-// maximum difference between requested coordinate and actual texture position
-const MAX_TEXTURE_OFFSET = 31;
-const MAX_ZOOM_THRESHOLD = 2;
-const PIXEL_RAY_THRESHOLD = 10;
-
+const Flycam2dConstants = {
+  // maximum difference between requested coordinate and actual texture position
+  MAX_TEXTURE_OFFSET: 31,
+  MAX_ZOOM_THRESHOLD: 2,
+  PIXEL_RAY_THRESHOLD: 10,
+};
 
 class Flycam2d {
+
+  viewportWidth: number;
+  zoomStepCount: number;
+  model: Model;
+  maxZoomStepDiff: number;
+  zoomStep: number;
+  integerZoomStep: number;
+  buffer: Array<Array<number>>
+  position: Vector3;
+  direction: Vector3;
+  rayThreshold: Vector4;
+  spaceDirection: Vector3;
+  quality: number;
+  voxelPerPixel3DView: number;
+
+  // Copied from backbone events (TODO: handle this better)
+  trigger: Function;
+  listenTo: Function;
 
   constructor(viewportWidth, zoomStepCount, model) {
     this.viewportWidth = viewportWidth;
@@ -60,8 +86,8 @@ class Flycam2d {
     // Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
 
     const zoomThreshold = Math.min(
-      MAX_ZOOM_THRESHOLD,
-      (constants.TEXTURE_WIDTH - MAX_TEXTURE_OFFSET) / this.viewportWidth,
+      Flycam2dConstants.MAX_ZOOM_THRESHOLD,
+      (constants.TEXTURE_WIDTH - Flycam2dConstants.MAX_TEXTURE_OFFSET) / this.viewportWidth,
     );
     return Math.log(zoomThreshold) / Math.LN2;
   }
@@ -120,7 +146,7 @@ class Flycam2d {
     let pixelNeeded;
     let scaleArray;
     return [0, 1, 2].forEach((planeID) => {
-      scaleArray = Dimensions.transDim(app.scaleInfo.baseVoxelFactors, planeID);
+      scaleArray = Dimensions.transDim(scaleInfo.baseVoxelFactors, planeID);
       pixelNeeded = this.viewportWidth * this.getTextureScalingFactor();
       this.buffer[planeID] = [constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[0]),
         constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[1])];
@@ -210,7 +236,7 @@ class Flycam2d {
     if (increaseSpeedWithZoom == null) { increaseSpeedWithZoom = true; }
     vector = Dimensions.transDim(vector, planeID);
     const zoomFactor = increaseSpeedWithZoom ? Math.pow(2, this.zoomStep) : 1;
-    const scaleFactor = app.scaleInfo.baseVoxelFactors;
+    const scaleFactor = scaleInfo.baseVoxelFactors;
     const delta = [vector[0] * zoomFactor * scaleFactor[0],
       vector[1] * zoomFactor * scaleFactor[1],
       vector[2] * zoomFactor * scaleFactor[2]];
@@ -236,8 +262,8 @@ class Flycam2d {
     const max = [];
 
     for (let i = 0; i <= 2; i++) {
-      min.push(position[i] - (offset * app.scaleInfo.baseVoxelFactors[i]));
-      max.push(position[i] + (offset * app.scaleInfo.baseVoxelFactors[i]));
+      min.push(position[i] - (offset * scaleInfo.baseVoxelFactors[i]));
+      max.push(position[i] + (offset * scaleInfo.baseVoxelFactors[i]));
     }
 
     return { min, max };
@@ -300,7 +326,7 @@ class Flycam2d {
     // returns [left, top, right, bottom] array
 
     // convert scale vector to array in order to be able to use getIndices()
-    const scaleArray = Dimensions.transDim(app.scaleInfo.baseVoxelFactors, planeID);
+    const scaleArray = Dimensions.transDim(scaleInfo.baseVoxelFactors, planeID);
     const offsets = this.getOffsets(planeID);
     const size = this.getTextureScalingFactor() * this.viewportWidth;
     // two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
@@ -319,16 +345,16 @@ class Flycam2d {
 
 
   update3DViewSize(cameraRight, cameraLeft) {
-    this.voxelPerPixel3DView = (cameraRight - cameraLeft) / constants.VIEWPORT_WIDTH / app.scaleInfo.baseVoxel;
+    this.voxelPerPixel3DView = (cameraRight - cameraLeft) / constants.VIEWPORT_WIDTH / scaleInfo.baseVoxel;
   }
 
 
   getRayThreshold(planeID) {
     // Voxel threshold used for ray tracing
     if (planeID < 3) {
-      return PIXEL_RAY_THRESHOLD * Math.pow(2, this.zoomStep);
+      return Flycam2dConstants.PIXEL_RAY_THRESHOLD * Math.pow(2, this.zoomStep);
     } else {
-      return PIXEL_RAY_THRESHOLD * this.voxelPerPixel3DView;
+      return Flycam2dConstants.PIXEL_RAY_THRESHOLD * this.voxelPerPixel3DView;
     }
   }
 

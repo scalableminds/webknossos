@@ -5,7 +5,6 @@
 
 import _ from "lodash";
 import app from "app";
-import Utils from "libs/utils";
 import * as THREE from "three";
 import Backbone from "backbone";
 import Model from "oxalis/model";
@@ -95,6 +94,7 @@ class Cube {
     v.push(vec(min[0], 0, min[2]));
 
     for (const mesh of this.crossSections.concat([this.cube])) {
+      mesh.geometry.computeBoundingSphere();
       mesh.geometry.verticesNeedUpdate = true;
     }
 
@@ -110,14 +110,15 @@ class Cube {
 
     for (const i of constants.ALL_PLANES) {
       const thirdDim = dimensions.thirdDimensionForPlane(i);
-      const geo = this.crossSections[i].geometry;
-      for (const j of Utils.__range__(0, geo.vertices.length, false)) {
-        const array = geo.vertices[j].toArray();
+      const geometry = this.crossSections[i].geometry;
+      for (const vertex of geometry.vertices) {
+        const array = vertex.toArray();
         array[thirdDim] = position[thirdDim];
-        geo.vertices[j] = new THREE.Vector3(array[0], array[1], array[2]);
+        vertex.fromArray(array);
       }
 
-      geo.verticesNeedUpdate = true;
+      geometry.computeBoundingSphere();
+      geometry.verticesNeedUpdate = true;
     }
   }
 

@@ -1,3 +1,8 @@
+/**
+ * abstract_tree_view.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import $ from "jquery";
 import app from "app";
@@ -7,6 +12,10 @@ import AbstractTreeRenderer from "oxalis/view/skeletontracing/abstract_tree_rend
 
 
 class AbstractTreeView extends Marionette.View {
+
+  initialized: boolean;
+  abstractTreeRenderer: AbstractTreeRenderer;
+
   static initClass() {
     this.prototype.className = "flex-column";
     this.prototype.template = _.template("\

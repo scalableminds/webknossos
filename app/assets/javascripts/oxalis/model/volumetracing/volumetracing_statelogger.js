@@ -1,7 +1,16 @@
-import StateLogger from "../statelogger";
+/**
+ * volumetracing_statelogger.js
+ * @flow weak
+ */
+
+import StateLogger from "oxalis/model/statelogger";
+import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
+import PushQueue from "oxalis/model/binary/pushqueue";
 
 class VolumeTracingStateLogger extends StateLogger {
 
+  volumeTracing: VolumeTracing;
+  pushQueue: PushQueue;
 
   constructor(flycam, version, tracingId, tracingType, allowUpdate, volumeTracing, pushQueue) {
     super(flycam, version, tracingId, tracingType, allowUpdate);

@@ -1,78 +1,87 @@
+/**
+ * mappings.js
+ * @flow
+ */
+
 import _ from "lodash";
 import Store from "oxalis/store";
 import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
+import type Layer, { DataStoreInfoType } from "oxalis/model/binary/layers/layer";
+
+export type MappingArray = Array<number>;
+
+export type MappingType = {
+  parent: ?string;
+  name: string;
+  classes: ?Array<Array<number>>;
+};
 
 class Mappings {
 
+  mappings: {
+    [key: string]: MappingType,
+  } = {};
+  baseUrl: string;
+  doWithToken: Function;
 
-  constructor(dataStoreInfo, layer) {
-    this.mappings = _.keyBy(layer.mappings, "name");
+  constructor(dataStoreInfo: DataStoreInfoType, layer: Layer) {
     const datasetName = Store.getState().dataset.name;
+    this.mappings = _.transform(layer.mappings, (result, mappingObject) => {
+      result[mappingObject.name] = mappingObject;
+    }, {});
     this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
     this.doWithToken = layer.doWithToken.bind(layer);
   }
 
 
-  getMappingNames() {
+  getMappingNames(): Array<string> {
     return _.keys(this.mappings);
   }
 
 
-  getMappingArrayAsync(mappingName) {
-    return this.fetchMappings(mappingName).then(() => this.getMappingArray(mappingName),
-    );
+  async getMappingArrayAsync(mappingName: string): Promise<MappingArray> {
+    await this.fetchMappings(mappingName);
+    return this.buildMappingArray(mappingName);
   }
 
 
-  fetchMappings(mappingName) {
+  fetchMappings(mappingName: string): Promise<*> {
     const mappingChain = this.getMappingChain(mappingName);
-    const promises = _.map(mappingChain, curMappingName => this.fetchMapping(curMappingName));
-    return Promise.all(promises);
+    return Promise.all(mappingChain.map(curMappingName => this.fetchMapping(curMappingName)));
   }
 
 
-  fetchMapping(mappingName) {
-    if (this.mappings[mappingName].mappingObject != null) {
-      return Promise.resolve();
+  fetchMapping(mappingName: string): Promise<?MappingType> {
+    const mappingObject = this.mappings[mappingName];
+    if (mappingObject != null && mappingObject.classes != null) {
+      return Promise.resolve(mappingObject);
     }
-
-    return this.doWithToken(token => Request.receiveJSON(
+    return this.doWithToken((token: string) => Request.receiveJSON(
         `${this.baseUrl + mappingName}?token=${token}`,
-      ).then(
-        (mapping) => {
-          this.mappings[mappingName].mappingObject = mapping;
-          console.log("Done downloading:", mappingName);
-        },
-        error => console.error("Error downloading:", mappingName, error)),
+      ).then((mapping: MappingType) => {
+        this.mappings[mappingName] = mapping;
+        console.log("Done downloading:", mappingName);
+        return mapping;
+      }, error => console.error("Error downloading:", mappingName, error)),
     );
   }
 
 
-  getMappingArray(mappingName) {
-    const mapping = this.mappings[mappingName];
-    if (mapping.mappingArray != null) {
-      return mapping.mappingArray;
-    }
-
-    return (mapping.mappingArray = this.buildMappingArray(mappingName));
-  }
-
-
-  buildMappingArray(mappingName) {
-    const mappingArray = [];
+  buildMappingArray(mappingName: string): MappingArray {
+    const mappingArray: MappingArray = [];
 
     for (const currentMappingName of this.getMappingChain(mappingName)) {
-      const { mappingObject } = this.mappings[currentMappingName];
-      ErrorHandling.assert(mappingObject,
-          "mappingObject must have been fetched at this point");
-
-      for (const mappingClass of mappingObject.classes) {
-        const minId = this.min(mappingClass);
-        const mappedId = mappingArray[minId] || minId;
-
-        for (const id of mappingClass) {
-          mappingArray[id] = mappedId;
+      const mappingObject = this.mappings[currentMappingName];
+      ErrorHandling.assert(mappingObject.classes,
+          "mappingObject classes must have been fetched at this point");
+      if (mappingObject.classes) {
+        for (const mappingClass of mappingObject.classes) {
+          const minId = _.min(mappingClass);
+          const mappedId = mappingArray[minId] || minId;
+          for (const id of mappingClass) {
+            mappingArray[id] = mappedId;
+          }
         }
       }
     }
@@ -81,26 +90,15 @@ class Mappings {
   }
 
 
-  getMappingChain(mappingName) {
+  getMappingChain(mappingName: string): Array<string> {
     const chain = [mappingName];
-    let mapping = this.mappings[mappingName];
+    const mappingObject = this.mappings[mappingName];
+    const parentMappingName = mappingObject.parent;
 
-    while (mapping.parent != null) {
-      chain.push(mapping.parent);
-      mapping = this.mappings[mapping.parent];
+    if (parentMappingName != null) {
+      return chain.concat(this.getMappingChain(parentMappingName));
     }
-
     return chain;
-  }
-
-
-  // Since Math.min(array...) does not scale
-  min(array) {
-    let min = Infinity;
-    for (const entry of array) {
-      min = Math.min(min, entry);
-    }
-    return min;
   }
 }
 

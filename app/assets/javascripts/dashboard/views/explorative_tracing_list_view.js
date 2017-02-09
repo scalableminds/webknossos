@@ -14,6 +14,9 @@ import UserAnnotationsCollection from "../models/user_annotations_collection";
 
 
 class ExplorativeTracingListView extends Marionette.CompositeView {
+
+  showArchivedAnnotations: boolean;
+
   static initClass() {
     this.prototype.template = _.template(`\
 <h3>Explorative Annotations</h3>
@@ -103,7 +106,8 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
     };
   }
 
-  templateContext() {
+  // Cannot be ES6 style function, as these are covariant by default
+  templateContext = function templateContext() {
     return {
       isAdminView: this.options.isAdminView,
       showArchivedAnnotations: this.showArchivedAnnotations,
@@ -115,7 +119,9 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
     this.options = options;
     this.childViewOptions.parent = this;
 
-    this.collection = new UserAnnotationsCollection([], { userID: this.options.userID });
+    // If you know how to do this better, do it. Backbones Collection type is not compatible to Marionettes
+    // Collection type according to flow - although they actually should be...
+    this.collection = ((new UserAnnotationsCollection([], { userID: this.options.userID }): any): Marionette.Collection);
 
     // Show a loading spinner for long running requests
     this.listenTo(this.collection, "request", () => app.router.showLoadingSpinner());
@@ -180,14 +186,22 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
   fetchArchivedAnnotations() {
     this.ui.toggleViewSpinner.toggleClass("hide", false);
     this.showArchivedAnnotations = true;
-    this.collection.isFinished = true;
+    // Need to make sure this.collection is a UserAnnotationsCollection with the isFinished
+    // attribute, otherwise flow complains
+    if (this.collection instanceof UserAnnotationsCollection) {
+      this.collection.isFinished = true;
+    }
     this.collection.fetch().then(() => this.render());
   }
 
   fetchOpenAnnotations() {
     this.ui.toggleViewSpinner.toggleClass("hide", false);
     this.showArchivedAnnotations = false;
-    this.collection.isFinished = false;
+    // Need to make sure this.collection is a UserAnnotationsCollection with the isFinished
+    // attribute, otherwise flow complains
+    if (this.collection instanceof UserAnnotationsCollection) {
+      this.collection.isFinished = false;
+    }
     this.collection.fetch().then(() => this.render());
   }
 

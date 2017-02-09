@@ -1,10 +1,22 @@
+/**
+ * volumelayer.js
+ * @flow weak
+ */
+
 import Drawing from "libs/drawing";
 import Utils from "libs/utils";
-import Dimensions from "../dimensions";
+import Dimensions from "oxalis/model/dimensions";
+
+import type { PlaneType, Vector3 } from "oxalis/constants";
 
 
 class VolumeLayer {
 
+  plane: PlaneType;
+  thirdDimensionValue: number;
+  contourList: Array<Vector3>;
+  maxCoord: ?Vector3;
+  minCoord: ?Vector3;
 
   constructor(plane, thirdDimensionValue) {
     this.plane = plane;
@@ -21,16 +33,21 @@ class VolumeLayer {
   }
 
 
-  updateArea(pos) {
-    if (this.maxCoord == null) {
-      this.maxCoord = pos.slice();
-      this.minCoord = pos.slice();
+  updateArea(pos: Vector3) {
+    let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
+
+    if (maxCoord == null || minCoord == null) {
+      maxCoord = pos.slice();
+      minCoord = pos.slice();
     }
 
     for (let i = 0; i <= 2; i++) {
-      this.minCoord[i] = Math.min(this.minCoord[i], Math.floor(pos[i]) - 2);
-      this.maxCoord[i] = Math.max(this.maxCoord[i], Math.ceil(pos[i]) + 2);
+      minCoord[i] = Math.min(minCoord[i], Math.floor(pos[i]) - 2);
+      maxCoord[i] = Math.max(maxCoord[i], Math.ceil(pos[i]) + 2);
     }
+
+    this.minCoord = minCoord;
+    this.maxCoord = maxCoord;
   }
 
 

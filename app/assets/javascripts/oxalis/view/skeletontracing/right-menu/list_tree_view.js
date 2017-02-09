@@ -143,7 +143,7 @@ class ListTreeView extends Marionette.CompositeView {
   sortTrees(evt) {
     evt.preventDefault();
     const shouldSortTreesByName = $(evt.currentTarget).data("sort") === "name";
-    Store.dispatch(updateUserSettingsAction("sortTreesByName", shouldSortTreesByName));
+    Store.dispatch(updateUserSettingAction("sortTreesByName", shouldSortTreesByName));
 
     this.refresh();
     return this.updateSortIndicator();

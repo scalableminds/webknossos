@@ -45,6 +45,8 @@ export function NumberInputSetting({ onChange, value, label, max, min = 1, step 
 
 export class BoundingBoxSetting extends React.Component {
 
+  state: {isValid: boolean, text: string};
+
   constructor(props) {
     super(props);
     this.state = {
@@ -52,7 +54,6 @@ export class BoundingBoxSetting extends React.Component {
       text: props.value,
     };
   }
-  state: {isValid: boolean, text: string};
 
   validate = (evt) => {
     const text = evt.target.value;

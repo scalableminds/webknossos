@@ -27,7 +27,6 @@ class SkeletonTracing {
 
   flycam: Flycam;
   flycam3d: Flycam3d;
-  user: User;
   trees: Array<TraceTree>;
   activeNode: ?TracePoint;
   activeTree: TraceTree;

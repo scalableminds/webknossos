@@ -5,7 +5,6 @@
 
 import update from "immutability-helper";
 import type { SettingActionTypes } from "oxalis/model/actions/settings_actions";
-import type { OxalisState } from "oxalis/store";
 
 const SettingsReducer = (state: Object = {}, action: SettingActionTypes) => {
   switch (action.type) {
@@ -76,7 +75,7 @@ const SettingsReducer = (state: Object = {}, action: SettingActionTypes) => {
   //   });
   // }
     }
-
+      break;
     default:
       return state;
   }

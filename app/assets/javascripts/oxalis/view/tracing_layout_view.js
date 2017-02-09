@@ -16,13 +16,13 @@ import OxalisModel from "oxalis/model";
 import Constants from "oxalis/constants";
 import Modal from "oxalis/view/modal";
 import Utils from "libs/utils";
+import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "./action_bar_view";
 import SkeletonTracingRightMenuView from "./skeletontracing/skeletontracing_right_menu_view";
 import VolumeTracingRightMenuView from "./volumetracing/volumetracing_right_menu_view";
 import ViewmodeRightMenuView from "./viewmode/viewmode_right_menu_view";
 import UserScriptsModalView from "./user_scripts_modal";
 import TracingView from "./tracing_view";
-import SettingsView from "oxalis/view/settings/settings_view";
 
 const MARGIN = 40;
 
@@ -91,7 +91,6 @@ class TracingLayoutView extends Marionette.View {
     );
 
     this.model = this.options.model;
-    //this.options.adapterModel = new BackboneToOxalisAdapterModel(this.model);
 
     this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
     this.listenTo(this.model, "change:mode", this.renderSettings);
@@ -179,27 +178,12 @@ class TracingLayoutView extends Marionette.View {
 
 
   renderSettings() {
-    // This method will be invoked again once the model is initialized as part of
-    // the "sync" event callback.
-    // let settingsTabView;
-    // if (!this.model.initialized) { return; }
-
-    // if (this.isSkeletonMode()) {
-    //   const SettingsTabClass = this.isArbitraryMode() ? SkeletonArbitraryTabView : SkeletonPlaneTabView;
-    //   settingsTabView = new SettingsTabClass(this.options);
-    // } else if (this.isVolumeMode()) {
-    //   settingsTabView = new VolumeTabView(this.options);
-    // } else {
-    //   settingsTabView = new ViewmodeTabView(this.options);
-    // }
-
     render(
       <Provider store={store}>
         <SettingsView />
       </Provider>,
       this.ui.settings[0],
     );
-    // this.showChildView("settings", settingsTabView);
   }
 
 

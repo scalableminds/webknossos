@@ -5,9 +5,8 @@
 
 import Backbone from "backbone";
 import _ from "lodash";
-import app from "app";
 import Store from "oxalis/store";
-import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import Utils from "../libs/utils";
 import Binary from "./model/binary";
@@ -440,7 +439,7 @@ class Model extends Backbone.Model {
   applyState(state, tracing) {
     this.get("flycam").setPosition(state.position || tracing.content.editPosition);
     if (state.zoomStep != null) {
-      // Store.dispatch(updateUserSettingAction("zoom", Math.exp(Math.LN2 * state.zoomStep)));
+      // Store.dispatc("zoom", Math.exp(Math.LN2 * state.zoomStep)));
       this.get("flycam3d").setZoomStep(state.zoomStep);
     }
 

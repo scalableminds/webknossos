@@ -6,7 +6,6 @@
 import _ from "lodash";
 import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
-import app from "app";
 import Store from "oxalis/store";
 import scaleInfo from "oxalis/model/scaleinfo";
 import constants from "oxalis/constants";

@@ -12,7 +12,7 @@ import { NumberInputSetting, SwitchSetting, NumberSliderSetting, BoundingBoxSett
 
 const Panel = Collapse.Panel;
 
-class TracingSettingsView extends Component {
+class UserSettingsView extends Component {
 
   render() {
     return (
@@ -31,8 +31,8 @@ class TracingSettingsView extends Component {
           <SwitchSetting label="Show Crosshairs" value={this.props.displayCrosshair} onChange={_.partial(this.props.onChange, "displayCrosshair")} />
         </Panel>
         <Panel header="Nodes & Trees" key="3">
-          <NumberInputSetting label="Active Node ID" max={5000} value={this.props.activeNodeId} onChange={_.partial(this.props.onChange, "activeNodeId")} />
-          <NumberInputSetting label="Active Tree ID" max={5000} value={this.props.activeTreeId} onChange={_.partial(this.props.onChange, "activeTreeId")} />
+          <NumberInputSetting label="Active Node ID" value={this.props.activeNodeId} onChange={_.partial(this.props.onChange, "activeNodeId")} />
+          <NumberInputSetting label="Active Tree ID" value={this.props.activeTreeId} onChange={_.partial(this.props.onChange, "activeTreeId")} />
           <NumberSliderSetting label="Radius" max={5000} value={this.props.radius} onChange={_.partial(this.props.onChange, "radius")} />
           <NumberSliderSetting label="Particle Size" max={20} step={0.1} value={this.props.particleSize} onChange={_.partial(this.props.onChange, "particleSize")} />
           <SwitchSetting label="Soma Clicking" value={this.props.newNodeNewTree} onChange={_.partial(this.props.onChange, "newNodeNewTree")} />
@@ -47,7 +47,14 @@ class TracingSettingsView extends Component {
           <NumberInputSetting label="Clipping Distance" max={127} value={this.props.clippingDistanceArbitrary} onChange={_.partial(this.props.onChange, "clippingDistanceArbitrary")} />
           <SwitchSetting label="Show Crosshair" value={this.props.displayCrosshair} onChange={_.partial(this.props.onChange, "displayCrosshair")} />
         </Panel>
-        <Panel header="Other" key="5">
+        <Panel header="Volume Options" key="5">
+          <NumberInputSetting label="Active Cell ID" value={this.props.activeCellId} onChange={_.partial(this.props.onChange, "activeCellId")} />
+          <NumberInputSetting label="Segment Opacity" max={100} value={this.props.segmentationOpacity} onChange={_.partial(this.props.onChange, "segmentationOpacity")} />
+          <SwitchSetting label="3D Volume Rendering" value={this.props.isosurfaceDisplay} onChange={_.partial(this.props.onChange, "isosurfaceDisplay")} />
+          <NumberInputSetting label="3D Rendering Bounding Box Size" min={1} max={10} step={0.1} value={this.props.isosurfaceBBsize} onChange={_.partial(this.props.onChange, "isosurfaceBBsize")} />
+          <NumberInputSetting label="3D Rendering Resolution" min={40} max={400} value={this.props.isosurfaceResolution} onChange={_.partial(this.props.onChange, "isosurfaceResolution")} />
+        </Panel>
+        <Panel header="Other" key="6">
           <BoundingBoxSetting label="Bounding Box" value={this.props.boundingBox} onChange={_.partial(this.props.onChange, "boundingBox")} />
           <SwitchSetting label="Display Planes in 3D View" value={this.props.tdViewDisplayPlanes} onChange={_.partial(this.props.onChange, "tdViewDisplayPlanes")} />
           <SwitchSetting label="Render Comments in Abstract Tree" value={this.props.renderComments} onChange={_.partial(this.props.onChange, "renderComments")} />
@@ -65,4 +72,4 @@ const mapDispatchToProps = dispatch => ({
   onChange(propertyName, value) { dispatch(updateUserSettingAction(propertyName, value)); },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(TracingSettingsView);
+export default connect(mapStateToProps, mapDispatchToProps)(UserSettingsView);

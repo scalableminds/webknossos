@@ -5,7 +5,7 @@ import Utils from "libs/utils";
 export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }) {
   return (
     <Row className="settings-row">
-      <Col span={8}>{label}</Col>
+      <Col span={8}><span className="setting-label">{label}</span></Col>
       <Col span={8}>
         <Slider min={min} max={max} onChange={onChange} value={value} step={step} />
       </Col>
@@ -24,7 +24,7 @@ export function NumberSliderSetting({ onChange, value, label, max, min = 1, step
 export function SwitchSetting({ onChange, value, label }) {
   return (
     <Row className="settings-row">
-      <Col span={8}>{label}</Col>
+      <Col span={8}><span className="setting-label">{label}</span></Col>
       <Col span={16}>
         <Switch onChange={onChange} checked={value} defaultChecked={value} />
       </Col>
@@ -35,7 +35,7 @@ export function SwitchSetting({ onChange, value, label }) {
 export function NumberInputSetting({ onChange, value, label, max, min = 1, step = 1 }) {
   return (
     <Row className="settings-row">
-      <Col span={8}>{label}</Col>
+      <Col span={8}><span className="setting-label">{label}</span></Col>
       <Col span={16}>
         <InputNumber min={min} max={max} onChange={onChange} value={value} step={step} />
       </Col>
@@ -81,7 +81,7 @@ export class BoundingBoxSetting extends React.Component {
 
     return (
       <Row className="settings-row">
-        <Col span={8}>{this.props.label}</Col>
+        <Col span={8}><span className="setting-label">{this.props.label}</span></Col>
         <Col span={16}>
           <Tooltip
             trigger={["focus"]}
@@ -100,7 +100,7 @@ export class BoundingBoxSetting extends React.Component {
 // export function ColorSetting({ onChange, label, value }) {
 //   return (
 //     <Row className="settings-row">
-//       <Col span={8}>{label}</Col>
+//       <Col span={8}><span className="setting-label">{label}</span></Col>
 //       <Col span={16}>
 //         <ColorPicker onChange={onChange} value={value} defaultValue={value} />
 //       </Col>
@@ -111,7 +111,7 @@ export class BoundingBoxSetting extends React.Component {
 export function DropdownSetting({ onChange, label, value, children }) {
   return (
     <Row className="settings-row">
-      <Col span={8}>{label}</Col>
+      <Col span={8}><span className="setting-label">{label}</span></Col>
       <Col span={16}>
         <Select onChange={onChange} value={value.toString()} defaultValue={value.toString()} >
           {children}

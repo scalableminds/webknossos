@@ -35,6 +35,7 @@ export const OrthoViewsWithoutTDView = [
 export type OrthoViewType = $Keys<typeof OrthoViews>;
 export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
 
+// TODO: Get rid of this
 export const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,

@@ -13,7 +13,7 @@ class ArbitraryPlaneInfo extends Marionette.View {
     this.prototype.id = "arbitrary-info-canvas";
 
     this.prototype.template = _.template("\
-<input type=\"checkbox\" <%= getCheckedStatus() %> >\
+<input type=\"checkbox\" <%- getCheckedStatus() %> >\
 ");
 
     this.prototype.templateContext = {

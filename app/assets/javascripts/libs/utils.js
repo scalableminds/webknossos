@@ -173,6 +173,10 @@ const Utils = {
   __guard__(value, transform) {
     return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
   },
+
+  sleep(timeout: number): Promise<void> {
+    return new Promise((resolve) => { setTimeout(resolve, timeout); });
+  },
 };
 
 export default Utils;

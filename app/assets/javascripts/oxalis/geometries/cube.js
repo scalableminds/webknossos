@@ -93,6 +93,7 @@ class Cube {
     v.push(vec(min[0], 0, min[2]));
 
     for (const mesh of _.values(this.crossSections).concat([this.cube])) {
+      mesh.geometry.computeBoundingSphere();
       mesh.geometry.verticesNeedUpdate = true;
     }
 
@@ -108,14 +109,15 @@ class Cube {
 
     for (const planeId of OrthoViewsWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
-      const geo = this.crossSections[planeId].geometry;
-      for (let j = 0; j < geo.vertices.length; j++) {
-        const array = geo.vertices[j].toArray();
+      const geometry = this.crossSections[planeId].geometry;
+      for (const vertex of geometry.vertices) {
+        const array = vertex.toArray();
         array[thirdDim] = position[thirdDim];
-        geo.vertices[j] = new THREE.Vector3(array[0], array[1], array[2]);
+        vertex.fromArray(array);
       }
 
-      geo.verticesNeedUpdate = true;
+      geometry.computeBoundingSphere();
+      geometry.verticesNeedUpdate = true;
     }
   }
 

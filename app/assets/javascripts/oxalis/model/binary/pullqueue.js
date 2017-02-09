@@ -56,10 +56,9 @@ class PullQueue {
   }
 
 
-  pull(): Array<Promise<*>> {
+  pull(): Array<Promise<void>> {
     // Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
-    this.queue = _.filter(this.queue, item => this.cube.getOrCreateBucket(item.bucket).needsRequest(),
-    );
+    this.queue = _.filter(this.queue, item => this.cube.getOrCreateBucket(item.bucket).needsRequest());
     this.queue = _.sortBy(this.queue, item => item.priority);
 
     // Starting to download some buckets
@@ -83,7 +82,7 @@ class PullQueue {
   }
 
 
-  async pullBatch(batch: Array<Vector4>): Promise<*> {
+  async pullBatch(batch: Array<Vector4>): Promise<void> {
     // Loading a bunch of buckets
     this.batchCount++;
 

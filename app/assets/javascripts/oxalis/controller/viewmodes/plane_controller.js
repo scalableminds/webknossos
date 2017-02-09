@@ -108,7 +108,8 @@ class PlaneController {
       this.cameraController.changeTDViewYZ,
       this.cameraController.changeTDViewXZ,
     ];
-    $("#TDViewControls button").each((i, element) => $(element).on("click", callbacks[i]));
+    $("#TDViewControls button")
+      .each((i, element) => $(element).on("click", () => { callbacks[i](); }));
 
     const meshes = this.sceneController.getMeshes();
 

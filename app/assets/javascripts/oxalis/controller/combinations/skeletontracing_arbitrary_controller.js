@@ -1,6 +1,6 @@
 /**
  * skeletontracing_arbitrary_controller.js
- * @flow weak
+ * @flow
  */
 
 import ArbitraryController from "../viewmodes/arbitrary_controller";

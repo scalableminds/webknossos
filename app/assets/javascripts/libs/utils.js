@@ -1,18 +1,17 @@
 /**
  * utils.js
- * @flow weak
+ * @flow
  */
 
-import $ from "jquery";
 import _ from "lodash";
+import type { Vector3 } from "oxalis/constants";
+
+type Comparator<T> = (T, T) => -1 | 0 | 1;
 
 const Utils = {
-
-
-  clamp(a, x, b) {
+  clamp(a: number, x: number, b: number): number {
     return Math.max(a, Math.min(b, x));
   },
-
 
   zeroPad(num: number, zeros: number = 0): string {
     let paddedNum = `${num.toString()}`;
@@ -22,8 +21,7 @@ const Utils = {
     return paddedNum;
   },
 
-
-  unflatten(array, tupleSize) {
+  unflatten<T>(array: Array<T>, tupleSize: number): Array<Array<T>> {
     const result = [];
     for (let i = 0; i < array.length; i += tupleSize) {
       result.push(array.slice(i, i + tupleSize));
@@ -31,34 +29,25 @@ const Utils = {
     return result;
   },
 
-
   // sums up an array
-  sum(array, iterator) {
-    if (_.isString(iterator) || _.isNumber(iterator)) {
-      return array.reduce(((r, a) => r + a[iterator]), 0);
-    } else {
-      return array.reduce(((r, a) => r + a), 0);
-    }
+  sum(array: Array<number>): number {
+    return array.reduce(((r, a) => r + a), 0);
   },
 
-
-  roundTo(value, digits) {
+  roundTo(value: number, digits: number): number {
     const digitMultiplier = Math.pow(10, digits);
     return Math.round(value * digitMultiplier) / digitMultiplier;
   },
 
-
-  intToHex(int, digits = 6) {
+  intToHex(int: number, digits: number = 6): string {
     return (_.repeat("0", digits) + int.toString(16)).slice(-digits);
   },
 
-
-  rgbToHex(color) {
+  rgbToHex(color: Vector3): string {
     return `#${color.map(int => Utils.intToHex(int, 2)).join("")}`;
   },
 
-
-  hexToRgb(hex) {
+  hexToRgb(hex: string): Vector3 {
     const bigint = parseInt(hex.slice(1), 16);
     const r = (bigint >> 16) & 255;
     const g = (bigint >> 8) & 255;
@@ -67,11 +56,9 @@ const Utils = {
     return [r, g, b];
   },
 
-
-  compareBy(key, isSortedAscending = true) {
+  compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {
     // generic key comparator for array.prototype.sort
-
-    return function (a, b) {
+    return function (a: T, b: T) {
       if (!isSortedAscending) {
         [a, b] = [b, a];
       }
@@ -86,7 +73,7 @@ const Utils = {
   },
 
 
-  stringToNumberArray(s) {
+  stringToNumberArray(s: string): Array<number> {
     // remove leading/trailing whitespaces
     s = s.trim();
     // replace remaining whitespaces with commata
@@ -105,7 +92,7 @@ const Utils = {
   },
 
 
-  loaderTemplate() {
+  loaderTemplate(): string {
     return `\
 <div id="loader-icon">
   <i class="fa fa-spinner fa-spin fa-4x"></i>
@@ -114,15 +101,8 @@ const Utils = {
   },
 
 
-  isElementInViewport(el) {
-    // special bonus for those using jQuery
-    if (typeof $ === "function" && el instanceof $) {
-      el = el[0];
-    }
-
-
+  isElementInViewport(el: Element): boolean {
     const rect = el.getBoundingClientRect();
-
     return (
       rect.top >= 0 &&
       rect.left >= 0 &&
@@ -133,7 +113,7 @@ const Utils = {
 
 
   // this is insecure and must not be used for security related functionality
-  isUserAdmin(user) {
+  isUserAdmin(user: any): boolean {
     if (user == null) {
       return false;
     } else {
@@ -142,18 +122,21 @@ const Utils = {
   },
 
 
-  getUrlParams(paramName) {
+  getUrlParams(paramName: string): { [key: string]: string | boolean } {
     // Parse the URL parameters as objects and return it or just a single param
-    const params = window.location.search.substring(1).split("&").reduce((result, value) => {
-      const parts = value.split("=");
-      if (parts[0]) {
-        const key = decodeURIComponent(parts[0]);
-        value = parts[1] ? decodeURIComponent(parts[1]) : true;
-        result[key] = value;
-      }
-      return result;
-    }
-    , {});
+    const params = window.location.search.substring(1).split("&")
+      .reduce((result, value): void => {
+        const parts = value.split("=");
+        if (parts[0]) {
+          const key = decodeURIComponent(parts[0]);
+          if (parts[1]) {
+            result[key] = decodeURIComponent(parts[1]);
+          } else {
+            result[key] = true;
+          }
+        }
+        return result;
+      }, {});
 
     if (paramName) { return params[paramName]; } else { return params; }
   },
@@ -170,7 +153,7 @@ const Utils = {
     return range;
   },
 
-  __guard__(value, transform) {
+  __guard__<T, U>(value: ?T, transform: (T) => U) {
     return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
   },
 

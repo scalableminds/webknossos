@@ -1,6 +1,6 @@
 /**
  * skeletontracing_controller.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -23,15 +23,19 @@ class SkeletonTracingController {
   skeletonTracingView: SkeletonTracingView;
   sceneController: SceneController;
 
-  constructor(model, skeletonTracingView, sceneController) {
+  constructor(
+    model: Model,
+    skeletonTracingView: SkeletonTracingView,
+    sceneController: SceneController,
+  ) {
+    _.extend(this, Backbone.Events);
     this.model = model;
     this.skeletonTracingView = skeletonTracingView;
     this.sceneController = sceneController;
-    _.extend(this, Backbone.Events);
   }
 
 
-  setParticleSize = (delta) => {
+  setParticleSize = (delta: number): void => {
     let particleSize = this.model.user.get("particleSize") + delta;
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize);
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize);
@@ -40,14 +44,14 @@ class SkeletonTracingController {
   }
 
 
-  setRadius(delta) {
+  setRadius(delta: number): void {
     this.model.skeletonTracing.setActiveNodeRadius(
       this.model.skeletonTracing.getActiveNodeRadius() * Math.pow(1.05, delta),
     );
   }
 
 
-  toggleSkeletonVisibility = () => {
+  toggleSkeletonVisibility = (): void => {
     this.sceneController.skeleton.toggleVisibility();
     // Show warning, if this is the first time to use
     // this function for this user
@@ -59,13 +63,15 @@ class SkeletonTracingController {
   }
 
 
-  setActiveNode(nodeId, merge = false, centered = false) {
+  setActiveNode(nodeId: number, merge: boolean = false, centered: boolean = false): void {
     this.model.skeletonTracing.setActiveNode(nodeId, merge);
-    if (centered) { this.model.skeletonTracing.centerActiveNode(); }
+    if (centered) {
+      this.model.skeletonTracing.centerActiveNode();
+    }
   }
 
 
-  centerActiveNode = () => {
+  centerActiveNode = (): void => {
     const position = this.model.skeletonTracing.getActiveNodePos();
     if (position) {
       this.model.flycam.setPosition(position);

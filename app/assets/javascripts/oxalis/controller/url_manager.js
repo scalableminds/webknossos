@@ -1,6 +1,6 @@
 /**
  * url_manager.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -28,7 +28,7 @@ class UrlManager {
 
   MAX_UPDATE_INTERVAL = 1000;
 
-  constructor(model) {
+  constructor(model: Model) {
     this.model = model;
     this.baseUrl = document.location.pathname + document.location.search;
     this.initialState = this.parseUrl();
@@ -37,7 +37,7 @@ class UrlManager {
   }
 
   update = _.throttle(
-    () => location.replace(this.buildUrl()),
+    () => { location.replace(this.buildUrl()); },
     this.MAX_UPDATE_INTERVAL,
   );
 
@@ -78,7 +78,7 @@ class UrlManager {
   }
 
 
-  startUrlUpdater() {
+  startUrlUpdater(): void {
     this.listenTo(this.model.flycam, "changed", this.update);
     this.listenTo(this.model.flycam3d, "changed", this.update);
     this.listenTo(this.model, "change:mode", this.update);
@@ -89,7 +89,7 @@ class UrlManager {
   }
 
 
-  buildUrl() {
+  buildUrl(): string {
     const { flycam, flycam3d } = this.model;
     let state = V3.floor(flycam.getPosition());
     state.push(this.model.mode);

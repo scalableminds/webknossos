@@ -1,6 +1,6 @@
 /**
  * camera_controller.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -10,7 +10,7 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import Flycam2d from "oxalis/model/flycam2d";
 import Model from "oxalis/model";
-import type { Vector3, OrthoViewMapType } from "oxalis/constants";
+import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import scaleInfo from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewsWithoutTDView } from "oxalis/constants";
@@ -78,8 +78,18 @@ class CameraController {
   };
 
 
-  changeTDView(id, animate = true) {
-    let padding;
+  changeTDView(id: OrthoViewType, animate: boolean = true): void {
+    const positionOffset: OrthoViewMapType<Vector3> = {
+      [OrthoViews.PLANE_XY]: [0, 0, -1],
+      [OrthoViews.PLANE_YZ]: [1, 0, 0],
+      [OrthoViews.PLANE_XZ]: [0, 1, 0],
+    };
+    const upVector: OrthoViewMapType<Vector3> = {
+      [OrthoViews.PLANE_XY]: [0, -1, 0],
+      [OrthoViews.PLANE_YZ]: [0, -1, 0],
+      [OrthoViews.PLANE_XZ]: [0, 0, -1],
+    };
+
     const camera = this.cameras[OrthoViews.TDView];
     const b = scaleInfo.voxelToNm(this.model.upperBoundary);
 
@@ -110,7 +120,7 @@ class CameraController {
     let to: TweenState;
     if (id === OrthoViews.TDView) {
       const diagonal = Math.sqrt((b[0] * b[0]) + (b[1] * b[1]));
-      padding = 0.05 * diagonal;
+      const padding = 0.05 * diagonal;
 
       // Calculate the distance from (0, b[1]) in order to center the view
       const a1 = b[0]; const b1 = -b[1]; const x1 = 0; const y1 = b[1];
@@ -149,12 +159,9 @@ class CameraController {
       const ind = Dimensions.getIndices(id);
       const width = Math.max(b[ind[0]], b[ind[1]] * 1.12) * 1.1;
       const paddingTop = width * 0.12;
-      padding = ((width / 1.1) * 0.1) / 2;
+      const padding = ((width / 1.1) * 0.1) / 2;
       const offsetX = pos[ind[0]] + padding + ((width - b[ind[0]]) / 2);
       const offsetY = pos[ind[1]] + paddingTop + padding;
-
-      const positionOffset = [[0, 0, -1], [1, 0, 0], [0, 1, 0]];
-      const upVector = [[0, -1, 0], [0, -1, 0], [0, 0, -1]];
 
       const l = -offsetX;
       const t = offsetY;
@@ -191,20 +198,19 @@ class CameraController {
     }
   }
 
-  degToRad(deg) { return (deg / 180) * Math.PI; }
+  degToRad(deg: number): number {
+    return (deg / 180) * Math.PI;
+  }
 
-  changeTDViewXY = () => this.changeTDView(OrthoViews.PLANE_XY);
-  changeTDViewYZ = () => this.changeTDView(OrthoViews.PLANE_YZ);
-  changeTDViewXZ = () => this.changeTDView(OrthoViews.PLANE_XZ);
+  changeTDViewXY = (): void => this.changeTDView(OrthoViews.PLANE_XY);
+  changeTDViewYZ = (): void => this.changeTDView(OrthoViews.PLANE_YZ);
+  changeTDViewXZ = (): void => this.changeTDView(OrthoViews.PLANE_XZ);
 
-  changeTDViewDiagonal = (animate) => {
-    if (animate == null) {
-      animate = true;
-    }
-    return this.changeTDView(OrthoViews.TDView, animate);
+  changeTDViewDiagonal = (animate: boolean = true): void => {
+    this.changeTDView(OrthoViews.TDView, animate);
   };
 
-  updateCameraTDView(tweenState: TweenState) {
+  updateCameraTDView(tweenState: TweenState): void {
     const p = tweenState.getConvertedPosition();
     tweenState.camera.position.set(tweenState.dx + p[0], tweenState.dy + p[1], tweenState.dz + p[2]);
     tweenState.camera.left = tweenState.l;
@@ -220,13 +226,13 @@ class CameraController {
     app.vent.trigger("rerender");
   }
 
-  TDViewportSize() {
+  TDViewportSize(): number {
     // always quadratic
     return (this.cameras[OrthoViews.TDView].right - this.cameras[OrthoViews.TDView].left);
   }
 
 
-  zoomTDView = (value, position, curWidth) => {
+  zoomTDView = (value: number, position: THREE.Vector3, curWidth: number): void => {
     let offsetX;
     let offsetY;
     const camera = this.cameras[OrthoViews.TDView];
@@ -256,17 +262,19 @@ class CameraController {
   };
 
 
-  moveTDViewX = x => this.moveTDViewRaw(
-    new THREE.Vector2((x * this.TDViewportSize()) / constants.VIEWPORT_WIDTH, 0),
-  );
+  moveTDViewX = (x: number): void => {
+    this.moveTDViewRaw(
+      new THREE.Vector2((x * this.TDViewportSize()) / constants.VIEWPORT_WIDTH, 0));
+  };
 
 
-  moveTDViewY = y => this.moveTDViewRaw(
-    new THREE.Vector2(0, (-y * this.TDViewportSize()) / constants.VIEWPORT_WIDTH),
-  );
+  moveTDViewY = (y: number): void => {
+    this.moveTDViewRaw(
+      new THREE.Vector2(0, (-y * this.TDViewportSize()) / constants.VIEWPORT_WIDTH));
+  };
 
 
-  moveTDView(nmVector) {
+  moveTDView(nmVector: THREE.Vector3): void {
     // moves camera by the nm vector
     const camera = this.cameras[OrthoViews.TDView];
 
@@ -277,11 +285,11 @@ class CameraController {
     rotation.order = rotation.order.split("").reverse().join("");
 
     nmVector.applyEuler(rotation);
-    return this.moveTDViewRaw(nmVector);
+    this.moveTDViewRaw(nmVector);
   }
 
 
-  moveTDViewRaw(moveVector) {
+  moveTDViewRaw(moveVector: THREE.Vector3): void {
     const camera = this.cameras[OrthoViews.TDView];
     camera.left += moveVector.x;
     camera.right += moveVector.x;
@@ -292,7 +300,7 @@ class CameraController {
   }
 
 
-  centerTDView() {
+  centerTDView(): void {
     const camera = this.cameras[OrthoViews.TDView];
     return this.moveTDViewRaw(
       new THREE.Vector2(
@@ -302,18 +310,18 @@ class CameraController {
   }
 
 
-  setClippingDistance(value) {
+  setClippingDistance(value: number): void {
     this.camDistance = value; // Plane is shifted so it's <value> to the back and the front
-    return this.updateCamViewport();
+    this.updateCamViewport();
   }
 
 
-  getClippingDistance(planeID) {
-    return this.camDistance * scaleInfo.voxelPerNM[planeID];
+  getClippingDistance(dim: number): number {
+    return this.camDistance * scaleInfo.voxelPerNM[dim];
   }
 
 
-  updateCamViewport() {
+  updateCamViewport(): void {
     const scaleFactor = scaleInfo.baseVoxel;
     const boundary = (constants.VIEWPORT_WIDTH / 2) * this.model.user.get("zoom");
     for (const planeId of OrthoViewsWithoutTDView) {
@@ -327,8 +335,8 @@ class CameraController {
 
 
   bindToEvents() {
-    this.listenTo(this.model.user, "change:clippingDistance", function (model, value) { return this.setClippingDistance(value); });
-    this.listenTo(this.model.user, "change:zoom", function () { return this.updateCamViewport(); });
+    this.listenTo(this.model.user, "change:clippingDistance", (model, value) => { this.setClippingDistance(value); });
+    this.listenTo(this.model.user, "change:zoom", () => { this.updateCamViewport(); });
   }
 }
 

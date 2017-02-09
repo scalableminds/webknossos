@@ -75,7 +75,7 @@ class SceneController {
   }
 
 
-  createMeshes() {
+  createMeshes(): void {
     // Cubes
     this.cube = new Cube(this.model, {
       max: this.upperBoundary,
@@ -93,8 +93,6 @@ class SceneController {
         color: 0x00ff00,
         showCrossSections: true });
     }
-
-    // TODO: Implement text
 
     if (this.model.volumeTracing != null) {
       this.contour = new ContourGeometry(this.model.volumeTracing, this.model.flycam);
@@ -120,12 +118,12 @@ class SceneController {
   }
 
 
-  removeShapes() {
+  removeShapes(): void {
     this.trigger("removeGeometries", this.volumeMeshes);
   }
 
 
-  showShapes(bb: BoundingBoxType, resolution: number, id: number) {
+  showShapes(bb: BoundingBoxType, resolution: number, id: number): void {
     if (this.model.getSegmentationBinary() == null) { return; }
 
     if (this.polygonFactory != null) {
@@ -200,7 +198,7 @@ class SceneController {
   }
 
 
-  update = () => {
+  update = (): void => {
     const gPos = this.flycam.getPosition();
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = this.flycam.getPlaneScalingFactor();
@@ -214,12 +212,7 @@ class SceneController {
   }
 
 
-  setTextRotation() {}
-
-    // TODO: Implement
-
-
-  setDisplayCrosshair(value: boolean) {
+  setDisplayCrosshair(value: boolean): void {
     for (const plane of _.values(this.planes)) {
       plane.setDisplayCrosshair(value);
     }
@@ -252,7 +245,7 @@ class SceneController {
   }
 
 
-  getMeshes = () => {
+  getMeshes = (): Array<THREE.Mesh> => {
     let result = [];
     for (const plane of _.values(this.planes)) {
       result = result.concat(plane.getMeshes());

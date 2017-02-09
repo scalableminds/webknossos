@@ -1,13 +1,17 @@
 /**
  * minimal_skeletontracing_arbitrary_controller.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import Input from "libs/input";
 import Toast from "libs/toast";
-import ArbitraryController from "../viewmodes/arbitrary_controller";
-import Constants from "../../constants";
+import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import Constants from "oxalis/constants";
+import type Model from "oxalis/model";
+import type View from "oxalis/view";
+import type SceneController from "oxalis/controller/scene_controller";
+import type SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
@@ -16,14 +20,19 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
   // Minimal Skeleton Tracing Arbitrary Controller:
   // Extends Arbitrary controller to add controls that are specific to minimal Arbitrary mode.
 
-  constructor(...args) {
-    super(...args);
+  constructor(
+    model: Model,
+    view: View,
+    sceneController: SceneController,
+    skeletonTracingController: SkeletonTracingController,
+  ) {
+    super(model, view, sceneController, skeletonTracingController);
 
     _.defer(() => this.setRecord(true));
   }
 
 
-  initKeyboard() {
+  initKeyboard(): void {
     this.input.keyboard = new Input.Keyboard({
 
       space: timeFactor => this.move(timeFactor),
@@ -62,16 +71,16 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
 
   // make sure that it is not possible to keep nodes from being created
-  setWaypoint(...args) {
+  setWaypoint(): void {
     if (this.isBranchpointvideoMode()) { return; }
     if (!this.model.get("flightmodeRecording")) {
       this.model.set("flightmodeRecording", true);
     }
-    super.setWaypoint(...args);
+    super.setWaypoint();
   }
 
 
-  deleteActiveNode() {
+  deleteActiveNode(): void {
     if (this.isBranchpointvideoMode()) { return; }
     const { skeletonTracing } = this.model;
     const activeNode = skeletonTracing.getActiveNode();

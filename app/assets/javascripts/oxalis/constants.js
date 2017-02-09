@@ -9,6 +9,8 @@ export type ModeType = 0 | 1 | 2 | 3;
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
+export type Vector5 = [number, number, number, number, number];
+export type Vector6 = [number, number, number, number, number, number];
 export type Point2 = { x: number, y: number };
 export type Point3 = { x: number, y: number, z: number };
 // TODO replace with BoundingBoxType

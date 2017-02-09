@@ -1,4 +1,4 @@
-import { watchPushSettingsAsync, initializeDatasetSettingsAsync } from "./settings_saga";
+import { watchPushSettingsAsync, initializeSettingsAsync } from "./settings_saga";
 
 export default function* rootSaga() {
   yield [

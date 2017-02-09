@@ -332,13 +332,11 @@ class ArbitraryController {
     this.isStarted = false;
   }
 
-
   scroll = (delta, type) => {
     if (type === "shift") {
       this.setParticleSize(Utils.clamp(-1, delta, 1));
     }
   }
-
 
   addNode = (position, rotation) => {
     if (!this.isStarted) { return; }
@@ -417,10 +415,23 @@ class ArbitraryController {
       let newRotation = this.model.skeletonTracing.getActiveNodeRotation();
       newRotation = this.getShortestRotation(curRotation, newRotation);
 
-      const waypointAnimation = new TWEEN.Tween(
-        { x: curPos[0], y: curPos[1], z: curPos[2], rx: curRotation[0], ry: curRotation[1], rz: curRotation[2], cam: this.cam });
-      waypointAnimation.to(
-        { x: newPos[0], y: newPos[1], z: newPos[2], rx: newRotation[0], ry: newRotation[1], rz: newRotation[2] }, this.TIMETOCENTER);
+      const waypointAnimation = new TWEEN.Tween({
+        x: curPos[0],
+        y: curPos[1],
+        z: curPos[2],
+        rx: curRotation[0],
+        ry: curRotation[1],
+        rz: curRotation[2],
+        cam: this.cam,
+      });
+      waypointAnimation.to({
+        x: newPos[0],
+        y: newPos[1],
+        z: newPos[2],
+        rx: newRotation[0],
+        ry: newRotation[1],
+        rz: newRotation[2],
+      }, this.TIMETOCENTER);
       waypointAnimation.onUpdate(function () {
         this.cam.setPosition([this.x, this.y, this.z]);
         this.cam.setRotation([this.rx, this.ry, this.rz]);

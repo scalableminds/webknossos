@@ -10,10 +10,10 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import Flycam2d from "oxalis/model/flycam2d";
 import Model from "oxalis/model";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, OrthoViewMapType } from "oxalis/constants";
 import scaleInfo from "oxalis/model/scaleinfo";
-import Dimensions from "../model/dimensions";
-import constants from "../constants";
+import Dimensions from "oxalis/model/dimensions";
+import constants, { OrthoViews, OrthoViewsWithoutTDView } from "oxalis/constants";
 
 type TweenState = {
   notify: () => void,
@@ -36,7 +36,7 @@ class CameraController {
   // The Skeleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
   // View. It provides methods to set a certain View (animated).
 
-  cameras: Array<THREE.OrthographicCamera>;
+  cameras: OrthoViewMapType<THREE.OrthographicCamera>;
   camera: THREE.OrthographicCamera;
   flycam: Flycam2d;
   model: Model;
@@ -47,18 +47,18 @@ class CameraController {
   trigger: Function;
   listenTo: Function;
 
-  constructor(cameras, flycam, model) {
+  constructor(cameras: OrthoViewMapType<THREE.OrthographicCamera>, flycam: Flycam2d, model: Model) {
+    _.extend(this, Backbone.Events);
     this.cameras = cameras;
     this.flycam = flycam;
     this.model = model;
-    _.extend(this, Backbone.Events);
 
     app.vent.on({
       centerTDView: () => this.centerTDView(),
     });
 
     this.updateCamViewport();
-    for (const cam of this.cameras) {
+    for (const cam of _.values(this.cameras)) {
       cam.near = -1000000;
       cam.far = 1000000;
     }
@@ -68,19 +68,19 @@ class CameraController {
     this.bindToEvents();
   }
 
-  update = () => {
+  update = (): void => {
     const gPos = this.flycam.getPosition();
     // camera porition's unit is nm, so convert it.
     const cPos = scaleInfo.voxelToNm(gPos);
-    this.cameras[constants.PLANE_XY].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
-    this.cameras[constants.PLANE_YZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
-    this.cameras[constants.PLANE_XZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
+    this.cameras[OrthoViews.PLANE_XY].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
+    this.cameras[OrthoViews.PLANE_YZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
+    this.cameras[OrthoViews.PLANE_XZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
   };
 
 
   changeTDView(id, animate = true) {
     let padding;
-    const camera = this.cameras[constants.TDView];
+    const camera = this.cameras[OrthoViews.TDView];
     const b = scaleInfo.voxelToNm(this.model.upperBoundary);
 
     const pos = scaleInfo.voxelToNm(this.model.flycam.getPosition());
@@ -108,7 +108,7 @@ class CameraController {
     this.tween = new TWEEN.Tween(from);
 
     let to: TweenState;
-    if (id === constants.TDView) {
+    if (id === OrthoViews.TDView) {
       const diagonal = Math.sqrt((b[0] * b[0]) + (b[1] * b[1]));
       padding = 0.05 * diagonal;
 
@@ -193,15 +193,15 @@ class CameraController {
 
   degToRad(deg) { return (deg / 180) * Math.PI; }
 
-  changeTDViewXY = () => this.changeTDView(constants.PLANE_XY);
-  changeTDViewYZ = () => this.changeTDView(constants.PLANE_YZ);
-  changeTDViewXZ = () => this.changeTDView(constants.PLANE_XZ);
+  changeTDViewXY = () => this.changeTDView(OrthoViews.PLANE_XY);
+  changeTDViewYZ = () => this.changeTDView(OrthoViews.PLANE_YZ);
+  changeTDViewXZ = () => this.changeTDView(OrthoViews.PLANE_XZ);
 
   changeTDViewDiagonal = (animate) => {
     if (animate == null) {
       animate = true;
     }
-    return this.changeTDView(constants.TDView, animate);
+    return this.changeTDView(OrthoViews.TDView, animate);
   };
 
   updateCameraTDView(tweenState: TweenState) {
@@ -222,14 +222,14 @@ class CameraController {
 
   TDViewportSize() {
     // always quadratic
-    return (this.cameras[constants.TDView].right - this.cameras[constants.TDView].left);
+    return (this.cameras[OrthoViews.TDView].right - this.cameras[OrthoViews.TDView].left);
   }
 
 
   zoomTDView = (value, position, curWidth) => {
     let offsetX;
     let offsetY;
-    const camera = this.cameras[constants.TDView];
+    const camera = this.cameras[OrthoViews.TDView];
     const factor = Math.pow(0.9, value);
     const middleX = (camera.left + camera.right) / 2;
     const middleY = (camera.bottom + camera.top) / 2;
@@ -268,7 +268,7 @@ class CameraController {
 
   moveTDView(nmVector) {
     // moves camera by the nm vector
-    const camera = this.cameras[constants.TDView];
+    const camera = this.cameras[OrthoViews.TDView];
 
     const rotation = THREE.Vector3.prototype.multiplyScalar.call(
       camera.rotation.clone(), -1,
@@ -282,7 +282,7 @@ class CameraController {
 
 
   moveTDViewRaw(moveVector) {
-    const camera = this.cameras[constants.TDView];
+    const camera = this.cameras[OrthoViews.TDView];
     camera.left += moveVector.x;
     camera.right += moveVector.x;
     camera.top += moveVector.y;
@@ -293,7 +293,7 @@ class CameraController {
 
 
   centerTDView() {
-    const camera = this.cameras[constants.TDView];
+    const camera = this.cameras[OrthoViews.TDView];
     return this.moveTDViewRaw(
       new THREE.Vector2(
         -(camera.left + camera.right) / 2,
@@ -316,11 +316,11 @@ class CameraController {
   updateCamViewport() {
     const scaleFactor = scaleInfo.baseVoxel;
     const boundary = (constants.VIEWPORT_WIDTH / 2) * this.model.user.get("zoom");
-    for (const i of [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]) {
-      this.cameras[i].near = -this.camDistance;
-      this.cameras[i].left = this.cameras[i].bottom = -boundary * scaleFactor;
-      this.cameras[i].right = this.cameras[i].top = boundary * scaleFactor;
-      this.cameras[i].updateProjectionMatrix();
+    for (const planeId of OrthoViewsWithoutTDView) {
+      this.cameras[planeId].near = -this.camDistance;
+      this.cameras[planeId].left = this.cameras[planeId].bottom = -boundary * scaleFactor;
+      this.cameras[planeId].right = this.cameras[planeId].top = boundary * scaleFactor;
+      this.cameras[planeId].updateProjectionMatrix();
     }
     app.vent.trigger("rerender");
   }

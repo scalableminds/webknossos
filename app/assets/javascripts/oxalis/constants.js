@@ -5,24 +5,51 @@
 
 export const ModeValues = [0, 1, 2, 3];
 export type VolumeModeType = 0 | 1;
-export type PlaneType = 0 | 1 | 2;
-export type ModeType = PlaneType | 3;
-export type ViewType = 0 | 1 | 2 | 3;
+export type ModeType = 0 | 1 | 2 | 3;
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
 export type Point2 = { x: number, y: number };
+export type Point3 = { x: number, y: number, z: number };
+// TODO replace with BoundingBoxType
+export type Extent3 = {
+  minX: number;
+  minY: number;
+  minZ: number;
+  maxX: number;
+  maxY: number;
+  maxZ: number;
+};
+
+export const OrthoViews = {
+  PLANE_XY: "PLANE_XY",
+  PLANE_YZ: "PLANE_YZ",
+  PLANE_XZ: "PLANE_XZ",
+  TDView: "TDView",
+};
+export const OrthoViewsWithoutTDView = [
+  OrthoViews.PLANE_XY,
+  OrthoViews.PLANE_YZ,
+  OrthoViews.PLANE_XZ,
+];
+export type OrthoViewType = $Keys<typeof OrthoViews>;
+export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
+
+export const OrthoViewToNumber: OrthoViewMapType<number> = {
+  [OrthoViews.PLANE_XY]: 0,
+  [OrthoViews.PLANE_YZ]: 1,
+  [OrthoViews.PLANE_XZ]: 2,
+  [OrthoViews.TDView]: 3,
+};
+export const OrthoViewColors: OrthoViewMapType<number> = {
+  [OrthoViews.PLANE_XY]: 0xff0000,
+  [OrthoViews.PLANE_YZ]: 0x0000ff,
+  [OrthoViews.PLANE_XZ]: 0x00ff00,
+  [OrthoViews.TDView]: 0xffffff,
+};
 
 const Constants = {
-  PLANE_XY: 0,
-  PLANE_YZ: 1,
-  PLANE_XZ: 2,
-  TDView: 3,
   ARBITRARY_VIEW: 4,
-  PLANE_NAMES: ["xy", "yz", "xz"],
-  ALL_PLANES: [0, 1, 2],
-  ALL_VIEWPORTS: [0, 1, 2, 3],
-  PLANE_COLORS: [0xff0000, 0x0000ff, 0x00ff00, 0xffffff],
 
   MODE_PLANE_TRACING: 0,
   MODE_ARBITRARY: 1,

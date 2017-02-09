@@ -1,16 +1,22 @@
 /**
  * bucket_builder.js
- * @flow weak
+ * @flow
  */
 
-import _ from "lodash";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
+import type { Vector3, Vector4 } from "oxalis/constants";
+
+type BucketInfo = {
+  position: Vector3;
+  zoomStep: number;
+  cubeSize: number;
+};
 
 // Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
 // object as expected by the server on bucket request
 const BucketBuilder = {
 
-  fromZoomedAddress([x, y, z, zoomStep], options = {}) {
+  fromZoomedAddress([x, y, z, zoomStep]: Vector4, options: Object = {}): BucketInfo {
     let bucket = {
       position: [
         x << (zoomStep + BUCKET_SIZE_P),
@@ -21,13 +27,13 @@ const BucketBuilder = {
       cubeSize: 1 << BUCKET_SIZE_P,
     };
 
-    bucket = _.extend(bucket, options);
+    bucket = Object.assign(bucket, options);
 
     return bucket;
   },
 
 
-  bucketToZoomedAddress(bucket) {
+  bucketToZoomedAddress(bucket: BucketInfo): Vector4 {
     const [x, y, z] = bucket.position;
     const { zoomStep } = bucket;
     return [

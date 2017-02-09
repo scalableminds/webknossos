@@ -1,6 +1,6 @@
 /**
  * bounding_box.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -55,7 +55,6 @@ class BoundingBox {
 
   containsBucket([x, y, z, zoomStep]: Vector4): boolean {
     const { min, max } = this.getBoxForZoomStep(zoomStep);
-
     return (
       min[0] <= x && x < max[0] &&
       min[1] <= y && y < max[1] &&

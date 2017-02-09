@@ -1,5 +1,5 @@
-import runAsync from "../helpers/run-async";
-import Deferred from "../../libs/deferred";
+import runAsync from "test/helpers/run-async";
+import Deferred from "libs/deferred";
 
 describe("Deferred", () => {
   function makeGetState(promise) {

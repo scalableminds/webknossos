@@ -38,7 +38,6 @@ export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
 };
-export type LayerType = WkLayer | NdStoreLayer;
 export type RestrictionsType = {
   allowAccess: boolean,
   allowUpdate: boolean,

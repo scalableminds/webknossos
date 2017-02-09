@@ -110,7 +110,7 @@ if (bucketIndex == lastBucketIndex) {
 
   <%= pointIndexMacro({ pointIndex : "pointIndex", x : "sub_x", y : "sub_y", z : "sub_z", zoomStep : "lastBucketZoomStep" }) %>
 
-  <%= output %> = lastBucket[pointIndex];
+  <%= output %> = lastBucket.data[pointIndex];
 
 } else if ((bucket = buckets.getBucket(bucketIndex)) != null) {
 
@@ -123,7 +123,7 @@ if (bucketIndex == lastBucketIndex) {
   lastBucketIndex = bucketIndex;
   lastBucketZoomStep = bucketZoomStep;
 
-  <%= output %> = bucket[pointIndex];
+  <%= output %> = bucket.data[pointIndex];
 
 } else {
   isBucketMissing = true;

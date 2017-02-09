@@ -19,20 +19,26 @@ import scaleInfo from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneView from "oxalis/view/plane_view";
-import constants from "oxalis/constants";
-import type { Point2, Vector3, ViewType, PlaneType } from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewsWithoutTDView } from "oxalis/constants";
+import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 
 class PlaneController {
   planeView: PlaneView;
   model: Model;
   view: View;
-  input: any;
+  input: {
+    mouseControllers: OrthoViewMapType<Input.Mouse>;
+    keyboard: Input.Keyboard;
+    keyboardNoLoop: Input.Keyboard;
+    keyboardLoopDelayed: Input.Keyboard;
+    destroy(): void;
+  };
   sceneController: SceneController;
   isStarted: boolean;
   flycam: Flycam2d;
   oldNmPos: Vector3;
   planeView: PlaneView;
-  activeViewport: ViewType;
+  activeViewport: OrthoViewType;
   cameraController: CameraController;
   zoomPos: Vector3;
   controls: TrackballControls;
@@ -50,16 +56,16 @@ class PlaneController {
     this.prototype.bindings = [];
 
     this.prototype.input = {
-      mouseControllers: [],
+      mouseControllers: {},
       keyboard: null,
       keyboardNoLoop: null,
       keyboardLoopDelayed: null,
 
       destroy() {
-        for (const mouse of this.mouseControllers) {
+        for (const mouse of _.values(this.mouseControllers)) {
           mouse.destroy();
         }
-        this.mouseControllers = [];
+        this.mouseControllers = {};
         Utils.__guard__(this.keyboard, x => x.destroy());
         Utils.__guard__(this.keyboardNoLoop, x1 => x1.destroy());
         Utils.__guard__(this.keyboardLoopDelayed, x2 => x2.destroy());
@@ -86,7 +92,7 @@ class PlaneController {
 
     this.planeView = new PlaneView(this.model, this.view);
 
-    this.activeViewport = constants.PLANE_XY;
+    this.activeViewport = OrthoViews.PLANE_XY;
 
     // initialize Camera Controller
     this.cameraController = new CameraController(this.planeView.getCameras(), this.flycam, this.model);
@@ -120,14 +126,16 @@ class PlaneController {
 
 
   initMouse(): void {
-    for (const id of [0, 1, 2]) {
-      const inputcatcher = $(`#plane${constants.PLANE_NAMES[id]}`);
-      this.input.mouseControllers.push(
-        new Input.Mouse(inputcatcher, this.getPlaneMouseControls(id), id));
+    for (const id of Object.keys(OrthoViews)) {
+      if (id !== OrthoViews.TDView) {
+        const inputcatcher = $(`#inputcatcher_${OrthoViews[id]}`);
+        this.input.mouseControllers[id] =
+          new Input.Mouse(inputcatcher, this.getPlaneMouseControls(id), id);
+      } else {
+        this.input.mouseControllers[id] =
+          new Input.Mouse($("#inputcatcher_TDView"), this.getTDViewMouseControls(), id);
+      }
     }
-
-    this.input.mouseControllers.push(
-      new Input.Mouse($("#TDView"), this.getTDViewMouseControls(), constants.TDView));
   }
 
 
@@ -135,12 +143,12 @@ class PlaneController {
     return {
       leftDownMove: delta => this.moveTDView(delta),
       scroll: value => this.zoomTDView(Utils.clamp(-1, value, 1), true),
-      over: () => this.planeView.setActiveViewport(this.activeViewport = constants.TDView),
+      over: () => this.planeView.setActiveViewport(this.activeViewport = OrthoViews.TDView),
     };
   }
 
 
-  getPlaneMouseControls(planeId: PlaneType): Object {
+  getPlaneMouseControls(planeId: OrthoViewType): Object {
     return {
       leftDownMove: delta => this.move([
         (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
@@ -159,10 +167,10 @@ class PlaneController {
 
 
   initTrackballControls(): void {
-    const view = $("#TDView")[0];
+    const view = $("#inputcatcher_TDView")[0];
     const pos = scaleInfo.voxelToNm(this.flycam.getPosition());
     this.controls = new TrackballControls(
-      this.planeView.getCameras()[constants.TDView],
+      this.planeView.getCameras()[OrthoViews.TDView],
       view,
       new THREE.Vector3(...pos),
       () => app.vent.trigger("rerender"));
@@ -335,7 +343,7 @@ class PlaneController {
 
   move = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
     const { activeViewport } = this;
-    if (activeViewport !== 3) { // 3 == TDView
+    if (activeViewport !== OrthoViews.TDView) {
       this.flycam.movePlane(v, activeViewport, increaseSpeedWithZoom);
     } else {
       this.moveTDView({ x: -v[0], y: -v[1] });
@@ -349,7 +357,7 @@ class PlaneController {
 
   moveZ = (z: number, oneSlide: boolean): void => {
     const { activeViewport } = this;
-    if (activeViewport === 3) { // 3 == TDView
+    if (activeViewport === OrthoViews.TDView) {
       return;
     }
 
@@ -366,7 +374,7 @@ class PlaneController {
 
 
   zoom(value: number, zoomToMouse: boolean): void {
-    if (([0, 1, 2]).includes(this.activeViewport)) {
+    if ((OrthoViewsWithoutTDView).includes(this.activeViewport)) {
       this.zoomPlanes(value, zoomToMouse);
     } else {
       this.zoomTDView(value, zoomToMouse);
@@ -391,7 +399,7 @@ class PlaneController {
   zoomTDView(value: number, zoomToMouse: boolean = true): void {
     let zoomToPosition;
     if (zoomToMouse) {
-      zoomToPosition = this.input.mouseControllers[constants.TDView].position;
+      zoomToPosition = this.input.mouseControllers[OrthoViews.TDView].position;
     }
     this.cameraController.zoomTDView(value, zoomToPosition, this.planeView.curWidth);
   }
@@ -407,7 +415,7 @@ class PlaneController {
     // Move the plane so that the mouse is at the same position as
     // before the zoom
     const { activeViewport } = this;
-    if (this.isMouseOver() && activeViewport !== 3) { // 3 == TDView
+    if (this.isMouseOver() && activeViewport !== OrthoViews.TDView) {
       const mousePos = this.getMousePosition();
       const moveVector = [this.zoomPos[0] - mousePos[0],
         this.zoomPos[1] - mousePos[1],
@@ -465,17 +473,17 @@ class PlaneController {
     const { scaleFactor } = this.planeView;
     const planeRatio = scaleInfo.baseVoxelFactors;
     switch (this.activeViewport) {
-      case constants.PLANE_XY:
+      case OrthoViews.PLANE_XY:
         position = [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),
           curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[1] * zoomFactor),
           curGlobalPos[2]];
         break;
-      case constants.PLANE_YZ:
+      case OrthoViews.PLANE_YZ:
         position = [curGlobalPos[0],
           curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[1] * zoomFactor),
           curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[2] * zoomFactor)];
         break;
-      case constants.PLANE_XZ:
+      case OrthoViews.PLANE_XZ:
         position = [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),
           curGlobalPos[1],
           curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.y) / scaleFactor) * planeRatio[2] * zoomFactor)];

@@ -1,10 +1,11 @@
 /**
  * polyhedron_rasterizer.js
- * @flow weak
+ * @flow
  */
 
 import Utils from "libs/utils";
 import { M4x4 } from "libs/mjs";
+import type { Matrix4x4 } from "libs/mjs";
 
 // Constants
 const HEAP_SIZE = 1 << 25;
@@ -19,17 +20,17 @@ const Int32MAX = 2147483647;
 //   (a0 - o0) * (b1 - o1) - (a1 - o1) * (b0 - o0)
 
 
-const drawFunction = function (x, y, z, buffer, shiftZ) {
+function drawFunction(x: number, y: number, z: number, buffer: Int32Array, shiftZ: number): void {
   const __indexY = (z << shiftZ) + (y << 1);
 
   if (x < buffer[__indexY]) { buffer[__indexY] = x; }
   if (x > buffer[__indexY + 1]) { buffer[__indexY + 1] = x; }
-};
+}
 
 
 // Returns the index of the next free bit.
 // Example: 5 = 0000 0101 => 3
-const nextFreeBit = function (x) {
+function nextFreeBit(x: number): number {
   let n = 1;
   if ((x >> 16) === 0) {
     n += 16;
@@ -48,7 +49,7 @@ const nextFreeBit = function (x) {
     x <<= 2;
   }
   return 32 - n - (x >> 31);
-};
+}
 
 
 // Represents a convex polyhedron, which can be voxelized.
@@ -100,7 +101,7 @@ class PolyhedronRasterizer {
   shiftZ: number;
   vertices: Array<number>;
 
-  constructor(vertices1, indices) {
+  constructor(vertices1: Array<number>, indices: Array<number>) {
     let buffer;
     let bufferLength;
     this.vertices = vertices1;
@@ -138,7 +139,7 @@ class PolyhedronRasterizer {
   }
 
 
-  calcExtent() {
+  calcExtent(): void {
     let maxY;
     let maxZ;
     let minY;
@@ -192,12 +193,12 @@ class PolyhedronRasterizer {
   //  )
 
 
-  draw(x, y, z) {
+  draw(x: number, y: number, z: number) {
     const { buffer, shiftZ } = this;
     drawFunction(x, y, z, buffer, shiftZ);
   }
 
-  drawEdges() {
+  drawEdges(): void {
     // Draws the edges into the buffer.
 
     const { indices, vertices } = this;
@@ -220,7 +221,7 @@ class PolyhedronRasterizer {
   }
 
 
-  drawLine3d(x, y, z, x1, y1, z1) {
+  drawLine3d(x: number, y: number, z: number, x1: number, y1: number, z1: number): void {
     // Source: https://sites.google.com/site/proyectosroboticos/bresenham-3d
 
     let tmp;
@@ -317,7 +318,7 @@ class PolyhedronRasterizer {
     }
   }
 
-  drawLine2d(x, y, x1, y1, z) {
+  drawLine2d(x: number, y: number, x1: number, y1: number, z: number): void {
     // Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
 
     let d;
@@ -379,7 +380,7 @@ class PolyhedronRasterizer {
     }
   }
 
-  drawPolygons() {
+  drawPolygons(): void {
     // Iterates over all relevant xy-planes. The points in
     // each plane are used to build a convex polygon. The
     // edges of that polygon is then drawn into the buffer.
@@ -432,7 +433,7 @@ class PolyhedronRasterizer {
   }
 
 
-  collectPoints() {
+  collectPoints(): Array<number> {
     const { buffer, minX, minY, minZ, shiftZ, deltaY, deltaZ } = this;
 
     const output = [];
@@ -443,7 +444,9 @@ class PolyhedronRasterizer {
         const x0 = buffer[index++];
         const x1 = buffer[index++];
         if (x0 !== Int32MAX) {
-          for (const x of Utils.__range__(x0, x1, true)) { output.push(x + minX, y + minY, z + minZ); }
+          for (let x = x0; x <= x1; x++) {
+            output.push(x + minX, y + minY, z + minZ);
+          }
         }
       }
     }
@@ -452,7 +455,7 @@ class PolyhedronRasterizer {
   }
 
 
-  collectPointsOnion(xs, ys, zs) {
+  collectPointsOnion(xs: number, ys: number, zs: number): Int32Array {
     const { buffer, minX, maxX, minY, maxY, minZ, maxZ, deltaX, deltaY, deltaZ, shiftZ } = this;
 
     const maxRadius = Math.max(
@@ -514,28 +517,32 @@ PolyhedronRasterizer.Master = class Master {
   vertices: Array<number>;
 
   // Works just like a regular mesh in WebGL.
-  constructor(vertices, indices) {
+  constructor(vertices: Array<number>, indices: Array<number>) {
     this.vertices = vertices;
     this.indices = indices;
   }
 
-  transformAffine(matrix) {
+  transformAffine(matrix: Matrix4x4): PolyhedronRasterizer {
     const { vertices, indices } = this;
 
     const transformedPolyhdron = new PolyhedronRasterizer(
       M4x4.transformPointsAffine(matrix, vertices, new Int32Array(vertices.length)),
       indices,
     );
-
     const orientationVector = M4x4.transformLineAffine(matrix, [0, 0, 1], [0, 0, 0]);
-
     transformedPolyhdron.orientation = orientationVector[2] < 0 ? -1 : 1;
-
     return transformedPolyhdron;
   }
 
 
-  static squareFrustum(nearFaceXWidth, nearFaceYWidth, nearFaceZ, farFaceXWidth, farFaceYWidth, farFaceZ) {
+  static squareFrustum(
+    nearFaceXWidth: number,
+    nearFaceYWidth: number,
+    nearFaceZ: number,
+    farFaceXWidth: number,
+    farFaceYWidth: number,
+    farFaceZ: number,
+  ): Master {
     const vertices = [
       -nearFaceXWidth / 2, -nearFaceYWidth / 2, nearFaceZ, // 0
       -farFaceXWidth / 2, -farFaceYWidth / 2, farFaceZ, // 3
@@ -564,12 +571,12 @@ PolyhedronRasterizer.Master = class Master {
   }
 
 
-  static cuboid(widthX, widthY, widthZ) {
+  static cuboid(widthX: number, widthY: number, widthZ: number): Master {
     return this.squareFrustum(widthX, widthY, 0, widthX, widthY, widthZ);
   }
 
 
-  static cube(width) {
+  static cube(width: number): Master {
     return this.cuboid(width, width, width);
   }
 };

@@ -74,8 +74,7 @@ class Layer {
     ).then((dataStore) => {
       this.tokenRequestPromise = null;
       return dataStore.token;
-    },
-    );
+    });
 
     return this.tokenRequestPromise;
   }

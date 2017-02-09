@@ -236,7 +236,8 @@ class SkeletonTracing {
   }
 
 
-  addNode(position, rotation, viewport, resolution, bitDepth, interpolation) {
+  addNode(position: Vector3, rotation: Vector3, viewport: number,
+    resolution: number, bitDepth: number, interpolation: boolean) {
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if (this.ensureDirection(position)) {

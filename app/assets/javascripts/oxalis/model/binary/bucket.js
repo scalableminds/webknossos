@@ -7,31 +7,32 @@ import _ from "lodash";
 import Backbone from "backbone";
 import type { Vector4 } from "oxalis/constants";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
-import Utils from "../../../libs/utils";
+import Utils from "libs/utils";
 
 export const BucketStateEnum = {
-  UNREQUESTED: 0,
-  REQUESTED: 1,
-  LOADED: 2,
+  UNREQUESTED: "UNREQUESTED",
+  REQUESTED: "REQUESTED",
+  LOADED: "LOADED",
 };
-const BucketStateNames = ["unrequested", "requested", "loaded"];
+export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
 
 export const BUCKET_SIZE_P = 5;
 
-export class Bucket {
+export class DataBucket {
+  type: "data" = "data";
   BIT_DEPTH: number;
   BUCKET_LENGTH: number;
   BYTE_OFFSET: number;
 
-  state: 0 | 1 | 2;
+  state: BucketStateEnumType;
   dirty: boolean;
   accessed: boolean;
   data: ?Uint8Array;
   temporalBucketManager: TemporalBucketManager;
   zoomedAddress: Vector4;
-  isNullBucket = false;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
+  on: Function;
 
 
   constructor(BIT_DEPTH: number, zoomedAddress: Vector4, temporalBucketManager: TemporalBucketManager) {
@@ -68,7 +69,7 @@ export class Bucket {
   }
 
 
-  label(labelFunc: () => void) {
+  label(labelFunc: (Uint8Array) => void) {
     labelFunc(this.getOrCreateData());
     this.dirty = true;
   }
@@ -79,7 +80,7 @@ export class Bucket {
   }
 
 
-  getData(): ?Uint8Array {
+  getData(): Uint8Array {
     if (this.data == null) {
       throw new Error("Bucket.getData() called, but data does not exist.");
     }
@@ -89,7 +90,7 @@ export class Bucket {
   }
 
 
-  getOrCreateData(): ?Uint8Array {
+  getOrCreateData(): Uint8Array {
     if (this.data == null) {
       this.data = new Uint8Array(this.BUCKET_LENGTH);
       this.temporalBucketManager.addBucket(this);
@@ -150,7 +151,7 @@ export class Bucket {
 
 
   unexpectedState(): void {
-    throw new Error(`Unexpected state: ${BucketStateNames[this.state]}`);
+    throw new Error(`Unexpected state: ${this.state}`);
   }
 
 
@@ -176,7 +177,7 @@ export class Bucket {
 
 
 export class NullBucket {
-  isNullBucket = true;
+  type: "null" = "null";
   isOutOfBoundingBox: boolean;
 
   constructor(isOutOfBoundingBox: boolean) {
@@ -185,7 +186,10 @@ export class NullBucket {
 
   hasData(): boolean { return false; }
   needsRequest(): boolean { return false; }
+  getData(): Uint8Array { throw new Error("NullBucket has no data."); }
 }
 
 export const NULL_BUCKET = new NullBucket(false);
 export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
+
+export type Bucket = DataBucket | NullBucket;

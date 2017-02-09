@@ -9,12 +9,14 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import constants from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewToNumber } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
 import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
-import type { Point2, Vector3, PlaneType } from "oxalis/constants";
+import type { Point2, Vector3, OrthoViewType } from "oxalis/constants";
+
+const TDView: 3 = 3;
 
 class SkeletonTracingPlaneController extends PlaneController {
 
@@ -62,7 +64,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  getPlaneMouseControls(planeId: PlaneType): Object {
+  getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
       leftClick: (pos, plane, event) =>
         this.onClick(pos, event.shiftKey, event.altKey, plane),
@@ -75,7 +77,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   getTDViewMouseControls(): Object {
     return _.extend(super.getTDViewMouseControls(), {
       leftClick: (position, plane, event) =>
-        this.onClick(position, event.shiftKey, event.altKey, constants.TDView),
+        this.onClick(position, event.shiftKey, event.altKey, OrthoViews.TDView),
     });
   }
 
@@ -120,7 +122,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  onClick = (position: Point2, shiftPressed: boolean, altPressed: boolean, plane: PlaneType): void => {
+  onClick = (position: Point2, shiftPressed: boolean, altPressed: boolean, plane: OrthoViewType): void => {
     if (!shiftPressed) { // do nothing
       return;
     }
@@ -166,11 +168,11 @@ class SkeletonTracingPlaneController extends PlaneController {
       // make sure you can't click nodes, that are clipped away (one can't see)
       const ind = dimensions.getIndices(plane);
       if (intersect.object.visible &&
-        (plane === constants.TDView ||
+        (plane === TDView ||
           (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
         // set the active Node to the one that has the ID stored in the vertex
         // center the node if click was in 3d-view
-        const centered = plane === constants.TDView;
+        const centered = plane === TDView;
         this.skeletonTracingController.setActiveNode(nodeID, shiftPressed && altPressed, centered);
         break;
       }
@@ -180,7 +182,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
   setWaypoint(position: Vector3, ctrlPressed: boolean): void {
     const { activeViewport } = this;
-    if (activeViewport === 3) { // TDView == 3
+    if (activeViewport === TDView) {
       return;
     }
     const activeNode = this.model.skeletonTracing.getActiveNode();
@@ -218,7 +220,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     this.model.skeletonTracing.addNode(
       position,
       rotation,
-      this.activeViewport,
+      OrthoViewToNumber[this.activeViewport],
       this.model.flycam.getIntegerZoomStep(),
       datasetConfig.get("fourBit") ? 4 : 8,
       datasetConfig.get("interpolation"),

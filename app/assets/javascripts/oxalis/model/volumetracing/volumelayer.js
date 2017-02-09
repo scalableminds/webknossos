@@ -7,7 +7,7 @@ import Drawing from "libs/drawing";
 import Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 
-import type { PlaneType, Vector2, Vector3 } from "oxalis/constants";
+import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
 
 export class VoxelIterator {
   hasNext: boolean = true;
@@ -25,17 +25,19 @@ export class VoxelIterator {
     return iterator;
   }
 
-  constructor(map: boolean[][], width: number, height: number, minCoord2d: Vector2) {
+  constructor(map: boolean[][], width: number, height: number,
+    minCoord2d: Vector2, get3DCoordinate: ((Vector2) => Vector3) = () => [0, 0, 0]) {
     this.map = map;
     this.width = width;
     this.height = height;
     this.minCoord2d = minCoord2d;
+    this.get3DCoordinate = get3DCoordinate;
     if (!this.map[0][0]) {
       this.getNext();
     }
   }
 
-  getNext() {
+  getNext(): Vector3 {
     const res = this.get3DCoordinate([this.x + this.minCoord2d[0], this.y + this.minCoord2d[1]]);
     let foundNext = false;
     while (!foundNext) {
@@ -53,13 +55,13 @@ export class VoxelIterator {
 
 class VolumeLayer {
 
-  plane: PlaneType;
+  plane: OrthoViewType;
   thirdDimensionValue: number;
   contourList: Array<Vector3>;
   maxCoord: ?Vector3;
   minCoord: ?Vector3;
 
-  constructor(plane: PlaneType, thirdDimensionValue: number) {
+  constructor(plane: OrthoViewType, thirdDimensionValue: number) {
     this.plane = plane;
     this.thirdDimensionValue = thirdDimensionValue;
     this.contourList = [];
@@ -157,7 +159,8 @@ class VolumeLayer {
     this.fillOutsideArea(map, width, height);
     this.drawOutlineVoxels(setMap);
 
-    return new VoxelIterator(map, width, height, minCoord2d);
+    const iterator = new VoxelIterator(map, width, height, minCoord2d, this.get3DCoordinate.bind(this));
+    return iterator;
   }
 
 
@@ -173,12 +176,12 @@ class VolumeLayer {
   }
 
 
-  fillOutsideArea(map: boolean[][], width: number, height: number) {
+  fillOutsideArea(map: boolean[][], width: number, height: number): void {
     const setMap = (x, y) => { map[x][y] = false; };
     const isEmpty = (x, y) => map[x][y] === true;
 
     // Fill everything BUT the cell
-    return Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap);
+    Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap);
   }
 
 

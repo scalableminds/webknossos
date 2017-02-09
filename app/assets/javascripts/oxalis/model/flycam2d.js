@@ -10,8 +10,8 @@ import type { BoundingBoxType } from "oxalis/model";
 import User from "oxalis/model/user";
 import scaleInfo from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
-import constants from "oxalis/constants";
-import type { Vector2, Vector3, Vector4, PlaneType } from "oxalis/constants";
+import constants, { OrthoViews } from "oxalis/constants";
+import type { Vector2, Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import Model from "oxalis/model";
 
 const Flycam2dConstants = {
@@ -30,7 +30,7 @@ class Flycam2d {
   maxZoomStepDiff: number;
   zoomStep: number;
   integerZoomStep: number;
-  buffer: Array<Array<number>>
+  buffer: OrthoViewMapType<Vector2>;
   position: Vector3;
   direction: Vector3;
   rayThreshold: Vector4;
@@ -57,7 +57,12 @@ class Flycam2d {
     this.integerZoomStep = 0;
     // buffer: how many pixels is the texture larger than the canvas on each dimension?
     // --> two dimensional array with buffer[planeID][dimension], dimension: x->0, y->1
-    this.buffer = [[0, 0], [0, 0], [0, 0]];
+    this.buffer = {
+      [OrthoViews.PLANE_XY]: [0, 0],
+      [OrthoViews.PLANE_XZ]: [0, 0],
+      [OrthoViews.PLANE_YZ]: [0, 0],
+      [OrthoViews.TDView]: [0, 0],
+    };
     this.position = [0, 0, 0];
     this.direction = [0, 0, 1];
     this.voxelPerPixel3DView = 100;
@@ -145,12 +150,14 @@ class Flycam2d {
   calculateBuffer(): void {
     let pixelNeeded;
     let scaleArray;
-    return [0, 1, 2].forEach((planeID) => {
+    for (const planeID of Object.keys(OrthoViews)) {
       scaleArray = Dimensions.transDim(scaleInfo.baseVoxelFactors, planeID);
       pixelNeeded = this.viewportWidth * this.getTextureScalingFactor();
-      this.buffer[planeID] = [constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[0]),
-        constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[1])];
-    });
+      this.buffer[planeID] = [
+        constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[0]),
+        constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[1]),
+      ];
+    }
   }
 
 
@@ -208,17 +215,17 @@ class Flycam2d {
   }
 
 
-  getRotation(planeID: PlaneType): Vector3 {
+  getRotation(planeID: OrthoViewType): Vector3 {
     switch (planeID) {
-      case constants.PLANE_YZ: return [0, 270, 0];
-      case constants.PLANE_XZ: return [90, 0, 0];
+      case OrthoViews.PLANE_YZ: return [0, 270, 0];
+      case OrthoViews.PLANE_XZ: return [90, 0, 0];
       default:
-      case constants.PLANE_XY: return [0, 0, 0];
+      case OrthoViews.PLANE_XY: return [0, 0, 0];
     }
   }
 
 
-  move(p: Vector3, planeID: PlaneType): void {
+  move(p: Vector3, planeID: ?OrthoViewType): void {
     // move by whatever is stored in p
 
     // if planeID is given, use it to manipulate z
@@ -230,7 +237,7 @@ class Flycam2d {
   }
 
 
-  movePlane(vector: Vector3, planeID: PlaneType, increaseSpeedWithZoom: boolean = true) {
+  movePlane(vector: Vector3, planeID: OrthoViewType, increaseSpeedWithZoom: boolean = true) {
     // vector of voxels in BaseVoxels
     vector = Dimensions.transDim(vector, planeID);
     const zoomFactor = increaseSpeedWithZoom ? Math.pow(2, this.zoomStep) : 1;
@@ -268,7 +275,7 @@ class Flycam2d {
   }
 
 
-  getTexturePosition(planeID: PlaneType): Vector3 {
+  getTexturePosition(planeID: OrthoViewType): Vector3 {
     const texturePosition = this.position.slice();    // copy that position
     // As the Model does not render textures for exact positions, the last 5 bits of
     // the X and Y coordinates for each texture have to be set to 0
@@ -300,7 +307,7 @@ class Flycam2d {
   }
 
 
-  needsUpdate(planeID: PlaneType): boolean {
+  needsUpdate(planeID: OrthoViewType): boolean {
     const area = this.getArea(planeID);
     // const ind = Dimensions.getIndices(planeID);
     const res = ((area[0] < 0) || (area[1] < 0) || (area[2] > constants.TEXTURE_WIDTH) || (area[3] > constants.TEXTURE_WIDTH) ||
@@ -311,7 +318,7 @@ class Flycam2d {
   }
 
 
-  getOffsets(planeID: PlaneType): Vector2 {
+  getOffsets(planeID: OrthoViewType): Vector2 {
     // return the coordinate of the upper left corner of the viewport as texture-relative coordinate
 
     const ind = Dimensions.getIndices(planeID);
@@ -320,7 +327,7 @@ class Flycam2d {
   }
 
 
-  getArea(planeID: PlaneType): Vector4 {
+  getArea(planeID: OrthoViewType): Vector4 {
     // returns [left, top, right, bottom] array
 
     // convert scale vector to array in order to be able to use getIndices()
@@ -333,12 +340,12 @@ class Flycam2d {
   }
 
 
-  getAreas(): [Vector4, Vector4, Vector4] {
-    return [
-      this.getArea(0),
-      this.getArea(1),
-      this.getArea(2),
-    ];
+  getAreas(): OrthoViewMapType<Vector4> {
+    return {
+      [OrthoViews.PLANE_XY]: this.getArea(OrthoViews.PLANE_XY),
+      [OrthoViews.PLANE_XZ]: this.getArea(OrthoViews.PLANE_XZ),
+      [OrthoViews.PLANE_YZ]: this.getArea(OrthoViews.PLANE_YZ),
+    };
   }
 
 
@@ -347,9 +354,9 @@ class Flycam2d {
   }
 
 
-  getRayThreshold(planeID: PlaneType): number {
+  getRayThreshold(planeID: OrthoViewType): number {
     // Voxel threshold used for ray tracing
-    if (planeID < 3) {
+    if (planeID !== OrthoViews.TDView) {
       return Flycam2dConstants.PIXEL_RAY_THRESHOLD * Math.pow(2, this.zoomStep);
     } else {
       return Flycam2dConstants.PIXEL_RAY_THRESHOLD * this.voxelPerPixel3DView;

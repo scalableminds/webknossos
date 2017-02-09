@@ -12,9 +12,28 @@ import type { Vector3 } from "oxalis/constants";
 // trying to access "zoomStep" or "isTemporalData" of an Uint8Array.
 // When we flowed everything we can refactor all occurences of BucketData into
 // composition.
-class BucketData extends Uint8Array {
-  zoomStep: number;
-  isTemporalData: boolean;
+class ArbitraryBucketData {
+  data: Uint8Array;
+  zoomStep: number = 0;
+  isTemporalData: boolean = false;
+
+  static withLength(dataLength: number): ArbitraryBucketData {
+    return new ArbitraryBucketData(new Uint8Array(dataLength));
+  }
+
+  constructor(data: Uint8Array) {
+    this.data = data;
+  }
+
+  fill(value: number): void {
+    if (this.data.fill != null) {
+      this.data.fill(value);
+    } else {
+      for (let i = 0; i < this.data.length; i++) {
+        this.data[i] = value;
+      }
+    }
+  }
 }
 
 const ARBITRARY_MAX_ZOOMSTEP = 2;
@@ -27,7 +46,7 @@ class ArbitraryCubeAdapter {
   sizeZYX: number;
   sizeZY: number;
   sizeZ: number;
-  NOT_LOADED_BUCKET_DATA: BucketData;
+  NOT_LOADED_BUCKET_DATA: ArbitraryBucketData;
   getBucket = _.memoize(this.getBucketImpl);
 
   constructor(cube: DataCube, boundary: Vector3) {
@@ -37,10 +56,8 @@ class ArbitraryCubeAdapter {
     this.sizeZY = this.boundary[1] * this.boundary[2];
     this.sizeZ = this.boundary[2];
 
-    this.NOT_LOADED_BUCKET_DATA = new BucketData(this.cube.BUCKET_LENGTH);
-    for (let i = 0; i < this.NOT_LOADED_BUCKET_DATA.length; i++) {
-      this.NOT_LOADED_BUCKET_DATA[i] = NOT_LOADED_BUCKET_INTENSITY;
-    }
+    this.NOT_LOADED_BUCKET_DATA = ArbitraryBucketData.withLength(this.cube.BUCKET_LENGTH);
+    this.NOT_LOADED_BUCKET_DATA.fill(NOT_LOADED_BUCKET_INTENSITY);
     this.NOT_LOADED_BUCKET_DATA.zoomStep = 0;
     this.NOT_LOADED_BUCKET_DATA.isTemporalData = true;
   }
@@ -55,7 +72,7 @@ class ArbitraryCubeAdapter {
     return this.getBucket.cache.clear();
   }
 
-  getBucketImpl(bucketIndex: number): ?BucketData {
+  getBucketImpl(bucketIndex: number): ?ArbitraryBucketData {
     let bucketAddress = [
       Math.floor(bucketIndex / this.sizeZY),
       Math.floor((bucketIndex % this.sizeZY) / this.sizeZ),
@@ -71,7 +88,7 @@ class ArbitraryCubeAdapter {
       }
 
       if (bucket.hasData()) {
-        const bucketData = this.cube.getBucket(bucketAddress).getData();
+        const bucketData = new ArbitraryBucketData(this.cube.getBucket(bucketAddress).getData());
         bucketData.zoomStep = zoomStep;
         return bucketData;
       }

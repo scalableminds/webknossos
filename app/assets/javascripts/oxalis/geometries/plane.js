@@ -1,6 +1,6 @@
 /**
  * plane.js
- * @flow weak
+ * @flow
  */
 
 import app from "app";
@@ -8,12 +8,17 @@ import scaleInfo from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Model from "oxalis/model";
 import Flycam2d from "oxalis/model/flycam2d";
-import PlaneMaterialFactory from "./materials/plane_material_factory";
-import Dimensions from "../model/dimensions";
-import constants from "../constants";
-import type { PlaneType } from "../constants";
+import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
+import Dimensions from "oxalis/model/dimensions";
+import { OrthoViews, OrthoViewColors } from "oxalis/constants";
+import type { OrthoViewType, Vector3 } from "oxalis/constants";
 
-const CROSSHAIR_COLORS = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]];
+const CROSSHAIR_COLORS = {
+  [OrthoViews.PLANE_XY]: [0x0000ff, 0x00ff00],
+  [OrthoViews.PLANE_XZ]: [0xff0000, 0x00ff00],
+  [OrthoViews.PLANE_YZ]: [0x0000ff, 0xff0000],
+  [OrthoViews.TDView]: [0x000000, 0x000000],
+};
 const GRAY_CH_COLOR = 0x222222;
 
 class Plane {
@@ -22,7 +27,7 @@ class Plane {
 
   plane: THREE.Mesh;
   flycam: Flycam2d;
-  planeID: PlaneType;
+  planeID: OrthoViewType;
   model: Model;
   planeWidth: number;
   textureWidth: number;
@@ -31,7 +36,7 @@ class Plane {
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
 
-  constructor(planeWidth: number, textureWidth: number, flycam: Flycam2d, planeID: PlaneType, model: Model) {
+  constructor(planeWidth: number, textureWidth: number, flycam: Flycam2d, planeID: OrthoViewType, model: Model) {
     this.flycam = flycam;
     this.planeID = planeID;
     this.model = model;
@@ -49,7 +54,7 @@ class Plane {
     this.createMeshes(planeWidth, textureWidth);
   }
 
-  createMeshes(pWidth, tWidth) {
+  createMeshes(pWidth: number, tWidth: number): void {
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
     const textureMaterial = new PlaneMaterialFactory(this.model, tWidth).getMaterial();
@@ -74,29 +79,29 @@ class Plane {
     TDViewBordersGeo.vertices.push(new THREE.Vector3(pWidth / 2, pWidth / 2, 0));
     TDViewBordersGeo.vertices.push(new THREE.Vector3(pWidth / 2, -pWidth / 2, 0));
     TDViewBordersGeo.vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
-    this.TDViewBorders = new THREE.Line(TDViewBordersGeo, new THREE.LineBasicMaterial({ color: constants.PLANE_COLORS[this.planeID], linewidth: 1 }));
+    this.TDViewBorders = new THREE.Line(TDViewBordersGeo, new THREE.LineBasicMaterial({ color: OrthoViewColors[this.planeID], linewidth: 1 }));
   }
 
 
-  setDisplayCrosshair = (value) => {
+  setDisplayCrosshair = (value: boolean): void => {
     this.displayCosshair = value;
   }
 
 
-  setOriginalCrosshairColor = () => {
+  setOriginalCrosshairColor = (): void => {
     [0, 1].forEach((i) => {
       this.crosshair[i].material = new THREE.LineBasicMaterial({ color: CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 });
     });
   }
 
-  setGrayCrosshairColor = () => {
+  setGrayCrosshairColor = (): void => {
     [0, 1].forEach((i) => {
       this.crosshair[i].material = new THREE.LineBasicMaterial({ color: GRAY_CH_COLOR, linewidth: 1 });
     });
   }
 
 
-  updateTexture() {
+  updateTexture(): void {
     const area = this.flycam.getArea(this.planeID);
     if (this.model != null) {
       for (const name of Object.keys(this.model.binary)) {
@@ -114,7 +119,7 @@ class Plane {
       }
     }
 
-    return this.plane.material.setScaleParams({
+    this.plane.material.setScaleParams({
       repeat: {
         x: (area[2] - area[0]) / this.textureWidth,
         y: (area[3] - area[1]) / this.textureWidth,
@@ -127,7 +132,7 @@ class Plane {
   }
 
 
-  setScale = (factor) => {
+  setScale = (factor: number): void => {
     const scaleVec = new THREE.Vector3().multiplyVectors(new THREE.Vector3(factor, factor, factor), this.scaleVector);
     this.plane.scale.copy(scaleVec);
     this.TDViewBorders.scale.copy(scaleVec);
@@ -136,33 +141,36 @@ class Plane {
   }
 
 
-  setRotation = rotVec =>
+  setRotation = (rotVec: Vector3): void => {
     [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]]
       .map(mesh => mesh.setRotationFromEuler(rotVec));
+  }
 
 
-  setPosition = (posVec) => {
+  setPosition = (posVec: Vector3): void => {
     this.TDViewBorders.position.copy(posVec);
     this.crosshair[0].position.copy(posVec);
     this.crosshair[1].position.copy(posVec);
 
     const offset = new THREE.Vector3(0, 0, 0);
-    if (this.planeID === constants.PLANE_XY) {
+    if (this.planeID === OrthoViews.PLANE_XY) {
       offset.z = 1;
-    } else if (this.planeID === constants.PLANE_YZ) {
+    } else if (this.planeID === OrthoViews.PLANE_YZ) {
       offset.x = -1;
-    } else if (this.planeID === constants.PLANE_XZ) { offset.y = -1; }
+    } else if (this.planeID === OrthoViews.PLANE_XZ) {
+      offset.y = -1;
+    }
     this.plane.position.copy(offset.addVectors(posVec, offset));
   }
 
 
-  setVisible = (visible) => {
+  setVisible = (visible: boolean): void => {
     this.plane.visible = this.TDViewBorders.visible = visible;
     this.crosshair[0].visible = this.crosshair[1].visible = visible && this.displayCosshair;
   }
 
 
-  setSegmentationAlpha(alpha) {
+  setSegmentationAlpha(alpha: number): void {
     this.plane.material.setSegmentationAlpha(alpha);
     app.vent.trigger("rerender");
   }
@@ -171,7 +179,7 @@ class Plane {
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]]
 
 
-  setLinearInterpolationEnabled = (enabled) => {
+  setLinearInterpolationEnabled = (enabled: boolean) => {
     this.plane.material.setColorInterpolation(
       enabled ? THREE.LinearFilter : THREE.NearestFilter,
     );

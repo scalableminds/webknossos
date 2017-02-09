@@ -11,14 +11,14 @@ import DataCube from "oxalis/model/binary/data_cube";
 import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import Plane2D from "oxalis/model/binary/plane2d";
-import PingStrategyBase, * as PingStrategy from "oxalis/model/binary/ping_strategy";
-import PingStrategy3dBase, * as PingStrategy3d from "oxalis/model/binary/ping_strategy_3d";
+import { PingStrategy, SkeletonPingStrategy, VolumePingStrategy } from "oxalis/model/binary/ping_strategy";
+import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
-import constants from "oxalis/constants";
+import { OrthoViews } from "oxalis/constants";
 import Model from "oxalis/model";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { Tracing } from "oxalis/model";
 import type Layer, { CategoryType } from "oxalis/model/binary/layers/layer";
@@ -28,8 +28,8 @@ const DIRECTION_VECTOR_SMOOTHER = 0.125;
 
 type PingOptions = {
   zoomStep: number;
-  areas: [Vector4, Vector4, Vector4];
-  activePlane: number;
+  areas: OrthoViewMapType<Vector4>;
+  activePlane: OrthoViewType;
 };
 
 class Binary {
@@ -47,14 +47,14 @@ class Binary {
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   mappings: Mappings;
-  pingStrategies: Array<PingStrategyBase>;
-  pingStrategies3d: Array<PingStrategy3dBase>;
-  planes: Array<Plane2D>;
+  pingStrategies: Array<PingStrategy>;
+  pingStrategies3d: Array<PingStrategy3d>;
+  planes: OrthoViewMapType<Plane2D>;
   direction: Vector3;
-  activeMapping: string | null;
-  lastPosition: Vector3 | null;
-  lastZoomStep: number | null;
-  lastAreas: Array<Vector4> | null;
+  activeMapping: ?string;
+  lastPosition: ?Vector3;
+  lastZoomStep: ?number;
+  lastAreas: ?OrthoViewMapType<Vector4>;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -89,17 +89,17 @@ class Binary {
     this.direction = [0, 0, 0];
 
     this.pingStrategies = [
-      new PingStrategy.Skeleton(this.cube, constants.TEXTURE_SIZE_P),
-      new PingStrategy.Volume(this.cube, constants.TEXTURE_SIZE_P),
+      new SkeletonPingStrategy(this.cube),
+      new VolumePingStrategy(this.cube),
     ];
     this.pingStrategies3d = [
-      new PingStrategy3d.DslSlow(),
+      new DslSlowPingStrategy3d(this.cube),
     ];
 
-    this.planes = [];
-    for (const planeId of constants.ALL_PLANES) {
-      this.planes.push(new Plane2D(planeId, this.cube, this.layer.bitDepth, this.targetBitDepth,
-                                32, this.category === "segmentation"));
+    this.planes = {};
+    for (const planeId of Object.keys(OrthoViews)) {
+      this.planes[planeId] = new Plane2D(planeId, this.cube,
+        this.layer.bitDepth, this.targetBitDepth, 32, this.category === "segmentation");
     }
 
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {
@@ -115,8 +115,9 @@ class Binary {
 
 
   forcePlaneRedraw(): void {
-    this.planes.forEach(plane =>
-      plane.forceRedraw());
+    for (const plane of _.values(this.planes)) {
+      plane.forceRedraw();
+    }
   }
 
 
@@ -156,7 +157,7 @@ class Binary {
     if (!_.isEqual(position, this.lastPosition) || zoomStep !== this.lastZoomStep || !_.isEqual(areas, this.lastAreas)) {
       this.lastPosition = position.slice();
       this.lastZoomStep = zoomStep;
-      this.lastAreas = areas.slice();
+      this.lastAreas = Object.assign({}, areas);
 
       for (const strategy of this.pingStrategies) {
         if (strategy.forContentType(this.tracing.contentType) && strategy.inVelocityRange(this.connectionInfo.bandwidth) && strategy.inRoundTripTimeRange(this.connectionInfo.roundTripTime)) {

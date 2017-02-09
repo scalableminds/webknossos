@@ -1,22 +1,21 @@
 /**
  * pullqueue.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import DataCube from "oxalis/model/binary/data_cube";
-import BinaryDataConnectionInfo from "../binarydata_connection_info";
-import { Bucket } from "./bucket";
-import Layer from "./layers/layer";
-import Utils from "../../../libs/utils";
-import Request from "../../../libs/request";
+import BinaryDataConnectionInfo from "oxalis/model/binarydata_connection_info";
+import Layer from "oxalis/model/binary/layers/layer";
+import type { Bucket } from "oxalis/model/binary/bucket";
+import type { Vector4 } from "oxalis/constants";
 
 type DatastoreInfoType = {
   url: string,
   typ: string,
 };
 
-type PullQueueItemType = {
+export type PullQueueItemType = {
   priority: number,
   bucket: Bucket,
 };
@@ -40,11 +39,8 @@ class PullQueue {
   connectionInfo: BinaryDataConnectionInfo;
   datastoreInfo: DatastoreInfoType;
 
-  static initClass() {
-  }
 
-
-  constructor(cube, layer, connectionInfo, datastoreInfo) {
+  constructor(cube: DataCube, layer: Layer, connectionInfo: BinaryDataConnectionInfo, datastoreInfo: DatastoreInfoType) {
     this.cube = cube;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
@@ -60,7 +56,7 @@ class PullQueue {
   }
 
 
-  pull() {
+  pull(): Array<Promise<*>> {
     // Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
     this.queue = _.filter(this.queue, item => this.cube.getOrCreateBucket(item.bucket).needsRequest(),
     );
@@ -73,12 +69,10 @@ class PullQueue {
       while (batch.length < this.BATCH_SIZE && this.queue.length) {
         const address = this.queue.shift().bucket;
         const bucket = this.cube.getOrCreateBucket(address);
-
-        // Buckets might be in the Queue multiple times
-        if (!bucket.needsRequest()) { continue; }
-
-        batch.push(address);
-        bucket.pull();
+        if (bucket.type === "data" && bucket.needsRequest()) {
+          batch.push(address);
+          bucket.pull();
+        }
       }
 
       if (batch.length > 0) {
@@ -89,77 +83,78 @@ class PullQueue {
   }
 
 
-  pullBatch(batch) {
+  async pullBatch(batch: Array<Vector4>): Promise<*> {
     // Loading a bunch of buckets
     this.batchCount++;
 
     // Measuring the time until response arrives to select appropriate preloading strategy
     const roundTripBeginTime = new Date();
 
-    return Request.always(
-      this.layer.requestFromStore(batch).then((responseBuffer) => {
-        let bucketData;
-        this.connectionInfo.log(this.layer.name, roundTripBeginTime, batch.length, responseBuffer.length);
+    try {
+      const responseBuffer = await this.layer.requestFromStore(batch);
+      let bucketData;
+      this.connectionInfo.log(this.layer.name, roundTripBeginTime, batch.length, responseBuffer.length);
 
-        let offset = 0;
-        for (const bucket of batch) {
-          bucketData = responseBuffer.subarray(offset, offset += this.cube.BUCKET_LENGTH);
-          this.cube.boundingBox.removeOutsideArea(bucket, bucketData);
-          this.maybeWhitenEmptyBucket(bucketData);
-          this.cube.getBucket(bucket).receiveData(bucketData);
+      let offset = 0;
+      for (const bucketAddress of batch) {
+        bucketData = responseBuffer.subarray(offset, offset += this.cube.BUCKET_LENGTH);
+        this.cube.boundingBox.removeOutsideArea(bucketAddress, bucketData);
+        this.maybeWhitenEmptyBucket(bucketData);
+        const bucket = this.cube.getBucket(bucketAddress);
+        if (bucket.type === "data") {
+          bucket.receiveData(bucketData);
         }
-      },
-      ).catch((error) => {
-        for (const bucketAddress of batch) {
-          const bucket = this.cube.getBucket(bucketAddress);
+      }
+    } catch (error) {
+      for (const bucketAddress of batch) {
+        const bucket = this.cube.getBucket(bucketAddress);
+        if (bucket.type === "data") {
           bucket.pullFailed();
           if (bucket.dirty) {
             this.add({ bucket: bucketAddress, priority: PullQueueConstants.PRIORITY_HIGHEST });
           }
         }
-
-        console.error(error);
-      },
-      ),
-      () => {
-        this.batchCount--;
-        this.pull();
-      },
-    );
+      }
+      console.error(error);
+    } finally {
+      this.batchCount--;
+      this.pull();
+    }
   }
 
 
-  clearNormalPriorities() {
+  clearNormalPriorities(): void {
     this.queue = _.filter(this.queue, e => e.priority === PullQueueConstants.PRIORITY_HIGHEST);
   }
 
 
-  add(item) {
+  add(item: PullQueueItemType): void {
     this.queue.push(item);
   }
 
 
-  addAll(items) {
+  addAll(items: Array<PullQueueItemType>): void {
     this.queue = this.queue.concat(items);
   }
 
 
-  isNDstore() {
+  isNDstore(): boolean {
     return this.datastoreInfo.typ === "ndstore";
   }
 
 
-  maybeWhitenEmptyBucket(bucketData) {
+  maybeWhitenEmptyBucket(bucketData: Uint8Array) {
     if (!this.whitenEmptyBuckets) { return; }
 
     const allZero = _.reduce(bucketData, ((res, e) => res && e === 0), true);
 
     if (allZero) {
-      Utils.__range__(0, bucketData.length, false).forEach((i) => { bucketData[i] = 255; });
+      for (let i = 0; i < bucketData.length; i++) {
+        bucketData[i] = 255;
+      }
     }
   }
 }
-PullQueue.initClass();
 
 
 export default PullQueue;

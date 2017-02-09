@@ -3,6 +3,8 @@ import $ from "jquery";
 import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Backbone from "backbone";
+import Store from "oxalis/store";
+import { updateUserSettingsAction } from "oxalis/model/actions/settings_actions";
 import ListTreeItemView from "./list_tree_item_view";
 
 class ListTreeView extends Marionette.CompositeView {
@@ -133,7 +135,8 @@ class ListTreeView extends Marionette.CompositeView {
 
   sortTrees(evt) {
     evt.preventDefault();
-    this.model.user.set("sortTreesByName", ($(evt.currentTarget).data("sort") === "name"));
+    const shouldSortTreesByName = $(evt.currentTarget).data("sort") === "name";
+    Store.dispatch(updateUserSettingsAction("sortTreesByName", shouldSortTreesByName));
 
     this.refresh();
     return this.updateSortIndicator();
@@ -152,7 +155,7 @@ class ListTreeView extends Marionette.CompositeView {
 
 
   updateSortIndicator() {
-    const isSortedByName = this.model.user.get("sortTreesByName");
+    const isSortedByName = Store.getState().userConfiguration.sortTreesByName;
     this.ui.sortNameIcon.toggle(isSortedByName);
     return this.ui.sortTimeIcon.toggle(!isSortedByName);
   }

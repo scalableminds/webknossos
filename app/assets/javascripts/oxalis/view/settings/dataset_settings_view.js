@@ -26,11 +26,10 @@ class DatasetSettings extends Component {
         <NumberSliderSetting label="Brightness" min={-255} max={255} step={5} value={layer.brightness} onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")} />
         <NumberSliderSetting label="Contrast" min={0.5} max={5} step={0.1} value={layer.contrast} onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")} />
       </div>
-    )
+    );
   }
 
   render() {
-
     const colorSettings = this.props.dataLayerNames.map(this.getColorSettings);
 
     return (

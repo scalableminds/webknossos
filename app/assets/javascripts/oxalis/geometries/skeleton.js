@@ -2,6 +2,7 @@ import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
+import Store from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import constants from "../constants";
 import Tree from "./tree";
@@ -44,11 +45,11 @@ class Skeleton {
     this.listenTo(this.skeletonTracing, "newTreeColor", this.updateTreeColor);
     this.listenTo(this.skeletonTracing, "reloadTrees", this.loadSkeletonFromModel);
 
-    this.listenTo(this.model.user, "change:particleSize", this.setParticleSize);
-    this.listenTo(this.model.user, "change:overrideNodeRadius", () => (
-      _.map(this.treeGeometries, tree =>
-        tree.showRadius(!this.model.user.get("overrideNodeRadius")))),
-    );
+    Store.subscribe(() => {
+      const { overrideNodeRadius, setParticleSize } = Store.getState().userConfiguration;
+      this.setParticleSize(setParticleSize);
+      _.map(this.treeGeometries, tree => tree.showRadius(!overrideNodeRadius));
+    });
   }
 
   createNewTree(treeId, treeColor) {
@@ -223,8 +224,7 @@ class Skeleton {
 
   updateForCam(id) {
     for (const tree of _.values(this.treeGeometries)) {
-      tree.showRadius(id !== constants.TDView &&
-        !this.model.user.get("overrideNodeRadius"));
+      tree.showRadius(id !== constants.TDView && !Store.getState().userConfiguration.overrideNodeRadius);
     }
 
     if (constants.ALL_PLANES.includes(id)) {

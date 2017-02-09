@@ -1,6 +1,7 @@
 import app from "app";
 import Backbone from "backbone";
 import _ from "lodash";
+import Store from "oxalis/store";
 import Utils from "libs/utils";
 import ColorGenerator from "libs/color_generator";
 import TracePoint from "./tracepoint";
@@ -21,10 +22,9 @@ class SkeletonTracing {
     this.prototype.firstEdgeDirection = null;
   }
 
-  constructor(tracing, flycam, flycam3d, user) {
+  constructor(tracing, flycam, flycam3d) {
     this.flycam = flycam;
     this.flycam3d = flycam3d;
-    this.user = user;
     _.extend(this, Backbone.Events);
 
     this.doubleBranchPop = false;
@@ -372,7 +372,7 @@ class SkeletonTracing {
 
   selectNextTree(forward) {
     let i;
-    const trees = this.getTreesSorted(this.user.get("sortTreesByName"));
+    const trees = this.getTreesSorted(Store.getState().userConfiguration.sortTreesByName);
     for (i of Utils.__range__(0, trees.length, false)) {
       if (this.activeTree.treeId === trees[i].treeId) {
         break;
@@ -653,7 +653,7 @@ class SkeletonTracing {
 
 
   getTreesSorted() {
-    if (this.user.get("sortTreesByName")) {
+    if (Store.getState().userConfiguration.sortTreesByName) {
       return this.getTreesSortedBy("name");
     } else {
       return this.getTreesSortedBy("timestamp");

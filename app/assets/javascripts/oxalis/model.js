@@ -7,7 +7,7 @@ import Backbone from "backbone";
 import _ from "lodash";
 import app from "app";
 import Store from "oxalis/store";
-import { setDatasetAction } from "oxalis/model/actions/settings_actions";
+import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Utils from "../libs/utils";
 import Binary from "./model/binary";
 import SkeletonTracing from "./model/skeletontracing/skeletontracing";
@@ -71,6 +71,7 @@ type Tracing = {
   tracingTime: number,
   typ: string,
   version: number,
+  user: any,
 };
 
 class Model extends Backbone.Model {
@@ -185,7 +186,7 @@ class Model extends Backbone.Model {
       }
     })();
 
-    const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataset.name, dataStore));
+    const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataStore));
 
     ErrorHandling.assertExtendContext({
       task: this.get("tracingId"),
@@ -193,7 +194,6 @@ class Model extends Backbone.Model {
     });
 
     console.log("tracing", tracing);
-    console.log("user", this.user);
 
     const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
     app.scaleInfo = new ScaleInfo(dataset.scale);
@@ -235,7 +235,7 @@ class Model extends Backbone.Model {
         this.set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, this.getSegmentationBinary()));
         this.annotationModel = this.get("volumeTracing");
       } else {
-        this.set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, this.user));
+        this.set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d));
         this.annotationModel = this.get("skeletonTracing");
       }
     }
@@ -316,7 +316,7 @@ class Model extends Backbone.Model {
   getLayerInfos(userLayers) {
     // Overwrite or extend layers with userLayers
 
-    const layers = Store.getSate().dataset.dataLayers;
+    const layers = Store.getState().dataset.dataLayers;
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {
@@ -396,7 +396,7 @@ class Model extends Backbone.Model {
   applyState(state, tracing) {
     this.get("flycam").setPosition(state.position || tracing.content.editPosition);
     if (state.zoomStep != null) {
-      this.get("user").set("zoom", Math.exp(Math.LN2 * state.zoomStep));
+      Store.dispatch(updateUserSettingAction("zoom", Math.exp(Math.LN2 * state.zoomStep)));
       this.get("flycam3d").setZoomStep(state.zoomStep);
     }
 

@@ -189,7 +189,8 @@ class SkeletonTracingPlaneController extends PlaneController {
     this.addNode(position, rotation, !ctrlPressed);
 
     // Strg + Rightclick to set new not active branchpoint
-    if (ctrlPressed && !this.model.user.get("newNodeNewTree")) {
+    const newNodeNewTree = Store.getState().userConfiguration.newNodeNewTree;
+    if (ctrlPressed && !newNodeNewTree) {
       this.model.skeletonTracing.pushBranch();
       this.skeletonTracingController.setActiveNode(activeNode.id);
     }
@@ -197,7 +198,8 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   addNode = (position, rotation, centered) => {
-    if (this.model.settings.somaClickingAllowed && this.model.user.get("newNodeNewTree")) {
+    const newNodeNewTree = Store.getState().userConfiguration.newNodeNewTree;
+    if (this.model.settings.somaClickingAllowed && newNodeNewTree) {
       this.model.skeletonTracing.createNewTree();
     }
 

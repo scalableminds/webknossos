@@ -2,6 +2,7 @@ import _ from "lodash";
 import Backbone from "backbone";
 import app from "app";
 import Store from "oxalis/store";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Dimensions from "./dimensions";
 import constants from "../constants";
 
@@ -22,8 +23,6 @@ class Flycam2d {
 
     console.log("ZoomStepCount: ", this.zoomStepCount);
 
-    this.user = this.model.user;
-
     this.maxZoomStepDiff = this.calculateMaxZoomStepDiff();
     this.zoomStep = 0.0;
     this.integerZoomStep = 0;
@@ -39,11 +38,15 @@ class Flycam2d {
     this.updateStoredValues();
 
     // correct zoom values that are too high or too low
-    this.user.set("zoom", Math.max(0.01, Math.min(this.user.get("zoom"), Math.floor(this.getMaxZoomStep()))));
+    const zoom = Math.max(0.01, Math.min(Store.getState().userConfiguration.zoom, Math.floor(this.getMaxZoomStep())));
+    Store.dispatch(updateUserSettingAction("zoom", zoom));
 
-    Store.subscribe(() => { this.setQuality(Store.getState().datasetConfiguration.quality); });
+    Store.subscribe(() => {
+      debugger
+      this.setQuality(Store.getState().datasetConfiguration.quality);
     // TODO move zoom into tracing settings
-    this.listenTo(this.user, "change:zoom", function (userModel, zoomFactor) { return this.zoom(Math.log(zoomFactor) / Math.LN2); });
+      this.zoom(Math.log(Store.getState().userConfiguration.zoomFactor) / Math.LN2);
+    });
 
     // Fire changed event every time
     const trigger = this.trigger;
@@ -158,7 +161,7 @@ class Flycam2d {
 
   setDirection(direction) {
     this.direction = direction;
-    if (this.user.get("dynamicSpaceDirection")) {
+    if (Store.getState().userConfiguration.dynamicSpaceDirection) {
       this.setSpaceDirection(direction);
     }
   }

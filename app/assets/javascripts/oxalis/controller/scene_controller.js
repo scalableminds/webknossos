@@ -311,15 +311,15 @@ class SceneController {
 
 
   bindToEvents() {
-    const { user } = this.model;
-    this.listenTo(this.model, "change:userBoundingBox", function (bb) { this.setUserBoundingBox(bb); });
-    this.listenTo(user, "change:segmentationOpacity", function (model, opacity) {
-      this.setSegmentationAlpha(opacity);
+    Store.subscribe(() => {
+      const { segmentationOpacity, clippingDistance, displayCrosshair, tdViewDisplayPlanes } = Store.getState().userConfiguration;
+      this.setSegmentationAlpha(segmentationOpacity);
+      this.setClippingDistance(clippingDistance);
+      this.setDisplayCrosshair(displayCrosshair);
+      this.setDisplayPlanes(tdViewDisplayPlanes);
+      this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
     });
-    this.listenTo(user, "change:clippingDistance", function (model, value) { this.setClippingDistance(value); });
-    this.listenTo(user, "change:displayCrosshair", function (model, value) { this.setDisplayCrosshair(value); });
-    Store.subscribe(() => { this.setInterpolation(Store.getState().datasetConfiguration.interpolation); });
-    this.listenTo(user, "change:tdViewDisplayPlanes", function (model, value) { this.setDisplayPlanes(value); });
+    this.listenTo(this.model, "change:userBoundingBox", function (bb) { this.setUserBoundingBox(bb); });
   }
 }
 SceneController.initClass();

@@ -7,7 +7,7 @@ import _ from "lodash";
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { Collapse } from "antd";
-import { updateSettingAction } from "oxalis/model/actions/settings_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { deleteActiveNodeAction } from "oxalis/model/actions/skeleton_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, ButtonSetting, BoundingBoxSetting } from "./setting_input_views";
 
@@ -44,7 +44,7 @@ const mapStateToProps = state => (
 );
 
 const mapDispatchToProps = dispatch => ({
-  onChange(propertyName, value) { dispatch(updateSettingAction(propertyName, value)); },
+  onChange(propertyName, value) { dispatch(updateUserSettingAction(propertyName, value)); },
   handleDeleteActiveNode() { dispatch(deleteActiveNodeAction); },
 });
 

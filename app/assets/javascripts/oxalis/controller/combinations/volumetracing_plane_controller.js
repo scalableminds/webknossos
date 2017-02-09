@@ -4,7 +4,9 @@
  */
 
 import _ from "lodash";
+import Store from "oxalis/store";
 import Constants from "oxalis/constants";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import PlaneController from "../viewmodes/plane_controller";
 
@@ -27,9 +29,9 @@ class VolumeTracingPlaneController extends PlaneController {
     this.listenTo(this.model.flycam, "zoomStepChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()),
     );
 
-    this.listenTo(this.model.user, "change:isosurfaceDisplay", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "change:isosurfaceBBsize", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "change:isosurfaceResolution", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    Store.subscribe(() => {
+      this.render3dCell(this.model.volumeTracing.getActiveCellId());
+    });
     this.listenTo(this.model.volumeTracing, "newActiveCell", function (id) {
       id = this.model.volumeTracing.getActiveCellId();
       if (id > 0) {
@@ -75,13 +77,15 @@ class VolumeTracingPlaneController extends PlaneController {
 
 
   getPlaneMouseControls(planeId) {
+    const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+    const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
     return _.extend(super.getPlaneMouseControls(planeId), {
 
       leftDownMove: (delta, pos) => {
         if (this.model.volumeTracing.mode === Constants.VOLUME_MODE_MOVE) {
           this.move([
-            (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
-            (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
+            (delta.x * mouseInversionX) / this.planeView.scaleFactor,
+            (delta.y * mouseInversionY) / this.planeView.scaleFactor,
             0,
           ]);
         }
@@ -125,8 +129,8 @@ class VolumeTracingPlaneController extends PlaneController {
 
 
   adjustSegmentationOpacity() {
-    if (this.model.user.get("segmentationOpacity") < 10) {
-      this.model.user.set("segmentationOpacity", 50);
+    if (Store.getState().userConfiguration.segmentationOpacity < 10) {
+      Store.dispatch(updateUserSettingAction("segmentationOpacity", 50));
     }
   }
 
@@ -139,17 +143,17 @@ class VolumeTracingPlaneController extends PlaneController {
 
 
   render3dCell(id) {
-    if (!this.model.user.get("isosurfaceDisplay")) {
+    if (!Store.getState().userConfiguration.isosurfaceDisplay) {
       this.sceneController.removeShapes();
       return;
     }
     const bb = this.model.flycam.getViewportBoundingBox();
-    const res = this.model.user.get("isosurfaceResolution");
+    const res = Store.getState().userConfiguration.isosurfaceResolution;
     this.sceneController.showShapes(this.scaleIsosurfaceBB(bb), res, id);
   }
 
   scaleIsosurfaceBB(bb) {
-    const factor = this.model.user.get("isosurfaceBBsize");
+    const factor = Store.getState().userConfiguration.isosurfaceBBsize;
     for (let i = 0; i <= 2; i++) {
       const width = bb.max[i] - bb.min[i];
       const diff = ((factor - 1) * width) / 2;

@@ -2,6 +2,7 @@ import _ from "lodash";
 import $ from "jquery";
 import app from "app";
 import Marionette from "backbone.marionette";
+import Store from "oxalis/store";
 import AbstractTreeRenderer from "oxalis/view/skeletontracing/abstract_tree_renderer";
 
 
@@ -22,7 +23,7 @@ class AbstractTreeView extends Marionette.View {
   initialize() {
     this.listenTo(app.vent, "planes:resize", this.resize);
     this.listenTo(app.vent, "view:setTheme", this.drawTree);
-    this.listenTo(this.model.user, "change:renderComments", this.drawTree);
+    Store.subscribe(this.drawTree);
 
     this.listenTo(this.model.skeletonTracing, "newActiveNode", this.drawTree);
     this.listenTo(this.model.skeletonTracing, "newActiveTree", this.drawTree);
@@ -56,7 +57,7 @@ class AbstractTreeView extends Marionette.View {
 
   drawTree() {
     if (this.model.skeletonTracing && this.abstractTreeRenderer) {
-      this.abstractTreeRenderer.renderComments(this.model.user.get("renderComments"));
+      this.abstractTreeRenderer.renderComments(Store.getState().userConfiguration.renderComments);
       this.abstractTreeRenderer.drawTree(
         this.model.skeletonTracing.getTree(),
         this.model.skeletonTracing.getActiveNodeId());

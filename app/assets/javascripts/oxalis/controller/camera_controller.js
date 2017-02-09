@@ -10,6 +10,7 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import Flycam2d from "oxalis/model/flycam2d";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import Dimensions from "../model/dimensions";
 import constants from "../constants";
@@ -314,7 +315,8 @@ class CameraController {
 
   updateCamViewport() {
     const scaleFactor = app.scaleInfo.baseVoxel;
-    const boundary = (constants.VIEWPORT_WIDTH / 2) * this.model.user.get("zoom");
+    const zoom = Store.getState().userConfiguration.zoom;
+    const boundary = (constants.VIEWPORT_WIDTH / 2) * zoom;
     for (const i of [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]) {
       this.cameras[i].near = -this.camDistance;
       this.cameras[i].left = this.cameras[i].bottom = -boundary * scaleFactor;
@@ -326,8 +328,10 @@ class CameraController {
 
 
   bindToEvents() {
-    this.listenTo(this.model.user, "change:clippingDistance", function (model, value) { return this.setClippingDistance(value); });
-    this.listenTo(this.model.user, "change:zoom", function () { return this.updateCamViewport(); });
+    Store.subscribe(() => {
+      this.setClippingDistance(Store.getState().userConfiguration.zoom);
+      this.updateCamViewport();
+    });
   }
 }
 

@@ -7,7 +7,7 @@ import _ from "lodash";
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { Collapse } from "antd";
-import { updateSettingAction } from "oxalis/model/actions/settings_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { SwitchSetting, NumberSliderSetting } from "./setting_input_views";
 
 const Panel = Collapse.Panel;
@@ -46,7 +46,7 @@ const mapStateToProps = state => (
 );
 
 const mapDispatchToProps = dispatch => ({
-  onChange(propertyName, value) { dispatch(updateSettingAction(propertyName, value)); },
+  onChange(propertyName, value) { dispatch(updateUserSettingAction(propertyName, value)); },
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(UserSettingsView);

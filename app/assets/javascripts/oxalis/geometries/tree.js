@@ -4,6 +4,7 @@ import ResizableBuffer from "libs/resizable_buffer";
 import ErrorHandling from "libs/error_handling";
 import * as THREE from "three";
 import TWEEN from "tween.js";
+import Store from "oxalis/store";
 import ParticleMaterialFactory from "./materials/particle_material_factory";
 
 class Tree {
@@ -349,7 +350,7 @@ class Tree {
 
 
   getLineWidth() {
-    return this.model.user.get("particleSize") / 4;
+    return Store.getState().userConfiguration.particleSize / 4;
   }
 
 

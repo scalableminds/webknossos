@@ -12,7 +12,9 @@ import Input from "libs/input";
 import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import View from "oxalis/view";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import Flycam2d from "oxalis/model/flycam2d";
 import type { Vector3, ViewType } from "oxalis/constants";
@@ -106,8 +108,6 @@ class PlaneController {
       this.planeView.addGeometry(mesh);
     }
 
-    this.model.user.triggerAll();
-
     this.initTrackballControls();
     this.bindToEvents();
     this.stop();
@@ -138,11 +138,14 @@ class PlaneController {
 
 
   getPlaneMouseControls(planeId) {
+    const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+    const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
+
     return {
 
       leftDownMove: delta => this.move([
-        (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
-        (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
+        (delta.x * mouseInversionX) / this.planeView.scaleFactor,
+        (delta.y * mouseInversionY) / this.planeView.scaleFactor,
         0,
       ]),
 
@@ -204,16 +207,17 @@ class PlaneController {
 
     const getMoveValue = (timeFactor) => {
       if (([0, 1, 2]).includes(this.activeViewport)) {
-        return (this.model.user.get("moveValue") * timeFactor) / app.scaleInfo.baseVoxel / constants.FPS;
+        return (Store.getState().userConfiguration.moveValue * timeFactor) / app.scaleInfo.baseVoxel / constants.FPS;
       }
       return (constants.TDView_MOVE_SPEED * timeFactor) / constants.FPS;
     };
 
+    const scaleValue = Store.getState().userConfiguration.scaleValue;
     this.input.keyboard = new Input.Keyboard({
 
       // ScaleTrianglesPlane
-      l: timeFactor => this.scaleTrianglesPlane(-this.model.user.get("scaleValue") * timeFactor),
-      k: timeFactor => this.scaleTrianglesPlane(this.model.user.get("scaleValue") * timeFactor),
+      l: timeFactor => this.scaleTrianglesPlane(-scaleValue * timeFactor),
+      k: timeFactor => this.scaleTrianglesPlane(scaleValue * timeFactor),
 
       // Move
       left: timeFactor => this.moveX(-getMoveValue(timeFactor)),
@@ -236,10 +240,8 @@ class PlaneController {
       d: (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
     }
 
-    , this.model.user.get("keyboardDelay"),
+    , Store.getState().userConfiguration.keyboardDelay,
     );
-
-    this.listenTo(this.model.user, "change:keyboardDelay", function (model, value) { this.input.keyboardLoopDelayed.delay = value; });
 
     this.input.keyboardNoLoop = new Input.KeyboardNoLoop(this.getKeyboardControls());
   }
@@ -259,8 +261,9 @@ class PlaneController {
 
 
   init() {
-    this.cameraController.setClippingDistance(this.model.user.get("clippingDistance"));
-    this.sceneController.setClippingDistance(this.model.user.get("clippingDistance"));
+    const clippingDistance = Store.getState().userConfiguration.clippingDistance;
+    this.cameraController.setClippingDistance(clippingDistance);
+    this.sceneController.setClippingDistance(clippingDistance);
   }
 
 
@@ -379,7 +382,7 @@ class PlaneController {
     }
 
     this.flycam.zoomByDelta(value);
-    this.model.user.set("zoom", this.flycam.getPlaneScalingFactor());
+    Store.dispatch(updateUserSettingAction("zoom", this.flycam.getPlaneScalingFactor()));
 
     if (zoomToMouse) {
       this.finishZoom();
@@ -398,8 +401,11 @@ class PlaneController {
 
 
   moveTDView(delta) {
-    this.cameraController.moveTDViewX(delta.x * this.model.user.getMouseInversionX());
-    this.cameraController.moveTDViewY(delta.y * this.model.user.getMouseInversionY());
+    const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+    const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
+
+    this.cameraController.moveTDViewX(delta.x * mouseInversionX);
+    this.cameraController.moveTDViewY(delta.y * mouseInversionY);
   }
 
 
@@ -427,20 +433,20 @@ class PlaneController {
 
 
   changeMoveValue(delta) {
-    let moveValue = this.model.user.get("moveValue") + delta;
+    let moveValue = Store.getState().userConfiguration.moveValue + delta;
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
-    this.model.user.set("moveValue", (Number)(moveValue));
+    Store.dispatch(updateUserSettingAction("moveValue", moveValue));
   }
 
 
   scaleTrianglesPlane(delta) {
-    let scale = this.model.user.get("scale") + delta;
+    let scale = Store.getState().userConfiguration.scale + delta;
     scale = Math.min(constants.MAX_SCALE, scale);
     scale = Math.max(constants.MIN_SCALE, scale);
 
-    this.model.user.set("scale", scale);
+    Store.dispatch(updateUserSettingAction("scale", scale));
   }
 
 

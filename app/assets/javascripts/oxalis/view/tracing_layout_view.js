@@ -9,7 +9,6 @@ import store from "oxalis/store";
 import OxalisController from "oxalis/controller";
 import OxalisModel from "oxalis/model";
 import Constants from "oxalis/constants";
-import BackboneToOxalisAdapterModel from "oxalis/model/settings/backbone_to_oxalis_adapter_model";
 import Modal from "oxalis/view/modal";
 import Utils from "libs/utils";
 import ActionBarView from "./action_bar_view";
@@ -91,7 +90,7 @@ class TracingLayoutView extends Marionette.View {
     );
 
     this.model = this.options.model;
-    this.options.adapterModel = new BackboneToOxalisAdapterModel(this.model);
+    //this.options.adapterModel = new BackboneToOxalisAdapterModel(this.model);
 
     this.listenTo(this, "render", this.afterRender);
     this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
@@ -182,17 +181,17 @@ class TracingLayoutView extends Marionette.View {
   renderSettings() {
     // This method will be invoked again once the model is initialized as part of
     // the "sync" event callback.
-    let settingsTabView;
-    if (!this.model.initialized) { return; }
+    // let settingsTabView;
+    // if (!this.model.initialized) { return; }
 
-    if (this.isSkeletonMode()) {
-      const SettingsTabClass = this.isArbitraryMode() ? SkeletonArbitraryTabView : SkeletonPlaneTabView;
-      settingsTabView = new SettingsTabClass(this.options);
-    } else if (this.isVolumeMode()) {
-      settingsTabView = new VolumeTabView(this.options);
-    } else {
-      settingsTabView = new ViewmodeTabView(this.options);
-    }
+    // if (this.isSkeletonMode()) {
+    //   const SettingsTabClass = this.isArbitraryMode() ? SkeletonArbitraryTabView : SkeletonPlaneTabView;
+    //   settingsTabView = new SettingsTabClass(this.options);
+    // } else if (this.isVolumeMode()) {
+    //   settingsTabView = new VolumeTabView(this.options);
+    // } else {
+    //   settingsTabView = new ViewmodeTabView(this.options);
+    // }
 
     render(
       <Provider store={store}>

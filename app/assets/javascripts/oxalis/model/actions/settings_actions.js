@@ -20,7 +20,7 @@ export type SettingActionTypes = (
   UpdateLayerSettingActionType
 );
 
-export const updateSettingAction = (propertyName: string, value: any): UpdateUserSettingActionType => ({
+export const updateUserSettingAction = (propertyName: string, value: any): UpdateUserSettingActionType => ({
   type: "UPDATE_USER_SETTING",
   propertyName,
   value,

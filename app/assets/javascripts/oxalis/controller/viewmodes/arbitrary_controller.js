@@ -16,6 +16,7 @@ import type { ModeType } from "oxalis/constants";
 import Model from "oxalis/model";
 import View from "oxalis/view";
 import Store from "oxalis/store";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import Flycam3d from "oxalis/model/flycam3d";
@@ -102,11 +103,11 @@ class ArbitraryController {
 
     this.input = _.extend({}, this.input);
 
-    this.crosshair = new Crosshair(this.cam, this.model.user.get("crosshairSize"));
+    this.crosshair = new Crosshair(this.cam, Store.getState().userConfiguration.crosshairSize);
     this.arbitraryView.addGeometry(this.crosshair);
 
-    this.listenTo(this.model.user, "change:displayCrosshair", function (userModel, value) {
-      this.crosshair.setVisibility(value);
+    Store.subscribe(() => {
+      this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
     });
 
     this.bindToEvents();
@@ -114,7 +115,7 @@ class ArbitraryController {
 
     this.stop();
 
-    this.crosshair.setVisibility(this.model.user.get("displayCrosshair"));
+    this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
   }
 
 
@@ -126,16 +127,18 @@ class ArbitraryController {
 
 
   initMouse() {
+    const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+    const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
     this.input.mouse = new Input.Mouse(
       this.canvas, {
         leftDownMove: (delta) => {
           if (this.mode === constants.MODE_ARBITRARY) {
             this.cam.yaw(
-            -delta.x * this.model.user.getMouseInversionX() * this.model.user.get("mouseRotateValue"),
+            -delta.x * mouseInversionX * Store.getState().userConfiguration.mouseRotateValue,
             true,
           );
             this.cam.pitch(
-            delta.y * this.model.user.getMouseInversionY() * this.model.user.get("mouseRotateValue"),
+            delta.y * mouseInversionY * Store.getState().userConfiguration.mouseRotateValue,
             true,
           );
           } else if (this.mode === constants.MODE_ARBITRARY_PLANE) {
@@ -152,13 +155,14 @@ class ArbitraryController {
 
 
   initKeyboard() {
+    const { scaleValue, rotateValue } = Store.getState().userConfiguration.scaleValue;
     this.input.keyboard = new Input.Keyboard({
 
       // KeyboardJS is sensitive to ordering (complex combos first)
 
       // Scale plane
-      l: () => this.arbitraryView.applyScale(-this.model.user.get("scaleValue")),
-      k: () => this.arbitraryView.applyScale(this.model.user.get("scaleValue")),
+      l: () => this.arbitraryView.applyScale(-scaleValue),
+      k: () => this.arbitraryView.applyScale(scaleValue),
 
       // Move
       space: (timeFactor) => {
@@ -180,16 +184,16 @@ class ArbitraryController {
       },
 
       // Rotate at centre
-      "shift + left": timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor),
-      "shift + right": timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor),
-      "shift + up": timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor),
-      "shift + down": timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor),
+      "shift + left": timeFactor => this.cam.yaw(rotateValue * timeFactor),
+      "shift + right": timeFactor => this.cam.yaw(-rotateValue * timeFactor),
+      "shift + up": timeFactor => this.cam.pitch(rotateValue * timeFactor),
+      "shift + down": timeFactor => this.cam.pitch(-rotateValue * timeFactor),
 
       // Rotate in distance
-      left: timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      right: timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      up: timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      down: timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      left: timeFactor => this.cam.yaw(rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      right: timeFactor => this.cam.yaw(-rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      up: timeFactor => this.cam.pitch(-rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      down: timeFactor => this.cam.pitch(rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
 
       // Zoom in/out
       i: () => this.cam.zoomIn(),
@@ -265,7 +269,8 @@ class ArbitraryController {
 
 
   getVoxelOffset(timeFactor) {
-    return (this.model.user.get("moveValue3d") * timeFactor) / app.scaleInfo.baseVoxel / constants.FPS;
+    const moveValue3d = Store.getState().userConfiguration.moveValue3d;
+    return (moveValue3d * timeFactor) / app.scaleInfo.baseVoxel / constants.FPS;
   }
 
 
@@ -278,7 +283,8 @@ class ArbitraryController {
 
 
   init() {
-    this.setClippingDistance(this.model.user.get("clippingDistanceArbitrary"));
+    const clippingDistanceArbitrary = Store.getState().userConfiguration.clippingDistanceArbitrary;
+    this.setClippingDistance(clippingDistanceArbitrary);
     this.arbitraryView.applyScale(0);
   }
 
@@ -291,17 +297,12 @@ class ArbitraryController {
       this.listenTo(binary.cube, "bucketLoaded", this.arbitraryView.draw);
     }
 
-    this.listenTo(this.model.user, "change:crosshairSize", function (model, value) {
-      this.crosshair.setScale(value);
-    });
-    this.listenTo(this.model.user, { "change:sphericalCapRadius": function (model, value) {
-      this.model.flycam3d.distance = value;
+    Store.subscribe(() => {
+      const { sphericalCapRadius, clippingDistanceArbitrary } = Store.getState().userConfiguration;
+      this.crosshair.setScale(sphericalCapRadius);
+      this.model.flycam3d.distance = sphericalCapRadius;
       this.plane.setMode(this.mode);
-    },
-    },
-    );
-    this.listenTo(this.model.user, "change:clippingDistanceArbitrary", function (model, value) {
-      this.setClippingDistance(value);
+      this.setClippingDistance(clippingDistanceArbitrary);
     });
   }
 
@@ -363,20 +364,20 @@ class ArbitraryController {
 
 
   changeMoveValue(delta) {
-    let moveValue = this.model.user.get("moveValue3d") + delta;
+    let moveValue = Store.getState().userConfiguration.moveValue3d + delta;
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
-    this.model.user.set("moveValue3d", (Number)(moveValue));
+    Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
   }
 
 
   setParticleSize(delta) {
-    let particleSize = this.model.user.get("particleSize") + delta;
+    let particleSize = Store.getState().userConfiguration.particleSize + delta;
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize);
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize);
 
-    this.model.user.set("particleSize", (Number)(particleSize));
+    Store.dispatch(updateUserSettingAction("particleSize", particleSize));
   }
 
 

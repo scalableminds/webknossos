@@ -6,6 +6,7 @@
 import _ from "lodash";
 import Input from "libs/input";
 import Toast from "libs/toast";
+import Store from "oxalis/store";
 import ArbitraryController from "../viewmodes/arbitrary_controller";
 import Constants from "../../constants";
 
@@ -24,6 +25,8 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
 
   initKeyboard() {
+    const rotateValue = Store.getState().userConfiguration.rotateValue;
+
     this.input.keyboard = new Input.Keyboard({
 
       space: timeFactor => this.move(timeFactor),
@@ -33,10 +36,10 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
       o: () => this.cam.zoomOut(),
 
       // Rotate in distance
-      left: timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
-      right: timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
-      up: timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
-      down: timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
+      left: timeFactor => this.cam.yaw(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY),
+      right: timeFactor => this.cam.yaw(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY),
+      up: timeFactor => this.cam.pitch(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY),
+      down: timeFactor => this.cam.pitch(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY),
     });
 
     this.input.keyboardNoLoop = new Input.KeyboardNoLoop({

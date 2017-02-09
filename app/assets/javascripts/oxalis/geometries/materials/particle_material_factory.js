@@ -5,6 +5,7 @@
 
 import _ from "lodash";
 import app from "app";
+import Store from "oxalis/store";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
 class ParticleMaterialFactory extends AbstractMaterialFactory {
@@ -18,7 +19,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
     this.uniforms = _.extend(this.uniforms, {
       zoomFactor: {
         type: "f",
-        value: this.model.flycam.getPlaneScalingFactor(),
+        value: 1.0,
       },
       baseVoxel: {
         type: "f",
@@ -26,11 +27,11 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
       },
       particleSize: {
         type: "f",
-        value: this.model.user.get("particleSize"),
+        value: 5.0,
       },
       scale: {
         type: "f",
-        value: this.model.user.get("scale"),
+        value: 1.0,
       },
       showRadius: {
         type: "i",
@@ -54,15 +55,12 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
   setupChangeListeners() {
     super.setupChangeListeners();
 
-    this.listenTo(this.model.user, "change:particleSize", function (model, size) {
-      this.uniforms.particleSize.value = size;
-      app.vent.trigger("rerender");
-    });
-    this.listenTo(this.model.user, "change:scale", function (model, scale) {
+    Store.subscribe(() => {
+      const { particleSize, scale } = Store.getState().userConfiguration;
+      this.uniforms.particleSize.value = particleSize;
       this.uniforms.scale.value = scale;
       app.vent.trigger("rerender");
     });
-    this.listenTo(this.model.user, "change:overrideNodeRadius", () => app.vent.trigger("rerender"));
 
     this.listenTo(this.model.flycam, "zoomStepChanged", function () {
       this.uniforms.zoomFactor.value = this.model.flycam.getPlaneScalingFactor();

@@ -4,6 +4,7 @@ import Backbone from "backbone";
 import $ from "jquery";
 import TWEEN from "tween.js";
 import * as THREE from "three";
+import Store from "oxalis/store";
 import modal from "./modal";
 import Toast from "../../libs/toast";
 import constants from "../constants";
@@ -262,8 +263,10 @@ class PlaneView {
       this.listenTo(this.model.skeletonTracing, "mergeDifferentTrees", () => Toast.error("You can't merge nodes within the same tree", false));
     }
 
-    this.listenTo(this.model.user, "change:scale", function (model, scale) {
-      if (this.running) { this.scaleTrianglesPlane(scale); }
+    Store.subscribe(() => {
+      if (this.running) {
+        this.scaleTrianglesPlane(Store.getState().userConfiguration.scale);
+      }
     });
   }
 
@@ -279,7 +282,7 @@ class PlaneView {
     this.running = true;
 
     $(".inputcatcher").show();
-    this.scaleTrianglesPlane(this.model.user.get("scale"));
+    this.scaleTrianglesPlane(Store.getState().userConfiguration.scale);
 
     this.animate();
   }

@@ -8,8 +8,7 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { Collapse } from "antd";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { deleteActiveNodeAction } from "oxalis/model/actions/skeleton_actions";
-import { NumberInputSetting, SwitchSetting, NumberSliderSetting, ButtonSetting, BoundingBoxSetting } from "./setting_input_views";
+import { NumberInputSetting, SwitchSetting, NumberSliderSetting, BoundingBoxSetting } from "./setting_input_views";
 
 const Panel = Collapse.Panel;
 
@@ -38,9 +37,17 @@ class TracingSettingsView extends Component {
           <NumberSliderSetting label="Particle Size" max={20} step={0.1} value={this.props.particleSize} onChange={_.partial(this.props.onChange, "particleSize")} />
           <SwitchSetting label="Soma Clicking" value={this.props.newNodeNewTree} onChange={_.partial(this.props.onChange, "newNodeNewTree")} />
           <SwitchSetting label="Override Radius" value={this.props.overrideNodeRadius} onChange={_.partial(this.props.onChange, "overrideNodeRadius")} />
-          <ButtonSetting label="Delete Active Node" onClick={this.props.handleDeleteActiveNode} />
         </Panel>
-        <Panel header="Other" key="4">
+        <Panel header="Flight Options" key="4">
+          <NumberInputSetting label="Mouse Rotation" min={0.0001} max={0.02} step={0.001} value={this.props.mouseRotateValue} onChange={_.partial(this.props.onChange, "mouseRotateValue")} />
+          <NumberInputSetting label="Keyboard Rotation Value" min={0.001} max={0.08} step={0.001} value={this.props.activeNodeId} onChange={_.partial(this.props.onChange, "activeNodeId")} />
+          <NumberInputSetting label="Move Value (nm/s)" min={30} max={1500} step={10} value={this.props.moveValue3d} onChange={_.partial(this.props.onChange, "moveValue3d")} />
+          <NumberInputSetting label="Crosshair Size" min={0.05} max={0.5} step={0.01} value={this.props.crosshairSize} onChange={_.partial(this.props.onChange, "crosshairSize")} />
+          <NumberInputSetting label="Sphere Radius" min={50} max={500} step={1} value={this.props.sphericalCapRadius} onChange={_.partial(this.props.onChange, "sphericalCapRadius")} />
+          <NumberInputSetting label="Clipping Distance" max={127} value={this.props.clippingDistanceArbitrary} onChange={_.partial(this.props.onChange, "clippingDistanceArbitrary")} />
+          <SwitchSetting label="Show Crosshair" value={this.props.displayCrosshair} onChange={_.partial(this.props.onChange, "displayCrosshair")} />
+        </Panel>
+        <Panel header="Other" key="5">
           <BoundingBoxSetting label="Bounding Box" value={this.props.boundingBox} onChange={_.partial(this.props.onChange, "boundingBox")} />
           <SwitchSetting label="Display Planes in 3D View" value={this.props.tdViewDisplayPlanes} onChange={_.partial(this.props.onChange, "tdViewDisplayPlanes")} />
           <SwitchSetting label="Render Comments in Abstract Tree" value={this.props.renderComments} onChange={_.partial(this.props.onChange, "renderComments")} />
@@ -56,7 +63,6 @@ const mapStateToProps = state => (
 
 const mapDispatchToProps = dispatch => ({
   onChange(propertyName, value) { dispatch(updateUserSettingAction(propertyName, value)); },
-  handleDeleteActiveNode() { dispatch(deleteActiveNodeAction); },
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(TracingSettingsView);

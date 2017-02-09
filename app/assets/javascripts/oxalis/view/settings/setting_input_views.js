@@ -1,5 +1,5 @@
 import React from "react";
-import { Row, Col, Slider, InputNumber, Switch, Button, Tooltip, Input, Select } from "antd";
+import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
 import Utils from "libs/utils";
 
 export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }) {
@@ -95,16 +95,6 @@ export class BoundingBoxSetting extends React.Component {
       </Row>
     );
   }
-}
-
-export function ButtonSetting({ onClick, label }) {
-  return (
-    <Row className="settings-row">
-      <Col span={24}>
-        <Button onClick={onClick}>{label}</Button>
-      </Col>
-    </Row>
-  );
 }
 
 // export function ColorSetting({ onChange, label, value }) {

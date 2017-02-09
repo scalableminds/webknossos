@@ -23,7 +23,7 @@ class AbstractTreeView extends Marionette.View {
   initialize() {
     this.listenTo(app.vent, "planes:resize", this.resize);
     this.listenTo(app.vent, "view:setTheme", this.drawTree);
-    Store.subscribe(this.drawTree);
+    Store.subscribe(() => { this.drawTree(); });
 
     this.listenTo(this.model.skeletonTracing, "newActiveNode", this.drawTree);
     this.listenTo(this.model.skeletonTracing, "newActiveTree", this.drawTree);
@@ -57,7 +57,6 @@ class AbstractTreeView extends Marionette.View {
 
   drawTree() {
     if (this.model.skeletonTracing && this.abstractTreeRenderer) {
-      this.abstractTreeRenderer.renderComments(Store.getState().userConfiguration.renderComments);
       this.abstractTreeRenderer.drawTree(
         this.model.skeletonTracing.getTree(),
         this.model.skeletonTracing.getActiveNodeId());

@@ -70,8 +70,8 @@ type Tracing = {
   task: any,
   tracingTime: number,
   typ: string,
-  version: number,
   user: any,
+  version: number,
 };
 
 class Model extends Backbone.Model {
@@ -396,7 +396,7 @@ class Model extends Backbone.Model {
   applyState(state, tracing) {
     this.get("flycam").setPosition(state.position || tracing.content.editPosition);
     if (state.zoomStep != null) {
-      Store.dispatch(updateUserSettingAction("zoom", Math.exp(Math.LN2 * state.zoomStep)));
+      // Store.dispatch(updateUserSettingAction("zoom", Math.exp(Math.LN2 * state.zoomStep)));
       this.get("flycam3d").setZoomStep(state.zoomStep);
     }
 

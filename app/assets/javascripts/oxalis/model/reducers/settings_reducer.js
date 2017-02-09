@@ -32,6 +32,13 @@ const SettingsReducer = (state: Object = {}, action: SettingActionTypes) => {
       return update(state, { datasetConfiguration: { $set: action.initialState } });
     }
 
+    case "INITIALIZE_SETTINGS": {
+      return update(state, {
+        datasetConfiguration: { $set: action.initialDatasetSettings },
+        userConfiguration: { $set: action.initialUserSettings },
+      });
+    }
+
     case "SET_DATASET": {
       return update(state, {
         dataset: { $set: action.dataset },

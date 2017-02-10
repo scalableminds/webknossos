@@ -1,5 +1,7 @@
 @(form: Form[(String, String, String)])(implicit session: oxalis.view.SessionData, messages: Messages)
 
+@import play.api.Play
+
 @main(){
 
   <div class="container">
@@ -8,7 +10,7 @@
 
         <legend>Login</legend>
         <div class="alert alert-info">
-          Please be advised, access is for lab members only.
+          @Messages(Play.current.configuration.getString("customMessages.login").getOrElse("user.login.prompt"))
         </div>
 
         @form.globalError.map { error =>
@@ -32,6 +34,3 @@
     </div>
   </div>
 }
-
-
-

@@ -4,12 +4,13 @@
  * settings_actions.js
  * @flow
  */
+import type { UserConfigurationType, DatasetConfigurationType, DatasetType } from "oxalis/store";
 
 type UpdateUserSettingActionType = {type: "UPDATE_USER_SETTING", propertyName: string, value: any};
 type UpdateDatasetSettingActionType = {type: "UPDATE_DATASET_SETTING", propertyName: string, value: any};
 type UpdateLayerSettingActionType = {type: "UPDATE_LAYER_SETTING", layerName:string, propertyName: string, value: any};
-type InitializeSettingsAction = {type: "INITIALIZE_SETTINGS", initialUserSettings: Object, initialDatasetSettings: Object};
-type SetDatasetAction = {type: "SET_DATASET", dataset: Object, dataLayerNames: Array<string>};
+type InitializeSettingsAction = {type: "INITIALIZE_SETTINGS", initialUserSettings: UserConfigurationType, initialDatasetSettings: DatasetConfigurationType};
+type SetDatasetAction = {type: "SET_DATASET", dataset: DatasetType, dataLayerNames: Array<string>};
 
 export type SettingActionTypes = (
   UpdateUserSettingActionType |
@@ -37,7 +38,7 @@ export const updateLayerSettingAction = (layerName: string, propertyName: string
   value,
 });
 
-export const setDatasetAction = (dataset: Object, dataLayerNames: Array<string>): SetDatasetAction => ({
+export const setDatasetAction = (dataset: DatasetType, dataLayerNames: Array<string>): SetDatasetAction => ({
   type: "SET_DATASET",
   dataset,
   dataLayerNames,

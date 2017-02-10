@@ -127,6 +127,7 @@ class UserSettingsView extends Component {
         </Panel>
       );
     }
+    return null;
   };
 
   render() {

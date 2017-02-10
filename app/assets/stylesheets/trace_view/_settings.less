@@ -6,7 +6,8 @@
   width: @settings-wrapper-width;
   margin-right: 10px;
   transform: translate(-@settings-wrapper-width, 0);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   z-index: 500;
 }
 
@@ -21,6 +22,7 @@
   .setting-label {
     word-wrap: break-word;
     white-space: normal;
+    margin-right: 5px;
   }
 }
 

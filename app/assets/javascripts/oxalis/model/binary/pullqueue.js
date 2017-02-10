@@ -7,7 +7,6 @@ import _ from "lodash";
 import DataCube from "oxalis/model/binary/data_cube";
 import BinaryDataConnectionInfo from "oxalis/model/binarydata_connection_info";
 import Layer from "oxalis/model/binary/layers/layer";
-import type { Bucket } from "oxalis/model/binary/bucket";
 import type { Vector4 } from "oxalis/constants";
 
 type DatastoreInfoType = {
@@ -17,7 +16,7 @@ type DatastoreInfoType = {
 
 export type PullQueueItemType = {
   priority: number,
-  bucket: Bucket,
+  bucket: Vector4,
 };
 
 export const PullQueueConstants = {

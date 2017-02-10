@@ -140,8 +140,9 @@ class SceneController {
       this.removeShapes();
       this.volumeMeshes = [];
 
-      for (const triangleId of Object.keys(triangles)) {
-        const mappedId = this.model.getSegmentationBinary().cube.mapId(parseInt(triangleId));
+      for (const triangleIdString of Object.keys(triangles)) {
+        const triangleId = parseInt(triangleIdString, 10);
+        const mappedId = this.model.getSegmentationBinary().cube.mapId(triangleId);
         const volume = new VolumeGeometry(triangles[triangleId], mappedId);
         this.volumeMeshes = this.volumeMeshes.concat(volume.getMeshes());
       }

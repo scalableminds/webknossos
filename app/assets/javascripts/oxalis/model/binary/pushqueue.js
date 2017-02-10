@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import type Layer from "oxalis/model/binary/layers/layer";
-import Pipeline from "libs/pipeline";
+import TaskSerializer from "libs/task_serializer";
 import type { Vector4 } from "oxalis/constants";
 import DataCube from "./data_cube";
 
@@ -18,17 +18,17 @@ class PushQueue {
   cube: DataCube;
   layer: Layer;
   tracingId: string;
-  updatePipeline: Pipeline;
+  taskSerializer: TaskSerializer;
   sendData: boolean;
   queue: Array<Vector4>;
 
   constructor(dataSetName: string, cube: DataCube, layer: Layer, tracingId: string,
-    updatePipeline: Pipeline, sendData: boolean = true) {
+    taskSerializer: TaskSerializer, sendData: boolean = true) {
     this.dataSetName = dataSetName;
     this.cube = cube;
     this.layer = layer;
     this.tracingId = tracingId;
-    this.updatePipeline = updatePipeline;
+    this.taskSerializer = taskSerializer;
     this.sendData = sendData;
     this.queue = [];
   }
@@ -37,7 +37,7 @@ class PushQueue {
   stateSaved(): boolean {
     return this.queue.length === 0 &&
            this.cube.temporalBucketManager.getCount() === 0 &&
-           !this.updatePipeline.isBusy();
+           !this.taskSerializer.isBusy();
   }
 
 
@@ -93,18 +93,18 @@ class PushQueue {
     while (this.queue.length) {
       const batchSize = Math.min(BATCH_SIZE, this.queue.length);
       const batch = this.queue.splice(0, batchSize);
-      this.pushBatch(batch);
+      this.taskSerializer.scheduleTask(() => this.pushBatch(batch));
     }
-    await this.updatePipeline.getLastActionPromise();
+    await this.taskSerializer.join();
   };
 
 
   push = _.debounce(this.pushImpl, DEBOUNCE_TIME);
 
 
-  pushBatch(batch: Array<Vector4>): void {
+  pushBatch(batch: Array<Vector4>): Promise<void> {
     const getBucketData = bucket => this.cube.getBucket(bucket).getData();
-    this.layer.sendToStore(batch, getBucketData);
+    return this.layer.sendToStore(batch, getBucketData);
   }
 }
 

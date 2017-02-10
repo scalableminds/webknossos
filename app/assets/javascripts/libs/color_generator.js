@@ -1,9 +1,13 @@
+/*
+ * color_generator.js
+ * @flow
+ */
 import * as THREE from "three";
 
 const GOLDEN_RATIO = 0.618033988749895;
 
 const ColorGenerator = {
-  distinctColorForId(id) {
+  distinctColorForId(id: number): number {
     let hue = id * GOLDEN_RATIO;
     hue %= 1;
     const color = new THREE.Color();

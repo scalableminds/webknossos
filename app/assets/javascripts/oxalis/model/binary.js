@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import Pipeline from "libs/pipeline";
+import TaskSerializer from "libs/task_serializer";
 import InterpolationCollector from "oxalis/model/binary/interpolation_collector";
 import DataCube from "oxalis/model/binary/data_cube";
 import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
@@ -77,12 +77,12 @@ class Binary {
 
     this.cube = new DataCube(this.model.taskBoundingBox, this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
 
-    const updatePipeline = new Pipeline([this.tracing.version]);
+    const taskSerializer = new TaskSerializer();
 
     const datasetName = this.model.get("dataset").get("name");
     const datastoreInfo = this.model.get("dataset").get("dataStore");
     this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
-    this.pushQueue = new PushQueue(datasetName, this.cube, this.layer, this.tracing.id, updatePipeline);
+    this.pushQueue = new PushQueue(datasetName, this.cube, this.layer, this.tracing.id, taskSerializer);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
     this.mappings = new Mappings(datastoreInfo, datasetName, this.layer);
     this.activeMapping = null;
@@ -201,13 +201,10 @@ class Binary {
       this.cube.getArbitraryCube(),
     );
 
-    this.pullQueue.addAll(missingBuckets.map(
-      bucket =>
-        ({
-          bucket,
-          priority: PullQueueConstants.PRIORITY_HIGHEST,
-        }),
-    ));
+    this.pullQueue.addAll(missingBuckets.map(bucket => ({
+      bucket,
+      priority: PullQueueConstants.PRIORITY_HIGHEST,
+    })));
     this.pullQueue.pull();
 
     return buffer;

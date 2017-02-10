@@ -8,7 +8,7 @@ import Backbone from "backbone";
 import $ from "jquery";
 import _ from "lodash";
 import Utils from "libs/utils";
-import Input from "libs/input";
+import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
@@ -27,10 +27,10 @@ class PlaneController {
   model: Model;
   view: View;
   input: {
-    mouseControllers: OrthoViewMapType<Input.Mouse>;
-    keyboard: Input.Keyboard;
-    keyboardNoLoop: Input.Keyboard;
-    keyboardLoopDelayed: Input.Keyboard;
+    mouseControllers: OrthoViewMapType<InputMouse>;
+    keyboard: ?InputKeyboard;
+    keyboardNoLoop: ?InputKeyboardNoLoop;
+    keyboardLoopDelayed: ?InputKeyboard;
     destroy(): void;
   };
   sceneController: SceneController;
@@ -131,10 +131,10 @@ class PlaneController {
       if (id !== OrthoViews.TDView) {
         const inputcatcher = $(`#inputcatcher_${OrthoViews[id]}`);
         this.input.mouseControllers[id] =
-          new Input.Mouse(inputcatcher, this.getPlaneMouseControls(id), id);
+          new InputMouse(inputcatcher, this.getPlaneMouseControls(id), id);
       } else {
         this.input.mouseControllers[id] =
-          new Input.Mouse($("#inputcatcher_TDView"), this.getTDViewMouseControls(), id);
+          new InputMouse($("#inputcatcher_TDView"), this.getTDViewMouseControls(), id);
       }
     }
   }
@@ -222,7 +222,7 @@ class PlaneController {
       return (constants.TDView_MOVE_SPEED * timeFactor) / constants.FPS;
     };
 
-    this.input.keyboard = new Input.Keyboard({
+    this.input.keyboard = new InputKeyboard({
       // ScaleTrianglesPlane
       l: timeFactor => this.scaleTrianglesPlane(-this.model.user.get("scaleValue") * timeFactor),
       k: timeFactor => this.scaleTrianglesPlane(this.model.user.get("scaleValue") * timeFactor),
@@ -234,7 +234,7 @@ class PlaneController {
       down: timeFactor => this.moveY(getMoveValue(timeFactor)),
     });
 
-    this.input.keyboardLoopDelayed = new Input.Keyboard({
+    this.input.keyboardLoopDelayed = new InputKeyboard({
       // KeyboardJS is sensitive to ordering (complex combos first)
       "shift + f": (timeFactor, first) => this.moveZ(getMoveValue(timeFactor) * 5, first),
       "shift + d": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor) * 5, first),
@@ -247,9 +247,13 @@ class PlaneController {
     }, this.model.user.get("keyboardDelay"));
 
     this.listenTo(this.model.user, "change:keyboardDelay",
-      (model, value) => { this.input.keyboardLoopDelayed.delay = value; });
+      (model, value) => {
+        if (this.input.keyboardLoopDelayed != null) {
+          this.input.keyboardLoopDelayed.delay = value;
+        }
+      });
 
-    this.input.keyboardNoLoop = new Input.KeyboardNoLoop(this.getKeyboardControls());
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop(this.getKeyboardControls());
   }
 
 
@@ -427,7 +431,10 @@ class PlaneController {
 
   getMousePosition(): Vector3 {
     const pos = this.input.mouseControllers[this.activeViewport].position;
-    return this.calculateGlobalPos(pos);
+    if (pos != null) {
+      return this.calculateGlobalPos(pos);
+    }
+    return [0, 0, 0];
   }
 
 

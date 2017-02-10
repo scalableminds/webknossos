@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import Input from "libs/input";
+import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import Constants from "oxalis/constants";
@@ -33,14 +33,11 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
 
   initKeyboard(): void {
-    this.input.keyboard = new Input.Keyboard({
-
+    this.input.keyboard = new InputKeyboard({
       space: timeFactor => this.move(timeFactor),
-
       // Zoom in/out
       i: () => this.cam.zoomIn(),
       o: () => this.cam.zoomOut(),
-
       // Rotate in distance
       left: timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
       right: timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
@@ -48,7 +45,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
       down: timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
     });
 
-    this.input.keyboardNoLoop = new Input.KeyboardNoLoop({
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop({
 
       // Branches
       b: () => this.pushBranch(),
@@ -60,7 +57,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
     });
 
-    this.input.keyboardOnce = new Input.Keyboard({
+    this.input.keyboardOnce = new InputKeyboard({
 
       // Delete active node and recenter last node
       "shift + space": () => this.deleteActiveNode(),

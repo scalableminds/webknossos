@@ -9,25 +9,25 @@ import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 import Stats from "stats.js";
-import PlaneController from "./controller/viewmodes/plane_controller";
-import SkeletonTracingController from "./controller/annotations/skeletontracing_controller";
-import VolumeTracingController from "./controller/annotations/volumetracing_controller";
-import SkeletonTracingArbitraryController from "./controller/combinations/skeletontracing_arbitrary_controller";
-import SkeletonTracingPlaneController from "./controller/combinations/skeletontracing_plane_controller";
-import VolumeTracingPlaneController from "./controller/combinations/volumetracing_plane_controller";
-import ArbitraryController from "./controller/viewmodes/arbitrary_controller";
-import MinimalArbitraryController from "./controller/combinations/minimal_skeletontracing_arbitrary_controller";
-import SceneController from "./controller/scene_controller";
-import UrlManager from "./controller/url_manager";
-import View from "./view";
-import SkeletonTracingView from "./view/skeletontracing/skeletontracing_view";
-import VolumeTracingView from "./view/volumetracing/volumetracing_view";
-import constants from "./constants";
-import Input from "../libs/input";
-import Toast from "../libs/toast";
-import Model from "./model.js";
+import { InputKeyboardNoLoop } from "libs/input";
+import Toast from "libs/toast";
+import Model from "oxalis/model";
+import PlaneController from "oxalis/controller/viewmodes/plane_controller";
+import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
+import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
+import SkeletonTracingArbitraryController from "oxalis/controller/combinations/skeletontracing_arbitrary_controller";
+import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
+import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
+import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import MinimalArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
+import SceneController from "oxalis/controller/scene_controller";
+import UrlManager from "oxalis/controller/url_manager";
+import View from "oxalis/view";
+import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
+import VolumeTracingView from "oxalis/view/volumetracing/volumetracing_view";
+import constants from "oxalis/constants";
 
-import type { ToastType } from "../libs/toast";
+import type { ToastType } from "libs/toast";
 
 class Controller {
 
@@ -40,7 +40,7 @@ class Controller {
   planeController: PlaneController;
   arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
-  keyboardNoLoop: Input.KeyboardNoLoop;
+  keyboardNoLoop: InputKeyboardNoLoop;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -200,7 +200,7 @@ class Controller {
       });
     }
 
-    this.keyboardNoLoop = new Input.KeyboardNoLoop(keyboardControls);
+    this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
   }
 
 

@@ -1,4 +1,13 @@
-class Deferred {
+/*
+ * deferred.js
+ * @flow
+ */
+
+class Deferred<T, U> {
+  internalResolve: (T) => void;
+  internalReject: (U) => void;
+  internalPromise: Promise<T>;
+
   // Wrapper around `Promise` that keeps a reference to `resolve` and `reject`
   // methods.
   //
@@ -14,8 +23,6 @@ class Deferred {
 
 
   constructor() {
-    this.internalResolve = null;
-    this.internalReject = null;
     this.internalPromise = new Promise((resolve, reject) => {
       this.internalResolve = resolve;
       this.internalReject = reject;
@@ -23,17 +30,17 @@ class Deferred {
   }
 
 
-  resolve(arg) {
-    return this.internalResolve(arg);
+  resolve(arg: T): void {
+    this.internalResolve(arg);
   }
 
 
-  reject(arg) {
-    return this.internalReject(arg);
+  reject(arg: U): void {
+    this.internalReject(arg);
   }
 
 
-  promise() {
+  promise(): Promise<T> {
     return this.internalPromise;
   }
 }

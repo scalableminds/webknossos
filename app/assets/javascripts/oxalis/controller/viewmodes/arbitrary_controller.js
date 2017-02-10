@@ -7,7 +7,8 @@ import Backbone from "backbone";
 import $ from "jquery";
 import _ from "lodash";
 import TWEEN from "tween.js";
-import Input from "libs/input";
+import { InputKeyboard, InputMouse, InputKeyboardNoLoop } from "libs/input";
+import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
@@ -32,7 +33,7 @@ class ArbitraryController {
   sceneController: SceneController;
   skeletonTracingController: SkeletonTracingController;
   isStarted: boolean;
-  canvas: any;
+  canvas: JQuery;
   cam: Flycam3d;
   plane: ArbitraryPlane;
   infoPlane: ArbitraryPlaneInfo;
@@ -41,7 +42,13 @@ class ArbitraryController {
   TIMETOCENTER: number;
   fullscreen: boolean;
   lastNodeMatrix: Matrix4x4;
-  input: any;
+  input: {
+    mouse: ?InputMouse;
+    keyboard: ?InputKeyboard;
+    keyboardNoLoop: ?InputKeyboardNoLoop;
+    keyboardOnce: ?InputKeyboard;
+    destroy: () => void;
+  };
   mode: ModeType;
 
   // Copied from backbone events (TODO: handle this better)
@@ -126,9 +133,9 @@ class ArbitraryController {
 
 
   initMouse(): void {
-    this.input.mouse = new Input.Mouse(
+    this.input.mouse = new InputMouse(
       this.canvas, {
-        leftDownMove: (delta) => {
+        leftDownMove: (delta: Point2) => {
           if (this.mode === constants.MODE_ARBITRARY) {
             this.cam.yaw(
             -delta.x * this.model.user.getMouseInversionX() * this.model.user.get("mouseRotateValue"),
@@ -143,8 +150,7 @@ class ArbitraryController {
             this.cam.move([delta.x * f, delta.y * f, 0]);
           }
         },
-        rightClick: pos => this.createBranchMarker(pos),
-
+        rightClick: (pos: Point2) => { this.createBranchMarker(pos); },
         scroll: this.scroll,
       },
     );
@@ -152,7 +158,7 @@ class ArbitraryController {
 
 
   initKeyboard(): void {
-    this.input.keyboard = new Input.Keyboard({
+    this.input.keyboard = new InputKeyboard({
 
       // KeyboardJS is sensitive to ordering (complex combos first)
 
@@ -200,7 +206,7 @@ class ArbitraryController {
       g: () => this.changeMoveValue(-25),
     });
 
-    this.input.keyboardNoLoop = new Input.KeyboardNoLoop({
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop({
 
       // Branches
       b: () => this.pushBranch(),
@@ -216,7 +222,7 @@ class ArbitraryController {
       r: () => this.cam.yaw(Math.PI),
     });
 
-    this.input.keyboardOnce = new Input.Keyboard(
+    this.input.keyboardOnce = new InputKeyboard(
 
       // Delete active node and recenter last node
       { "shift + space": () => this.deleteActiveNode() }
@@ -330,8 +336,7 @@ class ArbitraryController {
     this.isStarted = false;
   }
 
-  // TODO: Define type for key modifier
-  scroll = (delta: number, type: string) => {
+  scroll = (delta: number, type: ?ModifierKeys) => {
     if (type === "shift") {
       this.setParticleSize(Utils.clamp(-1, delta, 1));
     }

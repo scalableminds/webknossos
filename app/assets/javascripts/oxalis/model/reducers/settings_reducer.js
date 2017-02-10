@@ -24,14 +24,6 @@ function SettingsReducer(state: OxalisState, action: SettingActionTypes): Oxalis
       return update(state, { datasetConfiguration: { layers: { [layerName]: { [propertyName]: { $set: value } } } } });
     }
 
-    case "INITIALIZE_USER_SETTINGS": {
-      return update(state, { userConfiguration: { $set: action.initialState } });
-    }
-
-    case "INITIALIZE_DATASET_SETTINGS": {
-      return update(state, { datasetConfiguration: { $set: action.initialState } });
-    }
-
     case "INITIALIZE_SETTINGS": {
       return update(state, {
         datasetConfiguration: { $set: action.initialDatasetSettings },

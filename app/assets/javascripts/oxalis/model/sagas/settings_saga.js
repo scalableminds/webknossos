@@ -25,6 +25,7 @@ function* pushDatasetSettingsAsync() {
 }
 
 export function* watchPushSettingsAsync() {
+  yield take("INITIALIZE_SETTINGS");
   yield [
     throttle(500, "UPDATE_USER_SETTING", pushUserSettingsAsync),
     throttle(500, "UPDATE_DATASET_SETTING", pushDatasetSettingsAsync),

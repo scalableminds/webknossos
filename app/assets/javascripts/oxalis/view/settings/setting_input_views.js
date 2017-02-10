@@ -51,7 +51,14 @@ export class BoundingBoxSetting extends React.Component {
     super(props);
     this.state = {
       isValid: true,
-      text: props.value,
+      text: props.value.join(", "),
+    };
+  }
+
+  componentWillReceiveProps(newProps) {
+    this.state = {
+      isValid: true,
+      text: newProps.value.join(", "),
     };
   }
 

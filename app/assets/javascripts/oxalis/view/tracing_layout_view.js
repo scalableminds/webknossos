@@ -180,7 +180,7 @@ class TracingLayoutView extends Marionette.View {
   renderSettings() {
     render(
       <Provider store={store}>
-        <SettingsView />
+        <SettingsView oldModel={this.model} />
       </Provider>,
       this.ui.settings[0],
     );

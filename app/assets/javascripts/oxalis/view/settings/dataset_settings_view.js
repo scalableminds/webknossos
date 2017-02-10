@@ -17,7 +17,6 @@ class DatasetSettings extends Component {
 
   getColorSettings = (layerName, i) => {
     const layer = this.props.layers[layerName];
-    // <ColorSetting label="Color"/>
     return (
       <div key={i}>
         <Row>
@@ -27,6 +26,10 @@ class DatasetSettings extends Component {
         <NumberSliderSetting label="Contrast" min={0.5} max={5} step={0.1} value={layer.contrast} onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")} />
       </div>
     );
+  }
+
+  onChangeQuality = (propertyName:string, value:string) => {
+    this.props.onChange(propertyName, parseInt(value));
   }
 
   render() {
@@ -40,7 +43,7 @@ class DatasetSettings extends Component {
         <Panel header="Quality" key="2">
           <SwitchSetting label="4 Bit" value={this.props.fourBit} onChange={_.partial(this.props.onChange, "fourBit")} />
           <SwitchSetting label="Interpolation" value={this.props.interpolation} onChange={_.partial(this.props.onChange, "interpolation")} />
-          <DropdownSetting label="Quality" value={this.props.quality} onChange={_.partial(this.props.onChange, "quality")} >
+          <DropdownSetting label="Quality" value={this.props.quality} onChange={_.partial(this.onChangeQuality, "quality")} >
             <Option value="0">high</Option>
             <Option value="1">medium</Option>
             <Option value="2">low</Option>

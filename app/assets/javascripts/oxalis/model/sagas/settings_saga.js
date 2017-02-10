@@ -19,7 +19,7 @@ function* pushUserSettingsAsync() {
 }
 
 function* pushDatasetSettingsAsync() {
-  const datasetName = yield select(state => state.datasetName);
+  const datasetName = yield select(state => state.dataset.name);
   const payload = yield select(state => state.datasetConfiguration);
   yield call(Request.sendJSONReceiveJSON.bind(Request), `/api/dataSetConfigurations/${datasetName}`, { data: payload });
 }

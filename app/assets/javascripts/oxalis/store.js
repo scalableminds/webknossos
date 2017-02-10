@@ -47,7 +47,7 @@ export type DatasetConfigurationType = {
       contrast: number
     }
   },
-  quality: string
+  quality: number
 }
 
 export type UserConfigurationType = {
@@ -103,7 +103,7 @@ const defaultState: OxalisState = {
         contrast: 1,
       },
     },
-    quality: "0",
+    quality: 0,
   },
   userConfiguration: {
     boundingBox: [],

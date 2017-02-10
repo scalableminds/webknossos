@@ -105,18 +105,43 @@ export class BoundingBoxSetting extends React.Component {
   }
 }
 
-// export function ColorSetting({ onChange, label, value }) {
-//   return (
-//     <Row className="settings-row">
-//       <Col span={8}><span className="setting-label">{label}</span></Col>
-//       <Col span={16}>
-//         <ColorPicker onChange={onChange} value={value} defaultValue={value} />
-//       </Col>
-//     </Row>
-//   );
-// }
+/* eslint-disable react/no-multi-comp */
+export class ColorSetting extends React.Component {
+  state: {
+    value: string;
+  }
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      value: "#000000",
+    };
+  }
+
+  componentWillReceiveProps(newProps) {
+    debugger
+    this.setState({ value: Utils.rgbToHex(newProps.value) });
+  }
+
+  onColorChange = (evt) => {
+    debugger
+    this.props.onChange(Utils.hexToRgb(evt.target.value));
+  }
+
+  render() {
+    return (
+      <Row className="settings-row">
+        <Col span={8}><span className="setting-label">{this.props.label}</span></Col>
+        <Col span={16}>
+          <input type="color" onChange={this.onColorChange} value={this.state.value} />
+        </Col>
+      </Row>
+    );
+  }
+}
 
 export function DropdownSetting({ onChange, label, value, children }) {
+  debugger
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>

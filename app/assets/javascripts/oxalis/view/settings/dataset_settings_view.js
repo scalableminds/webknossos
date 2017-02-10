@@ -8,15 +8,15 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { Collapse, Row, Col, Select } from "antd";
 import { updateDatasetSettingAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
-import { SwitchSetting, NumberSliderSetting, DropdownSetting } from "./setting_input_views";
+import { SwitchSetting, NumberSliderSetting, DropdownSetting, ColorSetting } from "./setting_input_views";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
 
 class DatasetSettings extends Component {
 
-  getColorSettings = (layerName, i) => {
-    const layer = this.props.layers[layerName];
+  getColorSettings = (layer, layerName, i) => {
+    console.log(layer)
     return (
       <div key={i}>
         <Row>
@@ -24,6 +24,7 @@ class DatasetSettings extends Component {
         </Row>
         <NumberSliderSetting label="Brightness" min={-255} max={255} step={5} value={layer.brightness} onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")} />
         <NumberSliderSetting label="Contrast" min={0.5} max={5} step={0.1} value={layer.contrast} onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")} />
+        <ColorSetting label="Color" value={layer.color} onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")} className="ant-btn" />
       </div>
     );
   }
@@ -33,7 +34,7 @@ class DatasetSettings extends Component {
   }
 
   render() {
-    const colorSettings = this.props.dataLayerNames.map(this.getColorSettings);
+    const colorSettings = _.map(this.props.layers, this.getColorSettings);
 
     return (
       <Collapse defaultActiveKey={["1", "2", "3", "4"]}>

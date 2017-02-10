@@ -35,7 +35,6 @@ export type DatasetType = {
 }
 
 export type DatasetConfigurationType = {
-  dataLayerNames: Array<string>,
   datasetName: string,
   fourBit: boolean,
   interpolation: boolean,
@@ -91,7 +90,6 @@ export type OxalisState = {
 
 const defaultState: OxalisState = {
   datasetConfiguration: {
-    dataLayerNames: ["color"],
     datasetName: "",
     fourBit: true,
     interpolation: false,

@@ -34,7 +34,6 @@ function SettingsReducer(state: OxalisState, action: SettingActionTypes): Oxalis
     case "SET_DATASET": {
       return update(state, {
         dataset: { $set: action.dataset },
-        datasetConfiguration: { dataLayerNames: { $set: action.dataLayerNames } },
       });
     }
 

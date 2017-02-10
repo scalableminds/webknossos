@@ -177,7 +177,7 @@ class Model extends Backbone.Model {
       }
 
       const colorLayers = _.filter(dataset.dataLayers, layer => layer.category === "color");
-      Store.dispatch(setDatasetAction(dataset, _.map(colorLayers, "name")));
+      Store.dispatch(setDatasetAction(dataset));
       return tracing;
     }).then((tracing: Tracing) => {
       const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);

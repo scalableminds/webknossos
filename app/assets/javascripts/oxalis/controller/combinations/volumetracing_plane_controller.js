@@ -77,11 +77,12 @@ class VolumeTracingPlaneController extends PlaneController {
 
 
   getPlaneMouseControls(planeId) {
-    const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
-    const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
     return _.extend(super.getPlaneMouseControls(planeId), {
 
       leftDownMove: (delta, pos) => {
+        const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+        const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
+
         if (this.model.volumeTracing.mode === Constants.VOLUME_MODE_MOVE) {
           this.move([
             (delta.x * mouseInversionX) / this.planeView.scaleFactor,

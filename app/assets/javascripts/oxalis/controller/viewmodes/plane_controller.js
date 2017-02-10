@@ -139,16 +139,18 @@ class PlaneController {
 
 
   getPlaneMouseControls(planeId) {
-    const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
-    const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
 
     return {
 
-      leftDownMove: delta => this.move([
-        (delta.x * mouseInversionX) / this.planeView.scaleFactor,
-        (delta.y * mouseInversionY) / this.planeView.scaleFactor,
-        0,
-      ]),
+      leftDownMove: delta => {
+        const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+        const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
+        return this.move([
+          (delta.x * mouseInversionX) / this.planeView.scaleFactor,
+          (delta.y * mouseInversionY) / this.planeView.scaleFactor,
+          0,
+        ])
+      },
 
       over: () => {
         $(":focus").blur();

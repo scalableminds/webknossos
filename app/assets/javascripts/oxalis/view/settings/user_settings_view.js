@@ -79,7 +79,7 @@ class UserSettingsView extends Component {
     const mode = this.props.oldModel.get("mode");
     if (mode === Constants.MODE_PLANE_TRACING || mode === Constants.MODE_VOLUME) {
       return (
-        <Panel header="Viewport Options" key="2">
+        <Panel header="Viewport Options" key="1">
           <NumberSliderSetting label="Move Value (nm/s)" min={30} max={14000} step={10} value={this.props.moveValue} onChange={_.partial(this.props.onChange, "moveValue")} />
           <NumberSliderSetting label="Zoom" min={-100} max={100} value={this.props.zoom || 0} onChange={_.partial(this.props.onChange, "zoom")} />
           <NumberSliderSetting label="Viewport Scale" min={0.05} max={20} step={0.1} value={this.props.scale} onChange={_.partial(this.props.onChange, "scale")} />
@@ -90,7 +90,7 @@ class UserSettingsView extends Component {
       );
     } else {
       return (
-        <Panel header="Flight Options" key="2">
+        <Panel header="Flight Options" key="1">
           <NumberInputSetting label="Mouse Rotation" min={0.0001} max={0.02} step={0.001} value={this.props.mouseRotateValue} onChange={_.partial(this.props.onChange, "mouseRotateValue")} />
           <NumberInputSetting label="Keyboard Rotation Value" min={0.001} max={0.08} step={0.001} value={this.state.activeNodeId} onChange={this.onChangeActiveNodeId} />
           <NumberInputSetting label="Move Value (nm/s)" min={30} max={1500} step={10} value={this.props.moveValue3d} onChange={_.partial(this.props.onChange, "moveValue3d")} />
@@ -107,7 +107,7 @@ class UserSettingsView extends Component {
     const mode = this.props.oldModel.get("mode");
     if (mode in Constants.MODES_SKELETON) {
       return (
-        <Panel header="Nodes & Trees" key="3">
+        <Panel header="Nodes & Trees" key="2">
           <NumberInputSetting label="Active Node ID" value={this.state.activeNodeId} onChange={this.onChangeActiveNodeId} />
           <NumberInputSetting label="Active Tree ID" value={this.state.activeTreeId} onChange={this.onChangeActiveTreeId} />
           <NumberSliderSetting label="Radius" max={5000} value={this.props.radius} onChange={_.partial(this.props.onChange, "radius")} />
@@ -118,7 +118,7 @@ class UserSettingsView extends Component {
       );
     } else if (mode === Constants.MODE_VOLUME) {
       return (
-        <Panel header="Volume Options" key="3">
+        <Panel header="Volume Options" key="2">
           <NumberInputSetting label="Active Cell ID" value={this.state.activeCellId} onChange={this.onChangeActiveCellId} />
           <NumberInputSetting label="Segment Opacity" max={100} value={this.props.segmentationOpacity} onChange={_.partial(this.props.onChange, "segmentationOpacity")} />
           <SwitchSetting label="3D Volume Rendering" value={this.props.isosurfaceDisplay} onChange={_.partial(this.props.onChange, "isosurfaceDisplay")} />
@@ -133,13 +133,13 @@ class UserSettingsView extends Component {
   render() {
     return (
       <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
-        <Panel header="Controls" key="1">
+        { this.getViewportOptions() }
+        { this.getSkeletonOrVolumeOptions() }
+        <Panel header="Controls" key="3">
           <SwitchSetting label="Inverse X" value={this.props.inverseX} onChange={_.partial(this.props.onChange, "inverseX")} />
           <SwitchSetting label="Inverse Y" value={this.props.inverseY} onChange={_.partial(this.props.onChange, "inverseY")} />
           <NumberSliderSetting label="Keyboard delay (ms)" min={0} max={500} value={this.props.keyboardDelay} onChange={_.partial(this.props.onChange, "keyboardDelay")} />
         </Panel>
-        { this.getViewportOptions() }
-        { this.getSkeletonOrVolumeOptions() }
         <Panel header="Other" key="4">
           <BoundingBoxSetting label="Bounding Box" value={this.props.boundingBox} onChange={_.partial(this.props.onChange, "boundingBox")} />
           <SwitchSetting label="Display Planes in 3D View" value={this.props.tdViewDisplayPlanes} onChange={_.partial(this.props.onChange, "tdViewDisplayPlanes")} />

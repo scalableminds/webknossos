@@ -123,11 +123,11 @@ class ArbitraryController {
 
 
   initMouse() {
-    const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
-    const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
     this.input.mouse = new Input.Mouse(
       this.canvas, {
         leftDownMove: (delta) => {
+          const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+          const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
           if (this.mode === constants.MODE_ARBITRARY) {
             this.cam.yaw(
             -delta.x * mouseInversionX * Store.getState().userConfiguration.mouseRotateValue,

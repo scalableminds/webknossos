@@ -26,7 +26,7 @@ class TemplateHelpers {
   formatScale(scaleArr: Vector3): string {
     if (scaleArr != null && scaleArr.length > 0) {
       const scaleArrRounded = scaleArr.map(value => Utils.roundTo(value, 2));
-      return `(${scaleArrRounded.join(", ")})`;
+      return `${scaleArrRounded.join(" × ")} nm³`;
     } else {
       return "";
     }

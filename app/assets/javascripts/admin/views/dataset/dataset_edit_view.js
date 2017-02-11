@@ -23,7 +23,7 @@ class DatasetEditView extends Marionette.View {
         <div class="form-group">
           <label class="col-sm-2 control-label" for="description">Description</label>
           <div class="col-sm-9">
-            <input type="text" id="description" name="description" value="<%- description %>" class="form-control" />
+            <textarea id="description" name="description" class="form-control"><%- description %></textarea>
           </div>
         </div>
         <div class="form-group">

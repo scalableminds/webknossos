@@ -100,7 +100,7 @@ class TracingLayoutView extends Marionette.View {
 
     $("#add-script-link")
       .removeClass("hide")
-      .on("click", this.showUserScriptsModal);
+      .on("click", this.showUserScriptsModal.bind(this));
 
     app.oxalis = new OxalisController(this.options);
   }
@@ -153,7 +153,7 @@ class TracingLayoutView extends Marionette.View {
   }
 
 
-  showUserScriptsModal = (event) => {
+  showUserScriptsModal(event) {
     event.preventDefault();
     const modalView = new UserScriptsModalView();
     this.showChildView("modalWrapper", modalView);

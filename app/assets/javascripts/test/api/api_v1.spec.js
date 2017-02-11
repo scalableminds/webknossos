@@ -5,7 +5,7 @@ import _ from "lodash";
 import Backbone from "backbone";
 import "backbone.marionette";
 import constants from "oxalis/constants";
-import TRACING_OBJECT from "test/data/tracing_object";
+import TRACING_OBJECT from "../data/tracing_object";
 
 mockRequire.stopAll();
 

@@ -84,8 +84,9 @@ class VolumeTracingPlaneController extends PlaneController {
             (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
             0,
           ]);
+        } else {
+          this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
         }
-        this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
       },
 
       leftMouseDown: (pos, plane, event) => {
@@ -101,7 +102,11 @@ class VolumeTracingPlaneController extends PlaneController {
         this.volumeTracingController.restoreAfterDeleteMode();
       },
 
-      rightDownMove: (delta, pos) => this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos)),
+      rightDownMove: (delta, pos) => {
+        if (this.model.volumeTracing.mode === Constants.VOLUME_MODE_TRACE) {
+          this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
+        }
+      },
 
       rightMouseDown: (pos, plane) => {
         this.volumeTracingController.enterDeleteMode();

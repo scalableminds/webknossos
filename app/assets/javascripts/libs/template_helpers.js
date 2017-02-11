@@ -24,7 +24,7 @@ const TemplateHelpers = {
   formatScale(scaleArr) {
     if (Utils.__guard__(scaleArr, x => x.length) > 0) {
       const scaleArrRounded = scaleArr.map(value => Utils.roundTo(value, 2));
-      return `(${scaleArrRounded.join(", ")})`;
+      return `${scaleArrRounded.join(" × ")} nm³`;
     } else {
       return "";
     }

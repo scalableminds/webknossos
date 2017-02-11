@@ -1,5 +1,7 @@
 @(form: Form[(String, String, String, String, String)], teams: List[models.team.Team])(implicit session: oxalis.view.SessionData, messages: Messages)
 
+@import play.api.Play
+
 @main() {
 
   <div class="container">
@@ -10,7 +12,7 @@
       <legend>Sign up</legend>
 
       <div class="alert alert-info">
-        Not a member of the listed teams? Contact webknossos@@scalableminds.com to get more information about how to get to use webKnossos.
+        @Messages(Play.current.configuration.getString("customMessages.register").getOrElse("user.register.prompt"))
       </div>
 
       @form.errors.map { error =>
@@ -36,4 +38,3 @@
     </div>
   </div>
 }
-

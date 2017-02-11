@@ -283,8 +283,9 @@ class UtilsApi {
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
   registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T[]) => void, args: T[]) => void): void {
-    const oldFunc = this.model.skeletonTracing[funcName].bind(this.model.skeletonTracing);
-    this.model.skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
+    const skeletonTracing: {[key:string]: Function } = this.model.skeletonTracing;
+    const oldFunc = skeletonTracing[funcName].bind(this.model.skeletonTracing);
+    skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
   }
  /**
   * Sets a custom handler function for a keyboard shortcut.

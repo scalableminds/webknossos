@@ -211,7 +211,7 @@ describe("Api", () => {
       it("should get the bounding box of a layer", (done) => {
         const correctBoundingBox = [[3840, 4220, 2304], [3968, 4351, 2688]];
         const boundingBox = api.data.getBoundingBox("color");
-        expect(_.isEqual(correctBoundingBox, boundingBox)).toBe(true);
+        expect(boundingBox).toEqual(correctBoundingBox);
         done();
       });
     });

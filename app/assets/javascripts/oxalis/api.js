@@ -53,7 +53,7 @@ class TracingApi {
  /**
   * Returns all nodes belonging to a tracing.
   */
-  getAllNodes(): [TracePoint] {
+  getAllNodes(): Array<TracePoint> {
     return this.model.skeletonTracing.getNodeListOfAllTrees();
   }
 
@@ -208,10 +208,6 @@ class UserApi {
     - inverseX
     - inverseY
     - keyboardDelay
-    - mouseActive
-    - keyboardActive
-    - gamepadActive
-    - motionsensorActive
     - firstVisToggle
     - particleSize
     - overrideNodeRadius

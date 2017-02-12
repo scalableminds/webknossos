@@ -15,19 +15,17 @@ const Option = Select.Option;
 
 class DatasetSettings extends Component {
 
-  getColorSettings = (layer, layerName, i) => {
-    console.log(layer)
-    return (
+  getColorSettings = (layer, layerName, i) =>
+    (
       <div key={i}>
         <Row>
           <Col span={24}>Layer: {layerName}</Col>
         </Row>
         <NumberSliderSetting label="Brightness" min={-255} max={255} step={5} value={layer.brightness} onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")} />
         <NumberSliderSetting label="Contrast" min={0.5} max={5} step={0.1} value={layer.contrast} onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")} />
-        <ColorSetting label="Color" value={layer.color} onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")} className="ant-btn" />
+        <ColorSetting label="Color" value={layer.color} onChange={_.partial(this.props.onChangeLayer, layerName, "color")} className="ant-btn" />
       </div>
     );
-  }
 
   onChangeQuality = (propertyName:string, value:string) => {
     this.props.onChange(propertyName, parseInt(value));

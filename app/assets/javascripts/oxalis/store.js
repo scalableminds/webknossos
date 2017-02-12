@@ -94,13 +94,7 @@ const defaultState: OxalisState = {
     fourBit: true,
     interpolation: false,
     keyboardDelay: 342,
-    layers: {
-      color: {
-        color: [255, 255, 255],
-        brightness: 5,
-        contrast: 1,
-      },
-    },
+    layers: {},
     quality: 0,
   },
   userConfiguration: {

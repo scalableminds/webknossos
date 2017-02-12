@@ -141,7 +141,6 @@ export class ColorSetting extends React.Component {
 }
 
 export function DropdownSetting({ onChange, label, value, children }) {
-  debugger
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>

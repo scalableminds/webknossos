@@ -3,6 +3,7 @@
  * @flow
  */
 
+import _ from "lodash";
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
 import type { SettingActionTypes } from "oxalis/model/actions/settings_actions";
@@ -26,12 +27,29 @@ function SettingsReducer(state: OxalisState, action: SettingActionTypes): Oxalis
 
     case "INITIALIZE_SETTINGS": {
       return update(state, {
-        datasetConfiguration: { $set: action.initialDatasetSettings },
-        userConfiguration: { $set: action.initialUserSettings },
+        datasetConfiguration: { $merge: action.initialDatasetSettings },
+        userConfiguration: { $merge: action.initialUserSettings },
       });
     }
 
     case "SET_DATASET": {
+      // set defaults for every data layer if not yet present
+      if (_.isEmpty(state.datasetConfiguration.layers)) {
+        const colorLayers = _.filter(action.dataset.dataLayers, layer => layer.category === "color");
+        const layerSettingsDefaults = _.transform(colorLayers, (result, layer) => {
+          result[layer.name] = ({
+            brightness: 0,
+            contrast: 1,
+            color: [255, 255, 255],
+          });
+        }, {});
+
+        return update(state, {
+          datasetConfiguration: { layers: { $set: layerSettingsDefaults } },
+          dataset: { $set: action.dataset },
+        });
+      }
+
       return update(state, {
         dataset: { $set: action.dataset },
       });

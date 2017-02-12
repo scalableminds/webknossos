@@ -176,7 +176,6 @@ class Model extends Backbone.Model {
         throw this.HANDLED_ERROR;
       }
 
-      const colorLayers = _.filter(dataset.dataLayers, layer => layer.category === "color");
       Store.dispatch(setDatasetAction(dataset));
       return tracing;
     }).then((tracing: Tracing) => {

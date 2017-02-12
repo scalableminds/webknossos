@@ -47,15 +47,15 @@ class UserSettingsView extends Component {
 
     if (wkModel.get("mode") in Constants.MODES_SKELETON) {
       this.setState({
-        activeNodeId: wkModel.annotationModel.getActiveNodeId(),
-        activeTreeId: wkModel.annotationModel.getActiveTreeId(),
+        activeNodeId: wkModel.annotationModel.getActiveNodeId() || 0,
+        activeTreeId: wkModel.annotationModel.getActiveTreeId() || 0,
         activeCellId: 0,
       });
     } else {
       this.setState({
         activeNodeId: 0,
         activeTreeId: 0,
-        activeCellId: wkModel.annotationModel.getActiveCellId(),
+        activeCellId: wkModel.annotationModel.getActiveCellId() || 0,
       });
     }
   }

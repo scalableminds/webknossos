@@ -9,6 +9,11 @@ import Store from "oxalis/store";
 import scaleInfo from "oxalis/model/scaleinfo";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
+const DEFAULT_ZOOMFACTOR = 1.0;
+const DEFAULT_SCALE = 1.0;
+const DEFAULT_RADIUS = 1.0;
+const DEFAULT_PARTICLESIZE = 1.0;
+
 class ParticleMaterialFactory extends AbstractMaterialFactory {
 
   // Copied from backbone events (TODO: handle this better)
@@ -20,7 +25,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
     this.uniforms = _.extend(this.uniforms, {
       zoomFactor: {
         type: "f",
-        value: 1.0,
+        value: DEFAULT_ZOOMFACTOR,
       },
       baseVoxel: {
         type: "f",
@@ -28,15 +33,15 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
       },
       particleSize: {
         type: "f",
-        value: 5.0,
+        value: DEFAULT_PARTICLESIZE,
       },
       scale: {
         type: "f",
-        value: 1.0,
+        value: DEFAULT_SCALE,
       },
       showRadius: {
         type: "i",
-        value: 1,
+        value: DEFAULT_RADIUS,
       },
     },
     );

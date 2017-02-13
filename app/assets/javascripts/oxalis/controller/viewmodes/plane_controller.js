@@ -214,12 +214,18 @@ class PlaneController {
       return (constants.TDView_MOVE_SPEED * timeFactor) / constants.FPS;
     };
 
-    const scaleValue = Store.getState().userConfiguration.scaleValue;
     this.input.keyboard = new Input.Keyboard({
 
       // ScaleTrianglesPlane
-      l: timeFactor => this.scaleTrianglesPlane(-scaleValue * timeFactor),
-      k: timeFactor => this.scaleTrianglesPlane(scaleValue * timeFactor),
+      l: (timeFactor) => {
+        const scaleValue = Store.getState().userConfiguration.scaleValue;
+        this.scaleTrianglesPlane(-scaleValue * timeFactor);
+      },
+
+      k: (timeFactor) => {
+        const scaleValue = Store.getState().userConfiguration.scaleValue;
+        this.scaleTrianglesPlane(scaleValue * timeFactor);
+      },
 
       // Move
       left: timeFactor => this.moveX(-getMoveValue(timeFactor)),

@@ -19,7 +19,7 @@ type DataLayerType = {
   },
   resolutions: Vector4,
   fallback: any,
-  elementClass: "uint8",
+  elementClass: "uint8" | "uint16",
   mappings:[],
 }
 

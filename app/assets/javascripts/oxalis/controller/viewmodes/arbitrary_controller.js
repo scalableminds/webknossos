@@ -151,14 +151,13 @@ class ArbitraryController {
 
 
   initKeyboard() {
-    const { scaleValue, rotateValue } = Store.getState().userConfiguration.scaleValue;
     this.input.keyboard = new Input.Keyboard({
 
       // KeyboardJS is sensitive to ordering (complex combos first)
 
       // Scale plane
-      l: () => this.arbitraryView.applyScale(-scaleValue),
-      k: () => this.arbitraryView.applyScale(scaleValue),
+      l: () => this.arbitraryView.applyScale(-Store.getState().userConfiguration.scaleValue),
+      k: () => this.arbitraryView.applyScale(Store.getState().userConfiguration.scaleValue),
 
       // Move
       space: (timeFactor) => {
@@ -180,16 +179,16 @@ class ArbitraryController {
       },
 
       // Rotate at centre
-      "shift + left": timeFactor => this.cam.yaw(rotateValue * timeFactor),
-      "shift + right": timeFactor => this.cam.yaw(-rotateValue * timeFactor),
-      "shift + up": timeFactor => this.cam.pitch(rotateValue * timeFactor),
-      "shift + down": timeFactor => this.cam.pitch(-rotateValue * timeFactor),
+      "shift + left": timeFactor => this.cam.yaw(Store.getState().userConfiguration.rotateValue * timeFactor),
+      "shift + right": timeFactor => this.cam.yaw(-Store.getState().userConfiguration.rotateValue * timeFactor),
+      "shift + up": timeFactor => this.cam.pitch(Store.getState().userConfiguration.rotateValue * timeFactor),
+      "shift + down": timeFactor => this.cam.pitch(-Store.getState().userConfiguration.rotateValue * timeFactor),
 
       // Rotate in distance
-      left: timeFactor => this.cam.yaw(rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      right: timeFactor => this.cam.yaw(-rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      up: timeFactor => this.cam.pitch(-rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      down: timeFactor => this.cam.pitch(rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      left: timeFactor => this.cam.yaw(Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      right: timeFactor => this.cam.yaw(-Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      up: timeFactor => this.cam.pitch(-Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      down: timeFactor => this.cam.pitch(Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
 
       // Zoom in/out
       i: () => this.cam.zoomIn(),

@@ -10,6 +10,8 @@ import Utils from "libs/utils";
 import Store from "oxalis/store";
 import AbstractPlaneMaterialFactory from "./abstract_plane_material_factory";
 
+const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
+
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
 
@@ -65,7 +67,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         };
         this.uniforms[`${shaderName}_color`] = {
           type: "v3",
-          value: new THREE.Vector3([255, 255, 255]),
+          value: DEFAULT_COLOR,
         };
       }
     }

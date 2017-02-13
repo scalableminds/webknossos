@@ -137,6 +137,9 @@ class SceneController {
     );
 
     this.polygonFactory.getTriangles().then((triangles) => {
+      if (triangles == null) {
+        return;
+      }
       this.removeShapes();
       this.volumeMeshes = [];
 

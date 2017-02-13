@@ -379,14 +379,17 @@ class DataCube {
 
 
   getVoxelIndex(voxel: Vector3): number {
-    const voxelOffset = voxel.map(v => v & 0b11111);
+    // No `map` for performance reasons
+    const voxelOffset = [0, 0, 0];
+    for (let i = 0; i < 3; i++) {
+      voxelOffset[i] = voxel[i] & 0b11111;
+    }
     return this.getVoxelIndexByVoxelOffset(voxelOffset);
   }
 
 
   positionToZoomedAddress([x, y, z]: Vector3, zoomStep: number = 0): Vector4 {
     // return the bucket a given voxel lies in
-
     return [
       x >> (BUCKET_SIZE_P + zoomStep),
       y >> (BUCKET_SIZE_P + zoomStep),

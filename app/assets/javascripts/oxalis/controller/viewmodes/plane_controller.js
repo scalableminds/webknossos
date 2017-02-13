@@ -21,6 +21,7 @@ import Dimensions from "oxalis/model/dimensions";
 import PlaneView from "oxalis/view/plane_view";
 import constants, { OrthoViews, OrthoViewsWithoutTDView } from "oxalis/constants";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { ModifierKeys } from "libs/input";
 
 class PlaneController {
   planeView: PlaneView;
@@ -142,8 +143,8 @@ class PlaneController {
 
   getTDViewMouseControls(): Object {
     return {
-      leftDownMove: delta => this.moveTDView(delta),
-      scroll: value => this.zoomTDView(Utils.clamp(-1, value, 1), true),
+      leftDownMove: (delta: Point2) => this.moveTDView(delta),
+      scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
       over: () => this.planeView.setActiveViewport(this.activeViewport = OrthoViews.TDView),
     };
   }
@@ -151,7 +152,7 @@ class PlaneController {
 
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return {
-      leftDownMove: delta => this.move([
+      leftDownMove: (delta: Point2) => this.move([
         (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
         (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
         0,
@@ -461,7 +462,7 @@ class PlaneController {
   }
 
 
-  scrollPlanes(delta: number, type: ?string): void {
+  scrollPlanes(delta: number, type: ?ModifierKeys): void {
     switch (type) {
       case null:
         this.moveZ(delta, true);

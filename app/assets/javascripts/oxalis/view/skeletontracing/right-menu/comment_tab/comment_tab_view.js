@@ -3,7 +3,7 @@ import $ from "jquery";
 import Marionette from "backbone.marionette";
 import React from "react";
 import { render } from "react-dom";
-import Input from "libs/input";
+import { InputKeyboardNoLoop } from "libs/input";
 import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import CommentList from "./comment_list";
@@ -78,7 +78,7 @@ class CommentTabView extends Marionette.View {
     this.listenTo(this.model.skeletonTracing, "setComment", this.setComment);
 
     // keyboard shortcuts
-    return new Input.KeyboardNoLoop({
+    return new InputKeyboardNoLoop({
       n: () => this.nextComment(),
       p: () => this.previousComment(),
     });

@@ -37,6 +37,7 @@ type MouseHandler =
   (deltaY: number, modifier: ?ModifierKeys) => void |
   (position: Point2, id: ?string, event: JQueryInputEventObject) => void |
   (delta: Point2, position: Point2, id: ?string, event: JQueryInputEventObject) => void;
+
 // Workaround: KeyboardJS fires event for "C" even if you press
 // "Ctrl + C".
 function shouldIgnore(event: JQueryInputEventObject, key: KeyboardKey) {

@@ -1,24 +1,41 @@
+/*
+ * request.js
+ * @flow
+ */
+/* globals $TypedArray:false */
+
 import _ from "lodash";
 import pako from "pako";
 import Toast from "./toast";
-import ErrorHandling from "./error_handling";
 
-const Request = {
+type RequestOptions = {
+  headers?: { [key: string]: string };
+  method?: 'GET' | 'POST' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH';
+  timeout?: number;
+}
 
+type RequestOptionsWithData<T> = {
+  data: T;
+  headers?: { [key: string]: string };
+  method?: 'GET' | 'POST' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH';
+  timeout?: number;
+  // body?: ?(Blob | FormData | URLSearchParams | string);
+}
+
+class Request {
   // IN:  nothing
   // OUT: json
-  receiveJSON(url, options = {}) {
+  receiveJSON(url: string, options: RequestOptions = {}): Promise<any> {
     return this.triggerRequest(
       url,
       _.defaultsDeep(options, { headers: { Accept: "application/json" } }),
       this.handleEmptyJsonResponse,
     );
-  },
-
+  }
 
   // IN:  json
   // OUT: json
-  sendJSONReceiveJSON(url, options = {}) {
+  sendJSONReceiveJSON(url: string, options: RequestOptionsWithData<any>): Promise<any> {
     // Sanity check
     // Requests without body should not send 'json' header and use 'receiveJSON' instead
     if (!options.data) {
@@ -29,8 +46,7 @@ const Request = {
     }
 
     const body = _.isString(options.data) ?
-        options.data
-      :
+        options.data :
         JSON.stringify(options.data);
 
     return this.receiveJSON(
@@ -43,47 +59,47 @@ const Request = {
         },
       }),
     );
-  },
-
+  }
 
   // IN:  multipart formdata
   // OUT: json
-  sendMultipartFormReceiveJSON(url, options = {}) {
-    const toFormData = function (input, form, namespace) {
-      const formData = form || new FormData();
+  sendMultipartFormReceiveJSON(url: string, options: RequestOptionsWithData<FormData | Object>): Promise<any> {
+    function toFormData(input: { [key: string]: Array<string> | File | Object | string },
+      form: ?FormData = null, namespace: ?string = null): FormData {
+      let formData;
+      if (form != null) {
+        formData = form;
+      } else {
+        formData = new FormData();
+      }
 
       for (const key of Object.keys(input)) {
         let formKey;
         const value = input[key];
-        if (namespace) {
+        if (namespace != null) {
           formKey = `${namespace}[${key}]`;
         } else {
           formKey = key;
         }
 
-        if (_.isArray(value)) {
+        if (Array.isArray(value)) {
           for (const val of value) {
             formData.append(`${formKey}[]`, val);
           }
         } else if (value instanceof File) {
           formData.append(`${formKey}[]`, value, value.name);
-        } else if (_.isObject(value)) {
-          toFormData(value, formData, key);
-        } else { // string
-          ErrorHandling.assert(_.isString(value));
+        } else if (typeof value === "string") {
           formData.append(formKey, value);
+        } else { // nested object
+          toFormData(value, formData, key);
         }
       }
-
       return formData;
-    };
-
+    }
 
     const body = options.data instanceof FormData ?
-        options.data
-      :
+        options.data :
         toFormData(options.data);
-
 
     return this.receiveJSON(
       url,
@@ -92,15 +108,13 @@ const Request = {
         body,
       }),
     );
-  },
-
+  }
 
   // IN:  url-encoded formdata
   // OUT: json
-  sendUrlEncodedFormReceiveJSON(url, options = {}) {
+  sendUrlEncodedFormReceiveJSON(url: string, options: RequestOptionsWithData<string | JQuery>): Promise<any> {
     const body = typeof options.data === "string" ?
-        options.data
-      :
+        options.data :
         options.data.serialize();
 
     return this.receiveJSON(
@@ -111,31 +125,34 @@ const Request = {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-      },
-      ),
+      }),
     );
-  },
+  }
 
-
-  receiveArraybuffer(url, options = {}) {
+  receiveArraybuffer(url: string, options: RequestOptions = {}): Promise<ArrayBuffer> {
     return this.triggerRequest(
       url,
       _.defaultsDeep(options, { headers: { Accept: "application/octet-stream" } }),
       response => response.arrayBuffer());
-  },
-
+  }
 
   // IN:  arraybuffer
   // OUT: arraybuffer
-  sendArraybufferReceiveArraybuffer(url, options = {}) {
+  sendArraybufferReceiveArraybuffer(url: string,
+    options: RequestOptionsWithData<ArrayBuffer | $TypedArray>): Promise<ArrayBuffer> {
     let body = options.data instanceof ArrayBuffer ?
-        options.data
-      :
+        options.data :
         options.data.buffer.slice(0, options.data.byteLength);
 
     if (options.compress) {
       body = pako.gzip(body);
-      options.headers["Content-Encoding"] = "gzip";
+      if (options.headers == null) {
+        options.headers = {
+          "Content-Encoding": "gzip",
+        };
+      } else {
+        options.headers["Content-Encoding"] = "gzip";
+      }
     }
 
     return this.receiveArraybuffer(
@@ -146,13 +163,12 @@ const Request = {
         headers: {
           "Content-Type": "application/octet-stream",
         },
-      },
-      ),
+      }),
     );
-  },
+  }
 
-
-  triggerRequest(url, options = {}, responseDataHandler) {
+  triggerRequest<T>(url: string, options: RequestOptions | RequestOptionsWithData<T> = {},
+    responseDataHandler: ?Function = null): Promise<*> {
     const defaultOptions = {
       method: "GET",
       host: "",
@@ -176,7 +192,7 @@ const Request = {
       if (_.isString(params)) {
         appendix = params;
       } else if (_.isObject(params)) {
-        appendix = _.map(params, (value, key) => `${key}=${value}`).join("&");
+        appendix = _.map(params, (value: string, key: string) => `${key}=${value}`).join("&");
       } else {
         throw new Error("options.params is expected to be a string or object for a request!");
       }
@@ -184,16 +200,16 @@ const Request = {
       url += `?${appendix}`;
     }
 
-
     const headers = new Headers();
     for (const name of Object.keys(options.headers)) {
       headers.set(name, options.headers[name]);
     }
     options.headers = headers;
 
-    let fetchPromise = fetch(url, options)
-      .then(this.handleStatus)
-      .then(responseDataHandler);
+    let fetchPromise = fetch(url, options).then(this.handleStatus);
+    if (responseDataHandler != null) {
+      fetchPromise = fetchPromise.then(responseDataHandler);
+    }
 
     if (!options.doNotCatch) {
       fetchPromise = fetchPromise.catch(this.handleError);
@@ -211,29 +227,25 @@ const Request = {
     } else {
       return fetchPromise;
     }
-  },
+  }
 
-
-  timeoutPromise(timeout) {
+  timeoutPromise(timeout: number): Promise<string> {
     return new Promise((resolve) => {
       setTimeout(
         () => resolve("timeout"),
         timeout,
       );
     });
-  },
+  }
 
-
-  handleStatus(response) {
+  handleStatus(response: Response): Promise<Response> {
     if (response.status >= 200 && response.status < 400) {
       return Promise.resolve(response);
     }
-
     return Promise.reject(response);
-  },
+  }
 
-
-  handleError(error) {
+  handleError(error: Response | Error): Promise<void> {
     if (error instanceof Response) {
       return error.text().then(
         (text) => {
@@ -241,7 +253,9 @@ const Request = {
             const json = JSON.parse(text);
 
             // Propagate HTTP status code for further processing down the road
-            json.status = error.status;
+            if (error.status) {
+              json.status = error.status;
+            }
 
             Toast.message(json.messages);
             return Promise.reject(json);
@@ -258,25 +272,17 @@ const Request = {
       Toast.error(error);
       return Promise.reject(error);
     }
-  },
+  }
 
-
-  handleEmptyJsonResponse(response) {
+  handleEmptyJsonResponse(response: Response): Promise<{}> {
     const contentLength = parseInt(response.headers.get("Content-Length"));
     if (contentLength === 0) {
       return Promise.resolve({});
     } else {
       return response.json();
     }
-  },
+  }
+}
 
 
-  // Extends the native Promise API with `always` functionality similar to jQuery.
-  // http://api.jquery.com/deferred.always/
-  always(promise, func) {
-    return promise.then(func, func);
-  },
-};
-
-
-export default Request;
+export default new Request();

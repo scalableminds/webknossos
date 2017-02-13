@@ -2,6 +2,7 @@
  * skeletontracing_plane_controller.js
  * @flow
  */
+/* globals JQueryInputEventObject:false */
 
 import $ from "jquery";
 import * as THREE from "three";
@@ -15,6 +16,7 @@ import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType } from "oxalis/constants";
+import type { ModifierKeys } from "libs/input";
 
 const TDView: 3 = 3;
 
@@ -66,9 +68,9 @@ class SkeletonTracingPlaneController extends PlaneController {
 
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
-      leftClick: (pos, plane, event) =>
+      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
         this.onClick(pos, event.shiftKey, event.altKey, plane),
-      rightClick: (pos, plane, event) =>
+      rightClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
         this.setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
     });
   }
@@ -76,8 +78,8 @@ class SkeletonTracingPlaneController extends PlaneController {
 
   getTDViewMouseControls(): Object {
     return _.extend(super.getTDViewMouseControls(), {
-      leftClick: (position, plane, event) =>
-        this.onClick(position, event.shiftKey, event.altKey, OrthoViews.TDView),
+      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
+        this.onClick(pos, event.shiftKey, event.altKey, OrthoViews.TDView),
     });
   }
 
@@ -113,7 +115,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   };
 
 
-  scrollPlanes(delta: number, type: ?string): void {
+  scrollPlanes(delta: number, type: ?ModifierKeys): void {
     super.scrollPlanes(delta, type);
 
     if (type === "shift") {

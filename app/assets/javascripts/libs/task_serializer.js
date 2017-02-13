@@ -65,6 +65,7 @@ class TaskSerializer {
 
   signalResolve(task: AsyncTask, obj: any): void {
     const deferred = this.deferreds.get(task);
+    this.deferreds.delete(task);
     if (deferred != null) {
       deferred.resolve(obj);
     }
@@ -72,6 +73,7 @@ class TaskSerializer {
 
   signalReject(task: AsyncTask, error: any): void {
     const deferred = this.deferreds.get(task);
+    this.deferreds.delete(task);
     if (deferred != null) {
       deferred.reject(error);
     }
@@ -87,20 +89,20 @@ class TaskSerializer {
       const currentTask = this.tasks.shift();
       try {
         const response = await currentTask();
-        await this.signalResolve(currentTask, response);
+        this.signalResolve(currentTask, response);
       } catch (error) {
         this.retryCount++;
         this.tasks.unshift(currentTask);
 
         if (this.retryCount >= this.maxRetry) {
           this.failed = true;
-          await this.signalReject(currentTask, error);
+          this.signalReject(currentTask, error);
         } else {
           await Utils.sleep(this.retryTimeMs);
         }
       }
     }
-    this.running = true;
+    this.running = false;
     this.doneDeferred.resolve();
     this.doneDeferred = new Deferred();
   }

@@ -39,8 +39,7 @@ class VolumeTracingController {
 
     _.extend(this, Backbone.Events);
 
-    $("#create-cell-button").on("click", () => this.model.volumeTracing.createCell(),
-    );
+    $("#create-cell-button").on("click", () => this.model.volumeTracing.createCell());
 
     // Keyboard shortcuts
     this.keyboardNoLoop = new InputKeyboardNoLoop({
@@ -72,14 +71,12 @@ class VolumeTracingController {
         $(inputId).on("focus", () => {
           this.mergeMode = inputModeMapping[inputId];
           console.log(this.mergeMode);
-        },
-        );
+        });
         $(inputId).keypress((event) => {
           if (event.which === 13) {
             this.merge();
           }
-        },
-        );
+        });
       })(input);
     }
   }

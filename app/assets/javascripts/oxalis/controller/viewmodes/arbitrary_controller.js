@@ -138,13 +138,13 @@ class ArbitraryController {
         leftDownMove: (delta: Point2) => {
           if (this.mode === constants.MODE_ARBITRARY) {
             this.cam.yaw(
-            -delta.x * this.model.user.getMouseInversionX() * this.model.user.get("mouseRotateValue"),
-            true,
-          );
+              -delta.x * this.model.user.getMouseInversionX() * this.model.user.get("mouseRotateValue"),
+              true,
+            );
             this.cam.pitch(
-            delta.y * this.model.user.getMouseInversionY() * this.model.user.get("mouseRotateValue"),
-            true,
-          );
+              delta.y * this.model.user.getMouseInversionY() * this.model.user.get("mouseRotateValue"),
+              true,
+            );
           } else if (this.mode === constants.MODE_ARBITRARY_PLANE) {
             const f = this.cam.getZoomStep() / (this.arbitraryView.width / this.WIDTH);
             this.cam.move([delta.x * f, delta.y * f, 0]);

@@ -19,7 +19,6 @@ object DataSetConfiguration extends BasicSettings {
     Map(
       "fourBit" -> JsBoolean(true),
       "quality" -> JsNumber(0),
-      "interpolation" -> JsBoolean(false),
-      "layers" -> Json.obj()))
+      "interpolation" -> JsBoolean(false)))
 
 }

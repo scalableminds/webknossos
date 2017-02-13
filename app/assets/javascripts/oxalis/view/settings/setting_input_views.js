@@ -119,12 +119,10 @@ export class ColorSetting extends React.Component {
   }
 
   componentWillReceiveProps(newProps) {
-    debugger
     this.setState({ value: Utils.rgbToHex(newProps.value) });
   }
 
   onColorChange = (evt) => {
-    debugger
     this.props.onChange(Utils.hexToRgb(evt.target.value));
   }
 

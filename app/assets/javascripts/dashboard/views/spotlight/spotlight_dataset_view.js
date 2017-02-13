@@ -36,7 +36,7 @@ class SpotlightDatasetView extends Marionette.View {
 
     <p>Scale: <%- TemplateHelpers.formatScale(dataSource.scale) %></p>
     <% if(description) { %>
-      <p><%- description %></p>
+      <p style="white-space: pre-wrap;"><%- description %></p>
     <% } else { %>
       <% if(hasSegmentation) { %>
         <p>Original data and segmentation</p>

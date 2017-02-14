@@ -31,12 +31,10 @@ type KeyboardBinding = [KeyboardKey, KeyboardHandler];
 type BindingMap<T: Function> = { [key: KeyboardKey]: T };
 type MouseButtonWhichType = 1 | 3;
 type MouseButtonStringType = "left" | "right";
-type MouseHandler =
-  () => void |
-  (position: Point2) => void |
-  (deltaY: number, modifier: ?ModifierKeys) => void |
-  (position: Point2, id: ?string, event: JQueryInputEventObject) => void |
-  (delta: Point2, position: Point2, id: ?string, event: JQueryInputEventObject) => void;
+type MouseHandlerType =
+  ((deltaY: number, modifier: ?ModifierKeys) => void) |
+  ((position: Point2, id: ?string, event: JQueryInputEventObject) => void) |
+  ((delta: Point2, position: Point2, id: ?string, event: JQueryInputEventObject) => void);
 
 // Workaround: KeyboardJS fires event for "C" even if you press
 // "Ctrl + C".
@@ -242,11 +240,11 @@ export class InputMouse {
   position: ?Point2 = null;
 
   // Copied from backbone events (TODO: handle this better)
-  on: (bindings: BindingMap<MouseHandler>) => void;
-  attach: (bindings: BindingMap<MouseHandler>) => void;
+  on: (bindings: BindingMap<MouseHandlerType>) => void;
+  attach: (bindings: BindingMap<MouseHandlerType>) => void;
   trigger: Function;
 
-  constructor($target: JQuery, initialBindings: BindingMap<MouseHandler> = {}, id: ?string = null) {
+  constructor($target: JQuery, initialBindings: BindingMap<MouseHandlerType> = {}, id: ?string = null) {
     _.extend(this, Backbone.Events);
     this.$target = $target;
     this.id = id;

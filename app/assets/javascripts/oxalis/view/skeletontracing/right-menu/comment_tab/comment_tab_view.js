@@ -75,7 +75,7 @@ class CommentTabView extends Marionette.View {
     // events
     this.listenTo(this.model.skeletonTracing, "newActiveNode", this.updateInputElement);
     this.listenTo(this.model.skeletonTracing, "reloadTrees", this.updateState);
-    this.listenTo(this.model.skeletonTracing, "setComment", this.setComment);
+    this.listenTo(this.model.skeletonTracing, "newComment", this.updateState);
 
     // keyboard shortcuts
     return new Input.KeyboardNoLoop({
@@ -107,7 +107,7 @@ class CommentTabView extends Marionette.View {
     this.commentList.setState({
       data: this.model.skeletonTracing.getTreesSortedBy("treeId", this.isSortedAscending),
       activeNodeId: this.getActiveNodeId(),
-      activeTreeId: this.model.skeletonTracing.getActiveTreeId(),
+      activeTreeId: this.getActiveTreeId(),
       isSortedAscending: this.isSortedAscending,
     });
   }
@@ -125,16 +125,26 @@ class CommentTabView extends Marionette.View {
   }
 
 
-  setActiveNode(comment, treeId) {
+  getActiveTreeId() {
+    return this.model.skeletonTracing.getActiveTreeId();
+  }
+
+
+  setActiveComment(comment, treeId) {
     this.activeComment = this.makeComment(comment, treeId);
+  }
+
+
+  setActiveNode(comment, treeId) {
+    this.setActiveComment(comment, treeId);
     this.model.skeletonTracing.setActiveNode(comment.node);
     this.model.skeletonTracing.centerActiveNode();
   }
 
 
-  getCommentForNode(nodeId) {
-    const activeTree = this.model.skeletonTracing.getActiveTree();
-    return _.find(activeTree.comments, { node: nodeId });
+  getCommentForNode(nodeId, tree) {
+    if (!tree) { tree = this.model.skeletonTracing.getActiveTree(); }
+    return this.model.skeletonTracing.getCommentForNode(nodeId, tree);
   }
 
 
@@ -159,36 +169,15 @@ class CommentTabView extends Marionette.View {
   }
 
 
-  setComment(commentText) {
+  setComment(commentText, node) {
     if (!this.model.skeletonTracing.restrictionHandler.updateAllowed()) { return; }
+    if (!node) { node = this.model.skeletonTracing.getActiveNode(); }
+    // don't add a comment if there is no node
+    if (!node) { return; }
 
-    // add, delete or update a comment
-    const nodeId = this.getActiveNodeId();
+    this.model.skeletonTracing.setCommentForNode(commentText, node);
 
-    // don't add a comment if there is no active node
-    if (!nodeId) { return; }
-
-    const tree = this.model.skeletonTracing.getActiveTree();
-
-    let comment = this.getCommentForNode(nodeId);
-    if (comment) {
-      if (commentText !== "") {
-        comment.content = commentText;
-      } else {
-        tree.removeCommentWithNodeId(nodeId);
-      }
-      this.updateState();
-    } else if (commentText !== "") {
-      comment = {
-        node: nodeId,
-        content: commentText,
-      };
-      tree.comments.push(comment);
-
-      this.setActiveNode(comment, tree.treeId);
-    }
-
-    this.model.skeletonTracing.updateTree(tree);
+    this.updateState();
   }
 
 
@@ -249,7 +238,7 @@ class CommentTabView extends Marionette.View {
     }
 
     if (treeId === undefined) {
-      treeId = this.model.skeletonTracing.getActiveTreeId();
+      treeId = this.getActiveTreeId();
     }
 
     return { comment, treeId };

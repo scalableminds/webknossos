@@ -8,9 +8,7 @@ import Backbone from "backbone";
 import DataCube from "oxalis/model/binary/data_cube";
 import Dimensions from "oxalis/model/dimensions";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
-
 import constants from "oxalis/constants";
-
 import type { Vector2, Vector3, Vector4, OrthoViewType } from "oxalis/constants";
 
 class DataTexture {
@@ -20,7 +18,7 @@ class DataTexture {
   ready: boolean = false;
   zoomStep: number = 0;
   topLeftBucket: Vector3 = [0, 0, 0];
-  area: Vector2 = [0, 0, 0, 0];
+  area: Vector4 = [0, 0, 0, 0];
   counter: number = 0;
 }
 
@@ -176,9 +174,6 @@ class Plane2D {
 
 
   getTexture(texture: DataTexture, position: Vector3, zoomStep: number, area: Vector4): ?Uint8Array {
-    if (texture.counter == null) {
-      texture.counter = 0;
-    }
     texture.counter++;
 
     // Saving the layer, we'll have to render

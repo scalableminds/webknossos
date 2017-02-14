@@ -20,14 +20,14 @@
           @Messages(error.message)
         </div>
       }
-      @helper.select(form("team"), ("" -> "<None>") +: teams.map { t =>
+      @helper.select(form("team"), ("" -> "<Please select>") +: teams.map { t =>
         t.name -> t.name
-      }, 'class -> "form-control")
-      @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control")
-      @helper.inputText(form("firstName"), 'class -> "form-control")
-      @helper.inputText(form("lastName"), 'class -> "form-control")
-      @helper.inputPassword(form("password.main"), 'class -> "form-control")
-      @helper.inputPassword(form("password.validation"), 'class -> "form-control")
+      }, 'class -> "form-control", 'required -> "required")
+      @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control", 'required -> "required")
+      @helper.inputText(form("firstName"), 'class -> "form-control", 'required -> "required")
+      @helper.inputText(form("lastName"), 'class -> "form-control", 'required -> "required")
+      @helper.inputPassword(form("password.main"), 'class -> "form-control", 'required -> "required")
+      @helper.inputPassword(form("password.validation"), 'class -> "form-control", 'required -> "required")
 
       <div class="form-group">
         <div class="col-sm-9 col-sm-offset-3">

@@ -1,6 +1,6 @@
 /**
  * app.js
- * @flow weak
+ * @flow
  */
 
 import Marionette from "backbone.marionette";

@@ -7,6 +7,7 @@ import _ from "lodash";
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { Collapse, Row, Col, Select } from "antd";
+import type { DatasetConfigurationType, OxalisState } from "oxalis/store";
 import { updateDatasetSettingAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { SwitchSetting, NumberSliderSetting, DropdownSetting, ColorSetting } from "./setting_input_views";
 
@@ -15,17 +16,18 @@ const Option = Select.Option;
 
 class DatasetSettings extends Component {
 
-  getColorSettings = (layer, layerName, i) =>
-    (
-      <div key={i}>
-        <Row>
-          <Col span={24}>Layer: {layerName}</Col>
-        </Row>
-        <NumberSliderSetting label="Brightness" min={-255} max={255} step={5} value={layer.brightness} onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")} />
-        <NumberSliderSetting label="Contrast" min={0.5} max={5} step={0.1} value={layer.contrast} onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")} />
-        <ColorSetting label="Color" value={layer.color} onChange={_.partial(this.props.onChangeLayer, layerName, "color")} className="ant-btn" />
-      </div>
-    );
+  props: DatasetConfigurationType & { onChange: Function, onChangeLayer: Function };
+
+  getColorSettings = (layer: Object, layerName: string) => (
+    <div key={layerName}>
+      <Row>
+        <Col span={24}>Layer: {layerName}</Col>
+      </Row>
+      <NumberSliderSetting label="Brightness" min={-255} max={255} step={5} value={layer.brightness} onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")} />
+      <NumberSliderSetting label="Contrast" min={0.5} max={5} step={0.1} value={layer.contrast} onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")} />
+      <ColorSetting label="Color" value={layer.color} onChange={_.partial(this.props.onChangeLayer, layerName, "color")} className="ant-btn" />
+    </div>
+  );
 
   onChangeQuality = (propertyName:string, value:string) => {
     this.props.onChange(propertyName, parseInt(value));
@@ -53,7 +55,7 @@ class DatasetSettings extends Component {
   }
 }
 
-const mapStateToProps = state => (
+const mapStateToProps = (state: OxalisState) => (
   state.datasetConfiguration
 );
 

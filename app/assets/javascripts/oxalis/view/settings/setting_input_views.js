@@ -1,8 +1,14 @@
-import React from "react";
-import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
-import Utils from "libs/utils";
+/**
+ * setting_input_views.js
+ * @flow
+ */
 
-export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }) {
+import React from "react";
+import Utils from "libs/utils";
+import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
+import type { Vector6 } from "oxalis/constants";
+
+export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: Function, value: number, label: string, max: number, min?: number, step?: number}) {
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>
@@ -21,7 +27,7 @@ export function NumberSliderSetting({ onChange, value, label, max, min = 1, step
   );
 }
 
-export function SwitchSetting({ onChange, value, label }) {
+export function SwitchSetting({ onChange, value, label }:{onChange: Function, value: boolean, label: string}) {
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>
@@ -32,7 +38,7 @@ export function SwitchSetting({ onChange, value, label }) {
   );
 }
 
-export function NumberInputSetting({ onChange, value, label, max, min = 1, step = 1 }) {
+export function NumberInputSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: Function, value: number, label: string, max?: number, min?: number, step?: number}) {
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>
@@ -43,11 +49,21 @@ export function NumberInputSetting({ onChange, value, label, max, min = 1, step 
   );
 }
 
+type BoundingBoxSettingPropTypes = {
+  label: string,
+  value: Vector6,
+  onChange: Function,
+};
+
 export class BoundingBoxSetting extends React.Component {
 
-  state: {isValid: boolean, text: string};
+  props: BoundingBoxSettingPropTypes;
+  state: {
+    isValid: boolean,
+    text: string
+  };
 
-  constructor(props) {
+  constructor(props: BoundingBoxSettingPropTypes) {
     super(props);
     this.state = {
       isValid: true,
@@ -55,14 +71,14 @@ export class BoundingBoxSetting extends React.Component {
     };
   }
 
-  componentWillReceiveProps(newProps) {
+  componentWillReceiveProps(newProps: BoundingBoxSettingPropTypes) {
     this.state = {
       isValid: true,
       text: newProps.value.join(", "),
     };
   }
 
-  validate = (evt) => {
+  validate = (evt: SyntheticInputEvent) => {
     const text = evt.target.value;
 
     const isValidInput = new RegExp(/^[\d ,]+$/, "g").test(text);  // only allow numbers, spaces and comma as input
@@ -105,24 +121,32 @@ export class BoundingBoxSetting extends React.Component {
   }
 }
 
+type ColorSettingPropTypes = {
+  // eslint-disable-next-line react/no-unused-prop-types
+  value: Vector6,
+  label: string,
+  onChange: Function,
+}
+
 /* eslint-disable react/no-multi-comp */
 export class ColorSetting extends React.Component {
+  props: ColorSettingPropTypes;
   state: {
     value: string;
   }
 
-  constructor(props) {
+  constructor(props:ColorSettingPropTypes) {
     super(props);
     this.state = {
       value: "#000000",
     };
   }
 
-  componentWillReceiveProps(newProps) {
+  componentWillReceiveProps(newProps:ColorSettingPropTypes) {
     this.setState({ value: Utils.rgbToHex(newProps.value) });
   }
 
-  onColorChange = (evt) => {
+  onColorChange = (evt: SyntheticInputEvent) => {
     this.props.onChange(Utils.hexToRgb(evt.target.value));
   }
 
@@ -138,7 +162,7 @@ export class ColorSetting extends React.Component {
   }
 }
 
-export function DropdownSetting({ onChange, label, value, children }) {
+export function DropdownSetting({ onChange, label, value, children }:{ onChange: Function, label: string, value: number, children?: Array<Select.Option> }) {
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>

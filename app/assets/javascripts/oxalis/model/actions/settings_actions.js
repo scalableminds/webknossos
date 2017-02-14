@@ -9,7 +9,7 @@ import type { UserConfigurationType, DatasetConfigurationType, DatasetType } fro
 type UpdateUserSettingActionType = {type: "UPDATE_USER_SETTING", propertyName: string, value: any};
 type UpdateDatasetSettingActionType = {type: "UPDATE_DATASET_SETTING", propertyName: string, value: any};
 type UpdateLayerSettingActionType = {type: "UPDATE_LAYER_SETTING", layerName:string, propertyName: string, value: any};
-type InitializeSettingsAction = {type: "INITIALIZE_SETTINGS", initialUserSettings: UserConfigurationType, initialDatasetSettings: DatasetConfigurationType};
+export type InitializeSettingsAction = {type: "INITIALIZE_SETTINGS", initialUserSettings: UserConfigurationType, initialDatasetSettings: DatasetConfigurationType};
 type SetDatasetAction = {type: "SET_DATASET", dataset: DatasetType};
 
 export type SettingActionTypes = (

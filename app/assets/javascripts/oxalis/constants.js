@@ -10,6 +10,7 @@ export type ModeType = PlaneType | 3;
 export type ViewType = 0 | 1 | 2 | 3;
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
+export type Vector6 = [number, number, number, number, number, number];
 
 const Constants = {
 

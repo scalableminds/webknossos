@@ -36,6 +36,7 @@ class SkeletonTracing {
   restrictionHandler: RestrictionHandler;
   stateLogger: SkeletonTracingStateLogger;
   trigger: Function;
+  on: Function;
   treeIdCount: number;
   colorIdCounter: number;
   idCount: number;

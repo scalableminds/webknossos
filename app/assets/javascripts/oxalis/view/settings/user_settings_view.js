@@ -8,12 +8,16 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { Collapse } from "antd";
 import Constants from "oxalis/constants";
+import Model from "oxalis/model";
+import type { UserConfigurationType, OxalisState } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, BoundingBoxSetting } from "./setting_input_views";
 
 const Panel = Collapse.Panel;
 
 class UserSettingsView extends Component {
+
+  props: UserConfigurationType & { onChange: Function, oldModel: Model };
 
   state: {
     activeNodeId: number,
@@ -44,34 +48,33 @@ class UserSettingsView extends Component {
 
   updateIds = () => {
     const wkModel = this.props.oldModel;
-
     if (wkModel.get("mode") in Constants.MODES_SKELETON) {
       this.setState({
-        activeNodeId: wkModel.annotationModel.getActiveNodeId() || 0,
-        activeTreeId: wkModel.annotationModel.getActiveTreeId() || 0,
+        activeNodeId: wkModel.get("skeletonTracing").getActiveNodeId() || 0,
+        activeTreeId: wkModel.get("skeletonTracing").getActiveTreeId() || 0,
         activeCellId: 0,
       });
     } else {
       this.setState({
         activeNodeId: 0,
         activeTreeId: 0,
-        activeCellId: wkModel.annotationModel.getActiveCellId() || 0,
+        activeCellId: wkModel.get("volumeTracing").getActiveCellId() || 0,
       });
     }
   }
 
-  onChangeActiveNodeId = (value) => {
-    this.props.oldModel.annotationModel.setActiveNode(value);
+  onChangeActiveNodeId = (value: number) => {
+    this.props.oldModel.get("skeletonTracing").setActiveNode(value);
     this.setState(Object.assign({}, this.state, { activeNodeId: value }));
   }
 
-  onChangeActiveTreeId = (value) => {
-    this.props.oldModel.annotationModel.setActiveTree(value);
+  onChangeActiveTreeId = (value: number) => {
+    this.props.oldModel.get("skeletonTracing").setActiveTree(value);
     this.setState(Object.assign({}, this.state, { activeTreeId: value }));
   }
 
-  onChangeActiveCellId = (value) => {
-    this.props.oldModel.annotationModel.setActiveCell(value);
+  onChangeActiveCellId = (value: number) => {
+    this.props.oldModel.get("volumeTracing").setActiveCell(value);
     this.setState(Object.assign({}, this.state, { activeCellId: value }));
   }
 
@@ -150,7 +153,7 @@ class UserSettingsView extends Component {
   }
 }
 
-const mapStateToProps = state => (
+const mapStateToProps = (state: OxalisState) => (
   state.userConfiguration
 );
 

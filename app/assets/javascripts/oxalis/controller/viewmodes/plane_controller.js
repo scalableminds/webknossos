@@ -252,6 +252,9 @@ class PlaneController {
     );
 
     this.input.keyboardNoLoop = new Input.KeyboardNoLoop(this.getKeyboardControls());
+    Store.subscribe(() => {
+      this.input.keyboardLoopDelayed.delay = Store.getState().userConfiguration.keyboardDelay;
+    };
   }
 
 

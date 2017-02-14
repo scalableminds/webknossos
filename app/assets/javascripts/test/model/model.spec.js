@@ -50,6 +50,7 @@ mockRequire("../../oxalis/model/user", User);
 mockRequire("../../oxalis/model/dataset_configuration", DatasetConfiguration);
 mockRequire("../../oxalis/model/binary/layers/wk_layer", Layer);
 mockRequire("../../oxalis/model/binary/layers/nd_store_layer", Layer);
+mockRequire("libs/window", {});
 
 const TRACING_OBJECT = {
   content: {
@@ -75,7 +76,8 @@ const TRACING_OBJECT = {
   },
 };
 
-const Model = require("../../oxalis/model").default;
+// Avoid node caching and make sure all mockRequires are applied
+const Model = mockRequire.reRequire("../../oxalis/model").default;
 
 describe("Model", () => {
   let model = null;

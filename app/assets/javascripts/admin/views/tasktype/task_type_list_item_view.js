@@ -13,9 +13,9 @@ class TaskTypeItemView extends Marionette.View {
   <% _.each(settings.allowedModes, function (mode) { %>
   <% var modename = mode[0].toUpperCase() + mode.slice(1); %>
   <% if(mode == settings.preferredMode) { %>
-    <span class="label label-primary" title="default mode"><%= modename %></span><br />
+    <span class="label label-primary" title="default mode"><%- modename %></span><br />
   <% } else { %>
-    <span class="label label-default" ><%= modename %></span><br />
+    <span class="label label-default" ><%- modename %></span><br />
   <% } %>
   <% }) %>
 </td>

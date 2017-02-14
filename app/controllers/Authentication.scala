@@ -9,7 +9,7 @@ import akka.actor.ActorRef
 import com.scalableminds.util.mail._
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import models.team.TeamService
+import models.team.{Role, TeamService}
 import models.user._
 import net.liftweb.common.Full
 import org.apache.commons.codec.binary.Base64
@@ -42,7 +42,11 @@ class Authentication @Inject()(val messagesApi: MessagesApi, val configuration: 
 
   // -- Authentication
   val automaticUserActivation: Boolean =
-    Play.configuration.getBoolean("application.authentication.enableDevAutoVerify") getOrElse false
+    configuration.getBoolean("application.authentication.enableDevAutoVerify").getOrElse(false)
+
+  val roleOnRegistration: Role =
+    if(configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)) Role.Admin
+    else Role.User
 
   val registerForm: Form[(String, String, String, String, String)] = {
 
@@ -117,7 +121,8 @@ class Authentication @Inject()(val messagesApi: MessagesApi, val configuration: 
             formHtml(boundForm.withError("email", "user.email.alreadyInUse")).map(BadRequest(_))
           case _       =>
             for {
-              user <- UserService.insert(team, emailAddress, firstName, lastName, password, automaticUserActivation)
+              user <- UserService.insert(
+                team, emailAddress, firstName, lastName, password, automaticUserActivation, roleOnRegistration)
               brainDBResult <- BrainTracing.register(user)
             } yield {
               Mailer ! Send(

@@ -222,7 +222,7 @@ object AnnotationDAO
     count(defaultFindForUserQ(_user, annotationType))
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)
+    update(Json.obj("isActive" -> true, "_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)
 
   def incrementVersion(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(

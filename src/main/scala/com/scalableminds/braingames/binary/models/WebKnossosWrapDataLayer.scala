@@ -44,7 +44,6 @@ case class WebKnossosWrapDataLayer(settings: WebKnossosWrapDataLayerSettings) ex
       wkwFile <- WKWFile(new File(filePath))
       data <- wkwFile.readBlock(blockOffset.x, blockOffset.y, blockOffset.z)
     } yield {
-      wkwFile.close()
       data
     }
   }

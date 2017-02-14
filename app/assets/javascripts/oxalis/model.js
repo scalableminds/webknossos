@@ -6,23 +6,24 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
-import Utils from "../libs/utils";
-import Binary from "./model/binary";
-import SkeletonTracing from "./model/skeletontracing/skeletontracing";
-import User from "./model/user";
-import DatasetConfiguration from "./model/dataset_configuration";
-import VolumeTracing from "./model/volumetracing/volumetracing";
-import ConnectionInfo from "./model/binarydata_connection_info";
-import scaleInfo from "./model/scaleinfo";
-import Flycam2d from "./model/flycam2d";
-import Flycam3d from "./model/flycam3d";
-import constants from "./constants";
-import type { ModeType, Vector3, Vector4 } from "./constants";
-import Request from "../libs/request";
-import Toast from "../libs/toast";
-import ErrorHandling from "../libs/error_handling";
-import WkLayer from "./model/binary/layers/wk_layer";
-import NdStoreLayer from "./model/binary/layers/nd_store_layer";
+import window from "libs/window";
+import Utils from "libs/utils";
+import Binary from "oxalis/model/binary";
+import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
+import User from "oxalis/model/user";
+import DatasetConfiguration from "oxalis/model/dataset_configuration";
+import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
+import ConnectionInfo from "oxalis/model/binarydata_connection_info";
+import scaleInfo from "oxalis/model/scaleinfo";
+import Flycam2d from "oxalis/model/flycam2d";
+import Flycam3d from "oxalis/model/flycam3d";
+import constants from "oxalis/constants";
+import type { ModeType, Vector3, Vector4 } from "oxalis/constants";
+import Request from "libs/request";
+import Toast from "libs/toast";
+import ErrorHandling from "libs/error_handling";
+import WkLayer from "oxalis/model/binary/layers/wk_layer";
+import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 
 // This is THE model. It takes care of the data including the
 // communication with the server.
@@ -152,7 +153,7 @@ class Model extends Backbone.Model {
     let infoUrl;
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
       // Include /readOnly part whenever it is in the pathname
-      infoUrl = `${location.pathname}/info`;
+      infoUrl = `${window.location.pathname}/info`;
     } else {
       infoUrl = `/annotations/${this.get("tracingType")}/${this.get("tracingId")}/info`;
     }
@@ -252,8 +253,8 @@ class Model extends Backbone.Model {
       dataSet: dataset.get("name"),
     });
 
-    console.log("tracing", tracing);
-    console.log("user", this.user);
+    // console.log("tracing", tracing);
+    // console.log("user", this.user);
 
     const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
     scaleInfo.initialize(dataset.get("scale"));
@@ -308,7 +309,6 @@ class Model extends Backbone.Model {
     this.set("settings", tracing.content.settings);
     this.set("allowedModes", this.determineAllowedModes());
     this.set("isTask", this.get("tracingType") === "Task");
-
 
     // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
     if (this.get("allowedModes").length === 0) {
@@ -370,6 +370,11 @@ class Model extends Backbone.Model {
 
   getSegmentationBinary() {
     return _.find(this.binary, binary => binary.category === "segmentation");
+  }
+
+
+  getBinaryByName(name) {
+    return this.binary[name];
   }
 
 

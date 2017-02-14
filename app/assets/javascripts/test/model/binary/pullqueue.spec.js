@@ -13,7 +13,8 @@ const RequestMock = {
 };
 mockRequire("libs/request", RequestMock);
 
-const PullQueue = require("oxalis/model/binary/pullqueue").default;
+// Avoid node caching and make sure all mockRequires are applied
+const PullQueue = mockRequire.reRequire("oxalis/model/binary/pullqueue").default;
 
 describe("PullQueue", () => {
   const layer = {

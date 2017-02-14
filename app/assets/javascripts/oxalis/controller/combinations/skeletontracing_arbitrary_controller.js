@@ -3,7 +3,7 @@
  * @flow
  */
 
-import ArbitraryController from "../viewmodes/arbitrary_controller";
+import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 
 class SkeletonTracingArbitraryController extends ArbitraryController {}
 

@@ -7,7 +7,7 @@ import _ from "lodash";
 import type Layer from "oxalis/model/binary/layers/layer";
 import TaskSerializer from "libs/task_serializer";
 import type { Vector4 } from "oxalis/constants";
-import DataCube from "./data_cube";
+import DataCube from "oxalis/model/binary/data_cube";
 
 const BATCH_SIZE = 32;
 const DEBOUNCE_TIME = 1000;

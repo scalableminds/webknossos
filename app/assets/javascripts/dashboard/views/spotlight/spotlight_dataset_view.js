@@ -1,6 +1,7 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import TemplateHelpers from "libs/template_helpers";
+import app from "app";
 
 class SpotlightDatasetView extends Marionette.View {
   static initClass() {
@@ -70,8 +71,12 @@ class SpotlightDatasetView extends Marionette.View {
 
   submitForm(type, event) {
     event.preventDefault();
-    this.ui.contentTypeInput.val(type);
-    return this.ui.form.submit();
+    const loginNotice = `For dataset annotation, please log in or create an account. For dataset viewing, no account is required.
+Do you wish to log in now?`;
+    if (app.currentUser != null || confirm(loginNotice)) {
+      this.ui.contentTypeInput.val(type);
+      this.ui.form.submit();
+    }
   }
 }
 SpotlightDatasetView.initClass();

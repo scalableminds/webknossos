@@ -13,11 +13,11 @@ import Flycam from "oxalis/model/flycam2d";
 import Flycam3d from "oxalis/model/flycam3d";
 import User from "oxalis/model/user";
 import type { SkeletonContentDataType } from "oxalis/model";
-import TracePoint from "./tracepoint";
-import TraceTree from "./tracetree";
-import SkeletonTracingStateLogger from "./skeletontracing_statelogger";
-import RestrictionHandler from "../helpers/restriction_handler";
-import TracingParser from "./tracingparser";
+import TracePoint from "oxalis/model/skeletontracing/tracepoint";
+import TraceTree from "oxalis/model/skeletontracing/tracetree";
+import SkeletonTracingStateLogger from "oxalis/model/skeletontracing/skeletontracing_statelogger";
+import RestrictionHandler from "oxalis/model/helpers/restriction_handler";
+import TracingParser from "oxalis/model/skeletontracing/tracingparser";
 
 // Max and min radius in base voxels (see scaleInfo.baseVoxel)
 const MIN_RADIUS = 1;
@@ -397,8 +397,44 @@ class SkeletonTracing {
   }
 
 
-  setComment(commentText) {
-    this.trigger("setComment", commentText);
+  setCommentForNode(commentText: string, node: TracePoint) {
+    // add, delete or update a comment
+    const nodeId = node.id;
+    const tree = this.getTree(node.treeId);
+
+    let comment = this.getCommentForNode(nodeId, tree);
+    if (comment) {
+      if (commentText !== "") {
+        comment.content = commentText;
+      } else {
+        tree.removeCommentWithNodeId(nodeId);
+      }
+    } else if (commentText !== "") {
+      comment = {
+        node: nodeId,
+        content: commentText,
+      };
+      tree.comments.push(comment);
+    }
+
+    this.stateLogger.updateTree(tree);
+    this.trigger("newComment");
+  }
+
+
+  getCommentForNode(nodeId: number, tree: ?TraceTree) {
+    let trees;
+    if (tree == null) {
+      trees = this.getTrees();
+    } else {
+      trees = [tree];
+    }
+
+    for (const curTree of trees) {
+      const found = _.find(curTree.comments, { node: nodeId });
+      if (found) { return found; }
+    }
+    return null;
   }
 
 
@@ -642,11 +678,6 @@ class SkeletonTracing {
         this.trigger("mergeDifferentTrees");
       }
     }
-  }
-
-
-  updateTree(tree) {
-    this.stateLogger.updateTree(tree);
   }
 
 

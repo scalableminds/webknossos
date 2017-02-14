@@ -4,7 +4,7 @@
 */
 import Utils from "libs/utils";
 import type { CommentType, BranchPoint } from "oxalis/model";
-import Tracepoint from "./tracepoint";
+import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 
 /**
 * A single tree of skeleton tracing nodes.

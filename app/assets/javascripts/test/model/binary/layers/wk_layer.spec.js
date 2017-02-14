@@ -26,7 +26,7 @@ mockRequire("libs/request", RequestMock);
 mockRequire.reRequire("libs/request");
 mockRequire.reRequire("oxalis/model/binary/layers/layer");
 
-const WkLayer = require("oxalis/model/binary/layers/wk_layer").default;
+const WkLayer = mockRequire.reRequire("oxalis/model/binary/layers/wk_layer").default;
 
 describe("WkLayer", () => {
   const dataSetName = "dataSet";

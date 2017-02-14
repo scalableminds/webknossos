@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import TaskSerializer from "libs/task_serializer";
+import AsyncTaskQueue from "libs/async_task_queue";
 import InterpolationCollector from "oxalis/model/binary/interpolation_collector";
 import DataCube from "oxalis/model/binary/data_cube";
 import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
@@ -77,7 +77,7 @@ class Binary {
 
     this.cube = new DataCube(this.model.taskBoundingBox, this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
 
-    const taskSerializer = new TaskSerializer();
+    const taskSerializer = new AsyncTaskQueue();
 
     const datasetName = this.model.get("dataset").get("name");
     const datastoreInfo = this.model.get("dataset").get("dataStore");

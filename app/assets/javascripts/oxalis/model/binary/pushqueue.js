@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import type Layer from "oxalis/model/binary/layers/layer";
-import TaskSerializer from "libs/task_serializer";
+import AsyncTaskQueue from "libs/async_task_queue";
 import type { Vector4 } from "oxalis/constants";
 import DataCube from "oxalis/model/binary/data_cube";
 
@@ -18,12 +18,12 @@ class PushQueue {
   cube: DataCube;
   layer: Layer;
   tracingId: string;
-  taskSerializer: TaskSerializer;
+  taskSerializer: AsyncTaskQueue;
   sendData: boolean;
   queue: Array<Vector4>;
 
   constructor(dataSetName: string, cube: DataCube, layer: Layer, tracingId: string,
-    taskSerializer: TaskSerializer, sendData: boolean = true) {
+    taskSerializer: AsyncTaskQueue, sendData: boolean = true) {
     this.dataSetName = dataSetName;
     this.cube = cube;
     this.layer = layer;

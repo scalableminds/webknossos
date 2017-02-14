@@ -8,7 +8,7 @@ import Deferred from "libs/deferred";
 
 type AsyncTask = () => Promise<void>;
 
-class TaskSerializer {
+class AsyncTaskQueue {
   // Executes asynchronous tasks in order.
   //
   // Each action is executed after the previous action
@@ -108,4 +108,4 @@ class TaskSerializer {
   }
 }
 
-export default TaskSerializer;
+export default AsyncTaskQueue;

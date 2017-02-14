@@ -63,11 +63,12 @@ object UserService extends FoxImplicits {
     UserDAO.logActivity(_user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(teamName: String, email: String, firstName: String, lastName: String, password: String, isActive: Boolean): Fox[User] =
+  def insert(teamName: String, email: String, firstName: String,
+    lastName: String, password: String, isActive: Boolean, teamRole: Role = Role.User): Fox[User] =
     for {
       teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
-      teamMemberships = teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
-      user = User(email, firstName, lastName, isActive = false, hashPassword(password), md5(password), teamMemberships)
+      teamMemberships = teamOpt.map(t => TeamMembership(t.name, teamRole)).toList
+      user = User(email, firstName, lastName, isActive = isActive, hashPassword(password), md5(password), teamMemberships)
       _ <- UserDAO.insert(user)(GlobalAccessContext)
     } yield user
 

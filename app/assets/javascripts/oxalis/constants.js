@@ -8,6 +8,7 @@ export type VolumeModeType = 0 | 1;
 export type PlaneType = 0 | 1 | 2;
 export type ModeType = PlaneType | 3;
 export type ViewType = 0 | 1 | 2 | 3;
+export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
 

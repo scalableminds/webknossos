@@ -1,3 +1,8 @@
+/**
+ * sorted_collection.js
+ * @flow weak
+ */
+
 import _ from "lodash";
 import Backbone from "backbone";
 

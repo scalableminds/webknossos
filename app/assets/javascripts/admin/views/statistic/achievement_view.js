@@ -25,7 +25,7 @@ class AchievementView extends Marionette.View {
     </tr>
     <tr>
       <td>Number of open Assignments</td>
-      <td><%= numberOfOpenAssignments %></td>
+      <td><%- numberOfOpenAssignments %></td>
     </tr>
   </tbody>
 </table>\

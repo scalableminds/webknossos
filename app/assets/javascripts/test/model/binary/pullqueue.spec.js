@@ -12,7 +12,8 @@ const RequestMock = {
 };
 mockRequire("../../../libs/request", RequestMock);
 
-const PullQueue = require("../../../oxalis/model/binary/pullqueue").default;
+// Avoid node caching and make sure all mockRequires are applied
+const PullQueue = mockRequire.reRequire("../../../oxalis/model/binary/pullqueue").default;
 
 describe("PullQueue", () => {
   const layer = {
@@ -22,7 +23,6 @@ describe("PullQueue", () => {
     requestFromStore: sinon.stub(),
   };
   const cube = {
-    BUCKET_SIZE_P: 5,
     BUCKET_LENGTH: 32 * 32 * 32,
     getBucket: sinon.stub(),
     getOrCreateBucket: sinon.stub(),

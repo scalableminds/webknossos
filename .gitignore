@@ -38,10 +38,12 @@ src/main/scala/rebel.xml
 *.mtl
 public/bower_components
 public/bundle
+public/commit.txt
 /knowledge
 conf/github.conf
 tmp/
 errorShots/
 flow-coverage/
+public/docs/frontend-api
 dev-db/
 docker-compose.override.yml

@@ -1,6 +1,7 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import TemplateHelpers from "libs/template_helpers";
+import app from "app";
 
 class SpotlightDatasetView extends Marionette.View {
   static initClass() {
@@ -10,7 +11,7 @@ class SpotlightDatasetView extends Marionette.View {
 <div class="panel-body row">
   <div class="dataset-thumbnail col-sm-4">
     <img class="img-rounded" src="<%- thumbnailURL %>">
-  
+
     <div class="link-row">
       <a href="/datasets/<%- name %>/view" title="View dataset">
         <img src="/assets/images/eye.svg">
@@ -25,18 +26,18 @@ class SpotlightDatasetView extends Marionette.View {
       <% } %>
     </div>
   </div>
-  
+
   <form action="<%- jsRoutes.controllers.AnnotationController.createExplorational().url %>" method="POST">
     <input type="hidden" name="dataSetName" value="<%- name %>" />
     <input type="hidden" name="contentType" id="contentTypeInput" />
   </form>
-  
+
   <div class="dataset-description col-sm-8">
     <h3><%- name %></h3>
-  
+
     <p>Scale: <%- TemplateHelpers.formatScale(dataSource.scale) %></p>
     <% if(description) { %>
-      <p><%= description %></p>
+      <p style="white-space: pre-wrap;"><%- description %></p>
     <% } else { %>
       <% if(hasSegmentation) { %>
         <p>Original data and segmentation</p>
@@ -70,8 +71,12 @@ class SpotlightDatasetView extends Marionette.View {
 
   submitForm(type, event) {
     event.preventDefault();
-    this.ui.contentTypeInput.val(type);
-    return this.ui.form.submit();
+    const loginNotice = `For dataset annotation, please log in or create an account. For dataset viewing, no account is required.
+Do you wish to log in now?`;
+    if (app.currentUser != null || confirm(loginNotice)) {
+      this.ui.contentTypeInput.val(type);
+      this.ui.form.submit();
+    }
   }
 }
 SpotlightDatasetView.initClass();

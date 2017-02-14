@@ -11,6 +11,7 @@ import * as THREE from "three";
 import Flycam2d from "oxalis/model/flycam2d";
 import Model from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
+import scaleInfo from "oxalis/model/scaleinfo";
 import Plane from "../geometries/plane";
 import Skeleton from "../geometries/skeleton";
 import Cube from "../geometries/cube";
@@ -32,7 +33,7 @@ class SceneController {
   pingBinary: boolean;
   pingBinarySeg: boolean;
   volumeMeshes: any;
-  polygonFactory: PolygonFactory;
+  polygonFactory: ?PolygonFactory;
   cube: Cube;
   userBoundingBox: Cube;
   taskBoundingBox: Cube;
@@ -99,10 +100,13 @@ class SceneController {
     }
 
     // create Meshes
-    this.planes = new Array(3);
-    for (const i of [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]) {
-      this.planes[i] = new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, this.flycam, i, this.model);
-    }
+    const createPlane = planeIndex => new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, this.flycam, planeIndex, this.model);
+
+    this.planes = [
+      createPlane(constants.PLANE_XY),
+      createPlane(constants.PLANE_YZ),
+      createPlane(constants.PLANE_XZ),
+    ];
 
     this.planes[constants.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
     this.planes[constants.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
@@ -223,7 +227,7 @@ class SceneController {
   setClippingDistance(value) {
     // convert nm to voxel
     for (const i of constants.ALL_PLANES) {
-      this.planeShift[i] = value * app.scaleInfo.voxelPerNM[i];
+      this.planeShift[i] = value * scaleInfo.voxelPerNM[i];
     }
     app.vent.trigger("rerender");
   }

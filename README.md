@@ -42,7 +42,7 @@ datastore {
 braingames.binary.cacheMaxSize = 1000 # in entries (each cache entry is 2 MB)
 ```
 
-### Create and run Docker image
+### Create and run Docker container
 ```
 docker create \
   --name webknossos-datastore \

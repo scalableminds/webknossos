@@ -35,7 +35,7 @@ class TaskListItemView extends Marionette.CompositeView {
   <td><%- dataSet %></td>
   <td class="nowrap">
     (<%- editPosition %>)<br>
-    <span><%- TemplateHelpers.formatScale(boundingBox) %></span>
+    <span><%- TemplateHelpers.formatTuple(boundingBox) %></span>
   </td>
   <td>
     <% if (neededExperience.domain != "" || neededExperience.value > 0) { %>

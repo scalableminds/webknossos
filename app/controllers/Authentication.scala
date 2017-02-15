@@ -63,9 +63,9 @@ class Authentication @Inject()(val messagesApi: MessagesApi, val configuration: 
     Form(
       mapping(
         "team" -> text,
-        "email" -> email.verifying("user.email.trailingSpace", s => s.trim == s),
-        "firstName" -> nonEmptyText(1, 30).verifying("user.firstName.trailingSpace", s => s.trim == s),
-        "lastName" -> nonEmptyText(1, 30).verifying("user.lastName.trailingSpace", s => s.trim == s),
+        "email" -> email,
+        "firstName" -> text.transform(_.trim, identity[String]).verifying("user.firstName.empty", s => s.length > 0),
+        "lastName" -> text.transform(_.trim, identity[String]).verifying("user.lastName.empty", s => s.length > 0),
         "password" -> passwordField)(registerFormApply)(registerFormUnapply))
   }
 

@@ -21,6 +21,7 @@
     "babel-preset-react": "^6.16.0",
     "babel-register": "^6.9.0",
     "css-loader": "^0.26.1",
+    "documentation": "^4.0.0-beta.18",
     "eslint": "^3.12.2",
     "eslint-config-airbnb": "^13.0.0",
     "eslint-import-resolver-webpack": "^0.8.0",
@@ -53,7 +54,8 @@
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
     "flow": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
-    "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text"
+    "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
+    "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api.js app/assets/javascripts/oxalis/api.js --github --sort-order alpha --name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api"
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",

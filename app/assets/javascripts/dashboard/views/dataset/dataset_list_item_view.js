@@ -29,7 +29,7 @@ class DatasetListItemView extends Marionette.CompositeView {
   </td>
   <td title="<%- dataSource.baseDir %>"><%- name %><br /><span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(dataStore.name) %>"><%- dataStore.name %></span></td>
   <td><%- formattedCreated %></td>
-  <td><%- TemplateHelpers.formatScale(dataSource.scale) %></td>
+  <td><%- TemplateHelpers.formatTuple(dataSource.scale) %></td>
   <td class="team-label">
     <% _.map(allowedTeams, function(team){ %>
       <span class="label label-default" style="background-color: <%- TemplateHelpers.stringToColor(team) %>">

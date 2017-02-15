@@ -21,6 +21,6 @@
     "transform-async-to-generator",
     "transform-class-properties",
     "transform-flow-strip-types",
-    ["import", { libraryName: "antd", style: "css" }]
+    ["import", { libraryName: "antd" }]
   ],
 }

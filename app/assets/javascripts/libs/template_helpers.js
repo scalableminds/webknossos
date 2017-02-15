@@ -20,6 +20,14 @@ const TemplateHelpers = {
     return hash % this.COLOR_MAP.length;
   },
 
+  formatTuple(tuple) {
+    if (Utils.__guard__(tuple, x => x.length) > 0) {
+      const tupleRounded = tuple.map(value => Utils.roundTo(value, 2));
+      return `(${tupleRounded.join(", ")})`;
+    } else {
+      return "";
+    }
+  },
 
   formatScale(scaleArr) {
     if (Utils.__guard__(scaleArr, x => x.length) > 0) {

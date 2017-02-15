@@ -46,7 +46,7 @@ class Mailer(conf: Config) extends Actor {
    * @return
    */
   def send(mail: Mail) = {
-    if (enabled) {
+    if (enabled && mail.recipients.exists(_.trim != "")) {
       // Content type
       val contentType = mail.contentType getOrElse guessContentType(mail)
 

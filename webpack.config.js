@@ -44,15 +44,6 @@ module.exports = {
         }),
       },
       {
-        test: /\.css$/,
-        // This needs to be `loader` until `extract-text-webpack-plugin` is fixed
-        // Ref: https://github.com/webpack/extract-text-webpack-plugin/issues/250
-        loader: ExtractTextPlugin.extract({
-          fallbackLoader: "style-loader",
-          loader: "css-loader",
-        }),
-      },
-      {
         test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
         use: {
           loader: "url-loader",

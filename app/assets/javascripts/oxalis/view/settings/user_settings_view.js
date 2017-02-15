@@ -11,7 +11,7 @@ import Constants from "oxalis/constants";
 import Model from "oxalis/model";
 import type { UserConfigurationType, OxalisState } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { NumberInputSetting, SwitchSetting, NumberSliderSetting, BoundingBoxSetting } from "./setting_input_views";
+import { NumberInputSetting, SwitchSetting, NumberSliderSetting, BoundingBoxSetting, LogSliderSetting } from "./setting_input_views";
 
 const Panel = Collapse.Panel;
 
@@ -19,21 +19,12 @@ class UserSettingsView extends Component {
 
   props: UserConfigurationType & { onChange: Function, oldModel: Model };
 
-  state: {
-    activeNodeId: number,
-    activeTreeId: number,
-    activeCellId: number,
+  state = {
+    activeNodeId: 0,
+    activeTreeId: 0,
+    activeCellId: 0,
+    zoom: 1,
   };
-
-  constructor() {
-    super();
-
-    this.state = {
-      activeNodeId: 0,
-      activeTreeId: 0,
-      activeCellId: 0,
-    };
-  }
 
   componentDidMount() {
     this.updateIds();
@@ -84,7 +75,7 @@ class UserSettingsView extends Component {
       return (
         <Panel header="Viewport Options" key="1">
           <NumberSliderSetting label="Move Value (nm/s)" min={30} max={14000} step={10} value={this.props.moveValue} onChange={_.partial(this.props.onChange, "moveValue")} />
-          <NumberSliderSetting label="Zoom" min={-100} max={100} value={this.props.zoom || 0} onChange={_.partial(this.props.onChange, "zoom")} />
+          <LogSliderSetting label="Zoom" min={-100} max={101} value={this.props.zoom} onChange={_.partial(this.props.onChange, "zoom")} oldModel={this.props.oldModel}/>
           <NumberSliderSetting label="Viewport Scale" min={0.05} max={20} step={0.1} value={this.props.scale} onChange={_.partial(this.props.onChange, "scale")} />
           <NumberSliderSetting label="Clipping Distance" max={12000} value={this.props.clippingDistance} onChange={_.partial(this.props.onChange, "clippingDistance")} />
           <SwitchSetting label="d/f-Switching" value={this.props.dynamicSpaceDirection} onChange={_.partial(this.props.onChange, "dynamicSpaceDirection")} />

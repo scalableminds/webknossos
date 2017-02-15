@@ -128,7 +128,7 @@ const defaultState: OxalisState = {
     sortTreesByName: false,
     sphericalCapRadius: 140,
     tdViewDisplayPlanes: true,
-    zoom: 2,
+    zoom: 1,
   },
   dataset: null,
 };

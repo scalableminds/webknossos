@@ -6,6 +6,7 @@
 import React from "react";
 import Utils from "libs/utils";
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
+import Model from "oxalis/model";
 import type { Vector6 } from "oxalis/constants";
 
 export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: Function, value: number, label: string, max: number, min?: number, step?: number}) {
@@ -25,6 +26,58 @@ export function NumberSliderSetting({ onChange, value, label, max, min = 1, step
       </Col>
     </Row>
   );
+}
+
+type LogSliderSettingProps = {
+  onChange: Function,
+  value: number,
+  label: string,
+  max: number,
+  min: number,
+  oldModel: Model,
+};
+
+export class LogSliderSetting extends React.Component {
+
+  onChangeInput = (value: number) => {
+    if (this.props.min <= value && value <= this.props.max) {
+      this.props.onChange(value);
+    } else {
+      // reset to slider value
+      this.props.onChange(this.props.value);
+    }
+  }
+
+  onChangeSlider = (value: number) => {
+    const logScaleBase = Math.pow(this.props.oldModel.get("flycam").getMaxZoomStep(), 0.01);
+    const newValue = Math.pow(logScaleBase, value);
+    this.props.onChange(newValue);
+  }
+
+  getSliderValue = () => {
+    const logScaleBase = Math.pow(this.props.oldModel.get("flycam").getMaxZoomStep(), 0.01);
+    const scaleValue = Math.log(this.props.value) / Math.log(logScaleBase);
+    return Math.round(scaleValue);
+  }
+
+  render() {
+    return (
+      <Row className="settings-row">
+        <Col span={8}><span className="setting-label">{this.props.label}</span></Col>
+        <Col span={8}>
+          <Slider min={this.props.min} max={this.props.max} onChange={this.onChangeSlider} value={this.getSliderValue()} />
+        </Col>
+        <Col span={6}>
+          <InputNumber
+            min={this.props.min}
+            max={this.props.max}
+            style={{ marginLeft: 16 }}
+            value={this.props.value} onChange={this.onChangeInput}
+          />
+        </Col>
+      </Row>
+    );
+  }
 }
 
 export function SwitchSetting({ onChange, value, label }:{onChange: Function, value: boolean, label: string}) {

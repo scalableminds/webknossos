@@ -26,13 +26,12 @@ object DefaultMails {
   val workloadMail = conf.getString("workload.mail").getOrElse("")
 
   def registerAdminNotifyerMail(user: User, email: String, brainDBResult: String) =
-    if(newUserMailingList != "")
-      Mail(
-        from = email,
-        headers = Map("Sender" -> defaultFrom),
-        subject = s"A new user (${user.name}) registered on $uri",
-        bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
-        recipients = List(newUserMailingList))
+    Mail(
+      from = email,
+      headers = Map("Sender" -> defaultFrom),
+      subject = s"A new user (${user.name}) registered on $uri",
+      bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
+      recipients = List(newUserMailingList))
 
   /**
     * Creates a registration mail which should allow the user to verify his
@@ -61,11 +60,10 @@ object DefaultMails {
   }
 
   def availableTaskCountMail(tableRows: List[(String, Int, String)]) = {
-    if(workloadMail != "")
-      Mail(
-        from = defaultFrom,
-        subject = "Available Tasks Overview",
-        bodyHtml = html.mail.availableTaskCounts(tableRows).body,
-        recipients = List(workloadMail))
+    Mail(
+      from = defaultFrom,
+      subject = "Available Tasks Overview",
+      bodyHtml = html.mail.availableTaskCounts(tableRows).body,
+      recipients = List(workloadMail))
   }
 }

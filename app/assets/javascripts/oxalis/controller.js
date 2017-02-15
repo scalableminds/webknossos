@@ -156,6 +156,8 @@ class Controller {
         this.zoomStepWarningToast = null;
       }
     });
+
+    app.vent.trigger("webknossos:ready");
   }
 
 

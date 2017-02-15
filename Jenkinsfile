@@ -25,6 +25,8 @@ ansiColor('xterm') {
 
       stage("Build") {
 
+        sh "docker-compose run frontend-dependencies"
+        sh "docker-compose run frontend-docs"
         sh "docker-compose run sbt clean compile stage"
         sh "docker build -t scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
       }

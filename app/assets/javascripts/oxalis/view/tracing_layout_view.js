@@ -13,6 +13,7 @@ import app from "app";
 import store from "oxalis/store";
 import OxalisController from "oxalis/controller";
 import OxalisModel from "oxalis/model";
+import OxalisApi from "oxalis/api";
 import Constants from "oxalis/constants";
 import Modal from "oxalis/view/modal";
 import Utils from "libs/utils";
@@ -102,6 +103,7 @@ class TracingLayoutView extends Marionette.View {
       .on("click", this.showUserScriptsModal.bind(this));
 
     app.oxalis = new OxalisController(this.options);
+    window.webknossos = new OxalisApi(this.model);
   }
 
 

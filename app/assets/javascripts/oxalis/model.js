@@ -8,6 +8,7 @@ import _ from "lodash";
 import Store from "oxalis/store";
 import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
+import window from "libs/window";
 import Utils from "../libs/utils";
 import Binary from "./model/binary";
 import SkeletonTracing from "./model/skeletontracing/skeletontracing";
@@ -151,7 +152,7 @@ class Model extends Backbone.Model {
     let infoUrl;
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
       // Include /readOnly part whenever it is in the pathname
-      infoUrl = `${location.pathname}/info`;
+      infoUrl = `${window.location.pathname}/info`;
     } else {
       infoUrl = `/annotations/${this.get("tracingType")}/${this.get("tracingId")}/info`;
     }
@@ -291,7 +292,6 @@ class Model extends Backbone.Model {
     this.set("allowedModes", this.determineAllowedModes());
     this.set("isTask", this.get("tracingType") === "Task");
 
-
     // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
     if (this.get("allowedModes").length === 0) {
       Toast.error("There was no valid allowed tracing mode specified.");
@@ -352,6 +352,11 @@ class Model extends Backbone.Model {
 
   getSegmentationBinary() {
     return _.find(this.binary, binary => binary.category === "segmentation");
+  }
+
+
+  getBinaryByName(name) {
+    return this.binary[name];
   }
 
 

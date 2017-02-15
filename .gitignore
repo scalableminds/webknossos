@@ -44,5 +44,6 @@ conf/github.conf
 tmp/
 errorShots/
 flow-coverage/
+public/docs/frontend-api
 dev-db/
 docker-compose.override.yml

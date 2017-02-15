@@ -395,8 +395,44 @@ class SkeletonTracing {
   }
 
 
-  setComment(commentText) {
-    this.trigger("setComment", commentText);
+  setCommentForNode(commentText: string, node: TracePoint) {
+    // add, delete or update a comment
+    const nodeId = node.id;
+    const tree = this.getTree(node.treeId);
+
+    let comment = this.getCommentForNode(nodeId, tree);
+    if (comment) {
+      if (commentText !== "") {
+        comment.content = commentText;
+      } else {
+        tree.removeCommentWithNodeId(nodeId);
+      }
+    } else if (commentText !== "") {
+      comment = {
+        node: nodeId,
+        content: commentText,
+      };
+      tree.comments.push(comment);
+    }
+
+    this.stateLogger.updateTree(tree);
+    this.trigger("newComment");
+  }
+
+
+  getCommentForNode(nodeId: number, tree: ?TraceTree) {
+    let trees;
+    if (tree == null) {
+      trees = this.getTrees();
+    } else {
+      trees = [tree];
+    }
+
+    for (const curTree of trees) {
+      const found = _.find(curTree.comments, { node: nodeId });
+      if (found) { return found; }
+    }
+    return null;
   }
 
 
@@ -640,11 +676,6 @@ class SkeletonTracing {
         this.trigger("mergeDifferentTrees");
       }
     }
-  }
-
-
-  updateTree(tree) {
-    this.stateLogger.updateTree(tree);
   }
 
 

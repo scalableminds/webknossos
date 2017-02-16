@@ -3,6 +3,8 @@
  * @flow
  */
 
+ /* eslint-disable react/no-multi-comp */
+
 import React from "react";
 import Utils from "libs/utils";
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
@@ -38,6 +40,8 @@ type LogSliderSettingProps = {
 };
 
 export class LogSliderSetting extends React.Component {
+
+  props: LogSliderSettingProps;
 
   onChangeInput = (value: number) => {
     if (this.props.min <= value && value <= this.props.max) {
@@ -181,7 +185,7 @@ type ColorSettingPropTypes = {
   onChange: Function,
 }
 
-/* eslint-disable react/no-multi-comp */
+
 export class ColorSetting extends React.Component {
   props: ColorSettingPropTypes;
   state: {

@@ -23,6 +23,15 @@ class TemplateHelpers {
     return hash % this.COLOR_MAP.length;
   }
 
+  formatTuple(tuple: Array<number>) {
+    if (tuple != null && tuple.length > 0) {
+      const tupleRounded = tuple.map(value => Utils.roundTo(value, 2));
+      return `(${tupleRounded.join(", ")})`;
+    } else {
+      return "";
+    }
+  }
+
   formatScale(scaleArr: Vector3): string {
     if (scaleArr != null && scaleArr.length > 0) {
       const scaleArrRounded = scaleArr.map(value => Utils.roundTo(value, 2));

@@ -20,9 +20,13 @@
           @Messages(error.message)
         </div>
       }
-      @helper.select(form("team"), ("" -> "<Please select>") +: teams.map { t =>
-        t.name -> t.name
-      }, 'class -> "form-control", 'required -> "required")
+      @if(teams.length == 1) {
+        <input type="hidden" name="team" value="@teams.head.name" />
+      } else {
+        @helper.select(form("team"), ("" -> "<Please select>") +: teams.map { t =>
+          t.name -> t.name
+        }, 'class -> "form-control", 'required -> "required")
+      }
       @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control", 'required -> "required")
       @helper.inputText(form("firstName"), 'class -> "form-control", 'required -> "required")
       @helper.inputText(form("lastName"), 'class -> "form-control", 'required -> "required")

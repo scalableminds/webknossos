@@ -5,6 +5,7 @@
 
 import _ from "lodash";
 import Marionette from "backbone.marionette";
+import app from "app";
 import Constants from "../constants";
 
 class TracingView extends Marionette.View {
@@ -41,10 +42,8 @@ class TracingView extends Marionette.View {
   }
 
   initialize() {
-    this.listenTo(this.model.flycam, "zoomStepChanged", function () {
-      this.$el.toggleClass("zoomstep-warning",
-        (this.model.volumeTracing != null) && !this.model.canDisplaySegmentationData());
-    });
+    this.listenTo(this.model.flycam, "zoomStepChanged", this.onZoomStepChange);
+    this.listenTo(app.vent, "webknossos:ready", this.onZoomStepChange);
   }
 
 
@@ -59,6 +58,11 @@ class TracingView extends Marionette.View {
     if (Constants.MODES_ARBITRARY.includes(this.model.get("mode"))) {
       this.ui.inputcatchers.hide();
     }
+  }
+
+  onZoomStepChange() {
+    this.$el.toggleClass("zoomstep-warning",
+      (this.model.volumeTracing != null) && !this.model.canDisplaySegmentationData());
   }
 }
 TracingView.initClass();

@@ -22,6 +22,9 @@ import type { Point2 } from "oxalis/constants";
 // provide similar public interfaces for the input methods.
 // In most cases the heavy lifting is done by librarys in the background.
 
+const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
+const MOUSE_MOVE_DELTA_THRESHOLD = 30;
+
 
 export type ModifierKeys = "alt" | "shift" | "ctrl";
 type KeyboardKey = string;
@@ -87,7 +90,6 @@ export class InputKeyboardNoLoop {
 // fire the attached callback.
 export class InputKeyboard {
 
-  DELAY: number = 1000 / constants.FPS;
   keyCallbackMap = {};
   keyPressedCount: number = 0;
   bindings: Array<KeyboardBinding> = [];
@@ -167,7 +169,7 @@ export class InputKeyboard {
         }
       }
 
-      setTimeout((() => this.buttonLoop()), this.DELAY);
+      setTimeout((() => this.buttonLoop()), KEYBOARD_BUTTON_LOOP_INTERVAL);
     }
   }
 
@@ -181,7 +183,6 @@ export class InputKeyboard {
 // The mouse module.
 // Events: over, out, leftClick, rightClick, leftDownMove
 class InputMouseButton {
-  MOVE_DELTA_THRESHOLD = 30;
   mouse: InputMouse;
   name: MouseButtonStringType;
   which: MouseButtonWhichType;
@@ -212,7 +213,7 @@ class InputMouseButton {
   handleMouseUp(event: JQueryInputEventObject): void {
     if (event.which === this.which && this.down) {
       this.mouse.trigger(`${this.name}MouseUp`, event);
-      if (this.moveDelta <= this.MOVE_DELTA_THRESHOLD) {
+      if (this.moveDelta <= MOUSE_MOVE_DELTA_THRESHOLD) {
         this.mouse.trigger(`${this.name}Click`, this.mouse.lastPosition, this.id, event);
       }
       this.down = false;

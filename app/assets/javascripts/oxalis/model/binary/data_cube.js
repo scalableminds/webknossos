@@ -11,7 +11,7 @@ import PushQueue from "oxalis/model/binary/pushqueue";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { BoundingBoxType } from "oxalis/model";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
-import { DataBucket, NULL_BUCKET, NULL_BUCKET_OUT_OF_BB, BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
+import { DataBucket, NullBucket, NULL_BUCKET, NULL_BUCKET_OUT_OF_BB, BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import type { Bucket } from "oxalis/model/binary/bucket";
 import ArbitraryCubeAdapter from "oxalis/model/binary/arbitrary_cube_adapter";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
@@ -216,7 +216,7 @@ class DataCube {
     }
 
     let bucket = this.getBucket(address);
-    if (bucket.type === "null") {
+    if (bucket instanceof NullBucket) {
       bucket = this.createBucket(address);
     }
 
@@ -326,7 +326,7 @@ class DataCube {
     if (voxelInCube) {
       const address = this.positionToZoomedAddress(voxel);
       const bucket = this.getOrCreateBucket(address);
-      if (bucket.type === "data") {
+      if (bucket instanceof DataBucket) {
         const voxelIndex = this.getVoxelIndex(voxel);
 
         const labelFunc = (data: Uint8Array): void => {

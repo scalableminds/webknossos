@@ -161,10 +161,6 @@ const Utils = {
     return new Promise((resolve) => { setTimeout(resolve, timeout); });
   },
 
-  animationFrame(): Promise<void> {
-    return new Promise((resolve) => { window.requestAnimationFrame(resolve); });
-  },
-
   idleFrame(timeout: ?number = null): Promise<void> {
     return new Promise((resolve) => {
       if (_.isFunction(window.reqeustIdleCallback)) {

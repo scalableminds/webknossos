@@ -10,7 +10,7 @@ import type { BoundingBoxType } from "oxalis/model";
 import User from "oxalis/model/user";
 import scaleInfo from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
-import constants, { OrthoViews } from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewValues } from "oxalis/constants";
 import type { Vector2, Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import Model from "oxalis/model";
 
@@ -150,7 +150,7 @@ class Flycam2d {
   calculateBuffer(): void {
     let pixelNeeded;
     let scaleArray;
-    for (const planeID of Object.keys(OrthoViews)) {
+    for (const planeID of OrthoViewValues) {
       scaleArray = Dimensions.transDim(scaleInfo.baseVoxelFactors, planeID);
       pixelNeeded = this.viewportWidth * this.getTextureScalingFactor();
       this.buffer[planeID] = [

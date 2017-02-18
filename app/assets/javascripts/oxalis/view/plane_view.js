@@ -11,7 +11,7 @@ import scaleInfo from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import modal from "oxalis/view/modal";
 import Toast from "libs/toast";
-import constants, { OrthoViews, OrthoViewColors } from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 import Model from "oxalis/model";
 import View from "oxalis/view";
@@ -58,7 +58,7 @@ class PlaneView {
     // Initialize main THREE.js components
     this.cameras = {};
 
-    for (const plane of Object.keys(OrthoViews)) {
+    for (const plane of OrthoViewValues) {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
       this.cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
@@ -74,7 +74,7 @@ class PlaneView {
     this.cameras[OrthoViews.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
     this.cameras[OrthoViews.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
     this.cameras[OrthoViews.TDView].up = new THREE.Vector3(0, 0, -1);
-    for (const plane of Object.keys(OrthoViews)) {
+    for (const plane of OrthoViewValues) {
       this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
     }
 
@@ -157,8 +157,8 @@ class PlaneView {
       setupRenderArea(0, 0, this.renderer.domElement.width, 0xffffff);
       this.renderer.clear();
 
-      for (const plane of Object.keys(OrthoViews)) {
-        this.trigger("renderCam", plane); // TODO
+      for (const plane of OrthoViewValues) {
+        this.trigger("renderCam", plane);
         setupRenderArea(
           viewport[plane][0],
           viewport[plane][1],
@@ -205,7 +205,7 @@ class PlaneView {
     const HEIGHT = (canvas.height() - 20) / 2;
 
     this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
-    for (const plane of Object.keys(OrthoViews)) {
+    for (const plane of OrthoViewValues) {
       this.cameras[plane].aspect = WIDTH / HEIGHT;
       this.cameras[plane].updateProjectionMatrix();
     }
@@ -235,7 +235,7 @@ class PlaneView {
 
 
   setActiveViewport = (viewportID: OrthoViewType): void => {
-    for (const plane of Object.keys(OrthoViews)) {
+    for (const plane of OrthoViewValues) {
       if (plane === viewportID) {
         $(`#inputcatcher_${plane}`).removeClass("inactive").addClass("active");
       } else {

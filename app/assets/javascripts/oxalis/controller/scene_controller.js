@@ -17,7 +17,7 @@ import Cube from "oxalis/geometries/cube";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
 import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
-import constants, { OrthoViews, OrthoViewsWithoutTDView } from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { BoundingBoxType } from "oxalis/model";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
@@ -174,7 +174,7 @@ class SceneController {
       for (mesh of this.volumeMeshes) {
         mesh.visible = false;
       }
-      for (const planeId of OrthoViewsWithoutTDView) {
+      for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(true);
@@ -191,7 +191,7 @@ class SceneController {
       for (mesh of this.volumeMeshes) {
         mesh.visible = true;
       }
-      for (const planeId of OrthoViewsWithoutTDView) {
+      for (const planeId of OrthoViewValuesWithoutTDView) {
         pos = this.flycam.getPosition();
         this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
         this.planes[planeId].setGrayCrosshairColor();
@@ -206,7 +206,7 @@ class SceneController {
     const gPos = this.flycam.getPosition();
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = this.flycam.getPlaneScalingFactor();
-    for (const planeId of OrthoViewsWithoutTDView) {
+    for (const planeId of OrthoViewValuesWithoutTDView) {
       this.planes[planeId].updateTexture();
       // Update plane position
       this.planes[planeId].setPosition(globalPosVec);
@@ -226,7 +226,7 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    for (const i of [0, 1, 2]) {
+    for (let i = 0; i <= 2; i++) {
       this.planeShift[i] = value * scaleInfo.voxelPerNM[i];
     }
     app.vent.trigger("rerender");
@@ -242,7 +242,7 @@ class SceneController {
 
 
   setDisplayPlanes = (value: boolean): void => {
-    for (const planeId of Object.keys(OrthoViews)) {
+    for (const planeId of OrthoViewValues) {
       this.displayPlane[planeId] = value;
     }
     app.vent.trigger("rerender");

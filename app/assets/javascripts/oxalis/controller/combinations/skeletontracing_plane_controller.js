@@ -10,15 +10,20 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import constants, { OrthoViews, OrthoViewToNumber } from "oxalis/constants";
+import constants, { OrthoViews } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
 import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
-import type { Point2, Vector3, OrthoViewType } from "oxalis/constants";
+import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 
-const TDView: 3 = 3;
+const OrthoViewToNumber: OrthoViewMapType<number> = {
+  [OrthoViews.PLANE_XY]: 0,
+  [OrthoViews.PLANE_YZ]: 1,
+  [OrthoViews.PLANE_XZ]: 2,
+  [OrthoViews.TDView]: 3,
+};
 
 class SkeletonTracingPlaneController extends PlaneController {
 
@@ -170,11 +175,11 @@ class SkeletonTracingPlaneController extends PlaneController {
       // make sure you can't click nodes, that are clipped away (one can't see)
       const ind = dimensions.getIndices(plane);
       if (intersect.object.visible &&
-        (plane === TDView ||
+        (plane === OrthoViews.TDView ||
           (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
         // set the active Node to the one that has the ID stored in the vertex
         // center the node if click was in 3d-view
-        const centered = plane === TDView;
+        const centered = plane === OrthoViews.TDView;
         this.skeletonTracingController.setActiveNode(nodeID, shiftPressed && altPressed, centered);
         break;
       }
@@ -184,7 +189,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
   setWaypoint(position: Vector3, ctrlPressed: boolean): void {
     const { activeViewport } = this;
-    if (activeViewport === TDView) {
+    if (activeViewport === OrthoViews.TDView) {
       return;
     }
     const activeNode = this.model.skeletonTracing.getActiveNode();
@@ -240,19 +245,19 @@ class SkeletonTracingPlaneController extends PlaneController {
 
     const curGlobalPos = this.flycam.getPosition();
 
-    (new TWEEN.Tween({
+    const tween = new TWEEN.Tween({
       globalPosX: curGlobalPos[0],
       globalPosY: curGlobalPos[1],
       globalPosZ: curGlobalPos[2],
       flycam: this.flycam,
       dimensionToSkip,
-    }))
-    .to({
+    });
+    tween.to({
       globalPosX: position[0],
       globalPosY: position[1],
       globalPosZ: position[2],
     }, 200)
-    .onUpdate(function () {
+    .onUpdate(function () { // needs to be a normal (non-bound) function
       const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
       curPos[this.dimensionToSkip] = null;
       this.flycam.setPosition(curPos);

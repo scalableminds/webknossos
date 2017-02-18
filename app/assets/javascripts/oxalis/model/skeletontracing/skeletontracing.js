@@ -235,7 +235,7 @@ class SkeletonTracing {
     return [curPoint, curTree];
   }
 
-
+  // TODO: refactor `viewport` param to enum
   addNode(position: Vector3, rotation: Vector3, viewport: number,
     resolution: number, bitDepth: number, interpolation: boolean) {
     if (!this.restrictionHandler.updateAllowed()) { return; }

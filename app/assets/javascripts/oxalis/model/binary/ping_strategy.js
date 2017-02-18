@@ -8,7 +8,7 @@ import DataCube from "oxalis/model/binary/data_cube";
 import Dimensions from "oxalis/model/dimensions";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
-import { OrthoViewsWithoutTDView } from "oxalis/constants";
+import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 
 const MAX_ZOOM_STEP_DIFF = 1;
@@ -76,7 +76,7 @@ export class PingStrategy extends AbstractPingStrategy {
 
     if (zoomStepDiff > MAX_ZOOM_STEP_DIFF) { return pullQueue; }
 
-    for (const plane of OrthoViewsWithoutTDView) {
+    for (const plane of OrthoViewValuesWithoutTDView) {
       const indices = Dimensions.getIndices(plane);
       this.u = indices[0];
       this.v = indices[1];

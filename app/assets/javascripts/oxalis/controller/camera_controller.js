@@ -13,7 +13,7 @@ import Model from "oxalis/model";
 import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import scaleInfo from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
-import constants, { OrthoViews, OrthoViewsWithoutTDView } from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 
 type TweenState = {
   notify: () => void,
@@ -324,7 +324,7 @@ class CameraController {
   updateCamViewport(): void {
     const scaleFactor = scaleInfo.baseVoxel;
     const boundary = (constants.VIEWPORT_WIDTH / 2) * this.model.user.get("zoom");
-    for (const planeId of OrthoViewsWithoutTDView) {
+    for (const planeId of OrthoViewValuesWithoutTDView) {
       this.cameras[planeId].near = -this.camDistance;
       this.cameras[planeId].left = this.cameras[planeId].bottom = -boundary * scaleFactor;
       this.cameras[planeId].right = this.cameras[planeId].top = boundary * scaleFactor;

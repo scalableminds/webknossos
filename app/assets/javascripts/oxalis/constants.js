@@ -13,15 +13,6 @@ export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
 export type Point2 = { x: number, y: number };
 export type Point3 = { x: number, y: number, z: number };
-// TODO replace with BoundingBoxType
-export type Extent3 = {
-  minX: number;
-  minY: number;
-  minZ: number;
-  maxX: number;
-  maxY: number;
-  maxZ: number;
-};
 
 export const OrthoViews = {
   PLANE_XY: "PLANE_XY",
@@ -29,7 +20,8 @@ export const OrthoViews = {
   PLANE_XZ: "PLANE_XZ",
   TDView: "TDView",
 };
-export const OrthoViewsWithoutTDView = [
+export const OrthoViewValues = Object.keys(OrthoViews);
+export const OrthoViewValuesWithoutTDView = [
   OrthoViews.PLANE_XY,
   OrthoViews.PLANE_YZ,
   OrthoViews.PLANE_XZ,
@@ -37,13 +29,6 @@ export const OrthoViewsWithoutTDView = [
 export type OrthoViewType = $Keys<typeof OrthoViews>;
 export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
 
-// TODO: Get rid of this
-export const OrthoViewToNumber: OrthoViewMapType<number> = {
-  [OrthoViews.PLANE_XY]: 0,
-  [OrthoViews.PLANE_YZ]: 1,
-  [OrthoViews.PLANE_XZ]: 2,
-  [OrthoViews.TDView]: 3,
-};
 export const OrthoViewColors: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0xff0000,
   [OrthoViews.PLANE_YZ]: 0x0000ff,

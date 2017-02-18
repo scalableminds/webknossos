@@ -9,7 +9,7 @@ import * as THREE from "three";
 import Backbone from "backbone";
 import Model from "oxalis/model";
 import type { Vector3, OrthoViewMapType } from "oxalis/constants";
-import { OrthoViews, OrthoViewsWithoutTDView } from "oxalis/constants";
+import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
 
 class Cube {
@@ -48,7 +48,7 @@ class Cube {
       new THREE.LineBasicMaterial(lineProperties));
 
     this.crossSections = {};
-    for (const planeId of OrthoViewsWithoutTDView) {
+    for (const planeId of OrthoViewValuesWithoutTDView) {
       this.crossSections[planeId] = new THREE.Line(
         new THREE.Geometry(),
         new THREE.LineBasicMaterial(lineProperties));
@@ -107,7 +107,7 @@ class Cube {
       return;
     }
 
-    for (const planeId of OrthoViewsWithoutTDView) {
+    for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
       const geometry = this.crossSections[planeId].geometry;
       for (const vertex of geometry.vertices) {
@@ -130,7 +130,7 @@ class Cube {
       return;
     }
 
-    for (const planeId of OrthoViewsWithoutTDView) {
+    for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
       const position = this.model.flycam.getPosition();
       if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] <= this.max[thirdDim]) {

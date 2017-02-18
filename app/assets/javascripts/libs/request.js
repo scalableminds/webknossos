@@ -19,7 +19,6 @@ type RequestOptionsWithData<T> = {
   headers?: { [key: string]: string };
   method?: 'GET' | 'POST' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH';
   timeout?: number;
-  // body?: ?(Blob | FormData | URLSearchParams | string);
 }
 
 class Request {
@@ -112,16 +111,12 @@ class Request {
 
   // IN:  url-encoded formdata
   // OUT: json
-  sendUrlEncodedFormReceiveJSON(url: string, options: RequestOptionsWithData<string | JQuery>): Promise<any> {
-    const body = typeof options.data === "string" ?
-        options.data :
-        options.data.serialize();
-
+  sendUrlEncodedFormReceiveJSON(url: string, options: RequestOptionsWithData<string>): Promise<any> {
     return this.receiveJSON(
       url,
       _.defaultsDeep(options, {
         method: "POST",
-        body,
+        body: options.data,
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },

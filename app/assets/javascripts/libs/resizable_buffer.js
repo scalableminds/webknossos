@@ -5,8 +5,9 @@
 /* globals Class:false $TypedArray:false */
 import Utils from "libs/utils";
 
+const GROW_MULTIPLIER = 1.3;
+
 class ResizableBuffer<T:$TypedArray> {
-  GROW_MULTIPLIER: number = 1.3;
   elementLength: number;
   capacity: number;
   length: number;
@@ -58,18 +59,18 @@ class ResizableBuffer<T:$TypedArray> {
     return this.buffer[i];
   }
 
-  set(element: number[] | $TypedArray, i: number): void {
+  set(element: Array<number> | $TypedArray, i: number): void {
     this.buffer.set(element, i * this.elementLength);
   }
 
-  push(element: number[] | $TypedArray): void {
+  push(element: Array<number> | $TypedArray): void {
     this.ensureCapacity();
     const { buffer, elementLength, length } = this;
     buffer.set(element, length);
     this.length += elementLength;
   }
 
-  pushMany(elements: number[][] | $TypedArray[]): void {
+  pushMany(elements: Array<Array<number>> | Array<$TypedArray>): void {
     this.ensureCapacity(this.length + (elements.length * this.elementLength));
 
     // eslint-disable-next-line prefer-const
@@ -82,7 +83,7 @@ class ResizableBuffer<T:$TypedArray> {
     this.length += elements.length * elementLength;
   }
 
-  pushSubarray(subarray: number[]): void {
+  pushSubarray(subarray: Array<number>): void {
     this.ensureCapacity(this.length + subarray.length);
 
     // eslint-disable-next-line no-unused-vars
@@ -94,7 +95,7 @@ class ResizableBuffer<T:$TypedArray> {
   }
 
 
-  pop(r: ?number[]) {
+  pop(r: ?Array<number>) {
     if (r == null) { r = new Array(this.elementLength); }
     if (!this.length) { return null; }
 
@@ -111,7 +112,7 @@ class ResizableBuffer<T:$TypedArray> {
   }
 
 
-  top(r: ?number[]) {
+  top(r: ?Array<number>) {
     if (r == null) { r = new Array(this.elementLength); }
     if (!this.length) { return null; }
 
@@ -134,7 +135,7 @@ class ResizableBuffer<T:$TypedArray> {
       const { buffer } = this;
 
       while (this.capacity < newCapacity) {
-        this.capacity = Math.floor(this.capacity * this.GROW_MULTIPLIER);
+        this.capacity = Math.floor(this.capacity * GROW_MULTIPLIER);
         this.capacity -= this.capacity % this.elementLength;
       }
 

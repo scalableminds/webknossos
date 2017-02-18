@@ -19,7 +19,7 @@ import scaleInfo from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneView from "oxalis/view/plane_view";
-import constants, { OrthoViews, OrthoViewsWithoutTDView } from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 
@@ -128,7 +128,7 @@ class PlaneController {
 
 
   initMouse(): void {
-    for (const id of Object.keys(OrthoViews)) {
+    for (const id of OrthoViewValues) {
       if (id !== OrthoViews.TDView) {
         const inputcatcher = $(`#inputcatcher_${OrthoViews[id]}`);
         this.input.mouseControllers[id] =
@@ -380,7 +380,7 @@ class PlaneController {
 
 
   zoom(value: number, zoomToMouse: boolean): void {
-    if ((OrthoViewsWithoutTDView).includes(this.activeViewport)) {
+    if ((OrthoViewValuesWithoutTDView).includes(this.activeViewport)) {
       this.zoomPlanes(value, zoomToMouse);
     } else {
       this.zoomTDView(value, zoomToMouse);

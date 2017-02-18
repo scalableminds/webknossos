@@ -3,6 +3,7 @@
  * @flow
  */
 
+import _ from "lodash";
 import Drawing from "libs/drawing";
 import Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
@@ -80,8 +81,8 @@ class VolumeLayer {
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
     if (maxCoord == null || minCoord == null) {
-      maxCoord = pos.slice();
-      minCoord = pos.slice();
+      maxCoord = _.clone(pos);
+      minCoord = _.clone(pos);
     }
 
     for (let i = 0; i <= 2; i++) {
@@ -193,7 +194,7 @@ class VolumeLayer {
         result.push(coord3d[i]);
       }
     }
-    return result.slice(0, 2);
+    return [result[0], result[1]];
   }
 
 

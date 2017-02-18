@@ -18,17 +18,17 @@ class PushQueue {
   cube: DataCube;
   layer: Layer;
   tracingId: string;
-  taskSerializer: AsyncTaskQueue;
+  taskQueue: AsyncTaskQueue;
   sendData: boolean;
   queue: Array<Vector4>;
 
   constructor(dataSetName: string, cube: DataCube, layer: Layer, tracingId: string,
-    taskSerializer: AsyncTaskQueue, sendData: boolean = true) {
+    taskQueue: AsyncTaskQueue, sendData: boolean = true) {
     this.dataSetName = dataSetName;
     this.cube = cube;
     this.layer = layer;
     this.tracingId = tracingId;
-    this.taskSerializer = taskSerializer;
+    this.taskQueue = taskQueue;
     this.sendData = sendData;
     this.queue = [];
   }
@@ -37,7 +37,7 @@ class PushQueue {
   stateSaved(): boolean {
     return this.queue.length === 0 &&
            this.cube.temporalBucketManager.getCount() === 0 &&
-           !this.taskSerializer.isBusy();
+           !this.taskQueue.isBusy();
   }
 
 
@@ -93,9 +93,9 @@ class PushQueue {
     while (this.queue.length) {
       const batchSize = Math.min(BATCH_SIZE, this.queue.length);
       const batch = this.queue.splice(0, batchSize);
-      this.taskSerializer.scheduleTask(() => this.pushBatch(batch));
+      this.taskQueue.scheduleTask(() => this.pushBatch(batch));
     }
-    await this.taskSerializer.join();
+    await this.taskQueue.join();
   };
 
 

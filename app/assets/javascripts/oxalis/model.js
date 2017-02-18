@@ -253,9 +253,6 @@ class Model extends Backbone.Model {
       dataSet: dataset.get("name"),
     });
 
-    // console.log("tracing", tracing);
-    // console.log("user", this.user);
-
     const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
     scaleInfo.initialize(dataset.get("scale"));
 

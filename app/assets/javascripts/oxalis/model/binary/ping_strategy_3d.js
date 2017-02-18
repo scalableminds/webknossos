@@ -5,7 +5,7 @@
 
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
-import type { Extent3 } from "oxalis/constants";
+import type { BoundingBoxType } from "oxalis/model";
 import PolyhedronRasterizer from "oxalis/model/binary/polyhedron_rasterizer";
 import { AbstractPingStrategy } from "oxalis/model/binary/ping_strategy";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
@@ -13,14 +13,18 @@ import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
 
 export class PingStrategy3d extends AbstractPingStrategy {
 
-  getExtentObject(poly0: Extent3, poly1: Extent3, zoom0: number, zoom1: number): Extent3 {
+  getExtentObject(poly0: BoundingBoxType, poly1: BoundingBoxType, zoom0: number, zoom1: number): BoundingBoxType {
     return {
-      minX: Math.min(poly0.minX << zoom0, poly1.minX << zoom1),
-      minY: Math.min(poly0.minY << zoom0, poly1.minY << zoom1),
-      minZ: Math.min(poly0.minZ << zoom0, poly1.minZ << zoom1),
-      maxX: Math.max(poly0.maxX << zoom0, poly1.maxX << zoom1),
-      maxY: Math.max(poly0.maxY << zoom0, poly1.maxY << zoom1),
-      maxZ: Math.max(poly0.maxZ << zoom0, poly1.maxZ << zoom1),
+      min: [
+        Math.min(poly0.min[0] << zoom0, poly1.min[0] << zoom1),
+        Math.min(poly0.min[1] << zoom0, poly1.min[1] << zoom1),
+        Math.min(poly0.min[2] << zoom0, poly1.min[2] << zoom1),
+      ],
+      max: [
+        Math.max(poly0.max[0] << zoom0, poly1.max[0] << zoom1),
+        Math.max(poly0.max[1] << zoom0, poly1.max[1] << zoom1),
+        Math.max(poly0.max[2] << zoom0, poly1.max[2] << zoom1),
+      ],
     };
   }
 

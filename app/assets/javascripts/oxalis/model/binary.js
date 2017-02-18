@@ -14,7 +14,7 @@ import Plane2D from "oxalis/model/binary/plane2d";
 import { PingStrategy, SkeletonPingStrategy, VolumePingStrategy } from "oxalis/model/binary/ping_strategy";
 import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
-import { OrthoViews } from "oxalis/constants";
+import { OrthoViewValues } from "oxalis/constants";
 import Model from "oxalis/model";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 
@@ -77,12 +77,12 @@ class Binary {
 
     this.cube = new DataCube(this.model.taskBoundingBox, this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
 
-    const taskSerializer = new AsyncTaskQueue();
+    const taskQueue = new AsyncTaskQueue();
 
     const datasetName = this.model.get("dataset").get("name");
     const datastoreInfo = this.model.get("dataset").get("dataStore");
     this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
-    this.pushQueue = new PushQueue(datasetName, this.cube, this.layer, this.tracing.id, taskSerializer);
+    this.pushQueue = new PushQueue(datasetName, this.cube, this.layer, this.tracing.id, taskQueue);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
     this.mappings = new Mappings(datastoreInfo, datasetName, this.layer);
     this.activeMapping = null;
@@ -97,7 +97,7 @@ class Binary {
     ];
 
     this.planes = {};
-    for (const planeId of Object.keys(OrthoViews)) {
+    for (const planeId of OrthoViewValues) {
       this.planes[planeId] = new Plane2D(planeId, this.cube,
         this.layer.bitDepth, this.targetBitDepth, 32, this.category === "segmentation");
     }

@@ -387,77 +387,54 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
                                bytesPerPixel: Int,
                                tiles: Iterator[RawImage],
                                progressHook: Double => Unit) {
-    val CubeSize = 128
 
     def convertToCubes(cubeSize: Int = 128): Unit = {
       val fileCache = new KnossosWriterCache(id, target)
-      tiles.zipWithIndex.foreach {
-        case (tile, idx) =>
-          writeTile(tile, idx, fileCache)
-          progressHook(idx.toFloat / depth)
+      var processed = 0
+      while(tiles.hasNext){
+        val tile = tiles.next()
+        writeTile(tile, processed, fileCache, cubeSize)
+        progressHook(processed.toFloat / depth)
+        processed += 1
       }
     }
 
-    case class FixedSizedImage(underlying: RawImage, targetWidth: Int, targetHeight: Int, zero: Byte = 0) {
-      private val uw = underlying.info.width
-      private val uh = underlying.info.height
-
-      def copyTo(other: Array[Byte], destPos: Int, srcPos: Int, length: Int): Unit = {
-        var i = 0
-        while (i < length) {
-          val col = (i + srcPos) % targetWidth
-          val row = (i + srcPos) / targetWidth
-          var b = 0
-          while (b < bytesPerPixel) {
-            if (col >= uw || row >= uh)
-              other((i * bytesPerPixel) + b + destPos * bytesPerPixel) = zero
-            else {
-              val data = underlying.data(row * uw * bytesPerPixel + col * bytesPerPixel + bytesPerPixel - b - 1)
-              other((i * bytesPerPixel) + b + destPos * bytesPerPixel) = data
-            }
-            b += 1
-          }
-          i += 1
-        }
-      }
-    }
-
-    private def writeTile(tile: RawImage, layerNumber: Int, files: KnossosWriterCache): Unit = {
-      // number of knossos buckets in x direction
-      val xs = (tile.data.length.toFloat / bytesPerPixel / tile.info.height / CubeSize).ceil.toInt
-      // number of knossos buckets in y direction
-      val ys = (tile.data.length.toFloat / bytesPerPixel / tile.info.width / CubeSize).ceil.toInt
+    private def writeTile(tile: RawImage, layerNumber: Int, files: KnossosWriterCache, cubeEdgeLength: Int): Unit = {
+      // number of knossos cubes in x direction
+      val numXCubes = (tile.data.length.toFloat / bytesPerPixel / tile.info.height / cubeEdgeLength).ceil.toInt
+      // number of knossos cubes in y direction
+      val numYCubes = (tile.data.length.toFloat / bytesPerPixel / tile.info.width / cubeEdgeLength).ceil.toInt
 
       // the given array might not fill up the buckets at the border, but we need to make sure it does, otherwise
       // writing the data to the file would result in a bucket size less than 128
-      val sliced = Array.fill(ys * xs)(new Array[Byte](bytesPerPixel * CubeSize * CubeSize))
+      val sliced = Array.fill(numYCubes * numXCubes)(new Array[Byte](bytesPerPixel * cubeEdgeLength * cubeEdgeLength))
 
-      var windowIdx = 0
+      var windowOffset = 0
       var counter = 0
       val tileWidthInBytes = tile.info.width * bytesPerPixel
-      val windowSize = CubeSize * bytesPerPixel
+      val windowSize = cubeEdgeLength * bytesPerPixel
 
-      while(windowIdx < tile.data.length){
-        val x = counter % xs
-        val row = (counter / xs) % CubeSize
-        val y = counter / xs / CubeSize
-        val idx = y * xs + x
+      while(windowOffset < tile.data.length){
+        val x = counter % numXCubes
+        val row = (counter / numXCubes) % cubeEdgeLength
+        val y = counter / numXCubes / cubeEdgeLength
+        val idx = y * numXCubes + x
 
         val actualBytesUsed =
-          math.min(windowSize, tileWidthInBytes - windowIdx % tileWidthInBytes)
+          math.min(windowSize, tileWidthInBytes - windowOffset % tileWidthInBytes)
 
-        val slice = tile.data.view(windowIdx, windowIdx + actualBytesUsed)
+        val slice = tile.data.view(windowOffset, windowOffset + actualBytesUsed)
         slice.copyToArray(sliced(idx), row * windowSize)
 
-        windowIdx += actualBytesUsed
+        windowOffset += actualBytesUsed
         counter += 1
       }
 
       sliced.zipWithIndex.par.foreach {
         case (cubeData, idx) =>
-          val x = idx % xs
-          val y = idx / xs
-          val file = files.get(new CubePosition(x * CubeSize, y * CubeSize, layerNumber, 1, CubeSize))
+          val x = idx % numXCubes
+          val y = idx / numXCubes
+          val file = files.get(new CubePosition(x * cubeEdgeLength, y * cubeEdgeLength, layerNumber, 1, cubeEdgeLength))
           file.write(cubeData)
           file.close()
       }

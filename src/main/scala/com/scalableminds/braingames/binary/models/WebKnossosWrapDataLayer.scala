@@ -27,8 +27,19 @@ object WebKnossosWrapDataLayerSettings {
 }
 
 case class WebKnossosWrapDataLayer(settings: WebKnossosWrapDataLayerSettings) extends FoxImplicits {
-  def load(baseDir: String, cube: CubePosition): Box[WKWFile] = {
-    val filePath = "%s/%d/x%06d_y%06d_z%06d.wkw".format(baseDir, cube.resolution, cube.x, cube.y, cube.z)
+  def load(baseDir: String, cube: CubePosition): Fox[Array[Byte]] = {
+    val fileCoords = new Point3D(
+      block.block.x / settings.fileLength,
+      block.block.y / settings.fileLength,
+      block.block.z / settings.fileLength
+    )
+    val blockOffset = new Point3D(
+      block.block.x % settings.fileLength,
+      block.block.y % settings.fileLength,
+      block.block.z % settings.fileLength
+    )
+
+    val filePath = "%s/%d/z%d/y%d/x%d.wkw".format(baseDir, cube.resolution, cube.z, cube.y, cube.x)
 
     WKWFile(new File(filePath))
   }

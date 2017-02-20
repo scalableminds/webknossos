@@ -6,6 +6,7 @@
 import _ from "lodash";
 import Backbone from "backbone";
 import Drawing from "libs/drawing";
+import Toast from "libs/toast";
 import VolumeCell from "oxalis/model/volumetracing/volumecell";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import VolumeTracingStateLogger from "oxalis/model/volumetracing/volumetracing_statelogger";
@@ -74,6 +75,13 @@ class VolumeTracing {
 
 
   setMode(mode) {
+    if (mode === this.mode) {
+      return;
+    }
+    if (mode === Constants.VOLUME_MODE_TRACE && this.flycam.getIntegerZoomStep() > 0) {
+      Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
+      return;
+    }
     this.mode = mode;
     this.trigger("change:mode", this.mode);
   }

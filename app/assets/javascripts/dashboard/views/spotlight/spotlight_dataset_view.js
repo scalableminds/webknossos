@@ -12,7 +12,7 @@ class SpotlightDatasetView extends Marionette.View {
   <div class="dataset-thumbnail col-sm-4">
     <img class="img-rounded" src="<%- thumbnailURL %>">
 
-    <div class="link-row">
+    <div class="dataset-thumbnail-buttons">
       <a href="/datasets/<%- name %>/view" title="View dataset">
         <img src="/assets/images/eye.svg">
       </a>
@@ -72,10 +72,12 @@ class SpotlightDatasetView extends Marionette.View {
   submitForm(type, event) {
     event.preventDefault();
     const loginNotice = `For dataset annotation, please log in or create an account. For dataset viewing, no account is required.
-Do you wish to log in now?`;
-    if (app.currentUser != null || confirm(loginNotice)) {
+Do you wish to sign up now?`;
+    if (app.currentUser != null) {
       this.ui.contentTypeInput.val(type);
       this.ui.form.submit();
+    } else if (confirm(loginNotice)) {
+      window.location.href = "/auth/register";
     }
   }
 }

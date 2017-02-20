@@ -85,8 +85,8 @@ class SkeletonTracing {
       // calculate direction of first edge in nm
       if (Utils.__guard__(this.data.trees[0], x1 => x1.edges) != null) {
         for (const edge of this.data.trees[0].edges) {
-          const sourceNode = this.findNodeInList(this.trees[0].nodes, edge.source).pos;
-          const targetNode = this.findNodeInList(this.trees[0].nodes, edge.target).pos;
+          const sourceNode = this.findNodeInList(this.trees[0].nodes, edge.source).position;
+          const targetNode = this.findNodeInList(this.trees[0].nodes, edge.target).position;
           if (sourceNode[0] !== targetNode[0] || sourceNode[1] !== targetNode[1] || sourceNode[2] !== targetNode[2]) {
             this.firstEdgeDirection = [targetNode[0] - sourceNode[0],
               targetNode[1] - sourceNode[1],

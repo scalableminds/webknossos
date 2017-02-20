@@ -50,7 +50,7 @@ class ContourGeometry {
     edgeGeometry.addAttribute("position", positionAttribute);
 
     this.edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({ linewidth: 2 }));
-    this.edge.vertexBuffer = new ResizableBuffer(3);
+    this.edge.vertexBuffer = new ResizableBuffer(3, Float32Array);
 
     this.reset();
   }

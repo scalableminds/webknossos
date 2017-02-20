@@ -3,6 +3,7 @@
 require("babel-register")({ presets: [["env", { targets: { node: "current" } }]] });
 
 const Jasmine = require("jasmine");
+const SpecReporter = require("jasmine-spec-reporter").SpecReporter;
 
 const jasmine = new Jasmine();
 
@@ -12,5 +13,6 @@ jasmine.loadConfig({
     "test/**/*[sS]pec.js",
   ],
 });
+jasmine.addReporter(new SpecReporter({ spec: { displayPending: true } }));
 
 jasmine.execute();

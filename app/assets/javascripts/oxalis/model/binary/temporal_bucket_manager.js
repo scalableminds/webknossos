@@ -1,11 +1,12 @@
 /**
  * temporal_bucket_manager.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
+import type { DataBucket } from "oxalis/model/binary/bucket";
 
 
 class TemporalBucketManager {
@@ -17,25 +18,24 @@ class TemporalBucketManager {
   pushQueue: PushQueue;
   loadedPromises: Array<Promise<void>>;
 
-  constructor(pullQueue, pushQueue) {
+  constructor(pullQueue: PullQueue, pushQueue: PushQueue) {
     this.pullQueue = pullQueue;
     this.pushQueue = pushQueue;
     this.loadedPromises = [];
   }
 
-
-  getCount() {
+  getCount(): number {
     return this.loadedPromises.length;
   }
 
 
-  addBucket(bucket) {
+  addBucket(bucket: DataBucket): void {
     this.pullBucket(bucket);
-    return this.loadedPromises.push(this.makeLoadedPromise(bucket));
+    this.loadedPromises.push(this.makeLoadedPromise(bucket));
   }
 
 
-  pullBucket(bucket) {
+  pullBucket(bucket: DataBucket): Array<Promise<void>> {
     this.pullQueue.add({
       bucket: bucket.zoomedAddress,
       priority: PullQueueConstants.PRIORITY_HIGHEST,
@@ -44,7 +44,7 @@ class TemporalBucketManager {
   }
 
 
-  makeLoadedPromise(bucket) {
+  makeLoadedPromise(bucket: DataBucket): Promise<void> {
     const loadedPromise = new Promise(
       (resolve, _reject) => bucket.on("bucketLoaded", () => {
         if (bucket.dirty) {
@@ -59,8 +59,8 @@ class TemporalBucketManager {
   }
 
 
-  getAllLoadedPromise() {
-    return Promise.all(this.loadedPromises);
+  async getAllLoadedPromise(): Promise<void> {
+    await Promise.all(this.loadedPromises);
   }
 }
 

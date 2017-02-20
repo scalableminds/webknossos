@@ -25,7 +25,8 @@
       "routes": false,
       "jsRoutes": false,
       "JQuery": false,
-      "SyntheticInputEvent": false
+      "SyntheticInputEvent": false,
+      "$Keys": false
     },
     "rules": {
       "quotes": ["error", "double"],

@@ -7,6 +7,7 @@ import createSagaMiddleware from "redux-saga";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
+import type { ElementClassType } from "oxalis/model/binary/layers/layer";
 
 type DataLayerType = {
   name: string,
@@ -19,7 +20,7 @@ type DataLayerType = {
   },
   resolutions: Vector4,
   fallback: any,
-  elementClass: "uint8" | "uint16",
+  elementClass: ElementClassType,
   mappings:[],
 }
 

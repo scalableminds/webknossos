@@ -12,8 +12,8 @@ import ErrorHandling from "libs/error_handling";
 import Model from "oxalis/model";
 import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
-import constants from "../constants";
-import Tree from "./tree";
+import { OrthoViews } from "oxalis/constants";
+import Tree from "oxalis/geometries/tree";
 
 class Skeleton {
   // This class is supposed to collect all the Geometries that belong to the skeleton, like
@@ -234,10 +234,10 @@ class Skeleton {
 
   updateForCam(id) {
     for (const tree of _.values(this.treeGeometries)) {
-      tree.showRadius(id !== constants.TDView && !Store.getState().userConfiguration.overrideNodeRadius);
+      tree.showRadius(id !== OrthoViews.TDView && !Store.getState().userConfiguration.overrideNodeRadius);
     }
 
-    if (constants.ALL_PLANES.includes(id)) {
+    if (id !== OrthoViews.TDView) {
       return this.setVisibilityTemporary(this.isVisible);
     }
     return this.setVisibilityTemporary(true);

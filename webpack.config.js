@@ -20,7 +20,7 @@ module.exports = {
     filename: "[name].js",
     sourceMapFilename: "[file].map",
     publicPath: "/assets/bundle/",
-    chunkFilename: "[chunkhash].js",
+    chunkFilename: "[id].js",
   },
   module: {
     // Reduce compilation time by telling webpack to not parse these libraries.

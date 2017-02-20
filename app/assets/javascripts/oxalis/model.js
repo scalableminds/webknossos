@@ -9,21 +9,21 @@ import Store from "oxalis/store";
 import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import window from "libs/window";
-import Utils from "../libs/utils";
-import Binary from "./model/binary";
-import SkeletonTracing from "./model/skeletontracing/skeletontracing";
-import VolumeTracing from "./model/volumetracing/volumetracing";
-import ConnectionInfo from "./model/binarydata_connection_info";
-import scaleInfo from "./model/scaleinfo";
-import Flycam2d from "./model/flycam2d";
-import Flycam3d from "./model/flycam3d";
-import constants from "./constants";
-import type { ModeType, Vector3, Vector4 } from "./constants";
-import Request from "../libs/request";
-import Toast from "../libs/toast";
-import ErrorHandling from "../libs/error_handling";
-import WkLayer from "./model/binary/layers/wk_layer";
-import NdStoreLayer from "./model/binary/layers/nd_store_layer";
+import Utils from "libs/utils";
+import Binary from "oxalis/model/binary";
+import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
+import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
+import ConnectionInfo from "oxalis/model/binarydata_connection_info";
+import scaleInfo from "oxalis/model/scaleinfo";
+import Flycam2d from "oxalis/model/flycam2d";
+import Flycam3d from "oxalis/model/flycam3d";
+import constants from "oxalis/constants";
+import type { ModeType, Vector3, Vector4 } from "oxalis/constants";
+import Request from "libs/request";
+import Toast from "libs/toast";
+import ErrorHandling from "libs/error_handling";
+import WkLayer from "oxalis/model/binary/layers/wk_layer";
+import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 
 // This is THE model. It takes care of the data including the
 // communication with the server.
@@ -39,7 +39,6 @@ export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
 };
-export type LayerType = WkLayer | NdStoreLayer;
 export type RestrictionsType = {
   allowAccess: boolean,
   allowUpdate: boolean,
@@ -236,8 +235,6 @@ class Model extends Backbone.Model {
       dataSet: dataset.name,
     });
 
-    console.log("tracing", tracing);
-
     const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
     scaleInfo.initialize(dataset.scale);
 
@@ -380,8 +377,8 @@ class Model extends Backbone.Model {
   }
 
 
-  canDisplaySegmentationData() {
-    return !this.flycam.getIntegerZoomStep() > 0 || !this.getSegmentationBinary();
+  canDisplaySegmentationData(): boolean {
+    return !(this.flycam.getIntegerZoomStep() > 0) || !this.getSegmentationBinary();
   }
 
 

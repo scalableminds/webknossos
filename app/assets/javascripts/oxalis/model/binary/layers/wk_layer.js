@@ -1,19 +1,21 @@
 /**
  * wk_layer.js
- * @flow weak
+ * @flow
  */
 
-import _ from "lodash";
 import Store from "oxalis/store";
-import Layer, { REQUEST_TIMEOUT } from "./layer";
-import BucketBuilder from "./bucket_builder";
-import Request from "../../../../libs/request";
-import MultipartData from "../../../../libs/multipart_data";
+import Layer, { REQUEST_TIMEOUT } from "oxalis/model/binary/layers/layer";
+import type { BucketRequestOptions, LayerInfoType, DataStoreInfoType } from "oxalis/model/binary/layers/layer";
+import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
+import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
+import Request from "libs/request";
+import MultipartData from "libs/multipart_data";
+import type { Vector4 } from "oxalis/constants";
 
 class WkLayer extends Layer {
 
-  constructor(...args) {
-    super(...args);
+  constructor(layerInfo: LayerInfoType, dataStoreInfo: DataStoreInfoType) {
+    super(layerInfo, dataStoreInfo);
 
     if (this.dataStoreInfo.typ !== "webknossos-store") {
       throw new Error("WkLayer should only be instantiated with webknossos-store");
@@ -23,7 +25,7 @@ class WkLayer extends Layer {
   }
 
 
-  setFourBit(newFourBit) {
+  setFourBit(newFourBit: boolean) {
     // No op if this is not a color layer
     if (this.category === "color") {
       this.fourBit = newFourBit;
@@ -31,13 +33,17 @@ class WkLayer extends Layer {
   }
 
 
-  buildBuckets(batch, options = {}) {
-    options = _.extend(options, { fourBit: this.fourBit });
+  buildBuckets(batch: Array<Vector4>, options: ?BucketRequestOptions) {
+    if (options == null) {
+      options = { fourBit: this.fourBit };
+    } else {
+      options.fourBit = this.fourBit;
+    }
     return super.buildBuckets(batch, options);
   }
 
 
-  requestFromStoreImpl(batch, token) {
+  async requestFromStoreImpl(batch: Array<BucketInfo>, token: string): Promise<Uint8Array> {
     const wasFourBit = this.fourBit;
     const requestData = new MultipartData();
 
@@ -48,8 +54,9 @@ class WkLayer extends Layer {
     }
 
     const datasetName = Store.getState().dataset.name;
-    return requestData.dataPromise().then(data => Request.sendArraybufferReceiveArraybuffer(
-        `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`,
+    const data = await requestData.dataPromise();
+    const responseBuffer = await Request.sendArraybufferReceiveArraybuffer(
+      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`,
       {
         data,
         headers: {
@@ -58,20 +65,17 @@ class WkLayer extends Layer {
         timeout: REQUEST_TIMEOUT,
         compress: true,
         doNotCatch: true,
-      },
-      ),
-    ).then((responseBuffer) => {
-      let result = new Uint8Array(responseBuffer);
-      if (wasFourBit) {
-        result = this.decodeFourBit(result);
-      }
-      return result;
-    },
-    );
+      });
+
+    let result = new Uint8Array(responseBuffer);
+    if (wasFourBit) {
+      result = this.decodeFourBit(result);
+    }
+    return result;
   }
 
 
-  decodeFourBit(bufferArray) {
+  decodeFourBit(bufferArray: Uint8Array): Uint8Array {
     // Expand 4-bit data
     const newColors = new Uint8Array(bufferArray.length << 1);
 
@@ -88,7 +92,7 @@ class WkLayer extends Layer {
   }
 
 
-  sendToStoreImpl(batch, getBucketData, token) {
+  async sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<void> {
     const transmitData = new MultipartData();
 
     for (const bucket of batch) {
@@ -98,18 +102,18 @@ class WkLayer extends Layer {
     }
 
     const datasetName = Store.getState().dataset.name;
-    return transmitData.dataPromise().then(data => Request.sendArraybufferReceiveArraybuffer(
-        `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`, {
-          method: "PUT",
-          data,
-          headers: {
-            "Content-Type": `multipart/mixed; boundary=${transmitData.boundary}`,
-          },
-          timeout: REQUEST_TIMEOUT,
-          compress: true,
-          doNotCatch: true,
+    const data = await transmitData.dataPromise();
+    await Request.sendArraybufferReceiveArraybuffer(
+      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`, {
+        method: "PUT",
+        data,
+        headers: {
+          "Content-Type": `multipart/mixed; boundary=${transmitData.boundary}`,
         },
-      ),
+        timeout: REQUEST_TIMEOUT,
+        compress: true,
+        doNotCatch: true,
+      },
     );
   }
 }

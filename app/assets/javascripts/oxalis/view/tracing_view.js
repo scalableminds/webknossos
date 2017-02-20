@@ -14,10 +14,10 @@ class TracingView extends Marionette.View {
     this.prototype.template = _.template(`\
 <div id="modal" class="modal fade" tabindex="-1" role="dialog"></div>
 <div id="inputcatchers">
-  <div id="planexy" class="inputcatcher"></div>
-  <div id="planeyz" class="inputcatcher"></div>
-  <div id="planexz" class="inputcatcher"></div>
-  <div id="TDView" class="inputcatcher">
+  <div id="inputcatcher_PLANE_XY" class="inputcatcher"></div>
+  <div id="inputcatcher_PLANE_YZ" class="inputcatcher"></div>
+  <div id="inputcatcher_PLANE_XZ" class="inputcatcher"></div>
+  <div id="inputcatcher_TDView" class="inputcatcher">
     <div id="TDViewControls" class="btn-group">
       <button type="button" class="btn btn-default btn-sm">3D</button>
       <button type="button" class="btn btn-default btn-sm">

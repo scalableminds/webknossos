@@ -13,11 +13,11 @@ import type { Vector3 } from "oxalis/constants";
 import Flycam from "oxalis/model/flycam2d";
 import Flycam3d from "oxalis/model/flycam3d";
 import type { SkeletonContentDataType } from "oxalis/model";
-import TracePoint from "./tracepoint";
-import TraceTree from "./tracetree";
-import SkeletonTracingStateLogger from "./skeletontracing_statelogger";
-import RestrictionHandler from "../helpers/restriction_handler";
-import TracingParser from "./tracingparser";
+import TracePoint from "oxalis/model/skeletontracing/tracepoint";
+import TraceTree from "oxalis/model/skeletontracing/tracetree";
+import SkeletonTracingStateLogger from "oxalis/model/skeletontracing/skeletontracing_statelogger";
+import RestrictionHandler from "oxalis/model/helpers/restriction_handler";
+import TracingParser from "oxalis/model/skeletontracing/tracingparser";
 
 // Max and min radius in base voxels (see scaleInfo.baseVoxel)
 const MIN_RADIUS = 1;
@@ -234,8 +234,9 @@ class SkeletonTracing {
     return [curPoint, curTree];
   }
 
-
-  addNode(position, rotation, viewport, resolution, bitDepth, interpolation) {
+  // TODO: refactor `viewport` param to enum
+  addNode(position: Vector3, rotation: Vector3, viewport: number,
+    resolution: number, bitDepth: number, interpolation: boolean) {
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     if (this.ensureDirection(position)) {

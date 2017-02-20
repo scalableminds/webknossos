@@ -1,21 +1,22 @@
 /**
  * nd_store_layer.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
-import Utils from "libs/utils";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
-import Layer from "./layer";
-import Request from "../../../../libs/request";
-import ErrorHandling from "../../../../libs/error_handling";
+import Layer from "oxalis/model/binary/layers/layer";
+import type { LayerInfoType, DataStoreInfoType } from "oxalis/model/binary/layers/layer";
+import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
+import Request from "libs/request";
+import ErrorHandling from "libs/error_handling";
+import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
 
 
 class NdStoreLayer extends Layer {
 
-
-  constructor(...args) {
-    super(...args);
+  constructor(layerInfo: LayerInfoType, dataStoreInfo: DataStoreInfoType) {
+    super(layerInfo, dataStoreInfo);
 
     if (this.dataStoreInfo.typ !== "ndstore") {
       throw new Error("NDstoreLayer should only be instantiated with ndstore");
@@ -23,18 +24,18 @@ class NdStoreLayer extends Layer {
   }
 
   // eslint-disable-next-line no-unused-vars
-  sendToStoreImpl(token) {
+  sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<*> {
     throw new Error("NDstore does not currently support sendToStore");
   }
 
 
-  requestDataToken() {
+  requestDataToken(): Promise<string> {
     // ndstore uses its own token that is fixed
     return Promise.resolve(this.dataStoreInfo.accessToken);
   }
 
 
-  requestFromStoreImpl(batch, token) {
+  async requestFromStoreImpl(batch: Array<BucketInfo>, token: string): Promise<Uint8Array> {
     ErrorHandling.assert(batch.length === 1, "Batch length should be 1 for NDstore Layers");
 
     const [bucket] = batch;
@@ -52,31 +53,28 @@ class NdStoreLayer extends Layer {
       return Promise.resolve(new Uint8Array(bucketSize * bucketSize * bucketSize));
     }
 
-    return Request.receiveArraybuffer(url).then(
-      (responseBuffer) => {
-        // the untyped array cannot be accessed by index, use a dataView for that
-        const dataView = new DataView(responseBuffer);
+    const responseBuffer = await Request.receiveArraybuffer(url);
+    // the untyped array cannot be accessed by index, use a dataView for that
+    const dataView = new DataView(responseBuffer);
 
-        // create a typed uint8 array that is initialized with zeros
-        const buffer = new Uint8Array(bucketSize * bucketSize * bucketSize);
-        const bucketBounds = this.getMaxCoordinatesAsBucket(bounds, bucket);
+    // create a typed uint8 array that is initialized with zeros
+    const buffer = new Uint8Array(bucketSize * bucketSize * bucketSize);
+    const bucketBounds = this.getMaxCoordinatesAsBucket(bounds, bucket);
 
-        // copy the ndstore response into the new array, respecting the bounds of the dataset
-        let index = 0;
-        for (const z of Utils.__range__(bucketBounds[2], bucketBounds[5], false)) {
-          for (const y of Utils.__range__(bucketBounds[1], bucketBounds[4], false)) {
-            for (const x of Utils.__range__(bucketBounds[0], bucketBounds[3], false)) {
-              buffer[(z * bucketSize * bucketSize) + (y * bucketSize) + x] = dataView.getUint8(index++);
-            }
-          }
+    // copy the ndstore response into the new array, respecting the bounds of the dataset
+    let index = 0;
+    for (let z = bucketBounds[2]; z < bucketBounds[5]; z++) {
+      for (let y = bucketBounds[1]; y < bucketBounds[4]; y++) {
+        for (let x = bucketBounds[0]; x < bucketBounds[3]; x++) {
+          buffer[(z * bucketSize * bucketSize) + (y * bucketSize) + x] = dataView.getUint8(index++);
         }
-        return buffer;
-      },
-    );
+      }
+    }
+    return buffer;
   }
 
 
-  clampBucketToMaxCoordinates({ position, zoomStep }) {
+  clampBucketToMaxCoordinates({ position, zoomStep }: { position: Vector3, zoomStep: number}): Vector6 {
     const min = this.lowerBoundary;
     const max = this.upperBoundary;
 
@@ -94,13 +92,12 @@ class NdStoreLayer extends Layer {
   }
 
 
-  getMaxCoordinatesAsBucket(bounds, bucket) {
+  getMaxCoordinatesAsBucket(bounds: Vector6, bucket: BucketInfo) {
     // transform bounds in zoom-step-0 voxels to bucket coordinates between 0 and BUCKET_SIZE_P
     const bucketBounds = _.map(bounds, (coordinate) => {
       const cubeSize = 1 << (BUCKET_SIZE_P + bucket.zoomStep);
       return (coordinate % cubeSize) >> bucket.zoomStep;
-    },
-    );
+    });
 
     // as the upper bound for bucket coordinates is exclusive, the % cubeSize of it is 0
     // but we want it to be 1 << BUCKET_SIZE_P

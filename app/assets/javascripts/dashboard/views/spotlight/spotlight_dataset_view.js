@@ -12,7 +12,7 @@ class SpotlightDatasetView extends Marionette.View {
   <div class="dataset-thumbnail col-sm-4">
     <img class="img-rounded" src="<%- thumbnailURL %>">
 
-    <div class="link-row">
+    <div class="dataset-thumbnail-buttons">
       <a href="/datasets/<%- name %>/view" title="View dataset">
         <img src="/assets/images/eye.svg">
       </a>

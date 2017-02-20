@@ -1,8 +1,12 @@
+/*
+ * format_utils.js
+ * @flow
+ */
 import moment from "moment";
 
 class FormatUtils {
 
-  static formatSeconds(durationSeconds) {
+  static formatSeconds(durationSeconds: number): string {
     const t = moment.duration(durationSeconds, "seconds");
     const [days, hours, minutes, seconds] = [t.days(), t.hours(), t.minutes(), t.seconds()];
 
@@ -20,12 +24,12 @@ class FormatUtils {
   }
 
 
-  static formatHash(id) {
+  static formatHash(id: string): string {
     return id.slice(-6);
   }
 
 
-  static formatShortText(text, maxLength = 100) {
+  static formatShortText(text: string, maxLength: number = 100): string {
     if (text.length > maxLength && maxLength > 4) {
       return `${text.slice(0, maxLength - 4)} ...`;
     }
@@ -36,7 +40,7 @@ class FormatUtils {
   /**
    * Return current date and time
    */
-  static formatDate() {
+  static formatDate(): string {
     return moment().format("YYYY-MM-DD HH:mm");
   }
 }

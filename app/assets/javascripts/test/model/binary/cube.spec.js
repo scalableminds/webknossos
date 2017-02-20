@@ -1,23 +1,29 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+/*
+ * cube.spec.js
+ * @flow
+ */
+
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
-import runAsync from "../../helpers/run-async";
+import runAsync from "test/helpers/run-async";
 
 mockRequire.stopAll();
 
 mockRequire("jquery", { fn: {} });
-mockRequire("../../../libs/error_handling", {
+mockRequire("libs/error_handling", {
   assertExists(expr) { this.assert(expr != null); },
   assert(expr) { if (!expr) throw new Error("Assertion failed"); },
 });
-mockRequire("../../../libs/toast", { error: _.noop });
+mockRequire("libs/toast", { error: _.noop });
+
 
 // Avoid node caching and make sure all mockRequires are applied
-const Cube = mockRequire.reRequire("../../../oxalis/model/binary/data_cube").default;
+const Cube = mockRequire.reRequire("oxalis/model/binary/data_cube").default;
 
 describe("Cube", () => {
-  let cube = null;
+  let cube;
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),
@@ -28,7 +34,7 @@ describe("Cube", () => {
   };
 
   beforeEach(() => {
-    cube = new Cube(null, [100, 100, 100], 3, 24);
+    cube = new Cube({ min: [0, 0, 0], max: [128, 128, 128] }, [100, 100, 100], 3, 24);
     cube.initializeWithQueues(pullQueue, pushQueue);
   });
 
@@ -36,7 +42,7 @@ describe("Cube", () => {
   describe("GetBucket", () => {
     it("should return a NullBucket on getBucket()", () => {
       const bucket = cube.getBucket([0, 0, 0, 0]);
-      expect(bucket.isNullBucket).toBe(true);
+      expect(bucket.type).toBe("null");
       expect(cube.bucketCount).toBe(0);
     });
 
@@ -44,7 +50,7 @@ describe("Cube", () => {
       expect(cube.bucketCount).toBe(0);
 
       const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
-      expect(bucket.isNullBucket).toBe(false);
+      expect(bucket.type).toBe("data");
       expect(cube.bucketCount).toBe(1);
     });
 

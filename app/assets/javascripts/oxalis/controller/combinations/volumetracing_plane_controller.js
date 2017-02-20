@@ -1,12 +1,18 @@
 /**
  * volumetracing_plane_controller.js
- * @flow weak
+ * @flow
  */
+/* globals JQueryInputEventObject:false */
 
 import _ from "lodash";
-import Constants from "oxalis/constants";
+import Utils from "libs/utils";
+import constants, { OrthoViews } from "oxalis/constants";
+import type { OrthoViewType, Point2 } from "oxalis/constants";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
-import PlaneController from "../viewmodes/plane_controller";
+import PlaneController from "oxalis/controller/viewmodes/plane_controller";
+import type SceneController from "oxalis/controller/scene_controller";
+import type Model, { BoundingBoxType } from "oxalis/model";
+import type View from "oxalis/view";
 
 class VolumeTracingPlaneController extends PlaneController {
 
@@ -18,19 +24,17 @@ class VolumeTracingPlaneController extends PlaneController {
 
   volumeTracingController: VolumeTracingController;
 
-  constructor(model, view, sceneController, volumeTracingController) {
+  constructor(model: Model, view: View, sceneController: SceneController, volumeTracingController: VolumeTracingController) {
     super(model, view, sceneController);
     this.volumeTracingController = volumeTracingController;
 
-    this.listenTo(this.model.flycam, "positionChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()),
-    );
-    this.listenTo(this.model.flycam, "zoomStepChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()),
-    );
+    this.listenTo(this.model.flycam, "positionChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()));
+    this.listenTo(this.model.flycam, "zoomStepChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()));
 
-    this.listenTo(this.model.user, "change:isosurfaceDisplay", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "change:isosurfaceBBsize", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "change:isosurfaceResolution", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.volumeTracing, "newActiveCell", function (id) {
+    this.listenTo(this.model.user, "change:isosurfaceDisplay", () => { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.user, "change:isosurfaceBBsize", () => { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.user, "change:isosurfaceResolution", () => { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
+    this.listenTo(this.model.volumeTracing, "newActiveCell", (id) => {
       id = this.model.volumeTracing.getActiveCellId();
       if (id > 0) {
         this.render3dCell(id);
@@ -39,46 +43,36 @@ class VolumeTracingPlaneController extends PlaneController {
   }
 
 
-  simulateTracing = () => {
-    this.model.volumeTracing.setMode(Constants.VOLUME_MODE_TRACE);
+  simulateTracing = async (): Promise<void> => {
+    this.model.volumeTracing.setMode(constants.VOLUME_MODE_TRACE);
 
-    const controls = this.getPlaneMouseControls();
+    const controls = this.getPlaneMouseControls(OrthoViews.PLANE_XY);
     let pos = (x, y) => ({ x, y });
 
-    controls.leftMouseDown(pos(100, 100), 0, {});
-
-    return _.defer(() => {
-      controls.leftDownMove(null, pos(200, 100));
-      return _.defer(() => {
-        controls.leftDownMove(null, pos(200, 200));
-        return _.defer(() => {
-          controls.leftDownMove(null, pos(100, 200));
-          return _.defer(() => {
-            controls.leftDownMove(null, pos(100, 100));
-            controls.leftMouseUp();
-            return _.defer(() => {
-              pos = this.model.flycam.getPosition();
-              pos[2]++;
-              this.model.flycam.setPosition(pos);
-              return _.defer(this.simulateTracing);
-            },
-            );
-          },
-          );
-        },
-        );
-      },
-      );
-    },
-    );
+    controls.leftMouseDown(pos(100, 100), OrthoViews.PLANE_XY, {});
+    await Utils.sleep(100);
+    controls.leftDownMove(null, pos(200, 100));
+    await Utils.sleep(100);
+    controls.leftDownMove(null, pos(200, 200));
+    await Utils.sleep(100);
+    controls.leftDownMove(null, pos(100, 200));
+    await Utils.sleep(100);
+    controls.leftDownMove(null, pos(100, 100));
+    controls.leftMouseUp();
+    await Utils.sleep(100);
+    pos = this.model.flycam.getPosition();
+    pos[2]++;
+    this.model.flycam.setPosition(pos);
+    await Utils.sleep(100);
+    await this.simulateTracing();
   };
 
 
-  getPlaneMouseControls(planeId) {
+  getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
 
-      leftDownMove: (delta, pos) => {
-        if (this.model.volumeTracing.mode === Constants.VOLUME_MODE_MOVE) {
+      leftDownMove: (delta: Point2, pos: Point2) => {
+        if (this.model.volumeTracing.mode === constants.VOLUME_MODE_MOVE) {
           this.move([
             (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
             (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
@@ -89,7 +83,7 @@ class VolumeTracingPlaneController extends PlaneController {
         }
       },
 
-      leftMouseDown: (pos, plane, event) => {
+      leftMouseDown: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) => {
         if (event.shiftKey) {
           this.volumeTracingController.enterDeleteMode();
         }
@@ -102,13 +96,13 @@ class VolumeTracingPlaneController extends PlaneController {
         this.volumeTracingController.restoreAfterDeleteMode();
       },
 
-      rightDownMove: (delta, pos) => {
-        if (this.model.volumeTracing.mode === Constants.VOLUME_MODE_TRACE) {
+      rightDownMove: (delta: Point2, pos: Point2) => {
+        if (this.model.volumeTracing.mode === constants.VOLUME_MODE_TRACE) {
           this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
         }
       },
 
-      rightMouseDown: (pos, plane) => {
+      rightMouseDown: (pos: Point2, plane: OrthoViewType) => {
         this.volumeTracingController.enterDeleteMode();
         this.model.volumeTracing.startEditing(plane);
         this.adjustSegmentationOpacity();
@@ -119,31 +113,30 @@ class VolumeTracingPlaneController extends PlaneController {
         this.volumeTracingController.restoreAfterDeleteMode();
       },
 
-      leftClick: (pos) => {
+      leftClick: (pos: Point2) => {
         const cellId = this.model.getSegmentationBinary().cube.getDataValue(this.calculateGlobalPos(pos));
 
         this.volumeTracingController.handleCellSelection(cellId);
       },
-    },
-    );
+    });
   }
 
 
-  adjustSegmentationOpacity() {
+  adjustSegmentationOpacity(): void {
     if (this.model.user.get("segmentationOpacity") < 10) {
       this.model.user.set("segmentationOpacity", 50);
     }
   }
 
 
-  getKeyboardControls() {
+  getKeyboardControls(): Object {
     return _.extend(super.getKeyboardControls(), {
       c: () => this.model.volumeTracing.createCell(),
     });
   }
 
 
-  render3dCell(id) {
+  render3dCell(id: number): void {
     if (!this.model.user.get("isosurfaceDisplay")) {
       this.sceneController.removeShapes();
       return;
@@ -153,7 +146,7 @@ class VolumeTracingPlaneController extends PlaneController {
     this.sceneController.showShapes(this.scaleIsosurfaceBB(bb), res, id);
   }
 
-  scaleIsosurfaceBB(bb) {
+  scaleIsosurfaceBB(bb: BoundingBoxType): BoundingBoxType {
     const factor = this.model.user.get("isosurfaceBBsize");
     for (let i = 0; i <= 2; i++) {
       const width = bb.max[i] - bb.min[i];

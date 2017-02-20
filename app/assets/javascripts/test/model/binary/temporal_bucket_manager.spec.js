@@ -2,15 +2,15 @@
 import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
-import runAsync from "../../helpers/run-async";
-import { Bucket } from "../../../oxalis/model/binary/bucket";
-import TemporalBucketManager from "../../../oxalis/model/binary/temporal_bucket_manager";
+import runAsync from "test/helpers/run-async";
+import { DataBucket } from "oxalis/model/binary/bucket";
+import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 
 mockRequire.stopAll();
 
 mockRequire("jquery", { fn: {} });
-mockRequire("../../../libs/request", null);
-require("../../../libs/core_ext");
+mockRequire("libs/request", null);
+require("libs/core_ext");
 
 
 describe("TemporalBucketManager", () => {
@@ -36,13 +36,13 @@ describe("TemporalBucketManager", () => {
 
   describe("Add / Remove", () => {
     it("should be added when bucket has not been requested", () => {
-      const bucket = new Bucket(8, [0, 0, 0, 0], manager);
+      const bucket = new DataBucket(8, [0, 0, 0, 0], manager);
       bucket.label(_.noop);
       expect(manager.getCount()).toBe(1);
     });
 
     it("should be added when bucket has not been received", () => {
-      const bucket = new Bucket(8, [0, 0, 0, 0], manager);
+      const bucket = new DataBucket(8, [0, 0, 0, 0], manager);
       bucket.pull();
       expect(bucket.needsRequest()).toBe(false);
 
@@ -51,7 +51,7 @@ describe("TemporalBucketManager", () => {
     });
 
     it("should not be added when bucket has been received", () => {
-      const bucket = new Bucket(8, [0, 0, 0, 0], manager);
+      const bucket = new DataBucket(8, [0, 0, 0, 0], manager);
       bucket.pull();
       bucket.receiveData(new Uint8Array(1 << 15));
       expect(bucket.isLoaded()).toBe(true);
@@ -61,7 +61,7 @@ describe("TemporalBucketManager", () => {
     });
 
     it("should be removed once it is loaded", () => {
-      const bucket = new Bucket(8, [0, 0, 0, 0], manager);
+      const bucket = new DataBucket(8, [0, 0, 0, 0], manager);
       bucket.label(_.noop);
       bucket.pull();
       bucket.receiveData(new Uint8Array(1 << 15));
@@ -76,8 +76,8 @@ describe("TemporalBucketManager", () => {
 
     beforeEach(() => {
       // Insert two buckets into manager
-      bucket1 = new Bucket(8, [0, 0, 0, 0], manager);
-      bucket2 = new Bucket(8, [1, 0, 0, 0], manager);
+      bucket1 = new DataBucket(8, [0, 0, 0, 0], manager);
+      bucket2 = new DataBucket(8, [1, 0, 0, 0], manager);
       for (const bucket of [bucket1, bucket2]) {
         bucket.label(_.noop);
         bucket.pull();

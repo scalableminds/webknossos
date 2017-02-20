@@ -5,13 +5,11 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import DataCube from "./data_cube";
-import Dimensions from "../dimensions";
-import { BUCKET_SIZE_P } from "./bucket";
-
-import constants from "../../constants";
-
-import type { Vector2, Vector3, Vector4 } from "../../constants";
+import DataCube from "oxalis/model/binary/data_cube";
+import Dimensions from "oxalis/model/dimensions";
+import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
+import constants from "oxalis/constants";
+import type { Vector2, Vector3, Vector4, OrthoViewType } from "oxalis/constants";
 
 class DataTexture {
   buffer = new Uint8Array();
@@ -69,7 +67,7 @@ function bufferOffsetByTile(tile: Vector2, tileSize: number): number {
 }
 
 class Plane2D {
-  index: number;
+  index: OrthoViewType;
   cube: DataCube;
   DATA_BIT_DEPTH: number;
   TEXTURE_BIT_DEPTH: number;
@@ -88,14 +86,14 @@ class Plane2D {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(index: number, cube: DataCube, DATA_BIT_DEPTH: number,
+  constructor(index: OrthoViewType, cube: DataCube, DATA_BIT_DEPTH: number,
     TEXTURE_BIT_DEPTH: number, MAPPED_DATA_BIT_DEPTH: number, isSegmentation: boolean) {
+    _.extend(this, Backbone.Events);
     this.index = index;
     this.cube = cube;
     this.DATA_BIT_DEPTH = DATA_BIT_DEPTH;
     this.TEXTURE_BIT_DEPTH = TEXTURE_BIT_DEPTH;
     this.MAPPED_DATA_BIT_DEPTH = MAPPED_DATA_BIT_DEPTH;
-    _.extend(this, Backbone.Events);
 
     this.BUCKETS_PER_ROW = 1 << (constants.TEXTURE_SIZE_P - BUCKET_SIZE_P);
     this.TEXTURE_SIZE = (1 << (constants.TEXTURE_SIZE_P << 1)) * (this.TEXTURE_BIT_DEPTH >> 3);

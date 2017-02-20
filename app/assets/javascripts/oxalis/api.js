@@ -6,12 +6,11 @@
 // only relative imports are followed by documentationjs
 import _ from "lodash";
 import app from "app";
-import Input from "libs/input";
+import { InputKeyboardNoLoop } from "libs/input";
 import OxalisModel from "oxalis/model";
 import Binary from "oxalis/model/binary";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
-
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 
@@ -287,7 +286,7 @@ class UtilsApi {
   * Sets a custom handler function for a keyboard shortcut.
   */
   registerKeyHandler(key: string, handler: () => void): Handler {
-    const keyboard = new Input.KeyboardNoLoop({ [key]: handler });
+    const keyboard = new InputKeyboardNoLoop({ [key]: handler });
     return { unregister: keyboard.destroy.bind(keyboard) };
   }
 }

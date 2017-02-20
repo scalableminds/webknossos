@@ -6,9 +6,9 @@
 import $ from "jquery";
 import app from "app";
 import * as THREE from "three";
-import constants from "./constants";
-import Model from "./model";
-import Toast from "../libs/toast";
+import constants from "oxalis/constants";
+import Model from "oxalis/model";
+import Toast from "libs/toast";
 
 class View {
 

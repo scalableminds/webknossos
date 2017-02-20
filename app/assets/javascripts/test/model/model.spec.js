@@ -36,20 +36,20 @@ class Flycam2d {
   setPosition() {}
 }
 
-mockRequire("../../libs/toast", { error: _.noop });
-mockRequire("../../libs/request", Request);
-mockRequire("../../libs/error_handling", ErrorHandling);
+mockRequire("libs/toast", { error: _.noop });
+mockRequire("libs/request", Request);
+mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", {});
-mockRequire("../../oxalis/model/binary", Binary);
-mockRequire("../../oxalis/model/scaleinfo", scaleInfo);
-mockRequire("../../oxalis/model/flycam2d", Flycam2d);
-mockRequire("../../oxalis/model/flycam3d", _.noop);
-mockRequire("../../oxalis/model/skeletontracing/skeletontracing", _.noop);
-mockRequire("../../oxalis/model/volumetracing/volumetracing", _.noop);
-mockRequire("../../oxalis/model/user", User);
-mockRequire("../../oxalis/model/dataset_configuration", DatasetConfiguration);
-mockRequire("../../oxalis/model/binary/layers/wk_layer", Layer);
-mockRequire("../../oxalis/model/binary/layers/nd_store_layer", Layer);
+mockRequire("oxalis/model/binary", Binary);
+mockRequire("oxalis/model/scaleinfo", scaleInfo);
+mockRequire("oxalis/model/flycam2d", Flycam2d);
+mockRequire("oxalis/model/flycam3d", _.noop);
+mockRequire("oxalis/model/skeletontracing/skeletontracing", _.noop);
+mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
+mockRequire("oxalis/model/user", User);
+mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
+mockRequire("oxalis/model/binary/layers/wk_layer", Layer);
+mockRequire("oxalis/model/binary/layers/nd_store_layer", Layer);
 mockRequire("libs/window", {});
 
 const TRACING_OBJECT = {

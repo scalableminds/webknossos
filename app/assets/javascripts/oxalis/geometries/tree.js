@@ -15,12 +15,12 @@ import ParticleMaterialFactory from "./materials/particle_material_factory";
 class Tree {
 
   model: Model;
-  nodeIDs: ResizableBuffer;
-  edgesBuffer: ResizableBuffer;
-  nodesBuffer: ResizableBuffer;
-  sizesBuffer: ResizableBuffer;
-  scalesBuffer: ResizableBuffer;
-  nodesColorBuffer: ResizableBuffer;
+  nodeIDs: ResizableBuffer<Int32Array>;
+  edgesBuffer: ResizableBuffer<Float32Array>;
+  nodesBuffer: ResizableBuffer<Float32Array>;
+  sizesBuffer: ResizableBuffer<Float32Array>;
+  scalesBuffer: ResizableBuffer<Float32Array>;
+  nodesColorBuffer: ResizableBuffer<Float32Array>;
   edges: THREE.LineSegments;
   particleMaterial: THREE.ShaderMaterial;
   nodes: THREE.Points;
@@ -33,12 +33,12 @@ class Tree {
     const edgeGeometry = new THREE.BufferGeometry();
     const nodeGeometry = new THREE.BufferGeometry();
 
-    this.nodeIDs = new ResizableBuffer(1, 100, Int32Array);
-    this.edgesBuffer = new ResizableBuffer(6);
-    this.nodesBuffer = new ResizableBuffer(3);
-    this.sizesBuffer = new ResizableBuffer(1);
-    this.scalesBuffer = new ResizableBuffer(1);
-    this.nodesColorBuffer = new ResizableBuffer(3);
+    this.nodeIDs = new ResizableBuffer(1, Int32Array, 100);
+    this.edgesBuffer = new ResizableBuffer(6, Float32Array);
+    this.nodesBuffer = new ResizableBuffer(3, Float32Array);
+    this.sizesBuffer = new ResizableBuffer(1, Float32Array);
+    this.scalesBuffer = new ResizableBuffer(1, Float32Array);
+    this.nodesColorBuffer = new ResizableBuffer(3, Float32Array);
 
     edgeGeometry.addAttribute("position", this.makeDynamicFloatAttribute(3, this.edgesBuffer));
     nodeGeometry.addAttribute("position", this.makeDynamicFloatAttribute(3, this.nodesBuffer));

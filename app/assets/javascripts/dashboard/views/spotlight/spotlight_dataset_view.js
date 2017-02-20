@@ -72,10 +72,12 @@ class SpotlightDatasetView extends Marionette.View {
   submitForm(type, event) {
     event.preventDefault();
     const loginNotice = `For dataset annotation, please log in or create an account. For dataset viewing, no account is required.
-Do you wish to log in now?`;
-    if (app.currentUser != null || confirm(loginNotice)) {
+Do you wish to sign up now?`;
+    if (app.currentUser != null) {
       this.ui.contentTypeInput.val(type);
       this.ui.form.submit();
+    } else if (confirm(loginNotice)) {
+      window.location.href = "/auth/register";
     }
   }
 }

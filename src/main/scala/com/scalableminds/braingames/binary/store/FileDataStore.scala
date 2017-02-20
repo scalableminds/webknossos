@@ -58,7 +58,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
           .map { file =>
             logger.trace("Accessing file: " + path)
             val t = System.currentTimeMillis
-            val r = new RandomAccessFile(file, "r") //byteArrayFromFile(file, fileSize)
+            val r = new RandomAccessFile(file, "r")
             NewRelic.recordResponseTimeMetric("Custom/FileDataStore/files-response-time", System.currentTimeMillis - t)
             NewRelic.incrementCounter("Custom/FileDataStore/files-loaded")
             r
@@ -84,13 +84,6 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
       document
     }
   }
-
-//  private def createOutputStream(path: Path, compressionAllowed: Boolean) = {
-//    if(compressionAllowed)
-//      new SnappyFramedOutputStream(Files.newOutputStream(path))
-//    else
-//      Files.newOutputStream(path)
-//  }
 
   def save(dataInfo: BucketWriteInstruction): Fox[Boolean] = {
     save(knossosBaseDir(dataInfo), dataInfo)

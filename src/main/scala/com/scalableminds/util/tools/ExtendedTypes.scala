@@ -31,9 +31,9 @@ object ExtendedTypes {
   implicit class ExtendedArray[A](val array: Array[A]) extends AnyVal {
 
     /**
-     * A dynamic sliding window is a sliding window which is moved n steps
-     * according to the return value of the passed function.
-     */
+      * A dynamic sliding window is a sliding window which is moved n steps
+      * according to the return value of the passed function.
+      */
     def dynamicSliding(windowSize: Int)(f: List[A] => Int) {
       val iterator = array.sliding(windowSize, 1)
       while (iterator.hasNext) {
@@ -52,7 +52,7 @@ object ExtendedTypes {
         val combined = new Array[T](size)
         var idx = 0
         var i = 0
-        while(i < as.length){
+        while (i < as.length) {
           Array.copy(as(i), 0, combined, idx, as(i).length)
           idx += as(i).length
           i += 1
@@ -69,8 +69,8 @@ object ExtendedTypes {
 
   implicit class ExtendedByteArray(val b: Array[Byte]) extends AnyVal {
     /**
-     * Converts this array of bytes to one float value
-     */
+      * Converts this array of bytes to one float value
+      */
     def toFloat: Float = {
       if (b != null && b.length == 4)
         ByteBuffer.wrap(b).getFloat
@@ -79,8 +79,8 @@ object ExtendedTypes {
     }
 
     /**
-     * Converts this array of bytes to one int value
-     */
+      * Converts this array of bytes to one int value
+      */
     def toIntFromFloat: Int = toFloat.toInt
 
     def toBooleanFromFloat: Boolean = b match {
@@ -89,9 +89,9 @@ object ExtendedTypes {
     }
 
     /**
-     * Splits this collection into smaller sub-arrays each containing exactly
-     * subCollectionSize entries (except the last sub-array which may contain less)
-     */
+      * Splits this collection into smaller sub-arrays each containing exactly
+      * subCollectionSize entries (except the last sub-array which may contain less)
+      */
     def subDivide(subCollectionSize: Int): Array[Array[Byte]] =
       b.sliding(subCollectionSize, subCollectionSize).toArray
   }
@@ -100,10 +100,10 @@ object ExtendedTypes {
 
 
     /**
-     * Patches the value of this double (used during arithmetic operations
-     * which may result in slightly incorrect result. To ensure correct
-     * rounding an epsilon is added/subtracted)
-     */
+      * Patches the value of this double (used during arithmetic operations
+      * which may result in slightly incorrect result. To ensure correct
+      * rounding an epsilon is added/subtracted)
+      */
     def patchAbsoluteValue: Double =
       if (d >= 0)
         d + EPSILON
@@ -111,8 +111,8 @@ object ExtendedTypes {
         d - EPSILON
 
     /**
-     * Tests if the value is near zero
-     */
+      * Tests if the value is near zero
+      */
     def isNearZero: Boolean =
       d <= EPSILON && d >= -EPSILON
 
@@ -120,14 +120,14 @@ object ExtendedTypes {
       (d + EPSILON).toInt
 
     /**
-     * Makes sure the double is in the given interval.
-     */
+      * Makes sure the double is in the given interval.
+      */
     def clamp(low: Double, high: Double): Double =
       math.min(high, math.max(low, d))
 
     /**
-     * Converts this double into an array of bytes
-     */
+      * Converts this double into an array of bytes
+      */
     def toBinary: Array[Byte] = {
       val binary = new Array[Byte](8)
       ByteBuffer.wrap(binary).putDouble(d)
@@ -137,8 +137,8 @@ object ExtendedTypes {
 
   implicit class ExtendedFloat(val f: Float) extends AnyVal {
     /**
-     * Converts this float into an array of bytes
-     */
+      * Converts this float into an array of bytes
+      */
     def toBinary: Array[Byte] = {
       val binary = new Array[Byte](4)
       ByteBuffer.wrap(binary).putFloat(f)
@@ -148,8 +148,8 @@ object ExtendedTypes {
 
   implicit class ExtendedInt(val i: Int) extends AnyVal {
     /**
-     * Converts this int into an array of bytes
-     */
+      * Converts this int into an array of bytes
+      */
     def toBinary: Array[Byte] = {
       val binary = new Array[Byte](4)
       ByteBuffer.wrap(binary).putInt(i)
@@ -228,12 +228,14 @@ object ExtendedTypes {
   implicit class CappedQueue[A](q: Queue[A]) {
     def enqueueCapped[B >: A](elem: B, maxSize: Int): Queue[B] = {
       var ret = q.enqueue(elem)
-      while (ret.size > maxSize) { ret = ret.dequeue._2 }
+      while (ret.size > maxSize) {
+        ret = ret.dequeue._2
+      }
       ret
     }
   }
 
-  implicit class ExtendedRandomAccessFile(f: RandomAccessFile){
+  implicit class ExtendedRandomAccessFile(f: RandomAccessFile) {
     def isClosed: Boolean = {
       val method = f.getClass.getDeclaredField("closed")
       method.setAccessible(true)

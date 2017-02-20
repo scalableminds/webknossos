@@ -105,7 +105,7 @@ ansiColor('xterm') {
 
       stage("Cleanup") {
 
-        archiveArtifacts(artifacts: "errorShots/*", fingerprint: true)
+        // archiveArtifacts(artifacts: "errorShots/*", fingerprint: true)
         sh "docker-compose down --volumes --remove-orphans || echo \"Can not run docker-compose down\""
         sh "docker rmi scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} || echo \"Can not remove this image\""
         sh "docker rmi scalableminds/webknossos:${env.BRANCH_NAME} || echo \"Can not remove this image\""

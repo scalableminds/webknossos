@@ -42,7 +42,7 @@ datastore {
 braingames.binary.cacheMaxSize = 1000 # in entries (each cache entry is 2 MB)
 ```
 
-### Create and run Docker image
+### Create and run Docker container
 ```
 docker create \
   --name webknossos-datastore \
@@ -64,10 +64,38 @@ docker stop webknossos-datastore
 
 docker rm webknossos-datastore
 ```
-You may want to create systemd configuration for `docker start/stop`, [reference](https://docs.docker.com/engine/admin/host_integration/).
 
+### Host integration (systemd)
+To have the datastore automatically start upon boot, you need to create a systemd unit file:
+```
+[Unit]
+Description=webKnossos datastore
+Requires=docker.service
+After=docker.service
 
-### Setup a reverse proxy
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker start -a webknossos-datastore
+ExecStop=/usr/bin/docker stop -t 2 webknossos-datastore
+
+[Install]
+WantedBy=default.target
+```
+Depending on you Linux distribution, the unit file should be stored in `/lib/systemd/system/webknossos-datastore.service` or `/usr/lib/systemd/system/webknossos-datastore.service`.
+
+```
+# Reload configuration
+systemctl daemon-reload
+
+# Enable for auto-start
+systemctl enable webknossos-datastore
+
+systemctl start webknossos-datastore
+
+systemctl stop webknossos-datastore
+```
+
+### Setup a reverse proxy for SSL termination
 * Install nginx
 * Configure it as a reverse proxy for `localhost:9090`, [reference](https://www.digitalocean.com/community/tutorials/understanding-nginx-http-proxying-load-balancing-buffering-and-caching)
 

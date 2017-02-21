@@ -63,14 +63,15 @@ object DataSetService extends FoxImplicits with LazyLogging {
     dataSource: DataSourceLike)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
 
     DataSetDAO.findOneBySourceName(dataSource.id)(GlobalAccessContext).futureBox.flatMap {
-      case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name =>
+      case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name && dataSet.owningTeam == dataSource.owningTeam =>
         DataSetDAO.updateDataSource(
           dataSource.id,
           dataStoreInfo,
           dataSource.source,
           isActive = dataSource.isUsable)(GlobalAccessContext).futureBox
       case Full(_)                                                           =>
-        // TODO: There is a problem: The dataset name is already in use. We are not going to update that datasource.
+        // TODO: There is a problem: The dataset name is already in use by some (potentially different) team.
+        // We are not going to update that datasource.
         // this should be somehow populated to the user to inform him that he needs to rename the datasource
         Fox.failure("dataset.name.alreadyInUse").futureBox
       case _                                                                 =>
@@ -101,7 +102,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
     logger.debug(s"Found datasets: " + dataSources.map(_.id).mkString(", "))
-    dataSources.map { dataSource =>
+    Fox.serialCombined(dataSources) { dataSource =>
       DataSetService.updateDataSource(
         DataStoreInfo(dataStore.name, dataSource.serverUrl, dataStore.typ, None), dataSource)
     }

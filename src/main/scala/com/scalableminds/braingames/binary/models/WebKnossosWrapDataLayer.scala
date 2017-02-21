@@ -38,7 +38,7 @@ case class WebKnossosWrapDataLayer(settings: WebKnossosWrapDataLayerSettings) ex
       block.block.z % settings.fileLength
     )
 
-    val filePath = "%s/%d/x%06d_y%06d_z%06d.wkw".format(block.dataLayer.baseDir, block.resolution, fileCoords.x, fileCoords.y, fileCoords.z)
+    val filePath = "%s/%d/z%d/y%d/x%d.wkw".format(block.dataLayer.baseDir, block.resolution, fileCoords.z, fileCoords.y, fileCoords.x)
 
     for {
       wkwFile <- WKWFile(new File(filePath))

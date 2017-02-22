@@ -5,8 +5,14 @@
 
 import _ from "lodash";
 import app from "app";
+import Store from "oxalis/store";
 import scaleInfo from "oxalis/model/scaleinfo";
 import AbstractMaterialFactory from "./abstract_material_factory";
+
+const DEFAULT_ZOOMFACTOR = 1.0;
+const DEFAULT_SCALE = 1.0;
+const DEFAULT_RADIUS = 1.0;
+const DEFAULT_PARTICLESIZE = 1.0;
 
 class ParticleMaterialFactory extends AbstractMaterialFactory {
 
@@ -19,7 +25,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
     this.uniforms = _.extend(this.uniforms, {
       zoomFactor: {
         type: "f",
-        value: this.model.flycam.getPlaneScalingFactor(),
+        value: DEFAULT_ZOOMFACTOR,
       },
       baseVoxel: {
         type: "f",
@@ -27,15 +33,15 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
       },
       particleSize: {
         type: "f",
-        value: this.model.user.get("particleSize"),
+        value: DEFAULT_PARTICLESIZE,
       },
       scale: {
         type: "f",
-        value: this.model.user.get("scale"),
+        value: DEFAULT_SCALE,
       },
       showRadius: {
         type: "i",
-        value: 1,
+        value: DEFAULT_RADIUS,
       },
     },
     );
@@ -55,15 +61,12 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
   setupChangeListeners() {
     super.setupChangeListeners();
 
-    this.listenTo(this.model.user, "change:particleSize", function (model, size) {
-      this.uniforms.particleSize.value = size;
-      app.vent.trigger("rerender");
-    });
-    this.listenTo(this.model.user, "change:scale", function (model, scale) {
+    Store.subscribe(() => {
+      const { particleSize, scale } = Store.getState().userConfiguration;
+      this.uniforms.particleSize.value = particleSize;
       this.uniforms.scale.value = scale;
       app.vent.trigger("rerender");
     });
-    this.listenTo(this.model.user, "change:overrideNodeRadius", () => app.vent.trigger("rerender"));
 
     this.listenTo(this.model.flycam, "zoomStepChanged", function () {
       this.uniforms.zoomFactor.value = this.model.flycam.getPlaneScalingFactor();

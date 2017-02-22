@@ -1,6 +1,7 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Constants from "oxalis/constants";
+import Store from "oxalis/store";
 
 class SkeletonActionsView extends Marionette.View {
   static initClass() {
@@ -28,7 +29,7 @@ class SkeletonActionsView extends Marionette.View {
 
 
   addNode() {
-    const datasetConfig = this.model.get("datasetConfiguration");
+    const datasetConfig = Store.getState().datasetConfiguration;
 
     // add node
     return this.model.skeletonTracing.addNode(
@@ -36,8 +37,8 @@ class SkeletonActionsView extends Marionette.View {
       this.model.flycam.getRotation(Constants.PLANE_XY),
       Constants.PLANE_XY, // xy viewport
       this.model.flycam.getIntegerZoomStep(),
-      datasetConfig.get("fourBit") ? 4 : 8,
-      datasetConfig.get("interpolation"),
+      datasetConfig.fourBit ? 4 : 8,
+      datasetConfig.interpolation,
     );
   }
 }

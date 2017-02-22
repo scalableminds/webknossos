@@ -6,19 +6,19 @@
 import _ from "lodash";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
+import React from "react";
+import { render } from "react-dom";
+import { Provider } from "react-redux";
 import app from "app";
+import store from "oxalis/store";
 import OxalisController from "oxalis/controller";
 import OxalisModel from "oxalis/model";
 import OxalisApi from "oxalis/api";
 import Constants from "oxalis/constants";
-import BackboneToOxalisAdapterModel from "oxalis/model/settings/backbone_to_oxalis_adapter_model";
 import Modal from "oxalis/view/modal";
 import Utils from "libs/utils";
+import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "./action_bar_view";
-import SkeletonPlaneTabView from "./settings/tab_views/skeleton_plane_tab_view";
-import SkeletonArbitraryTabView from "./settings/tab_views/skeleton_arbitrary_tab_view";
-import VolumeTabView from "./settings/tab_views/volume_tab_view";
-import ViewmodeTabView from "./settings/tab_views/viewmode_tab_view";
 import SkeletonTracingRightMenuView from "./skeletontracing/skeletontracing_right_menu_view";
 import VolumeTracingRightMenuView from "./volumetracing/volumetracing_right_menu_view";
 import ViewmodeRightMenuView from "./viewmode/viewmode_right_menu_view";
@@ -59,13 +59,13 @@ class TracingLayoutView extends Marionette.View {
     this.prototype.ui = {
       rightMenu: "#right-menu",
       slidingCanvas: "#sliding-canvas",
+      settings: "#settings-menu",
     };
 
     this.prototype.regions = {
       actionBar: "#action-bar",
       rightMenu: "#right-menu",
       tracingContainer: "#tracing",
-      settings: "#settings-menu",
       modalWrapper: ".modal-wrapper",
     };
 
@@ -92,7 +92,6 @@ class TracingLayoutView extends Marionette.View {
     );
 
     this.model = this.options.model;
-    this.options.adapterModel = new BackboneToOxalisAdapterModel(this.model);
 
     this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
     this.listenTo(this.model, "change:mode", this.renderSettings);
@@ -181,21 +180,12 @@ class TracingLayoutView extends Marionette.View {
 
 
   renderSettings() {
-    // This method will be invoked again once the model is initialized as part of
-    // the "sync" event callback.
-    let settingsTabView;
-    if (!this.model.initialized) { return; }
-
-    if (this.isSkeletonMode()) {
-      const SettingsTabClass = this.isArbitraryMode() ? SkeletonArbitraryTabView : SkeletonPlaneTabView;
-      settingsTabView = new SettingsTabClass(this.options);
-    } else if (this.isVolumeMode()) {
-      settingsTabView = new VolumeTabView(this.options);
-    } else {
-      settingsTabView = new ViewmodeTabView(this.options);
-    }
-
-    this.showChildView("settings", settingsTabView);
+    render(
+      <Provider store={store}>
+        <SettingsView oldModel={this.model} />
+      </Provider>,
+      this.ui.settings[0],
+    );
   }
 
 

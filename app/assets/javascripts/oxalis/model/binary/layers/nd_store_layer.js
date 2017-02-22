@@ -15,8 +15,8 @@ import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
 
 class NdStoreLayer extends Layer {
 
-  constructor(layerInfo: LayerInfoType, dataSetName: string, dataStoreInfo: DataStoreInfoType) {
-    super(layerInfo, dataSetName, dataStoreInfo);
+  constructor(layerInfo: LayerInfoType, dataStoreInfo: DataStoreInfoType) {
+    super(layerInfo, dataStoreInfo);
 
     if (this.dataStoreInfo.typ !== "ndstore") {
       throw new Error("NDstoreLayer should only be instantiated with ndstore");

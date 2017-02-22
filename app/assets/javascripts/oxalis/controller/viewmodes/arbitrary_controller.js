@@ -15,6 +15,8 @@ import Toast from "libs/toast";
 import type { ModeType, Vector3, Point2 } from "oxalis/constants";
 import Model from "oxalis/model";
 import View from "oxalis/view";
+import Store from "oxalis/store";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import Flycam3d from "oxalis/model/flycam3d";
@@ -49,7 +51,7 @@ class ArbitraryController {
     keyboardOnce: ?InputKeyboard;
     destroy: () => void;
   };
-  mode: ModeType;
+  mode: ModeType = 0;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -109,26 +111,22 @@ class ArbitraryController {
 
     this.input = _.extend({}, this.input);
 
-    this.crosshair = new Crosshair(this.cam, this.model.user.get("crosshairSize"));
+    this.crosshair = new Crosshair(this.cam, Store.getState().userConfiguration.crosshairSize);
     this.arbitraryView.addGeometry(this.crosshair);
-
-    this.listenTo(this.model.user, "change:displayCrosshair", function (userModel, value) {
-      this.crosshair.setVisibility(value);
-    });
 
     this.bindToEvents();
     this.arbitraryView.draw();
 
     this.stop();
 
-    this.crosshair.setVisibility(this.model.user.get("displayCrosshair"));
+    this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
   }
 
 
   render(): void {
     const matrix = this.cam.getMatrix();
     this.model.getColorBinaries().forEach(binary =>
-      binary.arbitraryPing(matrix, this.model.datasetConfiguration.get("quality")));
+      binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality));
   }
 
 
@@ -136,13 +134,15 @@ class ArbitraryController {
     this.input.mouse = new InputMouse(
       this.canvas, {
         leftDownMove: (delta: Point2) => {
+          const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+          const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
           if (this.mode === constants.MODE_ARBITRARY) {
             this.cam.yaw(
-              -delta.x * this.model.user.getMouseInversionX() * this.model.user.get("mouseRotateValue"),
+              -delta.x * mouseInversionX * Store.getState().userConfiguration.mouseRotateValue,
               true,
             );
             this.cam.pitch(
-              delta.y * this.model.user.getMouseInversionY() * this.model.user.get("mouseRotateValue"),
+              delta.y * mouseInversionY * Store.getState().userConfiguration.mouseRotateValue,
               true,
             );
           } else if (this.mode === constants.MODE_ARBITRARY_PLANE) {
@@ -163,8 +163,8 @@ class ArbitraryController {
       // KeyboardJS is sensitive to ordering (complex combos first)
 
       // Scale plane
-      l: () => this.arbitraryView.applyScale(-this.model.user.get("scaleValue")),
-      k: () => this.arbitraryView.applyScale(this.model.user.get("scaleValue")),
+      l: () => this.arbitraryView.applyScale(-Store.getState().userConfiguration.scaleValue),
+      k: () => this.arbitraryView.applyScale(Store.getState().userConfiguration.scaleValue),
 
       // Move
       space: (timeFactor) => {
@@ -186,16 +186,16 @@ class ArbitraryController {
       },
 
       // Rotate at centre
-      "shift + left": timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor),
-      "shift + right": timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor),
-      "shift + up": timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor),
-      "shift + down": timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor),
+      "shift + left": timeFactor => this.cam.yaw(Store.getState().userConfiguration.rotateValue * timeFactor),
+      "shift + right": timeFactor => this.cam.yaw(-Store.getState().userConfiguration.rotateValue * timeFactor),
+      "shift + up": timeFactor => this.cam.pitch(Store.getState().userConfiguration.rotateValue * timeFactor),
+      "shift + down": timeFactor => this.cam.pitch(-Store.getState().userConfiguration.rotateValue * timeFactor),
 
       // Rotate in distance
-      left: timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      right: timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      up: timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
-      down: timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      left: timeFactor => this.cam.yaw(Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      right: timeFactor => this.cam.yaw(-Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      up: timeFactor => this.cam.pitch(-Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
+      down: timeFactor => this.cam.pitch(Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY),
 
       // Zoom in/out
       i: () => this.cam.zoomIn(),
@@ -269,11 +269,10 @@ class ArbitraryController {
     }
   }
 
-
   getVoxelOffset(timeFactor: number): number {
-    return (this.model.user.get("moveValue3d") * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
+    const moveValue3d = Store.getState().userConfiguration.moveValue3d;
+    return (moveValue3d * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
   }
-
 
   move(timeFactor: number): void {
     if (!this.isStarted) { return; }
@@ -282,9 +281,9 @@ class ArbitraryController {
     this.moved();
   }
 
-
   init(): void {
-    this.setClippingDistance(this.model.user.get("clippingDistanceArbitrary"));
+    const clippingDistanceArbitrary = Store.getState().userConfiguration.clippingDistanceArbitrary;
+    this.setClippingDistance(clippingDistanceArbitrary);
     this.arbitraryView.applyScale(0);
   }
 
@@ -297,15 +296,13 @@ class ArbitraryController {
       this.listenTo(binary.cube, "bucketLoaded", this.arbitraryView.draw);
     }
 
-    this.listenTo(this.model.user, "change:crosshairSize", (model, value) => {
-      this.crosshair.setScale(value);
-    });
-    this.listenTo(this.model.user, { "change:sphericalCapRadius": (model, value) => {
-      this.model.flycam3d.distance = value;
+    Store.subscribe(() => {
+      const { sphericalCapRadius, clippingDistanceArbitrary, displayCrosshair } = Store.getState().userConfiguration;
+      this.crosshair.setScale(sphericalCapRadius);
+      this.model.flycam3d.distance = sphericalCapRadius;
       this.plane.setMode(this.mode);
-    } });
-    this.listenTo(this.model.user, "change:clippingDistanceArbitrary", (model, value) => {
-      this.setClippingDistance(value);
+      this.setClippingDistance(clippingDistanceArbitrary);
+      this.crosshair.setVisibility(displayCrosshair);
     });
   }
 
@@ -344,9 +341,9 @@ class ArbitraryController {
 
   addNode = (position: Vector3, rotation: Vector3) => {
     if (!this.isStarted) { return; }
-    const datasetConfig = this.model.get("datasetConfiguration");
-    const fourBit = datasetConfig.get("fourBit") ? 4 : 8;
-    const interpolation = datasetConfig.get("interpolation");
+    const datasetConfig = Store.getState().datasetConfiguration;
+    const fourBit = datasetConfig.fourBit ? 4 : 8;
+    const interpolation = datasetConfig.interpolation;
 
     this.model.skeletonTracing.addNode(position, rotation, constants.ARBITRARY_VIEW, 0, fourBit, interpolation);
   }
@@ -365,20 +362,19 @@ class ArbitraryController {
 
 
   changeMoveValue(delta: number): void {
-    let moveValue = this.model.user.get("moveValue3d") + delta;
+    let moveValue = Store.getState().userConfiguration.moveValue3d + delta;
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
-    this.model.user.set("moveValue3d", (Number)(moveValue));
+    Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
   }
 
-
   setParticleSize(delta: number): void {
-    let particleSize = this.model.user.get("particleSize") + delta;
+    let particleSize = Store.getState().userConfiguration.particleSize + delta;
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize);
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize);
 
-    this.model.user.set("particleSize", (Number)(particleSize));
+    Store.dispatch(updateUserSettingAction("particleSize", particleSize));
   }
 
 

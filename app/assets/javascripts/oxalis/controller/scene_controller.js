@@ -10,6 +10,7 @@ import Backbone from "backbone";
 import * as THREE from "three";
 import Flycam2d from "oxalis/model/flycam2d";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import scaleInfo from "oxalis/model/scaleinfo";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
@@ -312,17 +313,15 @@ class SceneController {
 
 
   bindToEvents(): void {
-    const { user } = this.model;
+    Store.subscribe(() => {
+      const { segmentationOpacity, clippingDistance, displayCrosshair, tdViewDisplayPlanes } = Store.getState().userConfiguration;
+      this.setSegmentationAlpha(segmentationOpacity);
+      this.setClippingDistance(clippingDistance);
+      this.setDisplayCrosshair(displayCrosshair);
+      this.setDisplayPlanes(tdViewDisplayPlanes);
+      this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
+    });
     this.listenTo(this.model, "change:userBoundingBox", (bb) => { this.setUserBoundingBox(bb); });
-    this.listenTo(user, "change:segmentationOpacity", (model, opacity) => {
-      this.setSegmentationAlpha(opacity);
-    });
-    this.listenTo(user, "change:clippingDistance", (model, value) => { this.setClippingDistance(value); });
-    this.listenTo(user, "change:displayCrosshair", (model, value) => { this.setDisplayCrosshair(value); });
-    this.listenTo(this.model.datasetConfiguration, "change:interpolation", (model, value) => {
-      this.setInterpolation(value);
-    });
-    this.listenTo(user, "change:tdViewDisplayPlanes", (model, value) => { this.setDisplayPlanes(value); });
   }
 }
 SceneController.initClass();

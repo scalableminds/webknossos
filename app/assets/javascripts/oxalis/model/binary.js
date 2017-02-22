@@ -5,6 +5,7 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
+import Store from "oxalis/store";
 import AsyncTaskQueue from "libs/async_task_queue";
 import InterpolationCollector from "oxalis/model/binary/interpolation_collector";
 import DataCube from "oxalis/model/binary/data_cube";
@@ -79,12 +80,11 @@ class Binary {
 
     const taskQueue = new AsyncTaskQueue();
 
-    const datasetName = this.model.get("dataset").get("name");
-    const datastoreInfo = this.model.get("dataset").get("dataStore");
+    const datastoreInfo = Store.getState().dataset.dataStore;
     this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
-    this.pushQueue = new PushQueue(datasetName, this.cube, this.layer, this.tracing.id, taskQueue);
+    this.pushQueue = new PushQueue(this.cube, this.layer, this.tracing.id, taskQueue);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
-    this.mappings = new Mappings(datastoreInfo, datasetName, this.layer);
+    this.mappings = new Mappings(datastoreInfo, this.layer);
     this.activeMapping = null;
     this.direction = [0, 0, 0];
 
@@ -103,9 +103,8 @@ class Binary {
     }
 
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {
-      this.layer.setFourBit(this.model.get("datasetConfiguration").get("fourBit"));
-      this.listenTo(this.model.get("datasetConfiguration"), "change:fourBit",
-                (datasetModel, fourBit) => { this.layer.setFourBit(fourBit); });
+      this.layer.setFourBit(Store.getState().datasetConfiguration.fourBit);
+      Store.subscribe(() => { this.layer.setFourBit(Store.getState().datasetConfiguration.fourBit); });
     }
 
     this.cube.on({

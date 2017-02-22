@@ -3,6 +3,7 @@
  * @flow
  */
 
+import Store from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { MappingType } from "oxalis/model/binary/mappings";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
@@ -13,7 +14,7 @@ import type { BoundingBoxObjectType } from "oxalis/model";
 
 
 export type CategoryType = "color" | "segmentation";
-type ElementClassType = string; // TODO: Can/should we be more precise like "uint16" | "Uint32"?
+export type ElementClassType = "uint8" | "uint16" | "uint32";
 
 export type DataStoreInfoType = {
   typ: string;
@@ -42,7 +43,6 @@ class Layer {
   fourBit: boolean;
   dataStoreInfo: DataStoreInfoType;
   name: string;
-  dataSetName: string;
   bitDepth: number;
   tokenPromise: Promise<string>;
   tokenRequestPromise: ?Promise<string>;
@@ -55,8 +55,7 @@ class Layer {
   resolutions: Array<number>;
 
 
-  constructor(layerInfo: LayerInfoType, dataSetName: string, dataStoreInfo: DataStoreInfoType) {
-    this.dataSetName = dataSetName;
+  constructor(layerInfo: LayerInfoType, dataStoreInfo: DataStoreInfoType) {
     this.dataStoreInfo = dataStoreInfo;
 
     this.name = layerInfo.name;
@@ -74,8 +73,9 @@ class Layer {
   requestDataToken(): Promise<string> {
     if (this.tokenRequestPromise) { return this.tokenRequestPromise; }
 
+    const datasetName = Store.getState().dataset.name;
     this.tokenRequestPromise = Request.receiveJSON(
-      `/dataToken/generate?dataSetName=${this.dataSetName}&dataLayerName=${this.name}`,
+      `/dataToken/generate?dataSetName=${datasetName}&dataLayerName=${this.name}`,
     ).then((dataStore) => {
       this.tokenRequestPromise = null;
       return dataStore.token;

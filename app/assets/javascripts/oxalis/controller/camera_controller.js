@@ -10,10 +10,11 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import Flycam2d from "oxalis/model/flycam2d";
 import Model from "oxalis/model";
-import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
+import Store from "oxalis/store";
 import scaleInfo from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 
 type TweenState = {
   notify: () => void,
@@ -323,7 +324,8 @@ class CameraController {
 
   updateCamViewport(): void {
     const scaleFactor = scaleInfo.baseVoxel;
-    const boundary = (constants.VIEWPORT_WIDTH / 2) * this.model.user.get("zoom");
+    const zoom = Store.getState().userConfiguration.zoom;
+    const boundary = (constants.VIEWPORT_WIDTH / 2) * zoom;
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.cameras[planeId].near = -this.camDistance;
       this.cameras[planeId].left = this.cameras[planeId].bottom = -boundary * scaleFactor;
@@ -335,8 +337,10 @@ class CameraController {
 
 
   bindToEvents() {
-    this.listenTo(this.model.user, "change:clippingDistance", (model, value) => { this.setClippingDistance(value); });
-    this.listenTo(this.model.user, "change:zoom", () => { this.updateCamViewport(); });
+    Store.subscribe(() => {
+      this.setClippingDistance(Store.getState().userConfiguration.zoom);
+      this.updateCamViewport();
+    });
   }
 }
 

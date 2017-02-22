@@ -25,6 +25,7 @@
       "routes": false,
       "jsRoutes": false,
       "JQuery": false,
+      "SyntheticInputEvent": false,
       "$Keys": false
     },
     "rules": {

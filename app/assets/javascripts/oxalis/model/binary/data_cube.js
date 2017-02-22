@@ -322,7 +322,6 @@ class DataCube {
     for (let i = 0; i <= 2; i++) {
       voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
     }
-
     if (voxelInCube) {
       const address = this.positionToZoomedAddress(voxel);
       const bucket = this.getOrCreateBucket(address);

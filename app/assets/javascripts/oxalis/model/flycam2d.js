@@ -4,15 +4,16 @@
  */
 
 import _ from "lodash";
-import app from "app";
 import Backbone from "backbone";
+import app from "app";
+import Store from "oxalis/store";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import Model from "oxalis/model";
 import type { BoundingBoxType } from "oxalis/model";
-import User from "oxalis/model/user";
 import scaleInfo from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewValues } from "oxalis/constants";
 import type { Vector2, Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
-import Model from "oxalis/model";
 
 const Flycam2dConstants = {
   // maximum difference between requested coordinate and actual texture position
@@ -26,7 +27,6 @@ class Flycam2d {
   viewportWidth: number;
   zoomStepCount: number;
   model: Model;
-  user: User;
   maxZoomStepDiff: number;
   zoomStep: number;
   integerZoomStep: number;
@@ -50,8 +50,6 @@ class Flycam2d {
 
     console.log("ZoomStepCount: ", this.zoomStepCount);
 
-    this.user = this.model.user;
-
     this.maxZoomStepDiff = this.calculateMaxZoomStepDiff();
     this.zoomStep = 0.0;
     this.integerZoomStep = 0;
@@ -72,11 +70,14 @@ class Flycam2d {
     this.updateStoredValues();
 
     // correct zoom values that are too high or too low
-    this.user.set("zoom", Math.max(0.01, Math.min(this.user.get("zoom"), Math.floor(this.getMaxZoomStep()))));
+    const zoom = Math.max(0.01, Math.min(Store.getState().userConfiguration.zoom, Math.floor(this.getMaxZoomStep())));
+    Store.dispatch(updateUserSettingAction("zoom", zoom));
 
-    this.listenTo(this.model.get("datasetConfiguration"), "change:quality", (datasetModel, quality) => { this.setQuality(quality); });
-    // TODO move zoom into tracing settings
-    this.listenTo(this.user, "change:zoom", (userModel, zoomFactor) => { this.zoom(Math.log(zoomFactor) / Math.LN2); });
+    Store.subscribe(() => {
+      this.setQuality(Store.getState().datasetConfiguration.quality);
+      // TODO move zoom into tracing settings
+      this.zoom(Math.log(Store.getState().userConfiguration.zoom) / Math.LN2);
+    });
 
     // Fire changed event every time
     const trigger = this.trigger;
@@ -193,7 +194,7 @@ class Flycam2d {
 
   setDirection(direction: Vector3): void {
     this.direction = direction;
-    if (this.user.get("dynamicSpaceDirection")) {
+    if (Store.getState().userConfiguration.dynamicSpaceDirection) {
       this.setSpaceDirection(direction);
     }
   }

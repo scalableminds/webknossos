@@ -4,6 +4,7 @@
  */
 
 import _ from "lodash";
+import Store from "oxalis/store";
 import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
 import type Layer, { DataStoreInfoType } from "oxalis/model/binary/layers/layer";
@@ -24,7 +25,8 @@ class Mappings {
   baseUrl: string;
   doWithToken: Function;
 
-  constructor(dataStoreInfo: DataStoreInfoType, datasetName: string, layer: Layer) {
+  constructor(dataStoreInfo: DataStoreInfoType, layer: Layer) {
+    const datasetName = Store.getState().dataset.name;
     this.mappings = _.transform(layer.mappings, (result, mappingObject) => {
       result[mappingObject.name] = mappingObject;
     }, {});

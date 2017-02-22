@@ -32,7 +32,6 @@ import type { ToastType } from "libs/toast";
 class Controller {
 
   model: Model;
-  fullScreen: boolean;
   urlManager: UrlManager;
   sceneController: SceneController;
   view: View;
@@ -62,8 +61,6 @@ class Controller {
     this.model = options.model;
 
     _.extend(this, Backbone.Events);
-
-    this.fullScreen = false;
 
     this.urlManager = new UrlManager(this.model);
     this.model.set("state", this.urlManager.initialState);

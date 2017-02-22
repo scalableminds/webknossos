@@ -5,13 +5,13 @@
 import app from "app";
 import Backbone from "backbone";
 import _ from "lodash";
+import Store from "oxalis/store";
 import Utils from "libs/utils";
 import ColorGenerator from "libs/color_generator";
 import scaleInfo from "oxalis/model/scaleinfo";
 import type { Vector3 } from "oxalis/constants";
 import Flycam from "oxalis/model/flycam2d";
 import Flycam3d from "oxalis/model/flycam3d";
-import User from "oxalis/model/user";
 import type { SkeletonContentDataType } from "oxalis/model";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
@@ -27,7 +27,6 @@ class SkeletonTracing {
 
   flycam: Flycam;
   flycam3d: Flycam3d;
-  user: User;
   trees: Array<TraceTree>;
   activeNode: ?TracePoint;
   activeTree: TraceTree;
@@ -37,16 +36,16 @@ class SkeletonTracing {
   restrictionHandler: RestrictionHandler;
   stateLogger: SkeletonTracingStateLogger;
   trigger: Function;
+  on: Function;
   treeIdCount: number;
   colorIdCounter: number;
   idCount: number;
   treePrefix: string;
   branchPointsAllowed: boolean;
 
-  constructor(tracing, flycam, flycam3d, user) {
+  constructor(tracing, flycam, flycam3d) {
     this.flycam = flycam;
     this.flycam3d = flycam3d;
-    this.user = user;
     this.trees = [];
 
     _.extend(this, Backbone.Events);
@@ -440,7 +439,7 @@ class SkeletonTracing {
 
   selectNextTree(forward) {
     let i;
-    const trees = this.getTreesSorted(this.user.get("sortTreesByName"));
+    const trees = this.getTreesSorted(Store.getState().userConfiguration.sortTreesByName);
     for (i of Utils.__range__(0, trees.length, false)) {
       if (this.activeTree.treeId === trees[i].treeId) {
         break;
@@ -713,7 +712,7 @@ class SkeletonTracing {
 
 
   getTreesSorted() {
-    if (this.user.get("sortTreesByName")) {
+    if (Store.getState().userConfiguration.sortTreesByName) {
       return this.getTreesSortedBy("name");
     } else {
       return this.getTreesSortedBy("timestamp");

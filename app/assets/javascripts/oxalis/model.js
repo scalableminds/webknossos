@@ -5,13 +5,13 @@
 
 import Backbone from "backbone";
 import _ from "lodash";
+import Store from "oxalis/store";
+import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
-import User from "oxalis/model/user";
-import DatasetConfiguration from "oxalis/model/dataset_configuration";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import scaleInfo from "oxalis/model/scaleinfo";
@@ -121,7 +121,6 @@ class Model extends Backbone.Model {
   HANDLED_ERROR = "error_was_handled";
 
   initialized: boolean;
-  user: User;
   connectionInfo: ConnectionInfo;
   binary: {
     [key: string]: Binary,
@@ -135,7 +134,6 @@ class Model extends Backbone.Model {
   flycam3d: Flycam3d;
   volumeTracing: VolumeTracing;
   skeletonTracing: SkeletonTracing;
-  datasetConfiguration: DatasetConfiguration;
   tracing: Tracing;
   mode: ModeType;
   allowedModes: Array<ModeType>;
@@ -160,14 +158,14 @@ class Model extends Backbone.Model {
 
     return Request.receiveJSON(infoUrl).then((tracing: Tracing) => {
       let error;
+      const dataset = tracing.content.dataSet;
       if (tracing.error) {
         ({ error } = tracing);
-      } else if (!tracing.content.dataSet) {
+      } else if (!dataset) {
         error = "Selected dataset doesn't exist";
-      } else if (!tracing.content.dataSet.dataLayers) {
-        const datasetName = tracing.content.dataSet.name;
-        if (datasetName) {
-          error = `Please, double check if you have the dataset '${datasetName}' imported.`;
+      } else if (!dataset.dataLayers) {
+        if (dataset.name) {
+          error = `Please, double check if you have the dataset '${dataset.name}' imported.`;
         } else {
           error = "Please, make sure you have a dataset imported.";
         }
@@ -178,25 +176,9 @@ class Model extends Backbone.Model {
         throw this.HANDLED_ERROR;
       }
 
-      this.user = new User();
-      this.set("user", this.user);
-      this.set("datasetName", tracing.content.dataSet.name);
-
-      return this.user.fetch().then(() => Promise.resolve(tracing));
-    },
-
-    ).then((tracing: Tracing) => {
-      this.set("dataset", new Backbone.Model(tracing.content.dataSet));
-      const colorLayers = _.filter(this.get("dataset").get("dataLayers"),
-                              layer => layer.category === "color");
-      this.set("datasetConfiguration", new DatasetConfiguration({
-        datasetName: this.get("datasetName"),
-        dataLayerNames: _.map(colorLayers, "name"),
-      }));
-      return this.get("datasetConfiguration").fetch().then(() => Promise.resolve(tracing));
-    },
-
-    ).then((tracing: Tracing) => {
+      Store.dispatch(setDatasetAction(dataset));
+      return tracing;
+    }).then((tracing: Tracing) => {
       const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
       return this.initializeWithData(tracing, layerInfos);
     },
@@ -235,8 +217,8 @@ class Model extends Backbone.Model {
 
 
   initializeWithData(tracing: Tracing, layerInfos) {
-    const { dataStore } = tracing.content.dataSet;
-    const dataset = this.get("dataset");
+    const dataset = tracing.content.dataSet;
+    const { dataStore } = dataset;
 
     const LayerClass = (() => {
       switch (dataStore.typ) {
@@ -246,15 +228,15 @@ class Model extends Backbone.Model {
       }
     })();
 
-    const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataset.get("name"), dataStore));
+    const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataStore));
 
     ErrorHandling.assertExtendContext({
       task: this.get("tracingId"),
-      dataSet: dataset.get("name"),
+      dataSet: dataset.name,
     });
 
     const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
-    scaleInfo.initialize(dataset.get("scale"));
+    scaleInfo.initialize(dataset.scale);
 
     const bb = tracing.content.boundingBox;
     if (bb != null) {
@@ -280,7 +262,7 @@ class Model extends Backbone.Model {
     }
 
     const flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, this);
-    const flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"));
+    const flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.scale);
     this.set("flycam", flycam);
     this.set("flycam3d", flycam3d);
     this.listenTo(flycam3d, "changed", matrix => flycam.setPosition(matrix.slice(12, 15)));
@@ -293,7 +275,7 @@ class Model extends Backbone.Model {
         this.set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, this.getSegmentationBinary()));
         this.annotationModel = this.get("volumeTracing");
       } else {
-        this.set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, this.user));
+        this.set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d));
         this.annotationModel = this.get("skeletonTracing");
       }
     }
@@ -378,7 +360,7 @@ class Model extends Backbone.Model {
   getLayerInfos(userLayers) {
     // Overwrite or extend layers with userLayers
 
-    const layers = this.get("dataset").get("dataLayers");
+    const layers = Store.getState().dataset.dataLayers;
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {
@@ -458,7 +440,9 @@ class Model extends Backbone.Model {
   applyState(state, tracing) {
     this.get("flycam").setPosition(state.position || tracing.content.editPosition);
     if (state.zoomStep != null) {
-      this.get("user").set("zoom", Math.exp(Math.LN2 * state.zoomStep));
+      _.defer(() => {
+        Store.dispatch(updateUserSettingAction("zoom", Math.exp(Math.LN2 * state.zoomStep)));
+      });
       this.get("flycam3d").setZoomStep(state.zoomStep);
     }
 

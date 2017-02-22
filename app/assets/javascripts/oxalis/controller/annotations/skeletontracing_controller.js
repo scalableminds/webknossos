@@ -5,8 +5,10 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
+import Store from "oxalis/store";
 import constants from "oxalis/constants";
 import Model from "oxalis/model";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
 import SceneController from "oxalis/controller/scene_controller";
 
@@ -36,11 +38,11 @@ class SkeletonTracingController {
 
 
   setParticleSize = (delta: number): void => {
-    let particleSize = this.model.user.get("particleSize") + delta;
+    let particleSize = Store.getState().userConfiguration.particleSize + delta;
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize);
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize);
 
-    this.model.user.set("particleSize", (Number)(particleSize));
+    Store.dispatch(updateUserSettingAction("particleSize", particleSize));
   }
 
 
@@ -55,10 +57,9 @@ class SkeletonTracingController {
     this.sceneController.skeleton.toggleVisibility();
     // Show warning, if this is the first time to use
     // this function for this user
-    if (this.model.user.get("firstVisToggle")) {
+    if (Store.getState().userConfiguration.firstVisToggle) {
       this.skeletonTracingView.showFirstVisToggle();
-      this.model.user.set("firstVisToggle", false);
-      this.model.user.push();
+      Store.dispatch(updateUserSettingAction("firstVisToggle", false));
     }
   }
 

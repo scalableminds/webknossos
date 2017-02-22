@@ -8,6 +8,7 @@ import $ from "jquery";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
+import Store from "oxalis/store";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import constants, { OrthoViews } from "oxalis/constants";
@@ -206,7 +207,8 @@ class SkeletonTracingPlaneController extends PlaneController {
     this.addNode(position, rotation, !ctrlPressed);
 
     // Strg + Rightclick to set new not active branchpoint
-    if (ctrlPressed && !this.model.user.get("newNodeNewTree")) {
+    const newNodeNewTree = Store.getState().userConfiguration.newNodeNewTree;
+    if (ctrlPressed && !newNodeNewTree) {
       this.model.skeletonTracing.pushBranch();
       this.skeletonTracingController.setActiveNode(activeNode.id);
     }
@@ -214,7 +216,8 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   addNode = (position: Vector3, rotation: Vector3, centered: boolean): void => {
-    if (this.model.settings.somaClickingAllowed && this.model.user.get("newNodeNewTree")) {
+    const newNodeNewTree = Store.getState().userConfiguration.newNodeNewTree;
+    if (this.model.settings.somaClickingAllowed && newNodeNewTree) {
       this.model.skeletonTracing.createNewTree();
     }
 
@@ -222,15 +225,15 @@ class SkeletonTracingPlaneController extends PlaneController {
       centered = true;
     }
 
-    const datasetConfig = this.model.get("datasetConfiguration");
+    const datasetConfig = Store.getState().datasetConfiguration;
 
     this.model.skeletonTracing.addNode(
       position,
       rotation,
       OrthoViewToNumber[this.activeViewport],
       this.model.flycam.getIntegerZoomStep(),
-      datasetConfig.get("fourBit") ? 4 : 8,
-      datasetConfig.get("interpolation"),
+      datasetConfig.fourBit ? 4 : 8,
+      datasetConfig.interpolation,
     );
 
     if (centered) {

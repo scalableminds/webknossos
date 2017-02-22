@@ -6,80 +6,24 @@
   width: @settings-wrapper-width;
   margin-right: 10px;
   transform: translate(-@settings-wrapper-width, 0);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   z-index: 500;
 }
 
 #settings-menu {
   width: @left-menu-width;
   padding: 10px 0px;
-  vertical-align: top;
-  white-space: normal;
-  .tab-menu;
 
-  .nav-tabs {
-    margin-bottom: 0px;
+  .settings-row {
+    margin-bottom: 10px;
   }
 
-  .panel {
-    border-radius: 0px;
-    margin-top: -1px; //avoid double borders
+  .setting-label {
+    word-wrap: break-word;
+    white-space: normal;
+    margin-right: 5px;
+    display: inline-block;
   }
-
-  .panel-body {
-
-    .row {
-      margin-bottom: 5px;
-    }
-  }
-
-  .panel-heading {
-
-    .caret-down {
-      display: inline-block;
-    }
-    .caret-right {
-      display: none;
-    }
-
-    &.collapsed {
-      .caret-right {
-        display: inline-block
-      }
-      .caret-down {
-        display: none
-      }
-
-    }
-  }
-
-  li.active > a{
-    background-color: #f5f5f5;
-  }
-}
-
-@settingsPaddingLeft: 4px;
-
-.slider-setting-view, .color-setting-view {
-  .v-center-agent {
-    height: @bsButtonHeight;
-  }
-  .col-sm-4 {
-    padding-left: @settingsPaddingLeft;
-  }
-}
-
-.checkbox-setting-view .col-sm-1 {
-  padding-left: @settingsPaddingLeft;
-}
-
-.dropdown-setting-view .col-sm-7,
-.number-setting-view .col-sm-7,
-.text-setting-view .col-sm-7 {
-  padding-left: @settingsPaddingLeft;
-}
-
-.text-setting-view input:invalid {
-  border-color: red;
 }
 

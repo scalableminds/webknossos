@@ -22,14 +22,20 @@ const RequestMock = {
   sendArraybufferReceiveArraybuffer: sinon.stub(),
   receiveJSON: sinon.stub(),
 };
+const StoreMock = {
+  getState: () => ({
+    dataset: { name: "dataSet" },
+  }),
+};
+
 mockRequire("libs/request", RequestMock);
+mockRequire("oxalis/store", StoreMock);
 mockRequire.reRequire("libs/request");
 mockRequire.reRequire("oxalis/model/binary/layers/layer");
 
 const WkLayer = mockRequire.reRequire("oxalis/model/binary/layers/wk_layer").default;
 
 describe("WkLayer", () => {
-  const dataSetName = "dataSet";
   const layerInfo = {
     name: "layername",
     category: "color",
@@ -47,7 +53,7 @@ describe("WkLayer", () => {
     RequestMock.receiveJSON = sinon.stub();
     RequestMock.receiveJSON.returns(Promise.resolve(tokenResponse));
 
-    layer = new WkLayer(layerInfo, dataSetName, dataStoreInfo);
+    layer = new WkLayer(layerInfo, dataStoreInfo);
   });
 
 

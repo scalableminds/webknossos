@@ -22,9 +22,8 @@ class PushQueue {
   sendData: boolean;
   queue: Array<Vector4>;
 
-  constructor(dataSetName: string, cube: DataCube, layer: Layer, tracingId: string,
+  constructor(cube: DataCube, layer: Layer, tracingId: string,
     taskQueue: AsyncTaskQueue, sendData: boolean = true) {
-    this.dataSetName = dataSetName;
     this.cube = cube;
     this.layer = layer;
     this.tracingId = tracingId;
@@ -32,7 +31,6 @@ class PushQueue {
     this.sendData = sendData;
     this.queue = [];
   }
-
 
   stateSaved(): boolean {
     return this.queue.length === 0 &&

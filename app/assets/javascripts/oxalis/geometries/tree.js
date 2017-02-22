@@ -9,6 +9,7 @@ import ResizableBuffer from "libs/resizable_buffer";
 import ErrorHandling from "libs/error_handling";
 import * as THREE from "three";
 import TWEEN from "tween.js";
+import Store from "oxalis/store";
 import Model from "oxalis/model";
 import ParticleMaterialFactory from "./materials/particle_material_factory";
 
@@ -61,6 +62,11 @@ class Tree {
     this.nodes = new THREE.Points(nodeGeometry, this.particleMaterial);
 
     this.id = treeId;
+
+    Store.subscribe(() => {
+      const { overrideNodeRadius } = Store.getState().userConfiguration;
+      this.showRadius(!overrideNodeRadius);
+    });
   }
 
   makeDynamicFloatAttribute(itemSize, resizableBuffer) {
@@ -369,7 +375,7 @@ class Tree {
 
 
   getLineWidth() {
-    return this.model.user.get("particleSize") / 4;
+    return Store.getState().userConfiguration.particleSize / 4;
   }
 
 

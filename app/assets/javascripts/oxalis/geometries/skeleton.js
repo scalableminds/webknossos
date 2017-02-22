@@ -7,6 +7,7 @@ import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
+import Store from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import Model from "oxalis/model";
 import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
@@ -58,11 +59,6 @@ class Skeleton {
     this.listenTo(this.skeletonTracing, "setBranch", this.setBranch);
     this.listenTo(this.skeletonTracing, "newTreeColor", this.updateTreeColor);
     this.listenTo(this.skeletonTracing, "reloadTrees", this.loadSkeletonFromModel);
-
-    this.listenTo(this.model.user, "change:overrideNodeRadius", () => (
-      _.map(this.treeGeometries, tree =>
-        tree.showRadius(!this.model.user.get("overrideNodeRadius")))),
-    );
   }
 
 
@@ -238,8 +234,7 @@ class Skeleton {
 
   updateForCam(id) {
     for (const tree of _.values(this.treeGeometries)) {
-      tree.showRadius(id !== OrthoViews.TDView &&
-        !this.model.user.get("overrideNodeRadius"));
+      tree.showRadius(id !== OrthoViews.TDView && !Store.getState().userConfiguration.overrideNodeRadius);
     }
 
     if (id !== OrthoViews.TDView) {

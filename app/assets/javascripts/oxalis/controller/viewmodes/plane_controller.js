@@ -12,7 +12,9 @@ import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import View from "oxalis/view";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import Flycam2d from "oxalis/model/flycam2d";
 import scaleInfo from "oxalis/model/scaleinfo";
@@ -118,9 +120,6 @@ class PlaneController {
       this.planeView.addGeometry(mesh);
     }
 
-    this.model.user.triggerAll();
-    this.model.datasetConfiguration.triggerAll();
-
     this.initTrackballControls();
     this.bindToEvents();
     this.stop();
@@ -152,11 +151,15 @@ class PlaneController {
 
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return {
-      leftDownMove: (delta: Point2) => this.move([
-        (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
-        (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
-        0,
-      ]),
+      leftDownMove: (delta: Point2) => {
+        const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+        const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
+        return this.move([
+          (delta.x * mouseInversionX) / this.planeView.scaleFactor,
+          (delta.y * mouseInversionY) / this.planeView.scaleFactor,
+          0,
+        ]);
+      },
 
       over: () => {
         $(":focus").blur();
@@ -218,15 +221,22 @@ class PlaneController {
 
     const getMoveValue = (timeFactor) => {
       if (([0, 1, 2]).includes(this.activeViewport)) {
-        return (this.model.user.get("moveValue") * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
+        return (Store.getState().userConfiguration.moveValue * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
       }
       return (constants.TDView_MOVE_SPEED * timeFactor) / constants.FPS;
     };
 
     this.input.keyboard = new InputKeyboard({
       // ScaleTrianglesPlane
-      l: timeFactor => this.scaleTrianglesPlane(-this.model.user.get("scaleValue") * timeFactor),
-      k: timeFactor => this.scaleTrianglesPlane(this.model.user.get("scaleValue") * timeFactor),
+      l: (timeFactor) => {
+        const scaleValue = Store.getState().userConfiguration.scaleValue;
+        this.scaleTrianglesPlane(-scaleValue * timeFactor);
+      },
+
+      k: (timeFactor) => {
+        const scaleValue = Store.getState().userConfiguration.scaleValue;
+        this.scaleTrianglesPlane(scaleValue * timeFactor);
+      },
 
       // Move
       left: timeFactor => this.moveX(-getMoveValue(timeFactor)),
@@ -245,16 +255,16 @@ class PlaneController {
       space: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
       f: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
       d: (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
-    }, this.model.user.get("keyboardDelay"));
-
-    this.listenTo(this.model.user, "change:keyboardDelay",
-      (model, value) => {
-        if (this.input.keyboardLoopDelayed != null) {
-          this.input.keyboardLoopDelayed.delay = value;
-        }
-      });
+    }, Store.getState().userConfiguration.keyboardDelay);
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop(this.getKeyboardControls());
+
+    Store.subscribe(() => {
+      const keyboardLoopDelayed = this.input.keyboardLoopDelayed;
+      if (keyboardLoopDelayed != null) {
+        keyboardLoopDelayed.delay = Store.getState().userConfiguration.keyboardDelay;
+      }
+    });
   }
 
 
@@ -270,12 +280,11 @@ class PlaneController {
     };
   }
 
-
   init(): void {
-    this.cameraController.setClippingDistance(this.model.user.get("clippingDistance"));
-    this.sceneController.setClippingDistance(this.model.user.get("clippingDistance"));
+    const clippingDistance = Store.getState().userConfiguration.clippingDistance;
+    this.cameraController.setClippingDistance(clippingDistance);
+    this.sceneController.setClippingDistance(clippingDistance);
   }
-
 
   start(): void {
     this.stop();
@@ -289,7 +298,6 @@ class PlaneController {
 
     this.isStarted = true;
   }
-
 
   stop(): void {
     if (this.isStarted) {
@@ -394,7 +402,7 @@ class PlaneController {
     }
 
     this.flycam.zoomByDelta(value);
-    this.model.user.set("zoom", this.flycam.getPlaneScalingFactor());
+    Store.dispatch(updateUserSettingAction("zoom", this.flycam.getPlaneScalingFactor()));
 
     if (zoomToMouse) {
       this.finishZoom();
@@ -410,12 +418,13 @@ class PlaneController {
     this.cameraController.zoomTDView(value, zoomToPosition, this.planeView.curWidth);
   }
 
-
   moveTDView(delta: Point2): void {
-    this.cameraController.moveTDViewX(delta.x * this.model.user.getMouseInversionX());
-    this.cameraController.moveTDViewY(delta.y * this.model.user.getMouseInversionY());
-  }
+    const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+    const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
 
+    this.cameraController.moveTDViewX(delta.x * mouseInversionX);
+    this.cameraController.moveTDViewY(delta.y * mouseInversionY);
+  }
 
   finishZoom = (): void => {
     // Move the plane so that the mouse is at the same position as
@@ -445,20 +454,19 @@ class PlaneController {
 
 
   changeMoveValue(delta: number): void {
-    let moveValue = this.model.user.get("moveValue") + delta;
+    let moveValue = Store.getState().userConfiguration.moveValue + delta;
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
-    this.model.user.set("moveValue", (Number)(moveValue));
+    Store.dispatch(updateUserSettingAction("moveValue", moveValue));
   }
 
-
   scaleTrianglesPlane(delta: number): void {
-    let scale = this.model.user.get("scale") + delta;
+    let scale = Store.getState().userConfiguration.scale + delta;
     scale = Math.min(constants.MAX_SCALE, scale);
     scale = Math.max(constants.MIN_SCALE, scale);
 
-    this.model.user.set("scale", scale);
+    Store.dispatch(updateUserSettingAction("scale", scale));
   }
 
 

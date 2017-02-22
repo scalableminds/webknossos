@@ -8,7 +8,6 @@
 import React from "react";
 import Utils from "libs/utils";
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
-import Model from "oxalis/model";
 import type { Vector6 } from "oxalis/constants";
 
 export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: Function, value: number, label: string, max: number, min?: number, step?: number}) {

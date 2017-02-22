@@ -1,38 +1,25 @@
 /*
 * traceparser.js
-* @flow weak
+* @flow
 */
 
+import _ from "lodash";
 import * as THREE from "three";
+import app from "app";
 import Toast from "libs/toast";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
+import type { SkeletonContentDataType, Tracing } from "oxalis/model";
 import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
-import type { SkeletonContentDataType, TreeData } from "oxalis/model";
+import RestrictionHandler from "oxalis/model/helpers/restriction_handler";
+
 
 class TracingParser {
 
-  skeletonTracing: SkeletonTracing;
-  data: SkeletonContentDataType;
-  idCount: number;
-  treeIdCount: number;
-  trees: Array<TreeData>;
-  activeNode: ?TracePoint;
-  activeTree: ?TraceTree;
+  static buildTrees(data: SkeletonContentDataType) {
+    const trees = [];
 
-  constructor(skeletonTracing, data) {
-    this.skeletonTracing = skeletonTracing;
-    this.data = data;
-    this.idCount = 1;
-    this.treeIdCount = 1;
-    this.trees = [];
-    this.activeNode = null;
-    this.activeTree = null;
-  }
-
-
-  buildTrees() {
-    for (const treeData of this.data.trees) {
+    for (const treeData of data.trees) {
       // Create new tree
       const tree = new TraceTree(
         treeData.id,
@@ -40,23 +27,23 @@ class TracingParser {
         treeData.name ? treeData.name : `Tree${(`00${treeData.id}`).slice(-3)}`,
         treeData.timestamp,
         treeData.comments,
-        treeData.branchPoints);
+        treeData.branchPoints,
+      );
 
       // Initialize nodes
       for (const node of treeData.nodes) {
         tree.nodes.push(
           new TracePoint(
             node.id, node.position, node.radius, treeData.id,
-            node.rotation, node.timestamp, node.viewport, node.resolution, node.bitDepth, node.interpolation));
-
-        // idCount should be bigger than any other id
-        this.idCount = Math.max(node.id + 1, this.idCount);
+            node.rotation, node.timestamp, node.viewport, node.resolution, node.bitDepth, node.interpolation,
+          ),
+        );
       }
 
       // Initialize edges
       for (const edge of treeData.edges) {
-        const sourceNode = this.skeletonTracing.findNodeInList(tree.nodes, edge.source);
-        const targetNode = this.skeletonTracing.findNodeInList(tree.nodes, edge.target);
+        const sourceNode = _.find(tree.nodes, { id: edge.source });
+        const targetNode = _.find(tree.nodes, { id: edge.target });
         if (sourceNode && targetNode) {
           sourceNode.appendNext(targetNode);
           targetNode.appendNext(sourceNode);
@@ -66,58 +53,110 @@ class TracingParser {
         }
       }
 
+      trees.push(tree);
+    }
+
+    return trees;
+  }
+
+
+  static convertColor(colorArray): THREE.Color {
+    return new THREE.Color().setRGB(...colorArray).getHex();
+  }
+
+  static generateTreeNamePrefix(tracingType: string, taskId: number): string {
+    let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
+    // Replace spaces in user names
+    user = user.replace(/ /g, "_");
+
+    if (tracingType === "Explorational") {
+      // Get YYYY-MM-DD string
+      const creationDate = new Date().toJSON().slice(0, 10);
+      return `explorative_${creationDate}_${user}_`;
+    } else {
+      return `task_${taskId}_${user}_`;
+    }
+  }
+
+
+  static parse(tracing: Tracing): SkeletonTracing {
+    if (tracing == null) {
+      Error("implement me");
+    }
+
+    const skeletonTracing = new SkeletonTracing();
+    skeletonTracing.trees = this.buildTrees(tracing.content.contentData);
+
+    for (const tree of skeletonTracing.trees) {
+      // idCount should be bigger than any other id
+      const maxNodeId = _.maxBy(tree.nodes, "id");
+      skeletonTracing.idCount = Math.max(maxNodeId.id + 1, skeletonTracing.idCount);
+
       // Set active Node
-      const activeNodeT = this.skeletonTracing.findNodeInList(tree.nodes, this.data.activeNode);
+      const activeNodeT = _.find(tree.nodes, { id: tracing.activeNode });
       if (activeNodeT) {
-        this.activeNode = activeNodeT;
+        skeletonTracing.activeNode = activeNodeT;
         // Active Tree is the one last added
-        this.activeTree = tree;
+        skeletonTracing.activeTree = tree;
       }
 
-      this.treeIdCount = Math.max(tree.treeId + 1, this.treeIdCount);
-      this.trees.push(tree);
+      // Initialize tree colors
+      if (tree.color == null) {
+        skeletonTracing.shuffleTreeColor(tree);
+      }
+
+      skeletonTracing.treeIdCount = Math.max(tree.treeId + 1, skeletonTracing.treeIdCount);
+      skeletonTracing.colorIdCounter = skeletonTracing.treeIdCount;
     }
 
-    if (this.data.activeNode && !this.activeNode) {
-      Toast.error(`Node with id ${this.data.activeNode} doesn't exist. Ignored active node.`);
-    }
-  }
 
-
-  convertColor(colorArray) {
-    if (colorArray != null) {
-      return new THREE.Color().setRGB(...colorArray).getHex();
+    if ((tracing.typ === "Task") && skeletonTracing.getNodeListOfAllTrees().length === 0) {
+      skeletonTracing.addNode(tracing.content.editPosition, tracing.content.editRotation, 0, 0, 4, false);
     }
 
-    return null;
-  }
-
-
-  parse() {
-    if (this.data == null) {
-      return {
-        idCount: 0,
-        treeIdCount: 0,
-        trees: [],
-        activeNode: null,
-        activeTree: null,
-      };
+    skeletonTracing.branchPointsAllowed = tracing.content.settings.branchPointsAllowed;
+    if (!skeletonTracing.branchPointsAllowed) {
+      // calculate direction of first edge in nm
+      if (Utils.__guard__(tracing.content.contentData.trees[0], x1 => x1.edges) != null) {
+        for (const edge of tracing.content.contentData.trees[0].edges) {
+          const sourceNode = _.find(skeletonTracing.trees[0].nodes, { id: edge.source }).position;
+          const targetNode = _.find(skeletonTracing.trees[0].nodes, { id: edge.target }).position;
+          if (sourceNode[0] !== targetNode[0] || sourceNode[1] !== targetNode[1] || sourceNode[2] !== targetNode[2]) {
+            skeletonTracing.firstEdgeDirection = [targetNode[0] - sourceNode[0],
+              targetNode[1] - sourceNode[1],
+              targetNode[2] - sourceNode[2]];
+            break;
+          }
+        }
+      }
     }
 
-    this.buildTrees();
+    //   if (this.firstEdgeDirection) {
+    //     this.flycam.setSpaceDirection(this.firstEdgeDirection);
+    //   }
+    // }
 
-    let nodeList = [];
-    for (const tree of this.trees) {
-      nodeList = nodeList.concat(tree.nodes);
+    if (tracing.activeNode && !skeletonTracing.activeNode) {
+      Toast.error(`Node with id ${tracing.activeNode} doesn't exist. Ignored active node.`);
     }
 
-    return {
-      idCount: this.idCount,
-      treeIdCount: this.treeIdCount,
-      trees: this.trees,
-      activeNode: this.activeNode,
-      activeTree: this.activeTree,
-    };
+    skeletonTracing.restrictionHandler = new RestrictionHandler(tracing.restrictions);
+
+    // Ensure a tree is active
+    if (!skeletonTracing.activeTree) {
+      if (skeletonTracing.trees.length > 0) {
+        skeletonTracing.activeTree = skeletonTracing.trees[0];
+      } else {
+        skeletonTracing.createNewTree();
+      }
+    }
+
+
+    // Initialize tree name prefix
+    skeletonTracing.treePrefix = this.generateTreeNamePrefix(tracing.typ, tracing.taskId);
+
+
+    return skeletonTracing;
   }
 }
 

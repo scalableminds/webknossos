@@ -4,9 +4,12 @@
  */
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import reduceReducers from "reduce-reducers";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
+import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
+import SkeletonTracing from "oxalis/model/skeletonTracing/skeletontracing";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import type { ElementClassType } from "oxalis/model/binary/layers/layer";
 
 type DataLayerType = {
@@ -87,6 +90,7 @@ export type OxalisState = {
   datasetConfiguration: DatasetConfigurationType,
   userConfiguration: UserConfigurationType,
   dataset: ?DatasetType,
+  skeletonTracing: ?SkeletonTracing,
 }
 
 
@@ -132,10 +136,16 @@ const defaultState: OxalisState = {
     zoom: 1,
   },
   dataset: null,
+  skeletonTracing: null,
 };
 
 const sagaMiddleware = createSagaMiddleware();
-const store = createStore(SettingsReducer, defaultState, applyMiddleware(sagaMiddleware));
+const combinedReducers = reduceReducers(
+  SettingsReducer,
+  SkeletonTracingReducer,
+);
+
+const store = createStore(combinedReducers, defaultState, applyMiddleware(sagaMiddleware));
 sagaMiddleware.run(rootSaga);
 
 export default store;

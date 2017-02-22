@@ -7,10 +7,12 @@ import Backbone from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
 import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
+import TracingParser from "oxalis/model/skeletontracing/tracingparser";
 import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
@@ -275,7 +277,9 @@ class Model extends Backbone.Model {
         this.set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, this.getSegmentationBinary()));
         this.annotationModel = this.get("volumeTracing");
       } else {
-        this.set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d));
+        const skeletonTracing = TracingParser.parse(tracing);
+        this.set("skeletonTracing", skeletonTracing);
+        Store.dispatch(initializeSkeletonTracingAction(tracing));
         this.annotationModel = this.get("skeletonTracing");
       }
     }

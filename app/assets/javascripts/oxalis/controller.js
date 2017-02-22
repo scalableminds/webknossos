@@ -67,13 +67,13 @@ class Controller {
 
     this.model.fetch()
         .then(() => this.modelFetchDone())
-        .catch((error) => {
-          // Don't throw errors for errors already handled by the model.
-          if (error !== this.model.HANDLED_ERROR) {
-            throw error;
-          }
-        },
-        );
+        // .catch((error) => {
+        //   // Don't throw errors for errors already handled by the model.
+        //   if (error !== this.model.HANDLED_ERROR) {
+        //     throw error;
+        //   }
+        // },
+        // );
   }
 
 

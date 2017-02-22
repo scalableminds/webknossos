@@ -30,10 +30,7 @@ class UserSettingsView extends Component {
     this.updateIds();
 
     const wkModel = this.props.oldModel;
-    wkModel.annotationModel.on("newTree", this.updateIds);
-    wkModel.annotationModel.on("newActiveTree", this.updateIds);
-    wkModel.annotationModel.on("newActiveNode", this.updateIds);
-    wkModel.annotationModel.on("newActiveCell", this.updateIds);
+    // wkModel.annotationModel.on("newActiveCell", this.updateIds);
     wkModel.on("change:mode", () => this.forceUpdate());
   }
 
@@ -99,11 +96,13 @@ class UserSettingsView extends Component {
 
   getSkeletonOrVolumeOptions = () => {
     const mode = this.props.oldModel.get("mode");
+    const activeNodeId = _.map(this.props.activeNode, "nodeId");
+
     if (mode in Constants.MODES_SKELETON) {
       return (
         <Panel header="Nodes & Trees" key="2">
-          <NumberInputSetting label="Active Node ID" value={this.state.activeNodeId} onChange={this.onChangeActiveNodeId} />
-          <NumberInputSetting label="Active Tree ID" value={this.state.activeTreeId} onChange={this.onChangeActiveTreeId} />
+          <NumberInputSetting label="Active Node ID" value={activeNodeId} onChange={this.onChangeActiveNodeId} />
+          <NumberInputSetting label="Active Tree ID" value={this.props.activeTree.treeId} onChange={this.onChangeActiveTreeId} />
           <NumberSliderSetting label="Radius" max={5000} value={this.props.radius} onChange={_.partial(this.props.onChange, "radius")} />
           <NumberSliderSetting label="Particle Size" max={20} step={0.1} value={this.props.particleSize} onChange={_.partial(this.props.onChange, "particleSize")} />
           <SwitchSetting label="Soma Clicking" value={this.props.newNodeNewTree} onChange={_.partial(this.props.onChange, "newNodeNewTree")} />
@@ -113,7 +112,7 @@ class UserSettingsView extends Component {
     } else if (mode === Constants.MODE_VOLUME) {
       return (
         <Panel header="Volume Options" key="2">
-          <NumberInputSetting label="Active Cell ID" value={this.state.activeCellId} onChange={this.onChangeActiveCellId} />
+          <NumberInputSetting label="Active Cell ID" value={this.props.activeCell.Id} onChange={this.onChangeActiveCellId} />
           <NumberInputSetting label="Segment Opacity" max={100} value={this.props.segmentationOpacity} onChange={_.partial(this.props.onChange, "segmentationOpacity")} />
           <SwitchSetting label="3D Volume Rendering" value={this.props.isosurfaceDisplay} onChange={_.partial(this.props.onChange, "isosurfaceDisplay")} />
           <NumberInputSetting label="3D Rendering Bounding Box Size" min={1} max={10} step={0.1} value={this.props.isosurfaceBBsize} onChange={_.partial(this.props.onChange, "isosurfaceBBsize")} />
@@ -144,8 +143,9 @@ class UserSettingsView extends Component {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => (
-  state.userConfiguration
+const mapStateToProps = (state: OxalisState) => Object.assign(
+  state.userConfiguration,
+  state.skeletonTracing,
 );
 
 const mapDispatchToProps = dispatch => ({

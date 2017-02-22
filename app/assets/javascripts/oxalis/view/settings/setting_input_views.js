@@ -36,8 +36,10 @@ type LogSliderSettingProps = {
   label: string,
   max: number,
   min: number,
-  oldModel: Model,
 };
+
+const LOG_SLIDER_MIN = -100;
+const LOG_SLIDER_MAX = 100;
 
 export class LogSliderSetting extends React.Component {
 
@@ -53,14 +55,24 @@ export class LogSliderSetting extends React.Component {
   }
 
   onChangeSlider = (value: number) => {
-    const logScaleBase = Math.pow(this.props.oldModel.get("flycam").getMaxZoomStep(), 0.01);
-    const newValue = Math.pow(logScaleBase, value);
-    this.props.onChange(newValue);
+    this.props.onChange(this.calculateValue(value));
   }
 
+  calculateValue(value: number) {
+    const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
+    const b = 100 * (Math.log(this.props.min) + Math.log(this.props.max)) /
+      (Math.log(this.props.min) - Math.log(this.props.max));
+    return Math.exp((value - b) / a);
+  }
+
+  formatTooltip = (value: number) =>
+    Utils.roundTo(this.calculateValue(value), 3);
+
   getSliderValue = () => {
-    const logScaleBase = Math.pow(this.props.oldModel.get("flycam").getMaxZoomStep(), 0.01);
-    const scaleValue = Math.log(this.props.value) / Math.log(logScaleBase);
+    const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
+    const b = 100 * (Math.log(this.props.min) + Math.log(this.props.max)) /
+      (Math.log(this.props.min) - Math.log(this.props.max));
+    const scaleValue = a * Math.log(this.props.value) + b;
     return Math.round(scaleValue);
   }
 
@@ -69,7 +81,13 @@ export class LogSliderSetting extends React.Component {
       <Row className="settings-row">
         <Col span={8}><span className="setting-label">{this.props.label}</span></Col>
         <Col span={8}>
-          <Slider min={this.props.min} max={this.props.max} onChange={this.onChangeSlider} value={this.getSliderValue()} />
+          <Slider
+            min={LOG_SLIDER_MIN}
+            max={LOG_SLIDER_MAX}
+            tipFormatter={this.formatTooltip}
+            onChange={this.onChangeSlider}
+            value={this.getSliderValue()}
+          />
         </Col>
         <Col span={6}>
           <InputNumber

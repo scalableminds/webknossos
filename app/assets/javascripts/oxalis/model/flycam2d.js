@@ -76,7 +76,7 @@ class Flycam2d {
     Store.subscribe(() => {
       this.setQuality(Store.getState().datasetConfiguration.quality);
       // TODO move zoom into tracing settings
-      this.zoom(Math.log(Store.getState().userConfiguration.zoomFactor) / Math.LN2);
+      this.zoom(Math.log(Store.getState().userConfiguration.zoom) / Math.LN2);
     });
 
     // Fire changed event every time

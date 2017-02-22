@@ -75,7 +75,7 @@ class UserSettingsView extends Component {
       return (
         <Panel header="Viewport Options" key="1">
           <NumberSliderSetting label="Move Value (nm/s)" min={30} max={14000} step={10} value={this.props.moveValue} onChange={_.partial(this.props.onChange, "moveValue")} />
-          <LogSliderSetting label="Zoom" min={-100} max={101} value={this.props.zoom} onChange={_.partial(this.props.onChange, "zoom")} oldModel={this.props.oldModel} />
+          <LogSliderSetting label="Zoom" min={-100} max={100} value={this.props.zoom} onChange={_.partial(this.props.onChange, "zoom")} oldModel={this.props.oldModel} />
           <NumberSliderSetting label="Viewport Scale" min={0.05} max={20} step={0.1} value={this.props.scale} onChange={_.partial(this.props.onChange, "scale")} />
           <NumberSliderSetting label="Clipping Distance" max={12000} value={this.props.clippingDistance} onChange={_.partial(this.props.onChange, "clippingDistance")} />
           <SwitchSetting label="d/f-Switching" value={this.props.dynamicSpaceDirection} onChange={_.partial(this.props.onChange, "dynamicSpaceDirection")} />

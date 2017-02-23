@@ -7,6 +7,7 @@ import Backbone from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
 import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import window from "libs/window";
@@ -456,7 +457,7 @@ class Model extends Backbone.Model {
     }
 
     if (state.activeNode != null) {
-      Utils.__guard__(this.get("skeletonTracing"), x => x.setActiveNode(state.activeNode));
+      Store.dispatch(setActiveNodeAction(state.activeNode));
     }
   }
 }

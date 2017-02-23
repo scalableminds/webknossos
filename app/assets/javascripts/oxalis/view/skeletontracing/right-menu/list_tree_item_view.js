@@ -7,12 +7,12 @@ import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
-import ListTreeView from "./list_tree_view";
+import Store from "oxalis/store";
+import { setActiveTreeAction } from "oxalis/model/actions/skeletontracing_actions";
 
 class ListTreeItemView extends Marionette.View {
 
   activeTreeId: number;
-  parent: ListTreeView;
 
   static initClass() {
     this.prototype.tagName = "li";
@@ -46,13 +46,12 @@ class ListTreeItemView extends Marionette.View {
 
   initialize(options) {
     this.activeTreeId = options.activeTreeId;
-    this.parent = options.parent;
   }
 
 
   setActive() {
     const id = this.model.get("treeId");
-    this.parent.setActiveTree(id);
+    Store.dispatch(setActiveTreeAction(id));
   }
 
 

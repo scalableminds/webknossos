@@ -90,7 +90,7 @@ export type OxalisState = {
   datasetConfiguration: DatasetConfigurationType,
   userConfiguration: UserConfigurationType,
   dataset: ?DatasetType,
-  skeletonTracing: ?SkeletonTracing,
+  skeletonTracing: SkeletonTracing,
 }
 
 

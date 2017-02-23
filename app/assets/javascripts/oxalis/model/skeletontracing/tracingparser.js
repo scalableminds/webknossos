@@ -9,14 +9,14 @@ import app from "app";
 import Toast from "libs/toast";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
-import type { SkeletonContentDataType, Tracing } from "oxalis/model";
+import type { SkeletonContentDataType, VolumeContentDataType, Tracing } from "oxalis/model";
 import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
 import RestrictionHandler from "oxalis/model/helpers/restriction_handler";
 
 
 class TracingParser {
 
-  static buildTrees(data: SkeletonContentDataType) {
+  static buildTrees(data: VolumeContentDataType | SkeletonContentDataType) {
     const trees = [];
 
     for (const treeData of data.trees) {

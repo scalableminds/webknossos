@@ -10,6 +10,7 @@ import Marionette from "backbone.marionette";
 import Backbone from "backbone";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { setActiveTreeAction, setTreeNameAction, createTreeAction, deleteTreeAction, shuffleTreeColorAction, shuffleAllTreeColorsAction, selectNextTreeAction } from "oxalis/model/actions/skeletontracing_actions";
 import ListTreeItemView from "./list_tree_item_view";
 
 class ListTreeView extends Marionette.CompositeView {
@@ -76,7 +77,6 @@ class ListTreeView extends Marionette.CompositeView {
   }
   childViewOptions = function childViewOptions() {
     return {
-      parent: this,
       activeTreeId: this.getActiveTree().treeId,
     };
   }
@@ -90,53 +90,45 @@ class ListTreeView extends Marionette.CompositeView {
     this.listenTo(this, "render", this.updateSortIndicator);
     this.listenTo(this, "render", this.refresh);
 
-    this.listenTo(this.model.skeletonTracing, "deleteTree", this.refresh);
-    this.listenTo(this.model.skeletonTracing, "mergeTree", this.refresh);
-    this.listenTo(this.model.skeletonTracing, "newTree", this.refresh);
-    this.listenTo(this.model.skeletonTracing, "newTreeName", this.updateTreeWithId);
-    this.listenTo(this.model.skeletonTracing, "reloadTrees", this.refresh);
-    this.listenTo(this.model.skeletonTracing, "deleteActiveNode", node => this.updateTreeWithId(node.treeId));
-    this.listenTo(this.model.skeletonTracing, "newNode", (id, treeId) => this.updateTreeWithId(treeId));
-    this.listenTo(this.model.skeletonTracing, "newTreeColor", this.updateTreeWithId);
-    this.listenTo(this.model.skeletonTracing, "newActiveTree", this.refresh);
-    this.listenTo(this.model.skeletonTracing, "newActiveNode", this.updateName);
+    // Probably performance issues here
+    // TODO Reactify this view
+    Store.subscribe(() => this.refresh());
   }
 
 
   setTreeName(evt) {
-    return this.model.skeletonTracing.setTreeName(evt.target.value);
+    Store.dispatch(setTreeNameAction(evt.target.value));
   }
 
 
   selectPreviousTree() {
-    return this.selectNextTree(false);
+    this.selectNextTree(false);
   }
 
 
-  selectNextTree(next = true) {
-    this.model.skeletonTracing.selectNextTree(next);
-    this.model.skeletonTracing.centerActiveNode();
-    return this.updateName();
+  selectNextTree(forward = true) {
+    Store.dispatch(selectNextTreeAction(forward));
+    this.updateName();
   }
 
 
   createNewTree() {
-    return this.model.skeletonTracing.createNewTree();
+    Store.dispatch(createTreeAction());
   }
 
 
   deleteTree() {
-    return this.model.skeletonTracing.deleteTree(true);
+    Store.dispatch(deleteTreeAction());
   }
 
 
   shuffleTreeColor() {
-    return this.model.skeletonTracing.shuffleTreeColor();
+    Store.dispatch(shuffleTreeColorAction());
   }
 
 
   shuffleAllTreeColors() {
-    return this.model.skeletonTracing.shuffleAllTreeColors();
+    Store.dispatch(shuffleAllTreeColorsAction());
   }
 
 
@@ -146,50 +138,49 @@ class ListTreeView extends Marionette.CompositeView {
     Store.dispatch(updateUserSettingAction("sortTreesByName", shouldSortTreesByName));
 
     this.refresh();
-    return this.updateSortIndicator();
+    this.updateSortIndicator();
   }
 
 
   updateTreeWithId(treeId) {
     // This method is used instead of refresh to avoid performance issues
     const $childView = this.$(`a[data-treeid='${treeId}']`);
-    const tree = this.model.skeletonTracing.getTree(treeId);
+    const tree = Store.getState().skeletonTracing.getTree(treeId);
 
     $childView.children(".tree-node-count").text(tree.nodes.length);
     $childView.children(".tree-icon").css("color", `#${Utils.intToHex(tree.color)}`);
-    return $childView.children(".tree-name").text(tree.name);
+    $childView.children(".tree-name").text(tree.name);
   }
 
 
   updateSortIndicator() {
     const isSortedByName = Store.getState().userConfiguration.sortTreesByName;
     this.ui.sortNameIcon.toggle(isSortedByName);
-    return this.ui.sortTimeIcon.toggle(!isSortedByName);
+    this.ui.sortTimeIcon.toggle(!isSortedByName);
   }
 
 
   getActiveTree() {
-    return this.model.skeletonTracing.getTree();
+    return Store.getState().skeletonTracing.getTree();
   }
 
 
   refresh() {
-    const trees = this.model.skeletonTracing.getTreesSorted();
+    const trees = Store.getState().skeletonTracing.getTreesSorted();
     this.collection.reset(trees);
 
-    return this.updateName();
+    this.updateName();
   }
 
 
   updateName() {
     const { name } = this.getActiveTree();
-    return this.ui.treeNameInput.val(name);
+    this.ui.treeNameInput.val(name);
   }
 
 
   setActiveTree(treeId) {
-    this.model.skeletonTracing.setActiveTree(treeId);
-    return this.model.skeletonTracing.centerActiveNode();
+    Store.dispatch(setActiveTreeAction(treeId));
   }
 }
 ListTreeView.initClass();

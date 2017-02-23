@@ -15,7 +15,6 @@ import ParticleMaterialFactory from "./materials/particle_material_factory";
 
 class Tree {
 
-  model: Model;
   nodeIDs: ResizableBuffer<Int32Array>;
   edgesBuffer: ResizableBuffer<Float32Array>;
   nodesBuffer: ResizableBuffer<Float32Array>;
@@ -27,10 +26,9 @@ class Tree {
   nodes: THREE.Points;
   id: number;
 
-  constructor(treeId, treeColor, model) {
+  constructor(treeId: number, treeColor, model: Model) {
     // create skeletonTracing to show in TDView and pre-allocate buffers
 
-    this.model = model;
     const edgeGeometry = new THREE.BufferGeometry();
     const nodeGeometry = new THREE.BufferGeometry();
 
@@ -57,7 +55,7 @@ class Tree {
       }),
     );
 
-    this.particleMaterial = new ParticleMaterialFactory(this.model).getMaterial();
+    this.particleMaterial = new ParticleMaterialFactory(model).getMaterial();
 
     this.nodes = new THREE.Points(nodeGeometry, this.particleMaterial);
 
@@ -194,7 +192,7 @@ class Tree {
 
 
   updateTreeColor() {
-    const newColor = this.model.skeletonTracing.getTree(this.id).color;
+    const newColor = Store.getState().skeletonTracing.getTree(this.id).color;
     this.edges.material.color = new THREE.Color(this.darkenHex(newColor));
 
     this.updateNodesColors();
@@ -272,10 +270,10 @@ class Tree {
 
 
   getColor(id, isActiveNode, isBranchPoint) {
-    const tree = this.model.skeletonTracing.getTree(this.id);
+    const tree = Store.getState().skeletonTracing.getTree(this.id);
     let { color } = tree;
     if (id != null) {
-      isActiveNode = isActiveNode || this.model.skeletonTracing.getActiveNodeId() === id;
+      isActiveNode = isActiveNode || Store.getState().skeletonTracing.getActiveNodeId() === id;
       isBranchPoint = isBranchPoint || tree.isBranchPoint(id);
 
       if (isActiveNode) {

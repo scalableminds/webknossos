@@ -9,6 +9,7 @@ import Store from "oxalis/store";
 import constants from "oxalis/constants";
 import Model from "oxalis/model";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
 import SceneController from "oxalis/controller/scene_controller";
 
@@ -47,9 +48,8 @@ class SkeletonTracingController {
 
 
   setRadius(delta: number): void {
-    this.model.skeletonTracing.setActiveNodeRadius(
-      this.model.skeletonTracing.getActiveNodeRadius() * Math.pow(1.05, delta),
-    );
+    const radius = Store.getState().skeletonTracing.getActiveNodeRadius();
+    Store.dispatch(setActiveNodeRadiusAction(radius * Math.pow(1.05, delta)));
   }
 
 
@@ -64,16 +64,8 @@ class SkeletonTracingController {
   }
 
 
-  setActiveNode(nodeId: number, merge: boolean = false, centered: boolean = false): void {
-    this.model.skeletonTracing.setActiveNode(nodeId, merge);
-    if (centered) {
-      this.model.skeletonTracing.centerActiveNode();
-    }
-  }
-
-
   centerActiveNode = (): void => {
-    const position = this.model.skeletonTracing.getActiveNodePos();
+    const position = Store.getState().skeletonTracing.getActiveNodePos();
     if (position) {
       this.model.flycam.setPosition(position);
     }

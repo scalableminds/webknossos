@@ -8,6 +8,7 @@ import Utils from "libs/utils";
 import Backbone from "backbone";
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import type { Vector3, ModeType } from "oxalis/constants";
 import constants, { ModeValues } from "oxalis/constants";
 
@@ -83,8 +84,8 @@ class UrlManager {
     this.listenTo(this.model.flycam3d, "changed", this.update);
     this.listenTo(this.model, "change:mode", this.update);
 
-    if (this.model.skeletonTracing) {
-      this.listenTo(this.model.skeletonTracing, "newActiveNode", this.update);
+    if (Store.getState().skeletonTracing) {
+      Store.subscribe(() => this.update());
     }
   }
 
@@ -102,8 +103,8 @@ class UrlManager {
       state = state.concat([flycam.getZoomStep().toFixed(2)]);
     }
 
-    if (Utils.__guard__(this.model.skeletonTracing, x => x.getActiveNodeId()) != null) {
-      state.push(this.model.skeletonTracing.getActiveNodeId());
+    if (Utils.__guard__(Store.getState().skeletonTracing, x => x.getActiveNodeId()) != null) {
+      state.push(Store.getState().skeletonTracing.getActiveNodeId());
     }
 
     return `${this.baseUrl}#${state.join(",")}`;

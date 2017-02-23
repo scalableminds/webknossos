@@ -5,9 +5,9 @@
 
 import _ from "lodash";
 import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
-import Toast from "libs/toast";
 import Store from "oxalis/store";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import { deleteNodeAction, createBranchPointAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import Constants from "oxalis/constants";
 import type Model from "oxalis/model";
 import type View from "oxalis/view";
@@ -20,6 +20,8 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
   //
   // Minimal Skeleton Tracing Arbitrary Controller:
   // Extends Arbitrary controller to add controls that are specific to minimal Arbitrary mode.
+  // Initiated on TaskTypes with "Advanced Tracing Options"
+  // Mainly used to simplify mechanical turk tracings
 
   constructor(
     model: Model,
@@ -60,8 +62,8 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
 
       // Branches
-      b: () => this.pushBranch(),
-      j: () => this.popBranch(),
+      b: () => Store.dispatch(createBranchPointAction()),
+      j: () => Store.dispatch(deleteBranchPointAction()),
 
       // Branchpointvideo
       ".": () => this.nextNode(true),
@@ -71,7 +73,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
     this.input.keyboardOnce = new InputKeyboard({
       // Delete active node and recenter last node
-      "shift + space": () => this.deleteActiveNode(),
+      "shift + space": () => Store.dispatch(deleteNodeAction()),
     }, -1);
   }
 
@@ -83,18 +85,6 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
       this.model.set("flightmodeRecording", true);
     }
     super.setWaypoint();
-  }
-
-
-  deleteActiveNode(): void {
-    if (this.isBranchpointvideoMode()) { return; }
-    const { skeletonTracing } = this.model;
-    const activeNode = skeletonTracing.getActiveNode();
-    if (activeNode.id === 1) {
-      Toast.error("Unable: Attempting to delete first node");
-    } else {
-      _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(() => this.centerActiveNode()));
-    }
   }
 }
 

@@ -13,6 +13,7 @@ import SkeletonTracingController from "oxalis/controller/annotations/skeletontra
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import constants, { OrthoViews } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
+import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
@@ -50,7 +51,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0): void {
     // For debugging purposes.
     if (nodesPerTree === nodesAlreadySet) {
-      this.model.skeletonTracing.createNewTree();
+      Store.disptach(createTreeAction());
       nodesAlreadySet = 0;
     }
 
@@ -97,12 +98,12 @@ class SkeletonTracingPlaneController extends PlaneController {
       "2": () => this.sceneController.skeleton.toggleInactiveTreeVisibility(),
 
       // Delete active node
-      delete: () => _.defer(() => this.model.skeletonTracing.deleteActiveNode()),
-      c: () => this.model.skeletonTracing.createNewTree(),
+      delete: () => Store.dispatch(deleteNodeAction()),
+      c: () => Store.dispatch(createTreeAction()),
 
       // Branches
-      b: () => this.model.skeletonTracing.pushBranch(),
-      j: () => this.popBranch(),
+      b: () => Store.dispatch(createBranchPointAction()),
+      j: () => Store.dispatch(deleteBranchPointAction()),
 
       s: () => {
         this.skeletonTracingController.centerActiveNode();
@@ -110,16 +111,6 @@ class SkeletonTracingPlaneController extends PlaneController {
       },
     });
   }
-
-
-  popBranch = (): void => {
-    _.defer(() => {
-      this.model.skeletonTracing.popBranch().then(
-        id => this.skeletonTracingController.setActiveNode(id, false, true),
-      );
-    });
-  };
-
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {
     super.scrollPlanes(delta, type);
@@ -181,7 +172,7 @@ class SkeletonTracingPlaneController extends PlaneController {
         // set the active Node to the one that has the ID stored in the vertex
         // center the node if click was in 3d-view
         const centered = plane === OrthoViews.TDView;
-        this.skeletonTracingController.setActiveNode(nodeID, shiftPressed && altPressed, centered);
+        Store.dispatch(setActiveNodeAction(nodeID, shiftPressed && altPressed, centered));
         break;
       }
     }
@@ -193,7 +184,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     if (activeViewport === OrthoViews.TDView) {
       return;
     }
-    const activeNode = this.model.skeletonTracing.getActiveNode();
+    const activeNode = Store.getState().skeletonTracing.getActiveNode();
     // set the new trace direction
     if (activeNode) {
       this.model.flycam.setDirection([
@@ -209,8 +200,8 @@ class SkeletonTracingPlaneController extends PlaneController {
     // Strg + Rightclick to set new not active branchpoint
     const newNodeNewTree = Store.getState().userConfiguration.newNodeNewTree;
     if (ctrlPressed && !newNodeNewTree) {
-      this.model.skeletonTracing.pushBranch();
-      this.skeletonTracingController.setActiveNode(activeNode.id);
+      Store.dispatch(createBranchPointAction());
+      Store.dispatch(setActiveNodeAction(activeNode.id));
     }
   }
 
@@ -218,26 +209,23 @@ class SkeletonTracingPlaneController extends PlaneController {
   addNode = (position: Vector3, rotation: Vector3, centered: boolean): void => {
     const newNodeNewTree = Store.getState().userConfiguration.newNodeNewTree;
     if (this.model.settings.somaClickingAllowed && newNodeNewTree) {
-      this.model.skeletonTracing.createNewTree();
+      Store.dispatch(createTreeAction());
     }
 
-    if (this.model.skeletonTracing.getActiveNode() == null) {
+    if (Store.getState().skeletonTracing.getActiveNode() == null) {
+      // when placing very first node of a tracing
       centered = true;
     }
 
-    const datasetConfig = Store.getState().datasetConfiguration;
-
-    this.model.skeletonTracing.addNode(
+    Store.dispatch(createNodeAction(
       position,
       rotation,
       OrthoViewToNumber[this.activeViewport],
       this.model.flycam.getIntegerZoomStep(),
-      datasetConfig.fourBit ? 4 : 8,
-      datasetConfig.interpolation,
-    );
+    ));
 
     if (centered) {
-      this.centerPositionAnimated(this.model.skeletonTracing.getActiveNodePos());
+      this.centerPositionAnimated(Store.getState().skeletonTracing.getActiveNodePos());
     }
   };
 

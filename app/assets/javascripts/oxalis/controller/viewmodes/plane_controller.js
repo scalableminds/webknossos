@@ -311,8 +311,6 @@ class PlaneController {
   }
 
   bindToEvents(): void {
-    this.planeView.bindToEvents();
-
     this.listenTo(this.planeView, "render", this.render);
     this.listenTo(this.planeView, "renderCam", this.sceneController.updateSceneForCam);
 

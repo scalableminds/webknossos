@@ -10,7 +10,6 @@ import Backbone from "backbone";
 import Store from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import Model from "oxalis/model";
-import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import { OrthoViews } from "oxalis/constants";
 import Tree from "oxalis/geometries/tree";
@@ -25,7 +24,6 @@ class Skeleton {
 
   model: Model;
   isVisible: boolean;
-  skeletonTracing: SkeletonTracing;
   treeGeometries: {[id:number]: Tree};
   showInactiveTrees: boolean;
   lastActiveNode: TracePoint;
@@ -35,7 +33,6 @@ class Skeleton {
     this.model = model;
     _.extend(this, Backbone.Events);
 
-    this.skeletonTracing = this.model.skeletonTracing;
     this.treeGeometries = {};
     this.isVisible = true;
 
@@ -43,22 +40,10 @@ class Skeleton {
 
     this.reset();
 
-    this.listenTo(this.skeletonTracing, "newActiveNode", function () {
-      this.setActiveNode();
-      return this.setInactiveTreeVisibility(this.showInactiveTrees);
-    });
-    this.listenTo(this.skeletonTracing, "newActiveNodeRadius", this.setActiveNodeRadius);
-    this.listenTo(this.skeletonTracing, "newTree", function (treeId, treeColor) {
-      this.createNewTree(treeId, treeColor);
-      return this.setInactiveTreeVisibility(this.showInactiveTrees);
-    });
-    this.listenTo(this.skeletonTracing, "deleteTree", this.deleteTree);
-    this.listenTo(this.skeletonTracing, "deleteActiveNode", this.deleteNode);
-    this.listenTo(this.skeletonTracing, "mergeTree", this.mergeTree);
-    this.listenTo(this.skeletonTracing, "newNode", this.setWaypoint.bind(this));
-    this.listenTo(this.skeletonTracing, "setBranch", this.setBranch);
-    this.listenTo(this.skeletonTracing, "newTreeColor", this.updateTreeColor);
-    this.listenTo(this.skeletonTracing, "reloadTrees", this.loadSkeletonFromModel);
+    // Potentially quite ressource intensive
+    // Test this some more
+    // Perhaps load can be eased a bit with ThreeJS-React wrappers?
+    Store.subscribe(() => this.reset());
   }
 
 
@@ -81,7 +66,7 @@ class Skeleton {
 
     this.treeGeometries = {};
 
-    for (const tree of this.skeletonTracing.getTrees()) {
+    for (const tree of Store.getState().skeletonTracing.getTrees()) {
       this.createNewTree(tree.treeId, tree.color);
     }
 
@@ -90,7 +75,7 @@ class Skeleton {
 
 
   loadSkeletonFromModel(trees) {
-    if (trees == null) { trees = this.model.skeletonTracing.getTrees(); }
+    if (trees == null) { trees = Store.getState().skeletonTracing.getTrees(); }
 
     for (const tree of trees) {
       const treeGeometry = this.getTreeGeometry(tree.treeId);
@@ -131,9 +116,9 @@ class Skeleton {
   }
 
   setWaypoint() {
-    const treeGeometry = this.getTreeGeometry(this.skeletonTracing.getTree().treeId);
+    const treeGeometry = this.getTreeGeometry(Store.getState().skeletonTracing.getTree().treeId);
 
-    treeGeometry.addNode(this.skeletonTracing.getActiveNode());
+    treeGeometry.addNode(Store.getState().skeletonTracing.getActiveNode());
     app.vent.trigger("rerender");
   }
 
@@ -150,7 +135,7 @@ class Skeleton {
 
   mergeTree(lastTreeID, lastNode, activeNode) {
     const lastTree = this.getTreeGeometry(lastTreeID);
-    const activeTree = this.getTreeGeometry(this.skeletonTracing.getTree().treeId);
+    const activeTree = this.getTreeGeometry(Store.getState().skeletonTracing.getTree().treeId);
 
     return activeTree.mergeTree(lastTree, lastNode, activeNode);
   }
@@ -174,7 +159,7 @@ class Skeleton {
       Utils.__guard__(treeGeometry, x => x.updateNodeColor(this.lastActiveNode.id, false));
     }
 
-    const activeNode = this.model.skeletonTracing.getActiveNode();
+    const activeNode = Store.getState().skeletonTracing.getActiveNode();
     if (activeNode != null) {
       treeGeometry = this.getTreeGeometry(activeNode.treeId);
       Utils.__guard__(treeGeometry, x1 => x1.updateNodeColor(activeNode.id, true));
@@ -186,7 +171,7 @@ class Skeleton {
 
 
   setActiveNodeRadius() {
-    const activeNode = this.model.skeletonTracing.getActiveNode();
+    const activeNode = Store.getState().skeletonTracing.getActiveNode();
     if (activeNode != null) {
       const treeGeometry = this.getTreeGeometry(activeNode.treeId);
       Utils.__guard__(treeGeometry, x => x.updateNodeRadius(activeNode.id, activeNode.radius));
@@ -202,7 +187,7 @@ class Skeleton {
 
   getTreeGeometry(treeId) {
     if (!treeId) {
-      ({ treeId } = this.skeletonTracing.getTree());
+      ({ treeId } = Store.getState().skeletonTracing.getTree().treeId);
     }
     return this.treeGeometries[treeId];
   }
@@ -254,7 +239,7 @@ class Skeleton {
     for (const mesh of this.getMeshes()) {
       mesh.isVisible = visible;
     }
-    const treeGeometry = this.getTreeGeometry(this.skeletonTracing.getTree().treeId);
+    const treeGeometry = this.getTreeGeometry(Store.getState().skeletonTracing.getTree().treeId);
     treeGeometry.edges.isVisible = true;
     treeGeometry.nodes.isVisible = true;
     app.vent.trigger("rerender");

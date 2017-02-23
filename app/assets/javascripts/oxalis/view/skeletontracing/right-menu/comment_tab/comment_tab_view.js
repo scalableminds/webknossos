@@ -3,16 +3,15 @@ import $ from "jquery";
 import Marionette from "backbone.marionette";
 import React from "react";
 import { render } from "react-dom";
+import Store from "oxalis/store";
+import { setActiveNodeAction, setCommentForNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { InputKeyboardNoLoop } from "libs/input";
 import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
+import type TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import CommentList from "./comment_list";
 
 class CommentTabView extends Marionette.View {
-  constructor(...args) {
-    super(...args);
-    this.setActiveNode = this.setActiveNode.bind(this);
-  }
 
   static initClass() {
     this.prototype.className = "flex-column";
@@ -73,9 +72,10 @@ class CommentTabView extends Marionette.View {
     }
 
     // events
-    this.listenTo(this.model.skeletonTracing, "newActiveNode", this.updateInputElement);
-    this.listenTo(this.model.skeletonTracing, "reloadTrees", this.updateState);
-    this.listenTo(this.model.skeletonTracing, "newComment", this.updateState);
+    Store.subscribe(() => {
+      this.updateInputElement();
+      this.updateState();
+    });
 
     // keyboard shortcuts
     return new InputKeyboardNoLoop({
@@ -90,7 +90,7 @@ class CommentTabView extends Marionette.View {
     if (!this.commentList) {
       super.render();
       this.commentList = render(
-        <CommentList onNewActiveNode={this.setActiveNode} />,
+        <CommentList />,
         this.ui.commentList[0],
       );
       this.updateState();
@@ -105,7 +105,7 @@ class CommentTabView extends Marionette.View {
     if (!this.commentList) { return; }
 
     this.commentList.setState({
-      data: this.model.skeletonTracing.getTreesSortedBy("treeId", this.isSortedAscending),
+      data: Store.getState().skeletonTracing.getTreesSortedBy("treeId", this.isSortedAscending),
       activeNodeId: this.getActiveNodeId(),
       activeTreeId: this.getActiveTreeId(),
       isSortedAscending: this.isSortedAscending,
@@ -121,12 +121,12 @@ class CommentTabView extends Marionette.View {
 
 
   getActiveNodeId() {
-    return this.model.skeletonTracing.getActiveNodeId();
+    return Store.getState().skeletonTracing.getActiveNodeId();
   }
 
 
   getActiveTreeId() {
-    return this.model.skeletonTracing.getActiveTreeId();
+    return Store.getState().skeletonTracing.getActiveTreeId();
   }
 
 
@@ -135,16 +135,9 @@ class CommentTabView extends Marionette.View {
   }
 
 
-  setActiveNode(comment, treeId) {
-    this.setActiveComment(comment, treeId);
-    this.model.skeletonTracing.setActiveNode(comment.node);
-    this.model.skeletonTracing.centerActiveNode();
-  }
-
-
   getCommentForNode(nodeId, tree) {
-    if (!tree) { tree = this.model.skeletonTracing.getActiveTree(); }
-    return this.model.skeletonTracing.getCommentForNode(nodeId, tree);
+    if (!tree) { tree = Store.getState().skeletonTracing.getActiveTree(); }
+    return Store.getState().skeletonTracing.getCommentForNode(nodeId, tree);
   }
 
 
@@ -169,14 +162,12 @@ class CommentTabView extends Marionette.View {
   }
 
 
-  setComment(commentText, node) {
-    if (!this.model.skeletonTracing.restrictionHandler.updateAllowed()) { return; }
-    if (!node) { node = this.model.skeletonTracing.getActiveNode(); }
+  setComment(commentText: string, node: TracePoint) {
+    if (!node) { node = Store.getState().skeletonTracing.getActiveNode(); }
     // don't add a comment if there is no node
     if (!node) { return; }
 
-    this.model.skeletonTracing.setCommentForNode(commentText, node);
-
+    Store.dispatch(setCommentForNodeAction(node, commentText));
     this.updateState();
   }
 
@@ -188,7 +179,7 @@ class CommentTabView extends Marionette.View {
     const { activeComment } = this;
 
     // get tree of active comment or activeTree if there is no active comment
-    let nextTree = this.model.skeletonTracing.getTree(activeComment.treeId);
+    let nextTree = Store.getState().skeletonTracing.getTree(activeComment.treeId);
     nextTree.comments.sort(Utils.compareBy("node", sortAscending));
 
     // try to find next comment for this tree
@@ -197,7 +188,7 @@ class CommentTabView extends Marionette.View {
 
     // try to find next tree with at least one comment
     if (!nextComment) {
-      trees = this.model.skeletonTracing.getTreesSortedBy("treeId", sortAscending);
+      trees = Store.getState().skeletonTracing.getTreesSortedBy("treeId", sortAscending);
       nextTree = _.find(trees,
         tree => this.treeComparator(tree.treeId, sortAscending) > this.treeComparator(activeComment.treeId, sortAscending) && tree.comments.length);
     }
@@ -214,7 +205,8 @@ class CommentTabView extends Marionette.View {
 
     // if a comment was found, make it active
     if (nextComment) {
-      this.setActiveNode(nextComment, nextTree.treeId);
+      this.setActiveComment(nextComment, nextTree.treeId);
+      Store.dispatch(setActiveNodeAction(nextComment.node, false, true));
     }
   }
 

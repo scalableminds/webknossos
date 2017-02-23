@@ -4,7 +4,9 @@
 */
 import _ from "lodash";
 import Store from "oxalis/store";
+import Toast from "libs/toast";
 import Utils from "libs/utils";
+import Modal from "oxalis/view/modal";
 import ColorGenerator from "libs/color_generator";
 import scaleInfo from "oxalis/model/scaleinfo";
 import type { Vector3 } from "oxalis/constants";
@@ -78,7 +80,7 @@ class SkeletonTracing {
         // this.trigger("setBranch", true, this.activeNode);
       }
     } else {
-      // this.trigger("noBranchPoints");
+      Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false);
     }
   }
 
@@ -95,6 +97,7 @@ class SkeletonTracing {
       this.doubleBranchPop = true;
       const activeNode = this.activeNode;
       if (activeNode) {
+        this.centerActiveNode();
         resolve(activeNode.id);
       }
     };
@@ -104,16 +107,19 @@ class SkeletonTracing {
         const [point, tree] = this.getNextBranch();
         if (point) {
           if (this.doubleBranchPop) {
-            // this.trigger("doubleBranch", () => reallyPopBranch(point, tree, resolve));
+            Modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+              "Jump again?",
+              [{ id: "jump-button", label: "Jump again", callback: () => reallyPopBranch(point, tree, resolve) },
+               { id: "cancel-button", label: "Cancel" }]);
           } else {
             reallyPopBranch(point, tree, resolve);
           }
         } else {
-          // this.trigger("emptyBranchStack");
+          Toast.error("No more branchpoints", false);
           reject();
         }
       } else {
-        // this.trigger("noBranchPoints");
+        Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false);
         reject();
       }
     },
@@ -175,7 +181,7 @@ class SkeletonTracing {
         // this.trigger("newActiveNode", activeNode.id);
       }
     } else {
-      // this.trigger("wrongDirection");
+      Toast.error("You're tracing in the wrong direction");
     }
   }
 
@@ -260,7 +266,7 @@ class SkeletonTracing {
   }
 
 
-  setActiveNode(nodeID, mergeTree = false) {
+  setActiveNode(nodeID, shouldMergeTree = false, shouldCenter= false) {
     const lastActiveNode = this.activeNode;
     const lastActiveTree = this.activeTree;
     for (const tree of this.trees) {
@@ -281,8 +287,12 @@ class SkeletonTracing {
         // this.trigger("newActiveTree", this.activeTree.treeId);
       }
 
-      if (mergeTree) {
+      if (shouldMergeTree) {
         this.mergeTree(lastActiveNode, lastActiveTree);
+      }
+
+      if (shouldCenter) {
+        this.centerActiveNode();
       }
     }
   }
@@ -301,7 +311,9 @@ class SkeletonTracing {
   }
 
 
-  setCommentForNode(commentText: string, node: TracePoint) {
+  setCommentForNode(node: TracePoint, commentText: string) {
+    if (!this.restrictionHandler.updateAllowed()) { return; }
+
     // add, delete or update a comment
     const nodeId = node.id;
     const tree = this.getTree(node.treeId);
@@ -429,10 +441,20 @@ class SkeletonTracing {
 
   deleteActiveNode() {
     let branchPoints;
+    const activeNode = this.getActiveNode();
+
+    if (activeNode.neighbors.length > 1) {
+      Toast.error("Unable: Attempting to cut skeleton");
+    }
+
+    if (this.isBranchpointvideoMode()) { return; }
+    if (activeNode.id === 1) {
+      Toast.error("Unable: Attempting to delete first node");
+    }
+
     if (!this.restrictionHandler.updateAllowed()) { return Promise.resolve(); }
 
     const reallyDeleteActiveNode = (resolve) => {
-      const activeNode = this.activeNode;
       if (activeNode) {
         for (const neighbor of activeNode.neighbors) {
           neighbor.removeNeighbor(activeNode.id);
@@ -498,7 +520,6 @@ class SkeletonTracing {
       const activeNode = this.activeNode;
       if (activeNode) {
         if (this.getbranchPointsForNodes(this.activeTree.branchPoints, [activeNode]).length) {
-          // this.trigger("deleteBranch", () => reallyDeleteActiveNode(resolve));
         } else {
           reallyDeleteActiveNode(resolve);
         }
@@ -579,7 +600,6 @@ class SkeletonTracing {
 
         this.setActiveNode(activeNodeID);
       } else {
-        // this.trigger("mergeDifferentTrees");
       }
     }
   }

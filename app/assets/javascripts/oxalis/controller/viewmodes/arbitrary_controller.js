@@ -17,6 +17,7 @@ import Model from "oxalis/model";
 import View from "oxalis/view";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { setActiveNodeAction, setCommentForNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import Flycam3d from "oxalis/model/flycam3d";
@@ -225,7 +226,7 @@ class ArbitraryController {
     this.input.keyboardOnce = new InputKeyboard(
 
       // Delete active node and recenter last node
-      { "shift + space": () => this.deleteActiveNode() }
+      { "shift + space": () => Store.dispatch(deleteNodeAction()) }
     , -1);
   }
 
@@ -240,17 +241,15 @@ class ArbitraryController {
 
   createBranchMarker(pos: Point2): void {
     if (!this.isBranchpointvideoMode() && !this.isSynapseannotationMode()) { return; }
-    const activeNode = this.model.skeletonTracing.getActiveNode();
+    const activeNode = Store.getState().skeletonTracing.getActiveNode();
     this.model.setMode(2);
     const f = this.cam.getZoomStep() / (this.arbitraryView.width / this.WIDTH);
     this.cam.move([-(pos.x - (this.arbitraryView.width / 2)) * f, -(pos.y - (this.arbitraryView.width / 2)) * f, 0]);
-    const position = this.cam.getPosition();
-    const rotation = this.cam.getRotation();
-    this.model.skeletonTracing.createNewTree();
-    this.addNode(position, rotation);
+    Store.dispatch(createTreeAction());
+    this.setWaypoint();
     this.cam.move([(pos.x - (this.arbitraryView.width / 2)) * f, (pos.y - (this.arbitraryView.width / 2)) * f, 0]);
     if (this.isBranchpointvideoMode()) {
-      this.setActiveNode(activeNode.id, true);
+      Store.dispatch(setActiveNodeAction(activeNode.id, true));
     }
     this.model.setMode(1);
     this.moved();
@@ -259,11 +258,11 @@ class ArbitraryController {
 
   nextNode(nextOne: boolean): void {
     if (!this.isBranchpointvideoMode()) { return; }
-    const activeNode = this.model.skeletonTracing.getActiveNode();
-    if ((nextOne && activeNode.id === this.model.skeletonTracing.getActiveTree().nodes.length) || (!nextOne && activeNode.id === 1)) {
+    const activeNode = Store.getState().skeletonTracing.getActiveNode();
+    if ((nextOne && activeNode.id === Store.getState().skeletonTracing.getActiveTree().nodes.length) || (!nextOne && activeNode.id === 1)) {
       return;
     }
-    this.setActiveNode(((activeNode.id + (2 * Number(nextOne))) - 1), true); // implicit cast from boolean to int
+    Store.dispatch(setActiveNodeAction((activeNode.id + (2 * Number(nextOne))) - 1), true);// implicit cast from boolean to int
     if ((this.view.theme === constants.THEME_BRIGHT) !== nextOne) { // switch background to black for backwards move
       this.view.toggleTheme();
     }
@@ -339,16 +338,6 @@ class ArbitraryController {
     }
   }
 
-  addNode = (position: Vector3, rotation: Vector3) => {
-    if (!this.isStarted) { return; }
-    const datasetConfig = Store.getState().datasetConfiguration;
-    const fourBit = datasetConfig.fourBit ? 4 : 8;
-    const interpolation = datasetConfig.interpolation;
-
-    this.model.skeletonTracing.addNode(position, rotation, constants.ARBITRARY_VIEW, 0, fourBit, interpolation);
-  }
-
-
   setWaypoint(): void {
     if (!this.model.get("flightmodeRecording")) {
       return;
@@ -357,7 +346,7 @@ class ArbitraryController {
     const position = this.cam.getPosition();
     const rotation = this.cam.getRotation();
 
-    this.addNode(position, rotation);
+    Store.dispatch(createNodeAction(position, rotation, constants.ARBITRARY_VIEW, 0));
   }
 
 
@@ -387,32 +376,34 @@ class ArbitraryController {
 
 
   pushBranch(): void {
+    // Consider for deletion
     this.setWaypoint();
-    this.model.skeletonTracing.pushBranch();
+    Store.dispatch(createBranchPointAction());
     Toast.success("Branchpoint set");
   }
 
 
   popBranch(): void {
-    _.defer(() => this.model.skeletonTracing.popBranch().then((id) => {
-      this.setActiveNode(id, true);
-      if (id === 1) {
-        this.cam.yaw(Math.PI);
-        Toast.warning("Reached initial node, view reversed");
-        this.model.skeletonTracing.setCommentForNode("reversed", this.model.skeletonTracing.getActiveNode());
-      }
-    }));
+    // Consider for deletion
+    Store.dispatch(deleteBranchPointAction());
+
+    const activeNodeId = Store.getState().skeletonTracing.getActiveNodeId();
+    if (activeNodeId === 1) {
+      this.cam.yaw(Math.PI);
+      Toast.warning("Reached initial node, view reversed");
+      Store.dispatch(setCommentForNodeAction(activeNodeId, "reversed"));
+    }
   }
 
 
   centerActiveNode(): void {
-    const activeNode = this.model.skeletonTracing.getActiveNode();
+    const activeNode = Store.getState().skeletonTracing.getActiveNode();
     if (activeNode) {
       // animate the change to the new position and new rotation
       const curPos = this.cam.getPosition();
-      const newPos = this.model.skeletonTracing.getActiveNodePos();
+      const newPos = Store.getState().skeletonTracing.getActiveNodePos();
       const curRotation = this.cam.getRotation();
-      let newRotation = this.model.skeletonTracing.getActiveNodeRotation();
+      let newRotation = Store.getState().skeletonTracing.getActiveNodeRotation();
       newRotation = this.getShortestRotation(curRotation, newRotation);
 
       const waypointAnimation = new TWEEN.Tween({
@@ -444,24 +435,12 @@ class ArbitraryController {
 
 
   setActiveNode(nodeId: number, centered: boolean, mergeTree: boolean = false): void {
-    this.model.skeletonTracing.setActiveNode(nodeId, mergeTree);
-    this.cam.setPosition(this.model.skeletonTracing.getActiveNodePos());
-    this.cam.setRotation(this.model.skeletonTracing.getActiveNodeRotation());
+    // Consider for removal
+    Store.dispatch(setActiveNodeAction(nodeId, mergeTree));
+
+    this.cam.setPosition(Store.getState().skeletonTracing.getActiveNodePos());
+    this.cam.setRotation(Store.getState().skeletonTracing.getActiveNodeRotation());
   }
-
-
-  deleteActiveNode(): void {
-    const { skeletonTracing } = this.model;
-    const activeNode = skeletonTracing.getActiveNode();
-    if (activeNode.neighbors.length > 1) {
-      Toast.error("Unable: Attempting to cut skeleton");
-    }
-
-    _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(
-      () => this.centerActiveNode(),
-    ));
-  }
-
 
   getShortestRotation(curRotation: Vector3, newRotation: Vector3): Vector3 {
     // TODO

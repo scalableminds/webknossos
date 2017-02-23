@@ -8,6 +8,7 @@ import $ from "jquery";
 import app from "app";
 import Marionette from "backbone.marionette";
 import Store from "oxalis/store";
+import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import AbstractTreeRenderer from "oxalis/view/skeletontracing/abstract_tree_renderer";
 
 
@@ -34,16 +35,6 @@ class AbstractTreeView extends Marionette.View {
     this.listenTo(app.vent, "view:setTheme", this.drawTree);
     Store.subscribe(() => { this.drawTree(); });
 
-    this.listenTo(this.model.skeletonTracing, "newActiveNode", this.drawTree);
-    this.listenTo(this.model.skeletonTracing, "newActiveTree", this.drawTree);
-    this.listenTo(this.model.skeletonTracing, "newTree", this.drawTree);
-    this.listenTo(this.model.skeletonTracing, "mergeTree", this.drawTree);
-    this.listenTo(this.model.skeletonTracing, "reloadTrees", this.drawTree);
-    this.listenTo(this.model.skeletonTracing, "deleteTree", this.drawTree);
-    this.listenTo(this.model.skeletonTracing, "deleteActiveNode", this.drawTree);
-    this.listenTo(this.model.skeletonTracing, "newNode", this.drawTree);
-    this.listenTo(this.model.skeletonTracing, "updateComments", this.drawTree);
-
     this.initialized = false;
     $(window).on("resize", () => this.drawTree());
   }
@@ -65,10 +56,10 @@ class AbstractTreeView extends Marionette.View {
 
 
   drawTree() {
-    if (this.model.skeletonTracing && this.abstractTreeRenderer) {
+    if (Store.getState().skeletonTracing && this.abstractTreeRenderer) {
       this.abstractTreeRenderer.drawTree(
-        this.model.skeletonTracing.getTree(),
-        this.model.skeletonTracing.getActiveNodeId());
+        Store.getState().skeletonTracing.getTree(),
+        Store.getState().skeletonTracing.getActiveNodeId());
     }
   }
 
@@ -76,8 +67,7 @@ class AbstractTreeView extends Marionette.View {
   handleClick(event) {
     const id = this.abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY);
     if (id) {
-      this.model.skeletonTracing.setActiveNode(id);
-      this.model.skeletonTracing.centerActiveNode();
+      Store.dispatch(setActiveNodeAction(id, false, true));
     }
   }
 }

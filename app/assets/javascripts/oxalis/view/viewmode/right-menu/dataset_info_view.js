@@ -44,10 +44,8 @@ class DatasetInfoView extends Marionette.View {
     this.listenTo(this.model.flycam3d, "changed", this.render);
     this.listenTo(this.model.flycam, "zoomStepChanged", this.render);
 
-    if (this.model.skeletonTracing) {
-      this.listenTo(this.model.skeletonTracing, "deleteTree", this.render);
-      this.listenTo(this.model.skeletonTracing, "mergeTree", this.render);
-      this.listenTo(this.model.skeletonTracing, "newTree", this.render);
+    if (Store.getState().skeletonTracing) {
+      Store.subscribe(() => this.render());
     }
   }
 
@@ -76,7 +74,7 @@ class DatasetInfoView extends Marionette.View {
       annotationType,
       zoomLevel: this.calculateZoomLevel(),
       dataSetName: Store.getState().dataset.name,
-      treeCount: Utils.__guard__(this.model.skeletonTracing, x => x.trees.length),
+      treeCount: Utils.__guard__(Store.getState().skeletonTracing, x => x.trees.length),
     };
   }
 

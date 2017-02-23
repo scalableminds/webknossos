@@ -12,6 +12,7 @@ import Stats from "stats.js";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
@@ -19,7 +20,7 @@ import SkeletonTracingArbitraryController from "oxalis/controller/combinations/s
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import MinimalArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
+import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import View from "oxalis/view";
@@ -84,13 +85,13 @@ class Controller {
     }
 
     app.router.on("beforeunload", () => {
-      if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
-        const { stateLogger } = this.model.annotationModel;
-        if (!stateLogger.stateSaved() && stateLogger.allowUpdate) {
-          stateLogger.pushNow();
-          return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.";
-        }
-      }
+      // if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+      //   const { stateLogger } = this.model.annotationModel;
+      //   if (!stateLogger.stateSaved() && stateLogger.allowUpdate) {
+      //     stateLogger.pushNow();
+      //     return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.";
+      //   }
+      // }
       return null;
     },
     );
@@ -101,14 +102,14 @@ class Controller {
       this.model.upperBoundary, this.model.flycam, this.model);
 
 
-    if (this.model.skeletonTracing != null) {
+    if (Store.getState().skeletonTracing != null) {
       this.view = new SkeletonTracingView(this.model);
       this.annotationController = new SkeletonTracingController(
         this.model, this.view, this.sceneController);
       this.planeController = new SkeletonTracingPlaneController(
         this.model, this.view, this.sceneController, this.annotationController);
 
-      const ArbitraryControllerClass = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalArbitraryController;
+      const ArbitraryControllerClass = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalSkeletonTracingArbitraryController;
       this.arbitraryController = new ArbitraryControllerClass(
         this.model, this.view, this.sceneController, this.annotationController);
     } else if (this.model.volumeTracing != null) {
@@ -217,7 +218,7 @@ class Controller {
       // save the progress
       model = this.model;
 
-      const tracingType = model.skeletonTracing || model.volumeTracing;
+      const tracingType = Store.getState().skeletonTracing || model.volumeTracing;
       tracingType.stateLogger.pushNow().then(() => {
         const url = `/annotations/${model.tracingType}/${model.tracingId}/finishAndRedirect`;
         app.router.loadURL(url);

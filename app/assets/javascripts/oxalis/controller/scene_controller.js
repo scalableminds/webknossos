@@ -99,7 +99,7 @@ class SceneController {
       this.contour = new ContourGeometry(this.model.volumeTracing, this.model.flycam);
     }
 
-    if (this.model.skeletonTracing != null) {
+    if (Store.getState().skeletonTracing != null) {
       this.skeleton = new Skeleton(this.model);
     }
 

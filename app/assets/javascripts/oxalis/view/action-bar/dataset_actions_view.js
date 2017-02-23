@@ -3,6 +3,7 @@ import app from "app";
 import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Request from "libs/request";
+import Store from "oxalis/store";
 import Constants from "oxalis/constants";
 import MergeModalView from "./merge_modal_view";
 import ShareModalView from "./share_modal_view";
@@ -122,10 +123,6 @@ class DatasetActionsView extends Marionette.View {
 
 
   shareTracing() {
-      // save the progress
-    const model = this.model.skeletonTracing || this.model.volumeTracing;
-    model.stateLogger.save();
-
     const modalView = new ShareModalView({ model: this.model });
     this.ui.modalWrapper.html(modalView.render().el);
     modalView.show();
@@ -143,7 +140,7 @@ class DatasetActionsView extends Marionette.View {
 
 
   getNextTask() {
-    const model = this.model.skeletonTracing || this.model.volumeTracing;
+    const model = Store.getState().skeletonTracing || this.model.volumeTracing;
     const finishUrl = `/annotations/${this.model.tracingType}/${this.model.tracingId}/finish`;
     const requestTaskUrl = "/user/tasks/request";
 

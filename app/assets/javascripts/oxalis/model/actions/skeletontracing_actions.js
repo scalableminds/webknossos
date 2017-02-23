@@ -6,7 +6,6 @@
  */
 import type { Vector3 } from "oxalis/constants";
 import type { Tracing } from "oxalis/model";
-import type TraceTree from "oxalis/model/skeletontracing/tracetree";
 
 type initializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing };
 
@@ -85,4 +84,10 @@ export const setCommentForNodeAction = (nodeId: number, commentText: string) => 
   type: "SET_COMMENT",
   nodeId,
   commentText,
+});
+
+export const pushSkeletonTracingAnnotationAction = (action: string, payload: any) => ({
+  type: "PUSH_SKELETONTRACING_ANNOTATION",
+  action,
+  payload,
 });

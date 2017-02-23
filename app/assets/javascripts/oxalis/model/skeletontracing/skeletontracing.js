@@ -65,26 +65,6 @@ class SkeletonTracing {
   }
 
 
-  pushBranch() {
-    if (!this.restrictionHandler.updateAllowed()) { return; }
-
-    if (this.branchPointsAllowed) {
-      if (this.activeNode) {
-        const newPoint = {
-          id: this.activeNode.id,
-          timestamp: Date.now(),
-        };
-        this.activeTree.branchPoints.push(newPoint);
-        // this.stateLogger.updateTree(this.activeTree);
-
-        // this.trigger("setBranch", true, this.activeNode);
-      }
-    } else {
-      Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false);
-    }
-  }
-
-
   popBranch() {
     if (!this.restrictionHandler.updateAllowed()) { return Promise.resolve(); }
 
@@ -450,6 +430,7 @@ class SkeletonTracing {
     if (this.isBranchpointvideoMode()) { return; }
     if (activeNode.id === 1) {
       Toast.error("Unable: Attempting to delete first node");
+      return;
     }
 
     if (!this.restrictionHandler.updateAllowed()) { return Promise.resolve(); }
@@ -459,7 +440,7 @@ class SkeletonTracing {
         for (const neighbor of activeNode.neighbors) {
           neighbor.removeNeighbor(activeNode.id);
         }
-        const updateTree = this.activeTree.removeNode(activeNode.id);
+        this.activeTree.removeNode(activeNode.id);
 
         // if (updateTree) { this.stateLogger.updateTree(this.activeTree); }
 
@@ -517,9 +498,13 @@ class SkeletonTracing {
     };
 
     return new Promise((resolve, reject) => {
-      const activeNode = this.activeNode;
       if (activeNode) {
         if (this.getbranchPointsForNodes(this.activeTree.branchPoints, [activeNode]).length) {
+          Modal.show("You are about to delete an unused branchpoint, are you sure?",
+            "Delete branchpoint?",
+            [{ id: "delete-button", label: "Delete branchpoint", callback: () => reallyDeleteActiveNode(resolve) },
+             { id: "cancel-button", label: "Cancel" }]
+          );
         } else {
           reallyDeleteActiveNode(resolve);
         }
@@ -600,6 +585,7 @@ class SkeletonTracing {
 
         this.setActiveNode(activeNodeID);
       } else {
+        Toast.error("You can't merge nodes within the same tree", false);
       }
     }
   }

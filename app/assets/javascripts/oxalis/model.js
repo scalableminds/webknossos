@@ -279,7 +279,6 @@ class Model extends Backbone.Model {
         this.annotationModel = this.get("volumeTracing");
       } else {
         const skeletonTracing = TracingParser.parse(tracing);
-        this.set("skeletonTracing", skeletonTracing);
         Store.dispatch(initializeSkeletonTracingAction(tracing));
         this.annotationModel = this.get("skeletonTracing");
       }

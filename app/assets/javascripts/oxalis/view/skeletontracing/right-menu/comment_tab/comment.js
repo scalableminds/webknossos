@@ -1,6 +1,8 @@
 import React, { Component } from "react";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import classNames from "classnames";
+import Store from "oxalis/store";
+import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 
 
 class Comment extends Component {
@@ -16,12 +18,12 @@ class Comment extends Component {
 
   handleClick(evt) {
     evt.preventDefault();
-    this.props.onNewActiveNode(this.props.data, this.props.treeId);
+    Store.dispatch(setActiveNodeAction(this.props.data.node));
   }
 
   ensureVisible() {
     if (this.props.isActive) {
-      // use ponyfill as so far only chrome supports this functionality
+      // use polyfill as so far only chrome supports this functionality
       scrollIntoViewIfNeeded(this.comment);
     }
   }

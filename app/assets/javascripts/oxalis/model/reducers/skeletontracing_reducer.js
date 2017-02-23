@@ -4,7 +4,10 @@
  */
 
 import update from "immutability-helper";
+import Store from "oxalis/store";
 import TracingParser from "oxalis/model/skeletontracing/tracingparser";
+import { pushSkeletonTracingAnnotationAction } from "oxalis/model/actions/skeletontracing_actions";
+import { createBranchPoint } from "oxalis/model/skeletontracing/foo";
 import type { OxalisState } from "oxalis/store";
 import type { SkeletonTracingActionTypes } from "oxalis/model/actions/skeletontracing_actions";
 
@@ -12,7 +15,12 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
       const skeletonTracing = TracingParser.parse(action.tracing);
-      return update(state, { skeletonTracing: { $set: skeletonTracing } });
+      const restrictions = Object.assign({}, action.tracing.restrictions, action.tracing.content.settings);
+
+      return update(state, { skeletonTracing: {
+        $set: skeletonTracing,
+        restrictions: { $set: restrictions } },
+      });
     }
 
     case "CREATE_NODE": {
@@ -47,7 +55,11 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
     }
 
     case "CREATE_BRANCHPOINT": {
-      state.skeletonTracing.pushBranch();
+      createBranchPoint.map((branchPoint) => {
+        update(state, { skeletonTracing: { branchPoints: { $push: branchPoint } } });
+        Store.dispatch(pushSkeletonTracingAnnotationAction("updateTree", state.skeletonTracing.activeTree));
+      });
+
       break;
     }
 

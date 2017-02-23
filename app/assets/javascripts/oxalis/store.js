@@ -136,7 +136,20 @@ const defaultState: OxalisState = {
     zoom: 1,
   },
   dataset: null,
-  skeletonTracing: null,
+  skeletonTracing: {
+    version: 0,
+    typ: "",
+    id: "",
+    trees: []
+    activeNode: null,
+    activeTree: null,
+    treeIdCount: number = 1;
+    colorIdCounter: number = 1;
+    idCount: number = 1;
+    treePrefix: string;
+    branchPointsAllowed: boolean;
+    restrictions: {}
+  },
 };
 
 const sagaMiddleware = createSagaMiddleware();

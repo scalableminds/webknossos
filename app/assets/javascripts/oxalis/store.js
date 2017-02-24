@@ -8,7 +8,6 @@ import reduceReducers from "reduce-reducers";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
-import SkeletonTracing from "oxalis/model/skeletonTracing/skeletontracing";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { ElementClassType } from "oxalis/model/binary/layers/layer";
 
@@ -36,6 +35,44 @@ export type DatasetType = {
  },
  scale: Vector3,
  dataLayers: Array<DataLayerType>
+}
+
+export type NodeType = {
+  position: Vector3,
+  rotation: Vector3,
+  bitdepth: number,
+  radius: number,
+  timestamp: number,
+}
+
+export type EdgeType = {
+  source: number,
+  target: number,
+}
+
+export type TreeType = {
+  treeId: number,
+  nodes: {[number]: NodeType},
+  edges: Array<EdgeType>,
+  name: string,
+  timestamp: number,
+  color: Vector4,
+  comments: Array<{node: number, content: string}>,
+}
+
+export type SkeletonTracingType = {
+  trees: {[number]: TreeType},
+  name: string,
+  branchpoints: {
+    id: number,
+    timestamp: number
+  },
+  edges: {
+    source: number,
+    target: number,
+  },
+  activeTreeId: number,
+  activeNodeId: number,
 }
 
 export type DatasetConfigurationType = {
@@ -90,7 +127,7 @@ export type OxalisState = {
   datasetConfiguration: DatasetConfigurationType,
   userConfiguration: UserConfigurationType,
   dataset: ?DatasetType,
-  skeletonTracing: SkeletonTracing,
+  skeletonTracing: SkeletonTracingType,
 }
 
 
@@ -140,14 +177,9 @@ const defaultState: OxalisState = {
     version: 0,
     typ: "",
     id: "",
-    trees: []
+    trees: {}
     activeNode: null,
     activeTree: null,
-    treeIdCount: number = 1;
-    colorIdCounter: number = 1;
-    idCount: number = 1;
-    treePrefix: string;
-    branchPointsAllowed: boolean;
     restrictions: {}
   },
 };

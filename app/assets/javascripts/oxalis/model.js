@@ -278,9 +278,7 @@ class Model extends Backbone.Model {
         this.set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, this.getSegmentationBinary()));
         this.annotationModel = this.get("volumeTracing");
       } else {
-        const skeletonTracing = TracingParser.parse(tracing);
         Store.dispatch(initializeSkeletonTracingAction(tracing));
-        this.annotationModel = this.get("skeletonTracing");
       }
     }
 

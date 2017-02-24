@@ -2,17 +2,20 @@
  * settings_reducer.js
  * @flow
  */
+/* eslint-disable array-callback-return */
 
+import _ from "lodash";
 import update from "immutability-helper";
-import Store from "oxalis/store";
+import Utils from "libs/utils";
 import TracingParser from "oxalis/model/skeletontracing/tracingparser";
-import { pushSkeletonTracingAnnotationAction } from "oxalis/model/actions/skeletontracing_actions";
-import { createBranchPoint } from "oxalis/model/skeletontracing/foo";
+import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode } from "oxalis/model/skeletontracing/foo";
 import type { OxalisState } from "oxalis/store";
 import type { SkeletonTracingActionTypes } from "oxalis/model/actions/skeletontracing_actions";
 
+
 function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActionTypes): OxalisState {
   switch (action.type) {
+
     case "INITIALIZE_SKELETONTRACING": {
       const skeletonTracing = TracingParser.parse(action.tracing);
       const restrictions = Object.assign({}, action.tracing.restrictions, action.tracing.content.settings);
@@ -24,68 +27,109 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
     }
 
     case "CREATE_NODE": {
-      const { position, rotation, viewport, resolution } = action;
-      const { fourBit, interpolation } = state.datasetConfiguration;
+      const { position, rotation } = action;
 
-      state.skeletonTracing.addNode(
-        position,
-        rotation,
-        viewport,
-        resolution,
-        fourBit ? 4 : 8,
-        interpolation,
-      );
-      break;
+      return createNode(state.skeletonTracing, position, rotation).map((node, edges) => {
+        const { activeTreeId } = state.skeletonTracing;
+        return update(state, { skeletonTracing: {
+          trees: { [activeTreeId]: {
+            nodes: { [node.id]: { $set: node } } },
+            edges: { $set: edges },
+          },
+          activeNodeId: { $set: node.id },
+        } });
+      }).getOrElse(state);
     }
 
     case "DELETE_NODE": {
-      state.skeletonTracing.deleteActiveNode();
-      state.skeletonTracing.centerActiveNode();
-      break;
+      return deleteNode(state.skeletonTracing).map(([trees, newActiveNodeId, newActiveTreeId]) => {
+
+        return update(state, { skeletonTracing: {
+          trees: { $set: trees },
+          activeNodeId: { $set: newActiveNodeId },
+          activeTreeId: { $set: newActiveTreeId },
+        } });
+      }).getOrElse(state);
     }
 
     case "SET_ACTIVE_NODE": {
-      state.skeletonTracing.setActiveNode(action.nodeId, action.shouldMergeTree);
-      break;
+      if (action.shouldMergeTree) {
+        debugger;
+        Error("who is call this?");
+      }
+
+      const newActiveTreeId = _.filter(state.skeletonTracing.trees, tree => tree.nodes[action.nodeId]).treeId;
+
+      return update(state, { skeletonTracing: {
+        activeNodeId: { $set: action.nodeId },
+        activeTreeId: { $set: newActiveTreeId },
+      } });
     }
 
     case "SET_ACTIVE_NODE_RADIUS": {
-      state.skeletonTracing.setActiveNodeRadius(action.radius);
-      break;
+      const { activeNodeId, activeTreeId } = state.skeletonTracing;
+      return update(state, { skeletonTracing: { trees: { [activeTreeId]: { nodes: { [activeNodeId]: { radius: { $set: action.radius } } } } } } });
     }
 
     case "CREATE_BRANCHPOINT": {
-      createBranchPoint.map((branchPoint) => {
-        update(state, { skeletonTracing: { branchPoints: { $push: branchPoint } } });
-        Store.dispatch(pushSkeletonTracingAnnotationAction("updateTree", state.skeletonTracing.activeTree));
-      });
-
-      break;
+      return createBranchPoint(state.skeletonTracing).map((branchPoint) => {
+        const { activeTreeId } = state.skeletontracing;
+        return update(state, { skeletonTracing: { trees: { [activeTreeId]: { branchPoints: { $push: branchPoint } } } } });
+      }).getOrElse(state);
     }
 
     case "DELETE_BRANCHPOINT": {
-      state.skeletonTracing.pushBranch();
-      break;
+      return deleteBranchPoint(state.skeletonTracing).map(([branchPoints, treeId, newActiveNodeId]) =>
+
+        update(state, { skeletonTracing: {
+          trees: { [treeId]: { branchPoints: { $set: branchPoints } } },
+          activeNodeId: { $set: newActiveNodeId },
+        } }),
+      ).getOrElse(state);
     }
 
     case "CREATE_TREE": {
-      state.skeletonTracing.createNewTree();
-      break;
+      return createTree(state.skeletonTracing).map(tree =>
+
+        update(state, { skeletonTracing: {
+          trees: { $push: tree },
+          activeNodeId: { $set: null },
+          activeTreeId: { $set: tree.treeId },
+        } }),
+      ).getOrElse(state);
     }
 
     case "DELETE_TREE": {
-      state.skeletonTracing.deleteTree();
-      break;
+      return deleteTree(state.skeletonTracing).map((trees, newActiveTreeId, newActiveNodeId) =>
+
+        update(state, { skeletonTracing: {
+          trees: { $set: trees } },
+          activeTreeId: { $set: newActiveTreeId },
+          activeNodeId: { $set: newActiveNodeId },
+        }),
+      ).getOrElse(state);
     }
 
     case "SET_ACTIVE_TREE": {
-      state.skeletonTracing.setActiveTree(action.treeId);
-      state.skeletonTracing.centerActiveNode();
-      break;
+      const { trees } = state.skeletonTracing;
+
+      const newActiveTreeId = action.treeId;
+      const newActiveNodeId = trees[newActiveTreeId].nodes[0];
+
+      return update(state, { skeletonTracing: {
+        activeNodeId: { $set: newActiveNodeId },
+        activeTreeId: { $set: newActiveTreeId },
+      } });
     }
 
     case "SET_TREE_NAME": {
-      state.skeletonTracing.setTreeName(action.name);
+      const { activeTreeId } = state.skeletonTracing;
+
+      if (state.skeletonTracing[activeTreeId]) {
+        const defaultName = `Tree${Utils.zeroPad(activeTreeId, 2)}`;
+        const newName = action.name || defaultName;
+        return update(state, { skeletontracing: { trees: { [activeTreeId]: { name: { $set: newName } } } } });
+      }
       break;
     }
 

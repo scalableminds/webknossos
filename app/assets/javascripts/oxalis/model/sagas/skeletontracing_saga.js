@@ -1,7 +1,11 @@
-import { call, spawn } from "redux-saga/effects";
+import { call, spawn, take } from "redux-saga/effects";
 import Request from "libs/request";
 
 let version = 0;
+
+function centerActiveNode() {
+  // pass
+}
 
 function* pushAnnotation(action, payload) {
   const APICall = Request.sendJSONReceiveJSON(
@@ -17,7 +21,12 @@ function* pushAnnotation(action, payload) {
   yield call(APICall);
 }
 
-export function* watchSkeletonTracingAsync() {
+export default function* watchSkeletonTracingAsync() {
   yield spawn(pushAnnotation, "PUSH_SKELETONTRACING_ANNOTATION");
+  yield [
+    take("SET_ACTIVE_TREE", centerActiveNode),
+    take("SET_ACTIVE_NODE", centerActiveNode),
+    take("DELETE_NODE", centerActiveNode),
+  ];
 }
 

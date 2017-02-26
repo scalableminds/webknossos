@@ -7,13 +7,10 @@ import Backbone from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
 import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import { initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
-import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
+import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
-import TracingParser from "oxalis/model/skeletontracing/tracingparser";
 import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
@@ -21,7 +18,7 @@ import scaleInfo from "oxalis/model/scaleinfo";
 import Flycam2d from "oxalis/model/flycam2d";
 import Flycam3d from "oxalis/model/flycam3d";
 import constants from "oxalis/constants";
-import type { ModeType, Vector3, Vector4 } from "oxalis/constants";
+import type { ModeType, Vector3 } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
@@ -34,10 +31,6 @@ import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 // All public operations are **asynchronous**. We return a promise
 // which you can react on.
 
-export type BranchPoint = {
-  id: number;
-  timestamp: number;
-}
 export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
@@ -48,25 +41,12 @@ export type RestrictionsType = {
   allowFinish: boolean,
   allowDownload: boolean,
 };
-type Settings = {
+
+export type SettingsType = {
   advancedOptionsAllowed: boolean,
   allowedModes: "orthogonal" | "oblique" | "flight" | "volume",
   branchPointsAllowed: boolean,
   somaClickingAllowed: boolean,
-};
-export type CommentType = {
-  node: number;
-  comment: string;
-};
-export type TreeData = {
-  id: number;
-  color: Vector4;
-  name: string;
-  timestamp: number;
-  comments: Array<CommentType>;
-  branchPoints: Array<BranchPoint>;
-  edges: Array<{source: number, target: number}>;
-  nodes: Array<Tracepoint>;
 };
 
 export type BoundingBoxObjectType = {
@@ -76,31 +56,16 @@ export type BoundingBoxObjectType = {
   depth: number,
 };
 
-export type SkeletonContentDataType = {
-  activeNode: null | number;
-  trees: Array<TreeData>;
-  zoomLevel: number;
-  customLayers: null;
-};
-
-export type VolumeContentDataType = {
-  activeCell: null | number;
-  customLayers: Array<Object>;
-  maxCoordinates: BoundingBoxObjectType;
-  customLayers: ?Array<Object>;
-  name: string;
-};
-
-export type Tracing = {
+export type Tracing<T> = {
   actions: Array<any>,
   content: {
     boundingBox: BoundingBoxObjectType,
-    contentData: VolumeContentDataType | SkeletonContentDataType,
+    contentData: T,
     contentType: string,
     dataSet: Object,
     editPosition: Vector3,
     editRotation: Vector3,
-    settings: Settings,
+    settings: SettingsType,
   },
   contentType: string,
   created: string,
@@ -137,10 +102,10 @@ class Model extends Backbone.Model {
   flycam3d: Flycam3d;
   volumeTracing: VolumeTracing;
   skeletonTracing: SkeletonTracing;
-  tracing: Tracing;
   mode: ModeType;
   allowedModes: Array<ModeType>;
-  settings: Settings;
+  settings: SettingsType;
+  tracing: Tracing
   tracingId: string;
   tracingType: "Explorational" | "Task" | "View";
 

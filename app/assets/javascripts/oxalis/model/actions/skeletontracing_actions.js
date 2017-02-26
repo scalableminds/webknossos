@@ -6,8 +6,9 @@
  */
 import type { Vector3 } from "oxalis/constants";
 import type { Tracing } from "oxalis/model";
+import type { SkeletonContentDataType } from "oxalis/store";
 
-type initializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing };
+type initializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing<SkeletonContentDataType> };
 type createNodeActionType = {type: "CREATE_NODE", position: Vector3, rotation: Vector3, viewport: number, resolution: number};
 type deleteNodeActionType = {type: "DELETE_NODE"};
 type setActiveNodeActionType = {type: "SET_ACTIVE_NODE", nodeId: number, shouldMergeTree: boolean};
@@ -26,7 +27,7 @@ type pushSkeletonTracingAnnotationActionType = {type: "PUSH_SKELETONTRACING_ANNO
 
 export type SkeletonTracingActionTypes = initializeSkeletonTracingActionType | createNodeActionType | deleteNodeActionType | setActiveNodeActionType | setActiveNodeRadiusActionType | createBranchPointActionType | deleteBranchPointActionType | createTreeActionType | deleteTreeActionType | setActiveTreeActionType | setTreeNameActionType | selectNextTreeActionType | shuffleTreeColorActionType | shuffleAllTreeColorsActionType | setCommentForNodeActionType | pushSkeletonTracingAnnotationActionType;
 
-export const initializeSkeletonTracingAction = (tracing: Tracing): initializeSkeletonTracingActionType => ({
+export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContentDataType>): initializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",
   tracing,
 });

@@ -7,7 +7,6 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
-import TracingParser from "oxalis/model/skeletontracing/tracingparser";
 import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode } from "oxalis/model/skeletontracing/foo";
 import type { OxalisState } from "oxalis/store";
 import type { SkeletonTracingActionTypes } from "oxalis/model/actions/skeletontracing_actions";
@@ -17,24 +16,35 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
   switch (action.type) {
 
     case "INITIALIZE_SKELETONTRACING": {
-      const skeletonTracing = TracingParser.parse(action.tracing);
       const restrictions = Object.assign({}, action.tracing.restrictions, action.tracing.content.settings);
+      const activeNodeId = action.tracing.content.contentData.activeNode ? action.tracing.content.contentData.activeNode : 0;
+      const activeTreeId = 0; // probably something else
 
-      return update(state, { skeletonTracing: {
-        $set: skeletonTracing,
-        restrictions: { $set: restrictions } },
-      });
+      const skeletonTracing = {
+        activeNodeId,
+        activeTreeId,
+        restrictions,
+        name: action.tracing.dataSetName,
+        trees: _.keyBy(action.tracing.content.contentData.trees, "id"),
+        contentType: action.tracing.contentType,
+        id: action.tracing.id,
+      };
+
+      return update(state, { skeletonTracing: { $set: skeletonTracing } });
     }
 
     case "CREATE_NODE": {
-      const { position, rotation } = action;
+      const { position, rotation, viewport, resolution } = action;
 
-      return createNode(state.skeletonTracing, position, rotation).map((node, edges) => {
+      return createNode(state.skeletonTracing, position, rotation, viewport, resolution).map(([node, edges]) => {
         const { activeTreeId } = state.skeletonTracing;
+
         return update(state, { skeletonTracing: {
-          trees: { [activeTreeId]: {
-            nodes: { [node.id]: { $set: node } } },
-            edges: { $set: edges },
+          trees: {
+            [activeTreeId]: {
+              nodes: { [node.id]: { $set: node } },
+              edges: { $set: edges },
+            },
           },
           activeNodeId: { $set: node.id },
         } });
@@ -42,14 +52,14 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
     }
 
     case "DELETE_NODE": {
-      return deleteNode(state.skeletonTracing).map(([trees, newActiveNodeId, newActiveTreeId]) => {
+      return deleteNode(state.skeletonTracing).map(([trees, newActiveNodeId, newActiveTreeId]) =>
 
-        return update(state, { skeletonTracing: {
+        update(state, { skeletonTracing: {
           trees: { $set: trees },
           activeNodeId: { $set: newActiveNodeId },
           activeTreeId: { $set: newActiveTreeId },
-        } });
-      }).getOrElse(state);
+        } }),
+      ).getOrElse(state);
     }
 
     case "SET_ACTIVE_NODE": {
@@ -57,7 +67,7 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
         debugger;
         Error("who is call this?");
       }
-
+      debugger
       const newActiveTreeId = _.filter(state.skeletonTracing.trees, tree => tree.nodes[action.nodeId]).treeId;
 
       return update(state, { skeletonTracing: {
@@ -73,7 +83,7 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
 
     case "CREATE_BRANCHPOINT": {
       return createBranchPoint(state.skeletonTracing).map((branchPoint) => {
-        const { activeTreeId } = state.skeletontracing;
+        const { activeTreeId } = state.skeletonTracing;
         return update(state, { skeletonTracing: { trees: { [activeTreeId]: { branchPoints: { $push: branchPoint } } } } });
       }).getOrElse(state);
     }

@@ -58,7 +58,6 @@ class UserSettingsView extends Component {
 
   getViewportOptions = () => {
     const mode = this.props.oldModel.get("mode");
-    const activeNodeId = this.props.activeNode ? this.props.activeNode.id : 0;
 
     if (mode === Constants.MODE_PLANE_TRACING || mode === Constants.MODE_VOLUME) {
       return (
@@ -75,7 +74,7 @@ class UserSettingsView extends Component {
       return (
         <Panel header="Flight Options" key="1">
           <NumberInputSetting label="Mouse Rotation" min={0.0001} max={0.02} step={0.001} value={this.props.mouseRotateValue} onChange={_.partial(this.props.onChange, "mouseRotateValue")} />
-          <NumberInputSetting label="Keyboard Rotation Value" min={0.001} max={0.08} step={0.001} value={activeNodeId} onChange={this.props.onChangeActiveNodeId} />
+          <NumberInputSetting label="Keyboard Rotation Value" min={0.001} max={0.08} step={0.001} value={this.props.activeNodeId} onChange={this.props.onChangeActiveNodeId} />
           <NumberInputSetting label="Move Value (nm/s)" min={30} max={1500} step={10} value={this.props.moveValue3d} onChange={_.partial(this.props.onChange, "moveValue3d")} />
           <NumberInputSetting label="Crosshair Size" min={0.05} max={0.5} step={0.01} value={this.props.crosshairSize} onChange={_.partial(this.props.onChange, "crosshairSize")} />
           <NumberInputSetting label="Sphere Radius" min={50} max={500} step={1} value={this.props.sphericalCapRadius} onChange={_.partial(this.props.onChange, "sphericalCapRadius")} />
@@ -88,13 +87,12 @@ class UserSettingsView extends Component {
 
   getSkeletonOrVolumeOptions = () => {
     const mode = this.props.oldModel.get("mode");
-    const activeNodeId = this.props.activeNode ? this.props.activeNode.id : 0;
 
     if (mode in Constants.MODES_SKELETON) {
       return (
         <Panel header="Nodes & Trees" key="2">
-          <NumberInputSetting label="Active Node ID" value={activeNodeId} onChange={this.props.onChangeActiveNodeId} />
-          <NumberInputSetting label="Active Tree ID" value={this.props.activeTree.treeId} onChange={this.props.onChangeActiveTreeId} />
+          <NumberInputSetting label="Active Node ID" value={this.props.activeNodeId} onChange={this.props.onChangeActiveNodeId} />
+          <NumberInputSetting label="Active Tree ID" value={this.props.activeTreeId} onChange={this.props.onChangeActiveTreeId} />
           <NumberSliderSetting label="Radius" max={5000} value={this.props.radius} onChange={_.partial(this.props.onChange, "radius")} />
           <NumberSliderSetting label="Particle Size" max={20} step={0.1} value={this.props.particleSize} onChange={_.partial(this.props.onChange, "particleSize")} />
           <SwitchSetting label="Soma Clicking" value={this.props.newNodeNewTree} onChange={_.partial(this.props.onChange, "newNodeNewTree")} />

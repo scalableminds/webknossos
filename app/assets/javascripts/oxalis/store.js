@@ -2,23 +2,77 @@
  * store.js
  * @flow
  */
+
+ /* eslint-disable no-useless-computed-key */
+
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "reduce-reducers";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
+import type { RestrictionsType, BoundingBoxObjectType, SettingsType } from "oxalis/model";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { ElementClassType } from "oxalis/model/binary/layers/layer";
+
+export type CommentType = {
+  node: number;
+  comment: string;
+};
+
+export type EdgeType = {
+  source: number,
+  target: number,
+};
+
+export type NodeType = {
+  position: Vector3,
+  rotation: Vector3,
+  bitdepth: number,
+  radius: number,
+  timestamp: number,
+};
+
+
+export type BranchPointType = {
+  id: number;
+  timestamp: number;
+};
+
+export type TreeType = {
+  treeId: number;
+  color: Vector4;
+  name: string;
+  timestamp: number;
+  comments: Array<CommentType>;
+  branchPoints: Array<BranchPointType>;
+  edges: Array<EdgeType>;
+  nodes: {[number]: NodeType};
+};
+
+export type SkeletonContentDataType = {
+  activeNode: null | number;
+  trees: Array<TreeType>;
+  zoomLevel: number;
+  customLayers: null;
+};
+
+export type VolumeContentDataType = {
+  activeCell: null | number;
+  customLayers: Array<Object>;
+  maxCoordinates: BoundingBoxObjectType;
+  customLayers: ?Array<Object>;
+  name: string;
+};
 
 type DataLayerType = {
   name: string,
   category: "color" | "segmentation",
   maxCoordinates: {
-     topLeft: Vector3,
-     width: number,
-     height: number,
-     depth: number,
+    topLeft: Vector3,
+    width: number,
+    height: number,
+    depth: number,
   },
   resolutions: Vector4,
   fallback: any,
@@ -37,42 +91,12 @@ export type DatasetType = {
  dataLayers: Array<DataLayerType>
 }
 
-export type NodeType = {
-  position: Vector3,
-  rotation: Vector3,
-  bitdepth: number,
-  radius: number,
-  timestamp: number,
-}
-
-export type EdgeType = {
-  source: number,
-  target: number,
-}
-
-export type TreeType = {
-  treeId: number,
-  nodes: {[number]: NodeType},
-  edges: Array<EdgeType>,
-  name: string,
-  timestamp: number,
-  color: Vector4,
-  comments: Array<{node: number, content: string}>,
-}
-
 export type SkeletonTracingType = {
   trees: {[number]: TreeType},
   name: string,
-  branchpoints: {
-    id: number,
-    timestamp: number
-  },
-  edges: {
-    source: number,
-    target: number,
-  },
   activeTreeId: number,
   activeNodeId: number,
+  restrictions: RestrictionsType & SettingsType,
 }
 
 export type DatasetConfigurationType = {
@@ -174,13 +198,26 @@ const defaultState: OxalisState = {
   },
   dataset: null,
   skeletonTracing: {
-    version: 0,
-    typ: "",
-    id: "",
-    trees: {}
-    activeNode: null,
-    activeTree: null,
-    restrictions: {}
+    trees: {
+      [0]: {
+        treeId: 0,
+        name: "TestTree",
+        nodes: {},
+        timestamp: Date.now(),
+        branchPoints: [],
+        edges: [],
+      },
+    },
+    name: "",
+    activeTreeId: 0,
+    activeNodeId: 0,
+    restrictions: {
+      branchPointsAllowed: true,
+      allowUpdate: true,
+      allowFinish: true,
+      allowAccess: true,
+      allowDownload: true,
+    },
   },
 };
 

@@ -121,12 +121,12 @@ class CommentTabView extends Marionette.View {
 
 
   getActiveNodeId() {
-    return Store.getState().skeletonTracing.getActiveNodeId();
+    return Store.getState().skeletonTracing.activeNodeId;
   }
 
 
   getActiveTreeId() {
-    return Store.getState().skeletonTracing.getActiveTreeId();
+    return Store.getState().skeletonTracing.activeTreeId;
   }
 
 
@@ -135,9 +135,9 @@ class CommentTabView extends Marionette.View {
   }
 
 
-  getCommentForNode(nodeId, tree) {
-    if (!tree) { tree = Store.getState().skeletonTracing.getActiveTree(); }
-    return Store.getState().skeletonTracing.getCommentForNode(nodeId, tree);
+  getCommentForNode(nodeId, treeId) {
+    if (!treeId) { treeId = Store.getState().skeletonTracing.activeTreeId; }
+    //return Store.getState().skeletonTracing.getCommentForNode(nodeId, treeId);
   }
 
 

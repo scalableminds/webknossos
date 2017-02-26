@@ -1,15 +1,13 @@
 import { call, spawn, take } from "redux-saga/effects";
 import Request from "libs/request";
 
-let version = 0;
-
 function centerActiveNode() {
   // pass
 }
 
 function* pushAnnotation(action, payload) {
   const APICall = Request.sendJSONReceiveJSON(
-    `/annotations/${this.tracingType}/${this.tracingId}?version=${(this.version + 1)}`, {
+    `/annotations/${this.tracingType}/${this.tracingId}?version=${(version + 1)}`, {
       method: "PUT",
       data: [{
         action,
@@ -21,7 +19,7 @@ function* pushAnnotation(action, payload) {
   yield call(APICall);
 }
 
-export default function* watchSkeletonTracingAsync() {
+export function* watchSkeletonTracingAsync() {
   yield spawn(pushAnnotation, "PUSH_SKELETONTRACING_ANNOTATION");
   yield [
     take("SET_ACTIVE_TREE", centerActiveNode),

@@ -77,7 +77,7 @@ class ListTreeView extends Marionette.CompositeView {
   }
   childViewOptions = function childViewOptions() {
     return {
-      activeTreeId: this.getActiveTree().treeId,
+      activeTreeId: this.getActiveTreeId(),
     };
   }
 
@@ -160,21 +160,22 @@ class ListTreeView extends Marionette.CompositeView {
   }
 
 
-  getActiveTree() {
-    return Store.getState().skeletonTracing.getTree();
+  getActiveTreeId() {
+    return Store.getState().skeletonTracing.activeTreeId;
   }
 
 
   refresh() {
-    const trees = Store.getState().skeletonTracing.getTreesSorted();
-    this.collection.reset(trees);
+    // const trees = Store.getState().skeletonTracing.getTreesSorted();
+    // this.collection.reset(trees);
 
     this.updateName();
   }
 
 
   updateName() {
-    const { name } = this.getActiveTree();
+    const treeId = this.getActiveTreeId();
+    const name = Store.getState().skeletonTracing.trees[treeId].name;
     this.ui.treeNameInput.val(name);
   }
 

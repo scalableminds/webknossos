@@ -12,8 +12,9 @@ import Utils from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
 import type { SkeletonTracingType, EdgeType, NodeType, TreeType } from "oxalis/store";
 
-function moveNodesToNewTree(trees: Array<TreeType>, nodeId: number) {
-
+function moveNodesToNewTree(trees: Array<TreeType>, nodeId: number): Array<TreeType>{
+  // TODO
+  return trees;
 }
 
 function generateTreeNamePrefix(skeletonTracing) {
@@ -46,8 +47,8 @@ export function createNode(skeletonTracing: SkeletonTracingType, position: Vecto
 
     // Find new node id by increasing the max node id.
     // Default to 0 if there are no nodes yet
-    const maxNodeId = _.size(skeletonTracing.trees[activeTreeId].nodes);
-    const nextNewId = maxNodeId !== 0 ? maxNodeId + 1 : 0;
+    const maxNodeId = _.max(Object.keys(skeletonTracing.trees[activeTreeId].nodes).map(nodeId => parseInt(nodeId)));
+    const nextNewId = activeNodeId === null ? 0 : maxNodeId + 1;
 
     // Create the new node
     const node: NodeType = {
@@ -61,14 +62,15 @@ export function createNode(skeletonTracing: SkeletonTracingType, position: Vecto
     };
 
     // Create a new edge
-    const edges = skeletonTracing.trees[activeTreeId].edges;
-    if (activeNodeId) {
+    const newEdges = [];
+    if (_.isNumber(activeNodeId)) {
       const newEdge: EdgeType = {
         source: activeNodeId,
         target: nextNewId,
       };
-      edges.push(newEdge);
+      newEdges.push(newEdge);
     }
+    const edges = skeletonTracing.trees[activeTreeId].edges.concat(newEdges);
 
     return Maybe.Just([node, edges]);
   }
@@ -79,44 +81,49 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[Array<T
   const { allowUpdate } = skeletonTracing.restrictions;
   const { activeNodeId, activeTreeId, trees } = skeletonTracing;
 
-  if (allowUpdate && activeNodeId > 1) {
+  if (allowUpdate && _.isNumber(activeNodeId)) {
     let newActiveNodeId;
     let newActiveTreeId;
+    let newTrees;
 
     // Delete Node
-    const activeTree = skeletonTracing[activeTreeId];
+    const activeTree = skeletonTracing.trees[activeTreeId];
     delete activeTree.nodes[activeNodeId];
 
     // Do we need to split trees? Are there edges leading to/from it?
-    const sourceNodeIds = activeTree.edges.map((edge) => { if (edge.from === activeNodeId) return edge.to; });
-    const targetNodeIds = activeTree.edges.map((edge) => { if (edge.to === activeNodeId) return edge.from; });
+    const sourceNodeIds = activeTree.edges.reduce((result, edge) => { if (edge.target === activeNodeId) result.push(edge.source); return result; }, []);
+    const targetNodeIds = activeTree.edges.reduce((result, edge) => { if (edge.source === activeNodeId) result.push(edge.target); return result; }, []);
 
-    if (sourceNodeIds && targetNodeIds) {
-      const newTrees = sourceNodeIds.map(nodeId => moveNodesToNewTree(nodeId)) +
-        targetNodeIds.map(nodeId => moveNodesToNewTree(nodeId));
-
-      // Delete current tree
-      delete skeletonTracing[activeTreeId];
-      // Set the newly split ones
-      newTrees.forEach((tree) => { trees[tree.treeId] = tree; });
-
-      newActiveNodeId = newTrees[-1].nodes[0];
-      newActiveTreeId = newTrees[-1].treeId;
-    } else {
+    if (_.isEmpty(sourceNodeIds) || _.isEmpty(targetNodeIds)) {
       // We do not need to split
       // just delete all edges leading to/from it
-      const newEdges = activeTree.edges.filter(edge => edge.from !== activeNodeId || edge.source !== activeNodeId);
-      activeTree.edge = newEdges;
+      const newEdges = activeTree.edges.filter(edge => edge.source !== activeNodeId && edge.target !== activeNodeId);
+      activeTree.edges = newEdges;
 
       // Delete all comments containing the node
       const newComments = activeTree.comments.filter(comment => comment.id !== activeNodeId);
       activeTree.comments = newComments;
 
-      newActiveNodeId = activeNodeId;
+      // Decrease active node id or reset to null
+      newActiveNodeId = activeNodeId === 0 ? null : activeNodeId - 1;
       newActiveTreeId = activeTreeId;
+      newTrees = skeletonTracing.trees;
+
+    } else {
+      // Split the tree
+      newTrees = sourceNodeIds.map(nodeId => moveNodesToNewTree(nodeId)) +
+        targetNodeIds.map(nodeId => moveNodesToNewTree(nodeId));
+
+      // Delete current tree
+      delete skeletonTracing.trees[activeTreeId];
+      // Set the newly split ones
+      newTrees.forEach((tree) => { trees[tree.treeId] = tree; });
+
+      newActiveNodeId = newTrees[-1].nodes[0];
+      newActiveTreeId = newTrees[-1].treeId;
     }
 
-    return Maybe.Just([trees, newActiveNodeId, newActiveTreeId]);
+    return Maybe.Just([newTrees, newActiveNodeId, newActiveTreeId]);
   }
   return Maybe.Nothing();
 }
@@ -158,7 +165,7 @@ export function createTree(skeletonTracing: SkeletonTracingType): Maybe<TreeType
 
   if (allowUpdate) {
     // create a new tree id and name
-    const newTreeId = _.size(skeletonTracing.trees) + 1;
+    const newTreeId = _.size(skeletonTracing.trees);
     const name = generateTreeNamePrefix(skeletonTracing) + Utils.zeroPad(this.newTreeId, 2);
 
     // Create the new tree

@@ -206,6 +206,7 @@ const defaultState: OxalisState = {
         timestamp: Date.now(),
         branchPoints: [],
         edges: [],
+        comments: [],
       },
     },
     name: "",

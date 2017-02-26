@@ -67,18 +67,23 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
         debugger;
         Error("who is call this?");
       }
-      debugger
-      const newActiveTreeId = _.filter(state.skeletonTracing.trees, tree => tree.nodes[action.nodeId]).treeId;
+      const newActiveTree = _.find(state.skeletonTracing.trees, tree => action.nodeId in Object.keys(tree.nodes));
 
-      return update(state, { skeletonTracing: {
-        activeNodeId: { $set: action.nodeId },
-        activeTreeId: { $set: newActiveTreeId },
-      } });
+      if (newActiveTree) {
+        return update(state, { skeletonTracing: {
+          activeNodeId: { $set: action.nodeId },
+          activeTreeId: { $set: newActiveTree.treeId },
+        } });
+      }
+
+      return state;
     }
 
     case "SET_ACTIVE_NODE_RADIUS": {
       const { activeNodeId, activeTreeId } = state.skeletonTracing;
-      return update(state, { skeletonTracing: { trees: { [activeTreeId]: { nodes: { [activeNodeId]: { radius: { $set: action.radius } } } } } } });
+      if (_.isNumber(activeNodeId)) {
+        return update(state, { skeletonTracing: { trees: { [activeTreeId]: { nodes: { [activeNodeId]: { radius: { $set: action.radius } } } } } } });
+      }
     }
 
     case "CREATE_BRANCHPOINT": {

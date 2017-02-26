@@ -136,9 +136,31 @@ describe("SkeletonTracing", () => {
   });
 
   it("should set a new active node", () => {
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+    const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(0);
+
+    // Create two nodes, then set first one active
+    let newState = SkeletonTracingReducer(initalState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, setActiveNodeAction);
+
+    expect(newState.skeletonTracing.activeNodeId).toBe(0);
+    expect(newState.skeletonTracing.activeTreeId).toBe(0);
+  });
+
+  it("should set a new active node in a different tree", () => {
   });
 
   it("should set a new node radius", () => {
+    const newRadius = 10;
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+    const setActiveNodeRadiusAction = SkeletonTracingActions.setActiveNodeRadiusAction(newRadius);
+
+    // Create a node and change its readius
+    let newState = SkeletonTracingReducer(initalState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, setActiveNodeRadiusAction);
+
+    expect(newState.skeletonTracing.trees[0].nodes[0].radius).toEqual(newRadius);
   });
 
   it("should create a branchpoint", () => {

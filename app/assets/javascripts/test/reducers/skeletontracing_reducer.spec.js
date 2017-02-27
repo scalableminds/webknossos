@@ -31,6 +31,7 @@ describe("SkeletonTracing", () => {
           branchPoints: [],
           edges: [],
           comments: [],
+          color: [23, 23, 23],
         },
       },
       name: "",
@@ -381,5 +382,36 @@ describe("SkeletonTracing", () => {
     const newState = SkeletonTracingReducer(initalState, setTreeNameAction);
 
     expect(newState.skeletonTracing.trees[0].name).toEqual("Tree000");
+  });
+
+  it("should increase the activeTreeId", () => {
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(0);
+    const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction();
+
+    // create a second tree, set first tree active then increase activeTreeId
+    let newState = SkeletonTracingReducer(initalState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, setActiveTreeAction);
+    newState = SkeletonTracingReducer(newState, selectNextTreeAction);
+
+    expect(newState.skeletonTracing.activeTreeId).toBe(1);
+  });
+
+  it("should decrease the activeTreeId", () => {
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction(false);
+
+    // create a second tree then decrease activeTreeId
+    let newState = SkeletonTracingReducer(initalState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, selectNextTreeAction);
+
+    expect(newState.skeletonTracing.activeTreeId).toBe(0);
+  });
+
+  it("should shuffle the tree color", () => {
+    const shuffleTreeColorAction = SkeletonTracingActions.shuffleTreeColorAction(0);
+    const newState = SkeletonTracingReducer(initalState, shuffleTreeColorAction);
+
+    expect(newState.skeletonTracing.trees[0].color).not.toEqual([23, 23, 23]);
   });
 });

@@ -19,13 +19,12 @@ type createTreeActionType = {type: "CREATE_TREE"};
 type deleteTreeActionType = {type: "DELETE_TREE"};
 type setActiveTreeActionType = {type: "SET_ACTIVE_TREE", treeId: number};
 type setTreeNameActionType = {type: "SET_TREE_NAME", name: ?string};
-type selectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: boolean};
+type selectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: ?boolean};
 type shuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR"};
 type shuffleAllTreeColorsActionType = {type: "SHUFFLE_ALL_TREE_COLORS"};
 type setCommentForNodeActionType = {type: "SET_COMMENT", nodeId: number, commentText: string};
-type pushSkeletonTracingAnnotationActionType = {type: "PUSH_SKELETONTRACING_ANNOTATION", action: string, payload: any};
 
-export type SkeletonTracingActionTypes = initializeSkeletonTracingActionType | createNodeActionType | deleteNodeActionType | setActiveNodeActionType | setActiveNodeRadiusActionType | createBranchPointActionType | deleteBranchPointActionType | createTreeActionType | deleteTreeActionType | setActiveTreeActionType | setTreeNameActionType | selectNextTreeActionType | shuffleTreeColorActionType | shuffleAllTreeColorsActionType | setCommentForNodeActionType | pushSkeletonTracingAnnotationActionType;
+export type SkeletonTracingActionTypes = initializeSkeletonTracingActionType | createNodeActionType | deleteNodeActionType | setActiveNodeActionType | setActiveNodeRadiusActionType | createBranchPointActionType | deleteBranchPointActionType | createTreeActionType | deleteTreeActionType | setActiveTreeActionType | setTreeNameActionType | selectNextTreeActionType | shuffleTreeColorActionType | shuffleAllTreeColorsActionType | setCommentForNodeActionType;
 
 export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContentDataType>): initializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",
@@ -82,27 +81,18 @@ export const setTreeNameAction = (name: ?string = null): setTreeNameActionType =
 });
 
 // TODO consider a better name + better param name
-export const selectNextTreeAction = (forward: boolean): selectNextTreeActionType => ({
+export const selectNextTreeAction = (forward: ?boolean = true): selectNextTreeActionType => ({
   type: "SELECT_NEXT_TREE",
   forward,
 });
 
-export const shuffleTreeColorAction = (): shuffleTreeColorActionType => ({
+export const shuffleTreeColorAction = (treeId: number): shuffleTreeColorActionType => ({
   type: "SHUFFLE_TREE_COLOR",
-});
-
-export const shuffleAllTreeColorsAction = (): shuffleAllTreeColorsActionType => ({
-  type: "SHUFFLE_ALL_TREE_COLORS",
+  treeId,
 });
 
 export const setCommentForNodeAction = (nodeId: number, commentText: string): setCommentForNodeActionType => ({
   type: "SET_COMMENT",
   nodeId,
   commentText,
-});
-
-export const pushSkeletonTracingAnnotationAction = (action: string, payload: any): pushSkeletonTracingAnnotationActionType => ({
-  type: "PUSH_SKELETONTRACING_ANNOTATION",
-  action,
-  payload,
 });

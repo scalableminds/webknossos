@@ -7,7 +7,7 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
-import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode } from "oxalis/model/skeletontracing/foo";
+import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor } from "oxalis/model/skeletontracing/foo";
 import type { OxalisState } from "oxalis/store";
 import type { SkeletonTracingActionTypes } from "oxalis/model/actions/skeletontracing_actions";
 
@@ -156,18 +156,22 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
     }
 
     case "SELECT_NEXT_TREE": {
-      state.skeletonTracing.selectNextTree(action.forward);
-      break;
+      const { activeTreeId, trees } = state.skeletonTracing;
+
+      const increaseDecrease = action.forward ? 1 : -1;
+      const maxTreeId = _.size(trees);
+      const newActiveTreeId = _.clamp(activeTreeId + increaseDecrease, 0, maxTreeId);
+
+      return update(state, { skeletonTracing: { activeTreeId: { $set: newActiveTreeId } } });
     }
 
     case "SHUFFLE_TREE_COLOR": {
-      state.skeletonTracing.shuffleTreeColor();
-      break;
-    }
+      shuffleTreeColor(state.skeletonTracing, action.treeId).map(([tree, treeId]) => {
 
-    case "SHUFFLE_ALL_TREE_COLORS": {
-      state.skeletonTracing.shuffleAllTreeColors();
-      break;
+        return update(state, { skeletonTracing: { trees: { [treeId]: { $set: tree } } } });
+      });
+
+      return state;
     }
 
     case "SET_COMMENT": {

@@ -11,7 +11,7 @@ import ColorGenerator from "libs/color_generator";
 import Utils from "libs/utils";
 import Window from "libs/window";
 import type { Vector3 } from "oxalis/constants";
-import type { SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType } from "oxalis/store";
+import type { SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, NodeMapType } from "oxalis/store";
 
 function moveNodesToNewTree(trees: TreeMapType, nodeId: number): TreeMapType {
   // TODO
@@ -216,6 +216,19 @@ export function deleteTree(skeletonTracing: SkeletonTracingType): Maybe<[TreeMap
 
     return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId]);
   }
+  return Maybe.Nothing();
+}
+
+export function shuffleTreeColor(skeletonTracing: SkeletonTracingType, treeId: number): Maybe<[TreeType, number]> {
+  const tree = skeletonTracing.trees[treeId];
+
+  if (_.isNumber(treeId) && tree) {
+    const randomId = _.random(0, 1000000000, false);
+    // ColorGenerator fails to produce distinct color for huge ids (Infinity)
+    tree.color = ColorGenerator.distinctColorForId(randomId);
+    return Maybe.Just([tree, treeId]);
+  }
+
   return Maybe.Nothing();
 }
 

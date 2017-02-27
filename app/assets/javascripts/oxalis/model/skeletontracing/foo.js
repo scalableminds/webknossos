@@ -130,14 +130,18 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[Array<T
 
 export function createBranchPoint(skeletonTracing: SkeletonTracingType): Maybe {
   const { branchPointsAllowed, allowUpdate } = skeletonTracing.restrictions;
-  const { activeNodeId } = skeletonTracing;
+  const { activeNodeId, activeTreeId } = skeletonTracing;
 
-  if (branchPointsAllowed && allowUpdate && activeNodeId) {
-    // create new branchpoint
-    return Maybe.Just({
-      id: activeNodeId,
-      timestamp: Date.now(),
-    });
+  if (branchPointsAllowed && allowUpdate && _.isNumber(activeNodeId)) {
+    const doesBranchPointExistAlready = _.some(skeletonTracing.trees[activeTreeId].branchPoints, branchPoint => branchPoint.id == activeNodeId);
+
+    if (!doesBranchPointExistAlready) {
+      // create new branchpoint
+      return Maybe.Just({
+        id: activeNodeId,
+        timestamp: Date.now(),
+      });
+    }
   }
   return Maybe.Nothing();
 }
@@ -148,14 +152,14 @@ export function deleteBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<[
 
   if (branchPointsAllowed && allowUpdate) {
     // Find most recent branchpoint across all trees
-    const treeId = _.maxBy(trees, tree => tree.branchPoints[-1].timestamp).treeId;
-    const nodeId = trees[treeId].branchPoints[-1].id;
+    const treeId = _.maxBy(_.values(trees), tree => _.last(tree.branchPoints).timestamp).treeId;
+    const branchPoint = _.last(trees[treeId].branchPoints);
 
-    // Delete branchpoint
-    const branchPoints = skeletonTracing.trees[treeId].nodes[nodeId].branchPoints;
-    const branchPoint = branchPoints.pop();
-
-    return Maybe.Just([branchPoints, treeId, branchPoint.id]);
+    if (branchPoint) {
+      // Delete branchpoint
+      const newBranchPoints = _.without(skeletonTracing.trees[treeId].branchPoints, branchPoint);
+      return Maybe.Just([newBranchPoints, treeId, branchPoint.id]);
+    }
   }
   return Maybe.Nothing();
 }

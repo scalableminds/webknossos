@@ -89,7 +89,7 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
     case "CREATE_BRANCHPOINT": {
       return createBranchPoint(state.skeletonTracing).map((branchPoint) => {
         const { activeTreeId } = state.skeletonTracing;
-        return update(state, { skeletonTracing: { trees: { [activeTreeId]: { branchPoints: { $push: branchPoint } } } } });
+        return update(state, { skeletonTracing: { trees: { [activeTreeId]: { branchPoints: { $push: [branchPoint] } } } } });
       }).getOrElse(state);
     }
 

@@ -18,7 +18,7 @@ type deleteBranchPointActionType = {type: "DELETE_BRANCHPOINT"};
 type createTreeActionType = {type: "CREATE_TREE"};
 type deleteTreeActionType = {type: "DELETE_TREE"};
 type setActiveTreeActionType = {type: "SET_ACTIVE_TREE", treeId: number};
-type setTreeNameActionType = {type: "SET_TREE_NAME", name: string};
+type setTreeNameActionType = {type: "SET_TREE_NAME", name: ?string};
 type selectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: boolean};
 type shuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR"};
 type shuffleAllTreeColorsActionType = {type: "SHUFFLE_ALL_TREE_COLORS"};
@@ -76,7 +76,7 @@ export const setActiveTreeAction = (treeId: number): setActiveTreeActionType => 
   treeId,
 });
 
-export const setTreeNameAction = (name: string): setTreeNameActionType => ({
+export const setTreeNameAction = (name: ?string = null): setTreeNameActionType => ({
   type: "SET_TREE_NAME",
   name,
 });

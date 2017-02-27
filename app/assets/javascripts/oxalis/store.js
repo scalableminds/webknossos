@@ -39,30 +39,32 @@ export type BranchPointType = {
   timestamp: number;
 };
 
+export type NodeMapType = {[number]: NodeType};
+
 export type TreeType = {
-  treeId: number;
-  color: Vector4;
-  name: string;
-  timestamp: number;
-  comments: Array<CommentType>;
-  branchPoints: Array<BranchPointType>;
-  edges: Array<EdgeType>;
-  nodes: {[number]: NodeType};
+  treeId: number,
+  color: Vector3,
+  name: string,
+  timestamp: number,
+  comments: Array<CommentType>,
+  branchPoints: Array<BranchPointType>,
+  edges: Array<EdgeType>,
+  nodes: NodeMapType,
 };
 
 export type SkeletonContentDataType = {
-  activeNode: null | number;
-  trees: Array<TreeType>;
-  zoomLevel: number;
-  customLayers: null;
+  activeNode: null | number,
+  trees: Array<TreeType>,
+  zoomLevel: number,
+  customLayers: null,
 };
 
 export type VolumeContentDataType = {
-  activeCell: null | number;
-  customLayers: Array<Object>;
-  maxCoordinates: BoundingBoxObjectType;
-  customLayers: ?Array<Object>;
-  name: string;
+  activeCell: null | number,
+  customLayers: Array<Object>,
+  maxCoordinates: BoundingBoxObjectType,
+  customLayers: ?Array<Object>,
+  name: string,
 };
 
 type DataLayerType = {
@@ -78,7 +80,7 @@ type DataLayerType = {
   fallback: any,
   elementClass: ElementClassType,
   mappings:[],
-}
+};
 
 export type DatasetType = {
  name: string,
@@ -89,10 +91,12 @@ export type DatasetType = {
  },
  scale: Vector3,
  dataLayers: Array<DataLayerType>
-}
+};
+
+export type TreeMapType = {[number]: TreeType};
 
 export type SkeletonTracingType = {
-  trees: {[number]: TreeType},
+  trees: TreeMapType,
   name: string,
   activeTreeId: number,
   activeNodeId: number,

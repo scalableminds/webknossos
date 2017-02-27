@@ -9,10 +9,11 @@ import app from "app";
 import scaleInfo from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import Utils from "libs/utils";
+import Window from "libs/window";
 import type { Vector3 } from "oxalis/constants";
-import type { SkeletonTracingType, EdgeType, NodeType, TreeType } from "oxalis/store";
+import type { SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType } from "oxalis/store";
 
-function moveNodesToNewTree(trees: Array<TreeType>, nodeId: number): Array<TreeType>{
+function moveNodesToNewTree(trees: TreeMapType, nodeId: number): TreeMapType {
   // TODO
   return trees;
 }
@@ -32,11 +33,7 @@ function generateTreeNamePrefix(skeletonTracing) {
   }
 }
 
-function getNewTreeColor(id) {
-  return ColorGenerator.distinctColorForId(id);
-}
-
-export function createNode(skeletonTracing: SkeletonTracingType, position: Vector3, rotation: Vector3, viewport: number, resolution: number): Maybe<[NodeType, EdgeType]> {
+export function createNode(skeletonTracing: SkeletonTracingType, position: Vector3, rotation: Vector3, viewport: number, resolution: number): Maybe<[NodeType, Array<EdgeType>]> {
   const { allowUpdate } = skeletonTracing.restrictions;
   const { activeTreeId, activeNodeId } = skeletonTracing;
 
@@ -47,8 +44,8 @@ export function createNode(skeletonTracing: SkeletonTracingType, position: Vecto
 
     // Find new node id by increasing the max node id.
     // Default to 0 if there are no nodes yet
-    const maxNodeId = _.max(Object.keys(skeletonTracing.trees[activeTreeId].nodes).map(nodeId => parseInt(nodeId)));
-    const nextNewId = activeNodeId === null ? 0 : maxNodeId + 1;
+    const maxNodeId = _.max(_.flatMap(skeletonTracing.trees, tree => _.map(tree.nodes, node => node.id)));
+    const nextNewId = _.isNumber(maxNodeId) ? maxNodeId + 1 : 0;
 
     // Create the new node
     const node: NodeType = {
@@ -77,9 +74,9 @@ export function createNode(skeletonTracing: SkeletonTracingType, position: Vecto
   return Maybe.Nothing();
 }
 
-export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[Array<TreeType>, number, number]> {
+export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMapType, number, number]> {
   const { allowUpdate } = skeletonTracing.restrictions;
-  const { activeNodeId, activeTreeId, trees } = skeletonTracing;
+  const { activeNodeId, activeTreeId } = skeletonTracing;
 
   if (allowUpdate && _.isNumber(activeNodeId)) {
     let newActiveNodeId;
@@ -101,14 +98,13 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[Array<T
       activeTree.edges = newEdges;
 
       // Delete all comments containing the node
-      const newComments = activeTree.comments.filter(comment => comment.id !== activeNodeId);
+      const newComments = activeTree.comments.filter(comment => comment.node !== activeNodeId);
       activeTree.comments = newComments;
 
       // Decrease active node id or reset to null
       newActiveNodeId = activeNodeId === 0 ? null : activeNodeId - 1;
       newActiveTreeId = activeTreeId;
       newTrees = skeletonTracing.trees;
-
     } else {
       // Split the tree
       newTrees = sourceNodeIds.map(nodeId => moveNodesToNewTree(nodeId)) +
@@ -128,12 +124,12 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[Array<T
   return Maybe.Nothing();
 }
 
-export function createBranchPoint(skeletonTracing: SkeletonTracingType): Maybe {
+export function createBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<BranchPointType> {
   const { branchPointsAllowed, allowUpdate } = skeletonTracing.restrictions;
   const { activeNodeId, activeTreeId } = skeletonTracing;
 
   if (branchPointsAllowed && allowUpdate && _.isNumber(activeNodeId)) {
-    const doesBranchPointExistAlready = _.some(skeletonTracing.trees[activeTreeId].branchPoints, branchPoint => branchPoint.id == activeNodeId);
+    const doesBranchPointExistAlready = _.some(skeletonTracing.trees[activeTreeId].branchPoints, branchPoint => branchPoint.id === activeNodeId);
 
     if (!doesBranchPointExistAlready) {
       // create new branchpoint
@@ -146,7 +142,7 @@ export function createBranchPoint(skeletonTracing: SkeletonTracingType): Maybe {
   return Maybe.Nothing();
 }
 
-export function deleteBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<[Object, number, number]> {
+export function deleteBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<[Array<BranchPointType>, number, number]> {
   const { branchPointsAllowed, allowUpdate } = skeletonTracing.restrictions;
   const { trees } = skeletonTracing;
 
@@ -169,8 +165,11 @@ export function createTree(skeletonTracing: SkeletonTracingType): Maybe<TreeType
 
   if (allowUpdate) {
     // create a new tree id and name
-    const newTreeId = _.size(skeletonTracing.trees);
-    const name = generateTreeNamePrefix(skeletonTracing) + Utils.zeroPad(this.newTreeId, 2);
+    // tree id can become 0 after deleting all trees
+    const maxTreeId = _.max(_.map(skeletonTracing.trees, "treeId"));
+    const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : 0;
+
+    const name = generateTreeNamePrefix(skeletonTracing) + Utils.zeroPad(newTreeId, 2);
 
     // Create the new tree
     const tree: TreeType = {
@@ -178,7 +177,7 @@ export function createTree(skeletonTracing: SkeletonTracingType): Maybe<TreeType
       treeId: newTreeId,
       nodes: {},
       timestamp: Date.now(),
-      color: getNewTreeColor(newTreeId),
+      color: ColorGenerator.distinctColorForId(newTreeId),
       branchPoints: [],
       edges: [],
       comments: [],
@@ -189,32 +188,33 @@ export function createTree(skeletonTracing: SkeletonTracingType): Maybe<TreeType
   return Maybe.Nothing();
 }
 
-export function deleteTree(skeletonTracing: SkeletonTracingType): Maybe<[Array<TreeType>, number, number]> {
+export function deleteTree(skeletonTracing: SkeletonTracingType): Maybe<[TreeMapType, number, ?number]> {
   const { allowUpdate } = skeletonTracing.restrictions;
-  const userConfirmation = confirm("Do you really want to delete the whole tree?");
+  const userConfirmation = Window.confirm("Do you really want to delete the whole tree?");
 
   if (allowUpdate && userConfirmation) {
     // Delete tree
-    const trees = skeletonTracing.trees;
-    delete trees[skeletonTracing.activeTreeId];
+    const newTrees = skeletonTracing.trees;
+    delete newTrees[skeletonTracing.activeTreeId];
 
     // Because we always want an active tree, check if we need
     // to create one.
     let newActiveTreeId;
     let newActiveNodeId;
-    if (trees.length === 0) {
+    if (_.size(newTrees) === 0) {
       const newTree = createTree(skeletonTracing).get();
-      trees.push(newTree);
+      newTrees[newTree.treeId] = newTree;
 
       newActiveTreeId = newTree.treeId;
       newActiveNodeId = null;
     } else {
       // just set the last tree to be the active one
-      newActiveTreeId = trees[-1].treeId;
-      newActiveNodeId = trees[-1].nodes[0];
+      const maxTreeId = _.max(_.map(newTrees, "treeId"));
+      newActiveTreeId = maxTreeId;
+      newActiveNodeId = _.get(newTrees[maxTreeId].nodes, "nodes[0].id", null);
     }
 
-    return Maybe.Just([trees, newActiveNodeId, newActiveTreeId]);
+    return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId]);
   }
   return Maybe.Nothing();
 }

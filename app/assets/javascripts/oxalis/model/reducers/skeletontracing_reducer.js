@@ -84,6 +84,8 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
       if (_.isNumber(activeNodeId)) {
         return update(state, { skeletonTracing: { trees: { [activeTreeId]: { nodes: { [activeNodeId]: { radius: { $set: action.radius } } } } } } });
       }
+
+      return state;
     }
 
     case "CREATE_BRANCHPOINT": {
@@ -107,7 +109,7 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
       return createTree(state.skeletonTracing).map(tree =>
 
         update(state, { skeletonTracing: {
-          trees: { $push: tree },
+          trees: { [tree.treeId]: { $set: tree } },
           activeNodeId: { $set: null },
           activeTreeId: { $set: tree.treeId },
         } }),
@@ -115,37 +117,42 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
     }
 
     case "DELETE_TREE": {
-      return deleteTree(state.skeletonTracing).map((trees, newActiveTreeId, newActiveNodeId) =>
+      return deleteTree(state.skeletonTracing).map(([trees, newActiveTreeId, newActiveNodeId]) =>
 
         update(state, { skeletonTracing: {
-          trees: { $set: trees } },
+          trees: { $set: trees },
           activeTreeId: { $set: newActiveTreeId },
           activeNodeId: { $set: newActiveNodeId },
-        }),
+        } }),
       ).getOrElse(state);
     }
 
     case "SET_ACTIVE_TREE": {
       const { trees } = state.skeletonTracing;
-
       const newActiveTreeId = action.treeId;
-      const newActiveNodeId = trees[newActiveTreeId].nodes[0];
 
-      return update(state, { skeletonTracing: {
-        activeNodeId: { $set: newActiveNodeId },
-        activeTreeId: { $set: newActiveTreeId },
-      } });
+      if (trees[newActiveTreeId]) {
+        const newActiveNodeId = _.max(_.map(trees[newActiveTreeId].nodes, "id")) || null;
+
+        return update(state, { skeletonTracing: {
+          activeNodeId: { $set: newActiveNodeId },
+          activeTreeId: { $set: newActiveTreeId },
+        } });
+      }
+
+      return state;
     }
 
     case "SET_TREE_NAME": {
       const { activeTreeId } = state.skeletonTracing;
 
-      if (state.skeletonTracing[activeTreeId]) {
-        const defaultName = `Tree${Utils.zeroPad(activeTreeId, 2)}`;
+      if (state.skeletonTracing.trees[activeTreeId]) {
+        const defaultName = `Tree${Utils.zeroPad(activeTreeId, 3)}`;
         const newName = action.name || defaultName;
-        return update(state, { skeletontracing: { trees: { [activeTreeId]: { name: { $set: newName } } } } });
+        return update(state, { skeletonTracing: { trees: { [activeTreeId]: { name: { $set: newName } } } } });
       }
-      break;
+
+      return state;
     }
 
     case "SELECT_NEXT_TREE": {

@@ -74,7 +74,7 @@ class DatasetInfoView extends Marionette.View {
       annotationType,
       zoomLevel: this.calculateZoomLevel(),
       dataSetName: Store.getState().dataset.name,
-      treeCount: Utils.__guard__(Store.getState().skeletonTracing, x => x.trees.length),
+      treeCount: _.size(Store.getState().skeletonTracing.trees),
     };
   }
 

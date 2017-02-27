@@ -30,7 +30,8 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
         id: action.tracing.id,
       };
 
-      return update(state, { skeletonTracing: { $set: skeletonTracing } });
+      // return update(state, { skeletonTracing: { $set: skeletonTracing } });
+      return state;
     }
 
     case "CREATE_NODE": {
@@ -175,7 +176,7 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
     }
 
     case "SET_COMMENT": {
-      state.skeletonTracing.setCommentForNode(action.nodeId, action.commentText);
+      // TODO
       break;
     }
 

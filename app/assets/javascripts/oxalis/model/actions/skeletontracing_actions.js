@@ -24,7 +24,7 @@ type shuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR"};
 type shuffleAllTreeColorsActionType = {type: "SHUFFLE_ALL_TREE_COLORS"};
 type setCommentForNodeActionType = {type: "SET_COMMENT", nodeId: number, commentText: string};
 
-export type SkeletonTracingActionTypes = initializeSkeletonTracingActionType | createNodeActionType | deleteNodeActionType | setActiveNodeActionType | setActiveNodeRadiusActionType | createBranchPointActionType | deleteBranchPointActionType | createTreeActionType | deleteTreeActionType | setActiveTreeActionType | setTreeNameActionType | selectNextTreeActionType | shuffleTreeColorActionType | shuffleAllTreeColorsActionType | setCommentForNodeActionType;
+export type SkeletonTracingActionTypes = (initializeSkeletonTracingActionType | createNodeActionType | deleteNodeActionType | setActiveNodeActionType | setActiveNodeRadiusActionType | createBranchPointActionType | deleteBranchPointActionType | createTreeActionType | deleteTreeActionType | setActiveTreeActionType | setTreeNameActionType | selectNextTreeActionType | shuffleTreeColorActionType | shuffleAllTreeColorsActionType | setCommentForNodeActionType);
 
 export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContentDataType>): initializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",

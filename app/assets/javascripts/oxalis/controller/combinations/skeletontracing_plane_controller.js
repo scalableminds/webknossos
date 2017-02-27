@@ -184,7 +184,8 @@ class SkeletonTracingPlaneController extends PlaneController {
     if (activeViewport === OrthoViews.TDView) {
       return;
     }
-    const activeNode = Store.getState().skeletonTracing.getActiveNode();
+    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
+    const activeNode = trees[activeTreeId].nodes[activeNodeId];
     // set the new trace direction
     if (activeNode) {
       this.model.flycam.setDirection([
@@ -207,12 +208,15 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   addNode = (position: Vector3, rotation: Vector3, centered: boolean): void => {
-    const newNodeNewTree = Store.getState().userConfiguration.newNodeNewTree;
+    const { newNodeNewTree } = Store.getState().userConfiguration;
+    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
+    const activeNode = trees[activeTreeId].nodes[activeNodeId];
+
     if (this.model.settings.somaClickingAllowed && newNodeNewTree) {
       Store.dispatch(createTreeAction());
     }
 
-    if (Store.getState().skeletonTracing.getActiveNode() == null) {
+    if (activeNode == null) {
       // when placing very first node of a tracing
       centered = true;
     }
@@ -225,7 +229,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     ));
 
     if (centered) {
-      this.centerPositionAnimated(Store.getState().skeletonTracing.getActiveNodePos());
+      this.centerPositionAnimated(activeNode.position);
     }
   };
 

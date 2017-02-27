@@ -14,6 +14,7 @@ import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, setCommentForNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+import type { NodeType } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 
@@ -35,14 +36,14 @@ class TracingApi {
   * Returns the id of the current active node.
   */
   getActiveNodeId(): ?number {
-    return Store.getState().skeletonTracing.getActiveNodeId();
+    return Store.getState().skeletonTracing.activeNodeId();
   }
 
  /**
   * Returns the id of the current active tree.
   */
   getActiveTreeId(): ?number {
-    return Store.getState().skeletonTracing.getActiveTreeId();
+    return Store.getState().skeletonTracing.activeTreeId();
   }
 
  /**
@@ -55,8 +56,9 @@ class TracingApi {
  /**
   * Returns all nodes belonging to a tracing.
   */
-  getAllNodes(): Array<TracePoint> {
-    return Store.getState().skeletonTracing.getNodeListOfAllTrees();
+  getAllNodes(): Array<NodeType> {
+    const { trees } = Store.getState().skeletonTracing;
+    return _.flatMap(trees, tree => _.map(tree, "nodes"));
   }
 
  /**
@@ -66,16 +68,13 @@ class TracingApi {
   * const activeNodeId = api.tracing.getActiveNodeId();
   * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
   */
-  setCommentForNode(commentText: string, node: TracePoint | number): void {
+  setCommentForNode(commentText: string, nodeId: number | number): void {
     // Convert nodeId to node
-    if (_.isNumber(node)) {
-      node = Store.getState().skeletonTracing.getNode(node);
-      if (node == null) throw Error("The supplied nodeId is not valid.");
-    } else if (!(node instanceof TracePoint)) {
-      throw Error("Supply either a nodeId or a node.");
+    if (_.isNumber(nodeId)) {
+      Store.dispatch(setCommentForNodeAction(nodeId, commentText));
+    } else {
+      throw Error("Supply a nodeId.");
     }
-
-    Store.dispatch(setCommentForNodeAction(node, commentText, ));
   }
 
  /**
@@ -88,15 +87,16 @@ class TracingApi {
   * @example // Provide a tree for lookup speed boost
   * const comment = api.tracing.getCommentForNode(23, api.getActiveTreeid());
   */
-  getCommentForNode(nodeId: number, tree: ?(TraceTree | number)): ?string {
+  getCommentForNode(nodeId: number, treeId: number): ?string {
     // Convert treeId to tree
-    if (_.isNumber(tree)) {
-      tree = Store.getState().skeletonTracing.getTree(tree);
+    if (_.isNumber(treeId)) {
+      const tree = Store.getState().skeletonTracing.trees[treeId];
       if (tree == null) throw Error("The supplied treeId is not valid.");
-    } else if (!(tree instanceof TraceTree || tree == null)) {
-      throw Error("Supply either a treeId, a tree or nothing.");
+    } else {
+      throw Error("Supply a treeId.");
     }
 
+    throw Error("TODO")
     const comment = Store.getState().skeletonTracing.getCommentForNode(nodeId, tree);
     return comment ? comment.content : null;
   }
@@ -281,6 +281,7 @@ class UtilsApi {
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
   registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T[]) => void, args: T[]) => void): void {
+    throw Error("todo")
     const skeletonTracing: {[key:string]: Function } = Store.getState().skeletonTracing;
     const oldFunc = skeletonTracing[funcName].bind(Store.getState().skeletonTracing);
     skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);

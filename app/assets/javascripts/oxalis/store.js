@@ -206,11 +206,17 @@ const defaultState: OxalisState = {
       [0]: {
         treeId: 0,
         name: "TestTree",
-        nodes: {},
+        nodes: {
+          [0]: {
+            position: [],
+            rotation: [],
+          },
+        },
         timestamp: Date.now(),
         branchPoints: [],
         edges: [],
         comments: [],
+        color: [],
       },
     },
     name: "",

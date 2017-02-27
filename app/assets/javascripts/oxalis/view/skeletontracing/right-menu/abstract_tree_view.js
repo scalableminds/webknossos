@@ -56,10 +56,11 @@ class AbstractTreeView extends Marionette.View {
 
 
   drawTree() {
+    const { activeTreeId, activeNodeId, trees } = Store.getState().skeletonTracing;
     if (Store.getState().skeletonTracing && this.abstractTreeRenderer) {
       this.abstractTreeRenderer.drawTree(
-        Store.getState().skeletonTracing.getTree(),
-        Store.getState().skeletonTracing.getActiveNodeId());
+        trees[activeTreeId],
+        activeNodeId);
     }
   }
 

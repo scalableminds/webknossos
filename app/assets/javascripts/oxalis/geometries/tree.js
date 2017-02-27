@@ -3,6 +3,7 @@
  * @flow weak
  */
 
+import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
 import ResizableBuffer from "libs/resizable_buffer";
@@ -99,6 +100,13 @@ class Tree {
     // Add any edge from smaller IDs to the node
     // ASSUMPTION: if this node is new, it should have a
     //             greater id as its neighbor
+    const { activeTreeId, trees } = Store.getState().skeletonTracing;
+    const neighborIds = trees[activeTreeId].edges.reduce((result, edge) => {
+      if (edge.target === node.id) result.append(edge.source);
+      return result;
+    }, []);
+
+    trees[activeTreeId].nodes[activeNodes]
     for (const neighbor of node.neighbors) {
       if (neighbor.id < node.id) {
         this.edgesBuffer.push(neighbor.position.concat(node.position));
@@ -109,9 +117,15 @@ class Tree {
   }
 
 
-  addNodes(nodeList) {
-    nodeList.forEach(node =>
-      this.addNode(node));
+  addNodes(nodes, edges) {
+    // nodeList.forEach(node =>
+    //   this.addNode(node));
+    this.nodesBuffer.pushMany(_.map(nodes, "position"));
+    this.sizesBuffer.pushMany(_.map(nodes, node => [node.radius * 2]));
+    this.scalesBuffer.pushMany(_.times(_.size(nodes), _.constant([1.0])));
+    this.nodeIDs.push(_.map(nodes, node => [node.id]));
+    this.nodesColorBuffer.pushMany(_.map(nodes, node => this.getColor(node.id)));
+    this.edgesBuffer.pushMany(edges.map(edge => nodes[edge.source].position.concat(nodes[edge.target].position)));
   }
 
 
@@ -192,7 +206,7 @@ class Tree {
 
 
   updateTreeColor() {
-    const newColor = Store.getState().skeletonTracing.getTree(this.id).color;
+    const newColor = Store.getState().skeletonTracing.trees[this.id].color;
     this.edges.material.color = new THREE.Color(this.darkenHex(newColor));
 
     this.updateNodesColors();
@@ -270,11 +284,11 @@ class Tree {
 
 
   getColor(id, isActiveNode, isBranchPoint) {
-    const tree = Store.getState().skeletonTracing.getTree(this.id);
+    const tree = Store.getState().skeletonTracing.trees[this.id];
     let { color } = tree;
     if (id != null) {
-      isActiveNode = isActiveNode || Store.getState().skeletonTracing.getActiveNodeId() === id;
-      isBranchPoint = isBranchPoint || tree.isBranchPoint(id);
+      isActiveNode = isActiveNode || Store.getState().skeletonTracing.activeNodeId === id;
+      isBranchPoint = isBranchPoint || id in _.map(tree.branchPoints, "node");
 
       if (isActiveNode) {
         color = this.shiftHex(color, 1 / 4);

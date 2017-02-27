@@ -20,7 +20,6 @@ function* pushAnnotation(action, payload) {
 }
 
 export function* watchSkeletonTracingAsync() {
-  yield spawn(pushAnnotation, "PUSH_SKELETONTRACING_ANNOTATION");
   yield [
     take("SET_ACTIVE_TREE", centerActiveNode),
     take("SET_ACTIVE_NODE", centerActiveNode),

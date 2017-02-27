@@ -218,7 +218,7 @@ class Controller {
       // save the progress
       model = this.model;
 
-      const tracingType = Store.getState().skeletonTracing || model.volumeTracing;
+      const tracingType = model.volumeTracing;
       tracingType.stateLogger.pushNow().then(() => {
         const url = `/annotations/${model.tracingType}/${model.tracingId}/finishAndRedirect`;
         app.router.loadURL(url);

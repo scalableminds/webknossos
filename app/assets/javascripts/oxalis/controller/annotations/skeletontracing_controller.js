@@ -48,7 +48,8 @@ class SkeletonTracingController {
 
 
   setRadius(delta: number): void {
-    const radius = Store.getState().skeletonTracing.getActiveNodeRadius();
+    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
+    const radius = trees[activeTreeId].nodes[activeNodeId].radius;
     Store.dispatch(setActiveNodeRadiusAction(radius * Math.pow(1.05, delta)));
   }
 
@@ -65,7 +66,8 @@ class SkeletonTracingController {
 
 
   centerActiveNode = (): void => {
-    const position = Store.getState().skeletonTracing.getActiveNodePos();
+    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
+    const position = trees[activeTreeId].nodes[activeNodeId].position;
     if (position) {
       this.model.flycam.setPosition(position);
     }

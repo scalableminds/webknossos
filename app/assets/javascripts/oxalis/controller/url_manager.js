@@ -103,8 +103,8 @@ class UrlManager {
       state = state.concat([flycam.getZoomStep().toFixed(2)]);
     }
 
-    if (Utils.__guard__(Store.getState().skeletonTracing, x => x.getActiveNodeId()) != null) {
-      state.push(Store.getState().skeletonTracing.getActiveNodeId());
+    if (Store.getState().skeletonTracing.activeNodeId != null) {
+      state.push(Store.getState().skeletonTracing.activeNodeId);
     }
 
     return `${this.baseUrl}#${state.join(",")}`;

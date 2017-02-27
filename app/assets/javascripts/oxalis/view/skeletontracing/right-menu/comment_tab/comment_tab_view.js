@@ -103,11 +103,11 @@ class CommentTabView extends Marionette.View {
 
   updateState() {
     if (!this.commentList) { return; }
-
+    const { trees, activeTreeId, activeNodeId } = Store.getState().skeletonTracing;
     this.commentList.setState({
-      data: Store.getState().skeletonTracing.getTreesSortedBy("treeId", this.isSortedAscending),
-      activeNodeId: this.getActiveNodeId(),
-      activeTreeId: this.getActiveTreeId(),
+      activeNodeId,
+      activeTreeId,
+      data: _.sortBy(trees, "treeId"),
       isSortedAscending: this.isSortedAscending,
     });
   }
@@ -162,12 +162,12 @@ class CommentTabView extends Marionette.View {
   }
 
 
-  setComment(commentText: string, node: TracePoint) {
-    if (!node) { node = Store.getState().skeletonTracing.getActiveNode(); }
+  setComment(commentText: string, nodeId: number) {
+    if (!nodeId) { nodeId = Store.getState().skeletonTracing.activeNodeId(); }
     // don't add a comment if there is no node
-    if (!node) { return; }
+    if (!nodeId) { return; }
 
-    Store.dispatch(setCommentForNodeAction(node, commentText));
+    Store.dispatch(setCommentForNodeAction(nodeId, commentText));
     this.updateState();
   }
 
@@ -179,7 +179,7 @@ class CommentTabView extends Marionette.View {
     const { activeComment } = this;
 
     // get tree of active comment or activeTree if there is no active comment
-    let nextTree = Store.getState().skeletonTracing.getTree(activeComment.treeId);
+    let nextTree = Store.getState().skeletonTracing.trees[activeComment.treeId];
     nextTree.comments.sort(Utils.compareBy("node", sortAscending));
 
     // try to find next comment for this tree
@@ -188,7 +188,7 @@ class CommentTabView extends Marionette.View {
 
     // try to find next tree with at least one comment
     if (!nextComment) {
-      trees = Store.getState().skeletonTracing.getTreesSortedBy("treeId", sortAscending);
+      trees = _.sortBy(Store.getState().skeletonTracing.trees, "treeId");
       nextTree = _.find(trees,
         tree => this.treeComparator(tree.treeId, sortAscending) > this.treeComparator(activeComment.treeId, sortAscending) && tree.comments.length);
     }

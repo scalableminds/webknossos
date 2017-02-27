@@ -140,24 +140,28 @@ class DatasetActionsView extends Marionette.View {
 
 
   getNextTask() {
-    const model = Store.getState().skeletonTracing || this.model.volumeTracing;
-    const finishUrl = `/annotations/${this.model.tracingType}/${this.model.tracingId}/finish`;
-    const requestTaskUrl = "/user/tasks/request";
+    if (this.model.volumeTracing) {
+      const model = this.model.volumeTracing;
+      const finishUrl = `/annotations/${this.model.tracingType}/${this.model.tracingId}/finish`;
+      const requestTaskUrl = "/user/tasks/request";
 
-    model.stateLogger.save()
-        .then(() => Request.triggerRequest(finishUrl))
-        .then(() => Request.receiveJSON(requestTaskUrl).then(
-            (annotation) => {
-              const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.model.tracing.task, x => x.type.id);
-              const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
-              const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
-              return app.router.loadURL(newTaskUrl);
-            },
-            () =>
-              // Wait a while so users have a chance to read the error message
-              setTimeout((() => app.router.loadURL("/dashboard")), 2000),
-          ),
-        );
+      model.stateLogger.save()
+          .then(() => Request.triggerRequest(finishUrl))
+          .then(() => Request.receiveJSON(requestTaskUrl).then(
+              (annotation) => {
+                const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.model.tracing.task, x => x.type.id);
+                const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
+                const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
+                return app.router.loadURL(newTaskUrl);
+              },
+              () =>
+                // Wait a while so users have a chance to read the error message
+                setTimeout((() => app.router.loadURL("/dashboard")), 2000),
+            ),
+          );
+    } else {
+      throw Error("todo");
+    }
   }
 
 

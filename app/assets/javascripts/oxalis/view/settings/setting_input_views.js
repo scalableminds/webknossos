@@ -156,11 +156,12 @@ export class BoundingBoxSetting extends React.Component {
     const text = evt.target.value;
 
     const isValidInput = new RegExp(/^[\d ,]+$/, "g").test(text);  // only allow numbers, spaces and comma as input
-    const isValidFormat = new RegExp(/(\d+\s*,\s*){5}\d+/).test(text); // BB should look like 0,0,0,0,0,0
+    // const isValidFormat = new RegExp(/(\d+\s*,\s*){5}\d+/).test(text); // BB should look like 0,0,0,0,0,0
+    const boundingBox = Utils.stringToNumberArray(text);
+    const isValidFormat = boundingBox.length === 6;
 
     if (isValidFormat) {
       // Width, height and depth of 0 should be allowed as a non-existing bounding box equals 0,0,0,0,0,0
-      const boundingBox = Utils.stringToNumberArray(text);
       if (boundingBox[3] > 0 || boundingBox[4] > 0 || boundingBox[5] > 0) {
         this.props.onChange(boundingBox);
       }

@@ -216,7 +216,6 @@ class UserApi {
     - sortCommentsAsc
     - segmentationOpacity
     - sphericalCapRadius
-    - renderComments
   *
   * @example
   * const segmentationOpacity = api.user.getConfiguration("segmentationOpacity");

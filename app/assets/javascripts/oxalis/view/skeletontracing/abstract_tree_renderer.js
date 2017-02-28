@@ -385,13 +385,12 @@ class AbstractTreeRenderer {
 
 
   /**
-   * Checks if a node is commented (renderComments has to be true).
+   * Checks if a node is commented.
    * @param  {Number} id TracePoint id
    * @return {Boolean}    true if node is commented
   */
   nodeIdHasComment(id) {
-    const renderComments = Store.getState().userConfiguration.renderComments;
-    return renderComments && _.find(this.tree.comments, { node: id });
+    return _.find(this.tree.comments, { node: id });
   }
 
 

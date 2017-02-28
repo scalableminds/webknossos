@@ -151,7 +151,7 @@ class UserSettingsView extends Component {
         { this.getViewportOptions() }
         { this.getSkeletonOrVolumeOptions() }
         <Panel header="Other" key="4">
-          <BoundingBoxSetting label="Bounding Box" value={this.props.boundingBox} onChange={this.onChangeBoundingBox} />
+          <BoundingBoxSetting label="Bounding Box" onChange={this.onChangeBoundingBox} />
           <SwitchSetting label="Display Planes in 3D View" value={this.props.tdViewDisplayPlanes} onChange={_.partial(this.props.onChange, "tdViewDisplayPlanes")} />
         </Panel>
       </Collapse>

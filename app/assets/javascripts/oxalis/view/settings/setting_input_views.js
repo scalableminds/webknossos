@@ -125,7 +125,6 @@ export function NumberInputSetting({ onChange, value, label, max, min = 1, step 
 
 type BoundingBoxSettingPropTypes = {
   label: string,
-  value: Vector6,
   onChange: Function,
 };
 
@@ -141,14 +140,14 @@ export class BoundingBoxSetting extends React.Component {
     super(props);
     this.state = {
       isValid: true,
-      text: props.value.join(", "),
+      text: "",
     };
   }
 
-  componentWillReceiveProps(newProps: BoundingBoxSettingPropTypes) {
+  componentWillReceiveProps() {
     this.state = {
       isValid: true,
-      text: newProps.value.join(", "),
+      text: "",
     };
   }
 

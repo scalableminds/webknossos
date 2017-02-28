@@ -220,10 +220,10 @@ class PlaneController {
     });
 
     const getMoveValue = (timeFactor) => {
-      if (([0, 1, 2]).includes(this.activeViewport)) {
-        return (Store.getState().userConfiguration.moveValue * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
+      if (this.activeViewport === OrthoViews.TDView) {
+        return (constants.TDView_MOVE_SPEED * timeFactor) / constants.FPS;
       }
-      return (constants.TDView_MOVE_SPEED * timeFactor) / constants.FPS;
+      return (Store.getState().userConfiguration.moveValue * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
     };
 
     this.input.keyboard = new InputKeyboard({

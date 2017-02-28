@@ -11,6 +11,11 @@ import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "a
 import type { Vector6 } from "oxalis/constants";
 
 export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: Function, value: number, label: string, max: number, min?: number, step?: number}) {
+  function _onChange(_value) {
+    if (min <= _value && _value <= max) {
+      onChange(_value);
+    }
+  }
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>
@@ -22,7 +27,7 @@ export function NumberSliderSetting({ onChange, value, label, max, min = 1, step
           min={min}
           max={max}
           style={{ marginLeft: 16 }}
-          value={value} onChange={onChange}
+          value={value} onChange={_onChange}
         />
       </Col>
     </Row>

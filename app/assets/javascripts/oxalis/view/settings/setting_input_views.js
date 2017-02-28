@@ -10,7 +10,7 @@ import Utils from "libs/utils";
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
 import type { Vector3, Vector6 } from "oxalis/constants";
 
-export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: Function, value: number, label: string, max: number, min?: number, step?: number}) {
+export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: (value: number) => void, value: number, label: string, max: number, min?: number, step?: number}) {
   function _onChange(_value) {
     if (min <= _value && _value <= max) {
       onChange(_value);
@@ -35,7 +35,7 @@ export function NumberSliderSetting({ onChange, value, label, max, min = 1, step
 }
 
 type LogSliderSettingProps = {
-  onChange: Function,
+  onChange: (value: number) => void,
   value: number,
   label: string,
   max: number,
@@ -106,7 +106,7 @@ export class LogSliderSetting extends React.Component {
   }
 }
 
-export function SwitchSetting({ onChange, value, label }:{onChange: Function, value: boolean, label: string}) {
+export function SwitchSetting({ onChange, value, label }:{onChange: (value: boolean) => void, value: boolean, label: string}) {
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>
@@ -117,7 +117,7 @@ export function SwitchSetting({ onChange, value, label }:{onChange: Function, va
   );
 }
 
-export function NumberInputSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: Function, value: number, label: string, max?: number, min?: number, step?: number}) {
+export function NumberInputSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: (value: number) => void, value: number, label: string, max?: number, min?: number, step?: number}) {
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>
@@ -236,7 +236,7 @@ type ColorSettingPropTypes = {
   // eslint-disable-next-line react/no-unused-prop-types
   value: Vector3,
   label: string,
-  onChange: Function,
+  onChange: (value: Vector3) => void,
 }
 
 export class ColorSetting extends React.Component {
@@ -272,7 +272,7 @@ export class ColorSetting extends React.Component {
   }
 }
 
-export function DropdownSetting({ onChange, label, value, children }:{ onChange: Function, label: string, value: number, children?: Array<Select.Option> }) {
+export function DropdownSetting({ onChange, label, value, children }:{ onChange: (value: number) => void, label: string, value: number, children?: Array<Select.Option> }) {
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>

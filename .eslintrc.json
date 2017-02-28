@@ -1,10 +1,18 @@
 {
-    "extends": "airbnb",
+    "extends": [
+      "airbnb",
+      "plugin:flowtype/recommended",
+      "plugin:react/recommended",
+      "prettier",
+      "prettier/flowtype",
+      "prettier/react"
+    ],
     "plugins": [
         "react",
         "jsx-a11y",
         "import",
-        "jasmine"
+        "jasmine",
+        "flowtype"
     ],
     "parserOptions": {
       "ecmaVersion": 8
@@ -27,7 +35,7 @@
       "JQuery": false
     },
     "rules": {
-      "quotes": ["error", "double"],
+      "quotes": ["error", "double", { "avoidEscape": true }],
       "max-len": ["off", 100],
       "class-methods-use-this": "off",
       "operator-assignment": "warn",

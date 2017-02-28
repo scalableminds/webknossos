@@ -11,7 +11,7 @@ type UserType = {
   firstName: string,
   lastName: string,
   email: string,
-  isAnonymous: bool,
+  isAnonymous: boolean,
   id: string,
 }
 

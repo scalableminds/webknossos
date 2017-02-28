@@ -83,7 +83,6 @@ class UserSettingsView extends Component {
 
   onChangeBoundingBox = (boundingBox: Vector6) => {
     this.props.oldModel.setUserBoundingBox(boundingBox);
-    this.props.onChange("boundingBox", boundingBox);
   }
 
   getViewportOptions = () => {

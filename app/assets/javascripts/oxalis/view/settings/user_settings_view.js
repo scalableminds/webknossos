@@ -24,6 +24,7 @@ class UserSettingsView extends Component {
     activeTreeId: 0,
     activeCellId: 0,
     zoom: 1,
+    radius: 10,
   };
 
   componentDidMount() {
@@ -34,6 +35,7 @@ class UserSettingsView extends Component {
     wkModel.annotationModel.on("newActiveTree", this.updateIds);
     wkModel.annotationModel.on("newActiveNode", this.updateIds);
     wkModel.annotationModel.on("newActiveCell", this.updateIds);
+    wkModel.annotationModel.on("newActiveNodeRadius", this.updateIds);
     wkModel.on("change:mode", () => this.forceUpdate());
   }
 
@@ -44,12 +46,14 @@ class UserSettingsView extends Component {
         activeNodeId: wkModel.get("skeletonTracing").getActiveNodeId() || 0,
         activeTreeId: wkModel.get("skeletonTracing").getActiveTreeId() || 0,
         activeCellId: 0,
+        radius: this.state.radius,
       });
     } else {
       this.setState({
         activeNodeId: 0,
         activeTreeId: 0,
         activeCellId: wkModel.get("volumeTracing").getActiveCellId() || 0,
+        radius: this.state.radius,
       });
     }
   }
@@ -67,6 +71,12 @@ class UserSettingsView extends Component {
   onChangeActiveCellId = (value: number) => {
     this.props.oldModel.get("volumeTracing").setActiveCell(value);
     this.setState(Object.assign({}, this.state, { activeCellId: value }));
+  }
+  onChangeRadius = (value: number) => {
+    this.setState(Object.assign({}, this.state, { radius: value }), () => {
+      this.props.oldModel.get("skeletonTracing").setActiveNodeRadius(value);
+      this.props.onChange("radius", value);
+    });
   }
 
   getViewportOptions = () => {
@@ -102,7 +112,7 @@ class UserSettingsView extends Component {
         <Panel header="Nodes & Trees" key="3">
           <NumberInputSetting label="Active Node ID" value={this.state.activeNodeId} onChange={this.onChangeActiveNodeId} />
           <NumberInputSetting label="Active Tree ID" value={this.state.activeTreeId} onChange={this.onChangeActiveTreeId} />
-          <NumberSliderSetting label="Radius" max={5000} value={this.props.radius} onChange={_.partial(this.props.onChange, "radius")} />
+          <NumberSliderSetting label="Radius" max={5000} value={this.state.radius} onChange={this.onChangeRadius} />
           <NumberSliderSetting label="Particle Size" max={20} step={0.1} value={this.props.particleSize} onChange={_.partial(this.props.onChange, "particleSize")} />
           <SwitchSetting label="Soma Clicking" value={this.props.newNodeNewTree} onChange={_.partial(this.props.onChange, "newNodeNewTree")} />
           <SwitchSetting label="Override Radius" value={this.props.overrideNodeRadius} onChange={_.partial(this.props.onChange, "overrideNodeRadius")} />

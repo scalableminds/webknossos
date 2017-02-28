@@ -124,7 +124,7 @@ class DataApi {
  /**
   * Returns the names of all available layers of the current tracing.
   */
-  getLayerNames(): [string] {
+  getLayerNames(): Array<string> {
     return _.map(this.model.binary, "name");
   }
 

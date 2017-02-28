@@ -30,7 +30,8 @@ export type ModifierKeys = "alt" | "shift" | "ctrl";
 type KeyboardKey = string;
 type KeyboardHandler = (event: JQueryInputEventObject) => void;
 type KeyboardLoopHandler = (number, isOriginalEvent: boolean) => void;
-type KeyboardBinding = [KeyboardKey, KeyboardHandler];
+type KeyboardBindingPress = [KeyboardKey, KeyboardHandler];
+type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type BindingMap<T: Function> = { [key: KeyboardKey]: T };
 type MouseButtonWhichType = 1 | 3;
 type MouseButtonStringType = "left" | "right";
@@ -54,7 +55,7 @@ function shouldIgnore(event: JQueryInputEventObject, key: KeyboardKey) {
 // to the underlying KeyboadJS library to do its dirty work.
 // Pressing a button will only fire an event once.
 export class InputKeyboardNoLoop {
-  bindings: Array<KeyboardBinding> = [];
+  bindings: Array<KeyboardBindingPress> = [];
   isStarted: boolean = true;
 
   constructor(initialBindings: BindingMap<KeyboardHandler>) {
@@ -92,7 +93,7 @@ export class InputKeyboard {
 
   keyCallbackMap = {};
   keyPressedCount: number = 0;
-  bindings: Array<KeyboardBinding> = [];
+  bindings: Array<KeyboardBindingDownUp> = [];
   isStarted: boolean = true;
   delay: number = 0;
 

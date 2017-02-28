@@ -23,10 +23,10 @@ class BoundingBox {
     // Min is including
     this.min = [0, 0, 0];
     // Max is excluding
-    this.max = this.cube.upperBoundary.slice();
+    this.max = _.clone(this.cube.upperBoundary);
 
     if (this.boundingBox != null) {
-      for (let i = 0; i <= 2; i++) {
+      for (let i = 0; i < 3; i++) {
         this.min[i] = Math.max(this.min[i], this.boundingBox.min[i]);
         this.max[i] = Math.min(this.max[i], this.boundingBox.max[i]);
       }

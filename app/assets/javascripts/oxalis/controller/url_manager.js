@@ -97,7 +97,7 @@ class UrlManager {
     if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
       state = state
         .concat([flycam3d.getZoomStep().toFixed(2)])
-        .concat(_.map(flycam3d.getRotation(), e => e.toFixed(2)));
+        .concat(flycam3d.getRotation().map(e => e.toFixed(2)));
     } else {
       state = state.concat([flycam.getZoomStep().toFixed(2)]);
     }

@@ -3,7 +3,6 @@
  * @flow weak
  */
 
-import Utils from "libs/utils";
 import * as THREE from "three";
 import type { Vector3 } from "oxalis/constants";
 
@@ -22,7 +21,7 @@ class ScaleInfo {
     this.nmPerVoxel = scale;
 
     this.voxelPerNM = [0, 0, 0];
-    for (const i of Utils.__range__(0, (this.nmPerVoxel.length - 1), true)) {
+    for (let i = 0; i < 3; i++) {
       this.voxelPerNM[i] = 1 / this.nmPerVoxel[i];
     }
 

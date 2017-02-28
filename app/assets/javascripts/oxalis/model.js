@@ -388,7 +388,7 @@ class Model extends Backbone.Model {
 
     for (const key of Object.keys(this.binary)) {
       const binary = this.binary[key];
-      for (let i = 0; i <= 2; i++) {
+      for (let i = 0; i < 3; i++) {
         this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]);
         this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]);
       }

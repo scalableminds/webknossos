@@ -10,7 +10,7 @@ import { Collapse } from "antd";
 import Constants from "oxalis/constants";
 import Model from "oxalis/model";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { NumberInputSetting, SwitchSetting, NumberSliderSetting, BoundingBoxSetting, LogSliderSetting } from "./setting_input_views";
+import { NumberInputSetting, SwitchSetting, NumberSliderSetting, BoundingBoxSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
 import type { Vector6 } from "oxalis/constants";
 import type { UserConfigurationType, OxalisState } from "oxalis/store";
 

@@ -1,7 +1,6 @@
 import _ from "lodash";
 import Backbone from "backbone";
 import app from "app";
-import Store from "oxalis/store";
 import Constants from "oxalis/constants";
 import Toast from "libs/toast";
 import Utils from "libs/utils";

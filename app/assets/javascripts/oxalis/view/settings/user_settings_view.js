@@ -12,7 +12,7 @@ import Model from "oxalis/model";
 import type { UserConfigurationType, OxalisState } from "oxalis/store";
 import type SkeletonTracing from "oxalis/model/skeletonTracing/skeletontracing";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, setActiveTreeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, BoundingBoxSetting, LogSliderSetting } from "./setting_input_views";
 
 const Panel = Collapse.Panel;
@@ -93,7 +93,7 @@ class UserSettingsView extends Component {
         <Panel header="Nodes & Trees" key="2">
           <NumberInputSetting label="Active Node ID" value={this.props.activeNodeId} onChange={this.props.onChangeActiveNodeId} />
           <NumberInputSetting label="Active Tree ID" value={this.props.activeTreeId} onChange={this.props.onChangeActiveTreeId} />
-          <NumberSliderSetting label="Radius" max={5000} value={this.props.radius} onChange={_.partial(this.props.onChange, "radius")} />
+          <NumberSliderSetting label="Radius" max={5000} value={this.props.radius} onChange={this.props.onChangeRadius} />
           <NumberSliderSetting label="Particle Size" max={20} step={0.1} value={this.props.particleSize} onChange={_.partial(this.props.onChange, "particleSize")} />
           <SwitchSetting label="Soma Clicking" value={this.props.newNodeNewTree} onChange={_.partial(this.props.onChange, "newNodeNewTree")} />
           <SwitchSetting label="Override Radius" value={this.props.overrideNodeRadius} onChange={_.partial(this.props.onChange, "overrideNodeRadius")} />
@@ -142,6 +142,10 @@ const mapDispatchToProps = dispatch => ({
   onChange(propertyName: string, value: any) { dispatch(updateUserSettingAction(propertyName, value)); },
   onChangeActiveNodeId(id: number) { dispatch(setActiveNodeAction(id)); },
   onChangeActiveTreeId(id: number) { dispatch(setActiveTreeAction(id)); },
+  onChangeRadius(radius: any) {
+    dispatch(updateUserSettingAction("radius", radius));
+    dispatch(setActiveNodeRadiusAction(radius));
+  },
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(UserSettingsView);

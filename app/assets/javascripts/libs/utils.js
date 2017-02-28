@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
 
@@ -89,6 +89,14 @@ const Utils = {
     }
 
     return result;
+  },
+
+  numberArrayToVector6(array: Array<number>): Vector6 {
+    const output = Array(6);
+    for (let i = 0; i < 6; i++) {
+      output[i] = i < array.length ? array[i] : 0;
+    }
+    return output;
   },
 
 

@@ -4,7 +4,7 @@
  */
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import type { ElementClassType } from "oxalis/model/binary/layers/layer";
@@ -35,20 +35,22 @@ export type DatasetType = {
  dataLayers: Array<DataLayerType>
 }
 
+export type DatasetLayerConfigurationType = {
+  color: Vector3,
+  brightness: number,
+  contrast: number,
+};
+
 export type DatasetConfigurationType = {
   datasetName: string,
   fourBit: boolean,
   interpolation: boolean,
   keyboardDelay: number,
   layers: {
-    [name:string]: {
-      color: Vector3,
-      brightness: number,
-      contrast: number
-    }
+    [name:string]: DatasetLayerConfigurationType,
   },
   quality: number
-}
+};
 
 export type UserConfigurationType = {
   clippingDistance: number,
@@ -81,9 +83,14 @@ export type UserConfigurationType = {
   zoom: number,
 }
 
+export type EphemeralConfigurationType = {
+  boundingBox: Vector6,
+};
+
 export type OxalisState = {
   datasetConfiguration: DatasetConfigurationType,
   userConfiguration: UserConfigurationType,
+  ephemeralConfiguration: EphemeralConfigurationType,
   dataset: ?DatasetType,
 }
 
@@ -126,6 +133,9 @@ const defaultState: OxalisState = {
     sphericalCapRadius: 140,
     tdViewDisplayPlanes: true,
     zoom: 1,
+  },
+  ephemeralConfiguration: {
+    boundingBox: [0, 0, 0, 0, 0, 0],
   },
   dataset: null,
 };

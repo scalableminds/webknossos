@@ -51,7 +51,6 @@ export type DatasetConfigurationType = {
 }
 
 export type UserConfigurationType = {
-  boundingBox: Array<number>,
   clippingDistance: number,
   clippingDistanceArbitrary: number,
   crosshairSize: number,
@@ -99,7 +98,6 @@ const defaultState: OxalisState = {
     quality: 0,
   },
   userConfiguration: {
-    boundingBox: [],
     clippingDistance: 50,
     clippingDistanceArbitrary: 64,
     crosshairSize: 0.1,

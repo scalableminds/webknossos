@@ -9,9 +9,10 @@ import { connect } from "react-redux";
 import { Collapse } from "antd";
 import Constants from "oxalis/constants";
 import Model from "oxalis/model";
-import type { UserConfigurationType, OxalisState } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, BoundingBoxSetting, LogSliderSetting } from "./setting_input_views";
+import type { Vector6 } from "oxalis/constants";
+import type { UserConfigurationType, OxalisState } from "oxalis/store";
 
 const Panel = Collapse.Panel;
 
@@ -72,11 +73,17 @@ class UserSettingsView extends Component {
     this.props.oldModel.get("volumeTracing").setActiveCell(value);
     this.setState(Object.assign({}, this.state, { activeCellId: value }));
   }
-  onChangeRadius = (value: number) => {
-    this.setState(Object.assign({}, this.state, { radius: value }), () => {
-      this.props.oldModel.get("skeletonTracing").setActiveNodeRadius(value);
-      this.props.onChange("radius", value);
+
+  onChangeRadius = (radius: number) => {
+    this.setState(Object.assign({}, this.state, { radius }), () => {
+      this.props.oldModel.get("skeletonTracing").setActiveNodeRadius(radius);
+      this.props.onChange("radius", radius);
     });
+  }
+
+  onChangeBoundingBox = (boundingBox: Vector6) => {
+    this.props.oldModel.setUserBoundingBox(boundingBox);
+    this.props.onChange("boundingBox", boundingBox);
   }
 
   getViewportOptions = () => {
@@ -145,7 +152,7 @@ class UserSettingsView extends Component {
         { this.getViewportOptions() }
         { this.getSkeletonOrVolumeOptions() }
         <Panel header="Other" key="4">
-          <BoundingBoxSetting label="Bounding Box" value={this.props.boundingBox} onChange={_.partial(this.props.onChange, "boundingBox")} />
+          <BoundingBoxSetting label="Bounding Box" value={this.props.boundingBox} onChange={this.onChangeBoundingBox} />
           <SwitchSetting label="Display Planes in 3D View" value={this.props.tdViewDisplayPlanes} onChange={_.partial(this.props.onChange, "tdViewDisplayPlanes")} />
         </Panel>
       </Collapse>

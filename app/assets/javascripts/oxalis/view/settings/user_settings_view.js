@@ -100,12 +100,12 @@ class UserSettingsView extends Component {
     } else {
       return (
         <Panel header="Flight Options" key="2">
-          <NumberInputSetting label="Mouse Rotation" min={0.0001} max={0.02} step={0.001} value={this.props.mouseRotateValue} onChange={_.partial(this.props.onChange, "mouseRotateValue")} />
-          <NumberInputSetting label="Keyboard Rotation Value" min={0.001} max={0.08} step={0.001} value={this.state.activeNodeId} onChange={this.onChangeActiveNodeId} />
-          <NumberInputSetting label="Move Value (nm/s)" min={30} max={1500} step={10} value={this.props.moveValue3d} onChange={_.partial(this.props.onChange, "moveValue3d")} />
-          <NumberInputSetting label="Crosshair Size" min={0.05} max={0.5} step={0.01} value={this.props.crosshairSize} onChange={_.partial(this.props.onChange, "crosshairSize")} />
-          <NumberInputSetting label="Sphere Radius" min={50} max={500} step={1} value={this.props.sphericalCapRadius} onChange={_.partial(this.props.onChange, "sphericalCapRadius")} />
-          <NumberInputSetting label="Clipping Distance" max={127} value={this.props.clippingDistanceArbitrary} onChange={_.partial(this.props.onChange, "clippingDistanceArbitrary")} />
+          <NumberSliderSetting label="Mouse Rotation" min={0.0001} max={0.02} step={0.001} value={this.props.mouseRotateValue} onChange={_.partial(this.props.onChange, "mouseRotateValue")} />
+          <NumberSliderSetting label="Keyboard Rotation Value" min={0.001} max={0.08} step={0.001} value={this.state.activeNodeId} onChange={this.onChangeActiveNodeId} />
+          <NumberSliderSetting label="Move Value (nm/s)" min={30} max={1500} step={10} value={this.props.moveValue3d} onChange={_.partial(this.props.onChange, "moveValue3d")} />
+          <NumberSliderSetting label="Crosshair Size" min={0.05} max={0.5} step={0.01} value={this.props.crosshairSize} onChange={_.partial(this.props.onChange, "crosshairSize")} />
+          <NumberSliderSetting label="Sphere Radius" min={50} max={500} step={1} value={this.props.sphericalCapRadius} onChange={_.partial(this.props.onChange, "sphericalCapRadius")} />
+          <NumberSliderSetting label="Clipping Distance" max={127} value={this.props.clippingDistanceArbitrary} onChange={_.partial(this.props.onChange, "clippingDistanceArbitrary")} />
           <SwitchSetting label="Show Crosshair" value={this.props.displayCrosshair} onChange={_.partial(this.props.onChange, "displayCrosshair")} />
         </Panel>
       );
@@ -129,10 +129,10 @@ class UserSettingsView extends Component {
       return (
         <Panel header="Volume Options" key="3">
           <NumberInputSetting label="Active Cell ID" value={this.state.activeCellId} onChange={this.onChangeActiveCellId} />
-          <NumberInputSetting label="Segment Opacity" max={100} value={this.props.segmentationOpacity} onChange={_.partial(this.props.onChange, "segmentationOpacity")} />
+          <NumberSliderSetting label="Segment Opacity" max={100} value={this.props.segmentationOpacity} onChange={_.partial(this.props.onChange, "segmentationOpacity")} />
           <SwitchSetting label="3D Volume Rendering" value={this.props.isosurfaceDisplay} onChange={_.partial(this.props.onChange, "isosurfaceDisplay")} />
-          <NumberInputSetting label="3D Rendering Bounding Box Size" min={1} max={10} step={0.1} value={this.props.isosurfaceBBsize} onChange={_.partial(this.props.onChange, "isosurfaceBBsize")} />
-          <NumberInputSetting label="3D Rendering Resolution" min={40} max={400} value={this.props.isosurfaceResolution} onChange={_.partial(this.props.onChange, "isosurfaceResolution")} />
+          <NumberSliderSetting label="3D Rendering Bounding Box Size" min={1} max={10} step={0.1} value={this.props.isosurfaceBBsize} onChange={_.partial(this.props.onChange, "isosurfaceBBsize")} />
+          <NumberSliderSetting label="3D Rendering Resolution" min={40} max={400} value={this.props.isosurfaceResolution} onChange={_.partial(this.props.onChange, "isosurfaceResolution")} />
         </Panel>
       );
     }

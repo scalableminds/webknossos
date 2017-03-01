@@ -7,7 +7,7 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
-import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor } from "oxalis/model/skeletontracing/foo";
+import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import type { OxalisState } from "oxalis/store";
 import type { SkeletonTracingActionTypes } from "oxalis/model/actions/skeletontracing_actions";
 
@@ -64,10 +64,6 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
     }
 
     case "SET_ACTIVE_NODE": {
-      if (action.shouldMergeTree) {
-        debugger;
-        Error("who is call this?");
-      }
       const newActiveTree = _.find(state.skeletonTracing.trees, tree => action.nodeId in Object.keys(tree.nodes));
 
       if (newActiveTree) {

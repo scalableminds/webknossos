@@ -1,6 +1,9 @@
 /**
- * foo.js
+ * skeletontracing_reducer_helpers.js
  * @flow
+ *
+ * THESE HELPERFUNCTIONS MUST ONLY BE CALLED FROM A REDUCER
+ *
  */
 
 import _ from "lodash";
@@ -11,7 +14,7 @@ import ColorGenerator from "libs/color_generator";
 import Utils from "libs/utils";
 import Window from "libs/window";
 import type { Vector3 } from "oxalis/constants";
-import type { SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, NodeMapType } from "oxalis/store";
+import type { SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType } from "oxalis/store";
 
 function moveNodesToNewTree(trees: TreeMapType, nodeId: number): TreeMapType {
   // TODO

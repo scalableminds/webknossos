@@ -26,9 +26,12 @@ export type EdgeType = {
 };
 
 export type NodeType = {
+  id: number,
   position: Vector3,
   rotation: Vector3,
   bitdepth: number,
+  viewport: number,
+  resolution: number,
   radius: number,
   timestamp: number,
 };

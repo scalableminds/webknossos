@@ -11,7 +11,7 @@ import type { SkeletonContentDataType } from "oxalis/store";
 type initializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing<SkeletonContentDataType> };
 type createNodeActionType = {type: "CREATE_NODE", position: Vector3, rotation: Vector3, viewport: number, resolution: number};
 type deleteNodeActionType = {type: "DELETE_NODE"};
-type setActiveNodeActionType = {type: "SET_ACTIVE_NODE", nodeId: number, shouldMergeTree: boolean};
+type setActiveNodeActionType = {type: "SET_ACTIVE_NODE", nodeId: number};
 type setActiveNodeRadiusActionType = {type: "SET_ACTIVE_NODE_RADIUS", radius: number};
 type createBranchPointActionType = {type: "CREATE_BRANCHPOINT"};
 type deleteBranchPointActionType = {type: "DELETE_BRANCHPOINT"};
@@ -42,11 +42,17 @@ export const deleteNodeAction = (): deleteNodeActionType => ({
   type: "DELETE_NODE",
 });
 
-export const setActiveNodeAction = (nodeId: number, shouldMergeTree: boolean = false): setActiveNodeActionType => ({
-  type: "SET_ACTIVE_NODE",
-  nodeId,
-  shouldMergeTree,
-});
+export const setActiveNodeAction = (nodeId: number, ...args): (setActiveNodeActionType) => {
+  if (args.length > 1) {
+    debugger;
+    Error("Who calls this with multiple arguments?");
+  }
+
+  return {
+    type: "SET_ACTIVE_NODE",
+    nodeId,
+  };
+};
 
 export const setActiveNodeRadiusAction = (radius: number): setActiveNodeRadiusActionType => ({
   type: "SET_ACTIVE_NODE_RADIUS",

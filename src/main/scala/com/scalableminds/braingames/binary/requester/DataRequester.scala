@@ -92,8 +92,10 @@ class DataRequester(
     }.getOrElse(Nil)
   }
 
-  private def emptyResult(bucket: BucketPosition, request: DataReadRequest) =
-    Fox.successful(new Array[Byte](bucket.volume * request.dataLayer.bytesPerElement))
+  private def emptyResult(bucket: BucketPosition, request: DataReadRequest) = {
+    val halfByteFactor = if(request.settings.useHalfByte) 2 else 1
+    Fox.successful(new Array[Byte](bucket.volume * request.dataLayer.bytesPerElement / halfByteFactor))
+  }
 
   protected def handleBucketReadRequest(bucket: BucketPosition, request: DataReadRequest) = {
     val point = request.cuboid.topLeft

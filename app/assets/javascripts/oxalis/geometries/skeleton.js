@@ -64,7 +64,7 @@ class Skeleton {
 
   createNewTree(treeId, treeColor) {
     const tree = new Tree(treeId, treeColor, this.model);
-    tree.showRadius(!this.model.user.get("overrideNodeRadius"));
+    tree.showRadius(!Store.getState().userConfiguration.overrideNodeRadius);
     this.treeGeometries[treeId] = tree;
     this.setActiveNode();
     this.trigger("newGeometries", tree.getMeshes());

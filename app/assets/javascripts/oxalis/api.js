@@ -6,14 +6,16 @@
 // only relative imports are followed by documentationjs
 import _ from "lodash";
 import app from "app";
-import Input from "libs/input";
+import { InputKeyboardNoLoop } from "libs/input";
 import OxalisModel from "oxalis/model";
+import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
-
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
+import type { UserConfigurationType } from "oxalis/store";
 
 /**
  * All tracing related API methods.
@@ -122,7 +124,7 @@ class DataApi {
  /**
   * Returns the names of all available layers of the current tracing.
   */
-  getLayerNames(): [string] {
+  getLayerNames(): Array<string> {
     return _.map(this.model.binary, "name");
   }
 
@@ -215,13 +217,12 @@ class UserApi {
     - sortCommentsAsc
     - segmentationOpacity
     - sphericalCapRadius
-    - renderComments
   *
   * @example
   * const segmentationOpacity = api.user.getConfiguration("segmentationOpacity");
   */
-  getConfiguration(key: string) {
-    return this.model.user.get(key);
+  getConfiguration(key: $Keys<UserConfigurationType>) {
+    return Store.getState().userConfiguration[key];
   }
 
  /**
@@ -231,8 +232,8 @@ class UserApi {
   * @example
   * api.user.setConfiguration("moveValue", 20);
   */
-  setConfiguration(key: string, value) {
-    this.model.user.set(key, value);
+  setConfiguration(key: $Keys<UserConfigurationType>, value) {
+    Store.dispatch(updateUserSettingAction(key, value));
   }
 }
 
@@ -287,7 +288,7 @@ class UtilsApi {
   * Sets a custom handler function for a keyboard shortcut.
   */
   registerKeyHandler(key: string, handler: () => void): Handler {
-    const keyboard = new Input.KeyboardNoLoop({ [key]: handler });
+    const keyboard = new InputKeyboardNoLoop({ [key]: handler });
     return { unregister: keyboard.destroy.bind(keyboard) };
   }
 }

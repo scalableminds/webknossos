@@ -4,7 +4,7 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 
 mockRequire.stopAll();
-const MultipartData = require("../../../../libs/multipart_data").default;
+const MultipartData = require("libs/multipart_data").default;
 // FileReader is not available in node context
 // -> Mock MultipartData to just return the data string
 MultipartData.prototype.dataPromise = function () {
@@ -15,21 +15,27 @@ MultipartData.prototype.dataPromise = function () {
 MultipartData.prototype.randomBoundary = function () {
   return "--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--";
 };
-mockRequire("../../../../libs/multipart_data", MultipartData);
+mockRequire("libs/multipart_data", MultipartData);
 
 const RequestMock = {
   always: (promise, func) => promise.then(func, func),
   sendArraybufferReceiveArraybuffer: sinon.stub(),
   receiveJSON: sinon.stub(),
 };
-mockRequire("../../../../libs/request", RequestMock);
-mockRequire.reRequire("../../../../libs/request");
-mockRequire.reRequire("../../../../oxalis/model/binary/layers/layer");
+const StoreMock = {
+  getState: () => ({
+    dataset: { name: "dataSet" },
+  }),
+};
 
-const WkLayer = mockRequire.reRequire("../../../../oxalis/model/binary/layers/wk_layer").default;
+mockRequire("libs/request", RequestMock);
+mockRequire("oxalis/store", StoreMock);
+mockRequire.reRequire("libs/request");
+mockRequire.reRequire("oxalis/model/binary/layers/layer");
+
+const WkLayer = mockRequire.reRequire("oxalis/model/binary/layers/wk_layer").default;
 
 describe("WkLayer", () => {
-  const dataSetName = "dataSet";
   const layerInfo = {
     name: "layername",
     category: "color",
@@ -47,7 +53,7 @@ describe("WkLayer", () => {
     RequestMock.receiveJSON = sinon.stub();
     RequestMock.receiveJSON.returns(Promise.resolve(tokenResponse));
 
-    layer = new WkLayer(layerInfo, dataSetName, dataStoreInfo);
+    layer = new WkLayer(layerInfo, dataStoreInfo);
   });
 
 
@@ -206,4 +212,3 @@ describe("WkLayer", () => {
     });
   });
 });
-

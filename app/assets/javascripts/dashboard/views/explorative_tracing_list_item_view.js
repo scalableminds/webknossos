@@ -99,19 +99,18 @@ class ExplorativeTracingListItemView extends Marionette.View {
 
   nameExplorativeAnnotation(event) {
     event.preventDefault();
-    const target = $(event.target);
-    const url = target.attr("action");
+    const target = event.target;
+    const url = target.action;
 
     Request.sendUrlEncodedFormReceiveJSON(
       url,
-      { data: target },
+      { data: $(target).serialize() },
     ).then((response) => {
       Toast.message(response.messages);
       const newName = this.$("input[name='name']").val();
       this.model.set("name", newName);
       this.render();
-    },
-    );
+    });
   }
 
   toggleState(state) {

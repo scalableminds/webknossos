@@ -63,23 +63,22 @@ class StateLogger {
   updateTree() {}
 }
 
-mockRequire("../../libs/toast", { error: _.noop });
 mockRequire("libs/toast", { error: _.noop });
 mockRequire("libs/window", window);
-mockRequire("../../libs/request", Request);
-mockRequire("../../libs/error_handling", ErrorHandling);
+mockRequire("libs/request", Request);
+mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);
-mockRequire("../../oxalis/model/scaleinfo", scaleInfo);
-mockRequire("../../oxalis/model/flycam2d", Flycam2d);
-mockRequire("../../oxalis/model/flycam3d", Flycam3d);
-mockRequire("../../oxalis/model/skeletontracing/skeletontracing_statelogger", StateLogger);
-mockRequire("../../oxalis/model/volumetracing/volumetracing", _.noop);
-mockRequire("../../oxalis/model/user", User);
-mockRequire("../../oxalis/model/dataset_configuration", DatasetConfiguration);
+mockRequire("oxalis/model/scaleinfo", scaleInfo);
+mockRequire("oxalis/model/flycam2d", Flycam2d);
+mockRequire("oxalis/model/flycam3d", Flycam3d);
+mockRequire("oxalis/model/skeletontracing/skeletontracing_statelogger", StateLogger);
+mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
+mockRequire("oxalis/model/user", User);
+mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
 mockRequire("keyboardjs", KeyboardJS);
 
 // Avoid node caching and make sure all mockRequires are applied
-const Model = mockRequire.reRequire("../../oxalis/model").default;
+const Model = mockRequire.reRequire("oxalis/model").default;
 const OxalisApi = mockRequire.reRequire("oxalis/api").default;
 
 describe("Api", () => {

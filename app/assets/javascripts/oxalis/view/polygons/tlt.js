@@ -1,6 +1,6 @@
 /**
  * tlt.js
- * @flow weak
+ * @flow
  */
 
 // ### Triangle Lookup Table
@@ -12,7 +12,9 @@
 
 // Generated from https://dl.dropboxusercontent.com/u/26034024/scm/tlt_coffee.c
 
-const tlt = [
+import type { Vector3 } from "oxalis/constants";
+
+const tlt: Array<Array<[Vector3, Vector3, Vector3]>> = [
   [],  // 0
   [[[0.5, 0, 0], [0, 0.5, 0], [0, 0, 0.5]]],  // 1
   [[[0.5, 0, 0], [1, 0, 0.5], [1, 0.5, 0]]],  // 2

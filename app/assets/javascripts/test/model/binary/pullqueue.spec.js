@@ -1,19 +1,20 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+
 import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
-import runAsync from "../../helpers/run-async";
-import { Bucket, BucketStateEnum } from "../../../oxalis/model/binary/bucket";
+import runAsync from "test/helpers/run-async";
+import { DataBucket, BucketStateEnum } from "oxalis/model/binary/bucket";
 
 mockRequire.stopAll();
 
 const RequestMock = {
   always: (promise, func) => promise.then(func, func),
 };
-mockRequire("../../../libs/request", RequestMock);
+mockRequire("libs/request", RequestMock);
 
 // Avoid node caching and make sure all mockRequires are applied
-const PullQueue = mockRequire.reRequire("../../../oxalis/model/binary/pullqueue").default;
+const PullQueue = mockRequire.reRequire("oxalis/model/binary/pullqueue").default;
 
 describe("PullQueue", () => {
   const layer = {
@@ -38,15 +39,15 @@ describe("PullQueue", () => {
     typ: "webknossos-store",
   };
 
-  let pullQueue = null;
-  let buckets = null;
+  let pullQueue;
+  let buckets;
 
   beforeEach(() => {
     pullQueue = new PullQueue(cube, layer, connectionInfo, datastoreInfo);
 
     buckets = [
-      new Bucket(8, [0, 0, 0, 0], null),
-      new Bucket(8, [1, 1, 1, 1], null),
+      new DataBucket(8, [0, 0, 0, 0], null),
+      new DataBucket(8, [1, 1, 1, 1], null),
     ];
 
     for (const bucket of buckets) {

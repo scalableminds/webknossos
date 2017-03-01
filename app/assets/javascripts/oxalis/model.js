@@ -5,25 +5,25 @@
 
 import Backbone from "backbone";
 import _ from "lodash";
+import Store from "oxalis/store";
+import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import window from "libs/window";
-import Utils from "../libs/utils";
-import Binary from "./model/binary";
-import SkeletonTracing from "./model/skeletontracing/skeletontracing";
-import User from "./model/user";
-import DatasetConfiguration from "./model/dataset_configuration";
-import VolumeTracing from "./model/volumetracing/volumetracing";
-import ConnectionInfo from "./model/binarydata_connection_info";
-import scaleInfo from "./model/scaleinfo";
-import Flycam2d from "./model/flycam2d";
-import Flycam3d from "./model/flycam3d";
-import constants from "./constants";
-import type { ModeType, Vector3, Vector4 } from "./constants";
-import Request from "../libs/request";
-import Toast from "../libs/toast";
-import ErrorHandling from "../libs/error_handling";
-import WkLayer from "./model/binary/layers/wk_layer";
-import NdStoreLayer from "./model/binary/layers/nd_store_layer";
+import Utils from "libs/utils";
+import Binary from "oxalis/model/binary";
+import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
+import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
+import ConnectionInfo from "oxalis/model/binarydata_connection_info";
+import scaleInfo from "oxalis/model/scaleinfo";
+import Flycam2d from "oxalis/model/flycam2d";
+import Flycam3d from "oxalis/model/flycam3d";
+import constants from "oxalis/constants";
+import type { ModeType, Vector3, Vector4, Vector6 } from "oxalis/constants";
+import Request from "libs/request";
+import Toast from "libs/toast";
+import ErrorHandling from "libs/error_handling";
+import WkLayer from "oxalis/model/binary/layers/wk_layer";
+import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 
 // This is THE model. It takes care of the data including the
 // communication with the server.
@@ -39,7 +39,6 @@ export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
 };
-export type LayerType = WkLayer | NdStoreLayer;
 export type RestrictionsType = {
   allowAccess: boolean,
   allowUpdate: boolean,
@@ -122,7 +121,6 @@ class Model extends Backbone.Model {
   HANDLED_ERROR = "error_was_handled";
 
   initialized: boolean;
-  user: User;
   connectionInfo: ConnectionInfo;
   binary: {
     [key: string]: Binary,
@@ -136,7 +134,6 @@ class Model extends Backbone.Model {
   flycam3d: Flycam3d;
   volumeTracing: VolumeTracing;
   skeletonTracing: SkeletonTracing;
-  datasetConfiguration: DatasetConfiguration;
   tracing: Tracing;
   mode: ModeType;
   allowedModes: Array<ModeType>;
@@ -161,14 +158,14 @@ class Model extends Backbone.Model {
 
     return Request.receiveJSON(infoUrl).then((tracing: Tracing) => {
       let error;
+      const dataset = tracing.content.dataSet;
       if (tracing.error) {
         ({ error } = tracing);
-      } else if (!tracing.content.dataSet) {
+      } else if (!dataset) {
         error = "Selected dataset doesn't exist";
-      } else if (!tracing.content.dataSet.dataLayers) {
-        const datasetName = tracing.content.dataSet.name;
-        if (datasetName) {
-          error = `Please, double check if you have the dataset '${datasetName}' imported.`;
+      } else if (!dataset.dataLayers) {
+        if (dataset.name) {
+          error = `Please, double check if you have the dataset '${dataset.name}' imported.`;
         } else {
           error = "Please, make sure you have a dataset imported.";
         }
@@ -179,25 +176,9 @@ class Model extends Backbone.Model {
         throw this.HANDLED_ERROR;
       }
 
-      this.user = new User();
-      this.set("user", this.user);
-      this.set("datasetName", tracing.content.dataSet.name);
-
-      return this.user.fetch().then(() => Promise.resolve(tracing));
-    },
-
-    ).then((tracing: Tracing) => {
-      this.set("dataset", new Backbone.Model(tracing.content.dataSet));
-      const colorLayers = _.filter(this.get("dataset").get("dataLayers"),
-                              layer => layer.category === "color");
-      this.set("datasetConfiguration", new DatasetConfiguration({
-        datasetName: this.get("datasetName"),
-        dataLayerNames: _.map(colorLayers, "name"),
-      }));
-      return this.get("datasetConfiguration").fetch().then(() => Promise.resolve(tracing));
-    },
-
-    ).then((tracing: Tracing) => {
+      Store.dispatch(setDatasetAction(dataset));
+      return tracing;
+    }).then((tracing: Tracing) => {
       const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
       return this.initializeWithData(tracing, layerInfos);
     },
@@ -236,8 +217,8 @@ class Model extends Backbone.Model {
 
 
   initializeWithData(tracing: Tracing, layerInfos) {
-    const { dataStore } = tracing.content.dataSet;
-    const dataset = this.get("dataset");
+    const dataset = tracing.content.dataSet;
+    const { dataStore } = dataset;
 
     const LayerClass = (() => {
       switch (dataStore.typ) {
@@ -247,18 +228,15 @@ class Model extends Backbone.Model {
       }
     })();
 
-    const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataset.get("name"), dataStore));
+    const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataStore));
 
     ErrorHandling.assertExtendContext({
       task: this.get("tracingId"),
-      dataSet: dataset.get("name"),
+      dataSet: dataset.name,
     });
 
-    console.log("tracing", tracing);
-    console.log("user", this.user);
-
     const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
-    scaleInfo.initialize(dataset.get("scale"));
+    scaleInfo.initialize(dataset.scale);
 
     const bb = tracing.content.boundingBox;
     if (bb != null) {
@@ -284,7 +262,7 @@ class Model extends Backbone.Model {
     }
 
     const flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, this);
-    const flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"));
+    const flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.scale);
     this.set("flycam", flycam);
     this.set("flycam3d", flycam3d);
     this.listenTo(flycam3d, "changed", matrix => flycam.setPosition(matrix.slice(12, 15)));
@@ -297,7 +275,7 @@ class Model extends Backbone.Model {
         this.set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, this.getSegmentationBinary()));
         this.annotationModel = this.get("volumeTracing");
       } else {
-        this.set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, this.user));
+        this.set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d));
         this.annotationModel = this.get("skeletonTracing");
       }
     }
@@ -334,13 +312,13 @@ class Model extends Backbone.Model {
   }
 
 
-  setUserBoundingBox(bb: Array<number>) {
+  setUserBoundingBox(bb: Vector6) {
     this.userBoundingBox = this.computeBoundingBoxFromArray(bb);
     this.trigger("change:userBoundingBox", this.userBoundingBox);
   }
 
 
-  computeBoundingBoxFromArray(bb: Array<number>): BoundingBoxType {
+  computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
     const [x, y, z, width, height, depth] = bb;
 
     return {
@@ -382,7 +360,7 @@ class Model extends Backbone.Model {
   getLayerInfos(userLayers) {
     // Overwrite or extend layers with userLayers
 
-    const layers = this.get("dataset").get("dataLayers");
+    const layers = Store.getState().dataset.dataLayers;
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {
@@ -399,8 +377,8 @@ class Model extends Backbone.Model {
   }
 
 
-  canDisplaySegmentationData() {
-    return !this.flycam.getIntegerZoomStep() > 0 || !this.getSegmentationBinary();
+  canDisplaySegmentationData(): boolean {
+    return !(this.flycam.getIntegerZoomStep() > 0) || !this.getSegmentationBinary();
   }
 
 
@@ -410,7 +388,7 @@ class Model extends Backbone.Model {
 
     for (const key of Object.keys(this.binary)) {
       const binary = this.binary[key];
-      for (let i = 0; i <= 2; i++) {
+      for (let i = 0; i < 3; i++) {
         this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]);
         this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]);
       }
@@ -462,7 +440,9 @@ class Model extends Backbone.Model {
   applyState(state, tracing) {
     this.get("flycam").setPosition(state.position || tracing.content.editPosition);
     if (state.zoomStep != null) {
-      this.get("user").set("zoom", Math.exp(Math.LN2 * state.zoomStep));
+      _.defer(() => {
+        Store.dispatch(updateUserSettingAction("zoom", Math.exp(Math.LN2 * state.zoomStep)));
+      });
       this.get("flycam3d").setZoomStep(state.zoomStep);
     }
 

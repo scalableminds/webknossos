@@ -8,6 +8,7 @@ import Backbone from "backbone";
 import * as THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";
+import type { ModeType } from "oxalis/constants";
 import Flycam3d from "oxalis/model/flycam3d";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import Model from "oxalis/model";
@@ -39,7 +40,7 @@ class ArbitraryPlane {
   controller: ArbitraryController;
   mesh: THREE.Mesh;
   isDirty: boolean;
-  queryVertices: Float32Array;
+  queryVertices: ?Float32Array;
   width: number;
   // TODO: Probably unused? Recheck when flow coverage is higher
   height: number;
@@ -72,14 +73,18 @@ class ArbitraryPlane {
   }
 
 
-  setMode(mode) {
-    this.queryVertices = (() => {
-      switch (mode) {
-        case constants.MODE_ARBITRARY: return this.calculateSphereVertices();
-        case constants.MODE_ARBITRARY_PLANE: return this.calculatePlaneVertices();
-        default: throw new Error("Unrecognized mode:", mode);
-      }
-    })();
+  setMode(mode: ModeType) {
+    switch (mode) {
+      case constants.MODE_ARBITRARY:
+        this.queryVertices = this.calculateSphereVertices();
+        break;
+      case constants.MODE_ARBITRARY_PLANE:
+        this.queryVertices = this.calculatePlaneVertices();
+        break;
+      default:
+        this.queryVertices = null;
+        break;
+    }
 
     this.isDirty = true;
   }

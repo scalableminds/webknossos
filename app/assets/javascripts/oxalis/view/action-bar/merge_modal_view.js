@@ -203,15 +203,15 @@ class MergeModalView extends ModalView {
 
     const form = this.ui.uploadAndExploreForm;
 
-    Request.always(
-      Request.sendMultipartFormReceiveJSON(
-        form.attr("action"),
-        { data: new FormData(form[0]) },
-      ).then((data) => {
+    Request.sendMultipartFormReceiveJSON(
+      form.attr("action"),
+      { data: new FormData(form[0]) },
+    ).then(
+      (data) => {
         this.nml = data.annotation;
         Toast.message(data.messages);
+        this.toggleIcon(true);
       },
-      ),
       () => this.toggleIcon(true),
     );
   }

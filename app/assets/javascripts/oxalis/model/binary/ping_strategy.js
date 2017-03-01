@@ -1,64 +1,46 @@
 /**
  * ping_strategy.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
-import Utils from "libs/utils";
-import Cube from "oxalis/model/binary/data_cube";
-import Dimensions from "../dimensions";
-import { BUCKET_SIZE_P } from "./bucket";
+import DataCube from "oxalis/model/binary/data_cube";
+import Dimensions from "oxalis/model/dimensions";
+import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
+import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
+import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 
 const MAX_ZOOM_STEP_DIFF = 1;
 
-class PingStrategy {
-
-  cube: Cube;
-  velocityRangeStart: number;
-  velocityRangeEnd: number;
-  roundTripTimeRangeStart: number;
-  roundTripTimeRangeEnd: number;
-  contentTypes: Array<string>;
-  name: string;
+export class AbstractPingStrategy {
+  cube: DataCube;
+  velocityRangeStart: number = 0;
+  velocityRangeEnd: number = 0;
+  roundTripTimeRangeStart: number = 0;
+  roundTripTimeRangeEnd: number = 0;
+  contentTypes: Array<string> = [];
+  name: string = "ABSTRACT";
   u: number;
   v: number;
-  static BaseStrategy: BaseStrategy;
-  static Skeleton: Skeleton;
-  static Volume: Volume;
 
-  constructor(cube) {
+  constructor(cube: DataCube) {
     this.cube = cube;
-
-    this.velocityRangeStart = 0;
-    this.velocityRangeEnd = 0;
-    this.roundTripTimeRangeStart = 0;
-    this.roundTripTimeRangeEnd = 0;
-    this.contentTypes = [];
-    this.name = "ABSTRACT";
   }
 
-
-  forContentType(contentType) {
-    return _.isEmpty(this.contentTypes) || ~this.contentTypes.indexOf(contentType);
+  forContentType(contentType: string): boolean {
+    return _.isEmpty(this.contentTypes) || this.contentTypes.includes(contentType);
   }
 
-
-  inVelocityRange(value: number) {
+  inVelocityRange(value: number): boolean {
     return this.velocityRangeStart <= value && value <= this.velocityRangeEnd;
   }
 
-
-  inRoundTripTimeRange(value: number) {
+  inRoundTripTimeRange(value: number): boolean {
     return this.roundTripTimeRangeStart <= value && value <= this.roundTripTimeRangeEnd;
   }
 
-
-  ping() {
-    throw new Error("Needs to be implemented in subclass");
-  }
-
-
-  getBucketArray(center, width, height) {
+  getBucketArray(center: Vector3, width: number, height: number) {
     const buckets = [];
     const uOffset = Math.ceil(width / 2);
     const vOffset = Math.ceil(height / 2);
@@ -71,39 +53,30 @@ class PingStrategy {
         buckets.push(_.min(bucket) >= 0 ? bucket : null);
       }
     }
-
     return buckets;
   }
 }
 
 
-class BaseStrategy extends PingStrategy {
+export class PingStrategy extends AbstractPingStrategy {
 
-  preloadingSlides: number;
-  preloadingPriorityOffset: number;
+  velocityRangeStart = 0;
+  velocityRangeEnd = Infinity;
+  roundTripTimeRangeStart = 0;
+  roundTripTimeRangeEnd = Infinity;
+  preloadingSlides = 0;
+  preloadingPriorityOffset = 0;
   w: number;
 
-  constructor(...args) {
-    super(...args);
-    this.velocityRangeStart = 0;
-    this.velocityRangeEnd = Infinity;
-
-    this.roundTripTimeRangeStart = 0;
-    this.roundTripTimeRangeEnd = Infinity;
-
-    this.preloadingSlides = 0;
-    this.preloadingPriorityOffset = 0;
-  }
-
-
-  ping(position, direction, requestedZoomStep, areas, activePlane) {
+  ping(position: Vector3, direction: Vector3, requestedZoomStep: number,
+    areas: OrthoViewMapType<Vector4>, activePlane: OrthoViewType): Array<PullQueueItemType> {
     const zoomStep = Math.min(requestedZoomStep, this.cube.MAX_ZOOM_STEP);
     const zoomStepDiff = requestedZoomStep - zoomStep;
     const pullQueue = [];
 
     if (zoomStepDiff > MAX_ZOOM_STEP_DIFF) { return pullQueue; }
 
-    for (let plane = 0; plane <= 2; plane++) {
+    for (const plane of OrthoViewValuesWithoutTDView) {
       const indices = Dimensions.getIndices(plane);
       this.u = indices[0];
       this.v = indices[1];
@@ -128,8 +101,12 @@ class BaseStrategy extends PingStrategy {
           pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority });
           if (plane === activePlane) {
             // preload only for active plane
-            for (const slide of Utils.__range__(0, this.preloadingSlides, false)) {
-              if (direction[this.w] >= 0) { bucket[this.w]++; } else { bucket[this.w]--; }
+            for (let slide = 0; slide < this.preloadingSlides; slide++) {
+              if (direction[this.w] >= 0) {
+                bucket[this.w]++;
+              } else {
+                bucket[this.w]--;
+              }
               const preloadingPriority = (priority << (slide + 1)) + this.preloadingPriorityOffset;
               pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: preloadingPriority });
             }
@@ -137,32 +114,19 @@ class BaseStrategy extends PingStrategy {
         }
       }
     }
-
     return pullQueue;
   }
 }
 
-
-export class Skeleton extends BaseStrategy {
-  constructor(...args) {
-    super(...args);
-    this.contentTypes = ["skeletonTracing"];
-
-    this.name = "SKELETON";
-    this.preloadingSlides = 2;
-  }
+export class SkeletonPingStrategy extends PingStrategy {
+  contentTypes = ["skeletonTracing"];
+  name = "SKELETON";
+  preloadingSlides = 2;
 }
 
-
-export class Volume extends BaseStrategy {
-  constructor(...args) {
-    super(...args);
-    this.contentTypes = ["volumeTracing"];
-
-    this.name = "VOLUME";
-    this.preloadingSlides = 1;
-    this.preloadingPriorityOffset = 80;
-  }
+export class VolumePingStrategy extends PingStrategy {
+  contentTypes = ["volumeTracing"];
+  name = "VOLUME";
+  preloadingSlides = 1;
+  preloadingPriorityOffset = 80;
 }
-
-export default PingStrategy;

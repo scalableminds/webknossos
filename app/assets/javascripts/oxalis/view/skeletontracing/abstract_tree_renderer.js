@@ -14,8 +14,6 @@ class AbstractTreeRenderer {
 
     this.prototype.MODE_NORMAL = 0;     // draw every node and the complete tree
     this.prototype.MODE_NOCHAIN = 1;     // draw only decision points
-
-    this.prototype.RENDER_COMMENTS = true;  // draw comments into tree
   }
 
   constructor($canvas) {
@@ -386,12 +384,12 @@ class AbstractTreeRenderer {
 
 
   /**
-   * Checks if a node is commented (RENDER_COMMENTS has to be true).
+   * Checks if a node is commented.
    * @param  {Number} id TracePoint id
    * @return {Boolean}    true if node is commented
   */
   nodeIdHasComment(id) {
-    return this.RENDER_COMMENTS && _.find(this.tree.comments, { node: id });
+    return _.find(this.tree.comments, { node: id });
   }
 
 
@@ -510,16 +508,6 @@ class AbstractTreeRenderer {
       this.commentColor = "blue";
     }
   }
-
-
-  /**
-   * Setter.
-   * @param  {Boolean} renderComments true, if abstract tree should show comments
-  */
-  renderComments(renderComments) {
-    this.RENDER_COMMENTS = renderComments;
-  }
-
 
   /**
    * Set width and height of the canvas object.

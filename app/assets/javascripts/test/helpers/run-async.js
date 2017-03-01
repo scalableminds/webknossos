@@ -17,4 +17,3 @@ export default function runAsync(functions, waitTimeMs = 100) {
     }, waitTimeMs);
   });
 }
-

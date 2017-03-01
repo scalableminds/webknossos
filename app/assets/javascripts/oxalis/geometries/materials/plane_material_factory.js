@@ -4,10 +4,13 @@
  */
 
 import _ from "lodash";
+import * as THREE from "three";
 import app from "app";
 import Utils from "libs/utils";
-import * as THREE from "three";
+import Store from "oxalis/store";
 import AbstractPlaneMaterialFactory from "./abstract_plane_material_factory";
+
+const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
@@ -58,14 +61,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: texture,
       };
       if (texture.binaryCategory !== "segmentation") {
-        const color = this.convertColor(this.model.datasetConfiguration.get(`layers.${texture.binaryName}.color`));
         this.uniforms[`${shaderName}_weight`] = {
           type: "f",
           value: 1,
         };
         this.uniforms[`${shaderName}_color`] = {
           type: "v3",
-          value: new THREE.Vector3(...color),
+          value: DEFAULT_COLOR,
         };
       }
     }
@@ -99,16 +101,15 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   setupChangeListeners() {
     super.setupChangeListeners();
 
-    this.listenTo(this.model.datasetConfiguration, "change", function (model) {
-      const object = model.changed.layers || {};
-      for (const binaryName of Object.keys(object)) {
-        const changes = object[binaryName];
-        const name = this.sanitizeName(binaryName);
-        if (changes.color != null) {
-          const color = this.convertColor(changes.color);
+    Store.subscribe(() => {
+      const layerSettings = Store.getState().datasetConfiguration.layers;
+      _.forEach(layerSettings, (settings, layerName) => {
+        const name = this.sanitizeName(layerName);
+        if (settings.color != null) {
+          const color = this.convertColor(settings.color);
           this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
         }
-      }
+      });
 
       app.vent.trigger("rerender");
     });

@@ -90,8 +90,7 @@ class VolumeTracing {
   toggleMode() {
     return this.setMode(
       this.mode === Constants.VOLUME_MODE_TRACE ?
-        Constants.VOLUME_MODE_MOVE
-      :
+        Constants.VOLUME_MODE_MOVE :
         Constants.VOLUME_MODE_TRACE,
     );
   }

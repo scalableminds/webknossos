@@ -6,7 +6,7 @@
 import _ from "lodash";
 import $ from "jquery";
 import Backbone from "backbone";
-import Input from "libs/input";
+import { InputKeyboardNoLoop } from "libs/input";
 import Model from "oxalis/model";
 import VolumeTracingView from "oxalis/view/volumetracing/volumetracing_view";
 import SceneController from "oxalis/controller/scene_controller";
@@ -25,7 +25,7 @@ class VolumeTracingController {
   inDeleteMode: boolean;
   mergeMode: 0 | 1 | 2;
   prevActiveCell: number;
-  keyboardNoLoop: Input.KeyboardNoLoop;
+  keyboardNoLoop: InputKeyboardNoLoop;
 
   MERGE_MODE_NORMAL = 0;
   MERGE_MODE_CELL1 = 1;
@@ -39,11 +39,10 @@ class VolumeTracingController {
 
     _.extend(this, Backbone.Events);
 
-    $("#create-cell-button").on("click", () => this.model.volumeTracing.createCell(),
-    );
+    $("#create-cell-button").on("click", () => this.model.volumeTracing.createCell());
 
     // Keyboard shortcuts
-    this.keyboardNoLoop = new Input.KeyboardNoLoop({
+    this.keyboardNoLoop = new InputKeyboardNoLoop({
       w: () => this.model.volumeTracing.toggleMode(),
       "1": () => this.model.volumeTracing.toggleMode(),
     });
@@ -72,14 +71,12 @@ class VolumeTracingController {
         $(inputId).on("focus", () => {
           this.mergeMode = inputModeMapping[inputId];
           console.log(this.mergeMode);
-        },
-        );
+        });
         $(inputId).keypress((event) => {
           if (event.which === 13) {
             this.merge();
           }
-        },
-        );
+        });
       })(input);
     }
   }

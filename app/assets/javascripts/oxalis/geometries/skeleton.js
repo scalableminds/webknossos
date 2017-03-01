@@ -7,12 +7,13 @@ import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
+import Store from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import Model from "oxalis/model";
 import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
-import constants from "../constants";
-import Tree from "./tree";
+import { OrthoViews } from "oxalis/constants";
+import Tree from "oxalis/geometries/tree";
 
 class Skeleton {
   // This class is supposed to collect all the Geometries that belong to the skeleton, like
@@ -58,17 +59,12 @@ class Skeleton {
     this.listenTo(this.skeletonTracing, "setBranch", this.setBranch);
     this.listenTo(this.skeletonTracing, "newTreeColor", this.updateTreeColor);
     this.listenTo(this.skeletonTracing, "reloadTrees", this.loadSkeletonFromModel);
-
-    this.listenTo(this.model.user, "change:overrideNodeRadius", () => (
-      _.map(this.treeGeometries, tree =>
-        tree.showRadius(!this.model.user.get("overrideNodeRadius")))),
-    );
   }
 
 
   createNewTree(treeId, treeColor) {
     const tree = new Tree(treeId, treeColor, this.model);
-    tree.showRadius(!this.model.user.get("overrideNodeRadius"));
+    tree.showRadius(!Store.getState().userConfiguration.overrideNodeRadius);
     this.treeGeometries[treeId] = tree;
     this.setActiveNode();
     this.trigger("newGeometries", tree.getMeshes());
@@ -239,11 +235,10 @@ class Skeleton {
 
   updateForCam(id) {
     for (const tree of _.values(this.treeGeometries)) {
-      tree.showRadius(id !== constants.TDView &&
-        !this.model.user.get("overrideNodeRadius"));
+      tree.showRadius(id !== OrthoViews.TDView && !Store.getState().userConfiguration.overrideNodeRadius);
     }
 
-    if (constants.ALL_PLANES.includes(id)) {
+    if (id !== OrthoViews.TDView) {
       return this.setVisibilityTemporary(this.isVisible);
     }
     return this.setVisibilityTemporary(true);

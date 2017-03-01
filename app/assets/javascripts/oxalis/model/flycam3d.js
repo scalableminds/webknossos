@@ -1,26 +1,14 @@
 /**
  * flycam3d.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import Backbone from "backbone";
 import * as THREE from "three";
 import { M4x4 } from "libs/mjs";
+import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";
-
-const updateMacro = function (_this) {
-  _this.trigger("changed", _this.currentMatrix, _this.zoomStep);
-  _this.hasChanged = true;
-};
-
-
-const transformationWithDistanceMacro = function (_this, transformationFn, transformationArg1, transformationArg2) {
-  const { currentMatrix } = _this;
-  M4x4.translate(_this.distanceVecNegative, currentMatrix, currentMatrix);
-  transformationFn.call(_this, transformationArg1, transformationArg2);
-  M4x4.translate(_this.distanceVecPositive, currentMatrix, currentMatrix);
-};
 
 const ZOOM_STEP_INTERVAL = 1.1;
 const ZOOM_STEP_MIN = 0.5;
@@ -35,7 +23,10 @@ class Flycam3d {
   distanceVecNegative: Vector3;
   distanceVecPositive: Vector3;
 
-  constructor(distance, scale) {
+  // Copied from backbone events (TODO: handle this better)
+  trigger: Function;
+
+  constructor(distance: number, scale: Vector3) {
     this.distance = distance;
     _.extend(this, Backbone.Events);
 
@@ -45,14 +36,21 @@ class Flycam3d {
     this.calculateDistanceVectors(this.zoomStep);
   }
 
+  transformationWithDistance(transformationCallback: () => void) {
+    const { currentMatrix } = this;
+    M4x4.translate(this.distanceVecNegative, currentMatrix, currentMatrix);
+    transformationCallback();
+    M4x4.translate(this.distanceVecPositive, currentMatrix, currentMatrix);
+  }
 
-  calculateDistanceVectors(zoomStep = 1) {
+
+  calculateDistanceVectors(zoomStep: number = 1): void {
     this.distanceVecNegative = [0, 0, -zoomStep * this.distance];
     this.distanceVecPositive = [0, 0, zoomStep * this.distance];
   }
 
 
-  calculateScaleValues(scale): Vector3 {
+  calculateScaleValues(scale: Vector3): Vector3 {
     scale = [1 / scale[0], 1 / scale[1], 1 / scale[2]];
     const maxScale = Math.max(scale[0], scale[1], scale[2]);
     const multi = 1 / maxScale;
@@ -61,7 +59,7 @@ class Flycam3d {
   }
 
 
-  reset(resetPosition = true) {
+  reset(resetPosition: boolean = true): void {
     let position;
     const { scale } = this;
     if (this.currentMatrix != null) {
@@ -84,16 +82,17 @@ class Flycam3d {
     // Apply 180° Rotation to keep it consistent with plane view
     this.roll(Math.PI);
 
-    return updateMacro(this);
+    this.update();
   }
 
 
-  update() {
-    return updateMacro(this);
+  update(): void {
+    this.trigger("changed", this.currentMatrix, this.zoomStep);
+    this.hasChanged = true;
   }
 
 
-  flush() {
+  flush(): boolean {
     if (this.hasChanged) {
       this.hasChanged = false;
       return true;
@@ -102,116 +101,116 @@ class Flycam3d {
   }
 
 
-  zoomIn() {
+  zoomIn(): void {
     this.zoomStep = Math.max(this.zoomStep / ZOOM_STEP_INTERVAL, ZOOM_STEP_MIN);
     this.calculateDistanceVectors(this.zoomStep);
-    return updateMacro(this);
+    this.update();
   }
 
 
-  zoomOut() {
+  zoomOut(): void {
     this.zoomStep = Math.min(this.zoomStep * ZOOM_STEP_INTERVAL, ZOOM_STEP_MAX);
     this.calculateDistanceVectors(this.zoomStep);
-    return updateMacro(this);
+    this.update();
   }
 
 
-  getZoomStep() {
+  getZoomStep(): number {
     return this.zoomStep;
   }
 
 
-  setZoomStep(zoomStep) {
+  setZoomStep(zoomStep: number): void {
     this.zoomStep = Math.min(ZOOM_STEP_MAX, Math.max(ZOOM_STEP_MIN, zoomStep));
   }
 
 
-  getMatrix() {
+  getMatrix(): Matrix4x4 {
     return M4x4.clone(this.currentMatrix);
   }
 
 
-  getZoomedMatrix() {
+  getZoomedMatrix(): Matrix4x4 {
     const matrix = this.getMatrix();
     return M4x4.scale1(this.zoomStep, matrix, matrix);
   }
 
 
-  setMatrix(matrix) {
+  setMatrix(matrix: Matrix4x4): void {
     this.currentMatrix = M4x4.clone(matrix);
-    return updateMacro(this);
+    this.update();
   }
 
 
-  move(vector) {
+  move(vector: Vector3): void {
     M4x4.translate(vector, this.currentMatrix, this.currentMatrix);
-    return updateMacro(this);
+    this.update();
   }
 
 
-  yaw(angle, regardDistance = false) {
+  yaw(angle: number, regardDistance: boolean = false): void {
     if (regardDistance) {
-      transformationWithDistanceMacro(this, this.yawSilent, angle);
+      this.transformationWithDistance(() => { this.yawSilent(angle); });
     } else {
       this.yawSilent(angle);
     }
-    return updateMacro(this);
+    this.update();
   }
 
 
-  yawSilent(angle) {
-    return this.rotateOnAxisSilent(angle, [0, 1, 0]);
+  yawSilent(angle: number): void {
+    this.rotateOnAxisSilent(angle, [0, 1, 0]);
   }
 
 
-  roll(angle, regardDistance = false) {
+  roll(angle: number, regardDistance: boolean = false): void {
     if (regardDistance) {
-      transformationWithDistanceMacro(this, this.rollSilent, angle);
+      this.transformationWithDistance(() => { this.rollSilent(angle); });
     } else {
       this.rollSilent(angle);
     }
-    return updateMacro(this);
+    this.update();
   }
 
 
-  rollSilent(angle) {
-    return this.rotateOnAxisSilent(angle, [0, 0, 1]);
+  rollSilent(angle: number): void {
+    this.rotateOnAxisSilent(angle, [0, 0, 1]);
   }
 
 
-  pitch(angle, regardDistance = false) {
+  pitch(angle: number, regardDistance: boolean = false): void {
     if (regardDistance) {
-      transformationWithDistanceMacro(this, this.pitchSilent, angle);
+      this.transformationWithDistance(() => { this.pitchSilent(angle); });
     } else {
       this.pitchSilent(angle);
     }
-    return updateMacro(this);
+    this.update();
   }
 
 
-  pitchSilent(angle) {
-    return this.rotateOnAxisSilent(angle, [1, 0, 0]);
+  pitchSilent(angle: number): void {
+    this.rotateOnAxisSilent(angle, [1, 0, 0]);
   }
 
 
-  rotateOnAxis(angle, axis) {
+  rotateOnAxis(angle: number, axis: Vector3): void {
     this.rotateOnAxisSilent(angle, axis);
-    return updateMacro(this);
+    this.update();
   }
 
 
-  rotateOnAxisSilent(angle, axis) {
-    return M4x4.rotate(angle, axis, this.currentMatrix, this.currentMatrix);
+  rotateOnAxisSilent(angle: number, axis: Vector3): void {
+    M4x4.rotate(angle, axis, this.currentMatrix, this.currentMatrix);
   }
 
 
-  rotateOnAxisDistance(angle, axis) {
-    transformationWithDistanceMacro(this, this.rotateOnAxisSilent, angle, axis);
-    return updateMacro(this);
+  rotateOnAxisDistance(angle: number, axis: Vector3): void {
+    this.transformationWithDistance(() => { this.rotateOnAxisSilent(angle, axis); });
+    this.update();
   }
 
 
-  toString() {
+  toString(): string {
     const matrix = this.currentMatrix;
     return `[${matrix[0]}, ${matrix[1]}, ${matrix[2]}, ${matrix[3]}, ${
       matrix[4]}, ${matrix[5]}, ${matrix[6]}, ${matrix[7]}, ${
@@ -220,13 +219,13 @@ class Flycam3d {
   }
 
 
-  getPosition() {
+  getPosition(): Vector3 {
     const matrix = this.currentMatrix;
     return [matrix[12], matrix[13], matrix[14]];
   }
 
 
-  getRotation() {
+  getRotation(): Vector3 {
     const object = new THREE.Object3D();
     const matrix = (new THREE.Matrix4()).fromArray(this.currentMatrix).transpose();
     object.applyMatrix(matrix);
@@ -235,15 +234,15 @@ class Flycam3d {
     // http://javascript.about.com/od/problemsolving/a/modulobug.htm
     const mod = (x, n) => ((x % n) + n) % n;
 
-    return _.map([
+    return [
       object.rotation.x,
       object.rotation.y,
       object.rotation.z - Math.PI,
-    ], e => mod((180 / Math.PI) * e, 360));
+    ].map(e => mod((180 / Math.PI) * e, 360));
   }
 
 
-  setPositionSilent(p) {
+  setPositionSilent(p: Vector3): void {
     const matrix = this.currentMatrix;
     matrix[12] = p[0];
     matrix[13] = p[1];
@@ -251,21 +250,21 @@ class Flycam3d {
   }
 
 
-  setPosition(p) {
+  setPosition(p: Vector3): void {
     this.setPositionSilent(p);
-    return updateMacro(this);
+    this.update();
   }
 
 
-  setRotation([x, y, z]) {
+  setRotation([x, y, z]: Vector3): void {
     this.reset(false);
     this.roll((-z * Math.PI) / 180);
     this.yaw((-y * Math.PI) / 180);
-    return this.pitch((-x * Math.PI) / 180);
+    this.pitch((-x * Math.PI) / 180);
   }
 
 
-  getCurrentUpVector() {
+  getCurrentUpVector(): Vector3 {
     const currentRotation = new THREE.Matrix4();
     currentRotation.extractRotation(new THREE.Matrix4(...this.currentMatrix));
     const up = new THREE.Vector3(0, 1, 0);
@@ -275,18 +274,18 @@ class Flycam3d {
   }
 
 
-  convertToJsArray(floatXArray) {
+  convertToJsArray(floatXArray: Float32Array): number[] {
     return Array.prototype.slice.call(floatXArray);
   }
 
 
-  getUp() {
+  getUp(): Vector3 {
     const matrix = this.currentMatrix;
     return [matrix[4], matrix[5], matrix[6]];
   }
 
 
-  getLeft() {
+  getLeft(): Vector3 {
     const matrix = this.currentMatrix;
     return [matrix[0], matrix[1], matrix[2]];
   }

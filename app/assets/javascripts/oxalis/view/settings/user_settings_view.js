@@ -9,10 +9,10 @@ import { connect } from "react-redux";
 import { Collapse } from "antd";
 import Constants from "oxalis/constants";
 import Model from "oxalis/model";
-import { updateUserSettingAction, updateEphemeralSettingAction } from "oxalis/model/actions/settings_actions";
+import { updateUserSettingAction, updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
 import type { Vector6 } from "oxalis/constants";
-import type { UserConfigurationType, EphemeralConfigurationType, OxalisState } from "oxalis/store";
+import type { UserConfigurationType, TemporaryConfigurationType, OxalisState } from "oxalis/store";
 
 const Panel = Collapse.Panel;
 
@@ -20,9 +20,9 @@ class UserSettingsView extends Component {
 
   props: {
     userConfiguration: UserConfigurationType,
-    ephemeralConfiguration: EphemeralConfigurationType,
+    temporaryConfiguration: TemporaryConfigurationType,
     onChangeUser: (key: $Keys<UserConfigurationType>, value: any) => void,
-    onChangeEphemeral: (key: $Keys<EphemeralConfigurationType>, value: any) => void,
+    onChangeTemporary: (key: $Keys<TemporaryConfigurationType>, value: any) => void,
     oldModel: Model,
   };
 
@@ -89,7 +89,7 @@ class UserSettingsView extends Component {
 
   onChangeBoundingBox = (boundingBox: Vector6) => {
     this.props.oldModel.setUserBoundingBox(boundingBox);
-    this.props.onChangeEphemeral("boundingBox", boundingBox);
+    this.props.onChangeTemporary("boundingBox", boundingBox);
   }
 
   getViewportOptions = () => {
@@ -167,7 +167,7 @@ class UserSettingsView extends Component {
         { this.getViewportOptions() }
         { this.getSkeletonOrVolumeOptions() }
         <Panel header="Other" key="4">
-          <Vector6InputSetting label="Bounding Box" tooltipTitle="Format: minX, minY, minZ, width, height, depth" value={this.props.ephemeralConfiguration.boundingBox} onChange={this.onChangeBoundingBox} />
+          <Vector6InputSetting label="Bounding Box" tooltipTitle="Format: minX, minY, minZ, width, height, depth" value={this.props.temporaryConfiguration.boundingBox} onChange={this.onChangeBoundingBox} />
           <SwitchSetting label="Display Planes in 3D View" value={this.props.userConfiguration.tdViewDisplayPlanes} onChange={_.partial(this.props.onChangeUser, "tdViewDisplayPlanes")} />
         </Panel>
       </Collapse>
@@ -177,12 +177,12 @@ class UserSettingsView extends Component {
 
 const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
-  ephemeralConfiguration: state.ephemeralConfiguration,
+  temporaryConfiguration: state.temporaryConfiguration,
 });
 
 const mapDispatchToProps = dispatch => ({
   onChangeUser(propertyName, value) { dispatch(updateUserSettingAction(propertyName, value)); },
-  onChangeEphemeral(propertyName, value) { dispatch(updateEphemeralSettingAction(propertyName, value)); },
+  onChangeTemporary(propertyName, value) { dispatch(updateTemporarySettingAction(propertyName, value)); },
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(UserSettingsView);

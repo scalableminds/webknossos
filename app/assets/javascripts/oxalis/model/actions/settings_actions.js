@@ -4,11 +4,11 @@
  * settings_actions.js
  * @flow
  */
-import type { UserConfigurationType, DatasetConfigurationType, DatasetLayerConfigurationType, EphemeralConfigurationType, DatasetType } from "oxalis/store";
+import type { UserConfigurationType, DatasetConfigurationType, DatasetLayerConfigurationType, TemporaryConfigurationType, DatasetType } from "oxalis/store";
 
 type UpdateUserSettingActionType = {type: "UPDATE_USER_SETTING", propertyName: $Keys<UserConfigurationType>, value: any};
 type UpdateDatasetSettingActionType = {type: "UPDATE_DATASET_SETTING", propertyName: $Keys<DatasetConfigurationType>, value: any};
-type UpdateEphemeralSettingActionType = {type: "UPDATE_EPHEMERAL_SETTING", propertyName: $Keys<EphemeralConfigurationType>, value: any};
+type UpdateTemporarySettingActionType = {type: "UPDATE_TEMPORARY_SETTING", propertyName: $Keys<TemporaryConfigurationType>, value: any};
 type UpdateLayerSettingActionType = {type: "UPDATE_LAYER_SETTING", layerName:string, propertyName: $Keys<DatasetLayerConfigurationType>, value: any};
 export type InitializeSettingsAction = {type: "INITIALIZE_SETTINGS", initialUserSettings: UserConfigurationType, initialDatasetSettings: DatasetConfigurationType};
 type SetDatasetAction = {type: "SET_DATASET", dataset: DatasetType};
@@ -32,8 +32,8 @@ export const updateDatasetSettingAction = (propertyName: $Keys<DatasetConfigurat
   value,
 });
 
-export const updateEphemeralSettingAction = (propertyName: $Keys<EphemeralConfigurationType>, value: any): UpdateEphemeralSettingActionType => ({
-  type: "UPDATE_EPHEMERAL_SETTING",
+export const updateTemporarySettingAction = (propertyName: $Keys<TemporaryConfigurationType>, value: any): UpdateTemporarySettingActionType => ({
+  type: "UPDATE_TEMPORARY_SETTING",
   propertyName,
   value,
 });

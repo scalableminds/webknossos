@@ -83,14 +83,14 @@ export type UserConfigurationType = {
   zoom: number,
 }
 
-export type EphemeralConfigurationType = {
+export type TemporaryConfigurationType = {
   boundingBox: Vector6,
 };
 
 export type OxalisState = {
   datasetConfiguration: DatasetConfigurationType,
   userConfiguration: UserConfigurationType,
-  ephemeralConfiguration: EphemeralConfigurationType,
+  temporaryConfiguration: TemporaryConfigurationType,
   dataset: ?DatasetType,
 }
 
@@ -134,7 +134,7 @@ const defaultState: OxalisState = {
     tdViewDisplayPlanes: true,
     zoom: 1,
   },
-  ephemeralConfiguration: {
+  temporaryConfiguration: {
     boundingBox: [0, 0, 0, 0, 0, 0],
   },
   dataset: null,

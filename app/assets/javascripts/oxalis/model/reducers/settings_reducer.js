@@ -20,9 +20,9 @@ function SettingsReducer(state: OxalisState, action: SettingActionTypes): Oxalis
       return update(state, { datasetConfiguration: { [propertyName]: { $set: value } } });
     }
 
-    case "UPDATE_EPHEMERAL_SETTING": {
+    case "UPDATE_TEMPORARY_SETTING": {
       const { propertyName, value } = action;
-      return update(state, { ephemeralConfiguration: { [propertyName]: { $set: value } } });
+      return update(state, { temporaryConfiguration: { [propertyName]: { $set: value } } });
     }
 
     case "UPDATE_LAYER_SETTING": {

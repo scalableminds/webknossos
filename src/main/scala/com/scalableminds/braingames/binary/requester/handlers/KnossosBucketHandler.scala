@@ -25,7 +25,6 @@ object KnossosCube{
   def create(file: RandomAccessFile): KnossosCube = {
     val channel = new FileInputStream(file.getPath).getChannel
     val buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size())
-    buffer.load()
     new KnossosCube(buffer, channel, file)
   }
 }
@@ -126,7 +125,7 @@ class KnossosBucketHandler(val cache: DataCubeCache)
 
   lazy val dataStore = new FileDataStore
 
-  def loadFromUnderlying[T](loadCube: CubeReadInstruction, timeout: FiniteDuration)(f: Cube => Box[T]): Fox[T] = {
+  def loadFromUnderlying(loadCube: CubeReadInstruction, timeout: FiniteDuration): Fox[KnossosCube] = {
     Future {
       blocking {
         val bucket = dataStore.load(loadCube)
@@ -136,7 +135,7 @@ class KnossosBucketHandler(val cache: DataCubeCache)
               f.exception.map(e => logger.warn("Load from store failed: " + f.msg, e))
               f
             case x =>
-              x.flatMap(data => f(KnossosCube.create(data)))
+              x.map(data => KnossosCube.create(data))
           }
         Await.result(bucket, timeout)
       }

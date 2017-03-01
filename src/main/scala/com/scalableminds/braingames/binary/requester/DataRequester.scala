@@ -43,9 +43,9 @@ class LayerLocker extends FoxImplicits {
   }
 }
 
-class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, Cube] {
-  override def onElementRemoval(key: CachedCube, value: Cube): Unit = {
-    value.scheduleForRemoval()
+class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, Fox[Cube]] {
+  override def onElementRemoval(key: CachedCube, value: Fox[Cube]): Unit = {
+    value.map(_.scheduleForRemoval())
   }
 }
 

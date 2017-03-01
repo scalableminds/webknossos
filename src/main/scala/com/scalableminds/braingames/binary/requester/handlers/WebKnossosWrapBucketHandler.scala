@@ -39,15 +39,14 @@ class WebKnossosWrapBucketHandler(val cache: DataCubeCache) extends BucketHandle
   with FoxImplicits
   with LazyLogging {
 
-  override def loadFromUnderlying[T](
-    loadBlock: CubeReadInstruction, timeout: FiniteDuration)(f: Cube => Box[T]): Fox[T] = {
+  override def loadFromUnderlying(
+    loadBlock: CubeReadInstruction, timeout: FiniteDuration): Fox[Cube] = {
     val wkwDataSource = new WebKnossosWrapDataSource(Paths.get(loadBlock.dataSource.baseDir))
 
     for {
       layer <- wkwDataSource.getLayer(loadBlock.dataLayer.name) ?~> "Could not find webKnossosWrap layer."
       wkwFile <- layer.load(loadBlock.dataLayer.baseDir, loadBlock.position)
-      result <- f(new WebKnossosWrapCube(wkwFile))
-    } yield result
+    } yield new WebKnossosWrapCube(wkwFile)
   }
 
   override def saveToUnderlying(saveBlock: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {

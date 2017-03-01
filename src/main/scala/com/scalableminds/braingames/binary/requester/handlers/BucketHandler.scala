@@ -6,14 +6,16 @@ package com.scalableminds.braingames.binary.requester.handlers
 
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.requester.{Cube, DataCache}
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 
+import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
+import play.api.libs.concurrent.Execution.Implicits._
 
-trait BucketHandler extends DataCache with LazyLogging {
-  protected def loadFromUnderlying[T](loadCube: CubeReadInstruction, timeout: FiniteDuration)(f: Cube => Box[T]): Fox[T]
+trait BucketHandler extends DataCache with LazyLogging with FoxImplicits{
+  protected def loadFromUnderlying(loadCube: CubeReadInstruction, timeout: FiniteDuration): Fox[Cube]
 
   protected def saveToUnderlying(saveBucket: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean]
 
@@ -22,13 +24,7 @@ trait BucketHandler extends DataCache with LazyLogging {
   }
 
   def load(loadBucket: BucketReadInstruction, timeout: FiniteDuration, useCache: Boolean): Fox[Array[Byte]] = {
-    val requestedCube = loadBucket.toCubeReadInstruction(loadBucket.dataSource.cubeLength)
-    val withCubeResource =
-      if (useCache)
-        withCache[Array[Byte]](requestedCube)(loadFromUnderlying(requestedCube, timeout)) _
-      else
-        loadFromUnderlying[Array[Byte]](requestedCube, timeout) _
-    withCubeResource { cube =>
+    def getBucket(cube: Cube): Box[Array[Byte]] = {
       cube.cutOutBucket(loadBucket).map { bucket =>
         if (loadBucket.settings.useHalfByte)
           convertToHalfByte(bucket)
@@ -36,6 +32,12 @@ trait BucketHandler extends DataCache with LazyLogging {
           bucket
       }
     }
+
+    val requestedCube = loadBucket.toCubeReadInstruction(loadBucket.dataSource.cubeLength)
+    if (useCache)
+      withCache[Array[Byte]](requestedCube)(loadFromUnderlying(requestedCube, timeout))(getBucket)
+    else
+      loadFromUnderlying(requestedCube, timeout).flatMap(getBucket)
   }
 
   private def convertToHalfByte(a: Array[Byte]) = {

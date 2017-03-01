@@ -71,28 +71,34 @@ trait Cube extends LazyLogging{
   * A data store implementation which uses the hdd as data storage
   */
 trait DataCache extends FoxImplicits{
-  def cache: LRUConcurrentCache[CachedCube, Cube]
+  def cache: LRUConcurrentCache[CachedCube, Fox[Cube]]
 
   /**
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  def withCache[T](blockInfo: CubeReadInstruction)(loadF: (Cube => Box[T]) => Fox[T])(f: Cube => Box[T]): Fox[T] = {
+  def withCache[T](blockInfo: CubeReadInstruction)(loadF: => Fox[Cube])(f: Cube => Box[T]): Fox[T] = {
     val cachedBlockInfo = CachedCube.from(blockInfo)
 
     cache.get(cachedBlockInfo) match {
-      case Some(cube) =>
-        cube.startAccess()
-        NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
-        val result = f(cube)
-        cube.finishAccess()
-        result.toFox
-      case _ =>
-        loadF{ cube: Cube =>
-          NewRelic.recordMetric("Custom/FileDataStore/Cache/size", cache.size())
-          NewRelic.incrementCounter("Custom/FileDataStore/Cache/miss")
+      case Some(cubeFox) =>
+        cubeFox.flatMap { cube =>
           cube.startAccess()
-          cache.put(cachedBlockInfo, cube)
+          NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
+          val result = f(cube)
+          cube.finishAccess()
+          result.toFox
+        }
+      case _ =>
+        val cubeF = loadF.map{ cube =>
+          cube.startAccess()
+          cube
+        }
+        cache.put(cachedBlockInfo,cubeF)
+        NewRelic.incrementCounter("Custom/FileDataStore/Cache/miss")
+        NewRelic.recordMetric("Custom/FileDataStore/Cache/size", cache.size())
+
+        cubeF.flatMap{cube =>
           val result = f(cube)
           cube.finishAccess()
           result

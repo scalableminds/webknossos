@@ -117,16 +117,15 @@ trait BinaryDataReadController extends BinaryDataCommonController {
   def requestViaAjax(
                       dataSetName: String,
                       dataLayerName: String) = TokenSecuredAction(dataSetName, dataLayerName).async(DataProtocol.readRequestParser) {
-
-    def validateRequests(requests: Seq[Box[DataProtocolReadRequest]]) = {
-      requests.find(_.isEmpty) match {
-        case Some(Failure(msg, _, _)) => Failure(msg)
-        case None => Full(requests.flatten.toList)
-        case _ => Empty
-      }
-    }
-
     implicit request =>
+      def validateRequests(requests: Seq[Box[DataProtocolReadRequest]]) = {
+        requests.find(_.isEmpty) match {
+          case Some(Failure(msg, _, _)) => Failure(msg)
+          case None => Full(requests.flatten.toList)
+          case _ => Empty
+        }
+      }
+
       AllowRemoteOrigin {
         for {
           requests <- validateRequests(request.body.files.map(_.ref)).toFox

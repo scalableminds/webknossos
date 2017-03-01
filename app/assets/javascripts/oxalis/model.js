@@ -6,7 +6,7 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
-import type { DatasetType } from "oxalis/store";
+import type { DatasetType, BoundingBoxObjectType } from "oxalis/store";
 import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import window from "libs/window";
@@ -67,13 +67,6 @@ export type TreeData = {
   nodes: Array<Tracepoint>;
 };
 
-export type BoundingBoxObjectType = {
-  topLeft: Vector3,
-  width: number,
-  height: number,
-  depth: number,
-};
-
 export type SkeletonContentDataType = {
   activeNode: null | number;
   trees: Array<TreeData>;
@@ -118,6 +111,7 @@ export type Tracing = {
   version: number,
 };
 
+// TODO: Non-reactive
 class Model extends Backbone.Model {
   HANDLED_ERROR = "error_was_handled";
 
@@ -361,7 +355,8 @@ class Model extends Backbone.Model {
   getLayerInfos(userLayers) {
     // Overwrite or extend layers with userLayers
 
-    const layers = Store.getState().dataset.dataLayers;
+    const dataset = Store.getState().dataset;
+    const layers = dataset == null ? [] : _.clone(dataset.dataLayers);
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {

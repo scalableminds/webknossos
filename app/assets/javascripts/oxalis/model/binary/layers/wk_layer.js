@@ -3,18 +3,19 @@
  * @flow
  */
 
-import Store from "oxalis/store";
 import Layer, { REQUEST_TIMEOUT } from "oxalis/model/binary/layers/layer";
-import type { BucketRequestOptions, LayerInfoType, DataStoreInfoType } from "oxalis/model/binary/layers/layer";
+import type { BucketRequestOptions } from "oxalis/model/binary/layers/layer";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
 import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
 import Request from "libs/request";
 import MultipartData from "libs/multipart_data";
 import type { Vector4 } from "oxalis/constants";
+import type { DataLayerType, DataStoreInfoType } from "oxalis/store";
 
+// TODO: Non-reactive
 class WkLayer extends Layer {
 
-  constructor(layerInfo: LayerInfoType, dataStoreInfo: DataStoreInfoType) {
+  constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
     super(layerInfo, dataStoreInfo);
 
     if (this.dataStoreInfo.typ !== "webknossos-store") {
@@ -53,7 +54,7 @@ class WkLayer extends Layer {
       });
     }
 
-    const datasetName = Store.getState().dataset.name;
+    const datasetName = this.getDatasetName();
     const data = await requestData.dataPromise();
     const responseBuffer = await Request.sendArraybufferReceiveArraybuffer(
       `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`,
@@ -101,7 +102,7 @@ class WkLayer extends Layer {
         getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)));
     }
 
-    const datasetName = Store.getState().dataset.name;
+    const datasetName = this.getDatasetName();
     const data = await transmitData.dataPromise();
     await Request.sendArraybufferReceiveArraybuffer(
       `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`, {

@@ -10,7 +10,7 @@ import Marionette from "backbone.marionette";
 import Backbone from "backbone";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveTreeAction, setTreeNameAction, createTreeAction, deleteTreeAction, shuffleTreeColorAction, shuffleAllTreeColorsAction, selectNextTreeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveTreeAction, setTreeNameAction, createTreeAction, deleteTreeAction, shuffleTreeColorsAction, selectNextTreeAction } from "oxalis/model/actions/skeletontracing_actions";
 import ListTreeItemView from "./list_tree_item_view";
 
 class ListTreeView extends Marionette.CompositeView {
@@ -123,12 +123,14 @@ class ListTreeView extends Marionette.CompositeView {
 
 
   shuffleTreeColor() {
-    Store.dispatch(shuffleTreeColorAction());
+    Store.dispatch(shuffleTreeColorsAction());
   }
 
 
   shuffleAllTreeColors() {
-    Store.dispatch(shuffleAllTreeColorsAction());
+    throw Error("todo");
+    // for tree ...
+    Store.dispatch(shuffleTreeColorsAction());
   }
 
 

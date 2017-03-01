@@ -3,7 +3,6 @@
  * @flow
  */
 
-import _ from "lodash";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import Layer from "oxalis/model/binary/layers/layer";
 import type { LayerInfoType, DataStoreInfoType } from "oxalis/model/binary/layers/layer";
@@ -94,7 +93,7 @@ class NdStoreLayer extends Layer {
 
   getMaxCoordinatesAsBucket(bounds: Vector6, bucket: BucketInfo) {
     // transform bounds in zoom-step-0 voxels to bucket coordinates between 0 and BUCKET_SIZE_P
-    const bucketBounds = _.map(bounds, (coordinate) => {
+    const bucketBounds = bounds.map((coordinate) => {
       const cubeSize = 1 << (BUCKET_SIZE_P + bucket.zoomStep);
       return (coordinate % cubeSize) >> bucket.zoomStep;
     });

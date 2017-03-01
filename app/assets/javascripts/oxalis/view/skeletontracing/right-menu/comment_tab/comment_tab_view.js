@@ -8,7 +8,6 @@ import { setActiveNodeAction, setCommentForNodeAction } from "oxalis/model/actio
 import { InputKeyboardNoLoop } from "libs/input";
 import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
-import type TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import CommentList from "./comment_list";
 
 class CommentTabView extends Marionette.View {

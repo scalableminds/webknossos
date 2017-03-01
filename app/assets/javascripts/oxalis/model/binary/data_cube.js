@@ -95,10 +95,10 @@ class DataCube {
       Math.ceil(this.upperBoundary[2] / (1 << BUCKET_SIZE_P)),
     ];
 
-    this.arbitraryCube = new ArbitraryCubeAdapter(this, cubeBoundary.slice());
+    this.arbitraryCube = new ArbitraryCubeAdapter(this, _.clone(cubeBoundary));
 
     for (let i = 0; i < this.ZOOM_STEP_COUNT; i++) {
-      this.cubes[i] = new CubeEntry(cubeBoundary.slice());
+      this.cubes[i] = new CubeEntry(_.clone(cubeBoundary));
 
       cubeBoundary = [
         (cubeBoundary[0] + 1) >> 1,

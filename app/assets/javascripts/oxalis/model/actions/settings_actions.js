@@ -4,11 +4,12 @@
  * settings_actions.js
  * @flow
  */
-import type { UserConfigurationType, DatasetConfigurationType, DatasetType } from "oxalis/store";
+import type { UserConfigurationType, DatasetConfigurationType, DatasetLayerConfigurationType, TemporaryConfigurationType, DatasetType } from "oxalis/store";
 
-type UpdateUserSettingActionType = {type: "UPDATE_USER_SETTING", propertyName: string, value: any};
-type UpdateDatasetSettingActionType = {type: "UPDATE_DATASET_SETTING", propertyName: string, value: any};
-type UpdateLayerSettingActionType = {type: "UPDATE_LAYER_SETTING", layerName:string, propertyName: string, value: any};
+type UpdateUserSettingActionType = {type: "UPDATE_USER_SETTING", propertyName: $Keys<UserConfigurationType>, value: any};
+type UpdateDatasetSettingActionType = {type: "UPDATE_DATASET_SETTING", propertyName: $Keys<DatasetConfigurationType>, value: any};
+type UpdateTemporarySettingActionType = {type: "UPDATE_TEMPORARY_SETTING", propertyName: $Keys<TemporaryConfigurationType>, value: any};
+type UpdateLayerSettingActionType = {type: "UPDATE_LAYER_SETTING", layerName:string, propertyName: $Keys<DatasetLayerConfigurationType>, value: any};
 export type InitializeSettingsAction = {type: "INITIALIZE_SETTINGS", initialUserSettings: UserConfigurationType, initialDatasetSettings: DatasetConfigurationType};
 type SetDatasetAction = {type: "SET_DATASET", dataset: DatasetType};
 
@@ -19,19 +20,25 @@ export type SettingActionTypes = (
   UpdateLayerSettingActionType
 );
 
-export const updateUserSettingAction = (propertyName: string, value: any): UpdateUserSettingActionType => ({
+export const updateUserSettingAction = (propertyName: $Keys<UserConfigurationType>, value: any): UpdateUserSettingActionType => ({
   type: "UPDATE_USER_SETTING",
   propertyName,
   value,
 });
 
-export const updateDatasetSettingAction = (propertyName: string, value: any): UpdateDatasetSettingActionType => ({
+export const updateDatasetSettingAction = (propertyName: $Keys<DatasetConfigurationType>, value: any): UpdateDatasetSettingActionType => ({
   type: "UPDATE_DATASET_SETTING",
   propertyName,
   value,
 });
 
-export const updateLayerSettingAction = (layerName: string, propertyName: string, value: any): UpdateLayerSettingActionType => ({
+export const updateTemporarySettingAction = (propertyName: $Keys<TemporaryConfigurationType>, value: any): UpdateTemporarySettingActionType => ({
+  type: "UPDATE_TEMPORARY_SETTING",
+  propertyName,
+  value,
+});
+
+export const updateLayerSettingAction = (layerName: string, propertyName: $Keys<DatasetLayerConfigurationType>, value: any): UpdateLayerSettingActionType => ({
   type: "UPDATE_LAYER_SETTING",
   layerName,
   propertyName,

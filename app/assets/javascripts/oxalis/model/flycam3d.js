@@ -234,11 +234,11 @@ class Flycam3d {
     // http://javascript.about.com/od/problemsolving/a/modulobug.htm
     const mod = (x, n) => ((x % n) + n) % n;
 
-    return _.map([
+    return [
       object.rotation.x,
       object.rotation.y,
       object.rotation.z - Math.PI,
-    ], e => mod((180 / Math.PI) * e, 360));
+    ].map(e => mod((180 / Math.PI) * e, 360));
   }
 
 

@@ -154,7 +154,7 @@ class Binary {
     }
 
     if (!_.isEqual(position, this.lastPosition) || zoomStep !== this.lastZoomStep || !_.isEqual(areas, this.lastAreas)) {
-      this.lastPosition = position.slice();
+      this.lastPosition = _.clone(position);
       this.lastZoomStep = zoomStep;
       this.lastAreas = Object.assign({}, areas);
 

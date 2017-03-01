@@ -30,7 +30,7 @@
     "eslint-plugin-jsx-a11y": "2.2.3",
     "eslint-plugin-react": "^6.8.0",
     "exports-loader": "^0.6.3",
-    "extract-text-webpack-plugin": "beta",
+    "extract-text-webpack-plugin": "2.0.0",
     "file-loader": "^0.9.0",
     "flow-bin": "^0.37.4",
     "imports-loader": "^0.7.0",

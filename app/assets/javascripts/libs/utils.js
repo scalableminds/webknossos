@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
 
@@ -91,6 +91,14 @@ const Utils = {
     return result;
   },
 
+  numberArrayToVector6(array: Array<number>): Vector6 {
+    const output = [0, 0, 0, 0, 0, 0];
+    for (let i = 0; i < Math.min(6, array.length); i++) {
+      output[i] = array[i];
+    }
+    return output;
+  },
+
 
   loaderTemplate(): string {
     return `\
@@ -104,6 +112,7 @@ const Utils = {
   isElementInViewport(el: Element): boolean {
     const rect = el.getBoundingClientRect();
     return (
+      document.documentElement != null &&
       rect.top >= 0 &&
       rect.left >= 0 &&
       rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&

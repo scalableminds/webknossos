@@ -68,6 +68,7 @@ class SkeletonTracingController {
   centerActiveNode = (): void => {
     const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
     const position = trees[activeTreeId].nodes[activeNodeId].position;
+
     if (position) {
       this.model.flycam.setPosition(position);
     }

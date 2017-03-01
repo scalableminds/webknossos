@@ -401,6 +401,7 @@ class ArbitraryController {
     const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
     if (activeNodeId) {
       const activeNode = trees[activeTreeId].nodes[activeNodeId];
+
       // animate the change to the new position and new rotation
       const curPos = this.cam.getPosition();
       const newPos = activeNode.position;
@@ -445,6 +446,18 @@ class ArbitraryController {
 
     this.cam.setPosition(activeNode.position);
     this.cam.setRotation(activeNode.rotation);
+  }
+
+  deleteActiveNode(): void {
+    const { skeletonTracing } = this.model;
+    const activeNode = skeletonTracing.getActiveNode();
+    if (activeNode.neighbors.length > 1) {
+      Toast.error("Unable: Attempting to cut skeleton");
+    }
+
+    _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(
+      () => this.centerActiveNode(),
+    ));
   }
 
   getShortestRotation(curRotation: Vector3, newRotation: Vector3): Vector3 {

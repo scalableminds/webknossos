@@ -277,7 +277,7 @@ class Flycam2d {
 
 
   getTexturePosition(planeID: OrthoViewType): Vector3 {
-    const texturePosition = this.position.slice();    // copy that position
+    const texturePosition = _.clone(this.position);    // copy that position
     // As the Model does not render textures for exact positions, the last 5 bits of
     // the X and Y coordinates for each texture have to be set to 0
     for (let i = 0; i <= 2; i++) {

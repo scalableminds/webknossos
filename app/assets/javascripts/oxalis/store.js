@@ -101,22 +101,22 @@ export type SkeletonTracingType = {
   activeTreeId: number,
   activeNodeId: number,
   restrictions: RestrictionsType & SettingsType,
-}
+};
+
+export type DatasetLayerConfigurationType = {
+  color: Vector3,
+  brightness: number,
+  contrast: number,
+};
 
 export type DatasetConfigurationType = {
   datasetName: string,
   fourBit: boolean,
   interpolation: boolean,
   keyboardDelay: number,
-  layers: {
-    [name:string]: {
-      color: Vector3,
-      brightness: number,
-      contrast: number
-    }
-  },
+  layers: DatasetLayerConfigurationType,
   quality: number
-}
+};
 
 export type UserConfigurationType = {
   boundingBox: Array<number>,
@@ -149,15 +149,19 @@ export type UserConfigurationType = {
   sphericalCapRadius: number,
   tdViewDisplayPlanes: boolean,
   zoom: number,
-}
+};
+
+export type TemporaryConfigurationType = {
+  boundingBox: Vector6,
+};
 
 export type OxalisState = {
   datasetConfiguration: DatasetConfigurationType,
   userConfiguration: UserConfigurationType,
+  temporaryConfiguration: TemporaryConfigurationType,
   dataset: ?DatasetType,
   skeletonTracing: SkeletonTracingType,
-}
-
+};
 
 const defaultState: OxalisState = {
   datasetConfiguration: {
@@ -169,7 +173,6 @@ const defaultState: OxalisState = {
     quality: 0,
   },
   userConfiguration: {
-    boundingBox: [],
     clippingDistance: 50,
     clippingDistanceArbitrary: 64,
     crosshairSize: 0.1,
@@ -189,7 +192,6 @@ const defaultState: OxalisState = {
     overrideNodeRadius: true,
     particleSize: 5,
     radius: 5,
-    renderComments: false,
     rotateValue: 0.01,
     scale: 1,
     scaleValue: 0.05,
@@ -199,6 +201,9 @@ const defaultState: OxalisState = {
     sphericalCapRadius: 140,
     tdViewDisplayPlanes: true,
     zoom: 1,
+  },
+  temporaryConfiguration: {
+    boundingBox: [0, 0, 0, 0, 0, 0],
   },
   dataset: null,
   skeletonTracing: {

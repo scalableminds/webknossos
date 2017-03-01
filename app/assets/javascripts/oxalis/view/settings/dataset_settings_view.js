@@ -7,7 +7,7 @@ import _ from "lodash";
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import { Collapse, Row, Col, Select } from "antd";
-import type { DatasetConfigurationType, OxalisState } from "oxalis/store";
+import type { DatasetConfigurationType, DatasetLayerConfigurationType, OxalisState } from "oxalis/store";
 import { updateDatasetSettingAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { SwitchSetting, NumberSliderSetting, DropdownSetting, ColorSetting } from "./setting_input_views";
 
@@ -16,7 +16,10 @@ const Option = Select.Option;
 
 class DatasetSettings extends Component {
 
-  props: DatasetConfigurationType & { onChange: Function, onChangeLayer: Function };
+  props: DatasetConfigurationType & {
+    onChange: (propertyName: $Keys<DatasetConfigurationType>, value: any) => void,
+    onChangeLayer: (layerName: string, propertyName: $Keys<DatasetLayerConfigurationType>, value: any) => void,
+  };
 
   getColorSettings = (layer: Object, layerName: string) => (
     <div key={layerName}>
@@ -29,7 +32,7 @@ class DatasetSettings extends Component {
     </div>
   );
 
-  onChangeQuality = (propertyName:string, value:string) => {
+  onChangeQuality = (propertyName: $Keys<DatasetConfigurationType>, value: string) => {
     this.props.onChange(propertyName, parseInt(value));
   }
 

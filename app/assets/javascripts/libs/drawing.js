@@ -3,6 +3,8 @@
  * @flow
  */
 
+import type { Vector3 } from "oxalis/constants";
+
 type RangeItem = [number, number, number, boolean | null, boolean, boolean];
 
 // This is a class with static methods and constants dealing with drawing
@@ -144,7 +146,7 @@ class Drawing {
   }
 
   // Source : http://twistedoakstudios.com/blog/Post3138_mouse-path-smoothing-for-jack-lumber
-  smoothLine(points: number[][], callback: (Array<number>) => void): number[][] {
+  smoothLine(points: Array<Vector3>, callback: (Vector3) => void): Array<Vector3> {
     const smoothLength = this.smoothLength || SMOOTH_LENGTH;
     const a = this.alpha || SMOOTH_ALPHA;
 
@@ -154,9 +156,9 @@ class Drawing {
         const p0 = points[j];
         const p1 = points[j + 1];
 
-        const p = [];
-        for (let k = 0; k < p0.length; k++) {
-          p.push((p0[k] * (1 - a)) + (p1[k] * a));
+        const p = [0, 0, 0];
+        for (let k = 0; k < 3; k++) {
+          p[k] = (p0[k] * (1 - a)) + (p1[k] * a);
         }
 
         callback(p);

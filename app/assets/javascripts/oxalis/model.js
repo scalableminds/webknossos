@@ -18,7 +18,7 @@ import scaleInfo from "oxalis/model/scaleinfo";
 import Flycam2d from "oxalis/model/flycam2d";
 import Flycam3d from "oxalis/model/flycam3d";
 import constants from "oxalis/constants";
-import type { ModeType, Vector3 } from "oxalis/constants";
+import type { ModeType, Vector3, Vector4, Vector6 } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
@@ -279,13 +279,13 @@ class Model extends Backbone.Model {
   }
 
 
-  setUserBoundingBox(bb: Array<number>) {
+  setUserBoundingBox(bb: Vector6) {
     this.userBoundingBox = this.computeBoundingBoxFromArray(bb);
     this.trigger("change:userBoundingBox", this.userBoundingBox);
   }
 
 
-  computeBoundingBoxFromArray(bb: Array<number>): BoundingBoxType {
+  computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
     const [x, y, z, width, height, depth] = bb;
 
     return {
@@ -355,7 +355,7 @@ class Model extends Backbone.Model {
 
     for (const key of Object.keys(this.binary)) {
       const binary = this.binary[key];
-      for (let i = 0; i <= 2; i++) {
+      for (let i = 0; i < 3; i++) {
         this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]);
         this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]);
       }

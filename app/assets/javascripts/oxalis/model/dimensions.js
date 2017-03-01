@@ -6,12 +6,15 @@
 import { OrthoViews } from "oxalis/constants";
 import type { OrthoViewType, Vector3 } from "oxalis/constants";
 
+export type DimensionIndicesType = 0 | 1 | 2;
+export type DimensionMapType = [DimensionIndicesType, DimensionIndicesType, DimensionIndicesType];
+
 // This is a class with static methods dealing with dimensions and
 // conversions between them.
 
 const Dimensions = {
 
-  getIndices(planeID: OrthoViewType): Vector3 {
+  getIndices(planeID: OrthoViewType): DimensionMapType {
     // Returns a ordered 3-tuple [x, y, z] which represents the dimensions from the viewpoint
     switch (planeID) {
       case OrthoViews.PLANE_XY: return [0, 1, 2];  // of each plane. For example, moving along the
@@ -28,7 +31,7 @@ const Dimensions = {
   },
 
 
-  planeForThirdDimension(dim: 0 | 1 | 2): OrthoViewType {
+  planeForThirdDimension(dim: DimensionIndicesType): OrthoViewType {
     // Return the plane in which dim is always the same
     switch (dim) {
       case 2: return OrthoViews.PLANE_XY;
@@ -38,7 +41,8 @@ const Dimensions = {
     }
   },
 
-  thirdDimensionForPlane(planeID: OrthoViewType): number {
+
+  thirdDimensionForPlane(planeID: OrthoViewType): DimensionIndicesType {
     // Opposite of planeForThirdDimension
     switch (planeID) {
       case OrthoViews.PLANE_XY: return 2;

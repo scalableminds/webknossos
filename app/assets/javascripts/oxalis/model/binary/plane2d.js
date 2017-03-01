@@ -7,6 +7,7 @@ import _ from "lodash";
 import Backbone from "backbone";
 import DataCube from "oxalis/model/binary/data_cube";
 import Dimensions from "oxalis/model/dimensions";
+import type { DimensionIndicesType } from "oxalis/model/dimensions";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import constants from "oxalis/constants";
 import type { Vector2, Vector3, Vector4, OrthoViewType } from "oxalis/constants";
@@ -17,7 +18,7 @@ class DataTexture {
   tiles: Array<boolean> = [];
   ready: boolean = false;
   zoomStep: number = 0;
-  topLeftBucket: Vector3 = [0, 0, 0];
+  topLeftBucket: Vector4 = [0, 0, 0, 0];
   area: Vector4 = [0, 0, 0, 0];
   counter: number = 0;
 }
@@ -78,9 +79,9 @@ class Plane2D {
   NOT_LOADED_BUCKET_DATA: Uint8Array;
   needsRedraw: boolean;
   MAP_SIZE: number = 0;
-  U: number = 0;
-  V: number = 0;
-  W: number = 0;
+  U: DimensionIndicesType = 0;
+  V: DimensionIndicesType = 0;
+  W: DimensionIndicesType = 0;
   dataTexture = new DataTexture();
 
   // Copied from backbone events (TODO: handle this better)
@@ -187,7 +188,7 @@ class Plane2D {
     ];
 
     // Calculating the coordinates of the textures top-left corner
-    const topLeftPosition = position.slice(0);
+    const topLeftPosition = _.clone(position);
     topLeftPosition[this.U] -= 1 << ((constants.TEXTURE_SIZE_P - 1) + zoomStep);
     topLeftPosition[this.V] -= 1 << ((constants.TEXTURE_SIZE_P - 1) + zoomStep);
 
@@ -297,7 +298,7 @@ class Plane2D {
   }
 
   renderDataTile(tile: Vector2): void {
-    const bucket = this.dataTexture.topLeftBucket.slice(0);
+    const bucket = _.clone(this.dataTexture.topLeftBucket);
     bucket[this.U] += tile[0];
     bucket[this.V] += tile[1];
     const map = this.generateRenderMap(bucket);

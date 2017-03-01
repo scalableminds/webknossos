@@ -8,9 +8,14 @@
 import React from "react";
 import Utils from "libs/utils";
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
-import type { Vector6 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 
-export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: Function, value: number, label: string, max: number, min?: number, step?: number}) {
+export function NumberSliderSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: (value: number) => void, value: number, label: string, max: number, min?: number, step?: number}) {
+  function _onChange(_value) {
+    if (min <= _value && _value <= max) {
+      onChange(_value);
+    }
+  }
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>
@@ -22,7 +27,7 @@ export function NumberSliderSetting({ onChange, value, label, max, min = 1, step
           min={min}
           max={max}
           style={{ marginLeft: 16 }}
-          value={value} onChange={onChange}
+          value={value} onChange={_onChange}
         />
       </Col>
     </Row>
@@ -30,7 +35,7 @@ export function NumberSliderSetting({ onChange, value, label, max, min = 1, step
 }
 
 type LogSliderSettingProps = {
-  onChange: Function,
+  onChange: (value: number) => void,
   value: number,
   label: string,
   max: number,
@@ -101,7 +106,7 @@ export class LogSliderSetting extends React.Component {
   }
 }
 
-export function SwitchSetting({ onChange, value, label }:{onChange: Function, value: boolean, label: string}) {
+export function SwitchSetting({ onChange, value, label }:{onChange: (value: boolean) => void, value: boolean, label: string}) {
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>
@@ -112,7 +117,7 @@ export function SwitchSetting({ onChange, value, label }:{onChange: Function, va
   );
 }
 
-export function NumberInputSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: Function, value: number, label: string, max?: number, min?: number, step?: number}) {
+export function NumberInputSetting({ onChange, value, label, max, min = 1, step = 1 }:{onChange: (value: number) => void, value: number, label: string, max?: number, min?: number, step?: number}) {
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>
@@ -123,58 +128,86 @@ export function NumberInputSetting({ onChange, value, label, max, min = 1, step 
   );
 }
 
-type BoundingBoxSettingPropTypes = {
+type VectorInputSettingPropTypes<T:Vector6> = {
   label: string,
-  value: Vector6,
-  onChange: Function,
+  value: T,
+  onChange: (value: T) => void,
+  tooltipTitle: string,
 };
 
-export class BoundingBoxSetting extends React.Component {
-
-  props: BoundingBoxSettingPropTypes;
+export class Vector6InputSetting extends React.Component {
+  props: VectorInputSettingPropTypes<Vector6>;
   state: {
+    isEditing: boolean,
     isValid: boolean,
-    text: string
+    text: string,
   };
 
-  constructor(props: BoundingBoxSettingPropTypes) {
+  constructor(props: VectorInputSettingPropTypes<Vector6>) {
     super(props);
     this.state = {
+      isEditing: false,
       isValid: true,
       text: props.value.join(", "),
     };
   }
 
-  componentWillReceiveProps(newProps: BoundingBoxSettingPropTypes) {
-    this.state = {
-      isValid: true,
-      text: newProps.value.join(", "),
-    };
+  componentWillReceiveProps(newProps: VectorInputSettingPropTypes<Vector6>) {
+    if (!this.state.isEditing) {
+      this.setState({
+        isValid: true,
+        text: newProps.value.join(", "),
+      });
+    }
   }
 
-  validate = (evt: SyntheticInputEvent) => {
+  defaultValue: Vector6 = [0, 0, 0, 0, 0, 0];
+
+  handleBlur = () => {
+    this.setState({
+      isEditing: false,
+    });
+    if (this.state.isValid) {
+      this.setState({
+        isValid: true,
+        text: this.props.value.join(", "),
+      });
+    } else {
+      this.props.onChange(this.defaultValue);
+      this.setState({
+        isValid: true,
+        text: this.defaultValue.join(", "),
+      });
+    }
+  };
+
+  handleFocus = () => {
+    this.setState({
+      isEditing: true,
+      text: this.props.value.join(", "),
+      isValid: true,
+    });
+  };
+
+  handleChange = (evt: SyntheticInputEvent) => {
     const text = evt.target.value;
 
-    const isValidInput = new RegExp(/^[\d ,]+$/, "g").test(text);  // only allow numbers, spaces and comma as input
-    const isValidFormat = new RegExp(/(\d+\s*,\s*){5}\d+/).test(text); // BB should look like 0,0,0,0,0,0
+    // only numbers, commas and whitespace is allowed
+    const isValidInput = (/^[\d\s,]*$/g).test(text);
+    const value = Utils.stringToNumberArray(text);
+    const isValidFormat = value.length === 6;
 
-    if (isValidFormat) {
-      // Width, height and depth of 0 should be allowed as a non-existing bounding box equals 0,0,0,0,0,0
-      const boundingBox = Utils.stringToNumberArray(text);
-      if (boundingBox[3] > 0 || boundingBox[4] > 0 || boundingBox[5] > 0) {
-        this.props.onChange(boundingBox);
-      }
+    if (isValidFormat && isValidInput) {
+      this.props.onChange(Utils.numberArrayToVector6(value));
     }
 
-    this.setState(Object.assign({}, this.state, {
-      text: isValidInput ? text : this.state.text,
+    this.setState({
+      text,
       isValid: isValidFormat,
-    }));
+    });
   };
 
   render() {
-    const tooltipPrefix = this.state.isValid ? "" : "Invalid ";
-    const tooltipTitle = `${tooltipPrefix} Format: minX, minY, minZ, width, height, depth`;
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
 
     return (
@@ -183,11 +216,16 @@ export class BoundingBoxSetting extends React.Component {
         <Col span={16}>
           <Tooltip
             trigger={["focus"]}
-            title={tooltipTitle}
+            title={this.props.tooltipTitle}
             placement="topLeft"
             overlayStyle={tooltipStyle}
           >
-            <Input onChange={this.validate} value={this.state.text} defaultValue={this.state.text} />
+            <Input
+              onChange={this.handleChange}
+              onFocus={this.handleFocus}
+              onBlur={this.handleBlur}
+              value={this.state.text}
+            />
           </Tooltip>
         </Col>
       </Row>
@@ -197,11 +235,10 @@ export class BoundingBoxSetting extends React.Component {
 
 type ColorSettingPropTypes = {
   // eslint-disable-next-line react/no-unused-prop-types
-  value: Vector6,
+  value: Vector3,
   label: string,
-  onChange: Function,
+  onChange: (value: Vector3) => void,
 }
-
 
 export class ColorSetting extends React.Component {
   props: ColorSettingPropTypes;
@@ -236,7 +273,7 @@ export class ColorSetting extends React.Component {
   }
 }
 
-export function DropdownSetting({ onChange, label, value, children }:{ onChange: Function, label: string, value: number, children?: Array<Select.Option> }) {
+export function DropdownSetting({ onChange, label, value, children }:{ onChange: (value: number) => void, label: string, value: number, children?: Array<Select.Option> }) {
   return (
     <Row className="settings-row">
       <Col span={8}><span className="setting-label">{label}</span></Col>

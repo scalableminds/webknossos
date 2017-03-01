@@ -9,10 +9,8 @@ import Store from "oxalis/store";
 import scaleInfo from "oxalis/model/scaleinfo";
 import AbstractMaterialFactory from "./abstract_material_factory";
 
-const DEFAULT_ZOOMFACTOR = 1.0;
-const DEFAULT_SCALE = 1.0;
+
 const DEFAULT_RADIUS = 1.0;
-const DEFAULT_PARTICLESIZE = 1.0;
 
 class ParticleMaterialFactory extends AbstractMaterialFactory {
 
@@ -25,7 +23,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
     this.uniforms = _.extend(this.uniforms, {
       zoomFactor: {
         type: "f",
-        value: DEFAULT_ZOOMFACTOR,
+        value: this.model.flycam.getPlaneScalingFactor(),
       },
       baseVoxel: {
         type: "f",
@@ -33,11 +31,11 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
       },
       particleSize: {
         type: "f",
-        value: DEFAULT_PARTICLESIZE,
+        value: Store.getState().userConfiguration.particleSize,
       },
       scale: {
         type: "f",
-        value: DEFAULT_SCALE,
+        value: Store.getState().userConfiguration.scale,
       },
       showRadius: {
         type: "i",

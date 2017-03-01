@@ -186,6 +186,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     }
     const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
     const activeNode = trees[activeTreeId].nodes[activeNodeId];
+
     // set the new trace direction
     if (activeNode) {
       this.model.flycam.setDirection([

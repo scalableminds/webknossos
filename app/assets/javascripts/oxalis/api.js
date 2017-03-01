@@ -14,9 +14,9 @@ import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, setCommentForNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import type { NodeType } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
+import type { NodeType, UserConfigurationType } from "oxalis/store";
 
 /**
  * All tracing related API methods.
@@ -124,7 +124,7 @@ class DataApi {
  /**
   * Returns the names of all available layers of the current tracing.
   */
-  getLayerNames(): [string] {
+  getLayerNames(): Array<string> {
     return _.map(this.model.binary, "name");
   }
 
@@ -217,12 +217,11 @@ class UserApi {
     - sortCommentsAsc
     - segmentationOpacity
     - sphericalCapRadius
-    - renderComments
   *
   * @example
   * const segmentationOpacity = api.user.getConfiguration("segmentationOpacity");
   */
-  getConfiguration(key: string) {
+  getConfiguration(key: $Keys<UserConfigurationType>) {
     return Store.getState().userConfiguration[key];
   }
 
@@ -233,7 +232,7 @@ class UserApi {
   * @example
   * api.user.setConfiguration("moveValue", 20);
   */
-  setConfiguration(key: string, value) {
+  setConfiguration(key: $Keys<UserConfigurationType>, value) {
     Store.dispatch(updateUserSettingAction(key, value));
   }
 }

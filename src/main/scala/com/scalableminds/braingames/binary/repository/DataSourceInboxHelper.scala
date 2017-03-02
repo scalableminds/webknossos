@@ -61,14 +61,14 @@ trait DataSourceInboxHelper
       val importResult = dsTypeGuesser.guessRepositoryType(unusableDataSource.sourceFolder)
         .importDataSource(dataRequester, unusableDataSource, progressTrackerFor(importTrackerId(unusableDataSource.id)))
         .flatMap { dataSource =>
-            val filedDS = FiledDataSource(unusableDataSource.owningTeam, unusableDataSource.sourceType, dataSource) 
+            val filedDS = FiledDataSource(unusableDataSource.sourceType, dataSource)
             writeDataSourceToFile(unusableDataSource.sourceFolder, filedDS)
         }
       
       importResult.futureBox.map {
         case Full(r) =>
           logger.info("Datasource import finished for " + unusableDataSource.id)
-          Full(r.toUsable(serverUrl))
+          Full(r.toUsable(serverUrl, unusableDataSource.owningTeam))
         case Empty =>
           logger.warn("Datasource import failed for " + unusableDataSource.id)
           Failure(Messages("dataSet.import.failedWithoutError", unusableDataSource.id))

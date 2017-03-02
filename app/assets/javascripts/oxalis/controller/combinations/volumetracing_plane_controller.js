@@ -6,7 +6,7 @@
 
 import _ from "lodash";
 import Store from "oxalis/store";
-import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
+import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import Utils from "libs/utils";
 import constants, { OrthoViews } from "oxalis/constants";
 import type { OrthoViewType, Point2 } from "oxalis/constants";

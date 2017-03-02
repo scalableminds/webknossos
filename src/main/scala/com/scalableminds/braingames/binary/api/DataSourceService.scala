@@ -83,7 +83,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
       None,
       fallbackLayer.map(l => l.elementClass).getOrElse(DataLayer.SEGMENTATION.defaultElementClass),
       isWritable = true,
-      _isCompressed = Some(true),
+      _isCompressed = Some(false),
       fallback = fallbackLayer.map(l => FallbackLayer(baseDataSource.id, l.name)),
       sections = List(section),
       nextSegmentationId = baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId),

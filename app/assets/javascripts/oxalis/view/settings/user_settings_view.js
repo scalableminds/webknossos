@@ -105,10 +105,12 @@ class UserSettingsView extends Component {
 
   getSkeletonOrVolumeOptions = () => {
     const mode = this.props.oldModel.get("mode");
+    const activeNodeId = _.isNumber(this.props.activeNodeId) ? this.props.activeNodeId : "";
+
     if (mode in Constants.MODES_SKELETON) {
       return (
         <Panel header="Nodes & Trees" key="3">
-          <NumberInputSetting label="Active Node ID" value={this.props.skeletonTracing.activeNodeId} onChange={this.props.onChangeActiveNodeId} />
+          <NumberInputSetting label="Active Node ID" value={activeNodeId} onChange={this.props.onChangeActiveNodeId} />
           <NumberInputSetting label="Active Tree ID" value={this.props.skeletonTracing.activeTreeId} onChange={this.props.onChangeActiveTreeId} />
           <NumberSliderSetting label="Radius" max={5000} value={this.props.userConfiguration.radius} onChange={this.props.onChangeRadius} />
           <NumberSliderSetting label="Particle Size" max={20} step={0.1} value={this.props.userConfiguration.particleSize} onChange={_.partial(this.props.onChangeUser, "particleSize")} />

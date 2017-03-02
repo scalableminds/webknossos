@@ -3,7 +3,7 @@
 * @flow weak
 */
 import Utils from "libs/utils";
-import type { CommentType, BranchPoint } from "oxalis/model";
+import type { CommentType, BranchPointType } from "oxalis/store";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 
 /**
@@ -18,10 +18,10 @@ class TraceTree {
   name: string;
   timestamp: number;
   comments: Array<CommentType>;
-  branchPoints: Array<BranchPoint>;
+  branchPoints: Array<BranchPointType>;
   nodes: Array<Tracepoint>;
 
-  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<CommentType> = [], branchPoints: Array<BranchPoint> = []) {
+  constructor(treeId: number, color: string, name: string, timestamp: number, comments: Array<CommentType> = [], branchPoints: Array<BranchPointType> = []) {
     this.treeId = treeId;
     this.color = color;
     this.name = name;

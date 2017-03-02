@@ -6,6 +6,7 @@
 import _ from "lodash";
 import React, { Component } from "react";
 import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 import { Collapse } from "antd";
 import Constants from "oxalis/constants";
 import Model from "oxalis/model";
@@ -119,7 +120,6 @@ class UserSettingsView extends Component {
       return (
         <Panel header="Volume Options" key="3">
           <NumberInputSetting label="Active Cell ID" value={this.state.activeCellId} onChange={this.onChangeActiveCellId} />
-          <NumberSliderSetting label="Segment Opacity" max={100} value={this.props.userConfiguration.segmentationOpacity} onChange={_.partial(this.props.onChangeUser, "segmentationOpacity")} />
           <SwitchSetting label="3D Volume Rendering" value={this.props.userConfiguration.isosurfaceDisplay} onChange={_.partial(this.props.onChangeUser, "isosurfaceDisplay")} />
           <NumberSliderSetting label="3D Rendering Bounding Box Size" min={1} max={10} step={0.1} value={this.props.userConfiguration.isosurfaceBBsize} onChange={_.partial(this.props.onChangeUser, "isosurfaceBBsize")} />
           <NumberSliderSetting label="3D Rendering Resolution" min={40} max={400} value={this.props.userConfiguration.isosurfaceResolution} onChange={_.partial(this.props.onChangeUser, "isosurfaceResolution")} />
@@ -141,7 +141,10 @@ class UserSettingsView extends Component {
         </Panel>
         { this.getViewportOptions() }
         { this.getSkeletonOrVolumeOptions() }
-        <Panel header="Other" key="4">
+        <Panel header="Segmentation" key="4">
+          <NumberSliderSetting label="Segmentation Opacity" max={100} value={this.props.userConfiguration.segmentationOpacity} onChange={_.partial(this.props.onChangeUser, "segmentationOpacity")} />
+        </Panel>
+        <Panel header="Other" key="5">
           <Vector6InputSetting label="Bounding Box" tooltipTitle="Format: minX, minY, minZ, width, height, depth" value={this.props.temporaryConfiguration.boundingBox} onChange={this.onChangeBoundingBox} />
           <SwitchSetting label="Display Planes in 3D View" value={this.props.userConfiguration.tdViewDisplayPlanes} onChange={_.partial(this.props.onChangeUser, "tdViewDisplayPlanes")} />
         </Panel>
@@ -156,7 +159,7 @@ const mapStateToProps = (state: OxalisState) => ({
   skeletonTracing: state.skeletonTracing,
 });
 
-const mapDispatchToProps = dispatch => ({
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeUser(propertyName, value) { dispatch(updateUserSettingAction(propertyName, value)); },
   onChangeTemporary(propertyName, value) { dispatch(updateTemporarySettingAction(propertyName, value)); },
   onChangeActiveNodeId(id: number) { dispatch(setActiveNodeAction(id)); },

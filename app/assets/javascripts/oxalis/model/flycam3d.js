@@ -7,6 +7,7 @@ import _ from "lodash";
 import Backbone from "backbone";
 import * as THREE from "three";
 import { M4x4 } from "libs/mjs";
+import Utils from "libs/utils";
 import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";
 
@@ -63,7 +64,7 @@ class Flycam3d {
     let position;
     const { scale } = this;
     if (this.currentMatrix != null) {
-      position = this.currentMatrix.slice(12, 15);
+      position = Utils.numberArrayToVector3(this.currentMatrix.slice(12, 15));
     }
 
     const m = [
@@ -234,11 +235,16 @@ class Flycam3d {
     // http://javascript.about.com/od/problemsolving/a/modulobug.htm
     const mod = (x, n) => ((x % n) + n) % n;
 
-    return [
+    const rotation: Vector3 = [
       object.rotation.x,
       object.rotation.y,
       object.rotation.z - Math.PI,
-    ].map(e => mod((180 / Math.PI) * e, 360));
+    ];
+    return [
+      mod((180 / Math.PI) * rotation[0], 360),
+      mod((180 / Math.PI) * rotation[1], 360),
+      mod((180 / Math.PI) * rotation[2], 360),
+    ];
   }
 
 

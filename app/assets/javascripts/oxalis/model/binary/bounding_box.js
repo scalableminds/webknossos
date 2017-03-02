@@ -6,6 +6,7 @@
 import _ from "lodash";
 import DataCube from "oxalis/model/binary/data_cube";
 import type { BoundingBoxType } from "oxalis/model";
+import { Vector3Indicies } from "oxalis/constants";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 
@@ -26,7 +27,7 @@ class BoundingBox {
     this.max = _.clone(this.cube.upperBoundary);
 
     if (this.boundingBox != null) {
-      for (let i = 0; i < 3; i++) {
+      for (const i of Vector3Indicies) {
         this.min[i] = Math.max(this.min[i], this.boundingBox.min[i]);
         this.max[i] = Math.min(this.max[i], this.boundingBox.max[i]);
       }

@@ -5,7 +5,7 @@
 
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import Layer from "oxalis/model/binary/layers/layer";
-import type { LayerInfoType, DataStoreInfoType } from "oxalis/model/binary/layers/layer";
+import type { DataLayerType, DataStoreInfoType } from "oxalis/store";
 import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
 import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
@@ -14,7 +14,7 @@ import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
 
 class NdStoreLayer extends Layer {
 
-  constructor(layerInfo: LayerInfoType, dataStoreInfo: DataStoreInfoType) {
+  constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
     super(layerInfo, dataStoreInfo);
 
     if (this.dataStoreInfo.typ !== "ndstore") {
@@ -30,7 +30,11 @@ class NdStoreLayer extends Layer {
 
   requestDataToken(): Promise<string> {
     // ndstore uses its own token that is fixed
-    return Promise.resolve(this.dataStoreInfo.accessToken);
+    if (this.dataStoreInfo.accessToken != null) {
+      return Promise.resolve(this.dataStoreInfo.accessToken);
+    } else {
+      return Promise.reject(new Error("No accessToken available."));
+    }
   }
 
 

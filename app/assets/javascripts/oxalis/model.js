@@ -6,6 +6,7 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
+import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType, TreeType } from "oxalis/store";
 import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import window from "libs/window";
@@ -17,8 +18,8 @@ import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import scaleInfo from "oxalis/model/scaleinfo";
 import Flycam2d from "oxalis/model/flycam2d";
 import Flycam3d from "oxalis/model/flycam3d";
-import constants from "oxalis/constants";
-import type { ModeType, Vector3, Vector4, Vector6 } from "oxalis/constants";
+import constants, { Vector3Indicies } from "oxalis/constants";
+import type { ModeType, Vector3, Vector6 } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
@@ -35,25 +36,20 @@ export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
 };
-export type RestrictionsType = {
-  allowAccess: boolean,
-  allowUpdate: boolean,
-  allowFinish: boolean,
-  allowDownload: boolean,
+
+export type SkeletonContentDataType = {
+  activeNode: null | number;
+  trees: Array<TreeType>;
+  zoomLevel: number;
+  customLayers: null;
 };
 
-export type SettingsType = {
-  advancedOptionsAllowed: boolean,
-  allowedModes: "orthogonal" | "oblique" | "flight" | "volume",
-  branchPointsAllowed: boolean,
-  somaClickingAllowed: boolean,
-};
-
-export type BoundingBoxObjectType = {
-  topLeft: Vector3,
-  width: number,
-  height: number,
-  depth: number,
+export type VolumeContentDataType = {
+  activeCell: null | number;
+  customLayers: Array<Object>;
+  maxCoordinates: BoundingBoxObjectType;
+  customLayers: ?Array<Object>;
+  name: string;
 };
 
 export type Tracing<T> = {
@@ -62,7 +58,7 @@ export type Tracing<T> = {
     boundingBox: BoundingBoxObjectType,
     contentData: T,
     contentType: string,
-    dataSet: Object,
+    dataSet: DatasetType,
     editPosition: Vector3,
     editRotation: Vector3,
     settings: SettingsType,
@@ -85,6 +81,7 @@ export type Tracing<T> = {
   version: number,
 };
 
+// TODO: Non-reactive
 class Model extends Backbone.Model {
   HANDLED_ERROR = "error_was_handled";
 
@@ -105,7 +102,7 @@ class Model extends Backbone.Model {
   mode: ModeType;
   allowedModes: Array<ModeType>;
   settings: SettingsType;
-  tracing: Tracing
+  tracing: Tracing<*>;
   tracingId: string;
   tracingType: "Explorational" | "Task" | "View";
 
@@ -124,7 +121,7 @@ class Model extends Backbone.Model {
       infoUrl = `/annotations/${this.get("tracingType")}/${this.get("tracingId")}/info`;
     }
 
-    return Request.receiveJSON(infoUrl).then((tracing: Tracing) => {
+    return Request.receiveJSON(infoUrl).then((tracing: Tracing<*>) => {
       let error;
       const dataset = tracing.content.dataSet;
       if (tracing.error) {
@@ -146,7 +143,7 @@ class Model extends Backbone.Model {
 
       Store.dispatch(setDatasetAction(dataset));
       return tracing;
-    }).then((tracing: Tracing) => {
+    }).then((tracing: Tracing<*>) => {
       const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
       return this.initializeWithData(tracing, layerInfos);
     },
@@ -184,7 +181,7 @@ class Model extends Backbone.Model {
   }
 
 
-  initializeWithData(tracing: Tracing, layerInfos) {
+  initializeWithData(tracing: Tracing<*>, layerInfos) {
     const dataset = tracing.content.dataSet;
     const { dataStore } = dataset;
 
@@ -208,7 +205,7 @@ class Model extends Backbone.Model {
 
     const bb = tracing.content.boundingBox;
     if (bb != null) {
-      this.taskBoundingBox = this.computeBoundingBoxFromArray(bb.topLeft.concat([bb.width, bb.height, bb.depth]));
+      this.taskBoundingBox = this.computeBoundingBoxFromArray(Utils.concatVector3(bb.topLeft, [bb.width, bb.height, bb.depth]));
     }
 
     this.connectionInfo = new ConnectionInfo();
@@ -327,7 +324,8 @@ class Model extends Backbone.Model {
   getLayerInfos(userLayers) {
     // Overwrite or extend layers with userLayers
 
-    const layers = Store.getState().dataset.dataLayers;
+    const dataset = Store.getState().dataset;
+    const layers = dataset == null ? [] : _.clone(dataset.dataLayers);
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {
@@ -355,7 +353,7 @@ class Model extends Backbone.Model {
 
     for (const key of Object.keys(this.binary)) {
       const binary = this.binary[key];
-      for (let i = 0; i < 3; i++) {
+      for (const i of Vector3Indicies) {
         this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]);
         this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]);
       }

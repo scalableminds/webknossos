@@ -4,7 +4,6 @@
  */
 
 import _ from "lodash";
-import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Store from "oxalis/store";
 import scaleInfo from "oxalis/model/scaleinfo";
@@ -70,10 +69,12 @@ class DatasetInfoView extends Marionette.View {
     // Or display an explorative tracings name if there is one
     if (name) { annotationType += `: ${name}`; }
 
+    const dataset = Store.getState().dataset;
+
     return {
       annotationType,
       zoomLevel: this.calculateZoomLevel(),
-      dataSetName: Store.getState().dataset.name,
+      dataSetName: dataset != null ? dataset.name : "",
       treeCount: _.size(Store.getState().skeletonTracing.trees),
     };
   }

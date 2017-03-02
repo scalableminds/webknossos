@@ -1,5 +1,5 @@
-// flow-typed signature: 9ce8dcc6ae874577da298da3b4539060
-// flow-typed version: 90ba41eb32/lodash_v4.x.x/flow_>=v0.28.x_<=v0.37.x
+// flow-typed signature: eeca32120ccf3bb8d7b4df38c6fdb617
+// flow-typed version: 12af8270f6/lodash_v4.x.x/flow_>=v0.38.x
 
 declare module 'lodash' {
   declare type TemplateSettings = {
@@ -28,7 +28,7 @@ declare module 'lodash' {
   };
 
   declare type NestedArray<T> = Array<Array<T>>;
-  
+
   declare type matchesIterateeShorthand = Object;
   declare type matchesPropertyIterateeShorthand = [string, any];
   declare type propertyIterateeShorthand = string;
@@ -38,7 +38,7 @@ declare module 'lodash' {
     | matchesIterateeShorthand
     | matchesPropertyIterateeShorthand
     | propertyIterateeShorthand;
-  
+
   declare type OIterateeWithResult<V, O, R> = Object|string|((value: V, key: string, object: O) => R);
   declare type OIteratee<O> = OIterateeWithResult<any, O, any>;
   declare type OFlatMapIteratee<T, U> = OIterateeWithResult<any, T, Array<U>>;
@@ -48,7 +48,7 @@ declare module 'lodash' {
     | matchesIterateeShorthand
     | matchesPropertyIterateeShorthand
     | propertyIterateeShorthand;
-  
+
   declare type _Iteratee<T> = (item: T, index: number, array: ?Array<T>) => mixed;
   declare type Iteratee<T> = _Iteratee<T>|Object|string;
   declare type Iteratee2<T, U> = ((item: T, index: number, array: ?Array<T>) => U)|Object|string;
@@ -301,7 +301,8 @@ declare module 'lodash' {
     isRegExp(value: any): bool;
     isSafeInteger(value: any): bool;
     isSet(value: any): bool;
-    isString(value: any): bool;
+    isString(value: string): true;
+    isString(value: number|Function|void|null|Object|Array<any>): false;
     isSymbol(value: any): bool;
     isTypedArray(value: any): bool;
     isUndefined(value: any): bool;

@@ -8,12 +8,10 @@
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "reduce-reducers";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
-import type { RestrictionsType, BoundingBoxObjectType, SettingsType } from "oxalis/model";
-import type { Vector3, Vector4 } from "oxalis/constants";
-import type { ElementClassType } from "oxalis/model/binary/layers/layer";
 
 export type CommentType = {
   node: number;
@@ -44,6 +42,13 @@ export type BranchPointType = {
 
 export type NodeMapType = {[number]: NodeType};
 
+export type BoundingBoxObjectType = {
+  topLeft: Vector3,
+  width: number,
+  height: number,
+  depth: number,
+};
+
 export type TreeType = {
   treeId: number,
   color: Vector3,
@@ -70,28 +75,49 @@ export type VolumeContentDataType = {
   name: string,
 };
 
-type DataLayerType = {
-  name: string,
-  category: "color" | "segmentation",
-  maxCoordinates: {
-    topLeft: Vector3,
-    width: number,
-    height: number,
-    depth: number,
-  },
-  resolutions: Vector4,
-  fallback: any,
-  elementClass: ElementClassType,
-  mappings:[],
+export type MappingType = {
+  parent?: string;
+  name: string;
+  classes?: Array<Array<number>>;
 };
 
-export type DatasetType = {
- name: string,
- dataStore: {
+export type CategoryType = "color" | "segmentation";
+export type ElementClassType = "uint8" | "uint16" | "uint32";
+
+export type DataLayerType = {
+  name: string,
+  category: CategoryType,
+  maxCoordinates: BoundingBoxObjectType,
+  resolutions: Array<number>,
+  // fallback: any,
+  elementClass: ElementClassType,
+  mappings: Array<MappingType>,
+}
+
+export type RestrictionsType = {
+  allowAccess: boolean,
+  allowUpdate: boolean,
+  allowFinish: boolean,
+  allowDownload: boolean,
+};
+
+export type SettingsType = {
+  advancedOptionsAllowed: boolean,
+  allowedModes: "orthogonal" | "oblique" | "flight" | "volume",
+  branchPointsAllowed: boolean,
+  somaClickingAllowed: boolean,
+};
+
+export type DataStoreInfoType = {
   name: string,
   url: string,
   typ: string,
- },
+  accessToken?: string,
+}
+
+export type DatasetType = {
+ name: string,
+ dataStore: DataStoreInfoType,
  scale: Vector3,
  dataLayers: Array<DataLayerType>
 };
@@ -117,12 +143,13 @@ export type DatasetConfigurationType = {
   fourBit: boolean,
   interpolation: boolean,
   keyboardDelay: number,
-  layers: DatasetLayerConfigurationType,
+  layers: {
+    [name:string]: DatasetLayerConfigurationType,
+  },
   quality: number
 };
 
 export type UserConfigurationType = {
-  boundingBox: Array<number>,
   clippingDistance: number,
   clippingDistanceArbitrary: number,
   crosshairSize: number,
@@ -141,7 +168,6 @@ export type UserConfigurationType = {
   newNodeNewTree: boolean,
   overrideNodeRadius: boolean,
   particleSize: number,
-  renderComments: boolean,
   radius: number,
   rotateValue: number,
   scale: number,

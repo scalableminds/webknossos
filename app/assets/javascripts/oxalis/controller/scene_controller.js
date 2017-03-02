@@ -18,7 +18,7 @@ import Cube from "oxalis/geometries/cube";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
 import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
-import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView, Vector3Indicies } from "oxalis/constants";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { BoundingBoxType } from "oxalis/model";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
@@ -227,7 +227,7 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    for (let i = 0; i < 3; i++) {
+    for (const i of Vector3Indicies) {
       this.planeShift[i] = value * scaleInfo.voxelPerNM[i];
     }
     app.vent.trigger("rerender");

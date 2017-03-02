@@ -14,6 +14,12 @@ export type Vector6 = [number, number, number, number, number, number];
 export type Point2 = { x: number, y: number };
 export type Point3 = { x: number, y: number, z: number };
 
+export const Vector2Indicies = [0, 1];
+export const Vector3Indicies = [0, 1, 2];
+export const Vector4Indicies = [0, 1, 2, 3];
+export const Vector5Indicies = [0, 1, 2, 3, 4];
+export const Vector6Indicies = [0, 1, 2, 3, 4, 5];
+
 export const OrthoViews = {
   PLANE_XY: "PLANE_XY",
   PLANE_YZ: "PLANE_YZ",

@@ -6,6 +6,7 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
+import type { DatasetType, BoundingBoxObjectType } from "oxalis/store";
 import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
 import window from "libs/window";
@@ -17,7 +18,7 @@ import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import scaleInfo from "oxalis/model/scaleinfo";
 import Flycam2d from "oxalis/model/flycam2d";
 import Flycam3d from "oxalis/model/flycam3d";
-import constants from "oxalis/constants";
+import constants, { Vector3Indicies } from "oxalis/constants";
 import type { ModeType, Vector3, Vector4, Vector6 } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -66,13 +67,6 @@ export type TreeData = {
   nodes: Array<Tracepoint>;
 };
 
-export type BoundingBoxObjectType = {
-  topLeft: Vector3,
-  width: number,
-  height: number,
-  depth: number,
-};
-
 export type SkeletonContentDataType = {
   activeNode: null | number;
   trees: Array<TreeData>;
@@ -94,7 +88,7 @@ export type Tracing = {
     boundingBox: BoundingBoxObjectType,
     contentData: VolumeContentDataType | SkeletonContentDataType,
     contentType: string,
-    dataSet: Object,
+    dataSet: DatasetType,
     editPosition: Vector3,
     editRotation: Vector3,
     settings: Settings,
@@ -117,6 +111,7 @@ export type Tracing = {
   version: number,
 };
 
+// TODO: Non-reactive
 class Model extends Backbone.Model {
   HANDLED_ERROR = "error_was_handled";
 
@@ -240,7 +235,7 @@ class Model extends Backbone.Model {
 
     const bb = tracing.content.boundingBox;
     if (bb != null) {
-      this.taskBoundingBox = this.computeBoundingBoxFromArray(bb.topLeft.concat([bb.width, bb.height, bb.depth]));
+      this.taskBoundingBox = this.computeBoundingBoxFromArray(Utils.concatVector3(bb.topLeft, [bb.width, bb.height, bb.depth]));
     }
 
     this.connectionInfo = new ConnectionInfo();
@@ -360,7 +355,8 @@ class Model extends Backbone.Model {
   getLayerInfos(userLayers) {
     // Overwrite or extend layers with userLayers
 
-    const layers = Store.getState().dataset.dataLayers;
+    const dataset = Store.getState().dataset;
+    const layers = dataset == null ? [] : _.clone(dataset.dataLayers);
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {
@@ -388,7 +384,7 @@ class Model extends Backbone.Model {
 
     for (const key of Object.keys(this.binary)) {
       const binary = this.binary[key];
-      for (let i = 0; i < 3; i++) {
+      for (const i of Vector3Indicies) {
         this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]);
         this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]);
       }

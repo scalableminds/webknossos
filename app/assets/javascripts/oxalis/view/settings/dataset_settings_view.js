@@ -6,6 +6,7 @@
 import _ from "lodash";
 import React, { Component } from "react";
 import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 import { Collapse, Row, Col, Select } from "antd";
 import type { DatasetConfigurationType, DatasetLayerConfigurationType, OxalisState } from "oxalis/store";
 import { updateDatasetSettingAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
@@ -62,7 +63,7 @@ const mapStateToProps = (state: OxalisState) => (
   state.datasetConfiguration
 );
 
-const mapDispatchToProps = dispatch => ({
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChange(propertyName, value) { dispatch(updateDatasetSettingAction(propertyName, value)); },
   onChangeLayer(layerName, propertyName, value) { dispatch(updateLayerSettingAction(layerName, propertyName, value)); },
 });

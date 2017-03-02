@@ -89,10 +89,12 @@ class DatasetInfoView extends Marionette.View {
     // Or display an explorative tracings name if there is one
     if (name) { annotationType += `: ${name}`; }
 
+    const dataset = Store.getState().dataset;
+
     return {
       annotationType,
       zoomLevel: this.calculateZoomLevel(),
-      dataSetName: Store.getState().dataset.name,
+      dataSetName: dataset != null ? dataset.name : "",
       treeCount: Utils.__guard__(this.model.skeletonTracing, x => x.trees.length),
       isPublicViewMode: this.model.get("controlMode") === constants.CONTROL_MODE_VIEW,
     };

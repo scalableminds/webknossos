@@ -49,27 +49,27 @@ class UrlManager {
     const state: State = {};
 
     if (stateString) {
-      const stateArray = stateString.split(",");
+      const stateArray = stateString.split(",").map(item => Number(item));
       if (stateArray.length >= 5) {
-        state.position = _.map(stateArray.slice(0, 3), e => +e);
+        state.position = Utils.numberArrayToVector3(stateArray.slice(0, 3));
 
-        const modeNumber = ModeValues.find(el => el === +stateArray[3]);
+        const modeNumber = ModeValues.find(el => el === stateArray[3]);
         if (modeNumber) {
           state.mode = modeNumber;
         } else {
           // Let's default to MODE_PLANE_TRACING
           state.mode = 0;
         }
-        state.zoomStep = +stateArray[4];
+        state.zoomStep = stateArray[4];
 
         if (stateArray.length >= 8) {
-          state.rotation = _.map(stateArray.slice(5, 8), e => +e);
+          state.rotation = Utils.numberArrayToVector3(stateArray.slice(5, 8));
 
           if (stateArray[8] != null) {
-            state.activeNode = +stateArray[8];
+            state.activeNode = stateArray[8];
           }
         } else if (stateArray[5] != null) {
-          state.activeNode = +stateArray[5];
+          state.activeNode = stateArray[5];
         }
       }
     }

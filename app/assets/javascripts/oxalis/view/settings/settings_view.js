@@ -11,9 +11,9 @@ import DatasetSettingsView from "./dataset_settings_view";
 
 const TabPane = Tabs.TabPane;
 
-const SettingsView = ({ oldModel }:{oldModel: Model}) =>
+const SettingsView = ({ oldModel, isPublicViewMode }:{oldModel: Model, isPublicViewMode: boolean}) =>
   <Tabs defaultActiveKey="1">
-    <TabPane tab="Tracing" key="1"><UserSettingsView oldModel={oldModel} /></TabPane>
+    <TabPane tab="Tracing" key="1"><UserSettingsView oldModel={oldModel} isPublicViewMode={isPublicViewMode} /></TabPane>
     <TabPane tab="Dataset" key="2"><DatasetSettingsView /></TabPane>
   </Tabs>;
 

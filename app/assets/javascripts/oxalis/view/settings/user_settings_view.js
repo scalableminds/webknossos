@@ -25,6 +25,7 @@ class UserSettingsView extends Component {
     onChangeUser: (key: $Keys<UserConfigurationType>, value: any) => void,
     onChangeTemporary: (key: $Keys<TemporaryConfigurationType>, value: any) => void,
     oldModel: Model,
+    isPublicViewMode: boolean,
   };
 
   state = {
@@ -36,15 +37,17 @@ class UserSettingsView extends Component {
   };
 
   componentDidMount() {
-    this.updateIds();
+    if (!this.props.isPublicViewMode) {
+      this.updateIds();
 
-    const wkModel = this.props.oldModel;
-    wkModel.annotationModel.on("newTree", this.updateIds);
-    wkModel.annotationModel.on("newActiveTree", this.updateIds);
-    wkModel.annotationModel.on("newActiveNode", this.updateIds);
-    wkModel.annotationModel.on("newActiveCell", this.updateIds);
-    wkModel.annotationModel.on("newActiveNodeRadius", this.updateIds);
-    wkModel.on("change:mode", () => this.forceUpdate());
+      const wkModel = this.props.oldModel;
+      wkModel.annotationModel.on("newTree", this.updateIds);
+      wkModel.annotationModel.on("newActiveTree", this.updateIds);
+      wkModel.annotationModel.on("newActiveNode", this.updateIds);
+      wkModel.annotationModel.on("newActiveCell", this.updateIds);
+      wkModel.annotationModel.on("newActiveNodeRadius", this.updateIds);
+      wkModel.on("change:mode", () => this.forceUpdate());
+    }
   }
 
   updateIds = () => {
@@ -130,7 +133,8 @@ class UserSettingsView extends Component {
 
   getSkeletonOrVolumeOptions = () => {
     const mode = this.props.oldModel.get("mode");
-    if (mode in Constants.MODES_SKELETON) {
+
+    if (mode in Constants.MODES_SKELETON && !this.props.isPublicViewMode) {
       return (
         <Panel header="Nodes & Trees" key="3">
           <NumberInputSetting label="Active Node ID" value={this.state.activeNodeId} onChange={this.onChangeActiveNodeId} />
@@ -141,7 +145,7 @@ class UserSettingsView extends Component {
           <SwitchSetting label="Override Radius" value={this.props.userConfiguration.overrideNodeRadius} onChange={_.partial(this.props.onChangeUser, "overrideNodeRadius")} />
         </Panel>
       );
-    } else if (mode === Constants.MODE_VOLUME) {
+    } else if (mode === Constants.MODE_VOLUME && !this.props.isPublicViewMode) {
       return (
         <Panel header="Volume Options" key="3">
           <NumberInputSetting label="Active Cell ID" value={this.state.activeCellId} onChange={this.onChangeActiveCellId} />
@@ -156,7 +160,7 @@ class UserSettingsView extends Component {
 
   render() {
     return (
-      <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
+      <Collapse defaultActiveKey={["1", "2", "3", "4", "5"]}>
         <Panel header="Controls" key="1">
           <NumberSliderSetting label="Keyboard delay (ms)" min={0} max={500} value={this.props.userConfiguration.keyboardDelay} onChange={_.partial(this.props.onChangeUser, "keyboardDelay")} />
           <NumberSliderSetting label="Move Value (nm/s)" min={30} max={14000} step={10} value={this.props.userConfiguration.moveValue} onChange={_.partial(this.props.onChangeUser, "moveValue")} />

@@ -17,7 +17,8 @@ export type SettingActionTypes = (
   UpdateUserSettingActionType |
   UpdateDatasetSettingActionType |
   InitializeSettingsAction |
-  UpdateLayerSettingActionType
+  UpdateLayerSettingActionType |
+  SetDatasetAction
 );
 
 export const updateUserSettingAction = (propertyName: $Keys<UserConfigurationType>, value: any): UpdateUserSettingActionType => ({

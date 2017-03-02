@@ -5,31 +5,10 @@
 
 import Store from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import type { MappingType } from "oxalis/model/binary/mappings";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
 import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
 import Request from "libs/request";
-
-import type { BoundingBoxObjectType } from "oxalis/model";
-
-
-export type CategoryType = "color" | "segmentation";
-export type ElementClassType = "uint8" | "uint16" | "uint32";
-
-export type DataStoreInfoType = {
-  typ: string;
-  url: string;
-  accessToken: string;
-};
-
-export type LayerInfoType = {
-  name: string;
-  category: CategoryType;
-  elementClass: ElementClassType;
-  mappings: Array<MappingType>;
-  maxCoordinates: BoundingBoxObjectType;
-  resolutions: Array<number>;
-}
+import type { DataStoreInfoType, CategoryType, ElementClassType, BoundingBoxObjectType, DataLayerType, MappingType } from "oxalis/store";
 
 export type BucketRequestOptions = {
   fourBit: boolean;
@@ -37,6 +16,7 @@ export type BucketRequestOptions = {
 
 export const REQUEST_TIMEOUT = 10000;
 
+// TODO: Non-reactive
 // Abstract class that defines the Layer interface and implements common
 // functionality.
 class Layer {
@@ -55,7 +35,7 @@ class Layer {
   resolutions: Array<number>;
 
 
-  constructor(layerInfo: LayerInfoType, dataStoreInfo: DataStoreInfoType) {
+  constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
     this.dataStoreInfo = dataStoreInfo;
 
     this.name = layerInfo.name;
@@ -69,11 +49,19 @@ class Layer {
     this.tokenPromise = this.requestDataToken();
   }
 
+  getDatasetName(): string {
+    const dataset = Store.getState().dataset;
+    if (dataset == null) {
+      throw new Error("Dataset needs to be available.");
+    }
+    return dataset.name;
+  }
+
 
   requestDataToken(): Promise<string> {
     if (this.tokenRequestPromise) { return this.tokenRequestPromise; }
 
-    const datasetName = Store.getState().dataset.name;
+    const datasetName = this.getDatasetName();
     this.tokenRequestPromise = Request.receiveJSON(
       `/dataToken/generate?dataSetName=${datasetName}&dataLayerName=${this.name}`,
     ).then((dataStore) => {

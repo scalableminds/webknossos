@@ -7,7 +7,7 @@ import _ from "lodash";
 import Drawing from "libs/drawing";
 import Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
-
+import { Vector3Indicies } from "oxalis/constants";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
 
 export class VoxelIterator {
@@ -85,7 +85,7 @@ class VolumeLayer {
       minCoord = _.clone(pos);
     }
 
-    for (let i = 0; i <= 2; i++) {
+    for (const i of Vector3Indicies) {
       minCoord[i] = Math.min(minCoord[i], Math.floor(pos[i]) - 2);
       maxCoord[i] = Math.max(maxCoord[i], Math.ceil(pos[i]) + 2);
     }

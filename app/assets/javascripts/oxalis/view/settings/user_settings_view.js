@@ -6,6 +6,7 @@
 import _ from "lodash";
 import React, { Component } from "react";
 import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 import { Collapse } from "antd";
 import Constants from "oxalis/constants";
 import Model from "oxalis/model";
@@ -182,7 +183,7 @@ const mapStateToProps = (state: OxalisState) => ({
   temporaryConfiguration: state.temporaryConfiguration,
 });
 
-const mapDispatchToProps = dispatch => ({
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeUser(propertyName, value) { dispatch(updateUserSettingAction(propertyName, value)); },
   onChangeTemporary(propertyName, value) { dispatch(updateTemporarySettingAction(propertyName, value)); },
 });

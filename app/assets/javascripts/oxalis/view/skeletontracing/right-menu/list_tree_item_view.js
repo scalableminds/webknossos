@@ -19,7 +19,7 @@ class ListTreeItemView extends Marionette.View {
     this.prototype.template = _.template(`\
 <i class="fa <%- getIcon() %>"></i>
 <a href="#" data-treeid="<%- treeId %>">
-  <span title="Node count" class="inline-block tree-node-count" style="width: 50px;"><%- nodes.length %></span>
+  <span title="Node count" class="inline-block tree-node-count" style="width: 50px;"><%- _.size(nodes) %></span>
   <i class="fa fa-circle tree-icon" style="color: #<%- intToHex(color) %>"></i>
   <span title="Tree Name" class="tree-name"><%- name %></span>
 </a>\

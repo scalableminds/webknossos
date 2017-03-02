@@ -1,8 +1,12 @@
-import { call, spawn, take } from "redux-saga/effects";
+import { call, takeEvery, select } from "redux-saga/effects";
 import Request from "libs/request";
 
-function centerActiveNode() {
-  // pass
+function* centerActiveNode() {
+  const { activeNodeId, activeTreeId, trees } = yield select(state => state.skeletonTracing);
+  const position = trees[activeTreeId].nodes[activeNodeId].position;
+
+  // Should be an action in the future
+  window.webknossos.model.flycam.setPosition(position);
 }
 
 function* pushAnnotation(action, payload) {
@@ -20,10 +24,6 @@ function* pushAnnotation(action, payload) {
 }
 
 export function* watchSkeletonTracingAsync() {
-  yield [
-    take("SET_ACTIVE_TREE", centerActiveNode),
-    take("SET_ACTIVE_NODE", centerActiveNode),
-    take("DELETE_NODE", centerActiveNode),
-  ];
+  yield takeEvery(["CREATE_NODE", "SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE"], centerActiveNode);
 }
 

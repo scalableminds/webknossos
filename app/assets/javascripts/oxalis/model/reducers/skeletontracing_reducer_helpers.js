@@ -185,7 +185,6 @@ export function createTree(skeletonTracing: SkeletonTracingType): Maybe<TreeType
       edges: [],
       comments: [],
     };
-
     return Maybe.Just(tree);
   }
   return Maybe.Nothing();

@@ -12,6 +12,7 @@ import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_fac
 import Dimensions from "oxalis/model/dimensions";
 import { OrthoViews, OrthoViewColors } from "oxalis/constants";
 import type { OrthoViewType, Vector3 } from "oxalis/constants";
+import _ from "lodash";
 
 const CROSSHAIR_COLORS = {
   [OrthoViews.PLANE_XY]: [0x0000ff, 0x00ff00],
@@ -69,7 +70,7 @@ class Plane {
       crosshairGeometries[i].vertices.push(new THREE.Vector3(-25 * i, -25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3(25 * i, 25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3((pWidth / 2) * i, (pWidth / 2) * (1 - i), 0));
-      this.crosshair[i] = new THREE.LineSegments(crosshairGeometries[i], new THREE.LineBasicMaterial({ color: CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 }));
+      this.crosshair[i] = new THREE.LineSegments(crosshairGeometries[i], this.getLineBasicMaterial(CROSSHAIR_COLORS[this.planeID][i], 1));
     }
 
     // create borders
@@ -79,7 +80,7 @@ class Plane {
     TDViewBordersGeo.vertices.push(new THREE.Vector3(pWidth / 2, pWidth / 2, 0));
     TDViewBordersGeo.vertices.push(new THREE.Vector3(pWidth / 2, -pWidth / 2, 0));
     TDViewBordersGeo.vertices.push(new THREE.Vector3(-pWidth / 2, -pWidth / 2, 0));
-    this.TDViewBorders = new THREE.Line(TDViewBordersGeo, new THREE.LineBasicMaterial({ color: OrthoViewColors[this.planeID], linewidth: 1 }));
+    this.TDViewBorders = new THREE.Line(TDViewBordersGeo, this.getLineBasicMaterial(OrthoViewColors[this.planeID], 1));
   }
 
 
@@ -87,19 +88,23 @@ class Plane {
     this.displayCosshair = value;
   }
 
+  getLineBasicMaterial = _.memoize(
+    (color: number, linewidth: number) =>
+      new THREE.LineBasicMaterial({ color, linewidth }),
+    (color: number, linewidth: number) => `${color}_${linewidth}`,
+  );
 
   setOriginalCrosshairColor = (): void => {
     [0, 1].forEach((i) => {
-      this.crosshair[i].material = new THREE.LineBasicMaterial({ color: CROSSHAIR_COLORS[this.planeID][i], linewidth: 1 });
+      this.crosshair[i].material = this.getLineBasicMaterial(CROSSHAIR_COLORS[this.planeID][i], 1);
     });
   }
 
   setGrayCrosshairColor = (): void => {
     [0, 1].forEach((i) => {
-      this.crosshair[i].material = new THREE.LineBasicMaterial({ color: GRAY_CH_COLOR, linewidth: 1 });
+      this.crosshair[i].material = this.getLineBasicMaterial(GRAY_CH_COLOR, 1);
     });
   }
-
 
   updateTexture(): void {
     const area = this.flycam.getArea(this.planeID);

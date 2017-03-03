@@ -5,7 +5,7 @@
 import _ from "lodash";
 import $ from "jquery";
 import AirbrakeClient from "airbrake-js";
-import Toast from "./toast";
+import Toast from "libs/toast";
 
 class ErrorWithParams extends Error {
   params: ?mixed;

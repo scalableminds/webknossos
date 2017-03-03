@@ -4,8 +4,8 @@ import Utils from "libs/utils";
 import $ from "jquery";
 import Marionette from "backbone.marionette";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
-import DatasetListItemView from "./dataset_list_item_view";
-import TeamAssignmentModalView from "./team_assignment_modal_view";
+import DatasetListItemView from "dashboard/views/dataset/dataset_list_item_view";
+import TeamAssignmentModalView from "dashboard/views/dataset/team_assignment_modal_view";
 
 const DATASETS_PER_PAGE = 30;
 

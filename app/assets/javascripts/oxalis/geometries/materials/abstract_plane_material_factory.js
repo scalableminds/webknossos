@@ -9,7 +9,7 @@ import app from "app";
 import Utils from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import AbstractMaterialFactory from "./abstract_material_factory";
+import AbstractMaterialFactory from "oxalis/geometries/materials/abstract_material_factory";
 
 class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 

@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import classNames from "classnames";
-import Comment from "./comment";
+import Comment from "oxalis/view/skeletontracing/right-menu/comment_tab/comment";
 
 
 class TreeCommentList extends Component {

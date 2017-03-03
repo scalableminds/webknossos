@@ -6,7 +6,7 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import app from "app";
-import Constants from "../constants";
+import Constants from "oxalis/constants";
 
 class TracingView extends Marionette.View {
   static initClass() {

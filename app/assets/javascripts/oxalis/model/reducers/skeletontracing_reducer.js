@@ -7,7 +7,7 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
-import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import type { OxalisState, TreeType } from "oxalis/store";
 import type { SkeletonTracingActionTypes } from "oxalis/model/actions/skeletontracing_actions";
 
@@ -168,9 +168,18 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
       ).getOrElse(state);
     }
 
-    case "SET_COMMENT": {
-      // TODO
-      break;
+    case "CREATE_COMMENT": {
+      return createComment(state.skeletonTracing, action.commentText).map(comments => {
+        const { activeTreeId } = state.skeletonTracing;
+        return update(state, { skeletonTracing: { trees: { [activeTreeId]: { comments: { $set: comments } } } } });
+      }).getOrElse(state);
+    }
+
+    case "DELETE_COMMENT": {
+      return deleteComment(state.skeletonTracing, action.commentText).map(comments => {
+        const { activeTreeId } = state.skeletonTracing;
+        return update(state, { skeletonTracing: { trees: { [activeTreeId]: { comments: { $set: comments } } } } });
+      }).getOrElse(state);
     }
 
     default:

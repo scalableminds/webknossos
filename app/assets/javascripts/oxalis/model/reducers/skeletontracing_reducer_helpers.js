@@ -14,7 +14,7 @@ import ColorGenerator from "libs/color_generator";
 import Utils from "libs/utils";
 import Window from "libs/window";
 import type { Vector3 } from "oxalis/constants";
-import type { SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType } from "oxalis/store";
+import type { SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
 
 function moveNodesToNewTree(trees: TreeMapType, nodeId: number): TreeMapType {
   // TODO
@@ -234,3 +234,36 @@ export function shuffleTreeColor(skeletonTracing: SkeletonTracingType, treeId: n
   return Maybe.Nothing();
 }
 
+export function createComment(skeletonTracing: SkeletonTracingType, commentText: string): Maybe<CommentType> {
+  const { allowUpdate } = skeletonTracing.restrictions;
+  const { activeNodeId, activeTreeId, trees } = skeletonTracing;
+
+  if (allowUpdate && _.isNumber(activeNodeId)) {
+    // Gather all comments other than the activeNode's comments
+    const comments = trees[activeTreeId].comments;
+    const commentsWithoutActiveNodeComment = comments.filter(comment => comment.node !== activeNodeId);
+
+    const newComment: CommentType = {
+      node: activeNodeId,
+      comment: commentText,
+    };
+
+    const newComments = commentsWithoutActiveNodeComment.concat([newComment]);
+    return Maybe.Just(newComments);
+  }
+
+  return Maybe.Nothing();
+}
+
+export function deleteComment(skeletonTracing: SkeletonTracingType): Maybe<CommentType> {
+  const { allowUpdate } = skeletonTracing.restrictions;
+  const { activeNodeId, activeTreeId, trees } = skeletonTracing;
+
+  if (allowUpdate && _.isNumber(activeNodeId)) {
+    const comments = trees[activeTreeId].comments;
+    const commentsWithoutActiveNodeComment = comments.filter(comment => comment.node !== activeNodeId);
+
+    return Maybe.Just(commentsWithoutActiveNodeComment);
+  }
+  return Maybe.Nothing();
+}

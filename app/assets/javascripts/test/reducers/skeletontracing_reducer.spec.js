@@ -414,4 +414,110 @@ describe("SkeletonTracing", () => {
 
     expect(newState.skeletonTracing.trees[0].color).not.toEqual([23, 23, 23]);
   });
+
+  it("should create a comment for the active node", () => {
+    const commentText = "Wow such test comment";
+
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
+
+    // create a single node with a comment
+    let newState = SkeletonTracingReducer(initalState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+
+    expect(newState.skeletonTracing.trees[0].comments.length).toEqual(1);
+    expect(newState.skeletonTracing.trees[0].comments[0].comment).toEqual(commentText);
+    expect(newState.skeletonTracing.trees[0].comments[0].node).toEqual(0);
+  });
+
+  it("shouldn't create a comments if there is no active node", () => {
+    const commentText = "Wow such test comment";
+    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
+    const newState = SkeletonTracingReducer(initalState, createCommentAction);
+    expect(newState.skeletonTracing.trees[0].comments.length).toEqual(0);
+  });
+
+
+  it("shouldn't create more than one comment for the active node", () => {
+    const commentText = "Wow such test comment";
+
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
+
+    // create a node and add the same comment three times
+    let newState = SkeletonTracingReducer(initalState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+
+    expect(newState.skeletonTracing.trees[0].comments.length).toEqual(1);
+  });
+
+  it("should create comments for several nodes", () => {
+    const commentText1 = "Wow such test comment";
+    const commentText2 = "Amaze test comment";
+
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+
+    // create two nodes with a different comment each
+    let newState = SkeletonTracingReducer(initalState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, SkeletonTracingActions.createCommentAction(commentText1));
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, SkeletonTracingActions.createCommentAction(commentText2));
+
+    expect(newState.skeletonTracing.trees[0].comments.length).toEqual(2);
+    expect(newState.skeletonTracing.trees[0].comments[0].comment).toEqual(commentText1);
+    expect(newState.skeletonTracing.trees[0].comments[0].node).toEqual(0);
+    expect(newState.skeletonTracing.trees[0].comments[1].comment).toEqual(commentText2);
+    expect(newState.skeletonTracing.trees[0].comments[1].node).toEqual(1);
+  });
+
+  it("should create comments for a different tree", () => {
+    const commentText = "Wow such test comment";
+
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+
+    let newState = SkeletonTracingReducer(initalState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+
+    expect(newState.skeletonTracing.trees[0].comments.length).toEqual(0);
+    expect(newState.skeletonTracing.trees[1].comments.length).toEqual(1);
+  });
+
+  it("should delete a comment for a node", () => {
+    const commentText = "Wow such test comment";
+
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
+    const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
+
+    // create a node with a comment, then delete it
+    let newState = SkeletonTracingReducer(initalState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+    newState = SkeletonTracingReducer(newState, deleteCommentAction);
+
+    expect(newState.skeletonTracing.trees[0].comments.length).toEqual(0);
+  });
+
+  it("should only delete the comment for the active node", () => {
+    const commentText = "Wow such test comment";
+
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+    const createCommentAction = SkeletonTracingActions.createCommentAction(commentText);
+    const deleteCommentAction = SkeletonTracingActions.deleteCommentAction();
+
+    // create two nodes with a comment each and delete the comment for the last node
+    let newState = SkeletonTracingReducer(initalState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+    newState = SkeletonTracingReducer(newState, deleteCommentAction);
+
+    expect(newState.skeletonTracing.trees[0].comments.length).toEqual(1);
+    expect(newState.skeletonTracing.trees[0].comments[0].node).toEqual(0);
+    expect(newState.skeletonTracing.trees[0].comments[0].comment).toEqual(commentText);
+  });
 });

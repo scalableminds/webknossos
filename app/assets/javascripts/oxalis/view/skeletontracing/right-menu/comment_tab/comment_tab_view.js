@@ -162,7 +162,7 @@ class CommentTabView extends Marionette.View {
 
 
   setComment(commentText: string, nodeId: number) {
-    if (!nodeId) { nodeId = Store.getState().skeletonTracing.activeNodeId(); }
+    if (!nodeId) { nodeId = Store.getState().skeletonTracing.activeNodeId; }
     // don't add a comment if there is no node
     if (!nodeId) { return; }
 
@@ -222,7 +222,6 @@ class CommentTabView extends Marionette.View {
 
 
   // Helper functions
-
   makeComment(comment, treeId) {
     if (comment === undefined) {
       return { comment: { node: null }, treeId: null };

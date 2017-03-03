@@ -21,9 +21,10 @@ type setActiveTreeActionType = {type: "SET_ACTIVE_TREE", treeId: number};
 type setTreeNameActionType = {type: "SET_TREE_NAME", name: ?string};
 type selectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: ?boolean};
 type shuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR"};
-type setCommentForNodeActionType = {type: "SET_COMMENT", nodeId: number, commentText: string};
+type createCommentActionType = {type: "CREATE_COMMENT", commentText: string};
+type deleteCommentActionType = {type: "DELETE_COMMENT"};
 
-export type SkeletonTracingActionTypes = (initializeSkeletonTracingActionType | createNodeActionType | deleteNodeActionType | setActiveNodeActionType | setActiveNodeRadiusActionType | createBranchPointActionType | deleteBranchPointActionType | createTreeActionType | deleteTreeActionType | setActiveTreeActionType | setTreeNameActionType | selectNextTreeActionType | shuffleTreeColorActionType | setCommentForNodeActionType);
+export type SkeletonTracingActionTypes = (initializeSkeletonTracingActionType | createNodeActionType | deleteNodeActionType | setActiveNodeActionType | setActiveNodeRadiusActionType | createBranchPointActionType | deleteBranchPointActionType | createTreeActionType | deleteTreeActionType | setActiveTreeActionType | setTreeNameActionType | selectNextTreeActionType | shuffleTreeColorActionType | createCommentActionType | deleteCommentActionType);
 
 export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContentDataType>): initializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",
@@ -96,8 +97,11 @@ export const shuffleTreeColorAction = (treeId: number): shuffleTreeColorActionTy
   treeId,
 });
 
-export const setCommentForNodeAction = (nodeId: number, commentText: string): setCommentForNodeActionType => ({
-  type: "SET_COMMENT",
-  nodeId,
+export const createCommentAction = (commentText: string): createCommentActionType => ({
+  type: "CREATE_COMMENT",
   commentText,
+});
+
+export const deleteCommentAction = (): deleteCommentActionType => ({
+  type: "DELETE_COMMENT",
 });

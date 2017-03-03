@@ -1,7 +1,7 @@
 import _ from "lodash";
 import app from "app";
 import Marionette from "backbone.marionette";
-import TaskTypeListItemView from "./task_type_list_item_view";
+import TaskTypeListItemView from "admin/views/tasktype/task_type_list_item_view";
 
 class TaskTypeListView extends Marionette.CompositeView {
   constructor(...args) {

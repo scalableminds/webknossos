@@ -1,5 +1,5 @@
 import $ from "jquery";
-import View from "../../view";
+import View from "oxalis/view";
 
 class VolumeTracingView extends View {
 

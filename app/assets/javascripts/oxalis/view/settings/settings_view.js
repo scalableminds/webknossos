@@ -6,8 +6,8 @@
 import React from "react";
 import { Tabs } from "antd";
 import Model from "oxalis/model";
-import UserSettingsView from "./user_settings_view";
-import DatasetSettingsView from "./dataset_settings_view";
+import UserSettingsView from "oxalis/view/settings/user_settings_view";
+import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
 
 const TabPane = Tabs.TabPane;
 

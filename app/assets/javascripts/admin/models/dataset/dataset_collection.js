@@ -1,5 +1,5 @@
-import SortedCollection from "../sorted_collection";
-import DatasetModel from "./dataset_model";
+import SortedCollection from "admin/models/sorted_collection";
+import DatasetModel from "admin/models/dataset/dataset_model";
 
 class DatasetCollection extends SortedCollection {
   static initClass() {

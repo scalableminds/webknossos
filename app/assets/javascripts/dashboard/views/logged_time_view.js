@@ -6,8 +6,8 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import c3 from "c3";
-import LoggedTimeListView from "./logged_time_list_view";
-import LoggedTimeCollection from "../models/logged_time_collection";
+import LoggedTimeListView from "dashboard/views/logged_time_list_view";
+import LoggedTimeCollection from "dashboard/models/logged_time_collection";
 
 
 class LoggedTimeView extends Marionette.View {

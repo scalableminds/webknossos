@@ -1,7 +1,7 @@
 import Utils from "libs/utils";
 import FormatUtils from "libs/format_utils";
 import Backbone from "backbone";
-import TaskModel from "./task_model";
+import TaskModel from "admin/models/task/task_model";
 
 class TaskCollection extends Backbone.Collection {
   static initClass() {

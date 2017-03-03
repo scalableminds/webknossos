@@ -4,8 +4,8 @@ import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Request from "libs/request";
 import Constants from "oxalis/constants";
-import MergeModalView from "./merge_modal_view";
-import ShareModalView from "./share_modal_view";
+import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
+import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 
 class DatasetActionsView extends Marionette.View {
   static initClass() {

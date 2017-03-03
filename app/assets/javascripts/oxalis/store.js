@@ -240,12 +240,7 @@ const defaultState: OxalisState = {
       [0]: {
         treeId: 0,
         name: "TestTree",
-        nodes: {
-          [0]: {
-            position: [],
-            rotation: [],
-          },
-        },
+        nodes: {},
         timestamp: Date.now(),
         branchPoints: [],
         edges: [],
@@ -255,7 +250,7 @@ const defaultState: OxalisState = {
     },
     name: "",
     activeTreeId: 0,
-    activeNodeId: 0,
+    activeNodeId: null,
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,

@@ -81,7 +81,7 @@ class Skeleton {
     for (const tree of trees) {
       const treeGeometry = this.getTreeGeometry(tree.treeId);
       treeGeometry.clear();
-      treeGeometry.addNodes(_.values(tree.nodes), tree.edges);
+      treeGeometry.addNodes(tree.nodes, tree.edges);
 
       for (const branchpoint of tree.branchPoints) {
         treeGeometry.updateNodeColor(branchpoint.id, null, true);

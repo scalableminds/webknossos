@@ -73,7 +73,7 @@ describe("SkeletonTracing", () => {
 
     expect(maxNodeId).toBe("0");
     expect(newState.skeletonTracing.activeNodeId).toBe(0);
-    expect(newState.skeletonTracing.trees[0].edges).toEqual(initalState.skeletonTracing.trees[0].edges);
+    expect(_.size(newState.skeletonTracing.trees[0].edges)).toEqual(0);
     expect(newState.skeletonTracing.trees[0].nodes[0]).toEqual(jasmine.objectContaining({
       position,
       rotation,

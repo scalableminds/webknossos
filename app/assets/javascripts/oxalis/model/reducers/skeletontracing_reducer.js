@@ -163,12 +163,9 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
     }
 
     case "SHUFFLE_TREE_COLOR": {
-      shuffleTreeColor(state.skeletonTracing, action.treeId).map(([tree, treeId]) => {
-
-        return update(state, { skeletonTracing: { trees: { [treeId]: { $set: tree } } } });
-      });
-
-      return state;
+      return shuffleTreeColor(state.skeletonTracing, action.treeId).map(([tree, treeId]) =>
+        update(state, { skeletonTracing: { trees: { [treeId]: { $set: tree } } } }),
+      ).getOrElse(state);
     }
 
     case "SET_COMMENT": {

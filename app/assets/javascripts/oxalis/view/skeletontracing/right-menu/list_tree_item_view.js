@@ -7,7 +7,7 @@ import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
-import ListTreeView from "./list_tree_view";
+import ListTreeView from "oxalis/view/skeletontracing/right-menu/list_tree_view";
 
 class ListTreeItemView extends Marionette.View {
 

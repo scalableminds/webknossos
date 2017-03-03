@@ -1,5 +1,5 @@
 import _ from "lodash";
-import AbstractSettingView from "./abstract_setting_view";
+import AbstractSettingView from "oxalis/view/settings/setting_views/abstract_setting_view";
 
 class CheckboxSettingView extends AbstractSettingView {
   static initClass() {

@@ -1,9 +1,9 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import app from "app";
-import GraphView from "./graph_view";
-import StatisticListView from "./statistic_list_view";
-import AchievementView from "./achievement_view";
+import GraphView from "admin/views/statistic/graph_view";
+import StatisticListView from "admin/views/statistic/statistic_list_view";
+import AchievementView from "admin/views/statistic/achievement_view";
 
 class StatisticView extends Marionette.View {
   static initClass() {

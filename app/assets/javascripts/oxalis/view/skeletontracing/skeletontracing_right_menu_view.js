@@ -3,11 +3,11 @@
  * @flow weak
  */
 
-import AbstractTabView from "../abstract_tab_view";
-import CommentTabView from "./right-menu/comment_tab/comment_tab_view";
-import AbstractTreeView from "./right-menu/abstract_tree_view";
-import ListTreeView from "./right-menu/list_tree_view";
-import DatasetInfoView from "../viewmode/right-menu/dataset_info_view";
+import AbstractTabView from "oxalis/view/abstract_tab_view";
+import CommentTabView from "oxalis/view/skeletontracing/right-menu/comment_tab/comment_tab_view";
+import AbstractTreeView from "oxalis/view/skeletontracing/right-menu/abstract_tree_view";
+import ListTreeView from "oxalis/view/skeletontracing/right-menu/list_tree_view";
+import DatasetInfoView from "oxalis/view/viewmode/right-menu/dataset_info_view";
 
 class SkeletonTracingRightMenuView extends AbstractTabView {
 

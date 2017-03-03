@@ -1,7 +1,7 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import DatasetUploadView from "./dataset_upload_view";
-import DatasetRemoteView from "./dataset_remote_view";
+import DatasetUploadView from "admin/views/dataset/dataset_upload_view";
+import DatasetRemoteView from "admin/views/dataset/dataset_remote_view";
 
 
 class DatasetAddView extends Marionette.View {

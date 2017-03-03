@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import * as THREE from "three";
-import AbstractPlaneMaterialFactory from "./abstract_plane_material_factory";
+import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 

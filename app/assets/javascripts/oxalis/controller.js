@@ -97,9 +97,7 @@ class Controller {
 
     this.urlManager.startUrlUpdater();
 
-    this.sceneController = new SceneController(
-      this.model.upperBoundary, this.model.flycam, this.model);
-
+    this.sceneController = new SceneController(this.model);
 
     if (this.model.skeletonTracing != null) {
       this.view = new SkeletonTracingView(this.model);

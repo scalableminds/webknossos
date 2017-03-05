@@ -8,7 +8,7 @@ import * as THREE from "three";
 import app from "app";
 import Utils from "libs/utils";
 import Store from "oxalis/store";
-import AbstractPlaneMaterialFactory from "./abstract_plane_material_factory";
+import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 

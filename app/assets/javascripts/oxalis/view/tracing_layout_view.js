@@ -18,12 +18,12 @@ import Constants from "oxalis/constants";
 import Modal from "oxalis/view/modal";
 import Utils from "libs/utils";
 import SettingsView from "oxalis/view/settings/settings_view";
-import ActionBarView from "./action_bar_view";
-import SkeletonTracingRightMenuView from "./skeletontracing/skeletontracing_right_menu_view";
-import VolumeTracingRightMenuView from "./volumetracing/volumetracing_right_menu_view";
-import ViewmodeRightMenuView from "./viewmode/viewmode_right_menu_view";
-import UserScriptsModalView from "./user_scripts_modal";
-import TracingView from "./tracing_view";
+import ActionBarView from "oxalis/view/action_bar_view";
+import SkeletonTracingRightMenuView from "oxalis/view/skeletontracing/skeletontracing_right_menu_view";
+import VolumeTracingRightMenuView from "oxalis/view/volumetracing/volumetracing_right_menu_view";
+import ViewmodeRightMenuView from "oxalis/view/viewmode/viewmode_right_menu_view";
+import UserScriptsModalView from "oxalis/view/user_scripts_modal";
+import TracingView from "oxalis/view/tracing_view";
 
 const MARGIN = 40;
 

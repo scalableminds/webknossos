@@ -1,4 +1,4 @@
-import SortedCollection from "../sorted_collection";
+import SortedCollection from "admin/models/sorted_collection";
 
 class UserCollection extends SortedCollection {
   static initClass() {

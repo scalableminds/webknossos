@@ -7,7 +7,7 @@ import _ from "lodash";
 import Utils from "libs/utils";
 import React, { Component } from "react";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
-import TreeCommentList from "./tree_comment_list";
+import TreeCommentList from "oxalis/view/skeletontracing/right-menu/comment_tab/tree_comment_list";
 
 type StateType = {
   data: Array<TraceTree>;

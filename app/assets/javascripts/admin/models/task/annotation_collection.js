@@ -1,6 +1,6 @@
 import Backbone from "backbone";
 import FormatUtils from "libs/format_utils";
-import AnnotationModel from "./annotation_model";
+import AnnotationModel from "admin/models/task/annotation_model";
 
 class AnnotationCollection extends Backbone.Collection {
   static initClass() {

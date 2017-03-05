@@ -9,8 +9,8 @@ import Utils from "libs/utils";
 import DatasetCollection from "admin/models/dataset/dataset_collection";
 import PaginationCollection from "admin/models/pagination_collection";
 import PaginationView from "admin/views/pagination_view";
-import DatasetListView from "./dataset_list_view";
-import SpotlightDatasetListView from "../spotlight/spotlight_dataset_list_view";
+import DatasetListView from "dashboard/views/dataset/dataset_list_view";
+import SpotlightDatasetListView from "dashboard/views/spotlight/spotlight_dataset_list_view";
 
 class DatasetSwitchView extends Marionette.View {
   static initClass() {

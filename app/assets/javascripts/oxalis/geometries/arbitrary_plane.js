@@ -13,7 +13,7 @@ import Flycam3d from "oxalis/model/flycam3d";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import Model from "oxalis/model";
 
-import ArbitraryPlaneMaterialFactory from "./materials/arbitrary_plane_material_factory";
+import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary_plane_material_factory";
 
 // Let's set up our trianglesplane.
 // It serves as a "canvas" where the brain images

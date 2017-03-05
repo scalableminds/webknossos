@@ -6,7 +6,7 @@ import Toast from "libs/toast";
 import SelectAllRows from "libs/behaviors/select_all_rows_behavior";
 import TeamRoleModalView from "admin/views/user/team_role_modal_view";
 import ExperienceModalView from "admin/views/user/experience_modal_view";
-import UserListItemView from "./user_list_item_view";
+import UserListItemView from "admin/views/user/user_list_item_view";
 
 class UserListView extends Marionette.CompositeView {
   static initClass() {

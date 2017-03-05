@@ -3,7 +3,7 @@ import app from "app";
 import Marionette from "backbone.marionette";
 import AnnotationCollection from "admin/models/task/annotation_collection";
 import TemplateHelpers from "libs/template_helpers";
-import TaskAnnotationView from "./task_annotation_view";
+import TaskAnnotationView from "admin/views/task/task_annotation_view";
 
 
 class TaskListItemView extends Marionette.CompositeView {

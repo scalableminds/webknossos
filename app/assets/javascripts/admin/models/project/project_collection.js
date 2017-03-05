@@ -1,5 +1,5 @@
 import Backbone from "backbone";
-import ProjectModel from "./project_model";
+import ProjectModel from "admin/models/project/project_model";
 
 class ProjectCollection extends Backbone.Collection {
   static initClass() {

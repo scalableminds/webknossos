@@ -7,8 +7,8 @@ import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
 import Toast from "libs/toast";
-import modal from "../modal";
-import View from "../../view";
+import modal from "oxalis/view/modal";
+import View from "oxalis/view";
 
 class SkeletonTracingView extends View {
   // Consider for deletion

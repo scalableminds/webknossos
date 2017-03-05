@@ -9,6 +9,7 @@ import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import Store from "oxalis/store";
 import { setActiveTreeAction } from "oxalis/model/actions/skeletontracing_actions";
+import ListTreeView from "oxalis/view/skeletontracing/right-menu/list_tree_view";
 
 class ListTreeItemView extends Marionette.View {
 

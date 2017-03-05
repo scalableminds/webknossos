@@ -12,7 +12,7 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
-import ParticleMaterialFactory from "./materials/particle_material_factory";
+import ParticleMaterialFactory from "oxalis/geometries/materials/particle_material_factory";
 
 class Tree {
 

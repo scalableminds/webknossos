@@ -6,7 +6,7 @@
 
 import _ from "lodash";
 import pako from "pako";
-import Toast from "./toast";
+import Toast from "libs/toast";
 
 type RequestOptions = {
   headers?: { [key: string]: string };

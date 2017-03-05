@@ -338,7 +338,7 @@ class CameraController {
 
   bindToEvents() {
     Store.subscribe(() => {
-      this.setClippingDistance(Store.getState().userConfiguration.zoom);
+      this.setClippingDistance(Store.getState().userConfiguration.clippingDistance);
       this.updateCamViewport();
     });
   }

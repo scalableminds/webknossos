@@ -13,7 +13,7 @@ import Binary from "oxalis/model/binary";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import TraceTree from "oxalis/model/skeletontracing/tracetree";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, setCommentForNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, createCommentAction } from "oxalis/model/actions/skeletontracing_actions";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { NodeType, UserConfigurationType } from "oxalis/store";
@@ -36,14 +36,14 @@ class TracingApi {
   * Returns the id of the current active node.
   */
   getActiveNodeId(): ?number {
-    return Store.getState().skeletonTracing.activeNodeId();
+    return Store.getState().skeletonTracing.activeNodeId;
   }
 
  /**
   * Returns the id of the current active tree.
   */
   getActiveTreeId(): ?number {
-    return Store.getState().skeletonTracing.activeTreeId();
+    return Store.getState().skeletonTracing.activeTreeId;
   }
 
  /**
@@ -69,6 +69,7 @@ class TracingApi {
   * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
   */
   setCommentForNode(commentText: string, nodeId: number | number): void {
+    throw Error("todo");  // createCommentAction only works for activeNodeId
     // Convert nodeId to node
     if (_.isNumber(nodeId)) {
       Store.dispatch(setCommentForNodeAction(nodeId, commentText));

@@ -17,7 +17,7 @@ import Model from "oxalis/model";
 import View from "oxalis/view";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, setCommentForNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, createCommentAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import Flycam3d from "oxalis/model/flycam3d";
@@ -392,7 +392,7 @@ class ArbitraryController {
     if (activeNodeId === 1) {
       this.cam.yaw(Math.PI);
       Toast.warning("Reached initial node, view reversed");
-      Store.dispatch(setCommentForNodeAction(activeNodeId, "reversed"));
+      Store.dispatch(createCommentAction("reversed"));
     }
   }
 

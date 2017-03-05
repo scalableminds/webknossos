@@ -7,7 +7,7 @@ import _ from "lodash";
 import app from "app";
 import Store from "oxalis/store";
 import scaleInfo from "oxalis/model/scaleinfo";
-import AbstractMaterialFactory from "./abstract_material_factory";
+import AbstractMaterialFactory from "oxalis/geometries/materials/abstract_material_factory";
 
 
 const DEFAULT_RADIUS = 1.0;

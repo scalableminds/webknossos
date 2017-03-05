@@ -225,7 +225,7 @@ export function shuffleTreeColor(skeletonTracing: SkeletonTracingType, treeId: n
   const tree = skeletonTracing.trees[treeId];
 
   if (_.isNumber(treeId) && tree) {
-    const randomId = _.random(0, 1000000000, false);
+    const randomId = _.random(0, 10000, false);
     // ColorGenerator fails to produce distinct color for huge ids (Infinity)
     tree.color = ColorGenerator.distinctColorForId(randomId);
     return Maybe.Just([tree, treeId]);
@@ -234,7 +234,7 @@ export function shuffleTreeColor(skeletonTracing: SkeletonTracingType, treeId: n
   return Maybe.Nothing();
 }
 
-export function createComment(skeletonTracing: SkeletonTracingType, commentText: string): Maybe<CommentType> {
+export function createComment(skeletonTracing: SkeletonTracingType, commentText: string): Maybe<Array<CommentType>> {
   const { allowUpdate } = skeletonTracing.restrictions;
   const { activeNodeId, activeTreeId, trees } = skeletonTracing;
 

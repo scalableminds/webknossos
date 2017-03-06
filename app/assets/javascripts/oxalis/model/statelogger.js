@@ -1,6 +1,6 @@
 /**
  * statelogger.js
- * @flow weak
+ * @flow
  */
 
 import Backbone from "backbone";
@@ -26,7 +26,7 @@ type DiffType = {
 function mutexPromise(func, timeout = 20000) {
   let promise = null;
 
-  return function (...args) {
+  return function (...args: Array<any>) {
     if (!promise) {
       let internalPromise;
       promise = internalPromise = func.apply(this, args);
@@ -60,7 +60,7 @@ class StateLogger {
   on: Function;
 
 
-  constructor(flycam, version, tracingId, tracingType, allowUpdate) {
+  constructor(flycam: Flycam2D, version: number, tracingId: string, tracingType: string, allowUpdate: boolean) {
     this.flycam = flycam;
     this.version = version;
     this.tracingId = tracingId;
@@ -75,7 +75,7 @@ class StateLogger {
   }
 
 
-  pushDiff(action, value, push = true) {
+  pushDiff(action: string, value: Object, push: boolean = true): void {
     this.newDiffs.push({
       action,
       value,
@@ -125,7 +125,7 @@ class StateLogger {
   pushThrottled = _.throttle(this.mutexedPush, PUSH_THROTTLE_TIME);
 
 
-  pushImpl(notifyOnFailure) {
+  pushImpl(notifyOnFailure: boolean) {
     if (!this.allowUpdate) {
       return Promise.resolve();
     }
@@ -155,7 +155,7 @@ class StateLogger {
   }
 
 
-  pushFailCallback(response, notifyOnFailure) {
+  pushFailCallback(response: Response, notifyOnFailure: boolean) {
     $("body").addClass("save-error");
 
     // HTTP Code 409 'conflict' for dirty state

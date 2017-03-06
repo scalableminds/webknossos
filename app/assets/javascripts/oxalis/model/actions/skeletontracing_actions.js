@@ -25,6 +25,23 @@ type createCommentActionType = {type: "CREATE_COMMENT", commentText: string};
 type deleteCommentActionType = {type: "DELETE_COMMENT"};
 
 export type SkeletonTracingActionTypes = (initializeSkeletonTracingActionType | createNodeActionType | deleteNodeActionType | setActiveNodeActionType | setActiveNodeRadiusActionType | createBranchPointActionType | deleteBranchPointActionType | createTreeActionType | deleteTreeActionType | setActiveTreeActionType | setTreeNameActionType | selectNextTreeActionType | shuffleTreeColorActionType | createCommentActionType | deleteCommentActionType);
+export const SkeletonTracingActions = [
+  "INITIALIZE_SKELETONTRACING",
+  "CREATE_NODE",
+  "DELETE_NODE",
+  "SET_ACTIVE_NODE",
+  "SET_ACTIVE_NODE_RADIUS",
+  "CREATE_BRANCHPOINT",
+  "DELETE_BRANCHPOINT",
+  "CREATE_TREE",
+  "DELETE_TREE",
+  "SET_ACTIVE_TREE",
+  "SET_TREE_NAME",
+  "SELECT_NEXT_TREE",
+  "SHUFFLE_TREE_COLOR",
+  "CREATE_COMMENT",
+  "DELETE_COMMENT",
+];
 
 export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContentDataType>): initializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",

@@ -1,43 +1,44 @@
 /**
  * volumetracing_statelogger.js
- * @flow weak
+ * @flow
  */
 
 import StateLogger from "oxalis/model/statelogger";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import PushQueue from "oxalis/model/binary/pushqueue";
+import Flycam2D from "oxalis/model/flycam2d";
 
 class VolumeTracingStateLogger extends StateLogger {
 
   volumeTracing: VolumeTracing;
   pushQueue: PushQueue;
 
-  constructor(flycam, version, tracingId, tracingType, allowUpdate, volumeTracing, pushQueue) {
+  constructor(flycam: Flycam2D, version: number, tracingId: string, tracingType: string, allowUpdate: boolean, volumeTracing: VolumeTracing, pushQueue: PushQueue) {
     super(flycam, version, tracingId, tracingType, allowUpdate);
     this.volumeTracing = volumeTracing;
     this.pushQueue = pushQueue;
   }
 
 
-  pushDiff(action, value, push = true, ...args) {
+  pushDiff(action: string, value: Object, push: boolean = true) {
     this.pushQueue.pushImpl();
-    super.pushDiff(action, value, push, ...args);
+    super.pushDiff(action, value, push);
 
     if (push) {
-      this.pushImpl();
+      this.pushQueue.pushImpl();
     }
   }
 
 
-  pushNow(...args) {
+  pushNow() {
     const pushQueuePromise = this.pushQueue.pushImpl();
-    const stateLoggerPromise = super.pushNow(...args);
+    const stateLoggerPromise = super.pushNow();
     return Promise.all([pushQueuePromise, stateLoggerPromise]);
   }
 
 
-  stateSaved(...args) {
-    return super.stateSaved(...args) && this.pushQueue.stateSaved();
+  stateSaved() {
+    return super.stateSaved() && this.pushQueue.stateSaved();
   }
 
 

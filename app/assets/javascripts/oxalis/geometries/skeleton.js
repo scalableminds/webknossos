@@ -12,7 +12,7 @@ import ErrorHandling from "libs/error_handling";
 import Model from "oxalis/model";
 import TracePoint from "oxalis/model/skeletontracing/tracepoint";
 import { OrthoViews } from "oxalis/constants";
-import Tree from "oxalis/geometries/tree";
+import TreeGeometry from "oxalis/geometries/tree_geometry";
 
 class Skeleton {
   // This class is supposed to collect all the Geometries that belong to the skeleton, like
@@ -24,7 +24,7 @@ class Skeleton {
 
   model: Model;
   isVisible: boolean;
-  treeGeometries: {[id:number]: Tree};
+  treeGeometries: {[id:number]: TreeGeometry};
   showInactiveTrees: boolean;
   lastActiveNode: TracePoint;
 
@@ -48,7 +48,7 @@ class Skeleton {
 
 
   createNewTree(treeId, treeColor) {
-    const tree = new Tree(treeId, treeColor, this.model);
+    const tree = new TreeGeometry(treeId, treeColor, this.model);
     tree.showRadius(!Store.getState().userConfiguration.overrideNodeRadius);
     this.treeGeometries[treeId] = tree;
     this.setActiveNode();
@@ -80,8 +80,7 @@ class Skeleton {
 
     for (const tree of trees) {
       const treeGeometry = this.getTreeGeometry(tree.treeId);
-      treeGeometry.clear();
-      treeGeometry.addNodes(tree.nodes, tree.edges);
+      treeGeometry.reset(tree.nodes, tree.edges);
 
       for (const branchpoint of tree.branchPoints) {
         treeGeometry.updateNodeColor(branchpoint.id, null, true);
@@ -227,9 +226,9 @@ class Skeleton {
     }
 
     if (id !== OrthoViews.TDView) {
-      return this.setVisibilityTemporary(this.isVisible);
+      this.setVisibilityTemporary(this.isVisible);
     }
-    return this.setVisibilityTemporary(true);
+    this.setVisibilityTemporary(true);
   }
 
 

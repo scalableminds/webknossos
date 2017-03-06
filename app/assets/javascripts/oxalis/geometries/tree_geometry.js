@@ -14,7 +14,7 @@ import Store from "oxalis/store";
 import Model from "oxalis/model";
 import ParticleMaterialFactory from "oxalis/geometries/materials/particle_material_factory";
 
-class Tree {
+class TreeGeometry {
 
   nodeIDs: ResizableBuffer<Int32Array>;
   edgesBuffer: ResizableBuffer<Float32Array>;
@@ -117,15 +117,17 @@ class Tree {
   }
 
 
-  addNodes(nodes, edges) {
-    // nodeList.forEach(node =>
-    //   this.addNode(node));
-    this.nodesBuffer.pushMany(_.map(nodes, "position"));
-    this.sizesBuffer.pushMany(_.map(nodes, node => [node.radius * 2]));
-    this.scalesBuffer.pushMany(_.times(_.size(nodes), _.constant([1.0])));
-    this.nodeIDs.push(_.map(nodes, node => [node.id]));
-    this.nodesColorBuffer.pushMany(_.map(nodes, node => this.getColor(node.id)));
-    this.edgesBuffer.pushMany(edges.map(edge => nodes[edge.source].position.concat(nodes[edge.target].position)));
+  reset(nodes, edges) {
+    if (_.size(nodes)) {
+      this.clear();
+
+      this.nodesBuffer.pushMany(_.map(nodes, "position"));
+      this.sizesBuffer.pushMany(_.map(nodes, node => [node.radius * 2]));
+      this.scalesBuffer.pushMany(_.times(_.size(nodes), _.constant([1.0])));
+      this.nodeIDs.push(_.map(nodes, node => [node.id]));
+      this.nodesColorBuffer.pushMany(_.map(nodes, node => this.getColor(node.id)));
+      this.edgesBuffer.pushMany(edges.map(edge => nodes[edge.source].position.concat(nodes[edge.target].position)));
+    }
   }
 
 
@@ -418,4 +420,4 @@ class Tree {
   }
 }
 
-export default Tree;
+export default TreeGeometry;

@@ -2,7 +2,7 @@ import _ from "lodash";
 import app from "app";
 import Marionette from "backbone.marionette";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
-import WorkloadListItemView from "./workload_list_item_view";
+import WorkloadListItemView from "admin/views/workload/workload_list_item_view";
 
 class WorkloadListView extends Marionette.CompositeView {
   static initClass() {

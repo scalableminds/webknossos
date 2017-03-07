@@ -9,8 +9,8 @@ import app from "app";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import SortTableBehavior from "libs/behaviors/sort_table_behavior";
-import ExplorativeTracingListItemView from "./explorative_tracing_list_item_view";
-import UserAnnotationsCollection from "../models/user_annotations_collection";
+import ExplorativeTracingListItemView from "dashboard/views/explorative_tracing_list_item_view";
+import UserAnnotationsCollection from "dashboard/models/user_annotations_collection";
 
 
 class ExplorativeTracingListView extends Marionette.CompositeView {

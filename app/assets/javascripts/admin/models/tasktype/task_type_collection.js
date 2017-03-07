@@ -1,6 +1,6 @@
 import _ from "lodash";
-import TaskTypeModel from "./task_type_model";
-import SortedCollection from "../sorted_collection";
+import TaskTypeModel from "admin/models/tasktype/task_type_model";
+import SortedCollection from "admin/models/sorted_collection";
 
 class TaskTypeCollection extends SortedCollection {
   static initClass() {

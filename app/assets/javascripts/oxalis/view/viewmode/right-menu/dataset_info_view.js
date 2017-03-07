@@ -23,6 +23,23 @@ class DatasetInfoView extends Marionette.View {
   <% if(treeCount != null) { %>
     <p>Total number of trees: <%- treeCount %></p>
   <% } %>
+  <% if (isPublicViewMode) { %>
+    <table class="table table-condensed table-nohead table-bordered">
+      <tbody>
+        <tr><th colspan="2">Controls</th></tr>
+        <tr><td>I,O or Alt + Mousewheel</td><td>Zoom in/out</td></tr>
+        <tr><td>Mousewheel or D and F</td><td>Move along 3rd axis</td></tr>
+        <tr><td>Left Mouse drag or Arrow keys</td><td>Move</td></tr>
+        <tr><td>Right click drag in 3D View</td><td>Rotate 3D View</td></tr>
+        <tr><td>K,L</td><td>Scale up/down viewports</td></tr>
+      </tbody>
+    </table>
+    <div>
+      <img class="img-50" src="/assets/images/Max-Planck-Gesellschaft.svg" alt="Max Plank Geselleschaft Logo" />
+      <img class="img-50" src="/assets/images/MPI-brain-research.svg" alt="Max Plank Institute of Brain Research Logo" />
+    </div>
+  <% } %>
+
 </div>\
 `);
 
@@ -72,11 +89,14 @@ class DatasetInfoView extends Marionette.View {
     // Or display an explorative tracings name if there is one
     if (name) { annotationType += `: ${name}`; }
 
+    const dataset = Store.getState().dataset;
+
     return {
       annotationType,
       zoomLevel: this.calculateZoomLevel(),
-      dataSetName: Store.getState().dataset.name,
+      dataSetName: dataset != null ? dataset.name : "",
       treeCount: Utils.__guard__(this.model.skeletonTracing, x => x.trees.length),
+      isPublicViewMode: this.model.get("controlMode") === constants.CONTROL_MODE_VIEW,
     };
   }
 

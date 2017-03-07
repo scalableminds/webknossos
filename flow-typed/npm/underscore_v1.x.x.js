@@ -1,5 +1,5 @@
-// flow-typed signature: fbe38cb79515a64b51c8f4736ae72cec
-// flow-typed version: 38a6de2c29/underscore_v1.x.x/flow_>=v0.13.x_<=v0.37.x
+// flow-typed signature: 37c2891add76b6fa4e6199147d5f340d
+// flow-typed version: 38a6de2c29/underscore_v1.x.x/flow_>=v0.38.x
 
 // type definitions for (some of) underscore
 

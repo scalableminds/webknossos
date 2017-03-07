@@ -6,6 +6,7 @@
 import _ from "lodash";
 import Backbone from "backbone";
 import Store from "oxalis/store";
+import type { CategoryType } from "oxalis/store";
 import AsyncTaskQueue from "libs/async_task_queue";
 import InterpolationCollector from "oxalis/model/binary/interpolation_collector";
 import DataCube from "oxalis/model/binary/data_cube";
@@ -22,7 +23,7 @@ import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { Tracing } from "oxalis/model";
-import type Layer, { CategoryType } from "oxalis/model/binary/layers/layer";
+import type Layer from "oxalis/model/binary/layers/layer";
 
 const PING_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -33,8 +34,8 @@ type PingOptions = {
   activePlane: OrthoViewType;
 };
 
+// TODO: Non-reactive
 class Binary {
-
   model: Model;
   cube: DataCube;
   tracing: Tracing;
@@ -80,7 +81,11 @@ class Binary {
 
     const taskQueue = new AsyncTaskQueue();
 
-    const datastoreInfo = Store.getState().dataset.dataStore;
+    const dataset = Store.getState().dataset;
+    if (dataset == null) {
+      throw new Error("Dataset needs to be available before constructing the Binary.");
+    }
+    const datastoreInfo = dataset.dataStore;
     this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
     this.pushQueue = new PushQueue(this.cube, this.layer, this.tracing.id, taskQueue);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);

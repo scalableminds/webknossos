@@ -12,7 +12,7 @@ import Model from "oxalis/model";
 import type { BoundingBoxType } from "oxalis/model";
 import scaleInfo from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
-import constants, { OrthoViews, OrthoViewValues } from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewValues, Vector3Indicies } from "oxalis/constants";
 import type { Vector2, Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 
 const Flycam2dConstants = {
@@ -291,7 +291,7 @@ class Flycam2d {
 
 
   setPositionSilent(position: Vector3): void {
-    for (let i = 0; i <= 2; i++) {
+    for (const i of Vector3Indicies) {
       if (position[i] == null) {
         position[i] = this.position[i];
       }

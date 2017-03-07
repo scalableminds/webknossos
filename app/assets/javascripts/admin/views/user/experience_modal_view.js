@@ -1,6 +1,6 @@
 import _ from "lodash";
 import $ from "jquery";
-import ModalView from "../modal_view";
+import ModalView from "admin/views/modal_view";
 
 class ExperienceModalView extends ModalView {
   static initClass() {

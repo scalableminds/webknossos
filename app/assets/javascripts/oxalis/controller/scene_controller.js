@@ -18,7 +18,7 @@ import Cube from "oxalis/geometries/cube";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
 import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
-import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView, Vector3Indicies } from "oxalis/constants";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { BoundingBoxType } from "oxalis/model";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
@@ -26,7 +26,6 @@ import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 class SceneController {
   skeleton: Skeleton;
   CUBE_COLOR: number;
-  upperBoundary: Vector3;
   flycam: Flycam2d;
   model: Model;
   current: number;
@@ -53,10 +52,9 @@ class SceneController {
     this.prototype.CUBE_COLOR = 0x999999;
   }
 
-  constructor(upperBoundary: Vector3, flycam: Flycam2d, model: Model) {
+  constructor(model: Model) {
     _.extend(this, Backbone.Events);
-    this.upperBoundary = upperBoundary;
-    this.flycam = flycam;
+    this.flycam = model.flycam;
     this.model = model;
 
     this.current = 0;
@@ -79,7 +77,8 @@ class SceneController {
   createMeshes(): void {
     // Cubes
     this.cube = new Cube(this.model, {
-      max: this.upperBoundary,
+      min: this.model.lowerBoundary,
+      max: this.model.upperBoundary,
       color: this.CUBE_COLOR,
       showCrossSections: true });
     this.userBoundingBox = new Cube(this.model, {
@@ -227,7 +226,7 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    for (let i = 0; i < 3; i++) {
+    for (const i of Vector3Indicies) {
       this.planeShift[i] = value * scaleInfo.voxelPerNM[i];
     }
     app.vent.trigger("rerender");

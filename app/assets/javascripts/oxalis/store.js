@@ -4,33 +4,46 @@
  */
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
-import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
-import type { ElementClassType } from "oxalis/model/binary/layers/layer";
 
-type DataLayerType = {
+export type BoundingBoxObjectType = {
+  topLeft: Vector3,
+  width: number,
+  height: number,
+  depth: number,
+};
+
+export type MappingType = {
+  parent: ?string;
+  name: string;
+  classes: ?Array<Array<number>>;
+};
+
+export type CategoryType = "color" | "segmentation";
+export type ElementClassType = "uint8" | "uint16" | "uint32";
+
+export type DataLayerType = {
   name: string,
-  category: "color" | "segmentation",
-  maxCoordinates: {
-     topLeft: Vector3,
-     width: number,
-     height: number,
-     depth: number,
-  },
-  resolutions: Vector4,
-  fallback: any,
+  category: CategoryType,
+  maxCoordinates: BoundingBoxObjectType,
+  resolutions: Array<number>,
+  // fallback: any,
   elementClass: ElementClassType,
-  mappings:[],
+  mappings: Array<MappingType>,
+}
+
+export type DataStoreInfoType = {
+  name: string,
+  url: string,
+  typ: string,
+  accessToken?: string,
 }
 
 export type DatasetType = {
  name: string,
- dataStore: {
-  name: string,
-  url: string,
-  typ: string,
- },
+ dataStore: DataStoreInfoType,
  scale: Vector3,
  dataLayers: Array<DataLayerType>
 }

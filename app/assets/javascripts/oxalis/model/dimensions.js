@@ -51,12 +51,12 @@ const Dimensions = {
     }
   },
 
-  roundCoordinate(coordinate: Array<number>): Array<number> {
-    const res = coordinate.slice();
-    for (let i = 0; i < res.length; i++) {
-      res[i] = Math.floor(res[i]);
-    }
-    return res;
+  roundCoordinate(coordinate: Vector3): Vector3 {
+    return [
+      Math.floor(coordinate[0]),
+      Math.floor(coordinate[1]),
+      Math.floor(coordinate[2]),
+    ];
   },
 
   distance(pos1: Array<number>, pos2: Array<number>): number {

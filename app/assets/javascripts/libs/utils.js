@@ -91,6 +91,25 @@ const Utils = {
     return result;
   },
 
+  concatVector3(a: Vector3, b: Vector3): Vector6 {
+    return [
+      a[0],
+      a[1],
+      a[2],
+      b[0],
+      b[1],
+      b[2],
+    ];
+  },
+
+  numberArrayToVector3(array: Array<number>): Vector3 {
+    const output = [0, 0, 0];
+    for (let i = 0; i < Math.min(3, array.length); i++) {
+      output[i] = array[i];
+    }
+    return output;
+  },
+
   numberArrayToVector6(array: Array<number>): Vector6 {
     const output = [0, 0, 0, 0, 0, 0];
     for (let i = 0; i < Math.min(6, array.length); i++) {

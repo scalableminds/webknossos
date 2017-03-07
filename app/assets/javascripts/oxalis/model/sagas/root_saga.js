@@ -1,4 +1,4 @@
-import { watchPushSettingsAsync, initializeSettingsAsync } from "./settings_saga";
+import { watchPushSettingsAsync, initializeSettingsAsync } from "oxalis/model/sagas/settings_saga";
 
 export default function* rootSaga() {
   yield [

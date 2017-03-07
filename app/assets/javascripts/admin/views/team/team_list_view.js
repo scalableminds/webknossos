@@ -2,8 +2,8 @@ import _ from "lodash";
 import Marionette from "backbone.marionette";
 import SelectAllRows from "libs/behaviors/select_all_rows_behavior";
 import app from "app";
-import TeamListItemView from "./team_list_item_view";
-import CreateTeamModalView from "./create_team_modal_view";
+import TeamListItemView from "admin/views/team/team_list_item_view";
+import CreateTeamModalView from "admin/views/team/create_team_modal_view";
 
 class TeamListView extends Marionette.CompositeView {
   static initClass() {

@@ -11,7 +11,7 @@ import Toast from "libs/toast";
 import TemplateHelpers from "libs/template_helpers";
 import Request from "libs/request";
 import DatasetAccesslistCollection from "admin/models/dataset/dataset_accesslist_collection";
-import DatasetAccessView from "./dataset_access_view";
+import DatasetAccessView from "dashboard/views/dataset/dataset_access_view";
 
 
 class DatasetListItemView extends Marionette.CompositeView {

@@ -1,5 +1,5 @@
 import Marionette from "backbone.marionette";
-import SelectionItemView from "./selection_item_view";
+import SelectionItemView from "admin/views/selection_item_view";
 
 class SelectionView extends Marionette.CollectionView {
   static initClass() {

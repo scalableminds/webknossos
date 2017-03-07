@@ -1,5 +1,5 @@
 import Backbone from "backbone";
-import Request from "./request";
+import Request from "libs/request";
 
 // changes Backbone ajax to use Request library instead of jquery ajax
 Backbone.ajax = function (options) {

@@ -8,8 +8,8 @@ import ProjectCollection from "admin/models/project/project_collection";
 import SelectionView from "admin/views/selection_view";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
-import TaskCreateFromFormView from "./task_create_from_form_view";
-import TaskCreateFromNMLView from "./task_create_from_nml_view";
+import TaskCreateFromFormView from "admin/views/task/task_create_subviews/task_create_from_form_view";
+import TaskCreateFromNMLView from "admin/views/task/task_create_subviews/task_create_from_nml_view";
 
 class TaskCreateFromView extends Marionette.View {
   static initClass() {

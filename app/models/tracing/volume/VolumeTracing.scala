@@ -10,7 +10,6 @@ import java.util.zip.ZipInputStream
 import javax.xml.stream.XMLStreamWriter
 
 import scala.concurrent.Future
-
 import models.tracing.CommonTracingService
 import net.liftweb.common.{Failure, Full}
 import com.typesafe.scalalogging.LazyLogging
@@ -22,7 +21,7 @@ import play.api.libs.ws.WS
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.braingames.binary.models.{DataLayer, DataSource, UserDataLayer}
+import com.scalableminds.braingames.binary.repository.WebKnossosWrapDataSourceType
 import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFileStream, NamedFunctionStream, ZipIO}
 import com.scalableminds.util.xml.{XMLWrites, Xml}
 import models.tracing.skeleton.SkeletonTracing
@@ -148,6 +147,7 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
     for {
       baseSource <- baseDataSet.dataSource.toFox
+      if baseSource.sourceType != Some(WebKnossosWrapDataSourceType.name)
       dataLayer <- DataStoreHandler.createUserDataLayer(baseDataSet.dataStoreInfo, baseSource)
       volumeTracing = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, editPosition = baseDataSet.defaultStart, zoomLevel = VolumeTracing.defaultZoomLevel)
       _ <- UserDataLayerDAO.insert(dataLayer)

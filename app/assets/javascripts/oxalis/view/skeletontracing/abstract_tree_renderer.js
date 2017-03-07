@@ -141,7 +141,7 @@ class AbstractTreeRenderer {
 
     if (mode === this.MODE_NORMAL || decision.chainCount < 3) {
       this.drawChainFromTo(top, middle, tree, decision);
-    } else if (mode === this.MODE_NOCHAIN) {
+    } else if (mode === MODE_NOCHAIN) {
       this.drawChainWithChainIndicatorFromTo(top, middle, tree, decision);
     }
 
@@ -192,7 +192,7 @@ class AbstractTreeRenderer {
    * @param  {Number} left     left border in pixels
    * @param  {Number} right    right border in pixels
    * @param  {Number} top      y coordinate in pixels
-   * @param  {Number} mode     @MODE_NORMAL or @MODE_NOCHAIN
+   * @param  {Number} mode     MODE_NORMAL or MODE_NOCHAIN
    * @return {Number}          new middle coordinate in pixels
   */
   drawBranch(decision: DecisionType, left: number, right: number, top: number, mode: AbstractTreeModeType): number {
@@ -219,7 +219,7 @@ class AbstractTreeRenderer {
    * @param  {Number} left     left border in pixels
    * @param  {Number} right    right border in pixels
    * @param  {Number} top      y coordinate in pixels
-   * @param  {Number} mode     @MODE_NORMAL or @MODE_NOCHAIN
+   * @param  {Number} mode     MODE_NORMAL or MODE_NOCHAIN
    * @return {Number}          new middle coordinate in pixels
   */
   drawCommentChain(decision: DecisionType, left: number, right: number, top: number, mode: AbstractTreeModeType): number {
@@ -295,16 +295,16 @@ class AbstractTreeRenderer {
    * Calculate the y coordinate of a node.
    * @param  {Number} chainCount amount of chained nodes since the parent node
    * @param  {Number} top        y coordinate of the parent node
-   * @param  {Number} mode       @MODE_NORMAL or @MODE_NOCHAIN
+   * @param  {Number} mode       MODE_NORMAL or MODE_NOCHAIN
    * @return {Number}            y coordinate of the current decision node
   */
   calculateTop(chainCount: number, top: number, mode: AbstractTreeModeType): number {
-    if (mode === this.MODE_NORMAL || chainCount < 3) {
+    if (mode === MODE_NORMAL || chainCount < 3) {
       return top + (chainCount * this.nodeDistance);
-    } else if (mode === this.MODE_NOCHAIN) {
+    } else if (mode === MODE_NOCHAIN) {
       return top + (2 * this.nodeDistance);
     }
-    // TODO: Remove once flow is integrated, as mode can only be @MODE_NORMAL or @MODE_NOCHAIN
+    // TODO: Remove once flow is integrated, as mode can only be MODE_NORMAL or MODE_NOCHAIN
     return null;
   }
 
@@ -313,7 +313,7 @@ class AbstractTreeRenderer {
    * Calculate the y coordinate of the first child of a node.
    * @param  {Number} chainCount amount of chained nodes since the parent node
    * @param  {Number} top        y coordinate of the parent node
-   * @param  {Number} mode       @MODE_NORMAL or @MODE_NOCHAIN
+   * @param  {Number} mode       MODE_NORMAL or MODE_NOCHAIN
    * @return {Number}            y coordinate of the current decision node's child
   */
   calculateChildTop(chainCount: number, top: number, mode: AbstractTreeModeType): number {
@@ -451,7 +451,7 @@ class AbstractTreeRenderer {
   /**
    * Recursively calculate the maximum depth of a TracePoint tree.
    * @param  {TracePoint} tree
-   * @param  {Number} mode      @MODE_NORMAL or @MODE_NOCHAIN
+   * @param  {Number} mode      MODE_NORMAL or MODE_NOCHAIN
    * @param  {Number} count     helper count, current depth
    * @return {Number}           depth of the tree
   */
@@ -467,7 +467,7 @@ class AbstractTreeRenderer {
 
     // find next decision point
     const decision = this.getNextDecision(tree);
-    if (mode === this.MODE_NOCHAIN) {
+    if (mode === MODE_NOCHAIN) {
       decision.chainCount = Math.min(decision.chainCount, 2);
     }
     count += decision.chainCount;

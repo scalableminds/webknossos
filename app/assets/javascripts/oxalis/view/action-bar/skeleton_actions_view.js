@@ -5,23 +5,25 @@ import Store from "oxalis/store";
 import { createNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 
 class SkeletonActionsView extends Marionette.View {
-  template = _.template(`\
-    <% if(isTracingMode()) { %>
-      <div class="btn-group">
-<button type="button" class="btn btn-default" id="add-node">Add Node (Right-Click) </button>
-      </div>
-    <% } %>\
-`);
+  static initClass() {
+    this.prototype.template = _.template(`\
+      <% if(isTracingMode()) { %>
+        <div class="btn-group">
+  <button type="button" class="btn btn-default" id="add-node">Add Node (Right-Click) </button>
+        </div>
+      <% } %>\
+  `);
 
-  templateContext = {
-    isTracingMode() {
-      return this.mode === Constants.MODE_PLANE_TRACING;
-    },
-  };
+    this.prototype.templateContext = {
+      isTracingMode() {
+        return this.mode === Constants.MODE_PLANE_TRACING;
+      },
+    };
 
-  events = {
-    "click #add-node": "addNode",
-  };
+    this.prototype.events = {
+      "click #add-node": "addNode",
+    };
+  }
 
   initialize() {
     this.listenTo(this.model, "change:mode", this.render);
@@ -38,5 +40,6 @@ class SkeletonActionsView extends Marionette.View {
     ));
   }
 }
+SkeletonActionsView.initClass();
 
 export default SkeletonActionsView;

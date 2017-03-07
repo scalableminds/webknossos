@@ -12,7 +12,7 @@ object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
-  val braingamesVersion = "9.3.0"
+  val braingamesVersion = "10.1.1"
   val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
@@ -118,14 +118,11 @@ object AssetCompilation {
 
   def isWindowsSystem = System.getProperty("os.name").startsWith("Windows")
 
-  private def startProcess(app: String, param: String, base: File) = {
+  private def startProcess(app: String, params: List[String], base: File) = {
     if(isWindowsSystem)
-      Process( "cmd" :: "/c" :: app :: param :: Nil, base )
+      Process( "cmd" :: "/c" :: app :: params, base )
     else
-      if(param != "")
-        Process( app :: param :: Nil, base )
-      else
-        Process( app, base )
+      Process( app :: params, base )
   }
 
   private def killProcess(pid: String) = {
@@ -137,7 +134,7 @@ object AssetCompilation {
 
   private def npmInstall: Def.Initialize[Task[Seq[File]]] = (npmPath, baseDirectory, streams) map { (npm, base, s) =>
     try{
-      val exitValue = startProcess(npm, "install", base) ! s.log
+      val exitValue = startProcess(npm, List("install"), base) ! s.log
       if(exitValue != 0)
         throw new Error(s"Running npm failed with exit code: $exitValue")
     } catch {
@@ -150,7 +147,7 @@ object AssetCompilation {
   private def webpackGenerateTask: Def.Initialize[Task[Any]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
     try{
       Future{
-        startProcess(webpack, "-w", base) ! s.log
+        startProcess(webpack, List("-w"), base) ! s.log
       }
     } catch {
       case e: java.io.IOException =>
@@ -170,7 +167,7 @@ object AssetCompilation {
 
   private def assetsGenerationTask: Def.Initialize[Task[Unit]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
     try{
-      val exitValue = startProcess(webpack, "--bail", base) ! s.log
+      val exitValue = startProcess(webpack, List("--define", "process.env.NODE_ENV=\"production\""), base) ! s.log
       if(exitValue != 0)
         throw new Error(s"Running webpack failed with exit code: $exitValue")
     } catch {

@@ -11,7 +11,7 @@ import Backbone from "backbone";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveTreeAction, setTreeNameAction, createTreeAction, deleteTreeAction, shuffleTreeColorAction, selectNextTreeAction } from "oxalis/model/actions/skeletontracing_actions";
-import ListTreeItemView from "./list_tree_item_view";
+import ListTreeItemView from "oxalis/view/skeletontracing/right-menu/list_tree_item_view";
 
 class ListTreeView extends Marionette.CompositeView {
   static initClass() {

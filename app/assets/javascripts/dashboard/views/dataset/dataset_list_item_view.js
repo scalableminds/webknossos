@@ -11,7 +11,7 @@ import Toast from "libs/toast";
 import TemplateHelpers from "libs/template_helpers";
 import Request from "libs/request";
 import DatasetAccesslistCollection from "admin/models/dataset/dataset_accesslist_collection";
-import DatasetAccessView from "./dataset_access_view";
+import DatasetAccessView from "dashboard/views/dataset/dataset_access_view";
 
 
 class DatasetListItemView extends Marionette.CompositeView {
@@ -85,7 +85,7 @@ class DatasetListItemView extends Marionette.CompositeView {
         <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
           <img src="/assets/images/skeleton.svg"> start Skeleton Tracing
         </a>
-        <% if(dataStore.typ != "ndstore"){ %>
+        <% if(dataStore.typ != "ndstore" && sourceType != "webKnossosWrap"){ %>
           <a href="#" title="Create volume tracing" id="volumeTraceLink">
             <img src="/assets/images/volume.svg"> start Volume Tracing
           </a>

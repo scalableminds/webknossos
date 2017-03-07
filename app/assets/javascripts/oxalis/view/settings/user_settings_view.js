@@ -30,6 +30,7 @@ class UserSettingsView extends Component {
     onChangeActiveTreeId: (value: number) => void,
     onChangeRadius: (value: number) => void,
     oldModel: Model,
+    isPublicViewMode: boolean,
   };
 
   state = {
@@ -38,11 +39,15 @@ class UserSettingsView extends Component {
   };
 
   componentDidMount() {
-    this.updateIds();
+    // remove public mode prop once oldModel is no longer a prop of this
+    if (!this.props.isPublicViewMode) {
+      this.updateIds();
 
-    const wkModel = this.props.oldModel;
-    // wkModel.annotationModel.on("newActiveCell", this.updateIds);
-    wkModel.on("change:mode", () => this.forceUpdate());
+      const wkModel = this.props.oldModel;
+      // wkModel.annotationModel.on("newActiveCell", this.updateIds);
+      wkModel.on("change:mode", () => this.forceUpdate());
+    }
+
   }
 
   updateIds = () => {
@@ -92,8 +97,7 @@ class UserSettingsView extends Component {
         return (
           <Panel header="Flight Options" key="2">
             <NumberSliderSetting label="Mouse Rotation" min={0.0001} max={0.02} step={0.001} value={this.props.userConfiguration.mouseRotateValue} onChange={_.partial(this.props.onChangeUser, "mouseRotateValue")} />
-            <NumberSliderSetting label="Keyboard Rotation Value" min={0.001} max={0.08} step={0.001} value={this.state.activeNodeId} onChange={this.onChangeActiveNodeId} />
-            <NumberSliderSetting label="Move Value (nm/s)" min={30} max={1500} step={10} value={this.props.userConfiguration.moveValue3d} onChange={_.partial(this.props.onChangeUser, "moveValue3d")} />
+            <NumberSliderSetting label="Keyboard Rotation" min={0.001} max={0.08} step={0.001} value={this.props.userConfiguration.rotateValue} onChange={_.partial(this.props.onChangeUser, "rotateValue")} />
             <NumberSliderSetting label="Crosshair Size" min={0.05} max={0.5} step={0.01} value={this.props.userConfiguration.crosshairSize} onChange={_.partial(this.props.onChangeUser, "crosshairSize")} />
             <NumberSliderSetting label="Sphere Radius" min={50} max={500} step={1} value={this.props.userConfiguration.sphericalCapRadius} onChange={_.partial(this.props.onChangeUser, "sphericalCapRadius")} />
             <NumberSliderSetting label="Clipping Distance" max={127} value={this.props.userConfiguration.clippingDistanceArbitrary} onChange={_.partial(this.props.onChangeUser, "clippingDistanceArbitrary")} />
@@ -105,9 +109,9 @@ class UserSettingsView extends Component {
 
   getSkeletonOrVolumeOptions = () => {
     const mode = this.props.oldModel.get("mode");
-    const activeNodeId = _.isNumber(this.props.activeNodeId) ? this.props.activeNodeId : "";
+    const activeNodeId = _.isNumber(this.props.skeletonTracing.activeNodeId) ? this.props.skeletonTracing.activeNodeId : "";
 
-    if (mode in Constants.MODES_SKELETON) {
+    if (Constants.MODES_SKELETON.includes(mode) && !this.props.isPublicViewMode) {
       return (
         <Panel header="Nodes & Trees" key="3">
           <NumberInputSetting label="Active Node ID" value={activeNodeId} onChange={this.props.onChangeActiveNodeId} />
@@ -118,7 +122,7 @@ class UserSettingsView extends Component {
           <SwitchSetting label="Override Radius" value={this.props.userConfiguration.overrideNodeRadius} onChange={_.partial(this.props.onChangeUser, "overrideNodeRadius")} />
         </Panel>
       );
-    } else if (mode === Constants.MODE_VOLUME) {
+    } else if (mode === Constants.MODE_VOLUME && !this.props.isPublicViewMode) {
       return (
         <Panel header="Volume Options" key="3">
           <NumberInputSetting label="Active Cell ID" value={this.state.activeCellId} onChange={this.onChangeActiveCellId} />
@@ -132,11 +136,16 @@ class UserSettingsView extends Component {
   };
 
   render() {
+    const mode = this.props.oldModel.get("mode");
+    const moveValueSetting = Constants.MODES_ARBITRARY.includes(mode) ?
+      <NumberSliderSetting label="Move Value (nm/s)" min={30} max={1500} step={10} value={this.props.userConfiguration.moveValue3d} onChange={_.partial(this.props.onChangeUser, "moveValue3d")} /> :
+      <NumberSliderSetting label="Move Value (nm/s)" min={30} max={14000} step={10} value={this.props.userConfiguration.moveValue} onChange={_.partial(this.props.onChangeUser, "moveValue")} />;
+
     return (
-      <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
+      <Collapse defaultActiveKey={["1", "2", "3", "4", "5"]}>
         <Panel header="Controls" key="1">
           <NumberSliderSetting label="Keyboard delay (ms)" min={0} max={500} value={this.props.userConfiguration.keyboardDelay} onChange={_.partial(this.props.onChangeUser, "keyboardDelay")} />
-          <NumberSliderSetting label="Move Value (nm/s)" min={30} max={14000} step={10} value={this.props.userConfiguration.moveValue} onChange={_.partial(this.props.onChangeUser, "moveValue")} />
+          {moveValueSetting}
           <SwitchSetting label="Inverse X" value={this.props.userConfiguration.inverseX} onChange={_.partial(this.props.onChangeUser, "inverseX")} />
           <SwitchSetting label="Inverse Y" value={this.props.userConfiguration.inverseY} onChange={_.partial(this.props.onChangeUser, "inverseY")} />
           <SwitchSetting label="d/f-Switching" value={this.props.userConfiguration.dynamicSpaceDirection} onChange={_.partial(this.props.onChangeUser, "dynamicSpaceDirection")} />
@@ -144,7 +153,7 @@ class UserSettingsView extends Component {
         { this.getViewportOptions() }
         { this.getSkeletonOrVolumeOptions() }
         <Panel header="Segmentation" key="4">
-          <NumberSliderSetting label="Segmentation Opacity" max={100} value={this.props.userConfiguration.segmentationOpacity} onChange={_.partial(this.props.onChangeUser, "segmentationOpacity")} />
+          <NumberSliderSetting label="Segmentation Opacity" min={0} max={100} value={this.props.userConfiguration.segmentationOpacity} onChange={_.partial(this.props.onChangeUser, "segmentationOpacity")} />
         </Panel>
         <Panel header="Other" key="5">
           <Vector6InputSetting label="Bounding Box" tooltipTitle="Format: minX, minY, minZ, width, height, depth" value={this.props.temporaryConfiguration.boundingBox} onChange={this.onChangeBoundingBox} />

@@ -58,9 +58,7 @@ class AbstractTreeView extends Marionette.View {
   drawTree() {
     const { activeTreeId, activeNodeId, trees } = Store.getState().skeletonTracing;
     if (Store.getState().skeletonTracing && this.abstractTreeRenderer) {
-      this.abstractTreeRenderer.drawTree(
-        trees[activeTreeId],
-        activeNodeId);
+      this.abstractTreeRenderer.drawTree(trees[activeTreeId], activeNodeId);
     }
   }
 
@@ -68,7 +66,7 @@ class AbstractTreeView extends Marionette.View {
   handleClick(event) {
     const id = this.abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY);
     if (id) {
-      Store.dispatch(setActiveNodeAction(id, false, true));
+      Store.dispatch(setActiveNodeAction(id));
     }
   }
 }

@@ -4,11 +4,11 @@ import Marionette from "backbone.marionette";
 import React from "react";
 import { render } from "react-dom";
 import Store from "oxalis/store";
-import { setActiveNodeAction, setCommentForNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, createCommentAction, deleteCommentAction } from "oxalis/model/actions/skeletontracing_actions";
 import { InputKeyboardNoLoop } from "libs/input";
 import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
-import CommentList from "./comment_list";
+import CommentList from "oxalis/view/skeletontracing/right-menu/comment_tab/comment_list";
 
 class CommentTabView extends Marionette.View {
 
@@ -60,15 +60,6 @@ class CommentTabView extends Marionette.View {
   initialize() {
     this.activeComment = {};
     this.isSortedAscending = true;
-
-    // select the activeNode if there is a comment...
-    const comment = this.getCommentForNode(this.getActiveNodeId());
-    if (comment) {
-      this.activeComment = this.makeComment(comment);
-    } else {
-      // make null comment
-      this.activeComment = this.makeComment();
-    }
 
     // events
     Store.subscribe(() => {
@@ -129,67 +120,56 @@ class CommentTabView extends Marionette.View {
   }
 
 
-  setActiveComment(comment, treeId) {
-    this.activeComment = this.makeComment(comment, treeId);
-  }
-
-
   getCommentForNode(nodeId, treeId) {
-    if (!treeId) { treeId = Store.getState().skeletonTracing.activeTreeId; }
-    //return Store.getState().skeletonTracing.getCommentForNode(nodeId, treeId);
+    const { activeTreeId, trees, activeNodeId } = Store.getState().skeletonTracing;
+    if (!treeId) { treeId = activeTreeId; }
+
+    const commentForActiveNode = trees[treeId].comments.filter(comment => comment.node === activeNodeId);
+    return commentForActiveNode[0];
   }
 
 
   updateInputElement(nodeId) {
     // responds to activeNode:change event
     const comment = this.getCommentForNode(nodeId);
-    let content = "";
+    let text = "";
     if (comment) {
-      this.activeComment = this.makeComment(comment);
-      ({ content } = comment);
+      // populate the input element
+      text = comment.comment;
     }
-
-    // populate the input element
-    this.ui.commentInput.val(content);
-    this.updateState();
+    this.ui.commentInput.val(text);
   }
 
 
   handleInput(evt) {
     const commentText = $(evt.target).val();
-    this.setComment(commentText);
+
+    if (commentText) {
+      Store.dispatch(createCommentAction(commentText));
+    } else {
+      Store.dispatch(deleteCommentAction(commentText));
+    }
   }
-
-
-  setComment(commentText: string, nodeId: number) {
-    if (!nodeId) { nodeId = Store.getState().skeletonTracing.activeNodeId; }
-    // don't add a comment if there is no node
-    if (!nodeId) { return; }
-
-    Store.dispatch(setCommentForNodeAction(nodeId, commentText));
-    this.updateState();
-  }
-
 
   nextComment(forward = true) {
-    let trees;
     const sortAscending = forward ? this.isSortedAscending : !this.isSortedAscending;
-
-    const { activeComment } = this;
+    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
 
     // get tree of active comment or activeTree if there is no active comment
-    let nextTree = Store.getState().skeletonTracing.trees[activeComment.treeId];
-    nextTree.comments.sort(Utils.compareBy("node", sortAscending));
+    let nextComment = null;
+    let nextTree = _.find(trees, (tree => _.some(tree.comments, comment => comment.node === activeNodeId)));
+    if (nextTree) {
+      nextTree.comments.sort(Utils.compareBy("node", sortAscending));
 
-    // try to find next comment for this tree
-    let nextComment = _.find(nextTree.comments,
-      comment => this.commentComparator(comment, sortAscending) > this.commentComparator(activeComment.comment, sortAscending));
+      // try to find next comment for this tree
+      nextComment = _.find(nextTree.comments,
+      comment => this.comparator(comment.node, sortAscending) > this.comparator(activeNodeId, sortAscending));
 
-    // try to find next tree with at least one comment
-    if (!nextComment) {
-      trees = _.sortBy(Store.getState().skeletonTracing.trees, "treeId");
-      nextTree = _.find(trees,
-        tree => this.treeComparator(tree.treeId, sortAscending) > this.treeComparator(activeComment.treeId, sortAscending) && tree.comments.length);
+      // try to find next tree with at least one comment
+      if (!nextComment) {
+        nextTree = _.find(trees,
+          tree => this.comparator(tree.treeId, sortAscending) > this.comparator(activeTreeId, sortAscending) && tree.comments.length);
+      }
     }
 
     // try to find any tree with at least one comment, starting from the beginning
@@ -202,10 +182,9 @@ class CommentTabView extends Marionette.View {
       nextComment = nextTree.comments[0];
     }
 
-    // if a comment was found, make it active
+    // if a comment was found set the corresponding node active, causing the list to update
     if (nextComment) {
-      this.setActiveComment(nextComment, nextTree.treeId);
-      Store.dispatch(setActiveNodeAction(nextComment.node, false, true));
+      Store.dispatch(setActiveNodeAction(nextComment.node));
     }
   }
 
@@ -220,33 +199,11 @@ class CommentTabView extends Marionette.View {
     this.updateState();
   }
 
-
-  // Helper functions
-  makeComment(comment, treeId) {
-    if (comment === undefined) {
-      return { comment: { node: null }, treeId: null };
-    }
-
-    if (treeId === undefined) {
-      treeId = this.getActiveTreeId();
-    }
-
-    return { comment, treeId };
-  }
-
-
-  commentComparator(comment, sortAscending) {
+  comparator(value, sortAscending) {
     const coefficient = sortAscending ? 1 : -1;
-    return comment.node * coefficient;
-  }
-
-
-  treeComparator(treeId, sortAscending) {
-    const coefficient = sortAscending ? 1 : -1;
-    return treeId * coefficient;
+    return value * coefficient;
   }
 }
 CommentTabView.initClass();
-
 
 export default CommentTabView;

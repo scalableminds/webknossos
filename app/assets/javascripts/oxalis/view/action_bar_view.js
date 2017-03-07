@@ -1,11 +1,11 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import DatasetActionsView from "./action-bar/dataset_actions_view";
-import DatasetPositionView from "./action-bar/dataset_position_view";
-import ViewModesView from "./action-bar/view_modes_view";
-import VolumeActionsView from "./action-bar/volume_actions_view";
-import SkeletonActionsView from "./action-bar/skeleton_actions_view";
-import Constants from "../constants";
+import DatasetActionsView from "oxalis/view/action-bar/dataset_actions_view";
+import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
+import ViewModesView from "oxalis/view/action-bar/view_modes_view";
+import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
+import SkeletonActionsView from "oxalis/view/action-bar/skeleton_actions_view";
+import Constants from "oxalis/constants";
 
 class ActionBarView extends Marionette.View {
   static initClass() {

@@ -10,8 +10,8 @@ import ace from "brace";
 import "brace/mode/javascript";
 import "brace/mode/json";
 import "brace/theme/clouds";
-import TaskListView from "./task_list_view";
-import TaskQueryDocumentationModal from "./task_query_documentation_modal";
+import TaskListView from "admin/views/task/task_list_view";
+import TaskQueryDocumentationModal from "admin/views/task/task_query_documentation_modal";
 
 class TaskQueryView extends Marionette.View {
   static initClass() {

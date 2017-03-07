@@ -8,9 +8,9 @@ import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import scaleInfo from "oxalis/model/scaleinfo";
-import Constants from "../constants";
-import Flycam3d from "../model/flycam3d";
-import View from "../view";
+import Constants from "oxalis/constants";
+import Flycam3d from "oxalis/model/flycam3d";
+import View from "oxalis/view";
 
 
 const DEFAULT_SCALE: number = 1.35;

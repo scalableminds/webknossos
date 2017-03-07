@@ -73,11 +73,6 @@ module.exports = {
   devtool: "cheap-source-map",
   plugins: [
     new ExtractTextPlugin("main.css"),
-    new webpack.DefinePlugin({
-      "process.env": {
-        NODE_ENV: process.env.NODE_ENV ? JSON.stringify(process.env.NODE_ENV) : undefined,
-      },
-    }),
     new webpack.ProvidePlugin({
       $: "jquery",
       jQuery: "jquery",

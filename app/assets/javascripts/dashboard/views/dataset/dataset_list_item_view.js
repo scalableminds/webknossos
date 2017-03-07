@@ -85,7 +85,7 @@ class DatasetListItemView extends Marionette.CompositeView {
         <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
           <img src="/assets/images/skeleton.svg"> start Skeleton Tracing
         </a>
-        <% if(dataStore.typ != "ndstore"){ %>
+        <% if(dataStore.typ != "ndstore" && sourceType != "webKnossosWrap"){ %>
           <a href="#" title="Create volume tracing" id="volumeTraceLink">
             <img src="/assets/images/volume.svg"> start Volume Tracing
           </a>

@@ -148,10 +148,12 @@ export function createBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<B
 export function deleteBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<[Array<BranchPointType>, number, number]> {
   const { branchPointsAllowed, allowUpdate } = skeletonTracing.restrictions;
   const { trees } = skeletonTracing;
+  const hasBranchPoints = _.some(_.map(trees, tree => !_.isEmpty(tree.branchPoints)));
 
-  if (branchPointsAllowed && allowUpdate) {
+  if (branchPointsAllowed && allowUpdate && hasBranchPoints) {
     // Find most recent branchpoint across all trees
-    const treeId = _.maxBy(_.values(trees), tree => _.last(tree.branchPoints).timestamp).treeId;
+    const treesWithBranchPoints = _.values(trees).filter(tree => !_.isEmpty(tree.branchPoints));
+    const treeId = _.maxBy(treesWithBranchPoints, tree => _.last(tree.branchPoints).timestamp).treeId;
     const branchPoint = _.last(trees[treeId].branchPoints);
 
     if (branchPoint) {

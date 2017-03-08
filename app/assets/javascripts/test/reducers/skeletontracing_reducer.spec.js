@@ -157,6 +157,7 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete a nodes and split the tree", () => {
+    // TODO
   });
 
   it("should set a new active node", () => {
@@ -173,7 +174,20 @@ describe("SkeletonTracing", () => {
   });
 
   it("should set a new active node in a different tree", () => {
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+    const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
 
+    // Create one node in the first tree, then set create second tree with two nodes
+    // Then set first node of second tree active
+    let newState = SkeletonTracingReducer(initalState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, setActiveNodeAction);
+
+    expect(newState.skeletonTracing.activeNodeId).toBe(1);
+    expect(newState.skeletonTracing.activeTreeId).toBe(1);
   });
 
   it("should set a new node radius", () => {
@@ -277,7 +291,40 @@ describe("SkeletonTracing", () => {
     expect(newState.skeletonTracing.activeTreeId).toBe(0);
   });
 
+  it("shouldn't delete more branchpoints than available", () => {
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+    const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+
+    // create two nodes and set them both as branchpoint
+    // then delete them both and jump back to first node
+    let newState = SkeletonTracingReducer(initalState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createBranchPointAction);
+    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+
+    expect(newState.skeletonTracing.trees[0].branchPoints.length).toBe(0);
+    expect(_.size(newState.skeletonTracing.trees[0].nodes)).toBe(1);
+    expect(newState.skeletonTracing.activeNodeId).toBe(0);
+    expect(newState.skeletonTracing.activeTreeId).toBe(0);
+  });
+
   it("should delete a branchpoint from a different tree", () => {
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+    const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+
+    // create a new tree, add a node, set it as branchpoint twice then delete the branchpoint
+    let newState = SkeletonTracingReducer(initalState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createBranchPointAction);
+    newState = SkeletonTracingReducer(newState, createBranchPointAction);
+    newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+
+    expect(newState.skeletonTracing.trees[0].branchPoints.length).toBe(0);
+    expect(newState.skeletonTracing.trees[1].branchPoints.length).toBe(0);
   });
 
   it("should add a new tree", () => {

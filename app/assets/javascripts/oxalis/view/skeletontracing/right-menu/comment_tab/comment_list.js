@@ -6,11 +6,11 @@
 import _ from "lodash";
 import Utils from "libs/utils";
 import React, { Component } from "react";
-import TraceTree from "oxalis/model/skeletontracing/tracetree";
 import TreeCommentList from "oxalis/view/skeletontracing/right-menu/comment_tab/tree_comment_list";
+import type { TreeType } from "oxalis/store";
 
 type StateType = {
-  data: Array<TraceTree>;
+  data: Array<TreeType>;
   activeNodeId: number;
   activeTreeId?: number;
   isSortedAscending: boolean;

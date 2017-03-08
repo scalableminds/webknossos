@@ -6,9 +6,11 @@
 import _ from "lodash";
 import Backbone from "backbone";
 import app from "app";
+import Store from "oxalis/store";
 import Constants from "oxalis/constants";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
+import type { TreeType } from "oxalis/store";
 
 const NODE_RADIUS = 2;
 const MAX_NODE_DISTANCE = 100;
@@ -25,17 +27,24 @@ type DecisionType = {
 };
 
 type AbstractTreeModeType = typeof(MODE_NORMAL) | typeof(MODE_NOCHAIN);
-type AbstractTreeType = Object;
+type AbstractNodeType = {
+  id: number,
+  children: Array<AbstractNodeType>,
+};
 
 class AbstractTreeRenderer {
 
   canvas: JQuery;
   ctx: CanvasRenderingContext2D;
-  nodeList: [];
+  nodeList: Array<{
+    x: number,
+    y: number,
+    id: number,
+  }>;
   getIdFromPos: Function;
   activeNodeId: number;
   cyclicTreeWarningIssued: boolean;
-  tree: AbstractTreeType;
+  tree: TreeType;
   nodeDistance: number;
   vgColor: string;
   commentColor: string;
@@ -47,9 +56,32 @@ class AbstractTreeRenderer {
     this.canvas = $canvas;
     this.ctx = $canvas[0].getContext("2d");
     this.ctx.lineWidth = 1;
-    this.nodeList = Array;
+    this.nodeList = [];
   }
 
+  buildNode(id: number): AbstractNodeType {
+    const { activeTreeId, trees } = Store.getState().skeletonTracing;
+
+    const edges = trees[activeTreeId].edges;
+    const childrenIds = _.filter(edges, edge => edge.source === id).map(edge => edge.target);
+    const children = childrenIds.map(childId => this.buildNode(childId));
+
+    return {
+      id,
+      children,
+    };
+  }
+
+  buildTree(): ?AbstractNodeType {
+    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
+
+    if (activeNodeId) {
+      // Asumption: Node with smallest id is root
+      const rootId = _.min(_.map(trees[activeTreeId].nodes, "id"));
+      const rootNode = this.buildNode(rootId);
+      return rootNode;
+    }
+  }
 
   /**
    * Render function called by events and GUI.
@@ -58,7 +90,7 @@ class AbstractTreeRenderer {
    * @param  {TraceTree} tree
    * @param  {Number} @activeNodeId TracePoint id
   */
-  drawTree(tree1: AbstractTreeType, activeNodeId: number) {
+  drawTree(tree1: TreeType, activeNodeId: number) {
     let root;
     this.tree = tree1;
     this.activeNodeId = activeNodeId;
@@ -81,7 +113,7 @@ class AbstractTreeRenderer {
     // I do not experience performance issues, even with large trees.
     // Still, this might not need to be done on every single draw...
     try {
-      root = tree.buildTree();
+      root = this.buildTree();
     } catch (e) {
       console.log("Error:", e);
       if (e === "CyclicTree") {
@@ -129,7 +161,7 @@ class AbstractTreeRenderer {
    * @param  {Number} mode  MODE_NORMAL or MODE_NOCHAIN
    * @return {Object}       new middle and top coordinates in pixels
   */
-  drawTreeWithWidths(tree: AbstractTreeType, left: number, right: number, top: number, mode: AbstractTreeModeType) {
+  drawTreeWithWidths(tree: AbstractNodeType, left: number, right: number, top: number, mode: AbstractTreeModeType) {
     const decision = this.getNextDecision(tree);
     let middle = this.calculateMiddle(left, right);
 
@@ -139,7 +171,7 @@ class AbstractTreeRenderer {
       middle = this.drawCommentChain(decision, left, right, top, mode);
     }
 
-    if (mode === this.MODE_NORMAL || decision.chainCount < 3) {
+    if (mode === MODE_NORMAL || decision.chainCount < 3) {
       this.drawChainFromTo(top, middle, tree, decision);
     } else if (mode === MODE_NOCHAIN) {
       this.drawChainWithChainIndicatorFromTo(top, middle, tree, decision);
@@ -158,7 +190,7 @@ class AbstractTreeRenderer {
    * @param  {TracePoint} tree
    * @return {Decision}
   */
-  getNextDecision(tree: AbstractTreeType): DecisionType {
+  getNextDecision(tree: AbstractNodeType): DecisionType {
     let chainCount = 0;
     let hasActiveNode = false;
 
@@ -236,7 +268,7 @@ class AbstractTreeRenderer {
    * @param  {TracePoint} tree
    * @param  {Decision} decision
   */
-  drawChainFromTo(top: number, left: number, tree: AbstractTreeType, decision: DecisionType): void {
+  drawChainFromTo(top: number, left: number, tree: AbstractNodeType, decision: DecisionType): void {
     // Draw the chain and the tree, connect them.
     let node = tree;
     for (const i of Utils.__range__(0, decision.chainCount, true)) {
@@ -253,11 +285,11 @@ class AbstractTreeRenderer {
    * Draws the dashed chain indicator and the start and end nodes.
    * @param  {Number} top      y coordinate in pixels
    * @param  {Number} middle   middel x coordinate in pixels
-   * @param  {TracePoint} tree
+   * @param  {TracePoint} node
    * @param  {Decision} decision
   */
-  drawChainWithChainIndicatorFromTo(top: number, middle: number, tree: AbstractTreeType, decision: DecisionType): void {
-    this.addNode(middle, top, tree.id);
+  drawChainWithChainIndicatorFromTo(top: number, middle: number, node: AbstractNodeType, decision: DecisionType): void {
+    this.addNode(middle, top, node.id);
     this.drawEdge(middle, top, middle, top + (0.5 * this.nodeDistance));
     this.drawChainIndicator(middle, top + (0.5 * this.nodeDistance), top + (1.5 * this.nodeDistance), decision.hasActiveNode);
     this.drawEdge(middle, top + (1.5 * this.nodeDistance), middle, top + (2 * this.nodeDistance));
@@ -423,7 +455,7 @@ class AbstractTreeRenderer {
    * @param  {TracePoint}   tree
    * @return {Number}       width of the tree
   */
-  recordWidths(tree: AbstractTreeType): number {
+  recordWidths(tree: AbstractNodeType): number {
     // Because any node with children.length == 1 has
     // the same width as its child, we can skip those.
 
@@ -455,7 +487,7 @@ class AbstractTreeRenderer {
    * @param  {Number} count     helper count, current depth
    * @return {Number}           depth of the tree
   */
-  getMaxTreeDepth(tree: AbstractTreeType, mode: AbstractTreeModeType, count: number = 0): number {
+  getMaxTreeDepth(tree: AbstractNodeType, mode: AbstractTreeModeType, count: number = 0): number {
     if (mode == null) { mode = MODE_NORMAL; }
 
     if (!tree) {

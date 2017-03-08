@@ -7,8 +7,8 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
-import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import type { OxalisState, TreeType } from "oxalis/store";
+import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, findActiveTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import type { OxalisState, TreeType, SkeletonTracingType } from "oxalis/store";
 import type { SkeletonTracingActionTypes } from "oxalis/model/actions/skeletontracing_actions";
 
 
@@ -17,21 +17,27 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
 
     case "INITIALIZE_SKELETONTRACING": {
       const restrictions = Object.assign({}, action.tracing.restrictions, action.tracing.content.settings);
-      const activeNodeId = action.tracing.content.contentData.activeNode ? action.tracing.content.contentData.activeNode : 0;
-      const activeTreeId = 0; // probably something else
+      const { contentData } = action.tracing.content;
 
-      const skeletonTracing = {
+      const trees = _.keyBy(contentData.trees.map(tree => update(tree, {
+        treeId: { $set: tree.id },
+        nodes: { $set: _.keyBy(tree.nodes, "id") },
+      })), "id");
+
+      const activeNodeId = contentData.activeNode ? contentData.activeNode : 0;
+      const activeTree = findActiveTree(trees, activeNodeId);
+
+      const skeletonTracing: SkeletonTracingType = {
         activeNodeId,
-        activeTreeId,
+        activeTreeId: activeTree != null ? activeTree.treeId : trees[1].treeId,
         restrictions,
+        trees,
         name: action.tracing.dataSetName,
-        trees: _.keyBy(action.tracing.content.contentData.trees, "id"),
         contentType: action.tracing.contentType,
         id: action.tracing.id,
       };
 
-      // return update(state, { skeletonTracing: { $set: skeletonTracing } });
-      return state;
+      return update(state, { skeletonTracing: { $set: skeletonTracing } });
     }
 
     case "CREATE_NODE": {

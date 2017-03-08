@@ -99,7 +99,7 @@ class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: Rando
 
   private def copyTo(offset: Long, other: Array[Byte], destPos: Long, length: java.lang.Long): Boolean = {
     // Any regularly called log statements in here should be avoided as they drastically slow down this method.
-    if (offset + length < mappedData.limit()) {
+    if (offset + length <= mappedData.limit()) {
       try {
         val memOffset: java.lang.Long = address + offset
         val targetOffset: java.lang.Long = destPos + arrayBaseOffset

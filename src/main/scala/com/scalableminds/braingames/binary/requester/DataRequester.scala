@@ -74,7 +74,7 @@ class DataRequester(
     }
 
   private def fallbackForLayer(layer: DataLayer): Future[List[(DataLayerSection, DataLayer)]] = {
-    layer.fallback.toFox.flatMap { fallback =>
+    layer.fallback.map { fallback =>
       dataSourceRepository.findUsableDataSource(fallback.dataSourceName).flatMap {
         d =>
           d.getDataLayer(fallback.layerName).map {
@@ -87,9 +87,9 @@ class DataRequester(
                 logger.error(s"Incompatible fallback layer. $layer is not compatible with $fallbackLayer")
                 Nil
               }
-          }.toFox
-      }
-    }.getOrElse(Nil)
+          }
+      }.getOrElse(Nil)
+    }.getOrElse(Future.successful(Nil))
   }
 
   private def emptyResult(bucket: BucketPosition, request: DataReadRequest) = {
@@ -135,8 +135,8 @@ class DataRequester(
   def loadBucketOfRequest(bucket: BucketPosition, request: DataReadRequest, useCache: Boolean): Fox[Array[Byte]] = {
     var lastSection: Option[DataLayerSection] = None
 
-    def loadFromSections(sections: Stream[(DataLayerSection, DataLayer)]): Fox[Array[Byte]] = sections match {
-      case (section, layerOfSection) #:: tail =>
+    def loadFromSections(sections: List[(DataLayerSection, DataLayer)]): Fox[Array[Byte]] = sections match {
+      case (section, layerOfSection) :: tail =>
         lastSection = Some(section)
         val bucketRead = BucketReadInstruction(request.dataSource, layerOfSection, section, bucket, request.settings)
         loadFromLayer(bucketRead, useCache).futureBox.flatMap {
@@ -153,14 +153,13 @@ class DataRequester(
         emptyResult(bucket, request)
     }
 
-    val sections = Stream(request.dataLayer.sections.map {
-      (_, request.dataLayer)
-    }.filter {
-      section =>
-        request.dataSection.forall(_ == section._1.sectionId)
-    }: _*).append(Await.result(fallbackForLayer(request.dataLayer), 5.seconds))
+    fallbackForLayer(request.dataLayer).toFox.flatMap { fallback =>
+      val sections = request.dataLayer.sections
+        .map {(_, request.dataLayer)}
+        .filter { section => request.dataSection.forall(_ == section._1.sectionId) } ::: fallback
 
-    loadFromSections(sections)
+      loadFromSections(sections)
+    }
   }
 
   private def loadFromLayer(bucketRead: BucketReadInstruction, useCache: Boolean): Fox[Array[Byte]] = {

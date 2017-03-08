@@ -33,6 +33,10 @@ class WebKnossosWrapCube(wkwFile: WKWFile) extends Cube {
 
     wkwFile.readBlock(blockOffsetX, blockOffsetY, blockOffsetZ)
   }
+
+  override protected def onFinalize(): Unit = {
+    wkwFile.close()
+  }
 }
 
 class WebKnossosWrapBucketHandler(val cache: DataCubeCache) extends BucketHandler

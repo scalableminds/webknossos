@@ -75,49 +75,13 @@ class TreeGeometry {
     return attr;
   }
 
-
   clear() {
     this.nodesBuffer.clear();
     this.edgesBuffer.clear();
     this.sizesBuffer.clear();
     this.scalesBuffer.clear();
     this.nodeIDs.clear();
-    this.updateNodesColors();
   }
-
-
-  isEmpty() {
-    return this.nodesBuffer.getLength() === 0;
-  }
-
-
-  addNode(node) {
-    debugger
-    this.nodesBuffer.push(node.position);
-    this.sizesBuffer.push([node.radius * 2]);
-    this.scalesBuffer.push([1.0]);
-    this.nodeIDs.push([node.id]);
-    this.nodesColorBuffer.push(this.getColor(node.id));
-
-    // Add any edge from smaller IDs to the node
-    // ASSUMPTION: if this node is new, it should have a
-    //             greater id as its neighbor
-    const { activeTreeId, trees } = Store.getState().skeletonTracing;
-    const neighborIds = trees[activeTreeId].edges.reduce((result, edge) => {
-      if (edge.target === node.id) result.append(edge.source);
-      return result;
-    }, []);
-
-    trees[activeTreeId].nodes[activeNodes]
-    for (const neighbor of node.neighbors) {
-      if (neighbor.id < node.id) {
-        this.edgesBuffer.push(neighbor.position.concat(node.position));
-      }
-    }
-
-    this.updateGeometries();
-  }
-
 
   reset(nodes, edges) {
     if (_.size(nodes)) {
@@ -134,68 +98,14 @@ class TreeGeometry {
     }
   }
 
-
-  deleteNode(node) {
-    debugger
-    let edgesIndex;
-    let found;
-    const swapLast = (array, index) => {
-      const lastElement = array.pop();
-      Utils.__range__(0, array.elementLength, false).forEach((i) => {
-        array.getAllElements()[(index * array.elementLength) + i] = lastElement[i];
-      });
-    };
-
-    const nodesIndex = this.getNodeIndex(node.id);
-    ErrorHandling.assert((nodesIndex != null), "No node found.", { id: node.id, nodeIDs: this.nodeIDs });
-
-    // swap IDs and nodes
-    swapLast(this.nodeIDs, nodesIndex);
-    swapLast(this.nodesBuffer, nodesIndex);
-    swapLast(this.sizesBuffer, nodesIndex);
-    swapLast(this.scalesBuffer, nodesIndex);
-    swapLast(this.nodesColorBuffer, nodesIndex);
-
-    // Delete Edge by finding it in the array
-    const edgeArray = this.getEdgeArray(node, node.neighbors[0]);
-
-    for (const i of Utils.__range__(0, this.edgesBuffer.getLength(), false)) {
-      found = true;
-      for (let j = 0; j <= 5; j++) {
-        found = found && Math.abs(this.edges.geometry.attributes.position.array[(6 * i) + j] - edgeArray[j]) < 0.5;
-      }
-      if (found) {
-        edgesIndex = i;
-        break;
-      }
-    }
-
-    ErrorHandling.assert(found, "No edge found.", { found, edgeArray, nodesIndex });
-
-    swapLast(this.edgesBuffer, edgesIndex);
-
-    this.updateGeometries();
-  }
-
   setSizeAttenuation(sizeAttenuation) {
     this.nodes.material.sizeAttenuation = sizeAttenuation;
     this.updateGeometries();
   }
 
-
-  updateTreeColor() {
-    const newColor = Store.getState().skeletonTracing.trees[this.id].color;
-    this.edges.material.color = new THREE.Color(this.darkenColor(newColor));
-
-    this.updateNodesColors();
-    this.updateGeometries();
-  }
-
-
   getMeshes() {
     return [this.nodes, this.edges];
   }
-
 
   dispose() {
     for (const geometry of this.getMeshes()) {
@@ -203,33 +113,6 @@ class TreeGeometry {
       geometry.material.dispose();
     }
   }
-
-
-  updateNodesColors() {
-    this.nodesColorBuffer.clear();
-    for (const i of Utils.__range__(0, this.nodeIDs.length, false)) {
-      this.nodesColorBuffer.push(this.getColor(this.nodeIDs.get(i)));
-    }
-
-    this.updateGeometries();
-  }
-
-
-  updateNodeColor(id, isActiveNode, isBranchPoint) {
-    this.doWithNodeIndex(id, index => this.nodesColorBuffer.set(this.getColor(id, isActiveNode, isBranchPoint), index),
-    );
-
-    this.updateGeometries();
-  }
-
-
-  updateNodeRadius(id, radius) {
-    this.doWithNodeIndex(id, index => this.sizesBuffer.set([radius * 2], index),
-    );
-
-    this.updateGeometries();
-  }
-
 
   startNodeHighlightAnimation(nodeId) {
     const normal = 1.0;
@@ -337,24 +220,6 @@ class TreeGeometry {
     mesh.geometry.computeBoundingSphere();
     mesh.geometry.setDrawRange(0, length * itemsPerElement);
   }
-
-
-  getNodeIndex(nodeId) {
-    for (let i = 0; i < this.nodeIDs.length; i++) {
-      if (this.nodeIDs.get(i) === nodeId) {
-        return i;
-      }
-    }
-    return null;
-  }
-
-
-  doWithNodeIndex(nodeId, f) {
-    const index = this.getNodeIndex(nodeId);
-    if (index == null) { return; }
-    f(index);
-  }
-
 
   getLineWidth() {
     return Store.getState().userConfiguration.particleSize / 4;

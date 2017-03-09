@@ -43,7 +43,6 @@ function* pushToQueue(updateAction: UpdateAction) {
 
 function* performDiffNodes(prevNodes: NodeMapType, nodes: NodeMapType, treeId: number) {
   if (prevNodes === nodes) return;
-  console.log(JSON.stringify(prevNodes, null, " "), JSON.stringify(nodes, null, " "));
   const { onlyA: deletedNodeIds, onlyB: addedNodeIds, both: bothNodeIds } = Utils.diffArrays(
     _.map(prevNodes, node => node.id),
     _.map(nodes, node => node.id),
@@ -120,17 +119,6 @@ function* performDiffTracing(prevSkeletonTracing: SkeletonTracingType, skeletonT
     yield call(pushToQueue, updateTracing(skeletonTracing));
     yield call(performDiffTrees, prevSkeletonTracing.trees, skeletonTracing.trees);
   }
-}
-
-export function* initializeSkeletonTracingAsync() {
-  yield take("SET_DATASET");
-  const datasetName = yield select(state => state.dataset.name);
-  const [initialUserSettings, initialDatasetSettings] = yield [
-    call(Request.receiveJSON.bind(Request), "/api/user/userConfiguration"),
-    call(Request.receiveJSON.bind(Request), `/api/dataSetConfigurations/${datasetName}`),
-  ];
-  const action = initializeSettingsAction(initialUserSettings, initialDatasetSettings);
-  yield put(action);
 }
 
 export function* saveSkeletonTracingAsync(): Generator<*, *, *> {

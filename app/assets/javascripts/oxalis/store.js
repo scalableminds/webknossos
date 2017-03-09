@@ -12,6 +12,7 @@ import type { Vector3, Vector6 } from "oxalis/constants";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
+import timestampMiddleware from "oxalis/model/helpers/timestamp_middleware";
 
 export type CommentType = {
   node: number;
@@ -267,7 +268,7 @@ const combinedReducers = reduceReducers(
   SkeletonTracingReducer,
 );
 
-const store = createStore(combinedReducers, defaultState, applyMiddleware(sagaMiddleware));
+const store = createStore(combinedReducers, defaultState, applyMiddleware(timestampMiddleware, sagaMiddleware));
 sagaMiddleware.run(rootSaga);
 
 export default store;

@@ -13,7 +13,7 @@ import constants from "oxalis/constants";
 import type { Vector2, Vector3, Vector4, OrthoViewType } from "oxalis/constants";
 
 class DataTexture {
-  buffer = new Uint8Array();
+  buffer: Uint8Array;
   layer: number = 0;
   tiles: Array<boolean> = [];
   ready: boolean = false;

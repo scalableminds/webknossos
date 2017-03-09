@@ -75,7 +75,7 @@ class AbstractTreeRenderer {
   buildTree(): ?AbstractNodeType {
     const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
 
-    if (activeNodeId) {
+    if (_.isNumber(activeNodeId)) {
       // Asumption: Node with smallest id is root
       const rootId = _.min(_.map(trees[activeTreeId].nodes, "id"));
       const rootNode = this.buildNode(rootId);

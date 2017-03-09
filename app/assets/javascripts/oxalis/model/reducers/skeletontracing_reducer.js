@@ -24,7 +24,7 @@ function SkeletonTracingReducer(state: OxalisState, action: SkeletonTracingActio
         nodes: { $set: _.keyBy(tree.nodes, "id") },
       })), "id");
 
-      const activeNodeId = contentData.activeNode ? contentData.activeNode : 0;
+      const activeNodeId = contentData.activeNode ? contentData.activeNode : null;
       const activeTree = findActiveTree(trees, activeNodeId);
 
       const skeletonTracing: SkeletonTracingType = {

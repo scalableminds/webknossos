@@ -64,6 +64,8 @@ export function createNode(skeletonTracing: SkeletonTracingType, position: Vecto
       resolution,
       id: nextNewId,
       timestamp: Date.now(),
+      //bitDepth: datasetConfig.fourBit ? 4 : 8,
+      //interpolation: datasetConfig.interpolation,
     };
 
     // Create a new edge

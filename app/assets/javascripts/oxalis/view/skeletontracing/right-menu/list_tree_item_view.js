@@ -9,7 +9,6 @@ import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import Store from "oxalis/store";
 import { setActiveTreeAction } from "oxalis/model/actions/skeletontracing_actions";
-import ListTreeView from "oxalis/view/skeletontracing/right-menu/list_tree_view";
 
 class ListTreeItemView extends Marionette.View {
 
@@ -21,7 +20,7 @@ class ListTreeItemView extends Marionette.View {
 <i class="fa <%- getIcon() %>"></i>
 <a href="#" data-treeid="<%- treeId %>">
   <span title="Node count" class="inline-block tree-node-count" style="width: 50px;"><%- _.size(nodes) %></span>
-  <i class="fa fa-circle tree-icon" style="color: #<%- intToHex(color) %>"></i>
+  <i class="fa fa-circle tree-icon" style="color: rgb(<%- rgbToString() %>)"></i>
   <span title="Tree Name" class="tree-name"><%- name %></span>
 </a>\
 `);
@@ -40,7 +39,7 @@ class ListTreeItemView extends Marionette.View {
         }
       },
 
-      intToHex: Utils.intToHex,
+      rgbToString: () => this.model.get("color").map(c => Math.round(c * 255)).join(","),
     };
   }
 

@@ -13,6 +13,7 @@ import TWEEN from "tween.js";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
 import ParticleMaterialFactory from "oxalis/geometries/materials/particle_material_factory";
+import type { Vector3 } from "oxalis/constant";
 
 class TreeGeometry {
 
@@ -51,7 +52,7 @@ class TreeGeometry {
     this.edges = new THREE.LineSegments(
       edgeGeometry,
       new THREE.LineBasicMaterial({
-        color: this.darkenHex(treeColor),
+        color: this.darkenColor(treeColor),
         linewidth: this.getLineWidth(),
       }),
     );
@@ -91,6 +92,7 @@ class TreeGeometry {
 
 
   addNode(node) {
+    debugger
     this.nodesBuffer.push(node.position);
     this.sizesBuffer.push([node.radius * 2]);
     this.scalesBuffer.push([1.0]);
@@ -127,11 +129,14 @@ class TreeGeometry {
       this.nodeIDs.push(_.map(nodes, node => [node.id]));
       this.nodesColorBuffer.pushMany(_.map(nodes, node => this.getColor(node.id)));
       this.edgesBuffer.pushMany(edges.map(edge => nodes[edge.source].position.concat(nodes[edge.target].position)));
+
+      this.updateGeometries();
     }
   }
 
 
   deleteNode(node) {
+    debugger
     let edgesIndex;
     let found;
     const swapLast = (array, index) => {
@@ -172,35 +177,6 @@ class TreeGeometry {
     this.updateGeometries();
   }
 
-  mergeTree(otherTree, lastNode, activeNode) {
-    const merge = (bufferA, bufferB) => {
-      bufferA.pushSubarray(bufferB.getAllElements());
-    };
-
-    // merge IDs, nodes and edges
-    merge(this.nodeIDs, otherTree.nodeIDs);
-    merge(this.nodesBuffer, otherTree.nodesBuffer);
-    merge(this.edgesBuffer, otherTree.edgesBuffer);
-    merge(this.sizesBuffer, otherTree.sizesBuffer);
-    merge(this.scalesBuffer, otherTree.scalesBuffer);
-    this.edgesBuffer.push(this.getEdgeArray(lastNode, activeNode));
-
-    this.updateNodesColors();
-    this.updateGeometries();
-  }
-
-
-  getEdgeArray(node1, node2) {
-    // ASSUMPTION: edges always go from smaller ID to bigger ID
-
-    if (node1.id < node2.id) {
-      return node1.position.concat(node2.position);
-    } else {
-      return node2.position.concat(node1.position);
-    }
-  }
-
-
   setSizeAttenuation(sizeAttenuation) {
     this.nodes.material.sizeAttenuation = sizeAttenuation;
     this.updateGeometries();
@@ -209,7 +185,7 @@ class TreeGeometry {
 
   updateTreeColor() {
     const newColor = Store.getState().skeletonTracing.trees[this.id].color;
-    this.edges.material.color = new THREE.Color(this.darkenHex(newColor));
+    this.edges.material.color = new THREE.Color(this.darkenColor(newColor));
 
     this.updateNodesColors();
     this.updateGeometries();
@@ -288,22 +264,23 @@ class TreeGeometry {
   getColor(id, isActiveNode, isBranchPoint) {
     const tree = Store.getState().skeletonTracing.trees[this.id];
     let { color } = tree;
+
     if (id != null) {
       isActiveNode = isActiveNode || Store.getState().skeletonTracing.activeNodeId === id;
       isBranchPoint = isBranchPoint || id in _.map(tree.branchPoints, "node");
 
       if (isActiveNode) {
-        color = this.shiftHex(color, 1 / 4);
+        color = this.shiftColor(color, 1 / 4);
       } else {
-        color = this.darkenHex(color);
+        color = this.darkenColor(color);
       }
 
       if (isBranchPoint) {
-        color = this.invertHex(color);
+        color = this.invertColor(color);
       }
     }
 
-    return this.hexToRGB(color);
+    return color;
   }
 
 
@@ -362,15 +339,6 @@ class TreeGeometry {
   }
 
 
-  logState(title) {
-    console.log(` +++ ${title} +++ `);
-    console.log("nodeIDs", this.nodeIDs.toString());
-    console.log("nodesBuffer", this.nodesBuffer.toString());
-    console.log("edgesBuffer", this.edgesBuffer.toString());
-    console.log("sizesBuffer", this.sizesBuffer.toString());
-  }
-
-
   getNodeIndex(nodeId) {
     for (let i = 0; i < this.nodeIDs.length; i++) {
       if (this.nodeIDs.get(i) === nodeId) {
@@ -395,28 +363,23 @@ class TreeGeometry {
 
   // ### Color utility methods
 
-  hexToRGB(hexColor) {
-    const rgbColor = new THREE.Color().setHex(hexColor);
-    return [rgbColor.r, rgbColor.g, rgbColor.b];
+  darkenColor(color: Vector3): Vector3 {
+    const threeColor = new THREE.Color().fromArray(color);
+    const hslColor = threeColor.getHSL();
+    threeColor.setHSL(hslColor.h, hslColor.s, 0.25);
+    return threeColor.toArray();
   }
 
 
-  darkenHex(hexColor) {
-    const hslColor = new THREE.Color(hexColor).getHSL();
-    hslColor.l = 0.25;
-    return new THREE.Color().setHSL(hslColor.h, hslColor.s, hslColor.l).getHex();
+  shiftColor(color: Vector3, shiftValue): Vector3 {
+    const threeColor = new THREE.Color().fromArray(color);
+    threeColor.offsetHSL(shiftValue, 0, 0);
+    return threeColor.toArray();
   }
 
 
-  shiftHex(hexColor, shiftValue) {
-    const hslColor = new THREE.Color(hexColor).getHSL();
-    hslColor.h = (hslColor.h + shiftValue) % 1;
-    return new THREE.Color().setHSL(hslColor.h, hslColor.s, hslColor.l).getHex();
-  }
-
-
-  invertHex(hexColor) {
-    return this.shiftHex(hexColor, 0.5);
+  invertColor(color: Vector3): Vector3 {
+    return this.shiftColor(color, 0.5);
   }
 }
 

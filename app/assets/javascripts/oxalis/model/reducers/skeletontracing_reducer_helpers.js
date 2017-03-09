@@ -221,7 +221,7 @@ export function deleteTree(skeletonTracing: SkeletonTracingType): Maybe<[TreeMap
   return Maybe.Nothing();
 }
 
-export function mergeTrees(skeletonTracing: SkeletonTracingType, sourceNodeId: number, targetNodeId: number): Maybe<TreeType> {
+export function mergeTrees(skeletonTracing: SkeletonTracingType, sourceNodeId: number, targetNodeId: number): Maybe<[TreeType, number, number]> {
   const { allowUpdate } = skeletonTracing.restrictions;
   const { trees } = skeletonTracing;
   const sourceTree = findTree(trees, sourceNodeId);
@@ -237,8 +237,7 @@ export function mergeTrees(skeletonTracing: SkeletonTracingType, sourceNodeId: n
       target: targetNodeId,
     };
     newTrees[targetTree.treeId].edges.push(newEdge);
-
-    return Maybe.Just(newTrees);
+    return Maybe.Just([newTrees, targetTree.treeId, targetNodeId]);
   }
   return Maybe.Nothing();
 }

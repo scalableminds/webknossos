@@ -161,10 +161,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     case "MERGE_TREES": {
       const { sourceNodeId, targetNodeId } = action;
 
-      return mergeTrees(state.skeletonTracing, sourceNodeId, targetNodeId).map(trees =>
+      return mergeTrees(state.skeletonTracing, sourceNodeId, targetNodeId).map(([trees, newActiveTreeId, newActiveNodeId]) =>
         update(state, { skeletonTracing: {
-          trees: { $set: trees } },
-        }),
+          trees: { $set: trees },
+          activeNodeId: { $set: newActiveNodeId },
+          activeTreeId: { $set: newActiveTreeId },
+        } }),
       ).getOrElse(state);
     }
 

@@ -13,6 +13,7 @@ import scaleInfo from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import Utils from "libs/utils";
 import Window from "libs/window";
+import update from "immutability-helper";
 import type { Vector3 } from "oxalis/constants";
 import type { SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
 
@@ -98,23 +99,45 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMap
     delete activeTree.nodes[activeNodeId];
 
     // Do we need to split trees? Are there edges leading to/from it?
-    const sourceNodeIds = activeTree.edges.reduce((result, edge) => { if (edge.target === activeNodeId) result.push(edge.source); return result; }, []);
-    const targetNodeIds = activeTree.edges.reduce((result, edge) => { if (edge.source === activeNodeId) result.push(edge.target); return result; }, []);
+    const sourceNodeIds = activeTree.edges.reduce((edge) => edge.target === activeNodeId).map((edge) => edge.source);
+    const targetNodeIds = activeTree.edges.reduce((edge) => edge.source === activeNodeId).map((edge) => edge.target);
+    const neighborIds = sourceNodeIds.concat(targetNodeIds);
 
-    if (_.isEmpty(sourceNodeIds) || _.isEmpty(targetNodeIds)) {
+    if (neighborIds.length === 0) {
+      // todo
+
+    } else if (neighborIds.length === 1) {
       // We do not need to split
       // just delete all edges leading to/from it
       const newEdges = activeTree.edges.filter(edge => edge.source !== activeNodeId && edge.target !== activeNodeId);
-      activeTree.edges = newEdges;
 
       // Delete all comments containing the node
       const newComments = activeTree.comments.filter(comment => comment.node !== activeNodeId);
-      activeTree.comments = newComments;
+
+
+      const newActiveTree = Object.assign(
+        {},
+        activeTree,
+        {
+          edges: newEdges,
+          comments: newComments,
+        }
+      );
 
       // Decrease active node id or reset to null
       newActiveNodeId = activeNodeId === 0 ? null : activeNodeId - 1;
       newActiveTreeId = activeTreeId;
-      newTrees = skeletonTracing.trees;
+
+      newTrees = update(
+        skeletonTracing,
+        {
+          trees: {
+            $set: {
+              [activeTreeId]: newActiveTree,
+            }
+          }
+        }
+      );
     } else {
       // Split the tree
       newTrees = sourceNodeIds.map(nodeId => moveNodesToNewTree(nodeId)) +

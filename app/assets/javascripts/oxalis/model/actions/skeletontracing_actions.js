@@ -18,13 +18,14 @@ type deleteBranchPointActionType = {type: "DELETE_BRANCHPOINT"};
 type createTreeActionType = {type: "CREATE_TREE"};
 type deleteTreeActionType = {type: "DELETE_TREE"};
 type setActiveTreeActionType = {type: "SET_ACTIVE_TREE", treeId: number};
+type mergeTreesActionType = {type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number};
 type setTreeNameActionType = {type: "SET_TREE_NAME", name: ?string};
 type selectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: ?boolean};
 type shuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR"};
 type createCommentActionType = {type: "CREATE_COMMENT", commentText: string};
 type deleteCommentActionType = {type: "DELETE_COMMENT"};
 
-export type SkeletonTracingActionTypes = (initializeSkeletonTracingActionType | createNodeActionType | deleteNodeActionType | setActiveNodeActionType | setActiveNodeRadiusActionType | createBranchPointActionType | deleteBranchPointActionType | createTreeActionType | deleteTreeActionType | setActiveTreeActionType | setTreeNameActionType | selectNextTreeActionType | shuffleTreeColorActionType | createCommentActionType | deleteCommentActionType);
+export type SkeletonTracingActionTypes = (initializeSkeletonTracingActionType | createNodeActionType | deleteNodeActionType | setActiveNodeActionType | setActiveNodeRadiusActionType | createBranchPointActionType | deleteBranchPointActionType | createTreeActionType | deleteTreeActionType | setActiveTreeActionType | mergeTreesActionType | setTreeNameActionType | setTreeNameActionType | selectNextTreeActionType | shuffleTreeColorActionType | createCommentActionType | deleteCommentActionType);
 export const SkeletonTracingActions = [
   "INITIALIZE_SKELETONTRACING",
   "CREATE_NODE",
@@ -37,6 +38,7 @@ export const SkeletonTracingActions = [
   "DELETE_TREE",
   "SET_ACTIVE_TREE",
   "SET_TREE_NAME",
+  "MERGE_TREES",
   "SELECT_NEXT_TREE",
   "SHUFFLE_TREE_COLOR",
   "CREATE_COMMENT",
@@ -96,6 +98,12 @@ export const deleteTreeAction = (): deleteTreeActionType => ({
 export const setActiveTreeAction = (treeId: number): setActiveTreeActionType => ({
   type: "SET_ACTIVE_TREE",
   treeId,
+});
+
+export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number): mergeTreesActionType => ({
+  type: "MERGE_TREES",
+  sourceNodeId,
+  targetNodeId,
 });
 
 export const setTreeNameAction = (name: ?string = null): setTreeNameActionType => ({

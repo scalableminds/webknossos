@@ -168,11 +168,14 @@ class SkeletonTracingPlaneController extends PlaneController {
       const ind = dimensions.getIndices(plane);
       if (intersect.object.visible &&
         (plane === OrthoViews.TDView ||
-          (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
+        (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
+
         // set the active Node to the one that has the ID stored in the vertex
-        // center the node if click was in 3d-view
-        const centered = plane === OrthoViews.TDView;
-        Store.dispatch(setActiveNodeAction(nodeID, shiftPressed && altPressed, centered));
+        Store.dispatch(setActiveNodeAction(nodeID));
+
+        if (shiftPressed && altPressed) {
+          Store.dispatch(mergeTreesAction(nodeID));
+        }
         break;
       }
     }

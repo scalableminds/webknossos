@@ -152,6 +152,9 @@ class Skeleton {
     app.vent.trigger("rerender");
   }
 
+  getAllNodes() {
+    return _.map(this.treeGeometries, tree => tree.nodes);
+  }
 
   setSizeAttenuation(sizeAttenuation) {
     return _.map(this.treeGeometries, tree =>

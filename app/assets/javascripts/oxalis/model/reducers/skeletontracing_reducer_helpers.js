@@ -21,9 +21,9 @@ function moveNodesToNewTree(trees: TreeMapType, nodeId: number): TreeMapType {
   return trees;
 }
 
-export function findActiveTree(trees: TreeMapType, activeNodeId: number): ?TreeType {
+export function findTree(trees: TreeMapType, nodeId: number): ?TreeType {
   return _.values(trees)
-    .filter(tree => _.includes(tree.nodes, { id: activeNodeId }))[0];
+    .filter(tree => _.map(tree.nodes, "id").includes(nodeId))[0];
 }
 
 function generateTreeNamePrefix(skeletonTracing, timestamp) {
@@ -117,16 +117,7 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMap
       newTrees = skeletonTracing.trees;
     } else {
       // Split the tree
-      newTrees = sourceNodeIds.map(nodeId => moveNodesToNewTree(nodeId)) +
-        targetNodeIds.map(nodeId => moveNodesToNewTree(nodeId));
-
-      // Delete current tree
-      delete skeletonTracing.trees[activeTreeId];
-      // Set the newly split ones
-      newTrees.forEach((tree) => { trees[tree.treeId] = tree; });
-
-      newActiveNodeId = newTrees[-1].nodes[0];
-      newActiveTreeId = newTrees[-1].treeId;
+      throw Error("TODO @ philipp");
     }
 
     return Maybe.Just([newTrees, newActiveNodeId, newActiveTreeId]);
@@ -226,6 +217,28 @@ export function deleteTree(skeletonTracing: SkeletonTracingType): Maybe<[TreeMap
     }
 
     return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId]);
+  }
+  return Maybe.Nothing();
+}
+
+export function mergeTrees(skeletonTracing: SkeletonTracingType, sourceNodeId: number, targetNodeId: number): Maybe<TreeType> {
+  const { allowUpdate } = skeletonTracing.restrictions;
+  const { trees } = skeletonTracing;
+  const sourceTree = findTree(trees, sourceNodeId);
+  const targetTree = findTree(trees, targetNodeId); // should be activeTree
+
+  if (allowUpdate && sourceTree && targetTree) {
+    const newTrees = _.omit(trees, sourceTree.treeId.toString());
+    newTrees[targetTree.treeId].nodes = Object.assign(targetTree.nodes, sourceTree.nodes);
+    newTrees[targetTree.treeId].edges = targetTree.edges.concat(sourceTree.edges);
+
+    const newEdge: EdgeType = {
+      source: sourceNodeId,
+      target: targetNodeId,
+    };
+    newTrees[targetTree.treeId].edges.push(newEdge);
+
+    return Maybe.Just(newTrees);
   }
   return Maybe.Nothing();
 }

@@ -4,9 +4,9 @@
  */
 
 import _ from "lodash";
-import app from "app";
 import Backbone from "backbone";
-import Toast from "libs/toast";
+// import app from "app";
+// import Toast from "libs/toast";
 import modal from "oxalis/view/modal";
 import View from "oxalis/view";
 

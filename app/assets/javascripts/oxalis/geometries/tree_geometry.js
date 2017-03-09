@@ -5,7 +5,6 @@
 
 import _ from "lodash";
 import app from "app";
-import Utils from "libs/utils";
 import ResizableBuffer from "libs/resizable_buffer";
 import ErrorHandling from "libs/error_handling";
 import * as THREE from "three";
@@ -13,7 +12,7 @@ import TWEEN from "tween.js";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
 import ParticleMaterialFactory from "oxalis/geometries/materials/particle_material_factory";
-import type { Vector3 } from "oxalis/constant";
+import type { Vector3 } from "oxalis/constants";
 
 class TreeGeometry {
 

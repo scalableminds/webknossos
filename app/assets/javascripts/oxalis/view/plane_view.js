@@ -10,8 +10,6 @@ import TWEEN from "tween.js";
 import scaleInfo from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Store from "oxalis/store";
-import modal from "oxalis/view/modal";
-import Toast from "libs/toast";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 import Model from "oxalis/model";

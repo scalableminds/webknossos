@@ -14,8 +14,6 @@ import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 
-import Toast from "libs/toast";
-
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
   // See comment in Controller class on general controller architecture.
@@ -77,12 +75,10 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
       // Delete active node and recenter last node
       "shift + space": () => Store.dispatch(deleteNodeAction()),
     }, -1);
-
   }
 
-
   // make sure that it is not possible to keep nodes from being created
-  setWaypoint(): void {
+  setWaypoint(...args): void {
     if (this.isBranchpointvideoMode()) { return; }
     if (!this.model.get("flightmodeRecording")) {
       this.model.set("flightmodeRecording", true);

@@ -70,7 +70,7 @@ class TracingApi {
     throw Error("todo");  // createCommentAction only works for activeNodeId
     // Convert nodeId to node
     if (_.isNumber(nodeId)) {
-      Store.dispatch(setCommentForNodeAction(nodeId, commentText));
+      Store.dispatch(createCommentAction(commentText));
     } else {
       throw Error("Supply a nodeId.");
     }
@@ -95,7 +95,7 @@ class TracingApi {
       throw Error("Supply a treeId.");
     }
 
-    throw Error("TODO")
+    throw Error("TODO");
     const comment = Store.getState().skeletonTracing.getCommentForNode(nodeId, tree);
     return comment ? comment.content : null;
   }
@@ -279,7 +279,7 @@ class UtilsApi {
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
   registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T[]) => void, args: T[]) => void): void {
-    throw Error("todo")
+    throw Error("todo");
     const skeletonTracing: {[key:string]: Function } = Store.getState().skeletonTracing;
     const oldFunc = skeletonTracing[funcName].bind(Store.getState().skeletonTracing);
     skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);

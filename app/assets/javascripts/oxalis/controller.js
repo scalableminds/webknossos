@@ -20,7 +20,7 @@ import SkeletonTracingArbitraryController from "oxalis/controller/combinations/s
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import MinimalArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
+import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import View from "oxalis/view";
@@ -67,7 +67,7 @@ class Controller {
     this.model.set("state", this.urlManager.initialState);
 
     this.model.fetch()
-        .then(() => this.modelFetchDone())
+        .then(() => this.modelFetchDone());
         // .catch((error) => {
         //   // Don't throw errors for errors already handled by the model.
         //   if (error !== this.model.HANDLED_ERROR) {

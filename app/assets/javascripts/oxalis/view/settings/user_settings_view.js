@@ -47,7 +47,6 @@ class UserSettingsView extends Component {
       // wkModel.annotationModel.on("newActiveCell", this.updateIds);
       wkModel.on("change:mode", () => this.forceUpdate());
     }
-
   }
 
   updateIds = () => {

@@ -5,7 +5,6 @@
 
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import Utils from "libs/utils";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import Store from "oxalis/store";
 import { setActiveTreeAction } from "oxalis/model/actions/skeletontracing_actions";

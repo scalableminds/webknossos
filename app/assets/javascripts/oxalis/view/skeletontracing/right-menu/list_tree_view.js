@@ -5,7 +5,6 @@
 
 import _ from "lodash";
 import $ from "jquery";
-import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Backbone from "backbone";
 import Store from "oxalis/store";

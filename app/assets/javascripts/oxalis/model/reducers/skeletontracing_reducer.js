@@ -187,14 +187,14 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "CREATE_COMMENT": {
-      return createComment(state.skeletonTracing, action.commentText).map(comments => {
+      return createComment(state.skeletonTracing, action.commentText).map((comments) => {
         const { activeTreeId } = state.skeletonTracing;
         return update(state, { skeletonTracing: { trees: { [activeTreeId]: { comments: { $set: comments } } } } });
       }).getOrElse(state);
     }
 
     case "DELETE_COMMENT": {
-      return deleteComment(state.skeletonTracing, action.commentText).map(comments => {
+      return deleteComment(state.skeletonTracing, action.commentText).map((comments) => {
         const { activeTreeId } = state.skeletonTracing;
         return update(state, { skeletonTracing: { trees: { [activeTreeId]: { comments: { $set: comments } } } } });
       }).getOrElse(state);

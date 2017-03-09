@@ -1,6 +1,6 @@
 // @flow
 import type { SkeletonTracingType, BranchPointType, CommentType, TreeType, NodeType } from "oxalis/store";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 
 type NodeWithTreeIdType = { treeId: number } & NodeType;

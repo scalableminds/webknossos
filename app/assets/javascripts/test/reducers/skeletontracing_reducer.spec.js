@@ -157,7 +157,7 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete a nodes and split the tree", () => {
-    // TODO
+    // TODO @philipp
   });
 
   it("should set a new active node", () => {
@@ -416,6 +416,28 @@ describe("SkeletonTracing", () => {
     expect(newState).toBe(initalState);
   });
 
+  it("should merge two trees", () => {
+    const createTreeAction = SkeletonTracingActions.createTreeAction();
+    const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+    const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(0, 2);
+
+    // create a node in first tree, then create a second tree with three nodes and merge them
+    let newState = SkeletonTracingReducer(initalState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, mergeTreesAction);
+
+    expect(_.size(newState.skeletonTracing.trees)).toBe(1);
+    expect(_.size(newState.skeletonTracing.trees[1].nodes)).toBe(4);
+    expect(newState.skeletonTracing.trees[1].edges).toEqual([
+      { source: 1, target: 2 },
+      { source: 2, target: 3 },
+      { source: 0, target: 2 },
+    ]);
+  });
+
   it("should rename the active tree", () => {
     const newName = "SuperTestName";
     const setTreeNameAction = SkeletonTracingActions.setTreeNameAction(newName);
@@ -483,7 +505,6 @@ describe("SkeletonTracing", () => {
     const newState = SkeletonTracingReducer(initalState, createCommentAction);
     expect(newState.skeletonTracing.trees[0].comments.length).toEqual(0);
   });
-
 
   it("shouldn't create more than one comment for the active node", () => {
     const commentText = "Wow such test comment";

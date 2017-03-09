@@ -6,7 +6,7 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
-import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, findActiveTree } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, findTree, mergeTrees } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import type { OxalisState, TreeType, SkeletonTracingType } from "oxalis/store";
 import type { SkeletonTracingActionTypes } from "oxalis/model/actions/skeletontracing_actions";
 import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
@@ -37,7 +37,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
       })), "id");
 
       const activeNodeId = contentData.activeNode ? contentData.activeNode : null;
-      const activeTree = activeNodeId ? findActiveTree(trees, activeNodeId) : null;
+      const activeTree = activeNodeId ? findTree(trees, activeNodeId) : null;
 
       let activeTreeId;
       if (activeTree != null) {
@@ -90,7 +90,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "SET_ACTIVE_NODE": {
-      const newActiveTree = _.find(state.skeletonTracing.trees, (tree: TreeType) => _.map(tree.nodes, "id").includes(action.nodeId));
+      const newActiveTree = findTree(state.skeletonTracing.trees, action.nodeId);
 
       if (newActiveTree) {
         return update(state, { skeletonTracing: {
@@ -164,6 +164,18 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
       }
 
       return state;
+    }
+
+    case "MERGE_TREES": {
+      const { sourceNodeId, targetNodeId } = action;
+
+      return mergeTrees(state.skeletonTracing, sourceNodeId, targetNodeId).map(([trees, newActiveTreeId, newActiveNodeId]) =>
+        update(state, { skeletonTracing: {
+          trees: { $set: trees },
+          activeNodeId: { $set: newActiveNodeId },
+          activeTreeId: { $set: newActiveTreeId },
+        } }),
+      ).getOrElse(state);
     }
 
     case "SET_TREE_NAME": {

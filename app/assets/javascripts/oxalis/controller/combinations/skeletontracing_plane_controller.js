@@ -13,7 +13,7 @@ import SkeletonTracingController from "oxalis/controller/annotations/skeletontra
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import constants, { OrthoViews } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
-import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
 import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
@@ -51,7 +51,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0): void {
     // For debugging purposes.
     if (nodesPerTree === nodesAlreadySet) {
-      Store.disptach(createTreeAction());
+      Store.dispatch(createTreeAction());
       nodesAlreadySet = 0;
     }
 
@@ -158,7 +158,7 @@ class SkeletonTracingPlaneController extends PlaneController {
         continue;
       }
 
-      const nodeID = geometry.nodeIDs.getAllElements()[index];
+      const nodeId = geometry.nodeIDs.getAllElements()[index];
 
       const posArray = geometry.attributes.position.array;
       const intersectsCoord = [posArray[3 * index], posArray[(3 * index) + 1], posArray[(3 * index) + 2]];
@@ -168,11 +168,16 @@ class SkeletonTracingPlaneController extends PlaneController {
       const ind = dimensions.getIndices(plane);
       if (intersect.object.visible &&
         (plane === OrthoViews.TDView ||
-          (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
+        (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
+
+        // merge two trees
+        if (shiftPressed && altPressed) {
+          const sourceNodeId = Store.getState().skeletonTracing.activeNodeId;
+          Store.dispatch(mergeTreesAction(sourceNodeId, nodeId));
+        }
+
         // set the active Node to the one that has the ID stored in the vertex
-        // center the node if click was in 3d-view
-        const centered = plane === OrthoViews.TDView;
-        Store.dispatch(setActiveNodeAction(nodeID, shiftPressed && altPressed, centered));
+        Store.dispatch(setActiveNodeAction(nodeId));
         break;
       }
     }

@@ -37,7 +37,11 @@ trait BucketHandler extends DataCache with LazyLogging with FoxImplicits{
     if (useCache)
       withCache[Array[Byte]](requestedCube)(loadFromUnderlying(requestedCube, timeout))(getBucket)
     else
-      loadFromUnderlying(requestedCube, timeout).flatMap(getBucket)
+      loadFromUnderlying(requestedCube, timeout).flatMap { cube =>
+        val bucket = getBucket(cube)
+        cube.scheduleForRemoval()
+        bucket
+      }
   }
 
   private def convertToHalfByte(a: Array[Byte]) = {

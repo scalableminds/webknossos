@@ -7,7 +7,7 @@
 
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
-import reduceReducers from "reduce-reducers";
+import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";

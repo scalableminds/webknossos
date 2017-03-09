@@ -13,6 +13,7 @@ import TWEEN from "tween.js";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
 import ParticleMaterialFactory from "oxalis/geometries/materials/particle_material_factory";
+import type { Vector3 } from "oxalis/constant";
 
 class TreeGeometry {
 
@@ -51,7 +52,7 @@ class TreeGeometry {
     this.edges = new THREE.LineSegments(
       edgeGeometry,
       new THREE.LineBasicMaterial({
-        color: this.darkenHex(treeColor),
+        color: this.darkenColor(treeColor),
         linewidth: this.getLineWidth(),
       }),
     );
@@ -74,48 +75,13 @@ class TreeGeometry {
     return attr;
   }
 
-
   clear() {
     this.nodesBuffer.clear();
     this.edgesBuffer.clear();
     this.sizesBuffer.clear();
     this.scalesBuffer.clear();
     this.nodeIDs.clear();
-    this.updateNodesColors();
   }
-
-
-  isEmpty() {
-    return this.nodesBuffer.getLength() === 0;
-  }
-
-
-  addNode(node) {
-    this.nodesBuffer.push(node.position);
-    this.sizesBuffer.push([node.radius * 2]);
-    this.scalesBuffer.push([1.0]);
-    this.nodeIDs.push([node.id]);
-    this.nodesColorBuffer.push(this.getColor(node.id));
-
-    // Add any edge from smaller IDs to the node
-    // ASSUMPTION: if this node is new, it should have a
-    //             greater id as its neighbor
-    const { activeTreeId, trees } = Store.getState().skeletonTracing;
-    const neighborIds = trees[activeTreeId].edges.reduce((result, edge) => {
-      if (edge.target === node.id) result.append(edge.source);
-      return result;
-    }, []);
-
-    trees[activeTreeId].nodes[activeNodes]
-    for (const neighbor of node.neighbors) {
-      if (neighbor.id < node.id) {
-        this.edgesBuffer.push(neighbor.position.concat(node.position));
-      }
-    }
-
-    this.updateGeometries();
-  }
-
 
   reset(nodes, edges) {
     if (_.size(nodes)) {
@@ -127,99 +93,19 @@ class TreeGeometry {
       this.nodeIDs.pushMany(_.map(nodes, node => [node.id]));
       this.nodesColorBuffer.pushMany(_.map(nodes, node => this.getColor(node.id)));
       this.edgesBuffer.pushMany(edges.map(edge => nodes[edge.source].position.concat(nodes[edge.target].position)));
+
+      this.updateGeometries();
     }
   }
-
-
-  deleteNode(node) {
-    let edgesIndex;
-    let found;
-    const swapLast = (array, index) => {
-      const lastElement = array.pop();
-      Utils.__range__(0, array.elementLength, false).forEach((i) => {
-        array.getAllElements()[(index * array.elementLength) + i] = lastElement[i];
-      });
-    };
-
-    const nodesIndex = this.getNodeIndex(node.id);
-    ErrorHandling.assert((nodesIndex != null), "No node found.", { id: node.id, nodeIDs: this.nodeIDs });
-
-    // swap IDs and nodes
-    swapLast(this.nodeIDs, nodesIndex);
-    swapLast(this.nodesBuffer, nodesIndex);
-    swapLast(this.sizesBuffer, nodesIndex);
-    swapLast(this.scalesBuffer, nodesIndex);
-    swapLast(this.nodesColorBuffer, nodesIndex);
-
-    // Delete Edge by finding it in the array
-    const edgeArray = this.getEdgeArray(node, node.neighbors[0]);
-
-    for (const i of Utils.__range__(0, this.edgesBuffer.getLength(), false)) {
-      found = true;
-      for (let j = 0; j <= 5; j++) {
-        found = found && Math.abs(this.edges.geometry.attributes.position.array[(6 * i) + j] - edgeArray[j]) < 0.5;
-      }
-      if (found) {
-        edgesIndex = i;
-        break;
-      }
-    }
-
-    ErrorHandling.assert(found, "No edge found.", { found, edgeArray, nodesIndex });
-
-    swapLast(this.edgesBuffer, edgesIndex);
-
-    this.updateGeometries();
-  }
-
-  mergeTree(otherTree, lastNode, activeNode) {
-    const merge = (bufferA, bufferB) => {
-      bufferA.pushSubarray(bufferB.getAllElements());
-    };
-
-    // merge IDs, nodes and edges
-    merge(this.nodeIDs, otherTree.nodeIDs);
-    merge(this.nodesBuffer, otherTree.nodesBuffer);
-    merge(this.edgesBuffer, otherTree.edgesBuffer);
-    merge(this.sizesBuffer, otherTree.sizesBuffer);
-    merge(this.scalesBuffer, otherTree.scalesBuffer);
-    this.edgesBuffer.push(this.getEdgeArray(lastNode, activeNode));
-
-    this.updateNodesColors();
-    this.updateGeometries();
-  }
-
-
-  getEdgeArray(node1, node2) {
-    // ASSUMPTION: edges always go from smaller ID to bigger ID
-
-    if (node1.id < node2.id) {
-      return node1.position.concat(node2.position);
-    } else {
-      return node2.position.concat(node1.position);
-    }
-  }
-
 
   setSizeAttenuation(sizeAttenuation) {
     this.nodes.material.sizeAttenuation = sizeAttenuation;
     this.updateGeometries();
   }
 
-
-  updateTreeColor() {
-    const newColor = Store.getState().skeletonTracing.trees[this.id].color;
-    this.edges.material.color = new THREE.Color(this.darkenHex(newColor));
-
-    this.updateNodesColors();
-    this.updateGeometries();
-  }
-
-
   getMeshes() {
     return [this.nodes, this.edges];
   }
-
 
   dispose() {
     for (const geometry of this.getMeshes()) {
@@ -228,40 +114,11 @@ class TreeGeometry {
     }
   }
 
-
-  updateNodesColors() {
-    this.nodesColorBuffer.clear();
-    for (const i of Utils.__range__(0, this.nodeIDs.length, false)) {
-      this.nodesColorBuffer.push(this.getColor(this.nodeIDs.get(i)));
-    }
-
-    this.updateGeometries();
-  }
-
-
-  updateNodeColor(id, isActiveNode, isBranchPoint) {
-    this.doWithNodeIndex(id, index => this.nodesColorBuffer.set(this.getColor(id, isActiveNode, isBranchPoint), index),
-    );
-
-    this.updateGeometries();
-  }
-
-
-  updateNodeRadius(id, radius) {
-    this.doWithNodeIndex(id, index => this.sizesBuffer.set([radius * 2], index),
-    );
-
-    this.updateGeometries();
-  }
-
-
   startNodeHighlightAnimation(nodeId) {
     const normal = 1.0;
     const highlighted = 2.0;
 
-    this.doWithNodeIndex(nodeId, index => this.animateNodeScale(normal, highlighted, index, () => this.animateNodeScale(highlighted, normal, index),
-      ),
-    );
+    // this.doWithNodeIndex(nodeId, index => this.animateNodeScale(normal, highlighted, index, () => this.animateNodeScale(highlighted, normal, index)),
   }
 
 
@@ -288,22 +145,23 @@ class TreeGeometry {
   getColor(id, isActiveNode, isBranchPoint) {
     const tree = Store.getState().skeletonTracing.trees[this.id];
     let { color } = tree;
+
     if (id != null) {
       isActiveNode = isActiveNode || Store.getState().skeletonTracing.activeNodeId === id;
       isBranchPoint = isBranchPoint || id in _.map(tree.branchPoints, "node");
 
       if (isActiveNode) {
-        color = this.shiftHex(color, 1 / 4);
+        color = this.shiftColor(color, 1 / 4);
       } else {
-        color = this.darkenHex(color);
+        color = this.darkenColor(color);
       }
 
       if (isBranchPoint) {
-        color = this.invertHex(color);
+        color = this.invertColor(color);
       }
     }
 
-    return this.hexToRGB(color);
+    return color;
   }
 
 
@@ -361,33 +219,6 @@ class TreeGeometry {
     mesh.geometry.setDrawRange(0, length * itemsPerElement);
   }
 
-
-  logState(title) {
-    console.log(` +++ ${title} +++ `);
-    console.log("nodeIDs", this.nodeIDs.toString());
-    console.log("nodesBuffer", this.nodesBuffer.toString());
-    console.log("edgesBuffer", this.edgesBuffer.toString());
-    console.log("sizesBuffer", this.sizesBuffer.toString());
-  }
-
-
-  getNodeIndex(nodeId) {
-    for (let i = 0; i < this.nodeIDs.length; i++) {
-      if (this.nodeIDs.get(i) === nodeId) {
-        return i;
-      }
-    }
-    return null;
-  }
-
-
-  doWithNodeIndex(nodeId, f) {
-    const index = this.getNodeIndex(nodeId);
-    if (index == null) { return; }
-    f(index);
-  }
-
-
   getLineWidth() {
     return Store.getState().userConfiguration.particleSize / 4;
   }
@@ -395,28 +226,23 @@ class TreeGeometry {
 
   // ### Color utility methods
 
-  hexToRGB(hexColor) {
-    const rgbColor = new THREE.Color().setHex(hexColor);
-    return [rgbColor.r, rgbColor.g, rgbColor.b];
+  darkenColor(color: Vector3): Vector3 {
+    const threeColor = new THREE.Color().fromArray(color);
+    const hslColor = threeColor.getHSL();
+    threeColor.setHSL(hslColor.h, hslColor.s, 0.25);
+    return threeColor.toArray();
   }
 
 
-  darkenHex(hexColor) {
-    const hslColor = new THREE.Color(hexColor).getHSL();
-    hslColor.l = 0.25;
-    return new THREE.Color().setHSL(hslColor.h, hslColor.s, hslColor.l).getHex();
+  shiftColor(color: Vector3, shiftValue): Vector3 {
+    const threeColor = new THREE.Color().fromArray(color);
+    threeColor.offsetHSL(shiftValue, 0, 0);
+    return threeColor.toArray();
   }
 
 
-  shiftHex(hexColor, shiftValue) {
-    const hslColor = new THREE.Color(hexColor).getHSL();
-    hslColor.h = (hslColor.h + shiftValue) % 1;
-    return new THREE.Color().setHSL(hslColor.h, hslColor.s, hslColor.l).getHex();
-  }
-
-
-  invertHex(hexColor) {
-    return this.shiftHex(hexColor, 0.5);
+  invertColor(color: Vector3): Vector3 {
+    return this.shiftColor(color, 0.5);
   }
 }
 

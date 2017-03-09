@@ -87,8 +87,8 @@ class AbstractTreeRenderer {
    * Render function called by events and GUI.
    * Draws the abstract tree, emphasizes the active node
    * and highlights comments, if enabled.
-   * @param  {TraceTree} tree
-   * @param  {Number} @activeNodeId TracePoint id
+   * @param  {TreeType} tree
+   * @param  {Number} @activeNodeId node id
   */
   drawTree(tree1: TreeType, activeNodeId: number) {
     let root;
@@ -154,7 +154,7 @@ class AbstractTreeRenderer {
   /**
    * Draws a whole tree inside the given borders.
    * Thus it fits on the canvas and scales as the tree grows.
-   * @param  {TracePoint} tree
+   * @param  {AbstractNodeType} tree
    * @param  {Number} left  left border in pixels
    * @param  {Number} right right border in pixels
    * @param  {Number} top   y coordinate in pixels
@@ -187,7 +187,7 @@ class AbstractTreeRenderer {
    *   - branch points
    *   - leaves
    *   - commented nodes
-   * @param  {TracePoint} tree
+   * @param  {AbstractNodeType} tree
    * @return {Decision}
   */
   getNextDecision(tree: AbstractNodeType): DecisionType {
@@ -265,7 +265,7 @@ class AbstractTreeRenderer {
    * Draws a sequence of nodes and the edges in between.
    * @param  {Number} top      y coordinate in pixels
    * @param  {Number} left     x coordinate in pixels
-   * @param  {TracePoint} tree
+   * @param  {AbstractNodeType} tree
    * @param  {Decision} decision
   */
   drawChainFromTo(top: number, left: number, tree: AbstractNodeType, decision: DecisionType): void {
@@ -285,7 +285,7 @@ class AbstractTreeRenderer {
    * Draws the dashed chain indicator and the start and end nodes.
    * @param  {Number} top      y coordinate in pixels
    * @param  {Number} middle   middel x coordinate in pixels
-   * @param  {TracePoint} node
+   * @param  {AbstractNodeType} node
    * @param  {Decision} decision
   */
   drawChainWithChainIndicatorFromTo(top: number, middle: number, node: AbstractNodeType, decision: DecisionType): void {
@@ -357,7 +357,7 @@ class AbstractTreeRenderer {
    * Add a node to the node list, so it can be drawn later.
    * @param {Number} x
    * @param {Number} y
-   * @param {Number} id TracePoint id
+   * @param {Number} id AbstractNodeType id
   */
   addNode(x: number, y: number, id: number): void {
     this.nodeList.push({ x, y, id });
@@ -378,7 +378,7 @@ class AbstractTreeRenderer {
    * Take active state, theme and comment into consideration.
    * @param  {Number} x
    * @param  {Number} y
-   * @param  {Number} id TracePoint id
+   * @param  {Number} id AbstractNodeType id
   */
   drawNode(x: number, y: number, id: number): void {
     this.ctx.beginPath();
@@ -441,7 +441,7 @@ class AbstractTreeRenderer {
 
   /**
    * Checks if a node is commented.
-   * @param  {Number} id TracePoint id
+   * @param  {Number} id AbstractNodeType id
    * @return {Boolean}    true if node is commented
   */
   nodeIdHasComment(id: number): boolean {
@@ -452,7 +452,7 @@ class AbstractTreeRenderer {
   /**
    * Traverse the tree and add a width property for each node
    * which indicates the number of all leaves in the tree.
-   * @param  {TracePoint}   tree
+   * @param  {AbstractNodeType}   tree
    * @return {Number}       width of the tree
   */
   recordWidths(tree: AbstractNodeType): number {
@@ -481,8 +481,8 @@ class AbstractTreeRenderer {
 
 
   /**
-   * Recursively calculate the maximum depth of a TracePoint tree.
-   * @param  {TracePoint} tree
+   * Recursively calculate the maximum depth of a AbstractNodeType tree.
+   * @param  {AbstractNodeType} tree
    * @param  {Number} mode      MODE_NORMAL or MODE_NOCHAIN
    * @param  {Number} count     helper count, current depth
    * @return {Number}           depth of the tree
@@ -523,10 +523,10 @@ class AbstractTreeRenderer {
 
 
   /**
-   * Get the id of a TracePoint from a position on the canvas.
+   * Get the id of a AbstractNodeType from a position on the canvas.
    * @param  {Number} x
    * @param  {Number} y
-   * @return {Number}   TracePoint id
+   * @return {Number}   AbstractNodeType id
   */
   getIdFromPos(x: number, y: number): number {
     let id;

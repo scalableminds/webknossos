@@ -246,7 +246,7 @@ const defaultState: OxalisState = {
         branchPoints: [],
         edges: [],
         comments: [],
-        color: [],
+        color: [0.8, 1, 0.3],
       },
     },
     name: "",

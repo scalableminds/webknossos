@@ -12,7 +12,6 @@ import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/mod
 import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
-import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import scaleInfo from "oxalis/model/scaleinfo";
@@ -92,13 +91,12 @@ class Model extends Backbone.Model {
   };
   taskBoundingBox: BoundingBoxType;
   userBoundingBox: BoundingBoxType;
-  annotationModel: SkeletonTracing | VolumeTracing;
+  annotationModel: VolumeTracing;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
   flycam: Flycam2d;
   flycam3d: Flycam3d;
   volumeTracing: VolumeTracing;
-  skeletonTracing: SkeletonTracing;
   mode: ModeType;
   allowedModes: Array<ModeType>;
   settings: SettingsType;

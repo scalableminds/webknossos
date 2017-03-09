@@ -144,18 +144,6 @@ class ListTreeView extends Marionette.CompositeView {
     this.updateSortIndicator();
   }
 
-
-  updateTreeWithId(treeId) {
-    // This method is used instead of refresh to avoid performance issues
-    const $childView = this.$(`a[data-treeid='${treeId}']`);
-    const tree = Store.getState().skeletonTracing.getTree(treeId);
-
-    $childView.children(".tree-node-count").text(tree.nodes.length);
-    $childView.children(".tree-icon").css("color", `#${Utils.intToHex(tree.color)}`);
-    $childView.children(".tree-name").text(tree.name);
-  }
-
-
   updateSortIndicator() {
     const isSortedByName = Store.getState().userConfiguration.sortTreesByName;
     this.ui.sortNameIcon.toggle(isSortedByName);

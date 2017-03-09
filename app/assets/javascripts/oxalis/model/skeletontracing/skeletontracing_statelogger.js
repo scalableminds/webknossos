@@ -8,12 +8,10 @@ import { V3 } from "libs/mjs";
 import ErrorHandling from "libs/error_handling";
 import StateLogger from "oxalis/model/statelogger";
 import Flycam3D from "oxalis/model/flycam3d";
-import SkeletonTracing from "oxalis/model/skeletontracing/skeletontracing";
 
 class SkeletonTracingStateLogger extends StateLogger {
 
   flycam3d: Flycam3D;
-  skeletonTracing: SkeletonTracing;
 
   constructor(flycam, flycam3d, version, tracingId, tracingType, allowUpdate, skeletonTracing) {
     super(flycam, version, tracingId, tracingType, allowUpdate);
@@ -23,7 +21,6 @@ class SkeletonTracingStateLogger extends StateLogger {
 
 
   // ### TREES
-
   treeObject(tree, oldId) {
     const treeColor = new THREE.Color(tree.color);
     return {

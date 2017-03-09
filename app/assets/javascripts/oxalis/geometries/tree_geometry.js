@@ -118,9 +118,7 @@ class TreeGeometry {
     const normal = 1.0;
     const highlighted = 2.0;
 
-    this.doWithNodeIndex(nodeId, index => this.animateNodeScale(normal, highlighted, index, () => this.animateNodeScale(highlighted, normal, index),
-      ),
-    );
+    // this.doWithNodeIndex(nodeId, index => this.animateNodeScale(normal, highlighted, index, () => this.animateNodeScale(highlighted, normal, index)),
   }
 
 

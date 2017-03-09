@@ -106,17 +106,21 @@ class Skeleton {
 
   setVisibility(isVisible) {
     this.isVisible = isVisible;
+
+    for (const mesh of this.getMeshes()) {
+      mesh.isVisible = isVisible;
+    }
     app.vent.trigger("rerender");
   }
 
 
   restoreVisibility() {
-    return this.setVisibilityTemporary(this.isVisible);
+    this.setVisibilityTemporary(this.isVisible);
   }
 
 
   toggleVisibility() {
-    return this.setVisibility(!this.isVisible);
+    this.setVisibility(!this.isVisible);
   }
 
 

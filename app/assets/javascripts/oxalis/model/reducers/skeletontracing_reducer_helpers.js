@@ -21,6 +21,11 @@ function moveNodesToNewTree(trees: TreeMapType, nodeId: number): TreeMapType {
   return trees;
 }
 
+export function findActiveTree(trees: TreeMapType, activeNodeId: number): ?TreeType {
+  return _.values(trees)
+    .filter(tree => _.includes(tree.nodes, { id: activeNodeId }))[0];
+}
+
 function generateTreeNamePrefix(skeletonTracing) {
   const { contentType, taskId } = skeletonTracing;
   let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;

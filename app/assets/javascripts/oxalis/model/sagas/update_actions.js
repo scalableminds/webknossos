@@ -1,15 +1,16 @@
 // @flow
 import type { SkeletonTracingType, BranchPointType, CommentType, TreeType, NodeType } from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import { Color } from "three";
 import { V3 } from "libs/mjs";
+
+type NodeWithTreeIdType = { treeId: number } & NodeType;
 
 type UpdateTreeUpdateAction = {
   action: "createTree" | "updateTree",
   value: {
     id: number,
     updatedId: ?number,
-    color: Vector4,
+    color: Vector3,
     name: string,
     timestamp: number,
     comments: Array<CommentType>,
@@ -36,11 +37,11 @@ type MergeTreeUpdateAction = {
 };
 type CreateNodeUpdateAction = {
   action: "createNode",
-  value: NodeType,
+  value: NodeWithTreeIdType,
 };
 type UpdateNodeUpdateAction = {
   action: "updateNode",
-  value: NodeType,
+  value: NodeWithTreeIdType,
 };
 type DeleteNodeUpdateAction = {
   action: "deleteNode",
@@ -51,6 +52,14 @@ type DeleteNodeUpdateAction = {
 };
 type CreateEdgeUpdateAction = {
   action: "createEdge",
+  value: {
+    treeId: number,
+    source: number,
+    target: number,
+  }
+};
+type DeleteEdgeUpdateAction = {
+  action: "deleteEdge",
   value: {
     treeId: number,
     source: number,
@@ -76,17 +85,16 @@ export type UpdateAction =
   UpdateNodeUpdateAction |
   DeleteNodeUpdateAction |
   CreateEdgeUpdateAction |
-  // DeleteEdgeUpdateAction |
+  DeleteEdgeUpdateAction |
   UpdateTracingUpdateAction;
 
 export function createTree(tree: TreeType): UpdateTreeUpdateAction {
-  const treeColor = new Color(tree.color);
   return {
     action: "createTree",
     value: {
       id: tree.treeId,
       updatedId: undefined,
-      color: [treeColor.r, treeColor.g, treeColor.b, 1],
+      color: tree.color,
       name: tree.name,
       timestamp: tree.timestamp,
       comments: tree.comments,
@@ -103,13 +111,12 @@ export function deleteTree(treeId: number): DeleteTreeUpdateAction {
   };
 }
 export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
-  const treeColor = new Color(tree.color);
   return {
     action: "updateTree",
     value: {
       id: tree.treeId,
       updatedId: tree.treeId,
-      color: [treeColor.r, treeColor.g, treeColor.b, 1],
+      color: tree.color,
       name: tree.name,
       timestamp: tree.timestamp,
       comments: tree.comments,
@@ -136,6 +143,16 @@ export function createEdge(treeId: number, sourceNodeId: number, targetNodeId: n
     },
   };
 }
+export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: number): CreateEdgeUpdateAction {
+  return {
+    action: "deleteEdge",
+    value: {
+      treeId,
+      source: sourceNodeId,
+      target: targetNodeId,
+    },
+  };
+}
 export function createNode(node: NodeType): CreateNodeUpdateAction {
   return {
     action: "createNode",
@@ -148,10 +165,10 @@ export function updateNode(node: NodeType): UpdateNodeUpdateAction {
     value: node,
   };
 }
-export function deleteNode(treeId: number, node: NodeType): DeleteNodeUpdateAction {
+export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateAction {
   return {
     action: "deleteNode",
-    value: { treeId, id: node.id },
+    value: { treeId, id: nodeId },
   };
 }
 export function updateTracing(tracing: SkeletonTracingType): UpdateTracingUpdateAction {

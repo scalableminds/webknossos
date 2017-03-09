@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
 
@@ -52,8 +52,15 @@ const Utils = {
     const r = (bigint >> 16) & 255;
     const g = (bigint >> 8) & 255;
     const b = bigint & 255;
-
     return [r, g, b];
+  },
+
+  hexToRgba(hex: string): Vector4 {
+    const bigint = parseInt(hex.slice(1), 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return [r, g, b, 1];
   },
 
   compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {
@@ -201,6 +208,27 @@ const Utils = {
         this.sleep(timeout != null ? timeout : 100).then(resolve);
       }
     });
+  },
+
+
+  diffArrays<T>(stateA: Array<T>, stateB: Array<T>): { both: Array<T>, onlyA: Array<T>, onlyB: Array<T> } {
+    const both = [];
+    const onlyA = [];
+    const onlyB = [];
+
+    for (const itemA of stateA) {
+      if (stateB.includes(itemA)) {
+        both.push(itemA);
+      } else {
+        onlyA.push(itemA);
+      }
+    }
+    for (const itemB of stateB) {
+      if (!stateA.includes(itemB)) {
+        onlyB.push(itemB);
+      }
+    }
+    return { both, onlyA, onlyB };
   },
 };
 

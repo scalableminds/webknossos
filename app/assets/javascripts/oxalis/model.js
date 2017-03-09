@@ -24,6 +24,7 @@ import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
+import ColorGenerator from "libs/color_generator";
 
 // This is THE model. It takes care of the data including the
 // communication with the server.
@@ -238,6 +239,18 @@ class Model extends Backbone.Model {
         this.set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, this.getSegmentationBinary()));
         this.annotationModel = this.get("volumeTracing");
       } else {
+        if (tracing.content.contentData.trees.length === 0) {
+          tracing.content.contentData.trees = [{
+            id: 1,
+            color: ColorGenerator.distinctColorForId(1),
+            name: "",
+            timestamp: Date.now(),
+            comments: [],
+            branchPoints: [],
+            edges: [],
+            nodes: {},
+          }];
+        }
         Store.dispatch(initializeSkeletonTracingAction(tracing));
       }
     }

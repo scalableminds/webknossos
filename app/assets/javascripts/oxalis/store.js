@@ -129,7 +129,7 @@ export type SkeletonTracingType = {
   trees: TreeMapType,
   name: string,
   activeTreeId: number,
-  activeNodeId: number,
+  activeNodeId: ?number,
   restrictions: RestrictionsType & SettingsType,
 };
 

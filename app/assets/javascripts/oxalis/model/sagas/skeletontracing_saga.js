@@ -2,6 +2,7 @@
  * skeletontracing_sagas.js
  * @flow
  */
+import app from "app";
 import { call, take, takeEvery, select } from "redux-saga/effects";
 import Request from "libs/request";
 import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType } from "oxalis/store";
@@ -12,15 +13,17 @@ import _ from "lodash";
 import Utils from "libs/utils";
 
 function* centerActiveNode() {
-  // const { activeNodeId, activeTreeId, trees } = yield select(state => state.skeletonTracing);
-  // const position = trees[activeTreeId].nodes[activeNodeId].position;
-  //
-  // // Should be an action in the future
-  // window.webknossos.model.flycam.setPosition(position);
+  const { activeNodeId, activeTreeId, trees } = yield select(state => state.skeletonTracing);
+
+  if (activeNodeId) {
+    // Should be an action in the future
+    const position = trees[activeTreeId].nodes[activeNodeId].position;
+    app.oxalis.planeController.centerPositionAnimated(position)
+  }
 }
 
 export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
-  yield takeEvery(["CREATE_NODE", "SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE"], centerActiveNode);
+  yield takeEvery(["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE"], centerActiveNode);
 }
 
 function* pushAnnotation(action, payload) {

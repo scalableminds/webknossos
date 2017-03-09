@@ -26,7 +26,7 @@ export function findActiveTree(trees: TreeMapType, activeNodeId: number): ?TreeT
     .filter(tree => _.includes(tree.nodes, { id: activeNodeId }))[0];
 }
 
-function generateTreeNamePrefix(skeletonTracing) {
+function generateTreeNamePrefix(skeletonTracing, timestamp) {
   const { contentType, taskId } = skeletonTracing;
   let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
 
@@ -34,14 +34,14 @@ function generateTreeNamePrefix(skeletonTracing) {
   user = user.replace(/ /g, "_");
   if (contentType === "Explorational") {
     // Get YYYY-MM-DD string
-    const creationDate = new Date().toJSON().slice(0, 10);
+    const creationDate = new Date(timestamp).toJSON().slice(0, 10);
     return `explorative_${creationDate}_${user}_`;
   } else {
     return `task_${taskId}_${user}_`;
   }
 }
 
-export function createNode(skeletonTracing: SkeletonTracingType, position: Vector3, rotation: Vector3, viewport: number, resolution: number): Maybe<[NodeType, Array<EdgeType>]> {
+export function createNode(skeletonTracing: SkeletonTracingType, position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number): Maybe<[NodeType, Array<EdgeType>]> {
   const { allowUpdate } = skeletonTracing.restrictions;
   const { activeTreeId, activeNodeId } = skeletonTracing;
 
@@ -63,7 +63,7 @@ export function createNode(skeletonTracing: SkeletonTracingType, position: Vecto
       viewport,
       resolution,
       id: nextNewId,
-      timestamp: Date.now(),
+      timestamp,
     };
 
     // Create a new edge
@@ -132,7 +132,7 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMap
   return Maybe.Nothing();
 }
 
-export function createBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<BranchPointType> {
+export function createBranchPoint(skeletonTracing: SkeletonTracingType, timestamp: number): Maybe<BranchPointType> {
   const { branchPointsAllowed, allowUpdate } = skeletonTracing.restrictions;
   const { activeNodeId, activeTreeId } = skeletonTracing;
 
@@ -143,7 +143,7 @@ export function createBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<B
       // create new branchpoint
       return Maybe.Just({
         id: activeNodeId,
-        timestamp: Date.now(),
+        timestamp,
       });
     }
   }
@@ -170,7 +170,7 @@ export function deleteBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<[
   return Maybe.Nothing();
 }
 
-export function createTree(skeletonTracing: SkeletonTracingType): Maybe<TreeType> {
+export function createTree(skeletonTracing: SkeletonTracingType, timestamp: number): Maybe<TreeType> {
   const { allowUpdate } = skeletonTracing.restrictions;
 
   if (allowUpdate) {
@@ -179,14 +179,14 @@ export function createTree(skeletonTracing: SkeletonTracingType): Maybe<TreeType
     const maxTreeId = _.max(_.map(skeletonTracing.trees, "treeId"));
     const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : 0;
 
-    const name = generateTreeNamePrefix(skeletonTracing) + Utils.zeroPad(newTreeId, 2);
+    const name = generateTreeNamePrefix(skeletonTracing, timestamp) + Utils.zeroPad(newTreeId, 2);
 
     // Create the new tree
     const tree: TreeType = {
       name,
       treeId: newTreeId,
       nodes: {},
-      timestamp: Date.now(),
+      timestamp,
       color: ColorGenerator.distinctColorForId(newTreeId),
       branchPoints: [],
       edges: [],

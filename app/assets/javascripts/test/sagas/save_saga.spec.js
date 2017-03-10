@@ -1,5 +1,20 @@
-import { compactUpdateActions } from "oxalis/model/sagas/save_saga";
+// @flow
+import mockRequire from "mock-require";
+mockRequire.stopAll();
+
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
+import * as SaveActions from "oxalis/model/actions/save_actions";
+import { take, call } from "redux-saga/effects";
+import Request from "libs/request";
+
+const { alert } = mockRequire.reRequire("libs/window");
+const { compactUpdateActions, pushAnnotationAsync } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
+
+
+function expectValue(block) {
+  expect(block.done).toBe(false);
+  return expect(block.value);
+}
 
 describe("SaveSaga", () => {
   const initialState = {
@@ -40,5 +55,91 @@ describe("SaveSaga", () => {
     ];
 
     expect(compactUpdateActions(updateActions)).toEqual([updateActions[1]]);
+  });
+
+  it("should send update actions", () => {
+    const updateActions = [
+      UpdateActions.createEdge(0, 0, 1),
+      UpdateActions.createEdge(0, 1, 2),
+    ];
+
+    const saga = pushAnnotationAsync();
+    expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
+    saga.next();
+    expectValue(saga.next()).toEqual(take("PUSH_SAVE_QUEUE"));
+    saga.next(SaveActions.pushSaveQueueAction(updateActions, false));
+    saga.next();
+    saga.next();
+    saga.next(true);
+    saga.next(updateActions);
+    expectValue(saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }))
+      .toEqual(call(Request.sendJSONReceiveJSON,
+        "/annotations/Explorational/1234567890?version=3", {
+          method: "PUT",
+          data: updateActions,
+        }));
+  });
+
+  it("should retry update actions", () => {
+    const updateActions = [
+      UpdateActions.createEdge(0, 0, 1),
+      UpdateActions.createEdge(0, 1, 2),
+    ];
+
+    const saga = pushAnnotationAsync();
+    expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
+    saga.next();
+    expectValue(saga.next()).toEqual(take("PUSH_SAVE_QUEUE"));
+    saga.next(SaveActions.pushSaveQueueAction(updateActions, false));
+    saga.next();
+    saga.next();
+    saga.next(true);
+    saga.next(updateActions);
+    expectValue(saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }))
+      .toEqual(call(Request.sendJSONReceiveJSON,
+        "/annotations/Explorational/1234567890?version=3", {
+          method: "PUT",
+          data: updateActions,
+        }));
+
+    saga.throw("Timeout");
+    saga.next();
+    saga.next();
+    saga.next(true);
+    saga.next(updateActions);
+    expectValue(saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }))
+      .toEqual(call(Request.sendJSONReceiveJSON,
+        "/annotations/Explorational/1234567890?version=3", {
+          method: "PUT",
+          data: updateActions,
+        }));
+  });
+
+  it("should escalate on permanent client error update actions", () => {
+    const updateActions = [
+      UpdateActions.createEdge(0, 0, 1),
+      UpdateActions.createEdge(0, 1, 2),
+    ];
+
+    const saga = pushAnnotationAsync();
+    expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
+    saga.next();
+    expectValue(saga.next()).toEqual(take("PUSH_SAVE_QUEUE"));
+    saga.next(SaveActions.pushSaveQueueAction(updateActions, false));
+    saga.next();
+    saga.next();
+    saga.next(true);
+    saga.next(updateActions);
+    expectValue(saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }))
+      .toEqual(call(Request.sendJSONReceiveJSON,
+        "/annotations/Explorational/1234567890?version=3", {
+          method: "PUT",
+          data: updateActions,
+        }));
+
+    saga.throw({ status: 409 });
+    const alertEffect = saga.next().value;
+    expect(alertEffect.CALL.fn).toBe(alert);
+    expect(saga.next().done).toBe(true);
   });
 });

@@ -163,6 +163,19 @@ class TreeGeometry {
     return color;
   }
 
+  updateNodeColor(id, isActiveNode, isBranchPoint) {
+    let index = null;
+    for (let i = 0; i < this.nodeIDs.length; i++) {
+      if (this.nodeIDs.get(i) === id) {
+        index = i;
+        break;
+      }
+    }
+    this.nodesColorBuffer.set(this.getColor(id, isActiveNode, isBranchPoint), index);
+
+    this.updateGeometries();
+  }
+
 
   showRadius(show) {
     this.edges.material.linewidth = this.getLineWidth();

@@ -9,6 +9,7 @@ import Store from "oxalis/store";
 import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType, TreeType } from "oxalis/store";
 import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setTaskAction } from "oxalis/model/actions/task_actions";
 import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
@@ -140,6 +141,7 @@ class Model extends Backbone.Model {
       }
 
       Store.dispatch(setDatasetAction(dataset));
+      Store.dispatch(setTaskAction(tracing.task));
       return tracing;
     }).then((tracing: Tracing<*>) => {
       const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);

@@ -14,7 +14,7 @@ import ColorGenerator from "libs/color_generator";
 import Utils from "libs/utils";
 import Window from "libs/window";
 import type { Vector3 } from "oxalis/constants";
-import type { SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
 
 function moveNodesToNewTree(trees: TreeMapType, nodeId: number): TreeMapType {
   // TODO
@@ -26,18 +26,17 @@ export function findTree(trees: TreeMapType, nodeId: number): ?TreeType {
     .filter(tree => _.map(tree.nodes, "id").includes(nodeId))[0];
 }
 
-function generateTreeNamePrefix(skeletonTracing, timestamp) {
-  const { contentType, taskId } = skeletonTracing;
+function generateTreeNamePrefix(state: OxalisState, timestamp) {
   let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
 
   // Replace spaces in user names
   user = user.replace(/ /g, "_");
-  if (contentType === "Explorational") {
+  if (state.skeletonTracing.contentType === "Explorational") {
     // Get YYYY-MM-DD string
     const creationDate = new Date(timestamp).toJSON().slice(0, 10);
     return `explorative_${creationDate}_${user}_`;
   } else {
-    return `task_${taskId}_${user}_`;
+    return `task_${state.task.id}_${user}_`;
   }
 }
 
@@ -163,16 +162,16 @@ export function deleteBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<[
   return Maybe.Nothing();
 }
 
-export function createTree(skeletonTracing: SkeletonTracingType, timestamp: number): Maybe<TreeType> {
-  const { allowUpdate } = skeletonTracing.restrictions;
+export function createTree(state: OxalisState, timestamp: number): Maybe<TreeType> {
+  const { allowUpdate } = state.skeletonTracing.restrictions;
 
   if (allowUpdate) {
     // create a new tree id and name
     // tree id can become 0 after deleting all trees
-    const maxTreeId = _.max(_.map(skeletonTracing.trees, "treeId"));
+    const maxTreeId = _.max(_.map(state.skeletonTracing.trees, "treeId"));
     const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : 0;
 
-    const name = generateTreeNamePrefix(skeletonTracing, timestamp) + Utils.zeroPad(newTreeId, 2);
+    const name = generateTreeNamePrefix(state, timestamp) + Utils.zeroPad(newTreeId, 2);
 
     // Create the new tree
     const tree: TreeType = {

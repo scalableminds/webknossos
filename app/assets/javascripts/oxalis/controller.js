@@ -27,6 +27,7 @@ import View from "oxalis/view";
 import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
 import VolumeTracingView from "oxalis/view/volumetracing/volumetracing_view";
 import constants from "oxalis/constants";
+import { wkReadyAction } from "oxalis/model/actions/actions";
 
 import type { ToastType } from "libs/toast";
 
@@ -148,6 +149,7 @@ class Controller {
     this.onZoomStepChange();
 
     app.vent.trigger("webknossos:ready");
+    Store.dispatch(wkReadyAction());
   }
 
 

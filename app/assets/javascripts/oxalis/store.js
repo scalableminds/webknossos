@@ -10,6 +10,7 @@ import createSagaMiddleware from "redux-saga";
 import reduceReducers from "reduce-reducers";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
+import TaskReducer from "oxalis/model/reducers/task_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import timestampMiddleware from "oxalis/model/helpers/timestamp_middleware";
@@ -185,12 +186,17 @@ export type TemporaryConfigurationType = {
   boundingBox: Vector6,
 };
 
+export type TaskType = {
+  taskId: number,
+};
+
 export type OxalisState = {
   datasetConfiguration: DatasetConfigurationType,
   userConfiguration: UserConfigurationType,
   temporaryConfiguration: TemporaryConfigurationType,
   dataset: ?DatasetType,
   skeletonTracing: SkeletonTracingType,
+  task: ?TaskType,
 };
 
 const defaultState: OxalisState = {
@@ -235,6 +241,7 @@ const defaultState: OxalisState = {
   temporaryConfiguration: {
     boundingBox: [0, 0, 0, 0, 0, 0],
   },
+  task: null,
   dataset: null,
   skeletonTracing: {
     trees: {
@@ -266,6 +273,7 @@ const sagaMiddleware = createSagaMiddleware();
 const combinedReducers = reduceReducers(
   SettingsReducer,
   SkeletonTracingReducer,
+  TaskReducer,
 );
 
 const store = createStore(combinedReducers, defaultState, applyMiddleware(timestampMiddleware, sagaMiddleware));

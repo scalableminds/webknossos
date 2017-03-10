@@ -18,11 +18,12 @@ function* centerActiveNode() {
   if (activeNodeId) {
     // Should be an action in the future
     const position = trees[activeTreeId].nodes[activeNodeId].position;
-    app.oxalis.planeController.centerPositionAnimated(position)
+    app.oxalis.planeController.centerPositionAnimated(position);
   }
 }
 
 export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
+  yield take("WK_READY");
   yield takeEvery(["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE"], centerActiveNode);
 }
 

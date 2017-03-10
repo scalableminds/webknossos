@@ -34,6 +34,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
       const trees = _.keyBy(rawTrees.map(tree => update(tree, {
         treeId: { $set: tree.id },
         nodes: { $set: _.keyBy(tree.nodes, "id") },
+        color: { $set: tree.color.slice(0, 3) },
       })), "id");
 
       const activeNodeId = contentData.activeNode ? contentData.activeNode : null;
@@ -45,7 +46,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
         restrictions,
         trees,
         name: action.tracing.dataSetName,
-        contentType: action.tracing.contentType,
+        contentType: action.tracing.typ,
         id: action.tracing.id,
       };
 
@@ -121,7 +122,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "CREATE_TREE": {
-      return createTree(state.skeletonTracing, timestamp).map(tree =>
+      return createTree(state, timestamp).map(tree =>
 
         update(state, { skeletonTracing: {
           trees: { [tree.treeId]: { $set: tree } },

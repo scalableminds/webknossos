@@ -13,7 +13,6 @@ import scaleInfo from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
 import Utils from "libs/utils";
-import Window from "libs/window";
 import type { Vector3 } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
 
@@ -202,9 +201,8 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
 
 export function deleteTree(skeletonTracing: SkeletonTracingType, timestamp: number): Maybe<[TreeMapType, number, ?number]> {
   const { allowUpdate } = skeletonTracing.restrictions;
-  const userConfirmation = Window.confirm("Do you really want to delete the whole tree?");
 
-  if (allowUpdate && userConfirmation) {
+  if (allowUpdate) {
     // Delete tree
     let newTrees = _.omit(skeletonTracing.trees, skeletonTracing.activeTreeId.toString());
 

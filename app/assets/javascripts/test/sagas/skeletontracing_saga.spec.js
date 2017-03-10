@@ -28,6 +28,9 @@ function testDiffing(prevTracing, nextTracing) {
 
 describe("SkeletonTracingSaga", () => {
   const initialState = {
+    task: {
+      id: 1,
+    },
     skeletonTracing: {
       trees: {
         "0": {
@@ -41,6 +44,7 @@ describe("SkeletonTracingSaga", () => {
           color: [23, 23, 23],
         },
       },
+      contentType: "Explorational",
       name: "",
       activeTreeId: 0,
       activeNodeId: null,

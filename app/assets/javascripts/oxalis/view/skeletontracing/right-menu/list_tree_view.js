@@ -8,6 +8,7 @@ import $ from "jquery";
 import Marionette from "backbone.marionette";
 import Backbone from "backbone";
 import Store from "oxalis/store";
+import Window from "libs/window";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveTreeAction, setTreeNameAction, createTreeAction, deleteTreeAction, shuffleTreeColorAction, selectNextTreeAction } from "oxalis/model/actions/skeletontracing_actions";
 import ListTreeItemView from "oxalis/view/skeletontracing/right-menu/list_tree_item_view";
@@ -117,7 +118,9 @@ class ListTreeView extends Marionette.CompositeView {
 
 
   deleteTree() {
-    Store.dispatch(deleteTreeAction());
+    if (Window.confirm("Do you really want to delete the whole tree?")) {
+      Store.dispatch(deleteTreeAction());
+    }
   }
 
 

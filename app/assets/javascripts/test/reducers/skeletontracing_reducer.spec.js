@@ -22,6 +22,9 @@ describe("SkeletonTracing", () => {
     dataset: null,
     userConfiguration: null,
     datasetConfiguration: null,
+    task: {
+      id: 1,
+    },
     skeletonTracing: {
       trees: {
         [0]: {
@@ -35,6 +38,7 @@ describe("SkeletonTracing", () => {
           color: [23, 23, 23],
         },
       },
+      contentType: "Explorational",
       name: "",
       activeTreeId: 0,
       activeNodeId: null,

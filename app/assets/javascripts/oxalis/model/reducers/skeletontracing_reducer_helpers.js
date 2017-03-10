@@ -11,6 +11,7 @@ import Maybe from "data.maybe";
 import app from "app";
 import scaleInfo from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
+import update from "immutability-helper";
 import Utils from "libs/utils";
 import Window from "libs/window";
 import type { Vector3 } from "oxalis/constants";
@@ -84,18 +85,18 @@ export function createNode(skeletonTracing: SkeletonTracingType, position: Vecto
   return Maybe.Nothing();
 }
 
-export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMapType, number, number]> {
+export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMapType, ?number, number]> {
   const { allowUpdate } = skeletonTracing.restrictions;
   const { activeNodeId, activeTreeId } = skeletonTracing;
 
   if (allowUpdate && _.isNumber(activeNodeId)) {
-    let newActiveNodeId;
-    let newActiveTreeId;
-    let newTrees;
+    let newActiveNodeId = activeNodeId;
+    let newActiveTreeId = activeTreeId;
+    let newTrees = skeletonTracing.trees;
 
     // Delete Node
-    const activeTree = skeletonTracing.trees[activeTreeId];
-    delete activeTree.nodes[activeNodeId];
+    let activeTree = skeletonTracing.trees[activeTreeId];
+    activeTree = update(activeTree, { nodes: { $set: _.omit(activeTree.nodes, [activeNodeId.toString()]) } });
 
     // Do we need to split trees? Are there edges leading to/from it?
     const sourceNodeIds = activeTree.edges.reduce((result, edge) => { if (edge.target === activeNodeId) result.push(edge.source); return result; }, []);
@@ -105,16 +106,20 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMap
       // We do not need to split
       // just delete all edges leading to/from it
       const newEdges = activeTree.edges.filter(edge => edge.source !== activeNodeId && edge.target !== activeNodeId);
-      activeTree.edges = newEdges;
+      if (newEdges.length !== activeTree.edges.length) {
+        activeTree = update(activeTree, { edges: { $set: newEdges } });
+      }
 
       // Delete all comments containing the node
       const newComments = activeTree.comments.filter(comment => comment.node !== activeNodeId);
-      activeTree.comments = newComments;
+      if (newComments.length !== activeTree.comments.length) {
+        activeTree = update(activeTree, { edges: { $set: newEdges } });
+      }
 
       // Decrease active node id or reset to null
       newActiveNodeId = activeNodeId === 0 ? null : activeNodeId - 1;
       newActiveTreeId = activeTreeId;
-      newTrees = skeletonTracing.trees;
+      newTrees = update(skeletonTracing.trees, { [activeTreeId]: { $set: activeTree } });
     } else {
       // Split the tree
       throw Error("TODO @ philipp");
@@ -190,22 +195,21 @@ export function createTree(skeletonTracing: SkeletonTracingType, timestamp: numb
   return Maybe.Nothing();
 }
 
-export function deleteTree(skeletonTracing: SkeletonTracingType): Maybe<[TreeMapType, number, ?number]> {
+export function deleteTree(skeletonTracing: SkeletonTracingType, timestamp: number): Maybe<[TreeMapType, number, ?number]> {
   const { allowUpdate } = skeletonTracing.restrictions;
   const userConfirmation = Window.confirm("Do you really want to delete the whole tree?");
 
   if (allowUpdate && userConfirmation) {
     // Delete tree
-    const newTrees = skeletonTracing.trees;
-    delete newTrees[skeletonTracing.activeTreeId];
+    let newTrees = _.omit(skeletonTracing.trees, skeletonTracing.activeTreeId.toString());
 
     // Because we always want an active tree, check if we need
     // to create one.
     let newActiveTreeId;
     let newActiveNodeId;
     if (_.size(newTrees) === 0) {
-      const newTree = createTree(skeletonTracing).get();
-      newTrees[newTree.treeId] = newTree;
+      const newTree = createTree(skeletonTracing, timestamp).get();
+      newTrees = update(newTrees, { [newTree.treeId]: { $set: newTree } });
 
       newActiveTreeId = newTree.treeId;
       newActiveNodeId = null;
@@ -228,27 +232,28 @@ export function mergeTrees(skeletonTracing: SkeletonTracingType, sourceNodeId: n
   const targetTree = findTree(trees, targetNodeId); // should be activeTree
 
   if (allowUpdate && sourceTree && targetTree) {
-    const newTrees = _.omit(trees, sourceTree.treeId.toString());
-    newTrees[targetTree.treeId].nodes = Object.assign(targetTree.nodes, sourceTree.nodes);
-    newTrees[targetTree.treeId].edges = targetTree.edges.concat(sourceTree.edges);
-
     const newEdge: EdgeType = {
       source: sourceNodeId,
       target: targetNodeId,
     };
-    newTrees[targetTree.treeId].edges.push(newEdge);
+
+    let newTrees = _.omit(trees, sourceTree.treeId.toString());
+    newTrees = update(newTrees, { [targetTree.treeId]: {
+      nodes: { $set: Object.assign({}, targetTree.nodes, sourceTree.nodes) },
+      edges: { $set: targetTree.edges.concat(sourceTree.edges).concat([newEdge]) },
+    } });
     return Maybe.Just([newTrees, targetTree.treeId, targetNodeId]);
   }
   return Maybe.Nothing();
 }
 
 export function shuffleTreeColor(skeletonTracing: SkeletonTracingType, treeId: number): Maybe<[TreeType, number]> {
-  const tree = skeletonTracing.trees[treeId];
+  let tree = skeletonTracing.trees[treeId];
 
   if (_.isNumber(treeId) && tree) {
     const randomId = _.random(0, 10000, false);
     // ColorGenerator fails to produce distinct color for huge ids (Infinity)
-    tree.color = ColorGenerator.distinctColorForId(randomId);
+    tree = update(tree, { color: { $set: ColorGenerator.distinctColorForId(randomId) } });
     return Maybe.Just([tree, treeId]);
   }
 

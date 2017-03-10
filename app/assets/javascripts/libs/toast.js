@@ -5,24 +5,21 @@ export type ToastType = {
   remove: () => void
 };
 
-$.fn.alertWithTimeout = function (timeout = 3000) {
-  this.each(function () {
-    const $this = $(this);
-    $this.alert();
-    let timerId = -1;
+function alertWithTimeout($this: JQuery, timeout = 3000) {
+  $this.alert();
+  let timerId = -1;
 
-    $this.hover(
-      () => clearTimeout(timerId),
-      () => {
-        timerId = setTimeout(
-          () => $this.alert("close"),
-          timeout,
-        );
-      },
-    );
-    $(window).one("mousemove", () => $this.mouseout());
-  });
-};
+  $this.hover(
+    () => clearTimeout(timerId),
+    () => {
+      timerId = setTimeout(
+        () => $this.alert("close"),
+        timeout,
+      );
+    },
+  );
+  $(window).one("mousemove", () => $this.mouseout());
+}
 
 
 const getToasts = (type, message) => $(`.alert-${type}[data-id='${message}']`);
@@ -67,7 +64,7 @@ const Toast = {
         $messageElement.alert();
       } else {
         const timeout = type === "danger" ? 6000 : 3000;
-        $messageElement.alertWithTimeout(timeout);
+        alertWithTimeout($messageElement, timeout);
       }
       $("#alert-container").append($messageElement);
 

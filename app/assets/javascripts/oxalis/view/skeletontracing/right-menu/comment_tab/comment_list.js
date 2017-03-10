@@ -37,7 +37,8 @@ class CommentList extends Component {
       if (!tree.comments.length) { return null; }
 
       // sort comments in place
-      tree.comments.sort(Utils.compareBy("node", this.state.isSortedAscending));
+      const sortOrder = this.state.isSortedAscending ? "asc" : "desc";
+      const sortedComments = _.orderBy(tree.comments, "node", sortOrder);
 
       // one tree and its comments
       return (
@@ -45,7 +46,7 @@ class CommentList extends Component {
           key={tree.treeId}
           treeId={tree.treeId}
           treeName={tree.name}
-          comments={tree.comments}
+          comments={sortedComments}
           activeNodeId={this.state.activeNodeId}
           activeTreeId={this.state.activeTreeId}
           onNewActiveNode={this.props.onNewActiveNode}

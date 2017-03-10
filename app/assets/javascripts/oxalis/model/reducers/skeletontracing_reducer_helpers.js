@@ -14,7 +14,6 @@ import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
 import Utils from "libs/utils";
 import Window from "libs/window";
-import update from "immutability-helper";
 import type { Vector3 } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
 

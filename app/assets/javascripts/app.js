@@ -16,13 +16,13 @@ type UserType = {
 }
 
 class OxalisApplication extends Marionette.Application {
-
   router: Router;
   oxalis: ?OxalisController;
   currentUser: UserType;
 }
 
 // eslint-disable-next-line no-unused-vars
-let app;
+const app = new OxalisApplication();
+window.app = app;
 
-export default window.app = app = new OxalisApplication();
+export default app;

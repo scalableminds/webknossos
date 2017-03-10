@@ -3,10 +3,10 @@
  * @flow
  */
 import app from "app";
-import { call, take, takeEvery, select } from "redux-saga/effects";
-import Request from "libs/request";
+import { call, put, take, takeEvery, select } from "redux-saga/effects";
 import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType } from "oxalis/store";
-import { SkeletonTracingActions } from "oxalis/model/actions/skeletontracing_actions";
+import { SkeletonTracingActions, createTreeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateTracing, moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import _ from "lodash";
@@ -28,50 +28,9 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
   yield takeEvery(["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE"], centerActiveNode);
 }
 
-function* pushAnnotation(action, payload) {
-  const APICall = Request.sendJSONReceiveJSON(
-    `/annotations/${this.tracingType}/${this.tracingId}?version=${(version + 1)}`, {
-      method: "PUT",
-      data: [{
-        action,
-        value: payload,
-      }],
-    },
-  );
-  yield call(APICall);
-}
 
-export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<UpdateAction> {
-  let result = updateActions;
-
-  // Remove all but the last updateTracing update actions
-  const updateTracingUpdateActions = result.filter(ua => ua.action === "updateTracing");
-  if (updateTracingUpdateActions.length > 1) {
-    result = _.without(result, ...updateTracingUpdateActions.slice(0, -1));
-  }
-
-  // // Detect moved nodes
-  // const movedNodes = [];
-  // for (const createUA of result) {
-  //   if (createUA.action === "createNode") {
-  //     const deleteUA = result.find(ua =>
-  //       ua.action === "deleteNode" &&
-  //       ua.value.id === createUA.value.id &&
-  //       ua.value.treeId !== createUA.value.treeId);
-  //     if (deleteUA != null) {
-  //       movedNodes.push([createUA, deleteUA]);
-  //     }
-  //   }
-  // }
-  // for (const [createUA, deleteUA] of movedNodes) {
-  //   moveTreeComponent(deleteUA.value.treeId, createUA.value.treeId, [createUA.value.id]);
-  // }
-
-  return result;
-}
-
-export function* pushToQueue(updateAction: UpdateAction): Generator<*, *, *> {
-  console.log(updateAction);
+export function* pushToQueue(updateActions: Array<UpdateAction>): Generator<*, *, *> {
+  yield put(pushSaveQueueAction(updateActions));
 }
 
 
@@ -154,16 +113,16 @@ function* performDiffTrees(prevTrees: TreeMapType, trees: TreeMapType): Generato
 }
 
 function* pushUpdateTracing(skeletonTracing: SkeletonTracingType) {
-  yield call(pushToQueue, updateTracing(skeletonTracing,
+  yield call(pushToQueue, [updateTracing(skeletonTracing,
     yield select(() => V3.floor(window.webknossos.model.flycam.getPosition())),
     yield select(() => window.webknossos.model.flycam3d.getRotation()),
     yield select(() => window.webknossos.model.flycam.getZoomStep()),
-  ));
+  )]);
 }
 
 function* performDiffTracing(prevSkeletonTracing: SkeletonTracingType, skeletonTracing: SkeletonTracingType) {
   if (prevSkeletonTracing !== skeletonTracing) {
-    yield call(performDiffTrees, prevSkeletonTracing.trees, skeletonTracing.trees);
+    yield call(pushToQueue, Array.from(performDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees)));
     yield call(pushUpdateTracing, skeletonTracing);
   }
 }
@@ -171,6 +130,10 @@ function* performDiffTracing(prevSkeletonTracing: SkeletonTracingType, skeletonT
 export function* saveSkeletonTracingAsync(): Generator<*, *, *> {
   yield take("INITIALIZE_SKELETONTRACING");
   let prevSkeletonTracing = yield select(state => state.skeletonTracing);
+  if (yield select(state => state.skeletonTracing.activeTreeId == null)) {
+    yield put(createTreeAction());
+  }
+  yield take("WK_READY");
   while (true) {
     yield take(SkeletonTracingActions);
     const skeletonTracing = yield select(state => state.skeletonTracing);

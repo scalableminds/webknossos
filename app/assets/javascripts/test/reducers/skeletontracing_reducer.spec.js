@@ -38,7 +38,7 @@ describe("SkeletonTracing", () => {
           color: [23, 23, 23],
         },
       },
-      contentType: "Explorational",
+      tracingType: "Explorational",
       name: "",
       activeTreeId: 0,
       activeNodeId: null,

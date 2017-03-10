@@ -4,10 +4,10 @@
  * task_actions.js
  * @flow
  */
- import type { TaskType } from "oxalis/store";
+import type { TaskType } from "oxalis/store";
 
- type setTaskActionType = {type: "SET_TASK", task: TaskType};
- export type TaskActionTypes = setTaskActionType;
+type setTaskActionType = {type: "SET_TASK", task: TaskType};
+export type TaskActionTypes = setTaskActionType;
 
 export const setTaskAction = (task: TaskType): setTaskActionType => ({
   type: "SET_TASK",

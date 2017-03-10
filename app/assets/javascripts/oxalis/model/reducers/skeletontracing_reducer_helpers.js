@@ -31,7 +31,7 @@ function generateTreeNamePrefix(state: OxalisState, timestamp) {
 
   // Replace spaces in user names
   user = user.replace(/ /g, "_");
-  if (state.skeletonTracing.contentType === "Explorational") {
+  if (state.skeletonTracing.tracingType === "Explorational") {
     // Get YYYY-MM-DD string
     const creationDate = new Date(timestamp).toJSON().slice(0, 10);
     return `explorative_${creationDate}_${user}_`;
@@ -40,18 +40,18 @@ function generateTreeNamePrefix(state: OxalisState, timestamp) {
   }
 }
 
-export function createNode(skeletonTracing: SkeletonTracingType, position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number): Maybe<[NodeType, Array<EdgeType>]> {
-  const { allowUpdate } = skeletonTracing.restrictions;
-  const { activeTreeId, activeNodeId } = skeletonTracing;
+export function createNode(state: OxalisState, position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number): Maybe<[NodeType, Array<EdgeType>]> {
+  const { allowUpdate } = state.skeletonTracing.restrictions;
+  const { activeTreeId, activeNodeId } = state.skeletonTracing;
 
-  if (allowUpdate) {
+  if (allowUpdate && activeTreeId != null) {
     // Use the same radius as current active node or revert to default value
     const defaultRadius = 10 * scaleInfo.baseVoxel;
-    const radius = activeNodeId ? skeletonTracing.trees[activeTreeId].nodes[activeNodeId].radius : defaultRadius;
+    const radius = activeNodeId ? state.skeletonTracing.trees[activeTreeId].nodes[activeNodeId].radius : defaultRadius;
 
     // Find new node id by increasing the max node id.
     // Default to 0 if there are no nodes yet
-    const maxNodeId = _.max(_.flatMap(skeletonTracing.trees, tree => _.map(tree.nodes, node => node.id)));
+    const maxNodeId = _.max(_.flatMap(state.skeletonTracing.trees, tree => _.map(tree.nodes, node => node.id)));
     const nextNewId = _.isNumber(maxNodeId) ? maxNodeId + 1 : 0;
 
     // Create the new node
@@ -63,20 +63,20 @@ export function createNode(skeletonTracing: SkeletonTracingType, position: Vecto
       resolution,
       id: nextNewId,
       timestamp,
-      //bitDepth: datasetConfig.fourBit ? 4 : 8,
-      //interpolation: datasetConfig.interpolation,
+      bitDepth: 8, // datasetConfig.fourBit ? 4 : 8,
+      interpolation: true, // datasetConfig.interpolation,
     };
 
     // Create a new edge
     const newEdges = [];
-    if (_.isNumber(activeNodeId)) {
+    if (activeNodeId != null) {
       const newEdge: EdgeType = {
         source: activeNodeId,
         target: nextNewId,
       };
       newEdges.push(newEdge);
     }
-    const edges = skeletonTracing.trees[activeTreeId].edges.concat(newEdges);
+    const edges = state.skeletonTracing.trees[activeTreeId].edges.concat(newEdges);
 
     return Maybe.Just([node, edges]);
   }
@@ -87,7 +87,7 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMap
   const { allowUpdate } = skeletonTracing.restrictions;
   const { activeNodeId, activeTreeId } = skeletonTracing;
 
-  if (allowUpdate && _.isNumber(activeNodeId)) {
+  if (allowUpdate && activeNodeId != null && activeTreeId != null) {
     let newActiveNodeId = activeNodeId;
     let newActiveTreeId = activeTreeId;
     let newTrees = skeletonTracing.trees;
@@ -97,8 +97,8 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMap
     activeTree = update(activeTree, { nodes: { $set: _.omit(activeTree.nodes, [activeNodeId.toString()]) } });
 
     // Do we need to split trees? Are there edges leading to/from it?
-    const sourceNodeIds = activeTree.edges.reduce((edge) => edge.target === activeNodeId).map((edge) => edge.source);
-    const targetNodeIds = activeTree.edges.reduce((edge) => edge.source === activeNodeId).map((edge) => edge.target);
+    const sourceNodeIds = activeTree.edges.reduce(edge => edge.target === activeNodeId).map(edge => edge.source);
+    const targetNodeIds = activeTree.edges.reduce(edge => edge.source === activeNodeId).map(edge => edge.target);
     const neighborIds = sourceNodeIds.concat(targetNodeIds);
 
     if (neighborIds.length === 0) {
@@ -138,7 +138,7 @@ export function createBranchPoint(skeletonTracing: SkeletonTracingType, timestam
   const { branchPointsAllowed, allowUpdate } = skeletonTracing.restrictions;
   const { activeNodeId, activeTreeId } = skeletonTracing;
 
-  if (branchPointsAllowed && allowUpdate && _.isNumber(activeNodeId)) {
+  if (branchPointsAllowed && allowUpdate && activeNodeId != null && activeTreeId != null) {
     const doesBranchPointExistAlready = _.some(skeletonTracing.trees[activeTreeId].branchPoints, branchPoint => branchPoint.id === activeNodeId);
 
     if (!doesBranchPointExistAlready) {
@@ -201,10 +201,11 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
 
 export function deleteTree(skeletonTracing: SkeletonTracingType, timestamp: number): Maybe<[TreeMapType, number, ?number]> {
   const { allowUpdate } = skeletonTracing.restrictions;
+  const { activeTreeId } = skeletonTracing;
 
-  if (allowUpdate) {
+  if (allowUpdate && activeTreeId != null) {
     // Delete tree
-    let newTrees = _.omit(skeletonTracing.trees, skeletonTracing.activeTreeId.toString());
+    let newTrees = _.omit(skeletonTracing.trees, activeTreeId.toString());
 
     // Because we always want an active tree, check if we need
     // to create one.
@@ -267,7 +268,7 @@ export function createComment(skeletonTracing: SkeletonTracingType, commentText:
   const { allowUpdate } = skeletonTracing.restrictions;
   const { activeNodeId, activeTreeId, trees } = skeletonTracing;
 
-  if (allowUpdate && _.isNumber(activeNodeId)) {
+  if (allowUpdate && activeNodeId != null && activeTreeId != null) {
     // Gather all comments other than the activeNode's comments
     const comments = trees[activeTreeId].comments;
     const commentsWithoutActiveNodeComment = comments.filter(comment => comment.node !== activeNodeId);
@@ -288,7 +289,7 @@ export function deleteComment(skeletonTracing: SkeletonTracingType): Maybe<Array
   const { allowUpdate } = skeletonTracing.restrictions;
   const { activeNodeId, activeTreeId, trees } = skeletonTracing;
 
-  if (allowUpdate && _.isNumber(activeNodeId)) {
+  if (allowUpdate && activeNodeId != null && activeTreeId != null) {
     const comments = trees[activeTreeId].comments;
     const commentsWithoutActiveNodeComment = comments.filter(comment => comment.node !== activeNodeId);
 

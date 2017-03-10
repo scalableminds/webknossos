@@ -6,6 +6,8 @@ import Request from "libs/request";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
+import store from "oxalis/store";
+import { saveNowAction } from "oxalis/model/actions/save_actions";
 
 class DatasetActionsView extends Marionette.View {
   static initClass() {
@@ -70,44 +72,48 @@ class DatasetActionsView extends Marionette.View {
 
 
   updateSavedState() {
-    // if (this.model.annotationModel.stateLogger.stateSaved()) {
-    //   this.ui.saveButton.text("Saved   ✓");
-    // } else {
-    //   this.ui.saveButton.text("Save");
-    // }
+    const { save: saveState } = store.getState();
+    if (saveState.isBusy || saveState.queue.length > 0) {
+      this.ui.saveButton.text("Save");
+    } else {
+      this.ui.saveButton.text("Saved   ✓");
+    }
   }
 
+  async saveAndWait() {
+    store.dispatch(saveNowAction());
+    let saveState = store.getState().save;
+    while (saveState.isBusy || saveState.queue.length > 0) {
+      await Utils.sleep(2000);
+      saveState = store.getState().save;
+    }
+  }
 
   finishTracing(evt) {
     evt.preventDefault();
-    this.saveTracing().then(() => {
+    this.saveAndWait().then(() => {
       if (confirm("Are you sure you want to permanently finish this tracing?")) {
         app.router.loadURL(evt.currentTarget.href);
       }
-    },
-    );
+    });
   }
-
 
   downloadTracing(evt) {
     evt.preventDefault();
     const win = window.open("about:blank", "_blank");
     win.document.body.innerHTML = "Please wait...";
-    this.saveTracing().then(() => {
+    this.saveAndWait().then(() => {
       win.location.href = this.model.tracing.downloadUrl;
       win.document.body.innerHTML = "You may close this window after the download has started.";
     });
   }
 
-
   saveTracing(evt) {
     if (evt) {
       evt.preventDefault();
     }
-
-    return this.model.save();
+    store.dispatch(saveNowAction());
   }
-
 
   mergeTracing() {
     const modalView = new MergeModalView({ model: this.model });
@@ -133,26 +139,25 @@ class DatasetActionsView extends Marionette.View {
   }
 
 
-  getNextTask() {
+  async getNextTask() {
     if (this.model.volumeTracing) {
       const model = this.model.volumeTracing;
       const finishUrl = `/annotations/${this.model.tracingType}/${this.model.tracingId}/finish`;
       const requestTaskUrl = "/user/tasks/request";
 
-      model.stateLogger.save()
-          .then(() => Request.triggerRequest(finishUrl))
-          .then(() => Request.receiveJSON(requestTaskUrl).then(
-              (annotation) => {
-                const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.model.tracing.task, x => x.type.id);
-                const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
-                const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
-                return app.router.loadURL(newTaskUrl);
-              },
-              () =>
-                // Wait a while so users have a chance to read the error message
-                setTimeout((() => app.router.loadURL("/dashboard")), 2000),
-            ),
-          );
+      await model.statelogger.save();
+      await this.saveAndWait();
+      await Request.triggerRequest(finishUrl);
+      try {
+        const annotation = await Request.receiveJSON(requestTaskUrl);
+        const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.model.tracing.task, x => x.type.id);
+        const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
+        const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
+        app.router.loadURL(newTaskUrl);
+      } catch (err) {
+        await Utils.sleep(2000);
+        app.router.loadURL("/dashboard");
+      }
     } else {
       throw Error("todo");
     }

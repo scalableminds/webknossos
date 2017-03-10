@@ -1,5 +1,5 @@
 /**
- * settings_reducer.js
+ * task_reducer.js
  * @flow
  */
 

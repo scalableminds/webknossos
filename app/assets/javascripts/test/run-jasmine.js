@@ -13,6 +13,7 @@ jasmine.loadConfig({
     "test/**/*[sS]pec.js",
   ],
 });
-jasmine.addReporter(new SpecReporter({ spec: { displayPending: true } }));
+jasmine.env.clearReporters();
+jasmine.addReporter(new SpecReporter({ spec: { displayPending: true, displayStacktrace: true } }));
 
 jasmine.execute();

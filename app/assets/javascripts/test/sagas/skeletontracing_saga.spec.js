@@ -1,9 +1,8 @@
-import { saveSkeletonTracingAsync, compactUpdateActions } from "oxalis/model/sagas/skeletontracing_saga";
+import { saveSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
 import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { addTimestamp } from "oxalis/model/helpers/timestamp_middleware";
-import * as UpdateActions from "oxalis/model/sagas/update_actions";
-import { take } from "redux-saga/effects";
+import { take, put } from "redux-saga/effects";
 
 function expectValue(block) {
   expect(block.done).toBe(false);
@@ -44,7 +43,7 @@ describe("SkeletonTracingSaga", () => {
           color: [23, 23, 23],
         },
       },
-      contentType: "Explorational",
+      tracingType: "Explorational",
       name: "",
       activeTreeId: 0,
       activeNodeId: null,
@@ -59,12 +58,19 @@ describe("SkeletonTracingSaga", () => {
   };
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction([1, 2, 3], [0, 1, 0], 0, 1.2));
   const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction());
-  const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
+  const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction(), 12345678);
   const deleteTreeAction = addTimestamp(SkeletonTracingActions.deleteTreeAction());
   const setActiveNodeRadiusAction = addTimestamp(SkeletonTracingActions.setActiveNodeRadiusAction(12));
   const createCommentAction = addTimestamp(SkeletonTracingActions.createCommentAction("Hallo"));
   const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction(), 12345678);
 
+  it("should create a tree if there is none", () => {
+    const saga = saveSkeletonTracingAsync();
+    expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
+    saga.next();
+    saga.next({ skeletonTracing: { trees: {} } });
+    expectValue(saga.next(true)).toEqual(put(SkeletonTracingActions.createTreeAction()));
+  });
 
   it("shouldn't do anything if unchanged", () => {
     const saga = saveSkeletonTracingAsync();
@@ -127,7 +133,6 @@ describe("SkeletonTracingSaga", () => {
     const newState = SkeletonTracingReducer(testState, mergeTreesAction);
     const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing);
 
-    console.log(updateActions, testState.skeletonTracing.trees, newState.skeletonTracing.trees);
     expect(updateActions[0].action).toBe("deleteNode");
     expect(updateActions[0].value.id).toBe(1);
     expect(updateActions[0].value.treeId).toBe(1);
@@ -223,14 +228,5 @@ describe("SkeletonTracingSaga", () => {
     expect(updateActions[0].action).toBe("updateTree");
     expect(updateActions[0].value.id).toBe(0);
     expect(updateActions[0].value.branchPoints).toEqual([{ id: 0, timestamp: 12345678 }]);
-  });
-
-  it("should compact multiple updateTracing update actions", () => {
-    const updateActions = [
-      UpdateActions.updateTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
-      UpdateActions.updateTracing(initialState, [2, 3, 4], [0, 0, 1], 2),
-    ];
-
-    expect(compactUpdateActions(updateActions)).toEqual([updateActions[1]]);
   });
 });

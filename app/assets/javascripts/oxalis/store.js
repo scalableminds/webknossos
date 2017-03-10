@@ -11,9 +11,11 @@ import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
+import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import timestampMiddleware from "oxalis/model/helpers/timestamp_middleware";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 export type CommentType = {
   node: number;
@@ -103,9 +105,11 @@ export type RestrictionsType = {
   allowDownload: boolean,
 };
 
+export type AllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
+
 export type SettingsType = {
   advancedOptionsAllowed: boolean,
-  allowedModes: "orthogonal" | "oblique" | "flight" | "volume",
+  allowedModes: Array<AllowedModeType>,
   branchPointsAllowed: boolean,
   somaClickingAllowed: boolean,
 };
@@ -129,7 +133,10 @@ export type TreeMapType = {[number]: TreeType};
 export type SkeletonTracingType = {
   trees: TreeMapType,
   name: string,
-  activeTreeId: number,
+  version: number,
+  id: string,
+  tracingType: "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType",
+  activeTreeId: ?number,
   activeNodeId: ?number,
   restrictions: RestrictionsType & SettingsType,
 };
@@ -190,6 +197,12 @@ export type TaskType = {
   taskId: number,
 };
 
+export type SaveStateType = {
+  isBusy: boolean,
+  queue: Array<UpdateAction>,
+  lastSaveTimestamp: number,
+};
+
 export type OxalisState = {
   datasetConfiguration: DatasetConfigurationType,
   userConfiguration: UserConfigurationType,
@@ -197,6 +210,7 @@ export type OxalisState = {
   dataset: ?DatasetType,
   skeletonTracing: SkeletonTracingType,
   task: ?TaskType,
+  save: SaveStateType,
 };
 
 const defaultState: OxalisState = {
@@ -244,20 +258,13 @@ const defaultState: OxalisState = {
   task: null,
   dataset: null,
   skeletonTracing: {
-    trees: {
-      [0]: {
-        treeId: 0,
-        name: "TestTree",
-        nodes: {},
-        timestamp: Date.now(),
-        branchPoints: [],
-        edges: [],
-        comments: [],
-        color: [0.8, 1, 0.3],
-      },
-    },
+    trees: {},
     name: "",
-    activeTreeId: 0,
+    version: 0,
+    id: "",
+    tracingId: "",
+    tracingType: "Explorational",
+    activeTreeId: null,
     activeNodeId: null,
     restrictions: {
       branchPointsAllowed: true,
@@ -265,7 +272,15 @@ const defaultState: OxalisState = {
       allowFinish: true,
       allowAccess: true,
       allowDownload: true,
+      somaClickingAllowed: true,
+      advancedOptionsAllowed: true,
+      allowedModes: ["orthogonal", "oblique", "flight"],
     },
+  },
+  save: {
+    queue: [],
+    isBusy: false,
+    lastSaveTimestamp: 0,
   },
 };
 
@@ -274,9 +289,12 @@ const combinedReducers = reduceReducers(
   SettingsReducer,
   SkeletonTracingReducer,
   TaskReducer,
+  SaveReducer,
 );
 
 const store = createStore(combinedReducers, defaultState, applyMiddleware(timestampMiddleware, sagaMiddleware));
 sagaMiddleware.run(rootSaga);
+
+// window.store = store;
 
 export default store;

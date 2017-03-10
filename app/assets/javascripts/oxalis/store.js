@@ -7,7 +7,7 @@
 
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
-import reduceReducers from "reduce-reducers";
+import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
@@ -130,7 +130,7 @@ export type SkeletonTracingType = {
   trees: TreeMapType,
   name: string,
   activeTreeId: number,
-  activeNodeId: number,
+  activeNodeId: ?number,
   restrictions: RestrictionsType & SettingsType,
 };
 

@@ -107,6 +107,7 @@ describe("Api", () => {
         });
       })
       .catch((error) => {
+        console.error("model.fetch() failed", error);
         fail(error.message);
         done();
       });

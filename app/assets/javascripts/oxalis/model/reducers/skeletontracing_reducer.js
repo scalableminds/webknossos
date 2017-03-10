@@ -38,11 +38,19 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
       })), "id");
 
       const activeNodeId = contentData.activeNode ? contentData.activeNode : null;
-      const activeTree = findTree(trees, activeNodeId);
+      const activeTree = activeNodeId ? findTree(trees, activeNodeId) : null;
+
+      let activeTreeId;
+      if (activeTree != null) {
+        activeTreeId = activeTree.treeId;
+      } else {
+        const lastTree = _.maxBy(_.values(trees), tree => tree.id);
+        activeTreeId = lastTree.treeId;
+      }
 
       const skeletonTracing: SkeletonTracingType = {
         activeNodeId,
-        activeTreeId: activeTree != null ? activeTree.treeId : trees[1].treeId,
+        activeTreeId,
         restrictions,
         trees,
         name: action.tracing.dataSetName,
@@ -133,7 +141,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "DELETE_TREE": {
-      return deleteTree(state.skeletonTracing).map(([trees, newActiveTreeId, newActiveNodeId]) =>
+      return deleteTree(state.skeletonTracing, timestamp).map(([trees, newActiveTreeId, newActiveNodeId]) =>
 
         update(state, { skeletonTracing: {
           trees: { $set: trees },

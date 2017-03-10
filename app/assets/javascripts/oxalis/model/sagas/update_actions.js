@@ -1,7 +1,6 @@
 // @flow
 import type { SkeletonTracingType, BranchPointType, CommentType, TreeType, NodeType } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-import { V3 } from "libs/mjs";
 
 type NodeWithTreeIdType = { treeId: number } & NodeType;
 
@@ -143,7 +142,7 @@ export function createEdge(treeId: number, sourceNodeId: number, targetNodeId: n
     },
   };
 }
-export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: number): CreateEdgeUpdateAction {
+export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: number): DeleteEdgeUpdateAction {
   return {
     action: "deleteEdge",
     value: {
@@ -153,16 +152,16 @@ export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: n
     },
   };
 }
-export function createNode(node: NodeType): CreateNodeUpdateAction {
+export function createNode(treeId: number, node: NodeType): CreateNodeUpdateAction {
   return {
     action: "createNode",
-    value: node,
+    value: Object.assign({}, node, { treeId }),
   };
 }
-export function updateNode(node: NodeType): UpdateNodeUpdateAction {
+export function updateNode(treeId: number, node: NodeType): UpdateNodeUpdateAction {
   return {
     action: "updateNode",
-    value: node,
+    value: Object.assign({}, node, { treeId }),
   };
 }
 export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateAction {
@@ -171,14 +170,14 @@ export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateActi
     value: { treeId, id: nodeId },
   };
 }
-export function updateTracing(tracing: SkeletonTracingType): UpdateTracingUpdateAction {
+export function updateTracing(tracing: SkeletonTracingType, position: Vector3, rotation: Vector3, zoomLevel: number): UpdateTracingUpdateAction {
   return {
     action: "updateTracing",
     value: {
       activeNode: tracing.activeNodeId,
-      editPosition: V3.floor(window.webknossos.model.flycam.getPosition()),
-      editRotation: window.webknossos.model.flycam3d.getRotation(),
-      zoomLevel: window.webknossos.model.flycam.getZoomStep(),
+      editPosition: position,
+      editRotation: rotation,
+      zoomLevel,
     },
   };
 }

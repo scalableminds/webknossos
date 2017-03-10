@@ -238,7 +238,9 @@ class SkeletonTracingPlaneController extends PlaneController {
       // we created a new node, so use it's reference
       const { activeNodeId: _activeNodeId, activeTreeId: _activeTreeId, trees: _trees } = Store.getState().skeletonTracing;
       const _activeNode = _trees[_activeTreeId].nodes[_activeNodeId];
-      this.centerPositionAnimated(_activeNode.position);
+      if (_activeNode) {
+        this.centerPositionAnimated(_activeNode.position);
+      }
     }
   };
 

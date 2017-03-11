@@ -67,8 +67,7 @@ describe("SaveSaga", () => {
     expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
     saga.next();
     expectValue(saga.next()).toEqual(take("PUSH_SAVE_QUEUE"));
-    saga.next(SaveActions.pushSaveQueueAction(updateActions, false));
-    saga.next();
+    saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
     saga.next();
     saga.next(true);
     saga.next(updateActions);
@@ -90,8 +89,7 @@ describe("SaveSaga", () => {
     expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
     saga.next();
     expectValue(saga.next()).toEqual(take("PUSH_SAVE_QUEUE"));
-    saga.next(SaveActions.pushSaveQueueAction(updateActions, false));
-    saga.next();
+    saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
     saga.next();
     saga.next(true);
     saga.next(updateActions);
@@ -125,8 +123,7 @@ describe("SaveSaga", () => {
     expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
     saga.next();
     expectValue(saga.next()).toEqual(take("PUSH_SAVE_QUEUE"));
-    saga.next(SaveActions.pushSaveQueueAction(updateActions, false));
-    saga.next();
+    saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
     saga.next();
     saga.next(true);
     saga.next(updateActions);
@@ -141,5 +138,28 @@ describe("SaveSaga", () => {
     const alertEffect = saga.next().value;
     expect(alertEffect.CALL.fn).toBe(alert);
     expect(saga.next().done).toBe(true);
+  });
+
+  it("should send update actions right away", () => {
+    const updateActions = [
+      UpdateActions.createEdge(0, 0, 1),
+      UpdateActions.createEdge(0, 1, 2),
+    ];
+
+    const saga = pushAnnotationAsync();
+    expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
+    saga.next();
+    expectValue(saga.next()).toEqual(take("PUSH_SAVE_QUEUE"));
+    saga.next(SaveActions.pushSaveQueueAction(updateActions, false));
+    saga.next(SaveActions.saveNowAction());
+    saga.next();
+    saga.next(true);
+    saga.next(updateActions);
+    expectValue(saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }))
+      .toEqual(call(Request.sendJSONReceiveJSON,
+        "/annotations/Explorational/1234567890?version=3", {
+          method: "PUT",
+          data: updateActions,
+        }));
   });
 });

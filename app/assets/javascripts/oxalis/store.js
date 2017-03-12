@@ -208,6 +208,8 @@ export type SaveStateType = {
 export type Flycam3DType = {
   zoomStep: number,
   currentMatrix: Matrix4x4,
+  directionOrtho: Vector3,
+  spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
 }
 
 export type OxalisState = {
@@ -293,6 +295,8 @@ const defaultState: OxalisState = {
   flycam3d: {
     zoomStep: 1.3,
     currentMatrix: M4x4.identity,
+    directionOrtho: [0, 0, 1],
+    spaceDirectionOrtho: [1, 1, 1],
   },
 };
 

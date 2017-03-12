@@ -4,13 +4,19 @@ import type { OxalisState } from "oxalis/store";
 import type { Flycam3DActionType } from "oxalis/model/actions/flycam3d_actions";
 import type { SettingActionType } from "oxalis/model/actions/settings_actions";
 import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
+import { maxZoomStepDiff, getZoomStepCount } from "oxalis/model/reducers/flycam2d_reducer_helper";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo2";
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";
+import constants from "oxalis/constants";
+import Utils from "libs/utils";
+import Dimensions from "oxalis/model/dimensions";
+import _ from "lodash";
 
 const ZOOM_STEP_INTERVAL = 1.1;
 const ZOOM_STEP_MIN = 0.5;
-const ZOOM_STEP_MAX = 5;
+// const ZOOM_STEP_MAX = 5;
 
 function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vector3): Matrix4x4 {
   return M4x4.rotate(angle, axis, currentMatrix);
@@ -66,6 +72,17 @@ function resetMatrix(matrix: Matrix4x4, dataSetScale: Vector3) {
   return newMatrix;
 }
 
+function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
+  return update(state, { flycam3d: {
+    currentMatrix: { $set: M4x4.translate(vector, state.flycam3d.currentMatrix) },
+  } });
+}
+
+function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
+  return update(state, { flycam3d: {
+    zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getZoomStepCount(state) + maxZoomStepDiff) },
+  } });
+}
 
 function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3DActionType | SettingActionType>): OxalisState {
   switch (action.type) {
@@ -76,19 +93,16 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
     }
 
     case "ZOOM_IN":
-      return update(state, { flycam3d: {
-        zoomStep: { $set: Math.max(state.flycam3d.zoomStep / ZOOM_STEP_INTERVAL, ZOOM_STEP_MIN) },
-      } });
+      return zoomReducer(state, state.flycam3d.zoomStep / ZOOM_STEP_INTERVAL);
 
     case "ZOOM_OUT":
-      return update(state, { flycam3d: {
-        zoomStep: { $set: Math.min(state.flycam3d.zoomStep * ZOOM_STEP_INTERVAL, ZOOM_STEP_MAX) },
-      } });
+      return zoomReducer(state, state.flycam3d.zoomStep * ZOOM_STEP_INTERVAL);
+
+    case "ZOOM_BY_DELTA":
+      return zoomReducer(state, state.flycam3d.zoomStep - (action.zoomDelta * constants.ZOOM_DIFF));
 
     case "SET_ZOOM_STEP":
-      return update(state, { flycam3d: {
-        zoomStep: { $set: Math.min(ZOOM_STEP_MAX, Math.max(ZOOM_STEP_MIN, action.zoomStep)) },
-      } });
+      return zoomReducer(state, action.zoomStep);
 
     case "SET_POSITION": {
       const matrix = M4x4.clone(state.flycam3d.currentMatrix);
@@ -105,15 +119,46 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
         matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
         matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
         matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
-        return update(state, { flycam3d: { currentMatrix: { $set: matrix } } });
+        let newState = update(state, { flycam3d: { currentMatrix: { $set: matrix } } });
+        if (state.userConfiguration.dynamicSpaceDirection) {
+          const spaceDirectionOrtho = [0, 1, 2].map(index => action.direction[index] <= 0 ? -1 : 1);
+          newState = update(newState, { flycam3d: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } } });
+        }
+        return newState;
       }
       return state;
     }
 
     case "MOVE_FLYCAM":
-      return update(state, { flycam3d: {
-        currentMatrix: { $set: M4x4.translate(action.vector, state.flycam3d.currentMatrix) },
-      } });
+      return moveReducer(state, action.vector);
+
+    case "MOVE_FLYCAM_ORTHO": {
+      const vector = _.clone(action.vector);
+      const { planeId } = action;
+      // if planeID is given, use it to manipulate z
+      if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
+        // change direction of the value connected to space, based on the last direction
+        vector[Dimensions.getIndices(planeId)[2]] *=
+          state.flycam3d.spaceDirectionOrtho[Dimensions.getIndices(planeId)[2]];
+      }
+      return moveReducer(state, vector);
+    }
+
+    case "MOVE_PLANE_FLYCAM_ORTHO": {
+      const { dataset } = state;
+      if (dataset != null) {
+        const vector = Dimensions.transDim(action.vector, action.planeId);
+        const zoomFactor = action.increaseSpeedWithZoom ? Math.pow(2, state.flycam3d.zoomStep) : 1;
+        const scaleFactor = getBaseVoxelFactors(dataset.scale);
+        const delta = [
+          vector[0] * zoomFactor * scaleFactor[0],
+          vector[1] * zoomFactor * scaleFactor[1],
+          vector[2] * zoomFactor * scaleFactor[2],
+        ];
+        return moveReducer(state, delta);
+      }
+      return state;
+    }
 
     case "YAW_FLYCAM":
       return rotateReducer(state, action.angle, [0, 1, 0], action.regardDistance);

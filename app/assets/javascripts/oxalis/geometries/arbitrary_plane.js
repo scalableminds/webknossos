@@ -76,7 +76,7 @@ class ArbitraryPlane {
   setMode(mode: ModeType) {
     switch (mode) {
       case constants.MODE_ARBITRARY:
-        this.queryVertices = this.calculateSphereVertices();
+        this.queryVertices = this.calculateSphereVertices(this.cam.distance);
         break;
       case constants.MODE_ARBITRARY_PLANE:
         this.queryVertices = this.calculatePlaneVertices();
@@ -121,8 +121,7 @@ class ArbitraryPlane {
   }
 
 
-  calculateSphereVertices(sphericalCapRadius) {
-    if (sphericalCapRadius == null) { sphericalCapRadius = this.cam.distance; }
+  calculateSphereVertices = _.memoize((sphericalCapRadius) => {
     const queryVertices = new Float32Array(this.width * this.width * 3);
 
     // so we have Point [0, 0, 0] centered
@@ -152,10 +151,10 @@ class ArbitraryPlane {
     }
 
     return queryVertices;
-  }
+  });
 
 
-  calculatePlaneVertices() {
+  calculatePlaneVertices = _.memoize(() => {
     const queryVertices = new Float32Array(this.width * this.width * 3);
 
     // so we have Point [0, 0, 0] centered
@@ -170,7 +169,7 @@ class ArbitraryPlane {
     }
 
     return queryVertices;
-  }
+  });
 
 
   applyScale(delta) {

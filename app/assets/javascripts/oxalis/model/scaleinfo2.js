@@ -36,6 +36,10 @@ export function getVoxelPerNMVector(dataSetScale: Vector3): THREE.Vector3 {
   return new THREE.Vector3(...voxelPerNM);
 }
 
-export function voxelToNm(dataSetScale: Vector3): Vector3 {
-  return [0, 1, 2].map(i => posArray[i] * dataSetScale[i]);
+export function voxelToNm(dataSetScale: Vector3, posArray: Vector3): Vector3 {
+  const result = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    result[i] = posArray[i] * dataSetScale[i];
+  }
+  return result;
 }

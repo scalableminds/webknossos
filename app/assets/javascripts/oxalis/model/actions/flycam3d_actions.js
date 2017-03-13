@@ -36,6 +36,22 @@ export type Flycam3DActionType =
   | PitchFlycamActionType
   | RotateFlycamActionType;
 
+export const Flycam3DActions = [
+  "ZOOM_IN",
+  "ZOOM_OUT",
+  "ZOOM_BY_DELTA",
+  "SET_ZOOM_STEP",
+  "SET_POSITION",
+  "SET_ROTATION",
+  "MOVE_FLYCAM_ORTHO",
+  "MOVE_PLANE_FLYCAM_ORTHO",
+  "MOVE_FLYCAM",
+  "YAW_FLYCAM",
+  "ROLL_FLYCAM",
+  "PITCH_FLYCAM",
+  "ROTATE_FLYCAM",
+];
+
 export const zoomInAction = (): ZoomInActionType => ({ type: "ZOOM_IN" });
 export const zoomOutAction = (): ZoomOutActionType => ({ type: "ZOOM_OUT" });
 export const zoomByDeltaAction = (zoomDelta: number): ZoomByDeltaActionType =>

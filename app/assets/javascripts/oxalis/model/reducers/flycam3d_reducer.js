@@ -4,7 +4,7 @@ import type { OxalisState } from "oxalis/store";
 import type { Flycam3DActionType } from "oxalis/model/actions/flycam3d_actions";
 import type { SettingActionType } from "oxalis/model/actions/settings_actions";
 import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
-import { maxZoomStepDiff, getZoomStepCount } from "oxalis/model/reducers/flycam2d_reducer_helper";
+import { maxZoomStepDiff, getZoomStepCount } from "oxalis/model/accessors/flycam2d_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo2";
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
@@ -121,7 +121,7 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
         matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
         let newState = update(state, { flycam3d: { currentMatrix: { $set: matrix } } });
         if (state.userConfiguration.dynamicSpaceDirection) {
-          const spaceDirectionOrtho = [0, 1, 2].map(index => action.direction[index] <= 0 ? -1 : 1);
+          const spaceDirectionOrtho = [0, 1, 2].map(index => action.rotation[index] <= 0 ? -1 : 1);
           newState = update(newState, { flycam3d: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } } });
         }
         return newState;
@@ -147,14 +147,22 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
     case "MOVE_PLANE_FLYCAM_ORTHO": {
       const { dataset } = state;
       if (dataset != null) {
-        const vector = Dimensions.transDim(action.vector, action.planeId);
-        const zoomFactor = action.increaseSpeedWithZoom ? Math.pow(2, state.flycam3d.zoomStep) : 1;
+        const { planeId, increaseSpeedWithZoom } = action;
+        const vector = Dimensions.transDim(action.vector, planeId);
+        const zoomFactor = increaseSpeedWithZoom ? Math.pow(2, state.flycam3d.zoomStep) : 1;
         const scaleFactor = getBaseVoxelFactors(dataset.scale);
         const delta = [
           vector[0] * zoomFactor * scaleFactor[0],
           vector[1] * zoomFactor * scaleFactor[1],
           vector[2] * zoomFactor * scaleFactor[2],
         ];
+
+        if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
+          // change direction of the value connected to space, based on the last direction
+          vector[Dimensions.getIndices(planeId)[2]] *=
+            state.flycam3d.spaceDirectionOrtho[Dimensions.getIndices(planeId)[2]];
+        }
+
         return moveReducer(state, delta);
       }
       return state;

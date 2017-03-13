@@ -5,7 +5,7 @@ import type { Flycam3DType, OxalisState } from "oxalis/store";
 import constants, { OrthoViews, OrthoViewValues } from "oxalis/constants";
 import Maybe from "data.maybe";
 import Dimensions from "oxalis/model/dimensions";
-import { getPosition } from "oxalis/model/reducers/flycam3d_reducer_helper";
+import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 import * as scaleInfo2 from "oxalis/model/scaleinfo2";
 
 const Flycam2dConstants = {

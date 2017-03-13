@@ -28,6 +28,8 @@ import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_vie
 import VolumeTracingView from "oxalis/view/volumetracing/volumetracing_view";
 import constants from "oxalis/constants";
 import { wkReadyAction } from "oxalis/model/actions/actions";
+import { saveNowAction } from "oxalis/model/actions/save_actions";
+import messages from "messages";
 
 import type { ToastType } from "libs/toast";
 
@@ -86,16 +88,16 @@ class Controller {
     }
 
     app.router.on("beforeunload", () => {
-      // if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
-      //   const { stateLogger } = this.model.annotationModel;
-      //   if (!stateLogger.stateSaved() && stateLogger.allowUpdate) {
-      //     stateLogger.pushNow();
-      //     return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.";
-      //   }
-      // }
+      if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+        const state = Store.getState();
+        const stateSaved = !state.save.isBusy && state.save.queue.length === 0;
+        if (!stateSaved && state.skeletonTracing.restrictions.allowUpdate) {
+          Store.dispatch(saveNowAction());
+          return messages["save.leave_page_unfinished"];
+        }
+      }
       return null;
-    },
-    );
+    });
 
     this.urlManager.startUrlUpdater();
 

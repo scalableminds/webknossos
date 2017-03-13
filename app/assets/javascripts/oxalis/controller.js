@@ -89,11 +89,19 @@ class Controller {
 
     app.router.on("beforeunload", () => {
       if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
-        const state = Store.getState();
-        const stateSaved = !state.save.isBusy && state.save.queue.length === 0;
-        if (!stateSaved && state.skeletonTracing.restrictions.allowUpdate) {
-          Store.dispatch(saveNowAction());
-          return messages["save.leave_page_unfinished"];
+        if (this.model.volumeTracing != null) {
+          const { stateLogger } = this.model.annotationModel;
+          if (!stateLogger.stateSaved() && stateLogger.allowUpdate) {
+            stateLogger.pushNow();
+            return messages["save.leave_page_unfinished"];
+          }
+        } else {
+          const state = Store.getState();
+          const stateSaved = !state.save.isBusy && state.save.queue.length === 0;
+          if (!stateSaved && state.skeletonTracing.restrictions.allowUpdate) {
+            Store.dispatch(saveNowAction());
+            return messages["save.leave_page_unfinished"];
+          }
         }
       }
       return null;

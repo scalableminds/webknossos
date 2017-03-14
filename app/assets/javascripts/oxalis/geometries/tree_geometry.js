@@ -79,6 +79,7 @@ class TreeGeometry {
     this.edgesBuffer.clear();
     this.sizesBuffer.clear();
     this.scalesBuffer.clear();
+    this.nodesColorBuffer.clear();
     this.nodeIDs.clear();
   }
 

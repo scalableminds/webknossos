@@ -31,12 +31,12 @@ function generateTreeNamePrefix(state: OxalisState, timestamp) {
 
   // Replace spaces in user names
   user = user.replace(/ /g, "_");
-  if (state.skeletonTracing.tracingType === "Explorational") {
+  if (state.skeletonTracing.tracingType === "Explorational" || !state.task) {
     // Get YYYY-MM-DD string
     const creationDate = new Date(timestamp).toJSON().slice(0, 10);
     return `explorative_${creationDate}_${user}_`;
   } else {
-    return `task_${state.task.id}_${user}_`;
+    return `task_${state.task.taskId}_${user}_`;
   }
 }
 
@@ -63,7 +63,7 @@ export function createNode(state: OxalisState, position: Vector3, rotation: Vect
       resolution,
       id: nextNewId,
       timestamp,
-      bitDepth: 8, // datasetConfig.fourBit ? 4 : 8,
+      bitdepth: 8, // datasetConfig.fourBit ? 4 : 8,
       interpolation: true, // datasetConfig.interpolation,
     };
 
@@ -83,7 +83,8 @@ export function createNode(state: OxalisState, position: Vector3, rotation: Vect
   return Maybe.Nothing();
 }
 
-export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMapType, ?number, number]> {
+export function deleteNode(state: OxalisState, timestamp: number): Maybe<[TreeMapType, number, ?number]> {
+  const skeletonTracing = state.skeletonTracing;
   const { allowUpdate } = skeletonTracing.restrictions;
   const { activeNodeId, activeTreeId } = skeletonTracing;
 
@@ -93,45 +94,135 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMap
     let newTrees = skeletonTracing.trees;
 
     // Delete Node
-    let activeTree = skeletonTracing.trees[activeTreeId];
+    let activeTree: TreeType = skeletonTracing.trees[activeTreeId];
     activeTree = update(activeTree, { nodes: { $set: _.omit(activeTree.nodes, [activeNodeId.toString()]) } });
 
     // Do we need to split trees? Are there edges leading to/from it?
-    const sourceNodeIds = activeTree.edges.reduce(edge => edge.target === activeNodeId).map(edge => edge.source);
-    const targetNodeIds = activeTree.edges.reduce(edge => edge.source === activeNodeId).map(edge => edge.target);
+    const sourceNodeIds = activeTree.edges.filter(edge => edge.target === activeNodeId).map(edge => edge.source);
+    const targetNodeIds = activeTree.edges.filter(edge => edge.source === activeNodeId).map(edge => edge.target);
     const neighborIds = sourceNodeIds.concat(targetNodeIds);
 
     if (neighborIds.length === 0) {
-      // todo
-
-    } else if (neighborIds.length === 1) {
-      // We do not need to split
-      // just delete all edges leading to/from it
-      const newEdges = activeTree.edges.filter(edge => edge.source !== activeNodeId && edge.target !== activeNodeId);
-
-      if (newEdges.length !== activeTree.edges.length) {
-        activeTree = update(activeTree, { edges: { $set: newEdges } });
-      }
-
-      // Delete all comments containing the node
-      const newComments = activeTree.comments.filter(comment => comment.node !== activeNodeId);
-
-      if (newComments.length !== activeTree.comments.length) {
-        activeTree = update(activeTree, { comments: { $set: newEdges } });
-      }
-
-      // Decrease active node id or reset to null
-      newActiveNodeId = activeNodeId === 0 ? null : activeNodeId - 1;
-      newActiveTreeId = activeTreeId;
-      newTrees = update(skeletonTracing.trees, { [activeTreeId]: { $set: activeTree } });
+      return deleteTree(state, timestamp);
     } else {
-      // Split the tree
-      throw Error("TODO @ philipp");
+      // Use split-algorithmus. If we delete a node which is only connected via one edge,
+      // this algorithmus will only produce one tree (which reuses the old oen)
+
+      // Build a hashmap which contains for each node all edges leading/leaving into/from the node
+      let nodeToEdgesMap: {[number]: Array<EdgeType>} = {};
+      activeTree.edges.forEach((edge) => {
+        if (nodeToEdgesMap[edge.source]) {
+          nodeToEdgesMap[edge.source].push(edge);
+        } else {
+          nodeToEdgesMap[edge.source] = [edge];
+        }
+        if (nodeToEdgesMap[edge.target]) {
+          nodeToEdgesMap[edge.target].push(edge);
+        } else {
+          nodeToEdgesMap[edge.target] = [edge];
+        }
+      });
+
+      // Traverse from active node in all directions (i.e., use each edge) and
+      // remember which edges were already visited
+      const deletedEdges = nodeToEdgesMap[activeNodeId];
+      let visitedEdges = {};
+      const getEdgeHash = edge => edge.source + "-" + edge.target;
+
+      // Mark edges of deleted node as visited
+      deletedEdges.forEach((deletedEdge) => {
+        visitedEdges[getEdgeHash(deletedEdge)] = true;
+      })
+
+      const traverseTree = function (nodeId: number, newTree: TreeType) {
+        const edges = nodeToEdgesMap[nodeId];
+
+        if (nodeId !== activeNodeId) {
+          newTree.nodes[nodeId] = activeTree.nodes[nodeId];
+        }
+        for (const edge of edges) {
+          const edgeHash = getEdgeHash(edge);
+          if (visitedEdges[edgeHash]) {
+            continue;
+          }
+          visitedEdges[edgeHash] = true;
+          newTree.edges.push(edge);
+
+          traverseTree(edge.source, newTree);
+          traverseTree(edge.target, newTree);
+        }
+      };
+
+      // The intermediateState is used for the createTree function, which takes
+      // care of generating non-colliding tree names, ids and colors
+      let intermediateState = state;
+      // For each edge of the to-be-deleted node, create a new tree.
+      const cutTrees = deletedEdges.map((edgeOfActiveNode, edgeIndex) => {
+        let newTree;
+        if (edgeIndex === 0) {
+          // Reuse the first tree
+          newTree = {
+            branchPoints: [],
+            color: activeTree.color,
+            comments: [],
+            edges: [],
+            name: activeTree.name,
+            nodes: {},
+            timestamp: activeTree.timestamp,
+            treeId: activeTree.treeId,
+          };
+        } else {
+          newTree = createTree(intermediateState, timestamp).get();
+          intermediateState = update(intermediateState, { skeletonTracing: { trees: { [newTree.treeId]: { $set: newTree }}}});
+        }
+
+        const neighborId = activeNodeId != edgeOfActiveNode.source
+          ? edgeOfActiveNode.source
+          : edgeOfActiveNode.target;
+
+        if (newActiveNodeId != null) {
+          // Use a neighbor of the deleted node as the new active node
+          newActiveNodeId = neighborId;
+        }
+        traverseTree(neighborId, newTree);
+        return newTree;
+      });
+
+      // Write branchpoints into correct trees
+      activeTree.branchPoints.forEach((branchpoint) => {
+        cutTrees.forEach((newTree) => {
+          if (newTree.nodes[branchpoint.id]) {
+            newTree.branchPoints.push(branchpoint);
+          }
+        });
+      });
+
+      // Write comments into correct trees
+      activeTree.comments.forEach((comment) => {
+        cutTrees.forEach((newTree) => {
+          if (newTree.nodes[comment.node]) {
+            newTree.comments.push(comment);
+          }
+        });
+      });
+
+      newTrees = skeletonTracing.trees;
+      cutTrees.forEach((cutTree) => {
+        newTrees = update(newTrees, { [cutTree.treeId]: { $set: cutTree } });
+      });
+      // newActiveNodeId was already written to when traversing the tree. Find the
+      // corresponding treeId
+      const newActiveTree = findTree(newTrees, newActiveNodeId);
+      if (!newActiveTree) {
+        throw new Error("Could not find tree for active node id")
+      };
+      newActiveTreeId = newActiveTree.treeId;
     }
 
-    return Maybe.Just([newTrees, newActiveNodeId, newActiveTreeId]);
+    return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId]);
+  } else {
+    return Maybe.Nothing();
   }
-  return Maybe.Nothing();
 }
 
 export function createBranchPoint(skeletonTracing: SkeletonTracingType, timestamp: number): Maybe<BranchPointType> {
@@ -199,7 +290,8 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
   return Maybe.Nothing();
 }
 
-export function deleteTree(skeletonTracing: SkeletonTracingType, timestamp: number): Maybe<[TreeMapType, number, ?number]> {
+export function deleteTree(state: OxalisState, timestamp: number): Maybe<[TreeMapType, number, ?number]> {
+  const skeletonTracing = state.skeletonTracing;
   const { allowUpdate } = skeletonTracing.restrictions;
   const { activeTreeId } = skeletonTracing;
 
@@ -212,7 +304,7 @@ export function deleteTree(skeletonTracing: SkeletonTracingType, timestamp: numb
     let newActiveTreeId;
     let newActiveNodeId;
     if (_.size(newTrees) === 0) {
-      const newTree = createTree(skeletonTracing, timestamp).get();
+      const newTree = createTree(state, timestamp).get();
       newTrees = update(newTrees, { [newTree.treeId]: { $set: newTree } });
 
       newActiveTreeId = newTree.treeId;
@@ -221,7 +313,7 @@ export function deleteTree(skeletonTracing: SkeletonTracingType, timestamp: numb
       // just set the last tree to be the active one
       const maxTreeId = _.max(_.map(newTrees, "treeId"));
       newActiveTreeId = maxTreeId;
-      newActiveNodeId = _.get(newTrees[maxTreeId].nodes, "nodes[0].id", null);
+      newActiveNodeId = _.first(Object.keys(newTrees[maxTreeId].nodes)) || null;
     }
 
     return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId]);

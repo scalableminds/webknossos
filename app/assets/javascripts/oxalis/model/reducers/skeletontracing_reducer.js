@@ -73,7 +73,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "DELETE_NODE": {
-      return deleteNode(state.skeletonTracing).map(([trees, newActiveNodeId, newActiveTreeId]) =>
+      return deleteNode(state, timestamp).map(([trees, newActiveTreeId, newActiveNodeId]) =>
         update(state, { skeletonTracing: {
           trees: { $set: trees },
           activeNodeId: { $set: newActiveNodeId },
@@ -134,7 +134,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "DELETE_TREE": {
-      return deleteTree(state.skeletonTracing, timestamp).map(([trees, newActiveTreeId, newActiveNodeId]) =>
+      return deleteTree(state, timestamp).map(([trees, newActiveTreeId, newActiveNodeId]) =>
 
         update(state, { skeletonTracing: {
           trees: { $set: trees },

@@ -15,12 +15,19 @@ import { SwitchSetting, NumberSliderSetting, DropdownSetting, ColorSetting } fro
 const Panel = Collapse.Panel;
 const Option = Select.Option;
 
+type DatasetSettingsProps = {
+  datasetConfiguration: DatasetConfigurationType,
+  onChange: (propertyName: $Keys<DatasetConfigurationType>, value: any) => void,
+  onChangeLayer: (layerName: string, propertyName: $Keys<DatasetLayerConfigurationType>, value: any) => void,
+};
+
 class DatasetSettings extends Component {
 
-  props: DatasetConfigurationType & {
-    onChange: (propertyName: $Keys<DatasetConfigurationType>, value: any) => void,
-    onChangeLayer: (layerName: string, propertyName: $Keys<DatasetLayerConfigurationType>, value: any) => void,
-  };
+  props: DatasetSettingsProps;
+
+  shouldComponentUpdate(nextProps: DatasetSettingsProps) {
+    return this.props.datasetConfiguration !== nextProps.datasetConfiguration;
+  }
 
   getColorSettings = (layer: Object, layerName: string) => (
     <div key={layerName}>
@@ -38,7 +45,7 @@ class DatasetSettings extends Component {
   }
 
   render() {
-    const colorSettings = _.map(this.props.layers, this.getColorSettings);
+    const colorSettings = _.map(this.props.datasetConfiguration.layers, this.getColorSettings);
 
     return (
       <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
@@ -46,9 +53,9 @@ class DatasetSettings extends Component {
           {colorSettings}
         </Panel>
         <Panel header="Quality" key="2">
-          <SwitchSetting label="4 Bit" value={this.props.fourBit} onChange={_.partial(this.props.onChange, "fourBit")} />
-          <SwitchSetting label="Interpolation" value={this.props.interpolation} onChange={_.partial(this.props.onChange, "interpolation")} />
-          <DropdownSetting label="Quality" value={this.props.quality} onChange={_.partial(this.onChangeQuality, "quality")} >
+          <SwitchSetting label="4 Bit" value={this.props.datasetConfiguration.fourBit} onChange={_.partial(this.props.onChange, "fourBit")} />
+          <SwitchSetting label="Interpolation" value={this.props.datasetConfiguration.interpolation} onChange={_.partial(this.props.onChange, "interpolation")} />
+          <DropdownSetting label="Quality" value={this.props.datasetConfiguration.quality} onChange={_.partial(this.onChangeQuality, "quality")} >
             <Option value="0">high</Option>
             <Option value="1">medium</Option>
             <Option value="2">low</Option>
@@ -60,7 +67,7 @@ class DatasetSettings extends Component {
 }
 
 const mapStateToProps = (state: OxalisState) => (
-  state.datasetConfiguration
+  { datasetConfiguration: state.datasetConfiguration }
 );
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

@@ -10,7 +10,8 @@ import _ from "lodash";
 import CheckboxSettingView from "oxalis/view/settings/setting_views/checkbox_setting_view";
 import Binary from "oxalis/model/binary";
 import Cube from "oxalis/model/binary/data_cube";
-import Flycam2d from "oxalis/model/flycam2d";
+import Store from "oxalis/store";
+import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 
 const RENDER_DEBOUNCE_TIME = 200;
 
@@ -20,7 +21,6 @@ class MappingInfoView extends Marionette.View {
   model: Backbone.Model;
   binary: Binary;
   cube: Cube;
-  flycam: Flycam2d;
   renderDebounced: Function;
 
   static initClass() {
@@ -63,21 +63,20 @@ class MappingInfoView extends Marionette.View {
 
     this.binary = oxalisModel.getSegmentationBinary();
     this.cube = this.binary.cube;
-    this.flycam = oxalisModel.flycam;
 
     this.renderDebounced = _.debounce(this.render, RENDER_DEBOUNCE_TIME);
     this.listenTo(this.cube, "bucketLoaded", this.renderDebounced);
     this.listenTo(this.cube, "volumeLabeled", this.renderDebounced);
     this.listenTo(this.cube, "newMapping", this.render);
-    this.listenTo(this.flycam, "positionChanged", this.renderDebounced);
     this.listenTo(this.model, "change:enableMapping", function () {
       return this.cube.setMappingEnabled(this.model.get("enableMapping"));
     });
+    Store.subscribe(() => { this.renderDebounced(); });
   }
 
 
   serializeData() {
-    const pos = this.flycam.getPosition();
+    const pos = getPosition(Store.getState().flycam3d);
 
     return {
       hasMapping: this.cube.hasMapping(),

@@ -6,15 +6,16 @@
 import StateLogger from "oxalis/model/statelogger";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import PushQueue from "oxalis/model/binary/pushqueue";
-import Flycam2D from "oxalis/model/flycam2d";
+import Store from "oxalis/store";
+import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 
 class VolumeTracingStateLogger extends StateLogger {
 
   volumeTracing: VolumeTracing;
   pushQueue: PushQueue;
 
-  constructor(flycam: Flycam2D, version: number, tracingId: string, tracingType: string, allowUpdate: boolean, volumeTracing: VolumeTracing, pushQueue: PushQueue) {
-    super(flycam, version, tracingId, tracingType, allowUpdate);
+  constructor(version: number, tracingId: string, tracingType: string, allowUpdate: boolean, volumeTracing: VolumeTracing, pushQueue: PushQueue) {
+    super(version, tracingId, tracingType, allowUpdate);
     this.volumeTracing = volumeTracing;
     this.pushQueue = pushQueue;
   }
@@ -47,7 +48,7 @@ class VolumeTracingStateLogger extends StateLogger {
       "updateTracing",
       {
         activeCell: this.volumeTracing.getActiveCellId(),
-        editPosition: this.flycam.getPosition(),
+        editPosition: getPosition(Store.getState().flycam3d),
         nextCell: this.volumeTracing.idCount,
       },
       false,

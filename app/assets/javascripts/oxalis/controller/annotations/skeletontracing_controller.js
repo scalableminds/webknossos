@@ -10,6 +10,7 @@ import constants from "oxalis/constants";
 import Model from "oxalis/model";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setPositionAction } from "oxalis/model/actions/flycam3d_actions";
 import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
 import SceneController from "oxalis/controller/scene_controller";
 
@@ -70,7 +71,7 @@ class SkeletonTracingController {
     const position = trees[activeTreeId].nodes[activeNodeId].position;
 
     if (position) {
-      this.model.flycam.setPosition(position);
+      Store.dispatch(setPositionAction(position));
     }
   }
 }

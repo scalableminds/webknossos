@@ -10,7 +10,7 @@ import React from "react";
 import { render } from "react-dom";
 import { Provider } from "react-redux";
 import app from "app";
-import store from "oxalis/store";
+import store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
 import OxalisModel from "oxalis/model";
 import OxalisApi from "oxalis/api";

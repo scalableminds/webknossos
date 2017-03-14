@@ -6,6 +6,9 @@ import constants from "oxalis/constants";
 import utils from "libs/utils";
 import Toast from "libs/toast";
 import { V3 } from "libs/mjs";
+import Store from "oxalis/store";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam3d_actions";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam3d_accessor";
 
 class DatasetPositionView extends Marionette.View {
   static initClass() {
@@ -32,11 +35,11 @@ class DatasetPositionView extends Marionette.View {
 
     this.prototype.templateContext = {
       position() {
-        return V3.floor(this.flycam.getPosition()).join(", ");
+        return V3.floor(getPosition(Store.getState().flycam3d)).join(", ");
       },
 
       rotation() {
-        return V3.round(this.flycam3d.getRotation()).join(", ");
+        return V3.round(getRotation(Store.getState().flycam3d)).join(", ");
       },
 
       isArbitrayMode() {
@@ -62,9 +65,9 @@ class DatasetPositionView extends Marionette.View {
     this.render = _.throttle(this.render, 100);
     this.listenTo(this.model, "change:mode", this.render);
 
-    // TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
-    this.listenTo(this.model.get("flycam3d"), "changed", this.render);
-    this.listenTo(this.model.get("flycam"), "positionChanged", this.render);
+    this._unsubscribe = Store.subscribe(() => {
+      this.render();
+    });
   }
 
 
@@ -78,7 +81,7 @@ class DatasetPositionView extends Marionette.View {
   changePosition(event) {
     const posArray = utils.stringToNumberArray(event.target.value);
     if (posArray.length === 3) {
-      this.model.flycam.setPosition(posArray);
+      Store.dispatch(setPositionAction(posArray));
       app.vent.trigger("centerTDView");
       this.ui.positionInput.get(0).setCustomValidity("");
     } else {
@@ -91,7 +94,7 @@ class DatasetPositionView extends Marionette.View {
   changeRotation(event) {
     const rotArray = utils.stringToNumberArray(event.target.value);
     if (rotArray.length === 3) {
-      this.model.flycam3d.setRotation(rotArray);
+      Store.dispatch(setRotationAction(rotArray));
       this.ui.rotationInput.get(0).setCustomValidity("");
     } else {
       this.ui.rotationInput.get(0).setCustomValidity("Please supply a valid rotation, like 1,1,1!");
@@ -109,8 +112,7 @@ class DatasetPositionView extends Marionette.View {
   }
 
   onDestroy() {
-    this.model.flycam3d.off("changed");
-    this.model.flycam.off("positionChanged");
+    this._unsubscribe();
   }
 }
 DatasetPositionView.initClass();

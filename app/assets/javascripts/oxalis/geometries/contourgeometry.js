@@ -9,7 +9,6 @@ import Backbone from "backbone";
 import ResizableBuffer from "libs/resizable_buffer";
 import * as THREE from "three";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
-import Flycam2d from "oxalis/model/flycam2d";
 
 const COLOR_NORMAL = new THREE.Color(0x0000ff);
 const COLOR_DELETE = new THREE.Color(0xff0000);
@@ -17,16 +16,14 @@ const COLOR_DELETE = new THREE.Color(0xff0000);
 
 class ContourGeometry {
   volumeTracing: VolumeTracing;
-  flycam: Flycam2d;
   color: THREE.Color;
   edge: THREE.Line;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(volumeTracing: VolumeTracing, flycam: Flycam2d) {
+  constructor(volumeTracing: VolumeTracing) {
     this.volumeTracing = volumeTracing;
-    this.flycam = flycam;
     _.extend(this, Backbone.Events);
 
     this.color = COLOR_NORMAL;

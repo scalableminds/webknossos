@@ -130,7 +130,6 @@ class Binary {
 
     const setMapping = (mapping) => {
       this.cube.setMapping(mapping);
-      this.model.flycam.update();
     };
 
     if (mappingName != null) {

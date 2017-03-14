@@ -1,6 +1,6 @@
 /**
  * arbitrary_plane.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -9,9 +9,10 @@ import * as THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
-import Flycam3d from "oxalis/model/flycam3d";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam3d_accessor";
 
 import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary_plane_material_factory";
 
@@ -35,7 +36,6 @@ import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary
 // for the flat surface
 class ArbitraryPlane {
 
-  cam: Flycam3d;
   model: Model;
   controller: ArbitraryController;
   mesh: THREE.Mesh;
@@ -50,9 +50,8 @@ class ArbitraryPlane {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(cam, model, controller, width = 128) {
+  constructor(model: Model, controller: ArbitraryController, width: number = 128) {
     this.isDirty = true;
-    this.cam = cam;
     this.model = model;
     this.controller = controller;
     this.height = 0;
@@ -61,22 +60,23 @@ class ArbitraryPlane {
 
     this.mesh = this.createMesh();
 
-    this.listenTo(this.cam, "changed", function () { this.isDirty = true; });
-    this.listenTo(this.model.flycam, "positionChanged", function () { this.isDirty = true; });
-
     for (const name of Object.keys(this.model.binary)) {
       const binary = this.model.binary[name];
       binary.cube.on("bucketLoaded", () => { this.isDirty = true; });
     }
 
     if ((Math.log(this.width) / Math.LN2) % 1 === 1) { throw new Error("width needs to be a power of 2"); }
+
+    Store.subscribe(() => {
+      this.isDirty = true;
+    });
   }
 
 
   setMode(mode: ModeType) {
     switch (mode) {
       case constants.MODE_ARBITRARY:
-        this.queryVertices = this.calculateSphereVertices(this.cam.distance);
+        this.queryVertices = this.calculateSphereVertices(Store.getState().userConfiguration.sphericalCapRadius);
         break;
       case constants.MODE_ARBITRARY_PLANE:
         this.queryVertices = this.calculatePlaneVertices();
@@ -90,28 +90,26 @@ class ArbitraryPlane {
   }
 
 
-  attachScene(scene) {
+  attachScene(scene: THREE.Scene) {
     scene.add(this.mesh);
   }
 
 
   update() {
     if (this.isDirty) {
-      const { mesh, cam } = this;
+      const { mesh } = this;
 
-      const matrix = cam.getZoomedMatrix();
+      const matrix = getZoomedMatrix(Store.getState().flycam3d);
 
       const newVertices = M4x4.transformPointsAffine(matrix, this.queryVertices);
       const newColors = this.model.getColorBinaries()[0].getByVerticesSync(newVertices);
 
       this.textureMaterial.setData("color", newColors);
 
-      const m = cam.getZoomedMatrix();
-
-      mesh.matrix.set(m[0], m[4], m[8], m[12],
-                      m[1], m[5], m[9], m[13],
-                      m[2], m[6], m[10], m[14],
-                      m[3], m[7], m[11], m[15]);
+      mesh.matrix.set(matrix[0], matrix[4], matrix[8], matrix[12],
+                      matrix[1], matrix[5], matrix[9], matrix[13],
+                      matrix[2], matrix[6], matrix[10], matrix[14],
+                      matrix[3], matrix[7], matrix[11], matrix[15]);
 
       mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
       mesh.matrixWorldNeedsUpdate = true;
@@ -172,12 +170,11 @@ class ArbitraryPlane {
   });
 
 
-  applyScale(delta) {
+  applyScale(delta: number) {
     this.x = Number(this.mesh.scale.x) + Number(delta);
 
     if (this.x > 0.5 && this.x < 10) {
       this.mesh.scale.x = this.mesh.scale.y = this.mesh.scale.z = this.x;
-      this.cam.update();
     }
   }
 

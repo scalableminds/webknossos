@@ -32,18 +32,12 @@ class Layer {
   resolutions = [];
 }
 
-class Flycam2d {
-  setPosition() {}
-}
-
 mockRequire("libs/toast", { error: _.noop });
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", {});
 mockRequire("oxalis/model/binary", Binary);
 mockRequire("oxalis/model/scaleinfo", scaleInfo);
-mockRequire("oxalis/model/flycam2d", Flycam2d);
-mockRequire("oxalis/model/flycam3d", _.noop);
 mockRequire("oxalis/model/skeletontracing/skeletontracing", _.noop);
 mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
 mockRequire("oxalis/model/user", User);

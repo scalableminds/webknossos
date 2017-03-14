@@ -122,10 +122,10 @@ describe("Flycam3D", () => {
   });
 
   it("should move in ortho mode with dynamicSpaceDirection", () => {
-    let newState = Flycam3DReducer(initialState, addTimestamp(Flycam3DActions.setRotationAction([-2, 0, 0])));
-    newState = Flycam3DReducer(newState, addTimestamp(Flycam3DActions.moveFlycamOrthoAction([2, 0, 0], OrthoViews.PLANE_XY)));
+    let newState = Flycam3DReducer(initialState, addTimestamp(Flycam3DActions.setRotationAction([0, 0, -2])));
+    newState = Flycam3DReducer(newState, addTimestamp(Flycam3DActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY)));
 
-    equalWithEpsilon(getPosition(newState.flycam3d), [-2, 0, 0]);
+    equalWithEpsilon(getPosition(newState.flycam3d), [2, 0, -2]);
   });
 
   it("should move by plane in ortho mode (1/3)", () => {
@@ -150,9 +150,9 @@ describe("Flycam3D", () => {
   });
 
   it("should move by plane in ortho mode with dynamicSpaceDirection", () => {
-    let newState = Flycam3DReducer(initialState, addTimestamp(Flycam3DActions.setRotationAction([-2, 0, 0])));
-    newState = Flycam3DReducer(newState, addTimestamp(Flycam3DActions.movePlaneFlycamOrthoAction([2, 0, 0], OrthoViews.PLANE_XY, true)));
+    let newState = Flycam3DReducer(initialState, addTimestamp(Flycam3DActions.setRotationAction([0, 0, -2])));
+    newState = Flycam3DReducer(newState, addTimestamp(Flycam3DActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true)));
 
-    equalWithEpsilon(getPosition(newState.flycam3d), [-8, 0, 0]);
+    equalWithEpsilon(getPosition(newState.flycam3d), [0, 0, -4]);
   });
 });

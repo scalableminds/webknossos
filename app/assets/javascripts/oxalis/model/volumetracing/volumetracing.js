@@ -1,6 +1,6 @@
 /**
  * volumetracing.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -13,17 +13,17 @@ import VolumeTracingStateLogger from "oxalis/model/volumetracing/volumetracing_s
 import Dimensions from "oxalis/model/dimensions";
 import RestrictionHandler from "oxalis/model/helpers/restriction_handler";
 import Constants from "oxalis/constants";
-import Flycam2D from "oxalis/model/flycam2d";
-import Flycam3D from "oxalis/model/flycam3d";
 import Binary from "oxalis/model/binary";
+import Store from "oxalis/store";
+import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { getIntegerZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
+import { setRotationAction } from "oxalis/model/actions/flycam3d_actions";
 
-import type { Vector3, VolumeModeType } from "oxalis/constants";
-import type { VolumeContentDataType } from "oxalis/model";
+import type { Vector3, VolumeModeType, OrthoViewType } from "oxalis/constants";
+import type { Tracing, VolumeContentDataType } from "oxalis/model";
 
 class VolumeTracing {
 
-  flycam: Flycam2D;
-  flycam3d: Flycam3D;
   binary: Binary;
   contentData: VolumeContentDataType;
   restrictionHandler: RestrictionHandler;
@@ -40,9 +40,7 @@ class VolumeTracing {
   trigger: Function;
   on: Function;
 
-  constructor(tracing, flycam, flycam3d, binary) {
-    this.flycam = flycam;
-    this.flycam3d = flycam3d;
+  constructor(tracing: Tracing<VolumeContentDataType>, binary: Binary) {
     this.binary = binary;
     _.extend(this, Backbone.Events);
 
@@ -53,11 +51,15 @@ class VolumeTracing {
     this.cells = [];
     this.activeCell = null;
     this.currentLayer = null;        // Layer currently edited
-    this.idCount = this.contentData.nextCell || 1;
+    if (this.contentData.nextCell != null) {
+      this.idCount = this.contentData.nextCell;
+    } else {
+      this.idCount = 1;
+    }
     this.lastCentroid = null;
 
     this.stateLogger = new VolumeTracingStateLogger(
-      this.flycam, tracing.version, tracing.id, tracing.typ,
+      tracing.version, tracing.id, tracing.typ,
       tracing.restrictions.allowUpdate,
       this, this.binary.pushQueue,
     );
@@ -74,11 +76,11 @@ class VolumeTracing {
   }
 
 
-  setMode(mode) {
+  setMode(mode: VolumeModeType) {
     if (mode === this.mode) {
       return;
     }
-    if (mode === Constants.VOLUME_MODE_TRACE && this.flycam.getIntegerZoomStep() > 0) {
+    if (mode === Constants.VOLUME_MODE_TRACE && getIntegerZoomStep(Store.getState()) > 0) {
       Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
       return;
     }
@@ -96,7 +98,7 @@ class VolumeTracing {
   }
 
 
-  createCell(id) {
+  createCell(id: ?number) {
     let newCell;
     if (id == null) {
       id = this.idCount++;
@@ -108,23 +110,23 @@ class VolumeTracing {
   }
 
 
-  startEditing(planeId) {
+  startEditing(planeId: OrthoViewType) {
     // Return, if layer was actually started
 
     if (!this.restrictionHandler.updateAllowed()) { return false; }
 
-    if ((typeof this.currentLayer !== "undefined" && this.currentLayer !== null) || this.flycam.getIntegerZoomStep() > 0) {
+    if ((typeof this.currentLayer !== "undefined" && this.currentLayer !== null) || getIntegerZoomStep(Store.getState()) > 0) {
       return false;
     }
 
-    const pos = Dimensions.roundCoordinate(this.flycam.getPosition());
+    const pos = Dimensions.roundCoordinate(getPosition(Store.getState().flycam3d));
     const thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)];
     this.currentLayer = new VolumeLayer(planeId, thirdDimValue);
     return true;
   }
 
 
-  addToLayer(pos) {
+  addToLayer(pos: Vector3) {
     if (!this.restrictionHandler.updateAllowed()) { return; }
 
     const currentLayer = this.currentLayer;
@@ -161,13 +163,13 @@ class VolumeTracing {
   }
 
 
-  updateDirection(centroid) {
+  updateDirection(centroid: Vector3) {
     if (this.lastCentroid != null) {
-      this.flycam.setDirection([
+      Store.dispatch(setRotationAction([
         centroid[0] - this.lastCentroid[0],
         centroid[1] - this.lastCentroid[1],
         centroid[2] - this.lastCentroid[2],
-      ]);
+      ]));
     }
     this.lastCentroid = centroid;
   }
@@ -187,7 +189,7 @@ class VolumeTracing {
   }
 
 
-  setActiveCell(id) {
+  setActiveCell(id: number) {
     this.activeCell = null;
     for (const cell of this.cells) {
       if (cell.id === id) { this.activeCell = cell; }

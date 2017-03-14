@@ -19,6 +19,9 @@ import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
+import { getIntegerZoomStep, getRayThreshold, getRotationOrtho } from "oxalis/model/accessors/flycam2d_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam3d_actions";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -55,7 +58,7 @@ class SkeletonTracingPlaneController extends PlaneController {
       nodesAlreadySet = 0;
     }
 
-    const [x, y, z] = this.flycam.getPosition();
+    const [x, y, z] = getPosition(Store.getState().flycam3d);
     this.setWaypoint([x + 1, y + 1, z], false);
     _.defer(() => this.simulateTracing(nodesPerTree, nodesAlreadySet + 1));
   }
@@ -136,7 +139,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     // create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(normalizedMousePos, camera);
-    raycaster.params.Points.threshold = this.model.flycam.getRayThreshold(plane);
+    raycaster.params.Points.threshold = getRayThreshold(Store.getState().flycam3d, plane);
 
     // identify clicked object
     let intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());
@@ -162,14 +165,13 @@ class SkeletonTracingPlaneController extends PlaneController {
 
       const posArray = geometry.attributes.position.array;
       const intersectsCoord = [posArray[3 * index], posArray[(3 * index) + 1], posArray[(3 * index) + 2]];
-      const globalPos = this.model.flycam.getPosition();
+      const globalPos = getPosition(Store.getState().flycam3d);
 
       // make sure you can't click nodes, that are clipped away (one can't see)
       const ind = dimensions.getIndices(plane);
       if (intersect.object.visible &&
         (plane === OrthoViews.TDView ||
         (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
-
         // merge two trees
         if (shiftPressed && altPressed) {
           const sourceNodeId = Store.getState().skeletonTracing.activeNodeId;
@@ -194,14 +196,14 @@ class SkeletonTracingPlaneController extends PlaneController {
 
     // set the new trace direction
     if (activeNode) {
-      this.model.flycam.setDirection([
+      Store.dispatch(setRotationAction([
         position[0] - activeNode.position[0],
         position[1] - activeNode.position[1],
         position[2] - activeNode.position[2],
-      ]);
+      ]));
     }
 
-    const rotation = this.model.flycam.getRotation(activeViewport);
+    const rotation = getRotationOrtho(activeViewport);
     this.addNode(position, rotation, !ctrlPressed);
 
     // Strg + Rightclick to set new not active branchpoint
@@ -231,7 +233,7 @@ class SkeletonTracingPlaneController extends PlaneController {
       position,
       rotation,
       OrthoViewToNumber[this.activeViewport],
-      this.model.flycam.getIntegerZoomStep(),
+      getIntegerZoomStep(Store.getState()),
     ));
 
     if (centered) {
@@ -249,13 +251,12 @@ class SkeletonTracingPlaneController extends PlaneController {
     // Let the user still manipulate the "third dimension" during animation
     const dimensionToSkip = dimensions.thirdDimensionForPlane(this.activeViewport);
 
-    const curGlobalPos = this.flycam.getPosition();
+    const curGlobalPos = getPosition(Store.getState().flycam3d);
 
     const tween = new TWEEN.Tween({
       globalPosX: curGlobalPos[0],
       globalPosY: curGlobalPos[1],
       globalPosZ: curGlobalPos[2],
-      flycam: this.flycam,
       dimensionToSkip,
     });
     tween.to({
@@ -266,7 +267,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     .onUpdate(function () { // needs to be a normal (non-bound) function
       const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
       curPos[this.dimensionToSkip] = null;
-      this.flycam.setPosition(curPos);
+      Store.dispatch(setPositionAction(curPos));
     })
     .start();
   }

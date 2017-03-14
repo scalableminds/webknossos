@@ -1,8 +1,11 @@
+// @flow weak
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import Constants from "oxalis/constants";
+import Constants, { OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import { createNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { getRotationOrtho, getIntegerZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
 
 class SkeletonActionsView extends Marionette.View {
   static initClass() {
@@ -33,10 +36,10 @@ class SkeletonActionsView extends Marionette.View {
   addNode() {
     // add node
     Store.dispatch(createNodeAction(
-      this.model.flycam.getPosition(),
-      this.model.flycam.getRotation(Constants.PLANE_XY),
-      Constants.PLANE_XY, // xy viewport
-      this.model.flycam.getIntegerZoomStep(),
+      getPosition(Store.getState().flycam3d),
+      getRotationOrtho(OrthoViews.PLANE_XY),
+      OrthoViews.PLANE_XY, // xy viewport
+      getIntegerZoomStep(Store.getState()),
     ));
   }
 }

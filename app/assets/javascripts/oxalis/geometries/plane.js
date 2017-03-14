@@ -7,7 +7,8 @@ import app from "app";
 import scaleInfo from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Model from "oxalis/model";
-import Flycam2d from "oxalis/model/flycam2d";
+import { getArea, getIntegerZoomStep, getTexturePosition } from "oxalis/model/accessors/flycam2d_accessor";
+import Store from "oxalis/store";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";
 import { OrthoViews, OrthoViewColors } from "oxalis/constants";
@@ -27,7 +28,6 @@ class Plane {
   // the plane itself, its texture, borders and crosshairs.
 
   plane: THREE.Mesh;
-  flycam: Flycam2d;
   planeID: OrthoViewType;
   model: Model;
   planeWidth: number;
@@ -37,8 +37,7 @@ class Plane {
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
 
-  constructor(planeWidth: number, textureWidth: number, flycam: Flycam2d, planeID: OrthoViewType, model: Model) {
-    this.flycam = flycam;
+  constructor(planeWidth: number, textureWidth: number, planeID: OrthoViewType, model: Model) {
     this.planeID = planeID;
     this.model = model;
     this.planeWidth = planeWidth;
@@ -107,14 +106,14 @@ class Plane {
   }
 
   updateTexture(): void {
-    const area = this.flycam.getArea(this.planeID);
+    const area = getArea(Store.getState(), this.planeID);
     if (this.model != null) {
       for (const name of Object.keys(this.model.binary)) {
         const binary = this.model.binary[name];
         const dataBuffer = binary.planes[this.planeID].get({
-          position: this.flycam.getTexturePosition(this.planeID),
-          zoomStep: this.flycam.getIntegerZoomStep(),
-          area: this.flycam.getArea(this.planeID),
+          position: getTexturePosition(Store.getState(), this.planeID),
+          zoomStep: getIntegerZoomStep(Store.getState()),
+          area,
         });
 
         if (dataBuffer) {

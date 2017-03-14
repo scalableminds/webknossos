@@ -1,10 +1,11 @@
 /**
  * crosshair.js
- * @flow weak
+ * @flow
  */
 
 import * as THREE from "three";
-import Flycam3d from "oxalis/model/flycam3d";
+import Store from "oxalis/store";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam3d_accessor";
 
 class Crosshair {
 
@@ -16,19 +17,16 @@ class Crosshair {
 
   context: CanvasRenderingContext2D;
   scale: number;
-  cam: Flycam3d;
 
   isDirty: boolean;
 
-  constructor(cam, scale) {
+  constructor(scale: number) {
     this.WIDTH = 200;
     this.COLOR = "#2895FF";
     this.SCALE_MIN = 0.01;
     this.SCALE_MAX = 1;
     this.scale = 0;
     this.isDirty = true;
-
-    this.cam = cam;
 
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = this.WIDTH;
@@ -61,7 +59,7 @@ class Crosshair {
     throw new Error("Could not retrieve 2d context");
   }
 
-  setVisibility(v) {
+  setVisibility(v: boolean) {
     this.mesh.setVisibilityEnabled(v);
   }
 
@@ -89,7 +87,7 @@ class Crosshair {
       mesh.material.map.needsUpdate = true;
     }
 
-    const m = this.cam.getZoomedMatrix();
+    const m = getZoomedMatrix(Store.getState().flycam3d);
 
     mesh.matrix.set(m[0], m[4], m[8], m[12],
                     m[1], m[5], m[9], m[13],
@@ -106,7 +104,7 @@ class Crosshair {
   }
 
 
-  setScale(value) {
+  setScale(value: number) {
     // eslint-disable-next-line no-unused-vars
     const { SCALE_MIN, SCALE_MAX, mesh } = this;
 
@@ -118,12 +116,12 @@ class Crosshair {
   }
 
 
-  attachScene(scene) {
+  attachScene(scene: THREE.Scene) {
     return scene.add(this.mesh);
   }
 
 
-  createMesh(canvas) {
+  createMesh(canvas: HTMLCanvasElement) {
     const { WIDTH } = this;
 
     const texture = new THREE.Texture(canvas);

@@ -155,7 +155,14 @@ class Controller {
 
     // Zoom step warning
     this.zoomStepWarningToast = null;
-    this.listenTo(this.model.flycam, "zoomStepChanged", this.onZoomStepChange);
+    let lastZoomStep = Store.getState().flycam3d.zoomStep;
+    Store.subscribe(() => {
+      const { zoomStep } = Store.getState().flycam3d;
+      if (lastZoomStep !== zoomStep) {
+        this.onZoomStepChange();
+        lastZoomStep = zoomStep;
+      }
+    });
     this.onZoomStepChange();
 
     app.vent.trigger("webknossos:ready");

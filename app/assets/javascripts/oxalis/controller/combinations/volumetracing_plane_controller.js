@@ -15,6 +15,9 @@ import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import type SceneController from "oxalis/controller/scene_controller";
 import type Model, { BoundingBoxType } from "oxalis/model";
 import type View from "oxalis/view";
+import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { getViewportBoundingBox } from "oxalis/model/accessors/flycam2d_accessor";
+import { setPositionAction } from "oxalis/model/actions/flycam3d_actions";
 
 class VolumeTracingPlaneController extends PlaneController {
 
@@ -29,9 +32,6 @@ class VolumeTracingPlaneController extends PlaneController {
   constructor(model: Model, view: View, sceneController: SceneController, volumeTracingController: VolumeTracingController) {
     super(model, view, sceneController);
     this.volumeTracingController = volumeTracingController;
-
-    this.listenTo(this.model.flycam, "positionChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()));
-    this.listenTo(this.model.flycam, "zoomStepChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()));
 
     Store.subscribe(() => {
       this.render3dCell(this.model.volumeTracing.getActiveCellId());
@@ -62,9 +62,9 @@ class VolumeTracingPlaneController extends PlaneController {
     controls.leftDownMove(null, pos(100, 100));
     controls.leftMouseUp();
     await Utils.sleep(100);
-    pos = this.model.flycam.getPosition();
+    pos = _.clone(getPosition(Store.getState().flycam3d));
     pos[2]++;
-    this.model.flycam.setPosition(pos);
+    Store.dispatch(setPositionAction(pos));
     await Utils.sleep(100);
     await this.simulateTracing();
   };
@@ -146,20 +146,24 @@ class VolumeTracingPlaneController extends PlaneController {
       this.sceneController.removeShapes();
       return;
     }
-    const bb = this.model.flycam.getViewportBoundingBox();
+    const bb = getViewportBoundingBox(Store.getState());
     const res = Store.getState().userConfiguration.isosurfaceResolution;
     this.sceneController.showShapes(this.scaleIsosurfaceBB(bb), res, id);
   }
 
   scaleIsosurfaceBB(bb: BoundingBoxType): BoundingBoxType {
     const factor = Store.getState().userConfiguration.isosurfaceBBsize;
+    const result = {
+      min: [0, 0, 0],
+      max: [0, 0, 0],
+    };
     for (let i = 0; i <= 2; i++) {
       const width = bb.max[i] - bb.min[i];
       const diff = ((factor - 1) * width) / 2;
-      bb.min[i] -= diff;
-      bb.max[i] += diff;
+      result.min[i] = bb.min[i] - diff;
+      result.max[i] = bb.max[i] + diff;
     }
-    return bb;
+    return result;
   }
 }
 

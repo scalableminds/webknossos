@@ -11,6 +11,7 @@ import Model from "oxalis/model";
 import Store from "oxalis/store";
 import type { Vector3, ModeType } from "oxalis/constants";
 import constants, { ModeValues } from "oxalis/constants";
+import { getRotation, getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 
 type State = {
   position?: Vector3,
@@ -80,8 +81,6 @@ class UrlManager {
 
 
   startUrlUpdater(): void {
-    this.listenTo(this.model.flycam, "changed", this.update);
-    this.listenTo(this.model.flycam3d, "changed", this.update);
     this.listenTo(this.model, "change:mode", this.update);
 
     if (Store.getState().skeletonTracing) {
@@ -91,16 +90,15 @@ class UrlManager {
 
 
   buildUrl(): string {
-    const { flycam, flycam3d } = this.model;
-    let state = V3.floor(flycam.getPosition());
+    let state = V3.floor(getPosition(Store.getState().flycam3d));
     state.push(this.model.mode);
 
     if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
       state = state
-        .concat([flycam3d.getZoomStep().toFixed(2)])
-        .concat(flycam3d.getRotation().map(e => e.toFixed(2)));
+        .concat([Store.getState().flycam3d.zoomStep.toFixed(2)])
+        .concat(getRotation(Store.getState().flycam3d).map(e => e.toFixed(2)));
     } else {
-      state = state.concat([flycam.getZoomStep().toFixed(2)]);
+      state = state.concat([Store.getState().flycam3d.zoomStep.toFixed(2)]);
     }
 
     if (Store.getState().skeletonTracing.activeNodeId != null) {

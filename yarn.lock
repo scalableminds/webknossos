@@ -484,6 +484,10 @@ babel-helper-hoist-variables@^6.22.0:
     babel-runtime "^6.22.0"
     babel-types "^6.22.0"
 
+babel-helper-is-react-class@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/babel-helper-is-react-class/-/babel-helper-is-react-class-1.0.0.tgz#ef6f3678b05c76dbdeedadead7af98c2724d8431"
+
 babel-helper-optimise-call-expression@^6.23.0:
   version "6.23.0"
   resolved "https://registry.yarnpkg.com/babel-helper-optimise-call-expression/-/babel-helper-optimise-call-expression-6.23.0.tgz#f3ee7eed355b4282138b33d02b78369e470622f5"
@@ -870,9 +874,21 @@ babel-plugin-transform-object-rest-spread@^6.22.0:
     babel-plugin-syntax-object-rest-spread "^6.8.0"
     babel-runtime "^6.22.0"
 
+babel-plugin-transform-react-constant-elements@^6.5.0:
+  version "6.23.0"
+  resolved "https://registry.yarnpkg.com/babel-plugin-transform-react-constant-elements/-/babel-plugin-transform-react-constant-elements-6.23.0.tgz#2f119bf4d2cdd45eb9baaae574053c604f6147dd"
+  dependencies:
+    babel-runtime "^6.22.0"
+
 babel-plugin-transform-react-display-name@^6.23.0:
   version "6.23.0"
   resolved "https://registry.yarnpkg.com/babel-plugin-transform-react-display-name/-/babel-plugin-transform-react-display-name-6.23.0.tgz#4398910c358441dc4cef18787264d0412ed36b37"
+  dependencies:
+    babel-runtime "^6.22.0"
+
+babel-plugin-transform-react-inline-elements@^6.6.5:
+  version "6.22.0"
+  resolved "https://registry.yarnpkg.com/babel-plugin-transform-react-inline-elements/-/babel-plugin-transform-react-inline-elements-6.22.0.tgz#6687211a32b49a52f22c573a2b5504a25ef17c53"
   dependencies:
     babel-runtime "^6.22.0"
 
@@ -897,6 +913,16 @@ babel-plugin-transform-react-jsx@^6.23.0:
     babel-helper-builder-react-jsx "^6.23.0"
     babel-plugin-syntax-jsx "^6.8.0"
     babel-runtime "^6.22.0"
+
+babel-plugin-transform-react-pure-class-to-function@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/babel-plugin-transform-react-pure-class-to-function/-/babel-plugin-transform-react-pure-class-to-function-1.0.1.tgz#32a649c97d653250b419cfd1489331b0290d9ee4"
+  dependencies:
+    babel-helper-is-react-class "^1.0.0"
+
+babel-plugin-transform-react-remove-prop-types@^0.2.5:
+  version "0.2.12"
+  resolved "https://registry.yarnpkg.com/babel-plugin-transform-react-remove-prop-types/-/babel-plugin-transform-react-remove-prop-types-0.2.12.tgz#3406696df0b8b456089f9d726d27e7e123d2f929"
 
 babel-plugin-transform-regenerator@^6.22.0, babel-plugin-transform-regenerator@^6.6.0:
   version "6.22.0"
@@ -988,6 +1014,15 @@ babel-preset-flow@^6.23.0:
   resolved "https://registry.yarnpkg.com/babel-preset-flow/-/babel-preset-flow-6.23.0.tgz#e71218887085ae9a24b5be4169affb599816c49d"
   dependencies:
     babel-plugin-transform-flow-strip-types "^6.22.0"
+
+babel-preset-react-optimize@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/babel-preset-react-optimize/-/babel-preset-react-optimize-1.0.1.tgz#c23509fba7cbc76d7de7050e7d26bcd22bc304e8"
+  dependencies:
+    babel-plugin-transform-react-constant-elements "^6.5.0"
+    babel-plugin-transform-react-inline-elements "^6.6.5"
+    babel-plugin-transform-react-pure-class-to-function "^1.0.1"
+    babel-plugin-transform-react-remove-prop-types "^0.2.5"
 
 babel-preset-react@^6.16.0, babel-preset-react@^6.5.0:
   version "6.23.0"
@@ -1884,6 +1919,10 @@ debug@^2.0.0, debug@^2.1.1, debug@^2.2.0:
 decamelize@^1.0.0, decamelize@^1.1.1, decamelize@^1.1.2:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/decamelize/-/decamelize-1.2.0.tgz#f6534d15148269b20352e7bee26f501f9a191290"
+
+deep-diff@0.3.4:
+  version "0.3.4"
+  resolved "https://registry.yarnpkg.com/deep-diff/-/deep-diff-0.3.4.tgz#aac5c39952236abe5f037a2349060ba01b00ae48"
 
 deep-extend@~0.4.0:
   version "0.4.1"
@@ -5145,6 +5184,12 @@ reduce-function-call@^1.0.1:
   resolved "https://registry.yarnpkg.com/reduce-function-call/-/reduce-function-call-1.0.2.tgz#5a200bf92e0e37751752fe45b0ab330fd4b6be99"
   dependencies:
     balanced-match "^0.4.2"
+
+redux-logger@^2.8.2:
+  version "2.8.2"
+  resolved "https://registry.yarnpkg.com/redux-logger/-/redux-logger-2.8.2.tgz#52140a89afa1c1d25312cc17649c116650bf7fca"
+  dependencies:
+    deep-diff "0.3.4"
 
 redux-saga@^0.14.3:
   version "0.14.3"

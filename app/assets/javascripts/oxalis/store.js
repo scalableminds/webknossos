@@ -7,14 +7,15 @@
 
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
+import createLogger from "redux-logger";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
-import { M4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import Flycam3DReducer from "oxalis/model/reducers/flycam3d_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import timestampMiddleware from "oxalis/model/helpers/timestamp_middleware";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
@@ -293,22 +294,31 @@ const defaultState: OxalisState = {
   },
   flycam3d: {
     zoomStep: 1.3,
-    currentMatrix: M4x4.identity,
+    currentMatrix: [
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1,
+    ],
     spaceDirectionOrtho: [1, 1, 1],
   },
 };
 
 const sagaMiddleware = createSagaMiddleware();
+const loggerMiddleware = createLogger({ collapsed: true });
 const combinedReducers = reduceReducers(
   SettingsReducer,
   SkeletonTracingReducer,
   TaskReducer,
   SaveReducer,
+  Flycam3DReducer,
 );
 
-const store = createStore(combinedReducers, defaultState, applyMiddleware(timestampMiddleware, sagaMiddleware));
+const store = createStore(combinedReducers, defaultState, applyMiddleware(
+  timestampMiddleware,
+  sagaMiddleware,
+  // loggerMiddleware,
+));
 sagaMiddleware.run(rootSaga);
-
-// window.store = store;
 
 export default store;

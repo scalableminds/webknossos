@@ -6,7 +6,7 @@
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
-import Store from "oxalis/store";
+import Store from "oxalis/throttled_store";
 import Model from "oxalis/model";
 import { OrthoViews } from "oxalis/constants";
 import TreeGeometry from "oxalis/geometries/tree_geometry";

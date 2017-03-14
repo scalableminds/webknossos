@@ -9,6 +9,7 @@ import Store from "oxalis/store";
 import scaleInfo from "oxalis/model/scaleinfo";
 import constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
 
 class DatasetInfoView extends Marionette.View {
   static initClass() {
@@ -55,13 +56,11 @@ class DatasetInfoView extends Marionette.View {
     };
   }
 
+  _unsubscribe = _.noop;
 
   initialize() {
-    this.listenTo(this.model.flycam3d, "changed", this.render);
-    this.listenTo(this.model.flycam, "zoomStepChanged", this.render);
-
     if (Store.getState().skeletonTracing) {
-      Store.subscribe(() => this.render());
+      this._unsubscribe = Store.subscribe(() => this.render());
     }
   }
 
@@ -102,10 +101,10 @@ class DatasetInfoView extends Marionette.View {
     let width;
     let zoom;
     if (constants.MODES_PLANE.includes(this.model.mode)) {
-      zoom = this.model.flycam.getPlaneScalingFactor();
+      zoom = getPlaneScalingFactor(Store.getState().flycam3d);
       width = constants.PLANE_WIDTH;
     } else if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
-      zoom = this.model.flycam3d.zoomStep;
+      zoom = Store.getState().flycam3d.zoomStep;
       width = ArbitraryController.prototype.WIDTH;
     } else {
       throw Error("Model mode not recognized:", this.model.mode);
@@ -117,8 +116,7 @@ class DatasetInfoView extends Marionette.View {
 
 
   onDestroy() {
-    this.model.flycam3d.off("changed");
-    this.model.flycam.off("zoomStepChanged");
+    this._unsubscribe();
   }
 }
 DatasetInfoView.initClass();

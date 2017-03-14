@@ -10,14 +10,14 @@ import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType
 import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
+import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam3d_actions";
 import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import scaleInfo from "oxalis/model/scaleinfo";
-import Flycam2d from "oxalis/model/flycam2d";
-import Flycam3d from "oxalis/model/flycam3d";
+import { getIntegerZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
 import constants, { Vector3Indicies } from "oxalis/constants";
 import type { ModeType, Vector3, Vector6 } from "oxalis/constants";
 import Request from "libs/request";
@@ -46,6 +46,7 @@ export type SkeletonContentDataType = {
 
 export type VolumeContentDataType = {
   activeCell: null | number;
+  nextCell?: number,
   customLayers: Array<Object>;
   maxCoordinates: BoundingBoxObjectType;
   customLayers: ?Array<Object>;
@@ -95,8 +96,6 @@ class Model extends Backbone.Model {
   annotationModel: VolumeTracing;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  flycam: Flycam2d;
-  flycam3d: Flycam3d;
   volumeTracing: VolumeTracing;
   mode: ModeType;
   allowedModes: Array<ModeType>;
@@ -226,18 +225,11 @@ class Model extends Backbone.Model {
       throw this.HANDLED_ERROR;
     }
 
-    const flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, this);
-    const flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.scale);
-    this.set("flycam", flycam);
-    this.set("flycam3d", flycam3d);
-    this.listenTo(flycam3d, "changed", matrix => flycam.setPosition(matrix.slice(12, 15)));
-    this.listenTo(flycam, "positionChanged", position => flycam3d.setPositionSilent(position));
-
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
       if (isVolumeTracing) {
         ErrorHandling.assert((this.getSegmentationBinary() != null),
           "Volume is allowed, but segmentation does not exist");
-        this.set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, this.getSegmentationBinary()));
+        this.set("volumeTracing", new VolumeTracing(tracing, this.getSegmentationBinary()));
         this.annotationModel = this.get("volumeTracing");
       } else {
         Store.dispatch(initializeSkeletonTracingAction(tracing));
@@ -343,7 +335,7 @@ class Model extends Backbone.Model {
 
 
   canDisplaySegmentationData(): boolean {
-    return !(this.flycam.getIntegerZoomStep() > 0) || !this.getSegmentationBinary();
+    return !(getIntegerZoomStep(Store.getState()) > 0) || !this.getSegmentationBinary();
   }
 
 
@@ -403,17 +395,17 @@ class Model extends Backbone.Model {
 
 
   applyState(state, tracing) {
-    this.get("flycam").setPosition(state.position || tracing.content.editPosition);
+    Store.dispatch(setPositionAction(state.position || tracing.content.editPosition));
     if (state.zoomStep != null) {
       _.defer(() => {
         Store.dispatch(updateUserSettingAction("zoom", Math.exp(Math.LN2 * state.zoomStep)));
       });
-      this.get("flycam3d").setZoomStep(state.zoomStep);
+      Store.dispatch(setZoomStepAction(state.zoomStep));
     }
 
     const rotation = state.rotation || tracing.content.editRotation;
     if (rotation != null) {
-      this.get("flycam3d").setRotation(rotation);
+      Store.dispatch(setRotationAction(rotation));
     }
 
     if (state.activeNode != null) {

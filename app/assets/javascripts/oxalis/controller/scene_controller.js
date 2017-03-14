@@ -8,7 +8,8 @@ import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 import * as THREE from "three";
-import Flycam2d from "oxalis/model/flycam2d";
+import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import scaleInfo from "oxalis/model/scaleinfo";
@@ -26,7 +27,6 @@ import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 class SceneController {
   skeleton: Skeleton;
   CUBE_COLOR: number;
-  flycam: Flycam2d;
   model: Model;
   current: number;
   displayPlane: OrthoViewMapType<boolean>;
@@ -54,7 +54,6 @@ class SceneController {
 
   constructor(model: Model) {
     _.extend(this, Backbone.Events);
-    this.flycam = model.flycam;
     this.model = model;
 
     this.current = 0;
@@ -95,7 +94,7 @@ class SceneController {
     }
 
     if (this.model.volumeTracing != null) {
-      this.contour = new ContourGeometry(this.model.volumeTracing, this.model.flycam);
+      this.contour = new ContourGeometry(this.model.volumeTracing);
     }
 
     if (Store.getState().skeletonTracing != null) {
@@ -104,7 +103,7 @@ class SceneController {
 
     // create Meshes
     const createPlane = planeIndex =>
-      new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, this.flycam, planeIndex, this.model);
+      new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, planeIndex, this.model);
 
     this.planes = {
       [OrthoViews.PLANE_XY]: createPlane(OrthoViews.PLANE_XY),
@@ -178,7 +177,7 @@ class SceneController {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(true);
-          pos = this.flycam.getPosition().slice();
+          pos = _.clone(getPosition(Store.getState().flycam3d));
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] += planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
@@ -192,7 +191,7 @@ class SceneController {
         mesh.visible = true;
       }
       for (const planeId of OrthoViewValuesWithoutTDView) {
-        pos = this.flycam.getPosition();
+        pos = getPosition(Store.getState().flycam3d);
         this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(true);
@@ -203,9 +202,9 @@ class SceneController {
 
 
   update = (): void => {
-    const gPos = this.flycam.getPosition();
+    const gPos = getPosition(Store.getState().flycam3d);
     const globalPosVec = new THREE.Vector3(...gPos);
-    const planeScale = this.flycam.getPlaneScalingFactor();
+    const planeScale = getPlaneScalingFactor(Store.getState().flycam3d);
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.planes[planeId].updateTexture();
       // Update plane position

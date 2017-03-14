@@ -16,6 +16,7 @@
       "modules": false,
     }],
     "react",
+    /*"react-optimize",*/
   ],
   plugins: [
     "transform-async-to-generator",

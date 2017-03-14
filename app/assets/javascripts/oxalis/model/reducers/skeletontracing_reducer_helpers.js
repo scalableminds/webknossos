@@ -63,7 +63,7 @@ export function createNode(state: OxalisState, position: Vector3, rotation: Vect
       resolution,
       id: nextNewId,
       timestamp,
-      bitdepth: 8, // datasetConfig.fourBit ? 4 : 8,
+      bitDepth: 8, // datasetConfig.fourBit ? 4 : 8,
       interpolation: true, // datasetConfig.interpolation,
     };
 

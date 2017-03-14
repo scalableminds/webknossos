@@ -34,7 +34,7 @@ export type NodeType = {
   id: number,
   position: Vector3,
   rotation: Vector3,
-  bitdepth: number,
+  bitDepth: number,
   viewport: number,
   resolution: number,
   radius: number,

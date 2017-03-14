@@ -176,7 +176,7 @@ describe("SkeletonTracing", () => {
   it("should delete nodes and split the tree", () => {
     const createDummyNode = (id) => {
       return {
-        bitdepth: 8,
+        bitDepth: 8,
         id,
         position: [0, 0, 0],
         radius: 10,

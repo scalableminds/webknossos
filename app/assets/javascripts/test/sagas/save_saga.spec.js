@@ -1,12 +1,11 @@
 // @flow
 import mockRequire from "mock-require";
-mockRequire.stopAll();
-
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
 import * as SaveActions from "oxalis/model/actions/save_actions";
 import { take, call } from "redux-saga/effects";
 import Request from "libs/request";
 
+mockRequire.stopAll();
 const { alert } = mockRequire.reRequire("libs/window");
 const { compactUpdateActions, pushAnnotationAsync } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
 

@@ -16,7 +16,8 @@ describe("Save", () => {
     save: {
       isBusy: false,
       queue: [],
-    }
+      lastSaveTimestamp: 0,
+    },
   };
 
   it("should add update actions to the queue", () => {
@@ -101,5 +102,4 @@ describe("Save", () => {
 
     expect(newState.save.queue).toEqual([]);
   });
-
 });

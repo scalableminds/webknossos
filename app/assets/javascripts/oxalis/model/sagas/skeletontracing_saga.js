@@ -4,11 +4,13 @@
  */
 import app from "app";
 import { call, put, take, takeEvery, select } from "redux-saga/effects";
-import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType } from "oxalis/store";
+import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, Flycam3DType } from "oxalis/store";
 import { SkeletonTracingActions, createTreeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateTracing, moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import { Flycam3DActions } from "oxalis/model/actions/flycam3d_actions";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam3d_accessor";
 import _ from "lodash";
 import Utils from "libs/utils";
 import { V3 } from "libs/mjs";
@@ -28,13 +30,7 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
   yield takeEvery(["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE"], centerActiveNode);
 }
 
-
-export function* pushToQueue(updateActions: Array<UpdateAction>): Generator<*, *, *> {
-  yield put(pushSaveQueueAction(updateActions));
-}
-
-
-function* performDiffNodes(prevNodes: NodeMapType, nodes: NodeMapType, treeId: number): Generator<UpdateAction, void, void> {
+function* diffNodes(prevNodes: NodeMapType, nodes: NodeMapType, treeId: number): Generator<UpdateAction, void, void> {
   if (prevNodes === nodes) return;
   const { onlyA: deletedNodeIds, onlyB: addedNodeIds, both: bothNodeIds } = Utils.diffArrays(
     _.map(prevNodes, node => node.id),
@@ -62,7 +58,7 @@ function updateNodePredicate(prevNode: NodeType, node: NodeType): boolean {
   return !_.isEqual(prevNode, node);
 }
 
-function* performDiffEdges(prevEdges: Array<EdgeType>, edges: Array<EdgeType>, treeId: number): Generator<UpdateAction, void, void> {
+function* diffEdges(prevEdges: Array<EdgeType>, edges: Array<EdgeType>, treeId: number): Generator<UpdateAction, void, void> {
   if (prevEdges === edges) return;
   const { onlyA: deletedEdges, onlyB: addedEdges } = Utils.diffArrays(prevEdges, edges);
   for (const edge of deletedEdges) {
@@ -81,7 +77,7 @@ function updateTreePredicate(prevTree: TreeType, tree: TreeType): boolean {
     !_.isEqual(prevTree.timestamp, tree.timestamp);
 }
 
-function* performDiffTrees(prevTrees: TreeMapType, trees: TreeMapType): Generator<UpdateAction, void, void> {
+export function* diffTrees(prevTrees: TreeMapType, trees: TreeMapType): Generator<UpdateAction, void, void> {
   if (prevTrees === trees) return;
   const { onlyA: deletedTreeIds, onlyB: addedTreeIds, both: bothTreeIds } = Utils.diffArrays(
     _.map(prevTrees, tree => tree.treeId),
@@ -89,22 +85,22 @@ function* performDiffTrees(prevTrees: TreeMapType, trees: TreeMapType): Generato
   );
   for (const treeId of deletedTreeIds) {
     const prevTree = prevTrees[treeId];
-    yield* performDiffNodes(prevTree.nodes, {}, treeId);
-    yield* performDiffEdges(prevTree.edges, [], treeId);
+    yield* diffNodes(prevTree.nodes, {}, treeId);
+    yield* diffEdges(prevTree.edges, [], treeId);
     yield deleteTree(treeId);
   }
   for (const treeId of addedTreeIds) {
     const tree = trees[treeId];
     yield createTree(tree);
-    yield* performDiffNodes({}, tree.nodes, treeId);
-    yield* performDiffEdges([], tree.edges, treeId);
+    yield* diffNodes({}, tree.nodes, treeId);
+    yield* diffEdges([], tree.edges, treeId);
   }
   for (const treeId of bothTreeIds) {
     const tree = trees[treeId];
     const prevTree = prevTrees[treeId];
     if (tree !== prevTree) {
-      yield* performDiffNodes(prevTree.nodes, tree.nodes, treeId);
-      yield* performDiffEdges(prevTree.edges, tree.edges, treeId);
+      yield* diffNodes(prevTree.nodes, tree.nodes, treeId);
+      yield* diffEdges(prevTree.edges, tree.edges, treeId);
       if (updateTreePredicate(prevTree, tree)) {
         yield updateTree(tree);
       }
@@ -112,19 +108,28 @@ function* performDiffTrees(prevTrees: TreeMapType, trees: TreeMapType): Generato
   }
 }
 
-function* pushUpdateTracing(skeletonTracing: SkeletonTracingType) {
-  yield call(pushToQueue, [updateTracing(skeletonTracing,
-    yield select(() => V3.floor(window.webknossos.model.flycam.getPosition())),
-    yield select(() => window.webknossos.model.flycam3d.getRotation()),
-    yield select(() => window.webknossos.model.flycam.getZoomStep()),
-  )]);
+export function* diffTracing(
+  prevSkeletonTracing: SkeletonTracingType,
+  skeletonTracing: SkeletonTracingType,
+  flycam3d: Flycam3DType,
+): Generator<UpdateAction, *, *> {
+  if (prevSkeletonTracing !== skeletonTracing) {
+    yield* diffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
+  }
+  yield updateTracing(
+    skeletonTracing,
+    V3.floor(getPosition(flycam3d)),
+    getRotation(flycam3d),
+    flycam3d.zoomStep,
+  );
 }
 
-function* performDiffTracing(prevSkeletonTracing: SkeletonTracingType, skeletonTracing: SkeletonTracingType) {
-  if (prevSkeletonTracing !== skeletonTracing) {
-    yield call(pushToQueue, Array.from(performDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees)));
-    yield call(pushUpdateTracing, skeletonTracing);
-  }
+export function performDiffTracing(
+  prevSkeletonTracing: SkeletonTracingType,
+  skeletonTracing: SkeletonTracingType,
+  flycam3d: Flycam3DType,
+): Array<UpdateAction> {
+  return Array.from(diffTracing(prevSkeletonTracing, skeletonTracing, flycam3d));
 }
 
 export function* saveSkeletonTracingAsync(): Generator<*, *, *> {
@@ -135,9 +140,14 @@ export function* saveSkeletonTracingAsync(): Generator<*, *, *> {
   }
   yield take("WK_READY");
   while (true) {
-    yield take(SkeletonTracingActions);
+    yield take(SkeletonTracingActions.concat(Flycam3DActions));
     const skeletonTracing = yield select(state => state.skeletonTracing);
-    yield call(performDiffTracing, prevSkeletonTracing, skeletonTracing);
+    const flycam3d = yield select(state => state.flycam3d);
+    const items = Array.from(yield call(performDiffTracing,
+      prevSkeletonTracing, skeletonTracing, flycam3d));
+    if (items.length > 0) {
+      yield put(pushSaveQueueAction(items));
+    }
     prevSkeletonTracing = skeletonTracing;
   }
 }

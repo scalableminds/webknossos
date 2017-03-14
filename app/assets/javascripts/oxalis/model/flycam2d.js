@@ -24,19 +24,19 @@ const Flycam2dConstants = {
 
 class Flycam2d {
 
-  viewportWidth: number;
-  zoomStepCount: number;
-  model: Model;
-  maxZoomStepDiff: number;
-  zoomStep: number;
-  integerZoomStep: number;
-  buffer: OrthoViewMapType<Vector2>;
-  position: Vector3;
-  direction: Vector3;
-  rayThreshold: Vector4;
-  spaceDirection: Vector3;
-  quality: number;
-  voxelPerPixel3DView: number;
+  viewportWidth: number; // constant
+  zoomStepCount: number; // computable from datasetLayers
+  model: Model; // unused
+  maxZoomStepDiff: number; // Computed
+  zoomStep: number; // Same as flycam3d.zoomStep
+  integerZoomStep: number; // Computed
+  buffer: OrthoViewMapType<Vector2>; // Computed
+  position: Vector3; // Same as flycam3d.position
+  direction: Vector3; // new -> directionOrtho
+  rayThreshold: Vector4; // unused
+  spaceDirection: Vector3; // new -> spaceDirectionOrtho
+  quality: number; // state.datasetConfiguration.quality
+  voxelPerPixel3DView: number; // only used here
 
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
@@ -87,7 +87,7 @@ class Flycam2d {
     };
   }
 
-
+  // pure
   calculateMaxZoomStepDiff(): number {
     // Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
 
@@ -98,12 +98,12 @@ class Flycam2d {
     return Math.log(zoomThreshold) / Math.LN2;
   }
 
-
+  // dispatch: ZOOM_BY_DELTA
   zoomByDelta(delta: number): void {
     this.zoom(this.zoomStep - (delta * constants.ZOOM_DIFF));
   }
 
-
+  // dispatch: SET_ZOOM_STEP
   zoom(zoom: number): void {
     // Make sure the max. zoom Step will not be exceded
     if (zoom < this.zoomStepCount + this.maxZoomStepDiff) {
@@ -111,7 +111,7 @@ class Flycam2d {
     }
   }
 
-
+  // drop
   setQuality(value: number): void {
     // Set offset to the best-possible zoom step
 
@@ -120,7 +120,7 @@ class Flycam2d {
     this.update();
   }
 
-
+  // pure
   calculateIntegerZoomStep(): void {
     // round, because Model expects Integer
     this.integerZoomStep = Math.ceil((this.zoomStep - this.maxZoomStepDiff) + this.quality);
@@ -128,12 +128,12 @@ class Flycam2d {
     this.integerZoomStep = Math.max(this.integerZoomStep, 0);
   }
 
-
+  // state.flycam3d.zoomStep
   getZoomStep(): number {
     return this.zoomStep;
   }
 
-
+  // dispatch
   setZoomStep(zoomStep: number): void {
     this.zoomStep = zoomStep;
     this.update();
@@ -141,13 +141,13 @@ class Flycam2d {
     this.trigger("zoomStepChanged", zoomStep);
   }
 
-
+  // pure
   getMaxZoomStep(): number {
     const maxZoomStep = this.zoomStepCount - 1;
     return Math.pow(2, maxZoomStep + this.maxZoomStepDiff);
   }
 
-
+  // pure
   calculateBuffer(): void {
     let pixelNeeded;
     let scaleArray;
@@ -161,13 +161,14 @@ class Flycam2d {
     }
   }
 
-
+  // drop
   updateStoredValues(): void {
     this.calculateIntegerZoomStep();
     this.calculateBuffer();
   }
 
 
+  // pure
   getIntegerZoomStep(): number {
     if (!this.integerZoomStep) {
       this.calculateIntegerZoomStep();
@@ -177,21 +178,23 @@ class Flycam2d {
   }
 
 
+  // pure
   getTextureScalingFactor(): number {
     return Math.pow(2, this.zoomStep) / Math.pow(2, this.integerZoomStep);
   }
 
-
+  // pure
   getPlaneScalingFactor(): number {
     return Math.pow(2, this.zoomStep);
   }
 
-
+  // unused
   getDirection(): Vector3 {
     return this.direction;
   }
 
 
+  // dispatch SET_ROTATION
   setDirection(direction: Vector3): void {
     this.direction = direction;
     if (Store.getState().userConfiguration.dynamicSpaceDirection) {
@@ -199,7 +202,7 @@ class Flycam2d {
     }
   }
 
-
+  // only used here
   setSpaceDirection(direction: Vector3): void {
     [0, 1, 2].forEach((index) => {
       if (direction[index] <= 0) {
@@ -210,12 +213,12 @@ class Flycam2d {
     });
   }
 
-
+  // only used here
   getSpaceDirection(): Vector3 {
     return this.spaceDirection;
   }
 
-
+  // getRotationOrtho(state.flycam3d)
   getRotation(planeID: OrthoViewType): Vector3 {
     switch (planeID) {
       case OrthoViews.PLANE_YZ: return [0, 270, 0];
@@ -225,7 +228,7 @@ class Flycam2d {
     }
   }
 
-
+  // dispatch: MOVE_FLYCAM_ORTHO
   move(p: Vector3, planeID: ?OrthoViewType): void {
     // move by whatever is stored in p
 
@@ -238,14 +241,17 @@ class Flycam2d {
   }
 
 
+  // dispatch: MOVE_FLYCAM_ORTHO
   movePlane(vector: Vector3, planeID: OrthoViewType, increaseSpeedWithZoom: boolean = true) {
     // vector of voxels in BaseVoxels
     vector = Dimensions.transDim(vector, planeID);
     const zoomFactor = increaseSpeedWithZoom ? Math.pow(2, this.zoomStep) : 1;
     const scaleFactor = scaleInfo.baseVoxelFactors;
-    const delta = [vector[0] * zoomFactor * scaleFactor[0],
+    const delta = [
+      vector[0] * zoomFactor * scaleFactor[0],
       vector[1] * zoomFactor * scaleFactor[1],
-      vector[2] * zoomFactor * scaleFactor[2]];
+      vector[2] * zoomFactor * scaleFactor[2],
+    ];
     this.move(delta, planeID);
   }
 
@@ -256,11 +262,13 @@ class Flycam2d {
   }
 
 
+  // getPosition(state.flycam3d)
   getPosition(): Vector3 {
     return this.position;
   }
 
 
+  // pure
   getViewportBoundingBox(): BoundingBoxType {
     const position = this.getPosition();
     const offset = (this.getPlaneScalingFactor() * this.viewportWidth) / 2;
@@ -276,6 +284,7 @@ class Flycam2d {
   }
 
 
+  // pure
   getTexturePosition(planeID: OrthoViewType): Vector3 {
     const texturePosition = _.clone(this.position);    // copy that position
     // As the Model does not render textures for exact positions, the last 5 bits of
@@ -301,13 +310,14 @@ class Flycam2d {
     this.update();
   }
 
-
+  // dispatch
   setPosition(position: Vector3): void {
     this.setPositionSilent(position);
     this.trigger("positionChanged", position);
   }
 
 
+  // unused
   needsUpdate(planeID: OrthoViewType): boolean {
     const area = this.getArea(planeID);
     // const ind = Dimensions.getIndices(planeID);
@@ -318,7 +328,7 @@ class Flycam2d {
     return res;
   }
 
-
+  // pure
   getOffsets(planeID: OrthoViewType): Vector2 {
     // return the coordinate of the upper left corner of the viewport as texture-relative coordinate
 
@@ -327,7 +337,7 @@ class Flycam2d {
       (this.buffer[planeID][1] / 2) + ((this.position[ind[1]] - this.getTexturePosition(planeID)[ind[1]]) / Math.pow(2, this.integerZoomStep))];
   }
 
-
+  // pure
   getArea(planeID: OrthoViewType): Vector4 {
     // returns [left, top, right, bottom] array
 
@@ -340,7 +350,7 @@ class Flycam2d {
     return [offsets[0], offsets[1], offsets[0] + (size * scaleArray[0]), offsets[1] + (size * scaleArray[1])];
   }
 
-
+  // pure
   getAreas(): OrthoViewMapType<Vector4> {
     return {
       [OrthoViews.PLANE_XY]: this.getArea(OrthoViews.PLANE_XY),
@@ -349,12 +359,14 @@ class Flycam2d {
     };
   }
 
-
+  // drop
   update3DViewSize(cameraRight: number, cameraLeft: number): void {
     this.voxelPerPixel3DView = (cameraRight - cameraLeft) / constants.VIEWPORT_WIDTH / scaleInfo.baseVoxel;
   }
 
 
+  // new: getRayThreshold()
+  // new: getRayThresholdTDView(cameraRight: number, cameraLeft: number)
   getRayThreshold(planeID: OrthoViewType): number {
     // Voxel threshold used for ray tracing
     if (planeID !== OrthoViews.TDView) {

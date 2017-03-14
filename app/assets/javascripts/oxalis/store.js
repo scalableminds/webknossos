@@ -9,6 +9,8 @@ import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import type { Vector3, Vector6 } from "oxalis/constants";
+import type { Matrix4x4 } from "libs/mjs";
+import { M4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
@@ -203,6 +205,12 @@ export type SaveStateType = {
   lastSaveTimestamp: number,
 };
 
+export type Flycam3DType = {
+  zoomStep: number,
+  currentMatrix: Matrix4x4,
+  spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
+}
+
 export type OxalisState = {
   datasetConfiguration: DatasetConfigurationType,
   userConfiguration: UserConfigurationType,
@@ -211,6 +219,7 @@ export type OxalisState = {
   skeletonTracing: SkeletonTracingType,
   task: ?TaskType,
   save: SaveStateType,
+  flycam3d: Flycam3DType,
 };
 
 const defaultState: OxalisState = {
@@ -281,6 +290,11 @@ const defaultState: OxalisState = {
     queue: [],
     isBusy: false,
     lastSaveTimestamp: 0,
+  },
+  flycam3d: {
+    zoomStep: 1.3,
+    currentMatrix: M4x4.identity,
+    spaceDirectionOrtho: [1, 1, 1],
   },
 };
 

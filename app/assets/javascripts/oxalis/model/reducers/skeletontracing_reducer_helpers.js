@@ -313,7 +313,7 @@ export function deleteTree(state: OxalisState, timestamp: number): Maybe<[TreeMa
       // just set the last tree to be the active one
       const maxTreeId = _.max(_.map(newTrees, "treeId"));
       newActiveTreeId = maxTreeId;
-      newActiveNodeId = _.first(Object.keys(newTrees[maxTreeId].nodes));
+      newActiveNodeId = _.first(Object.keys(newTrees[maxTreeId].nodes)) || null;
     }
 
     return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId]);

@@ -11,6 +11,7 @@ import mock from "mock-require";
 import ScaleInfo from "oxalis/model/scaleinfo";
 import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
 import { addTimestamp } from "oxalis/model/helpers/timestamp_middleware";
+import update from "immutability-helper";
 
 mock.stopAll();
 mock("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -157,7 +158,7 @@ describe("SkeletonTracing", () => {
     expect(newStateB).toEqual(newState);
   });
 
-  it("should delete a several nodes from a tree", () => {
+  it("should delete several nodes from a tree", () => {
     const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
     const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction());
 
@@ -172,8 +173,86 @@ describe("SkeletonTracing", () => {
     expect(newStateB).toEqual(initalState);
   });
 
-  it("should delete a nodes and split the tree", () => {
-    // TODO @philipp
+  it("should delete nodes and split the tree", () => {
+    const createDummyNode = (id) => {
+      return {
+        bitdepth: 8,
+        id,
+        position: [0, 0, 0],
+        radius: 10,
+        resolution: 10,
+        rotation: [0, 0, 0],
+        timestamp: 0,
+        viewport: 1,
+      };
+    }
+
+    const state = update(
+      initalState,
+      { skeletonTracing: { trees: { $set: {
+        [0]: {
+          treeId: 0,
+          name: "TestTree-0",
+          nodes: {
+            [0]: createDummyNode(0),
+            [1]: createDummyNode(1),
+            [2]: createDummyNode(2),
+            [7]: createDummyNode(7),
+          },
+          timestamp: Date.now(),
+          branchPoints: [
+            {id: 1, timestamp: 0},
+            {id: 7, timestamp: 0},
+          ],
+          edges: [
+            {source: 0, target: 1},
+            {source: 2, target: 1},
+            {source: 1, target: 7},
+          ],
+          comments: [{comment: "comment", node: 0}],
+          color: [23, 23, 23],
+        },
+        [1]: {
+          treeId: 1,
+          name: "TestTree-1",
+          nodes: {
+            [4]: createDummyNode(4),
+            [5]: createDummyNode(5),
+            [6]: createDummyNode(6),
+          },
+          timestamp: Date.now(),
+          branchPoints: [],
+          edges: [
+            {source: 4, target: 5},
+            {source: 5, target: 6},
+          ],
+          comments: [],
+          color: [30, 30, 30],
+        },
+      }}, }}
+    )
+
+
+    const setActiveNodeAction = addTimestamp(SkeletonTracingActions.setActiveNodeAction(1));
+    const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction());
+
+    // Add three nodes node, then delete the second one
+    const state0 = SkeletonTracingReducer(state, setActiveNodeAction);
+    const state1 = SkeletonTracingReducer(state0, deleteNodeAction);
+
+    const newTrees = state1.skeletonTracing.trees;
+    console.log(newTrees);
+
+    expect(Object.keys(newTrees).length).toBe(4);
+    expect(newTrees[0].nodes[0].id).toBe(0);
+    expect(newTrees[0].comments.length).toBe(1);
+    expect(newTrees[0].comments[0].node).toBe(0);
+    expect(newTrees[1].nodes[4].id).toBe(4);
+
+    expect(newTrees[2].nodes[2].id).toBe(2);
+    expect(newTrees[3].nodes[7].id).toBe(7);
+    expect(newTrees[3].branchPoints[0].id).toBe(7);
+
   });
 
   it("should set a new active node", () => {

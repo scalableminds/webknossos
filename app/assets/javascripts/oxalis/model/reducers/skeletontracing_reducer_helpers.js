@@ -97,8 +97,8 @@ export function deleteNode(skeletonTracing: SkeletonTracingType): Maybe<[TreeMap
     activeTree = update(activeTree, { nodes: { $set: _.omit(activeTree.nodes, [activeNodeId.toString()]) } });
 
     // Do we need to split trees? Are there edges leading to/from it?
-    const sourceNodeIds = activeTree.edges.reduce(edge => edge.target === activeNodeId).map(edge => edge.source);
-    const targetNodeIds = activeTree.edges.reduce(edge => edge.source === activeNodeId).map(edge => edge.target);
+    const sourceNodeIds = activeTree.edges.filter(edge => edge.target === activeNodeId).map(edge => edge.source);
+    const targetNodeIds = activeTree.edges.filter(edge => edge.source === activeNodeId).map(edge => edge.target);
     const neighborIds = sourceNodeIds.concat(targetNodeIds);
 
     if (neighborIds.length === 0) {

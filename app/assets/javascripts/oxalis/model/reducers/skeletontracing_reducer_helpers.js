@@ -156,6 +156,7 @@ export function deleteNode(state: OxalisState, timestamp: number): Maybe<[TreeMa
       // The intermediateState is used for the createTree function, which takes
       // care of generating non-colliding tree names, ids and colors
       let intermediateState = state;
+      // For each edge of the to-be-deleted node, create a new tree.
       const cutTrees = deletedEdges.map((edgeOfActiveNode, edgeIndex) => {
         let newTree;
         if (edgeIndex === 0) {
@@ -180,6 +181,7 @@ export function deleteNode(state: OxalisState, timestamp: number): Maybe<[TreeMa
           : edgeOfActiveNode.target;
 
         if (newActiveNodeId != null) {
+          // Use a neighbor of the deleted node as the new active node
           newActiveNodeId = neighborId;
         }
         traverseTree(neighborId, newTree);
@@ -204,6 +206,10 @@ export function deleteNode(state: OxalisState, timestamp: number): Maybe<[TreeMa
         });
       });
 
+      newTrees = skeletonTracing.trees;
+      cutTrees.forEach((cutTree) => {
+        newTrees = update(newTrees, { [cutTree.treeId]: { $set: cutTree } });
+      });
       // newActiveNodeId was already written to when traversing the tree. Find the
       // corresponding treeId
       const newActiveTree = findTree(newTrees, newActiveNodeId);
@@ -211,11 +217,6 @@ export function deleteNode(state: OxalisState, timestamp: number): Maybe<[TreeMa
         throw new Error("Could not find tree for active node id")
       };
       newActiveTreeId = newActiveTree.treeId;
-
-      newTrees = skeletonTracing.trees;
-      cutTrees.forEach((cutTree) => {
-        newTrees = update(newTrees, { [cutTree.treeId]: { $set: cutTree } });
-      });
     }
 
     return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId]);
@@ -312,7 +313,7 @@ export function deleteTree(state: OxalisState, timestamp: number): Maybe<[TreeMa
       // just set the last tree to be the active one
       const maxTreeId = _.max(_.map(newTrees, "treeId"));
       newActiveTreeId = maxTreeId;
-      newActiveNodeId = _.get(newTrees[maxTreeId].nodes, "nodes[0].id", null);
+      newActiveNodeId = _.first(Object.keys(newTrees[maxTreeId].nodes));
     }
 
     return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId]);

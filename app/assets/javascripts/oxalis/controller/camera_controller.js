@@ -316,7 +316,7 @@ class CameraController {
 
   updateCamViewport(): void {
     const scaleFactor = scaleInfo.baseVoxel;
-    const zoom = Store.getState().userConfiguration.zoom;
+    const zoom = Store.getState().flycam3d.zoomStep;
     const boundary = (constants.VIEWPORT_WIDTH / 2) * zoom;
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.cameras[planeId].near = -this.camDistance;

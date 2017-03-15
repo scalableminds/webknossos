@@ -256,4 +256,71 @@ describe("SkeletonTracingSaga", () => {
     expect(updateActions[0].value.id).toBe(0);
     expect(updateActions[0].value.branchPoints).toEqual([{ id: 0, timestamp: 12345678 }]);
   });
+
+  it("should emit update actions on merge tree", () => {
+    const mergeTreesAction = addTimestamp(SkeletonTracingActions.mergeTreesAction(0, 2));
+
+    // create a node in first tree, then create a second tree with three nodes and merge them
+    let testState = SkeletonTracingReducer(initialState, createNodeAction);
+    testState = SkeletonTracingReducer(testState, createTreeAction);
+    testState = SkeletonTracingReducer(testState, createNodeAction);
+    testState = SkeletonTracingReducer(testState, createNodeAction);
+    testState = SkeletonTracingReducer(testState, createNodeAction);
+    const newState = SkeletonTracingReducer(testState, mergeTreesAction);
+
+    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam3d);
+
+    expect(updateActions[0]).toEqual({ action: "deleteNode", value: { treeId: 0, id: 0 } });
+    expect(updateActions[1]).toEqual({ action: "deleteTree", value: { id: 0 } });
+    expect(updateActions[2].action).toBe("createNode");
+    expect(updateActions[2].value.id).toBe(0);
+    expect(updateActions[2].value.treeId).toBe(1);
+    expect(updateActions[3]).toEqual({
+      action: "createEdge",
+      value: { treeId: 1, source: 0, target: 2 },
+    });
+  });
+
+  it("should emit update actions on split tree", () => {
+    const mergeTreesAction = addTimestamp(SkeletonTracingActions.mergeTreesAction(0, 2));
+
+    // create a node in first tree, then create a second tree with three nodes and merge them
+    let testState = SkeletonTracingReducer(initialState, createNodeAction);
+    testState = SkeletonTracingReducer(testState, createTreeAction);
+    testState = SkeletonTracingReducer(testState, createNodeAction);
+    testState = SkeletonTracingReducer(testState, createNodeAction);
+    testState = SkeletonTracingReducer(testState, createNodeAction);
+    testState = SkeletonTracingReducer(testState, mergeTreesAction);
+    const newState = SkeletonTracingReducer(testState, deleteNodeAction);
+
+    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam3d);
+
+    expect(updateActions[0].action).toBe("createTree");
+    expect(updateActions[0].value.id).toBe(2);
+    expect(updateActions[1].action).toBe("createNode");
+    expect(updateActions[1].value.id).toBe(3);
+    expect(updateActions[1].value.treeId).toBe(2);
+    expect(updateActions[2].action).toBe("createTree");
+    expect(updateActions[2].value.id).toBe(3);
+    expect(updateActions[3].action).toBe("createNode");
+    expect(updateActions[3].value.id).toBe(0);
+    expect(updateActions[3].value.treeId).toBe(3);
+    expect(updateActions[4]).toEqual({ action: "deleteNode", value: { treeId: 1, id: 0 } });
+    expect(updateActions[5]).toEqual({ action: "deleteNode", value: { treeId: 1, id: 2 } });
+    expect(updateActions[6]).toEqual({ action: "deleteNode", value: { treeId: 1, id: 3 } });
+    expect(updateActions[7]).toEqual({
+      action: "deleteEdge",
+      value: { treeId: 1, source: 1, target: 2 },
+    });
+    expect(updateActions[8]).toEqual({
+      action: "deleteEdge",
+      value: { treeId: 1, source: 2, target: 3 },
+    });
+    expect(updateActions[9]).toEqual({
+      action: "deleteEdge",
+      value: { treeId: 1, source: 0, target: 2 },
+    });
+    expect(updateActions[10].action).toBe("updateTree");
+    expect(updateActions[10].value.id).toBe(1);
+  });
 });

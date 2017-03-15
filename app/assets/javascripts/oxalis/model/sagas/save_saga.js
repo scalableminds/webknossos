@@ -29,13 +29,14 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
     }
     yield put(setSaveBusyAction(true));
     while (yield select(state => state.save.queue.length > 0)) {
-      const batch = compactUpdateActions(yield select(state => state.save.queue));
+      const batch = yield select(state => state.save.queue);
+      const compactBatch = compactUpdateActions(batch);
       const { version, tracingType, id: tracingId } = yield select(state => state.skeletonTracing);
       try {
         yield call(Request.sendJSONReceiveJSON,
           `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {
             method: "PUT",
-            data: batch,
+            data: compactBatch,
           });
         yield put(setVersionNumber(version + 1));
         yield put(setLastSaveTimestampAction());

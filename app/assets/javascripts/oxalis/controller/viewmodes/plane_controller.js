@@ -376,7 +376,7 @@ class PlaneController {
     if (oneSlide) {
       Store.dispatch(moveFlycamOrthoAction(
         Dimensions.transDim(
-          [0, 0, (z < 0 ? -1 : 1) << getIntegerZoomStep(Store.getState())],
+          [0, 0, (z < 0 ? -1 : 1) * Math.max(1, getIntegerZoomStep(Store.getState()))],
           activeViewport),
         activeViewport));
     } else {

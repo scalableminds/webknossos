@@ -2,7 +2,8 @@
 import mockRequire from "mock-require";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
 import * as SaveActions from "oxalis/model/actions/save_actions";
-import { take, call } from "redux-saga/effects";
+import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import { take, call, put } from "redux-saga/effects";
 import Request from "libs/request";
 
 mockRequire.stopAll();
@@ -160,5 +161,26 @@ describe("SaveSaga", () => {
           method: "PUT",
           data: updateActions,
         }));
+  });
+
+  it("should remove the correct update actions", () => {
+    const updateActions = [
+      UpdateActions.updateTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
+      UpdateActions.updateTracing(initialState, [2, 3, 4], [0, 0, 1], 2),
+    ];
+
+    const saga = pushAnnotationAsync();
+    expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
+    saga.next();
+    expectValue(saga.next()).toEqual(take("PUSH_SAVE_QUEUE"));
+    saga.next(SaveActions.pushSaveQueueAction(updateActions, false));
+    saga.next(SaveActions.saveNowAction());
+    saga.next();
+    saga.next(true);
+    saga.next(updateActions);
+    saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" });
+    expect(saga.next().value).toEqual(put(SkeletonTracingActions.setVersionNumber(3)));
+    expect(saga.next().value).toEqual(put(SaveActions.setLastSaveTimestampAction()));
+    expect(saga.next().value).toEqual(put(SaveActions.shiftSaveQueueAction(2)));
   });
 });

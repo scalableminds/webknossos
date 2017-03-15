@@ -21,7 +21,7 @@ class Skeleton {
 
   model: Model;
   isVisible: boolean;
-  treeGeometries: {[id:number]: TreeGeometry};
+  treeGeometryCache: {[id:number]: TreeGeometry};
   showInactiveTrees: boolean;
 
 
@@ -29,7 +29,7 @@ class Skeleton {
     this.model = model;
     _.extend(this, Backbone.Events);
 
-    this.treeGeometries = {};
+    this.treeGeometryCache = {};
     this.isVisible = true;
 
     this.showInactiveTrees = true;
@@ -45,14 +45,30 @@ class Skeleton {
   createNewTree(treeId, treeColor): TreeGeometry {
     const tree = new TreeGeometry(treeId, treeColor, this.model);
     tree.showRadius(!Store.getState().userConfiguration.overrideNodeRadius);
-    this.treeGeometries[treeId] = tree;
+    this.treeGeometryCache[treeId] = tree;
     this.trigger("newGeometries", tree.getMeshes());
 
     return tree;
   }
 
+  evictFromCache = _.throttle(() => {
+    const treeIds = Object.keys(Store.getState().skeletonTracing.trees);
+
+    // actually free the buffers etc. from the GPU
+    Object.values(_.omit(this.treeGeometryCache, treeIds)).map((treeGeometry) => {
+      this.trigger("removeGeometries", treeGeometry.getMeshes());
+      treeGeometry.dispose();
+    });
+
+    // remove geometry from cache
+    this.treeGeometryCache = _.pick(this.treeGeometryCache, treeIds);
+  }, 500)
+
   reset() {
     const trees = _.values(Store.getState().skeletonTracing.trees);
+
+    // periodically evict unused tree geometries left over after tree deletion/splitting
+    this.evictFromCache();
 
     for (const tree of trees) {
       let treeGeometry = this.getTreeGeometry(tree.treeId);
@@ -70,7 +86,7 @@ class Skeleton {
 
   getMeshes = () => {
     let meshes = [];
-    for (const tree of _.values(this.treeGeometries)) {
+    for (const tree of _.values(this.treeGeometryCache)) {
       meshes = meshes.concat(tree.getMeshes());
     }
     return meshes;
@@ -80,7 +96,7 @@ class Skeleton {
     if (!treeId) {
       treeId = Store.getState().skeletonTracing.activeTreeId;
     }
-    return this.treeGeometries[treeId];
+    return this.treeGeometryCache[treeId];
   }
 
 
@@ -113,7 +129,7 @@ class Skeleton {
 
 
   updateForCam(id) {
-    for (const tree of _.values(this.treeGeometries)) {
+    for (const tree of _.values(this.treeGeometryCache)) {
       tree.showRadius(id !== OrthoViews.TDView && !Store.getState().userConfiguration.overrideNodeRadius);
     }
 
@@ -141,11 +157,11 @@ class Skeleton {
   }
 
   getAllNodes() {
-    return _.map(this.treeGeometries, tree => tree.nodes);
+    return _.map(this.treeGeometryCache, tree => tree.nodes);
   }
 
   setSizeAttenuation(sizeAttenuation) {
-    return _.map(this.treeGeometries, tree =>
+    return _.map(this.treeGeometryCache, tree =>
       tree.setSizeAttenuation(sizeAttenuation));
   }
 }

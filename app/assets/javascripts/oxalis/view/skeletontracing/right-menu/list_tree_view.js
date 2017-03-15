@@ -160,10 +160,15 @@ class ListTreeView extends Marionette.CompositeView {
 
   refresh = _.throttle(() => {
     const trees = _.values(Store.getState().skeletonTracing.trees);
+
+    if (_.isEqual(trees, this.collection.toJSON())) {
+      return;
+    }
+
     this.collection.reset(trees);
 
     this.updateName();
-  }, 200);
+  }, 500);
 
 
   updateName() {

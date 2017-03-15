@@ -189,7 +189,6 @@ export type UserConfigurationType = {
   sortTreesByName: boolean,
   sphericalCapRadius: number,
   tdViewDisplayPlanes: boolean,
-  zoom: number,
 };
 
 export type TemporaryConfigurationType = {
@@ -260,7 +259,6 @@ const defaultState: OxalisState = {
     sortTreesByName: false,
     sphericalCapRadius: 140,
     tdViewDisplayPlanes: true,
-    zoom: 1,
   },
   temporaryConfiguration: {
     boundingBox: [0, 0, 0, 0, 0, 0],

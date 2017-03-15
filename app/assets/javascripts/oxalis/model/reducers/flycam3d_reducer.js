@@ -4,19 +4,17 @@ import type { OxalisState } from "oxalis/store";
 import type { Flycam3DActionType } from "oxalis/model/actions/flycam3d_actions";
 import type { SettingActionType } from "oxalis/model/actions/settings_actions";
 import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
-import { maxZoomStepDiff, getZoomStepCount } from "oxalis/model/accessors/flycam2d_accessor";
+import { getMaxZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo2";
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";
-import constants from "oxalis/constants";
 import Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 import _ from "lodash";
 
 const ZOOM_STEP_INTERVAL = 1.1;
-const ZOOM_STEP_MIN = 0.5;
-// const ZOOM_STEP_MAX = 5;
+const ZOOM_STEP_MIN = 0.1;
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -91,7 +89,7 @@ function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
 
 function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
   return update(state, { flycam3d: {
-    zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getZoomStepCount(state) + maxZoomStepDiff) },
+    zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getMaxZoomStep(state)) },
   } });
 }
 
@@ -110,7 +108,7 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
       return zoomReducer(state, state.flycam3d.zoomStep * ZOOM_STEP_INTERVAL);
 
     case "ZOOM_BY_DELTA":
-      return zoomReducer(state, state.flycam3d.zoomStep - (action.zoomDelta * constants.ZOOM_DIFF));
+      return zoomReducer(state, state.flycam3d.zoomStep / Math.pow(ZOOM_STEP_INTERVAL, action.zoomDelta));
 
     case "SET_ZOOM_STEP":
       return zoomReducer(state, action.zoomStep);

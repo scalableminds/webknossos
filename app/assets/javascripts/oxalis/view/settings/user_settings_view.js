@@ -16,6 +16,7 @@ import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSet
 import type { Vector6 } from "oxalis/constants";
 import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, SkeletonTracingType } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
+import { setZoomStepAction } from "oxalis/model/actions/flycam3d_actions";
 
 const Panel = Collapse.Panel;
 
@@ -23,12 +24,14 @@ type UserSettingsViewProps = {
   userConfiguration: UserConfigurationType,
   temporaryConfiguration: TemporaryConfigurationType,
   skeletonTracing: SkeletonTracingType,
+  zoomStep: number,
   state: OxalisState,
   onChangeUser: (key: $Keys<UserConfigurationType>, value: any) => void,
   onChangeTemporary: (key: $Keys<TemporaryConfigurationType>, value: any) => void,
   onChangeActiveNodeId: (value: number) => void,
   onChangeActiveTreeId: (value: number) => void,
   onChangeRadius: (value: number) => void,
+  onChangeZoomStep: (value: number) => void,
   oldModel: Model,
   isPublicViewMode: boolean,
 };
@@ -102,7 +105,7 @@ class UserSettingsView extends Component {
       case Constants.MODE_PLANE_TRACING:
         return (
           <Panel header="Viewport Options" key="2">
-            <LogSliderSetting label="Zoom" min={0.1} max={getMaxZoomStep(this.props.state)} value={this.props.userConfiguration.zoom} onChange={this.onChangeUser.zoom} />
+            <LogSliderSetting label="Zoom" min={0.1} max={getMaxZoomStep(this.props.state)} value={this.props.zoomStep} onChange={this.props.onChangeZoomStep} />
             <NumberSliderSetting label="Viewport Scale" min={0.05} max={20} step={0.1} value={this.props.userConfiguration.scale} onChange={this.onChangeUser.scale} />
             <NumberSliderSetting label="Clipping Distance" max={12000} value={this.props.userConfiguration.clippingDistance} onChange={this.onChangeUser.clippingDistance} />
             <SwitchSetting label="Show Crosshairs" value={this.props.userConfiguration.displayCrosshair} onChange={this.onChangeUser.displayCrosshair} />
@@ -111,7 +114,7 @@ class UserSettingsView extends Component {
       case Constants.MODE_VOLUME:
         return (
           <Panel header="Viewport Options" key="2">
-            <LogSliderSetting label="Zoom" min={0.1} max={getMaxZoomStep(this.props.state)} value={this.props.userConfiguration.zoom} onChange={this.onChangeUser.zoom} />
+            <LogSliderSetting label="Zoom" min={0.1} max={getMaxZoomStep(this.props.state)} value={this.props.zoomStep} onChange={this.props.onChangeZoomStep} />
             <NumberSliderSetting label="Viewport Scale" min={0.05} max={20} step={0.1} value={this.props.userConfiguration.scale} onChange={this.onChangeUser.scale} />
             <SwitchSetting label="Show Crosshairs" value={this.props.userConfiguration.displayCrosshair} onChange={this.onChangeUser.displayCrosshair} />
           </Panel>
@@ -191,6 +194,7 @@ const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   temporaryConfiguration: state.temporaryConfiguration,
   skeletonTracing: state.skeletonTracing,
+  zoomStep: state.flycam3d.zoomStep,
   state,
 });
 
@@ -199,6 +203,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeTemporary(propertyName, value) { dispatch(updateTemporarySettingAction(propertyName, value)); },
   onChangeActiveNodeId(id: number) { dispatch(setActiveNodeAction(id)); },
   onChangeActiveTreeId(id: number) { dispatch(setActiveTreeAction(id)); },
+  onChangeZoomStep(zoomStep: number) { dispatch(setZoomStepAction(zoomStep)); },
   onChangeRadius(radius: any) {
     dispatch(updateUserSettingAction("radius", radius));
     dispatch(setActiveNodeRadiusAction(radius));

@@ -42,35 +42,23 @@ class Skeleton {
     Store.subscribe(() => this.reset());
   }
 
-  createNewTree(treeId, treeColor) {
+  createNewTree(treeId, treeColor): TreeGeometry {
     const tree = new TreeGeometry(treeId, treeColor, this.model);
     tree.showRadius(!Store.getState().userConfiguration.overrideNodeRadius);
     this.treeGeometries[treeId] = tree;
     this.trigger("newGeometries", tree.getMeshes());
+
+    return tree;
   }
 
-  // Will completely reload the trees from model.
-  // This needs to be done at initialization
   reset() {
-    for (const tree of _.values(this.treeGeometries)) {
-      this.trigger("removeGeometries", tree.getMeshes());
-      tree.dispose();
-    }
-
-    this.treeGeometries = {};
-
-    for (const tree of _.values(Store.getState().skeletonTracing.trees)) {
-      this.createNewTree(tree.treeId, tree.color);
-    }
-
-    return this.loadSkeletonFromModel();
-  }
-
-  loadSkeletonFromModel(trees) {
-    if (trees == null) { trees = _.values(Store.getState().skeletonTracing.trees); }
+    const trees = _.values(Store.getState().skeletonTracing.trees);
 
     for (const tree of trees) {
-      const treeGeometry = this.getTreeGeometry(tree.treeId);
+      let treeGeometry = this.getTreeGeometry(tree.treeId);
+      if (!treeGeometry) {
+        treeGeometry = this.createNewTree(tree.treeId, tree.color);
+      }
       treeGeometry.reset(tree.nodes, tree.edges);
 
       for (const branchpoint of tree.branchPoints) {

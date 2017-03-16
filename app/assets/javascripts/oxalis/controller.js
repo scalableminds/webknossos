@@ -111,7 +111,8 @@ class Controller {
 
     this.sceneController = new SceneController(this.model);
 
-    if (Store.getState().skeletonTracing != null) {
+    // TODO: Replace with skeletonTracing from Store (which is non-null currently)
+    if (this.model.skeletonTracing != null) {
       this.view = new SkeletonTracingView(this.model);
       this.annotationController = new SkeletonTracingController(
         this.model, this.view, this.sceneController);

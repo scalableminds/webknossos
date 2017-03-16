@@ -73,7 +73,11 @@ class DatasetActionsView extends Marionette.View {
 
   updateSavedState() {
     const { save: saveState } = store.getState();
-    if (saveState.isBusy || saveState.queue.length > 0) {
+    const stateSaved =
+      this.model.volumeTracing != null ?
+      this.model.annotationModel.stateLogger.stateSaved() :
+      !saveState.isBusy && !saveState.queue.length > 0;
+    if (!stateSaved) {
       this.ui.saveButton.text("Save");
     } else {
       this.ui.saveButton.text("Saved   ✓");
@@ -81,6 +85,10 @@ class DatasetActionsView extends Marionette.View {
   }
 
   async saveAndWait() {
+    if (this.model.volumeTracing != null) {
+      this.saveTracing();
+      return;
+    }
     store.dispatch(saveNowAction());
     let saveState = store.getState().save;
     while (saveState.isBusy || saveState.queue.length > 0) {

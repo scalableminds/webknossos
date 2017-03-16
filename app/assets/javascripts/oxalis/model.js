@@ -7,7 +7,7 @@ import Backbone from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
 import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType, TreeType } from "oxalis/store";
-import { setDatasetAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam3d_actions";
@@ -397,9 +397,6 @@ class Model extends Backbone.Model {
   applyState(state, tracing) {
     Store.dispatch(setPositionAction(state.position || tracing.content.editPosition));
     if (state.zoomStep != null) {
-      _.defer(() => {
-        Store.dispatch(updateUserSettingAction("zoom", Math.exp(Math.LN2 * state.zoomStep)));
-      });
       Store.dispatch(setZoomStepAction(state.zoomStep));
     }
 

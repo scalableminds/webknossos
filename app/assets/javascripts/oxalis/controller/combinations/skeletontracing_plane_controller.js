@@ -19,7 +19,7 @@ import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
-import { getIntegerZoomStep, getRayThreshold, getRotationOrtho } from "oxalis/model/accessors/flycam2d_accessor";
+import { getRequestLogZoomStep, getRayThreshold, getRotationOrtho } from "oxalis/model/accessors/flycam2d_accessor";
 import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam3d_actions";
 
@@ -233,7 +233,7 @@ class SkeletonTracingPlaneController extends PlaneController {
       position,
       rotation,
       OrthoViewToNumber[this.activeViewport],
-      getIntegerZoomStep(Store.getState()),
+      getRequestLogZoomStep(Store.getState()),
     ));
 
     if (centered) {

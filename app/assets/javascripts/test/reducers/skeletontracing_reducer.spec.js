@@ -174,18 +174,16 @@ describe("SkeletonTracing", () => {
   });
 
   it("should delete nodes and split the tree", () => {
-    const createDummyNode = (id) => {
-      return {
-        bitDepth: 8,
-        id,
-        position: [0, 0, 0],
-        radius: 10,
-        resolution: 10,
-        rotation: [0, 0, 0],
-        timestamp: 0,
-        viewport: 1,
-      };
-    }
+    const createDummyNode = id => ({
+      bitDepth: 8,
+      id,
+      position: [0, 0, 0],
+      radius: 10,
+      resolution: 10,
+      rotation: [0, 0, 0],
+      timestamp: 0,
+      viewport: 1,
+    });
 
     const state = update(
       initialState,
@@ -201,15 +199,15 @@ describe("SkeletonTracing", () => {
           },
           timestamp: Date.now(),
           branchPoints: [
-            {id: 1, timestamp: 0},
-            {id: 7, timestamp: 0},
+            { id: 1, timestamp: 0 },
+            { id: 7, timestamp: 0 },
           ],
           edges: [
-            {source: 0, target: 1},
-            {source: 2, target: 1},
-            {source: 1, target: 7},
+            { source: 0, target: 1 },
+            { source: 2, target: 1 },
+            { source: 1, target: 7 },
           ],
-          comments: [{comment: "comment", node: 0}],
+          comments: [{ comment: "comment", node: 0 }],
           color: [23, 23, 23],
         },
         [1]: {
@@ -223,14 +221,13 @@ describe("SkeletonTracing", () => {
           timestamp: Date.now(),
           branchPoints: [],
           edges: [
-            {source: 4, target: 5},
-            {source: 5, target: 6},
+            { source: 4, target: 5 },
+            { source: 5, target: 6 },
           ],
           comments: [],
           color: [30, 30, 30],
         },
-      }}, }}
-    )
+      } } } });
 
 
     const setActiveNodeAction = addTimestamp(SkeletonTracingActions.setActiveNodeAction(1));
@@ -241,7 +238,6 @@ describe("SkeletonTracing", () => {
     const state1 = SkeletonTracingReducer(state0, deleteNodeAction);
 
     const newTrees = state1.skeletonTracing.trees;
-    console.log(newTrees);
 
     expect(Object.keys(newTrees).length).toBe(4);
     expect(newTrees[0].nodes[0].id).toBe(0);
@@ -252,7 +248,6 @@ describe("SkeletonTracing", () => {
     expect(newTrees[2].nodes[2].id).toBe(2);
     expect(newTrees[3].nodes[7].id).toBe(7);
     expect(newTrees[3].branchPoints[0].id).toBe(7);
-
   });
 
   it("should set a new active node", () => {

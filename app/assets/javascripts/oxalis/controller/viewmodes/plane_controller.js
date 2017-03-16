@@ -17,7 +17,7 @@ import View from "oxalis/view";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
-import { getIntegerZoomStep, getAreas, getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
+import { getRequestLogZoomStep, getIntegerZoomStep, getAreas, getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
 import { movePlaneFlycamOrthoAction, moveFlycamOrthoAction, zoomByDeltaAction } from "oxalis/model/actions/flycam3d_actions";
 import scaleInfo from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
@@ -341,7 +341,7 @@ class PlaneController {
     for (const dataLayerName of Object.keys(this.model.binary)) {
       if (this.sceneController.pingDataLayer(dataLayerName)) {
         this.model.binary[dataLayerName].ping(getPosition(Store.getState().flycam3d), {
-          zoomStep: getIntegerZoomStep(Store.getState()),
+          zoomStep: getRequestLogZoomStep(Store.getState()),
           areas: getAreas(Store.getState()),
           activePlane: this.activeViewport,
         });

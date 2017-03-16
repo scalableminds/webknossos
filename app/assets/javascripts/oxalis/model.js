@@ -335,7 +335,7 @@ class Model extends Backbone.Model {
 
 
   canDisplaySegmentationData(): boolean {
-    return !(getIntegerZoomStep(Store.getState()) > 0) || !this.getSegmentationBinary();
+    return !(getIntegerZoomStep(Store.getState()) > 1) || !this.getSegmentationBinary();
   }
 
 

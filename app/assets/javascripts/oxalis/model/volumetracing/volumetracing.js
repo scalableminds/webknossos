@@ -80,7 +80,7 @@ class VolumeTracing {
     if (mode === this.mode) {
       return;
     }
-    if (mode === Constants.VOLUME_MODE_TRACE && getIntegerZoomStep(Store.getState()) > 0) {
+    if (mode === Constants.VOLUME_MODE_TRACE && getIntegerZoomStep(Store.getState()) > 1) {
       Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
       return;
     }
@@ -115,7 +115,7 @@ class VolumeTracing {
 
     if (!this.restrictionHandler.updateAllowed()) { return false; }
 
-    if ((typeof this.currentLayer !== "undefined" && this.currentLayer !== null) || getIntegerZoomStep(Store.getState()) > 0) {
+    if ((typeof this.currentLayer !== "undefined" && this.currentLayer !== null) || getIntegerZoomStep(Store.getState()) > 1) {
       return false;
     }
 

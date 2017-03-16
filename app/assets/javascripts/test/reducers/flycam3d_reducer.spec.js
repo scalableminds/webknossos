@@ -132,14 +132,14 @@ describe("Flycam3D", () => {
     const moveAction = addTimestamp(Flycam3DActions.movePlaneFlycamOrthoAction([2, 0, 0], OrthoViews.PLANE_XY, true));
     const newState = Flycam3DReducer(initialState, moveAction);
 
-    expect(getPosition(newState.flycam3d)).toEqual([8, 0, 0]);
+    expect(getPosition(newState.flycam3d)).toEqual([4, 0, 0]);
   });
 
   it("should move by plane in ortho mode (2/3)", () => {
     const moveAction = addTimestamp(Flycam3DActions.movePlaneFlycamOrthoAction([2, 2, 0], OrthoViews.PLANE_XZ, true));
     const newState = Flycam3DReducer(initialState, moveAction);
 
-    expect(getPosition(newState.flycam3d)).toEqual([8, 0, 4]);
+    expect(getPosition(newState.flycam3d)).toEqual([4, 0, 2]);
   });
 
   it("should move by plane in ortho mode (3/3)", () => {
@@ -153,6 +153,6 @@ describe("Flycam3D", () => {
     let newState = Flycam3DReducer(initialState, addTimestamp(Flycam3DActions.setRotationAction([0, 0, -2])));
     newState = Flycam3DReducer(newState, addTimestamp(Flycam3DActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true)));
 
-    equalWithEpsilon(getPosition(newState.flycam3d), [0, 0, -4]);
+    equalWithEpsilon(getPosition(newState.flycam3d), [0, 0, -2]);
   });
 });

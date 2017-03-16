@@ -7,7 +7,7 @@ import app from "app";
 import scaleInfo from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Model from "oxalis/model";
-import { getArea, getIntegerZoomStep, getTexturePosition } from "oxalis/model/accessors/flycam2d_accessor";
+import { getArea, getRequestLogZoomStep, getTexturePosition } from "oxalis/model/accessors/flycam2d_accessor";
 import Store from "oxalis/store";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";
@@ -112,7 +112,7 @@ class Plane {
         const binary = this.model.binary[name];
         const dataBuffer = binary.planes[this.planeID].get({
           position: getTexturePosition(Store.getState(), this.planeID),
-          zoomStep: getIntegerZoomStep(Store.getState()),
+          zoomStep: getRequestLogZoomStep(Store.getState()),
           area,
         });
 

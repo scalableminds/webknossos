@@ -167,7 +167,7 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
       if (dataset != null) {
         const { planeId, increaseSpeedWithZoom } = action;
         const vector = Dimensions.transDim(action.vector, planeId);
-        const zoomFactor = increaseSpeedWithZoom ? Math.pow(2, state.flycam3d.zoomStep) : 1;
+        const zoomFactor = increaseSpeedWithZoom ? state.flycam3d.zoomStep : 1;
         const scaleFactor = getBaseVoxelFactors(dataset.scale);
         const delta = [
           vector[0] * zoomFactor * scaleFactor[0],

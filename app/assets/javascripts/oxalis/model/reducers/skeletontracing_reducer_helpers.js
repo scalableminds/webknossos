@@ -109,7 +109,7 @@ export function deleteNode(state: OxalisState, timestamp: number): Maybe<[TreeMa
       // this algorithmus will only produce one tree (which reuses the old oen)
 
       // Build a hashmap which contains for each node all edges leading/leaving into/from the node
-      let nodeToEdgesMap: {[number]: Array<EdgeType>} = {};
+      const nodeToEdgesMap: {[number]: Array<EdgeType>} = {};
       activeTree.edges.forEach((edge) => {
         if (nodeToEdgesMap[edge.source]) {
           nodeToEdgesMap[edge.source].push(edge);
@@ -126,15 +126,15 @@ export function deleteNode(state: OxalisState, timestamp: number): Maybe<[TreeMa
       // Traverse from active node in all directions (i.e., use each edge) and
       // remember which edges were already visited
       const deletedEdges = nodeToEdgesMap[activeNodeId];
-      let visitedEdges = {};
-      const getEdgeHash = edge => edge.source + "-" + edge.target;
+      const visitedEdges = {};
+      const getEdgeHash = edge => `${edge.source}-${edge.target}`;
 
       // Mark edges of deleted node as visited
       deletedEdges.forEach((deletedEdge) => {
         visitedEdges[getEdgeHash(deletedEdge)] = true;
-      })
+      });
 
-      const traverseTree = function (nodeId: number, newTree: TreeType) {
+      const traverseTree = (nodeId: number, newTree: TreeType) => {
         const edges = nodeToEdgesMap[nodeId];
 
         if (nodeId !== activeNodeId) {
@@ -173,10 +173,10 @@ export function deleteNode(state: OxalisState, timestamp: number): Maybe<[TreeMa
           };
         } else {
           newTree = createTree(intermediateState, timestamp).get();
-          intermediateState = update(intermediateState, { skeletonTracing: { trees: { [newTree.treeId]: { $set: newTree }}}});
+          intermediateState = update(intermediateState, { skeletonTracing: { trees: { [newTree.treeId]: { $set: newTree } } } });
         }
 
-        const neighborId = activeNodeId != edgeOfActiveNode.source
+        const neighborId = activeNodeId !== edgeOfActiveNode.source
           ? edgeOfActiveNode.source
           : edgeOfActiveNode.target;
 
@@ -214,8 +214,8 @@ export function deleteNode(state: OxalisState, timestamp: number): Maybe<[TreeMa
       // corresponding treeId
       const newActiveTree = findTree(newTrees, newActiveNodeId);
       if (!newActiveTree) {
-        throw new Error("Could not find tree for active node id")
-      };
+        throw new Error("Could not find tree for active node id");
+      }
       newActiveTreeId = newActiveTree.treeId;
     }
 

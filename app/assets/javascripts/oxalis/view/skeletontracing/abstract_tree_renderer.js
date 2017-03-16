@@ -81,6 +81,7 @@ class AbstractTreeRenderer {
       const rootNode = this.buildNode(rootId);
       return rootNode;
     }
+    return null;
   }
 
   /**

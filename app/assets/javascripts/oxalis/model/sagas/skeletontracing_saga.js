@@ -7,7 +7,7 @@ import { call, put, take, takeEvery, select } from "redux-saga/effects";
 import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, Flycam3DType } from "oxalis/store";
 import { SkeletonTracingActions, createTreeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
-import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateTracing, moveTreeComponent } from "oxalis/model/sagas/update_actions";
+import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateTracing } from "oxalis/model/sagas/update_actions";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { Flycam3DActions } from "oxalis/model/actions/flycam3d_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam3d_accessor";

@@ -400,7 +400,6 @@ class PlaneController {
     }
 
     Store.dispatch(zoomByDeltaAction(value));
-    Store.dispatch(updateUserSettingAction("zoom", getPlaneScalingFactor(Store.getState().flycam3d)));
 
     if (zoomToMouse) {
       this.finishZoom();

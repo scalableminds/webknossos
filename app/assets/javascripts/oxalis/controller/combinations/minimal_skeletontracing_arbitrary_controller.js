@@ -13,6 +13,7 @@ import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
+import { zoomInAction, zoomOutAction, yawFlycamAction, pitchFlycamAction } from "oxalis/model/actions/flycam3d_actions";
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
@@ -38,32 +39,32 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
     this.input.keyboard = new InputKeyboard({
       space: timeFactor => this.move(timeFactor),
       // Zoom in/out
-      i: () => this.cam.zoomIn(),
-      o: () => this.cam.zoomOut(),
+      i: () => { Store.dispatch(zoomInAction()); },
+      o: () => { Store.dispatch(zoomOutAction()); },
       // Rotate in distance
       left: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        this.cam.yaw(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY);
+        Store.dispatch(yawFlycamAction(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
       },
       right: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        this.cam.yaw(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY);
+        Store.dispatch(yawFlycamAction(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
       },
       up: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        this.cam.pitch(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY);
+        Store.dispatch(pitchFlycamAction(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
       },
       down: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        this.cam.pitch(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY);
+        Store.dispatch(pitchFlycamAction(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
       },
     });
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
 
       // Branches
-      b: () => Store.dispatch(createBranchPointAction()),
-      j: () => Store.dispatch(deleteBranchPointAction()),
+      b: () => { Store.dispatch(createBranchPointAction()); },
+      j: () => { Store.dispatch(deleteBranchPointAction()); },
 
       // Branchpointvideo
       ".": () => this.nextNode(true),
@@ -73,17 +74,17 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
     this.input.keyboardOnce = new InputKeyboard({
       // Delete active node and recenter last node
-      "shift + space": () => Store.dispatch(deleteNodeAction()),
+      "shift + space": () => { Store.dispatch(deleteNodeAction()); },
     }, -1);
   }
 
   // make sure that it is not possible to keep nodes from being created
-  setWaypoint(...args): void {
+  setWaypoint(): void {
     if (this.isBranchpointvideoMode()) { return; }
     if (!this.model.get("flightmodeRecording")) {
       this.model.set("flightmodeRecording", true);
     }
-    super.setWaypoint(...args);
+    super.setWaypoint();
   }
 }
 

@@ -1,7 +1,7 @@
-import { initializeSettingsAsync, watchPushSettingsAsync } from "oxalis/model/sagas/settings_saga";
-import { initializeSettingsAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { take, call, put } from "redux-saga/effects";
-import Request from "libs/request";
+import { initializeSettingsAsync } from "oxalis/model/sagas/settings_saga";
+import { initializeSettingsAction } from "oxalis/model/actions/settings_actions";
+import { take, put } from "redux-saga/effects";
+// import Request from "libs/request";
 
 function expectValue(block) {
   expect(block.done).toBe(false);
@@ -17,11 +17,12 @@ describe("settings_sagas", () => {
     const saga = initializeSettingsAsync();
     expectValue(saga.next()).toEqual(take("SET_DATASET"));
     saga.next();
-    saga.next(datasetName);
-    // expectValue(saga.next(datasetName)).toEqual([
-    //   call(Request.receiveJSON, "/api/user/userConfiguration"),
-    //   call(Request.receiveJSON, `/api/dataSetConfigurations/${datasetName}`),
-    // ]);
+    const requestCalls = saga.next(datasetName).value;
+    expect(requestCalls.length).toBe(2);
+    expect(requestCalls[0].CALL.args).toEqual(["/api/user/userConfiguration"]);
+    // expect(requestCalls[0].CALL.fn).toEqual(Request.receiveJSON);
+    expect(requestCalls[1].CALL.args).toEqual([`/api/dataSetConfigurations/${datasetName}`]);
+    // expect(requestCalls[1].CALL.fn).toEqual(Request.receiveJSON);
     expectValue(saga.next([initialUserSettings, initialDatasetSettings]))
       .toEqual(put(initializeSettingsAction(initialUserSettings, initialDatasetSettings)));
     expect(saga.next().done);

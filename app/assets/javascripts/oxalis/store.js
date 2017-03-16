@@ -7,7 +7,6 @@
 
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
-import createLogger from "redux-logger";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -303,7 +302,6 @@ const defaultState: OxalisState = {
 };
 
 const sagaMiddleware = createSagaMiddleware();
-const loggerMiddleware = createLogger({ collapsed: true });
 const combinedReducers = reduceReducers(
   SettingsReducer,
   SkeletonTracingReducer,
@@ -315,7 +313,6 @@ const combinedReducers = reduceReducers(
 const store = createStore(combinedReducers, defaultState, applyMiddleware(
   timestampMiddleware,
   sagaMiddleware,
-  // loggerMiddleware,
 ));
 sagaMiddleware.run(rootSaga);
 

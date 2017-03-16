@@ -1,4 +1,4 @@
-declare module 'seamless-immutable' {
+declare module "seamless-immutable" {
   declare type Immutable<T: Object | Array<*>> = T & {
     // Array methods
     flatMap(fn: Function): Array<any>;

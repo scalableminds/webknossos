@@ -4,7 +4,6 @@
  */
 
 import _ from "lodash";
-import Utils from "libs/utils";
 import React, { Component } from "react";
 import TreeCommentList from "oxalis/view/skeletontracing/right-menu/comment_tab/tree_comment_list";
 import type { TreeType } from "oxalis/store";

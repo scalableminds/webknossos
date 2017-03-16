@@ -10,7 +10,6 @@ import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTre
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import type { SkeletonTracingActionTypes } from "oxalis/model/actions/skeletontracing_actions";
 import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
-import ColorGenerator from "libs/color_generator";
 
 function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<SkeletonTracingActionTypes>): OxalisState {
   const { timestamp } = action;
@@ -57,17 +56,18 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
 
       const { activeTreeId } = state.skeletonTracing;
       if (activeTreeId != null) {
-        return createNode(state, position, rotation, viewport, resolution, timestamp).map(([node, edges]) => {
-          return update(state, { skeletonTracing: {
-            trees: {
-              [activeTreeId]: {
-                nodes: { [node.id]: { $set: node } },
-                edges: { $set: edges },
+        return createNode(state, position, rotation, viewport, resolution, timestamp)
+          .map(([node, edges]) =>
+            update(state, { skeletonTracing: {
+              trees: {
+                [activeTreeId]: {
+                  nodes: { [node.id]: { $set: node } },
+                  edges: { $set: edges },
+                },
               },
-            },
-            activeNodeId: { $set: node.id },
-          } });
-        }).getOrElse(state);
+              activeNodeId: { $set: node.id },
+            } }))
+          .getOrElse(state);
       }
       return state;
     }
@@ -105,9 +105,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     case "CREATE_BRANCHPOINT": {
       const { activeTreeId } = state.skeletonTracing;
       if (activeTreeId != null) {
-        return createBranchPoint(state.skeletonTracing, timestamp).map((branchPoint) => {
-          return update(state, { skeletonTracing: { trees: { [activeTreeId]: { branchPoints: { $push: [branchPoint] } } } } });
-        }).getOrElse(state);
+        return createBranchPoint(state.skeletonTracing, timestamp)
+          .map(branchPoint =>
+            update(state, { skeletonTracing: {
+              trees: { [activeTreeId]: { branchPoints: { $push: [branchPoint] } } },
+            } }))
+          .getOrElse(state);
       }
       return state;
     }
@@ -202,9 +205,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     case "CREATE_COMMENT": {
       const { activeTreeId } = state.skeletonTracing;
       if (activeTreeId != null) {
-        return createComment(state.skeletonTracing, action.commentText).map((comments) => {
-          return update(state, { skeletonTracing: { trees: { [activeTreeId]: { comments: { $set: comments } } } } });
-        }).getOrElse(state);
+        return createComment(state.skeletonTracing, action.commentText)
+          .map(comments =>
+            update(state, { skeletonTracing: {
+              trees: { [activeTreeId]: { comments: { $set: comments } } },
+            } }))
+          .getOrElse(state);
       }
       return state;
     }
@@ -212,9 +218,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     case "DELETE_COMMENT": {
       const { activeTreeId } = state.skeletonTracing;
       if (activeTreeId != null) {
-        return deleteComment(state.skeletonTracing, action.commentText).map((comments) => {
-          return update(state, { skeletonTracing: { trees: { [activeTreeId]: { comments: { $set: comments } } } } });
-        }).getOrElse(state);
+        return deleteComment(state.skeletonTracing, action.commentText)
+          .map(comments =>
+            update(state, { skeletonTracing: {
+              trees: { [activeTreeId]: { comments: { $set: comments } } },
+            } }))
+          .getOrElse(state);
       }
       return state;
     }

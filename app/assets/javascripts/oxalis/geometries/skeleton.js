@@ -55,7 +55,7 @@ class Skeleton {
     const treeIds = Object.keys(Store.getState().skeletonTracing.trees);
 
     // actually free the buffers etc. from the GPU
-    Object.values(_.omit(this.treeGeometryCache, treeIds)).map((treeGeometry) => {
+    Object.values(_.omit(this.treeGeometryCache, treeIds)).forEach((treeGeometry) => {
       this.trigger("removeGeometries", treeGeometry.getMeshes());
       treeGeometry.dispose();
     });

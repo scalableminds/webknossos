@@ -8,7 +8,7 @@ import app from "app";
 import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -68,7 +68,7 @@ class CameraController {
 
   update = (): void => {
     const state = Store.getState();
-    const gPos = getPosition(state.flycam3d);
+    const gPos = getPosition(state.flycam);
     // camera porition's unit is nm, so convert it.
     const cPos = voxelToNm(state.dataset.scale, gPos);
     this.cameras[OrthoViews.PLANE_XY].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
@@ -93,11 +93,11 @@ class CameraController {
     const state = Store.getState();
     const b = voxelToNm(state.dataset.scale, this.model.upperBoundary);
 
-    const pos = voxelToNm(state.dataset.scale, getPosition(state.flycam3d));
+    const pos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
     const time = 800;
 
     const notify = () => this.trigger("cameraPositionChanged");
-    const getConvertedPosition = () => voxelToNm(Store.getState().dataset.scale, getPosition(Store.getState().flycam3d));
+    const getConvertedPosition = () => voxelToNm(Store.getState().dataset.scale, getPosition(Store.getState().flycam));
 
     const from = {
       notify,
@@ -320,7 +320,7 @@ class CameraController {
   updateCamViewport(): void {
     const state = Store.getState();
     const scaleFactor = getBaseVoxel(state.dataset.scale);
-    const zoom = Store.getState().flycam3d.zoomStep;
+    const zoom = Store.getState().flycam.zoomStep;
     const boundary = (constants.VIEWPORT_WIDTH / 2) * zoom;
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.cameras[planeId].near = -this.camDistance;

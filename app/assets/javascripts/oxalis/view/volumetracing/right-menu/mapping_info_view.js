@@ -11,7 +11,7 @@ import CheckboxSettingView from "oxalis/view/settings/setting_views/checkbox_set
 import Binary from "oxalis/model/binary";
 import Cube from "oxalis/model/binary/data_cube";
 import Store from "oxalis/store";
-import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 
 const RENDER_DEBOUNCE_TIME = 200;
 
@@ -76,7 +76,7 @@ class MappingInfoView extends Marionette.View {
 
 
   serializeData() {
-    const pos = getPosition(Store.getState().flycam3d);
+    const pos = getPosition(Store.getState().flycam);
 
     return {
       hasMapping: this.cube.hasMapping(),

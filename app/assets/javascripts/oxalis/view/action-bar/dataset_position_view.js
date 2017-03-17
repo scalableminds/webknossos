@@ -7,8 +7,8 @@ import utils from "libs/utils";
 import Toast from "libs/toast";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam3d_actions";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam3d_accessor";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 
 class DatasetPositionView extends Marionette.View {
   static initClass() {
@@ -35,11 +35,11 @@ class DatasetPositionView extends Marionette.View {
 
     this.prototype.templateContext = {
       position() {
-        return V3.floor(getPosition(Store.getState().flycam3d)).join(", ");
+        return V3.floor(getPosition(Store.getState().flycam)).join(", ");
       },
 
       rotation() {
-        return V3.round(getRotation(Store.getState().flycam3d)).join(", ");
+        return V3.round(getRotation(Store.getState().flycam)).join(", ");
       },
 
       isArbitrayMode() {

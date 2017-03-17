@@ -12,7 +12,7 @@ import type { ModeType } from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam3d_accessor";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 
 import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary_plane_material_factory";
 
@@ -99,7 +99,7 @@ class ArbitraryPlane {
     if (this.isDirty) {
       const { mesh } = this;
 
-      const matrix = getZoomedMatrix(Store.getState().flycam3d);
+      const matrix = getZoomedMatrix(Store.getState().flycam);
 
       const newVertices = M4x4.transformPointsAffine(matrix, this.queryVertices);
       const newColors = this.model.getColorBinaries()[0].getByVerticesSync(newVertices);

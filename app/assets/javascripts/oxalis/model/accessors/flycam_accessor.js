@@ -1,14 +1,16 @@
 // @flow
 import type { Vector2, Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { BoundingBoxType } from "oxalis/model";
-import type { Flycam3DType, OxalisState } from "oxalis/store";
+import type { FlycamType, OxalisState } from "oxalis/store";
 import constants, { OrthoViews, OrthoViewValues } from "oxalis/constants";
 import Maybe from "data.maybe";
 import Dimensions from "oxalis/model/dimensions";
-import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 import * as scaleInfo from "oxalis/model/scaleinfo";
 import _ from "lodash";
 import Utils from "libs/utils";
+import type { Matrix4x4 } from "libs/mjs";
+import { M4x4 } from "libs/mjs";
+import * as THREE from "three";
 
 const MAX_TEXTURE_OFFSET = 31;
 const MAX_ZOOM_THRESHOLD = 2;
@@ -24,6 +26,46 @@ export const MAX_ZOOM_STEP_DIFF = Math.min(
   (constants.TEXTURE_WIDTH - MAX_TEXTURE_OFFSET) / constants.VIEWPORT_WIDTH,
 );
 
+export function getUp(flycam: FlycamType): Vector3 {
+  const matrix = flycam.currentMatrix;
+  return [matrix[4], matrix[5], matrix[6]];
+}
+
+export function getLeft(flycam: FlycamType): Vector3 {
+  const matrix = flycam.currentMatrix;
+  return [matrix[0], matrix[1], matrix[2]];
+}
+
+export function getPosition(flycam: FlycamType): Vector3 {
+  const matrix = flycam.currentMatrix;
+  return [matrix[12], matrix[13], matrix[14]];
+}
+
+export function getRotation(flycam: FlycamType): Vector3 {
+  const object = new THREE.Object3D();
+  const matrix = (new THREE.Matrix4()).fromArray(flycam.currentMatrix).transpose();
+  object.applyMatrix(matrix);
+
+  // Fix JS modulo bug
+  // http://javascript.about.com/od/problemsolving/a/modulobug.htm
+  const mod = (x, n) => ((x % n) + n) % n;
+
+  const rotation: Vector3 = [
+    object.rotation.x,
+    object.rotation.y,
+    object.rotation.z - Math.PI,
+  ];
+  return [
+    mod((180 / Math.PI) * rotation[0], 360),
+    mod((180 / Math.PI) * rotation[1], 360),
+    mod((180 / Math.PI) * rotation[2], 360),
+  ];
+}
+
+export function getZoomedMatrix(flycam: FlycamType): Matrix4x4 {
+  return M4x4.scale1(flycam.zoomStep, flycam.currentMatrix);
+}
+
 export function getMaxZoomStep(state: OxalisState): number {
   return 1 + Maybe.fromNullable(state.dataset)
     .map(dataset =>
@@ -33,13 +75,13 @@ export function getMaxZoomStep(state: OxalisState): number {
 }
 
 export function getIntegerZoomStep(state: OxalisState): number {
-  return Math.floor(state.flycam3d.zoomStep);
+  return Math.floor(state.flycam.zoomStep);
 }
 
 export function getRequestLogZoomStep(state: OxalisState): number {
   return Utils.clamp(
     0,
-    Math.ceil(log2(state.flycam3d.zoomStep / MAX_ZOOM_STEP_DIFF)) + state.datasetConfiguration.quality,
+    Math.ceil(log2(state.flycam.zoomStep / MAX_ZOOM_STEP_DIFF)) + state.datasetConfiguration.quality,
     log2(getMaxZoomStep(state)),
   );
 }
@@ -61,11 +103,11 @@ export function calculateTextureBuffer(state: OxalisState): OrthoViewMapType<Vec
 }
 
 export function getTextureScalingFactor(state: OxalisState): number {
-  return state.flycam3d.zoomStep / Math.pow(2, getRequestLogZoomStep(state));
+  return state.flycam.zoomStep / Math.pow(2, getRequestLogZoomStep(state));
 }
 
-export function getPlaneScalingFactor(flycam3d: Flycam3DType): number {
-  return flycam3d.zoomStep;
+export function getPlaneScalingFactor(flycam: FlycamType): number {
+  return flycam.zoomStep;
 }
 
 export function getRotationOrtho(planeId: OrthoViewType): Vector3 {
@@ -78,8 +120,8 @@ export function getRotationOrtho(planeId: OrthoViewType): Vector3 {
 }
 
 export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
-  const position = getPosition(state.flycam3d);
-  const offset = (getPlaneScalingFactor(state.flycam3d) * constants.VIEWPORT_WIDTH) / 2;
+  const position = getPosition(state.flycam);
+  const offset = (getPlaneScalingFactor(state.flycam) * constants.VIEWPORT_WIDTH) / 2;
   const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
   const min = [0, 0, 0];
   const max = [0, 0, 0];
@@ -93,7 +135,7 @@ export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
 }
 
 export function getTexturePosition(state: OxalisState, planeId: OrthoViewType): Vector3 {
-  const texturePosition = _.clone(getPosition(state.flycam3d));
+  const texturePosition = _.clone(getPosition(state.flycam));
   // As the Model does not render textures for exact positions, the last 5 bits of
   // the X and Y coordinates for each texture have to be set to 0
   for (let i = 0; i <= 2; i++) {
@@ -107,7 +149,7 @@ export function getTexturePosition(state: OxalisState, planeId: OrthoViewType): 
 export function getOffsets(state: OxalisState, planeId: OrthoViewType): Vector2 {
   // return the coordinate of the upper left corner of the viewport as texture-relative coordinate
   const buffer = calculateTextureBuffer(state);
-  const position = getPosition(state.flycam3d);
+  const position = getPosition(state.flycam);
   const requestZoomStep = Math.pow(2, getRequestLogZoomStep(state));
   const texturePosition = getTexturePosition(state, planeId);
   const ind = Dimensions.getIndices(planeId);
@@ -142,6 +184,6 @@ export function getAreas(state: OxalisState): OrthoViewMapType<Vector4> {
   };
 }
 
-export function getRayThreshold(flycam3d: Flycam3DType): number {
-  return PIXEL_RAY_THRESHOLD * flycam3d.zoomStep;
+export function getRayThreshold(flycam: FlycamType): number {
+  return PIXEL_RAY_THRESHOLD * flycam.zoomStep;
 }

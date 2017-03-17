@@ -9,8 +9,7 @@ import Utils from "libs/utils";
 import Backbone from "backbone";
 import * as THREE from "three";
 import { V3 } from "libs/mjs";
-import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
+import { getPosition, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
@@ -178,7 +177,7 @@ class SceneController {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(true);
-          pos = _.clone(getPosition(Store.getState().flycam3d));
+          pos = _.clone(getPosition(Store.getState().flycam));
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] += planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
@@ -192,7 +191,7 @@ class SceneController {
         mesh.visible = true;
       }
       for (const planeId of OrthoViewValuesWithoutTDView) {
-        pos = getPosition(Store.getState().flycam3d);
+        pos = getPosition(Store.getState().flycam);
         this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(true);
@@ -203,9 +202,9 @@ class SceneController {
 
 
   update = (): void => {
-    const gPos = getPosition(Store.getState().flycam3d);
+    const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
-    const planeScale = getPlaneScalingFactor(Store.getState().flycam3d);
+    const planeScale = getPlaneScalingFactor(Store.getState().flycam);
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.planes[planeId].updateTexture();
       // Update plane position

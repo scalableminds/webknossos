@@ -10,13 +10,13 @@ import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
-import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam3d_actions";
+import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
-import { getIntegerZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
+import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { Vector3Indicies } from "oxalis/constants";
 import type { ModeType, Vector3, Vector6 } from "oxalis/constants";
 import Request from "libs/request";

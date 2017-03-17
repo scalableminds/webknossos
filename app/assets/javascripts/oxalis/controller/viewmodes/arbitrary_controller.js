@@ -27,8 +27,8 @@ import ArbitraryView from "oxalis/view/arbitrary_view";
 import ArbitraryPlaneInfo from "oxalis/geometries/arbitrary_plane_info";
 import constants from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
-import { yawFlycamAction, pitchFlycamAction, setPositionAction, setRotationAction, zoomInAction, zoomOutAction, moveFlycamAction } from "oxalis/model/actions/flycam3d_actions";
-import { getRotation, getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { yawFlycamAction, pitchFlycamAction, setPositionAction, setRotationAction, zoomInAction, zoomOutAction, moveFlycamAction } from "oxalis/model/actions/flycam_actions";
+import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 
 class ArbitraryController {
   arbitraryView: ArbitraryView;
@@ -124,7 +124,7 @@ class ArbitraryController {
 
 
   render(): void {
-    const matrix = Store.getState().flycam3d.currentMatrix;
+    const matrix = Store.getState().flycam.currentMatrix;
     this.model.getColorBinaries().forEach(binary =>
       binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality));
   }
@@ -146,7 +146,7 @@ class ArbitraryController {
               true,
             ));
           } else if (this.mode === constants.MODE_ARBITRARY_PLANE) {
-            const f = Store.getState().flycam3d.zoomStep / (this.arbitraryView.width / this.WIDTH);
+            const f = Store.getState().flycam.zoomStep / (this.arbitraryView.width / this.WIDTH);
             Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
           }
         },
@@ -242,7 +242,7 @@ class ArbitraryController {
     if (!this.isBranchpointvideoMode() && !this.isSynapseannotationMode()) { return; }
     const activeNodeId = Store.getState().skeletonTracing.activeNodeId;
     this.model.setMode(2);
-    const f = Store.getState().flycam3d.zoomStep / (this.arbitraryView.width / this.WIDTH);
+    const f = Store.getState().flycam.zoomStep / (this.arbitraryView.width / this.WIDTH);
     Store.dispatch(moveFlycamAction([-(pos.x - (this.arbitraryView.width / 2)) * f, -(pos.y - (this.arbitraryView.width / 2)) * f, 0]));
     Store.dispatch(createTreeAction());
     this.setWaypoint();
@@ -344,8 +344,8 @@ class ArbitraryController {
       return;
     }
 
-    const position = getPosition(Store.getState().flycam3d);
-    const rotation = getRotation(Store.getState().flycam3d);
+    const position = getPosition(Store.getState().flycam);
+    const rotation = getRotation(Store.getState().flycam);
 
     Store.dispatch(createNodeAction(position, rotation, constants.ARBITRARY_VIEW, 0));
   }
@@ -403,9 +403,9 @@ class ArbitraryController {
       const activeNode = trees[activeTreeId].nodes[activeNodeId];
 
       // animate the change to the new position and new rotation
-      const curPos = getPosition(Store.getState().flycam3d);
+      const curPos = getPosition(Store.getState().flycam);
       const newPos = activeNode.position;
-      const curRotation = getRotation(Store.getState().flycam3d);
+      const curRotation = getRotation(Store.getState().flycam);
       let newRotation = activeNode.rotation;
       newRotation = this.getShortestRotation(curRotation, newRotation);
 
@@ -453,7 +453,7 @@ class ArbitraryController {
 
 
   moved(): void {
-    const matrix = Store.getState().flycam3d.currentMatrix;
+    const matrix = Store.getState().flycam.currentMatrix;
 
     if (this.lastNodeMatrix == null) {
       this.lastNodeMatrix = matrix;

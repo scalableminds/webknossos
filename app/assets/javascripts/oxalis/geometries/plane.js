@@ -7,7 +7,7 @@ import app from "app";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Model from "oxalis/model";
-import { getArea, getRequestLogZoomStep, getTexturePosition } from "oxalis/model/accessors/flycam2d_accessor";
+import { getArea, getRequestLogZoomStep, getTexturePosition } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";

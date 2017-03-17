@@ -10,7 +10,7 @@ import TWEEN from "tween.js";
 import Constants from "oxalis/constants";
 import View from "oxalis/view";
 import Store from "oxalis/store";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam3d_accessor";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 
 
 const DEFAULT_SCALE: number = 1.35;
@@ -148,7 +148,7 @@ class ArbitraryView {
       }
     }
 
-    const m = getZoomedMatrix(Store.getState().flycam3d);
+    const m = getZoomedMatrix(Store.getState().flycam);
 
     camera.matrix.set(m[0], m[4], m[8], m[12],
                       m[1], m[5], m[9], m[13],

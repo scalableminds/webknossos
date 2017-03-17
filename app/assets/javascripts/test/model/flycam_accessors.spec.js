@@ -1,9 +1,9 @@
 // @flow
 import _ from "lodash";
 import { OrthoViews } from "oxalis/constants";
-import * as accessors from "oxalis/model/accessors/flycam2d_accessor";
+import * as accessors from "oxalis/model/accessors/flycam_accessor";
 
-describe("Flycam2D Accessors", () => {
+describe("Flycam Accessors", () => {
   const initialState = {
     dataset: {
       scale: [1, 1, 2],
@@ -18,7 +18,7 @@ describe("Flycam2D Accessors", () => {
       sphericalCapRadius: 100,
       dynamicSpaceDirection: true,
     },
-    flycam3d: {
+    flycam: {
       zoomStep: 1.3,
       currentMatrix: [
         1, 0, 0, 0,
@@ -31,7 +31,7 @@ describe("Flycam2D Accessors", () => {
   };
 
   it("should calculate the ray threshold", () => {
-    expect(accessors.getRayThreshold(initialState.flycam3d)).toBe(13);
+    expect(accessors.getRayThreshold(initialState.flycam)).toBe(13);
   });
 
   it("should calculate the max zoom step", () => {
@@ -55,7 +55,7 @@ describe("Flycam2D Accessors", () => {
   it("should calculate the request log zoom step (3/3)", () => {
     const state = _.cloneDeep(initialState);
     state.datasetConfiguration.quality = 1;
-    state.flycam3d.zoomStep = 8;
+    state.flycam.zoomStep = 8;
     expect(accessors.getRequestLogZoomStep(state)).toBe(4);
   });
 
@@ -72,7 +72,7 @@ describe("Flycam2D Accessors", () => {
   it("should calculate the texture scaling factor (2/2)", () => {
     const state = _.cloneDeep(initialState);
     state.datasetConfiguration.quality = 1;
-    state.flycam3d.zoomStep = 8.6;
+    state.flycam.zoomStep = 8.6;
 
     const texturePosition = accessors.getTextureScalingFactor(state);
     expect(texturePosition).toEqual(0.5375);

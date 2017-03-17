@@ -19,9 +19,8 @@ import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
-import { getRequestLogZoomStep, getRayThreshold, getRotationOrtho } from "oxalis/model/accessors/flycam2d_accessor";
-import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam3d_actions";
+import { getRequestLogZoomStep, getRayThreshold, getRotationOrtho, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -58,7 +57,7 @@ class SkeletonTracingPlaneController extends PlaneController {
       nodesAlreadySet = 0;
     }
 
-    const [x, y, z] = getPosition(Store.getState().flycam3d);
+    const [x, y, z] = getPosition(Store.getState().flycam);
     this.setWaypoint([x + 1, y + 1, z], false);
     _.defer(() => this.simulateTracing(nodesPerTree, nodesAlreadySet + 1));
   }
@@ -139,7 +138,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     // create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(normalizedMousePos, camera);
-    raycaster.params.Points.threshold = getRayThreshold(Store.getState().flycam3d, plane);
+    raycaster.params.Points.threshold = getRayThreshold(Store.getState().flycam, plane);
 
     // identify clicked object
     let intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());
@@ -165,7 +164,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
       const posArray = geometry.attributes.position.array;
       const intersectsCoord = [posArray[3 * index], posArray[(3 * index) + 1], posArray[(3 * index) + 2]];
-      const globalPos = getPosition(Store.getState().flycam3d);
+      const globalPos = getPosition(Store.getState().flycam);
 
       // make sure you can't click nodes, that are clipped away (one can't see)
       const ind = dimensions.getIndices(plane);
@@ -251,7 +250,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     // Let the user still manipulate the "third dimension" during animation
     const dimensionToSkip = dimensions.thirdDimensionForPlane(this.activeViewport);
 
-    const curGlobalPos = getPosition(Store.getState().flycam3d);
+    const curGlobalPos = getPosition(Store.getState().flycam);
 
     const tween = new TWEEN.Tween({
       globalPosX: curGlobalPos[0],

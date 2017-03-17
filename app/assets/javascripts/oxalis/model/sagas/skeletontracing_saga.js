@@ -4,12 +4,12 @@
  */
 import app from "app";
 import { call, put, take, takeEvery, select } from "redux-saga/effects";
-import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, Flycam3DType } from "oxalis/store";
+import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, FlycamType } from "oxalis/store";
 import { SkeletonTracingActions, createTreeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateTracing } from "oxalis/model/sagas/update_actions";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { Flycam3DActions } from "oxalis/model/actions/flycam3d_actions";
+import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam3d_accessor";
 import _ from "lodash";
 import Utils from "libs/utils";
@@ -111,25 +111,25 @@ export function* diffTrees(prevTrees: TreeMapType, trees: TreeMapType): Generato
 export function* diffTracing(
   prevSkeletonTracing: SkeletonTracingType,
   skeletonTracing: SkeletonTracingType,
-  flycam3d: Flycam3DType,
+  flycam: FlycamType,
 ): Generator<UpdateAction, *, *> {
   if (prevSkeletonTracing !== skeletonTracing) {
     yield* diffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
   }
   yield updateTracing(
     skeletonTracing,
-    V3.floor(getPosition(flycam3d)),
-    getRotation(flycam3d),
-    flycam3d.zoomStep,
+    V3.floor(getPosition(flycam)),
+    getRotation(flycam),
+    flycam.zoomStep,
   );
 }
 
 export function performDiffTracing(
   prevSkeletonTracing: SkeletonTracingType,
   skeletonTracing: SkeletonTracingType,
-  flycam3d: Flycam3DType,
+  flycam: FlycamType,
 ): Array<UpdateAction> {
-  return Array.from(diffTracing(prevSkeletonTracing, skeletonTracing, flycam3d));
+  return Array.from(diffTracing(prevSkeletonTracing, skeletonTracing, flycam));
 }
 
 export function* saveSkeletonTracingAsync(): Generator<*, *, *> {
@@ -140,11 +140,11 @@ export function* saveSkeletonTracingAsync(): Generator<*, *, *> {
   }
   yield take("WK_READY");
   while (true) {
-    yield take(SkeletonTracingActions.concat(Flycam3DActions));
+    yield take(SkeletonTracingActions.concat(FlycamActions));
     const skeletonTracing = yield select(state => state.skeletonTracing);
-    const flycam3d = yield select(state => state.flycam3d);
+    const flycam = yield select(state => state.flycam);
     const items = Array.from(yield call(performDiffTracing,
-      prevSkeletonTracing, skeletonTracing, flycam3d));
+      prevSkeletonTracing, skeletonTracing, flycam));
     if (items.length > 0) {
       yield put(pushSaveQueueAction(items));
     }

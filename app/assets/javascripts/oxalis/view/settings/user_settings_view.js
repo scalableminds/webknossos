@@ -16,7 +16,7 @@ import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSet
 import type { Vector6 } from "oxalis/constants";
 import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, SkeletonTracingType } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
-import { setZoomStepAction } from "oxalis/model/actions/flycam3d_actions";
+import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 
 const Panel = Collapse.Panel;
 
@@ -194,7 +194,7 @@ const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   temporaryConfiguration: state.temporaryConfiguration,
   skeletonTracing: state.skeletonTracing,
-  zoomStep: state.flycam3d.zoomStep,
+  zoomStep: state.flycam.zoomStep,
   state,
 });
 

@@ -90,15 +90,15 @@ class UrlManager {
 
 
   buildUrl(): string {
-    let state = V3.floor(getPosition(Store.getState().flycam3d));
+    let state = V3.floor(getPosition(Store.getState().flycam));
     state.push(this.model.mode);
 
     if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
       state = state
-        .concat([Store.getState().flycam3d.zoomStep.toFixed(2)])
-        .concat(getRotation(Store.getState().flycam3d).map(e => e.toFixed(2)));
+        .concat([Store.getState().flycam.zoomStep.toFixed(2)])
+        .concat(getRotation(Store.getState().flycam).map(e => e.toFixed(2)));
     } else {
-      state = state.concat([Store.getState().flycam3d.zoomStep.toFixed(2)]);
+      state = state.concat([Store.getState().flycam.zoomStep.toFixed(2)]);
     }
 
     if (Store.getState().skeletonTracing.activeNodeId != null) {

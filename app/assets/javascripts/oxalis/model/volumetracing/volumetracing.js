@@ -17,7 +17,7 @@ import Binary from "oxalis/model/binary";
 import Store from "oxalis/store";
 import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
-import { setRotationAction } from "oxalis/model/actions/flycam3d_actions";
+import { setRotationAction } from "oxalis/model/actions/flycam_actions";
 
 import type { Vector3, VolumeModeType, OrthoViewType } from "oxalis/constants";
 import type { Tracing, VolumeContentDataType } from "oxalis/model";
@@ -119,7 +119,7 @@ class VolumeTracing {
       return false;
     }
 
-    const pos = Dimensions.roundCoordinate(getPosition(Store.getState().flycam3d));
+    const pos = Dimensions.roundCoordinate(getPosition(Store.getState().flycam));
     const thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)];
     this.currentLayer = new VolumeLayer(planeId, thirdDimValue);
     return true;

@@ -1,7 +1,7 @@
 // @flow
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
-import type { Flycam3DActionType } from "oxalis/model/actions/flycam3d_actions";
+import type { FlycamActionType } from "oxalis/model/actions/flycam_actions";
 import type { SettingActionType } from "oxalis/model/actions/settings_actions";
 import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
@@ -42,20 +42,20 @@ function rotateOnAxisWithDistance(
 }
 
 function rotateReducer(state: OxalisState, angle: number, axis: Vector3, regardDistance: boolean): OxalisState {
-  const { flycam3d } = state;
+  const { flycam } = state;
   if (regardDistance) {
-    return update(state, { flycam3d: {
+    return update(state, { flycam: {
       currentMatrix: { $set: rotateOnAxisWithDistance(
-        flycam3d.zoomStep,
+        flycam.zoomStep,
         state.userConfiguration.sphericalCapRadius,
-        flycam3d.currentMatrix,
+        flycam.currentMatrix,
         angle,
         axis,
       ) },
     } });
   }
-  return update(state, { flycam3d: {
-    currentMatrix: { $set: rotateOnAxis(flycam3d.currentMatrix, angle, axis) },
+  return update(state, { flycam: {
+    currentMatrix: { $set: rotateOnAxis(flycam.currentMatrix, angle, axis) },
   } });
 }
 
@@ -80,42 +80,42 @@ function resetMatrix(matrix: Matrix4x4, dataSetScale: Vector3) {
 }
 
 function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
-  const matrix = cloneMatrix(state.flycam3d.currentMatrix);
+  const matrix = cloneMatrix(state.flycam.currentMatrix);
   matrix[12] += vector[0];
   matrix[13] += vector[1];
   matrix[14] += vector[2];
-  return update(state, { flycam3d: { currentMatrix: { $set: matrix } } });
+  return update(state, { flycam: { currentMatrix: { $set: matrix } } });
 }
 
 function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
-  return update(state, { flycam3d: {
+  return update(state, { flycam: {
     zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getMaxZoomStep(state)) },
   } });
 }
 
-function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3DActionType | SettingActionType>): OxalisState {
+function FlycamReducer(state: OxalisState, action: ActionWithTimestamp<FlycamActionType | SettingActionType>): OxalisState {
   switch (action.type) {
     case "SET_DATASET": {
-      return update(state, { flycam3d: {
-        currentMatrix: { $set: resetMatrix(state.flycam3d.currentMatrix, action.dataset.scale) },
+      return update(state, { flycam: {
+        currentMatrix: { $set: resetMatrix(state.flycam.currentMatrix, action.dataset.scale) },
       } });
     }
 
     case "ZOOM_IN":
-      return zoomReducer(state, state.flycam3d.zoomStep / ZOOM_STEP_INTERVAL);
+      return zoomReducer(state, state.flycam.zoomStep / ZOOM_STEP_INTERVAL);
 
     case "ZOOM_OUT":
-      return zoomReducer(state, state.flycam3d.zoomStep * ZOOM_STEP_INTERVAL);
+      return zoomReducer(state, state.flycam.zoomStep * ZOOM_STEP_INTERVAL);
 
     case "ZOOM_BY_DELTA":
-      return zoomReducer(state, state.flycam3d.zoomStep / Math.pow(ZOOM_STEP_INTERVAL, action.zoomDelta));
+      return zoomReducer(state, state.flycam.zoomStep / Math.pow(ZOOM_STEP_INTERVAL, action.zoomDelta));
 
     case "SET_ZOOM_STEP":
       return zoomReducer(state, action.zoomStep);
 
     case "SET_POSITION": {
       // cannot use M4x4.clone because of immutable-seamless
-      const matrix = cloneMatrix(state.flycam3d.currentMatrix);
+      const matrix = cloneMatrix(state.flycam.currentMatrix);
       if (action.position[0] != null) {
         matrix[12] = action.position[0];
       }
@@ -125,20 +125,20 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
       if (action.position[2] != null) {
         matrix[14] = action.position[2];
       }
-      return update(state, { flycam3d: { currentMatrix: { $set: matrix } } });
+      return update(state, { flycam: { currentMatrix: { $set: matrix } } });
     }
 
     case "SET_ROTATION": {
       if (state.dataset != null) {
         const [x, y, z] = action.rotation;
-        let matrix = resetMatrix(state.flycam3d.currentMatrix, state.dataset.scale);
+        let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.scale);
         matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
         matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
         matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
-        let newState = update(state, { flycam3d: { currentMatrix: { $set: matrix } } });
+        let newState = update(state, { flycam: { currentMatrix: { $set: matrix } } });
         if (state.userConfiguration.dynamicSpaceDirection) {
           const spaceDirectionOrtho = [0, 1, 2].map(index => action.rotation[index] < 0 ? -1 : 1);
-          newState = update(newState, { flycam3d: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } } });
+          newState = update(newState, { flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } } });
         }
         return newState;
       }
@@ -146,8 +146,8 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
     }
 
     case "MOVE_FLYCAM":
-      return update(state, { flycam3d: {
-        currentMatrix: { $set: M4x4.translate(action.vector, state.flycam3d.currentMatrix, []) },
+      return update(state, { flycam: {
+        currentMatrix: { $set: M4x4.translate(action.vector, state.flycam.currentMatrix, []) },
       } });
 
     case "MOVE_FLYCAM_ORTHO": {
@@ -157,7 +157,7 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
       if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
         // change direction of the value connected to space, based on the last direction
         const dim = Dimensions.getIndices(planeId)[2];
-        vector[dim] *= state.flycam3d.spaceDirectionOrtho[dim];
+        vector[dim] *= state.flycam.spaceDirectionOrtho[dim];
       }
       return moveReducer(state, vector);
     }
@@ -167,7 +167,7 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
       if (dataset != null) {
         const { planeId, increaseSpeedWithZoom } = action;
         const vector = Dimensions.transDim(action.vector, planeId);
-        const zoomFactor = increaseSpeedWithZoom ? state.flycam3d.zoomStep : 1;
+        const zoomFactor = increaseSpeedWithZoom ? state.flycam.zoomStep : 1;
         const scaleFactor = getBaseVoxelFactors(dataset.scale);
         const delta = [
           vector[0] * zoomFactor * scaleFactor[0],
@@ -178,7 +178,7 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
         if (planeId != null && state.userConfiguration.dynamicSpaceDirection) {
           // change direction of the value connected to space, based on the last direction
           const dim = Dimensions.getIndices(planeId)[2];
-          delta[dim] *= state.flycam3d.spaceDirectionOrtho[dim];
+          delta[dim] *= state.flycam.spaceDirectionOrtho[dim];
         }
 
         return moveReducer(state, delta);
@@ -203,4 +203,4 @@ function Flycam3DReducer(state: OxalisState, action: ActionWithTimestamp<Flycam3
   }
 }
 
-export default Flycam3DReducer;
+export default FlycamReducer;

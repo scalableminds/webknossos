@@ -14,7 +14,7 @@ import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
-import Flycam3DReducer from "oxalis/model/reducers/flycam3d_reducer";
+import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import timestampMiddleware from "oxalis/model/helpers/timestamp_middleware";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
@@ -204,7 +204,7 @@ export type SaveStateType = {
   lastSaveTimestamp: number,
 };
 
-export type Flycam3DType = {
+export type FlycamType = {
   zoomStep: number,
   currentMatrix: Matrix4x4,
   spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
@@ -218,7 +218,7 @@ export type OxalisState = {
   skeletonTracing: SkeletonTracingType,
   task: ?TaskType,
   save: SaveStateType,
-  flycam3d: Flycam3DType,
+  flycam: FlycamType,
 };
 
 const defaultState: OxalisState = {
@@ -298,7 +298,7 @@ const defaultState: OxalisState = {
     isBusy: false,
     lastSaveTimestamp: 0,
   },
-  flycam3d: {
+  flycam: {
     zoomStep: 1.3,
     currentMatrix: [
       1, 0, 0, 0,
@@ -316,7 +316,7 @@ const combinedReducers = reduceReducers(
   SkeletonTracingReducer,
   TaskReducer,
   SaveReducer,
-  Flycam3DReducer,
+  FlycamReducer,
 );
 
 const store = createStore(combinedReducers, defaultState, applyMiddleware(

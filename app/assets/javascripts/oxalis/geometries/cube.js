@@ -60,7 +60,7 @@ class Cube {
     }
 
     Store.subscribe(() => {
-      this.updatePosition(getPosition(Store.getState().flycam3d));
+      this.updatePosition(getPosition(Store.getState().flycam));
     });
   }
 
@@ -102,7 +102,7 @@ class Cube {
     }
 
     this.initialized = true;
-    this.updatePosition(getPosition(Store.getState().flycam3d));
+    this.updatePosition(getPosition(Store.getState().flycam));
     app.vent.trigger("rerender");
   }
 
@@ -136,7 +136,7 @@ class Cube {
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
-      const position = getPosition(Store.getState().flycam3d);
+      const position = getPosition(Store.getState().flycam);
       if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] <= this.max[thirdDim]) {
         this.crossSections[planeId].visible = this.visible && (planeId === id) && this.showCrossSections;
       } else {

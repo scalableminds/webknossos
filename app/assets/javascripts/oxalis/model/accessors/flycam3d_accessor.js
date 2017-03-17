@@ -2,27 +2,27 @@
 import type { Vector3 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
-import type { Flycam3DType } from "oxalis/store";
+import type { FlycamType } from "oxalis/store";
 import * as THREE from "three";
 
-export function getUp(flycam3d: Flycam3DType): Vector3 {
-  const matrix = flycam3d.currentMatrix;
+export function getUp(flycam: FlycamType): Vector3 {
+  const matrix = flycam.currentMatrix;
   return [matrix[4], matrix[5], matrix[6]];
 }
 
-export function getLeft(flycam3d: Flycam3DType): Vector3 {
-  const matrix = flycam3d.currentMatrix;
+export function getLeft(flycam: FlycamType): Vector3 {
+  const matrix = flycam.currentMatrix;
   return [matrix[0], matrix[1], matrix[2]];
 }
 
-export function getPosition(flycam3d: Flycam3DType): Vector3 {
-  const matrix = flycam3d.currentMatrix;
+export function getPosition(flycam: FlycamType): Vector3 {
+  const matrix = flycam.currentMatrix;
   return [matrix[12], matrix[13], matrix[14]];
 }
 
-export function getRotation(flycam3d: Flycam3DType): Vector3 {
+export function getRotation(flycam: FlycamType): Vector3 {
   const object = new THREE.Object3D();
-  const matrix = (new THREE.Matrix4()).fromArray(flycam3d.currentMatrix).transpose();
+  const matrix = (new THREE.Matrix4()).fromArray(flycam.currentMatrix).transpose();
   object.applyMatrix(matrix);
 
   // Fix JS modulo bug
@@ -41,6 +41,6 @@ export function getRotation(flycam3d: Flycam3DType): Vector3 {
   ];
 }
 
-export function getZoomedMatrix(flycam3d: Flycam3DType): Matrix4x4 {
-  return M4x4.scale1(flycam3d.zoomStep, flycam3d.currentMatrix);
+export function getZoomedMatrix(flycam: FlycamType): Matrix4x4 {
+  return M4x4.scale1(flycam.zoomStep, flycam.currentMatrix);
 }

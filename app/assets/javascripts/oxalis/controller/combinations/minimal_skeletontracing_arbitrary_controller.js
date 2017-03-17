@@ -13,7 +13,7 @@ import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
-import { zoomInAction, zoomOutAction, yawFlycamAction, pitchFlycamAction } from "oxalis/model/actions/flycam3d_actions";
+import { zoomInAction, zoomOutAction, yawFlycamAction, pitchFlycamAction } from "oxalis/model/actions/flycam_actions";
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 

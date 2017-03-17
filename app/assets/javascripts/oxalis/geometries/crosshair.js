@@ -87,7 +87,7 @@ class Crosshair {
       mesh.material.map.needsUpdate = true;
     }
 
-    const m = getZoomedMatrix(Store.getState().flycam3d);
+    const m = getZoomedMatrix(Store.getState().flycam);
 
     mesh.matrix.set(m[0], m[4], m[8], m[12],
                     m[1], m[5], m[9], m[13],

@@ -76,7 +76,7 @@ class MappingInfoView extends Marionette.View {
 
 
   serializeData() {
-    const pos = getPosition(Store.getState().flycam3d);
+    const pos = getPosition(Store.getState().flycam);
 
     return {
       hasMapping: this.cube.hasMapping(),

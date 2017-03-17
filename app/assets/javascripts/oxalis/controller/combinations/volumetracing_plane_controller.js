@@ -17,7 +17,7 @@ import type Model, { BoundingBoxType } from "oxalis/model";
 import type View from "oxalis/view";
 import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 import { getViewportBoundingBox } from "oxalis/model/accessors/flycam2d_accessor";
-import { setPositionAction } from "oxalis/model/actions/flycam3d_actions";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 
 class VolumeTracingPlaneController extends PlaneController {
 
@@ -62,7 +62,7 @@ class VolumeTracingPlaneController extends PlaneController {
     controls.leftDownMove(null, pos(100, 100));
     controls.leftMouseUp();
     await Utils.sleep(100);
-    pos = _.clone(getPosition(Store.getState().flycam3d));
+    pos = _.clone(getPosition(Store.getState().flycam));
     pos[2]++;
     Store.dispatch(setPositionAction(pos));
     await Utils.sleep(100);

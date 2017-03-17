@@ -159,9 +159,9 @@ class Controller {
 
     // Zoom step warning
     this.zoomStepWarningToast = null;
-    let lastZoomStep = Store.getState().flycam3d.zoomStep;
+    let lastZoomStep = Store.getState().flycam.zoomStep;
     Store.subscribe(() => {
-      const { zoomStep } = Store.getState().flycam3d;
+      const { zoomStep } = Store.getState().flycam;
       if (lastZoomStep !== zoomStep) {
         this.onZoomStepChange();
         lastZoomStep = zoomStep;

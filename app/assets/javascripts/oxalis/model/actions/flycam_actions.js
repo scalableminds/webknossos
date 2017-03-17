@@ -21,7 +21,7 @@ type RollFlycamActionType = { type: "ROLL_FLYCAM", angle: number, regardDistance
 type PitchFlycamActionType = { type: "PITCH_FLYCAM", angle: number, regardDistance: boolean };
 type RotateFlycamActionType = { type: "ROTATE_FLYCAM", angle: number, axis: Vector3, regardDistance: boolean };
 
-export type Flycam3DActionType =
+export type FlycamActionType =
   | ZoomInActionType
   | ZoomOutActionType
   | ZoomByDeltaActionType
@@ -36,7 +36,7 @@ export type Flycam3DActionType =
   | PitchFlycamActionType
   | RotateFlycamActionType;
 
-export const Flycam3DActions = [
+export const FlycamActions = [
   "ZOOM_IN",
   "ZOOM_OUT",
   "ZOOM_BY_DELTA",

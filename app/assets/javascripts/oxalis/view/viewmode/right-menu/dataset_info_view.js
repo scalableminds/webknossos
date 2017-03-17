@@ -102,10 +102,10 @@ class DatasetInfoView extends Marionette.View {
     let zoom;
     const state = Store.getState();
     if (constants.MODES_PLANE.includes(this.model.mode)) {
-      zoom = getPlaneScalingFactor(Store.getState().flycam3d);
+      zoom = getPlaneScalingFactor(Store.getState().flycam);
       width = constants.PLANE_WIDTH;
     } else if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
-      zoom = state.flycam3d.zoomStep;
+      zoom = state.flycam.zoomStep;
       width = ArbitraryController.prototype.WIDTH;
     } else {
       throw Error("Model mode not recognized:", this.model.mode);

@@ -253,7 +253,7 @@ describe("Api", () => {
       });
     });
 
-    describe("registerOverwrite", () => {
+    xdescribe("registerOverwrite", () => {
       it("should overwrite an existing function", (done) => {
         spyOn(model.skeletonTracing, "addNode");
         const oldAddNode = model.skeletonTracing.addNode;

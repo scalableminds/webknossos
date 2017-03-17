@@ -12,6 +12,7 @@ import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, createCommentAction } from "oxalis/model/actions/skeletontracing_actions";
+import { findTreeByNodeId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { NodeType, UserConfigurationType } from "oxalis/store";
@@ -48,6 +49,9 @@ class TracingApi {
   * Sets the active node given a node id.
   */
   setActiveNode(id: number) {
+    if (id == null) {
+      throw new Error("Node id is missing.");
+    }
     Store.dispatch(setActiveNodeAction(id));
   }
 
@@ -56,7 +60,7 @@ class TracingApi {
   */
   getAllNodes(): Array<NodeType> {
     const { trees } = Store.getState().skeletonTracing;
-    return _.flatMap(trees, tree => _.map(tree, "nodes"));
+    return _.flatMap(trees, tree => _.values(tree.nodes));
   }
 
  /**
@@ -66,13 +70,21 @@ class TracingApi {
   * const activeNodeId = api.tracing.getActiveNodeId();
   * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
   */
-  setCommentForNode(commentText: string, nodeId: number | number): void {
-    throw Error("todo");  // createCommentAction only works for activeNodeId
+  setCommentForNode(commentText: string, nodeId: number, treeId?: number): void {
+    if (commentText == null) {
+      throw new Error("Comment text is missing.");
+    }
     // Convert nodeId to node
     if (_.isNumber(nodeId)) {
-      Store.dispatch(createCommentAction(commentText));
+      const tree = treeId != null ?
+        Store.getState().skeletonTracing.trees[treeId] :
+        findTreeByNodeId(Store.getState().skeletonTracing.trees, nodeId).get();
+      if (tree == null) {
+        throw Error(`Couldn't find node ${nodeId}.`);
+      }
+      Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
     } else {
-      throw Error("Supply a nodeId.");
+      throw Error("Node id is missing.");
     }
   }
 
@@ -86,18 +98,28 @@ class TracingApi {
   * @example // Provide a tree for lookup speed boost
   * const comment = api.tracing.getCommentForNode(23, api.getActiveTreeid());
   */
-  getCommentForNode(nodeId: number, treeId: number): ?string {
-    // Convert treeId to tree
-    if (_.isNumber(treeId)) {
-      const tree = Store.getState().skeletonTracing.trees[treeId];
-      if (tree == null) throw Error("The supplied treeId is not valid.");
-    } else {
-      throw Error("Supply a treeId.");
+  getCommentForNode(nodeId: number, treeId?: number): ?string {
+    if (nodeId == null) {
+      throw new Error("Node id is missing.");
     }
-
-    throw Error("TODO");
-    const comment = Store.getState().skeletonTracing.getCommentForNode(nodeId, tree);
-    return comment ? comment.content : null;
+    // Convert treeId to tree
+    let tree = null;
+    if (treeId != null) {
+      tree = Store.getState().skeletonTracing.trees[treeId];
+      if (tree == null) {
+        throw Error(`Couldn't find tree ${treeId}.`);
+      }
+      if (tree.nodes[nodeId] == null) {
+        throw Error(`Couldn't find node ${nodeId} in tree ${treeId}.`);
+      }
+    } else {
+      tree = _.values(Store.getState().skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
+      if (tree == null) {
+        throw Error(`Couldn't find node ${nodeId}.`);
+      }
+    }
+    const comment = tree.comments.find(__ => __.node === nodeId);
+    return comment != null ? comment.content : null;
   }
 
 }
@@ -199,7 +221,6 @@ class UserApi {
     - clippingDistanceArbitrary
     - dynamicSpaceDirection
     - displayCrosshair
-    - zoom
     - scale
     - tdViewDisplayPlanes
     - isosurfaceDisplay

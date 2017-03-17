@@ -64,6 +64,7 @@ mockRequire("keyboardjs", KeyboardJS);
 // Avoid node caching and make sure all mockRequires are applied
 const Model = mockRequire.reRequire("oxalis/model").default;
 const OxalisApi = mockRequire.reRequire("oxalis/api").default;
+const Store = mockRequire.reRequire("oxalis/store").default;
 
 describe("Api", () => {
   let model = null;
@@ -78,7 +79,7 @@ describe("Api", () => {
     model.set("controlMode", constants.CONTROL_MODE_TRACE);
     webknossos = new OxalisApi(model);
 
-    Request.receiveJSON.returns(Promise.resolve(TRACING_OBJECT));
+    Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
     User.prototype.fetch.returns(Promise.resolve());
 
     model.fetch()
@@ -124,6 +125,7 @@ describe("Api", () => {
 
     describe("getAllNodes", () => {
       it("should get a list of all nodes", (done) => {
+        console.log(Store.getState().skeletonTracing);
         const nodes = api.tracing.getAllNodes();
         expect(nodes.length).toBe(3);
         done();

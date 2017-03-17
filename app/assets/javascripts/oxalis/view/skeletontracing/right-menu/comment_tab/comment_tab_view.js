@@ -135,7 +135,7 @@ class CommentTabView extends Marionette.View {
     let text = "";
     if (comment) {
       // populate the input element
-      text = comment.comment;
+      text = comment.content;
     }
     this.ui.commentInput.val(text);
   }

@@ -21,7 +21,7 @@ import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 export type CommentType = {
   node: number;
-  comment: string;
+  content: string;
 };
 
 export type EdgeType = {

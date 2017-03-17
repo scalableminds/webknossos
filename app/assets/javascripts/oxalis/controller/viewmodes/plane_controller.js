@@ -19,7 +19,7 @@ import SceneController from "oxalis/controller/scene_controller";
 import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 import { getRequestLogZoomStep, getIntegerZoomStep, getAreas, getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
 import { movePlaneFlycamOrthoAction, moveFlycamOrthoAction, zoomByDeltaAction } from "oxalis/model/actions/flycam3d_actions";
-import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
+import { voxelToNm, getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneView from "oxalis/view/plane_view";

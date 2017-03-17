@@ -1,9 +1,9 @@
 // @flow
 import _ from "lodash";
 import { OrthoViews } from "oxalis/constants";
-import * as accessors from "oxalis/model/accessors/flycam2d_accessor";
+import * as accessors from "oxalis/model/accessors/flycam_accessor";
 
-describe("Flycam2D Accessors", () => {
+describe("Flycam Accessors", () => {
   const initialState = {
     dataset: {
       scale: [1, 1, 2],

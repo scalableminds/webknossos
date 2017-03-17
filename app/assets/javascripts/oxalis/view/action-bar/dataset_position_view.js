@@ -8,7 +8,7 @@ import Toast from "libs/toast";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam3d_accessor";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 
 class DatasetPositionView extends Marionette.View {
   static initClass() {

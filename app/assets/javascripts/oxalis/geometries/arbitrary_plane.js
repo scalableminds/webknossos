@@ -12,7 +12,7 @@ import type { ModeType } from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam3d_accessor";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 
 import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary_plane_material_factory";
 

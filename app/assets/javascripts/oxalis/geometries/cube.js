@@ -12,7 +12,7 @@ import type { Vector3, OrthoViewMapType } from "oxalis/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
 import Store from "oxalis/store";
-import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 
 class Cube {
 

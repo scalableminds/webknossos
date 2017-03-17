@@ -8,7 +8,7 @@ import app from "app";
 import Store from "oxalis/store";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import AbstractMaterialFactory from "oxalis/geometries/materials/abstract_material_factory";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 
 const DEFAULT_RADIUS = 1.0;
 

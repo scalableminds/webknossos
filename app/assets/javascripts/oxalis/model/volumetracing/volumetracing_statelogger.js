@@ -7,7 +7,7 @@ import StateLogger from "oxalis/model/statelogger";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import Store from "oxalis/store";
-import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 
 class VolumeTracingStateLogger extends StateLogger {
 

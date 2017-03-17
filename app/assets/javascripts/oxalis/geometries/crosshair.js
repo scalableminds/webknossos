@@ -5,7 +5,7 @@
 
 import * as THREE from "three";
 import Store from "oxalis/store";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam3d_accessor";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 
 class Crosshair {
 

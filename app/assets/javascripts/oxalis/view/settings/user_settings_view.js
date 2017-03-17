@@ -15,7 +15,7 @@ import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction } f
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
 import type { Vector6 } from "oxalis/constants";
 import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, SkeletonTracingType } from "oxalis/store";
-import { getMaxZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
+import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 
 const Panel = Collapse.Panel;

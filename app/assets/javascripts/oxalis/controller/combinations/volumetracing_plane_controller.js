@@ -15,8 +15,7 @@ import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import type SceneController from "oxalis/controller/scene_controller";
 import type Model, { BoundingBoxType } from "oxalis/model";
 import type View from "oxalis/view";
-import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
-import { getViewportBoundingBox } from "oxalis/model/accessors/flycam2d_accessor";
+import { getPosition, getViewportBoundingBox } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 
 class VolumeTracingPlaneController extends PlaneController {

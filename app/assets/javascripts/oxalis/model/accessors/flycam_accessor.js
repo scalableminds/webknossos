@@ -5,10 +5,12 @@ import type { FlycamType, OxalisState } from "oxalis/store";
 import constants, { OrthoViews, OrthoViewValues } from "oxalis/constants";
 import Maybe from "data.maybe";
 import Dimensions from "oxalis/model/dimensions";
-import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 import * as scaleInfo from "oxalis/model/scaleinfo";
 import _ from "lodash";
 import Utils from "libs/utils";
+import type { Matrix4x4 } from "libs/mjs";
+import { M4x4 } from "libs/mjs";
+import * as THREE from "three";
 
 const MAX_TEXTURE_OFFSET = 31;
 const MAX_ZOOM_THRESHOLD = 2;
@@ -23,6 +25,46 @@ export const MAX_ZOOM_STEP_DIFF = Math.min(
   MAX_ZOOM_THRESHOLD,
   (constants.TEXTURE_WIDTH - MAX_TEXTURE_OFFSET) / constants.VIEWPORT_WIDTH,
 );
+
+export function getUp(flycam: FlycamType): Vector3 {
+  const matrix = flycam.currentMatrix;
+  return [matrix[4], matrix[5], matrix[6]];
+}
+
+export function getLeft(flycam: FlycamType): Vector3 {
+  const matrix = flycam.currentMatrix;
+  return [matrix[0], matrix[1], matrix[2]];
+}
+
+export function getPosition(flycam: FlycamType): Vector3 {
+  const matrix = flycam.currentMatrix;
+  return [matrix[12], matrix[13], matrix[14]];
+}
+
+export function getRotation(flycam: FlycamType): Vector3 {
+  const object = new THREE.Object3D();
+  const matrix = (new THREE.Matrix4()).fromArray(flycam.currentMatrix).transpose();
+  object.applyMatrix(matrix);
+
+  // Fix JS modulo bug
+  // http://javascript.about.com/od/problemsolving/a/modulobug.htm
+  const mod = (x, n) => ((x % n) + n) % n;
+
+  const rotation: Vector3 = [
+    object.rotation.x,
+    object.rotation.y,
+    object.rotation.z - Math.PI,
+  ];
+  return [
+    mod((180 / Math.PI) * rotation[0], 360),
+    mod((180 / Math.PI) * rotation[1], 360),
+    mod((180 / Math.PI) * rotation[2], 360),
+  ];
+}
+
+export function getZoomedMatrix(flycam: FlycamType): Matrix4x4 {
+  return M4x4.scale1(flycam.zoomStep, flycam.currentMatrix);
+}
 
 export function getMaxZoomStep(state: OxalisState): number {
   return 1 + Maybe.fromNullable(state.dataset)

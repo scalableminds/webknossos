@@ -28,7 +28,7 @@ import ArbitraryPlaneInfo from "oxalis/geometries/arbitrary_plane_info";
 import constants from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import { yawFlycamAction, pitchFlycamAction, setPositionAction, setRotationAction, zoomInAction, zoomOutAction, moveFlycamAction } from "oxalis/model/actions/flycam_actions";
-import { getRotation, getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 
 class ArbitraryController {
   arbitraryView: ArbitraryView;

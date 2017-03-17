@@ -10,7 +10,7 @@ import TWEEN from "tween.js";
 import Constants from "oxalis/constants";
 import View from "oxalis/view";
 import Store from "oxalis/store";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam3d_accessor";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 
 
 const DEFAULT_SCALE: number = 1.35;

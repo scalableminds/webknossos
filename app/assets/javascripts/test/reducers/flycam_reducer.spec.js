@@ -2,7 +2,7 @@ import * as FlycamActions from "oxalis/model/actions/flycam_actions";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import { M4x4, V3 } from "libs/mjs";
 import { addTimestamp } from "oxalis/model/helpers/timestamp_middleware";
-import { getPosition, getRotation, getUp, getLeft, getZoomedMatrix } from "oxalis/model/accessors/flycam3d_accessor";
+import { getPosition, getRotation, getUp, getLeft, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { OrthoViews } from "oxalis/constants";
 
 function equalWithEpsilon(a, b, epsilon = 1e-10) {

@@ -9,7 +9,7 @@ import Store from "oxalis/store";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 
 class DatasetInfoView extends Marionette.View {
   static initClass() {

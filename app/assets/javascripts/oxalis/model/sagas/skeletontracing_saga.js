@@ -10,7 +10,7 @@ import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateTracing } from "oxalis/model/sagas/update_actions";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam3d_accessor";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import _ from "lodash";
 import Utils from "libs/utils";
 import { V3 } from "libs/mjs";

@@ -11,7 +11,7 @@ import Model from "oxalis/model";
 import Store from "oxalis/store";
 import type { Vector3, ModeType } from "oxalis/constants";
 import constants, { ModeValues } from "oxalis/constants";
-import { getRotation, getPosition } from "oxalis/model/accessors/flycam3d_accessor";
+import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 
 type State = {
   position?: Vector3,

@@ -15,8 +15,7 @@ import RestrictionHandler from "oxalis/model/helpers/restriction_handler";
 import Constants from "oxalis/constants";
 import Binary from "oxalis/model/binary";
 import Store from "oxalis/store";
-import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
-import { getIntegerZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
+import { getPosition, getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setRotationAction } from "oxalis/model/actions/flycam_actions";
 
 import type { Vector3, VolumeModeType, OrthoViewType } from "oxalis/constants";

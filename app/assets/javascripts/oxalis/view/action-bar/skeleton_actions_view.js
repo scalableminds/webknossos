@@ -4,8 +4,7 @@ import Marionette from "backbone.marionette";
 import Constants, { OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import { createNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
-import { getRotationOrtho, getIntegerZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
+import { getPosition, getRotationOrtho, getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
 class SkeletonActionsView extends Marionette.View {
   static initClass() {

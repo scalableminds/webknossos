@@ -3,7 +3,6 @@
  * @flow
  */
 
-import * as THREE from "three";
 import type { Vector3 } from "oxalis/constants";
 
 export function getBaseVoxel(dataSetScale: Vector3): number {

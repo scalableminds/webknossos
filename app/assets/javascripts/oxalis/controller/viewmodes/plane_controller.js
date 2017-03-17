@@ -189,9 +189,9 @@ class PlaneController {
       ...pos);
 
     Store.subscribe(() => {
-      const state = Store.getState();
-      const position = getPosition(state.flycam3d);
-      const nmPosition = voxelToNm(state.dataset.scale, position);
+      const newState = Store.getState();
+      const position = getPosition(newState.flycam3d);
+      const nmPosition = voxelToNm(newState.dataset.scale, position);
 
       this.controls.target.set(...nmPosition);
       this.controls.update();

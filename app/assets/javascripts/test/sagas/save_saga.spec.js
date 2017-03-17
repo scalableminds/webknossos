@@ -1,4 +1,5 @@
 // @flow
+/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import mockRequire from "mock-require";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
 import * as SaveActions from "oxalis/model/actions/save_actions";

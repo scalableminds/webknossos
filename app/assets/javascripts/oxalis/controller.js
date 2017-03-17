@@ -121,7 +121,6 @@ class Controller {
         this.planeController = new VolumeTracingPlaneController(
           this.model, this.view, this.sceneController, this.annotationController);
       } else {
-
         // SKELETONRACING MODE
         this.view = new SkeletonTracingView(this.model);
         this.annotationController = new SkeletonTracingController(

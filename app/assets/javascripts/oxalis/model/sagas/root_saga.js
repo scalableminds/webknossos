@@ -3,11 +3,19 @@ import { watchSkeletonTracingAsync, saveSkeletonTracingAsync } from "oxalis/mode
 import { pushAnnotationAsync } from "oxalis/model/sagas/save_saga";
 
 export default function* rootSaga() {
-  yield [
-    initializeSettingsAsync(),
-    watchPushSettingsAsync(),
-    watchSkeletonTracingAsync(),
-    saveSkeletonTracingAsync(),
-    pushAnnotationAsync(),
-  ];
+  try {
+    yield [
+      initializeSettingsAsync(),
+      watchPushSettingsAsync(),
+      watchSkeletonTracingAsync(),
+      saveSkeletonTracingAsync(),
+      pushAnnotationAsync(),
+    ];
+  } catch (err) {
+    alert(`\
+Internal error.
+Please reload the page to avoid losing data.
+
+${err} ${err.stack}`);
+  }
 }

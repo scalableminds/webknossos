@@ -214,7 +214,7 @@ export type OxalisState = {
   datasetConfiguration: DatasetConfigurationType,
   userConfiguration: UserConfigurationType,
   temporaryConfiguration: TemporaryConfigurationType,
-  dataset: ?DatasetType,
+  dataset: DatasetType,
   skeletonTracing: SkeletonTracingType,
   task: ?TaskType,
   save: SaveStateType,
@@ -263,7 +263,16 @@ const defaultState: OxalisState = {
     boundingBox: [0, 0, 0, 0, 0, 0],
   },
   task: null,
-  dataset: null,
+  dataset: {
+    name: "Test Dataset",
+    scale: [5, 5, 5],
+    dataStore: {
+      name: "localhost",
+      url: "http://localhost:9000",
+      typ: "webknossos-store",
+    },
+    dataLayers: [],
+  },
   skeletonTracing: {
     trees: {},
     name: "",

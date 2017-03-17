@@ -26,6 +26,7 @@ class TreeGeometry {
   particleMaterial: THREE.ShaderMaterial;
   nodes: THREE.Points;
   id: number;
+  oldActiveNodeId: ?number;
 
   constructor(treeId: number, treeColor, model: Model) {
     // create skeletonTracing to show in TDView and pre-allocate buffers
@@ -61,10 +62,22 @@ class TreeGeometry {
     this.nodes = new THREE.Points(nodeGeometry, this.particleMaterial);
 
     this.id = treeId;
+    this.oldActiveNodeId = null;
 
     Store.subscribe(() => {
-      const { overrideNodeRadius } = Store.getState().userConfiguration;
+      const state = Store.getState();
+      const { overrideNodeRadius } = state.userConfiguration;
       this.showRadius(!overrideNodeRadius);
+
+      _.defer(() => {
+
+	const activeNodeId = state.skeletonTracing.activeNodeId;
+	if (activeNodeId !== this.oldActiveNodeId) {
+	  this.startNodeHighlightAnimation(activeNodeId);
+	  this.oldActiveNodeId = activeNodeId;
+	}
+       }
+      )
     });
   }
 
@@ -118,12 +131,13 @@ class TreeGeometry {
     const normal = 1.0;
     const highlighted = 2.0;
 
-    // this.doWithNodeIndex(nodeId, index => this.animateNodeScale(normal, highlighted, index, () => this.animateNodeScale(highlighted, normal, index)),
+    const nodeIndex = this.getNodeIndex(nodeId);
+    if (nodeIndex) {
+      this.animateNodeScale(normal, highlighted, nodeIndex, () => this.animateNodeScale(highlighted, normal, nodeIndex));
+    }
   }
 
-
-  animateNodeScale(from, to, index, onComplete) {
-    if (onComplete == null) { onComplete = function () {}; }
+  animateNodeScale(from, to, index, onComplete = _.noop) {
     const setScaleFactor = factor => this.scalesBuffer.set([factor], index);
     const redraw = () => {
       this.updateGeometries();
@@ -134,13 +148,22 @@ class TreeGeometry {
       redraw();
     };
 
-    (new TWEEN.Tween({ scaleFactor: from }))
+    const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });
+    tweenAnimation
       .to({ scaleFactor: to }, 100)
       .onUpdate(onUpdate)
       .onComplete(onComplete)
       .start();
   }
 
+  getNodeIndex(nodeId) {
+    for (let i = 0; i < this.nodeIDs.length; i++) {
+      if (this.nodeIDs.get(i) === nodeId) {
+	return i;
+      }
+    }
+    return null;
+  }
 
   getColor(id, isActiveNode, isBranchPoint) {
     const tree = Store.getState().skeletonTracing.trees[this.id];

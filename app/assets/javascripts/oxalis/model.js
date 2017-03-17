@@ -16,7 +16,6 @@ import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
-import scaleInfo from "oxalis/model/scaleinfo";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
 import constants, { Vector3Indicies } from "oxalis/constants";
 import type { ModeType, Vector3, Vector6 } from "oxalis/constants";
@@ -200,7 +199,6 @@ class Model extends Backbone.Model {
     });
 
     const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
-    scaleInfo.initialize(dataset.scale);
 
     const bb = tracing.content.boundingBox;
     if (bb != null) {

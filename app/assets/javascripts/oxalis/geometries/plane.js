@@ -4,7 +4,7 @@
  */
 
 import app from "app";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Model from "oxalis/model";
 import { getArea, getRequestLogZoomStep, getTexturePosition } from "oxalis/model/accessors/flycam2d_accessor";
@@ -48,7 +48,8 @@ class Plane {
     // dimension with the highest resolution. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
-    const scaleArray = Dimensions.transDim(scaleInfo.baseVoxelFactors, this.planeID);
+    const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.scale);
+    const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.scaleVector = new THREE.Vector3(...scaleArray);
 
     this.createMeshes(planeWidth, textureWidth);

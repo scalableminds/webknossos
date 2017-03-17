@@ -6,7 +6,7 @@ import constants, { OrthoViews, OrthoViewValues } from "oxalis/constants";
 import Maybe from "data.maybe";
 import Dimensions from "oxalis/model/dimensions";
 import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
-import * as scaleInfo2 from "oxalis/model/scaleinfo2";
+import * as scaleInfo from "oxalis/model/scaleinfo";
 import _ from "lodash";
 import Utils from "libs/utils";
 
@@ -48,7 +48,7 @@ export function calculateTextureBuffer(state: OxalisState): OrthoViewMapType<Vec
   // buffer: how many pixels is the texture larger than the canvas on each dimension?
   // --> two dimensional array with buffer[planeId][dimension], dimension: x->0, y->1
   const pixelNeeded = constants.VIEWPORT_WIDTH * getTextureScalingFactor(state);
-  const baseVoxelFactors = scaleInfo2.getBaseVoxelFactors(state.dataset.scale);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
   const buffer = {};
   for (const planeId of OrthoViewValues) {
     const scaleArray = Dimensions.transDim(baseVoxelFactors, planeId);
@@ -80,7 +80,7 @@ export function getRotationOrtho(planeId: OrthoViewType): Vector3 {
 export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
   const position = getPosition(state.flycam3d);
   const offset = (getPlaneScalingFactor(state.flycam3d) * constants.VIEWPORT_WIDTH) / 2;
-  const baseVoxelFactors = scaleInfo2.getBaseVoxelFactors(state.dataset.scale);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
   const min = [0, 0, 0];
   const max = [0, 0, 0];
 
@@ -121,7 +121,7 @@ export function getArea(state: OxalisState, planeId: OrthoViewType): Vector4 {
   // returns [left, top, right, bottom] array
 
   // convert scale vector to array in order to be able to use getIndices()
-  const scaleArray = Dimensions.transDim(scaleInfo2.getBaseVoxelFactors(state.dataset.scale), planeId);
+  const scaleArray = Dimensions.transDim(scaleInfo.getBaseVoxelFactors(state.dataset.scale), planeId);
   const offsets = getOffsets(state, planeId);
   const size = getTextureScalingFactor(state) * constants.VIEWPORT_WIDTH;
   // two pixels larger, just to fight rounding mistakes (important for mouse click conversion)

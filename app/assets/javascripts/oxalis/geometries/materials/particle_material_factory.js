@@ -6,7 +6,7 @@
 import _ from "lodash";
 import app from "app";
 import Store from "oxalis/store";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import AbstractMaterialFactory from "oxalis/geometries/materials/abstract_material_factory";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
 
@@ -19,23 +19,24 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
 
   setupUniforms() {
     super.setupUniforms();
+    const state = Store.getState();
 
     this.uniforms = _.extend(this.uniforms, {
       zoomFactor: {
         type: "f",
-        value: getPlaneScalingFactor(Store.getState().flycam3d),
+        value: getPlaneScalingFactor(state.flycam3d),
       },
       baseVoxel: {
         type: "f",
-        value: scaleInfo.baseVoxel,
+        value: getBaseVoxel(state.dataset.scale),
       },
       particleSize: {
         type: "f",
-        value: Store.getState().userConfiguration.particleSize,
+        value: state.userConfiguration.particleSize,
       },
       scale: {
         type: "f",
-        value: Store.getState().userConfiguration.scale,
+        value: state.userConfiguration.scale,
       },
       showRadius: {
         type: "i",

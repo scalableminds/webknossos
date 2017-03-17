@@ -29,9 +29,6 @@ const ErrorHandling = {
   assertExists: _.noop,
   assert: _.noop,
 };
-const scaleInfo = {
-  initialize: _.noop,
-};
 const window = {
   location: {
     pathname: "annotationUrl",
@@ -55,7 +52,6 @@ mockRequire("libs/window", window);
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);
-mockRequire("oxalis/model/scaleinfo", scaleInfo);
 mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
 mockRequire("oxalis/model/user", User);
 mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);

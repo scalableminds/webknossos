@@ -6,7 +6,7 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Store from "oxalis/store";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
@@ -100,18 +100,20 @@ class DatasetInfoView extends Marionette.View {
   calculateZoomLevel() {
     let width;
     let zoom;
+    const state = Store.getState();
     if (constants.MODES_PLANE.includes(this.model.mode)) {
       zoom = getPlaneScalingFactor(Store.getState().flycam3d);
       width = constants.PLANE_WIDTH;
     } else if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
-      zoom = Store.getState().flycam3d.zoomStep;
+      zoom = state.flycam3d.zoomStep;
       width = ArbitraryController.prototype.WIDTH;
     } else {
       throw Error("Model mode not recognized:", this.model.mode);
     }
 
     // unit is nm
-    return zoom * width * scaleInfo.baseVoxel;
+    const baseVoxel = getBaseVoxel(state.dataset.scale);
+    return zoom * width * baseVoxel;
   }
 
 

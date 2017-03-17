@@ -9,17 +9,12 @@
 import _ from "lodash";
 import Maybe from "data.maybe";
 import app from "app";
-import { getBaseVoxel } from "oxalis/model/scaleinfo2";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
 import Utils from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
-
-function moveNodesToNewTree(trees: TreeMapType, nodeId: number): TreeMapType {
-  // TODO
-  return trees;
-}
 
 export function findTree(trees: TreeMapType, nodeId: number): ?TreeType {
   return _.values(trees)

@@ -7,7 +7,6 @@ import _ from "lodash";
 import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import scaleInfo from "oxalis/model/scaleinfo";
 import Constants from "oxalis/constants";
 import View from "oxalis/view";
 import Store from "oxalis/store";
@@ -82,8 +81,9 @@ class ArbitraryView {
     this.cameraPosition = [0, 0, this.camDistance];
 
     this.group = new THREE.Object3D();
+    const nmPerVoxel = new THREE.Vector3(...Store.getState().dataset.scale);
     // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale.copy(new THREE.Vector3(...scaleInfo.nmPerVoxel));
+    this.group.scale.copy(nmPerVoxel);
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.group);
     this.group.add(this.camera);

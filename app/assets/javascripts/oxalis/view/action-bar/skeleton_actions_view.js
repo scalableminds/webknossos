@@ -38,7 +38,7 @@ class SkeletonActionsView extends Marionette.View {
     Store.dispatch(createNodeAction(
       getPosition(Store.getState().flycam3d),
       getRotationOrtho(OrthoViews.PLANE_XY),
-      OrthoViews.PLANE_XY, // xy viewport
+      0, // legacy for OrthoViews.PLANE_XY
       getIntegerZoomStep(Store.getState()),
     ));
   }

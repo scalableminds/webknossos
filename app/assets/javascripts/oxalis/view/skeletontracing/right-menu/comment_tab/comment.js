@@ -39,7 +39,7 @@ class Comment extends Component {
       <li className={liClassName} id={`comment-tab-node-${data.node}`} ref={(ref) => { this.comment = ref; }}>
         <i className={iClassName} />
         <a href="#jump-to-comment" onClick={this.handleClick}>
-          {`${data.node} - ${data.comment}`}
+          {`${data.node} - ${data.content}`}
         </a>
       </li>
     );

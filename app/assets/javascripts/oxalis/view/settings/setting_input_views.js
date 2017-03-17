@@ -153,9 +153,9 @@ type NumberInputSettingProps = {
   onChange: (value: number) => void,
   value: number,
   label: string,
-  max: number,
-  min: number,
-  step: number,
+  max?: number,
+  min?: number,
+  step?: number,
 };
 
 export class NumberInputSetting extends React.PureComponent {

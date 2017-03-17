@@ -54,7 +54,8 @@ class AbstractTreeRenderer {
     _.extend(this, Backbone.Events);
 
     this.canvas = $canvas;
-    this.ctx = $canvas[0].getContext("2d");
+    const HTMLCanvas: HTMLCanvasElement = ($canvas[0]: HTMLCanvasElement);
+    this.ctx = HTMLCanvas.getContext("2d");
     this.ctx.lineWidth = 1;
     this.nodeList = [];
   }

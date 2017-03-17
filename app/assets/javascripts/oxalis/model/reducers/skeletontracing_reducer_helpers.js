@@ -16,6 +16,18 @@ import Utils from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
 
+export function getActiveNode(tracing: SkeletonTracingType) {
+  const { activeTreeId, activeNodeId } = tracing;
+  if (activeTreeId != null && activeNodeId != null) {
+    return Maybe.Just(tracing.trees[activeTreeId].nodes[activeNodeId]);
+  }
+  return Maybe.Nothing();
+}
+
+export function getEdges(tree: TreeType, node: NodeType) {
+  return tree.edges.filter(e => e.source === node.id || e.target === node.id);
+}
+
 function getActiveNodeFromTree(tracing: SkeletonTracingType, tree: TreeType) {
   const { activeNodeId } = tracing;
   if (activeNodeId != null) {

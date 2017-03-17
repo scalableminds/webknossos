@@ -433,30 +433,6 @@ class ArbitraryController {
     }
   }
 
-
-  setActiveNode(nodeId: number, centered: boolean, mergeTree: boolean = false): void {
-    // Consider for removal
-    Store.dispatch(setActiveNodeAction(nodeId, mergeTree));
-
-    const { activeTreeId, activeNodeId, trees } = Store.getState().skeletonTracing;
-    const activeNode = trees[activeTreeId].nodes[activeNodeId];
-
-    Store.dispatch(setPositionAction(activeNode.position));
-    Store.dispatch(setRotationAction(activeNode.rotation));
-  }
-
-  deleteActiveNode(): void {
-    const { skeletonTracing } = this.model;
-    const activeNode = skeletonTracing.getActiveNode();
-    if (activeNode.neighbors.length > 1) {
-      Toast.error("Unable: Attempting to cut skeleton");
-    }
-
-    _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(
-      () => this.centerActiveNode(),
-    ));
-  }
-
   getShortestRotation(curRotation: Vector3, newRotation: Vector3): Vector3 {
     // TODO
     // interpolating Euler angles does not lead to the shortest rotation

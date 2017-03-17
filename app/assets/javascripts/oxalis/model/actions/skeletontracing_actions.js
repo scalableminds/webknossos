@@ -66,17 +66,10 @@ export const deleteNodeAction = (nodeId?: number, treeId?: number): deleteNodeAc
   treeId,
 });
 
-export const setActiveNodeAction = (nodeId: number, ...args): (setActiveNodeActionType) => {
-  if (args.length > 1) {
-    debugger;
-    Error("Who calls this with multiple arguments?");
-  }
-
-  return {
-    type: "SET_ACTIVE_NODE",
-    nodeId,
-  };
-};
+export const setActiveNodeAction = (nodeId: number): (setActiveNodeActionType) => ({
+  type: "SET_ACTIVE_NODE",
+  nodeId,
+});
 
 export const setActiveNodeRadiusAction = (radius: number): setActiveNodeRadiusActionType => ({
   type: "SET_ACTIVE_NODE_RADIUS",

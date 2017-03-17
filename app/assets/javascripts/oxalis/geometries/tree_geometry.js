@@ -70,14 +70,12 @@ class TreeGeometry {
       this.showRadius(!overrideNodeRadius);
 
       _.defer(() => {
-
-	const activeNodeId = state.skeletonTracing.activeNodeId;
-	if (activeNodeId !== this.oldActiveNodeId) {
-	  this.startNodeHighlightAnimation(activeNodeId);
-	  this.oldActiveNodeId = activeNodeId;
-	}
-       }
-      )
+        const activeNodeId = state.skeletonTracing.activeNodeId;
+        if (activeNodeId !== this.oldActiveNodeId) {
+          this.startNodeHighlightAnimation(activeNodeId);
+          this.oldActiveNodeId = activeNodeId;
+        }
+      });
     });
   }
 
@@ -159,7 +157,7 @@ class TreeGeometry {
   getNodeIndex(nodeId) {
     for (let i = 0; i < this.nodeIDs.length; i++) {
       if (this.nodeIDs.get(i) === nodeId) {
-	return i;
+        return i;
       }
     }
     return null;

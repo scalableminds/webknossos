@@ -8,7 +8,6 @@
 
 import _ from "lodash";
 import mock from "mock-require";
-import ScaleInfo from "oxalis/model/scaleinfo";
 import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
 import { addTimestamp } from "oxalis/model/helpers/timestamp_middleware";
 import update from "immutability-helper";
@@ -20,7 +19,9 @@ const SkeletonTracingReducer = mock.reRequire("oxalis/model/reducers/skeletontra
 
 describe("SkeletonTracing", () => {
   const initialState = {
-    dataset: null,
+    dataset: {
+      scale: [5, 5, 5],
+    },
     userConfiguration: null,
     datasetConfiguration: null,
     task: {
@@ -57,11 +58,6 @@ describe("SkeletonTracing", () => {
   const rotation = [0.5, 0.5, 0.5];
   const viewport = 0;
   const resolution = 0;
-
-  beforeAll(() => {
-    // needed for default node radius
-    ScaleInfo.initialize([5]);
-  });
 
   it("should add a new node", () => {
     const action = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));

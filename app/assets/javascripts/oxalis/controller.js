@@ -112,25 +112,29 @@ class Controller {
     this.sceneController = new SceneController(this.model);
 
     // TODO: Replace with skeletonTracing from Store (which is non-null currently)
-    if (this.model.skeletonTracing != null) {
-      this.view = new SkeletonTracingView(this.model);
-      this.annotationController = new SkeletonTracingController(
-        this.model, this.view, this.sceneController);
-      this.planeController = new SkeletonTracingPlaneController(
-        this.model, this.view, this.sceneController, this.annotationController);
+    if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+      if (this.model.volumeTracing != null) {
+        // VOLUME MODE
+        this.view = new VolumeTracingView(this.model);
+        this.annotationController = new VolumeTracingController(
+          this.model, this.view, this.sceneController);
+        this.planeController = new VolumeTracingPlaneController(
+          this.model, this.view, this.sceneController, this.annotationController);
+      } else {
 
-      const ArbitraryControllerClass = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalSkeletonTracingArbitraryController;
-      this.arbitraryController = new ArbitraryControllerClass(
-        this.model, this.view, this.sceneController, this.annotationController);
-    } else if (this.model.volumeTracing != null) {
-      this.view = new VolumeTracingView(this.model);
-      this.annotationController = new VolumeTracingController(
-        this.model, this.view, this.sceneController);
-      this.planeController = new VolumeTracingPlaneController(
-        this.model, this.view, this.sceneController, this.annotationController);
+        // SKELETONRACING MODE
+        this.view = new SkeletonTracingView(this.model);
+        this.annotationController = new SkeletonTracingController(
+          this.model, this.view, this.sceneController);
+        this.planeController = new SkeletonTracingPlaneController(
+          this.model, this.view, this.sceneController, this.annotationController);
+
+        const ArbitraryControllerClass = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalSkeletonTracingArbitraryController;
+        this.arbitraryController = new ArbitraryControllerClass(
+          this.model, this.view, this.sceneController, this.annotationController);
+      }
     } else {
-      // View mode
-
+      // VIEW MODE
       this.view = new View(this.model);
       this.planeController = new PlaneController(
         this.model, this.view, this.sceneController);

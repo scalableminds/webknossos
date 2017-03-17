@@ -20,7 +20,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, createCommentAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
 import ArbitraryView from "oxalis/view/arbitrary_view";
@@ -269,8 +269,10 @@ class ArbitraryController {
   }
 
   getVoxelOffset(timeFactor: number): number {
-    const moveValue3d = Store.getState().userConfiguration.moveValue3d;
-    return (moveValue3d * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
+    const state = Store.getState();
+    const moveValue3d = state.userConfiguration.moveValue3d;
+    const baseVoxel = getBaseVoxel(state.dataset.scale);
+    return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
   }
 
   move(timeFactor: number): void {

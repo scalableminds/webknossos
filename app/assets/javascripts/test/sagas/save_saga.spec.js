@@ -18,6 +18,9 @@ function expectValue(block) {
 
 describe("SaveSaga", () => {
   const initialState = {
+    dataset: {
+      scale: [5, 5, 5],
+    },
     task: {
       id: 1,
     },

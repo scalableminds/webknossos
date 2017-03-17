@@ -5,7 +5,7 @@ import type { Flycam3DActionType } from "oxalis/model/actions/flycam3d_actions";
 import type { SettingActionType } from "oxalis/model/actions/settings_actions";
 import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam2d_accessor";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo2";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";

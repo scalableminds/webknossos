@@ -19,7 +19,7 @@ import SceneController from "oxalis/controller/scene_controller";
 import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 import { getRequestLogZoomStep, getIntegerZoomStep, getAreas, getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
 import { movePlaneFlycamOrthoAction, moveFlycamOrthoAction, zoomByDeltaAction } from "oxalis/model/actions/flycam3d_actions";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { voxelToNm, getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneView from "oxalis/view/plane_view";
@@ -90,7 +90,8 @@ class PlaneController {
 
     this.isStarted = false;
 
-    this.oldNmPos = scaleInfo.voxelToNm(getPosition(Store.getState().flycam3d));
+    const state = Store.getState();
+    this.oldNmPos = voxelToNm(state.dataset.scale, getPosition(state.flycam3d));
 
     this.planeView = new PlaneView(this.model, this.view);
 
@@ -172,7 +173,8 @@ class PlaneController {
 
   initTrackballControls(): void {
     const view = $("#inputcatcher_TDView")[0];
-    const pos = scaleInfo.voxelToNm(getPosition(Store.getState().flycam3d));
+    const state = Store.getState();
+    const pos = voxelToNm(state.dataset.scale, getPosition(state.flycam3d));
     this.controls = new TrackballControls(
       this.planeView.getCameras()[OrthoViews.TDView],
       view,
@@ -184,11 +186,12 @@ class PlaneController {
     this.controls.staticMoving = true;
 
     this.controls.target.set(
-      ...scaleInfo.voxelToNm(getPosition(Store.getState().flycam3d)));
+      ...pos);
 
     Store.subscribe(() => {
-      const position = getPosition(Store.getState().flycam3d);
-      const nmPosition = scaleInfo.voxelToNm(position);
+      const state = Store.getState();
+      const position = getPosition(state.flycam3d);
+      const nmPosition = voxelToNm(state.dataset.scale, position);
 
       this.controls.target.set(...nmPosition);
       this.controls.update();
@@ -220,10 +223,11 @@ class PlaneController {
     });
 
     const getMoveValue = (timeFactor) => {
+      const state = Store.getState();
       if (this.activeViewport === OrthoViews.TDView) {
-        return (Store.getState().userConfiguration.moveValue * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
+        return (state.userConfiguration.moveValue * timeFactor) / getBaseVoxel(state.dataset.scale) / constants.FPS;
       }
-      return (Store.getState().userConfiguration.moveValue * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
+      return (state.userConfiguration.moveValue * timeFactor) / getBaseVoxel(state.dataset.scale) / constants.FPS;
     };
 
     this.input.keyboard = new InputKeyboard({
@@ -482,10 +486,11 @@ class PlaneController {
 
   calculateGlobalPos = (clickPos: Point2): Vector3 => {
     let position;
-    const curGlobalPos = getPosition(Store.getState().flycam3d);
-    const zoomFactor = getPlaneScalingFactor(Store.getState().flycam3d);
+    const state = Store.getState();
+    const curGlobalPos = getPosition(state.flycam3d);
+    const zoomFactor = getPlaneScalingFactor(state.flycam3d);
     const { scaleFactor } = this.planeView;
-    const planeRatio = scaleInfo.baseVoxelFactors;
+    const planeRatio = getBaseVoxelFactors(state.dataset.scale);
     switch (this.activeViewport) {
       case OrthoViews.PLANE_XY:
         position = [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),

@@ -9,7 +9,7 @@
 import _ from "lodash";
 import Maybe from "data.maybe";
 import app from "app";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
 import Utils from "libs/utils";
@@ -19,9 +19,9 @@ import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, Br
 function getActiveNodeFromTree(tracing: SkeletonTracingType, tree: TreeType) {
   const { activeNodeId } = tracing;
   if (activeNodeId != null) {
-    return tree.nodes[activeNodeId];
+    return Maybe.Just(tree.nodes[activeNodeId]);
   }
-  return null;
+  return Maybe.Nothing();
 }
 
 export function findTreeByNodeId(trees: TreeMapType, nodeId: number): Maybe<TreeType> {
@@ -86,12 +86,12 @@ function generateTreeNamePrefix(state: OxalisState, timestamp) {
 
 export function createNode(state: OxalisState, tree: TreeType, position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number): Maybe<[NodeType, Array<EdgeType>]> {
   const { allowUpdate } = state.skeletonTracing.restrictions;
-  const activeNode = getActiveNodeFromTree(state.skeletonTracing, tree);
+  const activeNodeMaybe = getActiveNodeFromTree(state.skeletonTracing, tree);
 
   if (allowUpdate) {
     // Use the same radius as current active node or revert to default value
-    const defaultRadius = 10 * scaleInfo.baseVoxel;
-    const radius = activeNode != null ? activeNode.radius : defaultRadius;
+    const defaultRadius = 10 * getBaseVoxel(state.dataset.scale);
+    const radius = activeNodeMaybe.map(activeNode => activeNode.radius).getOrElse(defaultRadius);
 
     // Find new node id by increasing the max node id.
     // Default to 0 if there are no nodes yet
@@ -112,14 +112,10 @@ export function createNode(state: OxalisState, tree: TreeType, position: Vector3
     };
 
     // Create a new edge
-    const newEdges = [];
-    if (activeNode != null) {
-      const newEdge: EdgeType = {
-        source: activeNode.id,
-        target: nextNewId,
-      };
-      newEdges.push(newEdge);
-    }
+    const newEdges = activeNodeMaybe.map(activeNode => [{
+      source: activeNode.id,
+      target: nextNewId,
+    }]).getOrElse([]);
     const edges = tree.edges.concat(newEdges);
 
     return Maybe.Just([node, edges]);

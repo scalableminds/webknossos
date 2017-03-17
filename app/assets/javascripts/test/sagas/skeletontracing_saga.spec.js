@@ -28,6 +28,9 @@ function testDiffing(prevTracing, nextTracing, flycam3d) {
 
 describe("SkeletonTracingSaga", () => {
   const initialState = {
+    dataset: {
+      scale: [5, 5, 5],
+    },
     task: {
       id: 1,
     },
@@ -235,7 +238,7 @@ describe("SkeletonTracingSaga", () => {
 
     expect(updateActions[0].action).toBe("updateTree");
     expect(updateActions[0].value.id).toBe(0);
-    expect(updateActions[0].value.comments).toEqual([{ node: 0, comment: "Hallo" }]);
+    expect(updateActions[0].value.comments).toEqual([{ node: 0, content: "Hallo" }]);
   });
 
   it("shouldn't emit an updateTree update actions (comments)", () => {

@@ -8,18 +8,19 @@ import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 import * as THREE from "three";
+import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam3d_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam2d_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import Cube from "oxalis/geometries/cube";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
 import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
-import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView, Vector3Indicies } from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { BoundingBoxType } from "oxalis/model";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
@@ -225,9 +226,9 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    for (const i of Vector3Indicies) {
-      this.planeShift[i] = value * scaleInfo.voxelPerNM[i];
-    }
+    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.scale);
+    V3.scale(voxelPerNMVector, value, this.planeShift);
+
     app.vent.trigger("rerender");
   }
 

@@ -9,7 +9,7 @@
 import _ from "lodash";
 import Maybe from "data.maybe";
 import app from "app";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { getBaseVoxel } from "oxalis/model/scaleinfo2";
 import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
 import Utils from "libs/utils";
@@ -46,7 +46,7 @@ export function createNode(state: OxalisState, position: Vector3, rotation: Vect
 
   if (allowUpdate && activeTreeId != null) {
     // Use the same radius as current active node or revert to default value
-    const defaultRadius = 10 * scaleInfo.baseVoxel;
+    const defaultRadius = 10 * getBaseVoxel(state.dataset.scale);
     const radius = activeNodeId ? state.skeletonTracing.trees[activeTreeId].nodes[activeNodeId].radius : defaultRadius;
 
     // Find new node id by increasing the max node id.

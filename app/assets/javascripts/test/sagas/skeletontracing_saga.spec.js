@@ -28,6 +28,9 @@ function testDiffing(prevTracing, nextTracing, flycam3d) {
 
 describe("SkeletonTracingSaga", () => {
   const initialState = {
+    dataset: {
+      scale: [5, 5, 5],
+    },
     task: {
       id: 1,
     },

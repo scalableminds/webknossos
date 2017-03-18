@@ -13,10 +13,10 @@ import com.scalableminds.util.geometry.{BoundingBox, Scale}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedListOfBoxes
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
-
 import scala.concurrent.ExecutionContext.Implicits._
 
 
@@ -60,13 +60,14 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
   }
 
   protected def extractSections(base: Path): Fox[List[DataLayerSection]] = {
-    val sectionSettingsMap = extractSectionSettings(base)
-    Fox.combined(sectionSettingsMap.map {
-      case (path, settings) => createSection(base.relativize(path), settings).toFox
-    }.toList)
+    extractSectionSettings(base).flatMap { sectionSettingsMap =>
+      Fox.combined(sectionSettingsMap.map {
+        case (path, settings) => createSection(base.relativize(path), settings).toFox
+      }.toList)
+    }
   }
 
-  protected def extractSectionSettings(base: Path): Map[Path, DataLayerSectionSettings] = {
+  protected def extractSectionSettings(base: Path): Fox[Map[Path, DataLayerSectionSettings]] = {
 
     def extract(path: Path, depth: Int = 0): List[Box[(Path, DataLayerSectionSettings)]] = {
       if (depth > maxRecursiveLayerDepth) {
@@ -82,7 +83,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
       }
     }
 
-    extract(base).flatten.toMap
+    extract(base).combine.map(_.toMap).toFox
   }
 
   protected def normalizeClasses(classes: List[List[Long]], parentClasses: List[List[Long]]): Box[List[List[Long]]] = {

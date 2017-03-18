@@ -249,4 +249,21 @@ object ExtendedTypes {
     }
   }
 
+  implicit class ExtendedListOfBoxes[T](l: List[Box[T]]) {
+    def combine: Box[List[T]] = {
+      l.foldLeft[Box[List[T]]](Full(List.empty))((result: Box[List[T]], elemBox: Box[T]) => {
+        result.flatMap { l2 =>
+          elemBox match {
+            case Full(elem) =>
+              Full(l2 :+ elem)
+            case Empty =>
+              Full(l2)
+            case f: Failure =>
+              f
+          }
+        }
+      })
+    }
+  }
+
 }

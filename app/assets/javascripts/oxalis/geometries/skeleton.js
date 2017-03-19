@@ -75,11 +75,8 @@ class Skeleton {
       if (!treeGeometry) {
         treeGeometry = this.createNewTree(tree.treeId, tree.color);
       }
-      treeGeometry.reset(tree.nodes, tree.edges);
 
-      for (const branchpoint of tree.branchPoints) {
-        treeGeometry.updateNodeColor(branchpoint.id, null, true);
-      }
+      treeGeometry.reset(tree.nodes, tree.edges);
     }
     app.vent.trigger("rerender");
   }

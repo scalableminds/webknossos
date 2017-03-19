@@ -5,8 +5,6 @@
 
 import _ from "lodash";
 import app from "app";
-import ResizableBuffer from "libs/resizable_buffer";
-import ErrorHandling from "libs/error_handling";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import Store from "oxalis/store";
@@ -16,38 +14,23 @@ import type { Vector3 } from "oxalis/constants";
 
 class TreeGeometry {
 
-  nodeIDs: ResizableBuffer<Int32Array>;
-  edgesBuffer: ResizableBuffer<Float32Array>;
-  nodesBuffer: ResizableBuffer<Float32Array>;
-  sizesBuffer: ResizableBuffer<Float32Array>;
-  scalesBuffer: ResizableBuffer<Float32Array>;
-  nodesColorBuffer: ResizableBuffer<Float32Array>;
+  nodeIDs: Int32Array;
+  edgesBuffer: Float32Array;
+  nodesBuffer: Float32Array;
+  sizesBuffer: Float32Array;
+  scalesBuffer: Float32Array;
+  nodesColorBuffer: Float32Array;
   edges: THREE.LineSegments;
   particleMaterial: THREE.ShaderMaterial;
   nodes: THREE.Points;
   id: number;
   oldActiveNodeId: ?number;
+  oldNodeCount: ?number;
 
   constructor(treeId: number, treeColor, model: Model) {
-    // create skeletonTracing to show in TDView and pre-allocate buffers
-
+    // create skeletonTracing to show in TDView
     const edgeGeometry = new THREE.BufferGeometry();
     const nodeGeometry = new THREE.BufferGeometry();
-
-    this.nodeIDs = new ResizableBuffer(1, Int32Array, 100);
-    this.edgesBuffer = new ResizableBuffer(6, Float32Array);
-    this.nodesBuffer = new ResizableBuffer(3, Float32Array);
-    this.sizesBuffer = new ResizableBuffer(1, Float32Array);
-    this.scalesBuffer = new ResizableBuffer(1, Float32Array);
-    this.nodesColorBuffer = new ResizableBuffer(3, Float32Array);
-
-    edgeGeometry.addAttribute("position", this.makeDynamicFloatAttribute(3, this.edgesBuffer));
-    nodeGeometry.addAttribute("position", this.makeDynamicFloatAttribute(3, this.nodesBuffer));
-    nodeGeometry.addAttribute("sizeNm", this.makeDynamicFloatAttribute(1, this.sizesBuffer));
-    nodeGeometry.addAttribute("nodeScaleFactor", this.makeDynamicFloatAttribute(1, this.scalesBuffer));
-    nodeGeometry.addAttribute("color", this.makeDynamicFloatAttribute(3, this.nodesColorBuffer));
-
-    nodeGeometry.nodeIDs = this.nodeIDs;
 
     this.edges = new THREE.LineSegments(
       edgeGeometry,
@@ -63,6 +46,7 @@ class TreeGeometry {
 
     this.id = treeId;
     this.oldActiveNodeId = null;
+    this.oldNodeCount = null;
 
     Store.subscribe(() => {
       const state = Store.getState();
@@ -80,38 +64,86 @@ class TreeGeometry {
   }
 
   makeDynamicFloatAttribute(itemSize, resizableBuffer) {
-    const attr = new THREE.BufferAttribute(resizableBuffer.getBuffer(), itemSize);
+    const attr = new THREE.BufferAttribute(resizableBuffer, itemSize);
     attr.setDynamic(true);
     return attr;
   }
 
-  clear() {
-    this.nodesBuffer.clear();
-    this.edgesBuffer.clear();
-    this.sizesBuffer.clear();
-    this.scalesBuffer.clear();
-    this.nodesColorBuffer.clear();
-    this.nodeIDs.clear();
+  reset(nodes, edges) {
+    if (this.oldNodeCount !== _.size(nodes)) {
+      // only reset if anything has changed, for performance reasons
+      // Increases movement perf large tracings
+      // Ruins updating node radius and colors for branchpoints etc
+      this.resetNodes(nodes);
+      this.resetEdges(nodes, edges);
+
+      this.oldNodeCount = _.size(nodes);
+    }
   }
 
-  reset(nodes, edges) {
-    if (_.size(nodes)) {
-      this.clear();
+  resetEdges(nodes, edges) {
+    const edgesBuffer = new Float32Array(edges.length * 6);
 
-      this.nodesBuffer.pushMany(_.map(nodes, "position"));
-      this.sizesBuffer.pushMany(_.map(nodes, node => [node.radius * 2]));
-      this.scalesBuffer.pushMany(_.times(_.size(nodes), _.constant([1.0])));
-      this.nodeIDs.pushMany(_.map(nodes, node => [node.id]));
-      this.nodesColorBuffer.pushMany(_.map(nodes, node => this.getColor(node.id)));
-      this.edgesBuffer.pushMany(edges.map(edge => nodes[edge.source].position.concat(nodes[edge.target].position)));
+    let i = 0;
+    for (const edge of edges) {
+      const edgePositions = nodes[edge.source].position.concat(nodes[edge.target].position);
+      edgesBuffer.set(edgePositions, i * 6);
+      i++;
+    }
 
-      this.updateGeometries();
+    const edgesMesh = this.edges;
+
+    // Free any memory allocated on the GPU
+    edgesMesh.geometry.dispose();
+
+    edgesMesh.geometry.addAttribute("position", this.makeDynamicFloatAttribute(3, edgesBuffer));
+    edgesMesh.geometry.computeBoundingSphere();
+  }
+
+  resetNodes(nodes) {
+    const nodeCount = _.size(nodes);
+
+    if (nodeCount) {
+      const sizesBuffer = new Float32Array(nodeCount);
+      const scalesBuffer = new Float32Array(nodeCount);
+      const nodesBuffer = new Float32Array(nodeCount * 3);
+      const nodesColorBuffer = new Float32Array(nodeCount * 3);
+      const nodeIDs = [];
+
+
+      // What is quicker? Setting each element into the TypedArray or creating a temp. (non-immutable) array and setting that as the TypedArray
+      let i = 0;
+      for (const node of Object.values(nodes)) {
+        const indexTimesThree = i * 3;
+        sizesBuffer.set([node.radius * 2], i);
+        scalesBuffer.set([1.0], i);
+        nodesBuffer.set(node.position, indexTimesThree);
+        nodesColorBuffer.set(this.getColor(node.id), indexTimesThree);
+        nodeIDs.push(node.id);
+
+        i++;
+      }
+      // this.edgesBuffer.pushMany(edges.map(edge => nodes[edge.source].position.concat(nodes[edge.target].position)));
+
+      const nodesMesh = this.nodes;
+
+      // Free any memory allocated on the GPU
+      nodesMesh.geometry.dispose();
+
+      nodesMesh.geometry.addAttribute("position", this.makeDynamicFloatAttribute(3, nodesBuffer));
+      nodesMesh.geometry.addAttribute("sizeNm", this.makeDynamicFloatAttribute(1, sizesBuffer));
+      nodesMesh.geometry.addAttribute("nodeScaleFactor", this.makeDynamicFloatAttribute(1, scalesBuffer));
+      nodesMesh.geometry.addAttribute("color", this.makeDynamicFloatAttribute(3, nodesColorBuffer));
+      nodesMesh.geometry.nodeIDs = nodeIDs;
+
+      nodesMesh.geometry.computeBoundingSphere();
+      // nodesMesh.geometry.setDrawRange(0, nodeCount);
     }
   }
 
   setSizeAttenuation(sizeAttenuation) {
     this.nodes.material.sizeAttenuation = sizeAttenuation;
-    this.updateGeometries();
+    // this.updateGeometries();
   }
 
   getMeshes() {
@@ -136,13 +168,13 @@ class TreeGeometry {
   }
 
   animateNodeScale(from, to, index, onComplete = _.noop) {
-    const setScaleFactor = factor => this.scalesBuffer.set([factor], index);
+    //const setScaleFactor = factor => this.scalesBuffer.set([factor], index);
     const redraw = () => {
-      this.updateGeometries();
+      // this.updateGeometries();
       app.vent.trigger("rerender");
     };
     const onUpdate = function () {
-      setScaleFactor(this.scaleFactor);
+      // setScaleFactor(this.scaleFactor);
       redraw();
     };
 
@@ -155,21 +187,21 @@ class TreeGeometry {
   }
 
   getNodeIndex(nodeId) {
-    for (let i = 0; i < this.nodeIDs.length; i++) {
-      if (this.nodeIDs.get(i) === nodeId) {
+    for (let i = 0; i < this.nodes.geometry.nodeIDs.length; i++) {
+      if (this.nodes.geometry.nodeIDs[i] === nodeId) {
         return i;
       }
     }
     return null;
   }
 
-  getColor(id, isActiveNode, isBranchPoint) {
+  getColor(id) {
     const tree = Store.getState().skeletonTracing.trees[this.id];
     let { color } = tree;
 
     if (id != null) {
-      isActiveNode = isActiveNode || Store.getState().skeletonTracing.activeNodeId === id;
-      isBranchPoint = isBranchPoint || id in _.map(tree.branchPoints, "node");
+      const isActiveNode = Store.getState().skeletonTracing.activeNodeId === id;
+      const isBranchPoint = !_.isEmpty(tree.branchPoints.filter(branchPoint => branchPoint.id === id));
 
       if (isActiveNode) {
         color = this.shiftColor(color, 1 / 4);
@@ -185,73 +217,11 @@ class TreeGeometry {
     return color;
   }
 
-  updateNodeColor(id, isActiveNode, isBranchPoint) {
-    let index = null;
-    for (let i = 0; i < this.nodeIDs.length; i++) {
-      if (this.nodeIDs.get(i) === id) {
-        index = i;
-        break;
-      }
-    }
-    this.nodesColorBuffer.set(this.getColor(id, isActiveNode, isBranchPoint), index);
-
-    this.updateGeometries();
-  }
-
-
   showRadius(show) {
     this.edges.material.linewidth = this.getLineWidth();
     this.particleMaterial.setShowRadius(show);
   }
 
-
-  updateGeometries() {
-    this.updateGeometry(this.nodes, {
-      position: [3, this.nodesBuffer],
-      sizeNm: [1, this.sizesBuffer],
-      nodeScaleFactor: [1, this.scalesBuffer],
-      color: [3, this.nodesColorBuffer],
-    });
-
-    this.updateGeometry(this.edges, {
-      position: [3, this.edgesBuffer],
-    }, 2);
-  }
-
-
-  updateGeometry(mesh, attribute2buffer, itemsPerElement = 1) {
-    let length = -1;
-    let needsToRebuildGeometry = false;
-    for (const attribute of Object.keys(attribute2buffer)) {
-      const rBuffer = attribute2buffer[attribute][1];
-
-      if (length === -1) {
-        length = rBuffer.getLength();
-      } else {
-        ErrorHandling.assertEquals(rBuffer.getLength(), length,
-          "All attribute lengths should be equal.");
-      }
-
-      if (mesh.geometry.attributes[attribute].array !== rBuffer.getBuffer()) {
-        // The reference of the underlying buffer has changed. Unfortunately,
-        // this means that we have to re-create all of the attributes.
-        needsToRebuildGeometry = true;
-      }
-      mesh.geometry.attributes[attribute].needsUpdate = true;
-    }
-
-    if (needsToRebuildGeometry) {
-      // Free any memory allocated on the GPU
-      mesh.geometry.dispose();
-      for (const attribute of Object.keys(attribute2buffer)) {
-        // Recreate attribute
-        const [itemSize, rBuffer] = attribute2buffer[attribute];
-        mesh.geometry.addAttribute(attribute, this.makeDynamicFloatAttribute(itemSize, rBuffer));
-      }
-    }
-    mesh.geometry.computeBoundingSphere();
-    mesh.geometry.setDrawRange(0, length * itemsPerElement);
-  }
 
   getLineWidth() {
     return Store.getState().userConfiguration.particleSize / 4;

@@ -35,27 +35,27 @@ export function findTreeByNodeId(trees: TreeMapType, nodeId: number): Maybe<Tree
   return Maybe.fromNullable(_.values(trees).find(tree => tree.nodes[nodeId] != null));
 }
 
-export function getTree(state: OxalisState, treeId: ?number) {
+export function getTree(tracing: SkeletonTracingType, treeId: ?number) {
   if (treeId != null) {
-    return Maybe.fromNullable(state.skeletonTracing.trees[treeId]);
+    return Maybe.fromNullable(tracing.trees[treeId]);
   }
-  const { activeTreeId } = state.skeletonTracing;
+  const { activeTreeId } = tracing;
   if (activeTreeId != null) {
-    return Maybe.fromNullable(state.skeletonTracing.trees[activeTreeId]);
+    return Maybe.fromNullable(tracing.trees[activeTreeId]);
   }
   return Maybe.Nothing();
 }
 
-export function getNodeAndTree(state: OxalisState, nodeId: ?number, treeId: ?number) {
+export function getNodeAndTree(tracing: SkeletonTracingType, nodeId: ?number, treeId: ?number) {
   let tree;
   if (treeId != null) {
-    tree = state.skeletonTracing.trees[treeId];
+    tree = tracing.trees[treeId];
   } else if (nodeId != null) {
-    tree = _.values(state.skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
+    tree = _.values(tracing.trees).find(__ => __.nodes[nodeId] != null);
   } else {
-    const { activeTreeId } = state.skeletonTracing;
+    const { activeTreeId } = tracing;
     if (activeTreeId != null) {
-      tree = state.skeletonTracing.trees[activeTreeId];
+      tree = tracing.trees[activeTreeId];
     }
   }
 
@@ -64,7 +64,7 @@ export function getNodeAndTree(state: OxalisState, nodeId: ?number, treeId: ?num
     if (nodeId != null) {
       node = tree.nodes[nodeId];
     } else {
-      const { activeNodeId } = state.skeletonTracing;
+      const { activeNodeId } = tracing;
       if (activeNodeId != null) {
         node = tree.nodes[activeNodeId];
       }

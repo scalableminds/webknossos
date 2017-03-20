@@ -55,7 +55,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     case "CREATE_NODE": {
       const { position, rotation, viewport, resolution, treeId } = action;
 
-      return getTree(state, treeId)
+      return getTree(state.skeletonTracing, treeId)
         .chain(tree =>
           createNode(state, tree, position, rotation, viewport, resolution, timestamp)
             .map(([node, edges]) =>
@@ -72,7 +72,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "DELETE_NODE": {
-      return getNodeAndTree(state, action.nodeId, action.treeId)
+      return getNodeAndTree(state.skeletonTracing, action.nodeId, action.treeId)
         .chain(([tree, node]) => deleteNode(state, tree, node, timestamp))
         .map(([trees, newActiveTreeId, newActiveNodeId]) =>
           update(state, { skeletonTracing: {
@@ -93,7 +93,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "SET_ACTIVE_NODE_RADIUS": {
-      return getNodeAndTree(state, null, null)
+      return getNodeAndTree(state.skeletonTracing, null, null)
         .map(([tree, node]) => update(state, { skeletonTracing: { trees: {
           [tree.treeId]: { nodes: { [node.id]: { radius: { $set: action.radius } } } },
         } } }))
@@ -101,7 +101,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "CREATE_BRANCHPOINT": {
-      return getNodeAndTree(state, action.nodeId, action.treeId)
+      return getNodeAndTree(state.skeletonTracing, action.nodeId, action.treeId)
         .chain(([tree, node]) =>
           createBranchPoint(state.skeletonTracing, tree, node, timestamp)
             .map(branchPoint =>
@@ -133,7 +133,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "DELETE_TREE": {
-      return getTree(state, action.treeId)
+      return getTree(state.skeletonTracing, action.treeId)
         .chain(tree => deleteTree(state, tree, timestamp))
         .map(([trees, newActiveTreeId, newActiveNodeId]) =>
           update(state, { skeletonTracing: {
@@ -147,7 +147,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     case "SET_ACTIVE_TREE": {
       const { trees } = state.skeletonTracing;
 
-      return getTree(state, action.treeId)
+      return getTree(state.skeletonTracing, action.treeId)
         .map((tree) => {
           const newActiveNodeId = _.max(_.map(trees[tree.treeId].nodes, "id")) || null;
 
@@ -172,7 +172,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "SET_TREE_NAME": {
-      return getTree(state, action.treeId)
+      return getTree(state.skeletonTracing, action.treeId)
         .map((tree) => {
           const defaultName = `Tree${Utils.zeroPad(tree.treeId, 3)}`;
           const newName = action.name || defaultName;
@@ -193,7 +193,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "SHUFFLE_TREE_COLOR": {
-      return getTree(state, action.treeId)
+      return getTree(state.skeletonTracing, action.treeId)
         .chain(tree => shuffleTreeColor(state.skeletonTracing, tree))
         .map(([tree, treeId]) =>
           update(state, { skeletonTracing: { trees: { [treeId]: { $set: tree } } } }))
@@ -201,7 +201,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "CREATE_COMMENT": {
-      return getNodeAndTree(state, action.nodeId, action.treeId)
+      return getNodeAndTree(state.skeletonTracing, action.nodeId, action.treeId)
         .chain(([tree, node]) =>
           createComment(state.skeletonTracing, tree, node, action.commentText)
             .map(comments =>
@@ -212,7 +212,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
     }
 
     case "DELETE_COMMENT": {
-      return getNodeAndTree(state, action.nodeId, action.treeId)
+      return getNodeAndTree(state.skeletonTracing, action.nodeId, action.treeId)
         .chain(([tree, node]) =>
           deleteComment(state.skeletonTracing, tree, node, action.commentText)
             .map(comments =>

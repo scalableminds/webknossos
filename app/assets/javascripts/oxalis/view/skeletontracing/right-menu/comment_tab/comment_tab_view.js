@@ -20,33 +20,32 @@ const InputGroup = Input.Group;
 
 class CommentTabView extends React.Component {
 
-  constructor() {
-    super();
-
-    // TODO unsubcribe?
-    // keyboard shortcuts
-    const keyboard = new InputKeyboardNoLoop({
-      n: () => this.nextComment(),
-      p: () => this.previousComment(),
-    });
-  }
-
   state = {
     isSortedAscending: true,
   }
 
-  nextComment(forward = true) {
+  componentWillUnmount() {
+    this.keyboard.destroy();
+  }
+
+  keyboard = new InputKeyboardNoLoop({
+    n: () => this.nextComment(),
+    p: () => this.previousComment(),
+  });
+
+  nextComment = (forward = true) => {
     const sortAscending = forward ? this.state.isSortedAscending : !this.state.isSortedAscending;
+    const sortOrder = sortAscending ? "asc" : "desc";
     const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
 
     // get tree of active comment or activeTree if there is no active comment
     let nextComment = null;
     let nextTree = _.find(trees, (tree => _.some(tree.comments, comment => comment.node === activeNodeId)));
     if (nextTree) {
-      nextTree.comments.sort(Utils.compareBy("node", sortAscending));
+      const sortedComments = _.orderBy(nextTree.comments, ["node"], [sortOrder]);
 
       // try to find next comment for this tree
-      nextComment = _.find(nextTree.comments,
+      nextComment = _.find(sortedComments,
       comment => this.comparator(comment.node, sortAscending) > this.comparator(activeNodeId, sortAscending));
 
       // try to find next tree with at least one comment
@@ -62,18 +61,17 @@ class CommentTabView extends React.Component {
     }
 
     if (!nextComment && nextTree) {
-      nextTree.comments.sort(Utils.compareBy("node", sortAscending));
-      nextComment = nextTree.comments[0];
+      const sortedComments = _.orderBy(nextTree.comments, ["node"], [sortOrder]);
+      nextComment = sortedComments[0];
     }
 
     // if a comment was found set the corresponding node active, causing the list to update
     if (nextComment) {
-
       this.props.setActiveNode(nextComment.node);
     }
   }
 
-  previousComment() {
+  previousComment = () => {
     this.nextComment(false);
   }
 
@@ -127,14 +125,14 @@ class CommentTabView extends React.Component {
     return (
       <div>
         <InputGroup compact>
-          <Button><i className="fa fa-arrow-left" /></Button>
+          <Button onClick={this.previousComment}><i className="fa fa-arrow-left" /></Button>
           <Input
             value={activeComment}
             onChange={this.handleChangeInput}
             placeholder="Add comment"
             style={{ width: "70%" }}
           />
-          <Button><i className="fa fa-arrow-right" /></Button>
+          <Button onClick={this.nextComment}><i className="fa fa-arrow-right" /></Button>
           <Button onClick={this.handleChangeSorting} title="sort">
             <i className={sortingIconClass} />
           </Button>

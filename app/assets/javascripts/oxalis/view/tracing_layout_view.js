@@ -146,7 +146,9 @@ class TracingLayoutView extends Marionette.View {
     );
 
     render(
-      <RightMenuView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />,
+      <Provider store={store}>
+        <RightMenuView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
+      </Provider>,
       this.ui.rightMenu[0],
     );
 

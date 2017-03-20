@@ -36,28 +36,13 @@ class ReactBackboneWrapper extends React.Component {
 class RightMenuView extends React.PureComponent {
   props: RightMenuViewProps;
 
-  state: {
-    abstractTreeView: AbstractTreeTabView,
-    datasetInfoView: DatasetInfoTabView,
-  };
-
-  componentWillMount() {
-    // const abstractTreeView = new AbstractTreeView({ model: this.props.oldModel });
-    const datasetInfoView = new DatasetInfoTabView({ model: this.props.oldModel });
-
-    this.setState({
-      // abstractTreeView,
-      datasetInfoView,
-    });
-  }
-
   render() {
     return (
-      <Tabs destroyInactiveTabPane defaultActiveKey="4">
-        <TabPane tab="Info" key="1"><ReactBackboneWrapper backboneView={this.state.datasetInfoView} /></TabPane>
+      <Tabs destroyInactiveTabPane defaultActiveKey="1">
+        <TabPane tab="Info" key="1"><DatasetInfoTabView oldModel={this.props.oldModel} /></TabPane>
         <TabPane tab="Tree Viewer" key="2"></TabPane>
-        <TabPane tab="Trees" key="3"><TreesTabView store={Store} /></TabPane>
-        <TabPane tab="Comments" key="4"><CommentTabView store={Store} /></TabPane>
+        <TabPane tab="Trees" key="3"><TreesTabView /></TabPane>
+        <TabPane tab="Comments" key="4"><CommentTabView /></TabPane>
       </Tabs>
     );
   }

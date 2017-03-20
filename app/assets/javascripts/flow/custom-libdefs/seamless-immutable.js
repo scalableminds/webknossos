@@ -18,10 +18,11 @@ declare module "seamless-immutable" {
 
   declare function from<T: Object | Array<*>> (spec: T): Immutable<T>;
 
-  declare type Default = {
+  declare type Default<T> = {
     from: typeof from;
-    isImmutable: (x: *) => boolean
+    isImmutable: (x: *) => boolean;
+    (x: T): T;
   };
 
-  declare module.exports: Default;
+  declare module.exports: Default<*>;
 }

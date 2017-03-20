@@ -151,7 +151,7 @@ export class SwitchSetting extends React.PureComponent {
 
 type NumberInputSettingProps = {
   onChange: (value: number) => void,
-  value: number,
+  value: number | "",
   label: string,
   max?: number,
   min?: number,

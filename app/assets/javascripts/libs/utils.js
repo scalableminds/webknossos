@@ -5,6 +5,7 @@
 
 import _ from "lodash";
 import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
+import Maybe from "data.maybe";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
 
@@ -235,6 +236,10 @@ const Utils = {
       }
     }
     return { both, onlyA, onlyB };
+  },
+
+  zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
+    return maybeA.chain(valueA => maybeB.map(valueB => [valueA, valueB]));
   },
 };
 

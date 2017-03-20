@@ -21,6 +21,7 @@ function* centerActiveNode() {
   if (activeNodeId) {
     // Should be an action in the future
     const position = trees[activeTreeId].nodes[activeNodeId].position;
+    // $FlowFixMe
     app.oxalis.planeController.centerPositionAnimated(position);
   }
 }

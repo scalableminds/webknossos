@@ -6,7 +6,6 @@
 import _ from "lodash";
 import Backbone from "backbone";
 import app from "app";
-import Store from "oxalis/store";
 import Constants from "oxalis/constants";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
@@ -32,15 +31,17 @@ type AbstractNodeType = {
   children: Array<AbstractNodeType>,
 };
 
+export type NodeListItemType = {
+  x: number,
+  y: number,
+  id: number,
+};
+
 class AbstractTreeRenderer {
 
-  canvas: JQuery;
+  canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
-  nodeList: Array<{
-    x: number,
-    y: number,
-    id: number,
-  }>;
+  nodeList: Array<NodeListItemType>;
   getIdFromPos: Function;
   activeNodeId: number;
   cyclicTreeWarningIssued: boolean;
@@ -49,21 +50,46 @@ class AbstractTreeRenderer {
   vgColor: string;
   commentColor: string;
 
+  static drawTree($canvas: JQuery, tree: ?TreeType, activeNodeId: ?number) {
+    const renderer = new AbstractTreeRenderer($canvas);
+    if (tree != null && activeNodeId != null) {
+      renderer.drawTree(tree, activeNodeId);
+    } else {
+      renderer.clearBackground();
+    }
+    return renderer.nodeList;
+  }
+
+  static getIdFromPos(x: number, y: number, nodeList: Array<NodeListItemType>): ?number {
+    let id = null;
+    for (const entry of nodeList) {
+      if (Math.abs(x - entry.x) <= CLICK_TRESHOLD &&
+          Math.abs(y - entry.y) <= CLICK_TRESHOLD) {
+        id = entry.id;
+        break;
+      }
+    }
+    return id;
+  }
+
   constructor($canvas: JQuery) {
     this.getIdFromPos = this.getIdFromPos.bind(this);
     _.extend(this, Backbone.Events);
 
-    this.canvas = $canvas;
-    const HTMLCanvas: HTMLCanvasElement = ($canvas[0]: HTMLCanvasElement);
-    this.ctx = HTMLCanvas.getContext("2d");
-    this.ctx.lineWidth = 1;
+    const canvas = $canvas[0];
+    if (canvas instanceof HTMLCanvasElement) {
+      this.canvas = canvas;
+      const ctx = canvas.getContext("2d");
+      if (ctx != null) {
+        this.ctx = ctx;
+        ctx.lineWidth = 1;
+      }
+    }
     this.nodeList = [];
   }
 
   buildNode(id: number): AbstractNodeType {
-    const { activeTreeId, trees } = Store.getState().skeletonTracing;
-
-    const edges = trees[activeTreeId].edges;
+    const edges = this.tree.edges;
     const childrenIds = _.filter(edges, edge => edge.source === id).map(edge => edge.target);
     const children = childrenIds.map(childId => this.buildNode(childId));
 
@@ -74,15 +100,10 @@ class AbstractTreeRenderer {
   }
 
   buildTree(): ?AbstractNodeType {
-    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
-
-    if (activeNodeId !== null) {
-      // Asumption: Node with smallest id is root
-      const rootId = _.min(_.map(trees[activeTreeId].nodes, "id"));
-      const rootNode = this.buildNode(rootId);
-      return rootNode;
-    }
-    return null;
+    // Asumption: Node with smallest id is root
+    const rootId = _.min(_.map(this.tree.nodes, "id"));
+    const rootNode = this.buildNode(rootId);
+    return rootNode;
   }
 
   /**
@@ -92,16 +113,12 @@ class AbstractTreeRenderer {
    * @param  {TreeType} tree
    * @param  {Number} @activeNodeId node id
   */
-  drawTree(tree1: TreeType, activeNodeId: number) {
+  drawTree(tree: TreeType, activeNodeId: number) {
     let root;
-    this.tree = tree1;
+    this.tree = tree;
     this.activeNodeId = activeNodeId;
-    const { tree } = this;
-    if (tree == null) {
-      return;
-    }
 
-    this.setDimensions(this.canvas.width(), this.canvas.height());
+    this.setDimensions(this.canvas.offsetWidth, this.canvas.offsetHeight);
     this.clearBackground();
     this.setupColors();
 
@@ -131,7 +148,7 @@ class AbstractTreeRenderer {
       return;
     }
 
-    this.nodeDistance = Math.min(this.canvas.height() / (this.getMaxTreeDepth(root, mode) + 1), MAX_NODE_DISTANCE);
+    this.nodeDistance = Math.min(this.canvas.height / (this.getMaxTreeDepth(root, mode) + 1), MAX_NODE_DISTANCE);
 
     // The algorithm works as follows:
     // A tree is given a left and right border that it can use. If
@@ -146,7 +163,7 @@ class AbstractTreeRenderer {
     // by recordWidths(), the second by drawTreeWithWidths().
 
     this.recordWidths(root);
-    this.drawTreeWithWidths(root, NODE_RADIUS, this.canvas.width() - NODE_RADIUS, this.nodeDistance / 2, mode);
+    this.drawTreeWithWidths(root, NODE_RADIUS, this.canvas.width - NODE_RADIUS, this.nodeDistance / 2, mode);
 
     // because of z layering all nodes have to be drawn last
     this.drawAllNodes();
@@ -338,8 +355,7 @@ class AbstractTreeRenderer {
     } else if (mode === MODE_NOCHAIN) {
       return top + (2 * this.nodeDistance);
     }
-    // TODO: Remove once flow is integrated, as mode can only be MODE_NORMAL or MODE_NOCHAIN
-    return null;
+    return 0;
   }
 
 
@@ -447,7 +463,7 @@ class AbstractTreeRenderer {
    * @return {Boolean}    true if node is commented
   */
   nodeIdHasComment(id: number): boolean {
-    return _.find(this.tree.comments, { node: id });
+    return _.find(this.tree.comments, { node: id }) != null;
   }
 
 
@@ -530,8 +546,8 @@ class AbstractTreeRenderer {
    * @param  {Number} y
    * @return {Number}   AbstractNodeType id
   */
-  getIdFromPos(x: number, y: number): number {
-    let id;
+  getIdFromPos(x: number, y: number): ?number {
+    let id = null;
     for (const entry of this.nodeList) {
       if (Math.abs(x - entry.x) <= CLICK_TRESHOLD &&
           Math.abs(y - entry.y) <= CLICK_TRESHOLD) {
@@ -547,7 +563,7 @@ class AbstractTreeRenderer {
    * Clear the background of the canvas.
   */
   clearBackground(): void {
-    return this.ctx.clearRect(0, 0, this.canvas.width(), this.canvas.height());
+    return this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
 
@@ -558,6 +574,7 @@ class AbstractTreeRenderer {
   */
   setupColors(): void {
     // apply color scheme
+    // $FlowFixMe
     if (app.oxalis.view.theme === Constants.THEME_BRIGHT) {
       this.vgColor = "black";
       this.commentColor = "red";
@@ -573,8 +590,10 @@ class AbstractTreeRenderer {
    * @param {Number} height
   */
   setDimensions(width: number, height: number): void {
-    this.canvas[0].width = width;
-    this.canvas[0].height = height;
+    this.canvas.style.width = `${width}px`;
+    this.canvas.style.height = `${height}px`;
+    this.canvas.width = width;
+    this.canvas.height = height;
   }
 }
 

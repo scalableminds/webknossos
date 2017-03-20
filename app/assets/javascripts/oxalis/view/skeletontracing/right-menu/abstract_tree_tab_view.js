@@ -10,12 +10,13 @@ import Marionette from "backbone.marionette";
 import Store from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import AbstractTreeRenderer from "oxalis/view/skeletontracing/abstract_tree_renderer";
+import type { NodeListItemType } from "oxalis/view/skeletontracing/abstract_tree_renderer";
 
 
 class AbstractTreeTabView extends Marionette.View {
 
+  nodeList: Array<NodeListItemType>;
   initialized: boolean;
-  abstractTreeRenderer: AbstractTreeRenderer;
 
   static initClass() {
     this.prototype.className = "flex-column";
@@ -48,25 +49,25 @@ class AbstractTreeTabView extends Marionette.View {
 
   render() {
     super.render();
-    if (this.initialized) {
-      this.abstractTreeRenderer = new AbstractTreeRenderer(this.ui.canvas);
-    }
     this.drawTree();
   }
 
 
   drawTree = _.throttle(() => {
     const { activeTreeId, activeNodeId, trees } = Store.getState().skeletonTracing;
-    if (Store.getState().skeletonTracing && this.abstractTreeRenderer) {
-      this.abstractTreeRenderer.drawTree(trees[activeTreeId], activeNodeId);
+    if (Store.getState().skeletonTracing && this.initialized) {
+      this.nodeList = AbstractTreeRenderer.drawTree(this.ui.canvas, activeTreeId != null ? trees[activeTreeId] : null, activeNodeId);
     }
   }, 1000);
 
 
   handleClick(event) {
-    const id = this.abstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY);
-    if (id) {
-      Store.dispatch(setActiveNodeAction(id));
+    const nodeList = this.nodeList;
+    if (nodeList) {
+      const id = AbstractTreeRenderer.getIdFromPos(event.offsetX, event.offsetY, nodeList);
+      if (id != null) {
+        Store.dispatch(setActiveNodeAction(id));
+      }
     }
   }
 }

@@ -47,6 +47,7 @@
       "no-param-reassign": "warn",
       "no-plusplus": "off",
       "no-restricted-syntax": "warn",
+      "array-callback-return": "warn",
       "no-restricted-properties": ["off", {"object": "Math", "property": "pow"}],
       "no-restricted-syntax": ["error", "ForInStatement"],
       "no-underscore-dangle": "off",

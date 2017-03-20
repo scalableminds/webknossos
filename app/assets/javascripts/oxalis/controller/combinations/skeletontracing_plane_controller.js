@@ -21,6 +21,7 @@ import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/co
 import type { ModifierKeys } from "libs/input";
 import { getRequestLogZoomStep, getRayThreshold, getRotationOrtho, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -173,8 +174,8 @@ class SkeletonTracingPlaneController extends PlaneController {
         (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
         // merge two trees
         if (shiftPressed && altPressed) {
-          const sourceNodeId = Store.getState().skeletonTracing.activeNodeId;
-          Store.dispatch(mergeTreesAction(sourceNodeId, nodeId));
+          getActiveNode(Store.getState().skeletonTracing)
+            .map(activeNode => Store.dispatch(mergeTreesAction(activeNode.id, nodeId)));
         }
 
         // set the active Node to the one that has the ID stored in the vertex
@@ -190,17 +191,14 @@ class SkeletonTracingPlaneController extends PlaneController {
     if (activeViewport === OrthoViews.TDView) {
       return;
     }
-    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
-    const activeNode = trees[activeTreeId].nodes[activeNodeId];
+    const activeNodeMaybe = getActiveNode(Store.getState().skeletonTracing);
 
     // set the new trace direction
-    if (activeNode) {
-      Store.dispatch(setRotationAction([
-        position[0] - activeNode.position[0],
-        position[1] - activeNode.position[1],
-        position[2] - activeNode.position[2],
-      ]));
-    }
+    activeNodeMaybe.map(activeNode => Store.dispatch(setRotationAction([
+      position[0] - activeNode.position[0],
+      position[1] - activeNode.position[1],
+      position[2] - activeNode.position[2],
+    ])));
 
     const rotation = getRotationOrtho(activeViewport);
     this.addNode(position, rotation, !ctrlPressed);
@@ -209,21 +207,20 @@ class SkeletonTracingPlaneController extends PlaneController {
     const newNodeNewTree = Store.getState().userConfiguration.newNodeNewTree;
     if (ctrlPressed && !newNodeNewTree) {
       Store.dispatch(createBranchPointAction());
-      Store.dispatch(setActiveNodeAction(activeNode.id));
+      activeNodeMaybe.map(activeNode => Store.dispatch(setActiveNodeAction(activeNode.id)));
     }
   }
 
 
   addNode = (position: Vector3, rotation: Vector3, centered: boolean): void => {
     const { newNodeNewTree } = Store.getState().userConfiguration;
-    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
-    const activeNode = trees[activeTreeId].nodes[activeNodeId];
+    const activeNodeMaybe = getActiveNode(Store.getState().skeletonTracing);
 
     if (this.model.settings.somaClickingAllowed && newNodeNewTree) {
       Store.dispatch(createTreeAction());
     }
 
-    if (activeNode == null) {
+    if (activeNodeMaybe.isNothing) {
       // when placing very first node of a tracing
       centered = true;
     }
@@ -237,11 +234,8 @@ class SkeletonTracingPlaneController extends PlaneController {
 
     if (centered) {
       // we created a new node, so use it's reference
-      const { activeNodeId: _activeNodeId, activeTreeId: _activeTreeId, trees: _trees } = Store.getState().skeletonTracing;
-      const _activeNode = _trees[_activeTreeId].nodes[_activeNodeId];
-      if (_activeNode) {
-        this.centerPositionAnimated(_activeNode.position);
-      }
+      getActiveNode(Store.getState().skeletonTracing)
+        .map(newActiveNode => this.centerPositionAnimated(newActiveNode.position));
     }
   };
 

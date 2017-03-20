@@ -100,7 +100,7 @@ class CommentTabView extends React.Component {
     const sortOrder = this.state.isSortedAscending ? "asc" : "desc";
     const { activeNodeId, activeTreeId } = this.props.skeletonTracing;
 
-    return _.orderBy(this.props.skeletonTracing.trees, ["treeId"], [sortOrder]).map(tree =>
+    return _.orderBy(this.props.skeletonTracing.trees, ["treeId"], [sortOrder]).filter(tree => tree.comments.length > 0).map(tree =>
       // one tree and its comments
       <TreeCommentList
         key={tree.treeId}

@@ -123,7 +123,6 @@ class TreeGeometry {
 
         i++;
       }
-      // this.edgesBuffer.pushMany(edges.map(edge => nodes[edge.source].position.concat(nodes[edge.target].position)));
 
       const nodesMesh = this.nodes;
 

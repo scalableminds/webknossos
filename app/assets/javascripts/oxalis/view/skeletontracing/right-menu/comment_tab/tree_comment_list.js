@@ -1,33 +1,39 @@
-import React, { Component } from "react";
+/**
+ * tree_comment_list.js
+ * @flow
+ */
+
+import React from "react";
 import classNames from "classnames";
 import Comment from "oxalis/view/skeletontracing/right-menu/comment_tab/comment";
+import type { TreeType } from "oxalis/store";
 
+type TreeCommentListProps = {
+  tree: TreeType,
+  activeTreeId: number,
+  activeNodeId: number,
+}
 
-class TreeCommentList extends Component {
+class TreeCommentList extends React.PureComponent {
 
-  constructor() {
-    super();
-    this.state = { collapsed: false };
-    this.handleClick = this.handleClick.bind(this);
-  }
+  props: TreeCommentListProps;
+  state = { collapsed: false };
 
-  handleClick(evt) {
+  handleToggleComment = () => {
     this.setState({ collapsed: !this.state.collapsed });
-    evt.preventDefault();
   }
 
   render() {
-    const containsActiveNode = this.props.treeId === this.props.activeTreeId;
+    const containsActiveNode = this.props.tree.treeId === this.props.activeTreeId;
 
     // don't render the comment nodes if the tree is collapsed
     const commentNodes = !this.state.collapsed ?
-      this.props.comments.map(comment =>
+      this.props.tree.comments.map(comment =>
         <Comment
           key={comment.node}
           data={comment}
-          treeId={this.props.treeId}
+          treeId={this.props.tree.treeId}
           isActive={comment.node === this.props.activeNodeId}
-          onNewActiveNode={this.props.onNewActiveNode}
         />,
       ) :
       null;
@@ -42,10 +48,10 @@ class TreeCommentList extends Component {
     return (
       <div>
         <li className={liClassName}>
-          <a href="#toggle-comment" onClick={this.handleClick}>
+          <a href="#toggle-comment" onClick={this.handleToggleComment}>
             <i className={iClassName} />
           </a>
-          {this.props.treeId} - {this.props.treeName}
+          {this.props.tree.treeId} - {this.props.tree.name}
         </li>
         {commentNodes}
       </div>

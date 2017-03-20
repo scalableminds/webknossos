@@ -29,6 +29,7 @@ import constants from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import { yawFlycamAction, pitchFlycamAction, setPositionAction, setRotationAction, zoomInAction, zoomOutAction, moveFlycamAction } from "oxalis/model/actions/flycam_actions";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 
 class ArbitraryController {
   arbitraryView: ArbitraryView;
@@ -247,7 +248,7 @@ class ArbitraryController {
     Store.dispatch(createTreeAction());
     this.setWaypoint();
     Store.dispatch(moveFlycamAction([(pos.x - (this.arbitraryView.width / 2)) * f, (pos.y - (this.arbitraryView.width / 2)) * f, 0]));
-    if (this.isBranchpointvideoMode()) {
+    if (this.isBranchpointvideoMode() && activeNodeId != null) {
       Store.dispatch(setActiveNodeAction(activeNodeId, true));
     }
     this.model.setMode(1);
@@ -257,15 +258,19 @@ class ArbitraryController {
 
   nextNode(nextOne: boolean): void {
     if (!this.isBranchpointvideoMode()) { return; }
-    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
 
-    if ((nextOne && activeNodeId === _.size(trees[activeTreeId].nodes)) || (!nextOne && activeNodeId === 1)) {
-      return;
-    }
-    Store.dispatch(setActiveNodeAction((activeNodeId + (2 * Number(nextOne))) - 1), true);// implicit cast from boolean to int
-    if ((this.view.theme === constants.THEME_BRIGHT) !== nextOne) { // switch background to black for backwards move
-      this.view.toggleTheme();
-    }
+    Utils.zipMaybe(
+      getActiveNode(Store.getState().skeletonTracing),
+      getMaxNodeId(Store.getState().skeletonTracing),
+    ).map(([activeNode, maxNodeId]) => {
+      if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
+        return;
+      }
+      Store.dispatch(setActiveNodeAction((activeNode.id + (2 * Number(nextOne))) - 1), true);// implicit cast from boolean to int
+      if ((this.view.theme === constants.THEME_BRIGHT) !== nextOne) { // switch background to black for backwards move
+        this.view.toggleTheme();
+      }
+    });
   }
 
   getVoxelOffset(timeFactor: number): number {
@@ -398,10 +403,8 @@ class ArbitraryController {
 
 
   centerActiveNode(): void {
-    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
-    if (activeNodeId) {
-      const activeNode = trees[activeTreeId].nodes[activeNodeId];
-
+    // eslint-disable-next-line array-callback-return
+    getActiveNode(Store.getState().skeletonTracing).map((activeNode) => {
       // animate the change to the new position and new rotation
       const curPos = getPosition(Store.getState().flycam);
       const newPos = activeNode.position;
@@ -430,7 +433,7 @@ class ArbitraryController {
         Store.dispatch(setRotationAction([this.rx, this.ry, this.rz]));
       });
       waypointAnimation.start();
-    }
+    });
   }
 
   getShortestRotation(curRotation: Vector3, newRotation: Vector3): Vector3 {

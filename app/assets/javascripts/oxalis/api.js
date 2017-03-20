@@ -12,7 +12,7 @@ import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, createCommentAction } from "oxalis/model/actions/skeletontracing_actions";
-import { findTreeByNodeId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { NodeType, UserConfigurationType } from "oxalis/store";

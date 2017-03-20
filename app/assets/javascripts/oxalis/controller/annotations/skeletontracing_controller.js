@@ -11,6 +11,7 @@ import Model from "oxalis/model";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
 import SceneController from "oxalis/controller/scene_controller";
 
@@ -49,9 +50,9 @@ class SkeletonTracingController {
 
 
   setRadius(delta: number): void {
-    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
-    const radius = trees[activeTreeId].nodes[activeNodeId].radius;
-    Store.dispatch(setActiveNodeRadiusAction(radius * Math.pow(1.05, delta)));
+    getActiveNode(Store.getState().skeletonTracing)
+      .map(activeNode =>
+        Store.dispatch(setActiveNodeRadiusAction(activeNode.radius * Math.pow(1.05, delta))));
   }
 
 
@@ -67,12 +68,8 @@ class SkeletonTracingController {
 
 
   centerActiveNode = (): void => {
-    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
-    const position = trees[activeTreeId].nodes[activeNodeId].position;
-
-    if (position) {
-      Store.dispatch(setPositionAction(position));
-    }
+    getActiveNode(Store.getState().skeletonTracing)
+      .map(activeNode => Store.dispatch(setPositionAction(activeNode.position)));
   }
 }
 

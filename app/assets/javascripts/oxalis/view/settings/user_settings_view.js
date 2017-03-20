@@ -135,13 +135,14 @@ class UserSettingsView extends Component {
 
   getSkeletonOrVolumeOptions = () => {
     const mode = this.props.oldModel.get("mode");
-    const activeNodeId = _.isNumber(this.props.skeletonTracing.activeNodeId) ? this.props.skeletonTracing.activeNodeId : "";
+    const activeNodeId = this.props.skeletonTracing.activeNodeId != null ? this.props.skeletonTracing.activeNodeId : "";
+    const activeTreeId = this.props.skeletonTracing.activeTreeId != null ? this.props.skeletonTracing.activeTreeId : "";
 
     if (Constants.MODES_SKELETON.includes(mode) && !this.props.isPublicViewMode) {
       return (
         <Panel header="Nodes & Trees" key="3">
           <NumberInputSetting label="Active Node ID" value={activeNodeId} onChange={this.props.onChangeActiveNodeId} />
-          <NumberInputSetting label="Active Tree ID" value={this.props.skeletonTracing.activeTreeId} onChange={this.props.onChangeActiveTreeId} />
+          <NumberInputSetting label="Active Tree ID" value={activeTreeId} onChange={this.props.onChangeActiveTreeId} />
           <NumberSliderSetting label="Radius" max={5000} value={this.props.userConfiguration.radius} onChange={this.props.onChangeRadius} />
           <NumberSliderSetting label="Particle Size" max={20} step={0.1} value={this.props.userConfiguration.particleSize} onChange={this.onChangeUser.particleSize} />
           <SwitchSetting label="Soma Clicking" value={this.props.userConfiguration.newNodeNewTree} onChange={this.onChangeUser.newNodeNewTree} />

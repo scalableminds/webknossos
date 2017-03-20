@@ -75,7 +75,7 @@ type DeleteEdgeUpdateAction = {
 type UpdateTracingUpdateAction = {
   action: "updateTracing",
   value: {
-    activeNode: number,
+    activeNode?: number,
     editPosition: Vector3,
     editRotation: Vector3,
     zoomLevel: number,
@@ -178,10 +178,20 @@ export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateActi
   };
 }
 export function updateTracing(tracing: SkeletonTracingType, position: Vector3, rotation: Vector3, zoomLevel: number): UpdateTracingUpdateAction {
+  if (tracing.activeNodeId != null) {
+    return {
+      action: "updateTracing",
+      value: {
+        activeNode: tracing.activeNodeId,
+        editPosition: position,
+        editRotation: rotation,
+        zoomLevel,
+      },
+    };
+  }
   return {
     action: "updateTracing",
     value: {
-      activeNode: tracing.activeNodeId,
       editPosition: position,
       editRotation: rotation,
       zoomLevel,

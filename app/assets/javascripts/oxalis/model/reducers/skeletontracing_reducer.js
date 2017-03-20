@@ -6,7 +6,8 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
-import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, findTreeByNodeId, getTree, getNodeAndTree, mergeTrees } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, mergeTrees } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { findTreeByNodeId, getTree, getNodeAndTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import type { SkeletonTracingActionTypes } from "oxalis/model/actions/skeletontracing_actions";
 import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";

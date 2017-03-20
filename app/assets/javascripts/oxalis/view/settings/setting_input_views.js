@@ -13,7 +13,7 @@ import type { Vector3, Vector6 } from "oxalis/constants";
 
 type NumberSliderSettingProps = {
   onChange: (value: number) => void,
-  value: number,
+  value: number | "",
   label: string,
   max: number,
   min: number,

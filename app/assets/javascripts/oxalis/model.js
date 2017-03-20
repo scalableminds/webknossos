@@ -99,7 +99,7 @@ class Model extends Backbone.Model {
   mode: ModeType;
   allowedModes: Array<ModeType>;
   settings: SettingsType;
-  tracing: Tracing<*>;
+  tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>;
   tracingId: string;
   tracingType: "Explorational" | "Task" | "View";
 
@@ -179,7 +179,7 @@ class Model extends Backbone.Model {
   }
 
 
-  initializeWithData(tracing: Tracing<*>, layerInfos) {
+  initializeWithData(tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>, layerInfos) {
     const dataset = tracing.content.dataSet;
     const { dataStore } = dataset;
 
@@ -197,8 +197,6 @@ class Model extends Backbone.Model {
       task: this.get("tracingId"),
       dataSet: dataset.name,
     });
-
-    const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
 
     const bb = tracing.content.boundingBox;
     if (bb != null) {
@@ -223,14 +221,20 @@ class Model extends Backbone.Model {
       throw this.HANDLED_ERROR;
     }
 
+    const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
+
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
       if (isVolumeTracing) {
+        // $FlowFixMe
+        const volumeTracing: Tracing<VolumeContentDataType> = tracing;
         ErrorHandling.assert((this.getSegmentationBinary() != null),
           "Volume is allowed, but segmentation does not exist");
-        this.set("volumeTracing", new VolumeTracing(tracing, this.getSegmentationBinary()));
+        this.set("volumeTracing", new VolumeTracing(volumeTracing, this.getSegmentationBinary()));
         this.annotationModel = this.get("volumeTracing");
       } else {
-        Store.dispatch(initializeSkeletonTracingAction(tracing));
+        // $FlowFixMe
+        const skeletonTracing: Tracing<SkeletonContentDataType> = tracing;
+        Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
       }
     }
 

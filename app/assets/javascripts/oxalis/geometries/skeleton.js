@@ -1,6 +1,6 @@
 /**
  * skeleton.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -9,6 +9,7 @@ import Backbone from "backbone";
 import Store from "oxalis/throttled_store";
 import Model from "oxalis/model";
 import { OrthoViews } from "oxalis/constants";
+import type { Vector3, OrthoViewType } from "oxalis/constants";
 import TreeGeometry from "oxalis/geometries/tree_geometry";
 
 class Skeleton {
@@ -25,7 +26,7 @@ class Skeleton {
   showInactiveTrees: boolean;
 
 
-  constructor(model) {
+  constructor(model: Model) {
     this.model = model;
     _.extend(this, Backbone.Events);
 
@@ -42,7 +43,7 @@ class Skeleton {
     Store.subscribe(() => this.reset());
   }
 
-  createNewTree(treeId, treeColor): TreeGeometry {
+  createNewTree(treeId: number, treeColor: Vector3): TreeGeometry {
     const tree = new TreeGeometry(treeId, treeColor, this.model);
     tree.showRadius(!Store.getState().userConfiguration.overrideNodeRadius);
     this.treeGeometryCache[treeId] = tree;
@@ -55,7 +56,7 @@ class Skeleton {
     const treeIds = Object.keys(Store.getState().skeletonTracing.trees);
 
     // actually free the buffers etc. from the GPU
-    Object.values(_.omit(this.treeGeometryCache, treeIds)).forEach((treeGeometry) => {
+    _.values(_.omit(this.treeGeometryCache, treeIds)).forEach((treeGeometry) => {
       this.trigger("removeGeometries", treeGeometry.getMeshes());
       treeGeometry.dispose();
     });
@@ -92,15 +93,18 @@ class Skeleton {
     return meshes;
   }
 
-  getTreeGeometry(treeId) {
+  getTreeGeometry(treeId: ?number) {
     if (!treeId) {
       treeId = Store.getState().skeletonTracing.activeTreeId;
     }
-    return this.treeGeometryCache[treeId];
+    if (treeId != null) {
+      return this.treeGeometryCache[treeId];
+    }
+    return null;
   }
 
 
-  setVisibilityTemporary(isVisible) {
+  setVisibilityTemporary(isVisible: boolean) {
     for (const mesh of this.getMeshes()) {
       mesh.visible = isVisible && ((mesh.isVisible != null) ? mesh.isVisible : true);
     }
@@ -108,7 +112,7 @@ class Skeleton {
   }
 
 
-  setVisibility(isVisible) {
+  setVisibility(isVisible: boolean) {
     this.isVisible = isVisible;
 
     for (const mesh of this.getMeshes()) {
@@ -128,7 +132,7 @@ class Skeleton {
   }
 
 
-  updateForCam(id) {
+  updateForCam(id: OrthoViewType) {
     for (const tree of _.values(this.treeGeometryCache)) {
       tree.showRadius(id !== OrthoViews.TDView && !Store.getState().userConfiguration.overrideNodeRadius);
     }
@@ -146,21 +150,23 @@ class Skeleton {
   }
 
 
-  setInactiveTreeVisibility(visible) {
+  setInactiveTreeVisibility(visible: boolean) {
     for (const mesh of this.getMeshes()) {
       mesh.isVisible = visible;
     }
     const treeGeometry = this.getTreeGeometry(Store.getState().skeletonTracing.activeTreeId);
-    treeGeometry.edges.isVisible = true;
-    treeGeometry.nodes.isVisible = true;
-    app.vent.trigger("rerender");
+    if (treeGeometry != null) {
+      treeGeometry.edges.isVisible = true;
+      treeGeometry.nodes.isVisible = true;
+      app.vent.trigger("rerender");
+    }
   }
 
   getAllNodes() {
     return _.map(this.treeGeometryCache, tree => tree.nodes);
   }
 
-  setSizeAttenuation(sizeAttenuation) {
+  setSizeAttenuation(sizeAttenuation: boolean) {
     return _.map(this.treeGeometryCache, tree =>
       tree.setSizeAttenuation(sizeAttenuation));
   }

@@ -2,7 +2,6 @@
  * settings_reducer.js
  * @flow
  */
-/* eslint-disable array-callback-return */
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";

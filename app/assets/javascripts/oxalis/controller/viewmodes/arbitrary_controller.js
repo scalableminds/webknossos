@@ -403,7 +403,6 @@ class ArbitraryController {
 
 
   centerActiveNode(): void {
-    // eslint-disable-next-line array-callback-return
     getActiveNode(Store.getState().skeletonTracing).map((activeNode) => {
       // animate the change to the new position and new rotation
       const curPos = getPosition(Store.getState().flycam);

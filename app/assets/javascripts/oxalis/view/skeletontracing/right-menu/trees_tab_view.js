@@ -9,7 +9,7 @@ import Maybe from "data.maybe";
 import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu } from "antd";
 import Window from "libs/window";
-import ListTreeItemView from "oxalis/view/skeletontracing/right-menu/list_tree_item_view";
+import TreesTabItemView from "oxalis/view/skeletontracing/right-menu/trees_tab_item_view";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setTreeNameAction, createTreeAction, deleteTreeAction, shuffleTreeColorAction, selectNextTreeAction } from "oxalis/model/actions/skeletontracing_actions";
 import type { Dispatch } from "redux";
@@ -18,7 +18,7 @@ import type { OxalisState } from "oxalis/store";
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
 
-class ListTreeView extends React.Component {
+class TreesTabView extends React.Component {
 
   handleChangeTreeName = (evt) => {
     this.props.onChangeTreeName(evt.target.value);
@@ -45,7 +45,7 @@ class ListTreeView extends React.Component {
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
     return _.orderBy(this.props.skeletonTracing.trees, [orderAttribute], ["asc"]).map(tree =>
-      <ListTreeItemView
+      <TreesTabItemView
         key={tree.treeId}
         tree={tree}
         activeTreeId={this.props.skeletonTracing.activeTreeId}
@@ -53,7 +53,7 @@ class ListTreeView extends React.Component {
     );
   }
 
-  handleDropdownClick = ({key}) => {
+  handleDropdownClick = ({ key }) => {
     const shouldSortTreesByName = key === "sortByName";
     this.props.onSortTree(shouldSortTreesByName);
   };
@@ -117,4 +117,4 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeTreeName(name) { dispatch(setTreeNameAction(name)); },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(ListTreeView);
+export default connect(mapStateToProps, mapDispatchToProps)(TreesTabView);

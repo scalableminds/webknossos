@@ -12,7 +12,7 @@ import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_action
 import AbstractTreeRenderer from "oxalis/view/skeletontracing/abstract_tree_renderer";
 
 
-class AbstractTreeView extends Marionette.View {
+class AbstractTreeTabView extends Marionette.View {
 
   initialized: boolean;
   abstractTreeRenderer: AbstractTreeRenderer;
@@ -70,7 +70,7 @@ class AbstractTreeView extends Marionette.View {
     }
   }
 }
-AbstractTreeView.initClass();
+AbstractTreeTabView.initClass();
 
 
-export default AbstractTreeView;
+export default AbstractTreeTabView;

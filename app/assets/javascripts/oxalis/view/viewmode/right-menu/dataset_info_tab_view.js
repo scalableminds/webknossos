@@ -11,7 +11,7 @@ import constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 
-class DatasetInfoView extends Marionette.View {
+class DatasetInfoTabView extends Marionette.View {
   static initClass() {
     this.prototype.className = "col-sm-12 flex-column";
     this.prototype.id = "dataset";
@@ -121,6 +121,6 @@ class DatasetInfoView extends Marionette.View {
     this._unsubscribe();
   }
 }
-DatasetInfoView.initClass();
+DatasetInfoTabView.initClass();
 
-export default DatasetInfoView;
+export default DatasetInfoTabView;

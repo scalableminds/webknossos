@@ -4,7 +4,6 @@ import classNames from "classnames";
 import Store from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 
-
 class Comment extends Component {
 
   componentDidUpdate() {

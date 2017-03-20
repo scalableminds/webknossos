@@ -3,6 +3,7 @@
  * @flow
  */
 
+import _ from "lodash";
 import React from "react";
 import classNames from "classnames";
 import Comment from "oxalis/view/skeletontracing/right-menu/comment_tab/comment";
@@ -12,12 +13,15 @@ type TreeCommentListProps = {
   tree: TreeType,
   activeTreeId: number,
   activeNodeId: number,
+  sortOrder: "asc" | "desc";
 }
 
 class TreeCommentList extends React.PureComponent {
 
   props: TreeCommentListProps;
-  state = { collapsed: false };
+  state = {
+    collapsed: false,
+  };
 
   handleToggleComment = () => {
     this.setState({ collapsed: !this.state.collapsed });
@@ -28,7 +32,7 @@ class TreeCommentList extends React.PureComponent {
 
     // don't render the comment nodes if the tree is collapsed
     const commentNodes = !this.state.collapsed ?
-      this.props.tree.comments.map(comment =>
+      _.orderBy(this.props.tree.comments, "node", [this.props.sortOrder]).map(comment =>
         <Comment
           key={comment.node}
           data={comment}

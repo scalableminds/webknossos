@@ -4,10 +4,12 @@
  */
 
 import _ from "lodash";
+import $ from "jquery";
 import type Layer from "oxalis/model/binary/layers/layer";
 import AsyncTaskQueue from "libs/async_task_queue";
 import type { Vector4 } from "oxalis/constants";
 import DataCube from "oxalis/model/binary/data_cube";
+import Toast from "libs/toast";
 
 const BATCH_SIZE = 32;
 const DEBOUNCE_TIME = 1000;
@@ -30,6 +32,16 @@ class PushQueue {
     this.taskQueue = taskQueue;
     this.sendData = sendData;
     this.queue = [];
+
+    const autoSaveFailureMessage = "Auto-Save failed!";
+    this.taskQueue.on("failure", () => {
+      $("body").addClass("save-error");
+      Toast.error(autoSaveFailureMessage, true);
+    });
+    this.taskQueue.on("success", () => {
+      $("body").removeClass("save-error");
+      Toast.delete("danger", autoSaveFailureMessage);
+    });
   }
 
   stateSaved(): boolean {
@@ -41,13 +53,6 @@ class PushQueue {
 
   insert(bucketAddress: Vector4): void {
     this.queue.push(bucketAddress);
-    this.removeDuplicates();
-    this.push();
-  }
-
-
-  insertFront(bucketAddress: Vector4): void {
-    this.queue.unshift(bucketAddress);
     this.removeDuplicates();
     this.push();
   }
@@ -91,9 +96,15 @@ class PushQueue {
     while (this.queue.length) {
       const batchSize = Math.min(BATCH_SIZE, this.queue.length);
       const batch = this.queue.splice(0, batchSize);
+      // fire and forget
       this.taskQueue.scheduleTask(() => this.pushBatch(batch));
     }
-    await this.taskQueue.join();
+    try {
+      // wait here
+      await this.taskQueue.join();
+    } catch (error) {
+      alert("We've encountered a permanent issue while saving. Please try to reload the page.");
+    }
   };
 
 

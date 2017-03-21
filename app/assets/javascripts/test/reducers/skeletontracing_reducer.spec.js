@@ -617,7 +617,7 @@ describe("SkeletonTracing", () => {
     expect(newState.skeletonTracing.activeTreeId).toBe(0);
   });
 
-  it("should shuffle the tree color", () => {
+  it("should shuffle the color of a specified tree", () => {
     const shuffleTreeColorAction = addTimestamp(SkeletonTracingActions.shuffleTreeColorAction(0));
     const newState = SkeletonTracingReducer(initialState, shuffleTreeColorAction);
 
@@ -736,5 +736,155 @@ describe("SkeletonTracing", () => {
     expect(newState.skeletonTracing.trees[0].comments.length).toEqual(1);
     expect(newState.skeletonTracing.trees[0].comments[0].node).toEqual(0);
     expect(newState.skeletonTracing.trees[0].comments[0].content).toEqual(commentText);
+  });
+
+  it("should add a node in a specified tree", () => {
+    const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
+    const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution, 1));
+
+    // create three nodes
+    let newState = SkeletonTracingReducer(initialState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+
+    expect(newState).not.toBe(initialState);
+    expect(newState.skeletonTracing.trees[1].nodes[0]).not.toBeUndefined();
+    expect(newState.skeletonTracing.activeTreeId).toBe(1);
+    expect(newState.skeletonTracing.activeNodeId).toBe(0);
+  });
+
+  it("should delete a specified node (1/2)", () => {
+    const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
+    const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction(1, 0));
+
+    // create three nodes
+    let newState = SkeletonTracingReducer(initialState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, deleteNodeAction);
+
+    expect(newState).not.toBe(initialState);
+    expect(newState.skeletonTracing.trees[0].nodes[1]).toBeUndefined();
+    // tree is split
+    expect(newState.skeletonTracing.trees[1]).not.toBeUndefined();
+    expect(newState.skeletonTracing.activeNodeId).toBe(2);
+    expect(newState.skeletonTracing.activeTreeId).toBe(1);
+  });
+
+  it("should delete a specified node (2/2)", () => {
+    const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
+    const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction(1));
+
+    // create three nodes
+    let newState = SkeletonTracingReducer(initialState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, deleteNodeAction);
+
+    expect(newState).not.toBe(initialState);
+    expect(newState.skeletonTracing.trees[0].nodes[1]).toBeUndefined();
+    // tree is split
+    expect(newState.skeletonTracing.trees[1]).not.toBeUndefined();
+    expect(newState.skeletonTracing.activeNodeId).toBe(2);
+    expect(newState.skeletonTracing.activeTreeId).toBe(1);
+  });
+
+  it("should create a branchpoint for a specified node (1/2)", () => {
+    const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
+    const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction(1, 0));
+
+    // create a single node and then set it as branchpoint
+    let newState = SkeletonTracingReducer(initialState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createBranchPointAction);
+
+    expect(newState).not.toBe(initialState);
+    expect(newState.skeletonTracing.trees[0].branchPoints.length).toEqual(1);
+    expect(newState.skeletonTracing.trees[0].branchPoints[0].id).toEqual(1);
+  });
+
+  it("should create a branchpoint for a specified node (2/2)", () => {
+    const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
+    const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction(1));
+
+    // create a single node and then set it as branchpoint
+    let newState = SkeletonTracingReducer(initialState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createBranchPointAction);
+
+    expect(newState).not.toBe(initialState);
+    expect(newState.skeletonTracing.trees[0].branchPoints.length).toEqual(1);
+    expect(newState.skeletonTracing.trees[0].branchPoints[0].id).toEqual(1);
+  });
+
+  it("should delete a specified tree", () => {
+    const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
+    const deleteTreeAction = addTimestamp(SkeletonTracingActions.deleteTreeAction(1));
+
+    // create a tree and delete it again
+    let newState = SkeletonTracingReducer(initialState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, deleteTreeAction);
+
+    console.log(newState.skeletonTracing.trees);
+    expect(newState).not.toBe(initialState);
+    expect(newState.skeletonTracing.trees[1]).toBeUndefined();
+    expect(newState.skeletonTracing.trees[2]).not.toBeUndefined();
+    expect(newState.skeletonTracing.activeTreeId).toBe(2);
+  });
+
+  it("should rename a specified tree", () => {
+    const newName = "SuperTestName";
+    const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
+    const setTreeNameAction = addTimestamp(SkeletonTracingActions.setTreeNameAction(newName, 1));
+    let newState = SkeletonTracingReducer(initialState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, createTreeAction);
+    newState = SkeletonTracingReducer(newState, setTreeNameAction);
+
+    expect(newState).not.toBe(initialState);
+    expect(newState.skeletonTracing.trees[1].name).toEqual(newName);
+    expect(newState.skeletonTracing.trees[0].name).not.toEqual(newName);
+    expect(newState.skeletonTracing.trees[2].name).not.toEqual(newName);
+  });
+
+  it("should create a comment for a specified node", () => {
+    const commentText = "Wow such test comment";
+
+    const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
+    const createCommentAction = addTimestamp(SkeletonTracingActions.createCommentAction(commentText, 1));
+
+    // create a single node with a comment
+    let newState = SkeletonTracingReducer(initialState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+
+    expect(newState).not.toBe(initialState);
+    expect(newState.skeletonTracing.trees[0].comments.length).toEqual(1);
+    expect(newState.skeletonTracing.trees[0].comments[0].content).toEqual(commentText);
+    expect(newState.skeletonTracing.trees[0].comments[0].node).toEqual(1);
+  });
+  it("should delete a comment for a specified node (1/2)", () => {
+    const commentText = "Wow such test comment";
+
+    const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
+    const createCommentAction = addTimestamp(SkeletonTracingActions.createCommentAction(commentText));
+    const deleteCommentAction = addTimestamp(SkeletonTracingActions.deleteCommentAction(1));
+
+    // create a node with a comment, then delete it
+    let newState = SkeletonTracingReducer(initialState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+    newState = SkeletonTracingReducer(newState, createNodeAction);
+    newState = SkeletonTracingReducer(newState, createCommentAction);
+    newState = SkeletonTracingReducer(newState, deleteCommentAction);
+
+    expect(newState).not.toBe(initialState);
+    expect(newState.skeletonTracing.trees[0].comments.length).toEqual(2);
+    expect(newState.skeletonTracing.trees[0].comments[0].node).toEqual(0);
+    expect(newState.skeletonTracing.trees[0].comments[1].node).toEqual(2);
   });
 });

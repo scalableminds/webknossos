@@ -76,6 +76,20 @@ describe("Flycam", () => {
     equalWithEpsilon(getPosition(newState.flycam), [1, 2, 3]);
   });
 
+  it("should set the position the flycam with skipped dimension (1/2)", () => {
+    const positionAction = addTimestamp(FlycamActions.setPositionAction([1, 2, 3], 2));
+    const newState = FlycamReducer(initialState, positionAction);
+
+    equalWithEpsilon(getPosition(newState.flycam), [1, 2, 0]);
+  });
+
+  it("should set the position the flycam with skipped dimension (2/2)", () => {
+    const positionAction = addTimestamp(FlycamActions.setPositionAction([1, 2, 3], 0));
+    const newState = FlycamReducer(initialState, positionAction);
+
+    equalWithEpsilon(getPosition(newState.flycam), [0, 2, 3]);
+  });
+
   it("should rotate the flycam", () => {
     const rotateAction = addTimestamp(FlycamActions.rotateFlycamAction(0.5 * Math.PI, [1, 1, 0]));
     const newState = FlycamReducer(initialState, rotateAction);

@@ -261,9 +261,10 @@ class SkeletonTracingPlaneController extends PlaneController {
     .onUpdate(function () { // needs to be a normal (non-bound) function
       const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
       if (dimensionToSkip != null) {
-        curPos[dimensionToSkip] = null;
+        Store.dispatch(setPositionAction(curPos, dimensionToSkip));
+      } else {
+        Store.dispatch(setPositionAction(curPos));
       }
-      Store.dispatch(setPositionAction(curPos));
     })
     .start();
   }

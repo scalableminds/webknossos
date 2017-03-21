@@ -1,7 +1,7 @@
 // @flow
 import Maybe from "data.maybe";
 import _ from "lodash";
-import type { OxalisState, SkeletonTracingType, NodeType, TreeType, TreeMapType } from "oxalis/store";
+import type { SkeletonTracingType, NodeType, TreeType, TreeMapType } from "oxalis/store";
 
 export function getActiveNode(tracing: SkeletonTracingType) {
   const { activeTreeId, activeNodeId } = tracing;

@@ -11,19 +11,17 @@ import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode,
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import _ from "lodash";
 import Utils from "libs/utils";
 import { V3 } from "libs/mjs";
 
 function* centerActiveNode() {
-  const { activeNodeId, activeTreeId, trees } = yield select(state => state.skeletonTracing);
-
-  if (activeNodeId != null) {
-    // Should be an action in the future
-    const position = trees[activeTreeId].nodes[activeNodeId].position;
-    // $FlowFixMe
-    app.oxalis.planeController.centerPositionAnimated(position);
-  }
+  getActiveNode(yield select(state => state.skeletonTracing))
+    .map((activeNode) => {
+      // $FlowFixMe
+      app.oxalis.planeController.centerPositionAnimated(activeNode.position);
+    });
 }
 
 export function* watchSkeletonTracingAsync(): Generator<*, *, *> {

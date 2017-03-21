@@ -242,7 +242,9 @@ class SkeletonTracingPlaneController extends PlaneController {
 
   centerPositionAnimated(position: Vector3): void {
     // Let the user still manipulate the "third dimension" during animation
-    const dimensionToSkip = dimensions.thirdDimensionForPlane(this.activeViewport);
+    const dimensionToSkip = this.activeViewport !== OrthoViews.TDView ?
+      dimensions.thirdDimensionForPlane(this.activeViewport) :
+      -1;
 
     const curGlobalPos = getPosition(Store.getState().flycam);
 

@@ -240,11 +240,11 @@ class SkeletonTracingPlaneController extends PlaneController {
   };
 
 
-  centerPositionAnimated(position: Vector3): void {
+  centerPositionAnimated(position: Vector3, skipDimensions: boolean = true): void {
     // Let the user still manipulate the "third dimension" during animation
-    const dimensionToSkip = this.activeViewport !== OrthoViews.TDView ?
+    const dimensionToSkip = skipDimensions && this.activeViewport !== OrthoViews.TDView ?
       dimensions.thirdDimensionForPlane(this.activeViewport) :
-      -1;
+      null;
 
     const curGlobalPos = getPosition(Store.getState().flycam);
 
@@ -252,7 +252,6 @@ class SkeletonTracingPlaneController extends PlaneController {
       globalPosX: curGlobalPos[0],
       globalPosY: curGlobalPos[1],
       globalPosZ: curGlobalPos[2],
-      dimensionToSkip,
     });
     tween.to({
       globalPosX: position[0],
@@ -261,7 +260,9 @@ class SkeletonTracingPlaneController extends PlaneController {
     }, 200)
     .onUpdate(function () { // needs to be a normal (non-bound) function
       const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
-      curPos[this.dimensionToSkip] = null;
+      if (dimensionToSkip != null) {
+        curPos[dimensionToSkip] = null;
+      }
       Store.dispatch(setPositionAction(curPos));
     })
     .start();

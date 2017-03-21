@@ -173,7 +173,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       case (taskTypeId, experience, status, team, projectName, boundingBox, dataSetName, start, rotation) =>
         for {
           task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-          _ <- ensureTeamAdministration(request.user, task.team)
+          _ <- ensureTeamAdministration(request.user, task.team) ?~> Messages("notAllowed")
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
           openInstanceCount <- task.remainingInstances
@@ -198,6 +198,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def delete(taskId: String) = Authenticated.async { implicit request =>
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
+      _ <- ensureTeamAdministration(request.user, task.team) ?~> Messages("notAllowed")
       _ <- TaskService.remove(task._id)
     } yield {
       JsonOk(Messages("task.removed"))

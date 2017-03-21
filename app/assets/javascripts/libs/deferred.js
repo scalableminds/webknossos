@@ -4,9 +4,9 @@
  */
 
 class Deferred<T, U> {
-  internalResolve: (T) => void;
-  internalReject: (U) => void;
-  internalPromise: Promise<T>;
+  _internalResolve: (T) => void;
+  _internalReject: (U) => void;
+  _internalPromise: Promise<T>;
 
   // Wrapper around `Promise` that keeps a reference to `resolve` and `reject`
   // methods.
@@ -23,25 +23,26 @@ class Deferred<T, U> {
 
 
   constructor() {
-    this.internalPromise = new Promise((resolve, reject) => {
-      this.internalResolve = resolve;
-      this.internalReject = reject;
+    this._internalPromise = new Promise((resolve, reject) => {
+      this._internalResolve = resolve;
+      this._internalReject = reject;
     });
   }
 
-
   resolve(arg: T): void {
-    this.internalResolve(arg);
+    this._internalResolve(arg);
   }
-
 
   reject(arg: U): void {
-    this.internalReject(arg);
+    this._internalReject(arg);
   }
 
-
   promise(): Promise<T> {
-    return this.internalPromise;
+    return this._internalPromise;
+  }
+
+  task(): () => Promise<T> {
+    return () => this.promise();
   }
 }
 

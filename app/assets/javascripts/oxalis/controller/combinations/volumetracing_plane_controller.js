@@ -6,7 +6,7 @@
 
 import _ from "lodash";
 import Store from "oxalis/store";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import Utils from "libs/utils";
 import constants, { OrthoViews } from "oxalis/constants";
 import type { OrthoViewType, Point2 } from "oxalis/constants";
@@ -128,8 +128,8 @@ class VolumeTracingPlaneController extends PlaneController {
 
 
   adjustSegmentationOpacity(): void {
-    if (Store.getState().userConfiguration.segmentationOpacity < 10) {
-      Store.dispatch(updateUserSettingAction("segmentationOpacity", 50));
+    if (Store.getState().datasetConfiguration.segmentationOpacity < 10) {
+      Store.dispatch(updateDatasetSettingAction("segmentationOpacity", 50));
     }
   }
 

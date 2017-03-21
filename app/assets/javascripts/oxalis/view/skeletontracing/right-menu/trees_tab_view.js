@@ -10,7 +10,7 @@ import { Button, Dropdown, Input, Menu } from "antd";
 import Window from "libs/window";
 import TreesTabItemView from "oxalis/view/skeletontracing/right-menu/trees_tab_item_view";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { getActiveTree } from "oxalis/model/accessors/skeletonTracing_accessor";
+import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setTreeNameAction, createTreeAction, deleteTreeAction, shuffleTreeColorAction, selectNextTreeAction } from "oxalis/model/actions/skeletontracing_actions";
 import type { Dispatch } from "redux";
 import type { OxalisState } from "oxalis/store";

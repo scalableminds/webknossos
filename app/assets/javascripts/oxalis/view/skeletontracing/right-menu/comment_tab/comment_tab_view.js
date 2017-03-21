@@ -18,9 +18,13 @@ import type { OxalisState } from "oxalis/store";
 
 const InputGroup = Input.Group;
 
+type CommentTabStateType = {
+  isSortedAscending: boolean,
+};
+
 class CommentTabView extends React.Component {
 
-  state = {
+  state: CommentTabStateType = {
     isSortedAscending: true,
   }
 

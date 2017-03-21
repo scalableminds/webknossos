@@ -742,7 +742,7 @@ describe("SkeletonTracing", () => {
     const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
     const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution, 1));
 
-    // create three nodes
+    // create a few trees and add a node to a specific one
     let newState = SkeletonTracingReducer(initialState, createTreeAction);
     newState = SkeletonTracingReducer(newState, createTreeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
@@ -757,7 +757,7 @@ describe("SkeletonTracing", () => {
     const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
     const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction(1, 0));
 
-    // create three nodes
+    // create three nodes and delete a specific one
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
@@ -775,7 +775,7 @@ describe("SkeletonTracing", () => {
     const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
     const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction(1));
 
-    // create three nodes
+    // create three nodes and delete a specific one
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
@@ -793,7 +793,7 @@ describe("SkeletonTracing", () => {
     const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
     const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction(1, 0));
 
-    // create a single node and then set it as branchpoint
+    // create some nodes and then set a specific one as branchpoint
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
@@ -808,7 +808,7 @@ describe("SkeletonTracing", () => {
     const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
     const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction(1));
 
-    // create a single node and then set it as branchpoint
+    // create some nodes and then set a specific one as branchpoint
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
@@ -823,12 +823,11 @@ describe("SkeletonTracing", () => {
     const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
     const deleteTreeAction = addTimestamp(SkeletonTracingActions.deleteTreeAction(1));
 
-    // create a tree and delete it again
+    // create some trees and delete a specific one
     let newState = SkeletonTracingReducer(initialState, createTreeAction);
     newState = SkeletonTracingReducer(newState, createTreeAction);
     newState = SkeletonTracingReducer(newState, deleteTreeAction);
 
-    console.log(newState.skeletonTracing.trees);
     expect(newState).not.toBe(initialState);
     expect(newState.skeletonTracing.trees[1]).toBeUndefined();
     expect(newState.skeletonTracing.trees[2]).not.toBeUndefined();
@@ -839,6 +838,7 @@ describe("SkeletonTracing", () => {
     const newName = "SuperTestName";
     const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
     const setTreeNameAction = addTimestamp(SkeletonTracingActions.setTreeNameAction(newName, 1));
+
     let newState = SkeletonTracingReducer(initialState, createTreeAction);
     newState = SkeletonTracingReducer(newState, createTreeAction);
     newState = SkeletonTracingReducer(newState, setTreeNameAction);
@@ -855,7 +855,7 @@ describe("SkeletonTracing", () => {
     const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
     const createCommentAction = addTimestamp(SkeletonTracingActions.createCommentAction(commentText, 1));
 
-    // create a single node with a comment
+    // create a few nodes and adds one comment
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
@@ -873,7 +873,7 @@ describe("SkeletonTracing", () => {
     const createCommentAction = addTimestamp(SkeletonTracingActions.createCommentAction(commentText));
     const deleteCommentAction = addTimestamp(SkeletonTracingActions.deleteCommentAction(1));
 
-    // create a node with a comment, then delete it
+    // create nodes with comments, then delete a specific comment
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createCommentAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);

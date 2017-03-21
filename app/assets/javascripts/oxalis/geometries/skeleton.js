@@ -9,8 +9,9 @@ import Backbone from "backbone";
 import Store from "oxalis/throttled_store";
 import Model from "oxalis/model";
 import { OrthoViews } from "oxalis/constants";
-import type { Vector3, OrthoViewType } from "oxalis/constants";
 import TreeGeometry from "oxalis/geometries/tree_geometry";
+import type { Vector3, OrthoViewType } from "oxalis/constants";
+import type { SkeletonTracingType } from "oxalis/store";
 
 class Skeleton {
   // This class is supposed to collect all the Geometries that belong to the skeleton, like
@@ -24,7 +25,7 @@ class Skeleton {
   isVisible: boolean;
   treeGeometryCache: {[id:number]: TreeGeometry};
   showInactiveTrees: boolean;
-
+  oldSkeletonTracing: SkeletonTracingType;
 
   constructor(model: Model) {
     this.model = model;
@@ -34,6 +35,7 @@ class Skeleton {
     this.isVisible = true;
 
     this.showInactiveTrees = true;
+    this.oldSkeletonTracing = null;
 
     // this.reset();
 
@@ -66,20 +68,28 @@ class Skeleton {
   }, 500)
 
   reset() {
-    const trees = _.values(Store.getState().skeletonTracing.trees);
+    const skeletonTracing = Store.getState().skeletonTracing;
 
-    // periodically evict unused tree geometries left over after tree deletion/splitting
-    this.evictFromCache();
+    // only update the WebGl stuff if the tracing has really changed
+    // this should smooth performance when one is just viewing/moving around
+    if (skeletonTracing !== this.oldSkeletonTracing) {
+      const trees = _.values(Store.getState().skeletonTracing.trees);
 
-    for (const tree of trees) {
-      let treeGeometry = this.getTreeGeometry(tree.treeId);
-      if (!treeGeometry) {
-        treeGeometry = this.createNewTree(tree.treeId, tree.color);
+      // periodically evict unused tree geometries left over after tree deletion/splitting
+      this.evictFromCache();
+
+      for (const tree of trees) {
+        let treeGeometry = this.getTreeGeometry(tree.treeId);
+        if (!treeGeometry) {
+          treeGeometry = this.createNewTree(tree.treeId, tree.color);
+        }
+
+        treeGeometry.reset(tree.nodes, tree.edges);
       }
 
-      treeGeometry.reset(tree.nodes, tree.edges);
+      app.vent.trigger("rerender");
+      this.oldSkeletonTracing = skeletonTracing;
     }
-    app.vent.trigger("rerender");
   }
 
   getMeshes = () => {

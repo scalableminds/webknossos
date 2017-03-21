@@ -25,12 +25,12 @@ class TreeGeometry {
   nodes: THREE.Points;
   id: number;
   oldActiveNodeId: ?number;
-  oldNodeCount: ?number;
 
   constructor(treeId: number, treeColor, model: Model) {
     // create skeletonTracing to show in TDView
     const edgeGeometry = new THREE.BufferGeometry();
     const nodeGeometry = new THREE.BufferGeometry();
+    nodeGeometry.nodeIDs = [];
 
     this.edges = new THREE.LineSegments(
       edgeGeometry,
@@ -46,7 +46,6 @@ class TreeGeometry {
 
     this.id = treeId;
     this.oldActiveNodeId = null;
-    this.oldNodeCount = null;
 
     Store.subscribe(() => {
       const state = Store.getState();
@@ -70,33 +69,23 @@ class TreeGeometry {
   }
 
   reset(nodes, edges) {
-    if (this.oldNodeCount !== _.size(nodes)) {
-      // only reset if anything has changed, for performance reasons
-      // Increases movement perf large tracings
-      // Ruins updating node radius and colors for branchpoints etc
-      this.resetNodes(nodes);
-      this.resetEdges(nodes, edges);
-
-      this.oldNodeCount = _.size(nodes);
-    }
+    this.resetNodes(nodes);
+    this.resetEdges(nodes, edges);
   }
 
   resetEdges(nodes, edges) {
-    const edgesBuffer = new Float32Array(edges.length * 6);
+    const edgesBuffer = [];
 
-    let i = 0;
     for (const edge of edges) {
-      const edgePositions = nodes[edge.source].position.concat(nodes[edge.target].position);
-      edgesBuffer.set(edgePositions, i * 6);
-      i++;
+      const sourceNodePosition = nodes[edge.source].position;
+      const targetNodePosition = nodes[edge.target].position;
+      edgesBuffer.push(sourceNodePosition[0], sourceNodePosition[1], sourceNodePosition[2], targetNodePosition[0], targetNodePosition[1], targetNodePosition[2]);
     }
 
     const edgesMesh = this.edges;
+    edgesMesh.geometry.dispose(); // Free any memory allocated on the GPU
 
-    // Free any memory allocated on the GPU
-    edgesMesh.geometry.dispose();
-
-    edgesMesh.geometry.addAttribute("position", this.makeDynamicFloatAttribute(3, edgesBuffer));
+    edgesMesh.geometry.addAttribute("position", this.makeDynamicFloatAttribute(3, new Float32Array(edgesBuffer)));
     edgesMesh.geometry.computeBoundingSphere();
   }
 
@@ -104,35 +93,30 @@ class TreeGeometry {
     const nodeCount = _.size(nodes);
 
     if (nodeCount) {
-      const sizesBuffer = new Float32Array(nodeCount);
-      const scalesBuffer = new Float32Array(nodeCount);
-      const nodesBuffer = new Float32Array(nodeCount * 3);
-      const nodesColorBuffer = new Float32Array(nodeCount * 3);
+      const sizesBuffer = [];
+      const scalesBuffer = [];
+      const positionBuffer = [];
+      const colorBuffer = [];
       const nodeIDs = [];
 
-
-      // What is quicker? Setting each element into the TypedArray or creating a temp. (non-immutable) array and setting that as the TypedArray
-      let i = 0;
+      // explicitly use loop here for performance reasons #perfmatters
       for (const node of Object.values(nodes)) {
-        const indexTimesThree = i * 3;
-        sizesBuffer.set([node.radius * 2], i);
-        scalesBuffer.set([1.0], i);
-        nodesBuffer.set(node.position, indexTimesThree);
-        nodesColorBuffer.set(this.getColor(node.id), indexTimesThree);
-        nodeIDs.push(node.id);
+        const nodeColor = this.getColor(node.id);
 
-        i++;
+        sizesBuffer.push(node.radius * 2);
+        scalesBuffer.push(1.0);
+        positionBuffer.push(node.position[0], node.position[1], node.position[2]);
+        colorBuffer.push(nodeColor[0], nodeColor[1], nodeColor[2]);
+        nodeIDs.push(node.id);
       }
 
       const nodesMesh = this.nodes;
+      nodesMesh.geometry.dispose(); // Free any memory allocated on the GPU
 
-      // Free any memory allocated on the GPU
-      nodesMesh.geometry.dispose();
-
-      nodesMesh.geometry.addAttribute("position", this.makeDynamicFloatAttribute(3, nodesBuffer));
-      nodesMesh.geometry.addAttribute("sizeNm", this.makeDynamicFloatAttribute(1, sizesBuffer));
-      nodesMesh.geometry.addAttribute("nodeScaleFactor", this.makeDynamicFloatAttribute(1, scalesBuffer));
-      nodesMesh.geometry.addAttribute("color", this.makeDynamicFloatAttribute(3, nodesColorBuffer));
+      nodesMesh.geometry.addAttribute("position", this.makeDynamicFloatAttribute(3, new Float32Array(positionBuffer)));
+      nodesMesh.geometry.addAttribute("sizeNm", this.makeDynamicFloatAttribute(1, new Float32Array(sizesBuffer)));
+      nodesMesh.geometry.addAttribute("nodeScaleFactor", this.makeDynamicFloatAttribute(1, new Float32Array(scalesBuffer)));
+      nodesMesh.geometry.addAttribute("color", this.makeDynamicFloatAttribute(3, new Float32Array(colorBuffer)));
       nodesMesh.geometry.nodeIDs = nodeIDs;
 
       nodesMesh.geometry.computeBoundingSphere();
@@ -160,7 +144,7 @@ class TreeGeometry {
     const normal = 1.0;
     const highlighted = 2.0;
 
-    const nodeIndex = this.getNodeIndex(nodeId);
+    const nodeIndex = _.findIndex(this.nodes.geometry.nodeIDs, id => id === nodeId);
     if (nodeIndex) {
       this.animateNodeScale(normal, highlighted, nodeIndex, () => this.animateNodeScale(highlighted, normal, nodeIndex));
     }
@@ -183,15 +167,6 @@ class TreeGeometry {
       .onUpdate(onUpdate)
       .onComplete(onComplete)
       .start();
-  }
-
-  getNodeIndex(nodeId) {
-    for (let i = 0; i < this.nodes.geometry.nodeIDs.length; i++) {
-      if (this.nodes.geometry.nodeIDs[i] === nodeId) {
-        return i;
-      }
-    }
-    return null;
   }
 
   getColor(id) {

@@ -1,90 +1,82 @@
 /**
  * mapping_info_view.js
- * @flow weak
+ * @flow
  */
-
-import Backbone from "backbone";
-import Marionette from "backbone.marionette";
-import Subviews from "backbone-subviews";
-import _ from "lodash";
-import CheckboxSettingView from "oxalis/view/settings/setting_views/checkbox_setting_view";
-import Binary from "oxalis/model/binary";
+import React, { Component } from "react";
+import { connect } from "react-redux";
 import Cube from "oxalis/model/binary/data_cube";
-import Store from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
+import type Model from "oxalis/model";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import type { Vector3 } from "oxalis/constants";
+import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 
-const RENDER_DEBOUNCE_TIME = 200;
+class MappingInfoView extends Component {
+  props: {
+    position: Vector3,
+    oldModel: Model,
+  };
 
-class MappingInfoView extends Marionette.View {
-
-  subviewCreators: Object;
-  model: Backbone.Model;
-  binary: Binary;
-  cube: Cube;
-  renderDebounced: Function;
-
-  static initClass() {
-    this.prototype.id = "volume-mapping-info";
-    this.prototype.template = _.template(`\
-<div class="well">
-  <% if (hasMapping) { %>
-    <p>ID without mapping: <%- idWithoutMapping %></p>
-    <p>ID with mapping: <%- idWithMapping %></p>
-  <% } else { %>
-    <p>ID at current position: <%- idWithoutMapping %></p>
-  <% } %>
-</div>
-<% if (hasMapping) { %>
-  <div data-subview="enableMapping"></div>
-<% } %>\
-`);
-
-
-    this.prototype.subviewCreators = {
-
-      enableMapping() {
-        return new CheckboxSettingView({
-          model: this.model,
-          options: {
-            name: "enableMapping",
-            displayName: "Enable Mapping",
-          },
-        });
-      },
-    };
+  componentDidMount() {
+    const cube = this.getCube();
+    cube.on("bucketLoaded", this._forceUpdate);
+    cube.on("volumeLabeled", this._forceUpdate);
+    cube.on("newMapping", this._forceUpdate);
   }
 
-
-  initialize({ model: oxalisModel }) {
-    Subviews.add(this);
-
-    this.model = new Backbone.Model();
-    this.model.set("enableMapping", true);
-
-    this.binary = oxalisModel.getSegmentationBinary();
-    this.cube = this.binary.cube;
-
-    this.renderDebounced = _.debounce(this.render, RENDER_DEBOUNCE_TIME);
-    this.listenTo(this.cube, "bucketLoaded", this.renderDebounced);
-    this.listenTo(this.cube, "volumeLabeled", this.renderDebounced);
-    this.listenTo(this.cube, "newMapping", this.render);
-    this.listenTo(this.model, "change:enableMapping", function () {
-      return this.cube.setMappingEnabled(this.model.get("enableMapping"));
-    });
-    Store.subscribe(() => { this.renderDebounced(); });
+  componentWillUnmount() {
+    const cube = this.getCube();
+    cube.off("bucketLoaded", this._forceUpdate);
+    cube.off("volumeLabeled", this._forceUpdate);
+    cube.off("newMapping", this._forceUpdate);
   }
 
+  _forceUpdate = () => { this.forceUpdate(); };
 
-  serializeData() {
-    const pos = getPosition(Store.getState().flycam);
+  getCube(): Cube {
+    return this.props.oldModel.getSegmentationBinary().cube;
+  }
 
-    return {
-      hasMapping: this.cube.hasMapping(),
-      idWithMapping: this.cube.getDataValue(pos, this.cube.mapping),
-      idWithoutMapping: this.cube.getDataValue(pos, null),
-    };
+  handleChangeMappingEnabled = (isEnabled: boolean) => {
+    this.getCube().setMappingEnabled(isEnabled);
+  }
+
+  render() {
+    const cube = this.getCube();
+    const hasMapping = cube.hasMapping();
+    const idWithMapping = cube.getDataValue(this.props.position, cube.mapping);
+    const idWithoutMapping = cube.getDataValue(this.props.position, null);
+
+    return (
+      <div id="volume-mapping-info">
+        <div className="well">
+          {
+            hasMapping ?
+              <div>
+                <p>ID without mapping: {idWithoutMapping}</p>
+                <p>ID with mapping: {idWithMapping}</p>
+              </div> :
+              <p>ID at current position: {idWithoutMapping}</p>
+          }
+        </div>
+        {
+          hasMapping ?
+            <div>
+              <SwitchSetting
+                value={cube.currentMapping != null}
+                onChange={this.handleChangeMappingEnabled}
+                label="Enable Mapping"
+              />
+            </div> :
+            null
+        }
+      </div>
+    );
   }
 }
-MappingInfoView.initClass();
 
-export default MappingInfoView;
+function mapStateToProps(state: OxalisState) {
+  return { position: getPosition(state.flycam) };
+}
+
+export default connect(mapStateToProps)(MappingInfoView);

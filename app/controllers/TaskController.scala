@@ -95,7 +95,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       result <- {
         val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename).nmls
 
-        val futureResult: Future[List[Box[String]]] = Fox.serialSequence(nmls){
+        val futureResult: Future[List[Box[JsObject]]] = Fox.serialSequence(nmls){
           case NMLService.NMLParseSuccess(_, nml) =>
             val task = Task(
               taskType._id,
@@ -108,7 +108,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             for {
               _ <- TaskService.insert(task, project)
               _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, nml)
-            } yield Messages("task.create.success")
+              taskjs <- Task.transformToJson(task, request.userOpt)
+            } yield taskjs
 
           case NMLService.NMLParseFailure(fileName, error) =>
             Fox.failure(Messages("nml.file.invalid", fileName, error))
@@ -133,14 +134,13 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           task = Task(taskType._id, team, experience, status.open, _project = project.name)
           _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start, rotation)
           _ <- TaskService.insert(task, project)
-        } yield {
-          task
-        }
+          taskjs <- Task.transformToJson(task, request.userOpt)
+        } yield taskjs
     }
 
   def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
     withJsonUsing(json, Reads.list(taskCompleteReads)) { parsed =>
-      Fox.serialSequence(parsed){p => createSingleTask(p).map(_ => Messages("task.create.success"))}.map { results =>
+      Fox.serialSequence(parsed){p => createSingleTask(p)}.map { results =>
         val js = bulk2StatusJson(results)
         JsonOk(js, Messages("task.bulk.processed"))
       }
@@ -153,9 +153,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         request.body.asJson.toFox.flatMap { json =>
           withJsonUsing(json, taskCompleteReads) { parsed =>
             for {
-              task <- createSingleTask(parsed)
-              json <- Task.transformToJson(task, request.userOpt)
-            } yield JsonOk(json, Messages("task.create.success"))
+              taskjs <- createSingleTask(parsed)
+            } yield JsonOk(taskjs, Messages("task.create.success"))
           }
         }
       case "nml"     =>

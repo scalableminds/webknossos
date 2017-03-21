@@ -5,6 +5,8 @@
 
 import Utils from "libs/utils";
 import Deferred from "libs/deferred";
+import Backbone from "backbone";
+import _ from "lodash";
 
 type AsyncTask = () => Promise<void>;
 
@@ -17,6 +19,7 @@ class AsyncTaskQueue {
 
   maxRetry: number;
   retryTimeMs: number;
+  failureEventThreshold: number;
   tasks: Array<AsyncTask> = [];
   deferreds: Map<AsyncTask, Deferred<void, any>> = new Map();
   doneDeferred: Deferred<void, any> = new Deferred();
@@ -25,9 +28,15 @@ class AsyncTaskQueue {
   running: boolean = false;
   failed: boolean = false;
 
-  constructor(maxRetry: number = 3, retryTimeMs: number = 1000) {
+  // Copied from backbone events (TODO: handle this better)
+  on: Function;
+  trigger: Function;
+
+  constructor(maxRetry: number = 3, retryTimeMs: number = 1000, failureEventThreshold: number = 3) {
+    _.extend(this, Backbone.Events);
     this.maxRetry = maxRetry;
     this.retryTimeMs = retryTimeMs;
+    this.failureEventThreshold = failureEventThreshold;
   }
 
 
@@ -39,6 +48,9 @@ class AsyncTaskQueue {
     this.tasks.push(task);
     const deferred = new Deferred();
     this.deferreds.set(task, deferred);
+    if (this.failed) {
+      this.restart();
+    }
     if (!this.running) {
       this.executeNext();
     }
@@ -80,7 +92,11 @@ class AsyncTaskQueue {
   }
 
   join(): Promise<void> {
-    return this.doneDeferred.promise();
+    if (this.isBusy()) {
+      return this.doneDeferred.promise();
+    } else {
+      return Promise.resolve();
+    }
   }
 
   async executeNext(): Promise<void> {
@@ -90,13 +106,21 @@ class AsyncTaskQueue {
       try {
         const response = await currentTask();
         this.signalResolve(currentTask, response);
+        this.trigger("success");
       } catch (error) {
         this.retryCount++;
         this.tasks.unshift(currentTask);
-
+        if (this.retryCount > this.failureEventThreshold) {
+          this.trigger("failure", this.retryCount);
+        }
         if (this.retryCount >= this.maxRetry) {
           this.failed = true;
           this.signalReject(currentTask, error);
+
+          this.running = false;
+          this.doneDeferred.reject(error);
+          this.doneDeferred = new Deferred();
+          return;
         } else {
           await Utils.sleep(this.retryTimeMs);
         }

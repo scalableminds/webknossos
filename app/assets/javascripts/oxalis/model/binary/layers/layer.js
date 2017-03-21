@@ -14,7 +14,7 @@ export type BucketRequestOptions = {
   fourBit: boolean;
 };
 
-export const REQUEST_TIMEOUT = 10000;
+export const REQUEST_TIMEOUT = 30000;
 
 // TODO: Non-reactive
 // Abstract class that defines the Layer interface and implements common

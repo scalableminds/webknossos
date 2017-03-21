@@ -157,7 +157,8 @@ export type DatasetConfigurationType = {
   layers: {
     [name:string]: DatasetLayerConfigurationType,
   },
-  quality: number
+  quality: number,
+  segmentationOpacity: number,
 };
 
 export type UserConfigurationType = {
@@ -183,7 +184,6 @@ export type UserConfigurationType = {
   rotateValue: number,
   scale: number,
   scaleValue: number,
-  segmentationOpacity: number,
   sortCommentsAsc: boolean,
   sortTreesByName: boolean,
   sphericalCapRadius: number,
@@ -229,6 +229,7 @@ const defaultState: OxalisState = {
     keyboardDelay: 342,
     layers: {},
     quality: 0,
+    segmentationOpacity: 20,
   },
   userConfiguration: {
     clippingDistance: 50,
@@ -253,7 +254,6 @@ const defaultState: OxalisState = {
     rotateValue: 0.01,
     scale: 1,
     scaleValue: 0.05,
-    segmentationOpacity: 20,
     sortCommentsAsc: true,
     sortTreesByName: false,
     sphericalCapRadius: 140,

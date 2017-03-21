@@ -20,7 +20,7 @@ function* centerActiveNode() {
   getActiveNode(yield select(state => state.skeletonTracing))
     .map((activeNode) => {
       // $FlowFixMe
-      app.oxalis.planeController.centerPositionAnimated(activeNode.position);
+      app.oxalis.planeController.centerPositionAnimated(activeNode.position, false);
     });
 }
 

@@ -92,7 +92,7 @@ class TracingLayoutView extends Marionette.View {
     this.model = this.options.model;
 
     this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
-    this.listenTo(this.model, "change:mode", this.renderSettings);
+    // this.listenTo(this.model, "change:mode", this.renderRegions);
     this.listenTo(this.model, "sync", this.renderRegions);
     $(window).on("resize", this.resizeRightMenu.bind(this));
 
@@ -147,7 +147,7 @@ class TracingLayoutView extends Marionette.View {
 
     render(
       <Provider store={store}>
-        <RightMenuView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
+        <RightMenuView oldModel={this.model} />
       </Provider>,
       this.ui.rightMenu[0],
     );

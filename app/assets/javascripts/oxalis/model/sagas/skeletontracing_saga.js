@@ -18,7 +18,7 @@ import { V3 } from "libs/mjs";
 function* centerActiveNode() {
   const { activeNodeId, activeTreeId, trees } = yield select(state => state.skeletonTracing);
 
-  if (activeNodeId) {
+  if (activeNodeId != null) {
     // Should be an action in the future
     const position = trees[activeTreeId].nodes[activeNodeId].position;
     // $FlowFixMe

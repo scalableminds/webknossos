@@ -5,14 +5,15 @@
 
 import _ from "lodash";
 import React from "react";
+import { connect } from "react-redux";
 import classNames from "classnames";
 import Comment from "oxalis/view/skeletontracing/right-menu/comment_tab/comment";
-import type { TreeType } from "oxalis/store";
+import type { OxalisState, TreeType } from "oxalis/store";
 
 type TreeCommentListProps = {
   tree: TreeType,
-  activeTreeId: number,
-  activeNodeId: number,
+  activeTreeId: ?number,
+  activeNodeId: ?number,
   sortOrder: "asc" | "desc";
 }
 
@@ -63,5 +64,11 @@ class TreeCommentList extends React.PureComponent {
   }
 }
 
+function mapStateToProps(state: OxalisState) {
+  return {
+    activeNodeId: state.skeletonTracing.activeNodeId,
+    activeTreeId: state.skeletonTracing.activeTreeId,
+  };
+}
 
-export default TreeCommentList;
+export default connect(mapStateToProps)(TreeCommentList);

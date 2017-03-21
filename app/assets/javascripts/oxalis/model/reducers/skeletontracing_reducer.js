@@ -186,7 +186,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
       if (_.values(trees).length === 0) return state;
 
       const increaseDecrease = action.forward ? 1 : -1;
-      const maxTreeId = _.size(trees);
+      const maxTreeId = _.max(_.map(trees, "treeId"));
       const newActiveTreeId = _.clamp((activeTreeId || 0) + increaseDecrease, 0, maxTreeId);
 
       return update(state, { skeletonTracing: { activeTreeId: { $set: newActiveTreeId } } });

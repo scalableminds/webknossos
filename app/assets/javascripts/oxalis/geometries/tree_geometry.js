@@ -100,7 +100,7 @@ class TreeGeometry {
       const nodeIDs = [];
 
       // explicitly use loop here for performance reasons #perfmatters
-      for (const node of Object.values(nodes)) {
+      for (const node of _.values(nodes)) {
         const nodeColor = this.getColor(node.id);
 
         sizesBuffer.push(node.radius * 2);
@@ -151,7 +151,7 @@ class TreeGeometry {
   }
 
   animateNodeScale(from, to, index, onComplete = _.noop) {
-    //const setScaleFactor = factor => this.scalesBuffer.set([factor], index);
+    // const setScaleFactor = factor => this.scalesBuffer.set([factor], index);
     const redraw = () => {
       // this.updateGeometries();
       app.vent.trigger("rerender");

@@ -48,6 +48,7 @@
       "no-plusplus": "off",
       "no-restricted-syntax": "warn",
       "array-callback-return": "warn",
+      "jsx-a11y/no-static-element-interactions": "warn",
       "no-restricted-properties": ["off", {"object": "Math", "property": "pow"}],
       "no-restricted-syntax": ["error", "ForInStatement"],
       "no-underscore-dangle": "off",

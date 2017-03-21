@@ -25,7 +25,7 @@ class Skeleton {
   isVisible: boolean;
   treeGeometryCache: {[id:number]: TreeGeometry};
   showInactiveTrees: boolean;
-  oldSkeletonTracing: SkeletonTracingType;
+  oldSkeletonTracing: ?SkeletonTracingType;
 
   constructor(model: Model) {
     this.model = model;

@@ -10,7 +10,7 @@ import constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType } from "oxalis/store";
-import type { Model } from "oxalis/model";
+import type Model from "oxalis/model";
 
 class DatasetInfoTabView extends Component {
   props: {

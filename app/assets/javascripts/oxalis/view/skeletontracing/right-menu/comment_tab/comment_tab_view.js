@@ -6,11 +6,11 @@
 import _ from "lodash";
 import React from "react";
 import Maybe from "data.maybe";
+import Utils from "libs/utils";
 import { connect } from "react-redux";
 import { Button, Input } from "antd";
 import { InputKeyboardNoLoop } from "libs/input";
-import Utils from "libs/utils";
-import Store from "oxalis/store";
+import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveNodeAction, createCommentAction, deleteCommentAction } from "oxalis/model/actions/skeletontracing_actions";
 import TreeCommentList from "oxalis/view/skeletontracing/right-menu/comment_tab/tree_comment_list";
 import type { Dispatch } from "redux";
@@ -34,41 +34,46 @@ class CommentTabView extends React.Component {
   });
 
   nextComment = (forward = true) => {
-    const sortAscending = forward ? this.state.isSortedAscending : !this.state.isSortedAscending;
-    const sortOrder = sortAscending ? "asc" : "desc";
-    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
+    Utils.zipMaybe(
+      getActiveTree(this.props.skeletonTracing),
+      getActiveNode(this.props.skeletonTracing),
+    ).map(([activeTree, activeNode]) => {
+      const sortAscending = forward ? this.state.isSortedAscending : !this.state.isSortedAscending;
+      const sortOrder = sortAscending ? "asc" : "desc";
+      const { trees } = this.props.skeletonTracing;
 
-    // get tree of active comment or activeTree if there is no active comment
-    let nextComment = null;
-    let nextTree = _.find(trees, (tree => _.some(tree.comments, comment => comment.node === activeNodeId)));
-    if (nextTree) {
-      const sortedComments = _.orderBy(nextTree.comments, ["node"], [sortOrder]);
+      // get tree of active comment or activeTree if there is no active comment
+      let nextComment = null;
+      let nextTree = _.find(trees, tree => _.some(tree.comments, comment => comment.node === activeNode.id));
+      if (nextTree != null) {
+        const sortedComments = _.orderBy(nextTree.comments, ["node"], [sortOrder]);
 
-      // try to find next comment for this tree
-      nextComment = _.find(sortedComments,
-      comment => this.comparator(comment.node, sortAscending) > this.comparator(activeNodeId, sortAscending));
+        // try to find next comment for this tree
+        nextComment = _.find(sortedComments,
+          comment => this.comparator(comment.node, sortAscending) > this.comparator(activeNode.id, sortAscending));
 
-      // try to find next tree with at least one comment
-      if (!nextComment) {
-        nextTree = _.find(trees,
-          tree => this.comparator(tree.treeId, sortAscending) > this.comparator(activeTreeId, sortAscending) && tree.comments.length);
+        // try to find next tree with at least one comment
+        if (!nextComment) {
+          nextTree = _.find(trees,
+            tree => this.comparator(tree.treeId, sortAscending) > this.comparator(activeTree.treeId, sortAscending) && tree.comments.length);
+        }
       }
-    }
 
-    // try to find any tree with at least one comment, starting from the beginning
-    if (!nextTree) {
-      nextTree = _.find(trees, tree => tree.comments.length);
-    }
+      // try to find any tree with at least one comment, starting from the beginning
+      if (nextTree == null) {
+        nextTree = _.find(trees, tree => tree.comments.length);
+      }
 
-    if (!nextComment && nextTree) {
-      const sortedComments = _.orderBy(nextTree.comments, ["node"], [sortOrder]);
-      nextComment = sortedComments[0];
-    }
+      if (nextComment == null && nextTree != null) {
+        const sortedComments = _.orderBy(nextTree.comments, ["node"], [sortOrder]);
+        nextComment = sortedComments[0];
+      }
 
-    // if a comment was found set the corresponding node active, causing the list to update
-    if (nextComment) {
-      this.props.setActiveNode(nextComment.node);
-    }
+      // if a comment was found set the corresponding node active, causing the list to update
+      if (nextComment) {
+        this.props.setActiveNode(nextComment.node);
+      }
+    });
   }
 
   previousComment = () => {
@@ -98,24 +103,22 @@ class CommentTabView extends React.Component {
 
   getTreeComponents() {
     const sortOrder = this.state.isSortedAscending ? "asc" : "desc";
-    const { activeNodeId, activeTreeId } = this.props.skeletonTracing;
 
     return _.orderBy(this.props.skeletonTracing.trees, ["treeId"], [sortOrder]).filter(tree => tree.comments.length > 0).map(tree =>
       // one tree and its comments
       <TreeCommentList
         key={tree.treeId}
         tree={tree}
-        activeNodeId={activeNodeId}
-        activeTreeId={activeTreeId}
         sortOrder={sortOrder}
       />,
     );
   }
 
   render() {
-    const { activeNodeId, activeTreeId, trees } = this.props.skeletonTracing;
-    const activeComment = Maybe.Just(trees[activeTreeId])
-      .chain(tree => Maybe.fromNullable(tree.comments.find(comment => comment.node === activeNodeId)))
+    const activeComment = Utils.zipMaybe(
+      getActiveTree(this.props.skeletonTracing),
+      getActiveNode(this.props.skeletonTracing),
+    ).chain(([tree, activeNode]) => Maybe.fromNullable(tree.comments.find(comment => comment.node === activeNode.id)))
       .map(comment => comment.content)
       .getOrElse("");
 

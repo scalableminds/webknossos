@@ -5,12 +5,12 @@
 
 import _ from "lodash";
 import React from "react";
-import Maybe from "data.maybe";
 import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu } from "antd";
 import Window from "libs/window";
 import TreesTabItemView from "oxalis/view/skeletontracing/right-menu/trees_tab_item_view";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { getActiveTree } from "oxalis/model/accessors/skeletonTracing_accessor";
 import { setTreeNameAction, createTreeAction, deleteTreeAction, shuffleTreeColorAction, selectNextTreeAction } from "oxalis/model/actions/skeletontracing_actions";
 import type { Dispatch } from "redux";
 import type { OxalisState } from "oxalis/store";
@@ -31,8 +31,8 @@ class TreesTabView extends React.Component {
   }
 
   shuffleTreeColor = () => {
-    const { activeTreeId, trees } = this.props.skeletonTracing;
-    this.props.onShuffleTreeColor(trees[activeTreeId].treeId);
+    getActiveTree(this.props.skeletonTracing)
+      .map(activeTree => this.props.onShuffleTreeColor(activeTree.treeId));
   }
 
   shuffleAllTreeColors = () => {
@@ -70,9 +70,8 @@ class TreesTabView extends React.Component {
   }
 
   render() {
-    const { trees, activeTreeId } = this.props.skeletonTracing;
-    const activeTreeMaybe = Maybe.Just(trees[activeTreeId]);
-    const activeTreeName = activeTreeMaybe.map(activeTree => activeTree.name).getOrElse("");
+    const activeTreeName = getActiveTree(this.props.skeletonTracing)
+      .map(activeTree => activeTree.name).getOrElse("");
 
     return (
       <div id="tree-list">
@@ -86,13 +85,13 @@ class TreesTabView extends React.Component {
           </Dropdown>
         </ButtonGroup>
         <InputGroup compact>
-          <Button onClick={this.props.onSelectNextTree.bind(this, false)}><i className="fa fa-arrow-left" /></Button>
+          <Button onClick={this.props.onSelectNextTreeBackward}><i className="fa fa-arrow-left" /></Button>
           <Input
             onChange={this.handleChangeTreeName}
             value={activeTreeName}
             style={{ width: "70%" }}
           />
-          <Button onClick={this.props.onSelectNextTree.bind(this, true)}><i className="fa fa-arrow-right" /></Button>
+          <Button onClick={this.props.onSelectNextTreeForward}><i className="fa fa-arrow-right" /></Button>
         </InputGroup>
 
         <ul>
@@ -111,7 +110,8 @@ const mapStateToProps = (state: OxalisState) => ({
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onShuffleTreeColor(treeId) { dispatch(shuffleTreeColorAction(treeId)); },
   onSortTree(shouldSortTreesByName) { dispatch(updateUserSettingAction("sortTreesByName", shouldSortTreesByName)); },
-  onSelectNextTree(forward) { dispatch(selectNextTreeAction(forward)); },
+  onSelectNextTreeForward() { dispatch(selectNextTreeAction(true)); },
+  onSelectNextTreeBackward() { dispatch(selectNextTreeAction(false)); },
   onCreateTree() { dispatch(createTreeAction()); },
   onDeleteTree() { dispatch(deleteTreeAction()); },
   onChangeTreeName(name) { dispatch(setTreeNameAction(name)); },

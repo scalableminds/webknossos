@@ -42,7 +42,6 @@ class AbstractTreeRenderer {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   nodeList: Array<NodeListItemType>;
-  getIdFromPos: Function;
   activeNodeId: number;
   cyclicTreeWarningIssued: boolean;
   tree: TreeType;
@@ -50,8 +49,8 @@ class AbstractTreeRenderer {
   vgColor: string;
   commentColor: string;
 
-  static drawTree($canvas: JQuery, tree: ?TreeType, activeNodeId: ?number) {
-    const renderer = new AbstractTreeRenderer($canvas);
+  static drawTree(canvas: HTMLCanvasElement, tree: ?TreeType, activeNodeId: ?number) {
+    const renderer = new AbstractTreeRenderer(canvas);
     if (tree != null && activeNodeId != null) {
       renderer.drawTree(tree, activeNodeId);
     } else {
@@ -72,18 +71,14 @@ class AbstractTreeRenderer {
     return id;
   }
 
-  constructor($canvas: JQuery) {
-    this.getIdFromPos = this.getIdFromPos.bind(this);
+  constructor(canvas: HTMLCanvasElement) {
     _.extend(this, Backbone.Events);
 
-    const canvas = $canvas[0];
-    if (canvas instanceof HTMLCanvasElement) {
-      this.canvas = canvas;
-      const ctx = canvas.getContext("2d");
-      if (ctx != null) {
-        this.ctx = ctx;
-        ctx.lineWidth = 1;
-      }
+    this.canvas = canvas;
+    const ctx = canvas.getContext("2d");
+    if (ctx != null) {
+      this.ctx = ctx;
+      ctx.lineWidth = 1;
     }
     this.nodeList = [];
   }
@@ -537,25 +532,6 @@ class AbstractTreeRenderer {
 
     // current decision point is a comment, follow the current chain
     return this.getMaxTreeDepth(decision.node.children[0], mode, count);
-  }
-
-
-  /**
-   * Get the id of a AbstractNodeType from a position on the canvas.
-   * @param  {Number} x
-   * @param  {Number} y
-   * @return {Number}   AbstractNodeType id
-  */
-  getIdFromPos(x: number, y: number): ?number {
-    let id = null;
-    for (const entry of this.nodeList) {
-      if (Math.abs(x - entry.x) <= CLICK_TRESHOLD &&
-          Math.abs(y - entry.y) <= CLICK_TRESHOLD) {
-        id = entry.id;
-        break;
-      }
-    }
-    return id;
   }
 
 

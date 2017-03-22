@@ -4,7 +4,7 @@
 package com.scalableminds.braingames.binary.models
 
 import play.api.libs.json.Json
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.BoundingBox
 
 /**
  * Company: scalableminds
@@ -18,17 +18,11 @@ case class DataLayerSection(
   sectionId: String,
   resolutions: List[Int],
   bboxSmall: BoundingBox,
-  bboxBig: BoundingBox) extends DataLayerSectionLike
-
-trait DataLayerSectionLike {
-  val bboxBig: BoundingBox
-  val bboxSmall: BoundingBox
-  val baseDir: String
-  val sectionId: String
+  bboxBig: BoundingBox) {
 
   /**
-   * Checks if a point is inside the whole data set boundary.
-   */
+    * Checks if a point is inside the whole data set boundary.
+    */
   def doesContainBucket(point: BucketPosition): Boolean = {
     bboxBig.contains(point.topLeft.toHighestRes)
   }

@@ -9,6 +9,7 @@ import java.nio.file.{Files, Path}
 import javax.imageio.ImageIO
 import javax.imageio.spi.IIORegistry
 
+import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
 import com.scalableminds.braingames.binary.requester.DataRequester
 import com.scalableminds.braingames.binary.models.{UnusableDataSource, _}
 import com.scalableminds.braingames.binary.store.DataStore
@@ -244,7 +245,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
         val boundingBox = BoundingBox(Point3D(0, 0, 0), layer.width, layer.height, layer.depth)
         val section = DataLayerSection(layerName, layerName, Resolutions, boundingBox, boundingBox)
         val elements = elementClass(layer.bytesPerPixel)
-        val knossosLayer = DataLayer(
+        val knossosLayer = KnossosDataLayer(
           layerName, DefaultLayerType.category, targetRoot.toString, None, elements,
           isWritable = false, _isCompressed = Some(false), None, List(section))
 
@@ -360,14 +361,12 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
   }
 
   private class KnossosWriterCache(id: String, folder: Path) {
-    val knossosExtension = "raw"
-
     def get(cube: CubePosition): FileOutputStream = {
       fileForPosition(cube)
     }
 
     private def fileForPosition(cube: CubePosition): FileOutputStream = {
-      val path = DataStore.knossosFilePath(folder, id, cube, knossosExtension)
+      val path = DataStore.knossosFilePath(folder, id, cube)
       Files.createDirectories(path.getParent)
       PathUtils.createFile(path, failIfExists = false)
       PathUtils.fileOption(path) match {

@@ -11,6 +11,9 @@ import com.scalableminds.util.geometry.BoundingBox
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import java.nio.file.Path
+
+import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
+
 import scala.concurrent.ExecutionContext.Implicits._
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 
@@ -54,7 +57,7 @@ class WebKnossosWrapDataSourceType(val messagesApi: MessagesApi) extends DataSou
     for {
       boundingBox <- BoundingBox.createFrom(layerSettings.boundingBox) ?~! Messages("dataset.layer.bbox.invalid")
     } yield {
-      DataLayer(
+      KnossosDataLayer(
         layerSettings.name,
         layerSettings.typ,
         basePath.resolve(layerSettings.name).toString,

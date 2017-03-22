@@ -6,6 +6,7 @@ package com.scalableminds.braingames.binary.repository
 import java.io.FileWriter
 import java.nio.file.{Files, Path}
 
+import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
 import com.scalableminds.braingames.binary.requester.DataRequester
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.repository.mapping.{MappingParser, MappingPrinter}
@@ -17,6 +18,7 @@ import com.scalableminds.util.tools.ExtendedTypes.ExtendedListOfBoxes
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
+
 import scala.concurrent.ExecutionContext.Implicits._
 
 
@@ -190,7 +192,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
     } yield {
       logger.info("Found Layer: " + settings)
       val dataLayerPath = layer.toAbsolutePath.toString
-      DataLayer(layer.getFileName.toString,
+      KnossosDataLayer(layer.getFileName.toString,
                 settings.typ,
                 dataLayerPath,
                 settings.flags,

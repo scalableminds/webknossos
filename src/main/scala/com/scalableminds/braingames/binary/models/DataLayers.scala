@@ -3,26 +3,14 @@
  */
 package com.scalableminds.braingames.binary.models
 
-import play.api.libs.json._
+import java.io.OutputStream
+
+import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
 import com.scalableminds.util.geometry.BoundingBox
-import com.scalableminds.braingames.binary.requester.handlers.{BucketHandler, KnossosBucketHandler, WebKnossosWrapBucketHandler}
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.braingames.binary.repository.{KnossosDataSourceType, WebKnossosWrapDataSourceType}
-import java.lang.Exception
+import play.api.libs.json._
 
 import scala.util.Try
-
-trait DataLayerLike {
-  val sections: List[DataLayerSectionLike]
-  val elementClass: String
-  val category: String
-
-  val elementSize = DataLayer.elementClassToSize(elementClass)
-  val bytesPerElement = elementSize / 8
-
-  def isCompatibleWith(other: DataLayerLike) =
-    this.bytesPerElement == other.bytesPerElement
-}
 
 case class FallbackLayer(dataSourceName: String, layerName: String)
 
@@ -32,64 +20,83 @@ object FallbackLayer{
 
 case class DataLayerType(category: String, defaultElementClass: String = "uint8")
 
-case class DataLayer(
-                      name: String,
-                      category: String,
-                      baseDir: String,
-                      flags: Option[List[String]],
-                      elementClass: String = "uint8",
-                      isWritable: Boolean = false,
-                      _isCompressed: Option[Boolean] = None,
-                      fallback: Option[FallbackLayer] = None,
-                      sections: List[DataLayerSection] = Nil,
-                      nextSegmentationId: Option[Long] = None,
-                      mappings: List[DataLayerMapping] = List(),
-                      sourceType: Option[String] = Some(KnossosDataSourceType.name)
-  ) extends DataLayerLike {
+trait DataLayer {
+  def name: String
+
+  def category: String
+
+  def elementClass: String
+
+  def elementSize = DataLayer.elementClassToSize(elementClass)
+
+  def bytesPerElement = elementSize / 8
+
+  def isCompatibleWith(other: DataLayer) =
+    this.bytesPerElement == other.bytesPerElement
+
+  def mappings: List[DataLayerMapping]
+
+  def getMapping(name: String) =
+    mappings.find(_.name == name)
+
+  def nextSegmentationId: Option[Long]
+
+  def resolutions: List[Int]
+
+  def boundingBox: BoundingBox
+
+  def writeTo(outputStream: OutputStream)
+
+  // ??
+  val sourceType: Option[String]
+
+  def isWritable: Boolean
+
+  def baseDir: String
+
+  def fallback: Option[FallbackLayer]
 
   def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
   def isUserDataLayer = baseDir.contains("userBinaryData")
 
-  // Should be used instead of the optional property (optional because of parsing compatibility)
-  def isCompressed = _isCompressed getOrElse false
-
-  def fileExtension = DataLayer.fileExt(isCompressed)
-
-  def getMapping(name: String) =
-    mappings.find(_.name == name)
-
-  val resolutions = sections.flatMap(_.resolutions).distinct
-
-  val maxCoordinates = BoundingBox.hull(sections.map(_.bboxBig))
-
-  lazy val boundingBox = BoundingBox.combine(sections.map(_.bboxBig))
+  // move
+  def sections: List[DataLayerSection]
 }
 
 object DataLayer extends LazyLogging{
+  val COLOR = DataLayerType("color")
+  val SEGMENTATION = DataLayerType("segmentation", "uint16")
+  val CLASSIFICATION = DataLayerType("classification", "uint16")
 
-  val KnossosFileExtention = "raw"
+  val dataLayerReads = new Reads[DataLayer] {
+    val layerTypeReads: Reads[String] = (JsPath \ "name").read[String]
+    def reads(json: JsValue): JsResult[DataLayer] = {
+      json.validate(layerTypeReads).flatMap {
+        case KnossosDataLayer.sourceType =>
+          json.validate[KnossosDataLayer]
+        case unknownType =>
+          JsError(s"Unexpected data layer type: ${unknownType}")
+      }
+    }
+  }
 
-  val CompressedFileExtention = "sz"
+  val dataLayerWrites = new Writes[DataLayer] {
+    def writes(dl: DataLayer): JsValue = {
+      dl match {
+        case knossos: KnossosDataLayer =>
+          Json.toJson(knossos).asOpt[JsObject].map(_ + ("layerType" -> JsString(KnossosDataLayer.sourceType))).get
+        case _ =>
+          Json.obj()
+      }
+    }
+  }
 
-  val MappingFileExtention = "json"
-
-  val COLOR =
-    DataLayerType("color")
-  val SEGMENTATION =
-    DataLayerType("segmentation", "uint16")
-  val CLASSIFICATION =
-    DataLayerType("classification", "uint16")
-
-  implicit val dataLayerFormat = Json.format[DataLayer]
+  implicit val dataLayerFormat = Format(dataLayerReads, dataLayerWrites)
 
   val supportedLayers = List(
     COLOR, SEGMENTATION, CLASSIFICATION
   )
-
-  def supportedFileExt = List(CompressedFileExtention, KnossosFileExtention)
-
-  def fileExt(isCompressed: Boolean) = if(isCompressed) CompressedFileExtention else KnossosFileExtention
 
   def isValidElementClass(elementClass: String): Boolean = {
     Try(elementClass).isSuccess

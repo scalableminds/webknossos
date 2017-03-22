@@ -9,6 +9,7 @@ import com.scalableminds.braingames.binary.MappingRequest
 import com.scalableminds.util.geometry.Point3D
 import java.io.{File, FilenameFilter, RandomAccessFile}
 
+import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
 import com.scalableminds.braingames.binary.models.{BucketWriteInstruction, CubePosition, CubeReadInstruction, DataAccessInstruction}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
@@ -61,19 +62,19 @@ object DataStore extends LazyLogging{
     dataSetDir.resolve(cube.resolution.toString).resolve(x).resolve(y).resolve(z)
   }
 
-  def knossosFilePath(dataSetDir: Path, id: String, cube: CubePosition, fileExt: String): Path = {
+  def knossosFilePath(dataSetDir: Path, id: String, cube: CubePosition): Path = {
     val x = "x%04d".format(cube.x)
     val y = "y%04d".format(cube.y)
     val z = "z%04d".format(cube.z)
-    val fileName = s"${id}_mag${cube.resolution}_${x}_${y}_${z}.$fileExt"
+    val fileName = s"${id}_mag${cube.resolution}_${x}_${y}_${z}.${KnossosDataLayer.fileExtension}"
     knossosDir(dataSetDir, cube).resolve(fileName)
   }
 
-  def fuzzyKnossosFile(dataSetDir: Path, id: String, cube: CubePosition, extensions: List[String]): Option[File] = {
+  def fuzzyKnossosFile(dataSetDir: Path, id: String, cube: CubePosition): Option[File] = {
     val dir = knossosDir(dataSetDir, cube)
     Option(dir.toFile.listFiles(new FilenameFilter() {
       override def accept(dir: File, name: String): Boolean = {
-        extensions.exists(e => name.endsWith(s".$e"))
+        name.endsWith(s".${KnossosDataLayer.fileExtension}")
       }
     })).getOrElse(Array.empty).headOption
   }

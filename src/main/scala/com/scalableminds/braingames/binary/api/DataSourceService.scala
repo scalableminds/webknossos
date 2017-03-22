@@ -10,6 +10,7 @@ import com.scalableminds.braingames.binary.models._
 import java.util.UUID
 import java.util.zip.ZipFile
 
+import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
 import com.typesafe.config.Config
 import com.scalableminds.util.tools.{Fox, FoxImplicits, ProgressState}
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
@@ -76,7 +77,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
     val basePath = userDataLayerFolder(name).toAbsolutePath
     val section = DataLayerSection("1", "1", List(1), baseDataSource.boundingBox, baseDataSource.boundingBox)
     val fallbackLayer = baseDataSource.getByCategory(category)
-    val preliminaryDataLayer = DataLayer(
+    val preliminaryDataLayer = KnossosDataLayer(
       name,
       category,
       basePath.toString,

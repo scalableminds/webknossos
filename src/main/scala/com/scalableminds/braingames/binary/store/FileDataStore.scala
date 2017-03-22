@@ -32,18 +32,14 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     * returns it.
     */
   def load(dataInfo: CubeReadInstruction): Fox[RandomAccessFile] = {
-    load(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.position, dataInfo.dataLayer.isCompressed)
+    load(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.position)
   }
 
   def load(dataSetDir: Path,
            dataSetId: String,
-           cube: CubePosition,
-           isCompressed: Boolean): Fox[RandomAccessFile] = {
-    val ext = DataLayer.fileExt(isCompressed)
-    lazy val fallback =
-      fuzzyKnossosFile(dataSetDir, dataSetId, cube, DataLayer.supportedFileExt)
-
-    load(knossosFilePath(dataSetDir, dataSetId, cube, ext), fallback)
+           cube: CubePosition): Fox[RandomAccessFile] = {
+    lazy val fallback = fuzzyKnossosFile(dataSetDir, dataSetId, cube)
+    load(knossosFilePath(dataSetDir, dataSetId, cube), fallback)
   }
 
   private def load(
@@ -116,8 +112,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     Future {
       val cubePosition = dataInfo.position.toCube(dataInfo.dataSource.cubeLength)
 
-      val path = knossosFilePath(dataSetDir, dataInfo.dataSource.id,
-        cubePosition, DataLayer.fileExt(dataInfo.dataLayer.isCompressed))
+      val path = knossosFilePath(dataSetDir, dataInfo.dataSource.id, cubePosition)
       var outputFile: RandomAccessFile = null
       try {
         PathUtils.parent(path.toAbsolutePath).map(p => Files.createDirectories(p))
@@ -151,24 +146,6 @@ object FileDataStore {
     val result = IOUtils.toByteArray(is)
     is.close()
     result
-  }
-
-  def byteArrayFromFile(file: File, fileSize: Option[Int]): Array[Byte] = {
-    FilenameUtils.getExtension(file.getAbsolutePath) match {
-      case DataLayer.KnossosFileExtention | DataLayer.MappingFileExtention =>
-        inputStreamToByteArray(new FileInputStream(file), fileSize.getOrElse(file.length().toInt))
-      case DataLayer.CompressedFileExtention  =>
-        inputStreamToByteArray(new SnappyFramedInputStream(new FileInputStream(file)))
-    }
-  }
-
-  def inputStreamFromDataFile(file: File): InputStream = {
-    FilenameUtils.getExtension(file.getAbsolutePath) match {
-      case DataLayer.KnossosFileExtention =>
-        new FileInputStream(file)
-      case DataLayer.CompressedFileExtention  =>
-        new SnappyFramedInputStream(new FileInputStream(file))
-    }
   }
 
   def inputStreamToByteArray(is: InputStream, size: Int): Array[Byte] = {

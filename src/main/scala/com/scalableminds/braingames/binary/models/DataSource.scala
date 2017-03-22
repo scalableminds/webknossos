@@ -18,26 +18,10 @@ case class DataSource(
   id: String,
   baseDir: String,
   scale: Scale,
+  sourceType: String,
   priority: Int = 0,
-  dataLayers: List[DataLayer] = Nil,
-  sourceType: Option[String] = Some(KnossosDataSourceType.name),
-  cubeLengthOpt: Option[Int] = Some(128)
+  dataLayers: List[DataLayer] = List.empty
 ) {
-
-  //  lazy val sourceFolder: Path =
-  //    Paths.get(baseDir)
-
-  /**
-    * Number of voxels per dimension in the storage format
-    */
-  val cubeLength: Int =
-    cubeLengthOpt.getOrElse(128)
-
-  /**
-    * Defines the size of the buckets loaded from files. This is the minimal size that can be loaded from a file.
-    */
-  val lengthOfLoadedBuckets: Int = 32
-
   /**
     * Boundary of the data source
     */

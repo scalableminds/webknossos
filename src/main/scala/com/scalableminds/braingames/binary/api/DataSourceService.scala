@@ -36,6 +36,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
     UUID.randomUUID().toString
   }
 
+  // TODO: repair and move to DataLayer
   def saveToFile(
                   file: File,
                   baseDataSource: DataSource,
@@ -51,7 +52,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
           val stream = zip.getInputStream(e)
           val result = DataStore.knossosDirToCube(section.baseDir, Paths.get(fileName)).map {
             case (resolution, point) =>
-              val bucket = new BucketPosition(point.x, point.y, point.z, resolution, baseDataSource.cubeLength) // TODO: HACKY!!!!
+              val bucket = new BucketPosition(point.x, point.y, point.z, resolution, dataLayer.cubeLength) // TODO: HACKY!!!!
               val writeBucket = BucketWriteInstruction(
                 baseDataSource, dataLayer, section, bucket, IOUtils.toByteArray(stream))
               dataStore.save(writeBucket).map(_ => resolution)

@@ -5,7 +5,7 @@ package com.scalableminds.braingames.binary.formats.wkw
 
 import java.nio.file.Path
 
-import com.scalableminds.braingames.binary.models.{SettingsFile, WebKnossosWrapDataLayer, WebKnossosWrapDataLayerSettings}
+import com.scalableminds.braingames.binary.models.SettingsFile
 import com.scalableminds.util.geometry.Scale
 import play.api.i18n.Messages
 import play.api.libs.json.Json

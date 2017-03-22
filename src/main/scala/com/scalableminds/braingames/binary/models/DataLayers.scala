@@ -27,7 +27,9 @@ trait DataLayer {
 
   def category: String
 
-  def sourceType: String
+  def baseDir: String
+
+  def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
   def elementClass: String
 
@@ -53,17 +55,19 @@ trait DataLayer {
 
   def writeTo(outputStream: OutputStream)
 
-  // ??
+  /**
+    * Number of voxels per dimension in the storage format
+    */
+  def cubeLength: Int // TODO: Should not (need to) be exposed.
 
+  /**
+    * Defines the size of the buckets loaded from files. This is the minimal size that can be loaded from a file.
+    */
+  def lengthOfLoadedBuckets: Int
 
-  def isWritable: Boolean
-
-  def baseDir: String
-
+  // TODO: remove after UserDataLayers are stored in DB
   def fallback: Option[FallbackLayer]
-
-  def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
-
+  def isWritable: Boolean
   def isUserDataLayer = baseDir.contains("userBinaryData")
 
   // move
@@ -76,13 +80,13 @@ object DataLayer extends LazyLogging{
   val CLASSIFICATION = DataLayerType("classification", "uint16")
 
   val dataLayerReads = new Reads[DataLayer] {
-    val layerTypeReads: Reads[String] = (JsPath \ "sourceType").read[String]
+    val layerTypeReads: Reads[String] = (JsPath \ "layerType").read[String]
 
     def reads(json: JsValue): JsResult[DataLayer] = {
       json.validate(layerTypeReads).flatMap {
-        case KnossosDataLayer.sourceType =>
+        case KnossosDataLayer.layerType =>
           json.validate[KnossosDataLayer]
-        case WKWDataLayer.sourceType =>
+        case WKWDataLayer.layerType =>
           json.validate[WKWDataLayer]
         case unknownType =>
           JsError(s"Unexpected data layer type: ${unknownType}")

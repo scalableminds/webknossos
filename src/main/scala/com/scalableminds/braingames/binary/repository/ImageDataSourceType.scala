@@ -9,7 +9,7 @@ import java.nio.file.{Files, Path}
 import javax.imageio.ImageIO
 import javax.imageio.spi.IIORegistry
 
-import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
+import com.scalableminds.braingames.binary.formats.knossos.{KnossosDataLayer, KnossosDataSourceType}
 import com.scalableminds.braingames.binary.requester.DataRequester
 import com.scalableminds.braingames.binary.models.{UnusableDataSource, _}
 import com.scalableminds.braingames.binary.store.DataStore
@@ -145,6 +145,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
               unusableDataSource.id,
               target.toString,
               settings.scale,
+              KnossosDataSourceType.name,
               settings.priority getOrElse 0,
               dataLayers = layers))
           case _ =>
@@ -152,6 +153,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
               unusableDataSource.id,
               target.toString,
               DefaultScale,
+              KnossosDataSourceType.name,
               dataLayers = layers))
         }
     }
@@ -249,7 +251,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
           layerName, DefaultLayerType.category, targetRoot.toString, None, elements,
           isWritable = false, None, List(section))
 
-        val tempDataSource = DataSource(id, targetRoot.toString, Scale.default, dataLayers = List(knossosLayer))
+        val tempDataSource = DataSource(id, targetRoot.toString, Scale.default, KnossosDataSourceType.name, dataLayers = List(knossosLayer))
 
         TileToCubeWriter(
           tempDataSource.id, 1, target, layer.depth,

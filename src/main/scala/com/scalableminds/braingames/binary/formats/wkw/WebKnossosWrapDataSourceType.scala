@@ -43,10 +43,9 @@ class WebKnossosWrapDataSourceType(val messagesApi: MessagesApi) extends DataSou
         settings.name getOrElse path.getFileName.toString,
         path.toAbsolutePath.toString,
         settings.scale,
+        name,
         settings.priority.getOrElse(DEFAULT_PRIORITY),
-        layers,
-        Some(name),
-        Some(1024))
+        layers)
     }
   }
 

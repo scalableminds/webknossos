@@ -222,6 +222,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
                            settings.id getOrElse path.getFileName.toString,
                            path.toAbsolutePath.toString,
                            settings.scale,
+                           KnossosDataSourceType.name,
                            settings.priority.getOrElse(DEFAULT_PRIORITY),
                            Nil))
         case Empty =>
@@ -229,6 +230,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
           Full(DataSource(path.getFileName.toString,
                           path.toAbsolutePath.toString,
                           Scale.default,
+                          KnossosDataSourceType.name,
                           DEFAULT_PRIORITY,
                           Nil))
         case f: Failure =>

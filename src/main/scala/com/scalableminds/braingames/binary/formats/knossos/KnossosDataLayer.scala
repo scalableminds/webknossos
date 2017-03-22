@@ -28,13 +28,16 @@ case class KnossosDataLayer(
                              fallback: Option[FallbackLayer] = None,
                              sections: List[DataLayerSection] = Nil,
                              nextSegmentationId: Option[Long] = None,
-                             mappings: List[DataLayerMapping] = List()
+                             mappings: List[DataLayerMapping] = List(),
+                             layerType: String = KnossosDataLayer.layerType
                             ) extends DataLayer with LazyLogging {
   val resolutions = sections.flatMap(_.resolutions).distinct
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.bboxBig))
 
-  val sourceType = KnossosDataLayer.sourceType
+  val cubeLength = 128
+
+  val lengthOfLoadedBuckets = 32
 
   def bucketHandler(cache: DataCubeCache) = new KnossosBucketHandler(cache)
 
@@ -61,7 +64,7 @@ case class KnossosDataLayer(
 }
 
 object KnossosDataLayer {
-  val sourceType = "knossos"
+  val layerType = "knossos"
 
   val fileExtension = "raw"
 

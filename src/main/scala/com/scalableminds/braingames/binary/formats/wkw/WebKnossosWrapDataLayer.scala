@@ -1,12 +1,12 @@
 /*
  * Copyright (C) 2011-2017 scalableminds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.models
+package com.scalableminds.braingames.binary.formats.wkw
 
 import java.io.File
 
-import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.braingames.binary.models.CubePosition
+import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.wrap.WKWFile
 import net.liftweb.common.Box
 import play.api.libs.json.Json

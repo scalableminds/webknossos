@@ -98,14 +98,14 @@ class DataRequester(
 
   def handleReadRequest(request: DataReadRequest): Fox[Array[Byte]] = {
     def isSingleBucketRequest = {
-      request.cuboid.width == request.dataSource.lengthOfLoadedBuckets &&
-        request.cuboid.height == request.dataSource.lengthOfLoadedBuckets &&
-        request.cuboid.depth == request.dataSource.lengthOfLoadedBuckets &&
-        request.cuboid.topLeft == request.cuboid.topLeft.toBucket(request.dataSource.lengthOfLoadedBuckets).topLeft
+      request.cuboid.width == request.dataLayer.lengthOfLoadedBuckets &&
+        request.cuboid.height == request.dataLayer.lengthOfLoadedBuckets &&
+        request.cuboid.depth == request.dataLayer.lengthOfLoadedBuckets &&
+        request.cuboid.topLeft == request.cuboid.topLeft.toBucket(request.dataLayer.lengthOfLoadedBuckets).topLeft
     }
 
     if (isSingleBucketRequest) {
-      request.cuboid.allBucketsInCuboid(request.dataSource.lengthOfLoadedBuckets).headOption.toFox.flatMap { bucket =>
+      request.cuboid.allBucketsInCuboid(request.dataLayer.lengthOfLoadedBuckets).headOption.toFox.flatMap { bucket =>
         handleBucketReadRequest(bucket, request)
       }
     } else {
@@ -217,7 +217,7 @@ trait DataReadRequester {
 
   def requestCuboidData[T](request: DataReadRequest): Fox[Array[Byte]] = {
 
-    val bucketQueue = request.cuboid.allBucketsInCuboid(request.dataSource.lengthOfLoadedBuckets)
+    val bucketQueue = request.cuboid.allBucketsInCuboid(request.dataLayer.lengthOfLoadedBuckets)
 
     loadAllBucketsOfRequest(bucketQueue, request).map { rs =>
       // after we have loaded all buckets that 'touch' our cuboid we want to retrieve, we need to cut the data from
@@ -233,7 +233,7 @@ trait DataReadRequester {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val cuboid = request.cuboid
     val result = new Array[Byte](cuboid.volume * bytesPerElement)
-    val bucketLength = request.dataSource.lengthOfLoadedBuckets
+    val bucketLength = request.dataLayer.lengthOfLoadedBuckets
 
     rs.reverse.foreach {
       case (bucket, data) =>

@@ -3,20 +3,12 @@
  */
 package com.scalableminds.braingames.binary.formats.knossos
 
-import java.io.{File, FileInputStream, OutputStream}
-import java.nio.file.Paths
-
 import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, DataLayerSection, FallbackLayer}
 import com.scalableminds.braingames.binary.requester.DataCubeCache
-import com.scalableminds.braingames.binary.requester.handlers.{KnossosBucketHandler, WebKnossosWrapBucketHandler}
+import com.scalableminds.braingames.binary.requester.handlers.WebKnossosWrapBucketHandler
 import com.scalableminds.util.geometry.BoundingBox
-import com.scalableminds.util.io.{NamedFileStream, ZipIO}
-import org.apache.commons.io.{FileUtils, FilenameUtils}
-import org.apache.commons.io.filefilter.{SuffixFileFilter, TrueFileFilter}
+import java.io.OutputStream
 import play.api.libs.json.Json
-
-import scala.collection.JavaConversions._
-import com.typesafe.scalalogging.LazyLogging
 
 case class WKWDataLayer(
                              name: String,
@@ -28,23 +20,26 @@ case class WKWDataLayer(
                              fallback: Option[FallbackLayer] = None,
                              sections: List[DataLayerSection] = Nil,
                              nextSegmentationId: Option[Long] = None,
-                             mappings: List[DataLayerMapping] = List()
-                            ) extends DataLayer with LazyLogging {
-  val sourceType = WKWDataLayer.sourceType
-
+                             mappings: List[DataLayerMapping] = List(),
+                             layerType: String = WKWDataLayer.layerType
+                            ) extends DataLayer {
   val resolutions = sections.flatMap(_.resolutions).distinct
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.bboxBig))
 
+  val cubeLength = 128
+
+  val lengthOfLoadedBuckets = 32
+
   def bucketHandler(cache: DataCubeCache) = new WebKnossosWrapBucketHandler(cache)
 
   def writeTo(outputStream: OutputStream): Unit = {
-    throw new Exception("Download not yet supported for WKW data sources.");
+    throw new Exception("Download not yet supported for WKW data sources.")
   }
 }
 
 object WKWDataLayer {
-  val sourceType = "webKnossosWrap"
+  val layerType = "webKnossosWrap"
 
   val fileExtension = "wkw"
 

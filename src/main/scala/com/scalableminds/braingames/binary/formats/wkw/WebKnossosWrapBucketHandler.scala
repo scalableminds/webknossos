@@ -22,8 +22,8 @@ import net.liftweb.common.{Box, Failure}
 
 class WebKnossosWrapCube(wkwFile: WKWFile) extends Cube {
   def cutOutBucket(requestedBucket: BucketReadInstruction): Box[Array[Byte]] = {
-    if(requestedBucket.dataSource.lengthOfLoadedBuckets !=  wkwFile.header.numVoxelsPerBlockDimension){
-      return Failure(s"Invalid bucket length. ${requestedBucket.dataSource.lengthOfLoadedBuckets}, " +
+    if(requestedBucket.dataLayer.lengthOfLoadedBuckets !=  wkwFile.header.numVoxelsPerBlockDimension){
+      return Failure(s"Invalid bucket length. ${requestedBucket.dataLayer.lengthOfLoadedBuckets}, " +
         s"${wkwFile.header.numVoxelsPerBlockDimension}")
     }
 

@@ -33,7 +33,7 @@ trait BucketHandler extends DataCache with LazyLogging with FoxImplicits{
       }
     }
 
-    val requestedCube = loadBucket.toCubeReadInstruction(loadBucket.dataSource.cubeLength)
+    val requestedCube = loadBucket.toCubeReadInstruction(loadBucket.dataLayer.cubeLength)
     if (useCache)
       withCache[Array[Byte]](requestedCube)(loadFromUnderlying(requestedCube, timeout))(getBucket)
     else

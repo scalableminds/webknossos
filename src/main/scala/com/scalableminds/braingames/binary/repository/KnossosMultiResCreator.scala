@@ -94,7 +94,7 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
       val targetResolution = resolution + 1
       logger.info(s"About to create resolution $targetResolution for ${dataSource.id}")
       val dataStore = new FileDataStore
-      val cubeLength = dataSource.cubeLength
+      val cubeLength = layer.cubeLength
       val points = for {
         x <- boundingBox.topLeft.x.to(boundingBox.bottomRight.x, cubeLength * targetResolution)
         y <- boundingBox.topLeft.y.to(boundingBox.bottomRight.y, cubeLength * targetResolution)
@@ -103,13 +103,13 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
 
       Fox.serialCombined(points.toList){ p =>
         val targetCubePosition = new BucketPosition(p.x, p.y, p.z, targetResolution, cubeLength) // TODO: hacky!!!!!
-        val length = cubeLength * 2 + dataSource.lengthOfLoadedBuckets
+        val length = cubeLength * 2 + layer.lengthOfLoadedBuckets
         val cuboid = Cuboid(new VoxelPosition(p.x, p.y, p.z, resolution), length, length, length)
         val request = DataReadRequest(dataSource, layer, None, cuboid, DataRequestSettings(false))
         dataRequester.handleReadRequest(request).flatMap { loadedData =>
           val scaledData = downScale(
-            loadedData, dataSource.cubeLength, dataSource.cubeLength,
-            dataSource.cubeLength, layer.bytesPerElement)
+            loadedData, layer.cubeLength, layer.cubeLength,
+            layer.cubeLength, layer.bytesPerElement)
           val request = BucketWriteInstruction(
             dataSource, layer, layer.sections.head, targetCubePosition, scaledData)
           dataStore.save(target, request)

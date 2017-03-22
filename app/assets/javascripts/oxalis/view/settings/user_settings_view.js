@@ -164,7 +164,7 @@ class UserSettingsView extends Component {
       <NumberSliderSetting label="Move Value (nm/s)" min={30} max={14000} step={10} value={this.props.userConfiguration.moveValue} onChange={_.partial(this.props.onChangeUser, "moveValue")} />;
 
     return (
-      <Collapse defaultActiveKey={["1", "2", "3", "4", "5"]}>
+      <Collapse defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header="Controls" key="1">
           <NumberSliderSetting label="Keyboard delay (ms)" min={0} max={500} value={this.props.userConfiguration.keyboardDelay} onChange={_.partial(this.props.onChangeUser, "keyboardDelay")} />
           {moveValueSetting}
@@ -174,10 +174,7 @@ class UserSettingsView extends Component {
         </Panel>
         { this.getViewportOptions() }
         { this.getSkeletonOrVolumeOptions() }
-        <Panel header="Segmentation" key="4">
-          <NumberSliderSetting label="Segmentation Opacity" min={0} max={100} value={this.props.userConfiguration.segmentationOpacity} onChange={_.partial(this.props.onChangeUser, "segmentationOpacity")} />
-        </Panel>
-        <Panel header="Other" key="5">
+        <Panel header="Other" key="4">
           <Vector6InputSetting label="Bounding Box" tooltipTitle="Format: minX, minY, minZ, width, height, depth" value={this.props.temporaryConfiguration.boundingBox} onChange={this.onChangeBoundingBox} />
           <SwitchSetting label="Display Planes in 3D View" value={this.props.userConfiguration.tdViewDisplayPlanes} onChange={_.partial(this.props.onChangeUser, "tdViewDisplayPlanes")} />
         </Panel>

@@ -313,7 +313,8 @@ class SceneController {
 
   bindToEvents(): void {
     Store.subscribe(() => {
-      const { segmentationOpacity, clippingDistance, displayCrosshair, tdViewDisplayPlanes } = Store.getState().userConfiguration;
+      const { clippingDistance, displayCrosshair, tdViewDisplayPlanes } = Store.getState().userConfiguration;
+      const { segmentationOpacity } = Store.getState().datasetConfiguration;
       this.setSegmentationAlpha(segmentationOpacity);
       this.setClippingDistance(clippingDistance);
       this.setDisplayCrosshair(displayCrosshair);

@@ -92,7 +92,11 @@ class AsyncTaskQueue {
   }
 
   join(): Promise<void> {
-    return this.doneDeferred.promise();
+    if (this.isBusy()) {
+      return this.doneDeferred.promise();
+    } else {
+      return Promise.resolve();
+    }
   }
 
   async executeNext(): Promise<void> {

@@ -96,13 +96,14 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename).nmls
 
         val futureResult: Future[List[Box[JsObject]]] = Fox.serialSequence(nmls){
-          case NMLService.NMLParseSuccess(_, nml) =>
+          case NMLService.NMLParseSuccess(fileName, nml) =>
             val task = Task(
               taskType._id,
               team,
               experience,
               status.open,
               _project = project.name,
+              creationInfo = Some(fileName),
               _id = BSONObjectID.generate)
 
             for {
@@ -152,9 +153,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       case "default" =>
         request.body.asJson.toFox.flatMap { json =>
           withJsonUsing(json, taskCompleteReads) { parsed =>
-            for {
-              taskjs <- createSingleTask(parsed)
-            } yield JsonOk(taskjs, Messages("task.create.success"))
+            createSingleTask(parsed).futureBox.map{ result =>
+              val js = bulk2StatusJson(List(result))
+              JsonOk(js, Messages("task.bulk.processed"))
+            }
           }
         }
       case "nml"     =>

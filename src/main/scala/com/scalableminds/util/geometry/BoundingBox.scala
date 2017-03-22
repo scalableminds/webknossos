@@ -24,9 +24,9 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
     val y = math.min(other.topLeft.y, topLeft.y)
     val z = math.min(other.topLeft.z, topLeft.z)
 
-    val w = math.max(other.width, width)
-    val h = math.max(other.height, height)
-    val d = math.max(other.depth, depth)
+    val w = math.max(other.bottomRight.x, bottomRight.x) - x
+    val h = math.max(other.bottomRight.y, bottomRight.y) - y
+    val d = math.max(other.bottomRight.z, bottomRight.z) - z
 
     BoundingBox(Point3D(x, y, z), w, h, d)
   }

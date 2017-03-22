@@ -198,7 +198,6 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
                 settings.flags,
                 settings.`class`,
                 isWritable = false,
-                _isCompressed = settings.isCompressed,
                 settings.fallback,
                 sections,
                 settings.largestValue.map(_ + 1),

@@ -24,7 +24,6 @@ case class KnossosDataLayer(
                              flags: Option[List[String]],
                              elementClass: String = "uint8",
                              isWritable: Boolean = false,
-                             _isCompressed: Option[Boolean] = None,
                              fallback: Option[FallbackLayer] = None,
                              sections: List[DataLayerSection] = Nil,
                              nextSegmentationId: Option[Long] = None,

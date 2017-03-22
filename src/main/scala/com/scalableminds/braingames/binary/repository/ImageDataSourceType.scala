@@ -247,7 +247,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
         val elements = elementClass(layer.bytesPerPixel)
         val knossosLayer = KnossosDataLayer(
           layerName, DefaultLayerType.category, targetRoot.toString, None, elements,
-          isWritable = false, _isCompressed = Some(false), None, List(section))
+          isWritable = false, None, List(section))
 
         val tempDataSource = DataSource(id, targetRoot.toString, Scale.default, dataLayers = List(knossosLayer))
 

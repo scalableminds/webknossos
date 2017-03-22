@@ -67,7 +67,7 @@ object ND2WK extends FoxImplicits {
         _ <- nd.resolutions.nonEmpty ?~> Messages("ndstore.invalid.resolutions")
         sections = List(DataLayerSection("", channel.name, resolutions = nd.resolutions.map(r => math.pow(2, r).toInt), bboxBig = bbox, bboxSmall = bbox))
       } yield {
-        DataLayer(
+        NDDataLayer(
           name = channel.name,
           category = channelTypeMapping.get(channel.channelType).get,
           baseDir = "",

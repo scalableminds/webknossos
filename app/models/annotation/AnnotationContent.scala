@@ -69,7 +69,7 @@ object AnnotationContent extends FoxImplicits {
       (__ \ 'fallback).write[Option[FallbackLayer]] and
       (__ \ 'elementClass).write[String] and
       (__ \ 'mappings).write[List[DataLayerMapping]]) (l =>
-      (l.name, l.category, l.maxCoordinates, l.resolutions, l.fallback, l.elementClass, l.mappings))
+      (l.name, l.category, l.boundingBox, l.resolutions, l.fallback, l.elementClass, l.mappings))
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and

@@ -21,7 +21,7 @@ import play.api.libs.ws.WS
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.braingames.binary.repository.WebKnossosWrapDataSourceType
+import com.scalableminds.braingames.binary.formats.wkw.WebKnossosWrapDataSourceType
 import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFileStream, NamedFunctionStream, ZipIO}
 import com.scalableminds.util.xml.{XMLWrites, Xml}
 import models.tracing.skeleton.SkeletonTracing

@@ -36,6 +36,9 @@ const Modal = {
     }
     html += "</div></div></div>";
 
+    if ($("#modal").length === 0) {
+      $("body").append("<div id='modal' class='modal fade'>");
+    }
     $("#modal").html(html);
 
     for (const button of buttons) {

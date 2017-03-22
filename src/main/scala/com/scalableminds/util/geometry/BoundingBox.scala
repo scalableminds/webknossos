@@ -69,21 +69,6 @@ object BoundingBox {
     }
   }
 
-  def hull(c: List[BoundingBox]): BoundingBox = {
-    if (c.isEmpty)
-      BoundingBox(Point3D(0, 0, 0), 0, 0, 0)
-    else {
-      val topLeft = c.map(_.topLeft).foldLeft(Point3D(0, 0, 0))((b, e) =>
-        Point3D(math.max(b.x, e.x), math.max(b.y, e.y), math.max(b.z, e.z)))
-
-      BoundingBox(
-                   topLeft,
-                   c.map(_.width).max,
-                   c.map(_.height).max,
-                   c.map(_.depth).max)
-    }
-  }
-
   def combine(bbs: List[BoundingBox]): BoundingBox = {
     bbs match {
       case head :: tail =>

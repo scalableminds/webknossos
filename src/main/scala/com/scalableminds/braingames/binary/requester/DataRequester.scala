@@ -3,8 +3,8 @@
  */
 package com.scalableminds.braingames.binary.requester
 
+import com.scalableminds.braingames.binary.formats.wkw.WebKnossosWrapDataSourceType
 import com.scalableminds.braingames.binary.models._
-import com.scalableminds.braingames.binary.repository.{KnossosDataSourceType, WebKnossosWrapDataSourceType}
 import com.scalableminds.braingames.binary.requester.handlers.{BucketHandler, KnossosBucketHandler, WebKnossosWrapBucketHandler}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Point3D
@@ -62,16 +62,6 @@ class DataRequester(
   private implicit val dataLoadTimeout = conf.getInt("loadTimeout").seconds
 
   private implicit val dataSaveTimeout = conf.getInt("saveTimeout").seconds
-
-  private def bucketHandler(sourceType: Option[String]): BucketHandler =
-    sourceType.getOrElse(KnossosDataSourceType.name) match {
-      case KnossosDataSourceType.name =>
-        new KnossosBucketHandler(cache)
-      case WebKnossosWrapDataSourceType.name =>
-        new WebKnossosWrapBucketHandler(cache)
-      case _ =>
-        throw new Exception("Unexpected data layer type")
-    }
 
   private def fallbackForLayer(layer: DataLayer): Future[List[(DataLayerSection, DataLayer)]] = {
     layer.fallback.map { fallback =>
@@ -165,7 +155,7 @@ class DataRequester(
   private def loadFromLayer(bucketRead: BucketReadInstruction, useCache: Boolean): Fox[Array[Byte]] = {
     if (bucketRead.dataLayerSection.doesContainBucket(bucketRead.position)) {
       val shouldCache = useCache && !bucketRead.dataLayer.isUserDataLayer
-      bucketHandler(bucketRead.dataLayer.sourceType).load(bucketRead, dataLoadTimeout, shouldCache)
+      bucketRead.dataLayer.bucketHandler(cache).load(bucketRead, dataLoadTimeout, shouldCache)
     } else {
       Fox.empty
     }
@@ -215,7 +205,7 @@ class DataRequester(
 
   def saveToLayer(saveBucket: BucketWriteInstruction): Fox[Boolean] = {
     if (saveBucket.dataLayerSection.doesContainBucket(saveBucket.position)) {
-      bucketHandler(saveBucket.dataLayer.sourceType).save(saveBucket, dataSaveTimeout)
+      saveBucket.dataLayer.bucketHandler(cache).save(saveBucket, dataSaveTimeout)
     } else {
       Fox.empty
     }

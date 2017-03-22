@@ -17,6 +17,11 @@ import scala.collection.JavaConversions._
 
 trait DataDownloadService extends LazyLogging{
   def downloadDataLayer(dataLayer: DataLayer, outputStream: OutputStream): Unit = {
-    dataLayer.writeTo(outputStream)
+    try {
+      dataLayer.writeTo(outputStream)
+    } catch {
+      case e: Exception =>
+        logger.error(s"Failed to zip datalayer ${dataLayer.name} for download. Error: " + e)
+    }
   }
 }

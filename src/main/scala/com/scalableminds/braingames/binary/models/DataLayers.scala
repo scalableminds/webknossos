@@ -5,7 +5,9 @@ package com.scalableminds.braingames.binary.models
 
 import java.io.OutputStream
 
-import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
+import com.scalableminds.braingames.binary.formats.knossos.{KnossosDataLayer, WKWDataLayer}
+import com.scalableminds.braingames.binary.requester.DataCubeCache
+import com.scalableminds.braingames.binary.requester.handlers.BucketHandler
 import com.scalableminds.util.geometry.BoundingBox
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
@@ -25,6 +27,8 @@ trait DataLayer {
 
   def category: String
 
+  def sourceType: String
+
   def elementClass: String
 
   def elementSize = DataLayer.elementClassToSize(elementClass)
@@ -34,6 +38,10 @@ trait DataLayer {
   def isCompatibleWith(other: DataLayer) =
     this.bytesPerElement == other.bytesPerElement
 
+  def resolutions: List[Int]
+
+  def boundingBox: BoundingBox
+
   def mappings: List[DataLayerMapping]
 
   def getMapping(name: String) =
@@ -41,14 +49,12 @@ trait DataLayer {
 
   def nextSegmentationId: Option[Long]
 
-  def resolutions: List[Int]
-
-  def boundingBox: BoundingBox
+  def bucketHandler(cache: DataCubeCache): BucketHandler
 
   def writeTo(outputStream: OutputStream)
 
   // ??
-  val sourceType: Option[String]
+
 
   def isWritable: Boolean
 
@@ -70,11 +76,14 @@ object DataLayer extends LazyLogging{
   val CLASSIFICATION = DataLayerType("classification", "uint16")
 
   val dataLayerReads = new Reads[DataLayer] {
-    val layerTypeReads: Reads[String] = (JsPath \ "name").read[String]
+    val layerTypeReads: Reads[String] = (JsPath \ "sourceType").read[String]
+
     def reads(json: JsValue): JsResult[DataLayer] = {
       json.validate(layerTypeReads).flatMap {
         case KnossosDataLayer.sourceType =>
           json.validate[KnossosDataLayer]
+        case WKWDataLayer.sourceType =>
+          json.validate[WKWDataLayer]
         case unknownType =>
           JsError(s"Unexpected data layer type: ${unknownType}")
       }
@@ -85,7 +94,9 @@ object DataLayer extends LazyLogging{
     def writes(dl: DataLayer): JsValue = {
       dl match {
         case knossos: KnossosDataLayer =>
-          Json.toJson(knossos).asOpt[JsObject].map(_ + ("layerType" -> JsString(KnossosDataLayer.sourceType))).get
+          Json.toJson(knossos)
+        case wkw: WKWDataLayer =>
+          Json.toJson(wkw)
         case _ =>
           Json.obj()
       }

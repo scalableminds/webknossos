@@ -6,6 +6,8 @@ package com.scalableminds.braingames.binary.repository
 import java.nio.file.Path
 import javax.inject.Inject
 
+import com.scalableminds.braingames.binary.formats.knossos.KnossosDataSourceType
+import com.scalableminds.braingames.binary.formats.wkw.WebKnossosWrapDataSourceType
 import com.scalableminds.braingames.binary.requester.DataRequester
 import com.scalableminds.braingames.binary.models.{DataSource, UnusableDataSource}
 import com.scalableminds.util.io.PathUtils

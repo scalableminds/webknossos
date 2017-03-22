@@ -16,6 +16,7 @@ import play.api.i18n.Messages.Implicits._
 import play.api.Play.current
 import java.nio.file.Paths
 
+import com.scalableminds.braingames.binary.formats.wkw.WebKnossosWrapDataSource
 import com.scalableminds.webknossos.wrap.WKWFile
 import net.liftweb.common.{Box, Failure}
 

@@ -3,10 +3,10 @@
  */
 package com.scalableminds.braingames.binary.models
 
-import java.nio.file.{Paths, Path}
-import com.scalableminds.braingames.binary.repository.KnossosDataSourceType
+import java.nio.file.{Path, Paths}
 
-import com.scalableminds.util.geometry.{BoundingBox, Scale, Point3D}
+import com.scalableminds.braingames.binary.formats.knossos.KnossosDataSourceType
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import play.api.libs.json._
 
 case class DataSourceSettings(

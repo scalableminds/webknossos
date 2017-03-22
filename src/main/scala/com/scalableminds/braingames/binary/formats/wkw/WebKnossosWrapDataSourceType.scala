@@ -1,21 +1,22 @@
 /*
  * Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.repository
+package com.scalableminds.braingames.binary.formats.wkw
 
-import com.scalableminds.braingames.binary.requester.DataRequester
-import com.scalableminds.braingames.binary.models._
-import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.util.geometry.BoundingBox
-import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
 import java.nio.file.Path
 
-import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
+import com.scalableminds.braingames.binary.formats.knossos.WKWDataLayer
+import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.repository.{DataSourceType, DataSourceTypeHandler}
+import com.scalableminds.braingames.binary.requester.DataRequester
+import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box
+import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 
 import scala.concurrent.ExecutionContext.Implicits._
-import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 
 class WebKnossosWrapDataSourceType(val messagesApi: MessagesApi) extends DataSourceType
   with DataSourceTypeHandler
@@ -57,7 +58,7 @@ class WebKnossosWrapDataSourceType(val messagesApi: MessagesApi) extends DataSou
     for {
       boundingBox <- BoundingBox.createFrom(layerSettings.boundingBox) ?~! Messages("dataset.layer.bbox.invalid")
     } yield {
-      KnossosDataLayer(
+      WKWDataLayer(
         layerSettings.name,
         layerSettings.typ,
         basePath.resolve(layerSettings.name).toString,
@@ -73,8 +74,7 @@ class WebKnossosWrapDataSourceType(val messagesApi: MessagesApi) extends DataSou
           boundingBox
         )),
         None,
-        List(),
-        Some(name)
+        List()
       )
     }
   }

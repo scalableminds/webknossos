@@ -1,13 +1,14 @@
 /*
  * Copyright (C) 2011-2017 scalableminds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.models
+package com.scalableminds.braingames.binary.formats.wkw
 
 import java.nio.file.Path
 
+import com.scalableminds.braingames.binary.models.{SettingsFile, WebKnossosWrapDataLayer, WebKnossosWrapDataLayerSettings}
+import com.scalableminds.util.geometry.Scale
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import com.scalableminds.util.geometry.Scale
 
 case class WebKnossosWrapDataSourceSettings(
                                            name: Option[String],

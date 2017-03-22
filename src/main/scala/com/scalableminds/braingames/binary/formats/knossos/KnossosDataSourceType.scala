@@ -1,20 +1,20 @@
 /*
  * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.repository
+package com.scalableminds.braingames.binary.formats.knossos
 
 import java.io.FileWriter
 import java.nio.file.{Files, Path}
 
-import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
-import com.scalableminds.braingames.binary.requester.DataRequester
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.repository.mapping.{MappingParser, MappingPrinter}
+import com.scalableminds.braingames.binary.repository.{DataSourceType, DataSourceTypeHandler}
+import com.scalableminds.braingames.binary.requester.DataRequester
 import com.scalableminds.util.geometry.{BoundingBox, Scale}
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedListOfBoxes
 import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedListOfBoxes
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}

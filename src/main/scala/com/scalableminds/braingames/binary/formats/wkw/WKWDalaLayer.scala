@@ -8,7 +8,7 @@ import java.nio.file.Paths
 
 import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, DataLayerSection, FallbackLayer}
 import com.scalableminds.braingames.binary.requester.DataCubeCache
-import com.scalableminds.braingames.binary.requester.handlers.KnossosBucketHandler
+import com.scalableminds.braingames.binary.requester.handlers.{KnossosBucketHandler, WebKnossosWrapBucketHandler}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.io.{NamedFileStream, ZipIO}
 import org.apache.commons.io.{FileUtils, FilenameUtils}
@@ -18,7 +18,7 @@ import play.api.libs.json.Json
 import scala.collection.JavaConversions._
 import com.typesafe.scalalogging.LazyLogging
 
-case class KnossosDataLayer(
+case class WKWDataLayer(
                              name: String,
                              category: String,
                              baseDir: String,
@@ -30,40 +30,23 @@ case class KnossosDataLayer(
                              nextSegmentationId: Option[Long] = None,
                              mappings: List[DataLayerMapping] = List()
                             ) extends DataLayer with LazyLogging {
+  val sourceType = WKWDataLayer.sourceType
+
   val resolutions = sections.flatMap(_.resolutions).distinct
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.bboxBig))
 
-  val sourceType = KnossosDataLayer.sourceType
-
-  def bucketHandler(cache: DataCubeCache) = new KnossosBucketHandler(cache)
+  def bucketHandler(cache: DataCubeCache) = new WebKnossosWrapBucketHandler(cache)
 
   def writeTo(outputStream: OutputStream): Unit = {
-    try {
-      val basePath = Paths.get(baseDir)
-      val filter = new SuffixFileFilter(KnossosDataLayer.fileExtension)
-      val files = FileUtils.listFiles(new File(baseDir), filter, TrueFileFilter.INSTANCE)
-      ZipIO.zip(
-        files.toList.map {
-          file =>
-            val name = s"${FilenameUtils.removeExtension(file.getAbsolutePath)}.${KnossosDataLayer.fileExtension}"
-            val path = basePath.relativize(Paths.get(name))
-            new NamedFileStream(file, path.toString){
-              override def stream() = new FileInputStream(file)
-            }
-        },
-        outputStream)
-    } catch {
-      case e: Exception =>
-        logger.error(s"Failed to zip datalayer ${name} for download. Error: " + e)
-    }
+    throw new Exception("Download not yet supported for WKW data sources.");
   }
 }
 
-object KnossosDataLayer {
-  val sourceType = "knossos"
+object WKWDataLayer {
+  val sourceType = "webKnossosWrap"
 
-  val fileExtension = "raw"
+  val fileExtension = "wkw"
 
-  implicit val knossosDataLayerFormat = Json.format[KnossosDataLayer]
+  implicit val wkwDataLayerFormat = Json.format[WKWDataLayer]
 }

@@ -140,7 +140,7 @@ describe("WkLayer", () => {
           headers: {
             "Content-Type": "multipart/mixed; boundary=--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--",
           },
-          timeout: 10000,
+          timeout: 30000,
           compress: true,
           doNotCatch: true,
         };
@@ -190,7 +190,7 @@ describe("WkLayer", () => {
           headers: {
             "Content-Type": "multipart/mixed; boundary=--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--",
           },
-          timeout: 10000,
+          timeout: 30000,
           compress: true,
           doNotCatch: true,
         };

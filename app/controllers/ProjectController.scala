@@ -108,6 +108,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+        _ <- request.user.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
         tasks <- project.tasks
         js <- Fox.serialSequence(tasks)(t => Task.transformToJson(t, request.userOpt))
       } yield {

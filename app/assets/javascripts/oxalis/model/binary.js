@@ -79,7 +79,7 @@ class Binary {
 
     this.cube = new DataCube(this.model.taskBoundingBox, this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
 
-    const taskQueue = new AsyncTaskQueue();
+    const taskQueue = new AsyncTaskQueue(Infinity);
 
     const dataset = Store.getState().dataset;
     if (dataset == null) {

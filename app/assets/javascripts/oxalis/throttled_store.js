@@ -7,7 +7,7 @@ const listeners = [];
 let waitForUpdate = new Deferred();
 
 Store.subscribe(() => {
-  waitForUpdate.internalResolve();
+  waitForUpdate.resolve();
   waitForUpdate = new Deferred();
 });
 

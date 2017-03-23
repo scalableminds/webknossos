@@ -146,7 +146,7 @@ class TreeGeometry {
     const highlighted = 2.0;
 
     const nodeIndex = _.findIndex(this.nodes.geometry.nodeIDs, id => id === nodeId);
-    if (nodeIndex) {
+    if (nodeIndex >= 0) {
       this.animateNodeScale(normal, highlighted, nodeIndex, () => this.animateNodeScale(highlighted, normal, nodeIndex));
     }
   }

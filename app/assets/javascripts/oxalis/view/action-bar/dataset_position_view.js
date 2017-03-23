@@ -29,10 +29,16 @@ class DatasetPositionView extends Component {
 
   _forceUpdate = () => { this.forceUpdate(); };
 
-  copyToClipboard = async () => {
+  copyPositionToClipboard = async () => {
     const position = V3.floor(getPosition(this.props.flycam)).join(", ");
     await Clipboard.copy(position);
     Toast.success("Position copied to clipboard");
+  };
+
+  copyRotationToClipboard = async () => {
+    const rotation = V3.round(getRotation(this.props.flycam)).join(", ");
+    await Clipboard.copy(rotation);
+    Toast.success("Rotation copied to clipboard");
   };
 
   handleChangePosition = (position) => {
@@ -53,7 +59,7 @@ class DatasetPositionView extends Component {
         <div>
           <Input.Group compact>
             <Button
-              onClick={this.copyToClipboard}
+              onClick={this.copyPositionToClipboard}
             >Position</Button>
             <Vector3Input
               value={position}
@@ -65,12 +71,16 @@ class DatasetPositionView extends Component {
         <div>
           {
             isArbitraryMode ?
-              <Vector3Input
-                addonBefore="Rotation"
-                value={rotation}
-                onChange={this.handleChangeRotation}
-                style={{ width: "120px" }}
-              /> : null
+              <Input.Group compact>
+                <Button
+                  onClick={this.copyRotationToClipboard}
+                >Rotation</Button>
+                <Vector3Input
+                  value={rotation}
+                  onChange={this.handleChangeRotation}
+                  style={{ width: "120px" }}
+                />
+              </Input.Group> : null
           }
         </div>
       </div>

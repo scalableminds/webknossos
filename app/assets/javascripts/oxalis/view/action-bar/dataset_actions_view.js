@@ -2,7 +2,7 @@
 import React, { Component } from "react";
 import _ from "lodash";
 import type Model from "oxalis/model";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import { connect } from "react-redux";
 import app from "app";
 import Utils from "libs/utils";
@@ -18,8 +18,17 @@ const SAVED_POLLING_INTERVAL = 100;
 
 class DatasetActionsView extends Component {
   props: {
+    skeletonTracing: SkeletonTracingType,
     oldModel: Model,
   };
+
+  state: {
+    shareModalOpen: boolean,
+    mergeModalOpen: boolean,
+  } = {
+    shareModalOpen: false,
+    mergeModalOpen: false,
+  }
 
   componentDidMount() {
     this.savedPollingInterval = window.setInterval(this._forceUpdate, SAVED_POLLING_INTERVAL);
@@ -54,12 +63,12 @@ class DatasetActionsView extends Component {
     }
   };
 
-  handleShare = () => {
-    const modalView = new ShareModalView({ model: this.props.oldModel });
-    if (this.modalWrapper) {
-      this.modalWrapper.appendChild(modalView.render().el);
-      modalView.show();
-    }
+  handleShareOpen = () => {
+    this.setState({ shareModalOpen: true });
+  };
+
+  handleShareClose = () => {
+    this.setState({ shareModalOpen: false });
   };
 
   handleDownload = async () => {
@@ -72,35 +81,30 @@ class DatasetActionsView extends Component {
   };
 
   handleNextTask = async () => {
-    if (this.props.oldModel.volumeTracing) {
-      const model = this.props.oldModel.volumeTracing;
-      const finishUrl = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/finish`;
-      const requestTaskUrl = "/user/tasks/request";
+    const { tracingType, id } = this.props.skeletonTracing;
+    const finishUrl = `/annotations/${tracingType}/${id}/finish`;
+    const requestTaskUrl = "/user/tasks/request";
 
-      await model.statelogger.save();
-      await this.handleSave();
-      await Request.triggerRequest(finishUrl);
-      try {
-        const annotation = await Request.receiveJSON(requestTaskUrl);
-        const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.oldModel.tracing.task, x => x.type.id);
-        const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
-        const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
-        app.router.loadURL(newTaskUrl);
-      } catch (err) {
-        await Utils.sleep(2000);
-        app.router.loadURL("/dashboard");
-      }
-    } else {
-      throw Error("todo");
+    await this.handleSave();
+    await Request.triggerRequest(finishUrl);
+    try {
+      const annotation = await Request.receiveJSON(requestTaskUrl);
+      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.oldModel.tracing.task, x => x.type.id);
+      const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
+      const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
+      app.router.loadURL(newTaskUrl);
+    } catch (err) {
+      await Utils.sleep(2000);
+      app.router.loadURL("/dashboard");
     }
   };
 
-  handleMerge = () => {
-    const modalView = new MergeModalView({ model: this.props.oldModel });
-    if (this.modalWrapper) {
-      this.modalWrapper.appendChild(modalView.render().el);
-      modalView.show();
-    }
+  handleMergeOpen = () => {
+    this.setState({ mergeModalOpen: true });
+  };
+
+  handleMergeClose = () => {
+    this.setState({ mergeModalOpen: false });
   };
 
   getSaveButtonIcon() {
@@ -110,7 +114,7 @@ class DatasetActionsView extends Component {
       this.props.oldModel.annotationModel.stateLogger.stateSaved() :
       !saveState.isBusy && !(saveState.queue.length > 0);
     if (!stateSaved) {
-      return "sync";
+      return "hourglass";
     } else {
       return "check";
     }
@@ -124,34 +128,37 @@ class DatasetActionsView extends Component {
 
     const elements = [];
     if (tracing.restrictions.allowUpdate) {
-      elements.push(<Button
-        type="primary"
-        onClick={this.handleSave}
-        icon={this.getSaveButtonIcon()}
-      >Save</Button>);
+      elements.push(
+        <Button
+          type="primary"
+          onClick={this.handleSave}
+          icon={this.getSaveButtonIcon()}
+        >Save</Button>);
     } else {
       elements.push(<Button type="primary" disabled>Read only</Button>);
     }
 
     if (hasAdvancedOptions) {
-      const groupElements = [];
       if (tracing.restrictions.allowFinish) {
-        groupElements.push(<Button
+        elements.push(<Button
           icon="check-circle-o"
           onClick={this.handleFinish}
         >{archiveButtonText}</Button>);
       }
       if (tracing.restrictions.allowDownload || !tracing.downloadUrl) {
-        groupElements.push(<Button
+        elements.push(<Button
           icon="download"
           onClick={this.handleDownload}
         >Download</Button>);
       }
-      groupElements.push(<Button
+      elements.push(<Button
         icon="share-alt"
-        onClick={this.handleShare}
+        onClick={this.handleShareOpen}
       >Share</Button>);
-      elements.push(<Button.Group>{groupElements}</Button.Group>);
+      elements.push(<ShareModalView
+        isVisible={this.state.shareModalOpen}
+        onOk={this.handleShareClose}
+      />);
     }
     if (tracing.restrictions.allowFinish && tracing.task) {
       elements.push(<Button
@@ -162,18 +169,19 @@ class DatasetActionsView extends Component {
       </Button>);
     }
     if (isSkeletonMode) {
-      elements.push(<Button
-        icon="folder-open"
-        onClick={this.handleMerge}
-      >Merge Tracing</Button>);
-      elements.push(<div
-        className="merge-modal-wrapper"
-        ref={(modalWrapper) => { this.modalWrapper = modalWrapper; }}
+      elements.push(
+        <Button
+          icon="folder-open"
+          onClick={this.handleMergeOpen}
+        >Merge Tracing</Button>);
+      elements.push(<MergeModalView
+        isVisible={this.state.mergeModalOpen}
+        onOk={this.handleMergeClose}
       />);
     }
 
     return (
-      <div>{elements}</div>
+      <div><Button.Group>{elements}</Button.Group></div>
     );
   }
 }

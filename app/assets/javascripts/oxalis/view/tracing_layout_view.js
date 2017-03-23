@@ -22,6 +22,8 @@ import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
 import UserScriptsModalView from "oxalis/view/user_scripts_modal";
 import TracingView from "oxalis/view/tracing_view";
+import enUS from "antd/lib/locale-provider/en_US";
+import { LocaleProvider } from "antd";
 
 const MARGIN = 40;
 
@@ -136,9 +138,11 @@ class TracingLayoutView extends Marionette.View {
     }
 
     render(
-      <Provider store={store}>
-        <ActionBarView oldModel={this.model} />
-      </Provider>,
+      <LocaleProvider locale={enUS}>
+        <Provider store={store}>
+          <ActionBarView oldModel={this.model} />
+        </Provider>
+      </LocaleProvider>,
       this.ui.actionBar[0],
     );
 

@@ -40,7 +40,7 @@ class TreeGeometry {
     this.edges = new THREE.LineSegments(
       edgeGeometry,
       new THREE.LineBasicMaterial({
-        color: this.darkenColor(treeColor),
+        color: new THREE.Color().fromArray(this.darkenColor(treeColor)),
         linewidth: this.getLineWidth(),
       }),
     );

@@ -73,12 +73,20 @@ class TreeGeometry {
   }
 
   resetEdges(nodes, edges) {
-    const edgesBuffer = [];
+    const edgesBuffer = new Array(_.size(edges) * 6);
 
+    let i = 0;
     for (const edge of edges) {
       const sourceNodePosition = nodes[edge.source].position;
       const targetNodePosition = nodes[edge.target].position;
-      edgesBuffer.push(sourceNodePosition[0], sourceNodePosition[1], sourceNodePosition[2], targetNodePosition[0], targetNodePosition[1], targetNodePosition[2]);
+      edgesBuffer[i] = sourceNodePosition[0];
+      edgesBuffer[i + 1] = sourceNodePosition[1];
+      edgesBuffer[i + 2] = sourceNodePosition[2];
+      edgesBuffer[i + 3] = targetNodePosition[0];
+      edgesBuffer[i + 4] = targetNodePosition[1];
+      edgesBuffer[i + 5] = targetNodePosition[2];
+
+      i += 6;
     }
 
     const edgesMesh = this.edges;
@@ -91,21 +99,29 @@ class TreeGeometry {
     const nodeCount = _.size(nodes);
 
     if (nodeCount) {
-      const sizesBuffer = [];
-      const scalesBuffer = [];
-      const positionBuffer = [];
-      const colorBuffer = [];
-      const nodeIDs = [];
+      const sizesBuffer = new Array(nodeCount);
+      const scalesBuffer = new Array(nodeCount);
+      const positionBuffer = new Array(nodeCount * 3);
+      const colorBuffer = new Array(nodeCount * 3);
+      const nodeIDs = new Array(nodeCount);
 
       // explicitly use loop here for performance reasons #perfmatters
+      let i = 0;
       for (const node of _.values(nodes)) {
         const nodeColor = this.getColor(node.id);
+        const indexTimesThree = i * 3;
 
-        sizesBuffer.push(node.radius * 2);
-        scalesBuffer.push(1.0);
-        positionBuffer.push(node.position[0], node.position[1], node.position[2]);
-        colorBuffer.push(nodeColor[0], nodeColor[1], nodeColor[2]);
-        nodeIDs.push(node.id);
+        sizesBuffer[i] = node.radius * 2;
+        scalesBuffer[i] = 1.0;
+        positionBuffer[indexTimesThree] = node.position[0];
+        positionBuffer[indexTimesThree + 1] = node.position[1];
+        positionBuffer[indexTimesThree + 2] = node.position[2];
+        colorBuffer[indexTimesThree] = nodeColor[0];
+        colorBuffer[indexTimesThree + 1] = nodeColor[1];
+        colorBuffer[indexTimesThree + 2] = nodeColor[2];
+        nodeIDs[i] = node.id;
+
+        i++;
       }
 
       const nodesMesh = this.nodes;

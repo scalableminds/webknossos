@@ -6,7 +6,7 @@ import Request from "libs/request";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
-import store from "oxalis/store";
+import Store from "oxalis/store";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 
 class DatasetActionsView extends Marionette.View {
@@ -72,7 +72,7 @@ class DatasetActionsView extends Marionette.View {
 
 
   updateSavedState() {
-    const { save: saveState } = store.getState();
+    const { save: saveState } = Store.getState();
     const stateSaved =
       this.model.volumeTracing != null ?
       this.model.annotationModel.stateLogger.stateSaved() :
@@ -89,11 +89,11 @@ class DatasetActionsView extends Marionette.View {
       this.saveTracing();
       return;
     }
-    store.dispatch(saveNowAction());
-    let saveState = store.getState().save;
+    Store.dispatch(saveNowAction());
+    let saveState = Store.getState().save;
     while (saveState.isBusy || saveState.queue.length > 0) {
       await Utils.sleep(2000);
-      saveState = store.getState().save;
+      saveState = Store.getState().save;
     }
   }
 
@@ -120,7 +120,7 @@ class DatasetActionsView extends Marionette.View {
     if (evt) {
       evt.preventDefault();
     }
-    store.dispatch(saveNowAction());
+    Store.dispatch(saveNowAction());
   }
 
   mergeTracing() {
@@ -148,26 +148,21 @@ class DatasetActionsView extends Marionette.View {
 
 
   async getNextTask() {
-    if (this.model.volumeTracing) {
-      const model = this.model.volumeTracing;
-      const finishUrl = `/annotations/${this.model.tracingType}/${this.model.tracingId}/finish`;
-      const requestTaskUrl = "/user/tasks/request";
+    const { tracingType, id } = Store.getState().skeletonTracing;
+    const finishUrl = `/annotations/${tracingType}/${id}/finish`;
+    const requestTaskUrl = "/user/tasks/request";
 
-      await model.statelogger.save();
-      await this.saveAndWait();
-      await Request.triggerRequest(finishUrl);
-      try {
-        const annotation = await Request.receiveJSON(requestTaskUrl);
-        const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.model.tracing.task, x => x.type.id);
-        const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
-        const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
-        app.router.loadURL(newTaskUrl);
-      } catch (err) {
-        await Utils.sleep(2000);
-        app.router.loadURL("/dashboard");
-      }
-    } else {
-      throw Error("todo");
+    await this.saveAndWait();
+    await Request.triggerRequest(finishUrl);
+    try {
+      const annotation = await Request.receiveJSON(requestTaskUrl);
+      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.model.tracing.task, x => x.type.id);
+      const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
+      const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
+      app.router.loadURL(newTaskUrl);
+    } catch (err) {
+      await Utils.sleep(2000);
+      app.router.loadURL("/dashboard");
     }
   }
 

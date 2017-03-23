@@ -4,7 +4,6 @@
  */
 
 import _ from "lodash";
-import app from "app";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import Store from "oxalis/store";

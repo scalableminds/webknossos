@@ -127,7 +127,7 @@ class TreeGeometry {
 
   setSizeAttenuation(sizeAttenuation) {
     this.nodes.material.sizeAttenuation = sizeAttenuation;
-    // this.updateGeometries();
+    this.nodes.material.needsUpdate = true;
   }
 
   getMeshes() {
@@ -152,14 +152,13 @@ class TreeGeometry {
   }
 
   animateNodeScale(from, to, index, onComplete = _.noop) {
-    // const setScaleFactor = factor => this.scalesBuffer.set([factor], index);
-    const redraw = () => {
-      // this.updateGeometries();
-      app.vent.trigger("rerender");
+    const setScaleFactor = (factor) => {
+      this.nodes.geometry.attributes.nodeScaleFactor.set([factor], index);
+      this.nodes.geometry.attributes.nodeScaleFactor.needsUpdate = true;
     };
+
     const onUpdate = function () {
-      // setScaleFactor(this.scaleFactor);
-      redraw();
+      setScaleFactor(this.scaleFactor);
     };
 
     const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });

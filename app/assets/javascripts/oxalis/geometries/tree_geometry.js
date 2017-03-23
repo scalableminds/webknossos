@@ -29,7 +29,13 @@ class TreeGeometry {
   constructor(treeId: number, treeColor, model: Model) {
     // create skeletonTracing to show in TDView
     const edgeGeometry = new THREE.BufferGeometry();
+    edgeGeometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(3), 3));
+
     const nodeGeometry = new THREE.BufferGeometry();
+    nodeGeometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(3), 3));
+    nodeGeometry.addAttribute("sizeNm", new THREE.BufferAttribute(new Float32Array(1), 1));
+    nodeGeometry.addAttribute("nodeScaleFactor", new THREE.BufferAttribute(new Float32Array(1), 1));
+    nodeGeometry.addAttribute("color", new THREE.BufferAttribute(new Float32Array(3), 3));
     nodeGeometry.nodeIDs = [];
 
     this.edges = new THREE.LineSegments(
@@ -62,12 +68,6 @@ class TreeGeometry {
     });
   }
 
-  makeDynamicFloatAttribute(itemSize, resizableBuffer) {
-    const attr = new THREE.BufferAttribute(resizableBuffer, itemSize);
-    attr.setDynamic(true);
-    return attr;
-  }
-
   reset(nodes, edges) {
     this.resetNodes(nodes);
     this.resetEdges(nodes, edges);
@@ -83,9 +83,8 @@ class TreeGeometry {
     }
 
     const edgesMesh = this.edges;
-    edgesMesh.geometry.dispose(); // Free any memory allocated on the GPU
-
-    edgesMesh.geometry.addAttribute("position", this.makeDynamicFloatAttribute(3, new Float32Array(edgesBuffer)));
+    edgesMesh.geometry.attributes.position.setArray(new Float32Array(edgesBuffer));
+    edgesMesh.geometry.attributes.position.needsUpdate = true;
     edgesMesh.geometry.computeBoundingSphere();
   }
 
@@ -111,16 +110,18 @@ class TreeGeometry {
       }
 
       const nodesMesh = this.nodes;
-      nodesMesh.geometry.dispose(); // Free any memory allocated on the GPU
-
-      nodesMesh.geometry.addAttribute("position", this.makeDynamicFloatAttribute(3, new Float32Array(positionBuffer)));
-      nodesMesh.geometry.addAttribute("sizeNm", this.makeDynamicFloatAttribute(1, new Float32Array(sizesBuffer)));
-      nodesMesh.geometry.addAttribute("nodeScaleFactor", this.makeDynamicFloatAttribute(1, new Float32Array(scalesBuffer)));
-      nodesMesh.geometry.addAttribute("color", this.makeDynamicFloatAttribute(3, new Float32Array(colorBuffer)));
+      nodesMesh.geometry.attributes.position.setArray(new Float32Array(positionBuffer));
+      nodesMesh.geometry.attributes.sizeNm.setArray(new Float32Array(sizesBuffer));
+      nodesMesh.geometry.attributes.nodeScaleFactor.setArray(new Float32Array(scalesBuffer));
+      nodesMesh.geometry.attributes.color.setArray(new Float32Array(colorBuffer));
       nodesMesh.geometry.nodeIDs = nodeIDs;
 
+      nodesMesh.geometry.attributes.position.needsUpdate = true;
+      nodesMesh.geometry.attributes.sizeNm.needsUpdate = true;
+      nodesMesh.geometry.attributes.nodeScaleFactor.needsUpdate = true;
+      nodesMesh.geometry.attributes.color.needsUpdate = true;
+
       nodesMesh.geometry.computeBoundingSphere();
-      // nodesMesh.geometry.setDrawRange(0, nodeCount);
     }
   }
 

@@ -102,7 +102,6 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  // TODO: secure
   def projectDownload(projectName: String) = Authenticated.async { implicit request =>
     def createProjectZip(project: Project) =
       for {
@@ -113,13 +112,13 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+      _ <- request.user.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
       zip <- createProjectZip(project)
     } yield {
       Ok.sendFile(zip.file)
     }
   }
 
-  // TODO: secure
   def taskDownload(taskId: String) = Authenticated.async { implicit request =>
     def createTaskZip(task: Task) = task.annotations.flatMap { annotations =>
       val finished = annotations.filter(_.state.isFinished)
@@ -128,11 +127,11 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      _ <- ensureTeamAdministration(request.user, task.team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
     } yield Ok.sendFile(zip.file)
   }
 
-  // TODO: secure
   def taskTypeDownload(taskTypeId: String) = Authenticated.async { implicit request =>
     def createTaskTypeZip(taskType: TaskType) =
       for {
@@ -142,15 +141,16 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       } yield zip
 
     for {
-      task <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      zip <- createTaskTypeZip(task)
+      tasktype <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
+      _ <- ensureTeamAdministration(request.user, tasktype.team) ?~> Messages("notAllowed")
+      zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
   }
-
-  // TODO: secure
+  
   def userDownload(userId: String) = Authenticated.async { implicit request =>
     for {
       user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
+      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
       annotations <- AnnotationService.findTasksOf(user, isFinished = Some(true), limit = Int.MaxValue)
       zipped <- AnnotationService.zipAnnotations(annotations, user.abreviatedName + "_nmls.zip")
     } yield {

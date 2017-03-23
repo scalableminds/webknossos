@@ -67,6 +67,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
                   },
                 },
                 activeNodeId: { $set: node.id },
+                activeTreeId: { $set: tree.treeId },
               } })))
         .getOrElse(state);
     }

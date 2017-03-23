@@ -50,6 +50,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def user(userId: String) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
     } yield {
       Ok(Json.toJson(user)(User.userPublicWrites(request.user)))
     }
@@ -74,6 +75,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def userLoggedTime(userId: String) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
       loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
@@ -87,6 +89,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
       content <- dashboardExploratoryAnnotations(user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
@@ -96,6 +99,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+        _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
       content <- dashboardTaskAnnotations(user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)

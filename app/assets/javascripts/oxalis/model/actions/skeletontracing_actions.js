@@ -8,25 +8,25 @@ import type { Vector3 } from "oxalis/constants";
 import type { Tracing } from "oxalis/model";
 import type { SkeletonContentDataType } from "oxalis/store";
 
-type initializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing<SkeletonContentDataType> };
-type createNodeActionType = {type: "CREATE_NODE", position: Vector3, rotation: Vector3, viewport: number, resolution: number, treeId?: number};
-type deleteNodeActionType = {type: "DELETE_NODE", nodeId?: number, treeId?: number};
-type setActiveNodeActionType = {type: "SET_ACTIVE_NODE", nodeId: number, treeId?: number};
-type setActiveNodeRadiusActionType = {type: "SET_ACTIVE_NODE_RADIUS", radius: number};
-type createBranchPointActionType = {type: "CREATE_BRANCHPOINT", nodeId?: number, treeId?: number};
-type deleteBranchPointActionType = {type: "DELETE_BRANCHPOINT"};
-type createTreeActionType = {type: "CREATE_TREE"};
-type deleteTreeActionType = {type: "DELETE_TREE", treeId?: number};
-type setActiveTreeActionType = {type: "SET_ACTIVE_TREE", treeId: number};
-type mergeTreesActionType = {type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number};
-type setTreeNameActionType = {type: "SET_TREE_NAME", treeId?: number, name: ?string};
-type selectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: ?boolean};
-type shuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR", treeId?: number};
-type createCommentActionType = {type: "CREATE_COMMENT", commentText: string, nodeId: ?number};
-type deleteCommentActionType = {type: "DELETE_COMMENT", nodeId: ?number, treeId?: number};
-type setVersionNumberActionType = {type: "SET_VERSION_NUMBER", version: number};
+type InitializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing<SkeletonContentDataType> };
+type CreateNodeActionType = {type: "CREATE_NODE", position: Vector3, rotation: Vector3, viewport: number, resolution: number, treeId?: number};
+type DeleteNodeActionType = {type: "DELETE_NODE", nodeId?: number, treeId?: number};
+type SetActiveNodeActionType = {type: "SET_ACTIVE_NODE", nodeId: number};
+type SetActiveNodeRadiusActionType = {type: "SET_ACTIVE_NODE_RADIUS", radius: number};
+type CreateBranchPointActionType = {type: "CREATE_BRANCHPOINT", nodeId?: number, treeId?: number};
+type DeleteBranchPointActionType = {type: "DELETE_BRANCHPOINT"};
+type CreateTreeActionType = {type: "CREATE_TREE"};
+type DeleteTreeActionType = {type: "DELETE_TREE", treeId?: number};
+type SetActiveTreeActionType = {type: "SET_ACTIVE_TREE", treeId: number};
+type MergeTreesActionType = {type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number};
+type SetTreeNameActionType = {type: "SET_TREE_NAME", treeId?: number, name: ?string};
+type SelectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: ?boolean};
+type ShuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR", treeId?: number};
+type CreateCommentActionType = {type: "CREATE_COMMENT", commentText: string, nodeId: ?number};
+type DeleteCommentActionType = {type: "DELETE_COMMENT", nodeId: ?number, treeId?: number};
+type SetVersionNumberActionType = {type: "SET_VERSION_NUMBER", version: number};
 
-export type SkeletonTracingActionTypes = (initializeSkeletonTracingActionType | createNodeActionType | deleteNodeActionType | setActiveNodeActionType | setActiveNodeRadiusActionType | createBranchPointActionType | deleteBranchPointActionType | createTreeActionType | deleteTreeActionType | setActiveTreeActionType | mergeTreesActionType | setTreeNameActionType | setTreeNameActionType | selectNextTreeActionType | shuffleTreeColorActionType | createCommentActionType | deleteCommentActionType | setVersionNumberActionType);
+export type SkeletonTracingActionTypes = (InitializeSkeletonTracingActionType | CreateNodeActionType | DeleteNodeActionType | SetActiveNodeActionType | SetActiveNodeRadiusActionType | CreateBranchPointActionType | DeleteBranchPointActionType | CreateTreeActionType | DeleteTreeActionType | SetActiveTreeActionType | MergeTreesActionType | SetTreeNameActionType | SetTreeNameActionType | SelectNextTreeActionType | ShuffleTreeColorActionType | CreateCommentActionType | DeleteCommentActionType | SetVersionNumberActionType);
 export const SkeletonTracingActions = [
   "INITIALIZE_SKELETONTRACING",
   "CREATE_NODE",
@@ -46,12 +46,12 @@ export const SkeletonTracingActions = [
   "DELETE_COMMENT",
 ];
 
-export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContentDataType>): initializeSkeletonTracingActionType => ({
+export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContentDataType>): InitializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",
   tracing,
 });
 
-export const createNodeAction = (position: Vector3, rotation: Vector3, viewport: number, resolution: number, treeId?: number): createNodeActionType => ({
+export const createNodeAction = (position: Vector3, rotation: Vector3, viewport: number, resolution: number, treeId?: number): CreateNodeActionType => ({
   type: "CREATE_NODE",
   position,
   rotation,
@@ -60,83 +60,82 @@ export const createNodeAction = (position: Vector3, rotation: Vector3, viewport:
   treeId,
 });
 
-export const deleteNodeAction = (nodeId?: number, treeId?: number): deleteNodeActionType => ({
+export const deleteNodeAction = (nodeId?: number, treeId?: number): DeleteNodeActionType => ({
   type: "DELETE_NODE",
   nodeId,
   treeId,
 });
 
-export const setActiveNodeAction = (nodeId: number): (setActiveNodeActionType) => ({
+export const setActiveNodeAction = (nodeId: number): SetActiveNodeActionType => ({
   type: "SET_ACTIVE_NODE",
   nodeId,
 });
 
-export const setActiveNodeRadiusAction = (radius: number): setActiveNodeRadiusActionType => ({
+export const setActiveNodeRadiusAction = (radius: number): SetActiveNodeRadiusActionType => ({
   type: "SET_ACTIVE_NODE_RADIUS",
   radius,
 });
 
-export const createBranchPointAction = (nodeId?: number, treeId?: number): createBranchPointActionType => ({
+export const createBranchPointAction = (nodeId?: number, treeId?: number): CreateBranchPointActionType => ({
   type: "CREATE_BRANCHPOINT",
   nodeId,
   treeId,
 });
 
-export const deleteBranchPointAction = (): deleteBranchPointActionType => ({
+export const deleteBranchPointAction = (): DeleteBranchPointActionType => ({
   type: "DELETE_BRANCHPOINT",
 });
 
-export const createTreeAction = (): createTreeActionType => ({
+export const createTreeAction = (): CreateTreeActionType => ({
   type: "CREATE_TREE",
 });
 
-export const deleteTreeAction = (treeId?: number): deleteTreeActionType => ({
+export const deleteTreeAction = (treeId?: number): DeleteTreeActionType => ({
   type: "DELETE_TREE",
   treeId,
 });
 
-export const setActiveTreeAction = (treeId: number): setActiveTreeActionType => ({
+export const setActiveTreeAction = (treeId: number): SetActiveTreeActionType => ({
   type: "SET_ACTIVE_TREE",
   treeId,
 });
 
-export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number): mergeTreesActionType => ({
+export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number): MergeTreesActionType => ({
   type: "MERGE_TREES",
   sourceNodeId,
   targetNodeId,
 });
 
-export const setTreeNameAction = (name: ?string = null, treeId?: number): setTreeNameActionType => ({
+export const setTreeNameAction = (name: ?string = null, treeId?: number): SetTreeNameActionType => ({
   type: "SET_TREE_NAME",
   name,
   treeId,
 });
 
-// TODO consider a better name + better param name
-export const selectNextTreeAction = (forward: ?boolean = true): selectNextTreeActionType => ({
+export const selectNextTreeAction = (forward: ?boolean = true): SelectNextTreeActionType => ({
   type: "SELECT_NEXT_TREE",
   forward,
 });
 
-export const shuffleTreeColorAction = (treeId: number): shuffleTreeColorActionType => ({
+export const shuffleTreeColorAction = (treeId: number): ShuffleTreeColorActionType => ({
   type: "SHUFFLE_TREE_COLOR",
   treeId,
 });
 
-export const createCommentAction = (commentText: string, nodeId?: number, treeId?: number): createCommentActionType => ({
+export const createCommentAction = (commentText: string, nodeId?: number, treeId?: number): CreateCommentActionType => ({
   type: "CREATE_COMMENT",
   commentText,
   nodeId,
   treeId,
 });
 
-export const deleteCommentAction = (nodeId?: number, treeId?: number): deleteCommentActionType => ({
+export const deleteCommentAction = (nodeId?: number, treeId?: number): DeleteCommentActionType => ({
   type: "DELETE_COMMENT",
   nodeId,
   treeId,
 });
 
-export const setVersionNumber = (version: number): setVersionNumberActionType => ({
+export const setVersionNumber = (version: number): SetVersionNumberActionType => ({
   type: "SET_VERSION_NUMBER",
   version,
 });

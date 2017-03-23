@@ -53,7 +53,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
               val bucket = new BucketPosition(point.x, point.y, point.z, resolution, baseDataSource.cubeLength) // TODO: HACKY!!!!
               val writeBucket = BucketWriteInstruction(
                 baseDataSource, dataLayer, section, bucket, IOUtils.toByteArray(stream))
-              dataStore.save(writeBucket).map(_ => resolution)
+              dataStore.save(writeBucket, None).map(_ => resolution)
           }.getOrElse(Fox.empty)
           result.onComplete( _ => stream.close())
           result

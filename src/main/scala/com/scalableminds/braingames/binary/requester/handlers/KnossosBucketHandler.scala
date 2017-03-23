@@ -6,6 +6,7 @@ package com.scalableminds.braingames.binary.requester.handlers
 import java.io.{FileInputStream, RandomAccessFile}
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
+import java.nio.file.{Files, Path}
 import java.util.concurrent.TimeoutException
 
 import com.scalableminds.braingames.binary.models._
@@ -148,10 +149,33 @@ class KnossosBucketHandler(val cache: DataCubeCache)
     }
   }
 
+  private def getOriginalFile(saveBucket: BucketWriteInstruction): Option[Path] = {
+    for {
+      fallback <- saveBucket.dataLayer.fallback
+      fallbackLayer <- saveBucket.dataSource.getDataLayer(fallback.layerName)
+      cubePosition = saveBucket.position.toCube(saveBucket.dataSource.cubeLength)
+      section <- fallbackLayer.sections.find(_.doesContainBucket(saveBucket.position))
+      readInstruction = CubeReadInstruction(saveBucket.dataSource,
+                                            fallbackLayer,
+                                            section,
+                                            cubePosition,
+                                            DataRequestSettings.default)
+      baseDir = DataStore.knossosBaseDir(readInstruction)
+      originalFile = DataStore.knossosFilePath(baseDir,
+                                               readInstruction.dataSource.id,
+                                               cubePosition,
+                                               DataLayer.fileExt(readInstruction.dataLayer.isCompressed))
+      if (Files.exists(originalFile))
+    } yield {
+      originalFile
+    }
+  }
+
   override def saveToUnderlying(saveBucket: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {
     Future {
       blocking {
-        val saveResult = dataStore.save(saveBucket).futureBox
+        val originalFile = getOriginalFile(saveBucket)
+        val saveResult = dataStore.save(saveBucket, originalFile).futureBox
         Await.result(saveResult, timeout)
       }
     }.recover {

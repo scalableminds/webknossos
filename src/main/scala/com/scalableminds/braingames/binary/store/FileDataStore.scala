@@ -85,8 +85,8 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     }
   }
 
-  def save(dataInfo: BucketWriteInstruction): Fox[Boolean] = {
-    save(knossosBaseDir(dataInfo), dataInfo)
+  def save(dataInfo: BucketWriteInstruction, originalFile: Option[Path]): Fox[Boolean] = {
+    save(knossosBaseDir(dataInfo), dataInfo, originalFile)
   }
 
   private def copyBucketToCube(outputFile: RandomAccessFile, dataInfo: BucketWriteInstruction) = {
@@ -112,7 +112,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     }
   }
 
-  def save(dataSetDir: Path, dataInfo: BucketWriteInstruction): Fox[Boolean] = {
+  def save(dataSetDir: Path, dataInfo: BucketWriteInstruction, originalFile: Option[Path] = None): Fox[Boolean] = {
     Future {
       val cubePosition = dataInfo.position.toCube(dataInfo.dataSource.cubeLength)
 
@@ -121,6 +121,9 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
       var outputFile: RandomAccessFile = null
       try {
         PathUtils.parent(path.toAbsolutePath).map(p => Files.createDirectories(p))
+        if (!Files.exists(path.toAbsolutePath)) {
+          originalFile.map(Files.copy(_, path.toAbsolutePath))
+        }
         outputFile = new RandomAccessFile(path.toFile, "rwd")
 
         copyBucketToCube(outputFile, dataInfo)

@@ -4,9 +4,6 @@
  */
 
 import _ from "lodash";
-import app from "app";
-import ResizableBuffer from "libs/resizable_buffer";
-import ErrorHandling from "libs/error_handling";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import Store from "oxalis/store";
@@ -16,12 +13,12 @@ import type { Vector3 } from "oxalis/constants";
 
 class TreeGeometry {
 
-  nodeIDs: ResizableBuffer<Int32Array>;
-  edgesBuffer: ResizableBuffer<Float32Array>;
-  nodesBuffer: ResizableBuffer<Float32Array>;
-  sizesBuffer: ResizableBuffer<Float32Array>;
-  scalesBuffer: ResizableBuffer<Float32Array>;
-  nodesColorBuffer: ResizableBuffer<Float32Array>;
+  nodeIDs: Int32Array;
+  edgesBuffer: Float32Array;
+  nodesBuffer: Float32Array;
+  sizesBuffer: Float32Array;
+  scalesBuffer: Float32Array;
+  nodesColorBuffer: Float32Array;
   edges: THREE.LineSegments;
   particleMaterial: THREE.ShaderMaterial;
   nodes: THREE.Points;
@@ -29,25 +26,16 @@ class TreeGeometry {
   oldActiveNodeId: ?number;
 
   constructor(treeId: number, treeColor, model: Model) {
-    // create skeletonTracing to show in TDView and pre-allocate buffers
-
+    // create skeletonTracing to show in TDView
     const edgeGeometry = new THREE.BufferGeometry();
+    edgeGeometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(3), 3));
+
     const nodeGeometry = new THREE.BufferGeometry();
-
-    this.nodeIDs = new ResizableBuffer(1, Int32Array, 100);
-    this.edgesBuffer = new ResizableBuffer(6, Float32Array);
-    this.nodesBuffer = new ResizableBuffer(3, Float32Array);
-    this.sizesBuffer = new ResizableBuffer(1, Float32Array);
-    this.scalesBuffer = new ResizableBuffer(1, Float32Array);
-    this.nodesColorBuffer = new ResizableBuffer(3, Float32Array);
-
-    edgeGeometry.addAttribute("position", this.makeDynamicFloatAttribute(3, this.edgesBuffer));
-    nodeGeometry.addAttribute("position", this.makeDynamicFloatAttribute(3, this.nodesBuffer));
-    nodeGeometry.addAttribute("sizeNm", this.makeDynamicFloatAttribute(1, this.sizesBuffer));
-    nodeGeometry.addAttribute("nodeScaleFactor", this.makeDynamicFloatAttribute(1, this.scalesBuffer));
-    nodeGeometry.addAttribute("color", this.makeDynamicFloatAttribute(3, this.nodesColorBuffer));
-
-    nodeGeometry.nodeIDs = this.nodeIDs;
+    nodeGeometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(3), 3));
+    nodeGeometry.addAttribute("sizeNm", new THREE.BufferAttribute(new Float32Array(1), 1));
+    nodeGeometry.addAttribute("nodeScaleFactor", new THREE.BufferAttribute(new Float32Array(1), 1));
+    nodeGeometry.addAttribute("color", new THREE.BufferAttribute(new Float32Array(3), 3));
+    nodeGeometry.nodeIDs = [];
 
     this.edges = new THREE.LineSegments(
       edgeGeometry,
@@ -79,39 +67,82 @@ class TreeGeometry {
     });
   }
 
-  makeDynamicFloatAttribute(itemSize, resizableBuffer) {
-    const attr = new THREE.BufferAttribute(resizableBuffer.getBuffer(), itemSize);
-    attr.setDynamic(true);
-    return attr;
-  }
-
-  clear() {
-    this.nodesBuffer.clear();
-    this.edgesBuffer.clear();
-    this.sizesBuffer.clear();
-    this.scalesBuffer.clear();
-    this.nodesColorBuffer.clear();
-    this.nodeIDs.clear();
-  }
-
   reset(nodes, edges) {
-    if (_.size(nodes)) {
-      this.clear();
+    this.resetNodes(nodes);
+    this.resetEdges(nodes, edges);
+  }
 
-      this.nodesBuffer.pushMany(_.map(nodes, "position"));
-      this.sizesBuffer.pushMany(_.map(nodes, node => [node.radius * 2]));
-      this.scalesBuffer.pushMany(_.times(_.size(nodes), _.constant([1.0])));
-      this.nodeIDs.pushMany(_.map(nodes, node => [node.id]));
-      this.nodesColorBuffer.pushMany(_.map(nodes, node => this.getColor(node.id)));
-      this.edgesBuffer.pushMany(edges.map(edge => nodes[edge.source].position.concat(nodes[edge.target].position)));
+  resetEdges(nodes, edges) {
+    const edgesBuffer = new Array(_.size(edges) * 6);
 
-      this.updateGeometries();
+    let i = 0;
+    for (const edge of edges) {
+      const sourceNodePosition = nodes[edge.source].position;
+      const targetNodePosition = nodes[edge.target].position;
+      edgesBuffer[i] = sourceNodePosition[0];
+      edgesBuffer[i + 1] = sourceNodePosition[1];
+      edgesBuffer[i + 2] = sourceNodePosition[2];
+      edgesBuffer[i + 3] = targetNodePosition[0];
+      edgesBuffer[i + 4] = targetNodePosition[1];
+      edgesBuffer[i + 5] = targetNodePosition[2];
+
+      i += 6;
+    }
+
+    const edgesMesh = this.edges;
+    edgesMesh.geometry.attributes.position.setArray(new Float32Array(edgesBuffer));
+    edgesMesh.geometry.attributes.position.needsUpdate = true;
+    edgesMesh.geometry.computeBoundingSphere();
+  }
+
+  resetNodes(nodes) {
+    const nodeCount = _.size(nodes);
+
+    if (nodeCount) {
+      const sizesBuffer = new Array(nodeCount);
+      const scalesBuffer = new Array(nodeCount);
+      const positionBuffer = new Array(nodeCount * 3);
+      const colorBuffer = new Array(nodeCount * 3);
+      const nodeIDs = new Array(nodeCount);
+
+      // explicitly use loop here for performance reasons #perfmatters
+      let i = 0;
+      for (const node of _.values(nodes)) {
+        const nodeColor = this.getColor(node.id);
+        const indexTimesThree = i * 3;
+
+        sizesBuffer[i] = node.radius * 2;
+        scalesBuffer[i] = 1.0;
+        positionBuffer[indexTimesThree] = node.position[0];
+        positionBuffer[indexTimesThree + 1] = node.position[1];
+        positionBuffer[indexTimesThree + 2] = node.position[2];
+        colorBuffer[indexTimesThree] = nodeColor[0];
+        colorBuffer[indexTimesThree + 1] = nodeColor[1];
+        colorBuffer[indexTimesThree + 2] = nodeColor[2];
+        nodeIDs[i] = node.id;
+
+        i++;
+      }
+
+      const nodesMesh = this.nodes;
+      nodesMesh.geometry.attributes.position.setArray(new Float32Array(positionBuffer));
+      nodesMesh.geometry.attributes.sizeNm.setArray(new Float32Array(sizesBuffer));
+      nodesMesh.geometry.attributes.nodeScaleFactor.setArray(new Float32Array(scalesBuffer));
+      nodesMesh.geometry.attributes.color.setArray(new Float32Array(colorBuffer));
+      nodesMesh.geometry.nodeIDs = nodeIDs;
+
+      nodesMesh.geometry.attributes.position.needsUpdate = true;
+      nodesMesh.geometry.attributes.sizeNm.needsUpdate = true;
+      nodesMesh.geometry.attributes.nodeScaleFactor.needsUpdate = true;
+      nodesMesh.geometry.attributes.color.needsUpdate = true;
+
+      nodesMesh.geometry.computeBoundingSphere();
     }
   }
 
   setSizeAttenuation(sizeAttenuation) {
     this.nodes.material.sizeAttenuation = sizeAttenuation;
-    this.updateGeometries();
+    this.nodes.material.needsUpdate = true;
   }
 
   getMeshes() {
@@ -129,21 +160,20 @@ class TreeGeometry {
     const normal = 1.0;
     const highlighted = 2.0;
 
-    const nodeIndex = this.getNodeIndex(nodeId);
-    if (nodeIndex) {
+    const nodeIndex = _.findIndex(this.nodes.geometry.nodeIDs, id => id === nodeId);
+    if (nodeIndex >= 0) {
       this.animateNodeScale(normal, highlighted, nodeIndex, () => this.animateNodeScale(highlighted, normal, nodeIndex));
     }
   }
 
   animateNodeScale(from, to, index, onComplete = _.noop) {
-    const setScaleFactor = factor => this.scalesBuffer.set([factor], index);
-    const redraw = () => {
-      this.updateGeometries();
-      app.vent.trigger("rerender");
+    const setScaleFactor = (factor) => {
+      this.nodes.geometry.attributes.nodeScaleFactor.set([factor], index);
+      this.nodes.geometry.attributes.nodeScaleFactor.needsUpdate = true;
     };
+
     const onUpdate = function () {
       setScaleFactor(this.scaleFactor);
-      redraw();
     };
 
     const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });
@@ -154,22 +184,13 @@ class TreeGeometry {
       .start();
   }
 
-  getNodeIndex(nodeId) {
-    for (let i = 0; i < this.nodeIDs.length; i++) {
-      if (this.nodeIDs.get(i) === nodeId) {
-        return i;
-      }
-    }
-    return null;
-  }
-
-  getColor(id, isActiveNode, isBranchPoint) {
+  getColor(id) {
     const tree = Store.getState().skeletonTracing.trees[this.id];
     let { color } = tree;
 
     if (id != null) {
-      isActiveNode = isActiveNode || Store.getState().skeletonTracing.activeNodeId === id;
-      isBranchPoint = isBranchPoint || id in _.map(tree.branchPoints, "node");
+      const isActiveNode = Store.getState().skeletonTracing.activeNodeId === id;
+      const isBranchPoint = !_.isEmpty(tree.branchPoints.filter(branchPoint => branchPoint.id === id));
 
       if (isActiveNode) {
         color = this.shiftColor(color, 1 / 4);
@@ -185,73 +206,11 @@ class TreeGeometry {
     return color;
   }
 
-  updateNodeColor(id, isActiveNode, isBranchPoint) {
-    let index = null;
-    for (let i = 0; i < this.nodeIDs.length; i++) {
-      if (this.nodeIDs.get(i) === id) {
-        index = i;
-        break;
-      }
-    }
-    this.nodesColorBuffer.set(this.getColor(id, isActiveNode, isBranchPoint), index);
-
-    this.updateGeometries();
-  }
-
-
   showRadius(show) {
     this.edges.material.linewidth = this.getLineWidth();
     this.particleMaterial.setShowRadius(show);
   }
 
-
-  updateGeometries() {
-    this.updateGeometry(this.nodes, {
-      position: [3, this.nodesBuffer],
-      sizeNm: [1, this.sizesBuffer],
-      nodeScaleFactor: [1, this.scalesBuffer],
-      color: [3, this.nodesColorBuffer],
-    });
-
-    this.updateGeometry(this.edges, {
-      position: [3, this.edgesBuffer],
-    }, 2);
-  }
-
-
-  updateGeometry(mesh, attribute2buffer, itemsPerElement = 1) {
-    let length = -1;
-    let needsToRebuildGeometry = false;
-    for (const attribute of Object.keys(attribute2buffer)) {
-      const rBuffer = attribute2buffer[attribute][1];
-
-      if (length === -1) {
-        length = rBuffer.getLength();
-      } else {
-        ErrorHandling.assertEquals(rBuffer.getLength(), length,
-          "All attribute lengths should be equal.");
-      }
-
-      if (mesh.geometry.attributes[attribute].array !== rBuffer.getBuffer()) {
-        // The reference of the underlying buffer has changed. Unfortunately,
-        // this means that we have to re-create all of the attributes.
-        needsToRebuildGeometry = true;
-      }
-      mesh.geometry.attributes[attribute].needsUpdate = true;
-    }
-
-    if (needsToRebuildGeometry) {
-      // Free any memory allocated on the GPU
-      mesh.geometry.dispose();
-      for (const attribute of Object.keys(attribute2buffer)) {
-        // Recreate attribute
-        const [itemSize, rBuffer] = attribute2buffer[attribute];
-        mesh.geometry.addAttribute(attribute, this.makeDynamicFloatAttribute(itemSize, rBuffer));
-      }
-    }
-    mesh.geometry.computeBoundingSphere();
-    mesh.geometry.setDrawRange(0, length * itemsPerElement);
-  }
 
   getLineWidth() {
     return Store.getState().userConfiguration.particleSize / 4;

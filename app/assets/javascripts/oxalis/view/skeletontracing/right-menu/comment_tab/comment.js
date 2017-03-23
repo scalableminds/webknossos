@@ -4,20 +4,13 @@ import classNames from "classnames";
 import Store from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 
-
 class Comment extends Component {
-
-  constructor() {
-    super();
-    this.handleClick = this.handleClick.bind(this);
-  }
 
   componentDidUpdate() {
     this.ensureVisible();
   }
 
-  handleClick(evt) {
-    evt.preventDefault();
+  handleClick = () => {
     Store.dispatch(setActiveNodeAction(this.props.data.node));
   }
 

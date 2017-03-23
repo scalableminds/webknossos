@@ -1,209 +1,165 @@
+/**
+ * comment_tab_view.js
+ * @flow
+ */
+
 import _ from "lodash";
-import $ from "jquery";
-import Marionette from "backbone.marionette";
 import React from "react";
-import { render } from "react-dom";
-import Store from "oxalis/store";
-import { setActiveNodeAction, createCommentAction, deleteCommentAction } from "oxalis/model/actions/skeletontracing_actions";
-import { InputKeyboardNoLoop } from "libs/input";
+import Maybe from "data.maybe";
 import Utils from "libs/utils";
-import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
-import CommentList from "oxalis/view/skeletontracing/right-menu/comment_tab/comment_list";
+import { connect } from "react-redux";
+import { Button, Input } from "antd";
+import { InputKeyboardNoLoop } from "libs/input";
+import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { setActiveNodeAction, createCommentAction, deleteCommentAction } from "oxalis/model/actions/skeletontracing_actions";
+import TreeCommentList from "oxalis/view/skeletontracing/right-menu/comment_tab/tree_comment_list";
+import type { Dispatch } from "redux";
+import type { OxalisState } from "oxalis/store";
 
-class CommentTabView extends Marionette.View {
+const InputGroup = Input.Group;
 
-  static initClass() {
-    this.prototype.className = "flex-column";
-    this.prototype.template = _.template(`\
-<div class="input-group" id="comment-navbar">
-  <div class="input-group-btn">
-    <button class="btn btn-default" id="comment-previous"><i class="fa fa-arrow-left"></i></button>
-  </div>
-  <input class="form-control" id="comment-input" type="text" value="<%- activeComment.comment ? activeComment.comment.content : '' %>" placeholder="Add comment">
-  <div class="input-group-btn">
-    <button class="btn btn-default" id="comment-next"><i class="fa fa-arrow-right"></i></button>
-    <button class="btn btn-default" id="comment-sort" title="sort">
-      <% if(isSortedAscending){ %>
-        <i class="fa fa-sort-alpha-asc"></i>
-      <% } else { %>
-        <i class="fa fa-sort-alpha-desc"></i>
-      <% } %>
-    </button>
-  </div>
-</div>
-<ul id="comment-list" class="flex-overflow"></ul>\
-`);
+type CommentTabStateType = {
+  isSortedAscending: boolean,
+};
 
+class CommentTabView extends React.Component {
 
-    this.prototype.ui = {
-      commentInput: "input",
-      commentList: "#comment-list",
-    };
-
-    this.prototype.events = {
-      "click #comment-sort": "sortComments",
-      "change input": "handleInput",
-      "click #comment-list li": "setActive",
-      "click #comment-next": "nextComment",
-      "click #comment-previous": "previousComment",
-    };
+  state: CommentTabStateType = {
+    isSortedAscending: true,
   }
 
-  templateContext() {
-    return {
-      activeComment: this.activeComment,
-      isSortedAscending: this.isSortedAscending,
-    };
+  componentWillUnmount() {
+    this.keyboard.destroy();
   }
 
+  keyboard = new InputKeyboardNoLoop({
+    n: () => this.nextComment(),
+    p: () => this.previousComment(),
+  });
 
-  initialize() {
-    this.activeComment = {};
-    this.isSortedAscending = true;
+  nextComment = (forward = true) => {
+    Utils.zipMaybe(
+      getActiveTree(this.props.skeletonTracing),
+      getActiveNode(this.props.skeletonTracing),
+    ).map(([activeTree, activeNode]) => {
+      const sortAscending = forward ? this.state.isSortedAscending : !this.state.isSortedAscending;
+      const sortOrder = sortAscending ? "asc" : "desc";
+      const { trees } = this.props.skeletonTracing;
 
-    // events
-    Store.subscribe(() => {
-      this.updateInputElement();
-      this.updateState();
-    });
+      // get tree of active comment or activeTree if there is no active comment
+      let nextComment = null;
+      let nextTree = _.find(trees, tree => _.some(tree.comments, comment => comment.node === activeNode.id));
+      if (nextTree != null) {
+        const sortedComments = _.orderBy(nextTree.comments, ["node"], [sortOrder]);
 
-    // keyboard shortcuts
-    return new InputKeyboardNoLoop({
-      n: () => this.nextComment(),
-      p: () => this.previousComment(),
-    });
-  }
+        // try to find next comment for this tree
+        nextComment = _.find(sortedComments,
+          comment => this.comparator(comment.node, sortAscending) > this.comparator(activeNode.id, sortAscending));
 
-
-  render() {
-    // tabs are not destroyed and a rerender would cause the react components to lose their state
-    if (!this.commentList) {
-      super.render();
-      this.commentList = render(
-        <CommentList />,
-        this.ui.commentList[0],
-      );
-      this.updateState();
-    }
-
-    // scroll active comment into view
-    this.ensureActiveCommentVisible();
-  }
-
-
-  updateState() {
-    if (!this.commentList) { return; }
-    const { trees, activeTreeId, activeNodeId } = Store.getState().skeletonTracing;
-    this.commentList.setState({
-      activeNodeId,
-      activeTreeId,
-      data: _.sortBy(trees, "treeId"),
-      isSortedAscending: this.isSortedAscending,
-    });
-  }
-
-
-  ensureActiveCommentVisible() {
-    const activeNodeId = this.getActiveNodeId();
-    const comment = $(`#comment-tab-node-${activeNodeId}`)[0];
-    if (comment) { scrollIntoViewIfNeeded(comment); }
-  }
-
-
-  getActiveNodeId() {
-    return Store.getState().skeletonTracing.activeNodeId;
-  }
-
-
-  getActiveTreeId() {
-    return Store.getState().skeletonTracing.activeTreeId;
-  }
-
-
-  getCommentForNode(nodeId, treeId) {
-    const { activeTreeId, trees, activeNodeId } = Store.getState().skeletonTracing;
-    if (!treeId) { treeId = activeTreeId; }
-
-    const commentForActiveNode = trees[treeId].comments.filter(comment => comment.node === activeNodeId);
-    return commentForActiveNode[0];
-  }
-
-
-  updateInputElement(nodeId) {
-    // responds to activeNode:change event
-    const comment = this.getCommentForNode(nodeId);
-    let text = "";
-    if (comment) {
-      // populate the input element
-      text = comment.content;
-    }
-    this.ui.commentInput.val(text);
-  }
-
-
-  handleInput(evt) {
-    const commentText = $(evt.target).val();
-
-    if (commentText) {
-      Store.dispatch(createCommentAction(commentText));
-    } else {
-      Store.dispatch(deleteCommentAction(commentText));
-    }
-  }
-
-  nextComment(forward = true) {
-    const sortAscending = forward ? this.isSortedAscending : !this.isSortedAscending;
-    const { activeNodeId, activeTreeId, trees } = Store.getState().skeletonTracing;
-
-    // get tree of active comment or activeTree if there is no active comment
-    let nextComment = null;
-    let nextTree = _.find(trees, (tree => _.some(tree.comments, comment => comment.node === activeNodeId)));
-    if (nextTree) {
-      nextTree.comments.sort(Utils.compareBy("node", sortAscending));
-
-      // try to find next comment for this tree
-      nextComment = _.find(nextTree.comments,
-      comment => this.comparator(comment.node, sortAscending) > this.comparator(activeNodeId, sortAscending));
-
-      // try to find next tree with at least one comment
-      if (!nextComment) {
-        nextTree = _.find(trees,
-          tree => this.comparator(tree.treeId, sortAscending) > this.comparator(activeTreeId, sortAscending) && tree.comments.length);
+        // try to find next tree with at least one comment
+        if (!nextComment) {
+          nextTree = _.find(trees,
+            tree => this.comparator(tree.treeId, sortAscending) > this.comparator(activeTree.treeId, sortAscending) && tree.comments.length);
+        }
       }
-    }
 
-    // try to find any tree with at least one comment, starting from the beginning
-    if (!nextTree) {
-      nextTree = _.find(trees, tree => tree.comments.length);
-    }
+      // try to find any tree with at least one comment, starting from the beginning
+      if (nextTree == null) {
+        nextTree = _.find(trees, tree => tree.comments.length);
+      }
 
-    if (!nextComment && nextTree) {
-      nextTree.comments.sort(Utils.compareBy("node", sortAscending));
-      nextComment = nextTree.comments[0];
-    }
+      if (nextComment == null && nextTree != null) {
+        const sortedComments = _.orderBy(nextTree.comments, ["node"], [sortOrder]);
+        nextComment = sortedComments[0];
+      }
 
-    // if a comment was found set the corresponding node active, causing the list to update
-    if (nextComment) {
-      Store.dispatch(setActiveNodeAction(nextComment.node));
-    }
+      // if a comment was found set the corresponding node active, causing the list to update
+      if (nextComment) {
+        this.props.setActiveNode(nextComment.node);
+      }
+    });
   }
 
-
-  previousComment() {
+  previousComment = () => {
     this.nextComment(false);
   }
 
-
-  sortComments() {
-    this.isSortedAscending = !this.isSortedAscending;
-    this.updateState();
-  }
-
-  comparator(value, sortAscending) {
+  comparator(value: number, sortAscending:boolean) {
     const coefficient = sortAscending ? 1 : -1;
     return value * coefficient;
   }
-}
-CommentTabView.initClass();
 
-export default CommentTabView;
+  handleChangeInput = (evt) => {
+    const commentText = evt.target.value;
+
+    if (commentText) {
+      this.props.createComment(commentText);
+    } else {
+      this.props.deleteComment(commentText);
+    }
+  }
+
+  handleChangeSorting = () => {
+    this.setState({
+      isSortedAscending: !this.state.isSortedAscending,
+    });
+  }
+
+  getTreeComponents() {
+    const sortOrder = this.state.isSortedAscending ? "asc" : "desc";
+
+    return _.orderBy(this.props.skeletonTracing.trees, ["treeId"], [sortOrder]).filter(tree => tree.comments.length > 0).map(tree =>
+      // one tree and its comments
+      <TreeCommentList
+        key={tree.treeId}
+        tree={tree}
+        sortOrder={sortOrder}
+      />,
+    );
+  }
+
+  render() {
+    const activeComment = Utils.zipMaybe(
+      getActiveTree(this.props.skeletonTracing),
+      getActiveNode(this.props.skeletonTracing),
+    ).chain(([tree, activeNode]) => Maybe.fromNullable(tree.comments.find(comment => comment.node === activeNode.id)))
+      .map(comment => comment.content)
+      .getOrElse("");
+
+    const sortingIconClass = this.state.isSortedAscending ? "fa fa-sort-alpha-asc" : "fa fa-sort-alpha-desc";
+    const treesAndComments = this.getTreeComponents();
+
+    return (
+      <div>
+        <InputGroup compact>
+          <Button onClick={this.previousComment}><i className="fa fa-arrow-left" /></Button>
+          <Input
+            value={activeComment}
+            onChange={this.handleChangeInput}
+            placeholder="Add comment"
+            style={{ width: "70%" }}
+          />
+          <Button onClick={this.nextComment}><i className="fa fa-arrow-right" /></Button>
+          <Button onClick={this.handleChangeSorting} title="sort">
+            <i className={sortingIconClass} />
+          </Button>
+        </InputGroup>
+        <ul id="comment-list">
+          {treesAndComments}
+        </ul>
+      </div>
+    );
+  }
+}
+
+const mapStateToProps = (state: OxalisState) => ({
+  skeletonTracing: state.skeletonTracing,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  setActiveNode(nodeId) { dispatch(setActiveNodeAction(nodeId)); },
+  deleteComment() { dispatch(deleteCommentAction()); },
+  createComment(text) { dispatch(createCommentAction(text)); },
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(CommentTabView);

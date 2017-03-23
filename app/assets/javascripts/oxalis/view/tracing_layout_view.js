@@ -19,9 +19,7 @@ import Modal from "oxalis/view/modal";
 import Utils from "libs/utils";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
-import SkeletonTracingRightMenuView from "oxalis/view/skeletontracing/skeletontracing_right_menu_view";
-import VolumeTracingRightMenuView from "oxalis/view/volumetracing/volumetracing_right_menu_view";
-import ViewmodeRightMenuView from "oxalis/view/viewmode/viewmode_right_menu_view";
+import RightMenuView from "oxalis/view/right_menu_view";
 import UserScriptsModalView from "oxalis/view/user_scripts_modal";
 import TracingView from "oxalis/view/tracing_view";
 
@@ -94,7 +92,7 @@ class TracingLayoutView extends Marionette.View {
     this.model = this.options.model;
 
     this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
-    this.listenTo(this.model, "change:mode", this.renderSettings);
+    // this.listenTo(this.model, "change:mode", this.renderRegions);
     this.listenTo(this.model, "sync", this.renderRegions);
     $(window).on("resize", this.resizeRightMenu.bind(this));
 
@@ -140,16 +138,20 @@ class TracingLayoutView extends Marionette.View {
       return;
     }
 
-    if (this.isSkeletonMode()) {
-      this.rightMenuView = new SkeletonTracingRightMenuView(this.options);
-    } else if (this.isVolumeMode()) {
-      this.rightMenuView = new VolumeTracingRightMenuView(this.options);
-    } else {
-      this.rightMenuView = new ViewmodeRightMenuView(this.options);
-    }
+    render(
+      <Provider store={store}>
+        <SettingsView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
+      </Provider>,
+      this.ui.settings[0],
+    );
 
-    this.showChildView("rightMenu", this.rightMenuView);
-    this.renderSettings();
+    render(
+      <Provider store={store}>
+        <RightMenuView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
+      </Provider>,
+      this.ui.rightMenu[0],
+    );
+
     this.maybeShowNewTaskTypeModal();
   }
 
@@ -176,16 +178,6 @@ class TracingLayoutView extends Marionette.View {
       text = "You are now tracing a new task with no description.";
     }
     Modal.show(text, title);
-  }
-
-
-  renderSettings() {
-    render(
-      <Provider store={store}>
-        <SettingsView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
-      </Provider>,
-      this.ui.settings[0],
-    );
   }
 
 

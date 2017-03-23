@@ -1,64 +1,50 @@
-import _ from "lodash";
-import Marionette from "backbone.marionette";
+// @flow
+import React, { Component } from "react";
+import type Model from "oxalis/model";
 import Constants from "oxalis/constants";
+import classnames from "classnames";
 
-class VolumeActionsView extends Marionette.View {
-  static initClass() {
-    this.prototype.template = _.template(`\
-<div class="btn-group">
-  <button
-    type="button"
-    class="btn btn-default <% if (isMoveMode) { %> btn-primary <% } %>"
-    id="mode-move">
-      Move
-  </button>
-  <button
-    type="button"
-    class="btn btn-default <% if (!isMoveMode) { %> btn-primary <% } %>"
-    id="mode-trace">
-      Trace
-  </button>
-</div>
-<div class="btn-group">
-  <button type="button" class="btn btn-default" id="create-cell">Create new cell (C)</button>
-</div>\
-`);
+class VolumeActionsView extends Component {
+  props: {
+    oldModel: Model,
+  };
 
-    this.prototype.modeMapping = {
-      "mode-trace": Constants.VOLUME_MODE_TRACE,
-      "mode-move": Constants.VOLUME_MODE_MOVE,
-    };
-
-    this.prototype.events = {
-      "click [id^=mode]": "changeMode",
-      "click #create-cell": "createCell",
-    };
+  componentDidMount() {
+    this.props.oldModel.on("change:mode", this._forceUpdate);
   }
 
-
-  initialize() {
-    this.listenTo(this.model.volumeTracing, "change:mode", this.render);
+  componentWillUnmount() {
+    this.props.oldModel.off("change:mode", this._forceUpdate);
   }
 
+  _forceUpdate = () => { this.forceUpdate(); };
 
-  createCell() {
-    return this.model.volumeTracing.createCell();
-  }
-
-
-  changeMode(evt) {
-    const mode = this.modeMapping[evt.target.id];
-    return this.model.volumeTracing.setMode(mode);
-  }
-
-
-  serializeData() {
-    return {
-      isMoveMode: this.model.volumeTracing.mode === Constants.VOLUME_MODE_MOVE,
-    };
+  render() {
+    const isMoveMode = this.props.oldModel.volumeTracing.mode === Constants.VOLUME_MODE_MOVE;
+    return (
+      <div>
+        <div className="btn-group">
+          <button
+            type="button"
+            className={classnames("btn btn-default", { "btn-primary": isMoveMode })}
+            onClick={() => { this.props.oldModel.volumeTracing.setMode(Constants.VOLUME_MODE_TRACE); }}
+          >Move</button>
+          <button
+            type="button"
+            className={classnames("btn btn-default", { "btn-primary": !isMoveMode })}
+            onClick={() => { this.props.oldModel.volumeTracing.setMode(Constants.VOLUME_MODE_MOVE); }}
+          >Trace</button>
+        </div>
+        <div className="btn-group">
+          <button
+            type="button"
+            className="btn btn-default"
+            onClick={() => { this.props.oldModel.volumeTracing.createCell(); }}
+          >Create new cell (C)</button>
+        </div>
+      </div>
+    );
   }
 }
-VolumeActionsView.initClass();
-
 
 export default VolumeActionsView;

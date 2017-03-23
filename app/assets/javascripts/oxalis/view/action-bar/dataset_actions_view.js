@@ -1,92 +1,41 @@
+// @flow
+import React, { Component } from "react";
 import _ from "lodash";
+import type Model from "oxalis/model";
+import type { OxalisState } from "oxalis/store";
+import { connect } from "react-redux";
 import app from "app";
 import Utils from "libs/utils";
-import Marionette from "backbone.marionette";
 import Request from "libs/request";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import store from "oxalis/store";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
+import { Button } from "antd";
 
-class DatasetActionsView extends Marionette.View {
-  static initClass() {
-    this.prototype.SAVED_POLLING_INTERVAL = 1000;
+const SAVED_POLLING_INTERVAL = 100;
 
-    this.prototype.template = _.template(`\
-<% if(tracing.restrictions.allowUpdate){ %>
-  <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
-<% } else { %>
-  <button class="btn btn-primary disabled">Read only</button>
-<% } %>
-<% if (hasAdvancedOptions) { %>
-  <div class="btn-group btn-group">
-    <% if(tracing.restrictions.allowFinish) { %>
-      <a href="/annotations/<%- tracingType %>/<%- tracingId %>/finishAndRedirect" class="btn btn-default" id="trace-finish-button"><i class="fa fa-check-circle-o"></i><%- getArchiveBtnText() %></a>
-    <% } %>
-    <% if(tracing.restrictions.allowDownload || ! tracing.downloadUrl) { %>
-      <a class="btn btn-default" id="trace-download-button"><i class="fa fa-download"></i>Download</a>
-    <% } %>
-    <button class="btn btn-default" id="trace-share-button"><i class="fa fa-share-alt"></i>Share</button>
-  </div>
+class DatasetActionsView extends Component {
+  props: {
+    oldModel: Model,
+  };
 
-  <% if(tracing.restrictions.allowFinish && tracing.task) { %>
-      <button class="btn btn-default" id="trace-next-task-button"><i class="fa fa-step-forward"></i>Finish and Get Next Task</button>
-  <% } %>
-
-  <% if (isSkeletonMode) { %>
-    <div class="btn btn-default" id="trace-merge-button"><i class="fa fa-folder-open"></i>Merge Tracing</div>
-    <div class="merge-modal-wrapper"></div>
-  <% } %>
-<% } %>\
-`);
-
-
-    this.prototype.events = {
-      "click #trace-finish-button": "finishTracing",
-      "click #trace-download-button": "downloadTracing",
-      "click #trace-save-button": "saveTracing",
-      "click #trace-merge-button": "mergeTracing",
-      "click #trace-share-button": "shareTracing",
-      "click #trace-next-task-button": "getNextTask",
-    };
-
-    this.prototype.ui = {
-      modalWrapper: ".merge-modal-wrapper",
-      saveButton: "#trace-save-button",
-    };
+  componentDidMount() {
+    this.savedPollingInterval = window.setInterval(this._forceUpdate, SAVED_POLLING_INTERVAL);
   }
 
-  templateContext() {
-    return {
-      isSkeletonMode: this.isSkeletonMode(),
-      getArchiveBtnText() { return this.isTask ? "Finish" : "Archive"; },
-      hasAdvancedOptions: this.hasAdvancedOptions(),
-    };
+  componentWillUnmount() {
+    window.clearInterval(this.savedPollingInterval);
   }
 
+  modalWrapper: ?HTMLDivElement = null;
+  savedPollingInterval: number = 0;
+  _forceUpdate = () => { this.forceUpdate(); };
 
-  initialize() {
-    this.savedPollingInterval = window.setInterval((() => this.updateSavedState()), this.SAVED_POLLING_INTERVAL);
-  }
-
-
-  updateSavedState() {
-    const { save: saveState } = store.getState();
-    const stateSaved =
-      this.model.volumeTracing != null ?
-      this.model.annotationModel.stateLogger.stateSaved() :
-      !saveState.isBusy && !saveState.queue.length > 0;
-    if (!stateSaved) {
-      this.ui.saveButton.text("Save");
-    } else {
-      this.ui.saveButton.text("Saved   ✓");
-    }
-  }
-
-  async saveAndWait() {
-    if (this.model.volumeTracing != null) {
-      this.saveTracing();
+  handleSave = async () => {
+    if (this.props.oldModel.volumeTracing != null) {
+      store.dispatch(saveNowAction());
       return;
     }
     store.dispatch(saveNowAction());
@@ -95,70 +44,45 @@ class DatasetActionsView extends Marionette.View {
       await Utils.sleep(2000);
       saveState = store.getState().save;
     }
-  }
+  };
 
-  finishTracing(evt) {
-    evt.preventDefault();
-    this.saveAndWait().then(() => {
-      if (confirm("Are you sure you want to permanently finish this tracing?")) {
-        app.router.loadURL(evt.currentTarget.href);
-      }
-    });
-  }
+  handleFinish = async () => {
+    const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/finishAndRedirect`;
+    await this.handleSave();
+    if (confirm("Are you sure you want to permanently finish this tracing?")) {
+      app.router.loadURL(url);
+    }
+  };
 
-  downloadTracing(evt) {
-    evt.preventDefault();
+  handleShare = () => {
+    const modalView = new ShareModalView({ model: this.props.oldModel });
+    if (this.modalWrapper) {
+      this.modalWrapper.appendChild(modalView.render().el);
+      modalView.show();
+    }
+  };
+
+  handleDownload = async () => {
     const win = window.open("about:blank", "_blank");
     win.document.body.innerHTML = "Please wait...";
-    this.saveAndWait().then(() => {
-      win.location.href = this.model.tracing.downloadUrl;
-      win.document.body.innerHTML = "You may close this window after the download has started.";
-    });
-  }
+    await this.handleSave();
 
-  saveTracing(evt) {
-    if (evt) {
-      evt.preventDefault();
-    }
-    store.dispatch(saveNowAction());
-  }
+    win.location.href = this.props.oldModel.tracing.downloadUrl;
+    win.document.body.innerHTML = "You may close this window after the download has started.";
+  };
 
-  mergeTracing() {
-    const modalView = new MergeModalView({ model: this.model });
-    this.ui.modalWrapper.html(modalView.render().el);
-    modalView.show();
-  }
-
-
-  shareTracing() {
-    const modalView = new ShareModalView({ model: this.model });
-    this.ui.modalWrapper.html(modalView.render().el);
-    modalView.show();
-  }
-
-
-  isSkeletonMode() {
-    return _.includes(Constants.MODES_SKELETON, this.model.get("mode"));
-  }
-
-
-  hasAdvancedOptions() {
-    return this.model.settings.advancedOptionsAllowed;
-  }
-
-
-  async getNextTask() {
-    if (this.model.volumeTracing) {
-      const model = this.model.volumeTracing;
-      const finishUrl = `/annotations/${this.model.tracingType}/${this.model.tracingId}/finish`;
+  handleNextTask = async () => {
+    if (this.props.oldModel.volumeTracing) {
+      const model = this.props.oldModel.volumeTracing;
+      const finishUrl = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/finish`;
       const requestTaskUrl = "/user/tasks/request";
 
       await model.statelogger.save();
-      await this.saveAndWait();
+      await this.handleSave();
       await Request.triggerRequest(finishUrl);
       try {
         const annotation = await Request.receiveJSON(requestTaskUrl);
-        const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.model.tracing.task, x => x.type.id);
+        const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.oldModel.tracing.task, x => x.type.id);
         const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
         const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
         app.router.loadURL(newTaskUrl);
@@ -169,13 +93,94 @@ class DatasetActionsView extends Marionette.View {
     } else {
       throw Error("todo");
     }
+  };
+
+  handleMerge = () => {
+    const modalView = new MergeModalView({ model: this.props.oldModel });
+    if (this.modalWrapper) {
+      this.modalWrapper.appendChild(modalView.render().el);
+      modalView.show();
+    }
+  };
+
+  getSaveButtonIcon() {
+    const { save: saveState } = store.getState();
+    const stateSaved =
+      this.props.oldModel.volumeTracing != null ?
+      this.props.oldModel.annotationModel.stateLogger.stateSaved() :
+      !saveState.isBusy && !(saveState.queue.length > 0);
+    if (!stateSaved) {
+      return "sync";
+    } else {
+      return "check";
+    }
   }
 
+  render() {
+    const isSkeletonMode = _.includes(Constants.MODES_SKELETON, this.props.oldModel.get("mode"));
+    const hasAdvancedOptions = this.props.oldModel.settings.advancedOptionsAllowed;
+    const archiveButtonText = this.isTask ? "Finish" : "Archive";
+    const { tracing } = this.props.oldModel;
 
-  onDestroy() {
-    window.clearInterval(this.savedPollingInterval);
+    const elements = [];
+    if (tracing.restrictions.allowUpdate) {
+      elements.push(<Button
+        type="primary"
+        onClick={this.handleSave}
+        icon={this.getSaveButtonIcon()}
+      >Save</Button>);
+    } else {
+      elements.push(<Button type="primary" disabled>Read only</Button>);
+    }
+
+    if (hasAdvancedOptions) {
+      const groupElements = [];
+      if (tracing.restrictions.allowFinish) {
+        groupElements.push(<Button
+          icon="check-circle-o"
+          onClick={this.handleFinish}
+        >{archiveButtonText}</Button>);
+      }
+      if (tracing.restrictions.allowDownload || !tracing.downloadUrl) {
+        groupElements.push(<Button
+          icon="download"
+          onClick={this.handleDownload}
+        >Download</Button>);
+      }
+      groupElements.push(<Button
+        icon="share-alt"
+        onClick={this.handleShare}
+      >Share</Button>);
+      elements.push(<Button.Group>{groupElements}</Button.Group>);
+    }
+    if (tracing.restrictions.allowFinish && tracing.task) {
+      elements.push(<Button
+        icon="verticle-left"
+        onClick={this.handleNextTask}
+      >
+        Finish and Get Next Task
+      </Button>);
+    }
+    if (isSkeletonMode) {
+      elements.push(<Button
+        icon="folder-open"
+        onClick={this.handleMerge}
+      >Merge Tracing</Button>);
+      elements.push(<div
+        className="merge-modal-wrapper"
+        ref={(modalWrapper) => { this.modalWrapper = modalWrapper; }}
+      />);
+    }
+
+    return (
+      <div>{elements}</div>
+    );
   }
 }
-DatasetActionsView.initClass();
+function mapStateToProps(state: OxalisState) {
+  return {
+    skeletonTracing: state.skeletonTracing,
+  };
+}
 
-export default DatasetActionsView;
+export default connect(mapStateToProps)(DatasetActionsView);

@@ -235,7 +235,6 @@ class UserApi {
     - overrideNodeRadius
     - sortTreesByName
     - sortCommentsAsc
-    - segmentationOpacity
     - sphericalCapRadius
   *
   * @example

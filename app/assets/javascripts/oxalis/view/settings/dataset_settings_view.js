@@ -46,7 +46,7 @@ class DatasetSettings extends Component {
           {colorSettings}
         </Panel>
         <Panel header="Segmentation" key="2">
-          <NumberSliderSetting label="Segmentation Opacity" max={100} value={this.props.segmentationOpacity} onChange={_.partial(this.props.onChange, "segmentationOpacity")} />
+          <NumberSliderSetting label="Segmentation Opacity" min={0} max={100} value={this.props.segmentationOpacity} onChange={_.partial(this.props.onChange, "segmentationOpacity")} />
         </Panel>
         <Panel header="Quality" key="3">
           <SwitchSetting label="4 Bit" value={this.props.fourBit} onChange={_.partial(this.props.onChange, "fourBit")} />

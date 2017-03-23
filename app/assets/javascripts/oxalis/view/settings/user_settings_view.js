@@ -105,7 +105,7 @@ class UserSettingsView extends Component {
       case Constants.MODE_PLANE_TRACING:
         return (
           <Panel header="Viewport Options" key="2">
-            <LogSliderSetting label="Zoom" min={0.1} max={getMaxZoomStep(this.props.state)} value={this.props.zoomStep} onChange={this.props.onChangeZoomStep} />
+            <LogSliderSetting label="Zoom" min={0.05} max={getMaxZoomStep(this.props.state)} value={this.props.zoomStep} onChange={this.props.onChangeZoomStep} />
             <LogSliderSetting label="Viewport Scale" min={0.05} max={20} step={0.1} value={this.props.userConfiguration.scale} onChange={this.onChangeUser.scale} />
             <LogSliderSetting label="Clipping Distance" min={1} max={12000} value={this.props.userConfiguration.clippingDistance} onChange={this.onChangeUser.clippingDistance} />
             <SwitchSetting label="Show Crosshairs" value={this.props.userConfiguration.displayCrosshair} onChange={this.onChangeUser.displayCrosshair} />

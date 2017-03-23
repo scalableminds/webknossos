@@ -14,7 +14,7 @@ import Dimensions from "oxalis/model/dimensions";
 import _ from "lodash";
 
 const ZOOM_STEP_INTERVAL = 1.1;
-const ZOOM_STEP_MIN = 0.1;
+const ZOOM_STEP_MIN = 0.05;
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [

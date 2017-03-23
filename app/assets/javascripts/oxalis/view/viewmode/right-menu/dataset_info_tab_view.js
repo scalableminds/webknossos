@@ -52,8 +52,7 @@ class DatasetInfoTabView extends Component {
   render() {
     let annotationType = this.props.oldModel.get("tracingType");
     const tracing = this.props.oldModel.get("tracing");
-    const { task } = tracing;
-    const { name } = tracing;
+    const { task, name } = tracing;
 
     // In case we have a task display its id as well
     if (task) { annotationType += `: ${task.id}`; }

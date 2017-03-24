@@ -33,6 +33,7 @@ case class Task(
   @info("Date of creation") created: DateTime = DateTime.now(),
   @info("Flag indicating deletion") isActive: Boolean = true,
   @info("Reference to project") _project: String,
+  @info("Optional information on the tasks creation") creationInfo: Option[String] = None,
   @info("Unique ID") _id: BSONObjectID = BSONObjectID.generate
 ) extends FoxImplicits {
 
@@ -125,7 +126,8 @@ object Task extends FoxImplicits {
         "neededExperience" -> task.neededExperience,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
-        "tracingTime" -> task.tracingTime
+        "tracingTime" -> task.tracingTime,
+        "creationInfo" -> task.creationInfo
       )
     }
   }

@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import Marionette from "backbone.marionette";
 import FormSyphon from "form-syphon";
 import TaskTypeCollection from "admin/models/tasktype/task_type_collection";
@@ -10,6 +9,7 @@ import Toast from "libs/toast";
 import Utils from "libs/utils";
 import TaskCreateFromFormView from "admin/views/task/task_create_subviews/task_create_from_form_view";
 import TaskCreateFromNMLView from "admin/views/task/task_create_subviews/task_create_from_nml_view";
+import Modal from "oxalis/view/modal";
 
 class TaskCreateFromView extends Marionette.View {
   static initClass() {
@@ -165,17 +165,19 @@ class TaskCreateFromView extends Marionette.View {
 
 
   // Submit form data as json
-  submit() {
+  submit(event) {
     this.toggleSubmitButton(true);
 
     // send form data to server
-    this.createSubview.submit();
+    this.createSubview.submit(event);
   }
 
 
   toggleSubmitButton(state) {
-    this.ui.submitButton.prop("disabled", state);
-    this.ui.submitButton.toggleClass("disabled", state);
+    if (this.ui.submitButton.prop != null) {
+      this.ui.submitButton.prop("disabled", state);
+      this.ui.submitButton.toggleClass("disabled", state);
+    }
   }
 
 
@@ -210,12 +212,17 @@ class TaskCreateFromView extends Marionette.View {
   }
 
 
-  showSaveSuccess(task) {
-    Toast.success(`The task was successfully ${this.getActionName().toLowerCase()}d`);
-
-    const url = `/projects/${task.get("projectName")}/tasks`;
-
-    app.router.navigate(`${url}#${task.id}`, { trigger: true });
+  showSaveSuccess(response) {
+    const successCount = response.items.filter(item => item.status === 200).length;
+    if (successCount === response.items.length) {
+      Toast.success(`${successCount} tasks were successfully ${this.getActionName().toLowerCase()}d.`);
+      const csvContent = response.items.map(({ success: task }) =>
+        `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`).join("\n");
+      Modal.show(`<pre>taskId,filename,position\n${csvContent}</pre>`, "Task IDs");
+    } else {
+      Toast.error(`${response.items.length - successCount}/${response.items.length} tasks weren't ${this.getActionName().toLowerCase()}d.`);
+    }
+    this.toggleSubmitButton(false);
   }
 
 

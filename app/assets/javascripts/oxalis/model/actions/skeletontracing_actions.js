@@ -112,7 +112,6 @@ export const setTreeNameAction = (name: ?string = null, treeId?: number): SetTre
   treeId,
 });
 
-// TODO consider a better name + better param name
 export const selectNextTreeAction = (forward: ?boolean = true): SelectNextTreeActionType => ({
   type: "SELECT_NEXT_TREE",
   forward,

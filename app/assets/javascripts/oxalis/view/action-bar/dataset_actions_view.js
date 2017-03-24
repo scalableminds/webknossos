@@ -2,15 +2,15 @@
 import React, { Component } from "react";
 import _ from "lodash";
 import type Model from "oxalis/model";
-import type { OxalisState, SkeletonTracingType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType, SaveStateType } from "oxalis/store";
 import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 import app from "app";
 import Utils from "libs/utils";
 import Request from "libs/request";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
-import store from "oxalis/store";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { Button } from "antd";
 
@@ -19,7 +19,9 @@ const SAVED_POLLING_INTERVAL = 100;
 class DatasetActionsView extends Component {
   props: {
     skeletonTracing: SkeletonTracingType,
+    save: SaveStateType,
     oldModel: Model,
+    dispatch: Dispatch<*>,
   };
 
   state: {
@@ -44,14 +46,14 @@ class DatasetActionsView extends Component {
 
   handleSave = async () => {
     if (this.props.oldModel.volumeTracing != null) {
-      store.dispatch(saveNowAction());
+      this.props.dispatch(saveNowAction());
       return;
     }
-    store.dispatch(saveNowAction());
-    let saveState = store.getState().save;
+    this.props.dispatch(saveNowAction());
+    let saveState = this.props.save;
     while (saveState.isBusy || saveState.queue.length > 0) {
-      await Utils.sleep(2000);
-      saveState = store.getState().save;
+      await Utils.sleep(500);
+      saveState = this.props.save;
     }
   };
 
@@ -108,7 +110,7 @@ class DatasetActionsView extends Component {
   };
 
   getSaveButtonIcon() {
-    const { save: saveState } = store.getState();
+    const { save: saveState } = this.props;
     const stateSaved =
       this.props.oldModel.volumeTracing != null ?
       this.props.oldModel.annotationModel.stateLogger.stateSaved() :
@@ -185,9 +187,11 @@ class DatasetActionsView extends Component {
     );
   }
 }
+
 function mapStateToProps(state: OxalisState) {
   return {
     skeletonTracing: state.skeletonTracing,
+    save: state.save,
   };
 }
 

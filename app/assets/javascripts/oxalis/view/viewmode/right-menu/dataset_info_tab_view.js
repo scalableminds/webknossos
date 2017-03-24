@@ -12,13 +12,15 @@ import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType } from "oxalis/store";
 import type Model from "oxalis/model";
 
+type DatasetInfoTabProps = {
+  oldModel: Model,
+  skeletonTracing: SkeletonTracingType,
+  dataset: DatasetType,
+  flycam: FlycamType,
+};
+
 class DatasetInfoTabView extends Component {
-  props: {
-    oldModel: Model,
-    skeletonTracing: SkeletonTracingType,
-    dataset: DatasetType,
-    flycam: FlycamType,
-  };
+  props: DatasetInfoTabProps;
 
   calculateZoomLevel(): number {
     let width;
@@ -37,7 +39,7 @@ class DatasetInfoTabView extends Component {
     return zoom * width * baseVoxel;
   }
 
-  chooseUnit(zoomLevel: number) {
+  chooseUnit(zoomLevel: number): string {
     if (zoomLevel < 1000) {
       return `${zoomLevel.toFixed(0)} nm`;
     } else if (zoomLevel < 1000000) {
@@ -50,8 +52,7 @@ class DatasetInfoTabView extends Component {
   render() {
     let annotationType = this.props.oldModel.get("tracingType");
     const tracing = this.props.oldModel.get("tracing");
-    const { task } = tracing;
-    const { name } = tracing;
+    const { task, name } = tracing;
 
     // In case we have a task display its id as well
     if (task) { annotationType += `: ${task.id}`; }

@@ -135,6 +135,7 @@ class MergeModalView extends Component {
         visible={this.props.isVisible}
         onOk={this.props.onOk}
         onCancel={this.props.onOk}
+        className="merge-modal"
       >
         <Form layout="inline" onSubmit={this.handleMergeTaskType}>
           <Form.Item label="Task Type">

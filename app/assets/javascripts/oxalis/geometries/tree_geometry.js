@@ -4,7 +4,6 @@
  */
 
 import _ from "lodash";
-import app from "app";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import Store from "oxalis/store";
@@ -29,13 +28,19 @@ class TreeGeometry {
   constructor(treeId: number, treeColor, model: Model) {
     // create skeletonTracing to show in TDView
     const edgeGeometry = new THREE.BufferGeometry();
+    edgeGeometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(3), 3));
+
     const nodeGeometry = new THREE.BufferGeometry();
+    nodeGeometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(3), 3));
+    nodeGeometry.addAttribute("sizeNm", new THREE.BufferAttribute(new Float32Array(1), 1));
+    nodeGeometry.addAttribute("nodeScaleFactor", new THREE.BufferAttribute(new Float32Array(1), 1));
+    nodeGeometry.addAttribute("color", new THREE.BufferAttribute(new Float32Array(3), 3));
     nodeGeometry.nodeIDs = [];
 
     this.edges = new THREE.LineSegments(
       edgeGeometry,
       new THREE.LineBasicMaterial({
-        color: this.darkenColor(treeColor),
+        color: new THREE.Color().fromArray(this.darkenColor(treeColor)),
         linewidth: this.getLineWidth(),
       }),
     );
@@ -62,30 +67,31 @@ class TreeGeometry {
     });
   }
 
-  makeDynamicFloatAttribute(itemSize, resizableBuffer) {
-    const attr = new THREE.BufferAttribute(resizableBuffer, itemSize);
-    attr.setDynamic(true);
-    return attr;
-  }
-
   reset(nodes, edges) {
     this.resetNodes(nodes);
     this.resetEdges(nodes, edges);
   }
 
   resetEdges(nodes, edges) {
-    const edgesBuffer = [];
+    const edgesBuffer = new Array(_.size(edges) * 6);
 
+    let i = 0;
     for (const edge of edges) {
       const sourceNodePosition = nodes[edge.source].position;
       const targetNodePosition = nodes[edge.target].position;
-      edgesBuffer.push(sourceNodePosition[0], sourceNodePosition[1], sourceNodePosition[2], targetNodePosition[0], targetNodePosition[1], targetNodePosition[2]);
+      edgesBuffer[i] = sourceNodePosition[0];
+      edgesBuffer[i + 1] = sourceNodePosition[1];
+      edgesBuffer[i + 2] = sourceNodePosition[2];
+      edgesBuffer[i + 3] = targetNodePosition[0];
+      edgesBuffer[i + 4] = targetNodePosition[1];
+      edgesBuffer[i + 5] = targetNodePosition[2];
+
+      i += 6;
     }
 
     const edgesMesh = this.edges;
-    edgesMesh.geometry.dispose(); // Free any memory allocated on the GPU
-
-    edgesMesh.geometry.addAttribute("position", this.makeDynamicFloatAttribute(3, new Float32Array(edgesBuffer)));
+    edgesMesh.geometry.attributes.position.setArray(new Float32Array(edgesBuffer));
+    edgesMesh.geometry.attributes.position.needsUpdate = true;
     edgesMesh.geometry.computeBoundingSphere();
   }
 
@@ -93,40 +99,50 @@ class TreeGeometry {
     const nodeCount = _.size(nodes);
 
     if (nodeCount) {
-      const sizesBuffer = [];
-      const scalesBuffer = [];
-      const positionBuffer = [];
-      const colorBuffer = [];
-      const nodeIDs = [];
+      const sizesBuffer = new Array(nodeCount);
+      const scalesBuffer = new Array(nodeCount);
+      const positionBuffer = new Array(nodeCount * 3);
+      const colorBuffer = new Array(nodeCount * 3);
+      const nodeIDs = new Array(nodeCount);
 
       // explicitly use loop here for performance reasons #perfmatters
+      let i = 0;
       for (const node of _.values(nodes)) {
         const nodeColor = this.getColor(node.id);
+        const indexTimesThree = i * 3;
 
-        sizesBuffer.push(node.radius * 2);
-        scalesBuffer.push(1.0);
-        positionBuffer.push(node.position[0], node.position[1], node.position[2]);
-        colorBuffer.push(nodeColor[0], nodeColor[1], nodeColor[2]);
-        nodeIDs.push(node.id);
+        sizesBuffer[i] = node.radius * 2;
+        scalesBuffer[i] = 1.0;
+        positionBuffer[indexTimesThree] = node.position[0];
+        positionBuffer[indexTimesThree + 1] = node.position[1];
+        positionBuffer[indexTimesThree + 2] = node.position[2];
+        colorBuffer[indexTimesThree] = nodeColor[0];
+        colorBuffer[indexTimesThree + 1] = nodeColor[1];
+        colorBuffer[indexTimesThree + 2] = nodeColor[2];
+        nodeIDs[i] = node.id;
+
+        i++;
       }
 
       const nodesMesh = this.nodes;
-      nodesMesh.geometry.dispose(); // Free any memory allocated on the GPU
-
-      nodesMesh.geometry.addAttribute("position", this.makeDynamicFloatAttribute(3, new Float32Array(positionBuffer)));
-      nodesMesh.geometry.addAttribute("sizeNm", this.makeDynamicFloatAttribute(1, new Float32Array(sizesBuffer)));
-      nodesMesh.geometry.addAttribute("nodeScaleFactor", this.makeDynamicFloatAttribute(1, new Float32Array(scalesBuffer)));
-      nodesMesh.geometry.addAttribute("color", this.makeDynamicFloatAttribute(3, new Float32Array(colorBuffer)));
+      nodesMesh.geometry.attributes.position.setArray(new Float32Array(positionBuffer));
+      nodesMesh.geometry.attributes.sizeNm.setArray(new Float32Array(sizesBuffer));
+      nodesMesh.geometry.attributes.nodeScaleFactor.setArray(new Float32Array(scalesBuffer));
+      nodesMesh.geometry.attributes.color.setArray(new Float32Array(colorBuffer));
       nodesMesh.geometry.nodeIDs = nodeIDs;
 
+      nodesMesh.geometry.attributes.position.needsUpdate = true;
+      nodesMesh.geometry.attributes.sizeNm.needsUpdate = true;
+      nodesMesh.geometry.attributes.nodeScaleFactor.needsUpdate = true;
+      nodesMesh.geometry.attributes.color.needsUpdate = true;
+
       nodesMesh.geometry.computeBoundingSphere();
-      // nodesMesh.geometry.setDrawRange(0, nodeCount);
     }
   }
 
   setSizeAttenuation(sizeAttenuation) {
     this.nodes.material.sizeAttenuation = sizeAttenuation;
-    // this.updateGeometries();
+    this.nodes.material.needsUpdate = true;
   }
 
   getMeshes() {
@@ -145,20 +161,19 @@ class TreeGeometry {
     const highlighted = 2.0;
 
     const nodeIndex = _.findIndex(this.nodes.geometry.nodeIDs, id => id === nodeId);
-    if (nodeIndex) {
+    if (nodeIndex >= 0) {
       this.animateNodeScale(normal, highlighted, nodeIndex, () => this.animateNodeScale(highlighted, normal, nodeIndex));
     }
   }
 
   animateNodeScale(from, to, index, onComplete = _.noop) {
-    // const setScaleFactor = factor => this.scalesBuffer.set([factor], index);
-    const redraw = () => {
-      // this.updateGeometries();
-      app.vent.trigger("rerender");
+    const setScaleFactor = (factor) => {
+      this.nodes.geometry.attributes.nodeScaleFactor.set([factor], index);
+      this.nodes.geometry.attributes.nodeScaleFactor.needsUpdate = true;
     };
+
     const onUpdate = function () {
-      // setScaleFactor(this.scaleFactor);
-      redraw();
+      setScaleFactor(this.scaleFactor);
     };
 
     const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });

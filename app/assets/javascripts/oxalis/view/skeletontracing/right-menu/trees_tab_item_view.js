@@ -23,7 +23,7 @@ class ListTreeItemView extends React.PureComponent {
     Store.dispatch(setActiveTreeAction(this.props.tree.treeId));
   }
 
-  scrollIntoView = (domElement: HTMLElement) => {
+  scrollIntoView = (domElement: ?HTMLElement) => {
     // scroll to active tree
     if (domElement && this.props.tree.treeId === this.props.activeTreeId) {
       scrollIntoViewIfNeeded(domElement);

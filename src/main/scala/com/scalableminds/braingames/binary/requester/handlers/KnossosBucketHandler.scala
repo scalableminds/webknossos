@@ -149,25 +149,40 @@ class KnossosBucketHandler(val cache: DataCubeCache)
     }
   }
 
+  private def selectOriginalFile(dataSource: DataSource, fallbackLayer: DataLayer, section: DataLayerSection, cubePosition: CubePosition): Option[Path] = {
+    val readInstruction = CubeReadInstruction(dataSource,
+                                            fallbackLayer,
+                                            section,
+                                            cubePosition,
+                                            DataRequestSettings.default)
+    val baseDir = DataStore.knossosBaseDir(readInstruction)
+    val knossosFile = DataStore.knossosFilePath(baseDir,
+                                                readInstruction.dataSource.id,
+                                                cubePosition,
+                                                DataLayer.fileExt(readInstruction.dataLayer.isCompressed))
+    val fallbackFile = DataStore.fuzzyKnossosFile(baseDir,
+                                                  readInstruction.dataSource.id,
+                                                  cubePosition,
+                                                  List(DataLayer.fileExt(readInstruction.dataLayer.isCompressed)))
+
+    val files = fallbackFile match {
+      case Some(fb) =>
+        List(knossosFile, fb.toPath)
+      case _ =>
+        List(knossosFile)
+    }
+    files.filter(Files.exists(_)).headOption
+  }
+
   private def getOriginalFile(saveBucket: BucketWriteInstruction): Option[Path] = {
     for {
       fallback <- saveBucket.dataLayer.fallback
       fallbackLayer <- saveBucket.dataSource.getDataLayer(fallback.layerName)
       cubePosition = saveBucket.position.toCube(saveBucket.dataSource.cubeLength)
       section <- fallbackLayer.sections.find(_.doesContainBucket(saveBucket.position))
-      readInstruction = CubeReadInstruction(saveBucket.dataSource,
-                                            fallbackLayer,
-                                            section,
-                                            cubePosition,
-                                            DataRequestSettings.default)
-      baseDir = DataStore.knossosBaseDir(readInstruction)
-      originalFile = DataStore.knossosFilePath(baseDir,
-                                               readInstruction.dataSource.id,
-                                               cubePosition,
-                                               DataLayer.fileExt(readInstruction.dataLayer.isCompressed))
-      if (Files.exists(originalFile))
+      result <- selectOriginalFile(saveBucket.dataSource, fallbackLayer, section, cubePosition)
     } yield {
-      originalFile
+      result
     }
   }
 

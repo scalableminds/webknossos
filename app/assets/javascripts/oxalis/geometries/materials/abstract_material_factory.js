@@ -20,7 +20,7 @@ type Uniforms = {
 class AbstractMaterialFactory {
 
   model: Model;
-  material: THREE.ShaderMaterial;
+  material: THREE.RawShaderMaterial;
   uniforms: Uniforms;
   attributes: Object;
 
@@ -46,7 +46,7 @@ class AbstractMaterialFactory {
       fragmentShader: this.getFragmentShader(),
     });
 
-    this.material = new THREE.ShaderMaterial(options);
+    this.material = new THREE.RawShaderMaterial(options);
   }
 
 

@@ -20,7 +20,7 @@ class TreeGeometry {
   scalesBuffer: Float32Array;
   nodesColorBuffer: Float32Array;
   edges: THREE.LineSegments;
-  particleMaterial: THREE.ShaderMaterial;
+  particleMaterial: THREE.RawShaderMaterial;
   nodes: THREE.Points;
   id: number;
   oldActiveNodeId: ?number;

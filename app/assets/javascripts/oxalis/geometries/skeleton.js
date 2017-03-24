@@ -9,9 +9,9 @@ import Backbone from "backbone";
 import Store from "oxalis/throttled_store";
 import Model from "oxalis/model";
 import { OrthoViews } from "oxalis/constants";
-import TreeGeometry from "oxalis/geometries/tree_geometry";
+import TreeGeometry from "oxalis/geometries/t_geometry";
 import type { Vector3, OrthoViewType } from "oxalis/constants";
-import type { SkeletonTracingType } from "oxalis/store";
+import type { SkeletonTracingType, TreeType } from "oxalis/store";
 
 class Skeleton {
   // This class is supposed to collect all the Geometries that belong to the skeleton, like
@@ -45,13 +45,13 @@ class Skeleton {
     Store.subscribe(() => this.reset());
   }
 
-  createNewTree(treeId: number, treeColor: Vector3): TreeGeometry {
-    const tree = new TreeGeometry(treeId, treeColor, this.model);
-    tree.showRadius(!Store.getState().userConfiguration.overrideNodeRadius);
-    this.treeGeometryCache[treeId] = tree;
-    this.trigger("newGeometries", tree.getMeshes());
+  createNewTree(tree: TreeType): TreeGeometry {
+    const treeGeometry = new TreeGeometry([tree], this.model);
+    // tree.showRadius(!Store.getState().userConfiguration.overrideNodeRadius);
+    this.treeGeometryCache[tree.treeId] = treeGeometry;
+    this.trigger("newGeometries", treeGeometry.getMeshes());
 
-    return tree;
+    return treeGeometry;
   }
 
   evictFromCache = _.throttle(() => {
@@ -81,10 +81,10 @@ class Skeleton {
       for (const tree of trees) {
         let treeGeometry = this.getTreeGeometry(tree.treeId);
         if (!treeGeometry) {
-          treeGeometry = this.createNewTree(tree.treeId, tree.color);
+          treeGeometry = this.createNewTree(tree);
         }
 
-        treeGeometry.reset(tree.nodes, tree.edges);
+        //treeGeometry.reset(tree.nodes, tree.edges);
       }
 
       app.vent.trigger("rerender");
@@ -141,7 +141,7 @@ class Skeleton {
 
   updateForCam(id: OrthoViewType) {
     for (const tree of _.values(this.treeGeometryCache)) {
-      tree.showRadius(id !== OrthoViews.TDView && !Store.getState().userConfiguration.overrideNodeRadius);
+      //tree.showRadius(id !== OrthoViews.TDView && !Store.getState().userConfiguration.overrideNodeRadius);
     }
 
     if (id !== OrthoViews.TDView) {

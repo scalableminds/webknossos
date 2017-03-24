@@ -45,7 +45,7 @@ class ArbitraryPlane {
   // TODO: Probably unused? Recheck when flow coverage is higher
   height: number;
   x: number;
-  textureMaterial: THREE.ShaderMaterial;
+  textureMaterial: THREE.RawShaderMaterial;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;

@@ -72,34 +72,55 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
 
   getVertexShader() {
     return `\
+precision highp float;
+precision highp int;
+
+varying vec3 vColor;
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
 uniform float zoomFactor;
 uniform float baseVoxel;
 uniform float particleSize;
 uniform float scale;
 uniform int   showRadius;
-varying vec3 vColor;
-attribute float sizeNm;
+attribute float radius;
 attribute float nodeScaleFactor;
+attribute vec3 position;
+attribute vec3 color;
+attribute float type;
+attribute float nodeId;
+attribute float treeId;
 
 void main()
 {
     vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-    vColor = color;
-    if (showRadius == 1)
-      gl_PointSize = max(
-          sizeNm / zoomFactor / baseVoxel,
-          particleSize
-        ) * scale * nodeScaleFactor;
-    else
-      gl_PointSize = particleSize * nodeScaleFactor;
+    vColor = vec3(1.0, 0.5, 0.5);
+    gl_PointSize = 5.0;
     gl_Position = projectionMatrix * mvPosition;
 }\
 `;
   }
 
+// void main()
+// {
+//     vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+//     vColor = vec3(1.0, 0.5, 0.5);
+//     if (showRadius == 1)
+//       gl_PointSize = max(
+//           radius * 2.0 / zoomFactor / baseVoxel,
+//           particleSize
+//         ) * scale * nodeScaleFactor;
+//     else
+//       gl_PointSize = particleSize * nodeScaleFactor;
+//     gl_Position = projectionMatrix * mvPosition;
+// }\
+// `;
+//   }
 
   getFragmentShader() {
     return `\
+precision highp float;
+
 varying vec3 vColor;
 
 void main()

@@ -9,11 +9,11 @@ class TGeometry {
 
   constructor(trees: Array<TreeType>, model) {
 
-    const nodeCount = Math.min(_.sumBy(trees, tree => _.size(tree.nodes)), 1000);
+    const nodeCount = Math.max(_.sumBy(trees, tree => _.size(tree.nodes)), 1000);
     const nodeGeometry = new THREE.BufferGeometry();
     nodeGeometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(nodeCount * 3), 3));
     nodeGeometry.addAttribute("radius", new THREE.BufferAttribute(new Float32Array(nodeCount), 1));
-    nodeGeometry.addAttribute("type", new THREE.BufferAttribute(new Uint8Array(nodeCount), 1));
+    nodeGeometry.addAttribute("type", new THREE.BufferAttribute(new Float32Array(nodeCount), 1));
     nodeGeometry.addAttribute("nodeId", new THREE.BufferAttribute(new Float32Array(nodeCount), 1));
     nodeGeometry.addAttribute("treeId", new THREE.BufferAttribute(new Float32Array(nodeCount), 1));
     this.nodeGeometry = nodeGeometry;
@@ -38,6 +38,7 @@ class TGeometry {
     this.nodes = new THREE.Points(nodeGeometry, this.particleMaterial);
 
     this.nodeCount = 0;
+    this.nodeMap = new Map();
 
     for (const tree of trees) {
       this.addTree(tree);
@@ -51,7 +52,7 @@ class TGeometry {
 
     nodeGeometryAttributes.position.set(node.position, index * 3);
     nodeGeometryAttributes.radius[index] = node.radius;
-    nodeGeometryAttributes.type[index] = 0;
+    nodeGeometryAttributes.type[index] = 123.0;
     nodeGeometryAttributes.nodeId[index] = node.id;
     nodeGeometryAttributes.treeId[index] = treeId;
 
@@ -63,11 +64,15 @@ class TGeometry {
 
     this.nodes.geometry.computeBoundingSphere();
 
+    this.nodeMap.set(node.id, index);
     this.nodeCount += 1;
   }
 
-  removeNode() {
-
+  removeNode(nodeId: number) {
+    const index = this.nodeMap.get(nodeId);
+    const nodeGeometryAttributes = this.nodes.geometry.attributes;
+    nodeGeometryAttributes.type[index] = 1.0;
+    nodeGeometryAttributes.type.needsUpdate = true;
   }
 
   addEdge() {

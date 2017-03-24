@@ -84,38 +84,33 @@ uniform float particleSize;
 uniform float scale;
 uniform int   showRadius;
 attribute float radius;
-attribute float nodeScaleFactor;
 attribute vec3 position;
-attribute vec3 color;
 attribute float type;
 attribute float nodeId;
 attribute float treeId;
 
 void main()
 {
+    float nodeScaleFactor = 1.0;
     vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
     vColor = vec3(1.0, 0.5, 0.5);
-    gl_PointSize = 5.0;
+
+    if (showRadius == 1)
+      gl_PointSize = max(
+          radius * 2.0 / zoomFactor / baseVoxel,
+          particleSize
+        ) * scale * nodeScaleFactor;
+    else
+      gl_PointSize = particleSize * nodeScaleFactor;
+
+    if (type > 0.5) {
+      gl_PointSize = 0.0;
+    }
     gl_Position = projectionMatrix * mvPosition;
 }\
 `;
   }
-
-// void main()
-// {
-//     vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-//     vColor = vec3(1.0, 0.5, 0.5);
-//     if (showRadius == 1)
-//       gl_PointSize = max(
-//           radius * 2.0 / zoomFactor / baseVoxel,
-//           particleSize
-//         ) * scale * nodeScaleFactor;
-//     else
-//       gl_PointSize = particleSize * nodeScaleFactor;
-//     gl_Position = projectionMatrix * mvPosition;
-// }\
-// `;
-//   }
 
   getFragmentShader() {
     return `\

@@ -12,6 +12,7 @@ import { OrthoViews } from "oxalis/constants";
 import TreeGeometry from "oxalis/geometries/t_geometry";
 import type { Vector3, OrthoViewType } from "oxalis/constants";
 import type { SkeletonTracingType, TreeType } from "oxalis/store";
+import { InputKeyboardNoLoop } from "libs/input";
 
 class Skeleton {
   // This class is supposed to collect all the Geometries that belong to the skeleton, like
@@ -43,6 +44,20 @@ class Skeleton {
     // Test this some more
     // Perhaps load can be eased a bit with ThreeJS-React wrappers?
     Store.subscribe(() => this.reset());
+    this.keyboardNoLoop = new InputKeyboardNoLoop({
+      "5": () => {
+        const activeNodeId = Store.getState().skeletonTracing.activeNodeId;
+        this.treeGeometryCache[0].removeNode(activeNodeId);
+      },
+      "6": () => {
+        const activeNodeId = Store.getState().skeletonTracing.activeNodeId;
+        this.treeGeometryCache[0].addNode({
+          position: [721, 660, 685],
+          id: 100,
+          radius: 20,
+        }, 0);
+      },
+    });
   }
 
   createNewTree(tree: TreeType): TreeGeometry {

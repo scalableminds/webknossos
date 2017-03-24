@@ -219,11 +219,6 @@ class TaskCreateFromView extends Marionette.View {
       const csvContent = response.items.map(({ success: task }) =>
         `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`).join("\n");
       Modal.show(`<pre>taskId,filename,position\n${csvContent}</pre>`, "Task IDs");
-      // if (successCount === 1) {
-      //   const task = response.items[0].success;
-      //   const url = `/projects/${task.projectName}/tasks`;
-      //   app.router.navigate(`${url}#${task.id}`, { trigger: true });
-      // }
     } else {
       Toast.error(`${response.items.length - successCount}/${response.items.length} tasks weren't ${this.getActionName().toLowerCase()}d.`);
     }

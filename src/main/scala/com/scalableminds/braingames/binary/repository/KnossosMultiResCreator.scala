@@ -5,6 +5,7 @@ package com.scalableminds.braingames.binary.repository
 
 import java.nio.file.Path
 
+import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
 import com.scalableminds.braingames.binary.requester.{Cuboid, DataRequester}
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.store.FileDataStore
@@ -82,7 +83,7 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
   }
 
   def createResolutions(dataSource: DataSource,
-                        layer: DataLayer,
+                        layer: KnossosDataLayer,
                         source: Path,
                         target: Path,
                         baseResolution: Int,
@@ -111,7 +112,7 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
             loadedData, layer.cubeLength, layer.cubeLength,
             layer.cubeLength, layer.bytesPerElement)
           val request = BucketWriteInstruction(
-            dataSource, layer, layer.sections.head, targetCubePosition, scaledData)
+            dataSource, layer, targetCubePosition, scaledData)
           dataStore.save(target, request)
         }
       } .map { r =>

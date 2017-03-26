@@ -9,7 +9,7 @@ import com.scalableminds.braingames.binary.MappingRequest
 import com.scalableminds.util.geometry.Point3D
 import java.io.{File, FilenameFilter, RandomAccessFile}
 
-import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
+import com.scalableminds.braingames.binary.formats.knossos.{KnossosDataLayer, KnossosDataLayerSection}
 import com.scalableminds.braingames.binary.models.{BucketWriteInstruction, CubePosition, CubeReadInstruction, DataAccessInstruction}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
@@ -25,20 +25,20 @@ trait DataStore {
   /**
     * Loads the data of a given point from the data source
     */
-  def load(dataInfo: CubeReadInstruction): Fox[RandomAccessFile]
+  def load(dataInfo: CubeReadInstruction, section: KnossosDataLayerSection): Fox[RandomAccessFile]
 
   /**
     * Saves the data of a given point to the data source
     */
-  def save(dataInfo: BucketWriteInstruction): Fox[Boolean]
+  def save(dataInfo: BucketWriteInstruction, section: KnossosDataLayerSection): Fox[Boolean]
 
   def load(request: MappingRequest): Fox[Array[Byte]]
 }
 
 object DataStore extends LazyLogging{
 
-  def knossosBaseDir(dataInfo: DataAccessInstruction): Path =
-    Paths.get(dataInfo.dataLayer.baseDir).resolve(dataInfo.dataLayerSection.baseDir)
+  def knossosBaseDir(dataInfo: DataAccessInstruction, section: KnossosDataLayerSection): Path =
+    Paths.get(dataInfo.dataLayer.baseDir).resolve(section.baseDir)
 
 
   def knossosDirToCube(baseDir: String, path: Path): Option[(Int, Point3D)] = {

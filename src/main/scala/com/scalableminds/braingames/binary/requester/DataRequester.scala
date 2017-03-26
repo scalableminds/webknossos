@@ -3,11 +3,8 @@
  */
 package com.scalableminds.braingames.binary.requester
 
-import com.scalableminds.braingames.binary.formats.wkw.WebKnossosWrapDataSourceType
 import com.scalableminds.braingames.binary.models._
-import com.scalableminds.braingames.binary.requester.handlers.{BucketHandler, KnossosBucketHandler, WebKnossosWrapBucketHandler}
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
@@ -63,23 +60,15 @@ class DataRequester(
 
   private implicit val dataSaveTimeout = conf.getInt("saveTimeout").seconds
 
-  private def fallbackForLayer(layer: DataLayer): Future[List[(DataLayerSection, DataLayer)]] = {
-    layer.fallback.map { fallback =>
-      dataSourceRepository.findUsableDataSource(fallback.dataSourceName).flatMap {
-        d =>
-          d.getDataLayer(fallback.layerName).map {
-            fallbackLayer =>
-              if (layer.isCompatibleWith(fallbackLayer))
-                fallbackLayer.sections.map {
-                  (_, fallbackLayer)
-                }
-              else {
-                logger.error(s"Incompatible fallback layer. $layer is not compatible with $fallbackLayer")
-                Nil
-              }
-          }
-      }.getOrElse(Nil)
-    }.getOrElse(Future.successful(Nil))
+  private def fallbackForLayer(layer: DataLayer): Fox[DataLayer] = {
+    for {
+      fallback <- layer.fallback.toFox
+      d <- dataSourceRepository.findUsableDataSource(fallback.dataSourceName)
+      fallbackLayer <- d.getDataLayer(fallback.layerName)
+      if layer.isCompatibleWith(fallbackLayer)
+    } yield {
+      fallbackLayer
+    }
   }
 
   private def emptyResult(bucket: BucketPosition, request: DataReadRequest) = {
@@ -123,12 +112,10 @@ class DataRequester(
 
 
   def loadBucketOfRequest(bucket: BucketPosition, request: DataReadRequest, useCache: Boolean): Fox[Array[Byte]] = {
-    var lastSection: Option[DataLayerSection] = None
 
-    def loadFromSections(sections: List[(DataLayerSection, DataLayer)]): Fox[Array[Byte]] = sections match {
-      case (section, layerOfSection) :: tail =>
-        lastSection = Some(section)
-        val bucketRead = BucketReadInstruction(request.dataSource, layerOfSection, section, bucket, request.settings)
+    def loadFromLayers(layers: List[DataLayer]): Fox[Array[Byte]] = layers match {
+      case layer :: tail =>
+        val bucketRead = BucketReadInstruction(request.dataSource, layer, bucket, request.settings)
         loadFromLayer(bucketRead, useCache).futureBox.flatMap {
           case Full(byteArray) =>
             Fox.successful(byteArray)
@@ -136,24 +123,21 @@ class DataRequester(
             logger.error(s"DataStore Failure: ${f.msg}")
             emptyResult(bucket, request)
           case _ =>
-            loadFromSections(tail)
+            loadFromLayers(tail)
         }
       case _ =>
         // We couldn't find the data in any section. Hence let's assume there is none
         emptyResult(bucket, request)
     }
 
-    fallbackForLayer(request.dataLayer).toFox.flatMap { fallback =>
-      val sections = request.dataLayer.sections
-        .map {(_, request.dataLayer)}
-        .filter { section => request.dataSection.forall(_ == section._1.sectionId) } ::: fallback
-
-      loadFromSections(sections)
+    fallbackForLayer(request.dataLayer).futureBox.flatMap { fallback =>
+      val layers = List(Full(request.dataLayer), fallback).flatten
+      loadFromLayers(layers)
     }
   }
 
   private def loadFromLayer(bucketRead: BucketReadInstruction, useCache: Boolean): Fox[Array[Byte]] = {
-    if (bucketRead.dataLayerSection.doesContainBucket(bucketRead.position)) {
+    if (bucketRead.dataLayer.doesContainBucket(bucketRead.position)) {
       val shouldCache = useCache && !bucketRead.dataLayer.isUserDataLayer
       bucketRead.dataLayer.bucketHandler(cache).load(bucketRead, dataLoadTimeout, shouldCache)
     } else {
@@ -185,26 +169,12 @@ class DataRequester(
     layer: DataLayer,
     modifiedData: Array[Byte]): Fox[Boolean] = {
 
-    def saveToSections(sections: List[DataLayerSection]): Fox[Boolean] = sections match {
-      case section :: tail =>
-        val saveBucket = BucketWriteInstruction(
-          request.dataSource, layer, section, bucket, modifiedData)
-        saveToLayer(saveBucket).futureBox.flatMap {
-          case Full(r) => Future.successful(Full(r))
-          case _ => saveToSections(tail)
-        }
-      case _ =>
-        logger.error("Could not save userData to any section.")
-        Fox.failure("dataStore.save.failedAllSections")
-    }
-
-    val sections = layer.sections.filter(section => request.dataSection.forall(_ == section.sectionId))
-
-    saveToSections(sections)
+    val saveBucket = BucketWriteInstruction(request.dataSource, layer, bucket, modifiedData)
+    saveToLayer(saveBucket)
   }
 
   def saveToLayer(saveBucket: BucketWriteInstruction): Fox[Boolean] = {
-    if (saveBucket.dataLayerSection.doesContainBucket(saveBucket.position)) {
+    if (saveBucket.dataLayer.doesContainBucket(saveBucket.position)) {
       saveBucket.dataLayer.bucketHandler(cache).save(saveBucket, dataSaveTimeout)
     } else {
       Fox.empty

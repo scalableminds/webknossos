@@ -19,7 +19,6 @@ case class Data(value: Array[Byte]) extends AnyVal
 
 case class CachedCube(
                         id: String,
-                        dataLayerId: String,
                         dataLayerName: String,
                         dataLayerBaseDir: String,
                         resolution: Int,
@@ -31,7 +30,6 @@ object CachedCube {
   def from(b: CubeReadInstruction): CachedCube =
     CachedCube(
                  b.dataSource.id,
-                 b.dataLayerSection.sectionId,
                  b.dataLayer.name,
                  b.dataLayer.baseDir,
                  b.position.resolution,

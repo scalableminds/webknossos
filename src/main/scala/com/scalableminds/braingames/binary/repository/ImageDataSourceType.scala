@@ -9,7 +9,7 @@ import java.nio.file.{Files, Path}
 import javax.imageio.ImageIO
 import javax.imageio.spi.IIORegistry
 
-import com.scalableminds.braingames.binary.formats.knossos.{KnossosDataLayer, KnossosDataSourceType}
+import com.scalableminds.braingames.binary.formats.knossos.{KnossosDataLayerSection, KnossosDataLayer, KnossosDataSourceType}
 import com.scalableminds.braingames.binary.requester.DataRequester
 import com.scalableminds.braingames.binary.models.{UnusableDataSource, _}
 import com.scalableminds.braingames.binary.store.DataStore
@@ -245,7 +245,7 @@ trait ImageDataSourceTypeHandler extends DataSourceTypeHandler with FoxImplicits
         val layerName = namingSchema(layer.layer)
         val target = targetRoot.resolve(layerName)
         val boundingBox = BoundingBox(Point3D(0, 0, 0), layer.width, layer.height, layer.depth)
-        val section = DataLayerSection(layerName, layerName, Resolutions, boundingBox, boundingBox)
+        val section = KnossosDataLayerSection(layerName, layerName, Resolutions, boundingBox, boundingBox)
         val elements = elementClass(layer.bytesPerPixel)
         val knossosLayer = KnossosDataLayer(
           layerName, DefaultLayerType.category, targetRoot.toString, None, elements,

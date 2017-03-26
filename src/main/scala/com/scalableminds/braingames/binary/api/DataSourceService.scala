@@ -10,7 +10,7 @@ import com.scalableminds.braingames.binary.models._
 import java.util.UUID
 import java.util.zip.ZipFile
 
-import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
+import com.scalableminds.braingames.binary.formats.knossos.{KnossosDataLayerSection, KnossosDataLayer}
 import com.typesafe.config.Config
 import com.scalableminds.util.tools.{Fox, FoxImplicits, ProgressState}
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
@@ -41,7 +41,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
                   file: File,
                   baseDataSource: DataSource,
                   dataLayer: DataLayer,
-                  section: DataLayerSection): Fox[DataLayerSection] = {
+                  section: KnossosDataLayerSection): Fox[KnossosDataLayerSection] = {
 
     val dataStore = new FileDataStore
     try {
@@ -54,8 +54,8 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
             case (resolution, point) =>
               val bucket = new BucketPosition(point.x, point.y, point.z, resolution, dataLayer.cubeLength) // TODO: HACKY!!!!
               val writeBucket = BucketWriteInstruction(
-                baseDataSource, dataLayer, section, bucket, IOUtils.toByteArray(stream))
-              dataStore.save(writeBucket).map(_ => resolution)
+                baseDataSource, dataLayer, bucket, IOUtils.toByteArray(stream))
+              dataStore.save(writeBucket, section).map(_ => resolution)
           }.getOrElse(Fox.empty)
           result.onComplete( _ => stream.close())
           result
@@ -76,7 +76,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
     val category = DataLayer.SEGMENTATION.category
     val name = userDataLayerName()
     val basePath = userDataLayerFolder(name).toAbsolutePath
-    val section = DataLayerSection("1", "1", List(1), baseDataSource.boundingBox, baseDataSource.boundingBox)
+    val section = KnossosDataLayerSection("1", "1", List(1), baseDataSource.boundingBox, baseDataSource.boundingBox)
     val fallbackLayer = baseDataSource.getByCategory(category)
     val preliminaryDataLayer = KnossosDataLayer(
       name,

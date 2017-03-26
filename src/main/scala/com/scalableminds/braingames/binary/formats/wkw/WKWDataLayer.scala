@@ -3,7 +3,7 @@
  */
 package com.scalableminds.braingames.binary.formats.knossos
 
-import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, DataLayerSection, FallbackLayer}
+import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, FallbackLayer}
 import com.scalableminds.braingames.binary.requester.DataCubeCache
 import com.scalableminds.braingames.binary.requester.handlers.WebKnossosWrapBucketHandler
 import com.scalableminds.util.geometry.BoundingBox
@@ -18,16 +18,13 @@ case class WKWDataLayer(
                              elementClass: String = "uint8",
                              isWritable: Boolean = false,
                              fallback: Option[FallbackLayer] = None,
-                             sections: List[DataLayerSection] = Nil,
+                             resolutions: List[Int],
+                             boundingBox: BoundingBox,
                              nextSegmentationId: Option[Long] = None,
-                             mappings: List[DataLayerMapping] = List(),
+                             mappings: List[DataLayerMapping] = Nil,
                              layerType: String = WKWDataLayer.layerType
                             ) extends DataLayer {
-  val resolutions = sections.flatMap(_.resolutions).distinct
-
-  lazy val boundingBox = BoundingBox.combine(sections.map(_.bboxBig))
-
-  val cubeLength = 128
+  val cubeLength = 1024
 
   val lengthOfLoadedBuckets = 32
 

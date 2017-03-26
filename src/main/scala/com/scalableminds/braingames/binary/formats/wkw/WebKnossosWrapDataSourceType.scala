@@ -65,13 +65,8 @@ class WebKnossosWrapDataSourceType(val messagesApi: MessagesApi) extends DataSou
         layerSettings.`class`,
         false,
         None,
-        List(DataLayerSection(
-          basePath.resolve(layerSettings.name).toString,
-          "",
-          layerSettings.resolutions,
-          boundingBox,
-          boundingBox
-        )),
+        layerSettings.resolutions,
+        boundingBox,
         None,
         List()
       )

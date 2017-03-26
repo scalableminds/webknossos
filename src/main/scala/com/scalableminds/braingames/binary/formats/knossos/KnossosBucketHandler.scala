@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.requester.handlers
+package com.scalableminds.braingames.binary.formats.knossos
 
 import java.io.{FileInputStream, RandomAccessFile}
 import java.nio.MappedByteBuffer
@@ -9,6 +9,7 @@ import java.nio.channels.FileChannel
 import java.util.concurrent.TimeoutException
 
 import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.requester.handlers.BucketHandler
 import com.scalableminds.braingames.binary.requester.{Cube, DataCubeCache}
 import com.scalableminds.braingames.binary.store._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedRandomAccessFile
@@ -38,7 +39,7 @@ class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: Rando
   // read-access the buffer from different threads without locking. Using the random access file
   // or the buffer directly would need a mutex around the seeking and reading (as that is not thread safe).
   private val unsafe =
-    FieldUtils.readField(mappedData, "unsafe", true)
+  FieldUtils.readField(mappedData, "unsafe", true)
 
   private val address =
     FieldUtils.readField(mappedData, "address", true).asInstanceOf[Long]
@@ -125,10 +126,10 @@ class KnossosBucketHandler(val cache: DataCubeCache)
 
   lazy val dataStore = new FileDataStore
 
-  def loadFromUnderlying(loadCube: CubeReadInstruction, timeout: FiniteDuration): Fox[KnossosCube] = {
+  private def loadCubeFromUnderlying(loadCube: CubeReadInstruction, section: KnossosDataLayerSection, timeout: FiniteDuration): Fox[KnossosCube] = {
     Future {
       blocking {
-        val bucket = dataStore.load(loadCube)
+        val bucket = dataStore.load(loadCube, section)
           .futureBox
           .map {
             case f: Failure =>
@@ -142,23 +143,81 @@ class KnossosBucketHandler(val cache: DataCubeCache)
     }.recover {
       case _: TimeoutException | _: InterruptedException =>
         logger.warn(s"Load from DS timed out. " +
-          s"(${loadCube.dataSource.id}/${loadCube.dataLayerSection.baseDir}, " +
+          s"(${loadCube.dataSource.id}/${section.baseDir}, " +
           s"Block: (${loadCube.position.x},${loadCube.position.y},${loadCube.position.z})")
         Failure("dataStore.load.timeout")
     }
   }
 
-  override def saveToUnderlying(saveBucket: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {
+  def loadFromUnderlying(loadCube: CubeReadInstruction, timeout: FiniteDuration): Fox[KnossosCube] = {
+    def loadFromSections(sections: List[KnossosDataLayerSection]): Fox[KnossosCube] = {
+      sections match {
+        case section :: tail =>
+          loadCubeFromUnderlying(loadCube, section, timeout).futureBox.flatMap {
+            case Full(knossosCube) =>
+              Fox.successful(knossosCube)
+            case f: Failure =>
+              logger.error(s"DataStore Failure: ${f.msg}")
+              Fox.empty
+            case _ =>
+              loadFromSections(tail)
+          }
+        case _ =>
+          // We couldn't find the data in any section.
+          Fox.empty
+      }
+    }
+
+    loadCube.dataLayer match {
+      case knossosDataLayer: KnossosDataLayer =>
+        loadFromSections(knossosDataLayer.sections)
+      case _ =>
+        // This should not happen!
+        logger.error(s"DataStore Failure: Unexpected layer type.")
+        Empty
+    }
+  }
+
+  private def saveBucketToUnderlying(saveBucket: BucketWriteInstruction, section: KnossosDataLayerSection, timeout: FiniteDuration): Fox[Boolean] = {
     Future {
       blocking {
-        val saveResult = dataStore.save(saveBucket).futureBox
+        val saveResult = dataStore.save(saveBucket, section).futureBox
         Await.result(saveResult, timeout)
       }
     }.recover {
       case _: TimeoutException | _: InterruptedException =>
         logger.warn(s"No response in time for block during save: " +
-          s"(${saveBucket.dataSource.id}/${saveBucket.dataLayerSection.baseDir} ${saveBucket.position})")
+          s"(${saveBucket.dataSource.id}/${section.baseDir} ${saveBucket.position})")
         Failure("dataStore.save.timeout")
+    }
+  }
+
+  override def saveToUnderlying(saveBucket: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {
+    def saveToSections(sections: List[KnossosDataLayerSection]): Fox[Boolean] = {
+      sections match {
+        case section :: tail =>
+          saveBucketToUnderlying(saveBucket, section, timeout).futureBox.flatMap {
+            case Full(result) =>
+              Fox.successful(result)
+            case f: Failure =>
+              logger.error(s"DataStore Failure: ${f.msg}")
+              Fox.empty
+            case _ =>
+              saveToSections(tail)
+          }
+        case _ =>
+          // We couldn't find the data in any section.
+          Fox.empty
+      }
+    }
+
+    saveBucket.dataLayer match {
+      case knossosDataLayer: KnossosDataLayer =>
+        saveToSections(knossosDataLayer.sections)
+      case _ =>
+        // This should not happen!
+        logger.error(s"DataStore Failure: Unexpected layer type.")
+        Empty
     }
   }
 }

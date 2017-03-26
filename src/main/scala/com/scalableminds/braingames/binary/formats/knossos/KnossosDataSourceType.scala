@@ -47,12 +47,12 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
     dataSourceFromFile(unusableDataSource.sourceFolder)
   }
 
-  protected def createSection(path: Path, settings: DataLayerSectionSettings): Box[DataLayerSection] = {
+  protected def createSection(path: Path, settings: KnossosDataLayerSectionSettings): Box[KnossosDataLayerSection] = {
     for {
       bboxSmall <- BoundingBox.createFrom(settings.bboxSmall) ?~! Messages("dataset.section.bboxsmall.invalid")
       bboxBig <- BoundingBox.createFrom(settings.bboxBig)  ?~! Messages("dataset.section.bboxbig.invalid")
     } yield {
-      DataLayerSection(
+      KnossosDataLayerSection(
                         path.toString,
                         settings.sectionId getOrElse path.getFileName.toString,
                         settings.resolutions,
@@ -61,7 +61,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
     }
   }
 
-  protected def extractSections(base: Path): Fox[List[DataLayerSection]] = {
+  protected def extractSections(base: Path): Fox[List[KnossosDataLayerSection]] = {
     extractSectionSettings(base).flatMap { sectionSettingsMap =>
       Fox.combined(sectionSettingsMap.map {
         case (path, settings) => createSection(base.relativize(path), settings).toFox
@@ -69,13 +69,13 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
     }
   }
 
-  protected def extractSectionSettings(base: Path): Fox[Map[Path, DataLayerSectionSettings]] = {
+  protected def extractSectionSettings(base: Path): Fox[Map[Path, KnossosDataLayerSectionSettings]] = {
 
-    def extract(path: Path, depth: Int = 0): List[Box[(Path, DataLayerSectionSettings)]] = {
+    def extract(path: Path, depth: Int = 0): List[Box[(Path, KnossosDataLayerSectionSettings)]] = {
       if (depth > maxRecursiveLayerDepth) {
         List.empty
       } else {
-        val head = DataLayerSectionSettings.fromSettingsFileIn(path, base).map(path -> _)
+        val head = KnossosDataLayerSectionSettings.fromSettingsFileIn(path, base).map(path -> _)
         val tail = PathUtils.listDirectories(path) match {
           case Full(dirs) => dirs.flatMap(d => extract(d, depth + 1))
           case f: Failure => List(f)
@@ -186,7 +186,7 @@ trait KnossosDataSourceTypeHandler extends DataSourceTypeHandler with I18nSuppor
 
   protected def extractLayer(layer: Path, dataSourcePath: Path): Fox[DataLayer] = {
     for {
-      settings <- DataLayerSettings.fromSettingsFileIn(layer, dataSourcePath).toFox
+      settings <- KnossosDataLayerSettings.fromSettingsFileIn(layer, dataSourcePath).toFox
       sections <- extractSections(layer)
       mappings <- extractMappings(layer)
     } yield {

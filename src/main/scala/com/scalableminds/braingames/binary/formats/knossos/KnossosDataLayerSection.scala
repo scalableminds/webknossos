@@ -1,10 +1,11 @@
 /*
  * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.models
+package com.scalableminds.braingames.binary.formats.knossos
 
-import play.api.libs.json.Json
+import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.util.geometry.BoundingBox
+import play.api.libs.json.Json
 
 /**
  * Company: scalableminds
@@ -13,7 +14,7 @@ import com.scalableminds.util.geometry.BoundingBox
  * Time: 17:48
  */
 
-case class DataLayerSection(
+case class KnossosDataLayerSection(
   baseDir: String,
   sectionId: String,
   resolutions: List[Int],
@@ -28,6 +29,6 @@ case class DataLayerSection(
   }
 }
 
-object DataLayerSection{
-  implicit val dataLayerSectionFormat = Json.format[DataLayerSection]
+object KnossosDataLayerSection{
+  implicit val dataLayerSectionFormat = Json.format[KnossosDataLayerSection]
 }

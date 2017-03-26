@@ -6,9 +6,8 @@ package com.scalableminds.braingames.binary.formats.knossos
 import java.io.{File, FileInputStream, OutputStream}
 import java.nio.file.Paths
 
-import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, DataLayerSection, FallbackLayer}
+import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, FallbackLayer}
 import com.scalableminds.braingames.binary.requester.DataCubeCache
-import com.scalableminds.braingames.binary.requester.handlers.KnossosBucketHandler
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.io.{NamedFileStream, ZipIO}
 import org.apache.commons.io.{FileUtils, FilenameUtils}
@@ -26,9 +25,9 @@ case class KnossosDataLayer(
                              elementClass: String = "uint8",
                              isWritable: Boolean = false,
                              fallback: Option[FallbackLayer] = None,
-                             sections: List[DataLayerSection] = Nil,
+                             sections: List[KnossosDataLayerSection] = Nil,
                              nextSegmentationId: Option[Long] = None,
-                             mappings: List[DataLayerMapping] = List(),
+                             mappings: List[DataLayerMapping] = Nil,
                              layerType: String = KnossosDataLayer.layerType
                             ) extends DataLayer with LazyLogging {
   val resolutions = sections.flatMap(_.resolutions).distinct

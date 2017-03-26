@@ -13,6 +13,7 @@ import com.scalableminds.util.io.PathUtils
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
 import com.scalableminds.braingames.binary.MappingRequest
+import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayerSection
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -31,20 +32,18 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  def load(dataInfo: CubeReadInstruction): Fox[RandomAccessFile] = {
-    load(knossosBaseDir(dataInfo), dataInfo.dataSource.id, dataInfo.position)
+  def load(dataInfo: CubeReadInstruction, section: KnossosDataLayerSection): Fox[RandomAccessFile] = {
+    load(knossosBaseDir(dataInfo, section), dataInfo)
   }
 
-  def load(dataSetDir: Path,
-           dataSetId: String,
-           cube: CubePosition): Fox[RandomAccessFile] = {
-    lazy val fallback = fuzzyKnossosFile(dataSetDir, dataSetId, cube)
-    load(knossosFilePath(dataSetDir, dataSetId, cube), fallback)
+  def load(dataSetDir: Path, dataInfo: CubeReadInstruction): Fox[RandomAccessFile] = {
+    lazy val fallback = fuzzyKnossosFile(dataSetDir, dataInfo.dataSource.id, dataInfo.position)
+    load(knossosFilePath(dataSetDir, dataInfo.dataSource.id, dataInfo.position), fallback)
   }
 
   private def load(
-    path: Path,
-    fallback: => Option[File]): Fox[RandomAccessFile] = {
+                    path: Path,
+                    fallback: => Option[File]): Fox[RandomAccessFile] = {
 
     Future {
       try {
@@ -81,8 +80,8 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     }
   }
 
-  def save(dataInfo: BucketWriteInstruction): Fox[Boolean] = {
-    save(knossosBaseDir(dataInfo), dataInfo)
+  def save(dataInfo: BucketWriteInstruction, section: KnossosDataLayerSection): Fox[Boolean] = {
+    save(knossosBaseDir(dataInfo, section), dataInfo)
   }
 
   private def copyBucketToCube(outputFile: RandomAccessFile, dataInfo: BucketWriteInstruction) = {
@@ -146,6 +145,14 @@ object FileDataStore {
     val result = IOUtils.toByteArray(is)
     is.close()
     result
+  }
+
+  def byteArrayFromFile(file: File, fileSize: Option[Int]): Array[Byte] = {
+    inputStreamToByteArray(new FileInputStream(file), fileSize.getOrElse(file.length().toInt))
+  }
+
+  def inputStreamFromDataFile(file: File): InputStream = {
+    new FileInputStream(file)
   }
 
   def inputStreamToByteArray(is: InputStream, size: Int): Array[Byte] = {

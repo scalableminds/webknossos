@@ -37,7 +37,7 @@ trait DataLayer {
 
   def bytesPerElement = elementSize / 8
 
-  def isCompatibleWith(other: DataLayer) =
+  def isCompatibleWith(other: DataLayer): Boolean =
     this.bytesPerElement == other.bytesPerElement
 
   def resolutions: List[Int]
@@ -56,6 +56,13 @@ trait DataLayer {
   def writeTo(outputStream: OutputStream)
 
   /**
+    * Checks if a point is inside the whole data set boundary.
+    */
+  def doesContainBucket(point: BucketPosition): Boolean = {
+    boundingBox.contains(point.topLeft.toHighestRes)
+  }
+
+  /**
     * Number of voxels per dimension in the storage format
     */
   def cubeLength: Int // TODO: Should not (need to) be exposed.
@@ -69,9 +76,6 @@ trait DataLayer {
   def fallback: Option[FallbackLayer]
   def isWritable: Boolean
   def isUserDataLayer = baseDir.contains("userBinaryData")
-
-  // move
-  def sections: List[DataLayerSection]
 }
 
 object DataLayer extends LazyLogging{

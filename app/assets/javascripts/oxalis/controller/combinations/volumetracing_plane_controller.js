@@ -6,7 +6,6 @@
 
 import _ from "lodash";
 import Store from "oxalis/store";
-import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import constants, { OrthoViews } from "oxalis/constants";
@@ -38,7 +37,8 @@ class VolumeTracingPlaneController extends PlaneController {
       this.render3dCell(this.model.volumeTracing.getActiveCellId());
     });
 
-    _.defer(this.adjustSegmentationOpacity);
+    // TODO: This should be put in a saga with `take('INITIALIZE_SETTINGS')`as pre-condition
+    setTimeout(this.adjustSegmentationOpacity, 500);
 
     this.listenTo(this.model.volumeTracing, "newActiveCell", (id) => {
       id = this.model.volumeTracing.getActiveCellId();
@@ -131,8 +131,7 @@ class VolumeTracingPlaneController extends PlaneController {
 
   adjustSegmentationOpacity(): void {
     if (Store.getState().datasetConfiguration.segmentationOpacity < 10) {
-      Toast.error("Your setting for \"segmentation opacity\" is set very low. Increase it for more visibility while volume tracing.");
-      Store.dispatch(updateDatasetSettingAction("segmentationOpacity", 10));
+      Toast.warning("Your setting for \"segmentation opacity\" is set very low.<br />Increase it for better visibility while volume tracing.");
     }
   }
 

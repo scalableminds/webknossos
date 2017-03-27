@@ -3,7 +3,7 @@
  */
 package oxalis.ndstore
 
-import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerSection, DataSource}
+import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataSet, DataStoreInfo, NDStore}
@@ -44,7 +44,7 @@ object ND2WK extends FoxImplicits {
       vr <- nd.voxelRes.get("0").filter(_.length >= 3) ?~> Messages("ndstore.invalid.voxelres.zero")
       scale = Scale(vr(0), vr(1), vr(2))
     } yield {
-      DataSource(name, baseDir = "", scale = scale, dataLayers = dataLayers)
+      DataSource(name, "", scale, "external", dataLayers = dataLayers)
     }
   }
 
@@ -65,17 +65,13 @@ object ND2WK extends FoxImplicits {
       for {
         bbox <- boundingBoxFromNDChannelSize(nd)
         _ <- nd.resolutions.nonEmpty ?~> Messages("ndstore.invalid.resolutions")
-        sections = List(DataLayerSection("", channel.name, resolutions = nd.resolutions.map(r => math.pow(2, r).toInt), bboxBig = bbox, bboxSmall = bbox))
       } yield {
         NDDataLayer(
-          name = channel.name,
-          category = channelTypeMapping.get(channel.channelType).get,
-          baseDir = "",
-          flags = None,
+          channel.name,
+          channelTypeMapping.get(channel.channelType).get,
           elementClass = channel.dataType,
-          isWritable = false,
-          fallback = None,
-          sections = sections
+          nd.resolutions.map(r => math.pow(2, r).toInt),
+          bbox
         )
       }
     }

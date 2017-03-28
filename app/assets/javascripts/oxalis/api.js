@@ -16,6 +16,7 @@ import { findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accesso
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { NodeType, UserConfigurationType } from "oxalis/store";
+import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
 
 /**
  * All tracing related API methods.
@@ -298,12 +299,13 @@ class UtilsApi {
   // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
-  // registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T[]) => void, args: T[]) => void): void {
-    // throw Error("todo");
-    // const skeletonTracing: {[key:string]: Function } = Store.getState().skeletonTracing;
-    // const oldFunc = skeletonTracing[funcName].bind(Store.getState().skeletonTracing);
-    // skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
-  // }
+  registerOverwrite<S, A>(
+    actionName: string,
+    overwriteFunction: (store: S, next: ((action: A) => void), action: A) => void
+  ) {
+    overwriteAction(actionName, overwriteFunction);
+  }
+
  /**
   * Sets a custom handler function for a keyboard shortcut.
   */

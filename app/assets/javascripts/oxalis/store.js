@@ -17,6 +17,7 @@ import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reduce
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import timestampMiddleware from "oxalis/model/helpers/timestamp_middleware";
+import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 export type CommentType = {
@@ -322,6 +323,7 @@ const combinedReducers = reduceReducers(
 const store = createStore(combinedReducers, defaultState, applyMiddleware(
   timestampMiddleware,
   sagaMiddleware,
+  overwriteActionMiddleware,
 ));
 sagaMiddleware.run(rootSaga);
 

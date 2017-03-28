@@ -145,7 +145,7 @@ class MergeModalView extends PureComponent {
             <Select value={this.state.selectedTaskType} style={{ width: 200 }} onChange={this.handleChangeMergeTaskType}>
               {
                 this.state.taskTypes.map(taskType =>
-                  <Select.Option value={taskType.id}>{taskType.label}</Select.Option>)
+                  <Select.Option key={taskType.id} value={taskType.id}>{taskType.label}</Select.Option>)
               }
             </Select>
           </Form.Item>
@@ -159,7 +159,7 @@ class MergeModalView extends PureComponent {
             <Select value={this.state.selectedProject} style={{ width: 200 }} onChange={this.handleChangeMergeProject}>
               {
                 this.state.projects.map(project =>
-                  <Select.Option value={project}>{project}</Select.Option>)
+                  <Select.Option key={project} value={project}>{project}</Select.Option>)
               }
             </Select>
           </Form.Item>

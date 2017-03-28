@@ -135,6 +135,7 @@ class DatasetActionsView extends PureComponent {
     if (tracing.restrictions.allowUpdate) {
       elements.push(
         <Button
+          key="save-button"
           type="primary"
           onClick={this.handleSave}
           icon={this.getSaveButtonIcon()}
@@ -146,27 +147,32 @@ class DatasetActionsView extends PureComponent {
     if (hasAdvancedOptions) {
       if (tracing.restrictions.allowFinish) {
         elements.push(<Button
+          key="finish-button"
           icon="check-circle-o"
           onClick={this.handleFinish}
         >{archiveButtonText}</Button>);
       }
       if (tracing.restrictions.allowDownload || !tracing.downloadUrl) {
         elements.push(<Button
+          key="download-button"
           icon="download"
           onClick={this.handleDownload}
         >Download</Button>);
       }
       elements.push(<Button
+        key="share-button"
         icon="share-alt"
         onClick={this.handleShareOpen}
       >Share</Button>);
       elements.push(<ShareModalView
+        key="share-modal"
         isVisible={this.state.shareModalOpen}
         onOk={this.handleShareClose}
       />);
     }
     if (tracing.restrictions.allowFinish && tracing.task) {
       elements.push(<Button
+        key="next-button"
         icon="verticle-left"
         onClick={this.handleNextTask}
       >
@@ -176,10 +182,12 @@ class DatasetActionsView extends PureComponent {
     if (isSkeletonMode) {
       elements.push(
         <Button
+          key="merge-button"
           icon="folder-open"
           onClick={this.handleMergeOpen}
         >Merge Tracing</Button>);
       elements.push(<MergeModalView
+        key="merge-modal"
         isVisible={this.state.mergeModalOpen}
         onOk={this.handleMergeClose}
       />);

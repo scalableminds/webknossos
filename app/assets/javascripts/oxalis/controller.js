@@ -24,8 +24,8 @@ import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combina
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import View from "oxalis/view";
-import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
-import VolumeTracingView from "oxalis/view/volumetracing/volumetracing_view";
+import SkeletonTracingView from "oxalis/view/skeletontracing_view";
+import VolumeTracingView from "oxalis/view/volumetracing_view";
 import constants from "oxalis/constants";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";

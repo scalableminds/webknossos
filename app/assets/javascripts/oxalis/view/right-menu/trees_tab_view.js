@@ -8,7 +8,7 @@ import React from "react";
 import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu } from "antd";
 import Window from "libs/window";
-import TreesTabItemView from "oxalis/view/skeletontracing/right-menu/trees_tab_item_view";
+import TreesTabItemView from "oxalis/view/right-menu/trees_tab_item_view";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setTreeNameAction, createTreeAction, deleteTreeAction, shuffleTreeColorAction, selectNextTreeAction } from "oxalis/model/actions/skeletontracing_actions";

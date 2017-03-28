@@ -8,8 +8,8 @@ import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import app from "app";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import AbstractTreeRenderer from "oxalis/view/skeletontracing/abstract_tree_renderer";
-import type { NodeListItemType } from "oxalis/view/skeletontracing/abstract_tree_renderer";
+import AbstractTreeRenderer from "oxalis/view/right-menu/abstract_tree_renderer";
+import type { NodeListItemType } from "oxalis/view/right-menu/abstract_tree_renderer";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 

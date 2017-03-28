@@ -12,7 +12,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
+import SkeletonTracingView from "oxalis/view/skeletontracing_view";
 import SceneController from "oxalis/controller/scene_controller";
 
 class SkeletonTracingController {

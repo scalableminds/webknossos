@@ -12,7 +12,7 @@ import { Button, Input } from "antd";
 import { InputKeyboardNoLoop } from "libs/input";
 import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveNodeAction, createCommentAction, deleteCommentAction } from "oxalis/model/actions/skeletontracing_actions";
-import TreeCommentList from "oxalis/view/skeletontracing/right-menu/comment_tab/tree_comment_list";
+import TreeCommentList from "oxalis/view/right-menu/comment_tab/tree_comment_list";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";

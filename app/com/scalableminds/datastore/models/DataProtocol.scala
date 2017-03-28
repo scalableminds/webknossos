@@ -10,6 +10,7 @@ import play.core.parsers.Multipart.PartHandler
 import play.api.libs.iteratee._
 import play.api.libs.concurrent.Execution.Implicits._
 import net.liftweb.common._
+import net.liftweb.util.Helpers.tryo
 
 import com.scalableminds.util.geometry.Point3D
 
@@ -39,20 +40,6 @@ case class DataProtocolWriteRequest(header: DataProtocolWriteRequestHeader, data
  */
 
 object DataProtocol {
-
-  /**
-   * Wraps a try-catch block in a Box[T]
-   */
-
-  private def tryo[T](f: => T): Box[T] = {
-      try {
-        Full(f)
-      } catch {
-        case c: Throwable => 
-          Failure(c.getMessage)
-      }
-  }
-
 
   /**
    * Wraps each parsed request as a FilePart object to conform to the BodyParser interface

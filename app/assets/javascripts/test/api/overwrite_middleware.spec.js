@@ -6,7 +6,7 @@ import overwriteActionMiddleware, {overwriteAction, removeOverwrite} from 'oxali
 const middlewares = [ overwriteActionMiddleware ];
 const mockStore = configureMockStore(middlewares);
 
-fdescribe("Api", () => {
+describe("Api", () => {
   describe("Tracing Api", () => {
     describe("registerOverwrite", () => {
       it("should overwrite an existing function", (done) => {

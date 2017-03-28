@@ -39,6 +39,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
       }
 
       const skeletonTracing: SkeletonTracingType = {
+        type: "skeleton",
         activeNodeId,
         activeTreeId,
         restrictions,

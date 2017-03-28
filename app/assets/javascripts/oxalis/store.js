@@ -134,6 +134,7 @@ export type DatasetType = {
 export type TreeMapType = {[number]: TreeType};
 
 export type SkeletonTracingType = {
+  type: "skeleton",
   trees: TreeMapType,
   name: string,
   version: number,
@@ -275,6 +276,7 @@ const defaultState: OxalisState = {
     dataLayers: [],
   },
   skeletonTracing: {
+    type: "skeleton",
     trees: {},
     name: "",
     version: 0,

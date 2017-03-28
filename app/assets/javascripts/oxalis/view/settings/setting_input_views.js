@@ -5,6 +5,7 @@
 
  /* eslint-disable react/no-multi-comp */
  /* eslint-disable react/prefer-stateless-function */
+ /* eslint-disable jsx-a11y/label-has-for */
 
 import React from "react";
 import Utils from "libs/utils";
@@ -38,7 +39,7 @@ export class NumberSliderSetting extends React.PureComponent {
 
     return (
       <Row className="settings-row">
-        <Col span={8}><span className="setting-label">{label}</span></Col>
+        <Col span={8}><label className="setting-label">{label}</label></Col>
         <Col span={8}>
           <Slider min={min} max={max} onChange={onChange} value={value} step={step} />
         </Col>
@@ -104,7 +105,7 @@ export class LogSliderSetting extends React.PureComponent {
   render() {
     return (
       <Row className="settings-row">
-        <Col span={8}><span className="setting-label">{this.props.label}</span></Col>
+        <Col span={8}><label className="setting-label">{this.props.label}</label></Col>
         <Col span={8}>
           <Slider
             min={LOG_SLIDER_MIN}
@@ -140,7 +141,7 @@ export class SwitchSetting extends React.PureComponent {
     const { label, onChange, value } = this.props;
     return (
       <Row className="settings-row">
-        <Col span={8}><span className="setting-label">{label}</span></Col>
+        <Col span={8}><label className="setting-label">{label}</label></Col>
         <Col span={16}>
           <Switch onChange={onChange} checked={value} defaultChecked={value} />
         </Col>
@@ -166,7 +167,7 @@ export class NumberInputSetting extends React.PureComponent {
 
     return (
       <Row className="settings-row">
-        <Col span={8}><span className="setting-label">{label}</span></Col>
+        <Col span={8}><label className="setting-label">{label}</label></Col>
         <Col span={16}>
           <InputNumber min={min} max={max} onChange={onChange} value={value} step={step} />
         </Col>
@@ -259,7 +260,7 @@ export class Vector6InputSetting extends React.PureComponent {
 
     return (
       <Row className="settings-row">
-        <Col span={8}><span className="setting-label">{this.props.label}</span></Col>
+        <Col span={8}><label className="setting-label">{this.props.label}</label></Col>
         <Col span={16}>
           <Tooltip
             trigger={["focus"]}
@@ -311,7 +312,7 @@ export class ColorSetting extends React.PureComponent {
   render() {
     return (
       <Row className="settings-row">
-        <Col span={8}><span className="setting-label">{this.props.label}</span></Col>
+        <Col span={8}><label className="setting-label">{this.props.label}</label></Col>
         <Col span={16}>
           <input type="color" onChange={this.onColorChange} value={this.state.value} />
         </Col>
@@ -334,7 +335,7 @@ export class DropdownSetting extends React.PureComponent {
     const { onChange, label, value, children } = this.props;
     return (
       <Row className="settings-row">
-        <Col span={8}><span className="setting-label">{label}</span></Col>
+        <Col span={8}><label className="setting-label">{label}</label></Col>
         <Col span={16}>
           <Select onChange={onChange} value={value.toString()} defaultValue={value.toString()} >
             {children}

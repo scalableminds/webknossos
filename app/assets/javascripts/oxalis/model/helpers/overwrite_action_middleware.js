@@ -1,8 +1,8 @@
-let overwrites = {};
+const overwrites = {};
 
 export function overwriteAction<S, A>(
   actionName: string,
-  overwriteFunction: (store: S, next: ((action: A) => void), action: A) => void
+  overwriteFunction: (store: S, next: ((action: A) => void), action: A) => void,
 ) {
   if (overwrites[actionName]) {
     console.warn("There is already an overwrite for ", actionName, ". The old overwrite function will be removed");
@@ -15,9 +15,9 @@ export function removeOverwrite(actionName: string) {
   delete overwrites[actionName];
 }
 
-export default function overwriteMiddleware(store) {
-  return (next: (action: ActionType) => void) =>
-    (action: ActionType) => {
+export default function overwriteMiddleware<A>(store) {
+  return (next: (action: A) => void) =>
+    (action: A) => {
       if (overwrites[action.type]) {
         overwrites[action.type](store, next, action);
       } else {

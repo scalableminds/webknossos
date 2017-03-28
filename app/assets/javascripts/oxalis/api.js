@@ -301,7 +301,7 @@ class UtilsApi {
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
   registerOverwrite<S, A>(
     actionName: string,
-    overwriteFunction: (store: S, next: ((action: A) => void), action: A) => void
+    overwriteFunction: (store: S, next: ((action: A) => void), action: A) => void,
   ) {
     overwriteAction(actionName, overwriteFunction);
   }

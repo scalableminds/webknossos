@@ -2,7 +2,7 @@
 import React, { PureComponent } from "react";
 import _ from "lodash";
 import type Model from "oxalis/model";
-import type { OxalisState, SkeletonTracingType, SaveStateType } from "oxalis/store";
+import type { OxalisState, TracingType, SaveStateType } from "oxalis/store";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import app from "app";
@@ -20,7 +20,7 @@ const SAVED_POLLING_INTERVAL = 100;
 class DatasetActionsView extends PureComponent {
   props: {
     // eslint-disable-next-line react/no-unused-prop-types
-    skeletonTracing: SkeletonTracingType,
+    tracing: TracingType,
     save: SaveStateType,
     oldModel: Model,
     // eslint-disable-next-line react/no-unused-prop-types
@@ -86,7 +86,7 @@ class DatasetActionsView extends PureComponent {
   };
 
   handleNextTask = async () => {
-    const { tracingType, tracingId } = this.props.skeletonTracing;
+    const { tracingType, tracingId } = this.props.tracing;
     const finishUrl = `/annotations/${tracingType}/${tracingId}/finish`;
     const requestTaskUrl = "/user/tasks/request";
 
@@ -193,7 +193,7 @@ class DatasetActionsView extends PureComponent {
 
 function mapStateToProps(state: OxalisState) {
   return {
-    skeletonTracing: state.skeletonTracing,
+    tracing: state.tracing,
     save: state.save,
   };
 }

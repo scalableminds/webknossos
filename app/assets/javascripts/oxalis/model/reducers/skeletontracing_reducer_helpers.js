@@ -22,7 +22,7 @@ function generateTreeNamePrefix(state: OxalisState, timestamp) {
 
   // Replace spaces in user names
   user = user.replace(/ /g, "_");
-  if (state.skeletonTracing.tracingType === "Explorational" || !state.task) {
+  if (state.tracing.tracingType === "Explorational" || !state.task) {
     // Get YYYY-MM-DD string
     const creationDate = new Date(timestamp).toJSON().slice(0, 10);
     return `explorative_${creationDate}_${user}_`;
@@ -71,7 +71,7 @@ export function createNode(skeletonTracing: SkeletonTracingType, datasetScale: V
 }
 
 export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, timestamp: number): Maybe<[TreeMapType, number, ?number]> {
-  return getSkeletonTracing(state.skeletonTracing).chain((skeletonTracing) => {
+  return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     const { allowUpdate } = skeletonTracing.restrictions;
 
     if (allowUpdate) {
@@ -158,7 +158,7 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
             };
           } else {
             newTree = createTree(intermediateState, timestamp).get();
-            intermediateState = update(intermediateState, { skeletonTracing: { trees: { [newTree.treeId]: { $set: newTree } } } });
+            intermediateState = update(intermediateState, { tracing: { trees: { [newTree.treeId]: { $set: newTree } } } });
           }
 
           const neighborId = node.id !== edgeOfActiveNode.source
@@ -246,7 +246,7 @@ export function deleteBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<[
 }
 
 export function createTree(state: OxalisState, timestamp: number): Maybe<TreeType> {
-  return getSkeletonTracing(state.skeletonTracing).chain((skeletonTracing) => {
+  return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     const { allowUpdate } = skeletonTracing.restrictions;
 
     if (allowUpdate) {
@@ -275,7 +275,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
 }
 
 export function deleteTree(state: OxalisState, tree: TreeType, timestamp: number): Maybe<[TreeMapType, number, ?number]> {
-  return getSkeletonTracing(state.skeletonTracing).chain((skeletonTracing) => {
+  return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     const { allowUpdate } = skeletonTracing.restrictions;
 
     if (allowUpdate) {

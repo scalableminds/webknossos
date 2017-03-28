@@ -103,7 +103,7 @@ class DatasetInfoTabView extends Component {
 
 function mapStateToProps(state: OxalisState) {
   return {
-    skeletonTracing: state.skeletonTracing,
+    skeletonTracing: state.tracing,
     dataset: state.dataset,
     flycam: state.flycam,
   };

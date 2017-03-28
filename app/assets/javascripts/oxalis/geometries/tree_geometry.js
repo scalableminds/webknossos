@@ -60,7 +60,7 @@ class TreeGeometry {
       this.showRadius(!overrideNodeRadius);
 
       _.defer(() => {
-        const activeNodeId = getSkeletonTracing(state.skeletonTracing)
+        const activeNodeId = getSkeletonTracing(state.tracing)
           .map(skeletonTracing => skeletonTracing.activeNodeId)
           .getOrElse(null);
         if (activeNodeId != null && activeNodeId !== this.oldActiveNodeId) {
@@ -189,7 +189,7 @@ class TreeGeometry {
   }
 
   getColor(id: number) {
-    return getSkeletonTracing(Store.getState().skeletonTracing)
+    return getSkeletonTracing(Store.getState().tracing)
       .chain(skeletonTracing => getNodeAndTree(skeletonTracing))
       .map(([tree, node]) => {
         let { color } = tree;

@@ -215,8 +215,8 @@ class MergeModalView extends PureComponent {
 
 function mapStateToProps(state: OxalisState) {
   return {
-    tracingId: state.skeletonTracing.tracingId,
-    tracingType: state.skeletonTracing.tracingType,
+    tracingId: state.tracing.tracingId,
+    tracingType: state.tracing.tracingType,
   };
 }
 

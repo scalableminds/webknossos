@@ -98,7 +98,7 @@ class Controller {
         } else {
           const state = Store.getState();
           const stateSaved = !state.save.isBusy && state.save.queue.length === 0;
-          if (!stateSaved && state.skeletonTracing.restrictions.allowUpdate) {
+          if (!stateSaved && state.tracing.restrictions.allowUpdate) {
             Store.dispatch(saveNowAction());
             return messages["save.leave_page_unfinished"];
           }

@@ -14,7 +14,7 @@ import { updateUserSettingAction, updateTemporarySettingAction } from "oxalis/mo
 import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
 import type { Vector6 } from "oxalis/constants";
-import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, SkeletonTracingType } from "oxalis/store";
+import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, TracingType } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 
@@ -23,7 +23,7 @@ const Panel = Collapse.Panel;
 type UserSettingsViewProps = {
   userConfiguration: UserConfigurationType,
   temporaryConfiguration: TemporaryConfigurationType,
-  skeletonTracing: SkeletonTracingType,
+  tracing: TracingType,
   zoomStep: number,
   state: OxalisState,
   onChangeUser: (key: $Keys<UserConfigurationType>, value: any) => void,
@@ -71,7 +71,7 @@ class UserSettingsView extends Component {
   shouldComponentUpdate(nextProps: UserSettingsViewProps, nextState: UserSettingsViewState) {
     return this.props.userConfiguration !== nextProps.userConfiguration
       || this.props.temporaryConfiguration !== nextProps.temporaryConfiguration
-      || this.props.skeletonTracing !== nextProps.skeletonTracing
+      || this.props.tracing !== nextProps.tracing
       || this.props.state !== nextProps.state
       || this.state.activeCellId !== nextState.activeCellId;
   }
@@ -135,10 +135,10 @@ class UserSettingsView extends Component {
 
   getSkeletonOrVolumeOptions = () => {
     const mode = this.props.oldModel.get("mode");
-    const activeNodeId = this.props.skeletonTracing.activeNodeId != null ? this.props.skeletonTracing.activeNodeId : "";
-    const activeTreeId = this.props.skeletonTracing.activeTreeId != null ? this.props.skeletonTracing.activeTreeId : "";
 
-    if (Constants.MODES_SKELETON.includes(mode) && !this.props.isPublicViewMode) {
+    if (Constants.MODES_SKELETON.includes(mode) && !this.props.isPublicViewMode && this.props.tracing.type === "skeleton") {
+      const activeNodeId = this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
+      const activeTreeId = this.props.tracing.activeTreeId != null ? this.props.tracing.activeTreeId : "";
       return (
         <Panel header="Nodes & Trees" key="3">
           <NumberInputSetting label="Active Node ID" value={activeNodeId} onChange={this.props.onChangeActiveNodeId} />
@@ -191,7 +191,7 @@ class UserSettingsView extends Component {
 const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   temporaryConfiguration: state.temporaryConfiguration,
-  skeletonTracing: state.skeletonTracing,
+  tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
   state,
 });

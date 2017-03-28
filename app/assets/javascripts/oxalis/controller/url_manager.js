@@ -84,7 +84,7 @@ class UrlManager {
   startUrlUpdater(): void {
     this.listenTo(this.model, "change:mode", this.update);
 
-    if (Store.getState().skeletonTracing) {
+    if (Store.getState().tracing) {
       Store.subscribe(() => this.update());
     }
   }
@@ -102,7 +102,7 @@ class UrlManager {
       state = state.concat([Store.getState().flycam.zoomStep.toFixed(2)]);
     }
 
-    getActiveNode(Store.getState().skeletonTracing).map(node => state.push(node.id));
+    getActiveNode(Store.getState().tracing).map(node => state.push(node.id));
     return `${this.baseUrl}#${state.join(",")}`;
   }
 }

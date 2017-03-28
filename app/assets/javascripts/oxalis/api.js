@@ -35,14 +35,14 @@ class TracingApi {
   * Returns the id of the current active node.
   */
   getActiveNodeId(): ?number {
-    return getActiveNode(Store.getState().skeletonTracing).map(node => node.id).getOrElse(null);
+    return getActiveNode(Store.getState().tracing).map(node => node.id).getOrElse(null);
   }
 
  /**
   * Returns the id of the current active tree.
   */
   getActiveTreeId(): ?number {
-    return getActiveTree(Store.getState().skeletonTracing).map(tree => tree.treeId).getOrElse(null);
+    return getActiveTree(Store.getState().tracing).map(tree => tree.treeId).getOrElse(null);
   }
 
  /**
@@ -59,7 +59,7 @@ class TracingApi {
   * Returns all nodes belonging to a tracing.
   */
   getAllNodes(): Array<NodeType> {
-    return getSkeletonTracing(Store.getState().skeletonTracing).map((skeletonTracing) => {
+    return getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
       const { trees } = skeletonTracing;
       return _.flatMap(trees, tree => _.values(tree.nodes));
     }).getOrElse([]);
@@ -76,7 +76,7 @@ class TracingApi {
     if (commentText == null) {
       throw new Error("Comment text is missing.");
     }
-    getSkeletonTracing(Store.getState().skeletonTracing).map((skeletonTracing) => {
+    getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
       // Convert nodeId to node
       if (_.isNumber(nodeId)) {
         const tree = treeId != null ?
@@ -106,7 +106,7 @@ class TracingApi {
     if (nodeId == null) {
       throw new Error("Node id is missing.");
     }
-    return getSkeletonTracing(Store.getState().skeletonTracing).map((skeletonTracing) => {
+    return getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
       // Convert treeId to tree
       let tree = null;
       if (treeId != null) {
@@ -306,8 +306,8 @@ class UtilsApi {
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
   // registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T[]) => void, args: T[]) => void): void {
     // throw Error("todo");
-    // const skeletonTracing: {[key:string]: Function } = Store.getState().skeletonTracing;
-    // const oldFunc = skeletonTracing[funcName].bind(Store.getState().skeletonTracing);
+    // const skeletonTracing: {[key:string]: Function } = Store.getState().tracing;
+    // const oldFunc = skeletonTracing[funcName].bind(Store.getState().tracing);
     // skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
   // }
  /**

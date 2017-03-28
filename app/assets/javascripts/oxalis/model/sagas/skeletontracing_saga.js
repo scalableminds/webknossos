@@ -17,7 +17,7 @@ import Utils from "libs/utils";
 import { V3 } from "libs/mjs";
 
 function* centerActiveNode() {
-  getActiveNode(yield select(state => state.skeletonTracing))
+  getActiveNode(yield select(state => state.tracing))
     .map((activeNode) => {
       // $FlowFixMe
       app.oxalis.planeController.centerPositionAnimated(activeNode.position, false);
@@ -133,14 +133,14 @@ export function performDiffTracing(
 
 export function* saveSkeletonTracingAsync(): Generator<*, *, *> {
   yield take("INITIALIZE_SKELETONTRACING");
-  let prevSkeletonTracing = yield select(state => state.skeletonTracing);
-  if (yield select(state => state.skeletonTracing.activeTreeId == null)) {
+  let prevSkeletonTracing = yield select(state => state.tracing);
+  if (yield select(state => state.tracing.activeTreeId == null)) {
     yield put(createTreeAction());
   }
   yield take("WK_READY");
   while (true) {
     yield take([...SkeletonTracingActions, ...FlycamActions]);
-    const skeletonTracing = yield select(state => state.skeletonTracing);
+    const skeletonTracing = yield select(state => state.tracing);
     const flycam = yield select(state => state.flycam);
     const items = Array.from(yield call(performDiffTracing,
       prevSkeletonTracing, skeletonTracing, flycam));

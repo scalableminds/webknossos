@@ -11,6 +11,7 @@ import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_action
 import AbstractTreeRenderer from "oxalis/view/skeletontracing/abstract_tree_renderer";
 import type { NodeListItemType } from "oxalis/view/skeletontracing/abstract_tree_renderer";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
+import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 
 class AbstractTreeView extends Component {
   props: {
@@ -65,7 +66,7 @@ class AbstractTreeView extends Component {
 }
 
 function mapStateToProps(state: OxalisState) {
-  return { skeletonTracing: state.skeletonTracing };
+  return { skeletonTracing: state.tracing };
 }
 
-export default connect(mapStateToProps)(AbstractTreeView);
+export default connect(mapStateToProps)(makeSkeletonTracingGuard(AbstractTreeView));

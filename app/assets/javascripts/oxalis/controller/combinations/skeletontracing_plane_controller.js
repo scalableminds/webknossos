@@ -174,7 +174,7 @@ class SkeletonTracingPlaneController extends PlaneController {
         (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
         // merge two trees
         if (shiftPressed && altPressed) {
-          getActiveNode(Store.getState().skeletonTracing)
+          getActiveNode(Store.getState().tracing)
             .map(activeNode => Store.dispatch(mergeTreesAction(activeNode.id, nodeId)));
         }
 
@@ -191,7 +191,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     if (activeViewport === OrthoViews.TDView) {
       return;
     }
-    const activeNodeMaybe = getActiveNode(Store.getState().skeletonTracing);
+    const activeNodeMaybe = getActiveNode(Store.getState().tracing);
 
     // set the new trace direction
     activeNodeMaybe.map(activeNode => Store.dispatch(setRotationAction([
@@ -214,7 +214,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
   addNode = (position: Vector3, rotation: Vector3, centered: boolean): void => {
     const { newNodeNewTree } = Store.getState().userConfiguration;
-    const activeNodeMaybe = getActiveNode(Store.getState().skeletonTracing);
+    const activeNodeMaybe = getActiveNode(Store.getState().tracing);
 
     if (this.model.settings.somaClickingAllowed && newNodeNewTree) {
       Store.dispatch(createTreeAction());
@@ -234,7 +234,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
     if (centered) {
       // we created a new node, so use it's reference
-      getActiveNode(Store.getState().skeletonTracing)
+      getActiveNode(Store.getState().tracing)
         .map(newActiveNode => this.centerPositionAnimated(newActiveNode.position));
     }
   };

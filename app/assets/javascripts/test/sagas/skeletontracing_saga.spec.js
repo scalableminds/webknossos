@@ -34,7 +34,7 @@ describe("SkeletonTracingSaga", () => {
     task: {
       id: 1,
     },
-    skeletonTracing: {
+    tracing: {
       type: "skeleton",
       trees: {
         "0": {
@@ -78,7 +78,7 @@ describe("SkeletonTracingSaga", () => {
     const saga = saveSkeletonTracingAsync();
     expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
     saga.next();
-    saga.next({ skeletonTracing: { trees: {} } });
+    saga.next({ tracing: { trees: {} } });
     expectValue(saga.next(true)).toEqual(put(SkeletonTracingActions.createTreeAction()));
   });
 
@@ -86,11 +86,11 @@ describe("SkeletonTracingSaga", () => {
     const saga = saveSkeletonTracingAsync();
     expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
     saga.next();
-    saga.next(initialState.skeletonTracing);
+    saga.next(initialState.tracing);
     saga.next(false);
     saga.next();
     saga.next();
-    saga.next(initialState.skeletonTracing);
+    saga.next(initialState.tracing);
     // only updateTracing
     const items = execCall(saga.next(initialState.flycam));
     expect(withoutUpdateTracing(items).length).toBe(0);
@@ -102,11 +102,11 @@ describe("SkeletonTracingSaga", () => {
     const saga = saveSkeletonTracingAsync();
     expectValue(saga.next()).toEqual(take("INITIALIZE_SKELETONTRACING"));
     saga.next();
-    saga.next(initialState.skeletonTracing);
+    saga.next(initialState.tracing);
     saga.next(false);
     saga.next();
     saga.next();
-    saga.next(newState.skeletonTracing);
+    saga.next(newState.tracing);
     const items = execCall(saga.next(newState.flycam));
     expect(withoutUpdateTracing(items).length).toBeGreaterThan(0);
     expectValue(saga.next(items)).toEqual(put(pushSaveQueueAction(items)));
@@ -115,7 +115,7 @@ describe("SkeletonTracingSaga", () => {
   it("should emit createNode update actions", () => {
     const newState = SkeletonTracingReducer(initialState, createNodeAction);
 
-    const updateActions = testDiffing(initialState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(initialState.tracing, newState.tracing, newState.flycam);
     expect(updateActions[0].action).toBe("createNode");
     expect(updateActions[0].value.id).toBe(0);
     expect(updateActions[0].value.treeId).toBe(0);
@@ -124,7 +124,7 @@ describe("SkeletonTracingSaga", () => {
   it("should emit createNode and createEdge update actions", () => {
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
-    const updateActions = testDiffing(initialState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(initialState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions[0].action).toBe("createNode");
     expect(updateActions[0].value.id).toBe(0);
@@ -142,7 +142,7 @@ describe("SkeletonTracingSaga", () => {
     let newState = SkeletonTracingReducer(initialState, createNodeAction);
     newState = SkeletonTracingReducer(newState, createTreeAction);
     newState = SkeletonTracingReducer(newState, createNodeAction);
-    const updateActions = testDiffing(initialState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(initialState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions[0].action).toBe("createTree");
     expect(updateActions[0].value.id).toBe(1);
@@ -162,7 +162,7 @@ describe("SkeletonTracingSaga", () => {
     testState = SkeletonTracingReducer(testState, createTreeAction);
     testState = SkeletonTracingReducer(testState, createNodeAction);
     const newState = SkeletonTracingReducer(testState, mergeTreesAction);
-    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions[0].action).toBe("deleteNode");
     expect(updateActions[0].value.id).toBe(1);
@@ -181,7 +181,7 @@ describe("SkeletonTracingSaga", () => {
   it("should emit a deleteNode update action", () => {
     const testState = SkeletonTracingReducer(initialState, createNodeAction);
     const newState = SkeletonTracingReducer(testState, deleteNodeAction);
-    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions[0].action).toBe("deleteNode");
     expect(updateActions[0].value.id).toBe(0);
@@ -192,7 +192,7 @@ describe("SkeletonTracingSaga", () => {
     let testState = SkeletonTracingReducer(initialState, createNodeAction);
     testState = SkeletonTracingReducer(testState, createNodeAction);
     const newState = SkeletonTracingReducer(testState, deleteNodeAction);
-    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions[0].action).toBe("deleteNode");
     expect(updateActions[0].value.id).toBe(1);
@@ -206,7 +206,7 @@ describe("SkeletonTracingSaga", () => {
   it("should emit a deleteTree update action", () => {
     const testState = SkeletonTracingReducer(initialState, createTreeAction);
     const newState = SkeletonTracingReducer(testState, deleteTreeAction);
-    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions[0].action).toBe("deleteTree");
     expect(updateActions[0].value.id).toBe(1);
@@ -215,7 +215,7 @@ describe("SkeletonTracingSaga", () => {
   it("should emit an updateNode update action", () => {
     const testState = SkeletonTracingReducer(initialState, createNodeAction);
     const newState = SkeletonTracingReducer(testState, setActiveNodeRadiusAction);
-    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions[0].action).toBe("updateNode");
     expect(updateActions[0].value.id).toBe(0);
@@ -227,7 +227,7 @@ describe("SkeletonTracingSaga", () => {
     let testState = SkeletonTracingReducer(initialState, createNodeAction);
     testState = SkeletonTracingReducer(testState, setActiveNodeRadiusAction);
     const newState = SkeletonTracingReducer(testState, setActiveNodeRadiusAction);
-    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions).toEqual([]);
   });
@@ -235,7 +235,7 @@ describe("SkeletonTracingSaga", () => {
   it("should emit an updateTree update actions (comments)", () => {
     const testState = SkeletonTracingReducer(initialState, createNodeAction);
     const newState = SkeletonTracingReducer(testState, createCommentAction);
-    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions[0].action).toBe("updateTree");
     expect(updateActions[0].value.id).toBe(0);
@@ -246,7 +246,7 @@ describe("SkeletonTracingSaga", () => {
     let testState = SkeletonTracingReducer(initialState, createNodeAction);
     testState = SkeletonTracingReducer(testState, createCommentAction);
     const newState = SkeletonTracingReducer(testState, createCommentAction);
-    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions).toEqual([]);
   });
@@ -254,7 +254,7 @@ describe("SkeletonTracingSaga", () => {
   it("should emit an updateTree update actions (branchpoints)", () => {
     const testState = SkeletonTracingReducer(initialState, createNodeAction);
     const newState = SkeletonTracingReducer(testState, createBranchPointAction);
-    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions[0].action).toBe("updateTree");
     expect(updateActions[0].value.id).toBe(0);
@@ -272,7 +272,7 @@ describe("SkeletonTracingSaga", () => {
     testState = SkeletonTracingReducer(testState, createNodeAction);
     const newState = SkeletonTracingReducer(testState, mergeTreesAction);
 
-    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions[0]).toEqual({ action: "deleteNode", value: { treeId: 0, id: 0 } });
     expect(updateActions[1]).toEqual({ action: "deleteTree", value: { id: 0 } });
@@ -297,7 +297,7 @@ describe("SkeletonTracingSaga", () => {
     testState = SkeletonTracingReducer(testState, mergeTreesAction);
     const newState = SkeletonTracingReducer(testState, deleteNodeAction);
 
-    const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+    const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
     expect(updateActions[0].action).toBe("createTree");
     expect(updateActions[0].value.id).toBe(2);

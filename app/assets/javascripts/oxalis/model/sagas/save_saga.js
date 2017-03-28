@@ -31,7 +31,7 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
     while (yield select(state => state.save.queue.length > 0)) {
       const batch = yield select(state => state.save.queue);
       const compactBatch = compactUpdateActions(batch);
-      const { version, tracingType, id: tracingId } = yield select(state => state.skeletonTracing);
+      const { version, tracingType, tracingId } = yield select(state => state.tracing);
       try {
         yield call(Request.sendJSONReceiveJSON,
           `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {

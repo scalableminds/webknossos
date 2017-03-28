@@ -65,10 +65,10 @@ class TreeCommentList extends React.PureComponent {
 }
 
 function mapStateToProps(state: OxalisState) {
-  if (state.skeletonTracing.type === "skeleton") {
+  if (state.tracing.type === "skeleton") {
     return {
-      activeNodeId: state.skeletonTracing.activeNodeId,
-      activeTreeId: state.skeletonTracing.activeTreeId,
+      activeNodeId: state.tracing.activeNodeId,
+      activeTreeId: state.tracing.activeTreeId,
     };
   }
   return { activeTreeId: null, activeNodeId: null };

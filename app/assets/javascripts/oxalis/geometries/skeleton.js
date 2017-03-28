@@ -57,7 +57,7 @@ class Skeleton {
   }
 
   evictFromCache = _.throttle(() => {
-    getSkeletonTracing(Store.getState().skeletonTracing).map((skeletonTracing) => {
+    getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
       const treeIds = Object.keys(skeletonTracing.trees);
       // actually free the buffers etc. from the GPU
       _.values(_.omit(this.treeGeometryCache, treeIds)).forEach((treeGeometry) => {
@@ -71,7 +71,7 @@ class Skeleton {
   }, 500)
 
   reset() {
-    const skeletonTracing = Store.getState().skeletonTracing;
+    const skeletonTracing = Store.getState().tracing;
     // only update the WebGl stuff if the tracing has really changed
     // this should smooth performance when one is just viewing/moving around
     if (skeletonTracing.type === "skeleton" && skeletonTracing !== this.oldSkeletonTracing) {
@@ -104,7 +104,7 @@ class Skeleton {
 
   getTreeGeometry(treeId: ?number) {
     if (!treeId) {
-      treeId = getActiveTree(Store.getState().skeletonTracing).map(tree => tree.treeId).getOrElse(null);
+      treeId = getActiveTree(Store.getState().tracing).map(tree => tree.treeId).getOrElse(null);
     }
     if (treeId != null) {
       return this.treeGeometryCache[treeId];
@@ -164,7 +164,7 @@ class Skeleton {
       mesh.isVisible = visible;
     }
     const treeGeometry = this.getTreeGeometry(
-      getActiveTree(Store.getState().skeletonTracing).map(tree => tree.treeId).getOrElse(null),
+      getActiveTree(Store.getState().tracing).map(tree => tree.treeId).getOrElse(null),
     );
     if (treeGeometry != null) {
       treeGeometry.edges.isVisible = true;

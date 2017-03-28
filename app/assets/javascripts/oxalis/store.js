@@ -253,7 +253,7 @@ export type OxalisState = {
   userConfiguration: UserConfigurationType,
   temporaryConfiguration: TemporaryConfigurationType,
   dataset: DatasetType,
-  skeletonTracing: TracingType,
+  tracing: TracingType,
   task: ?TaskType,
   save: SaveStateType,
   flycam: FlycamType,
@@ -311,7 +311,7 @@ const defaultState: OxalisState = {
     },
     dataLayers: [],
   },
-  skeletonTracing: {
+  tracing: {
     type: "skeleton",
     trees: {},
     name: "",

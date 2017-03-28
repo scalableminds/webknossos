@@ -86,8 +86,8 @@ class DatasetActionsView extends PureComponent {
   };
 
   handleNextTask = async () => {
-    const { tracingType, id } = this.props.skeletonTracing;
-    const finishUrl = `/annotations/${tracingType}/${id}/finish`;
+    const { tracingType, tracingId } = this.props.skeletonTracing;
+    const finishUrl = `/annotations/${tracingType}/${tracingId}/finish`;
     const requestTaskUrl = "/user/tasks/request";
 
     await this.handleSave();

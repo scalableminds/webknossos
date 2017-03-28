@@ -139,7 +139,7 @@ export function* saveSkeletonTracingAsync(): Generator<*, *, *> {
   }
   yield take("WK_READY");
   while (true) {
-    yield take(SkeletonTracingActions.concat(FlycamActions));
+    yield take([...SkeletonTracingActions, ...FlycamActions]);
     const skeletonTracing = yield select(state => state.skeletonTracing);
     const flycam = yield select(state => state.flycam);
     const items = Array.from(yield call(performDiffTracing,

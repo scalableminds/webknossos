@@ -1,6 +1,6 @@
 /**
  * tree.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -10,6 +10,8 @@ import Store from "oxalis/store";
 import Model from "oxalis/model";
 import ParticleMaterialFactory from "oxalis/geometries/materials/particle_material_factory";
 import type { Vector3 } from "oxalis/constants";
+import type { EdgeType, NodeMapType } from "oxalis/store";
+import { getNodeAndTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 
 class TreeGeometry {
 
@@ -25,7 +27,7 @@ class TreeGeometry {
   id: number;
   oldActiveNodeId: ?number;
 
-  constructor(treeId: number, treeColor, model: Model) {
+  constructor(treeId: number, treeColor: Vector3, model: Model) {
     // create skeletonTracing to show in TDView
     const edgeGeometry = new THREE.BufferGeometry();
     edgeGeometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(3), 3));
@@ -58,8 +60,10 @@ class TreeGeometry {
       this.showRadius(!overrideNodeRadius);
 
       _.defer(() => {
-        const activeNodeId = state.skeletonTracing.activeNodeId;
-        if (activeNodeId !== this.oldActiveNodeId) {
+        const activeNodeId = getSkeletonTracing(state.skeletonTracing)
+          .map(skeletonTracing => skeletonTracing.activeNodeId)
+          .getOrElse(null);
+        if (activeNodeId != null && activeNodeId !== this.oldActiveNodeId) {
           this.startNodeHighlightAnimation(activeNodeId);
           this.oldActiveNodeId = activeNodeId;
         }
@@ -67,12 +71,12 @@ class TreeGeometry {
     });
   }
 
-  reset(nodes, edges) {
+  reset(nodes: NodeMapType, edges: Array<EdgeType>) {
     this.resetNodes(nodes);
     this.resetEdges(nodes, edges);
   }
 
-  resetEdges(nodes, edges) {
+  resetEdges(nodes: NodeMapType, edges: Array<EdgeType>) {
     const edgesBuffer = new Array(_.size(edges) * 6);
 
     let i = 0;
@@ -95,7 +99,7 @@ class TreeGeometry {
     edgesMesh.geometry.computeBoundingSphere();
   }
 
-  resetNodes(nodes) {
+  resetNodes(nodes: NodeMapType) {
     const nodeCount = _.size(nodes);
 
     if (nodeCount) {
@@ -140,7 +144,7 @@ class TreeGeometry {
     }
   }
 
-  setSizeAttenuation(sizeAttenuation) {
+  setSizeAttenuation(sizeAttenuation: number) {
     this.nodes.material.sizeAttenuation = sizeAttenuation;
     this.nodes.material.needsUpdate = true;
   }
@@ -156,7 +160,7 @@ class TreeGeometry {
     }
   }
 
-  startNodeHighlightAnimation(nodeId) {
+  startNodeHighlightAnimation(nodeId: number) {
     const normal = 1.0;
     const highlighted = 2.0;
 
@@ -166,7 +170,7 @@ class TreeGeometry {
     }
   }
 
-  animateNodeScale(from, to, index, onComplete = _.noop) {
+  animateNodeScale(from: number, to: number, index: number, onComplete: () => void = _.noop) {
     const setScaleFactor = (factor) => {
       this.nodes.geometry.attributes.nodeScaleFactor.set([factor], index);
       this.nodes.geometry.attributes.nodeScaleFactor.needsUpdate = true;
@@ -184,29 +188,28 @@ class TreeGeometry {
       .start();
   }
 
-  getColor(id) {
-    const tree = Store.getState().skeletonTracing.trees[this.id];
-    let { color } = tree;
-
-    if (id != null) {
-      const isActiveNode = Store.getState().skeletonTracing.activeNodeId === id;
-      const isBranchPoint = !_.isEmpty(tree.branchPoints.filter(branchPoint => branchPoint.id === id));
-
-      if (isActiveNode) {
-        color = this.shiftColor(color, 1 / 4);
-      } else {
-        color = this.darkenColor(color);
-      }
-
-      if (isBranchPoint) {
-        color = this.invertColor(color);
-      }
-    }
-
-    return color;
+  getColor(id: number) {
+    return getSkeletonTracing(Store.getState().skeletonTracing)
+      .chain(skeletonTracing => getNodeAndTree(skeletonTracing))
+      .map(([tree, node]) => {
+        let { color } = tree;
+        if (id != null) {
+          const isActiveNode = node.id === id;
+          const isBranchPoint = !_.isEmpty(tree.branchPoints.filter(branchPoint => branchPoint.id === id));
+          if (isActiveNode) {
+            color = this.shiftColor(color, 1 / 4);
+          } else {
+            color = this.darkenColor(color);
+          }
+          if (isBranchPoint) {
+            color = this.invertColor(color);
+          }
+        }
+        return color;
+      }).getOrElse([0, 0, 0]);
   }
 
-  showRadius(show) {
+  showRadius(show: boolean) {
     this.edges.material.linewidth = this.getLineWidth();
     this.particleMaterial.setShowRadius(show);
   }
@@ -227,7 +230,7 @@ class TreeGeometry {
   }
 
 
-  shiftColor(color: Vector3, shiftValue): Vector3 {
+  shiftColor(color: Vector3, shiftValue: number): Vector3 {
     const threeColor = new THREE.Color().fromArray(color);
     threeColor.offsetHSL(shiftValue, 0, 0);
     return threeColor.toArray();

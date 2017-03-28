@@ -12,7 +12,7 @@ import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, createCommentAction } from "oxalis/model/actions/skeletontracing_actions";
-import { findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { NodeType, UserConfigurationType } from "oxalis/store";
@@ -35,14 +35,14 @@ class TracingApi {
   * Returns the id of the current active node.
   */
   getActiveNodeId(): ?number {
-    return Store.getState().skeletonTracing.activeNodeId;
+    return getActiveNode(Store.getState().skeletonTracing).map(node => node.id).getOrElse(null);
   }
 
  /**
   * Returns the id of the current active tree.
   */
   getActiveTreeId(): ?number {
-    return Store.getState().skeletonTracing.activeTreeId;
+    return getActiveTree(Store.getState().skeletonTracing).map(tree => tree.treeId).getOrElse(null);
   }
 
  /**
@@ -59,8 +59,10 @@ class TracingApi {
   * Returns all nodes belonging to a tracing.
   */
   getAllNodes(): Array<NodeType> {
-    const { trees } = Store.getState().skeletonTracing;
-    return _.flatMap(trees, tree => _.values(tree.nodes));
+    return getSkeletonTracing(Store.getState().skeletonTracing).map((skeletonTracing) => {
+      const { trees } = skeletonTracing;
+      return _.flatMap(trees, tree => _.values(tree.nodes));
+    }).getOrElse([]);
   }
 
  /**
@@ -74,18 +76,20 @@ class TracingApi {
     if (commentText == null) {
       throw new Error("Comment text is missing.");
     }
-    // Convert nodeId to node
-    if (_.isNumber(nodeId)) {
-      const tree = treeId != null ?
-        Store.getState().skeletonTracing.trees[treeId] :
-        findTreeByNodeId(Store.getState().skeletonTracing.trees, nodeId).get();
-      if (tree == null) {
-        throw Error(`Couldn't find node ${nodeId}.`);
+    getSkeletonTracing(Store.getState().skeletonTracing).map((skeletonTracing) => {
+      // Convert nodeId to node
+      if (_.isNumber(nodeId)) {
+        const tree = treeId != null ?
+        skeletonTracing.trees[treeId] :
+        findTreeByNodeId(skeletonTracing.trees, nodeId).get();
+        if (tree == null) {
+          throw Error(`Couldn't find node ${nodeId}.`);
+        }
+        Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
+      } else {
+        throw Error("Node id is missing.");
       }
-      Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
-    } else {
-      throw Error("Node id is missing.");
-    }
+    });
   }
 
  /**
@@ -102,24 +106,26 @@ class TracingApi {
     if (nodeId == null) {
       throw new Error("Node id is missing.");
     }
-    // Convert treeId to tree
-    let tree = null;
-    if (treeId != null) {
-      tree = Store.getState().skeletonTracing.trees[treeId];
-      if (tree == null) {
-        throw Error(`Couldn't find tree ${treeId}.`);
+    return getSkeletonTracing(Store.getState().skeletonTracing).map((skeletonTracing) => {
+      // Convert treeId to tree
+      let tree = null;
+      if (treeId != null) {
+        tree = skeletonTracing.trees[treeId];
+        if (tree == null) {
+          throw Error(`Couldn't find tree ${treeId}.`);
+        }
+        if (tree.nodes[nodeId] == null) {
+          throw Error(`Couldn't find node ${nodeId} in tree ${treeId}.`);
+        }
+      } else {
+        tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
+        if (tree == null) {
+          throw Error(`Couldn't find node ${nodeId}.`);
+        }
       }
-      if (tree.nodes[nodeId] == null) {
-        throw Error(`Couldn't find node ${nodeId} in tree ${treeId}.`);
-      }
-    } else {
-      tree = _.values(Store.getState().skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
-      if (tree == null) {
-        throw Error(`Couldn't find node ${nodeId}.`);
-      }
-    }
-    const comment = tree.comments.find(__ => __.node === nodeId);
-    return comment != null ? comment.content : null;
+      const comment = tree.comments.find(__ => __.node === nodeId);
+      return comment != null ? comment.content : null;
+    }).getOrElse(null);
   }
 
 }

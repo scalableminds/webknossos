@@ -12,6 +12,8 @@ import { OrthoViews } from "oxalis/constants";
 import TreeGeometry from "oxalis/geometries/tree_geometry";
 import type { Vector3, OrthoViewType } from "oxalis/constants";
 import type { SkeletonTracingType } from "oxalis/store";
+import { getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+
 
 class Skeleton {
   // This class is supposed to collect all the Geometries that belong to the skeleton, like
@@ -55,25 +57,25 @@ class Skeleton {
   }
 
   evictFromCache = _.throttle(() => {
-    const treeIds = Object.keys(Store.getState().skeletonTracing.trees);
+    getSkeletonTracing(Store.getState().skeletonTracing).map((skeletonTracing) => {
+      const treeIds = Object.keys(skeletonTracing.trees);
+      // actually free the buffers etc. from the GPU
+      _.values(_.omit(this.treeGeometryCache, treeIds)).forEach((treeGeometry) => {
+        this.trigger("removeGeometries", treeGeometry.getMeshes());
+        treeGeometry.dispose();
+      });
 
-    // actually free the buffers etc. from the GPU
-    _.values(_.omit(this.treeGeometryCache, treeIds)).forEach((treeGeometry) => {
-      this.trigger("removeGeometries", treeGeometry.getMeshes());
-      treeGeometry.dispose();
+      // remove geometry from cache
+      this.treeGeometryCache = _.pick(this.treeGeometryCache, treeIds);
     });
-
-    // remove geometry from cache
-    this.treeGeometryCache = _.pick(this.treeGeometryCache, treeIds);
   }, 500)
 
   reset() {
     const skeletonTracing = Store.getState().skeletonTracing;
-
     // only update the WebGl stuff if the tracing has really changed
     // this should smooth performance when one is just viewing/moving around
-    if (skeletonTracing !== this.oldSkeletonTracing) {
-      const trees = _.values(Store.getState().skeletonTracing.trees);
+    if (skeletonTracing.type === "skeleton" && skeletonTracing !== this.oldSkeletonTracing) {
+      const trees = _.values(skeletonTracing.trees);
 
       // periodically evict unused tree geometries left over after tree deletion/splitting
       this.evictFromCache();
@@ -102,7 +104,7 @@ class Skeleton {
 
   getTreeGeometry(treeId: ?number) {
     if (!treeId) {
-      treeId = Store.getState().skeletonTracing.activeTreeId;
+      treeId = getActiveTree(Store.getState().skeletonTracing).map(tree => tree.treeId).getOrElse(null);
     }
     if (treeId != null) {
       return this.treeGeometryCache[treeId];
@@ -161,7 +163,9 @@ class Skeleton {
     for (const mesh of this.getMeshes()) {
       mesh.isVisible = visible;
     }
-    const treeGeometry = this.getTreeGeometry(Store.getState().skeletonTracing.activeTreeId);
+    const treeGeometry = this.getTreeGeometry(
+      getActiveTree(Store.getState().skeletonTracing).map(tree => tree.treeId).getOrElse(null),
+    );
     if (treeGeometry != null) {
       treeGeometry.edges.isVisible = true;
       treeGeometry.nodes.isVisible = true;

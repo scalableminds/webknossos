@@ -28,6 +28,7 @@ describe("SkeletonTracing", () => {
       id: 1,
     },
     skeletonTracing: {
+      type: "skeleton",
       trees: {
         [0]: {
           treeId: 0,

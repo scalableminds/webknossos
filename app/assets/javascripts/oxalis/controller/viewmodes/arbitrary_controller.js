@@ -241,7 +241,7 @@ class ArbitraryController {
 
   createBranchMarker(pos: Point2): void {
     if (!this.isBranchpointvideoMode() && !this.isSynapseannotationMode()) { return; }
-    const activeNodeId = Store.getState().skeletonTracing.activeNodeId;
+    const activeNodeId = getActiveNode(Store.getState().skeletonTracing).map(node => node.id).getOrElse(null);
     this.model.setMode(2);
     const f = Store.getState().flycam.zoomStep / (this.arbitraryView.width / this.WIDTH);
     Store.dispatch(moveFlycamAction([-(pos.x - (this.arbitraryView.width / 2)) * f, -(pos.y - (this.arbitraryView.width / 2)) * f, 0]));
@@ -393,7 +393,7 @@ class ArbitraryController {
     // Consider for deletion
     Store.dispatch(deleteBranchPointAction());
 
-    const activeNodeId = Store.getState().skeletonTracing.activeNodeId;
+    const activeNodeId = getActiveNode(Store.getState().skeletonTracing).map(node => node.id);
     if (activeNodeId === 1) {
       Store.dispatch(yawFlycamAction(Math.PI));
       Toast.warning("Reached initial node, view reversed");

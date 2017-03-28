@@ -5,20 +5,20 @@ import Utils from "libs/utils";
 import _ from "lodash";
 import { Input } from "antd";
 
-type VectorInputPropTypes<T:Vector3> = {
-  value: T,
-  onChange: (value: T) => void,
+type Vector3InputPropTypes = {
+  value: Vector3,
+  onChange: (value: Vector3) => void,
 };
 
-export class Vector3Input extends React.PureComponent {
-  props: VectorInputPropTypes<Vector3>;
+export default class Vector3Input extends React.PureComponent {
+  props: Vector3InputPropTypes;
   state: {
     isEditing: boolean,
     isValid: boolean,
     text: string,
   };
 
-  constructor(props: VectorInputPropTypes<Vector3>) {
+  constructor(props: Vector3InputPropTypes) {
     super(props);
     this.state = {
       isEditing: false,
@@ -27,7 +27,7 @@ export class Vector3Input extends React.PureComponent {
     };
   }
 
-  componentWillReceiveProps(newProps: VectorInputPropTypes<Vector3>) {
+  componentWillReceiveProps(newProps: Vector3InputPropTypes) {
     if (!this.state.isEditing) {
       this.setState({
         isValid: true,

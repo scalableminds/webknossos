@@ -38,6 +38,7 @@ class VolumeTracing {
   listenTo: Function;
   trigger: Function;
   on: Function;
+  off: Function;
 
   constructor(tracing: Tracing<VolumeContentDataType>, binary: Binary) {
     this.binary = binary;

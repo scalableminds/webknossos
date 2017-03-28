@@ -1,5 +1,5 @@
 // @flow
-import React, { Component } from "react";
+import React, { PureComponent } from "react";
 import type { OxalisState, FlycamType } from "oxalis/store";
 import type Model from "oxalis/model";
 import { connect } from "react-redux";
@@ -11,9 +11,9 @@ import Store from "oxalis/store";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { Button, Input } from "antd";
-import { Vector3Input } from "libs/vector3_input";
+import Vector3Input from "libs/vector3_input";
 
-class DatasetPositionView extends Component {
+class DatasetPositionView extends PureComponent {
   props: {
     oldModel: Model,
     flycam: FlycamType,

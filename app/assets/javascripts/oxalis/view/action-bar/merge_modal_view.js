@@ -1,5 +1,6 @@
 // @flow
-import React, { Component } from "react";
+/* globals SyntheticEvent: 0 */
+import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { OxalisState } from "oxalis/store";
 import Toast from "libs/toast";
@@ -24,6 +25,7 @@ type MergeModalViewState = {
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
   selectedNML: ?AnnotationInfoType,
+  readOnly: boolean,
 };
 
 type UploadInfoType<T> = {
@@ -35,7 +37,7 @@ type UploadInfoType<T> = {
   },
 };
 
-class MergeModalView extends Component {
+class MergeModalView extends PureComponent {
   props: {
     isVisible: boolean,
     onOk: () => void,
@@ -50,13 +52,18 @@ class MergeModalView extends Component {
     selectedProject: null,
     selectedExplorativeAnnotation: "",
     selectedNML: null,
+    readOnly: false,
   };
 
-  async componentWillMount(): Promise<void> {
-    const taskTypes = await Request.receiveJSON("/api/taskTypes");
-    this.setState({ taskTypes: taskTypes.map(taskType => ({ id: taskType.id, label: taskType.summary })) });
-    const projects = await Request.receiveJSON("/api/projects");
-    this.setState({ projects: projects.map(project => project.name) });
+  componentWillMount() {
+    (async () => {
+      const taskTypes = await Request.receiveJSON("/api/taskTypes");
+      const projects = await Request.receiveJSON("/api/projects");
+      this.setState({
+        taskTypes: taskTypes.map(taskType => ({ id: taskType.id, label: taskType.summary })),
+        projects: projects.map(project => project.name),
+      });
+    })();
   }
 
   validateId(id: string) {
@@ -64,8 +71,7 @@ class MergeModalView extends Component {
   }
 
   async merge(url: string) {
-    // const readOnly = document.getElementById("checkbox-read-only").checked;
-    const annotation = await Request.receiveJSON(`${url}/false`);
+    const annotation = await Request.receiveJSON(`${url}/${this.state.readOnly ? "true" : "false"}`);
     Toast.message(annotation.messages);
     const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
     app.router.loadURL(redirectUrl);
@@ -84,9 +90,6 @@ class MergeModalView extends Component {
   };
 
   handleChangeNML = (info: UploadInfoType<{ annotation: AnnotationInfoType, messages: Array<any> }>) => {
-    if (info.file.status !== "uploading") {
-      console.log(info.file);
-    }
     if (info.file.status === "done") {
       const { annotation } = info.file.response;
       Toast.message(info.file.response.messages);
@@ -194,21 +197,21 @@ class MergeModalView extends Component {
           </Form.Item>
         </Form>
         <hr />
-        <div>
+        <p>
           The merged tracing will be saved as a new explorative tracing.
-        </div>
+        </p>
+        {/* <p>
+          <Switch
+            value={this.state.readOnly}
+            onChange={value => this.setState({ readOnly: value })}
+            style={{ marginRight: 5 }}
+          />
+          The merged tracing will be {this.state.readOnly ? "read-only" : "writeable"}.
+        </p> */}
       </Modal>
     );
   }
 }
-
-// <hr>
-// <div class="checkbox hidden">
-//   <label>
-//     <input type="checkbox" id="checkbox-read-only">
-//     The merged tracing will be read-only.
-//   </label>
-// </div>
 
 function mapStateToProps(state: OxalisState) {
   return {
@@ -217,4 +220,4 @@ function mapStateToProps(state: OxalisState) {
   };
 }
 
-export default connect()(MergeModalView);
+export default connect(mapStateToProps)(MergeModalView);

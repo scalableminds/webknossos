@@ -1,47 +1,40 @@
 // @flow
-import React, { Component } from "react";
+import React, { PureComponent } from "react";
 import type Model from "oxalis/model";
 import Constants from "oxalis/constants";
-import classnames from "classnames";
+import { Button, Radio } from "antd";
 
-class VolumeActionsView extends Component {
+class VolumeActionsView extends PureComponent {
   props: {
     oldModel: Model,
   };
 
   componentDidMount() {
-    this.props.oldModel.on("change:mode", this._forceUpdate);
+    this.props.oldModel.volumeTracing.on("change:mode", this._forceUpdate);
   }
 
   componentWillUnmount() {
-    this.props.oldModel.off("change:mode", this._forceUpdate);
+    this.props.oldModel.volumeTracing.off("change:mode", this._forceUpdate);
   }
 
   _forceUpdate = () => { this.forceUpdate(); };
 
   render() {
-    const isMoveMode = this.props.oldModel.volumeTracing.mode === Constants.VOLUME_MODE_MOVE;
     return (
       <div>
-        <div className="btn-group">
-          <button
-            type="button"
-            className={classnames("btn btn-default", { "btn-primary": isMoveMode })}
-            onClick={() => { this.props.oldModel.volumeTracing.setMode(Constants.VOLUME_MODE_TRACE); }}
-          >Move</button>
-          <button
-            type="button"
-            className={classnames("btn btn-default", { "btn-primary": !isMoveMode })}
-            onClick={() => { this.props.oldModel.volumeTracing.setMode(Constants.VOLUME_MODE_MOVE); }}
-          >Trace</button>
-        </div>
-        <div className="btn-group">
-          <button
-            type="button"
-            className="btn btn-default"
+        <Radio.Group
+          onChange={event => this.props.oldModel.volumeTracing.setMode(event.target.value)}
+          value={this.props.oldModel.volumeTracing.mode}
+          style={{ marginRight: 10 }}
+        >
+          <Radio.Button value={Constants.VOLUME_MODE_MOVE}>Move</Radio.Button>
+          <Radio.Button value={Constants.VOLUME_MODE_TRACE}>Trace</Radio.Button>
+        </Radio.Group>
+        <Button.Group>
+          <Button
             onClick={() => { this.props.oldModel.volumeTracing.createCell(); }}
-          >Create new cell (C)</button>
-        </div>
+          >Create new cell (C)</Button>
+        </Button.Group>
       </div>
     );
   }

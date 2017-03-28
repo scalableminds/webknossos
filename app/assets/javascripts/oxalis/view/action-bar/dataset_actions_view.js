@@ -1,5 +1,5 @@
 // @flow
-import React, { Component } from "react";
+import React, { PureComponent } from "react";
 import _ from "lodash";
 import type Model from "oxalis/model";
 import type { OxalisState, SkeletonTracingType, SaveStateType } from "oxalis/store";
@@ -13,14 +13,17 @@ import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { Button } from "antd";
+import messages from "messages";
 
 const SAVED_POLLING_INTERVAL = 100;
 
-class DatasetActionsView extends Component {
+class DatasetActionsView extends PureComponent {
   props: {
+    // eslint-disable-next-line react/no-unused-prop-types
     skeletonTracing: SkeletonTracingType,
     save: SaveStateType,
     oldModel: Model,
+    // eslint-disable-next-line react/no-unused-prop-types
     dispatch: Dispatch<*>,
   };
 
@@ -60,7 +63,7 @@ class DatasetActionsView extends Component {
   handleFinish = async () => {
     const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/finishAndRedirect`;
     await this.handleSave();
-    if (confirm("Are you sure you want to permanently finish this tracing?")) {
+    if (confirm(messages["finish.confirm"])) {
       app.router.loadURL(url);
     }
   };
@@ -75,11 +78,11 @@ class DatasetActionsView extends Component {
 
   handleDownload = async () => {
     const win = window.open("about:blank", "_blank");
-    win.document.body.innerHTML = "Please wait...";
+    win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
 
     win.location.href = this.props.oldModel.tracing.downloadUrl;
-    win.document.body.innerHTML = "You may close this window after the download has started.";
+    win.document.body.innerHTML = messages["download.close_window"];
   };
 
   handleNextTask = async () => {

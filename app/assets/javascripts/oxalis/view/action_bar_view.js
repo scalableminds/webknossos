@@ -33,7 +33,7 @@ function ActionBarView({ oldModel }: { oldModel: Model }) {
       { isTraceMode ? <DatasetActionsView oldModel={oldModel} /> : null }
       { hasAdvancedOptions ? <DatasetPositionView oldModel={oldModel} /> : null }
       { isVolumeMode && hasAdvancedOptions ? <VolumeActionsView oldModel={oldModel} /> : null }
-      { isTraceMode && hasAdvancedOptions ? <ViewModesView oldModel={oldModel} /> : null }
+      { !isVolumeMode && isTraceMode && hasAdvancedOptions ? <ViewModesView oldModel={oldModel} /> : null }
       { isTraceMode && hasAdvancedOptions ? <SkeletonActionsView oldModel={oldModel} /> : null }
     </div>
   );

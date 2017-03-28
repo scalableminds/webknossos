@@ -1,10 +1,10 @@
 // @flow
-import React, { Component } from "react";
+import React, { PureComponent } from "react";
 import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import { Modal, Input, Button } from "antd";
 
-class ShareModalView extends Component {
+class ShareModalView extends PureComponent {
   props: {
     isVisible: boolean,
     onOk: () => void,

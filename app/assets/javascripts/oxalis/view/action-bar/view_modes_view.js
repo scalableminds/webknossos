@@ -1,11 +1,11 @@
 // @flow
-import React, { Component } from "react";
+import React, { PureComponent } from "react";
 import type Model from "oxalis/model";
 import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
 import { Radio } from "antd";
 
-class ViewModesView extends Component {
+class ViewModesView extends PureComponent {
   props: {
     oldModel: Model,
   };

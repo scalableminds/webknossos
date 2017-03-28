@@ -1,5 +1,5 @@
 // @flow
-import React, { Component } from "react";
+import React, { PureComponent } from "react";
 import type Model from "oxalis/model";
 import Constants, { OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
@@ -7,7 +7,7 @@ import { createNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { getPosition, getRotationOrtho, getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { Button } from "antd";
 
-class SkeletonActionsView extends Component {
+class SkeletonActionsView extends PureComponent {
   props: {
     oldModel: Model,
   };

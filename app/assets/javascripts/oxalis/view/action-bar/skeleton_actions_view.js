@@ -1,38 +1,28 @@
-// @flow weak
-import _ from "lodash";
-import Marionette from "backbone.marionette";
+// @flow
+import React, { PureComponent } from "react";
+import type Model from "oxalis/model";
 import Constants, { OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import { createNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { getPosition, getRotationOrtho, getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { Button } from "antd";
 
-class SkeletonActionsView extends Marionette.View {
-  static initClass() {
-    this.prototype.template = _.template(`\
-      <% if(isTracingMode()) { %>
-        <div class="btn-group">
-  <button type="button" class="btn btn-default" id="add-node">Add Node (Right-Click) </button>
-        </div>
-      <% } %>\
-  `);
+class SkeletonActionsView extends PureComponent {
+  props: {
+    oldModel: Model,
+  };
 
-    this.prototype.templateContext = {
-      isTracingMode() {
-        return this.mode === Constants.MODE_PLANE_TRACING;
-      },
-    };
-
-    this.prototype.events = {
-      "click #add-node": "addNode",
-    };
+  componentDidMount() {
+    this.props.oldModel.on("change:mode", this._forceUpdate);
   }
 
-  initialize() {
-    this.listenTo(this.model, "change:mode", this.render);
+  componentWillUnmount() {
+    this.props.oldModel.off("change:mode", this._forceUpdate);
   }
 
+  _forceUpdate = () => { this.forceUpdate(); };
 
-  addNode() {
+  handleAddNode = () => {
     // add node
     Store.dispatch(createNodeAction(
       getPosition(Store.getState().flycam),
@@ -41,7 +31,21 @@ class SkeletonActionsView extends Marionette.View {
       getIntegerZoomStep(Store.getState()),
     ));
   }
+
+  render() {
+    if (this.props.oldModel.mode === Constants.MODE_PLANE_TRACING) {
+      return (
+        <div>
+          <Button
+            type="button"
+            icon="plus"
+            onClick={this.handleAddNode}
+          >Add Node (Right-Click)</Button>
+        </div>
+      );
+    }
+    return null;
+  }
 }
-SkeletonActionsView.initClass();
 
 export default SkeletonActionsView;

@@ -22,6 +22,8 @@ import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
 import UserScriptsModalView from "oxalis/view/user_scripts_modal";
 import TracingView from "oxalis/view/tracing_view";
+import enUS from "antd/lib/locale-provider/en_US";
+import { LocaleProvider } from "antd";
 
 const MARGIN = 40;
 
@@ -57,11 +59,11 @@ class TracingLayoutView extends Marionette.View {
     this.prototype.ui = {
       rightMenu: "#right-menu",
       slidingCanvas: "#sliding-canvas",
+      actionBar: "#action-bar",
       settings: "#settings-menu",
     };
 
     this.prototype.regions = {
-      actionBar: "#action-bar",
       rightMenu: "#right-menu",
       tracingContainer: "#tracing",
       modalWrapper: ".modal-wrapper",
@@ -127,16 +129,22 @@ class TracingLayoutView extends Marionette.View {
   renderRegions() {
     this.render();
 
-    const actionBarView = new ActionBarView(this.options);
     const tracingView = new TracingView(this.options);
 
     this.showChildView("tracingContainer", tracingView, { preventDestroy: true });
 
-    this.showChildView("actionBar", actionBarView, { preventDestroy: true });
-
     if (!this.model.settings.advancedOptionsAllowed) {
       return;
     }
+
+    render(
+      <LocaleProvider locale={enUS}>
+        <Provider store={store}>
+          <ActionBarView oldModel={this.model} />
+        </Provider>
+      </LocaleProvider>,
+      this.ui.actionBar[0],
+    );
 
     render(
       <Provider store={store}>

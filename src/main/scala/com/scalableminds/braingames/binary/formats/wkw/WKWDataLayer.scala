@@ -1,11 +1,10 @@
 /*
  * Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.formats.knossos
+package com.scalableminds.braingames.binary.formats.wkw
 
 import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, FallbackLayer}
 import com.scalableminds.braingames.binary.requester.DataCubeCache
-import com.scalableminds.braingames.binary.requester.handlers.WebKnossosWrapBucketHandler
 import com.scalableminds.util.geometry.BoundingBox
 import java.io.OutputStream
 import play.api.libs.json.Json

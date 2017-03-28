@@ -21,7 +21,6 @@ import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 
 import scala.concurrent.ExecutionContext.Implicits._
 
-
 class KnossosDataSourceType(val messagesApi: MessagesApi) extends DataSourceType with KnossosDataSourceTypeHandler {
   val name = KnossosDataSourceType.name
 }

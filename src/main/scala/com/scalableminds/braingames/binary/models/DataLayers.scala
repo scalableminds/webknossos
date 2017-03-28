@@ -5,7 +5,9 @@ package com.scalableminds.braingames.binary.models
 
 import java.io.OutputStream
 
-import com.scalableminds.braingames.binary.formats.knossos.{KnossosDataLayer, WKWDataLayer}
+import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
+import com.scalableminds.braingames.binary.formats.rocksdb.RocksDbDataLayer
+import com.scalableminds.braingames.binary.formats.wkw.WKWDataLayer
 import com.scalableminds.braingames.binary.requester.DataCubeCache
 import com.scalableminds.braingames.binary.requester.handlers.BucketHandler
 import com.scalableminds.util.geometry.BoundingBox
@@ -92,6 +94,8 @@ object DataLayer extends LazyLogging{
           json.validate[KnossosDataLayer]
         case WKWDataLayer.layerType =>
           json.validate[WKWDataLayer]
+        case RocksDbDataLayer.layerType =>
+          json.validate[RocksDbDataLayer]
         case unknownType =>
           JsError(s"Unexpected data layer type: ${unknownType}")
       }
@@ -101,10 +105,12 @@ object DataLayer extends LazyLogging{
   val dataLayerWrites = new Writes[DataLayer] {
     def writes(dl: DataLayer): JsValue = {
       dl match {
-        case knossos: KnossosDataLayer =>
-          Json.toJson(knossos)
-        case wkw: WKWDataLayer =>
-          Json.toJson(wkw)
+        case layer: KnossosDataLayer =>
+          Json.toJson(layer)
+        case layer: WKWDataLayer =>
+          Json.toJson(layer)
+        case layer: RocksDbDataLayer =>
+          Json.toJson(layer)
         case _ =>
           Json.obj()
       }

@@ -5,7 +5,6 @@ package com.scalableminds.braingames.binary.formats.wkw
 
 import java.nio.file.Path
 
-import com.scalableminds.braingames.binary.formats.knossos.WKWDataLayer
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.repository.{DataSourceType, DataSourceTypeHandler}
 import com.scalableminds.braingames.binary.requester.DataRequester

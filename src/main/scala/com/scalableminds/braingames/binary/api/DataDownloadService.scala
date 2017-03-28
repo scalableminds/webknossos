@@ -3,17 +3,9 @@
  */
 package com.scalableminds.braingames.binary.api
 
-import java.io.{File, OutputStream}
-import java.nio.file.Paths
-
+import java.io.OutputStream
 import com.scalableminds.braingames.binary.models.DataLayer
-import com.scalableminds.braingames.binary.store.FileDataStore
-import com.scalableminds.util.io.{NamedFileStream, ZipIO}
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.commons.io.filefilter.{SuffixFileFilter, TrueFileFilter}
-import org.apache.commons.io.{FileUtils, FilenameUtils}
-
-import scala.collection.JavaConversions._
 
 trait DataDownloadService extends LazyLogging{
   def downloadDataLayer(dataLayer: DataLayer, outputStream: OutputStream): Unit = {

@@ -17,8 +17,7 @@ import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayerSecti
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.commons.io.{FilenameUtils, IOUtils}
-import org.xerial.snappy.SnappyFramedInputStream
+import org.apache.commons.io.IOUtils
 
 /**
   * A data store implementation which uses the hdd as data storage

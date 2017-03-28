@@ -10,7 +10,8 @@ import com.scalableminds.braingames.binary.models._
 import java.util.UUID
 import java.util.zip.ZipFile
 
-import com.scalableminds.braingames.binary.formats.knossos.{KnossosDataLayerSection, KnossosDataLayer}
+import com.scalableminds.braingames.binary.formats.knossos.{KnossosDataLayer, KnossosDataLayerSection}
+import com.scalableminds.braingames.binary.formats.rocksdb.RocksDbDataLayer
 import com.typesafe.config.Config
 import com.scalableminds.util.tools.{Fox, FoxImplicits, ProgressState}
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
@@ -36,69 +37,28 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
     UUID.randomUUID().toString
   }
 
-  // TODO: repair and move to DataLayer
-  def saveToFile(
-                  file: File,
-                  baseDataSource: DataSource,
-                  dataLayer: DataLayer,
-                  section: KnossosDataLayerSection): Fox[KnossosDataLayerSection] = {
-
-    val dataStore = new FileDataStore
-    try {
-      val zip = new ZipFile(file)
-      val resolutions = ZipIO.withUnziped(zip, includeHiddenFiles = false) { entries =>
-        Fox.serialSequence(entries) { e =>
-          val fileName = e.getName
-          val stream = zip.getInputStream(e)
-          val result = DataStore.knossosDirToCube(section.baseDir, Paths.get(fileName)).map {
-            case (resolution, point) =>
-              val bucket = new BucketPosition(point.x, point.y, point.z, resolution, dataLayer.cubeLength) // TODO: HACKY!!!!
-              val writeBucket = BucketWriteInstruction(
-                baseDataSource, dataLayer, bucket, IOUtils.toByteArray(stream))
-              dataStore.save(writeBucket, section).map(_ => resolution)
-          }.getOrElse(Fox.empty)
-          result.onComplete( _ => stream.close())
-          result
-        }
-      }
-      resolutions.map{ res =>
-        val rs = res.flatten.distinct.sorted
-        section.copy(resolutions = rs)
-      }
-    } catch {
-      case e: Exception =>
-        logger.error("Exception: " + e)
-        Fox.failure("dataStore.upload.zipInvalid", Full(e))
-    }
-  }
-
   def createUserDataLayer(baseDataSource: DataSource, initialContent: Option[File]): Fox[UserDataLayer] = {
     val category = DataLayer.SEGMENTATION.category
     val name = userDataLayerName()
     val basePath = userDataLayerFolder(name).toAbsolutePath
-    val section = KnossosDataLayerSection("1", "1", List(1), baseDataSource.boundingBox, baseDataSource.boundingBox)
     val fallbackLayer = baseDataSource.getByCategory(category)
-    val preliminaryDataLayer = KnossosDataLayer(
+    val preliminaryDataLayer = RocksDbDataLayer(
       name,
       category,
-      basePath.toString,
-      None,
       fallbackLayer.map(l => l.elementClass).getOrElse(DataLayer.SEGMENTATION.defaultElementClass),
-      isWritable = true,
-      fallback = fallbackLayer.map(l => FallbackLayer(baseDataSource.id, l.name)),
-      sections = List(section),
-      nextSegmentationId = baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId),
-      fallbackLayer.map(_.mappings).getOrElse(List.empty)
+      true,
+      fallbackLayer.map(l => FallbackLayer(baseDataSource.id, l.name)),
+      List(1),
+      baseDataSource.boundingBox,
+      baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId),
+      fallbackLayer.map(_.mappings).getOrElse(Nil)
     )
 
     PathUtils.ensureDirectory(basePath)
 
     initialContent match {
       case Some(zip) =>
-        saveToFile(zip, baseDataSource, preliminaryDataLayer, section)
-          .map { section =>
-            UserDataLayer(baseDataSource.id, preliminaryDataLayer.copy(sections = List(section)))
-          }
+        Fox.failure("Initial content is currently not supported.")
       case _ =>
         Fox.successful(UserDataLayer(baseDataSource.id, preliminaryDataLayer))
     }

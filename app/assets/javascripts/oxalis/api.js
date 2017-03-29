@@ -11,7 +11,7 @@ import OxalisModel from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
 import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, createCommentAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, createCommentAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
@@ -62,6 +62,13 @@ class TracingApi {
   getAllNodes(): Array<NodeType> {
     const { trees } = Store.getState().skeletonTracing;
     return _.flatMap(trees, tree => _.values(tree.nodes));
+  }
+
+  /**
+   * Deletes the node with nodeId in the tree with treeId
+   */
+  deleteNode(nodeId: number, treeId: number) {
+    Store.dispatch(deleteNodeAction(nodeId, treeId));
   }
 
  /**

@@ -14,7 +14,6 @@ import com.typesafe.config.Config
 import com.scalableminds.util.tools.{Fox, FoxImplicits, ProgressState}
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.braingames.binary.store.{DataStore, FileDataStore}
-import com.scalableminds.util.geometry.Point3D
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import net.liftweb.common.{Box, Full}
@@ -50,10 +49,20 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
           val stream = zip.getInputStream(e)
           val result = DataStore.knossosDirToCube(section.baseDir, Paths.get(fileName)).map {
             case (resolution, point) =>
-              val bucket = new BucketPosition(point.x, point.y, point.z, resolution, baseDataSource.cubeLength) // TODO: HACKY!!!!
+              val cubePoint = point.scale(baseDataSource.cubeLength)
+              val bucket = new BucketPosition(cubePoint.x, cubePoint.y, cubePoint.z, resolution, baseDataSource.cubeLength)
               val writeBucket = BucketWriteInstruction(
-                baseDataSource, dataLayer, section, bucket, IOUtils.toByteArray(stream))
-              dataStore.save(writeBucket, None).map(_ => resolution)
+                baseDataSource, dataLayer, section, bucket, Array.empty)
+              val baseDir = DataStore.knossosBaseDir(writeBucket)
+              val filePath = DataStore.knossosFilePath(baseDir, baseDataSource.id, bucket.toCube(baseDataSource.cubeLength), dataLayer.fileExtension)
+              try {
+                PathUtils.parent(filePath.toAbsolutePath).map(p => Files.createDirectories(p))
+                Files.copy(stream, filePath)
+                Fox.successful(resolution)
+              } catch {
+                case e: Throwable =>
+                  Fox.failure(e.getMessage, Full(e))
+              }
           }.getOrElse(Fox.empty)
           result.onComplete( _ => stream.close())
           result

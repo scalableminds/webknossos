@@ -324,8 +324,8 @@ const combinedReducers = reduceReducers(
 
 const store = createStore(combinedReducers, defaultState, applyMiddleware(
   timestampMiddleware,
-  sagaMiddleware,
   overwriteActionMiddleware,
+  sagaMiddleware,
 ));
 sagaMiddleware.run(rootSaga);
 

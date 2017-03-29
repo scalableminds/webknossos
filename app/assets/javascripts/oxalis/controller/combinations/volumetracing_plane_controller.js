@@ -6,8 +6,8 @@
 
 import _ from "lodash";
 import Store from "oxalis/store";
-import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import Utils from "libs/utils";
+import Toast from "libs/toast";
 import constants, { OrthoViews } from "oxalis/constants";
 import type { OrthoViewType, Point2 } from "oxalis/constants";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
@@ -36,6 +36,10 @@ class VolumeTracingPlaneController extends PlaneController {
     Store.subscribe(() => {
       this.render3dCell(this.model.volumeTracing.getActiveCellId());
     });
+
+    // TODO: This should be put in a saga with `take('INITIALIZE_SETTINGS')`as pre-condition
+    setTimeout(this.adjustSegmentationOpacity, 500);
+
     this.listenTo(this.model.volumeTracing, "newActiveCell", (id) => {
       id = this.model.volumeTracing.getActiveCellId();
       if (id > 0) {
@@ -93,7 +97,6 @@ class VolumeTracingPlaneController extends PlaneController {
           this.volumeTracingController.enterDeleteMode();
         }
         this.model.volumeTracing.startEditing(plane);
-        this.adjustSegmentationOpacity();
       },
 
       leftMouseUp: () => {
@@ -110,7 +113,6 @@ class VolumeTracingPlaneController extends PlaneController {
       rightMouseDown: (pos: Point2, plane: OrthoViewType) => {
         this.volumeTracingController.enterDeleteMode();
         this.model.volumeTracing.startEditing(plane);
-        this.adjustSegmentationOpacity();
       },
 
       rightMouseUp: () => {
@@ -129,7 +131,7 @@ class VolumeTracingPlaneController extends PlaneController {
 
   adjustSegmentationOpacity(): void {
     if (Store.getState().datasetConfiguration.segmentationOpacity < 10) {
-      Store.dispatch(updateDatasetSettingAction("segmentationOpacity", 50));
+      Toast.warning("Your setting for \"segmentation opacity\" is set very low.<br />Increase it for better visibility while volume tracing.");
     }
   }
 

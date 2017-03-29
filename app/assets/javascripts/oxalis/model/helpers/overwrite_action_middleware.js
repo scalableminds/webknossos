@@ -20,7 +20,7 @@ export default function overwriteMiddleware<A>(store) {
     (action: A) => {
       if (overwrites[action.type]) {
         let isSyncExecutionDone = false;
-        const wrappedNext = function(...args) {
+        const wrappedNext = function (...args) {
           if (isSyncExecutionDone) {
             console.warn(
               "Apparently, you used registerOverwrite for", action.type, ` and

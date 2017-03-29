@@ -16,8 +16,8 @@ import _ from "lodash";
 
 const CROSSHAIR_COLORS = {
   [OrthoViews.PLANE_XY]: [0x0000ff, 0x00ff00],
-  [OrthoViews.PLANE_XZ]: [0xff0000, 0x00ff00],
-  [OrthoViews.PLANE_YZ]: [0x0000ff, 0xff0000],
+  [OrthoViews.PLANE_XZ]: [0x0000ff, 0xff0000],
+  [OrthoViews.PLANE_YZ]: [0xff0000, 0x00ff00],
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
 const GRAY_CH_COLOR = 0x222222;

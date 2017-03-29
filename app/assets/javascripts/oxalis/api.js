@@ -10,12 +10,12 @@ import { InputKeyboardNoLoop } from "libs/input";
 import OxalisModel from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, createCommentAction } from "oxalis/model/actions/skeletontracing_actions";
 import { findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
-import type { NodeType, UserConfigurationType } from "oxalis/store";
+import type { NodeType, UserConfigurationType, DatasetConfigurationType } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
 
 /**
@@ -196,6 +196,36 @@ class DataApi {
     layer.pullQueue.add({ bucket, priority: -1 });
     return Promise.all(layer.pullQueue.pull()).then(() => layer.cube.getDataValue(position));
   }
+
+  /**
+   * Returns the dataset's setting for the tracing view.
+   * @param key - One of the following keys:
+     - segmentationOpacity
+     - datasetName
+     - fourBit
+     - interpolation
+     - keyboardDelay
+     - layers
+     - quality
+     - segmentationOpacity
+   *
+   * @example
+   * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
+   */
+   getConfiguration(key: $Keys<DatasetConfigurationType>) {
+     return Store.getState().datasetConfiguration[key];
+   }
+
+  /**
+   * Set the dataset's setting for the tracing view.
+   * @param key - Same keys as for getConfiguration()
+   *
+   * @example
+   * api.user.setConfiguration("segmentationOpacity", 20);
+   */
+   setConfiguration(key: $Keys<DatasetConfigurationType>, value) {
+     Store.dispatch(updateDatasetSettingAction(key, value));
+   }
 }
 
 /**
@@ -239,7 +269,7 @@ class UserApi {
     - sphericalCapRadius
   *
   * @example
-  * const segmentationOpacity = api.user.getConfiguration("segmentationOpacity");
+  * const keyboardDelay = api.user.getConfiguration("keyboardDelay");
   */
   getConfiguration(key: $Keys<UserConfigurationType>) {
     return Store.getState().userConfiguration[key];
@@ -250,7 +280,7 @@ class UserApi {
   * @param key - Same keys as for getConfiguration()
   *
   * @example
-  * api.user.setConfiguration("moveValue", 20);
+  * api.user.setConfiguration("keyboardDelay", 20);
   */
   setConfiguration(key: $Keys<UserConfigurationType>, value) {
     Store.dispatch(updateUserSettingAction(key, value));

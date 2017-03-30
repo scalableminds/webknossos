@@ -3,7 +3,7 @@ import type { SkeletonTracingType, BranchPointType, CommentType, TreeType, NodeT
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 
-type NodeWithTreeIdType = { treeId: number } & NodeType;
+export type NodeWithTreeIdType = { treeId: number } & NodeType;
 
 function rgb2rgba(color: Vector3, alpha?: number = 1): Vector4 {
   return [

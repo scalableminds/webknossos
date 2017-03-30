@@ -40,13 +40,11 @@ class AbstractMaterialFactory {
 
 
   makeMaterial(options = {}) {
-    options = _.extend(options, {
+    this.material = new THREE.RawShaderMaterial(_.extend(options, {
       uniforms: this.uniforms,
       vertexShader: this.getVertexShader(),
       fragmentShader: this.getFragmentShader(),
-    });
-
-    this.material = new THREE.RawShaderMaterial(options);
+    }));
   }
 
 

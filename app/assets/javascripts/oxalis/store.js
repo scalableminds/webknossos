@@ -18,8 +18,6 @@ import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import timestampMiddleware from "oxalis/model/helpers/timestamp_middleware";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { createLogger } from 'redux-logger';
-
 
 export type CommentType = {
   node: number;
@@ -312,8 +310,6 @@ const defaultState: OxalisState = {
   },
 };
 
-
-const loggerMiddleware = createLogger();
 
 const sagaMiddleware = createSagaMiddleware();
 const combinedReducers = reduceReducers(

@@ -328,7 +328,7 @@ class PlaneController {
 
     // TODO check for ControleMode rather the Object existence
     if (this.sceneController.skeleton) {
-      this.listenTo(this.sceneController.skeleton, "newGeometries", list =>
+      this.listenTo(this.sceneController.skeleton.geometryHandler, "newGeometries", list =>
         list.map(geometry =>
           this.planeView.addGeometry(geometry)),
       );

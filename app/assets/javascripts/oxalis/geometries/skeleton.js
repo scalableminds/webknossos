@@ -4,15 +4,12 @@
  */
 
 import _ from "lodash";
-import app from "app";
 import Backbone from "backbone";
 import Store from "oxalis/throttled_store";
 import Model from "oxalis/model";
-import { OrthoViews } from "oxalis/constants";
-import TreeGeometry from "oxalis/geometries/t_geometry";
-import type { Vector3, OrthoViewType } from "oxalis/constants";
-import type { SkeletonTracingType, TreeType } from "oxalis/store";
-import { InputKeyboardNoLoop } from "libs/input";
+import type { SkeletonTracingType } from "oxalis/store";
+import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import SkeletonGeometryHandler from "oxalis/geometries/skeleton_geometry_handler";
 
 class Skeleton {
   // This class is supposed to collect all the Geometries that belong to the skeleton, like
@@ -22,130 +19,72 @@ class Skeleton {
   listenTo: Function;
   trigger: Function;
 
-  model: Model;
   isVisible: boolean;
-  treeGeometryCache: {[id:number]: TreeGeometry};
   showInactiveTrees: boolean;
-  oldSkeletonTracing: ?SkeletonTracingType;
+  prevTracing: SkeletonTracingType;
+  geometryHandler: SkeletonGeometryHandler;
 
   constructor(model: Model) {
-    this.model = model;
     _.extend(this, Backbone.Events);
 
-    this.treeGeometryCache = {};
     this.isVisible = true;
-
     this.showInactiveTrees = true;
-    this.oldSkeletonTracing = null;
 
-    // this.reset();
+    const tracing = Store.getState().skeletonTracing;
+    this.geometryHandler = new SkeletonGeometryHandler(tracing.trees, model);
+    this.prevTracing = tracing;
 
-    // Potentially quite ressource intensive
-    // Test this some more
-    // Perhaps load can be eased a bit with ThreeJS-React wrappers?
-    Store.subscribe(() => this.reset());
-    this.keyboardNoLoop = new InputKeyboardNoLoop({
-      "5": () => {
-        const activeNodeId = Store.getState().skeletonTracing.activeNodeId;
-        this.treeGeometryCache[0].removeNode(activeNodeId);
-      },
-      "6": () => {
-        const activeNodeId = Store.getState().skeletonTracing.activeNodeId;
-        this.treeGeometryCache[0].addNode({
-          position: [721, 660, 685],
-          id: 100,
-          radius: 20,
-        }, 0);
-      },
-    });
+    Store.subscribe(() => this.update());
   }
 
-  createNewTree(tree: TreeType): TreeGeometry {
-    const treeGeometry = new TreeGeometry([tree], this.model);
-    // tree.showRadius(!Store.getState().userConfiguration.overrideNodeRadius);
-    this.treeGeometryCache[tree.treeId] = treeGeometry;
-    this.trigger("newGeometries", treeGeometry.getMeshes());
 
-    return treeGeometry;
-  }
+  update() {
+    const tracing = Store.getState().skeletonTracing;
+    const diff = diffTrees(this.prevTracing.trees, tracing.trees);
 
-  evictFromCache = _.throttle(() => {
-    const treeIds = Object.keys(Store.getState().skeletonTracing.trees);
-
-    // actually free the buffers etc. from the GPU
-    _.values(_.omit(this.treeGeometryCache, treeIds)).forEach((treeGeometry) => {
-      this.trigger("removeGeometries", treeGeometry.getMeshes());
-      treeGeometry.dispose();
-    });
-
-    // remove geometry from cache
-    this.treeGeometryCache = _.pick(this.treeGeometryCache, treeIds);
-  }, 500)
-
-  reset() {
-    const skeletonTracing = Store.getState().skeletonTracing;
-
-    // only update the WebGl stuff if the tracing has really changed
-    // this should smooth performance when one is just viewing/moving around
-    if (skeletonTracing !== this.oldSkeletonTracing) {
-      const trees = _.values(Store.getState().skeletonTracing.trees);
-
-      // periodically evict unused tree geometries left over after tree deletion/splitting
-      this.evictFromCache();
-
-      for (const tree of trees) {
-        let treeGeometry = this.getTreeGeometry(tree.treeId);
-        if (!treeGeometry) {
-          treeGeometry = this.createNewTree(tree);
-        }
-
-        //treeGeometry.reset(tree.nodes, tree.edges);
+    for (const update of diff) {
+      switch (update.action) {
+        case "createNode":
+          this.geometryHandler.addNode(update.value);
+          break;
+        case "removeNode":
+          this.geometryHandler.removeNode(update.value);
+          break;
+        case "createEdge":
+          break;
+        case "removeEdge":
+          break;
+        default:
       }
-
-      app.vent.trigger("rerender");
-      this.oldSkeletonTracing = skeletonTracing;
     }
+
+    // this.geometryHandler.updateUniforms();
+    this.prevTracing = tracing;
   }
 
-  getMeshes = () => {
-    let meshes = [];
-    for (const tree of _.values(this.treeGeometryCache)) {
-      meshes = meshes.concat(tree.getMeshes());
-    }
-    return meshes;
-  }
-
-  getTreeGeometry(treeId: ?number) {
-    if (!treeId) {
-      treeId = Store.getState().skeletonTracing.activeTreeId;
-    }
-    if (treeId != null) {
-      return this.treeGeometryCache[treeId];
-    }
-    return null;
-  }
-
-
-  setVisibilityTemporary(isVisible: boolean) {
-    for (const mesh of this.getMeshes()) {
-      mesh.visible = isVisible && ((mesh.isVisible != null) ? mesh.isVisible : true);
-    }
-    app.vent.trigger("rerender");
-  }
+  getMeshes = () => this.geometryHandler.getMeshes()
 
 
   setVisibility(isVisible: boolean) {
     this.isVisible = isVisible;
 
-    for (const mesh of this.getMeshes()) {
+    /* for (const mesh of this.getMeshes()) {
       mesh.isVisible = isVisible;
     }
-    app.vent.trigger("rerender");
+    app.vent.trigger("rerender"); */
+  }
+
+
+  setVisibilityTemporary(/* isVisible: boolean */) {
+    /* for (const mesh of this.getMeshes()) {
+      mesh.visible = isVisible && ((mesh.isVisible != null) ? mesh.isVisible : true);
+    } */
+    // (TODO: still needed?) app.vent.trigger("rerender");
   }
 
 
   restoreVisibility() {
-    this.setVisibilityTemporary(this.isVisible);
+//    this.setVisibilityTemporary(this.isVisible);
   }
 
 
@@ -154,26 +93,26 @@ class Skeleton {
   }
 
 
-  updateForCam(id: OrthoViewType) {
-    for (const tree of _.values(this.treeGeometryCache)) {
+  updateForCam(/* id: OrthoViewType */) {
+    /* for (const tree of _.values(this.treeGeometryCache)) {
       //tree.showRadius(id !== OrthoViews.TDView && !Store.getState().userConfiguration.overrideNodeRadius);
     }
 
     if (id !== OrthoViews.TDView) {
       this.setVisibilityTemporary(this.isVisible);
     }
-    this.setVisibilityTemporary(true);
+    this.setVisibilityTemporary(true);*/
   }
 
 
   toggleInactiveTreeVisibility() {
-    this.showInactiveTrees = !this.showInactiveTrees;
-    return this.setInactiveTreeVisibility(this.showInactiveTrees);
+    // this.showInactiveTrees = !this.showInactiveTrees;
+    // return this.setInactiveTreeVisibility(this.showInactiveTrees);
   }
 
 
-  setInactiveTreeVisibility(visible: boolean) {
-    for (const mesh of this.getMeshes()) {
+  setInactiveTreeVisibility(/* isVisible: boolean */) {
+    /* for (const mesh of this.getMeshes()) {
       mesh.isVisible = visible;
     }
     const treeGeometry = this.getTreeGeometry(Store.getState().skeletonTracing.activeTreeId);
@@ -181,16 +120,19 @@ class Skeleton {
       treeGeometry.edges.isVisible = true;
       treeGeometry.nodes.isVisible = true;
       app.vent.trigger("rerender");
-    }
+    } */
   }
+
 
   getAllNodes() {
-    return _.map(this.treeGeometryCache, tree => tree.nodes);
+    return [];
+    // return _.map(this.treeGeometryCache, tree => tree.nodes);
   }
 
-  setSizeAttenuation(sizeAttenuation: boolean) {
-    return _.map(this.treeGeometryCache, tree =>
-      tree.setSizeAttenuation(sizeAttenuation));
+
+  setSizeAttenuation(/* sizeAttenuation: boolean */) {
+    /* return _.map(this.treeGeometryCache, tree =>
+      tree.setSizeAttenuation(sizeAttenuation));*/
   }
 }
 

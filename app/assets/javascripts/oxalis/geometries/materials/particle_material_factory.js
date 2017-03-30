@@ -75,7 +75,7 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
 precision highp float;
 precision highp int;
 
-varying vec3 vColor;
+varying vec3 color;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float zoomFactor;
@@ -92,24 +92,11 @@ attribute float treeId;
 void main()
 {
     float nodeScaleFactor = 1.0;
-    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
 
-
-    if (showRadius == 1)
-      gl_PointSize = max(
-          radius * 2.0 / zoomFactor / baseVoxel,
-          particleSize
-        ) * scale * nodeScaleFactor;
-    else
-      gl_PointSize = particleSize * nodeScaleFactor;
 
     gl_PointSize = 5.0;
-
-    if (typ > 0.5) {
-      vColor = vec3(1.0, 0.5, 0.5);
-    } else {
-      vColor = vec3(0.5, 0.5, 1.0);
-    }
+    color = vec3(1.0, 0.0, 1.0);
     gl_Position = projectionMatrix * mvPosition;
 }\
 `;
@@ -119,11 +106,11 @@ void main()
     return `\
 precision highp float;
 
-varying vec3 vColor;
+varying vec3 color;
 
 void main()
 {
-    gl_FragColor = vec4( vColor, 1.0 );
+    gl_FragColor = vec4(color, 1.0);
 }\
 `;
   }

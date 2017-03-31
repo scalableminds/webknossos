@@ -98,7 +98,7 @@ class TreeGeometry {
   resetNodes(nodes) {
     const nodeCount = _.size(nodes);
 
-    if (nodeCount) {
+    if (nodeCount > 0) {
       const sizesBuffer = new Array(nodeCount);
       const scalesBuffer = new Array(nodeCount);
       const positionBuffer = new Array(nodeCount * 3);
@@ -137,6 +137,10 @@ class TreeGeometry {
       nodesMesh.geometry.attributes.color.needsUpdate = true;
 
       nodesMesh.geometry.computeBoundingSphere();
+
+      // when geometry only contains 1 point, the bounding sphere's radius is 0
+      // however, for raycasting it needs to be larger
+      nodesMesh.geometry.boundingSphere.radius = Math.max(nodesMesh.geometry.boundingSphere.radius, 1000);
     }
   }
 

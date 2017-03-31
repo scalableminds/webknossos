@@ -503,7 +503,7 @@ class AbstractTreeRenderer {
   getMaxTreeDepth(tree: AbstractNodeType, mode: AbstractTreeModeType, count: number = 0): number {
     if (mode == null) { mode = MODE_NORMAL; }
 
-    if (!tree) {
+    if (tree == null) {
       return count;
     }
 

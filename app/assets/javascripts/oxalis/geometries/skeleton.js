@@ -80,7 +80,7 @@ class Skeleton {
 
       for (const tree of trees) {
         let treeGeometry = this.getTreeGeometry(tree.treeId);
-        if (!treeGeometry) {
+        if (treeGeometry == null) {
           treeGeometry = this.createNewTree(tree.treeId, tree.color);
         }
 
@@ -101,7 +101,7 @@ class Skeleton {
   }
 
   getTreeGeometry(treeId: ?number) {
-    if (!treeId) {
+    if (treeId == null) {
       treeId = Store.getState().skeletonTracing.activeTreeId;
     }
     if (treeId != null) {

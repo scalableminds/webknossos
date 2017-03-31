@@ -160,32 +160,34 @@ class TreeGeometry {
     }
   }
 
-  startNodeHighlightAnimation(nodeId) {
+  async startNodeHighlightAnimation(nodeId) {
     const normal = 1.0;
     const highlighted = 2.0;
 
-    const nodeIndex = _.findIndex(this.nodes.geometry.nodeIDs, id => id === nodeId);
-    if (nodeIndex >= 0) {
-      this.animateNodeScale(normal, highlighted, nodeIndex, () => this.animateNodeScale(highlighted, normal, nodeIndex));
-    }
+    await this.animateNodeScale(normal, highlighted, nodeId);
+    await this.animateNodeScale(highlighted, normal, nodeId);
   }
 
-  animateNodeScale(from, to, index, onComplete = _.noop) {
-    const setScaleFactor = (factor) => {
-      this.nodes.geometry.attributes.nodeScaleFactor.set([factor], index);
-      this.nodes.geometry.attributes.nodeScaleFactor.needsUpdate = true;
-    };
+  animateNodeScale(from, to, nodeId) {
+    return new Promise((resolve, reject) => {
+      const setScaleFactor = (factor) => {
+        const nodeIndex = _.findIndex(this.nodes.geometry.nodeIDs, id => id === nodeId);
+        if (nodeIndex !== -1) {
+          this.nodes.geometry.attributes.nodeScaleFactor.set([factor], nodeIndex);
+          this.nodes.geometry.attributes.nodeScaleFactor.needsUpdate = true;
+        }
+      };
 
-    const onUpdate = function () {
-      setScaleFactor(this.scaleFactor);
-    };
-
-    const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });
-    tweenAnimation
+      const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });
+      tweenAnimation
       .to({ scaleFactor: to }, 100)
-      .onUpdate(onUpdate)
-      .onComplete(onComplete)
+      .onUpdate(function onUpdate() {
+        setScaleFactor(this.scaleFactor);
+      })
+      .onComplete(resolve)
+      .onStop(reject)
       .start();
+    });
   }
 
   getColor(id) {

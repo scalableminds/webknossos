@@ -307,7 +307,7 @@ export function mergeTrees(skeletonTracing: SkeletonTracingType, sourceNodeId: n
   const sourceTree = findTreeByNodeId(trees, sourceNodeId).get();
   const targetTree = findTreeByNodeId(trees, targetNodeId).get(); // should be activeTree
 
-  if (allowUpdate && sourceTree && targetTree) {
+  if (allowUpdate && sourceTree != null && targetTree != null && sourceTree !== targetTree) {
     const newEdge: EdgeType = {
       source: sourceNodeId,
       target: targetNodeId,

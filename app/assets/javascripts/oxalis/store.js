@@ -14,6 +14,7 @@ import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import timestampMiddleware from "oxalis/model/helpers/timestamp_middleware";
@@ -354,6 +355,7 @@ const sagaMiddleware = createSagaMiddleware();
 const combinedReducers = reduceReducers(
   SettingsReducer,
   SkeletonTracingReducer,
+  VolumeTracingReducer,
   TaskReducer,
   SaveReducer,
   FlycamReducer,

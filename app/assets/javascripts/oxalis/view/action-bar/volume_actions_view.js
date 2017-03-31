@@ -1,30 +1,32 @@
 // @flow
 import React, { PureComponent } from "react";
+import { connect } from "react-redux";
 import type Model from "oxalis/model";
+import type { VolumeModeType } from "oxalis/constants";
+import type { OxalisState, VolumeTracingType } from "oxalis/store";
 import Constants from "oxalis/constants";
+import Store from "oxalis/store";
+import { setModeAction } from "oxalis/model/actions/volumetracing_actions";
 import { Button, Radio } from "antd";
 
 class VolumeActionsView extends PureComponent {
   props: {
     oldModel: Model,
+    volumeTracing: VolumeTracingType,
   };
 
-  componentDidMount() {
-    this.props.oldModel.volumeTracing.on("change:mode", this._forceUpdate);
+  handleSetMode = (event: { target: { value: VolumeModeType } }) => {
+    Store.dispatch(setModeAction(
+      event.target.value,
+    ));
   }
-
-  componentWillUnmount() {
-    this.props.oldModel.volumeTracing.off("change:mode", this._forceUpdate);
-  }
-
-  _forceUpdate = () => { this.forceUpdate(); };
 
   render() {
     return (
       <div>
         <Radio.Group
-          onChange={event => this.props.oldModel.volumeTracing.setMode(event.target.value)}
-          value={this.props.oldModel.volumeTracing.mode}
+          onChange={this.handleSetMode}
+          value={this.props.volumeTracing.viewMode}
           style={{ marginRight: 10 }}
         >
           <Radio.Button value={Constants.VOLUME_MODE_MOVE}>Move</Radio.Button>
@@ -40,4 +42,10 @@ class VolumeActionsView extends PureComponent {
   }
 }
 
-export default VolumeActionsView;
+function mapStateToProps(state: OxalisState) {
+  return {
+    volumeTracing: state.tracing,
+  };
+}
+
+export default connect(mapStateToProps)(VolumeActionsView);

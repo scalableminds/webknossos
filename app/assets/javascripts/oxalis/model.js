@@ -9,6 +9,7 @@ import Store from "oxalis/store";
 import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType, TreeType } from "oxalis/store";
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
+import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import window from "libs/window";
@@ -231,6 +232,7 @@ class Model extends Backbone.Model {
           "Volume is allowed, but segmentation does not exist");
         this.set("volumeTracing", new VolumeTracing(volumeTracing, this.getSegmentationBinary()));
         this.annotationModel = this.get("volumeTracing");
+        Store.dispatch(initializeVolumeTracingAction(volumeTracing));
       } else {
         // $FlowFixMe
         const skeletonTracing: Tracing<SkeletonContentDataType> = tracing;

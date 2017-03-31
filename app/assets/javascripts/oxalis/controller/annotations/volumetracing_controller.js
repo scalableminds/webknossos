@@ -8,6 +8,8 @@ import $ from "jquery";
 import Backbone from "backbone";
 import { InputKeyboardNoLoop } from "libs/input";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
+import { toggleModeAction } from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingView from "oxalis/view/volumetracing_view";
 import SceneController from "oxalis/controller/scene_controller";
 
@@ -43,8 +45,8 @@ class VolumeTracingController {
 
     // Keyboard shortcuts
     this.keyboardNoLoop = new InputKeyboardNoLoop({
-      w: () => this.model.volumeTracing.toggleMode(),
-      "1": () => this.model.volumeTracing.toggleMode(),
+      w: () => Store.dispatch(toggleModeAction()),
+      "1": () => Store.dispatch(toggleModeAction()),
     });
 
     // no merging for now

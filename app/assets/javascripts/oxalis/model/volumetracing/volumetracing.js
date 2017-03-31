@@ -6,7 +6,6 @@
 import _ from "lodash";
 import Backbone from "backbone";
 import Drawing from "libs/drawing";
-import Toast from "libs/toast";
 import VolumeCell from "oxalis/model/volumetracing/volumecell";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import VolumeTracingStateLogger from "oxalis/model/volumetracing/volumetracing_statelogger";
@@ -73,28 +72,6 @@ class VolumeTracing {
     // For testing
     window.setAlpha = v => Drawing.setAlpha(v);
     window.setSmoothLength = v => Drawing.setSmoothLength(v);
-  }
-
-
-  setMode(mode: VolumeModeType) {
-    if (mode === this.mode) {
-      return;
-    }
-    if (mode === Constants.VOLUME_MODE_TRACE && getIntegerZoomStep(Store.getState()) > 1) {
-      Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
-      return;
-    }
-    this.mode = mode;
-    this.trigger("change:mode", this.mode);
-  }
-
-
-  toggleMode() {
-    return this.setMode(
-      this.mode === Constants.VOLUME_MODE_TRACE ?
-        Constants.VOLUME_MODE_MOVE :
-        Constants.VOLUME_MODE_TRACE,
-    );
   }
 
 

@@ -144,7 +144,7 @@ class UserSettingsView extends Component {
           <NumberInputSetting label="Active Node ID" value={activeNodeId} onChange={this.props.onChangeActiveNodeId} />
           <NumberInputSetting label="Active Tree ID" value={activeTreeId} onChange={this.props.onChangeActiveTreeId} />
           <LogSliderSetting label="Node Radius" min={1} max={5000} roundTo={0} value={this.props.userConfiguration.radius} onChange={this.props.onChangeRadius} disabled={this.props.userConfiguration.overrideNodeRadius} />
-          <NumberSliderSetting label={this.props.userConfiguration.overrideNodeRadius ? "Particle Size": "Min. Particle Size"} max={20} step={0.1} value={this.props.userConfiguration.particleSize} onChange={this.onChangeUser.particleSize} />
+          <NumberSliderSetting label={this.props.userConfiguration.overrideNodeRadius ? "Particle Size" : "Min. Particle Size"} max={20} step={0.1} value={this.props.userConfiguration.particleSize} onChange={this.onChangeUser.particleSize} />
           <SwitchSetting label="Override Node Radius" value={this.props.userConfiguration.overrideNodeRadius} onChange={this.onChangeUser.overrideNodeRadius} />
           <SwitchSetting label="Soma Clicking" value={this.props.userConfiguration.newNodeNewTree} onChange={this.onChangeUser.newNodeNewTree} />
         </Panel>

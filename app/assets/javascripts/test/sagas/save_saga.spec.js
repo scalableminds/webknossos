@@ -3,6 +3,7 @@
 
 import mockRequire from "mock-require";
 import _ from "lodash";
+
 mockRequire.stopAll();
 
 mockRequire("libs/window", { alert: console.log.bind(console) });

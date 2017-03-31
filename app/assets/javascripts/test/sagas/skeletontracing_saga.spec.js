@@ -1,3 +1,4 @@
+/* eslint-disable import/no-extraneous-dependencies, import/first */
 import mockRequire from "mock-require";
 import _ from "lodash";
 

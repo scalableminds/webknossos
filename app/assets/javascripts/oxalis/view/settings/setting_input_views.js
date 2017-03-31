@@ -62,6 +62,7 @@ type LogSliderSettingProps = {
   label: string,
   max: number,
   min: number,
+  roundTo?: number,
 };
 
 const LOG_SLIDER_MIN = -100;
@@ -103,9 +104,10 @@ export class LogSliderSetting extends React.PureComponent {
   }
 
   render() {
+    const { label, roundTo, value, min, max } = this.props;
     return (
       <Row className="settings-row">
-        <Col span={8}><label className="setting-label">{this.props.label}</label></Col>
+        <Col span={8}><label className="setting-label">{label}</label></Col>
         <Col span={8}>
           <Slider
             min={LOG_SLIDER_MIN}
@@ -117,10 +119,10 @@ export class LogSliderSetting extends React.PureComponent {
         </Col>
         <Col span={6}>
           <InputNumber
-            min={this.props.min}
-            max={this.props.max}
+            min={min}
+            max={max}
             style={{ marginLeft: 16 }}
-            value={this.props.value} onChange={this.onChangeInput}
+            value={roundTo != null ? Utils.roundTo(value, roundTo) : value} onChange={this.onChangeInput}
           />
         </Col>
       </Row>

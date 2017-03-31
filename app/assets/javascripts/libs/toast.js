@@ -5,6 +5,13 @@ export type ToastType = {
   remove: () => void
 };
 
+function hashCode(s) {
+  return s.split("").reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+}
+
 $.fn.alertWithTimeout = function (timeout = 3000) {
   this.each(function () {
     const $this = $(this);
@@ -25,7 +32,7 @@ $.fn.alertWithTimeout = function (timeout = 3000) {
 };
 
 
-const getToasts = (type, message) => $(`.alert-${type}[data-id='${message}']`);
+const getToasts = (type, message) => $(`.alert-${type}[data-id='${hashCode(message)}']`);
 
 
 const shouldDisplayToast = (type, message, sticky) =>
@@ -60,7 +67,7 @@ const Toast = {
       } else {
         displayMessage = message;
       }
-      const $messageElement = $("<div>", { class: `alert alert-${type} fade in`, "data-id": message }).html(displayMessage);
+      const $messageElement = $("<div>", { class: `alert alert-${type} fade in`, "data-id": hashCode(message) }).html(displayMessage);
       const $closeButton = $("<button>", { type: "button", class: "close", "data-dismiss": "alert" }).html("&times;");
       $messageElement.prepend($closeButton);
       if (sticky) {

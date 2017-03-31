@@ -1,10 +1,23 @@
-import { saveSkeletonTracingAsync, diffTracing } from "oxalis/model/sagas/skeletontracing_saga";
-import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
-import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
-import { addTimestamp } from "oxalis/model/helpers/timestamp_middleware";
-import { take, put } from "redux-saga/effects";
-import { M4x4 } from "libs/mjs";
+import mockRequire from "mock-require";
+import _ from "lodash";
+
+const KeyboardJS = {
+  bind: _.noop,
+  unbind: _.noop,
+};
+
+mockRequire("keyboardjs", KeyboardJS);
+mockRequire("libs/window", { alert: console.log.bind(console) });
+mockRequire("bootstrap-toggle", {});
+mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
+
+const { saveSkeletonTracingAsync, diffTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
+const SkeletonTracingActions = mockRequire.reRequire("oxalis/model/actions/skeletontracing_actions");
+const { pushSaveQueueAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
+const SkeletonTracingReducer = mockRequire.reRequire("oxalis/model/reducers/skeletontracing_reducer").default;
+const { addTimestamp } = mockRequire.reRequire("oxalis/model/helpers/timestamp_middleware");
+const { take, put } = mockRequire.reRequire("redux-saga/effects");
+const { M4x4 } = mockRequire.reRequire("libs/mjs");
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 function expectValue(block) {

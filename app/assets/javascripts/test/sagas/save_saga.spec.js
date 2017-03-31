@@ -1,13 +1,19 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import mockRequire from "mock-require";
-import * as UpdateActions from "oxalis/model/sagas/update_actions";
-import * as SaveActions from "oxalis/model/actions/save_actions";
-import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-import { take, call, put } from "redux-saga/effects";
-import Request from "libs/request";
 
+import mockRequire from "mock-require";
+import _ from "lodash";
 mockRequire.stopAll();
+
+mockRequire("libs/window", { alert: console.log.bind(console) });
+mockRequire("app", { router: { off: _.noop, reload: _.noop } });
+
+const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
+const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
+const SkeletonTracingActions = mockRequire.reRequire("oxalis/model/actions/skeletontracing_actions");
+const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
+const Request = mockRequire.reRequire("libs/request").default;
+
 const { alert } = mockRequire.reRequire("libs/window");
 const { compactUpdateActions, pushAnnotationAsync } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
 

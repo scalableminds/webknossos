@@ -253,23 +253,19 @@ describe("Api", () => {
       });
     });
 
-    xdescribe("registerOverwrite", () => {
+    describe("registerOverwrite", () => {
       it("should overwrite an existing function", (done) => {
-        spyOn(model.skeletonTracing, "addNode");
-        const oldAddNode = model.skeletonTracing.addNode;
-
         let bool = false;
-        const newAddNode = function overwrite(oldFunc, args) {
+        api.utils.registerOverwrite("SET_ACTIVE_NODE", (store, call, action) => {
           bool = true;
-          oldFunc(...args);
-        };
-        api.utils.registerOverwrite("addNode", newAddNode);
+          call(action);
+        });
 
-        model.skeletonTracing.addNode();
+        api.tracing.setActiveNode(2);
         // The added instructions should have been executed
         expect(bool).toBe(true);
         // And the original method should have been called
-        expect(oldAddNode).toHaveBeenCalled();
+        expect(api.tracing.getActiveNodeId()).toBe(2);
         done();
       });
     });

@@ -194,7 +194,7 @@ class DatasetActionsView extends PureComponent {
     }
 
     return (
-      <div><Button.Group>{elements}</Button.Group></div>
+      <div><Button.Group size="large">{elements}</Button.Group></div>
     );
   }
 }

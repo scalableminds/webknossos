@@ -5,7 +5,6 @@ import DatasetActionsView from "oxalis/view/action-bar/dataset_actions_view";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
-import SkeletonActionsView from "oxalis/view/action-bar/skeleton_actions_view";
 import Constants from "oxalis/constants";
 import { Button } from "antd";
 
@@ -27,6 +26,7 @@ function ActionBarView({ oldModel }: { oldModel: Model }) {
             data-autohide="false"
             data-disable-scrolling="false"
             icon="menu-unfold"
+            size="large"
           >Menu</Button> :
           null
       }
@@ -34,7 +34,6 @@ function ActionBarView({ oldModel }: { oldModel: Model }) {
       { hasAdvancedOptions ? <DatasetPositionView oldModel={oldModel} /> : null }
       { isVolumeMode && hasAdvancedOptions ? <VolumeActionsView oldModel={oldModel} /> : null }
       { !isVolumeMode && isTraceMode && hasAdvancedOptions ? <ViewModesView oldModel={oldModel} /> : null }
-      { isTraceMode && hasAdvancedOptions ? <SkeletonActionsView oldModel={oldModel} /> : null }
     </div>
   );
 }

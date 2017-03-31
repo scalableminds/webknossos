@@ -26,7 +26,7 @@ class ViewModesView extends PureComponent {
 
   render() {
     return (
-      <Radio.Group onChange={this.handleChange} value={this.props.oldModel.get("mode")}>
+      <Radio.Group onChange={this.handleChange} value={this.props.oldModel.get("mode")} size="large">
         <Radio.Button value={constants.MODE_PLANE_TRACING}>Orthogonal</Radio.Button>
         <Radio.Button value={constants.MODE_ARBITRARY}>Flight</Radio.Button>
         <Radio.Button value={constants.MODE_ARBITRARY_PLANE}>Oblique</Radio.Button>

@@ -57,9 +57,10 @@ class DatasetPositionView extends PureComponent {
     return (
       <div>
         <div>
-          <Input.Group compact>
+          <Input.Group compact size="large">
             <Button
               onClick={this.copyPositionToClipboard}
+              size="large"
             >Position</Button>
             <Vector3Input
               value={position}
@@ -71,9 +72,10 @@ class DatasetPositionView extends PureComponent {
         <div>
           {
             isArbitraryMode ?
-              <Input.Group compact>
+              <Input.Group compact size="large">
                 <Button
                   onClick={this.copyRotationToClipboard}
+                  size="large"
                 >Rotation</Button>
                 <Vector3Input
                   value={rotation}

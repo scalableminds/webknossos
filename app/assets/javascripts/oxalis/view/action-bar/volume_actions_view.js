@@ -26,11 +26,12 @@ class VolumeActionsView extends PureComponent {
           onChange={event => this.props.oldModel.volumeTracing.setMode(event.target.value)}
           value={this.props.oldModel.volumeTracing.mode}
           style={{ marginRight: 10 }}
+          size="large"
         >
           <Radio.Button value={Constants.VOLUME_MODE_MOVE}>Move</Radio.Button>
           <Radio.Button value={Constants.VOLUME_MODE_TRACE}>Trace</Radio.Button>
         </Radio.Group>
-        <Button.Group>
+        <Button.Group size="large">
           <Button
             onClick={() => { this.props.oldModel.volumeTracing.createCell(); }}
           >Create new cell (C)</Button>

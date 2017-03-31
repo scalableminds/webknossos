@@ -57,7 +57,7 @@ class CommentTabView extends React.Component {
           comment => this.comparator(comment.node, sortAscending) > this.comparator(activeNode.id, sortAscending));
 
         // try to find next tree with at least one comment
-        if (!nextComment) {
+        if (nextComment == null) {
           nextTree = _.find(trees,
             tree => this.comparator(tree.treeId, sortAscending) > this.comparator(activeTree.treeId, sortAscending) && tree.comments.length);
         }

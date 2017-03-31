@@ -1,7 +1,5 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import mockRequire from "mock-require";
-mockRequire.stopAll();
-
 import sinon from "sinon";
 import _ from "lodash";
 import Backbone from "backbone";

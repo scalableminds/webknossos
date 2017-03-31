@@ -4,7 +4,6 @@
  */
 
 // only relative imports are followed by documentationjs
-import _ from "lodash";
 import app from "app";
 import OxalisModel from "oxalis/model";
 import createApiLatest from "./api_latest";

@@ -5,7 +5,6 @@
 
 // only relative imports are followed by documentationjs
 import _ from "lodash";
-import app from "app";
 import { InputKeyboardNoLoop } from "libs/input";
 import OxalisModel from "oxalis/model";
 import Store from "oxalis/store";
@@ -336,7 +335,7 @@ class UtilsApi {
   // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
-  registerOverwrite<S, A>(
+  registerOverwrite(
     functionName: string,
     newFunction: Function,
   ) {
@@ -352,12 +351,12 @@ class UtilsApi {
       });
     } else if (functionName === "deleteActiveNode") {
       overwriteAction("DELETE_NODE", (store, call, action) => {
-        newFunction((args) => {
+        newFunction(() => {
           call(action);
         }, []);
       });
     } else {
-      throw new Error("You used registerOverwrite in version 1 which is deprecated. This version only supports overwrites for addNode and deleteActiveNode.")
+      throw new Error("You used registerOverwrite in version 1 which is deprecated. This version only supports overwrites for addNode and deleteActiveNode.");
     }
   }
 
@@ -384,5 +383,5 @@ export default function createApiInterface(model: OxalisModel): ApiInterface {
     data: new DataApi(model),
     user: new UserApi(model),
     utils: new UtilsApi(model),
-  }
-};
+  };
+}

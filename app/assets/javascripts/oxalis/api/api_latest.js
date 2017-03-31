@@ -5,7 +5,6 @@
 
 // only relative imports are followed by documentationjs
 import _ from "lodash";
-import app from "app";
 import { InputKeyboardNoLoop } from "libs/input";
 import OxalisModel from "oxalis/model";
 import Store from "oxalis/store";
@@ -365,5 +364,5 @@ export default function createApiInterface(model: OxalisModel): ApiInterface {
     data: new DataApi(model),
     user: new UserApi(model),
     utils: new UtilsApi(model),
-  }
-};
+  };
+}

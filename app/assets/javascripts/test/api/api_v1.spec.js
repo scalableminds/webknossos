@@ -5,8 +5,8 @@ import _ from "lodash";
 import Backbone from "backbone";
 import "backbone.marionette";
 import constants from "oxalis/constants";
-import TRACING_OBJECT from "../fixtures/tracing_object";
 import { createTreeAction, createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions.js";
+import TRACING_OBJECT from "../fixtures/tracing_object";
 
 
 mockRequire.stopAll();
@@ -270,7 +270,7 @@ describe("Api", () => {
         // This should be fixed by running the tests isolated (e.g., with ava)
         const oldNodeCount = _.flatMap(
           Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes)
+          tree => _.values(tree.nodes),
         ).length;
 
         Store.dispatch(createTreeAction());
@@ -283,7 +283,7 @@ describe("Api", () => {
         // And the original method should have been called
         const newNodeCount = _.flatMap(
           Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes)
+          tree => _.values(tree.nodes),
         ).length;
         expect(newNodeCount).toBe(oldNodeCount + 1);
         done();
@@ -303,7 +303,7 @@ describe("Api", () => {
         Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1, 0));
         const oldNodeCount = _.flatMap(
           Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes)
+          tree => _.values(tree.nodes),
         ).length;
 
         Store.dispatch(deleteNodeAction(0, 0));
@@ -314,7 +314,7 @@ describe("Api", () => {
         // And the original method should have been called
         const newNodeCount = _.flatMap(
           Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes)
+          tree => _.values(tree.nodes),
         ).length;
         expect(newNodeCount).toBe(oldNodeCount - 1);
         done();

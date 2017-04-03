@@ -17,6 +17,8 @@ import type Model, { BoundingBoxType } from "oxalis/model";
 import type View from "oxalis/view";
 import { getPosition, getViewportBoundingBox } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { createCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 
 class VolumeTracingPlaneController extends PlaneController {
 
@@ -32,24 +34,20 @@ class VolumeTracingPlaneController extends PlaneController {
     super(model, view, sceneController);
     this.volumeTracingController = volumeTracingController;
 
+    // Todo: Do not render on every store change
     Store.subscribe(() => {
-      this.render3dCell(this.model.volumeTracing.getActiveCellId());
+      getActiveCellId(Store.getState().tracing).chain(cellId =>
+        this.render3dCell(cellId),
+      );
     });
 
     // TODO: This should be put in a saga with `take('INITIALIZE_SETTINGS')`as pre-condition
     setTimeout(this.adjustSegmentationOpacity, 500);
-
-    this.listenTo(this.model.volumeTracing, "newActiveCell", (id) => {
-      id = this.model.volumeTracing.getActiveCellId();
-      if (id > 0) {
-        this.render3dCell(id);
-      }
-    });
   }
 
 
   simulateTracing = async (): Promise<void> => {
-    this.model.volumeTracing.setMode(constants.VOLUME_MODE_TRACE);
+    Store.dispatch(setModeAction(constants.VOLUME_MODE_TRACE));
 
     const controls = this.getPlaneMouseControls(OrthoViews.PLANE_XY);
     let pos = (x, y) => ({ x, y });
@@ -137,7 +135,7 @@ class VolumeTracingPlaneController extends PlaneController {
 
   getKeyboardControls(): Object {
     return _.extend(super.getKeyboardControls(), {
-      c: () => this.model.volumeTracing.createCell(),
+      c: () => Store.dispatch(createCellAction()),
     });
   }
 

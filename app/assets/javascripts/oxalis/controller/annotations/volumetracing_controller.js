@@ -9,7 +9,8 @@ import Backbone from "backbone";
 import { InputKeyboardNoLoop } from "libs/input";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import { toggleModeAction } from "oxalis/model/actions/volumetracing_actions";
+import { toggleModeAction, setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import VolumeTracingView from "oxalis/view/volumetracing_view";
 import SceneController from "oxalis/controller/scene_controller";
 
@@ -26,7 +27,7 @@ class VolumeTracingController {
   sceneController: SceneController;
   inDeleteMode: boolean;
   mergeMode: 0 | 1 | 2;
-  prevActiveCell: number;
+  prevActiveCell: ?number;
   keyboardNoLoop: InputKeyboardNoLoop;
 
   MERGE_MODE_NORMAL = 0;
@@ -40,8 +41,6 @@ class VolumeTracingController {
     this.inDeleteMode = false;
 
     _.extend(this, Backbone.Events);
-
-    $("#create-cell-button").on("click", () => this.model.volumeTracing.createCell());
 
     // Keyboard shortcuts
     this.keyboardNoLoop = new InputKeyboardNoLoop({
@@ -99,7 +98,7 @@ class VolumeTracingController {
   handleCellSelection(cellId) {
     if (cellId > 0) {
       if (this.mergeMode === this.MERGE_MODE_NORMAL) {
-        this.model.volumeTracing.setActiveCell(cellId);
+        Store.dispatch(setActiveCellAction(cellId));
       } else if (this.mergeMode === this.MERGE_MODE_CELL1) {
         $("#merge-cell1").val(cellId);
         $("#merge-cell2").focus();
@@ -116,14 +115,14 @@ class VolumeTracingController {
 
     this.inDeleteMode = true;
 
-    this.prevActiveCell = this.model.volumeTracing.getActiveCellId();
-    this.model.volumeTracing.setActiveCell(0);
+    this.prevActiveCell = getActiveCellId(Store.getState().tracing).getOrElse(null);
+    Store.dispatch(setActiveCellAction(0));
   }
 
 
   restoreAfterDeleteMode() {
     if (this.inDeleteMode) {
-      this.model.volumeTracing.setActiveCell(this.prevActiveCell);
+      Store.dispatch(setActiveCellAction(this.prevActiveCell));
     }
     this.inDeleteMode = false;
   }

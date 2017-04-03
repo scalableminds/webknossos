@@ -12,6 +12,7 @@ import Constants from "oxalis/constants";
 import Model from "oxalis/model";
 import { updateUserSettingAction, updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
 import type { Vector6 } from "oxalis/constants";
 import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, TracingType } from "oxalis/store";
@@ -30,14 +31,11 @@ type UserSettingsViewProps = {
   onChangeTemporary: (key: $Keys<TemporaryConfigurationType>, value: any) => void,
   onChangeActiveNodeId: (value: number) => void,
   onChangeActiveTreeId: (value: number) => void,
+  onChangeActiveCellId: (value: number) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
   oldModel: Model,
   isPublicViewMode: boolean,
-};
-
-type UserSettingsViewState = {
-  activeCellId: number,
 };
 
 class UserSettingsView extends Component {
@@ -45,10 +43,6 @@ class UserSettingsView extends Component {
   props: UserSettingsViewProps;
   onChangeUser: {[$Keys<UserConfigurationType>]: Function};
   onChangeTemporary: {[$Keys<TemporaryConfigurationType>]: Function};
-
-  state: UserSettingsViewState = {
-    activeCellId: 0,
-  };
 
   componentWillMount() {
     // cache onChange handler
@@ -60,38 +54,16 @@ class UserSettingsView extends Component {
   componentDidMount() {
     // remove public mode prop once oldModel is no longer a prop of this
     if (!this.props.isPublicViewMode) {
-      this.updateIds();
-
       const wkModel = this.props.oldModel;
-      // wkModel.annotationModel.on("newActiveCell", this.updateIds);
       wkModel.on("change:mode", () => this.forceUpdate());
     }
   }
 
-  shouldComponentUpdate(nextProps: UserSettingsViewProps, nextState: UserSettingsViewState) {
+  shouldComponentUpdate(nextProps: UserSettingsViewProps) {
     return this.props.userConfiguration !== nextProps.userConfiguration
       || this.props.temporaryConfiguration !== nextProps.temporaryConfiguration
       || this.props.tracing !== nextProps.tracing
-      || this.props.state !== nextProps.state
-      || this.state.activeCellId !== nextState.activeCellId;
-  }
-
-  updateIds = () => {
-    const wkModel = this.props.oldModel;
-    if (wkModel.get("mode") in Constants.MODES_SKELETON) {
-      this.setState({
-        activeCellId: 0,
-      });
-    } else {
-      this.setState({
-        activeCellId: wkModel.get("volumeTracing").getActiveCellId() || 0,
-      });
-    }
-  }
-
-  onChangeActiveCellId = (value: number) => {
-    this.props.oldModel.get("volumeTracing").setActiveCell(value);
-    this.setState(Object.assign({}, this.state, { activeCellId: value }));
+      || this.props.state !== nextProps.state;
   }
 
   onChangeBoundingBox = (boundingBox: Vector6) => {
@@ -149,10 +121,11 @@ class UserSettingsView extends Component {
           <SwitchSetting label="Override Radius" value={this.props.userConfiguration.overrideNodeRadius} onChange={this.onChangeUser.overrideNodeRadius} />
         </Panel>
       );
-    } else if (mode === Constants.MODE_VOLUME && !this.props.isPublicViewMode) {
+    } else if (mode === Constants.MODE_VOLUME && !this.props.isPublicViewMode && this.props.tracing.type === "volume") {
+      const activeCellId = this.props.tracing.activeCellId != null ? this.props.tracing.activeCellId : "";
       return (
         <Panel header="Volume Options" key="3">
-          <NumberInputSetting label="Active Cell ID" value={this.state.activeCellId} onChange={this.onChangeActiveCellId} />
+          <NumberInputSetting label="Active Cell ID" value={activeCellId} onChange={this.props.onChangeActiveCellId} />
           <SwitchSetting label="3D Volume Rendering" value={this.props.userConfiguration.isosurfaceDisplay} onChange={this.onChangeUser.isosurfaceDisplay} />
           <NumberSliderSetting label="3D Rendering Bounding Box Size" min={1} max={10} step={0.1} value={this.props.userConfiguration.isosurfaceBBsize} onChange={this.onChangeUser.isosurfaceBBsize} />
           <NumberSliderSetting label="3D Rendering Resolution" min={40} max={400} value={this.props.userConfiguration.isosurfaceResolution} onChange={this.onChangeUser.isosurfaceResolution} />
@@ -201,6 +174,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeTemporary(propertyName, value) { dispatch(updateTemporarySettingAction(propertyName, value)); },
   onChangeActiveNodeId(id: number) { dispatch(setActiveNodeAction(id)); },
   onChangeActiveTreeId(id: number) { dispatch(setActiveTreeAction(id)); },
+  onChangeActiveCellId(id: number) { dispatch(setActiveCellAction(id)); },
   onChangeZoomStep(zoomStep: number) { dispatch(setZoomStepAction(zoomStep)); },
   onChangeRadius(radius: any) {
     dispatch(updateUserSettingAction("radius", radius));

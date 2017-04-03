@@ -6,12 +6,10 @@
 import _ from "lodash";
 import Backbone from "backbone";
 import Drawing from "libs/drawing";
-import VolumeCell from "oxalis/model/volumetracing/volumecell";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import VolumeTracingStateLogger from "oxalis/model/volumetracing/volumetracing_statelogger";
 import Dimensions from "oxalis/model/dimensions";
 import RestrictionHandler from "oxalis/model/helpers/restriction_handler";
-import Constants from "oxalis/constants";
 import Binary from "oxalis/model/binary";
 import Store from "oxalis/store";
 import { getPosition, getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -19,6 +17,7 @@ import { setRotationAction } from "oxalis/model/actions/flycam_actions";
 
 import type { Vector3, VolumeModeType, OrthoViewType } from "oxalis/constants";
 import type { Tracing, VolumeContentDataType } from "oxalis/model";
+import type { VolumeCellType } from "oxalis/store";
 
 class VolumeTracing {
 
@@ -26,8 +25,8 @@ class VolumeTracing {
   contentData: VolumeContentDataType;
   restrictionHandler: RestrictionHandler;
   mode: VolumeModeType;
-  cells: Array<VolumeCell>;
-  activeCell: ?VolumeCell;
+  // cells: Array<VolumeCell>;
+  activeCell: ?VolumeCellType;
   currentLayer: ?VolumeLayer;
   idCount: number;
   lastCentroid: ?Vector3;
@@ -43,18 +42,18 @@ class VolumeTracing {
     this.binary = binary;
     _.extend(this, Backbone.Events);
 
-    this.contentData = tracing.content.contentData;
+    // this.contentData = tracing.content.contentData;
     this.restrictionHandler = new RestrictionHandler(tracing.restrictions);
-    this.mode = Constants.VOLUME_MODE_MOVE;
+    // this.mode = Constants.VOLUME_MODE_MOVE;
 
-    this.cells = [];
-    this.activeCell = null;
-    this.currentLayer = null;        // Layer currently edited
-    if (this.contentData.nextCell != null) {
-      this.idCount = this.contentData.nextCell;
-    } else {
-      this.idCount = 1;
-    }
+    // this.cells = [];
+    // this.activeCell = null;
+    this.currentLayer = null; // Layer currently edited
+    // if (this.contentData.nextCell != null) {
+    //   this.idCount = this.contentData.nextCell;
+    // } else {
+    //   this.idCount = 1;
+    // }
     this.lastCentroid = null;
 
     this.stateLogger = new VolumeTracingStateLogger(
@@ -63,7 +62,7 @@ class VolumeTracing {
       this, this.binary.pushQueue,
     );
 
-    this.createCell(this.contentData.activeCell);
+    // this.createCell(this.contentData.activeCell);
 
     this.listenTo(this.binary.cube, "newMapping", function () {
       this.trigger("newActiveCell", this.getActiveCellId());
@@ -75,16 +74,16 @@ class VolumeTracing {
   }
 
 
-  createCell(id: ?number) {
-    let newCell;
-    if (id == null) {
-      id = this.idCount++;
-    }
+  // createCell(id: ?number) {
+  //   let newCell;
+  //   if (id == null) {
+  //     id = this.idCount++;
+  //   }
 
-    this.cells.push(newCell = new VolumeCell(id));
-    this.setActiveCell(newCell.id);
-    this.currentLayer = null;
-  }
+  //   this.cells.push(newCell = new VolumeCell(id));
+  //   this.setActiveCell(newCell.id);
+  //   this.currentLayer = null;
+  // }
 
 
   startEditing(planeId: OrthoViewType) {
@@ -113,7 +112,7 @@ class VolumeTracing {
     }
 
     currentLayer.addContour(pos);
-    this.trigger("updateLayer", this.getActiveCellId(), currentLayer.getSmoothedContourList());
+    // this.trigger("updateLayer", this.getActiveCellId(), currentLayer.getSmoothedContourList());
   }
 
 
@@ -152,32 +151,32 @@ class VolumeTracing {
   }
 
 
-  getActiveCellId() {
-    if (this.activeCell != null) {
-      return this.activeCell.id;
-    } else {
-      return 0;
-    }
-  }
+  // getActiveCellId() {
+  //   if (this.activeCell != null) {
+  //     return this.activeCell.id;
+  //   } else {
+  //     return 0;
+  //   }
+  // }
 
 
-  getMappedActiveCellId() {
-    return this.binary.cube.mapId(this.getActiveCellId());
-  }
+  // getMappedActiveCellId() {
+  //   return this.binary.cube.mapId(this.getActiveCellId());
+  // }
 
 
-  setActiveCell(id: number) {
-    this.activeCell = null;
-    for (const cell of this.cells) {
-      if (cell.id === id) { this.activeCell = cell; }
-    }
+  // setActiveCell(id: number) {
+  //   this.activeCell = null;
+  //   for (const cell of this.cells) {
+  //     if (cell.id === id) { this.activeCell = cell; }
+  //   }
 
-    if ((this.activeCell == null) && id > 0) {
-      this.createCell(id);
-    }
+  //   if ((this.activeCell == null) && id > 0) {
+  //     this.createCell(id);
+  //   }
 
-    this.trigger("newActiveCell", id);
-  }
+  //   this.trigger("newActiveCell", id);
+  // }
 }
 
 export default VolumeTracing;

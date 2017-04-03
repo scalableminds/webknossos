@@ -4,11 +4,11 @@ import type { Tracing } from "oxalis/model";
 import type { VolumeContentDataType } from "oxalis/store";
 
 type InitializeVolumeTracingActionType = { type: "INITIALIZE_VOLUMETRACING", tracing: Tracing<VolumeContentDataType> };
-type CreateCellActionType = { type: "CREATE_CELL", id: ?number };
+type CreateCellActionType = { type: "CREATE_CELL", cellId: ?number };
 type StartEditingActionType = { type: "START_EDITING", planeId: OrthoViewType };
 type AddToLayerActionType = { type: "ADD_TO_LAYER", position: Vector3 };
 type FinishEditingActionType = { type: "FINISH_EDITING" };
-type SetActiveCellActionType = { type: "SET_ACTIVE_CELL", activeCellId: number };
+type SetActiveCellActionType = { type: "SET_ACTIVE_CELL", cellId: number };
 type SetModeActionType = { type: "SET_MODE", mode: VolumeModeType };
 type ToggleModeActionType = { type: "TOGGLE_MODE" };
 
@@ -27,9 +27,9 @@ export const initializeVolumeTracingAction = (tracing: Tracing<VolumeContentData
   tracing,
 });
 
-export const createCellAction = (id: ?number): CreateCellActionType => ({
+export const createCellAction = (cellId: ?number): CreateCellActionType => ({
   type: "CREATE_CELL",
-  id,
+  cellId,
 });
 
 export const startEditingAction = (planeId: OrthoViewType): StartEditingActionType => ({
@@ -46,9 +46,9 @@ export const finishEditingAction = (): FinishEditingActionType => ({
   type: "FINISH_EDITING",
 });
 
-export const setActiveCellAction = (activeCellId: number): SetActiveCellActionType => ({
+export const setActiveCellAction = (cellId: number): SetActiveCellActionType => ({
   type: "SET_ACTIVE_CELL",
-  activeCellId,
+  cellId,
 });
 
 export const setModeAction = (mode: VolumeModeType): SetModeActionType => ({

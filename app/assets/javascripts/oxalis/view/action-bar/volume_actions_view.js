@@ -1,17 +1,15 @@
 // @flow
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
-import type Model from "oxalis/model";
 import type { VolumeModeType } from "oxalis/constants";
 import type { OxalisState, VolumeTracingType } from "oxalis/store";
 import Constants from "oxalis/constants";
 import Store from "oxalis/store";
-import { setModeAction } from "oxalis/model/actions/volumetracing_actions";
+import { setModeAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { Button, Radio } from "antd";
 
 class VolumeActionsView extends PureComponent {
   props: {
-    oldModel: Model,
     volumeTracing: VolumeTracingType,
   };
 
@@ -19,6 +17,10 @@ class VolumeActionsView extends PureComponent {
     Store.dispatch(setModeAction(
       event.target.value,
     ));
+  }
+
+  handleCreateCell = () => {
+    Store.dispatch(createCellAction());
   }
 
   render() {
@@ -34,7 +36,7 @@ class VolumeActionsView extends PureComponent {
         </Radio.Group>
         <Button.Group>
           <Button
-            onClick={() => { this.props.oldModel.volumeTracing.createCell(); }}
+            onClick={this.handleCreateCell}
           >Create new cell (C)</Button>
         </Button.Group>
       </div>

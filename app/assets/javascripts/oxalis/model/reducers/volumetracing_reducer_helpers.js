@@ -6,7 +6,7 @@
  *
  */
 
-import type { OxalisState, VolumeTracingType } from "oxalis/store";
+import type { OxalisState, VolumeTracingType, VolumeCellType } from "oxalis/store";
 import type { VolumeModeType } from "oxalis/constants";
 import Maybe from "data.maybe";
 import Constants from "oxalis/constants";
@@ -22,4 +22,28 @@ export function setMode(state: OxalisState, volumeTracing: VolumeTracingType, mo
     return Maybe.Nothing();
   }
   return Maybe.Just(mode);
+}
+
+export function setActiveCell(volumeTracing: VolumeTracingType, id: number) {
+  let newActiveCell = volumeTracing.cells[id];
+  let newIdCount = volumeTracing.idCount;
+
+  if ((newActiveCell == null) && id > 0) {
+    [newActiveCell, newIdCount] = createCell(volumeTracing, id).get();
+  }
+
+  return Maybe.Just([newActiveCell, newIdCount]);
+}
+
+export function createCell(volumeTracing: VolumeTracingType, id: ?number) {
+  let newIdCount = volumeTracing.idCount;
+  if (id == null) {
+    id = newIdCount++;
+  }
+
+  // Create the new VolumeCell
+  const cell: VolumeCellType = { id };
+
+  // this.currentLayer = null;
+  return Maybe.Just([cell, newIdCount]);
 }

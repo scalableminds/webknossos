@@ -89,6 +89,12 @@ export type MappingType = {
   classes?: Array<Array<number>>;
 };
 
+export type VolumeCellType = {
+  id: number;
+};
+
+export type VolumeCellMapType = {[number]: VolumeCellType};
+
 export type CategoryType = "color" | "segmentation";
 export type ElementClassType = "uint8" | "uint16" | "uint32";
 
@@ -151,9 +157,11 @@ export type VolumeTracingType = {
   type: "volume",
   name: string,
   version: number,
+  idCount: number,
   viewMode: ModeType, // VolumeViewModeType,
   cubes: [],
   activeCellId: ?number,
+  cells: VolumeCellMapType,
   controlMode: "Trace",
   tracingId: string,
   tracingType: "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType",

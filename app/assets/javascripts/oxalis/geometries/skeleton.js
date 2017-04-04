@@ -138,8 +138,7 @@ class Skeleton {
 
 
   getAllNodes() {
-    return [];
-    // return _.map(this.treeGeometryCache, tree => tree.nodes);
+    return _.map(this.geometryHandler.nodeGeometries, geometry => geometry.getMesh());
   }
 
 

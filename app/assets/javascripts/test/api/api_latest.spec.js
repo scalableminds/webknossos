@@ -5,11 +5,7 @@ import _ from "lodash";
 import Backbone from "backbone";
 import "backbone.marionette";
 import constants from "oxalis/constants";
-import { createTreeAction, createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions.js";
 import TRACING_OBJECT from "../fixtures/tracing_object";
-
-
-mockRequire.stopAll();
 
 function makeModelMock() {
   class ModelMock {}
@@ -84,7 +80,7 @@ describe("Api", () => {
       .then(() => {
         // Trigger the event ourselves, as the OxalisController is not instantiated
         app.vent.trigger("webknossos:ready");
-        webknossos.apiReady(1).then((apiObject) => {
+        webknossos.apiReady(2).then((apiObject) => {
           api = apiObject;
           done();
         });
@@ -98,8 +94,7 @@ describe("Api", () => {
 
 
   describe("Tracing Api", () => {
-    // Conflicts with the execution of the other api spec
-    xdescribe("getActiveNodeId", () => {
+    describe("getActiveNodeId", () => {
       it("should get the active node id", (done) => {
         expect(api.tracing.getActiveNodeId()).toBe(3);
         done();
@@ -108,8 +103,8 @@ describe("Api", () => {
 
     describe("setActiveNode", () => {
       it("should set the active node id", (done) => {
-        api.tracing.setActiveNode(2);
-        expect(api.tracing.getActiveNodeId()).toBe(2);
+        api.tracing.setActiveNode(1);
+        expect(api.tracing.getActiveNodeId()).toBe(1);
         done();
       });
     });
@@ -124,6 +119,7 @@ describe("Api", () => {
 
     describe("getAllNodes", () => {
       it("should get a list of all nodes", (done) => {
+        console.log(Store.getState().skeletonTracing);
         const nodes = api.tracing.getAllNodes();
         expect(nodes.length).toBe(3);
         done();
@@ -242,8 +238,7 @@ describe("Api", () => {
       });
     });
 
-    // Conflicts with the execution of the other api spec
-    xdescribe("registerKeyHandler", () => {
+    describe("registerKeyHandler", () => {
       it("should register a key handler and return a handler to unregister it again", (done) => {
         // Unfortunately this is not properly testable as KeyboardJS doesn't work without a DOM
         spyOn(KeyboardJS, "bind");
@@ -257,66 +252,18 @@ describe("Api", () => {
     });
 
     describe("registerOverwrite", () => {
-      it("should overwrite newAddNode", (done) => {
+      it("should overwrite an existing function", (done) => {
         let bool = false;
-        const newAddNode = function overwrite(oldFunc, args) {
+        api.utils.registerOverwrite("SET_ACTIVE_NODE", (store, call, action) => {
           bool = true;
-          oldFunc(...args);
-        };
-        api.utils.registerOverwrite("addNode", newAddNode);
+          call(action);
+        });
 
-        // Using the api to get all nodes yields a different set of nodes.
-        // There seem to be two different store instances float around.
-        // This should be fixed by running the tests isolated (e.g., with ava)
-        const oldNodeCount = _.flatMap(
-          Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes),
-        ).length;
-
-        Store.dispatch(createTreeAction());
-        Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1));
-
-
+        api.tracing.setActiveNode(2);
         // The added instructions should have been executed
         expect(bool).toBe(true);
-
         // And the original method should have been called
-        const newNodeCount = _.flatMap(
-          Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes),
-        ).length;
-        expect(newNodeCount).toBe(oldNodeCount + 1);
-        done();
-      });
-
-      it("should overwrite deleteActiveNode", (done) => {
-        let bool = false;
-        const deleteNode = function overwrite(oldFunc, args) {
-          bool = true;
-          oldFunc(...args);
-        };
-        api.utils.registerOverwrite("deleteActiveNode", deleteNode);
-
-        // Using the api to get all nodes yields a different set of nodes.
-        // There seem to be two different store instances float around.
-        // This should be fixed by running the tests isolated (e.g., with ava)
-        Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1, 0));
-        const oldNodeCount = _.flatMap(
-          Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes),
-        ).length;
-
-        Store.dispatch(deleteNodeAction(0, 0));
-
-        // The added instructions should have been executed
-        expect(bool).toBe(true);
-
-        // And the original method should have been called
-        const newNodeCount = _.flatMap(
-          Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes),
-        ).length;
-        expect(newNodeCount).toBe(oldNodeCount - 1);
+        expect(api.tracing.getActiveNodeId()).toBe(2);
         done();
       });
     });

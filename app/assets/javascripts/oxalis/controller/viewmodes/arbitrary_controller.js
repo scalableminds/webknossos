@@ -17,7 +17,7 @@ import Model from "oxalis/model";
 import View from "oxalis/view";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, createCommentAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -29,7 +29,8 @@ import constants from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import { yawFlycamAction, pitchFlycamAction, setPositionAction, setRotationAction, zoomInAction, zoomOutAction, moveFlycamAction } from "oxalis/model/actions/flycam_actions";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getActiveNode, getMaxNodeId, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
+import messages from "messages";
 
 class ArbitraryController {
   arbitraryView: ArbitraryView;
@@ -385,20 +386,15 @@ class ArbitraryController {
     // Consider for deletion
     this.setWaypoint();
     Store.dispatch(createBranchPointAction());
-    Toast.success("Branchpoint set");
+    Toast.success(messages["tracing.branchpoint_set"]);
   }
 
 
   popBranch(): void {
-    // Consider for deletion
-    Store.dispatch(deleteBranchPointAction());
-
-    const activeNodeId = Store.getState().skeletonTracing.activeNodeId;
-    if (activeNodeId === 1) {
-      Store.dispatch(yawFlycamAction(Math.PI));
-      Toast.warning("Reached initial node, view reversed");
-      Store.dispatch(createCommentAction("reversed"));
+    if (getBranchPoints(Store.getState().skeletonTracing).length === 0) {
+      Toast.error(messages["tracing.no_more_branchpoints"]);
     }
+    Store.dispatch(deleteBranchPointAction());
   }
 
 

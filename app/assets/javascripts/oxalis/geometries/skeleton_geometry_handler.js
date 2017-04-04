@@ -1,10 +1,15 @@
-// @flow
+/**
+ * skeleton_geometry_handler.js
+ * @flow
+ */
+
 import _ from "lodash";
 import * as THREE from "three";
 import Backbone from "backbone";
 import ParticleMaterialFactory, { NodeTypes } from "oxalis/geometries/materials/particle_material_factory";
 import type { TreeMapType, TreeType } from "oxalis/store";
 import type { NodeWithTreeIdType } from "oxalis/model/sagas/update_actions";
+import type { Vector3 } from "oxalis/constants";
 
 
 const MAX_CAPACITY = 1000;
@@ -26,6 +31,7 @@ class SkeletonNodeGeometry {
 
     const geometry = new THREE.BufferGeometry();
     geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
+    geometry.addAttribute("treeColor", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
     geometry.addAttribute("radius", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.addAttribute("type", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.addAttribute("nodeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
@@ -36,12 +42,13 @@ class SkeletonNodeGeometry {
     this.mesh = new THREE.Points(this.geometry, this.material);
   }
 
-  createNode(node: NodeWithTreeIdType) {
+  createNode(node: NodeWithTreeIdType, treeColor: Vector3, shouldUpdateBoundingSphere: boolean) {
     const index = this.freeList.pop() || this.nextIndex++;
     this.nodeIdToIndex.set(node.id, index);
 
     const attributes = this.geometry.attributes;
     attributes.position.set(node.position, index * 3);
+    attributes.treeColor.set(treeColor, index * 3);
     attributes.radius.array[index] = node.radius;
     attributes.type.array[index] = NodeTypes.NORMAL;
     attributes.nodeId.array[index] = node.id;
@@ -51,7 +58,9 @@ class SkeletonNodeGeometry {
       attribute.needsUpdate = true;
     }
 
-    this.geometry.computeBoundingSphere();
+    if (shouldUpdateBoundingSphere) {
+      this.geometry.computeBoundingSphere();
+    }
   }
 
   deleteNode(nodeId: number) {
@@ -64,11 +73,20 @@ class SkeletonNodeGeometry {
     }
   }
 
-  updateNodeAttribute(nodeId: number, attributeName: string, value: number) {
+  updateNodeScalar(attributeName: string, nodeId: number, value: number) {
     const index = this.nodeIdToIndex.get(nodeId);
     if (index != null) {
       const attribute = this.geometry.attributes[attributeName];
       attribute.array[index] = value;
+      attribute.needsUpdate = true;
+    }
+  }
+
+  updateNodeVector(attributeName: string, nodeId: number, values: Vector3) {
+    const index = this.nodeIdToIndex.get(nodeId);
+    if (index != null) {
+      const attribute = this.geometry.attributes[attributeName];
+      attribute.set(values, index * values.length);
       attribute.needsUpdate = true;
     }
   }
@@ -155,7 +173,7 @@ class SkeletonGeometryHandler {
     _.extend(this, Backbone.Events);
 
     const nodeCount = _.sum(_.map(trees, tree => _.size(tree.nodes)));
-    const nodeGeometry = new SkeletonNodeGeometry(nodeCount + MAX_CAPACITY);
+    const nodeGeometry = new SkeletonNodeGeometry(Math.max(nodeCount, MAX_CAPACITY));
     this.nodeGeometries = [nodeGeometry];
     this.nodeIdToGeometry = new Map();
 
@@ -167,11 +185,13 @@ class SkeletonGeometryHandler {
     for (const tree of _.values(trees)) {
       this.createTree(tree);
     }
+
+    nodeGeometry.geometry.computeBoundingSphere();
   }
 
-  createNode(node: NodeWithTreeIdType) {
+  createNode(node: NodeWithTreeIdType, treeColor: Vector3, shouldUpdateBoundingSphere:boolean = true) {
     const geometry = this.nodeGeometries[0];
-    geometry.createNode(node);
+    geometry.createNode(node, treeColor, shouldUpdateBoundingSphere);
     this.nodeIdToGeometry.set(node.id, geometry);
 
     if (!geometry.hasCapacity()) {
@@ -189,17 +209,17 @@ class SkeletonGeometryHandler {
     }
   }
 
-  updateNodeType(nodeId: number, type: number) {
+  updateNodeScalar(attributeName: string, nodeId: number, value: number) {
     const geometry = this.nodeIdToGeometry.get(nodeId);
     if (geometry != null) {
-      geometry.updateNodeAttribute(nodeId, "type", type);
+      geometry.updateNodeScalar(attributeName, nodeId, value);
     }
   }
 
-  updateNodeRadius(nodeId: number, radius: number) {
+  updateNodeVector(attributeName: string, nodeId: number, values: Vector3) {
     const geometry = this.nodeIdToGeometry.get(nodeId);
     if (geometry != null) {
-      geometry.updateNodeAttribute(nodeId, "radius", radius);
+      geometry.updateNodeVector(attributeName, nodeId, values);
     }
   }
 
@@ -231,7 +251,7 @@ class SkeletonGeometryHandler {
 
   createTree(tree: TreeType) {
     for (const node of _.values(tree.nodes)) {
-      this.createNode(node);
+      this.createNode(node, tree.color, false);
     }
     for (const edge of tree.edges) {
       const source = tree.nodes[edge.source];

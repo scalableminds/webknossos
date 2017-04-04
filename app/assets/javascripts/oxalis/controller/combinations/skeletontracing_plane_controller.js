@@ -157,11 +157,11 @@ class SkeletonTracingPlaneController extends PlaneController {
 
       // Raycaster also intersects with vertices that have an
       // index larger than numItems
-      if (geometry.nodeIDs.length <= index) {
+      if (geometry.attributes.nodeId.count <= index) {
         continue;
       }
 
-      const nodeId = geometry.nodeIDs[index];
+      const nodeId = geometry.attributes.nodeId.array[index];
 
       const posArray = geometry.attributes.position.array;
       const intersectsCoord = [posArray[3 * index], posArray[(3 * index) + 1], posArray[(3 * index) + 2]];

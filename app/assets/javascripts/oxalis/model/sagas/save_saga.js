@@ -2,6 +2,7 @@
  * save_saga.js
  * @flow
  */
+
 import _ from "lodash";
 import $ from "jquery";
 import { call, put, take, select, race } from "redux-saga/effects";
@@ -12,6 +13,7 @@ import { setVersionNumber } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { alert } from "libs/window";
+import app from "app";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
@@ -45,14 +47,14 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
       } catch (error) {
         yield call(toggleErrorHighlighting, true);
         if (error.status >= 400 && error.status < 500) {
-          // app.router.off("beforeunload");
+          app.router.off("beforeunload");
           // HTTP Code 409 'conflict' for dirty state
           if (error.status === 409) {
             yield call(alert, messages["save.failed_simultaneous_tracing"]);
           } else {
             yield call(alert, messages["save.failed_client_error"]);
           }
-          // app.router.reload();
+          app.router.reload();
           return;
         }
         yield delay(SAVE_RETRY_WAITING_TIME);

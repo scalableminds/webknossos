@@ -1,64 +1,44 @@
-import _ from "lodash";
-import Marionette from "backbone.marionette";
+// @flow
+import React, { PureComponent } from "react";
+import type Model from "oxalis/model";
 import Constants from "oxalis/constants";
+import { Button, Radio } from "antd";
 
-class VolumeActionsView extends Marionette.View {
-  static initClass() {
-    this.prototype.template = _.template(`\
-<div class="btn-group">
-  <button
-    type="button"
-    class="btn btn-default <% if (isMoveMode) { %> btn-primary <% } %>"
-    id="mode-move">
-      Move
-  </button>
-  <button
-    type="button"
-    class="btn btn-default <% if (!isMoveMode) { %> btn-primary <% } %>"
-    id="mode-trace">
-      Trace
-  </button>
-</div>
-<div class="btn-group">
-  <button type="button" class="btn btn-default" id="create-cell">Create new cell (C)</button>
-</div>\
-`);
+class VolumeActionsView extends PureComponent {
+  props: {
+    oldModel: Model,
+  };
 
-    this.prototype.modeMapping = {
-      "mode-trace": Constants.VOLUME_MODE_TRACE,
-      "mode-move": Constants.VOLUME_MODE_MOVE,
-    };
-
-    this.prototype.events = {
-      "click [id^=mode]": "changeMode",
-      "click #create-cell": "createCell",
-    };
+  componentDidMount() {
+    this.props.oldModel.volumeTracing.on("change:mode", this._forceUpdate);
   }
 
-
-  initialize() {
-    this.listenTo(this.model.volumeTracing, "change:mode", this.render);
+  componentWillUnmount() {
+    this.props.oldModel.volumeTracing.off("change:mode", this._forceUpdate);
   }
 
+  _forceUpdate = () => { this.forceUpdate(); };
 
-  createCell() {
-    return this.model.volumeTracing.createCell();
-  }
-
-
-  changeMode(evt) {
-    const mode = this.modeMapping[evt.target.id];
-    return this.model.volumeTracing.setMode(mode);
-  }
-
-
-  serializeData() {
-    return {
-      isMoveMode: this.model.volumeTracing.mode === Constants.VOLUME_MODE_MOVE,
-    };
+  render() {
+    return (
+      <div>
+        <Radio.Group
+          onChange={event => this.props.oldModel.volumeTracing.setMode(event.target.value)}
+          value={this.props.oldModel.volumeTracing.mode}
+          style={{ marginRight: 10 }}
+          size="large"
+        >
+          <Radio.Button value={Constants.VOLUME_MODE_MOVE}>Move</Radio.Button>
+          <Radio.Button value={Constants.VOLUME_MODE_TRACE}>Trace</Radio.Button>
+        </Radio.Group>
+        <Button.Group size="large">
+          <Button
+            onClick={() => { this.props.oldModel.volumeTracing.createCell(); }}
+          >Create new cell (C)</Button>
+        </Button.Group>
+      </div>
+    );
   }
 }
-VolumeActionsView.initClass();
-
 
 export default VolumeActionsView;

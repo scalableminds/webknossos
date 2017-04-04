@@ -1,21 +1,21 @@
 /*
- * api.js
+ * api_latest.js
  * @flow strict
  */
 
 // only relative imports are followed by documentationjs
 import _ from "lodash";
-import app from "app";
 import { InputKeyboardNoLoop } from "libs/input";
 import OxalisModel from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, createCommentAction } from "oxalis/model/actions/skeletontracing_actions";
+import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
+import { setActiveNodeAction, createCommentAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
-import type { NodeType, UserConfigurationType } from "oxalis/store";
+import type { NodeType, UserConfigurationType, DatasetConfigurationType } from "oxalis/store";
+import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
 
 /**
  * All tracing related API methods.
@@ -61,6 +61,13 @@ class TracingApi {
   getAllNodes(): Array<NodeType> {
     const { trees } = Store.getState().skeletonTracing;
     return _.flatMap(trees, tree => _.values(tree.nodes));
+  }
+
+  /**
+   * Deletes the node with nodeId in the tree with treeId
+   */
+  deleteNode(nodeId: number, treeId: number) {
+    Store.dispatch(deleteNodeAction(nodeId, treeId));
   }
 
  /**
@@ -195,6 +202,36 @@ class DataApi {
     layer.pullQueue.add({ bucket, priority: -1 });
     return Promise.all(layer.pullQueue.pull()).then(() => layer.cube.getDataValue(position));
   }
+
+  /**
+   * Returns the dataset's setting for the tracing view.
+   * @param key - One of the following keys:
+     - segmentationOpacity
+     - datasetName
+     - fourBit
+     - interpolation
+     - keyboardDelay
+     - layers
+     - quality
+     - segmentationOpacity
+   *
+   * @example
+   * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
+   */
+  getConfiguration(key: $Keys<DatasetConfigurationType>) {
+    return Store.getState().datasetConfiguration[key];
+  }
+
+  /**
+   * Set the dataset's setting for the tracing view.
+   * @param key - Same keys as for getConfiguration()
+   *
+   * @example
+   * api.user.setConfiguration("segmentationOpacity", 20);
+   */
+  setConfiguration(key: $Keys<DatasetConfigurationType>, value) {
+    Store.dispatch(updateDatasetSettingAction(key, value));
+  }
 }
 
 /**
@@ -204,8 +241,8 @@ class UserApi {
 
   model: OxalisModel;
 
-  constructor(oxalisModel: OxalisModel) {
-    this.model = oxalisModel;
+  constructor(model: OxalisModel) {
+    this.model = model;
   }
 
  /**
@@ -238,7 +275,7 @@ class UserApi {
     - sphericalCapRadius
   *
   * @example
-  * const segmentationOpacity = api.user.getConfiguration("segmentationOpacity");
+  * const keyboardDelay = api.user.getConfiguration("keyboardDelay");
   */
   getConfiguration(key: $Keys<UserConfigurationType>) {
     return Store.getState().userConfiguration[key];
@@ -249,7 +286,7 @@ class UserApi {
   * @param key - Same keys as for getConfiguration()
   *
   * @example
-  * api.user.setConfiguration("moveValue", 20);
+  * api.user.setConfiguration("keyboardDelay", 20);
   */
   setConfiguration(key: $Keys<UserConfigurationType>, value) {
     Store.dispatch(updateUserSettingAction(key, value));
@@ -268,8 +305,8 @@ class UtilsApi {
 
   model: OxalisModel;
 
-  constructor(oxalisModel: OxalisModel) {
-    this.model = oxalisModel;
+  constructor(model: OxalisModel) {
+    this.model = model;
   }
 
  /**
@@ -298,12 +335,13 @@ class UtilsApi {
   // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
-  // registerOverwrite<T>(funcName: string, newFunc: (oldFunc: (...T[]) => void, args: T[]) => void): void {
-    // throw Error("todo");
-    // const skeletonTracing: {[key:string]: Function } = Store.getState().skeletonTracing;
-    // const oldFunc = skeletonTracing[funcName].bind(Store.getState().skeletonTracing);
-    // skeletonTracing[funcName] = (...args) => newFunc(oldFunc, args);
-  // }
+  registerOverwrite<S, A>(
+    actionName: string,
+    overwriteFunction: (store: S, next: ((action: A) => void), action: A) => void,
+  ) {
+    overwriteAction(actionName, overwriteFunction);
+  }
+
  /**
   * Sets a custom handler function for a keyboard shortcut.
   */
@@ -313,7 +351,6 @@ class UtilsApi {
   }
 }
 
-
 type ApiInterface = {
   tracing: TracingApi,
   data: DataApi,
@@ -321,67 +358,11 @@ type ApiInterface = {
   utils: UtilsApi,
 };
 
-/**
- * webKnossos Public Frontend API.
- * @version 1
- * @module Api
- *
- *
- * @property {TracingApi} tracing - All methods related to getting tracings.
- * @property {DataApi} data - All methods related to getting binary data / layers.
- * @property {UserApi} user - All methods related to getting / setting the user's personal tracing configuration.
- * @property {UtilsApi} utils - Utitility methods for controlling wK.
- *
- * @example
- * window.webknossos.apiReady(1).then((api) => {
- *     const nodes = api.tracing.getAllNodes();
- *     const dataLayerNames = api.data.getLayerNames();
- *     const userConfiguration = api.user.getConfiguration();
- *     const keyHandler = api.utils.registerKeyHandler("enter", () => console.log("Welcome"));
- *  });
- */
-class Api {
-
-  readyPromise: Promise<void>;
-  apiInterface: ApiInterface;
-  model: OxalisModel;
- /**
-  * @private
-  */
-  constructor(oxalisModel: OxalisModel) {
-    this.readyPromise = new Promise((resolve) => {
-      app.vent.listenTo(app.vent, "webknossos:ready", resolve);
-    });
-
-    this.apiInterface = {
-      tracing: new TracingApi(oxalisModel),
-      data: new DataApi(oxalisModel),
-      user: new UserApi(oxalisModel),
-      utils: new UtilsApi(oxalisModel),
-    };
-
-    this.model = oxalisModel;
-  }
-
- /**
-  * API initializer. Will be called as soon as the webKnossos API is ready.
-  * @name apiReady
-  * @memberof Api
-  * @instance
-  * @param {number} version
-  *
-  * @example
-  * window.webknossos.apiReady(1).then((api) => {
-  *   // Your cool user script / wK plugin
-  *   const nodes = api.tracing.getAllNodes();
-  *   ...
-  * });
-  */
-  apiReady(version: number = 1): Promise<ApiInterface> {
-    // TODO: version check
-    console.log("Requested api version:", version);
-    return this.readyPromise.then(() => this.apiInterface);
-  }
+export default function createApiInterface(model: OxalisModel): ApiInterface {
+  return {
+    tracing: new TracingApi(model),
+    data: new DataApi(model),
+    user: new UserApi(model),
+    utils: new UtilsApi(model),
+  };
 }
-
-export default Api;

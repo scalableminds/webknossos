@@ -6,11 +6,11 @@
 import React from "react";
 import { Tabs } from "antd";
 import type Model from "oxalis/model";
-import CommentTabView from "oxalis/view/skeletontracing/right-menu/comment_tab/comment_tab_view";
-import AbstractTreeTabView from "oxalis/view/skeletontracing/right-menu/abstract_tree_tab_view";
-import TreesTabView from "oxalis/view/skeletontracing/right-menu/trees_tab_view";
-import DatasetInfoTabView from "oxalis/view/viewmode/right-menu/dataset_info_tab_view";
-import MappingInfoView from "oxalis/view/volumetracing/right-menu/mapping_info_view";
+import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
+import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
+import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
+import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
+import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import Constants from "oxalis/constants";
 
 const TabPane = Tabs.TabPane;

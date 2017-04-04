@@ -114,6 +114,7 @@ uniform float activeTreeId;
 uniform int overrideNodeRadius;
 
 attribute float radius;
+attribute vec3 treeColor;
 attribute vec3 position;
 attribute float type;
 attribute float nodeId;
@@ -145,7 +146,7 @@ vec3 shiftColor(vec3 color, float shiftValue) {
 void main()
 {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    color = vec3(1.0, 0.0, 1.0);
+    color = treeColor;
 
     if (overrideNodeRadius == 1) {
       gl_PointSize = overrideParticleSize;

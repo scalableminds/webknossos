@@ -38,9 +38,11 @@ class Skeleton {
 
     for (const update of diff) {
       switch (update.action) {
-        case "createNode":
-          this.geometryHandler.createNode(update.value);
+        case "createNode": {
+          const treeColor = tracing.trees[update.value.treeId].color;
+          this.geometryHandler.createNode(update.value, treeColor);
           break;
+        }
         case "deleteNode":
           this.geometryHandler.deleteNode(update.value.id);
           break;
@@ -55,21 +57,29 @@ class Skeleton {
           this.geometryHandler.deleteEdge(update.value.source, update.value.target);
           break;
         case "updateNode":
-          this.geometryHandler.updateNodeRadius(update.value.id, update.value.radius);
+          this.geometryHandler.updateNodeScalar("radius", update.value.id, update.value.radius);
           break;
         case "updateTree": {
           // diff branchpoints
           const treeId = update.value.id;
-          const oldBranchPoints = this.prevTracing.trees[treeId].branchPoints.map(branchPoint => branchPoint.id);
-          const newBranchPoints = tracing.trees[treeId].branchPoints.map(branchPoint => branchPoint.id);
+          const tree = tracing.trees[treeId];
+          const prevTree = this.prevTracing.trees[treeId];
+          const oldBranchPoints = prevTree.branchPoints.map(branchPoint => branchPoint.id);
+          const newBranchPoints = tree.branchPoints.map(branchPoint => branchPoint.id);
           const { onlyA: deletedBranchPoints, onlyB: createdBranchPoints } = Utils.diffArrays(oldBranchPoints, newBranchPoints);
 
           for (const nodeId of deletedBranchPoints) {
-            this.geometryHandler.updateNodeType(nodeId, NodeTypes.NORMAL);
+            this.geometryHandler.updateNodeScalar("type", nodeId, NodeTypes.NORMAL);
           }
 
           for (const nodeId of createdBranchPoints) {
-            this.geometryHandler.updateNodeType(nodeId, NodeTypes.BRANCH_POINT);
+            this.geometryHandler.updateNodeScalar("type", nodeId, NodeTypes.BRANCH_POINT);
+          }
+
+          if (tree.color !== prevTree.color) {
+            for (const node of _.values(tree.nodes)) {
+              this.geometryHandler.updateNodeVector("treeColor", node.id, tree.color);
+            }
           }
           break;
         }
@@ -83,7 +93,6 @@ class Skeleton {
 
   getMeshes = () => this.geometryHandler.getMeshes()
 
-
   setVisibility(isVisible: boolean) {
     this.isVisible = isVisible;
 
@@ -95,9 +104,9 @@ class Skeleton {
 
 
   setVisibilityTemporary(/* isVisible: boolean */) {
-    /* for (const mesh of this.getMeshes()) {
-      mesh.visible = isVisible && ((mesh.isVisible != null) ? mesh.isVisible : true);
-    } */
+    // for (const mesh of this.getMeshes()) {
+    //   mesh.visible = isVisible && ((mesh.isVisible != null) ? mesh.isVisible : true);
+    // }
     // (TODO: still needed?) app.vent.trigger("rerender");
   }
 
@@ -144,8 +153,7 @@ class Skeleton {
 
 
   getAllNodes() {
-    return [];
-    // return _.map(this.treeGeometryCache, tree => tree.nodes);
+    return _.map(this.geometryHandler.nodeGeometries, geometry => geometry.getMesh());
   }
 
 

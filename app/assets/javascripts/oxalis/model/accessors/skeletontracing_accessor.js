@@ -1,7 +1,7 @@
 // @flow
 import Maybe from "data.maybe";
 import _ from "lodash";
-import type { SkeletonTracingType, NodeType, TreeType, TreeMapType } from "oxalis/store";
+import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, BranchPointType } from "oxalis/store";
 
 export function getActiveNode(tracing: SkeletonTracingType) {
   const { activeTreeId, activeNodeId } = tracing;
@@ -91,4 +91,8 @@ export function getMaxNodeId(tracing: SkeletonTracingType) {
   return maxNodeId === -Infinity ?
     Maybe.Nothing() :
     Maybe.Just(maxNodeId);
+}
+
+export function getBranchPoints(tracing: SkeletonTracingType): Array<BranchPointType> {
+  return _.flatMap(tracing.trees, tree => tree.branchPoints);
 }

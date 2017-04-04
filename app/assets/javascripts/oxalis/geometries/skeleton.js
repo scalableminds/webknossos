@@ -44,14 +44,20 @@ class Skeleton {
         case "deleteNode":
           this.geometryHandler.deleteNode(update.value.id);
           break;
-        case "createEdge":
+        case "createEdge": {
+          const tree = tracing.trees[update.value.treeId];
+          const source = tree.nodes[update.value.source];
+          const target = tree.nodes[update.value.target];
+          this.geometryHandler.createEdge(source, target);
           break;
+        }
         case "deleteEdge":
+          this.geometryHandler.deleteEdge(update.value.source, update.value.target);
           break;
         case "updateNode":
           this.geometryHandler.updateNodeRadius(update.value.id, update.value.radius);
           break;
-        case "updateTree":
+        case "updateTree": {
           // diff branchpoints
           const treeId = update.value.id;
           const oldBranchPoints = this.prevTracing.trees[treeId].branchPoints.map(branchPoint => branchPoint.id);
@@ -65,8 +71,8 @@ class Skeleton {
           for (const nodeId of createdBranchPoints) {
             this.geometryHandler.updateNodeType(nodeId, NodeTypes.BRANCH_POINT);
           }
-
           break;
+        }
         default:
       }
     }

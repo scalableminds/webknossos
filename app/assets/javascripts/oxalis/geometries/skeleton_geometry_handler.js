@@ -36,7 +36,6 @@ class SkeletonNodeGeometry {
     this.mesh = new THREE.Points(this.geometry, this.material);
   }
 
-
   createNode(node: NodeWithTreeIdType) {
     const index = this.freeList.pop() || this.nextIndex++;
     this.nodeIdToIndex.set(node.id, index);
@@ -54,7 +53,6 @@ class SkeletonNodeGeometry {
 
     this.geometry.computeBoundingSphere();
   }
-
 
   deleteNode(nodeId: number) {
     const index = this.nodeIdToIndex.get(nodeId);
@@ -86,13 +84,72 @@ class SkeletonNodeGeometry {
   }
 }
 
+class SkeletonEdgeGeometry {
+  capacity: number;
+  nextIndex: number;
+  geometry: THREE.BufferdGeometry;
+  material: THREE.Material;
+  mesh: THREE.Mesh;
+  edgeIdToIndex: Map<number, number>;
+  freeList: Array<number>;
+
+  constructor(capacity: number) {
+    this.capacity = capacity;
+    this.nextIndex = 0;
+    this.edgeIdToIndex = new Map();
+    this.freeList = [];
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 6), 3));
+    geometry.addAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+    this.geometry = geometry;
+
+    this.material = new THREE.LineBasicMaterial({
+      color: new THREE.Color().fromArray([1, 0, 1]),
+      linewidth: 10,
+    });
+    this.mesh = new THREE.LineSegments(this.geometry, this.material);
+  }
+
+  createEdge(edgeId: number, source: NodeWithTreeIdType, target: NodeWithTreeIdType) {
+    const index = this.freeList.pop() || this.nextIndex++;
+    this.edgeIdToIndex.set(edgeId, index);
+
+    const attributes = this.geometry.attributes;
+    attributes.position.set(source.position, index * 6);
+    attributes.position.set(target.position, index * 6 + 3);
+
+    attributes.position.needsUpdate = true;
+    this.geometry.computeBoundingSphere();
+  }
+
+  deleteEdge(edgeId: number) {
+    const index = this.edgeIdToIndex.get(edgeId);
+    if (index != null) {
+      this.edgeIdToIndex.delete(edgeId);
+      this.geometry.attributes.position.set([0, 0, 0, 0, 0, 0], index * 6);
+      this.geometry.attributes.position.needsUpdate = true;
+      this.freeList.push(index);
+    }
+  }
+
+  hasCapacity(): boolean {
+    return this.freeList.length > 0 || this.nextIndex < this.capacity;
+  }
+
+  getMesh() {
+    return this.mesh;
+  }
+}
+
+
 class SkeletonGeometryHandler {
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
   trigger: Function;
 
   nodeGeometries: Array<SkeletonNodeGeometry>;
   nodeIdToGeometry: Map<number, SkeletonNodeGeometry>;
+  edgeGeometries: Array<SkeletonEdgeGeometry>;
+  edgeIdToGeometry: Map<number, SkeletonEdgeGeometry>;
 
   constructor(trees: TreeMapType) {
     _.extend(this, Backbone.Events);
@@ -101,6 +158,11 @@ class SkeletonGeometryHandler {
     const nodeGeometry = new SkeletonNodeGeometry(nodeCount + MAX_CAPACITY);
     this.nodeGeometries = [nodeGeometry];
     this.nodeIdToGeometry = new Map();
+
+    const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
+    const edgeGeometry = new SkeletonEdgeGeometry(edgeCount + MAX_CAPACITY);
+    this.edgeGeometries = [edgeGeometry];
+    this.edgeIdToGeometry = new Map();
 
     for (const tree of _.values(trees)) {
       this.createTree(tree);
@@ -141,12 +203,30 @@ class SkeletonGeometryHandler {
     }
   }
 
-  createEdge() {
-    // TODO
+  pair(a: number, b: number) {
+    return 0.5 * (a + b) * (a + b + 1) + b;
   }
 
-  deleteEdge() {
-    // TODO
+  createEdge(source: NodeWithTreeIdType, target: NodeWithTreeIdType) {
+    const edgeId = this.pair(source.id, target.id);
+    const geometry = this.edgeGeometries[0];
+    geometry.createEdge(edgeId, source, target);
+    this.edgeIdToGeometry.set(edgeId, geometry);
+
+    if (!geometry.hasCapacity()) {
+      const newGeometry = new SkeletonEdgeGeometry(MAX_CAPACITY);
+      this.trigger("newGeometries", [newGeometry.getMesh()]);
+      this.edgeGeometries.unshift(newGeometry);
+    }
+  }
+
+  deleteEdge(sourceId: number, targetId: number) {
+    const edgeId = this.pair(sourceId, targetId);
+    const geometry = this.edgeIdToGeometry.get(edgeId);
+    if (geometry != null) {
+      geometry.deleteEdge(edgeId);
+      this.edgeIdToGeometry.delete(edgeId);
+    }
   }
 
   createTree(tree: TreeType) {
@@ -156,14 +236,12 @@ class SkeletonGeometryHandler {
     for (const edge of tree.edges) {
       const source = tree.nodes[edge.source];
       const target = tree.nodes[edge.target];
-      this.createEdge(edge, source, target);
+      this.createEdge(source, target);
     }
   }
 
   getMeshes() {
-    const nodes = _.map(this.nodeGeometries, geometry => geometry.getMesh());
-    const edges = [];// _.map(this.edgeGeometries, geometry => geometry.getMesh());
-    return [...nodes, ...edges];
+    return [...this.nodeGeometries, ...this.edgeGeometries].map(geometry => geometry.getMesh());
   }
 }
 

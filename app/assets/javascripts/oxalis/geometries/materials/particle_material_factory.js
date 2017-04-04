@@ -137,7 +137,6 @@ vec3 hsv2rgb(vec3 color) {
 }
 
 vec3 shiftColor(vec3 color, float shiftValue) {
-
   vec3 hsvColor = rgb2hsv(color);
   hsvColor.x = fract(hsvColor.x + shiftValue);
   return hsv2rgb(hsvColor);

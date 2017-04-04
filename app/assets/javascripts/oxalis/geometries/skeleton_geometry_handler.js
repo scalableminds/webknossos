@@ -37,7 +37,7 @@ class SkeletonNodeGeometry {
   }
 
 
-  createNode(node: NodeWithTreeIdType) {
+  createNode(node: NodeWithTreeIdType, shouldUpdateBoundingSphere: boolean) {
     const index = this.freeList.pop() || this.nextIndex++;
     this.nodeIdToIndex.set(node.id, index);
 
@@ -52,7 +52,9 @@ class SkeletonNodeGeometry {
       attribute.needsUpdate = true;
     }
 
-    this.geometry.computeBoundingSphere();
+    if (shouldUpdateBoundingSphere) {
+      this.geometry.computeBoundingSphere();
+    }
   }
 
 
@@ -98,18 +100,20 @@ class SkeletonGeometryHandler {
     _.extend(this, Backbone.Events);
 
     const nodeCount = _.sum(_.map(trees, tree => _.size(tree.nodes)));
-    const nodeGeometry = new SkeletonNodeGeometry(nodeCount + MAX_CAPACITY);
+    const nodeGeometry = new SkeletonNodeGeometry(Math.max(nodeCount, MAX_CAPACITY));
     this.nodeGeometries = [nodeGeometry];
     this.nodeIdToGeometry = new Map();
 
     for (const tree of _.values(trees)) {
       this.createTree(tree);
     }
+
+    nodeGeometry.geometry.computeBoundingSphere();
   }
 
-  createNode(node: NodeWithTreeIdType) {
+  createNode(node: NodeWithTreeIdType, shouldUpdateBoundingSphere:boolean = true) {
     const geometry = this.nodeGeometries[0];
-    geometry.createNode(node);
+    geometry.createNode(node, shouldUpdateBoundingSphere);
     this.nodeIdToGeometry.set(node.id, geometry);
 
     if (!geometry.hasCapacity()) {
@@ -151,7 +155,7 @@ class SkeletonGeometryHandler {
 
   createTree(tree: TreeType) {
     for (const node of _.values(tree.nodes)) {
-      this.createNode(node);
+      this.createNode(node, false);
     }
     for (const edge of tree.edges) {
       const source = tree.nodes[edge.source];

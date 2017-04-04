@@ -85,7 +85,6 @@ class Skeleton {
 
   getMeshes = () => this.geometryHandler.getMeshes()
 
-
   setVisibility(isVisible: boolean) {
     this.isVisible = isVisible;
 
@@ -97,9 +96,9 @@ class Skeleton {
 
 
   setVisibilityTemporary(/* isVisible: boolean */) {
-    /* for (const mesh of this.getMeshes()) {
-      mesh.visible = isVisible && ((mesh.isVisible != null) ? mesh.isVisible : true);
-    } */
+    // for (const mesh of this.getMeshes()) {
+    //   mesh.visible = isVisible && ((mesh.isVisible != null) ? mesh.isVisible : true);
+    // }
     // (TODO: still needed?) app.vent.trigger("rerender");
   }
 

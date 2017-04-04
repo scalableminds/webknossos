@@ -28,12 +28,7 @@ import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary
 // be displayed by requesting them as though they were
 // attached to bend surface.
 // The result is then projected on a flat surface.
-// For me detail look in Model.
-//
-// queryVertices: holds the position/matrices
-// needed to for the bend surface.
-// normalVertices: (depricated) holds the vertex postion
-// for the flat surface
+
 class ArbitraryPlane {
 
   model: Model;

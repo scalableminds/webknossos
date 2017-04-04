@@ -544,6 +544,19 @@ describe("SkeletonTracing", () => {
     ]);
   });
 
+  it("shouldn't merge the same tree", () => {
+    const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
+    const mergeTreesAction = addTimestamp(SkeletonTracingActions.mergeTreesAction(0, 2));
+
+    // create a node in first tree, then create a second tree with three nodes and merge them
+    let testState = SkeletonTracingReducer(initialState, createNodeAction);
+    testState = SkeletonTracingReducer(testState, createNodeAction);
+    testState = SkeletonTracingReducer(testState, createNodeAction);
+    const newState = SkeletonTracingReducer(testState, mergeTreesAction);
+
+    expect(newState).toBe(testState);
+  });
+
   it("should merge two trees with comments and branchPoints", () => {
     const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
     const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));

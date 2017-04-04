@@ -8,7 +8,7 @@ import $ from "jquery";
 import Backbone from "backbone";
 import { InputKeyboardNoLoop } from "libs/input";
 import Model from "oxalis/model";
-import VolumeTracingView from "oxalis/view/volumetracing/volumetracing_view";
+import VolumeTracingView from "oxalis/view/volumetracing_view";
 import SceneController from "oxalis/controller/scene_controller";
 
 class VolumeTracingController {

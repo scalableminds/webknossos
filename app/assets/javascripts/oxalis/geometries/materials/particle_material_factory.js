@@ -9,6 +9,7 @@ import Store from "oxalis/store";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import AbstractMaterialFactory from "oxalis/geometries/materials/abstract_material_factory";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { NodeTypes } from "oxalis/geometries/skeleton_geometry_handler";
 
 const DEFAULT_RADIUS = 1.0;
 
@@ -85,7 +86,7 @@ uniform float scale;
 uniform int   showRadius;
 attribute float radius;
 attribute vec3 position;
-attribute float typ;
+attribute float type;
 attribute float nodeId;
 attribute float treeId;
 
@@ -94,8 +95,13 @@ void main()
     float nodeScaleFactor = 1.0;
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
 
+    // DELETED NODE
+    if (type < 0.0) {
+      gl_PointSize = 0.0;
+    } else {
+      gl_PointSize = 5.0;
+    }
 
-    gl_PointSize = 5.0;
     color = vec3(1.0, 0.0, 1.0);
     gl_Position = projectionMatrix * mvPosition;
 }\

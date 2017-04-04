@@ -45,14 +45,14 @@ class Skeleton {
     for (const update of diff) {
       switch (update.action) {
         case "createNode":
-          this.geometryHandler.addNode(update.value);
+          this.geometryHandler.createNode(update.value);
           break;
-        case "removeNode":
-          this.geometryHandler.removeNode(update.value);
+        case "deleteNode":
+          this.geometryHandler.deleteNode(update.value.id);
           break;
         case "createEdge":
           break;
-        case "removeEdge":
+        case "deleteEdge":
           break;
         default:
       }

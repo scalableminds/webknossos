@@ -7,7 +7,7 @@ import Model from "oxalis/model";
 import type { TreeMapType, TreeType } from "oxalis/store";
 import type { NodeWithTreeIdType } from "oxalis/model/sagas/update_actions";
 
-const NodeTypes = {
+export const NodeTypes = {
   INVALID: -1.0,
   NORMAL: 0.0,
   BRANCH_POINT: 1.0,
@@ -41,7 +41,7 @@ class SkeletonNodeGeometry {
   }
 
 
-  addNode(node: NodeWithTreeIdType) {
+  createNode(node: NodeWithTreeIdType) {
     const index = this.freeList.pop() || this.nextIndex++;
     this.nodeIdToIndex.set(node.id, index);
 
@@ -58,12 +58,12 @@ class SkeletonNodeGeometry {
   }
 
 
-  removeNode(nodeId) {
+  deleteNode(nodeId) {
     const index = this.nodeIdToIndex.get(nodeId);
     if (index != null) {
       this.nodeIdToIndex.delete(nodeId);
       this.geometry.attributes.type.needsUpdate = true;
-      this.geometry.attributes.type.array[index] = NodeTypes.BRANCH_POINT;
+      this.geometry.attributes.type.array[index] = NodeTypes.INVALID;
       this.freeList.push(index);
     }
   }
@@ -98,13 +98,13 @@ class SkeletonGeometryHandler {
     this.nodeIdToGeometry = new Map();
 
     for (const tree of _.values(trees)) {
-      this.addTree(tree);
+      this.createTree(tree);
     }
   }
 
-  addNode(node: NodeWithTreeIdType) {
+  createNode(node: NodeWithTreeIdType) {
     const geometry = this.nodeGeometries[0];
-    geometry.addNode(node);
+    geometry.createNode(node);
     this.nodeIdToGeometry.set(node.id, geometry);
 
     if (!geometry.hasCapacity()) {
@@ -114,30 +114,30 @@ class SkeletonGeometryHandler {
     }
   }
 
-  removeNode(nodeId: number) {
+  deleteNode(nodeId: number) {
     const geometry = this.nodeIdToGeometry.get(nodeId);
     if (geometry != null) {
-      geometry.removeNode(nodeId);
+      geometry.deleteNode(nodeId);
       this.nodeIdToGeometry.delete(nodeId);
     }
   }
 
-  addEdge() {
+  createEdge() {
     // TODO
   }
 
-  removeEdge() {
+  deleteEdge() {
     // TODO
   }
 
-  addTree(tree: TreeType) {
+  createTree(tree: TreeType) {
     for (const node of _.values(tree.nodes)) {
-      this.addNode(node);
+      this.createNode(node);
     }
     for (const edge of tree.edges) {
       const source = tree.nodes[edge.source];
       const target = tree.nodes[edge.target];
-      this.addEdge(edge, source, target);
+      this.createEdge(edge, source, target);
     }
   }
 

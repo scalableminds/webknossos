@@ -2,16 +2,12 @@
 import _ from "lodash";
 import * as THREE from "three";
 import Backbone from "backbone";
-import ParticleMaterialFactory from "oxalis/geometries/materials/particle_material_factory";
-import Model from "oxalis/model";
+import ParticleMaterialFactory, { NodeTypes } from "oxalis/geometries/materials/particle_material_factory";
 import type { TreeMapType, TreeType } from "oxalis/store";
 import type { NodeWithTreeIdType } from "oxalis/model/sagas/update_actions";
 
-export const NodeTypes = {
-  INVALID: -1.0,
-  NORMAL: 0.0,
-  BRANCH_POINT: 1.0,
-};
+
+const MAX_CAPACITY = 1000;
 
 class SkeletonNodeGeometry {
   capacity: number;
@@ -22,7 +18,7 @@ class SkeletonNodeGeometry {
   nodeIdToIndex: Map<number, number>;
   freeList: Array<number>;
 
-  constructor(capacity: number, model: Model) {
+  constructor(capacity: number) {
     this.capacity = capacity;
     this.nextIndex = 0;
     this.nodeIdToIndex = new Map();
@@ -36,7 +32,7 @@ class SkeletonNodeGeometry {
     geometry.addAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     this.geometry = geometry;
 
-    this.material = new ParticleMaterialFactory(model).getMaterial();
+    this.material = ParticleMaterialFactory.getMaterial();
     this.mesh = new THREE.Points(this.geometry, this.material);
   }
 
@@ -55,6 +51,8 @@ class SkeletonNodeGeometry {
     for (const attribute of _.values(attributes)) {
       attribute.needsUpdate = true;
     }
+
+    this.geometry.computeBoundingSphere();
   }
 
 
@@ -93,16 +91,14 @@ class SkeletonGeometryHandler {
   listenTo: Function;
   trigger: Function;
 
-  model: Model;
   nodeGeometries: Array<SkeletonNodeGeometry>;
   nodeIdToGeometry: Map<number, SkeletonNodeGeometry>;
 
-  constructor(trees: TreeMapType, model: Model) {
+  constructor(trees: TreeMapType) {
     _.extend(this, Backbone.Events);
 
-    this.model = model;
     const nodeCount = _.sum(_.map(trees, tree => _.size(tree.nodes)));
-    const nodeGeometry = new SkeletonNodeGeometry(nodeCount + 1000, this.model);
+    const nodeGeometry = new SkeletonNodeGeometry(nodeCount + MAX_CAPACITY);
     this.nodeGeometries = [nodeGeometry];
     this.nodeIdToGeometry = new Map();
 
@@ -117,8 +113,8 @@ class SkeletonGeometryHandler {
     this.nodeIdToGeometry.set(node.id, geometry);
 
     if (!geometry.hasCapacity()) {
-      const newGeometry = new SkeletonNodeGeometry(1000, this.model);
-      this.trigger("newGeometries", [newGeometry]);
+      const newGeometry = new SkeletonNodeGeometry(MAX_CAPACITY);
+      this.trigger("newGeometries", [newGeometry.getMesh()]);
       this.nodeGeometries.unshift(newGeometry);
     }
   }

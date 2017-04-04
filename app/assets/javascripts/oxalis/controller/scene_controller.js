@@ -98,7 +98,7 @@ class SceneController {
     }
 
     if (Store.getState().skeletonTracing != null) {
-      this.skeleton = new Skeleton(this.model);
+      this.skeleton = new Skeleton();
     }
 
     // create Meshes

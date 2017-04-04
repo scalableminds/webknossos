@@ -9,7 +9,13 @@ import * as THREE from "three";
 import Store from "oxalis/store";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import { NodeTypes } from "oxalis/geometries/skeleton_geometry_handler";
+
+export const NodeTypes = {
+  INVALID: -1.0,
+  NORMAL: 0.0,
+  BRANCH_POINT: 1.0,
+};
+
 
 class ParticleMaterialFactory {
 
@@ -186,4 +192,4 @@ void main()
   }
 }
 
-export default ParticleMaterialFactory;
+export default new ParticleMaterialFactory();

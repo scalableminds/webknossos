@@ -4,36 +4,28 @@
  */
 
 import _ from "lodash";
-import Backbone from "backbone";
 import Utils from "libs/utils";
 import Store from "oxalis/throttled_store";
-import Model from "oxalis/model";
 import type { SkeletonTracingType } from "oxalis/store";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import SkeletonGeometryHandler from "oxalis/geometries/skeleton_geometry_handler";
-import { NodeTypes } from "oxalis/geometries/skeleton_geometry_handler";
+import { NodeTypes } from "oxalis/geometries/materials/particle_material_factory";
 
 class Skeleton {
   // This class is supposed to collect all the Geometries that belong to the skeleton, like
   // nodes, edges and trees
-
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-  trigger: Function;
 
   isVisible: boolean;
   showInactiveTrees: boolean;
   prevTracing: SkeletonTracingType;
   geometryHandler: SkeletonGeometryHandler;
 
-  constructor(model: Model) {
-    _.extend(this, Backbone.Events);
-
+  constructor() {
     this.isVisible = true;
     this.showInactiveTrees = true;
 
     const tracing = Store.getState().skeletonTracing;
-    this.geometryHandler = new SkeletonGeometryHandler(tracing.trees, model);
+    this.geometryHandler = new SkeletonGeometryHandler(tracing.trees);
     this.prevTracing = tracing;
 
     Store.subscribe(() => this.update());

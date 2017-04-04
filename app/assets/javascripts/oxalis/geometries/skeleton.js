@@ -5,11 +5,13 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
+import Utils from "libs/utils";
 import Store from "oxalis/throttled_store";
 import Model from "oxalis/model";
 import type { SkeletonTracingType } from "oxalis/store";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import SkeletonGeometryHandler from "oxalis/geometries/skeleton_geometry_handler";
+import { NodeTypes } from "oxalis/geometries/skeleton_geometry_handler";
 
 class Skeleton {
   // This class is supposed to collect all the Geometries that belong to the skeleton, like
@@ -53,6 +55,22 @@ class Skeleton {
         case "createEdge":
           break;
         case "deleteEdge":
+          break;
+        case "updateTree":
+          // diff branchpoints
+          const treeId = update.value.id;
+          const oldBranchPoints = this.prevTracing.trees[treeId].branchPoints.map(branchPoint => branchPoint.id);
+          const newBranchPoints = tracing.trees[treeId].branchPoints.map(branchPoint => branchPoint.id);
+          const { onlyA: deletedBranchPoints, onlyB: createdBranchPoints } = Utils.diffArrays(oldBranchPoints, newBranchPoints);
+
+          for (const nodeId of deletedBranchPoints) {
+            this.geometryHandler.updateNodeType(nodeId, NodeTypes.NORMAL);
+          }
+
+          for (const nodeId of createdBranchPoints) {
+            this.geometryHandler.updateNodeType(nodeId, NodeTypes.BRANCH_POINT);
+          }
+
           break;
         default:
       }

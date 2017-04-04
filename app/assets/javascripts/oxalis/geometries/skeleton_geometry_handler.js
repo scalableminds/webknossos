@@ -58,13 +58,21 @@ class SkeletonNodeGeometry {
   }
 
 
-  deleteNode(nodeId) {
+  deleteNode(nodeId: number) {
     const index = this.nodeIdToIndex.get(nodeId);
     if (index != null) {
       this.nodeIdToIndex.delete(nodeId);
       this.geometry.attributes.type.needsUpdate = true;
       this.geometry.attributes.type.array[index] = NodeTypes.INVALID;
       this.freeList.push(index);
+    }
+  }
+
+  updateNodeType(nodeId: number, type: number) {
+    const index = this.nodeIdToIndex.get(nodeId);
+    if (index != null) {
+      this.geometry.attributes.type.array[index] = type;
+      this.geometry.attributes.type.needsUpdate = true;
     }
   }
 
@@ -138,6 +146,13 @@ class SkeletonGeometryHandler {
       const source = tree.nodes[edge.source];
       const target = tree.nodes[edge.target];
       this.createEdge(edge, source, target);
+    }
+  }
+
+  updateNodeType(nodeId: number, type: number) {
+    const geometry = this.nodeIdToGeometry.get(nodeId);
+    if (geometry != null) {
+      geometry.updateNodeType(nodeId, type);
     }
   }
 

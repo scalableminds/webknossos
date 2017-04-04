@@ -56,6 +56,9 @@ class Skeleton {
           break;
         case "deleteEdge":
           break;
+        case "updateNode":
+          this.geometryHandler.updateNodeRadius(update.value.id, update.value.radius);
+          break;
         case "updateTree":
           // diff branchpoints
           const treeId = update.value.id;

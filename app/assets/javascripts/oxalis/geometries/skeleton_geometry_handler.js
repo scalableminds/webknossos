@@ -68,11 +68,12 @@ class SkeletonNodeGeometry {
     }
   }
 
-  updateNodeType(nodeId: number, type: number) {
+  updateNodeAttribute(nodeId: number, attributeName: string, value: number) {
     const index = this.nodeIdToIndex.get(nodeId);
     if (index != null) {
-      this.geometry.attributes.type.array[index] = type;
-      this.geometry.attributes.type.needsUpdate = true;
+      const attribute = this.geometry.attributes[attributeName];
+      attribute.array[index] = value;
+      attribute.needsUpdate = true;
     }
   }
 
@@ -130,6 +131,20 @@ class SkeletonGeometryHandler {
     }
   }
 
+  updateNodeType(nodeId: number, type: number) {
+    const geometry = this.nodeIdToGeometry.get(nodeId);
+    if (geometry != null) {
+      geometry.updateNodeAttribute(nodeId, "type", type);
+    }
+  }
+
+  updateNodeRadius(nodeId: number, radius: number) {
+    const geometry = this.nodeIdToGeometry.get(nodeId);
+    if (geometry != null) {
+      geometry.updateNodeAttribute(nodeId, "radius", radius);
+    }
+  }
+
   createEdge() {
     // TODO
   }
@@ -146,13 +161,6 @@ class SkeletonGeometryHandler {
       const source = tree.nodes[edge.source];
       const target = tree.nodes[edge.target];
       this.createEdge(edge, source, target);
-    }
-  }
-
-  updateNodeType(nodeId: number, type: number) {
-    const geometry = this.nodeIdToGeometry.get(nodeId);
-    if (geometry != null) {
-      geometry.updateNodeType(nodeId, type);
     }
   }
 

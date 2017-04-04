@@ -5,43 +5,56 @@
 
 import _ from "lodash";
 import app from "app";
+import * as THREE from "three";
 import Store from "oxalis/store";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import AbstractMaterialFactory from "oxalis/geometries/materials/abstract_material_factory";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { NodeTypes } from "oxalis/geometries/skeleton_geometry_handler";
 
-const DEFAULT_RADIUS = 1.0;
+class ParticleMaterialFactory {
 
-class ParticleMaterialFactory extends AbstractMaterialFactory {
+  material: THREE.RawShaderMaterial;
+  uniforms: {
+    [key: string]: {
+      type: "f" | "i",
+      value: any,
+    }
+  };
 
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
+  constructor() {
+    this.setupUniforms();
+    this.setupChangeListeners();
+
+    this.material = new THREE.RawShaderMaterial({
+      uniforms: this.uniforms,
+      vertexShader: this.getVertexShader(),
+      fragmentShader: this.getFragmentShader(),
+    });
+  }
 
   setupUniforms() {
-    super.setupUniforms();
     const state = Store.getState();
 
-    this.uniforms = _.extend(this.uniforms, {
-      zoomFactor: {
+    this.uniforms = {
+      planeZoomFactor: {
         type: "f",
         value: getPlaneScalingFactor(state.flycam),
       },
-      baseVoxel: {
+      datasetScale: {
         type: "f",
         value: getBaseVoxel(state.dataset.scale),
       },
-      particleSize: {
+      overrideParticleSize: {
         type: "f",
         value: state.userConfiguration.particleSize,
       },
-      scale: {
+      viewportScale: {
         type: "f",
         value: state.userConfiguration.scale,
       },
-      showRadius: {
+      overrideNodeRadius: {
         type: "i",
-        value: DEFAULT_RADIUS,
+        value: true,
       },
       activeTreeId: {
         type: "f",
@@ -51,36 +64,30 @@ class ParticleMaterialFactory extends AbstractMaterialFactory {
         type: "f",
         value: NaN,
       },
-    },
-    );
-  }
-
-
-  makeMaterial() {
-    super.makeMaterial({ vertexColors: true });
-
-    this.material.setShowRadius = (showRadius) => {
-      const radius = this.uniforms.showRadius.value = showRadius ? 1 : 0;
-      return radius;
+      activeNodeScaleFactor: {
+        type: "f",
+        value: 1.0,
+      },
     };
   }
 
-
   setupChangeListeners() {
-    super.setupChangeListeners();
-
     Store.subscribe(() => {
       const state = Store.getState();
-      const { particleSize, scale } = state.userConfiguration;
-      this.uniforms.zoomFactor.value = getPlaneScalingFactor(Store.getState().flycam);
-      this.uniforms.particleSize.value = particleSize;
-      this.uniforms.scale.value = scale;
+      const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
+      this.uniforms.planeZoomFactor.value = getPlaneScalingFactor(Store.getState().flycam);
+      this.uniforms.overrideParticleSize.value = particleSize;
+      this.uniforms.overrideNodeRadius.value = overrideNodeRadius;
+      this.uniforms.viewportScale.value = scale;
       this.uniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
       this.uniforms.activeNodeId.value = state.skeletonTracing.activeNodeId;
       app.vent.trigger("rerender");
     });
   }
 
+  getMaterial() {
+    return this.material;
+  }
 
   getVertexShader() {
     return `\
@@ -88,15 +95,18 @@ precision highp float;
 precision highp int;
 
 varying vec3 color;
+
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
-uniform float zoomFactor;
-uniform float baseVoxel;
-uniform float particleSize;
-uniform float scale;
-uniform int showRadius;
+uniform float planeZoomFactor;
+uniform float datasetScale;
+uniform float overrideParticleSize;
+uniform float viewportScale;
+uniform float activeNodeScaleFactor;
 uniform float activeNodeId;
 uniform float activeTreeId;
+uniform int overrideNodeRadius;
+
 attribute float radius;
 attribute vec3 position;
 attribute float type;
@@ -129,27 +139,35 @@ vec3 shiftColor(vec3 color, float shiftValue) {
 
 void main()
 {
-    float nodeScaleFactor = 1.0;
-    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-
-    gl_PointSize = 5.0;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     color = vec3(1.0, 0.0, 1.0);
+
+    if (overrideNodeRadius == 1) {
+      gl_PointSize = overrideParticleSize;
+    } else {
+      gl_PointSize = max(
+        radius / planeZoomFactor / datasetScale,
+        overrideParticleSize
+      ) * viewportScale;
+    }
 
     // DELETED NODE
     if (type == ${NodeTypes.INVALID.toFixed(1)}) {
-      gl_PointSize = 3.0;
+      gl_PointSize = 0.0;
     }
 
     if (activeNodeId == nodeId) {
       color = shiftColor(color, 0.25);
-      gl_PointSize = 10.0;
+      gl_PointSize *= activeNodeScaleFactor;
     }
 
     if (type == ${NodeTypes.BRANCH_POINT.toFixed(1)}) {
       color = shiftColor(color, 0.5);
     }
 
-    gl_Position = projectionMatrix * mvPosition;
+
+
+
 }\
 `;
   }

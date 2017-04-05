@@ -10,6 +10,7 @@
     "url": "git://github.com/scalableminds/webknossos.git"
   },
   "devDependencies": {
+    "ava": "^0.18.2",
     "babel-cli": "^6.16.0",
     "babel-core": "^6.21.0",
     "babel-eslint": "^7.1.1",
@@ -17,6 +18,7 @@
     "babel-plugin-transform-async-to-generator": "^6.16.0",
     "babel-plugin-transform-class-properties": "^6.19.0",
     "babel-plugin-transform-flow-strip-types": "^6.21.0",
+    "babel-polyfill": "^6.23.0",
     "babel-preset-env": "^1.1.4",
     "babel-preset-react": "^6.16.0",
     "babel-preset-react-optimize": "^1.0.1",
@@ -53,7 +55,9 @@
     "worker-loader": "^0.7.1"
   },
   "scripts": {
-    "test": "export NODE_PATH=app/assets/javascripts && node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
+    "test": "yarn ava && yarn jasmine",
+    "ava": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava",
+    "jasmine": "export NODE_PATH=app/assets/javascripts && node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
     "flow": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
@@ -105,5 +109,20 @@
     "underscore": "^1.8.3",
     "webcola": "3.3.0",
     "whatwg-fetch": "^1.1.0"
+  },
+  "ava": {
+    "files": [
+      "app/assets/javascripts/test/**/*.ava.js"
+    ],
+    "source": [
+      "app/assets/javascripts/**/*.{js,jsx}"
+    ],
+    "modules": true,
+    "failFast": true,
+    "failWithoutAssertions": false,
+    "babel": "inherit",
+    "require": [
+      "babel-register"
+    ]
   }
 }

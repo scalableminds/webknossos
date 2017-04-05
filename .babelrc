@@ -1,4 +1,15 @@
 {
+  "env": {
+    "test": {
+      "presets": ["es2015", "react"],
+      plugins: [
+        "transform-async-to-generator",
+        "transform-class-properties",
+        "transform-flow-strip-types",
+        ["import", { libraryName: "antd" }]
+      ]
+    }
+  },
   presets: [
     ["env", {
       "targets": {

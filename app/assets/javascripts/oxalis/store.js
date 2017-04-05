@@ -142,6 +142,7 @@ export type SkeletonTracingType = {
   tracingType: "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType",
   activeTreeId: ?number,
   activeNodeId: ?number,
+  cachedMaxNodeId: number,
   restrictions: RestrictionsType & SettingsType,
 };
 

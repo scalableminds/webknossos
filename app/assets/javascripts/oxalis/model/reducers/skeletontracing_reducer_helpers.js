@@ -41,9 +41,7 @@ export function createNode(state: OxalisState, tree: TreeType, position: Vector3
     const radius = activeNodeMaybe.map(activeNode => activeNode.radius).getOrElse(defaultRadius);
 
     // Find new node id by increasing the max node id.
-    // Default to 0 if there are no nodes yet
-    const maxNodeId = _.max(_.flatMap(state.skeletonTracing.trees, __ => _.map(__.nodes, node => node.id)));
-    const nextNewId = _.isNumber(maxNodeId) ? maxNodeId + 1 : 0;
+    const nextNewId = state.skeletonTracing.cachedMaxNodeId + 1;
 
     // Create the new node
     const node: NodeType = {

@@ -111,10 +111,9 @@ class VolumeTracing {
 
 
   startEditing(planeId: OrthoViewType) {
-    // Return, if layer was actually started
-
     if (!this.restrictionHandler.updateAllowed()) { return false; }
 
+    // Return, if layer was already started
     if ((typeof this.currentLayer !== "undefined" && this.currentLayer !== null) || getIntegerZoomStep(Store.getState()) > 1) {
       return false;
     }
@@ -146,6 +145,7 @@ class VolumeTracing {
     const currentLayer = this.currentLayer;
 
     if ((currentLayer == null) || currentLayer.isEmpty()) {
+      this.currentLayer = null;
       return;
     }
 

@@ -103,6 +103,12 @@ class Skeleton {
     for (const tree of _.values(trees)) {
       this.createTree(tree);
     }
+    for (const nodes of this.nodes.buffers) {
+      nodes.geometry.computeBoundingSphere();
+    }
+    for (const edges of this.edges.buffers) {
+      edges.geometry.computeBoundingSphere();
+    }
 
     Store.subscribe(() => this.refresh());
     this.prevTracing = Store.getState().skeletonTracing;
@@ -252,7 +258,7 @@ class Skeleton {
     for (const edge of tree.edges) {
       const source = tree.nodes[edge.source];
       const target = tree.nodes[edge.target];
-      this.createEdge(tree.treeId, source, target);
+      this.createEdge(tree.treeId, source, target, false);
     }
   }
 

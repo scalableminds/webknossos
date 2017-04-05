@@ -3,7 +3,6 @@
  * @flow weak
  */
 
-import _ from "lodash";
 import app from "app";
 import * as THREE from "three";
 import Store from "oxalis/store";
@@ -131,6 +130,7 @@ vec3 rgb2hsv(vec3 color) {
     return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
 }
 
+// https://www.shadertoy.com/view/XljGzV
 vec3 hsv2rgb(vec3 color) {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(color.xxx + K.xyz) * 6.0 - K.www);
@@ -143,8 +143,7 @@ vec3 shiftColor(vec3 color, float shiftValue) {
   return hsv2rgb(hsvColor);
 }
 
-void main()
-{
+void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     color = treeColor;
 
@@ -159,7 +158,7 @@ void main()
 
     // DELETED NODE
     if (type == ${NodeTypes.INVALID.toFixed(1)}) {
-      gl_PointSize = 0.0;
+      gl_Position = vec4(-1.0, -1.0, -1.0, 0.0);
     }
 
     if (activeNodeId == nodeId) {
@@ -170,10 +169,6 @@ void main()
     if (type == ${NodeTypes.BRANCH_POINT.toFixed(1)}) {
       color = shiftColor(color, 0.5);
     }
-
-
-
-
 }\
 `;
   }

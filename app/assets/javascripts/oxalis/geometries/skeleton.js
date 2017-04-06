@@ -186,7 +186,7 @@ class Skeleton {
       switch (update.action) {
         case "createNode": {
           const treeColor = tracing.trees[update.value.treeId].color;
-          this.createNode(update.value, treeColor);
+          this.createNode(update.value.id, update.value, treeColor);
           break;
         }
         case "deleteNode":
@@ -253,7 +253,7 @@ class Skeleton {
 
   createTree(tree: TreeType) {
     for (const node of _.values(tree.nodes)) {
-      this.createNode(node, tree.color, false);
+      this.createNode(tree.treeId, node, tree.color, false);
     }
     for (const edge of tree.edges) {
       const source = tree.nodes[edge.source];
@@ -262,8 +262,8 @@ class Skeleton {
     }
   }
 
-  createNode(node: NodeWithTreeIdType, treeColor: Vector3, updateBoundingSphere: boolean = true) {
-    const id = this.combine(node.id, node.treeId);
+  createNode(treeId: number, node: NodeType, treeColor: Vector3, updateBoundingSphere: boolean = true) {
+    const id = this.combine(node.id, treeId);
     this.create(id, this.nodes, updateBoundingSphere, ({ buffer, index }) => {
       const attributes = buffer.geometry.attributes;
       attributes.position.set(node.position, index * 3);
@@ -271,7 +271,7 @@ class Skeleton {
       attributes.radius.array[index] = node.radius;
       attributes.type.array[index] = NodeTypes.NORMAL;
       attributes.nodeId.array[index] = node.id;
-      attributes.treeId.array[index] = node.treeId;
+      attributes.treeId.array[index] = treeId;
       return _.values(attributes);
     });
   }

@@ -1,7 +1,4 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-require("babel-register");
-require("babel-polyfill");
-
 import test from 'ava';
 import mockRequire from "mock-require";
 import sinon from "sinon";

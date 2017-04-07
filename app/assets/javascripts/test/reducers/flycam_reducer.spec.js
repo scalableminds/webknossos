@@ -3,7 +3,6 @@ import test from "ava";
 import * as FlycamActions from "oxalis/model/actions/flycam_actions";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import { M4x4, V3 } from "libs/mjs";
-import { addTimestamp } from "oxalis/model/helpers/timestamp_middleware";
 import { getPosition, getRotation, getUp, getLeft, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { OrthoViews } from "oxalis/constants";
 
@@ -41,21 +40,21 @@ test("Flycam should calculate zoomed matrix", (t) => {
 });
 
 test("Flycam should move the flycam", (t) => {
-  const moveAction = addTimestamp(FlycamActions.moveFlycamAction([1, 2, 3]));
+  const moveAction = FlycamActions.moveFlycamAction([1, 2, 3]);
   const newState = FlycamReducer(initialState, moveAction);
 
   equalWithEpsilon(t, getPosition(newState.flycam), [1, 2, 3]);
 });
 
 test("Flycam should move the flycam backwards", (t) => {
-  const moveAction = addTimestamp(FlycamActions.moveFlycamAction([-1, -2, -3]));
+  const moveAction = FlycamActions.moveFlycamAction([-1, -2, -3]);
   const newState = FlycamReducer(initialState, moveAction);
 
   equalWithEpsilon(t, getPosition(newState.flycam), [-1, -2, -3]);
 });
 
 test("Flycam should move the flycam and move it again", (t) => {
-  const moveAction = addTimestamp(FlycamActions.moveFlycamAction([1, 2, 3]));
+  const moveAction = FlycamActions.moveFlycamAction([1, 2, 3]);
   let newState = FlycamReducer(initialState, moveAction);
   newState = FlycamReducer(newState, moveAction);
 
@@ -63,7 +62,7 @@ test("Flycam should move the flycam and move it again", (t) => {
 });
 
 test("Flycam should set the rotation the flycam", (t) => {
-  const rotateAction = addTimestamp(FlycamActions.setRotationAction([180, 0, 0]));
+  const rotateAction = FlycamActions.setRotationAction([180, 0, 0]);
   const newState = FlycamReducer(initialState, rotateAction);
 
   equalWithEpsilon(t, getRotation(newState.flycam), [180, 0, 0]);
@@ -72,28 +71,28 @@ test("Flycam should set the rotation the flycam", (t) => {
 });
 
 test("Flycam should set the position the flycam", (t) => {
-  const positionAction = addTimestamp(FlycamActions.setPositionAction([1, 2, 3]));
+  const positionAction = FlycamActions.setPositionAction([1, 2, 3]);
   const newState = FlycamReducer(initialState, positionAction);
 
   equalWithEpsilon(t, getPosition(newState.flycam), [1, 2, 3]);
 });
 
 test("Flycam should set the position the flycam with skipped dimension (1/2)", (t) => {
-  const positionAction = addTimestamp(FlycamActions.setPositionAction([1, 2, 3], 2));
+  const positionAction = FlycamActions.setPositionAction([1, 2, 3], 2);
   const newState = FlycamReducer(initialState, positionAction);
 
   equalWithEpsilon(t, getPosition(newState.flycam), [1, 2, 0]);
 });
 
 test("Flycam should set the position the flycam with skipped dimension (2/2)", (t) => {
-  const positionAction = addTimestamp(FlycamActions.setPositionAction([1, 2, 3], 0));
+  const positionAction = FlycamActions.setPositionAction([1, 2, 3], 0);
   const newState = FlycamReducer(initialState, positionAction);
 
   equalWithEpsilon(t, getPosition(newState.flycam), [0, 2, 3]);
 });
 
 test("Flycam should rotate the flycam", (t) => {
-  const rotateAction = addTimestamp(FlycamActions.rotateFlycamAction(0.5 * Math.PI, [1, 1, 0]));
+  const rotateAction = FlycamActions.rotateFlycamAction(0.5 * Math.PI, [1, 1, 0]);
   const newState = FlycamReducer(initialState, rotateAction);
 
   equalWithEpsilon(t, getPosition(newState.flycam), [0, 0, 0]);
@@ -101,7 +100,7 @@ test("Flycam should rotate the flycam", (t) => {
 });
 
 test("Flycam should pitch the flycam", (t) => {
-  const rotateAction = addTimestamp(FlycamActions.pitchFlycamAction(0.5 * Math.PI));
+  const rotateAction = FlycamActions.pitchFlycamAction(0.5 * Math.PI);
   const newState = FlycamReducer(initialState, rotateAction);
 
   equalWithEpsilon(t, getPosition(newState.flycam), [0, 0, 0]);
@@ -109,7 +108,7 @@ test("Flycam should pitch the flycam", (t) => {
 });
 
 test("Flycam should pitch the flycam with spherical cap radius", (t) => {
-  const rotateAction = addTimestamp(FlycamActions.pitchFlycamAction(0.5 * Math.PI, true));
+  const rotateAction = FlycamActions.pitchFlycamAction(0.5 * Math.PI, true);
   const newState = FlycamReducer(initialState, rotateAction);
 
   equalWithEpsilon(t, getPosition(newState.flycam), [0, -200, -200]);
@@ -117,57 +116,57 @@ test("Flycam should pitch the flycam with spherical cap radius", (t) => {
 });
 
 test("Flycam should yaw the flycam", (t) => {
-  const rotateAction = addTimestamp(FlycamActions.yawFlycamAction(0.5 * Math.PI));
+  const rotateAction = FlycamActions.yawFlycamAction(0.5 * Math.PI);
   const newState = FlycamReducer(initialState, rotateAction);
 
   equalWithEpsilon(t, getRotation(newState.flycam), [0, 270, 180]);
 });
 
 test("Flycam should roll the flycam", (t) => {
-  const rotateAction = addTimestamp(FlycamActions.rollFlycamAction(0.5 * Math.PI));
+  const rotateAction = FlycamActions.rollFlycamAction(0.5 * Math.PI);
   const newState = FlycamReducer(initialState, rotateAction);
 
   equalWithEpsilon(t, getRotation(newState.flycam), [0, 0, 90]);
 });
 
 test("Flycam should move in ortho mode", (t) => {
-  const moveAction = addTimestamp(FlycamActions.moveFlycamOrthoAction([2, 0, 0], OrthoViews.PLANE_XY));
+  const moveAction = FlycamActions.moveFlycamOrthoAction([2, 0, 0], OrthoViews.PLANE_XY);
   const newState = FlycamReducer(initialState, moveAction);
 
   equalWithEpsilon(t, getPosition(newState.flycam), [2, 0, 0]);
 });
 
 test("Flycam should move in ortho mode with dynamicSpaceDirection", (t) => {
-  let newState = FlycamReducer(initialState, addTimestamp(FlycamActions.setRotationAction([0, 0, -2])));
-  newState = FlycamReducer(newState, addTimestamp(FlycamActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY)));
+  let newState = FlycamReducer(initialState, FlycamActions.setRotationAction([0, 0, -2]));
+  newState = FlycamReducer(newState, FlycamActions.moveFlycamOrthoAction([2, 0, 2], OrthoViews.PLANE_XY));
 
   equalWithEpsilon(t, getPosition(newState.flycam), [2, 0, -2]);
 });
 
 test("Flycam should move by plane in ortho mode (1/3)", (t) => {
-  const moveAction = addTimestamp(FlycamActions.movePlaneFlycamOrthoAction([2, 0, 0], OrthoViews.PLANE_XY, true));
+  const moveAction = FlycamActions.movePlaneFlycamOrthoAction([2, 0, 0], OrthoViews.PLANE_XY, true);
   const newState = FlycamReducer(initialState, moveAction);
 
   t.deepEqual(getPosition(newState.flycam), [4, 0, 0]);
 });
 
 test("Flycam should move by plane in ortho mode (2/3)", (t) => {
-  const moveAction = addTimestamp(FlycamActions.movePlaneFlycamOrthoAction([2, 2, 0], OrthoViews.PLANE_XZ, true));
+  const moveAction = FlycamActions.movePlaneFlycamOrthoAction([2, 2, 0], OrthoViews.PLANE_XZ, true);
   const newState = FlycamReducer(initialState, moveAction);
 
   t.deepEqual(getPosition(newState.flycam), [4, 0, 2]);
 });
 
 test("Flycam should move by plane in ortho mode (3/3)", (t) => {
-  const moveAction = addTimestamp(FlycamActions.movePlaneFlycamOrthoAction([2, 2, 0], OrthoViews.PLANE_XZ, false));
+  const moveAction = FlycamActions.movePlaneFlycamOrthoAction([2, 2, 0], OrthoViews.PLANE_XZ, false);
   const newState = FlycamReducer(initialState, moveAction);
 
   t.deepEqual(getPosition(newState.flycam), [2, 0, 1]);
 });
 
 test("Flycam should move by plane in ortho mode with dynamicSpaceDirection", (t) => {
-  let newState = FlycamReducer(initialState, addTimestamp(FlycamActions.setRotationAction([0, 0, -2])));
-  newState = FlycamReducer(newState, addTimestamp(FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true)));
+  let newState = FlycamReducer(initialState, FlycamActions.setRotationAction([0, 0, -2]));
+  newState = FlycamReducer(newState, FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true));
 
   equalWithEpsilon(t, getPosition(newState.flycam), [0, 0, -2]);
 });

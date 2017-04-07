@@ -50,7 +50,7 @@ export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContent
   tracing,
 });
 
-export const createNodeAction = (position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number = Date.now(), treeId?: number): CreateNodeActionType => ({
+export const createNodeAction = (position: Vector3, rotation: Vector3, viewport: number, resolution: number, treeId?: number, timestamp: number = Date.now()): CreateNodeActionType => ({
   type: "CREATE_NODE",
   position,
   rotation,
@@ -60,7 +60,7 @@ export const createNodeAction = (position: Vector3, rotation: Vector3, viewport:
   timestamp,
 });
 
-export const deleteNodeAction = (timestamp: number = Date.now(), nodeId?: number, treeId?: number): DeleteNodeActionType => ({
+export const deleteNodeAction = (nodeId?: number, treeId?: number, timestamp: number = Date.now()): DeleteNodeActionType => ({
   type: "DELETE_NODE",
   nodeId,
   treeId,
@@ -77,7 +77,7 @@ export const setActiveNodeRadiusAction = (radius: number): SetActiveNodeRadiusAc
   radius,
 });
 
-export const createBranchPointAction = (timestamp: number = Date.now(), nodeId?: number, treeId?: number): CreateBranchPointActionType => ({
+export const createBranchPointAction = (nodeId?: number, treeId?: number, timestamp: number = Date.now()): CreateBranchPointActionType => ({
   type: "CREATE_BRANCHPOINT",
   nodeId,
   treeId,
@@ -93,7 +93,7 @@ export const createTreeAction = (timestamp: number = Date.now()): CreateTreeActi
   timestamp,
 });
 
-export const deleteTreeAction = (timestamp: number = Date.now(), treeId?: number): DeleteTreeActionType => ({
+export const deleteTreeAction = (treeId?: number, timestamp: number = Date.now()): DeleteTreeActionType => ({
   type: "DELETE_TREE",
   treeId,
   timestamp,

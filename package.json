@@ -53,7 +53,7 @@
     "worker-loader": "^0.7.1"
   },
   "scripts": {
-    "test": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava",
+    "test": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --timeout=15s",
     "test-watch": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --watch",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
     "flow": "node_modules/.bin/flow",

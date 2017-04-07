@@ -196,7 +196,7 @@ test("User Api: setConfiguration should set and get a user configuration value",
   t.is(api.user.getConfiguration("moveValue"), MOVE_VALUE);
 });
 
-test.cb("Utils Api: sleep should sleep", (t) => {
+test.serial.cb("Utils Api: sleep should sleep", (t) => {
   const api = t.context.api;
   let bool = false;
   api.utils.sleep(200).then(() => { bool = true; });

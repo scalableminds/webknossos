@@ -1,15 +1,13 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+import test from "ava";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
 import Backbone from "backbone";
 import "backbone.marionette";
 import constants from "oxalis/constants";
-import { createTreeAction, createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions.js";
+import { createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions.js";
 import TRACING_OBJECT from "../fixtures/tracing_object";
-
-
-mockRequire.stopAll();
 
 function makeModelMock() {
   class ModelMock {}
@@ -24,6 +22,8 @@ const User = makeModelMock();
 const DatasetConfiguration = makeModelMock();
 const Request = {
   receiveJSON: sinon.stub(),
+  sendJSONReceiveJSON: sinon.stub(),
+  sendArraybufferReceiveArraybuffer: sinon.stub(),
   always: () => Promise.resolve(),
 };
 const ErrorHandling = {
@@ -35,6 +35,7 @@ const window = {
   location: {
     pathname: "annotationUrl",
   },
+  alert: console.log.bind(console),
 };
 const currentUser = {
   firstName: "SCM",
@@ -64,261 +65,188 @@ const Model = mockRequire.reRequire("oxalis/model").default;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 const Store = mockRequire.reRequire("oxalis/store").default;
 
-describe("Api", () => {
-  let model = null;
-  let webknossos = null;
-  let api = null;
+test.beforeEach((t) => {
+  const model = t.context.model = new Model();
+  model.set("state", { position: [1, 2, 3] });
+  model.set("tracingType", "tracingTypeValue");
+  model.set("tracingId", "tracingIdValue");
+  model.set("controlMode", constants.CONTROL_MODE_TRACE);
 
-  beforeEach((done) => {
-    model = new Model();
-    model.set("state", { position: [1, 2, 3] });
-    model.set("tracingType", "tracingTypeValue");
-    model.set("tracingId", "tracingIdValue");
-    model.set("controlMode", constants.CONTROL_MODE_TRACE);
-    webknossos = new OxalisApi(model);
+  const webknossos = t.context.webknossos = new OxalisApi(model);
 
-    Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
-    User.prototype.fetch.returns(Promise.resolve());
+  Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
+  User.prototype.fetch.returns(Promise.resolve());
 
-    model.fetch()
-      .then(() => {
-        // Trigger the event ourselves, as the OxalisController is not instantiated
-        app.vent.trigger("webknossos:ready");
-        webknossos.apiReady(1).then((apiObject) => {
-          api = apiObject;
-          done();
-        });
-      })
-      .catch((error) => {
-        console.error("model.fetch() failed", error);
-        fail(error.message);
-        done();
+  return model.fetch()
+    .then(() => {
+      // Trigger the event ourselves, as the OxalisController is not instantiated
+      app.vent.trigger("webknossos:ready");
+      webknossos.apiReady(1).then((apiObject) => {
+        t.context.api = apiObject;
       });
+    })
+    .catch((error) => {
+      console.error("model.fetch() failed", error);
+      fail(error.message);
+    });
+});
+
+test("getActiveNodeId should get the active node id", (t) => {
+  const api = t.context.api;
+  t.is(api.tracing.getActiveNodeId(), 3);
+});
+
+test("setActiveNode should set the active node id", (t) => {
+  const api = t.context.api;
+  api.tracing.setActiveNode(1);
+  t.is(api.tracing.getActiveNodeId(), 1);
+});
+
+test("getActiveTree should get the active tree id", (t) => {
+  const api = t.context.api;
+  api.tracing.setActiveNode(3);
+  t.is(api.tracing.getActiveTreeId(), 2);
+});
+
+test("getAllNodes should get a list of all nodes", (t) => {
+  const api = t.context.api;
+  const nodes = api.tracing.getAllNodes();
+  t.is(nodes.length, 3);
+});
+
+test("getCommentForNode should get the comment of a node", (t) => {
+  const api = t.context.api;
+  const comment = api.tracing.getCommentForNode(3);
+  t.is(comment, "Test");
+});
+
+test("getCommentForNode should throw an error if the supplied treeId doesn't exist", (t) => {
+  const api = t.context.api;
+  t.throws(() => api.tracing.getCommentForNode(3, 3));
+});
+
+test("setCommentForNode should set the comment of a node", (t) => {
+  const api = t.context.api;
+  const COMMENT = "a comment";
+  api.tracing.setCommentForNode(COMMENT, 2);
+  const comment = api.tracing.getCommentForNode(2);
+  t.is(comment, COMMENT);
+});
+
+test("setCommentForNode should throw an error if the supplied nodeId doesn't exist", (t) => {
+  const api = t.context.api;
+  t.throws(() => api.tracing.setCommentForNode("another comment", 4));
+});
+
+
+test("Data Api getLayerNames should get an array of all layer names", (t) => {
+  const api = t.context.api;
+  t.is(api.data.getLayerNames().length, 2);
+  t.regex(api.data.getLayerNames(), /segmentation/);
+  t.regex(api.data.getLayerNames(), /color/);
+});
+
+test("setMapping should throw an error if the layer name is not valid", (t) => {
+  const api = t.context.api;
+  t.throws(() => api.data.setMapping("nonExistingLayer", [1, 3]));
+});
+
+test("setMapping should set a mapping of a layer", (t) => {
+  const { api, model } = t.context;
+  const cube = model.getBinaryByName("segmentation").cube;
+  t.is(cube.hasMapping(), false);
+  api.data.setMapping("segmentation", [1, 3]);
+  t.is(cube.hasMapping(), true);
+  t.is(cube.mapId(1), 3);
+});
+
+test("getBoundingBox should throw an error if the layer name is not valid", (t) => {
+  const api = t.context.api;
+  t.throws(() => api.data.getBoundingBox("nonExistingLayer"));
+});
+
+test("getBoundingBox should get the bounding box of a layer", (t) => {
+  const api = t.context.api;
+  const correctBoundingBox = [[3840, 4220, 2304], [3968, 4351, 2688]];
+  const boundingBox = api.data.getBoundingBox("color");
+  t.deepEqual(boundingBox, correctBoundingBox);
+});
+
+test("getDataValue should throw an error if the layer name is not valid", (t) => {
+  const api = t.context.api;
+  t.throws(() => api.data.getDataValue("nonExistingLayer", [1, 2, 3]));
+});
+
+test("getDataValue should get the data value for a layer, position and zoomstep", (t) => {
+  // Currently, this test only makes sure pullQueue.pull is being called.
+  // There is another spec for pullqueue.js
+  const { api, model } = t.context;
+  const cube = model.getBinaryByName("segmentation").cube;
+
+  sinon.stub(cube.pullQueue, "pull").returns([Promise.resolve(true)]);
+  sinon.stub(cube, "getDataValue").returns(1337);
+
+  return api.data.getDataValue("segmentation", [3840, 4220, 2304], 0).then((dataValue) => {
+    t.is(dataValue, 1337);
   });
+});
 
+test("User Api: setConfiguration should set and get a user configuration value", (t) => {
+  const api = t.context.api;
+  const MOVE_VALUE = 10;
+  api.user.setConfiguration("moveValue", MOVE_VALUE);
+  t.is(api.user.getConfiguration("moveValue"), MOVE_VALUE);
+});
 
-  describe("Tracing Api", () => {
-    // Conflicts with the execution of the other api spec
-    xdescribe("getActiveNodeId", () => {
-      it("should get the active node id", (done) => {
-        expect(api.tracing.getActiveNodeId()).toBe(3);
-        done();
-      });
-    });
+test.cb("Utils Api: sleep should sleep", (t) => {
+  const api = t.context.api;
+  let bool = false;
+  api.utils.sleep(200).then(() => { bool = true; });
+  t.false(bool);
+  setTimeout(() => {
+    t.true(bool, true);
+    t.end();
+  }, 400);
+});
 
-    describe("setActiveNode", () => {
-      it("should set the active node id", (done) => {
-        api.tracing.setActiveNode(2);
-        expect(api.tracing.getActiveNodeId()).toBe(2);
-        done();
-      });
-    });
+test("registerKeyHandler should register a key handler and return a handler to unregister it again", (t) => {
+  const api = t.context.api;
+  // Unfortunately this is not properly testable as KeyboardJS doesn't work without a DOM
+  sinon.spy(KeyboardJS, "bind");
+  sinon.spy(KeyboardJS, "unbind");
+  const binding = api.utils.registerKeyHandler("g", () => {});
+  t.true(KeyboardJS.bind.calledOnce);
+  binding.unregister();
+  t.true(KeyboardJS.unbind.calledOnce);
+});
 
-    describe("getActiveTree", () => {
-      it("should get the active tree id", (done) => {
-        api.tracing.setActiveNode(3);
-        expect(api.tracing.getActiveTreeId()).toBe(2);
-        done();
-      });
-    });
+test("registerOverwrite should overwrite newAddNode", (t) => {
+  const { api } = t.context;
+  let bool = false;
+  const newAddNode = function overwrite(oldFunc, args) {
+    bool = true;
+    oldFunc(...args);
+  };
+  api.utils.registerOverwrite("addNode", newAddNode);
 
-    describe("getAllNodes", () => {
-      it("should get a list of all nodes", (done) => {
-        const nodes = api.tracing.getAllNodes();
-        expect(nodes.length).toBe(3);
-        done();
-      });
-    });
+  Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1));
 
-    describe("getCommentForNode", () => {
-      it("should get the comment of a node", (done) => {
-        const comment = api.tracing.getCommentForNode(3);
-        expect(comment).toBe("Test");
-        done();
-      });
+  // The added instructions should have been executed
+  t.true(bool);
+});
 
-      it("should throw an error if the supplied treeId doesn't exist", (done) => {
-        expect(() => api.tracing.getCommentForNode(3, 3)).toThrow();
-        done();
-      });
-    });
+test("registerOverwrite should overwrite deleteActiveNode", (t) => {
+  const { api } = t.context;
+  let bool = false;
+  const deleteNode = function overwrite(oldFunc, args) {
+    bool = true;
+    oldFunc(...args);
+  };
+  api.utils.registerOverwrite("deleteActiveNode", deleteNode);
 
-    describe("setCommentForNode", () => {
-      it("should set the comment of a node", (done) => {
-        const COMMENT = "a comment";
-        api.tracing.setCommentForNode(COMMENT, 2);
-        const comment = api.tracing.getCommentForNode(2);
-        expect(comment).toBe(COMMENT);
-        done();
-      });
+  Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1, 0));
+  Store.dispatch(deleteNodeAction(0, 0));
 
-      it("should throw an error if the supplied nodeId doesn't exist", (done) => {
-        expect(() => api.tracing.setCommentForNode("another comment", 4)).toThrow();
-        done();
-      });
-    });
-  });
-
-
-  describe("Data Api", () => {
-    describe("getLayerNames", () => {
-      it("should get an array of all layer names", (done) => {
-        expect(api.data.getLayerNames().length).toBe(2);
-        expect(api.data.getLayerNames()).toContain("segmentation");
-        expect(api.data.getLayerNames()).toContain("color");
-        done();
-      });
-    });
-
-    describe("setMapping", () => {
-      it("should throw an error if the layer name is not valid", (done) => {
-        expect(() => api.data.setMapping("nonExistingLayer", [1, 3])).toThrow();
-        done();
-      });
-
-      it("should set a mapping of a layer", (done) => {
-        const cube = model.getBinaryByName("segmentation").cube;
-        expect(cube.hasMapping()).toBe(false);
-        api.data.setMapping("segmentation", [1, 3]);
-        expect(cube.hasMapping()).toBe(true);
-        expect(cube.mapId(1)).toBe(3);
-        done();
-      });
-    });
-
-    describe("getBoundingBox", () => {
-      it("should throw an error if the layer name is not valid", (done) => {
-        expect(() => api.data.getBoundingBox("nonExistingLayer")).toThrow();
-        done();
-      });
-
-      it("should get the bounding box of a layer", (done) => {
-        const correctBoundingBox = [[3840, 4220, 2304], [3968, 4351, 2688]];
-        const boundingBox = api.data.getBoundingBox("color");
-        expect(boundingBox).toEqual(correctBoundingBox);
-        done();
-      });
-    });
-
-    describe("getDataValue", () => {
-      it("should throw an error if the layer name is not valid", (done) => {
-        expect(() => api.data.getDataValue("nonExistingLayer", [1, 2, 3])).toThrow();
-        done();
-      });
-
-      it("should get the data value for a layer, position and zoomstep", (done) => {
-        // TODO: Currently this test only makes sure pullQueue.pull is being called
-        // ideally it should also make sure that the correct data value is being returned
-        const cube = model.getBinaryByName("segmentation").cube;
-        spyOn(cube.pullQueue, "pull").and.callThrough();
-        api.data.getDataValue("segmentation", [3840, 4220, 2304], 0);
-        expect(cube.pullQueue.pull).toHaveBeenCalled();
-        done();
-      });
-    });
-  });
-
-  describe("User Api", () => {
-    describe("setConfiguration", () => {
-      it("should set and get a user configuration value", (done) => {
-        const MOVE_VALUE = 10;
-        api.user.setConfiguration("moveValue", MOVE_VALUE);
-        expect(api.user.getConfiguration("moveValue")).toBe(MOVE_VALUE);
-        done();
-      });
-    });
-  });
-
-  describe("Utils Api", () => {
-    describe("sleep", () => {
-      it("should sleep", (done) => {
-        let bool = false;
-        api.utils.sleep(200).then(() => { bool = true; });
-        expect(bool).toBe(false);
-        setTimeout(() => {
-          expect(bool).toBe(true);
-          done();
-        }, 400);
-      });
-    });
-
-    // Conflicts with the execution of the other api spec
-    xdescribe("registerKeyHandler", () => {
-      it("should register a key handler and return a handler to unregister it again", (done) => {
-        // Unfortunately this is not properly testable as KeyboardJS doesn't work without a DOM
-        spyOn(KeyboardJS, "bind");
-        spyOn(KeyboardJS, "unbind");
-        const binding = api.utils.registerKeyHandler("g", () => {});
-        expect(KeyboardJS.bind).toHaveBeenCalled();
-        binding.unregister();
-        expect(KeyboardJS.unbind).toHaveBeenCalled();
-        done();
-      });
-    });
-
-    describe("registerOverwrite", () => {
-      it("should overwrite newAddNode", (done) => {
-        let bool = false;
-        const newAddNode = function overwrite(oldFunc, args) {
-          bool = true;
-          oldFunc(...args);
-        };
-        api.utils.registerOverwrite("addNode", newAddNode);
-
-        // Using the api to get all nodes yields a different set of nodes.
-        // There seem to be two different store instances float around.
-        // This should be fixed by running the tests isolated (e.g., with ava)
-        const oldNodeCount = _.flatMap(
-          Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes),
-        ).length;
-
-        Store.dispatch(createTreeAction());
-        Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1));
-
-
-        // The added instructions should have been executed
-        expect(bool).toBe(true);
-
-        // And the original method should have been called
-        const newNodeCount = _.flatMap(
-          Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes),
-        ).length;
-        expect(newNodeCount).toBe(oldNodeCount + 1);
-        done();
-      });
-
-      it("should overwrite deleteActiveNode", (done) => {
-        let bool = false;
-        const deleteNode = function overwrite(oldFunc, args) {
-          bool = true;
-          oldFunc(...args);
-        };
-        api.utils.registerOverwrite("deleteActiveNode", deleteNode);
-
-        // Using the api to get all nodes yields a different set of nodes.
-        // There seem to be two different store instances float around.
-        // This should be fixed by running the tests isolated (e.g., with ava)
-        Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1, 0));
-        const oldNodeCount = _.flatMap(
-          Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes),
-        ).length;
-
-        Store.dispatch(deleteNodeAction(0, 0));
-
-        // The added instructions should have been executed
-        expect(bool).toBe(true);
-
-        // And the original method should have been called
-        const newNodeCount = _.flatMap(
-          Store.getState().skeletonTracing.trees,
-          tree => _.values(tree.nodes),
-        ).length;
-        expect(newNodeCount).toBe(oldNodeCount - 1);
-        done();
-      });
-    });
-  });
+  // The added instructions should have been executed
+  t.true(bool);
 });

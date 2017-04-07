@@ -1,30 +1,29 @@
+// @flow
+/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+import test from "ava";
+
 import { initializeSettingsAsync } from "oxalis/model/sagas/settings_saga";
 import { initializeSettingsAction } from "oxalis/model/actions/settings_actions";
 import { take, put } from "redux-saga/effects";
+import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 // import Request from "libs/request";
 
-function expectValue(block) {
-  expect(block.done).toBe(false);
-  return expect(block.value);
-}
+test("settings_sagas should load initial settings into the store", (t) => {
+  const datasetName = "foo";
+  const initialUserSettings = { userSettings: true };
+  const initialDatasetSettings = { datasetSettings: true };
 
-describe("settings_sagas", () => {
-  it("Should load initial settings into the store", () => {
-    const datasetName = "foo";
-    const initialUserSettings = { userSettings: true };
-    const initialDatasetSettings = { datasetSettings: true };
-
-    const saga = initializeSettingsAsync();
-    expectValue(saga.next()).toEqual(take("SET_DATASET"));
-    saga.next();
-    const requestCalls = saga.next(datasetName).value;
-    expect(requestCalls.length).toBe(2);
-    expect(requestCalls[0].CALL.args).toEqual(["/api/user/userConfiguration"]);
-    // expect(requestCalls[0].CALL.fn).toEqual(Request.receiveJSON);
-    expect(requestCalls[1].CALL.args).toEqual([`/api/dataSetConfigurations/${datasetName}`]);
-    // expect(requestCalls[1].CALL.fn).toEqual(Request.receiveJSON);
-    expectValue(saga.next([initialUserSettings, initialDatasetSettings]))
-      .toEqual(put(initializeSettingsAction(initialUserSettings, initialDatasetSettings)));
-    expect(saga.next().done);
-  });
+  const saga = initializeSettingsAsync();
+  expectValueDeepEqual(t, saga.next(), take("SET_DATASET"));
+  saga.next();
+  const requestCalls = saga.next(datasetName).value;
+  t.is(requestCalls.length, 2);
+  t.deepEqual(requestCalls[0].CALL.args, ["/api/user/userConfiguration"]);
+  // t.deepEqual(requestCalls[0].CALL.fn, Request.receiveJSON);
+  t.deepEqual(requestCalls[1].CALL.args, [`/api/dataSetConfigurations/${datasetName}`]);
+  // t.deepEqual(requestCalls[1].CALL.fn, Request.receiveJSON);
+  expectValueDeepEqual(t, saga.next([initialUserSettings, initialDatasetSettings]),
+    put(initializeSettingsAction(initialUserSettings, initialDatasetSettings)),
+  );
+  t.true(saga.next().done);
 });

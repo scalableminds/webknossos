@@ -29,7 +29,6 @@
     "eslint-config-airbnb": "^13.0.0",
     "eslint-import-resolver-webpack": "^0.8.0",
     "eslint-plugin-import": "^2.2.0",
-    "eslint-plugin-jasmine": "^2.2.0",
     "eslint-plugin-jsx-a11y": "2.2.3",
     "eslint-plugin-react": "^6.8.0",
     "exports-loader": "^0.6.3",
@@ -38,8 +37,6 @@
     "flow-bin": "^0.42.0",
     "imports-loader": "^0.7.0",
     "isomorphic-fetch": "^2.2.0",
-    "jasmine": "^2.5.2",
-    "jasmine-spec-reporter": "^3.2.0",
     "less": "^2.7.2",
     "less-loader": "^2.2.3",
     "mock-require": "^1.2.1",
@@ -55,12 +52,11 @@
     "worker-loader": "^0.7.1"
   },
   "scripts": {
-    "test": "yarn ava && yarn jasmine",
-    "ava": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava",
-    "ava-watch": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --watch",
-    "jasmine": "export NODE_PATH=app/assets/javascripts && node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
+    "test": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava",
+    "test-watch": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --watch",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
-    "flow": "node_modules/.bin/flow check",
+    "flow": "node_modules/.bin/flow",
+    "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
     "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
     "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_latest.js app/assets/javascripts/oxalis/api/api_latest.js --github --sort-order alpha --name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api"

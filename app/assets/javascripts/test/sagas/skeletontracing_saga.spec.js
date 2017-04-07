@@ -18,7 +18,6 @@ const { saveSkeletonTracingAsync, diffTracing } = mockRequire.reRequire("oxalis/
 const SkeletonTracingActions = mockRequire.reRequire("oxalis/model/actions/skeletontracing_actions");
 const { pushSaveQueueAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SkeletonTracingReducer = mockRequire.reRequire("oxalis/model/reducers/skeletontracing_reducer").default;
-const { addTimestamp } = mockRequire.reRequire("oxalis/model/helpers/timestamp_middleware");
 const { take, put } = mockRequire.reRequire("redux-saga/effects");
 const { M4x4 } = mockRequire.reRequire("libs/mjs");
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
@@ -69,20 +68,21 @@ const initialState = {
     spaceDirectionOrtho: [1, 1, 1],
   },
 };
-const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction([1, 2, 3], [0, 1, 0], 0, 1.2));
-const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction());
-const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction(), 12345678);
-const deleteTreeAction = addTimestamp(SkeletonTracingActions.deleteTreeAction());
-const setActiveNodeRadiusAction = addTimestamp(SkeletonTracingActions.setActiveNodeRadiusAction(12));
-const createCommentAction = addTimestamp(SkeletonTracingActions.createCommentAction("Hallo"));
-const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction(), 12345678);
+const createNodeAction = SkeletonTracingActions.createNodeAction([1, 2, 3], [0, 1, 0], 0, 1.2);
+const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
+const createTreeAction = SkeletonTracingActions.createTreeAction(12345678);
+const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
+const setActiveNodeRadiusAction = SkeletonTracingActions.setActiveNodeRadiusAction(12);
+const createCommentAction = SkeletonTracingActions.createCommentAction("Hallo");
+const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(undefined, undefined, 12345678);
 
 test("SkeletonTracingSaga should create a tree if there is none (saga test)", (t) => {
   const saga = saveSkeletonTracingAsync();
   expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
   saga.next();
   saga.next({ skeletonTracing: { trees: {} } });
-  expectValueDeepEqual(t, saga.next(true), put(SkeletonTracingActions.createTreeAction()));
+  t.is(saga.next(true).value.PUT.action.type, "CREATE_TREE");
+  // expectValueDeepEqual(t, saga.next(true), put(SkeletonTracingActions.createTreeAction()));
 });
 
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) => {
@@ -159,7 +159,7 @@ test("SkeletonTracingSaga should emit createNode and createTree update actions",
 
 
 test("SkeletonTracingSaga should emit first deleteNode and then createNode update actions", (t) => {
-  const mergeTreesAction = addTimestamp(SkeletonTracingActions.mergeTreesAction(1, 0));
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 0);
 
   let testState = SkeletonTracingReducer(initialState, createNodeAction);
   testState = SkeletonTracingReducer(testState, createTreeAction);
@@ -265,7 +265,7 @@ test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints
 });
 
 test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
-  const mergeTreesAction = addTimestamp(SkeletonTracingActions.mergeTreesAction(0, 2));
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(0, 2);
 
   // create a node in first tree, then create a second tree with three nodes and merge them
   let testState = SkeletonTracingReducer(initialState, createNodeAction);
@@ -289,7 +289,7 @@ test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
 });
 
 test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
-  const mergeTreesAction = addTimestamp(SkeletonTracingActions.mergeTreesAction(0, 2));
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(0, 2);
 
   // create a node in first tree, then create a second tree with three nodes and merge them
   let testState = SkeletonTracingReducer(initialState, createNodeAction);

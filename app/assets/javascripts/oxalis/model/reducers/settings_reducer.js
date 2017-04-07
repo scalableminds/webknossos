@@ -6,10 +6,9 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
-import type { SettingActionType } from "oxalis/model/actions/settings_actions";
-import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
+import type { ActionType } from "oxalis/model/actions/actions";
 
-function SettingsReducer(state: OxalisState, action: ActionWithTimestamp<SettingActionType>): OxalisState {
+function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "UPDATE_USER_SETTING": {
       const { propertyName, value } = action;

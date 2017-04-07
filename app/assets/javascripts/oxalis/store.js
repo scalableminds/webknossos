@@ -16,7 +16,6 @@ import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
-import timestampMiddleware from "oxalis/model/helpers/timestamp_middleware";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
@@ -65,21 +64,6 @@ export type TreeType = {
   branchPoints: Array<BranchPointType>,
   edges: Array<EdgeType>,
   nodes: NodeMapType,
-};
-
-export type SkeletonContentDataType = {
-  activeNode: null | number,
-  trees: Array<TreeType>,
-  zoomLevel: number,
-  customLayers: null,
-};
-
-export type VolumeContentDataType = {
-  activeCell: null | number,
-  customLayers: Array<Object>,
-  maxCoordinates: BoundingBoxObjectType,
-  customLayers: ?Array<Object>,
-  name: string,
 };
 
 export type MappingType = {
@@ -133,13 +117,16 @@ export type DatasetType = {
 
 export type TreeMapType = {[number]: TreeType};
 
+export type SkeletonTracingTypeTracingType =
+  "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType";
+
 export type SkeletonTracingType = {
   type: "skeleton",
   trees: TreeMapType,
   name: string,
   version: number,
   id: string,
-  tracingType: "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType",
+  tracingType: SkeletonTracingTypeTracingType,
   activeTreeId: ?number,
   activeNodeId: ?number,
   restrictions: RestrictionsType & SettingsType,
@@ -323,7 +310,6 @@ const combinedReducers = reduceReducers(
 );
 
 const store = createStore(combinedReducers, defaultState, applyMiddleware(
-  timestampMiddleware,
   overwriteActionMiddleware,
   sagaMiddleware,
 ));

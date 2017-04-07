@@ -122,6 +122,7 @@
     "failFast": true,
     "failWithoutAssertions": false,
     "babel": "inherit",
+    "powerAssert": true,
     "require": [
       "babel-register"
     ]

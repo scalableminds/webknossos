@@ -1,3 +1,7 @@
+// @flow
+import typeof Store from "oxalis/store";
+import type { ActionType } from "oxalis/model/actions/actions";
+import type { Dispatch, MiddlewareAPI } from "redux";
 const overwrites = {};
 
 export function overwriteAction<S, A>(
@@ -15,9 +19,9 @@ export function removeOverwrite(actionName: string) {
   delete overwrites[actionName];
 }
 
-export default function overwriteMiddleware<A>(store) {
-  return (next: (action: A) => void) =>
-    (action: A) => {
+export default function overwriteMiddleware<S, A: $Subtype<{ type: $Subtype<string> }>>(store: MiddlewareAPI<S, A>): (next: Dispatch<A>) => Dispatch<A> {
+  return (next: Dispatch<A>) =>
+    (action: A): A => {
       if (overwrites[action.type]) {
         let isSyncExecutionDone = false;
         const wrappedNext = function (...args) {
@@ -29,13 +33,14 @@ export default function overwriteMiddleware<A>(store) {
               are expected to be dispatched synchronously. Please dispatch the
               action in a synchronous way.`);
           }
-          next(...args);
+          return next(...args);
         };
 
-        overwrites[action.type](store, wrappedNext, action);
+        const returnValue = overwrites[action.type](store, wrappedNext, action);
         isSyncExecutionDone = true;
+        return returnValue;
       } else {
-        next(action);
+        return next(action);
       }
     };
 }

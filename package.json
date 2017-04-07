@@ -109,7 +109,7 @@
   },
   "ava": {
     "files": [
-      "app/assets/javascripts/test/**/*.ava.js"
+      "app/assets/javascripts/test/**/*.spec.js"
     ],
     "source": [
       "app/assets/javascripts/**/*.{js,jsx}"

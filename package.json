@@ -57,6 +57,7 @@
   "scripts": {
     "test": "yarn ava && yarn jasmine",
     "ava": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava",
+    "ava-watch": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --watch",
     "jasmine": "export NODE_PATH=app/assets/javascripts && node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
     "flow": "node_modules/.bin/flow check",

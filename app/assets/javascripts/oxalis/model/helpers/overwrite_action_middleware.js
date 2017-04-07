@@ -1,7 +1,6 @@
 // @flow
-import typeof Store from "oxalis/store";
-import type { ActionType } from "oxalis/model/actions/actions";
 import type { Dispatch, MiddlewareAPI } from "redux";
+
 const overwrites = {};
 
 export function overwriteAction<S, A>(

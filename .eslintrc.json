@@ -27,6 +27,7 @@
       "JQuery": false,
       "SyntheticInputEvent": false,
       "$Keys": false,
+      "$Subtype": false,
       "Generator": false
     },
     "rules": {

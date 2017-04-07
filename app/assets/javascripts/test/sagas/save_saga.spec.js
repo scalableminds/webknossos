@@ -1,10 +1,10 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
-import test from 'ava';
-import { expectValueDeepEqual } from "../helpers/sagaHelpers";
+import test from "ava";
 import mockRequire from "mock-require";
 import _ from "lodash";
+import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 
 mockRequire.stopAll();
 
@@ -54,7 +54,7 @@ const initialState = {
   },
 };
 
-test("SaveSaga should compact multiple updateTracing update actions", t => {
+test("SaveSaga should compact multiple updateTracing update actions", (t) => {
   const updateActions = [
     UpdateActions.updateTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
     UpdateActions.updateTracing(initialState, [2, 3, 4], [0, 0, 1], 2),
@@ -63,7 +63,7 @@ test("SaveSaga should compact multiple updateTracing update actions", t => {
   t.deepEqual(compactUpdateActions(updateActions), [updateActions[1]]);
 });
 
-test("SaveSaga should send update actions", t => {
+test("SaveSaga should send update actions", (t) => {
   const updateActions = [
     UpdateActions.createEdge(0, 0, 1),
     UpdateActions.createEdge(0, 1, 2),
@@ -83,11 +83,11 @@ test("SaveSaga should send update actions", t => {
     call(Request.sendJSONReceiveJSON, "/annotations/Explorational/1234567890?version=3", {
       method: "PUT",
       data: updateActions,
-    })
+    }),
   );
 });
 
-test("SaveSaga should retry update actions", t => {
+test("SaveSaga should retry update actions", (t) => {
   const updateActions = [
     UpdateActions.createEdge(0, 0, 1),
     UpdateActions.createEdge(0, 1, 2),
@@ -107,8 +107,8 @@ test("SaveSaga should retry update actions", t => {
       "/annotations/Explorational/1234567890?version=3", {
         method: "PUT",
         data: updateActions,
-      }
-    )
+      },
+    ),
   );
 
   saga.throw("Timeout");
@@ -122,12 +122,12 @@ test("SaveSaga should retry update actions", t => {
       "/annotations/Explorational/1234567890?version=3", {
         method: "PUT",
         data: updateActions,
-      }
-    )
+      },
+    ),
   );
 });
 
-test("SaveSaga should escalate on permanent client error update actions", t => {
+test("SaveSaga should escalate on permanent client error update actions", (t) => {
   const updateActions = [
     UpdateActions.createEdge(0, 0, 1),
     UpdateActions.createEdge(0, 1, 2),
@@ -147,8 +147,8 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
       "/annotations/Explorational/1234567890?version=3", {
         method: "PUT",
         data: updateActions,
-      }
-    )
+      },
+    ),
   );
 
   saga.throw({ status: 409 });
@@ -157,7 +157,7 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
   t.true(saga.next().done);
 });
 
-test("SaveSaga should send update actions right away", t => {
+test("SaveSaga should send update actions right away", (t) => {
   const updateActions = [
     UpdateActions.createEdge(0, 0, 1),
     UpdateActions.createEdge(0, 1, 2),
@@ -178,12 +178,12 @@ test("SaveSaga should send update actions right away", t => {
       "/annotations/Explorational/1234567890?version=3", {
         method: "PUT",
         data: updateActions,
-      }
-    )
+      },
+    ),
   );
 });
 
-test("SaveSaga should remove the correct update actions", t => {
+test("SaveSaga should remove the correct update actions", (t) => {
   const updateActions = [
     UpdateActions.updateTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
     UpdateActions.updateTracing(initialState, [2, 3, 4], [0, 0, 1], 2),

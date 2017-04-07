@@ -3,7 +3,7 @@
  * cube.spec.js
  * @flow
  */
-import test from 'ava';
+import test from "ava";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
@@ -23,7 +23,7 @@ mockRequire("libs/toast", { error: _.noop });
 // Avoid node caching and make sure all mockRequires are applied
 const Cube = mockRequire.reRequire("oxalis/model/binary/data_cube").default;
 
-test.beforeEach(t => {
+test.beforeEach((t) => {
   const cube = new Cube({ min: [0, 0, 0], max: [128, 128, 128] }, [100, 100, 100], 3, 24);
   const pullQueue = {
     add: sinon.stub(),
@@ -43,14 +43,14 @@ test.beforeEach(t => {
   context.pushQueue = pushQueue;
 });
 
-test("GetBucket should return a NullBucket on getBucket()", t => {
+test("GetBucket should return a NullBucket on getBucket()", (t) => {
   const { cube } = t.context;
   const bucket = cube.getBucket([0, 0, 0, 0]);
   t.is(bucket.type, "null");
   t.is(cube.bucketCount, 0);
 });
 
-test("GetBucket should create a new bucket on getOrCreateBucket()", t => {
+test("GetBucket should create a new bucket on getOrCreateBucket()", (t) => {
   const { cube } = t.context;
   t.is(cube.bucketCount, 0);
 
@@ -59,7 +59,7 @@ test("GetBucket should create a new bucket on getOrCreateBucket()", t => {
   t.is(cube.bucketCount, 1);
 });
 
-test("GetBucket should only create one bucket on getOrCreateBucket()", t => {
+test("GetBucket should only create one bucket on getOrCreateBucket()", (t) => {
   const { cube } = t.context;
   const bucket1 = cube.getOrCreateBucket([0, 0, 0, 0]);
   const bucket2 = cube.getOrCreateBucket([0, 0, 0, 0]);
@@ -67,7 +67,7 @@ test("GetBucket should only create one bucket on getOrCreateBucket()", t => {
   t.is(cube.bucketCount, 1);
 });
 
-test("Voxel Labeling should request buckets when temporal buckets are created", t => {
+test("Voxel Labeling should request buckets when temporal buckets are created", (t) => {
   const { cube, pullQueue } = t.context;
   cube.labelVoxel([1, 1, 1], 42);
 
@@ -76,7 +76,7 @@ test("Voxel Labeling should request buckets when temporal buckets are created", 
     () => {
       t.true(pullQueue.add.calledWith({
         bucket: [0, 0, 0, 0],
-        priority: -1 })
+        priority: -1 }),
       );
       t.true(pullQueue.pull.called);
     },
@@ -106,7 +106,7 @@ test("Voxel Labeling should push buckets after they were pulled", (t) => {
   ]);
 });
 
-test("Voxel Labeling should push buckets immediately if they are pulled already", t => {
+test("Voxel Labeling should push buckets immediately if they are pulled already", (t) => {
   const { cube, pushQueue } = t.context;
   const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
   bucket.pull();
@@ -124,7 +124,7 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
   ]);
 });
 
-test("Voxel Labeling should only create one temporal bucket", t => {
+test("Voxel Labeling should only create one temporal bucket", (t) => {
   const { cube } = t.context;
   // Creates temporal bucket
   cube.labelVoxel([0, 0, 0], 42);
@@ -139,7 +139,7 @@ test("Voxel Labeling should only create one temporal bucket", t => {
   t.is(data[3], 43);
 });
 
-test("Voxel Labeling should merge incoming buckets", t => {
+test("Voxel Labeling should merge incoming buckets", (t) => {
   const { cube } = t.context;
   const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
 
@@ -167,7 +167,7 @@ test("Voxel Labeling should merge incoming buckets", t => {
   t.is(newData[5], 6);
 });
 
-test("getDataValue() should return the raw value without a mapping", t => {
+test("getDataValue() should return the raw value without a mapping", (t) => {
   const { cube } = t.context;
   const value = 1 * (1 << 16) + 2 * (1 << 8) + 3;
   cube.labelVoxel([0, 0, 0], value);
@@ -175,7 +175,7 @@ test("getDataValue() should return the raw value without a mapping", t => {
   t.is(cube.getDataValue([0, 0, 0]), value);
 });
 
-test("getDataValue() should return the mapping value if available", t => {
+test("getDataValue() should return the mapping value if available", (t) => {
   const { cube } = t.context;
   cube.labelVoxel([0, 0, 0], 42);
   cube.labelVoxel([1, 1, 1], 43);
@@ -187,7 +187,7 @@ test("getDataValue() should return the mapping value if available", t => {
   t.is(cube.getDataValue([1, 1, 1], mapping), 43);
 });
 
-test("Garbage Collection should only keep 3 buckets", t => {
+test("Garbage Collection should only keep 3 buckets", (t) => {
   const { cube } = t.context;
   cube.MAXIMUM_BUCKET_COUNT = 3;
   cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
@@ -200,7 +200,7 @@ test("Garbage Collection should only keep 3 buckets", t => {
   t.is(cube.bucketCount, 3);
 });
 
-test("Garbage Collection should not collect buckets with shouldCollect() == false", t => {
+test("Garbage Collection should not collect buckets with shouldCollect() == false", (t) => {
   const { cube } = t.context;
   cube.MAXIMUM_BUCKET_COUNT = 3;
   cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
@@ -218,7 +218,7 @@ test("Garbage Collection should not collect buckets with shouldCollect() == fals
   t.deepEqual(addresses, [[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]]);
 });
 
-test("Garbage Collection should throw an exception if no bucket is collectable", t => {
+test("Garbage Collection should throw an exception if no bucket is collectable", (t) => {
   const { cube } = t.context;
   cube.MAXIMUM_BUCKET_COUNT = 3;
   cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);

@@ -6,7 +6,7 @@
 /* eslint-disable no-useless-computed-key */
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
-import test from 'ava';
+import test from "ava";
 
 import _ from "lodash";
 import mock from "mock-require";
@@ -66,7 +66,7 @@ const rotation = [0.5, 0.5, 0.5];
 const viewport = 0;
 const resolution = 0;
 
-test("SkeletonTracing should add a new node", t => {
+test("SkeletonTracing should add a new node", (t) => {
   const action = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const newState = SkeletonTracingReducer(initialState, action);
 
@@ -96,7 +96,7 @@ test("SkeletonTracing should add a new node", t => {
   });
 });
 
-test("SkeletonTracing should add a several nodes", t => {
+test("SkeletonTracing should add a several nodes", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
 
   // create three nodes
@@ -116,7 +116,7 @@ test("SkeletonTracing should add a several nodes", t => {
   ]);
 });
 
-test("SkeletonTracing should add nodes to a different tree", t => {
+test("SkeletonTracing should add nodes to a different tree", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
 
@@ -139,7 +139,7 @@ test("SkeletonTracing should add nodes to a different tree", t => {
   ]);
 });
 
-test("SkeletonTracing shouldn't delete a node from an empty tree", t => {
+test("SkeletonTracing shouldn't delete a node from an empty tree", (t) => {
   const action = addTimestamp(SkeletonTracingActions.deleteNodeAction());
   const newState = SkeletonTracingReducer(initialState, action);
 
@@ -147,7 +147,7 @@ test("SkeletonTracing shouldn't delete a node from an empty tree", t => {
   t.deepEqual(newState, initialState);
 });
 
-test("SkeletonTracing should delete a node from a tree", t => {
+test("SkeletonTracing should delete a node from a tree", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction());
 
@@ -162,7 +162,7 @@ test("SkeletonTracing should delete a node from a tree", t => {
   t.deepEqual(newStateB, newState);
 });
 
-test("SkeletonTracing should delete several nodes from a tree", t => {
+test("SkeletonTracing should delete several nodes from a tree", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction());
 
@@ -177,7 +177,7 @@ test("SkeletonTracing should delete several nodes from a tree", t => {
   t.deepEqual(Object.keys(newStateB.skeletonTracing.trees[1].nodes).length, 0);
 });
 
-test("SkeletonTracing should delete nodes and split the tree", t => {
+test("SkeletonTracing should delete nodes and split the tree", (t) => {
   const createDummyNode = id => ({
     bitDepth: 8,
     id,
@@ -254,7 +254,7 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
   t.is(newTrees[3].branchPoints[0].id, 7);
 });
 
-test("SkeletonTracing should set a new active node", t => {
+test("SkeletonTracing should set a new active node", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const setActiveNodeAction = addTimestamp(SkeletonTracingActions.setActiveNodeAction(0));
 
@@ -268,7 +268,7 @@ test("SkeletonTracing should set a new active node", t => {
   t.is(newState.skeletonTracing.activeTreeId, 0);
 });
 
-test("SkeletonTracing should set a new active node in a different tree", t => {
+test("SkeletonTracing should set a new active node in a different tree", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const setActiveNodeAction = addTimestamp(SkeletonTracingActions.setActiveNodeAction(1));
@@ -286,7 +286,7 @@ test("SkeletonTracing should set a new active node in a different tree", t => {
   t.is(newState.skeletonTracing.activeTreeId, 1);
 });
 
-test("SkeletonTracing should set a new node radius", t => {
+test("SkeletonTracing should set a new node radius", (t) => {
   const newRadius = 10;
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const setActiveNodeRadiusAction = addTimestamp(SkeletonTracingActions.setActiveNodeRadiusAction(newRadius));
@@ -299,7 +299,7 @@ test("SkeletonTracing should set a new node radius", t => {
   t.deepEqual(newState.skeletonTracing.trees[0].nodes[0].radius, newRadius);
 });
 
-test("SkeletonTracing should create a branchpoint", t => {
+test("SkeletonTracing should create a branchpoint", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction());
 
@@ -314,7 +314,7 @@ test("SkeletonTracing should create a branchpoint", t => {
   });
 });
 
-test("SkeletonTracing shouldn't create a branchpoint in an empty tree", t => {
+test("SkeletonTracing shouldn't create a branchpoint in an empty tree", (t) => {
   const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction());
 
   // create a branchpoint in a tree without any nodes
@@ -323,7 +323,7 @@ test("SkeletonTracing shouldn't create a branchpoint in an empty tree", t => {
   t.is(newState, initialState);
 });
 
-test("SkeletonTracing shouldn't create a branchpoint without the correct permissions", t => {
+test("SkeletonTracing shouldn't create a branchpoint without the correct permissions", (t) => {
   const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
   const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
 
@@ -338,7 +338,7 @@ test("SkeletonTracing shouldn't create a branchpoint without the correct permiss
   t.deepEqual(newState.skeletonTracing.trees[0].branchPoints.length, 0);
 });
 
-test("SkeletonTracing shouldn't create more branchpoints than nodes", t => {
+test("SkeletonTracing shouldn't create more branchpoints than nodes", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction());
 
@@ -355,7 +355,7 @@ test("SkeletonTracing shouldn't create more branchpoints than nodes", t => {
   });
 });
 
-test("SkeletonTracing should delete a branchpoint", t => {
+test("SkeletonTracing should delete a branchpoint", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction());
   const deleteBranchPointAction = addTimestamp(SkeletonTracingActions.deleteBranchPointAction());
@@ -373,7 +373,7 @@ test("SkeletonTracing should delete a branchpoint", t => {
   t.is(newState.skeletonTracing.activeTreeId, 0);
 });
 
-test("SkeletonTracing should delete several branchpoints", t => {
+test("SkeletonTracing should delete several branchpoints", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction());
   const deleteBranchPointAction = addTimestamp(SkeletonTracingActions.deleteBranchPointAction());
@@ -394,7 +394,7 @@ test("SkeletonTracing should delete several branchpoints", t => {
   t.is(newState.skeletonTracing.activeTreeId, 0);
 });
 
-test("SkeletonTracing shouldn't delete more branchpoints than available", t => {
+test("SkeletonTracing shouldn't delete more branchpoints than available", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction());
   const deleteBranchPointAction = addTimestamp(SkeletonTracingActions.deleteBranchPointAction());
@@ -414,7 +414,7 @@ test("SkeletonTracing shouldn't delete more branchpoints than available", t => {
   t.is(newState.skeletonTracing.activeTreeId, 0);
 });
 
-test("SkeletonTracing should delete a branchpoint from a different tree", t => {
+test("SkeletonTracing should delete a branchpoint from a different tree", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction());
@@ -432,7 +432,7 @@ test("SkeletonTracing should delete a branchpoint from a different tree", t => {
   t.is(newState.skeletonTracing.trees[1].branchPoints.length, 0);
 });
 
-test("SkeletonTracing should add a new tree", t => {
+test("SkeletonTracing should add a new tree", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const newState = SkeletonTracingReducer(initialState, createTreeAction);
 
@@ -451,7 +451,7 @@ test("SkeletonTracing should add a new tree", t => {
   });
 });
 
-test("SkeletonTracing should add a several new trees", t => {
+test("SkeletonTracing should add a several new trees", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
 
   // create three trees
@@ -466,7 +466,7 @@ test("SkeletonTracing should add a several new trees", t => {
   t.is(newState.skeletonTracing.activeNodeId, null);
 });
 
-test("SkeletonTracing should delete a new tree", t => {
+test("SkeletonTracing should delete a new tree", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const deleteTreeAction = addTimestamp(SkeletonTracingActions.deleteTreeAction());
 
@@ -478,7 +478,7 @@ test("SkeletonTracing should delete a new tree", t => {
   t.deepEqual(newState, initialState);
 });
 
-test("SkeletonTracing should delete several trees", t => {
+test("SkeletonTracing should delete several trees", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const deleteTreeAction = addTimestamp(SkeletonTracingActions.deleteTreeAction());
 
@@ -495,7 +495,7 @@ test("SkeletonTracing should delete several trees", t => {
   t.is(Object.keys(newState.skeletonTracing.trees).length, 1);
 });
 
-test("SkeletonTracing should set a new active tree", t => {
+test("SkeletonTracing should set a new active tree", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const setActiveTreeAction = addTimestamp(SkeletonTracingActions.setActiveTreeAction(1));
   let newState = SkeletonTracingReducer(initialState, createTreeAction);
@@ -506,7 +506,7 @@ test("SkeletonTracing should set a new active tree", t => {
   t.is(newState.skeletonTracing.activeNodeId, null);
 });
 
-test("SkeletonTracing should set a different active tree", t => {
+test("SkeletonTracing should set a different active tree", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const setActiveTreeAction = addTimestamp(SkeletonTracingActions.setActiveTreeAction(1));
@@ -522,14 +522,14 @@ test("SkeletonTracing should set a different active tree", t => {
   t.is(newState.skeletonTracing.activeNodeId, 1);
 });
 
-test("SkeletonTracing shouldn't set a new active tree for unknown tree ids", t => {
+test("SkeletonTracing shouldn't set a new active tree for unknown tree ids", (t) => {
   const setActiveTreeAction = addTimestamp(SkeletonTracingActions.setActiveTreeAction(10));
   const newState = SkeletonTracingReducer(initialState, setActiveTreeAction);
 
   t.is(newState, initialState);
 });
 
-test("SkeletonTracing should merge two trees", t => {
+test("SkeletonTracing should merge two trees", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const mergeTreesAction = addTimestamp(SkeletonTracingActions.mergeTreesAction(0, 2));
@@ -552,7 +552,7 @@ test("SkeletonTracing should merge two trees", t => {
   ]);
 });
 
-test("SkeletonTracing shouldn't merge the same tree", t => {
+test("SkeletonTracing shouldn't merge the same tree", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const mergeTreesAction = addTimestamp(SkeletonTracingActions.mergeTreesAction(0, 2));
 
@@ -565,7 +565,7 @@ test("SkeletonTracing shouldn't merge the same tree", t => {
   t.is(newState, testState);
 });
 
-test("SkeletonTracing should merge two trees with comments and branchPoints", t => {
+test("SkeletonTracing should merge two trees with comments and branchPoints", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const mergeTreesAction = addTimestamp(SkeletonTracingActions.mergeTreesAction(0, 2));
@@ -595,7 +595,7 @@ test("SkeletonTracing should merge two trees with comments and branchPoints", t 
   t.is(newState.skeletonTracing.trees[1].branchPoints.length, 1);
 });
 
-test("SkeletonTracing should rename the active tree", t => {
+test("SkeletonTracing should rename the active tree", (t) => {
   const newName = "SuperTestName";
   const setTreeNameAction = addTimestamp(SkeletonTracingActions.setTreeNameAction(newName));
   const newState = SkeletonTracingReducer(initialState, setTreeNameAction);
@@ -604,7 +604,7 @@ test("SkeletonTracing should rename the active tree", t => {
   t.deepEqual(newState.skeletonTracing.trees[0].name, newName);
 });
 
-test("SkeletonTracing should rename the active tree to a default name", t => {
+test("SkeletonTracing should rename the active tree to a default name", (t) => {
   const setTreeNameAction = addTimestamp(SkeletonTracingActions.setTreeNameAction());
   const newState = SkeletonTracingReducer(initialState, setTreeNameAction);
 
@@ -612,7 +612,7 @@ test("SkeletonTracing should rename the active tree to a default name", t => {
   t.deepEqual(newState.skeletonTracing.trees[0].name, "Tree000");
 });
 
-test("SkeletonTracing should increase the activeTreeId", t => {
+test("SkeletonTracing should increase the activeTreeId", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const setActiveTreeAction = addTimestamp(SkeletonTracingActions.setActiveTreeAction(0));
   const selectNextTreeAction = addTimestamp(SkeletonTracingActions.selectNextTreeAction());
@@ -626,7 +626,7 @@ test("SkeletonTracing should increase the activeTreeId", t => {
   t.is(newState.skeletonTracing.activeTreeId, 1);
 });
 
-test("SkeletonTracing should decrease the activeTreeId", t => {
+test("SkeletonTracing should decrease the activeTreeId", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const selectNextTreeAction = addTimestamp(SkeletonTracingActions.selectNextTreeAction(false));
 
@@ -638,7 +638,7 @@ test("SkeletonTracing should decrease the activeTreeId", t => {
   t.is(newState.skeletonTracing.activeTreeId, 0);
 });
 
-test("SkeletonTracing should shuffle the color of a specified tree", t => {
+test("SkeletonTracing should shuffle the color of a specified tree", (t) => {
   const shuffleTreeColorAction = addTimestamp(SkeletonTracingActions.shuffleTreeColorAction(0));
   const newState = SkeletonTracingReducer(initialState, shuffleTreeColorAction);
 
@@ -646,7 +646,7 @@ test("SkeletonTracing should shuffle the color of a specified tree", t => {
   t.notDeepEqual(newState.skeletonTracing.trees[0].color, [23, 23, 23]);
 });
 
-test("SkeletonTracing should create a comment for the active node", t => {
+test("SkeletonTracing should create a comment for the active node", (t) => {
   const commentText = "Wow such test comment";
 
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
@@ -662,7 +662,7 @@ test("SkeletonTracing should create a comment for the active node", t => {
   t.deepEqual(newState.skeletonTracing.trees[0].comments[0].node, 0);
 });
 
-test("SkeletonTracing shouldn't create a comments if there is no active node", t => {
+test("SkeletonTracing shouldn't create a comments if there is no active node", (t) => {
   const commentText = "Wow such test comment";
   const createCommentAction = addTimestamp(SkeletonTracingActions.createCommentAction(commentText));
   const newState = SkeletonTracingReducer(initialState, createCommentAction);
@@ -671,7 +671,7 @@ test("SkeletonTracing shouldn't create a comments if there is no active node", t
   t.deepEqual(newState.skeletonTracing.trees[0].comments.length, 0);
 });
 
-test("SkeletonTracing shouldn't create more than one comment for the active node", t => {
+test("SkeletonTracing shouldn't create more than one comment for the active node", (t) => {
   const commentText = "Wow such test comment";
 
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
@@ -687,7 +687,7 @@ test("SkeletonTracing shouldn't create more than one comment for the active node
   t.deepEqual(newState.skeletonTracing.trees[0].comments.length, 1);
 });
 
-test("SkeletonTracing should create comments for several nodes", t => {
+test("SkeletonTracing should create comments for several nodes", (t) => {
   const commentText1 = "Wow such test comment";
   const commentText2 = "Amaze test comment";
 
@@ -707,7 +707,7 @@ test("SkeletonTracing should create comments for several nodes", t => {
   t.deepEqual(newState.skeletonTracing.trees[0].comments[1].node, 1);
 });
 
-test("SkeletonTracing should create comments for a different tree", t => {
+test("SkeletonTracing should create comments for a different tree", (t) => {
   const commentText = "Wow such test comment";
 
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
@@ -723,7 +723,7 @@ test("SkeletonTracing should create comments for a different tree", t => {
   t.deepEqual(newState.skeletonTracing.trees[1].comments.length, 1);
 });
 
-test("SkeletonTracing should delete a comment for a node", t => {
+test("SkeletonTracing should delete a comment for a node", (t) => {
   const commentText = "Wow such test comment";
 
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
@@ -739,7 +739,7 @@ test("SkeletonTracing should delete a comment for a node", t => {
   t.deepEqual(newState.skeletonTracing.trees[0].comments.length, 0);
 });
 
-test("SkeletonTracing should only delete the comment for the active node", t => {
+test("SkeletonTracing should only delete the comment for the active node", (t) => {
   const commentText = "Wow such test comment";
 
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
@@ -759,7 +759,7 @@ test("SkeletonTracing should only delete the comment for the active node", t => 
   t.deepEqual(newState.skeletonTracing.trees[0].comments[0].content, commentText);
 });
 
-test("SkeletonTracing should add a node in a specified tree", t => {
+test("SkeletonTracing should add a node in a specified tree", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution, 1));
 
@@ -774,7 +774,7 @@ test("SkeletonTracing should add a node in a specified tree", t => {
   t.is(newState.skeletonTracing.activeNodeId, 0);
 });
 
-test("SkeletonTracing should delete a specified node (1/2)", t => {
+test("SkeletonTracing should delete a specified node (1/2)", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction(1, 0));
 
@@ -792,7 +792,7 @@ test("SkeletonTracing should delete a specified node (1/2)", t => {
   t.is(newState.skeletonTracing.activeTreeId, 1);
 });
 
-test("SkeletonTracing should delete a specified node (2/2)", t => {
+test("SkeletonTracing should delete a specified node (2/2)", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const deleteNodeAction = addTimestamp(SkeletonTracingActions.deleteNodeAction(1));
 
@@ -810,7 +810,7 @@ test("SkeletonTracing should delete a specified node (2/2)", t => {
   t.is(newState.skeletonTracing.activeTreeId, 1);
 });
 
-test("SkeletonTracing should create a branchpoint for a specified node (1/2)", t => {
+test("SkeletonTracing should create a branchpoint for a specified node (1/2)", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction(1, 0));
 
@@ -825,7 +825,7 @@ test("SkeletonTracing should create a branchpoint for a specified node (1/2)", t
   t.deepEqual(newState.skeletonTracing.trees[0].branchPoints[0].id, 1);
 });
 
-test("SkeletonTracing should create a branchpoint for a specified node (2/2)", t => {
+test("SkeletonTracing should create a branchpoint for a specified node (2/2)", (t) => {
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
   const createBranchPointAction = addTimestamp(SkeletonTracingActions.createBranchPointAction(1));
 
@@ -840,7 +840,7 @@ test("SkeletonTracing should create a branchpoint for a specified node (2/2)", t
   t.deepEqual(newState.skeletonTracing.trees[0].branchPoints[0].id, 1);
 });
 
-test("SkeletonTracing should delete a specified tree", t => {
+test("SkeletonTracing should delete a specified tree", (t) => {
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const deleteTreeAction = addTimestamp(SkeletonTracingActions.deleteTreeAction(1));
 
@@ -855,7 +855,7 @@ test("SkeletonTracing should delete a specified tree", t => {
   t.is(newState.skeletonTracing.activeTreeId, 2);
 });
 
-test("SkeletonTracing should rename a specified tree", t => {
+test("SkeletonTracing should rename a specified tree", (t) => {
   const newName = "SuperTestName";
   const createTreeAction = addTimestamp(SkeletonTracingActions.createTreeAction());
   const setTreeNameAction = addTimestamp(SkeletonTracingActions.setTreeNameAction(newName, 1));
@@ -870,7 +870,7 @@ test("SkeletonTracing should rename a specified tree", t => {
   t.notDeepEqual(newState.skeletonTracing.trees[2].name, newName);
 });
 
-test("SkeletonTracing should create a comment for a specified node", t => {
+test("SkeletonTracing should create a comment for a specified node", (t) => {
   const commentText = "Wow such test comment";
 
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));
@@ -887,7 +887,7 @@ test("SkeletonTracing should create a comment for a specified node", t => {
   t.deepEqual(newState.skeletonTracing.trees[0].comments[0].content, commentText);
   t.deepEqual(newState.skeletonTracing.trees[0].comments[0].node, 1);
 });
-test("SkeletonTracing should delete a comment for a specified node (1/2)", t => {
+test("SkeletonTracing should delete a comment for a specified node (1/2)", (t) => {
   const commentText = "Wow such test comment";
 
   const createNodeAction = addTimestamp(SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution));

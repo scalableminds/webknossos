@@ -1,5 +1,5 @@
-import test from 'ava';
-
+/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+import test from "ava";
 import AsyncTaskQueue from "libs/async_task_queue";
 import Deferred from "libs/deferred";
 import Utils from "libs/utils";

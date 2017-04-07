@@ -1,5 +1,5 @@
-import test from 'ava';
-
+/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+import test from "ava";
 import runAsync from "test/helpers/run-async";
 import Deferred from "libs/deferred";
 
@@ -31,7 +31,7 @@ test.cb("Deferred should initialize an unresolved Promise", (t) => {
       const { resolved, rejected } = getState();
       t.is(resolved, false);
       t.is(rejected, false);
-      t.end()
+      t.end();
     },
   ]);
 });
@@ -49,7 +49,7 @@ test.cb("Deferred should resolve the Promise", (t) => {
       t.is(resolved, true);
       t.is(rejected, false);
       t.is(result, 123);
-      t.end()
+      t.end();
     },
   ]);
 });
@@ -67,7 +67,7 @@ test.cb("Deferred should reject the Promise", (t) => {
       t.is(resolved, false);
       t.is(rejected, true);
       t.is(result, 123);
-      t.end()
+      t.end();
     },
   ]);
 });

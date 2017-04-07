@@ -59,6 +59,7 @@
     "flow": "node_modules/.bin/flow",
     "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
+    "lint-fix": "node_modules/.bin/eslint --fix --quiet app/assets/javascripts/",
     "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
     "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_latest.js app/assets/javascripts/oxalis/api/api_latest.js --github --sort-order alpha --name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api"
   },

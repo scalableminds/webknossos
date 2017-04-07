@@ -1,5 +1,5 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from 'ava';
+import test from "ava";
 import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
@@ -15,7 +15,7 @@ mockRequire("libs/window", {});
 const PullQueue = mockRequire.reRequire("oxalis/model/binary/pullqueue").default;
 const { DataBucket, BucketStateEnum } = mockRequire.reRequire("oxalis/model/binary/bucket");
 
-test.beforeEach(t => {
+test.beforeEach((t) => {
   const layer = {
     url: "url",
     name: "layername",
@@ -55,7 +55,7 @@ test.beforeEach(t => {
 });
 
 
-test("Successful pulling: should receive the correct data", t => {
+test("Successful pulling: should receive the correct data", (t) => {
   const { pullQueue, buckets, layer } = t.context;
   const bucketData1 = _.range(0, 32 * 32 * 32).map(i => i % 256);
   const bucketData2 = _.range(0, 32 * 32 * 32).map(i => (2 * i) % 256);
@@ -84,7 +84,7 @@ function prepare(t) {
   );
 }
 
-test("Request Failure: should not request twice if not bucket dirty", t => {
+test("Request Failure: should not request twice if not bucket dirty", (t) => {
   const { pullQueue, buckets, layer } = t.context;
   prepare(t);
   pullQueue.pull();
@@ -98,7 +98,7 @@ test("Request Failure: should not request twice if not bucket dirty", t => {
   ]);
 });
 
-test("Request Failure: should reinsert dirty buckets", t => {
+test("Request Failure: should reinsert dirty buckets", (t) => {
   const { pullQueue, buckets, layer } = t.context;
   prepare(t);
   buckets[0].dirty = true;

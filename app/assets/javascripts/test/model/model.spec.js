@@ -1,5 +1,5 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import test from 'ava';
+import test from "ava";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
@@ -70,7 +70,7 @@ const TRACING_OBJECT = {
 // Avoid node caching and make sure all mockRequires are applied
 const Model = mockRequire.reRequire("../../oxalis/model").default;
 
-test.beforeEach(t => {
+test.beforeEach((t) => {
   const model = t.context.model = new Model();
   model.set("state", { position: [1, 2, 3] });
   model.set("tracingType", "tracingTypeValue");
@@ -93,7 +93,7 @@ test.beforeEach(t => {
 //   });
 // });
 
-test("Model Initialization: should throw a model.HANDLED_ERROR for missing dataset", t => {
+test("Model Initialization: should throw a model.HANDLED_ERROR for missing dataset", (t) => {
   t.plan(1);
   const { model } = t.context;
   const tracingObject = _.clone(TRACING_OBJECT);
@@ -108,7 +108,7 @@ test("Model Initialization: should throw a model.HANDLED_ERROR for missing datas
     });
 });
 
-test("Model Initialization: should throw an Error on unexpected failure", t => {
+test("Model Initialization: should throw an Error on unexpected failure", (t) => {
   t.plan(1);
   const { model } = t.context;
   Request.receiveJSON.returns(Promise.reject(new Error("errorMessage")));

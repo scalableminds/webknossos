@@ -47,7 +47,7 @@ const dataStoreInfo = {
 };
 const tokenResponse = { token: "token" };
 
-test.beforeEach(t => {
+test.beforeEach((t) => {
   RequestMock.receiveJSON = sinon.stub();
   RequestMock.receiveJSON.returns(Promise.resolve(tokenResponse));
 
@@ -55,7 +55,7 @@ test.beforeEach(t => {
 });
 
 
-test.serial("Initialization should set the attributes correctly", t => {
+test.serial("Initialization should set the attributes correctly", (t) => {
   const { layer } = t.context;
   t.is(layer.name, "layername");
   t.is(layer.category, "color");
@@ -74,7 +74,7 @@ function prepare() {
 }
 
 
-test.serial("requestFromStore: Token Handling should request a token first", t => {
+test.serial("requestFromStore: Token Handling should request a token first", (t) => {
   const { layer } = t.context;
   prepare();
   return layer.tokenPromise.then((token) => {
@@ -87,7 +87,7 @@ test.serial("requestFromStore: Token Handling should request a token first", t =
   });
 });
 
-test.serial("requestFromStore: Token Handling should re-request a token when it's invalid", t => {
+test.serial("requestFromStore: Token Handling should re-request a token when it's invalid", (t) => {
   const { layer } = t.context;
   const { batch, responseBuffer } = prepare();
   RequestMock.sendArraybufferReceiveArraybuffer = sinon.stub();
@@ -119,7 +119,7 @@ test.serial("requestFromStore: Token Handling should re-request a token when it'
 });
 
 
-test.serial("requestFromStore: Request Handling: should pass the correct request parameters", t => {
+test.serial("requestFromStore: Request Handling: should pass the correct request parameters", (t) => {
   const { layer } = t.context;
   const { batch } = prepare();
   layer.setFourBit(true);
@@ -153,7 +153,7 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
 });
 
 
-test.serial("sendToStore: Request Handling should send the correct request parameters", t => {
+test.serial("sendToStore: Request Handling should send the correct request parameters", (t) => {
   const { layer } = t.context;
   const batch = [[0, 0, 0, 0], [1, 1, 1, 1]];
   RequestMock.sendArraybufferReceiveArraybuffer = sinon.stub();

@@ -46,7 +46,7 @@ export type BranchPointType = {
   +timestamp: number,
 };
 
-export type NodeMapType = {[number]: NodeType};
+export type NodeMapType = {+[number]: NodeType};
 
 export type BoundingBoxObjectType = {
   +topLeft: Vector3,
@@ -55,7 +55,7 @@ export type BoundingBoxObjectType = {
   +depth: number,
 };
 
-export type TreeType = {
+type TreeTypeBase = {
   +treeId: number,
   +color: Vector3,
   +name: string,
@@ -63,7 +63,15 @@ export type TreeType = {
   +comments: Array<CommentType>,
   +branchPoints: Array<BranchPointType>,
   +edges: Array<EdgeType>,
+}
+
+export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
+};
+
+type TemporaryMutableNodeMapType = {[number]: NodeType};
+export type TemporaryMutableTreeType = TreeTypeBase & {
+  +nodes: TemporaryMutableNodeMapType,
 };
 
 export type MappingType = {

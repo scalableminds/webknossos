@@ -93,6 +93,23 @@ function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
   } });
 }
 
+export function setRotationReducer(state: OxalisState, rotation: Vector3) {
+  if (state.dataset != null) {
+    const [x, y, z] = rotation;
+    let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.scale);
+    matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
+    matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
+    matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
+    let newState = update(state, { flycam: { currentMatrix: { $set: matrix } } });
+    if (state.userConfiguration.dynamicSpaceDirection) {
+      const spaceDirectionOrtho = [0, 1, 2].map(index => rotation[index] < 0 ? -1 : 1);
+      newState = update(newState, { flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } } });
+    }
+    return newState;
+  }
+  return state;
+}
+
 function FlycamReducer(state: OxalisState, action: ActionWithTimestamp<FlycamActionType | SettingActionType>): OxalisState {
   switch (action.type) {
     case "SET_DATASET": {
@@ -129,20 +146,7 @@ function FlycamReducer(state: OxalisState, action: ActionWithTimestamp<FlycamAct
     }
 
     case "SET_ROTATION": {
-      if (state.dataset != null) {
-        const [x, y, z] = action.rotation;
-        let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.scale);
-        matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
-        matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
-        matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
-        let newState = update(state, { flycam: { currentMatrix: { $set: matrix } } });
-        if (state.userConfiguration.dynamicSpaceDirection) {
-          const spaceDirectionOrtho = [0, 1, 2].map(index => action.rotation[index] < 0 ? -1 : 1);
-          newState = update(newState, { flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } } });
-        }
-        return newState;
-      }
-      return state;
+      return setRotationReducer(state, action.rotation);
     }
 
     case "MOVE_FLYCAM":

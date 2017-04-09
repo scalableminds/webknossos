@@ -37,6 +37,10 @@ function SaveReducer(state: OxalisState, action: ActionWithTimestamp<SaveActionT
       });
     }
 
+    case "SET_VERSION_NUMBER": {
+      return update(state, { tracing: { version: { $set: action.version } } });
+    }
+
     default:
       return state;
   }

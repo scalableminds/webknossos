@@ -4,21 +4,25 @@
  */
 import _ from "lodash";
 import $ from "jquery";
+import app from "app";
 import { call, put, take, select, race } from "redux-saga/effects";
 import { delay } from "redux-saga";
 import Request from "libs/request";
-import { shiftSaveQueueAction, setSaveBusyAction, setLastSaveTimestampAction } from "oxalis/model/actions/save_actions";
-import { setVersionNumber } from "oxalis/model/actions/skeletontracing_actions";
+import { shiftSaveQueueAction, setSaveBusyAction, setLastSaveTimestampAction, pushSaveQueueAction, setVersionNumber } from "oxalis/model/actions/save_actions";
+import { createTreeAction, SkeletonTracingActions } from "oxalis/model/actions/skeletontracing_actions";
+import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import messages from "messages";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { alert } from "libs/window";
-import app from "app";
+import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
+import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { TracingType, FlycamType } from "oxalis/store";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
 
 export function* pushAnnotationAsync(): Generator<*, *, *> {
-  yield take("INITIALIZE_SKELETONTRACING");
+  yield take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   yield put(setLastSaveTimestampAction());
   while (true) {
     const pushAction = yield take("PUSH_SAVE_QUEUE");
@@ -94,4 +98,47 @@ export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<
   // }
 
   return result;
+}
+
+export function performDiffTracing(
+  prevTracing: TracingType,
+  tracing: TracingType,
+  flycam: FlycamType,
+): Array<UpdateAction> {
+  if (tracing.type === "skeleton" && prevTracing.type === "skeleton") {
+    return Array.from(diffSkeletonTracing(prevTracing, tracing, flycam));
+  } else if (tracing.type === "volume" && prevTracing.type === "volume") {
+    return Array.from(diffVolumeTracing(prevTracing, tracing, flycam));
+  } else {
+    return [];
+  }
+}
+
+export function* saveTracingAsync(): Generator<*, *, *> {
+  const { initSkeleton } = yield race({
+    initSkeleton: take("INITIALIZE_SKELETONTRACING"),
+    initVolume: take("INITIALIZE_VOLUMETRACING"),
+  });
+  let prevTracing = yield select(state => state.tracing);
+  if (initSkeleton) {
+    if (yield select(state => state.tracing.activeTreeId == null)) {
+      yield put(createTreeAction());
+    }
+  }
+  yield take("WK_READY");
+  while (true) {
+    if (initSkeleton) {
+      yield take([...SkeletonTracingActions, ...FlycamActions]);
+    } else {
+      yield take(FlycamActions);
+    }
+    const tracing = yield select(state => state.tracing);
+    const flycam = yield select(state => state.flycam);
+    const items = Array.from(yield call(performDiffTracing,
+      prevTracing, tracing, flycam));
+    if (items.length > 0) {
+      yield put(pushSaveQueueAction(items));
+    }
+    prevTracing = tracing;
+  }
 }

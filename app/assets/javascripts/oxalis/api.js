@@ -218,9 +218,9 @@ class DataApi {
    * @example
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
    */
-   getConfiguration(key: $Keys<DatasetConfigurationType>) {
-     return Store.getState().datasetConfiguration[key];
-   }
+  getConfiguration(key: $Keys<DatasetConfigurationType>) {
+    return Store.getState().datasetConfiguration[key];
+  }
 
   /**
    * Set the dataset's setting for the tracing view.
@@ -229,9 +229,9 @@ class DataApi {
    * @example
    * api.user.setConfiguration("segmentationOpacity", 20);
    */
-   setConfiguration(key: $Keys<DatasetConfigurationType>, value) {
-     Store.dispatch(updateDatasetSettingAction(key, value));
-   }
+  setConfiguration(key: $Keys<DatasetConfigurationType>, value) {
+    Store.dispatch(updateDatasetSettingAction(key, value));
+  }
 }
 
 /**

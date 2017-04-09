@@ -1,5 +1,5 @@
 /**
- * settings_reducer.js
+ * skeletontracing_reducer.js
  * @flow
  */
 import _ from "lodash";
@@ -228,10 +228,6 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionWithTimestamp<
                   trees: { [tree.treeId]: { comments: { $set: comments } } },
                 } })))
           .getOrElse(state);
-      }
-
-      case "SET_VERSION_NUMBER": {
-        return update(state, { tracing: { version: { $set: action.version } } });
       }
 
       default:

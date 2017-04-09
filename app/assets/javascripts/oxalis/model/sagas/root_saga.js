@@ -1,6 +1,7 @@
 import { watchPushSettingsAsync, initializeSettingsAsync } from "oxalis/model/sagas/settings_saga";
-import { watchSkeletonTracingAsync, saveSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
-import { pushAnnotationAsync } from "oxalis/model/sagas/save_saga";
+import { watchSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
+import { pushAnnotationAsync, saveTracingAsync } from "oxalis/model/sagas/save_saga";
+import editVolumeLayerAsync from "oxalis/model/sagas/volumetracing_saga";
 
 export default function* rootSaga() {
   try {
@@ -8,8 +9,9 @@ export default function* rootSaga() {
       initializeSettingsAsync(),
       watchPushSettingsAsync(),
       watchSkeletonTracingAsync(),
-      saveSkeletonTracingAsync(),
+      saveTracingAsync(),
       pushAnnotationAsync(),
+      editVolumeLayerAsync(),
     ];
   } catch (err) {
     alert(`\

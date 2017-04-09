@@ -2,7 +2,7 @@
 import React, { PureComponent } from "react";
 import _ from "lodash";
 import type Model from "oxalis/model";
-import type { OxalisState, TracingType, SaveStateType } from "oxalis/store";
+import type { OxalisState, TracingType } from "oxalis/store";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import app from "app";
@@ -11,7 +11,6 @@ import Request from "libs/request";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
-import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { Button } from "antd";
 import messages from "messages";
 
@@ -21,7 +20,6 @@ class DatasetActionsView extends PureComponent {
   props: {
     // eslint-disable-next-line react/no-unused-prop-types
     tracing: TracingType,
-    save: SaveStateType,
     oldModel: Model,
     // eslint-disable-next-line react/no-unused-prop-types
     dispatch: Dispatch<*>,
@@ -48,16 +46,7 @@ class DatasetActionsView extends PureComponent {
   _forceUpdate = () => { this.forceUpdate(); };
 
   handleSave = async () => {
-    if (this.props.oldModel.volumeTracing != null) {
-      this.props.dispatch(saveNowAction());
-      return;
-    }
-    this.props.dispatch(saveNowAction());
-    let saveState = this.props.save;
-    while (saveState.isBusy || saveState.queue.length > 0) {
-      await Utils.sleep(500);
-      saveState = this.props.save;
-    }
+    await this.props.oldModel.save();
   };
 
   handleFinish = async () => {
@@ -113,12 +102,7 @@ class DatasetActionsView extends PureComponent {
   };
 
   getSaveButtonIcon() {
-    const { save: saveState } = this.props;
-    const stateSaved =
-      this.props.oldModel.volumeTracing != null ?
-      this.props.oldModel.annotationModel.stateLogger.stateSaved() :
-      !saveState.isBusy && !(saveState.queue.length > 0);
-    if (!stateSaved) {
+    if (!this.props.oldModel.stateSaved()) {
       return "hourglass";
     } else {
       return "check";

@@ -27,7 +27,7 @@ class VolumeTracingController {
   sceneController: SceneController;
   inDeleteMode: boolean;
   mergeMode: 0 | 1 | 2;
-  prevActiveCell: ?number;
+  prevActiveCellId: number;
   keyboardNoLoop: InputKeyboardNoLoop;
 
   MERGE_MODE_NORMAL = 0;
@@ -115,21 +115,18 @@ class VolumeTracingController {
 
     this.inDeleteMode = true;
 
-    this.prevActiveCell = getActiveCellId(Store.getState().tracing).getOrElse(null);
+    getActiveCellId(Store.getState().tracing).map((activeCellId) => {
+      this.prevActiveCellId = activeCellId;
+    });
     Store.dispatch(setActiveCellAction(0));
   }
 
 
   restoreAfterDeleteMode() {
     if (this.inDeleteMode) {
-      Store.dispatch(setActiveCellAction(this.prevActiveCell));
+      Store.dispatch(setActiveCellAction(this.prevActiveCellId));
     }
     this.inDeleteMode = false;
-  }
-
-
-  drawVolume(pos) {
-    this.model.volumeTracing.addToLayer(pos);
   }
 }
 

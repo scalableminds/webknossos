@@ -93,8 +93,8 @@ class SceneController {
         showCrossSections: true });
     }
 
-    if (this.model.volumeTracing != null) {
-      this.contour = new ContourGeometry(this.model.volumeTracing);
+    if (this.model.isVolumeTracing()) {
+      this.contour = new ContourGeometry();
     }
 
     if (Store.getState().tracing != null) {
@@ -134,7 +134,6 @@ class SceneController {
       resolution,
       bb.min, bb.max, id,
     );
-
     this.polygonFactory.getTriangles().then((triangles) => {
       if (triangles == null) {
         return;

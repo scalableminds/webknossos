@@ -11,6 +11,8 @@ type SaveNowActionType = { type: "SAVE_NOW" };
 type ShiftSaveQueueActionType = { type: "SHIFT_SAVE_QUEUE", count: number };
 type SetSaveBusyActionType = { type: "SET_SAVE_BUSY", isBusy: boolean };
 type SetLastSaveTimestampActionType = { type: "SET_LAST_SAVE_TIMESTAMP" };
+type SetVersionNumberActionType = {type: "SET_VERSION_NUMBER", version: number};
+
 export type SaveActionTypes =
   PushSaveQueueActionType |
   SaveNowActionType |
@@ -40,4 +42,9 @@ export const setSaveBusyAction = (isBusy: boolean): SetSaveBusyActionType => ({
 
 export const setLastSaveTimestampAction = (): SetLastSaveTimestampActionType => ({
   type: "SET_LAST_SAVE_TIMESTAMP",
+});
+
+export const setVersionNumber = (version: number): SetVersionNumberActionType => ({
+  type: "SET_VERSION_NUMBER",
+  version,
 });

@@ -27,7 +27,7 @@ class SkeletonActionsView extends PureComponent {
     Store.dispatch(createNodeAction(
       getPosition(Store.getState().flycam),
       getRotationOrtho(OrthoViews.PLANE_XY),
-      0, // legacy for OrthoViews.PLANE_XY
+      0, // legacy for OrthoViews.PLANE_XY as it was a number and is a string now
       getIntegerZoomStep(Store.getState()),
     ));
   }

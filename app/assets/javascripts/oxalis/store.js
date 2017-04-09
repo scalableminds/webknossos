@@ -8,7 +8,7 @@
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import type { Vector3, Vector6, ModeType } from "oxalis/constants";
+import type { Vector3, Vector6, ModeType, VolumeModeType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
@@ -68,6 +68,7 @@ export type TreeType = {
   nodes: NodeMapType,
 };
 
+
 export type SkeletonContentDataType = {
   activeNode: null | number,
   trees: Array<TreeType>,
@@ -81,6 +82,7 @@ export type VolumeContentDataType = {
   maxCoordinates: BoundingBoxObjectType,
   customLayers: ?Array<Object>,
   name: string,
+  nextCell: ?number,
 };
 
 export type MappingType = {
@@ -140,6 +142,8 @@ export type DatasetType = {
 
 export type TreeMapType = {[number]: TreeType};
 
+export type TracingTypeType = "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType";
+
 export type SkeletonTracingType = {
   type: "skeleton",
   activeTreeId: ?number,
@@ -147,7 +151,7 @@ export type SkeletonTracingType = {
   trees: TreeMapType,
   viewMode: ModeType, // SkeletonViewModeType,
   tracingId: string,
-  tracingType: "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType",
+  tracingType: TracingTypeType,
   name: string,
   version: number,
   restrictions: RestrictionsType & SettingsType,
@@ -158,13 +162,15 @@ export type VolumeTracingType = {
   name: string,
   version: number,
   idCount: number,
-  viewMode: ModeType, // VolumeViewModeType,
+  viewMode: VolumeModeType,
   cubes: [],
-  activeCellId: ?number,
+  activeCellId: number,
+  lastCentroid: ?Vector3,
+  contourList: Array<Vector3>,
   cells: VolumeCellMapType,
   controlMode: "Trace",
   tracingId: string,
-  tracingType: "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType",
+  tracingType: TracingTypeType,
   restrictions: RestrictionsType & SettingsType,
 };
 

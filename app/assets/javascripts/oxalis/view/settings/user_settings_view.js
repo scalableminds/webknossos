@@ -122,10 +122,9 @@ class UserSettingsView extends Component {
         </Panel>
       );
     } else if (mode === Constants.MODE_VOLUME && !this.props.isPublicViewMode && this.props.tracing.type === "volume") {
-      const activeCellId = this.props.tracing.activeCellId != null ? this.props.tracing.activeCellId : "";
       return (
         <Panel header="Volume Options" key="3">
-          <NumberInputSetting label="Active Cell ID" value={activeCellId} onChange={this.props.onChangeActiveCellId} />
+          <NumberInputSetting label="Active Cell ID" value={this.props.tracing.activeCellId} onChange={this.props.onChangeActiveCellId} />
           <SwitchSetting label="3D Volume Rendering" value={this.props.userConfiguration.isosurfaceDisplay} onChange={this.onChangeUser.isosurfaceDisplay} />
           <NumberSliderSetting label="3D Rendering Bounding Box Size" min={1} max={10} step={0.1} value={this.props.userConfiguration.isosurfaceBBsize} onChange={this.onChangeUser.isosurfaceBBsize} />
           <NumberSliderSetting label="3D Rendering Resolution" min={40} max={400} value={this.props.userConfiguration.isosurfaceResolution} onChange={this.onChangeUser.isosurfaceResolution} />

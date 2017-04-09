@@ -17,8 +17,8 @@ import type Model, { BoundingBoxType } from "oxalis/model";
 import type View from "oxalis/view";
 import { getPosition, getViewportBoundingBox } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import { createCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
+import { createCellAction, setModeAction, startEditingAction, addToLayerAction, finishEditingAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveCellId, getMode } from "oxalis/model/accessors/volumetracing_accessor";
 
 class VolumeTracingPlaneController extends PlaneController {
 
@@ -34,12 +34,20 @@ class VolumeTracingPlaneController extends PlaneController {
     super(model, view, sceneController);
     this.volumeTracingController = volumeTracingController;
 
-    // Todo: Do not render on every store change
+    let lastActiveCellId = getActiveCellId(Store.getState().tracing).get();
     Store.subscribe(() => {
-      getActiveCellId(Store.getState().tracing).chain(cellId =>
-        this.render3dCell(cellId),
-      );
+      getActiveCellId(Store.getState().tracing).map((cellId) => {
+        if (lastActiveCellId !== cellId) {
+          this.render3dCell(cellId);
+          lastActiveCellId = cellId;
+        }
+      });
     });
+
+    // If a new mapping is activated the 3D cell has to be updated, although the activeCellId did not change
+    this.listenTo(this.model.getSegmentationBinary().cube, "newMapping", () =>
+      this.render3dCell(lastActiveCellId),
+    );
 
     // TODO: This should be put in a saga with `take('INITIALIZE_SETTINGS')`as pre-condition
     setTimeout(this.adjustSegmentationOpacity, 500);
@@ -78,42 +86,46 @@ class VolumeTracingPlaneController extends PlaneController {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
         const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
 
-        if (this.model.volumeTracing.mode === constants.VOLUME_MODE_MOVE) {
-          this.move([
-            (delta.x * mouseInversionX) / this.planeView.scaleFactor,
-            (delta.y * mouseInversionY) / this.planeView.scaleFactor,
-            0,
-          ]);
-        } else {
-          this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
-        }
+        getMode(Store.getState().tracing).map((mode) => {
+          if (mode === constants.VOLUME_MODE_MOVE) {
+            this.move([
+              (delta.x * mouseInversionX) / this.planeView.scaleFactor,
+              (delta.y * mouseInversionY) / this.planeView.scaleFactor,
+              0,
+            ]);
+          } else {
+            Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
+          }
+        });
       },
 
       leftMouseDown: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) => {
         if (event.shiftKey) {
           this.volumeTracingController.enterDeleteMode();
         }
-        this.model.volumeTracing.startEditing(plane);
+        Store.dispatch(startEditingAction(plane));
       },
 
       leftMouseUp: () => {
-        this.model.volumeTracing.finishLayer();
+        Store.dispatch(finishEditingAction());
         this.volumeTracingController.restoreAfterDeleteMode();
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
-        if (this.model.volumeTracing.mode === constants.VOLUME_MODE_TRACE) {
-          this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
-        }
+        getMode(Store.getState().tracing).map((mode) => {
+          if (mode === constants.VOLUME_MODE_TRACE) {
+            Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
+          }
+        });
       },
 
       rightMouseDown: (pos: Point2, plane: OrthoViewType) => {
         this.volumeTracingController.enterDeleteMode();
-        this.model.volumeTracing.startEditing(plane);
+        Store.dispatch(startEditingAction(plane));
       },
 
       rightMouseUp: () => {
-        this.model.volumeTracing.finishLayer();
+        Store.dispatch(finishEditingAction());
         this.volumeTracingController.restoreAfterDeleteMode();
       },
 

@@ -1,14 +1,15 @@
-// @flow
-
+/**
+ * volumetracing_reducer.js
+ * @flow
+ */
 import update from "immutability-helper";
 import type { OxalisState, VolumeTracingType } from "oxalis/store";
 import type { VolumeTracingActionType } from "oxalis/model/actions/volumetracing_actions";
-import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { setMode, setActiveCell, createCell } from "oxalis/model/reducers/volumetracing_reducer_helpers";
+import { setModeReducer, setActiveCellReducer, createCellReducer, updateDirectionReducer, addToLayerReducer, resetContourReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import Constants from "oxalis/constants";
 
-function VolumeTracingReducer(state: OxalisState, action: ActionWithTimestamp<VolumeTracingActionType>): OxalisState {
+function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionType): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
       const restrictions = Object.assign({}, action.tracing.restrictions, action.tracing.content.settings);
@@ -21,9 +22,11 @@ function VolumeTracingReducer(state: OxalisState, action: ActionWithTimestamp<Vo
         idCount = contentData.nextCell;
       }
 
-      let volumeTracing: VolumeTracingType = {
+      const volumeTracing: VolumeTracingType = {
         type: "volume",
         activeCellId: 0,
+        lastCentroid: null,
+        contourList: [],
         idCount,
         cells: {},
         cubes: [],
@@ -36,16 +39,8 @@ function VolumeTracingReducer(state: OxalisState, action: ActionWithTimestamp<Vo
         version: action.tracing.version,
       };
 
-      volumeTracing = createCell(volumeTracing, contentData.activeCell)
-        .map(([activeCell, newIdCount]) =>
-          update(volumeTracing, {
-            activeCellId: { $set: activeCell.id },
-            cells: { [activeCell.id]: { $set: activeCell } },
-            idCount: { $set: newIdCount },
-          }))
-        .getOrElse(volumeTracing);
-
-      return update(state, { tracing: { $set: volumeTracing } });
+      const newState = update(state, { tracing: { $set: volumeTracing } });
+      return createCellReducer(newState, volumeTracing, contentData.activeCell);
     }
     default:
       // pass
@@ -54,42 +49,42 @@ function VolumeTracingReducer(state: OxalisState, action: ActionWithTimestamp<Vo
   return getVolumeTracing(state.tracing).map((volumeTracing) => {
     switch (action.type) {
       case "SET_MODE": {
-        return setMode(state, volumeTracing, action.mode)
-          .map(mode =>
-            update(state, { tracing: { viewMode: { $set: mode } } }))
-          .getOrElse(state);
+        return setModeReducer(state, volumeTracing, action.mode);
       }
 
       case "TOGGLE_MODE": {
         const newMode = volumeTracing.viewMode === Constants.VOLUME_MODE_TRACE ?
             Constants.VOLUME_MODE_MOVE :
             Constants.VOLUME_MODE_TRACE;
-        return setMode(state, volumeTracing, newMode)
-          .map(mode =>
-            update(state, { tracing: { viewMode: { $set: mode } } }))
-          .getOrElse(state);
+        return setModeReducer(state, volumeTracing, newMode);
       }
 
       case "SET_ACTIVE_CELL": {
-        return setActiveCell(volumeTracing, action.cellId)
-          .map(([activeCell, idCount]) =>
-            update(state, { tracing: {
-              activeCellId: { $set: activeCell.id },
-              cells: { [activeCell.id]: { $set: activeCell } },
-              idCount: { $set: idCount },
-            } }))
-          .getOrElse(state);
+        return setActiveCellReducer(state, volumeTracing, action.cellId);
       }
 
       case "CREATE_CELL": {
-        return createCell(volumeTracing, action.cellId)
-          .map(([newCell, idCount]) =>
-            update(state, { tracing: {
-              activeCellId: { $set: newCell.id },
-              cells: { [newCell.id]: { $set: newCell } },
-              idCount: { $set: idCount },
-            } }))
-          .getOrElse(state);
+        return createCellReducer(state, volumeTracing, action.cellId);
+      }
+
+      case "UPDATE_DIRECTION": {
+        return updateDirectionReducer(state, volumeTracing, action.centroid);
+      }
+
+      case "ADD_TO_LAYER": {
+        return addToLayerReducer(state, volumeTracing, action.position);
+      }
+
+      case "FINISH_EDITING": {
+        if (volumeTracing.contourList.length > 0) {
+          return addToLayerReducer(state, volumeTracing, volumeTracing.contourList[0]);
+        } else {
+          return state;
+        }
+      }
+
+      case "RESET_CONTOUR": {
+        return resetContourReducer(state);
       }
 
       default:

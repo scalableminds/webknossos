@@ -6,16 +6,16 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
-import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType, TreeType } from "oxalis/store";
+import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType, TreeType, TracingTypeType } from "oxalis/store";
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { saveNowAction } from "oxalis/model/actions/save_actions";
 import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
-import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { Vector3Indicies } from "oxalis/constants";
@@ -77,7 +77,7 @@ export type Tracing<T> = {
   stats: any,
   task: any,
   tracingTime: number,
-  typ: string,
+  typ: TracingTypeType,
   user: any,
   version: number,
 };
@@ -93,12 +93,11 @@ class Model extends Backbone.Model {
   };
   taskBoundingBox: BoundingBoxType;
   userBoundingBox: BoundingBoxType;
-  annotationModel: VolumeTracing;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  volumeTracing: VolumeTracing;
   mode: ModeType;
   allowedModes: Array<ModeType>;
+  isVolume: boolean;
   settings: SettingsType;
   tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>;
   tracingId: string;
@@ -222,16 +221,14 @@ class Model extends Backbone.Model {
       throw this.HANDLED_ERROR;
     }
 
-    const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
+    this.isVolume = tracing.content.settings.allowedModes.includes("volume");
 
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
-      if (isVolumeTracing) {
-        // $FlowFixMe
-        const volumeTracing: Tracing<VolumeContentDataType> = tracing;
+      if (this.isVolumeTracing()) {
         ErrorHandling.assert((this.getSegmentationBinary() != null),
           "Volume is allowed, but segmentation does not exist");
-        this.set("volumeTracing", new VolumeTracing(volumeTracing, this.getSegmentationBinary()));
-        this.annotationModel = this.get("volumeTracing");
+        // $FlowFixMe
+        const volumeTracing: Tracing<VolumeContentDataType> = tracing;
         Store.dispatch(initializeVolumeTracingAction(volumeTracing));
       } else {
         // $FlowFixMe
@@ -317,6 +314,11 @@ class Model extends Backbone.Model {
   }
 
 
+  isVolumeTracing() {
+    return this.isVolume;
+  }
+
+
   getLayerInfos(userLayers) {
     // Overwrite or extend layers with userLayers
 
@@ -356,32 +358,6 @@ class Model extends Backbone.Model {
     }
   }
 
-  // delegate save request to all submodules
-  save = function save() {
-    const submodels = [];
-    const promises = [];
-
-    if (this.get("volumeTracing") != null) {
-      submodels.push(this.get("volumeTracing").stateLogger);
-    }
-
-    if (this.get("skeletonTracing") != null) {
-      submodels.push(this.get("skeletonTracing").stateLogger);
-    }
-
-    _.each(submodels, model => promises.push(model.save()));
-
-    return Promise.all(promises).then(
-      (...args) => {
-        Toast.success("Saved!");
-        return Promise.resolve(...args);
-      },
-      (...args) => {
-        Toast.error("Couldn't save. Please try again.");
-        return Promise.reject(...args);
-      });
-  }
-
 
   // Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
   initSettersGetter() {
@@ -413,6 +389,26 @@ class Model extends Backbone.Model {
       Store.dispatch(setActiveNodeAction(state.activeNode));
     }
   }
+
+
+  stateSaved() {
+    const state = Store.getState();
+    const storeStateSaved = !state.save.isBusy && state.save.queue.length === 0;
+    const pushQueuesSaved = _.reduce(
+      this.binary,
+      (saved, binary) => saved && binary.pushQueue.stateSaved(),
+      true,
+    );
+    return storeStateSaved && pushQueuesSaved;
+  }
+
+
+  save = async () => {
+    Store.dispatch(saveNowAction());
+    while (!this.stateSaved()) {
+      await Utils.sleep(500);
+    }
+  };
 }
 
 export default Model;

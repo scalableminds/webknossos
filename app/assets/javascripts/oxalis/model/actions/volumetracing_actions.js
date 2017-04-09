@@ -1,4 +1,7 @@
-// @flow
+/**
+ * volumetracing_actions.js
+ * @flow
+ */
 import type { Vector3, OrthoViewType, VolumeModeType } from "oxalis/constants";
 import type { Tracing } from "oxalis/model";
 import type { VolumeContentDataType } from "oxalis/store";
@@ -11,6 +14,8 @@ type FinishEditingActionType = { type: "FINISH_EDITING" };
 type SetActiveCellActionType = { type: "SET_ACTIVE_CELL", cellId: number };
 type SetModeActionType = { type: "SET_MODE", mode: VolumeModeType };
 type ToggleModeActionType = { type: "TOGGLE_MODE" };
+type UpdateDirectionActionType = { type: "UPDATE_DIRECTION", centroid: Vector3 };
+type ResetContourActionType = { type: "RESET_CONTOUR" };
 
 export type VolumeTracingActionType =
   | InitializeVolumeTracingActionType
@@ -20,7 +25,9 @@ export type VolumeTracingActionType =
   | FinishEditingActionType
   | SetActiveCellActionType
   | SetModeActionType
-  | ToggleModeActionType;
+  | ToggleModeActionType
+  | UpdateDirectionActionType
+  | ResetContourActionType;
 
 export const initializeVolumeTracingAction = (tracing: Tracing<VolumeContentDataType>): InitializeVolumeTracingActionType => ({
   type: "INITIALIZE_VOLUMETRACING",
@@ -58,4 +65,13 @@ export const setModeAction = (mode: VolumeModeType): SetModeActionType => ({
 
 export const toggleModeAction = (): ToggleModeActionType => ({
   type: "TOGGLE_MODE",
+});
+
+export const updateDirectionAction = (centroid: Vector3): UpdateDirectionActionType => ({
+  type: "UPDATE_DIRECTION",
+  centroid,
+});
+
+export const resetContourAction = (): ResetContourActionType => ({
+  type: "RESET_CONTOUR",
 });

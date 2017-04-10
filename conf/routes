@@ -183,6 +183,15 @@ GET           /api/taskTypes/:id/download                                       
 GET           /api/taskTypes/:id                                                controllers.TaskTypeController.get(id: String)
 PUT           /api/taskTypes/:id                                                controllers.TaskTypeController.update(id: String)
 
+GET           /scripts                                                        controllers.ScriptsController.empty(id: String = "")
+GET           /scripts/create                                                 controllers.ScriptsController.empty(id: String = "")
+GET           /scripts/:id/edit                                               controllers.UserController.emptyWithWildcard(id: String)
+
+GET           /api/scripts                                                    controllers.ScriptsController.list
+POST          /api/scripts                                                    controllers.ScriptsController.create
+DELETE        /api/scripts/:id                                                controllers.ScriptsController.delete(id: String)
+
+
 # ID Validation
 GET           /api/find                                                         controllers.SearchController.find(q: String, type: String)
 

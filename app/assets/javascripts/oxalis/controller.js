@@ -26,6 +26,7 @@ import View from "oxalis/view";
 import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
 import VolumeTracingView from "oxalis/view/volumetracing/volumetracing_view";
 import constants from "oxalis/constants";
+import Request from "libs/request";
 
 import type { ToastType } from "libs/toast";
 
@@ -131,6 +132,7 @@ class Controller {
 
     this.initKeyboard();
     this.initTimeLimit();
+    this.initTaskScript();
 
     for (const binaryName of Object.keys(this.model.binary)) {
       this.listenTo(this.model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
@@ -149,6 +151,30 @@ class Controller {
     app.vent.trigger("webknossos:ready");
   }
 
+  initTaskScript() {
+    // Loads a Gist from GitHub with a user script if there is a
+    // script assigned to the task
+    if (this.model.tracing.task) {
+      const script = this.model.tracing.task.script;
+      const gistId = _.last(script.gist.split("/"));
+
+      Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then((gist) => {
+        const firstFile = gist.files[Object.keys(gist.files)[0]];
+
+        if (firstFile || firstFile.content) {
+          try {
+            // eslint-disable-next-line no-eval
+            eval(firstFile.content);
+          } catch (error) {
+            console.error(error);
+            Toast.error(`Error executing the task script "${script.name}". See console for more information.`);
+          }
+        } else {
+          Toast.error(`Unable to retrieve script ${script.name}`);
+        }
+      });
+    }
+  }
 
   initKeyboard() {
     // avoid scrolling while pressing space

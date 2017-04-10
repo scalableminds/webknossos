@@ -6,6 +6,8 @@ class ScriptModel extends Backbone.Model {
     this.prototype.urlRoot = "/api/scripts";
 
     this.prototype.defaults = {
+      gist: "",
+      name: "",
     }
   }
 

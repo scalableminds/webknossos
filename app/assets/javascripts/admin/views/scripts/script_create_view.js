@@ -10,27 +10,52 @@ import Toast from "libs/toast";
 class ScriptCreateView extends Marionette.View {
   static initClass() {
     this.prototype.template = _.template(`\
+<div class="row">
+  <div class="col-sm-12">
+    <div class="well">
+      <div class="col-sm-9 col-sm-offset-2">
+        <h3><%- getTitle() %> Scripts</h3>
+      </div>
 
+      <form method="POST" class="form-horizontal">
+        <div class="form-group">
+          <label class="col-sm-2 control-label" for="name">Name</label>
+          <div class="col-sm-9">
+            <input type="text" id="name" name="name" value="<%- name %>" class="form-control"
+             required pattern=".{3,}" title="Please use at least 3 characters.">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="col-sm-2 control-label" for="gist">Gist URL</label>
+          <div class="col-sm-9">
+            <input type="url" id="gist" name="gist" value="<%- gist %>" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="col-sm-2 col-sm-offset-9">
+          <button type="submit" class="form-control btn btn-primary"><%- getTitle() %></button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>\
 `);
-    this.prototype.className = "container wide task-types-administration";
-
-    this.prototype.regions =
-      { team: ".team" };
+    this.prototype.className = "container wide";
 
     this.prototype.events =
       { "submit form": "submitForm" };
 
     this.prototype.ui = {
       form: "form",
-      multiselect: "select[multiple='multiple']",
     };
   }
 
   templateContext() {
     return {
       getTitle: () => this.isEditingMode ? "Update" : "Create",
-      isChecked(bool) { return bool ? "checked" : ""; },
-      isSelected(bool) { return bool ? "selected" : ""; },
     };
   }
 
@@ -53,43 +78,12 @@ class ScriptCreateView extends Marionette.View {
       return;
     }
 
-
     const formValues = FormSyphon.serialize(this.ui.form);
-    if (formValues.settings.preferredMode === "Any") { formValues.settings.preferredMode = null; }
-
-    // Add 'required' attribute to select once it's supported
-    // https://github.com/davidstutz/bootstrap-multiselect/issues/620
-    if (_.isEmpty(formValues.settings.allowedModes)) {
-      Toast.error("Please provide at least one allowed mode.");
-      return;
-    }
-
 
     this.model.save(formValues).then(
-      () => app.router.navigate("/taskTypes", { trigger: true }));
+      () => app.router.navigate("/scripts", { trigger: true }));
   }
 
-
-  onRender() {
-    const teamSelectionView = new SelectionView({
-      collection: new TeamCollection(),
-      childViewOptions: {
-        modelValue() { return `${this.model.get("name")}`; },
-        defaultItem: { name: this.model.get("team") },
-      },
-      data: "amIAnAdmin=true",
-      name: "team",
-      required: true,
-    });
-    this.showChildView("team", teamSelectionView);
-
-    this.ui.multiselect.multiselect();
-  }
-
-
-  onBeforeDestroy() {
-    this.ui.multiselect.multiselect("destroy");
-  }
 }
 ScriptCreateView.initClass();
 

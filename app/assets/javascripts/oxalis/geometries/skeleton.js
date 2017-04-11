@@ -221,8 +221,7 @@ class Skeleton {
           this.updateNodeRadius(update.value.treeId, update.value.id, update.value.radius);
           break;
         case "createTree":
-          this.treeColorTexture.image.data.set(update.value.color, update.value.id * 3);
-          this.treeColorTexture.needsUpdate = true;
+          this.updateTreeColor(update.value.id, update.value.color)
           break;
         case "updateTree": {
           // diff branchpoints
@@ -242,9 +241,7 @@ class Skeleton {
           }
 
           if (tree.color !== prevTree.color) {
-            for (const node of _.values(tree.nodes)) {
-              this.updateNodeColor(treeId, node.id, tree.color);
-            }
+            this.updateTreeColor(treeId, update.value.color);
           }
           break;
         }
@@ -294,8 +291,7 @@ class Skeleton {
       this.createEdge(tree.treeId, source, target, false);
     }
 
-    this.treeColorTexture.image.data.set(tree.color, tree.treeId * 3);
-    this.treeColorTexture.needsUpdate = true;
+    this.updateTreeColor(tree.treeId, tree.color);
   }
 
   createNode(treeId: number, node: NodeType, updateBoundingSphere: boolean = true) {
@@ -316,15 +312,6 @@ class Skeleton {
     this.delete(id, this.nodes, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.type;
       attribute.array[index] = NodeTypes.INVALID;
-      return [attribute];
-    });
-  }
-
-  updateNodeColor(treeId: number, nodeId: number, color: Vector3) {
-    const id = this.combineIds(nodeId, treeId);
-    this.update(id, this.nodes, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.color;
-      attribute.set(color, index * 3);
       return [attribute];
     });
   }
@@ -367,6 +354,11 @@ class Skeleton {
       attribute.set([0, 0, 0, 0, 0, 0], index * 6);
       return [attribute];
     });
+  }
+
+  updateTreeColor(treeId: number, color: Vector3) {
+    this.treeColorTexture.image.data.set(color, treeId * 3);
+    this.treeColorTexture.needsUpdate = true;
   }
 
   setVisibility(isVisible: boolean) {

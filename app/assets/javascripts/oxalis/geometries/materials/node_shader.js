@@ -1,6 +1,6 @@
 /**
  * particle_material_factory.js
- * @flow weak
+ * @flow
  */
 
 import * as THREE from "three";
@@ -14,19 +14,18 @@ export const NodeTypes = {
   BRANCH_POINT: 1.0,
 };
 
-
-class ParticleMaterialFactory {
+class NodeShader {
 
   material: THREE.RawShaderMaterial;
   uniforms: {
     [key: string]: {
-      type: "f" | "i",
+      type: "f" | "i" | "t",
       value: any,
     }
   };
 
-  constructor() {
-    this.setupUniforms();
+  constructor(treeColorTexture: THREE.DataTexture) {
+    this.setupUniforms(treeColorTexture);
 
     this.material = new THREE.RawShaderMaterial({
       uniforms: this.uniforms,
@@ -35,7 +34,7 @@ class ParticleMaterialFactory {
     });
   }
 
-  setupUniforms() {
+  setupUniforms(treeColorTexture: THREE.DataTexture): void {
     const state = Store.getState();
 
     this.uniforms = {
@@ -71,14 +70,18 @@ class ParticleMaterialFactory {
         type: "f",
         value: 1.0,
       },
+      treeColors: {
+        type: "t",
+        value: treeColorTexture,
+      },
     };
   }
 
-  getMaterial() {
+  getMaterial(): THREE.RawShaderMaterial {
     return this.material;
   }
 
-  getVertexShader() {
+  getVertexShader(): string {
     return `\
 precision highp float;
 precision highp int;
@@ -96,8 +99,9 @@ uniform float activeNodeId;
 uniform float activeTreeId;
 uniform int overrideNodeRadius;
 
+uniform sampler2D treeColors;
+
 attribute float radius;
-attribute vec3 treeColor;
 attribute vec3 position;
 attribute float type;
 attribute float nodeId;
@@ -129,7 +133,8 @@ vec3 shiftColor(vec3 color, float shiftValue) {
 
 void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    color = treeColor;
+    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / 1024.0), treeId / (1024.0 * 1024.0));
+    color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
 
     if (overrideNodeRadius == 1) {
       gl_PointSize = overrideParticleSize;
@@ -157,7 +162,7 @@ void main() {
 `;
   }
 
-  getFragmentShader() {
+  getFragmentShader(): string {
     return `\
 precision highp float;
 
@@ -170,4 +175,4 @@ void main()
 `;
   }
 }
-export default new ParticleMaterialFactory();
+export default NodeShader;

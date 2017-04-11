@@ -12,7 +12,8 @@ import Store from "oxalis/throttled_store";
 import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
 import type { NodeWithTreeIdType } from "oxalis/model/sagas/update_actions";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import ParticleMaterialFactory, { NodeTypes } from "oxalis/geometries/materials/particle_material_factory";
+import NodeShader, { NodeTypes } from "oxalis/geometries/materials/node_shader";
+import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import type { Vector3 } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 
@@ -49,7 +50,6 @@ type BufferOperation = (position: BufferPosition) => Array<THREE.BufferAttribute
 const NodeBufferHelper = {
   addAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
     geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
-    geometry.addAttribute("treeColor", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
     geometry.addAttribute("radius", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.addAttribute("type", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.addAttribute("nodeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
@@ -64,6 +64,7 @@ const NodeBufferHelper = {
 const EdgeBufferHelper = {
   addAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
     geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 6), 3));
+    geometry.addAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity * 2), 1));
   },
 
   buildMesh(geometry: THREE.BufferGeometry, material: THREE.LineBasicMaterial): THREE.Mesh {
@@ -86,6 +87,7 @@ class Skeleton {
 
   nodes: BufferCollection;
   edges: BufferCollection;
+  treeColorTexture: THREE.DataTexture;
 
   constructor() {
     _.extend(this, Backbone.Events);
@@ -98,8 +100,16 @@ class Skeleton {
     const nodeCount = _.sum(_.map(trees, tree => _.size(tree.nodes)));
     const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
 
-    const nodeMaterial = ParticleMaterialFactory.getMaterial();
-    const edgeMaterial = new THREE.LineBasicMaterial();
+    this.treeColorTexture = new THREE.DataTexture(
+      new Float32Array(1024 * 1024 * 3),
+      1024,
+      1024,
+      THREE.RGBFormat,
+      THREE.FloatType,
+    );
+
+    const nodeMaterial = new NodeShader(this.treeColorTexture).getMaterial();
+    const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
 
     this.nodes = this.initializeBufferCollection(nodeCount, nodeMaterial, NodeBufferHelper);
     this.edges = this.initializeBufferCollection(edgeCount, edgeMaterial, EdgeBufferHelper);
@@ -191,8 +201,7 @@ class Skeleton {
     for (const update of diff) {
       switch (update.action) {
         case "createNode": {
-          const treeColor = tracing.trees[update.value.treeId].color;
-          this.createNode(update.value.treeId, update.value, treeColor);
+          this.createNode(update.value.treeId, update.value);
           break;
         }
         case "deleteNode":
@@ -210,6 +219,10 @@ class Skeleton {
           break;
         case "updateNode":
           this.updateNodeRadius(update.value.treeId, update.value.id, update.value.radius);
+          break;
+        case "createTree":
+          this.treeColorTexture.image.data.set(update.value.color, update.value.id * 3);
+          this.treeColorTexture.needsUpdate = true;
           break;
         case "updateTree": {
           // diff branchpoints
@@ -280,14 +293,16 @@ class Skeleton {
       const target = tree.nodes[edge.target];
       this.createEdge(tree.treeId, source, target, false);
     }
+
+    this.treeColorTexture.image.data.set(tree.color, tree.treeId * 3);
+    this.treeColorTexture.needsUpdate = true;
   }
 
-  createNode(treeId: number, node: NodeType, treeColor: Vector3, updateBoundingSphere: boolean = true) {
+  createNode(treeId: number, node: NodeType, updateBoundingSphere: boolean = true) {
     const id = this.combineIds(node.id, treeId);
     this.create(id, this.nodes, updateBoundingSphere, ({ buffer, index }) => {
       const attributes = buffer.geometry.attributes;
       attributes.position.set(node.position, index * 3);
-      attributes.treeColor.set(treeColor, index * 3);
       attributes.radius.array[index] = node.radius;
       attributes.type.array[index] = NodeTypes.NORMAL;
       attributes.nodeId.array[index] = node.id;
@@ -335,10 +350,13 @@ class Skeleton {
   createEdge(treeId: number, source: NodeType, target: NodeType, updateBoundingSphere: boolean = true) {
     const id = this.combineIds(treeId, source.id, target.id);
     this.create(id, this.edges, updateBoundingSphere, ({ buffer, index }) => {
-      const attribute = buffer.geometry.attributes.position;
-      attribute.set(source.position, index * 6);
-      attribute.set(target.position, index * 6 + 3);
-      return [attribute];
+      const positionAttribute = buffer.geometry.attributes.position;
+      const treeIdAttribute = buffer.geometry.attributes.treeId;
+
+      positionAttribute.set(source.position, index * 6);
+      positionAttribute.set(target.position, index * 6 + 3);
+      treeIdAttribute.set([treeId, treeId], index * 2);
+      return [positionAttribute, treeIdAttribute];
     });
   }
 
@@ -424,7 +442,7 @@ class Skeleton {
     await this.animateNodeScale(highlighted, normal);
   }
 
-  animateNodeScale(from, to) {
+  animateNodeScale(from: number, to: number) {
     return new Promise((resolve, reject) => {
       const setScaleFactor = (scale) => {
         this.nodes.material.uniforms.activeNodeScaleFactor.value = scale;

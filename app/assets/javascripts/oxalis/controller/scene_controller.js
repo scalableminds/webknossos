@@ -25,7 +25,7 @@ import type { BoundingBoxType } from "oxalis/model";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 
 class SceneController {
-  skeleton: Skeleton;
+  skeleton: ?Skeleton;
   CUBE_COLOR: number;
   model: Model;
   current: number;
@@ -33,17 +33,17 @@ class SceneController {
   planeShift: Vector3;
   pingBinary: boolean;
   pingBinarySeg: boolean;
-  volumeMeshes: any;
+  volumeMeshes: THREE.Object3D;
   polygonFactory: ?PolygonFactory;
   cube: Cube;
   userBoundingBox: Cube;
   taskBoundingBox: Cube;
   contour: ContourGeometry;
   planes: OrthoViewMapType<Plane>;
+  rootNode: THREE.Object3D;
 
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
-  listenTo: Function;
 
   static initClass() {
     // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
@@ -66,24 +66,27 @@ class SceneController {
     this.pingBinary = true;
     this.pingBinarySeg = true;
 
-    this.volumeMeshes = [];
-
     this.createMeshes();
     this.bindToEvents();
   }
 
 
   createMeshes(): void {
+    this.rootNode = new THREE.Object3D();
+
     // Cubes
     this.cube = new Cube(this.model, {
       min: this.model.lowerBoundary,
       max: this.model.upperBoundary,
       color: this.CUBE_COLOR,
       showCrossSections: true });
+    this.cube.getMeshes().forEach(mesh => this.rootNode.add(mesh));
+
     this.userBoundingBox = new Cube(this.model, {
       max: [0, 0, 0],
       color: 0xffaa00,
       showCrossSections: true });
+    this.userBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
     if (this.model.taskBoundingBox != null) {
       this.taskBoundingBox = new Cube(this.model, {
@@ -91,14 +94,18 @@ class SceneController {
         max: this.model.taskBoundingBox.max,
         color: 0x00ff00,
         showCrossSections: true });
+      this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
 
+    this.volumeMeshes = new THREE.Object3D();
     if (this.model.volumeTracing != null) {
       this.contour = new ContourGeometry(this.model.volumeTracing);
+      this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
 
     if (Store.getState().skeletonTracing != null) {
       this.skeleton = new Skeleton();
+      this.rootNode.add(this.skeleton.getRootNode());
     }
 
     // create Meshes
@@ -114,11 +121,10 @@ class SceneController {
     this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
     this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
     this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
-  }
 
-
-  removeShapes(): void {
-    this.trigger("removeGeometries", this.volumeMeshes);
+    for (const plane of _.values(this.planes)) {
+      plane.getMeshes().forEach(mesh => this.rootNode.add(mesh));
+    }
   }
 
 
@@ -139,17 +145,17 @@ class SceneController {
       if (triangles == null) {
         return;
       }
-      this.removeShapes();
-      this.volumeMeshes = [];
+      this.rootNode.remove(this.volumeMeshes);
+      this.volumeMeshes = new THREE.Object3D();
+      this.rootNode.add(this.volumeMeshes);
 
       for (const triangleIdString of Object.keys(triangles)) {
         const triangleId = parseInt(triangleIdString, 10);
         const mappedId = this.model.getSegmentationBinary().cube.mapId(triangleId);
         const volume = new VolumeGeometry(triangles[triangleId], mappedId);
-        this.volumeMeshes = this.volumeMeshes.concat(volume.getMeshes());
+        volume.getMeshes().forEach(this.volumeMeshes.add);
       }
 
-      this.trigger("newGeometries", this.volumeMeshes);
       app.vent.trigger("rerender");
       this.polygonFactory = null;
     });
@@ -170,9 +176,7 @@ class SceneController {
 
     if (id !== OrthoViews.TDView) {
       let ind;
-      for (mesh of this.volumeMeshes) {
-        mesh.visible = false;
-      }
+      this.volumeMeshes.visible = false;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
@@ -187,9 +191,7 @@ class SceneController {
         }
       }
     } else {
-      for (mesh of this.volumeMeshes) {
-        mesh.visible = true;
-      }
+      this.volumeMeshes.visible = true;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         pos = getPosition(Store.getState().flycam);
         this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
@@ -248,20 +250,10 @@ class SceneController {
   }
 
 
-  getMeshes = (): Array<THREE.Mesh> => {
-    let result = [];
-    for (const plane of _.values(this.planes)) {
-      result = result.concat(plane.getMeshes());
-    }
-
-    for (const geometry of [this.skeleton, this.contour, this.cube, this.userBoundingBox, this.taskBoundingBox]) {
-      if (geometry != null) {
-        result = result.concat(geometry.getMeshes());
-      }
-    }
-
-    return result;
+  getRootNode(): THREE.Object3D {
+    return this.rootNode;
   }
+
 
   setUserBoundingBox(bb: BoundingBoxType): void {
     this.userBoundingBox.setCorners(bb.min, bb.max);

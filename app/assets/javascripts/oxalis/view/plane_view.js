@@ -176,17 +176,11 @@ class PlaneView {
     }
   }
 
-  addGeometry(geometry: THREE.Geometry): void {
+  addNode(node: THREE.Object3D): void {
     // Adds a new Three.js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
 
-    this.group.add(geometry);
-  }
-
-
-  removeGeometry(geometry: THREE.Geometry): void {
-    this.group.remove(geometry);
-    this.draw();
+    this.group.add(node);
   }
 
 

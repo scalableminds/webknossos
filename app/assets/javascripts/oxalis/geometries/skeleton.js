@@ -4,13 +4,11 @@
  */
 
 import _ from "lodash";
-import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import Utils from "libs/utils";
 import Store from "oxalis/throttled_store";
 import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
-import type { NodeWithTreeIdType } from "oxalis/model/sagas/update_actions";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import NodeShader, { NodeTypes } from "oxalis/geometries/materials/node_shader";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
@@ -76,24 +74,14 @@ class Skeleton {
   // This class is supposed to collect all the Geometries that belong to the skeleton, like
   // nodes, edges and trees
 
-  trigger: Function; // TODO remove
-
-  // TODO move to store?
-  isVisible: boolean;
-  showInactiveTrees: boolean;
-
-
+  rootNode: THREE.Object3D;
   prevTracing: SkeletonTracingType;
-
   nodes: BufferCollection;
   edges: BufferCollection;
   treeColorTexture: THREE.DataTexture;
 
   constructor() {
-    _.extend(this, Backbone.Events);
-
-    this.isVisible = true;
-    this.showInactiveTrees = true;
+    this.rootNode = new THREE.Object3D();
 
     const state = Store.getState();
     const trees = state.skeletonTracing.trees;
@@ -143,11 +131,14 @@ class Skeleton {
   initializeBuffer(capacity: number, material: THREE.Material, helper: BufferHelper): Buffer {
     const geometry = new THREE.BufferGeometry();
     helper.addAttributes(geometry, capacity);
+    const mesh = helper.buildMesh(geometry, material);
+    this.rootNode.add(mesh);
+
     return {
       capacity,
       nextIndex: 0,
       geometry,
-      mesh: helper.buildMesh(geometry, material),
+      mesh,
     };
   }
 
@@ -155,7 +146,6 @@ class Skeleton {
     let currentBuffer = collection.buffers[0];
     if (collection.freeList.length === 0 && currentBuffer.nextIndex >= currentBuffer.capacity) {
       currentBuffer = this.initializeBuffer(MAX_CAPACITY, collection.material, collection.helper);
-      this.trigger("newGeometries", [currentBuffer.mesh]); // TODO remove
       collection.buffers.unshift(currentBuffer);
     }
     const bufferPosition = collection.freeList.pop() || { buffer: currentBuffer, index: currentBuffer.nextIndex++ };
@@ -221,7 +211,7 @@ class Skeleton {
           this.updateNodeRadius(update.value.treeId, update.value.id, update.value.radius);
           break;
         case "createTree":
-          this.updateTreeColor(update.value.id, update.value.color)
+          this.updateTreeColor(update.value.id, update.value.color);
           break;
         case "updateTree": {
           // diff branchpoints
@@ -270,8 +260,8 @@ class Skeleton {
     return _.map(this.nodes.buffers, buffer => buffer.mesh);
   }
 
-  getMeshes() {
-    return [...this.nodes.buffers, ...this.edges.buffers].map(buffer => buffer.mesh);
+  getRootNode() {
+    return this.rootNode;
   }
 
   // API
@@ -283,7 +273,7 @@ class Skeleton {
 
   createTree(tree: TreeType) {
     for (const node of _.values(tree.nodes)) {
-      this.createNode(tree.treeId, node, tree.color, false);
+      this.createNode(tree.treeId, node, false);
     }
     for (const edge of tree.edges) {
       const source = tree.nodes[edge.source];

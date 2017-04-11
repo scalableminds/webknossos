@@ -8,11 +8,7 @@ import DataCube from "oxalis/model/binary/data_cube";
 import BinaryDataConnectionInfo from "oxalis/model/binarydata_connection_info";
 import Layer from "oxalis/model/binary/layers/layer";
 import type { Vector4 } from "oxalis/constants";
-
-type DatastoreInfoType = {
-  url: string,
-  typ: string,
-};
+import type { DataStoreInfoType } from "oxalis/store";
 
 export type PullQueueItemType = {
   priority: number,
@@ -36,10 +32,10 @@ class PullQueue {
   layer: Layer;
   whitenEmptyBuckets: boolean;
   connectionInfo: BinaryDataConnectionInfo;
-  datastoreInfo: DatastoreInfoType;
+  datastoreInfo: DataStoreInfoType;
 
 
-  constructor(cube: DataCube, layer: Layer, connectionInfo: BinaryDataConnectionInfo, datastoreInfo: DatastoreInfoType) {
+  constructor(cube: DataCube, layer: Layer, connectionInfo: BinaryDataConnectionInfo, datastoreInfo: DataStoreInfoType) {
     this.cube = cube;
     this.layer = layer;
     this.connectionInfo = connectionInfo;

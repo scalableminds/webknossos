@@ -42,6 +42,15 @@ export const OrthoViewColors: OrthoViewMapType<number> = {
   [OrthoViews.TDView]: 0xffffff,
 };
 
+export const OrthoViewCrosshairColors: OrthoViewMapType<[number, number]> = {
+  [OrthoViews.PLANE_XY]: [0x0000ff, 0x00ff00],
+  [OrthoViews.PLANE_YZ]: [0xff0000, 0x00ff00],
+  [OrthoViews.PLANE_XZ]: [0x0000ff, 0xff0000],
+  [OrthoViews.TDView]: [0x000000, 0x000000],
+};
+
+export const OrthoViewGrayCrosshairColor = 0x222222;
+
 const Constants = {
   ARBITRARY_VIEW: 4,
 

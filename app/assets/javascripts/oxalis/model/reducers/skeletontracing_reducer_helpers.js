@@ -14,7 +14,7 @@ import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
 import Utils from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
-import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, TemporaryMutableTreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
 import { getActiveNodeFromTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 
 function generateTreeNamePrefix(state: OxalisState, timestamp) {
@@ -117,7 +117,7 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
         visitedEdges[getEdgeHash(deletedEdge)] = true;
       });
 
-      const traverseTree = (nodeId: number, newTree: TreeType) => {
+      const traverseTree = (nodeId: number, newTree: TemporaryMutableTreeType) => {
         const edges = nodeToEdgesMap[nodeId];
 
         if (nodeId !== node.id) {
@@ -155,7 +155,10 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
             treeId: activeTree.treeId,
           };
         } else {
-          newTree = createTree(intermediateState, timestamp).get();
+          const immutableNewTree = createTree(intermediateState, timestamp).get();
+          // Cast to mutable tree type since we want to mutably do the split
+          // in this reducer for performance reasons.
+          newTree = ((immutableNewTree: any): TemporaryMutableTreeType);
           intermediateState = update(intermediateState, { skeletonTracing: { trees: { [newTree.treeId]: { $set: newTree } } } });
         }
 

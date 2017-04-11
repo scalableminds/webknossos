@@ -6,7 +6,7 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
-import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType, TreeType, TracingTypeType } from "oxalis/store";
+import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType, NodeType, EdgeType, CommentType, BranchPointType, SkeletonTracingTypeTracingType, VolumeTracingTypeTracingType } from "oxalis/store";
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
@@ -37,16 +37,27 @@ export type BoundingBoxType = {
   max: Vector3,
 };
 
+type SkeletonContentTreeType = {
+  id: number,
+  color: Vector3,
+  name: string,
+  timestamp: number,
+  comments: Array<CommentType>,
+  branchPoints: Array<BranchPointType>,
+  edges: Array<EdgeType>,
+  nodes: Array<NodeType>,
+};
+
 export type SkeletonContentDataType = {
   activeNode: null | number;
-  trees: Array<TreeType>;
+  trees: Array<SkeletonContentTreeType>;
   zoomLevel: number;
   customLayers: null;
 };
 
 export type VolumeContentDataType = {
   activeCell: null | number;
-  nextCell?: number,
+  nextCell: ?number,
   customLayers: Array<Object>;
   maxCoordinates: BoundingBoxObjectType;
   customLayers: ?Array<Object>;
@@ -77,7 +88,7 @@ export type Tracing<T> = {
   stats: any,
   task: any,
   tracingTime: number,
-  typ: TracingTypeType,
+  typ: SkeletonTracingTypeTracingType | VolumeTracingTypeTracingType,
   user: any,
   version: number,
 };

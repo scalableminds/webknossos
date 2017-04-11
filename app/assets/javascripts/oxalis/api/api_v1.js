@@ -1,17 +1,16 @@
 /*
- * api.js
+ * api_v1.js
  * @flow strict
  */
 
 // only relative imports are followed by documentationjs
 import _ from "lodash";
-import app from "app";
 import { InputKeyboardNoLoop } from "libs/input";
 import OxalisModel from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
 import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, createCommentAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, createCommentAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
@@ -64,6 +63,13 @@ class TracingApi {
       const { trees } = skeletonTracing;
       return _.flatMap(trees, tree => _.values(tree.nodes));
     }).getOrElse([]);
+  }
+
+  /**
+   * Deletes the node with nodeId in the tree with treeId
+   */
+  deleteNode(nodeId: number, treeId: number) {
+    Store.dispatch(deleteNodeAction(nodeId, treeId));
   }
 
  /**
@@ -241,8 +247,8 @@ class UserApi {
 
   model: OxalisModel;
 
-  constructor(oxalisModel: OxalisModel) {
-    this.model = oxalisModel;
+  constructor(model: OxalisModel) {
+    this.model = model;
   }
 
  /**
@@ -305,8 +311,8 @@ class UtilsApi {
 
   model: OxalisModel;
 
-  constructor(oxalisModel: OxalisModel) {
-    this.model = oxalisModel;
+  constructor(model: OxalisModel) {
+    this.model = model;
   }
 
  /**
@@ -335,11 +341,29 @@ class UtilsApi {
   // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
-  registerOverwrite<S, A>(
-    actionName: string,
-    overwriteFunction: (store: S, next: ((action: A) => void), action: A) => void,
+  registerOverwrite(
+    functionName: string,
+    newFunction: Function,
   ) {
-    overwriteAction(actionName, overwriteFunction);
+    if (functionName === "addNode") {
+      overwriteAction("CREATE_NODE", (store, call, action) => {
+        // unpack the arguments for the old style overwrite
+        const args = [action.position, action.rotation, null, action.viewport, action.resolution, null];
+
+        newFunction(() => {
+          // just dispatch the normal action and ignore the arguments
+          call(action);
+        }, args);
+      });
+    } else if (functionName === "deleteActiveNode") {
+      overwriteAction("DELETE_NODE", (store, call, action) => {
+        newFunction(() => {
+          call(action);
+        }, []);
+      });
+    } else {
+      throw new Error("You used registerOverwrite in version 1 which is deprecated. This version only supports overwrites for addNode and deleteActiveNode.");
+    }
   }
 
  /**
@@ -359,67 +383,11 @@ type ApiInterface = {
   utils: UtilsApi,
 };
 
-/**
- * webKnossos Public Frontend API.
- * @version 1
- * @module Api
- *
- *
- * @property {TracingApi} tracing - All methods related to getting tracings.
- * @property {DataApi} data - All methods related to getting binary data / layers.
- * @property {UserApi} user - All methods related to getting / setting the user's personal tracing configuration.
- * @property {UtilsApi} utils - Utitility methods for controlling wK.
- *
- * @example
- * window.webknossos.apiReady(1).then((api) => {
- *     const nodes = api.tracing.getAllNodes();
- *     const dataLayerNames = api.data.getLayerNames();
- *     const userConfiguration = api.user.getConfiguration();
- *     const keyHandler = api.utils.registerKeyHandler("enter", () => console.log("Welcome"));
- *  });
- */
-class Api {
-
-  readyPromise: Promise<void>;
-  apiInterface: ApiInterface;
-  model: OxalisModel;
- /**
-  * @private
-  */
-  constructor(oxalisModel: OxalisModel) {
-    this.readyPromise = new Promise((resolve) => {
-      app.vent.listenTo(app.vent, "webknossos:ready", resolve);
-    });
-
-    this.apiInterface = {
-      tracing: new TracingApi(oxalisModel),
-      data: new DataApi(oxalisModel),
-      user: new UserApi(oxalisModel),
-      utils: new UtilsApi(oxalisModel),
-    };
-
-    this.model = oxalisModel;
-  }
-
- /**
-  * API initializer. Will be called as soon as the webKnossos API is ready.
-  * @name apiReady
-  * @memberof Api
-  * @instance
-  * @param {number} version
-  *
-  * @example
-  * window.webknossos.apiReady(1).then((api) => {
-  *   // Your cool user script / wK plugin
-  *   const nodes = api.tracing.getAllNodes();
-  *   ...
-  * });
-  */
-  apiReady(version: number = 1): Promise<ApiInterface> {
-    // TODO: version check
-    console.log("Requested api version:", version);
-    return this.readyPromise.then(() => this.apiInterface);
-  }
+export default function createApiInterface(model: OxalisModel): ApiInterface {
+  return {
+    tracing: new TracingApi(model),
+    data: new DataApi(model),
+    user: new UserApi(model),
+    utils: new UtilsApi(model),
+  };
 }
-
-export default Api;

@@ -13,7 +13,7 @@ import app from "app";
 import store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
 import OxalisModel from "oxalis/model";
-import OxalisApi from "oxalis/api";
+import OxalisApi from "oxalis/api/api_loader";
 import Constants from "oxalis/constants";
 import Modal from "oxalis/view/modal";
 import Utils from "libs/utils";

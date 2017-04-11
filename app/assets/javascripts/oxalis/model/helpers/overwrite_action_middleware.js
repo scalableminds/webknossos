@@ -1,3 +1,6 @@
+// @flow
+import type { Dispatch, MiddlewareAPI } from "redux";
+
 const overwrites = {};
 
 export function overwriteAction<S, A>(
@@ -15,13 +18,28 @@ export function removeOverwrite(actionName: string) {
   delete overwrites[actionName];
 }
 
-export default function overwriteMiddleware<A>(store) {
-  return (next: (action: A) => void) =>
-    (action: A) => {
+export default function overwriteMiddleware<S, A: $Subtype<{ type: $Subtype<string> }>>(store: MiddlewareAPI<S, A>): (next: Dispatch<A>) => Dispatch<A> {
+  return (next: Dispatch<A>) =>
+    (action: A): A => {
       if (overwrites[action.type]) {
-        overwrites[action.type](store, next, action);
+        let isSyncExecutionDone = false;
+        const wrappedNext = function (...args) {
+          if (isSyncExecutionDone) {
+            console.warn(
+              "Apparently, you used registerOverwrite for", action.type, ` and
+              dispatched the action asynchronously (e.g., within a setTimeout call
+              or after 'async'). This can lead to weird behaviour, since actions
+              are expected to be dispatched synchronously. Please dispatch the
+              action in a synchronous way.`);
+          }
+          return next(...args);
+        };
+
+        const returnValue = overwrites[action.type](store, wrappedNext, action);
+        isSyncExecutionDone = true;
+        return returnValue;
       } else {
-        next(action);
+        return next(action);
       }
     };
 }

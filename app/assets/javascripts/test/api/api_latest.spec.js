@@ -6,7 +6,6 @@ import _ from "lodash";
 import Backbone from "backbone";
 import "backbone.marionette";
 import constants from "oxalis/constants";
-import { createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import TRACING_OBJECT from "../fixtures/tracing_object";
 
 function makeModelMock() {
@@ -63,7 +62,6 @@ mockRequire("keyboardjs", KeyboardJS);
 // Avoid node caching and make sure all mockRequires are applied
 const Model = mockRequire.reRequire("oxalis/model").default;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
-const Store = mockRequire.reRequire("oxalis/store").default;
 
 test.beforeEach((t) => {
   const model = t.context.model = new Model();
@@ -81,7 +79,7 @@ test.beforeEach((t) => {
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");
-      webknossos.apiReady(1).then((apiObject) => {
+      webknossos.apiReady(2).then((apiObject) => {
         t.context.api = apiObject;
       });
     })
@@ -220,33 +218,17 @@ test("registerKeyHandler should register a key handler and return a handler to u
   t.true(KeyboardJS.unbind.calledOnce);
 });
 
-test("registerOverwrite should overwrite newAddNode", (t) => {
-  const { api } = t.context;
+test("registerOverwrite should overwrite an existing function", (t) => {
+  const api = t.context.api;
   let bool = false;
-  const newAddNode = function overwrite(oldFunc, args) {
+  api.utils.registerOverwrite("SET_ACTIVE_NODE", (store, call, action) => {
     bool = true;
-    oldFunc(...args);
-  };
-  api.utils.registerOverwrite("addNode", newAddNode);
+    call(action);
+  });
 
-  Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1));
-
+  api.tracing.setActiveNode(2);
   // The added instructions should have been executed
   t.true(bool);
-});
-
-test("registerOverwrite should overwrite deleteActiveNode", (t) => {
-  const { api } = t.context;
-  let bool = false;
-  const deleteNode = function overwrite(oldFunc, args) {
-    bool = true;
-    oldFunc(...args);
-  };
-  api.utils.registerOverwrite("deleteActiveNode", deleteNode);
-
-  Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1, 0));
-  Store.dispatch(deleteNodeAction(0, 0));
-
-  // The added instructions should have been executed
-  t.true(bool);
+  // And the original method should have been called
+  t.is(api.tracing.getActiveNodeId(), 2);
 });

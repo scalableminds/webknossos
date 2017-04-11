@@ -45,7 +45,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
     default:
       // pass
   }
-  console.log(action.type);
+
   return getVolumeTracing(state.tracing).map((volumeTracing) => {
     switch (action.type) {
       case "SET_MODE": {

@@ -14,7 +14,7 @@ import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
 import Utils from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
-import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, TemporaryMutableTreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
 import { getSkeletonTracing, getActiveNodeFromTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 
 function generateTreeNamePrefix(state: OxalisState, timestamp) {
@@ -119,7 +119,7 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
           visitedEdges[getEdgeHash(deletedEdge)] = true;
         });
 
-        const traverseTree = (nodeId: number, newTree: TreeType) => {
+        const traverseTree = (nodeId: number, newTree: TemporaryMutableTreeType) => {
           const edges = nodeToEdgesMap[nodeId];
 
           if (nodeId !== node.id) {
@@ -157,8 +157,11 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
               treeId: activeTree.treeId,
             };
           } else {
-            newTree = createTree(intermediateState, timestamp).get();
-            intermediateState = update(intermediateState, { tracing: { trees: { [newTree.treeId]: { $set: newTree } } } });
+            const immutableNewTree = createTree(intermediateState, timestamp).get();
+            // Cast to mutable tree type since we want to mutably do the split
+            // in this reducer for performance reasons.
+            newTree = ((immutableNewTree: any): TemporaryMutableTreeType);
+            intermediateState = update(intermediateState, { skeletonTracing: { trees: { [newTree.treeId]: { $set: newTree } } } });
           }
 
           const neighborId = node.id !== edgeOfActiveNode.source
@@ -247,7 +250,7 @@ export function deleteBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<[
 
 export function createTree(state: OxalisState, timestamp: number): Maybe<TreeType> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
-    const { allowUpdate } = skeletonTracing.restrictions;
+    const { allowUpdate } = state.tracing.restrictions;
 
     if (allowUpdate) {
       // create a new tree id and name
@@ -311,7 +314,7 @@ export function mergeTrees(skeletonTracing: SkeletonTracingType, sourceNodeId: n
   const sourceTree = findTreeByNodeId(trees, sourceNodeId).get();
   const targetTree = findTreeByNodeId(trees, targetNodeId).get(); // should be activeTree
 
-  if (allowUpdate && sourceTree && targetTree) {
+  if (allowUpdate && sourceTree != null && targetTree != null && sourceTree !== targetTree) {
     const newEdge: EdgeType = {
       source: sourceNodeId,
       target: targetNodeId,

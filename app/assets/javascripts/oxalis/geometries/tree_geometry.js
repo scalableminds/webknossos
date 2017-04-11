@@ -102,7 +102,7 @@ class TreeGeometry {
   resetNodes(nodes: NodeMapType) {
     const nodeCount = _.size(nodes);
 
-    if (nodeCount) {
+    if (nodeCount > 0) {
       const sizesBuffer = new Array(nodeCount);
       const scalesBuffer = new Array(nodeCount);
       const positionBuffer = new Array(nodeCount * 3);
@@ -141,6 +141,10 @@ class TreeGeometry {
       nodesMesh.geometry.attributes.color.needsUpdate = true;
 
       nodesMesh.geometry.computeBoundingSphere();
+
+      // when geometry only contains 1 point, the bounding sphere's radius is 0
+      // however, for raycasting it needs to be larger
+      nodesMesh.geometry.boundingSphere.radius = Math.max(nodesMesh.geometry.boundingSphere.radius, 1000);
     }
   }
 
@@ -160,32 +164,34 @@ class TreeGeometry {
     }
   }
 
-  startNodeHighlightAnimation(nodeId: number) {
+  async startNodeHighlightAnimation(nodeId: number) {
     const normal = 1.0;
     const highlighted = 2.0;
 
-    const nodeIndex = _.findIndex(this.nodes.geometry.nodeIDs, id => id === nodeId);
-    if (nodeIndex >= 0) {
-      this.animateNodeScale(normal, highlighted, nodeIndex, () => this.animateNodeScale(highlighted, normal, nodeIndex));
-    }
+    await this.animateNodeScale(normal, highlighted, nodeId);
+    await this.animateNodeScale(highlighted, normal, nodeId);
   }
 
-  animateNodeScale(from: number, to: number, index: number, onComplete: () => void = _.noop) {
-    const setScaleFactor = (factor) => {
-      this.nodes.geometry.attributes.nodeScaleFactor.set([factor], index);
-      this.nodes.geometry.attributes.nodeScaleFactor.needsUpdate = true;
-    };
+  animateNodeScale(from: number, to: number, nodeId: number) {
+    return new Promise((resolve, reject) => {
+      const setScaleFactor = (factor) => {
+        const nodeIndex = _.findIndex(this.nodes.geometry.nodeIDs, id => id === nodeId);
+        if (nodeIndex !== -1) {
+          this.nodes.geometry.attributes.nodeScaleFactor.set([factor], nodeIndex);
+          this.nodes.geometry.attributes.nodeScaleFactor.needsUpdate = true;
+        }
+      };
 
-    const onUpdate = function () {
-      setScaleFactor(this.scaleFactor);
-    };
-
-    const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });
-    tweenAnimation
+      const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });
+      tweenAnimation
       .to({ scaleFactor: to }, 100)
-      .onUpdate(onUpdate)
-      .onComplete(onComplete)
+      .onUpdate(function onUpdate() {
+        setScaleFactor(this.scaleFactor);
+      })
+      .onComplete(resolve)
+      .onStop(reject)
       .start();
+    });
   }
 
   getColor(id: number) {

@@ -62,6 +62,8 @@ type LogSliderSettingProps = {
   label: string,
   max: number,
   min: number,
+  roundTo?: number,
+  disabled?: boolean,
 };
 
 const LOG_SLIDER_MIN = -100;
@@ -70,6 +72,9 @@ const LOG_SLIDER_MAX = 100;
 export class LogSliderSetting extends React.PureComponent {
 
   props: LogSliderSettingProps;
+  static defaultProps = {
+    disabled: false,
+  };
 
   onChangeInput = (value: number) => {
     if (this.props.min <= value && value <= this.props.max) {
@@ -92,7 +97,7 @@ export class LogSliderSetting extends React.PureComponent {
   }
 
   formatTooltip = (value: number) =>
-    Utils.roundTo(this.calculateValue(value), 3);
+    Utils.roundTo(this.calculateValue(value), this.props.roundTo != null ? this.props.roundTo : 3);
 
   getSliderValue = () => {
     const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
@@ -103,9 +108,10 @@ export class LogSliderSetting extends React.PureComponent {
   }
 
   render() {
+    const { label, roundTo, value, min, max, disabled } = this.props;
     return (
       <Row className="settings-row">
-        <Col span={8}><label className="setting-label">{this.props.label}</label></Col>
+        <Col span={8}><label className="setting-label">{label}</label></Col>
         <Col span={8}>
           <Slider
             min={LOG_SLIDER_MIN}
@@ -113,14 +119,16 @@ export class LogSliderSetting extends React.PureComponent {
             tipFormatter={this.formatTooltip}
             onChange={this.onChangeSlider}
             value={this.getSliderValue()}
+            disabled={disabled}
           />
         </Col>
         <Col span={6}>
           <InputNumber
-            min={this.props.min}
-            max={this.props.max}
+            min={min}
+            max={max}
             style={{ marginLeft: 16 }}
-            value={this.props.value} onChange={this.onChangeInput}
+            value={roundTo != null ? Utils.roundTo(value, roundTo) : value} onChange={this.onChangeInput}
+            disabled={disabled}
           />
         </Col>
       </Row>

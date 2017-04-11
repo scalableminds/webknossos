@@ -3,8 +3,7 @@
  * @flow
  */
 import type { Vector3, OrthoViewType, VolumeModeType } from "oxalis/constants";
-import type { Tracing } from "oxalis/model";
-import type { VolumeContentDataType } from "oxalis/store";
+import type { Tracing, VolumeContentDataType } from "oxalis/model";
 
 type InitializeVolumeTracingActionType = { type: "INITIALIZE_VOLUMETRACING", tracing: Tracing<VolumeContentDataType> };
 type CreateCellActionType = { type: "CREATE_CELL", cellId: ?number };

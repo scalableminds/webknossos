@@ -65,7 +65,7 @@ class CommentTabView extends React.Component {
           comment => this.comparator(comment.node, sortAscending) > this.comparator(activeNode.id, sortAscending));
 
         // try to find next tree with at least one comment
-        if (!nextComment) {
+        if (nextComment == null) {
           // $FlowFixMe
           nextTree = _.find(trees,
             tree => this.comparator(tree.treeId, sortAscending) > this.comparator(activeTree.treeId, sortAscending) && tree.comments.length);
@@ -140,7 +140,7 @@ class CommentTabView extends React.Component {
     const treesAndComments = this.getTreeComponents();
 
     return (
-      <div>
+      <div className="flex-column">
         <InputGroup compact>
           <Button onClick={this.previousComment}><i className="fa fa-arrow-left" /></Button>
           <Input
@@ -154,7 +154,7 @@ class CommentTabView extends React.Component {
             <i className={sortingIconClass} />
           </Button>
         </InputGroup>
-        <ul id="comment-list">
+        <ul id="comment-list" className="flex-overflow">
           {treesAndComments}
         </ul>
       </div>

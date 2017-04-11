@@ -77,17 +77,17 @@ class UserSettingsView extends Component {
       case Constants.MODE_PLANE_TRACING:
         return (
           <Panel header="Viewport Options" key="2">
-            <LogSliderSetting label="Zoom" min={0.005} max={getMaxZoomStep(this.props.state)} value={this.props.zoomStep} onChange={this.props.onChangeZoomStep} />
-            <LogSliderSetting label="Viewport Scale" min={0.05} max={20} step={0.1} value={this.props.userConfiguration.scale} onChange={this.onChangeUser.scale} />
-            <LogSliderSetting label="Clipping Distance" min={1} max={12000} value={this.props.userConfiguration.clippingDistance} onChange={this.onChangeUser.clippingDistance} />
+            <LogSliderSetting label="Zoom" roundTo={3} min={0.001} max={getMaxZoomStep(this.props.state)} value={this.props.zoomStep} onChange={this.props.onChangeZoomStep} />
+            <LogSliderSetting label="Viewport Scale" roundTo={3} min={0.05} max={20} step={0.1} value={this.props.userConfiguration.scale} onChange={this.onChangeUser.scale} />
+            <LogSliderSetting label="Clipping Distance" roundTo={3} min={1} max={12000} value={this.props.userConfiguration.clippingDistance} onChange={this.onChangeUser.clippingDistance} />
             <SwitchSetting label="Show Crosshairs" value={this.props.userConfiguration.displayCrosshair} onChange={this.onChangeUser.displayCrosshair} />
           </Panel>
         );
       case Constants.MODE_VOLUME:
         return (
           <Panel header="Viewport Options" key="2">
-            <LogSliderSetting label="Zoom" min={0.1} max={getMaxZoomStep(this.props.state)} value={this.props.zoomStep} onChange={this.props.onChangeZoomStep} />
-            <LogSliderSetting label="Viewport Scale" min={0.05} max={20} step={0.1} value={this.props.userConfiguration.scale} onChange={this.onChangeUser.scale} />
+            <LogSliderSetting label="Zoom" roundTo={3} min={0.1} max={getMaxZoomStep(this.props.state)} value={this.props.zoomStep} onChange={this.props.onChangeZoomStep} />
+            <LogSliderSetting label="Viewport Scale" roundTo={3} min={0.05} max={20} step={0.1} value={this.props.userConfiguration.scale} onChange={this.onChangeUser.scale} />
             <SwitchSetting label="Show Crosshairs" value={this.props.userConfiguration.displayCrosshair} onChange={this.onChangeUser.displayCrosshair} />
           </Panel>
         );
@@ -115,10 +115,10 @@ class UserSettingsView extends Component {
         <Panel header="Nodes & Trees" key="3">
           <NumberInputSetting label="Active Node ID" value={activeNodeId} onChange={this.props.onChangeActiveNodeId} />
           <NumberInputSetting label="Active Tree ID" value={activeTreeId} onChange={this.props.onChangeActiveTreeId} />
-          <NumberSliderSetting label="Radius" max={5000} value={this.props.userConfiguration.radius} onChange={this.props.onChangeRadius} />
-          <NumberSliderSetting label="Particle Size" max={20} step={0.1} value={this.props.userConfiguration.particleSize} onChange={this.onChangeUser.particleSize} />
+          <LogSliderSetting label="Node Radius" min={1} max={5000} roundTo={0} value={this.props.userConfiguration.radius} onChange={this.props.onChangeRadius} disabled={this.props.userConfiguration.overrideNodeRadius} />
+          <NumberSliderSetting label={this.props.userConfiguration.overrideNodeRadius ? "Particle Size" : "Min. Particle Size"} max={20} step={0.1} value={this.props.userConfiguration.particleSize} onChange={this.onChangeUser.particleSize} />
+          <SwitchSetting label="Override Node Radius" value={this.props.userConfiguration.overrideNodeRadius} onChange={this.onChangeUser.overrideNodeRadius} />
           <SwitchSetting label="Soma Clicking" value={this.props.userConfiguration.newNodeNewTree} onChange={this.onChangeUser.newNodeNewTree} />
-          <SwitchSetting label="Override Radius" value={this.props.userConfiguration.overrideNodeRadius} onChange={this.onChangeUser.overrideNodeRadius} />
         </Panel>
       );
     } else if (mode === Constants.MODE_VOLUME && !this.props.isPublicViewMode && this.props.tracing.type === "volume") {

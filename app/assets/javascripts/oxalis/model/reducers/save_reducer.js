@@ -5,10 +5,9 @@
 
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
-import type { SaveActionTypes } from "oxalis/model/actions/save_actions";
-import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
+import type { ActionType } from "oxalis/model/actions/actions";
 
-function SaveReducer(state: OxalisState, action: ActionWithTimestamp<SaveActionTypes>): OxalisState {
+function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "PUSH_SAVE_QUEUE": {
       return update(state, {

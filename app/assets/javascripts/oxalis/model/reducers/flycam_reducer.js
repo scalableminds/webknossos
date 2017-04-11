@@ -1,9 +1,7 @@
 // @flow
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
-import type { FlycamActionType } from "oxalis/model/actions/flycam_actions";
-import type { SettingActionType } from "oxalis/model/actions/settings_actions";
-import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
+import type { ActionType } from "oxalis/model/actions/actions";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { M4x4 } from "libs/mjs";
@@ -110,7 +108,7 @@ export function setRotationReducer(state: OxalisState, rotation: Vector3) {
   return state;
 }
 
-function FlycamReducer(state: OxalisState, action: ActionWithTimestamp<FlycamActionType | SettingActionType>): OxalisState {
+function FlycamReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "SET_DATASET": {
       return update(state, { flycam: {

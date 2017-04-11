@@ -10,10 +10,9 @@ type PushSaveQueueActionType = { type: "PUSH_SAVE_QUEUE", items: Array<UpdateAct
 type SaveNowActionType = { type: "SAVE_NOW" };
 type ShiftSaveQueueActionType = { type: "SHIFT_SAVE_QUEUE", count: number };
 type SetSaveBusyActionType = { type: "SET_SAVE_BUSY", isBusy: boolean };
-type SetLastSaveTimestampActionType = { type: "SET_LAST_SAVE_TIMESTAMP" };
+type SetLastSaveTimestampActionType = { type: "SET_LAST_SAVE_TIMESTAMP", timestamp: number };
 type SetVersionNumberActionType = {type: "SET_VERSION_NUMBER", version: number};
-
-export type SaveActionTypes =
+export type SaveActionType =
   PushSaveQueueActionType |
   SaveNowActionType |
   ShiftSaveQueueActionType |
@@ -40,8 +39,9 @@ export const setSaveBusyAction = (isBusy: boolean): SetSaveBusyActionType => ({
   isBusy,
 });
 
-export const setLastSaveTimestampAction = (): SetLastSaveTimestampActionType => ({
+export const setLastSaveTimestampAction = (timestamp: number = Date.now()): SetLastSaveTimestampActionType => ({
   type: "SET_LAST_SAVE_TIMESTAMP",
+  timestamp,
 });
 
 export const setVersionNumber = (version: number): SetVersionNumberActionType => ({

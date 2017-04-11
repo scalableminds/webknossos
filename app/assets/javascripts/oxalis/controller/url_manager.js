@@ -13,6 +13,10 @@ import type { Vector3, ModeType } from "oxalis/constants";
 import constants, { ModeValues } from "oxalis/constants";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import window from "libs/window";
+
+const NO_MODIFY_TIMEOUT = 5000;
+const MAX_UPDATE_INTERVAL = 1000;
 
 type State = {
   position?: Vector3,
@@ -26,10 +30,9 @@ class UrlManager {
   baseUrl: string;
   model: Model;
   initialState: State;
+  lastUrl: ?string
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
-
-  MAX_UPDATE_INTERVAL = 1000;
 
   constructor(model: Model) {
     this.model = model;
@@ -40,8 +43,17 @@ class UrlManager {
   }
 
   update = _.throttle(
-    () => { location.replace(this.buildUrl()); },
-    this.MAX_UPDATE_INTERVAL,
+    () => {
+      const url = this.buildUrl();
+      // Don't tamper with URL if changed externally for some time
+      if (this.lastUrl == null || window.location.href === this.lastUrl) {
+        window.location.replace(url);
+        this.lastUrl = window.location.href;
+      } else {
+        setTimeout(() => { this.lastUrl = null; }, NO_MODIFY_TIMEOUT);
+      }
+    },
+    MAX_UPDATE_INTERVAL,
   );
 
   parseUrl(): State {

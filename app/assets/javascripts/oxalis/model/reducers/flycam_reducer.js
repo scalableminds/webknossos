@@ -1,9 +1,7 @@
 // @flow
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
-import type { FlycamActionType } from "oxalis/model/actions/flycam_actions";
-import type { SettingActionType } from "oxalis/model/actions/settings_actions";
-import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
+import type { ActionType } from "oxalis/model/actions/actions";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { M4x4 } from "libs/mjs";
@@ -93,7 +91,7 @@ function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
   } });
 }
 
-function FlycamReducer(state: OxalisState, action: ActionWithTimestamp<FlycamActionType | SettingActionType>): OxalisState {
+function FlycamReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "SET_DATASET": {
       return update(state, { flycam: {
@@ -130,14 +128,15 @@ function FlycamReducer(state: OxalisState, action: ActionWithTimestamp<FlycamAct
 
     case "SET_ROTATION": {
       if (state.dataset != null) {
-        const [x, y, z] = action.rotation;
+        const { rotation } = action;
+        const [x, y, z] = rotation;
         let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.scale);
         matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
         matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
         matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
         let newState = update(state, { flycam: { currentMatrix: { $set: matrix } } });
         if (state.userConfiguration.dynamicSpaceDirection) {
-          const spaceDirectionOrtho = [0, 1, 2].map(index => action.rotation[index] < 0 ? -1 : 1);
+          const spaceDirectionOrtho = [0, 1, 2].map(index => rotation[index] < 0 ? -1 : 1);
           newState = update(newState, { flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } } });
         }
         return newState;

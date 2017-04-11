@@ -6,7 +6,7 @@
 import Backbone from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
-import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType, TreeType } from "oxalis/store";
+import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType, NodeType, EdgeType, CommentType, BranchPointType, SkeletonTracingTypeTracingType } from "oxalis/store";
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
@@ -36,9 +36,20 @@ export type BoundingBoxType = {
   max: Vector3,
 };
 
+type SkeletonContentTreeType = {
+  id: number,
+  color: Vector3,
+  name: string,
+  timestamp: number,
+  comments: Array<CommentType>,
+  branchPoints: Array<BranchPointType>,
+  edges: Array<EdgeType>,
+  nodes: Array<NodeType>,
+};
+
 export type SkeletonContentDataType = {
   activeNode: null | number;
-  trees: Array<TreeType>;
+  trees: Array<SkeletonContentTreeType>;
   zoomLevel: number;
   customLayers: null;
 };
@@ -76,7 +87,7 @@ export type Tracing<T> = {
   stats: any,
   task: any,
   tracingTime: number,
-  typ: string,
+  typ: SkeletonTracingTypeTracingType,
   user: any,
   version: number,
 };

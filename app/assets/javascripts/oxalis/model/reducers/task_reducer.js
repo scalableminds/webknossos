@@ -5,10 +5,9 @@
 
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
-import type { TaskActionTypes } from "oxalis/model/actions/task_actions";
-import type { ActionWithTimestamp } from "oxalis/model/helpers/timestamp_middleware";
+import type { ActionType } from "oxalis/model/actions/actions";
 
-function TaskReducer(state: OxalisState, action: ActionWithTimestamp<TaskActionTypes>): OxalisState {
+function TaskReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "SET_TASK": {
       return update(state, {

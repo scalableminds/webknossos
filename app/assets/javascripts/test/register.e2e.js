@@ -9,12 +9,6 @@ describe("Register", () => {
   });
 
   describe("SignUp", () => {
-    it("should send empty form", async () => {
-      await page.signUpWithInclompleteForm();
-      const alerts = await page.getAlerts();
-      expect(alerts.length).toBe(6);
-    });
-
     it("should send complete form", async () => {
       await page.signUpWithCompleteForm();
       const modalText = await page.getModalText();
@@ -22,4 +16,3 @@ describe("Register", () => {
     });
   });
 });
-

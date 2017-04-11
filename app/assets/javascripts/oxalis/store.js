@@ -16,212 +16,207 @@ import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
-import timestampMiddleware from "oxalis/model/helpers/timestamp_middleware";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 export type CommentType = {
-  node: number;
-  content: string;
+  +node: number,
+  +content: string,
 };
 
 export type EdgeType = {
-  source: number,
-  target: number,
+  +source: number,
+  +target: number,
 };
 
 export type NodeType = {
-  id: number,
-  position: Vector3,
-  rotation: Vector3,
-  bitDepth: number,
-  viewport: number,
-  resolution: number,
-  radius: number,
-  timestamp: number,
+  +id: number,
+  +position: Vector3,
+  +rotation: Vector3,
+  +bitDepth: number,
+  +viewport: number,
+  +resolution: number,
+  +radius: number,
+  +timestamp: number,
 };
 
 
 export type BranchPointType = {
-  id: number;
-  timestamp: number;
+  +id: number,
+  +timestamp: number,
 };
 
-export type NodeMapType = {[number]: NodeType};
+export type NodeMapType = {+[number]: NodeType};
 
 export type BoundingBoxObjectType = {
-  topLeft: Vector3,
-  width: number,
-  height: number,
-  depth: number,
+  +topLeft: Vector3,
+  +width: number,
+  +height: number,
+  +depth: number,
 };
 
-export type TreeType = {
-  treeId: number,
-  color: Vector3,
-  name: string,
-  timestamp: number,
-  comments: Array<CommentType>,
-  branchPoints: Array<BranchPointType>,
-  edges: Array<EdgeType>,
-  nodes: NodeMapType,
+type TreeTypeBase = {
+  +treeId: number,
+  +color: Vector3,
+  +name: string,
+  +timestamp: number,
+  +comments: Array<CommentType>,
+  +branchPoints: Array<BranchPointType>,
+  +edges: Array<EdgeType>,
+}
+
+export type TreeType = TreeTypeBase & {
+  +nodes: NodeMapType,
 };
 
-export type SkeletonContentDataType = {
-  activeNode: null | number,
-  trees: Array<TreeType>,
-  zoomLevel: number,
-  customLayers: null,
-};
-
-export type VolumeContentDataType = {
-  activeCell: null | number,
-  customLayers: Array<Object>,
-  maxCoordinates: BoundingBoxObjectType,
-  customLayers: ?Array<Object>,
-  name: string,
+type TemporaryMutableNodeMapType = {[number]: NodeType};
+export type TemporaryMutableTreeType = TreeTypeBase & {
+  +nodes: TemporaryMutableNodeMapType,
 };
 
 export type MappingType = {
-  parent?: string;
-  name: string;
-  classes?: Array<Array<number>>;
+  +parent?: string;
+  +name: string;
+  +classes?: Array<Array<number>>;
 };
 
 export type CategoryType = "color" | "segmentation";
 export type ElementClassType = "uint8" | "uint16" | "uint32";
 
 export type DataLayerType = {
-  name: string,
-  category: CategoryType,
-  maxCoordinates: BoundingBoxObjectType,
-  resolutions: Array<number>,
-  // fallback: any,
-  elementClass: ElementClassType,
-  mappings: Array<MappingType>,
+  +name: string,
+  +category: CategoryType,
+  +maxCoordinates: BoundingBoxObjectType,
+  +resolutions: Array<number>,
+  // +fallback: any,
+  +elementClass: ElementClassType,
+  +mappings: Array<MappingType>,
 }
 
 export type RestrictionsType = {
-  allowAccess: boolean,
-  allowUpdate: boolean,
-  allowFinish: boolean,
-  allowDownload: boolean,
+  +allowAccess: boolean,
+  +allowUpdate: boolean,
+  +allowFinish: boolean,
+  +allowDownload: boolean,
 };
 
 export type AllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 
 export type SettingsType = {
-  advancedOptionsAllowed: boolean,
-  allowedModes: Array<AllowedModeType>,
-  branchPointsAllowed: boolean,
-  somaClickingAllowed: boolean,
+  +advancedOptionsAllowed: boolean,
+  +allowedModes: Array<AllowedModeType>,
+  +branchPointsAllowed: boolean,
+  +somaClickingAllowed: boolean,
 };
 
 export type DataStoreInfoType = {
-  name: string,
-  url: string,
-  typ: string,
-  accessToken?: string,
+  +name: string,
+  +url: string,
+  +typ: string,
+  +accessToken?: string,
 }
 
 export type DatasetType = {
- name: string,
- dataStore: DataStoreInfoType,
- scale: Vector3,
- dataLayers: Array<DataLayerType>
+ +name: string,
+ +dataStore: DataStoreInfoType,
+ +scale: Vector3,
+ +dataLayers: Array<DataLayerType>
 };
 
-export type TreeMapType = {[number]: TreeType};
+export type TreeMapType = {+[number]: TreeType};
+
+export type SkeletonTracingTypeTracingType =
+  "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType";
 
 export type SkeletonTracingType = {
-  type: "skeleton",
-  trees: TreeMapType,
-  name: string,
-  version: number,
-  id: string,
-  tracingType: "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType",
-  activeTreeId: ?number,
-  activeNodeId: ?number,
-  cachedMaxNodeId: number,
-  restrictions: RestrictionsType & SettingsType,
+  +type: "skeleton",
+  +trees: TreeMapType,
+  +name: string,
+  +version: number,
+  +id: string,
+  +tracingType: SkeletonTracingTypeTracingType,
+  +activeTreeId: ?number,
+  +activeNodeId: ?number,
+  +cachedMaxNodeId: number,
+  +restrictions: RestrictionsType & SettingsType,
 };
 
 export type DatasetLayerConfigurationType = {
-  color: Vector3,
-  brightness: number,
-  contrast: number,
+  +color: Vector3,
+  +brightness: number,
+  +contrast: number,
 };
 
 export type DatasetConfigurationType = {
-  datasetName: string,
-  fourBit: boolean,
-  interpolation: boolean,
-  keyboardDelay: number,
-  layers: {
+  +datasetName: string,
+  +fourBit: boolean,
+  +interpolation: boolean,
+  +keyboardDelay: number,
+  +layers: {
     [name:string]: DatasetLayerConfigurationType,
   },
-  quality: number,
-  segmentationOpacity: number,
+  +quality: number,
+  +segmentationOpacity: number,
 };
 
 export type UserConfigurationType = {
-  clippingDistance: number,
-  clippingDistanceArbitrary: number,
-  crosshairSize: number,
-  displayCrosshair: boolean,
-  dynamicSpaceDirection: boolean,
-  firstVisToggle: boolean,
-  inverseX: boolean,
-  inverseY: boolean,
-  isosurfaceBBsize: number,
-  isosurfaceDisplay: boolean,
-  isosurfaceResolution: number,
-  keyboardDelay: number,
-  mouseRotateValue: number,
-  moveValue: number,
-  moveValue3d: number,
-  newNodeNewTree: boolean,
-  overrideNodeRadius: boolean,
-  particleSize: number,
-  radius: number,
-  rotateValue: number,
-  scale: number,
-  scaleValue: number,
-  sortCommentsAsc: boolean,
-  sortTreesByName: boolean,
-  sphericalCapRadius: number,
-  tdViewDisplayPlanes: boolean,
+  +clippingDistance: number,
+  +clippingDistanceArbitrary: number,
+  +crosshairSize: number,
+  +displayCrosshair: boolean,
+  +dynamicSpaceDirection: boolean,
+  +firstVisToggle: boolean,
+  +inverseX: boolean,
+  +inverseY: boolean,
+  +isosurfaceBBsize: number,
+  +isosurfaceDisplay: boolean,
+  +isosurfaceResolution: number,
+  +keyboardDelay: number,
+  +mouseRotateValue: number,
+  +moveValue: number,
+  +moveValue3d: number,
+  +newNodeNewTree: boolean,
+  +overrideNodeRadius: boolean,
+  +particleSize: number,
+  +radius: number,
+  +rotateValue: number,
+  +scale: number,
+  +scaleValue: number,
+  +sortCommentsAsc: boolean,
+  +sortTreesByName: boolean,
+  +sphericalCapRadius: number,
+  +tdViewDisplayPlanes: boolean,
 };
 
 export type TemporaryConfigurationType = {
-  boundingBox: Vector6,
+  +boundingBox: Vector6,
 };
 
 export type TaskType = {
-  taskId: number,
+  +taskId: number,
 };
 
 export type SaveStateType = {
-  isBusy: boolean,
-  queue: Array<UpdateAction>,
-  lastSaveTimestamp: number,
+  +isBusy: boolean,
+  +queue: Array<UpdateAction>,
+  +lastSaveTimestamp: number,
 };
 
 export type FlycamType = {
-  zoomStep: number,
-  currentMatrix: Matrix4x4,
-  spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
+  +zoomStep: number,
+  +currentMatrix: Matrix4x4,
+  +spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
 }
 
 export type OxalisState = {
-  datasetConfiguration: DatasetConfigurationType,
-  userConfiguration: UserConfigurationType,
-  temporaryConfiguration: TemporaryConfigurationType,
-  dataset: DatasetType,
-  skeletonTracing: SkeletonTracingType,
-  task: ?TaskType,
-  save: SaveStateType,
-  flycam: FlycamType,
+  +datasetConfiguration: DatasetConfigurationType,
+  +userConfiguration: UserConfigurationType,
+  +temporaryConfiguration: TemporaryConfigurationType,
+  +dataset: DatasetType,
+  +skeletonTracing: SkeletonTracingType,
+  +task: ?TaskType,
+  +save: SaveStateType,
+  +flycam: FlycamType,
 };
 
 const defaultState: OxalisState = {
@@ -325,7 +320,6 @@ const combinedReducers = reduceReducers(
 );
 
 const store = createStore(combinedReducers, defaultState, applyMiddleware(
-  timestampMiddleware,
   overwriteActionMiddleware,
   sagaMiddleware,
 ));

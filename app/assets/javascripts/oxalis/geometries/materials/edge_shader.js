@@ -4,6 +4,8 @@
  */
 
 import * as THREE from "three";
+import Store from "oxalis/store";
+import { OrthoViews } from "oxalis/constants";
 
 class EdgeShader {
 
@@ -26,6 +28,8 @@ class EdgeShader {
   }
 
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
+    const state = Store.getState();
+
     this.uniforms = {
       activeTreeId: {
         type: "f",
@@ -34,6 +38,18 @@ class EdgeShader {
       treeColors: {
         type: "t",
         value: treeColorTexture,
+      },
+      shouldHideInactiveTrees: {
+        type: "i",
+        value: state.temporaryConfiguration.shouldHideInactiveTrees,
+      },
+      shouldHideAllSkeletons: {
+        type: "i",
+        value: state.temporaryConfiguration.shouldHideAllSkeletons,
+      },
+      is3DView: {
+        type: "i",
+        value: state.temporaryConfiguration.activeCamera === OrthoViews.TDViews,
       },
     };
   }
@@ -52,6 +68,9 @@ varying vec3 color;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float activeTreeId;
+uniform int shouldHideInactiveTrees;
+uniform int shouldHideAllSkeletons;
+uniform int is3DView;
 
 uniform sampler2D treeColors;
 
@@ -59,6 +78,17 @@ attribute vec3 position;
 attribute float treeId;
 
 void main() {
+
+    bool b_shouldHideInactiveTrees = shouldHideInactiveTrees == 1;
+    bool b_shouldHideAllSkeletons = shouldHideAllSkeletons == 1;
+    bool b_is3DView = is3DView == 1;
+
+    bool isVisible = (b_is3DView || !b_shouldHideAllSkeletons) && (!b_shouldHideInactiveTrees || activeTreeId == treeId);
+    if (!isVisible) {
+      gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
+      return;
+    }
+
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     vec2 treeIdToTextureCoordinate = vec2(fract(treeId / 1024.0), treeId / (1024.0 * 1024.0));
     color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;

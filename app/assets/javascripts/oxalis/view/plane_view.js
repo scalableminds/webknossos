@@ -10,9 +10,10 @@ import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 import Model from "oxalis/model";
 import View from "oxalis/view";
+import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 
 class PlaneView {
 
@@ -162,7 +163,9 @@ class PlaneView {
       this.renderer.clear();
 
       for (const plane of OrthoViewValues) {
-        this.trigger("renderCam", plane);
+
+        console.log("render", plane)
+        Store.dispatch(updateTemporarySettingAction("activeCamera", plane));
         setupRenderArea(
           viewport[plane][0],
           viewport[plane][1],

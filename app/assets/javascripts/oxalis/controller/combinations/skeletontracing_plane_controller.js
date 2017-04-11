@@ -22,6 +22,7 @@ import type { ModifierKeys } from "libs/input";
 import { getRequestLogZoomStep, getRayThreshold, getRotationOrtho, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -97,8 +98,8 @@ class SkeletonTracingPlaneController extends PlaneController {
   getKeyboardControls(): Object {
     return _.extend(super.getKeyboardControls(), {
 
-      "1": () => this.skeletonTracingController.toggleSkeletonVisibility(),
-      "2": () => this.sceneController.skeleton.toggleInactiveTreeVisibility(),
+      "1": () => Store.dispatch(toggleTemporarySettingAction("shouldHideAllSkeletons")), // this.skeletonTracingController.toggleSkeletonVisibility(),
+      "2": () => Store.dispatch(toggleTemporarySettingAction("shouldHideInactiveTrees")), // this.sceneController.skeleton.toggleInactiveTreeVisibility(),
 
       // Delete active node
       delete: () => Store.dispatch(deleteNodeAction()),

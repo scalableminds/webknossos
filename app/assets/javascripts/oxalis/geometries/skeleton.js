@@ -8,12 +8,13 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import Utils from "libs/utils";
 import Store from "oxalis/throttled_store";
-import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import NodeShader, { NodeTypes } from "oxalis/geometries/materials/node_shader";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
-import type { Vector3 } from "oxalis/constants";
+import { OrthoViews, OrthoViewType } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
+import type { Vector3 } from "oxalis/constants";
 
 
 const MAX_CAPACITY = 1000;
@@ -250,8 +251,16 @@ class Skeleton {
     this.nodes.material.uniforms.viewportScale.value = scale;
     this.nodes.material.uniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
     this.nodes.material.uniforms.activeNodeId.value = state.skeletonTracing.activeNodeId;
+    this.nodes.material.uniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
+    this.nodes.material.uniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
+    this.nodes.material.uniforms.is3DView.value = state.temporaryConfiguration.activeCamera === OrthoViews.TDView;
+
+    console.log(state.temporaryConfiguration.activeCamera)
 
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
+    this.edges.material.uniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
+    this.edges.material.uniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
+    this.edges.material.uniforms.is3DView.value = state.temporaryConfiguration.activeCamera === OrthoViews.TDView;
 
     this.prevTracing = tracing;
   }
@@ -350,65 +359,6 @@ class Skeleton {
     this.treeColorTexture.image.data.set(color, treeId * 3);
     this.treeColorTexture.needsUpdate = true;
   }
-
-  setVisibility(isVisible: boolean) {
-    this.isVisible = isVisible;
-
-    /* for (const mesh of this.getMeshes()) {
-      mesh.isVisible = isVisible;
-    }
-    app.vent.trigger("rerender"); */
-  }
-
-
-  setVisibilityTemporary(/* isVisible: boolean */) {
-    // for (const mesh of this.getMeshes()) {
-    //   mesh.visible = isVisible && ((mesh.isVisible != null) ? mesh.isVisible : true);
-    // }
-    // (TODO: still needed?) app.vent.trigger("rerender");
-  }
-
-
-  restoreVisibility() {
-//    this.setVisibilityTemporary(this.isVisible);
-  }
-
-
-  toggleVisibility() {
-    this.setVisibility(!this.isVisible);
-  }
-
-
-  updateForCam(/* id: OrthoViewType */) {
-    /* for (const tree of _.values(this.treeGeometryCache)) {
-      //tree.showRadius(id !== OrthoViews.TDView && !Store.getState().userConfiguration.overrideNodeRadius);
-    }
-
-    if (id !== OrthoViews.TDView) {
-      this.setVisibilityTemporary(this.isVisible);
-    }
-    this.setVisibilityTemporary(true);*/
-  }
-
-
-  toggleInactiveTreeVisibility() {
-    // this.showInactiveTrees = !this.showInactiveTrees;
-    // return this.setInactiveTreeVisibility(this.showInactiveTrees);
-  }
-
-
-  setInactiveTreeVisibility(/* isVisible: boolean */) {
-    /* for (const mesh of this.getMeshes()) {
-      mesh.isVisible = visible;
-    }
-    const treeGeometry = this.getTreeGeometry(Store.getState().skeletonTracing.activeTreeId);
-    if (treeGeometry != null) {
-      treeGeometry.edges.isVisible = true;
-      treeGeometry.nodes.isVisible = true;
-      app.vent.trigger("rerender");
-    } */
-  }
-
 
   setSizeAttenuation(/* sizeAttenuation: boolean */) {
     /* return _.map(this.treeGeometryCache, tree =>

@@ -7,6 +7,7 @@ import * as THREE from "three";
 import Store from "oxalis/store";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { OrthoViews } from "oxalis/constants";
 
 export const NodeTypes = {
   INVALID: -1.0,
@@ -74,6 +75,18 @@ class NodeShader {
         type: "t",
         value: treeColorTexture,
       },
+      shouldHideInactiveTrees: {
+        type: "i",
+        value: state.temporaryConfiguration.shouldHideInactiveTrees,
+      },
+      shouldHideAllSkeletons: {
+        type: "i",
+        value: state.temporaryConfiguration.shouldHideAllSkeletons,
+      },
+      is3DView: {
+        type: "i",
+        value: state.temporaryConfiguration.activeCamera === OrthoViews.TDViews,
+      },
     };
   }
 
@@ -98,6 +111,9 @@ uniform float activeNodeScaleFactor;
 uniform float activeNodeId;
 uniform float activeTreeId;
 uniform int overrideNodeRadius;
+uniform int shouldHideInactiveTrees;
+uniform int shouldHideAllSkeletons;
+uniform int is3DView;
 
 uniform sampler2D treeColors;
 
@@ -126,12 +142,25 @@ vec3 hsv2rgb(vec3 color) {
 }
 
 vec3 shiftColor(vec3 color, float shiftValue) {
-  vec3 hsvColor = rgb2hsv(color);
-  hsvColor.x = fract(hsvColor.x + shiftValue);
-  return hsv2rgb(hsvColor);
+    vec3 hsvColor = rgb2hsv(color);
+    hsvColor.x = fract(hsvColor.x + shiftValue);
+    return hsv2rgb(hsvColor);
+}
+
+bool isVisible() {
+  bool b_shouldHideInactiveTrees = shouldHideInactiveTrees == 1;
+  bool b_shouldHideAllSkeletons = shouldHideAllSkeletons == 1;
+  bool b_is3DView = is3DView == 1;
+
+  return (b_is3DView); // || !b_shouldHideAllSkeletons) && (!b_shouldHideInactiveTrees || activeTreeId == treeId);
 }
 
 void main() {
+    if (!isVisible()) {
+      gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
+      return;
+    }
+
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     vec2 treeIdToTextureCoordinate = vec2(fract(treeId / 1024.0), treeId / (1024.0 * 1024.0));
     color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;

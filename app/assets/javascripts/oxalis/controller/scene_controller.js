@@ -44,6 +44,7 @@ class SceneController {
 
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
+  listenTo: Function;
 
   static initClass() {
     // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
@@ -167,7 +168,6 @@ class SceneController {
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
 
-    let mesh;
     let pos;
     this.cube.updateForCam(id);
     this.userBoundingBox.updateForCam(id);
@@ -285,7 +285,6 @@ class SceneController {
     this.userBoundingBox.setVisibility(false);
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(false));
 
-    Utils.__guard__(this.skeleton, x1 => x1.restoreVisibility());
     Utils.__guard__(this.skeleton, x2 => x2.setSizeAttenuation(true));
   }
 

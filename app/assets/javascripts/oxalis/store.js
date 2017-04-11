@@ -8,7 +8,7 @@
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import type { Vector3, Vector6, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
@@ -190,6 +190,9 @@ export type UserConfigurationType = {
 
 export type TemporaryConfigurationType = {
   +boundingBox: Vector6,
+  +shouldHideInactiveTrees: boolean,
+  +shouldHideAllSkeletons: boolean,
+  +activeCamera: OrthoViewType,
 };
 
 export type TaskType = {
@@ -259,6 +262,9 @@ const defaultState: OxalisState = {
   },
   temporaryConfiguration: {
     boundingBox: [0, 0, 0, 0, 0, 0],
+    shouldHideInactiveTrees: false,
+    shouldHideAllSkeletons: false,
+    activeCamera: "PLANE_XY",
   },
   task: null,
   dataset: {

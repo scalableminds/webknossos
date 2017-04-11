@@ -6,6 +6,7 @@
 import _ from "lodash";
 import Backbone from "backbone";
 import * as THREE from "three";
+import TWEEN from "tween.js";
 import Utils from "libs/utils";
 import Store from "oxalis/throttled_store";
 import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
@@ -13,6 +14,8 @@ import type { NodeWithTreeIdType } from "oxalis/model/sagas/update_actions";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import ParticleMaterialFactory, { NodeTypes } from "oxalis/geometries/materials/particle_material_factory";
 import type { Vector3 } from "oxalis/constants";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+
 
 const MAX_CAPACITY = 1000;
 
@@ -87,6 +90,7 @@ class Skeleton {
 
   nodes: BufferCollection;
   edges: BufferCollection;
+  nodeMaterial: THREE.RawShaderMaterial;
 
   constructor() {
     _.extend(this, Backbone.Events);
@@ -99,6 +103,7 @@ class Skeleton {
     const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
     this.nodes = this.initializeBufferCollection(nodeCount, NodeBufferHelper);
     this.edges = this.initializeBufferCollection(edgeCount, EdgeBufferHelper);
+    this.nodeMaterial = ParticleMaterialFactory.getMaterial();
 
     for (const tree of _.values(trees)) {
       this.createTree(tree);
@@ -179,7 +184,8 @@ class Skeleton {
   }
 
   refresh() {
-    const tracing = Store.getState().skeletonTracing;
+    const state = Store.getState();
+    const tracing = state.skeletonTracing;
     const diff = diffTrees(this.prevTracing.trees, tracing.trees);
 
     for (const update of diff) {
@@ -232,6 +238,18 @@ class Skeleton {
         default:
       }
     }
+
+    if (tracing.activeNodeId !== this.prevTracing.activeNodeId) {
+      this.startNodeHighlightAnimation();
+    }
+
+    const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
+    this.nodeMaterial.uniforms.planeZoomFactor.value = getPlaneScalingFactor(Store.getState().flycam);
+    this.nodeMaterial.uniforms.overrideParticleSize.value = particleSize;
+    this.nodeMaterial.uniforms.overrideNodeRadius.value = overrideNodeRadius;
+    this.nodeMaterial.uniforms.viewportScale.value = scale;
+    this.nodeMaterial.uniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
+    this.nodeMaterial.uniforms.activeNodeId.value = state.skeletonTracing.activeNodeId;
 
     this.prevTracing = tracing;
   }
@@ -393,6 +411,33 @@ class Skeleton {
   setSizeAttenuation(/* sizeAttenuation: boolean */) {
     /* return _.map(this.treeGeometryCache, tree =>
       tree.setSizeAttenuation(sizeAttenuation));*/
+  }
+
+
+  async startNodeHighlightAnimation() {
+    const normal = 1.0;
+    const highlighted = 2.0;
+
+    await this.animateNodeScale(normal, highlighted);
+    await this.animateNodeScale(highlighted, normal);
+  }
+
+  animateNodeScale(from, to) {
+    return new Promise((resolve, reject) => {
+      const setScaleFactor = (scale) => {
+        this.nodeMaterial.uniforms.activeNodeScaleFactor.value = scale;
+      };
+
+      const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });
+      tweenAnimation
+      .to({ scaleFactor: to }, 100)
+      .onUpdate(function onUpdate() {
+        setScaleFactor(this.scaleFactor);
+      })
+      .onComplete(resolve)
+      .onStop(reject)
+      .start();
+    });
   }
 }
 

@@ -3,7 +3,6 @@
  * @flow weak
  */
 
-import app from "app";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -28,7 +27,6 @@ class ParticleMaterialFactory {
 
   constructor() {
     this.setupUniforms();
-    this.setupChangeListeners();
 
     this.material = new THREE.RawShaderMaterial({
       uniforms: this.uniforms,
@@ -74,20 +72,6 @@ class ParticleMaterialFactory {
         value: 1.0,
       },
     };
-  }
-
-  setupChangeListeners() {
-    Store.subscribe(() => {
-      const state = Store.getState();
-      const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
-      this.uniforms.planeZoomFactor.value = getPlaneScalingFactor(Store.getState().flycam);
-      this.uniforms.overrideParticleSize.value = particleSize;
-      this.uniforms.overrideNodeRadius.value = overrideNodeRadius;
-      this.uniforms.viewportScale.value = scale;
-      this.uniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
-      this.uniforms.activeNodeId.value = state.skeletonTracing.activeNodeId;
-      app.vent.trigger("rerender");
-    });
   }
 
   getMaterial() {
@@ -186,5 +170,4 @@ void main()
 `;
   }
 }
-
 export default new ParticleMaterialFactory();

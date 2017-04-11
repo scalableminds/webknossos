@@ -14,7 +14,7 @@ import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { OrthoViewType } from "oxalis/constants";
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
 
-export default function* editVolumeLayerAsync(): Generator<*, *, *> {
+export function* editVolumeLayerAsync(): Generator<*, *, *> {
   const allowUpdate = yield select(state => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {
@@ -54,7 +54,7 @@ function* createVolumeLayer(planeId: OrthoViewType) {
 }
 
 
-function* finishLayer(layer: VolumeLayer) {
+export function* finishLayer(layer: VolumeLayer) {
   if ((layer == null) || layer.isEmpty()) {
     return;
   }

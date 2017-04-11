@@ -44,7 +44,7 @@ export const setLastSaveTimestampAction = (timestamp: number = Date.now()): SetL
   timestamp,
 });
 
-export const setVersionNumber = (version: number): SetVersionNumberActionType => ({
+export const setVersionNumberAction = (version: number): SetVersionNumberActionType => ({
   type: "SET_VERSION_NUMBER",
   version,
 });

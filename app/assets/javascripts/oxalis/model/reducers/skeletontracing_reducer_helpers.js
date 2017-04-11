@@ -161,7 +161,7 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
             // Cast to mutable tree type since we want to mutably do the split
             // in this reducer for performance reasons.
             newTree = ((immutableNewTree: any): TemporaryMutableTreeType);
-            intermediateState = update(intermediateState, { skeletonTracing: { trees: { [newTree.treeId]: { $set: newTree } } } });
+            intermediateState = update(intermediateState, { tracing: { trees: { [newTree.treeId]: { $set: newTree } } } });
           }
 
           const neighborId = node.id !== edgeOfActiveNode.source

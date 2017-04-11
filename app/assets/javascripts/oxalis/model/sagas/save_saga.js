@@ -9,7 +9,7 @@ import app from "app";
 import { call, put, take, select, race } from "redux-saga/effects";
 import { delay } from "redux-saga";
 import Request from "libs/request";
-import { shiftSaveQueueAction, setSaveBusyAction, setLastSaveTimestampAction, pushSaveQueueAction, setVersionNumber } from "oxalis/model/actions/save_actions";
+import { shiftSaveQueueAction, setSaveBusyAction, setLastSaveTimestampAction, pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { createTreeAction, SkeletonTracingActions } from "oxalis/model/actions/skeletontracing_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import messages from "messages";
@@ -44,7 +44,7 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
             method: "PUT",
             data: compactBatch,
           });
-        yield put(setVersionNumber(version + 1));
+        yield put(setVersionNumberAction(version + 1));
         yield put(setLastSaveTimestampAction());
         yield put(shiftSaveQueueAction(batch.length));
         yield call(toggleErrorHighlighting, false);

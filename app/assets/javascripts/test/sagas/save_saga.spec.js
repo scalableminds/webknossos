@@ -13,7 +13,6 @@ mockRequire("app", { router: { off: _.noop, reload: _.noop } });
 
 const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
-const SkeletonTracingActions = mockRequire.reRequire("oxalis/model/actions/skeletontracing_actions");
 const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
 const Request = mockRequire.reRequire("libs/request").default;
 
@@ -27,7 +26,8 @@ const initialState = {
   task: {
     id: 1,
   },
-  skeletonTracing: {
+  tracing: {
+    type: "skeleton",
     trees: {
       "0": {
         treeId: 0,
@@ -54,10 +54,12 @@ const initialState = {
   },
 };
 
+const INIT_ACTIONS = ["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"];
+
 test("SaveSaga should compact multiple updateTracing update actions", (t) => {
   const updateActions = [
-    UpdateActions.updateTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
-    UpdateActions.updateTracing(initialState, [2, 3, 4], [0, 0, 1], 2),
+    UpdateActions.updateSkeletonTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
+    UpdateActions.updateSkeletonTracing(initialState, [2, 3, 4], [0, 0, 1], 2),
   ];
 
   t.deepEqual(compactUpdateActions(updateActions), [updateActions[1]]);
@@ -70,7 +72,7 @@ test("SaveSaga should send update actions", (t) => {
   ];
 
   const saga = pushAnnotationAsync();
-  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
+  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
   saga.next();
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
@@ -79,7 +81,7 @@ test("SaveSaga should send update actions", (t) => {
   saga.next(updateActions);
   expectValueDeepEqual(
     t,
-    saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }),
+    saga.next({ version: 2, tracingType: "Explorational", tracingId: "1234567890" }),
     call(Request.sendJSONReceiveJSON, "/annotations/Explorational/1234567890?version=3", {
       method: "PUT",
       data: updateActions,
@@ -94,7 +96,7 @@ test("SaveSaga should retry update actions", (t) => {
   ];
 
   const saga = pushAnnotationAsync();
-  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
+  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
   saga.next();
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
@@ -102,7 +104,7 @@ test("SaveSaga should retry update actions", (t) => {
   saga.next(true);
   saga.next(updateActions);
   expectValueDeepEqual(t,
-    saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }),
+    saga.next({ version: 2, tracingType: "Explorational", tracingId: "1234567890" }),
     call(Request.sendJSONReceiveJSON,
       "/annotations/Explorational/1234567890?version=3", {
         method: "PUT",
@@ -117,7 +119,7 @@ test("SaveSaga should retry update actions", (t) => {
   saga.next(true);
   saga.next(updateActions);
   expectValueDeepEqual(t,
-    saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }),
+    saga.next({ version: 2, tracingType: "Explorational", tracingId: "1234567890" }),
     call(Request.sendJSONReceiveJSON,
       "/annotations/Explorational/1234567890?version=3", {
         method: "PUT",
@@ -134,7 +136,7 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
   ];
 
   const saga = pushAnnotationAsync();
-  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
+  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
   saga.next();
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
@@ -142,7 +144,7 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
   saga.next(true);
   saga.next(updateActions);
   expectValueDeepEqual(t,
-    saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }),
+    saga.next({ version: 2, tracingType: "Explorational", tracingId: "1234567890" }),
     call(Request.sendJSONReceiveJSON,
       "/annotations/Explorational/1234567890?version=3", {
         method: "PUT",
@@ -164,7 +166,7 @@ test("SaveSaga should send update actions right away", (t) => {
   ];
 
   const saga = pushAnnotationAsync();
-  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
+  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
   saga.next();
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(SaveActions.pushSaveQueueAction(updateActions, false));
@@ -173,7 +175,7 @@ test("SaveSaga should send update actions right away", (t) => {
   saga.next(true);
   saga.next(updateActions);
   expectValueDeepEqual(t,
-    saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }),
+    saga.next({ version: 2, tracingType: "Explorational", tracingId: "1234567890" }),
     call(Request.sendJSONReceiveJSON,
       "/annotations/Explorational/1234567890?version=3", {
         method: "PUT",
@@ -185,12 +187,12 @@ test("SaveSaga should send update actions right away", (t) => {
 
 test("SaveSaga should remove the correct update actions", (t) => {
   const updateActions = [
-    UpdateActions.updateTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
-    UpdateActions.updateTracing(initialState, [2, 3, 4], [0, 0, 1], 2),
+    UpdateActions.updateSkeletonTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
+    UpdateActions.updateSkeletonTracing(initialState, [2, 3, 4], [0, 0, 1], 2),
   ];
 
   const saga = pushAnnotationAsync();
-  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
+  expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
   saga.next();
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(SaveActions.pushSaveQueueAction(updateActions, false));
@@ -198,8 +200,8 @@ test("SaveSaga should remove the correct update actions", (t) => {
   saga.next();
   saga.next(true);
   saga.next(updateActions);
-  saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" });
-  expectValueDeepEqual(t, saga.next(), put(SkeletonTracingActions.setVersionNumber(3)));
+  saga.next({ version: 2, tracingType: "Explorational", tracingId: "1234567890" });
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(3)));
   expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
   expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(2)));
 });

@@ -14,11 +14,12 @@ mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("bootstrap-toggle", {});
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 
-const { saveSkeletonTracingAsync, diffTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
+const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
+const { saveTracingAsync } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
 const SkeletonTracingActions = mockRequire.reRequire("oxalis/model/actions/skeletontracing_actions");
 const { pushSaveQueueAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SkeletonTracingReducer = mockRequire.reRequire("oxalis/model/reducers/skeletontracing_reducer").default;
-const { take, put } = mockRequire.reRequire("redux-saga/effects");
+const { take, put, race } = mockRequire.reRequire("redux-saga/effects");
 const { M4x4 } = mockRequire.reRequire("libs/mjs");
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
@@ -27,7 +28,7 @@ function withoutUpdateTracing(items: Array<UpdateAction>): Array<UpdateAction> {
 }
 
 function testDiffing(prevTracing, nextTracing, flycam) {
-  return withoutUpdateTracing(Array.from(diffTracing(prevTracing, nextTracing, flycam)));
+  return withoutUpdateTracing(Array.from(diffSkeletonTracing(prevTracing, nextTracing, flycam)));
 }
 
 const initialState = {
@@ -38,6 +39,7 @@ const initialState = {
     id: 1,
   },
   tracing: {
+    type: "skeleton",
     trees: {
       "0": {
         treeId: 0,
@@ -76,19 +78,24 @@ const setActiveNodeRadiusAction = SkeletonTracingActions.setActiveNodeRadiusActi
 const createCommentAction = SkeletonTracingActions.createCommentAction("Hallo");
 const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(undefined, undefined, 12345678);
 
+const INIT_RACE_ACTION_OBJECT = {
+  initSkeleton: take("INITIALIZE_SKELETONTRACING"),
+  initVolume: take("INITIALIZE_VOLUMETRACING"),
+};
+
 test("SkeletonTracingSaga should create a tree if there is none (saga test)", (t) => {
-  const saga = saveSkeletonTracingAsync();
-  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
-  saga.next();
+  const saga = saveTracingAsync();
+  expectValueDeepEqual(t, saga.next(), race(INIT_RACE_ACTION_OBJECT));
+  saga.next({ initSkeleton: true });
   saga.next({ tracing: { trees: {} } });
   t.is(saga.next(true).value.PUT.action.type, "CREATE_TREE");
   // expectValueDeepEqual(t, saga.next(true), put(SkeletonTracingActions.createTreeAction()));
 });
 
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) => {
-  const saga = saveSkeletonTracingAsync();
-  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
-  saga.next();
+  const saga = saveTracingAsync();
+  expectValueDeepEqual(t, saga.next(), race(INIT_RACE_ACTION_OBJECT));
+  saga.next({ initSkeleton: true });
   saga.next(initialState.tracing);
   saga.next(false);
   saga.next();
@@ -102,9 +109,9 @@ test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) =
 test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
   const newState = SkeletonTracingReducer(initialState, createNodeAction);
 
-  const saga = saveSkeletonTracingAsync();
-  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
-  saga.next();
+  const saga = saveTracingAsync();
+  expectValueDeepEqual(t, saga.next(), race(INIT_RACE_ACTION_OBJECT));
+  saga.next({ initSkeleton: true });
   saga.next(initialState.tracing);
   saga.next(false);
   saga.next();

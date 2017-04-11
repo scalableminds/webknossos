@@ -192,7 +192,7 @@ class Skeleton {
       switch (update.action) {
         case "createNode": {
           const treeColor = tracing.trees[update.value.treeId].color;
-          this.createNode(update.value.id, update.value, treeColor);
+          this.createNode(update.value.treeId, update.value, treeColor);
           break;
         }
         case "deleteNode":
@@ -265,7 +265,7 @@ class Skeleton {
   // API
 
   // recursive Cantor pairing to generate a unique id from a list of numbers.
-  combine(...numbers: Array<number>) {
+  combineIds(...numbers: Array<number>) {
     return numbers.reduce((acc, value) => 0.5 * (acc + value) * (acc + value + 1) + value);
   }
 
@@ -281,7 +281,8 @@ class Skeleton {
   }
 
   createNode(treeId: number, node: NodeType, treeColor: Vector3, updateBoundingSphere: boolean = true) {
-    const id = this.combine(node.id, treeId);
+    debugger
+    const id = this.combineIds(node.id, treeId);
     this.create(id, this.nodes, updateBoundingSphere, ({ buffer, index }) => {
       const attributes = buffer.geometry.attributes;
       attributes.position.set(node.position, index * 3);
@@ -295,7 +296,7 @@ class Skeleton {
   }
 
   deleteNode(treeId: number, nodeId: number) {
-    const id = this.combine(nodeId, treeId);
+    const id = this.combineIds(nodeId, treeId);
     this.delete(id, this.nodes, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.type;
       attribute.array[index] = NodeTypes.INVALID;
@@ -304,7 +305,7 @@ class Skeleton {
   }
 
   updateNodeColor(treeId: number, nodeId: number, color: Vector3) {
-    const id = this.combine(nodeId, treeId);
+    const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.color;
       attribute.set(color, index * 3);
@@ -313,7 +314,7 @@ class Skeleton {
   }
 
   updateNodeRadius(treeId: number, nodeId: number, radius: number) {
-    const id = this.combine(nodeId, treeId);
+    const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.radius;
       attribute.array[index] = radius;
@@ -322,7 +323,7 @@ class Skeleton {
   }
 
   updateNodeType(treeId: number, nodeId: number, type: number) {
-    const id = this.combine(nodeId, treeId);
+    const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.type;
       attribute.array[index] = type;
@@ -331,7 +332,7 @@ class Skeleton {
   }
 
   createEdge(treeId: number, source: NodeType, target: NodeType, updateBoundingSphere: boolean = true) {
-    const id = this.combine(treeId, source.id, target.id);
+    const id = this.combineIds(treeId, source.id, target.id);
     this.create(id, this.edges, updateBoundingSphere, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.position;
       attribute.set(source.position, index * 6);
@@ -341,7 +342,7 @@ class Skeleton {
   }
 
   deleteEdge(treeId: number, sourceId: number, targetId: number) {
-    const id = this.combine(treeId, sourceId, targetId);
+    const id = this.combineIds(treeId, sourceId, targetId);
     this.delete(id, this.edges, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.position;
       attribute.set([0, 0, 0, 0, 0, 0], index * 6);

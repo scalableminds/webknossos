@@ -41,6 +41,7 @@ type BufferCollection = {
   idToBufferPosition: Map<number, BufferPosition>,
   freeList: Array<BufferPosition>,
   helper: BufferHelper,
+  material: THREE.Material,
 }
 
 type BufferOperation = (position: BufferPosition) => Array<THREE.BufferAttribute>;
@@ -55,8 +56,7 @@ const NodeBufferHelper = {
     geometry.addAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
   },
 
-  buildMesh(geometry: THREE.BufferGeometry): THREE.Mesh {
-    const material = ParticleMaterialFactory.getMaterial();
+  buildMesh(geometry: THREE.BufferGeometry, material: THREE.RawShaderMaterial): THREE.Mesh {
     return new THREE.Points(geometry, material);
   },
 };
@@ -66,11 +66,7 @@ const EdgeBufferHelper = {
     geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 6), 3));
   },
 
-  buildMesh(geometry: THREE.BufferGeometry): THREE.Mesh {
-    const material = new THREE.LineBasicMaterial({
-      color: new THREE.Color().fromArray([1, 0, 1]),
-      linewidth: 10,
-    });
+  buildMesh(geometry: THREE.BufferGeometry, material: THREE.LineBasicMaterial): THREE.Mesh {
     return new THREE.LineSegments(geometry, material);
   },
 };
@@ -90,7 +86,6 @@ class Skeleton {
 
   nodes: BufferCollection;
   edges: BufferCollection;
-  nodeMaterial: THREE.RawShaderMaterial;
 
   constructor() {
     _.extend(this, Backbone.Events);
@@ -98,12 +93,16 @@ class Skeleton {
     this.isVisible = true;
     this.showInactiveTrees = true;
 
-    const trees = Store.getState().skeletonTracing.trees;
+    const state = Store.getState();
+    const trees = state.skeletonTracing.trees;
     const nodeCount = _.sum(_.map(trees, tree => _.size(tree.nodes)));
     const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
-    this.nodes = this.initializeBufferCollection(nodeCount, NodeBufferHelper);
-    this.edges = this.initializeBufferCollection(edgeCount, EdgeBufferHelper);
-    this.nodeMaterial = ParticleMaterialFactory.getMaterial();
+
+    const nodeMaterial = ParticleMaterialFactory.getMaterial();
+    const edgeMaterial = new THREE.LineBasicMaterial();
+
+    this.nodes = this.initializeBufferCollection(nodeCount, nodeMaterial, NodeBufferHelper);
+    this.edges = this.initializeBufferCollection(edgeCount, edgeMaterial, EdgeBufferHelper);
 
     for (const tree of _.values(trees)) {
       this.createTree(tree);
@@ -119,32 +118,33 @@ class Skeleton {
     this.prevTracing = Store.getState().skeletonTracing;
   }
 
-  initializeBufferCollection(initialCapacity: number, helper: BufferHelper): BufferCollection {
-    const initialBuffer = this.initializeBuffer(Math.max(initialCapacity, MAX_CAPACITY), helper);
+  initializeBufferCollection(initialCapacity: number, material: THREE.Material, helper: BufferHelper): BufferCollection {
+    const initialBuffer = this.initializeBuffer(Math.max(initialCapacity, MAX_CAPACITY), material, helper);
 
     return {
       buffers: [initialBuffer],
       idToBufferPosition: new Map(),
       freeList: [],
       helper,
+      material,
     };
   }
 
-  initializeBuffer(capacity: number, helper: BufferHelper): Buffer {
+  initializeBuffer(capacity: number, material: THREE.Material, helper: BufferHelper): Buffer {
     const geometry = new THREE.BufferGeometry();
     helper.addAttributes(geometry, capacity);
     return {
       capacity,
       nextIndex: 0,
       geometry,
-      mesh: helper.buildMesh(geometry),
+      mesh: helper.buildMesh(geometry, material),
     };
   }
 
   create(id: number, collection: BufferCollection, updateBoundingSphere: boolean, createFunc: BufferOperation) {
     let currentBuffer = collection.buffers[0];
     if (collection.freeList.length === 0 && currentBuffer.nextIndex >= currentBuffer.capacity) {
-      currentBuffer = this.initializeBuffer(MAX_CAPACITY, collection.helper);
+      currentBuffer = this.initializeBuffer(MAX_CAPACITY, collection.material, collection.helper);
       this.trigger("newGeometries", [currentBuffer.mesh]); // TODO remove
       collection.buffers.unshift(currentBuffer);
     }
@@ -244,12 +244,14 @@ class Skeleton {
     }
 
     const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
-    this.nodeMaterial.uniforms.planeZoomFactor.value = getPlaneScalingFactor(Store.getState().flycam);
-    this.nodeMaterial.uniforms.overrideParticleSize.value = particleSize;
-    this.nodeMaterial.uniforms.overrideNodeRadius.value = overrideNodeRadius;
-    this.nodeMaterial.uniforms.viewportScale.value = scale;
-    this.nodeMaterial.uniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
-    this.nodeMaterial.uniforms.activeNodeId.value = state.skeletonTracing.activeNodeId;
+    this.nodes.material.uniforms.planeZoomFactor.value = getPlaneScalingFactor(Store.getState().flycam);
+    this.nodes.material.uniforms.overrideParticleSize.value = particleSize;
+    this.nodes.material.uniforms.overrideNodeRadius.value = overrideNodeRadius;
+    this.nodes.material.uniforms.viewportScale.value = scale;
+    this.nodes.material.uniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
+    this.nodes.material.uniforms.activeNodeId.value = state.skeletonTracing.activeNodeId;
+
+    this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
 
     this.prevTracing = tracing;
   }
@@ -281,7 +283,6 @@ class Skeleton {
   }
 
   createNode(treeId: number, node: NodeType, treeColor: Vector3, updateBoundingSphere: boolean = true) {
-    debugger
     const id = this.combineIds(node.id, treeId);
     this.create(id, this.nodes, updateBoundingSphere, ({ buffer, index }) => {
       const attributes = buffer.geometry.attributes;
@@ -426,7 +427,7 @@ class Skeleton {
   animateNodeScale(from, to) {
     return new Promise((resolve, reject) => {
       const setScaleFactor = (scale) => {
-        this.nodeMaterial.uniforms.activeNodeScaleFactor.value = scale;
+        this.nodes.material.uniforms.activeNodeScaleFactor.value = scale;
       };
 
       const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });

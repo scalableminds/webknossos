@@ -183,6 +183,7 @@ class DataCube {
       return false;
     }
 
+    /* Removed for performance reasons
     ErrorHandling.assertExists(
       this.cubes[zoomStep],
       "Cube for given zoomStep does not exist", {
@@ -190,14 +191,15 @@ class DataCube {
         zoomStep,
         zoomStepCount: this.ZOOM_STEP_COUNT,
       },
-    );
+    );*/
 
     return this.boundingBox.containsBucket([x, y, z, zoomStep]);
   }
 
 
   getBucketIndex([x, y, z, zoomStep]: Vector4): ?number {
-    ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
+    // Removed for performance reasons
+    // ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
 
     const cube = this.cubes[zoomStep];
     if (cube != null) {

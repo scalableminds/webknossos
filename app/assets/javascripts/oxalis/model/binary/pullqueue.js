@@ -53,7 +53,6 @@ class PullQueue {
 
   pull(): Array<Promise<void>> {
     // Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
-    this.queue = _.filter(this.queue, item => this.cube.getOrCreateBucket(item.bucket).needsRequest());
     this.queue = _.sortBy(this.queue, item => item.priority);
 
     // Starting to download some buckets
@@ -62,10 +61,13 @@ class PullQueue {
       const batch = [];
       while (batch.length < this.BATCH_SIZE && this.queue.length) {
         const address = this.queue.shift().bucket;
-        const bucket = this.cube.getOrCreateBucket(address);
-        if (bucket.type === "data" && bucket.needsRequest()) {
-          batch.push(address);
-          bucket.pull();
+        const needsRequest = this.cube.getOrCreateBucket(address).needsRequest();
+        if (needsRequest) {
+          const bucket = this.cube.getOrCreateBucket(address);
+          if (bucket.type === "data" && bucket.needsRequest()) {
+            batch.push(address);
+            bucket.pull();
+          }
         }
       }
 

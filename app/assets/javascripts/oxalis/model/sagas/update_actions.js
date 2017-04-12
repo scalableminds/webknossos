@@ -1,22 +1,16 @@
 // @flow
 import type { SkeletonTracingType, BranchPointType, CommentType, TreeType, NodeType } from "oxalis/store";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
-
-function rgb2rgba(color: Vector3, alpha?: number = 1): Vector4 {
-  return [
-    color[0], color[1], color[2], alpha,
-  ];
-}
 
 type UpdateTreeUpdateAction = {
   action: "createTree" | "updateTree",
   value: {
     id: number,
     updatedId: ?number,
-    color: Vector4,
+    color: Vector3,
     name: string,
     timestamp: number,
     comments: Array<CommentType>,
@@ -100,7 +94,7 @@ export function createTree(tree: TreeType): UpdateTreeUpdateAction {
     value: {
       id: tree.treeId,
       updatedId: undefined,
-      color: rgb2rgba(tree.color),
+      color: tree.color,
       name: tree.name,
       timestamp: tree.timestamp,
       comments: tree.comments,
@@ -122,7 +116,7 @@ export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
     value: {
       id: tree.treeId,
       updatedId: tree.treeId,
-      color: rgb2rgba(tree.color),
+      color: tree.color,
       name: tree.name,
       timestamp: tree.timestamp,
       comments: tree.comments,

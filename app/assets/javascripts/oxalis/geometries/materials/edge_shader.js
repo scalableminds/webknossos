@@ -5,7 +5,6 @@
 
 import * as THREE from "three";
 import Store from "oxalis/store";
-import { OrthoViews } from "oxalis/constants";
 
 class EdgeShader {
 

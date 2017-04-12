@@ -66,7 +66,6 @@ class AbstractPlaneMaterialFactory {
     this.material = new THREE.ShaderMaterial(_.extend(options, {
       uniforms: this.uniforms,
       vertexShader: this.getVertexShader(),
-      fragmentShader: this.getFragmentShader(),
     }));
 
     this.material.setData = (name, data) => {

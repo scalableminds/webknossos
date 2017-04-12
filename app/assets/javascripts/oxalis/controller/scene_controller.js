@@ -25,7 +25,7 @@ import type { BoundingBoxType } from "oxalis/model";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 
 class SceneController {
-  skeleton: ?Skeleton;
+  skeleton: Skeleton;
   CUBE_COLOR: number;
   model: Model;
   current: number;

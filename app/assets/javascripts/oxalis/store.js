@@ -8,7 +8,7 @@
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import type { Vector3, Vector6, OrthoViewType } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
@@ -285,6 +285,7 @@ const defaultState: OxalisState = {
     tracingType: "Explorational",
     activeTreeId: null,
     activeNodeId: null,
+    cachedMaxNodeId: NaN,
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,

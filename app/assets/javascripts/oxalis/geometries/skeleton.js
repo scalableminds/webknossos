@@ -11,10 +11,10 @@ import Store from "oxalis/throttled_store";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import NodeShader, { NodeTypes } from "oxalis/geometries/materials/node_shader";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
-import { OrthoViews, OrthoViewType } from "oxalis/constants";
+import { OrthoViews } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, OrthoViewType } from "oxalis/constants";
 
 
 const MAX_CAPACITY = 1000;

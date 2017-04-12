@@ -16,7 +16,6 @@ import type { Bucket } from "oxalis/model/binary/bucket";
 import ArbitraryCubeAdapter from "oxalis/model/binary/arbitrary_cube_adapter";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import BoundingBox from "oxalis/model/binary/bounding_box";
-import ErrorHandling from "libs/error_handling";
 
 class CubeEntry {
   data: Map<number, Bucket>;

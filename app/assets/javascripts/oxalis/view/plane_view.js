@@ -12,7 +12,6 @@ import Store from "oxalis/store";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
 import Model from "oxalis/model";
 import View from "oxalis/view";
-import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 
 class PlaneView {

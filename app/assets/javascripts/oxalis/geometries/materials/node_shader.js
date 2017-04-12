@@ -7,7 +7,6 @@ import * as THREE from "three";
 import Store from "oxalis/store";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import { OrthoViews } from "oxalis/constants";
 
 export const NodeTypes = {
   INVALID: -1.0,

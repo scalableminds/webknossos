@@ -357,11 +357,6 @@ class Skeleton {
     this.treeColorTexture.needsUpdate = true;
   }
 
-  setSizeAttenuation(/* sizeAttenuation: boolean */) {
-    /* return _.map(this.treeGeometryCache, tree =>
-      tree.setSizeAttenuation(sizeAttenuation));*/
-  }
-
   updateForCam(camera: OrthoViewType) {
     const is3DView = camera === OrthoViews.TDView;
 

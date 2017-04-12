@@ -284,8 +284,6 @@ class SceneController {
     this.cube.setVisibility(false);
     this.userBoundingBox.setVisibility(false);
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(false));
-
-    Utils.__guard__(this.skeleton, x2 => x2.setSizeAttenuation(true));
   }
 
 
@@ -296,8 +294,6 @@ class SceneController {
     this.cube.setVisibility(true);
     this.userBoundingBox.setVisibility(true);
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(true));
-
-    Utils.__guard__(this.skeleton, x1 => x1.setSizeAttenuation(false));
   }
 
 

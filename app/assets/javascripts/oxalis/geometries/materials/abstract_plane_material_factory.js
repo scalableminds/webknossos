@@ -9,10 +9,22 @@ import app from "app";
 import Utils from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import AbstractMaterialFactory from "oxalis/geometries/materials/abstract_material_factory";
 
-class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
+type Uniform = {
+  type: string,
+  value: any,
+};
 
+type Uniforms = {
+  [key: string]: Uniform,
+};
+
+class AbstractPlaneMaterialFactory {
+
+  model: Model;
+  material: THREE.ShaderMaterial;
+  uniforms: Uniforms;
+  attributes: Object;
   textures: {
     [key: string]: THREE.DataTexture;
   };
@@ -20,11 +32,12 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
   maxFilter: THREE.NearestFilter;
   tWidth: number;
 
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-
   constructor(model: Model, tWidth: number) {
-    super(model);
+    this.model = model;
+
+    this.setupUniforms();
+    this.makeMaterial();
+    this.setupChangeListeners();
     this.tWidth = tWidth;
     this.minFilter = THREE.NearestFilter;
     this.maxFilter = THREE.NearestFilter;
@@ -33,7 +46,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
 
   setupUniforms() {
-    super.setupUniforms();
+    this.uniforms = {};
 
     for (const binary of this.model.getColorBinaries()) {
       const name = this.sanitizeName(binary.name);
@@ -50,7 +63,11 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
 
   makeMaterial(options) {
-    super.makeMaterial(options);
+    this.material = new THREE.ShaderMaterial(_.extend(options, {
+      uniforms: this.uniforms,
+      vertexShader: this.getVertexShader(),
+      fragmentShader: this.getFragmentShader(),
+    }));
 
     this.material.setData = (name, data) => {
       const textureName = this.sanitizeName(name);
@@ -73,6 +90,9 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
     });
   }
 
+  getMaterial() {
+    return this.material;
+  }
 
   createTextures() {
     throw new Error("Subclass responsibility");
@@ -103,13 +123,8 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
 
   getVertexShader() {
     return `\
-precision highp float;
-precision highp int;
 
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
-attribute vec3 position;
-attribute vec2 uv;
+
 varying vec2 vUv;
 
 void main() {

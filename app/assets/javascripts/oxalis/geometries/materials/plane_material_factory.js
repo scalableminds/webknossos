@@ -122,9 +122,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     return _.template(
       `\
-precision highp float;
-precision highp int;
-
 <% _.each(layers, function(name) { %>
   uniform sampler2D <%= name %>_texture;
   uniform float <%= name %>_brightness;

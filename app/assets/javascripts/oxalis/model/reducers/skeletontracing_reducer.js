@@ -147,11 +147,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const { timestamp, treeId } = action;
       return getTree(state.skeletonTracing, treeId)
         .chain(tree => deleteTree(state, tree, timestamp))
-        .map(([trees, newActiveTreeId, newActiveNodeId]) =>
+        .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
           update(state, { skeletonTracing: {
             trees: { $set: trees },
             activeTreeId: { $set: newActiveTreeId },
             activeNodeId: { $set: newActiveNodeId },
+            cachedMaxNodeId: { $set: newMaxNodeId },
           } }))
         .getOrElse(state);
     }

@@ -75,6 +75,7 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
   if (allowUpdate) {
     let newActiveNodeId = node.id;
     let newActiveTreeId = tree.treeId;
+    let newMaxNodeId = state.skeletonTracing.cachedMaxNodeId;
     let newTrees = skeletonTracing.trees;
 
     // Delete Node
@@ -202,7 +203,13 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
       newActiveTreeId = newActiveTree.treeId;
     }
 
-    return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId]);
+    // if the deleted node had the max id, find the new largest id
+    if (node.id === newMaxNodeId) {
+      newMaxNodeId = _.max(_.flatMap(newTrees, __ => _.map(__.nodes, node => node.id)));
+      newMaxNodeId = newMaxNodeId != null ? newMaxNodeId : -1;
+    }
+
+    return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
   } else {
     return Maybe.Nothing();
   }

@@ -24,7 +24,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       })), "id");
 
       const activeNodeId = contentData.activeNode ? contentData.activeNode : null;
-      const cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id))) || -1;
+      let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
+      cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : -1;
+
       const activeTree = activeNodeId ? findTreeByNodeId(trees, activeNodeId).get() : null;
 
       let activeTreeId = null;
@@ -78,11 +80,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const { timestamp, nodeId, treeId } = action;
       return getNodeAndTree(state.skeletonTracing, nodeId, treeId)
         .chain(([tree, node]) => deleteNode(state, tree, node, timestamp))
-        .map(([trees, newActiveTreeId, newActiveNodeId]) =>
+        .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
           update(state, { skeletonTracing: {
             trees: { $set: trees },
             activeNodeId: { $set: newActiveNodeId },
             activeTreeId: { $set: newActiveTreeId },
+            cachedMaxNodeId: { $set: newMaxNodeId },
           } }),
         ).getOrElse(state);
     }

@@ -285,7 +285,7 @@ const defaultState: OxalisState = {
     tracingType: "Explorational",
     activeTreeId: null,
     activeNodeId: null,
-    cachedMaxNodeId: NaN,
+    cachedMaxNodeId: -1,
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,

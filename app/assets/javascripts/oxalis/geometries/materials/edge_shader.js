@@ -49,7 +49,7 @@ class EdgeShader {
       },
       is3DView: {
         type: "i",
-        value: state.temporaryConfiguration.activeCamera === OrthoViews.TDViews,
+        value: false,
       },
     };
   }
@@ -77,14 +77,17 @@ uniform sampler2D treeColors;
 attribute vec3 position;
 attribute float treeId;
 
+bool isVisible() {
+  bool b_shouldHideInactiveTrees = shouldHideInactiveTrees == 1;
+  bool b_shouldHideAllSkeletons = shouldHideAllSkeletons == 1;
+  bool b_is3DView = is3DView == 1;
+
+  return (b_is3DView || !b_shouldHideAllSkeletons) && (!b_shouldHideInactiveTrees || activeTreeId == treeId);
+}
+
 void main() {
 
-    bool b_shouldHideInactiveTrees = shouldHideInactiveTrees == 1;
-    bool b_shouldHideAllSkeletons = shouldHideAllSkeletons == 1;
-    bool b_is3DView = is3DView == 1;
-
-    bool isVisible = (b_is3DView || !b_shouldHideAllSkeletons) && (!b_shouldHideInactiveTrees || activeTreeId == treeId);
-    if (!isVisible) {
+    if (!isVisible()) {
       gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
       return;
     }

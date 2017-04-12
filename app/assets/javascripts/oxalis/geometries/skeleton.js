@@ -253,14 +253,11 @@ class Skeleton {
     this.nodes.material.uniforms.activeNodeId.value = state.skeletonTracing.activeNodeId;
     this.nodes.material.uniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
     this.nodes.material.uniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
-    this.nodes.material.uniforms.is3DView.value = state.temporaryConfiguration.activeCamera === OrthoViews.TDView;
-
-    console.log(state.temporaryConfiguration.activeCamera)
 
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
+    this.edges.material.uniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
     this.edges.material.uniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
     this.edges.material.uniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
-    this.edges.material.uniforms.is3DView.value = state.temporaryConfiguration.activeCamera === OrthoViews.TDView;
 
     this.prevTracing = tracing;
   }
@@ -363,6 +360,13 @@ class Skeleton {
   setSizeAttenuation(/* sizeAttenuation: boolean */) {
     /* return _.map(this.treeGeometryCache, tree =>
       tree.setSizeAttenuation(sizeAttenuation));*/
+  }
+
+  updateForCam(camera: OrthoViewType) {
+    const is3DView = camera === OrthoViews.TDView;
+
+    this.nodes.material.uniforms.is3DView.value = is3DView;
+    this.edges.material.uniforms.is3DView.value = is3DView;
   }
 
 

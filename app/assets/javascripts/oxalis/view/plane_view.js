@@ -163,9 +163,7 @@ class PlaneView {
       this.renderer.clear();
 
       for (const plane of OrthoViewValues) {
-
-        console.log("render", plane)
-        Store.dispatch(updateTemporarySettingAction("activeCamera", plane));
+        this.trigger("renderCam", plane);
         setupRenderArea(
           viewport[plane][0],
           viewport[plane][1],

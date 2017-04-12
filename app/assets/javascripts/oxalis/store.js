@@ -192,7 +192,6 @@ export type TemporaryConfigurationType = {
   +boundingBox: Vector6,
   +shouldHideInactiveTrees: boolean,
   +shouldHideAllSkeletons: boolean,
-  +activeCamera: OrthoViewType,
 };
 
 export type TaskType = {
@@ -264,7 +263,6 @@ const defaultState: OxalisState = {
     boundingBox: [0, 0, 0, 0, 0, 0],
     shouldHideInactiveTrees: false,
     shouldHideAllSkeletons: false,
-    activeCamera: "PLANE_XY",
   },
   task: null,
   dataset: {

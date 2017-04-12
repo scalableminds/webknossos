@@ -85,7 +85,7 @@ class NodeShader {
       },
       is3DView: {
         type: "i",
-        value: state.temporaryConfiguration.activeCamera === OrthoViews.TDViews,
+        value: 0,
       },
     };
   }
@@ -152,7 +152,7 @@ bool isVisible() {
   bool b_shouldHideAllSkeletons = shouldHideAllSkeletons == 1;
   bool b_is3DView = is3DView == 1;
 
-  return (b_is3DView); // || !b_shouldHideAllSkeletons) && (!b_shouldHideInactiveTrees || activeTreeId == treeId);
+  return (b_is3DView || !b_shouldHideAllSkeletons) && (!b_shouldHideInactiveTrees || activeTreeId == treeId);
 }
 
 void main() {

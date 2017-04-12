@@ -1,6 +1,6 @@
 /**
  * abstract_plane_material_factory.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -18,6 +18,15 @@ type Uniform = {
 type Uniforms = {
   [key: string]: Uniform,
 };
+
+export type ShaderMaterialOptionsType = {
+  uniforms?: Uniforms,
+  vertexShader?: string,
+  fragmentShader?: string,
+  polygonOffset?: boolean,
+  polygonOffsetFactor?: number,
+  polygonOffsetUnits?: number,
+}
 
 class AbstractPlaneMaterialFactory {
 
@@ -45,7 +54,7 @@ class AbstractPlaneMaterialFactory {
   }
 
 
-  setupUniforms() {
+  setupUniforms(): void {
     this.uniforms = {};
 
     for (const binary of this.model.getColorBinaries()) {
@@ -62,10 +71,11 @@ class AbstractPlaneMaterialFactory {
   }
 
 
-  makeMaterial(options) {
+  makeMaterial(options?: ShaderMaterialOptionsType):void {
     this.material = new THREE.ShaderMaterial(_.extend(options, {
       uniforms: this.uniforms,
       vertexShader: this.getVertexShader(),
+      fragmentShader: this.getFragmentShader(),
     }));
 
     this.material.setData = (name, data) => {
@@ -76,7 +86,7 @@ class AbstractPlaneMaterialFactory {
   }
 
 
-  setupChangeListeners() {
+  setupChangeListeners():void {
     Store.subscribe(() => {
       const layerSettings = Store.getState().datasetConfiguration.layers;
       _.forEach(layerSettings, (settings, layerName) => {
@@ -89,25 +99,25 @@ class AbstractPlaneMaterialFactory {
     });
   }
 
-  getMaterial() {
+  getMaterial(): THREE.ShaderMaterial {
     return this.material;
   }
 
-  createTextures() {
+  createTextures():void {
     throw new Error("Subclass responsibility");
   }
 
 
-  sanitizeName(name) {
+  sanitizeName(name: ?string): string {
     // Make sure name starts with a letter and contains
     // no "-" signs
 
-    if (name == null) { return null; }
+    if (name == null) { return ""; }
     return `binary_${name.replace(/-/g, "_")}`;
   }
 
 
-  createDataTexture(width, bytes) {
+  createDataTexture(width: number, bytes: number):void {
     const format = bytes === 1 ? THREE.LuminanceFormat : THREE.RGBFormat;
 
     return new THREE.DataTexture(
@@ -119,8 +129,12 @@ class AbstractPlaneMaterialFactory {
     );
   }
 
+  getFragmentShader():string {
+    throw new Error("Subclass responsibility");
+  }
 
-  getVertexShader() {
+
+  getVertexShader():string {
     return `\
 
 

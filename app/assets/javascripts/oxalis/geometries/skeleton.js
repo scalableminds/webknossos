@@ -102,12 +102,13 @@ class Skeleton {
     return meshes;
   }
 
-  getTreeGeometry(treeId: ?number) {
-    if (treeId == null) {
-      treeId = getActiveTree(Store.getState().tracing).map(tree => tree.treeId).getOrElse(null);
+  getTreeGeometry(treeId?: number) {
+    let id = treeId;
+    if (id == null) {
+      id = getActiveTree(Store.getState().tracing).map(tree => tree.treeId).getOrElse(null);
     }
-    if (treeId != null) {
-      return this.treeGeometryCache[treeId];
+    if (id != null) {
+      return this.treeGeometryCache[id];
     }
     return null;
   }
@@ -163,9 +164,7 @@ class Skeleton {
     for (const mesh of this.getMeshes()) {
       mesh.isVisible = visible;
     }
-    const treeGeometry = this.getTreeGeometry(
-      getActiveTree(Store.getState().tracing).map(tree => tree.treeId).getOrElse(null),
-    );
+    const treeGeometry = this.getTreeGeometry();
     if (treeGeometry != null) {
       treeGeometry.edges.isVisible = true;
       treeGeometry.nodes.isVisible = true;

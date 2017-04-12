@@ -86,17 +86,16 @@ class VolumeTracingPlaneController extends PlaneController {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
         const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
 
-        getMode(Store.getState().tracing).map((mode) => {
-          if (mode === constants.VOLUME_MODE_MOVE) {
-            this.move([
-              (delta.x * mouseInversionX) / this.planeView.scaleFactor,
-              (delta.y * mouseInversionY) / this.planeView.scaleFactor,
-              0,
-            ]);
-          } else {
-            Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
-          }
-        });
+        const mode = getMode(Store.getState().tracing).get();
+        if (mode === constants.VOLUME_MODE_MOVE) {
+          this.move([
+            (delta.x * mouseInversionX) / this.planeView.scaleFactor,
+            (delta.y * mouseInversionY) / this.planeView.scaleFactor,
+            0,
+          ]);
+        } else {
+          Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
+        }
       },
 
       leftMouseDown: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) => {
@@ -112,11 +111,10 @@ class VolumeTracingPlaneController extends PlaneController {
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
-        getMode(Store.getState().tracing).map((mode) => {
-          if (mode === constants.VOLUME_MODE_TRACE) {
-            Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
-          }
-        });
+        const mode = getMode(Store.getState().tracing).get();
+        if (mode === constants.VOLUME_MODE_TRACE) {
+          Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
+        }
       },
 
       rightMouseDown: (pos: Point2, plane: OrthoViewType) => {

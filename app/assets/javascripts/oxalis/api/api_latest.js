@@ -87,8 +87,8 @@ class TracingApi {
       // Convert nodeId to node
       if (_.isNumber(nodeId)) {
         const tree = treeId != null ?
-        skeletonTracing.trees[treeId] :
-        findTreeByNodeId(skeletonTracing.trees, nodeId).get();
+          skeletonTracing.trees[treeId] :
+          findTreeByNodeId(skeletonTracing.trees, nodeId).get();
         if (tree == null) {
           throw Error(`Couldn't find node ${nodeId}.`);
         }

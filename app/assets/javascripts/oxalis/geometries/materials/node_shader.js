@@ -165,7 +165,7 @@ void main() {
     vec2 treeIdToTextureCoordinate = vec2(fract(treeId / 1024.0), treeId / (1024.0 * 1024.0));
     color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
 
-    if (overrideNodeRadius == 1) {
+    if (overrideNodeRadius == 1 || is3DView == 1) {
       gl_PointSize = overrideParticleSize;
     } else {
       gl_PointSize = max(

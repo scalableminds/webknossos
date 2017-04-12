@@ -9,17 +9,15 @@
 import type { OxalisState, VolumeTracingType, VolumeCellType } from "oxalis/store";
 import type { VolumeModeType, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
-import Toast from "libs/toast";
 import update from "immutability-helper";
-import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
 import { setRotationReducer } from "oxalis/model/reducers/flycam_reducer";
 
 export function setModeReducer(state: OxalisState, volumeTracing: VolumeTracingType, mode: VolumeModeType) {
   if (mode === volumeTracing.viewMode) {
     return state;
   }
-  if (mode === Constants.VOLUME_MODE_TRACE && getIntegerZoomStep(state) > 1) {
-    Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
+  if (mode === Constants.VOLUME_MODE_TRACE && isVolumeTracingDisallowed(state)) {
     return state;
   }
 
@@ -41,9 +39,15 @@ export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTr
 }
 
 export function createCellReducer(state: OxalisState, volumeTracing: VolumeTracingType, id: ?number) {
+  if (id === 0) {
+    // cellId 0 means there is no annotation, so there must not be a cell with id 0
+    return state;
+  }
   let newIdCount = volumeTracing.idCount;
   if (id == null) {
     id = newIdCount++;
+  } else {
+    newIdCount = Math.max(id + 1, newIdCount);
   }
 
   // Create the new VolumeCell
@@ -71,6 +75,11 @@ export function updateDirectionReducer(state: OxalisState, volumeTracing: Volume
 }
 
 export function addToLayerReducer(state: OxalisState, volumeTracing: VolumeTracingType, position: Vector3) {
+  const { allowUpdate } = state.tracing.restrictions;
+  if (!allowUpdate || isVolumeTracingDisallowed(state)) {
+    return state;
+  }
+
   return update(state, { tracing: {
     contourList: { $push: [position] },
   } });

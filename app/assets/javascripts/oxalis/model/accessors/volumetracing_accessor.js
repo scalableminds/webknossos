@@ -3,8 +3,9 @@
  * @flow
  */
 import Maybe from "data.maybe";
-import type { TracingType, VolumeTracingType } from "oxalis/store";
+import type { TracingType, VolumeTracingType, OxalisState } from "oxalis/store";
 import type { VolumeModeType } from "oxalis/constants";
+import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
 export function getVolumeTracing(tracing: TracingType): Maybe<VolumeTracingType> {
   if (tracing.type === "volume") {
@@ -25,4 +26,8 @@ export function getMode(tracing: TracingType): Maybe<VolumeModeType> {
     const { viewMode } = volumeTracing;
     return viewMode;
   });
+}
+
+export function isVolumeTracingDisallowed(state: OxalisState) {
+  return getIntegerZoomStep(state) > 1;
 }

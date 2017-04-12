@@ -7,9 +7,11 @@ import { call, select, put, take, race } from "redux-saga/effects";
 import { updateDirectionAction, resetContourAction } from "oxalis/model/actions/volumetracing_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import Dimensions from "oxalis/model/dimensions";
-import { getPosition, getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { OrthoViewType } from "oxalis/constants";
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
@@ -21,8 +23,8 @@ export function* editVolumeLayerAsync(): Generator<*, *, *> {
     const startEditingAction = yield take("START_EDITING");
 
     // Volume tracing for higher zoomsteps is currently not allowed
-    if (yield select(state => getIntegerZoomStep(state) > 1)) {
-      break;
+    if (yield select(state => isVolumeTracingDisallowed(state))) {
+      continue;
     }
     const currentLayer = yield call(createVolumeLayer, startEditingAction.planeId);
 
@@ -41,20 +43,20 @@ export function* editVolumeLayerAsync(): Generator<*, *, *> {
       currentLayer.addContour(addToLayerAction.position);
     }
 
-    if (abortEditing) break;
+    if (abortEditing) continue;
 
     yield call(finishLayer, currentLayer);
   }
 }
 
-function* createVolumeLayer(planeId: OrthoViewType) {
+function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
   const position = Dimensions.roundCoordinate(yield select(state => getPosition(state.flycam)));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
   return new VolumeLayer(planeId, thirdDimValue);
 }
 
 
-export function* finishLayer(layer: VolumeLayer) {
+export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
   if ((layer == null) || layer.isEmpty()) {
     return;
   }
@@ -71,6 +73,18 @@ export function* finishLayer(layer: VolumeLayer) {
 
   yield put(updateDirectionAction(layer.getCentroid()));
   yield put(resetContourAction());
+}
+
+
+export function* disallowVolumeTracingWarning(): Generator<*, *, *> {
+  while (true) {
+    const action = yield take(["SET_MODE", "TOGGLE_MODE"]);
+    const curMode = yield select(state => state.tracing.viewMode);
+    if (curMode !== action.mode) {
+      // If the mode didn't change, it was not allowed so display the warning
+      Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
+    }
+  }
 }
 
 export function* diffVolumeTracing(

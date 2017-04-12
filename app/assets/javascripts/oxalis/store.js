@@ -267,7 +267,7 @@ export type OxalisState = {
   +flycam: FlycamType,
 };
 
-const defaultState: OxalisState = {
+export const defaultState: OxalisState = {
   datasetConfiguration: {
     datasetName: "",
     fourBit: true,

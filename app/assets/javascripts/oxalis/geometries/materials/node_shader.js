@@ -104,15 +104,15 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float planeZoomFactor;
 uniform float datasetScale;
-uniform float overrideParticleSize;
 uniform float viewportScale;
-uniform float activeNodeScaleFactor;
 uniform float activeNodeId;
 uniform float activeTreeId;
-uniform int overrideNodeRadius;
-uniform int shouldHideInactiveTrees;
-uniform int shouldHideAllSkeletons;
-uniform int is3DView;
+uniform float activeNodeScaleFactor; // used for the "new node" animation
+uniform float overrideParticleSize; // node radius for equally size nodes
+uniform int overrideNodeRadius; // bool activates equaly node radius for all nodes
+uniform int shouldHideInactiveTrees; // bool show only the active tree hide everything else, triggered by shortcut "2"
+uniform int shouldHideAllSkeletons;  // bool hide all skeletons in the orthogonal planes (not 3DView), triggered by shortcut "1"
+uniform int is3DView; // bool indicates whether we are currently rendering the 3D viewport
 
 uniform sampler2D treeColors;
 
@@ -155,6 +155,7 @@ bool isVisible() {
 }
 
 void main() {
+    // VISIBILITY CAN BE TOGGLED THROUGH KEYBOARD SHORTCUTS
     if (!isVisible()) {
       gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
       return;
@@ -164,6 +165,7 @@ void main() {
     vec2 treeIdToTextureCoordinate = vec2(fract(treeId / 1024.0), treeId / (1024.0 * 1024.0));
     color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
 
+    // NODE RADIUS
     if (overrideNodeRadius == 1 || is3DView == 1) {
       gl_PointSize = overrideParticleSize;
     } else {
@@ -178,11 +180,13 @@ void main() {
       gl_Position = vec4(-1.0, -1.0, -1.0, 0.0);
     }
 
+    // NODE COLOR FOR ACTIVE NODE
     if (activeNodeId == nodeId) {
       color = shiftColor(color, 0.25);
       gl_PointSize *= activeNodeScaleFactor;
     }
 
+    // NODE COLOR FOR BRANCH_POINT
     if (type == ${NodeTypes.BRANCH_POINT.toFixed(1)}) {
       color = shiftColor(color, 0.5);
     }

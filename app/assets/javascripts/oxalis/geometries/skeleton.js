@@ -71,10 +71,16 @@ const EdgeBufferHelper = {
   },
 };
 
+/**
+ * Creates and manages the WebGL buffers for drawing skeletons (nodes, edges).
+ * Skeletons are not recreated on every store change according to the functional
+ * react paradigm for performance reasons. Instead we identify more fine granular
+ * actions like node cration/deletion/update etc.
+ * Skeletons are stored in single, large buffers regardless of which tree they belong to.
+ * Nodes are never deleted but marked as type "INVALID" and not drawn by the shader.
+ * @class
+ */
 class Skeleton {
-  // This class is supposed to collect all the Geometries that belong to the skeleton, like
-  // nodes, edges and trees
-
   rootNode: THREE.Object3D;
   prevTracing: SkeletonTracingType;
   nodes: BufferCollection;
@@ -143,6 +149,13 @@ class Skeleton {
     };
   }
 
+  /**
+   * Creates or reuses the WebGL buffers depending on how much capacity is left.
+   * @param id - Id of a node or edge to look up its corresponding buffer
+   * @param collection - collection of all buffers
+   * @param updateBoundingSphere - toggle to update ThreeJS's internals
+   * @param createFunc - callback(buffer, index) that actually creates a node / edge
+   */
   create(id: number, collection: BufferCollection, updateBoundingSphere: boolean, createFunc: BufferOperation) {
     let currentBuffer = collection.buffers[0];
     if (collection.freeList.length === 0 && currentBuffer.nextIndex >= currentBuffer.capacity) {
@@ -158,10 +171,18 @@ class Skeleton {
     }
 
     if (updateBoundingSphere) {
+      // Needs to be done to make ThreeJS happy
+      // Option is disable for the very first buffers created on skeleton initialization for performance
       bufferPosition.buffer.geometry.computeBoundingSphere();
     }
   }
 
+  /**
+   * Finds the corresponding WebGL buffer for a node/edge for deletion/invalidation
+   * @param id - Id of a node or edge to look up its corresponding buffer
+   * @param collection - collection of all buffers
+   * @param deleteFunc - callback(buffer, index) that actually deletes/invalidates a node / edge
+   */
   delete(id: number, collection: BufferCollection, deleteFunc: BufferOperation) {
     const bufferPosition = collection.idToBufferPosition.get(id);
     if (bufferPosition != null) {
@@ -174,6 +195,12 @@ class Skeleton {
     }
   }
 
+  /**
+   * Finds the corresponding WebGL buffer for a node/edge for updates
+   * @param id - Id of a node or edge to look up its corresponding buffer
+   * @param collection - collection of all buffers
+   * @param deleteFunc - callback(buffer, index) that actually updates a node / edge
+   */
   update(id: number, collection: BufferCollection, updateFunc: BufferOperation) {
     const bufferPosition = collection.idToBufferPosition.get(id);
     if (bufferPosition != null) {
@@ -184,6 +211,14 @@ class Skeleton {
     }
   }
 
+  /**
+   * Called on every store update. Diffs the old and new skeleton to identify
+   * more fine granular modify the manipulate the WebGL buffers instead of
+   * replacing them completely on every change.
+   * @param id - Id of a node or edge to look up its corresponding buffer
+   * @param collection - collection of all buffers
+   * @param deleteFunc - callback(buffer, index) that actually updates a node / edge
+   */
   refresh() {
     const state = Store.getState();
     const tracing = state.skeletonTracing;
@@ -244,6 +279,7 @@ class Skeleton {
       this.startNodeHighlightAnimation();
     }
 
+    // Uniforms
     const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
     this.nodes.material.uniforms.planeZoomFactor.value = getPlaneScalingFactor(Store.getState().flycam);
     this.nodes.material.uniforms.overrideParticleSize.value = particleSize;
@@ -262,21 +298,28 @@ class Skeleton {
     this.prevTracing = tracing;
   }
 
-  getAllNodes() {
+  getAllNodes(): Array<THREE.Mesh> {
     return _.map(this.nodes.buffers, buffer => buffer.mesh);
   }
 
-  getRootNode() {
+  getRootNode(): THREE.Object3D {
     return this.rootNode;
   }
 
-  // API
+  // ######### API ###############
 
-  // recursive Cantor pairing to generate a unique id from a list of numbers.
+  /**
+   * Combined node/edge id and a treeId to a single unique id using recursive cantor pairings.
+   * @param numbers - Array of node/edge id and treeId
+   */
   combineIds(...numbers: Array<number>) {
     return numbers.reduce((acc, value) => 0.5 * (acc + value) * (acc + value + 1) + value);
   }
 
+  /**
+   * Utility function to create a complete tree.
+   * Usually called only once initially.
+   */
   createTree(tree: TreeType) {
     for (const node of _.values(tree.nodes)) {
       this.createNode(tree.treeId, node, false);
@@ -290,6 +333,9 @@ class Skeleton {
     this.updateTreeColor(tree.treeId, tree.color);
   }
 
+  /**
+   * Creates a new node in a WebGL buffer.
+   */
   createNode(treeId: number, node: NodeType, updateBoundingSphere: boolean = true) {
     const id = this.combineIds(node.id, treeId);
     this.create(id, this.nodes, updateBoundingSphere, ({ buffer, index }) => {
@@ -303,6 +349,9 @@ class Skeleton {
     });
   }
 
+  /**
+   * Delete/invalidates a node in a WebGL buffer.
+   */
   deleteNode(treeId: number, nodeId: number) {
     const id = this.combineIds(nodeId, treeId);
     this.delete(id, this.nodes, ({ buffer, index }) => {
@@ -312,6 +361,9 @@ class Skeleton {
     });
   }
 
+  /**
+   * Updates a node's radius in a WebGL buffer.
+   */
   updateNodeRadius(treeId: number, nodeId: number, radius: number) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
@@ -321,6 +373,10 @@ class Skeleton {
     });
   }
 
+  /**
+   * Updates a node's type in a WebGL buffer.
+   * @param type - Either of INVALID, NORMAL, BRANCH_POINT
+   */
   updateNodeType(treeId: number, nodeId: number, type: number) {
     const id = this.combineIds(nodeId, treeId);
     this.update(id, this.nodes, ({ buffer, index }) => {
@@ -330,6 +386,9 @@ class Skeleton {
     });
   }
 
+  /**
+   * Creates a new edge in a WebGL buffer.
+   */
   createEdge(treeId: number, source: NodeType, target: NodeType, updateBoundingSphere: boolean = true) {
     const id = this.combineIds(treeId, source.id, target.id);
     this.create(id, this.edges, updateBoundingSphere, ({ buffer, index }) => {
@@ -343,6 +402,10 @@ class Skeleton {
     });
   }
 
+  /**
+   * Deletes/invalidates an edge in a WebGL buffer by changing the source and
+   * target node to [0, 0, 0]. Hence it is not drawn by the GPU.
+   */
   deleteEdge(treeId: number, sourceId: number, targetId: number) {
     const id = this.combineIds(treeId, sourceId, targetId);
     this.delete(id, this.edges, ({ buffer, index }) => {
@@ -352,11 +415,18 @@ class Skeleton {
     });
   }
 
+  /**
+   * Updates a node/edges's color based on the tree color. Colors are stored in
+   * a texture shared between the node and edge shader.
+   */
   updateTreeColor(treeId: number, color: Vector3) {
     this.treeColorTexture.image.data.set(color, treeId * 3);
     this.treeColorTexture.needsUpdate = true;
   }
 
+  /**
+   * Updates shader uniforms depending on which of the four tracing viewports is rendered.
+   */
   updateForCam(camera: OrthoViewType) {
     const is3DView = camera === OrthoViews.TDView;
 
@@ -364,7 +434,10 @@ class Skeleton {
     this.edges.material.uniforms.is3DView.value = is3DView;
   }
 
-
+  /**
+   * Calculates a resizing factor for the active node's radius every time the
+   * active node id changes. In essence this animates the node's radius to grow/shrink a little.
+   */
   async startNodeHighlightAnimation() {
     const normal = 1.0;
     const highlighted = 2.0;
@@ -373,6 +446,10 @@ class Skeleton {
     await this.animateNodeScale(highlighted, normal);
   }
 
+  /**
+   * Calculates a resizing factor for the active node's radius every time the
+   * active node id changes. In essence this animates the node's radius to grow/shrink a little.
+   */
   animateNodeScale(from: number, to: number) {
     return new Promise((resolve, reject) => {
       const setScaleFactor = (scale) => {

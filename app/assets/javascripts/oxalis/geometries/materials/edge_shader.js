@@ -67,9 +67,9 @@ varying vec3 color;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float activeTreeId;
-uniform int shouldHideInactiveTrees;
-uniform int shouldHideAllSkeletons;
-uniform int is3DView;
+uniform int shouldHideInactiveTrees; // show only the active tree hide everything else, triggered by shortcut "2"
+uniform int shouldHideAllSkeletons;  // hide all skeletons in the orthogonal planes (not 3DView)
+uniform int is3DView; // indicates whether we are currently rendering the 3D viewport
 
 uniform sampler2D treeColors;
 

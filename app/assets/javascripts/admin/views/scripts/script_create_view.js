@@ -2,8 +2,7 @@ import _ from "lodash";
 import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
-import "bootstrap-multiselect";
-import TeamCollection from "admin/models/team/team_collection";
+import UserCollection from "admin/models/user/user_collection";
 import SelectionView from "admin/views/selection_view";
 import Toast from "libs/toast";
 
@@ -19,7 +18,7 @@ class ScriptCreateView extends Marionette.View {
 
       <form method="POST" class="form-horizontal">
         <div class="form-group">
-          <label class="col-sm-2 control-label" for="name">Name</label>
+          <label class="col-sm-2 control-label" for="name">Script Name</label>
           <div class="col-sm-9">
             <input type="text" id="name" name="name" value="<%- name %>" class="form-control"
              required pattern=".{3,}" title="Please use at least 3 characters.">
@@ -30,6 +29,12 @@ class ScriptCreateView extends Marionette.View {
           <label class="col-sm-2 control-label" for="gist">Gist URL</label>
           <div class="col-sm-9">
             <input type="url" id="gist" name="gist" value="<%- gist %>" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="col-sm-2 control-label" for="gist">Owner</label>
+          <div class="col-sm-9 owner">
           </div>
         </div>
 
@@ -47,6 +52,10 @@ class ScriptCreateView extends Marionette.View {
 
     this.prototype.events =
       { "submit form": "submitForm" };
+
+    this.prototype.regions = {
+      owner: ".owner",
+    };
 
     this.prototype.ui = {
       form: "form",
@@ -67,6 +76,17 @@ class ScriptCreateView extends Marionette.View {
       this.listenTo(this.model, "sync", this.render);
       this.model.fetch();
     }
+
+    this.userSelectionView = new SelectionView({
+      collection: new UserCollection(),
+      childViewOptions: {
+        modelValue() { return this.model.id; },
+        modelLabel() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
+        defaultItem: { email: app.currentUser.email },
+      },
+      name: "owner",
+      data: "isAdmin=true",
+    });
   }
 
 
@@ -82,6 +102,10 @@ class ScriptCreateView extends Marionette.View {
 
     this.model.save(formValues).then(
       () => app.router.navigate("/scripts", { trigger: true }));
+  }
+
+  onRender() {
+    this.showChildView("owner", this.userSelectionView);
   }
 
 }

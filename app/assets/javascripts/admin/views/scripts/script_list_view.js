@@ -17,8 +17,9 @@ class ScriptListView extends Marionette.CompositeView {
 <table class="table table-striped table-details">
   <thead>
     <tr>
-      <th> # </th>
-      <th> Name </th>
+      <th>Name</th>
+      <th>Owner</th>
+      <th>Gist URL</th>
     </tr>
   </thead>
   <tbody></tbody>

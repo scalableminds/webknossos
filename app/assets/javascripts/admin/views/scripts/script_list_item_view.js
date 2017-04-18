@@ -6,8 +6,9 @@ class ScriptListItemView extends Marionette.View {
 
   template = () => {
     return _.template(`\
-<td class="monospace-id"><%- id %></td>
 <td><%- name %></td>
+<td><%- owner %></td>
+<td><a href="<%- gist %>"></td>
 `);
   }
 

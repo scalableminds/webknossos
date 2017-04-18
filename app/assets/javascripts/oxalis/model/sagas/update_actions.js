@@ -1,7 +1,6 @@
 // @flow
 import type { SkeletonTracingType, BranchPointType, CommentType, TreeType, NodeType } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-import { V3 } from "libs/mjs";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
 
@@ -156,13 +155,13 @@ export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: n
 export function createNode(treeId: number, node: NodeType): CreateNodeUpdateAction {
   return {
     action: "createNode",
-    value: Object.assign({}, node, { treeId, position: V3.floor(node.position) }),
+    value: Object.assign({}, node, { treeId, position: node.position }),
   };
 }
 export function updateNode(treeId: number, node: NodeType): UpdateNodeUpdateAction {
   return {
     action: "updateNode",
-    value: Object.assign({}, node, { treeId, position: V3.floor(node.position) }),
+    value: Object.assign({}, node, { treeId, position: node.position }),
   };
 }
 export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateAction {

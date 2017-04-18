@@ -289,18 +289,23 @@ class Skeleton {
 
     // Uniforms
     const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
+    var activeNodeId = state.skeletonTracing.activeNodeId;
+    activeNodeId = activeNodeId == null ? -1 : activeNodeId;
+    var activeTreeId = state.skeletonTracing.activeTreeId;
+    activeTreeId = activeTreeId == null ? -1 : activeTreeId;
+
     const nodeUniforms = this.nodes.material.uniforms;
-    nodeUniforms.planeZoomFactor.value = getPlaneScalingFactor(Store.getState().flycam);
+    nodeUniforms.planeZoomFactor.value = getPlaneScalingFactor(state.flycam);
     nodeUniforms.overrideParticleSize.value = particleSize;
     nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
     nodeUniforms.viewportScale.value = scale;
-    nodeUniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
-    nodeUniforms.activeNodeId.value = state.skeletonTracing.activeNodeId;
+    nodeUniforms.activeTreeId.value = activeTreeId;
+    nodeUniforms.activeNodeId.value = activeNodeId;
     nodeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
     nodeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
 
     const edgeUniforms = this.edges.material.uniforms;
-    edgeUniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
+    edgeUniforms.activeTreeId.value = activeTreeId;
     edgeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
     edgeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;

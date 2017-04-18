@@ -98,8 +98,8 @@ class SkeletonTracingPlaneController extends PlaneController {
   getKeyboardControls(): Object {
     return _.extend(super.getKeyboardControls(), {
 
-      "1": () => Store.dispatch(toggleTemporarySettingAction("shouldHideAllSkeletons")), // this.skeletonTracingController.toggleSkeletonVisibility(),
-      "2": () => Store.dispatch(toggleTemporarySettingAction("shouldHideInactiveTrees")), // this.sceneController.skeleton.toggleInactiveTreeVisibility(),
+      "1": () => Store.dispatch(toggleTemporarySettingAction("shouldHideAllSkeletons")),
+      "2": () => Store.dispatch(toggleTemporarySettingAction("shouldHideInactiveTrees")),
 
       // Delete active node
       delete: () => Store.dispatch(deleteNodeAction()),

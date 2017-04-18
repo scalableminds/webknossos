@@ -289,9 +289,9 @@ class Skeleton {
 
     // Uniforms
     const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
-    var activeNodeId = state.skeletonTracing.activeNodeId;
+    let activeNodeId = state.skeletonTracing.activeNodeId;
     activeNodeId = activeNodeId == null ? -1 : activeNodeId;
-    var activeTreeId = state.skeletonTracing.activeTreeId;
+    let activeTreeId = state.skeletonTracing.activeTreeId;
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
 
     const nodeUniforms = this.nodes.material.uniforms;

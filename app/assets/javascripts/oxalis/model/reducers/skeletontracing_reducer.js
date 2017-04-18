@@ -5,7 +5,6 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
-import { V3 } from "libs/mjs";
 import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, mergeTrees } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { findTreeByNodeId, getTree, getNodeAndTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
@@ -61,7 +60,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
       return getTree(state.skeletonTracing, treeId)
         .chain(tree =>
-          createNode(state, tree, V3.floor(position), rotation, viewport, resolution, timestamp)
+          createNode(state, tree, position, rotation, viewport, resolution, timestamp)
             .map(([node, edges]) =>
               update(state, { skeletonTracing: {
                 trees: {

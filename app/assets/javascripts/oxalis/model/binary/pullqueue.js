@@ -61,13 +61,10 @@ class PullQueue {
       const batch = [];
       while (batch.length < this.BATCH_SIZE && this.queue.length) {
         const address = this.queue.shift().bucket;
-        const needsRequest = this.cube.getOrCreateBucket(address).needsRequest();
-        if (needsRequest) {
-          const bucket = this.cube.getOrCreateBucket(address);
-          if (bucket.type === "data" && bucket.needsRequest()) {
-            batch.push(address);
-            bucket.pull();
-          }
+        const bucket = this.cube.getOrCreateBucket(address);
+        if (bucket.type === "data" && bucket.needsRequest()) {
+          batch.push(address);
+          bucket.pull();
         }
       }
 

@@ -31,6 +31,15 @@ function generateTreeNamePrefix(state: OxalisState, timestamp) {
   }
 }
 
+function getMaximumNodeId(trees: Array<TreeType>): number {
+  const newMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, n => n.id)));
+  return newMaxNodeId != null ? newMaxNodeId : -1;
+}
+
+function getMaximumTreeId(trees: Array<TreeType>): number {
+  return _.max(_.map(trees, "treeId"));
+}
+
 export function createNode(state: OxalisState, tree: TreeType, position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number): Maybe<[NodeType, Array<EdgeType>]> {
   const { allowUpdate } = state.skeletonTracing.restrictions;
   const activeNodeMaybe = getActiveNodeFromTree(state.skeletonTracing, tree);
@@ -205,8 +214,7 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
 
     // if the deleted node had the max id, find the new largest id
     if (node.id === newMaxNodeId) {
-      newMaxNodeId = _.max(_.flatMap(newTrees, __ => _.map(__.nodes, n => n.id)));
-      newMaxNodeId = newMaxNodeId != null ? newMaxNodeId : -1;
+      newMaxNodeId = getMaximumNodeId(newTrees);
     }
 
     return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
@@ -258,7 +266,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
   if (allowUpdate) {
     // create a new tree id and name
     // tree id can become 0 after deleting all trees
-    const maxTreeId = _.max(_.map(state.skeletonTracing.trees, "treeId"));
+    const maxTreeId = getMaximumTreeId(state.skeletonTracing.trees);
     const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : 0;
 
     const name = generateTreeNamePrefix(state, timestamp) + Utils.zeroPad(newTreeId, 2);
@@ -300,13 +308,12 @@ export function deleteTree(state: OxalisState, tree: TreeType, timestamp: number
       newActiveNodeId = null;
     } else {
       // just set the last tree to be the active one
-      const maxTreeId = _.max(_.map(newTrees, "treeId"));
+      const maxTreeId = getMaximumTreeId(newTrees);
       newActiveTreeId = maxTreeId;
       newActiveNodeId = _.first(Object.keys(newTrees[maxTreeId].nodes)) || null;
     }
 
-    newMaxNodeId = _.max(_.flatMap(newTrees, __ => _.map(__.nodes, node => node.id)));
-    newMaxNodeId = newMaxNodeId != null ? newMaxNodeId : -1;
+    newMaxNodeId = getMaximumNodeId(newTrees);
 
     return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
   }

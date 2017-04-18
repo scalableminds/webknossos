@@ -273,8 +273,13 @@ class Skeleton {
           }
           break;
         }
-        default:
+        case deleteTree:
+        case moveTreeComponent:
+        case mergeTree:
+          // Unused for now
           break;
+        default:
+          throw new Error("[Skeleton] Unhandled skeletontracing diff action");
       }
     }
 

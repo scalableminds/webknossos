@@ -30,7 +30,7 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
   createDataTexture(width: number, bytes: number): void {
     this.minFilter = THREE.LinearFilter;
-    super.createDataTexture(width, bytes);
+    return super.createDataTexture(width, bytes);
   }
 
 

@@ -37,6 +37,10 @@ const initialState = {
   task: {
     id: 1,
   },
+  datasetConfiguration: {
+    fourBit: false,
+    interpolation: false,
+  },
   skeletonTracing: {
     trees: {
       "0": {
@@ -83,7 +87,6 @@ test("SkeletonTracingSaga should create a tree if there is none (saga test)", (t
   saga.next();
   saga.next({ skeletonTracing: { trees: {} } });
   t.is(saga.next(true).value.PUT.action.type, "CREATE_TREE");
-  // expectValueDeepEqual(t, saga.next(true), put(SkeletonTracingActions.createTreeAction()));
 });
 
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) => {

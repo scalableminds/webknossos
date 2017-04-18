@@ -20,9 +20,6 @@ type Uniforms = {
 };
 
 export type ShaderMaterialOptionsType = {
-  uniforms?: Uniforms,
-  vertexShader?: string,
-  fragmentShader?: string,
   polygonOffset?: boolean,
   polygonOffsetFactor?: number,
   polygonOffsetUnits?: number,
@@ -71,7 +68,7 @@ class AbstractPlaneMaterialFactory {
   }
 
 
-  makeMaterial(options?: ShaderMaterialOptionsType):void {
+  makeMaterial(options?: ShaderMaterialOptionsType): void {
     this.material = new THREE.ShaderMaterial(_.extend(options, {
       uniforms: this.uniforms,
       vertexShader: this.getVertexShader(),
@@ -86,7 +83,7 @@ class AbstractPlaneMaterialFactory {
   }
 
 
-  setupChangeListeners():void {
+  setupChangeListeners(): void {
     Store.subscribe(() => {
       const layerSettings = Store.getState().datasetConfiguration.layers;
       _.forEach(layerSettings, (settings, layerName) => {
@@ -103,7 +100,7 @@ class AbstractPlaneMaterialFactory {
     return this.material;
   }
 
-  createTextures():void {
+  createTextures(): void {
     throw new Error("Subclass responsibility");
   }
 
@@ -117,7 +114,7 @@ class AbstractPlaneMaterialFactory {
   }
 
 
-  createDataTexture(width: number, bytes: number):void {
+  createDataTexture(width: number, bytes: number): void {
     const format = bytes === 1 ? THREE.LuminanceFormat : THREE.RGBFormat;
 
     return new THREE.DataTexture(

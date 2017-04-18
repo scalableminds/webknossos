@@ -154,7 +154,7 @@ class SceneController {
         const triangleId = parseInt(triangleIdString, 10);
         const mappedId = this.model.getSegmentationBinary().cube.mapId(triangleId);
         const volume = new VolumeGeometry(triangles[triangleId], mappedId);
-        volume.getMeshes().forEach(this.volumeMeshes.add);
+        volume.getMeshes().forEach(mesh => this.volumeMeshes.add(mesh));
       }
 
       app.vent.trigger("rerender");

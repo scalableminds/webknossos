@@ -10,13 +10,11 @@ import Utils from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 
-type Uniform = {
-  type: string,
-  value: any,
-};
-
-type Uniforms = {
-  [key: string]: Uniform,
+export type UniformsType = {
+  [key: string]: {
+    type: "f" | "i" | "t" | "v2" | "v3",
+    value: any,
+  }
 };
 
 export type ShaderMaterialOptionsType = {
@@ -29,7 +27,7 @@ class AbstractPlaneMaterialFactory {
 
   model: Model;
   material: THREE.ShaderMaterial;
-  uniforms: Uniforms;
+  uniforms: UniformsType;
   attributes: Object;
   textures: {
     [key: string]: THREE.DataTexture;
@@ -126,12 +124,12 @@ class AbstractPlaneMaterialFactory {
     );
   }
 
-  getFragmentShader():string {
+  getFragmentShader(): string {
     throw new Error("Subclass responsibility");
   }
 
 
-  getVertexShader():string {
+  getVertexShader(): string {
     return `\
 
 

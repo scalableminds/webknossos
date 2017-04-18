@@ -182,16 +182,6 @@ class DataCube {
       return false;
     }
 
-    /* Removed for performance reasons
-    ErrorHandling.assertExists(
-      this.cubes[zoomStep],
-      "Cube for given zoomStep does not exist", {
-        cubeCount: this.cubes.length,
-        zoomStep,
-        zoomStepCount: this.ZOOM_STEP_COUNT,
-      },
-    );*/
-
     return this.boundingBox.containsBucket([x, y, z, zoomStep]);
   }
 

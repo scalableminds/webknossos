@@ -1,12 +1,10 @@
-/**
- * particle_material_factory.js
- * @flow
- */
+// @flow
 
 import * as THREE from "three";
 import Store from "oxalis/store";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import type { UniformsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 export const NodeTypes = {
   INVALID: -1.0,
@@ -14,15 +12,12 @@ export const NodeTypes = {
   BRANCH_POINT: 1.0,
 };
 
+export const COLOR_TEXTURE_WIDTH = 1024.0;
+
 class NodeShader {
 
   material: THREE.RawShaderMaterial;
-  uniforms: {
-    [key: string]: {
-      type: "f" | "i" | "t",
-      value: any,
-    }
-  };
+  uniforms: UniformsType;
 
   constructor(treeColorTexture: THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);
@@ -162,7 +157,7 @@ void main() {
     }
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / 1024.0), treeId / (1024.0 * 1024.0));
+    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / ${COLOR_TEXTURE_WIDTH.toFixed(1)}), treeId / (${COLOR_TEXTURE_WIDTH.toFixed(1)} * ${COLOR_TEXTURE_WIDTH.toFixed(1)}));
     color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
 
     // NODE RADIUS

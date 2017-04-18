@@ -9,7 +9,7 @@ import TWEEN from "tween.js";
 import Utils from "libs/utils";
 import Store from "oxalis/throttled_store";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import NodeShader, { NodeTypes } from "oxalis/geometries/materials/node_shader";
+import NodeShader, { NodeTypes, COLOR_TEXTURE_WIDTH } from "oxalis/geometries/materials/node_shader";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import { OrthoViews } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
@@ -19,10 +19,8 @@ import type { Vector3, OrthoViewType } from "oxalis/constants";
 
 const MAX_CAPACITY = 1000;
 
-type BufferHelper = {
-  addAttributes(geometry: THREE.BufferGeometry, capacity: number): void,
-  buildMesh(geometry: THREE.BufferGeometry): THREE.Mesh,
-}
+// eslint-disable-next-line no-use-before-define
+type BufferHelperType = typeof NodeBufferHelperType | typeof EdgeBufferHelperType;
 
 type Buffer = {
   capacity: number,
@@ -40,13 +38,13 @@ type BufferCollection = {
   buffers: Array<Buffer>,
   idToBufferPosition: Map<number, BufferPosition>,
   freeList: Array<BufferPosition>,
-  helper: BufferHelper,
+  helper: BufferHelperType,
   material: THREE.Material,
 }
 
 type BufferOperation = (position: BufferPosition) => Array<THREE.BufferAttribute>;
 
-const NodeBufferHelper = {
+const NodeBufferHelperType = {
   addAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
     geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
     geometry.addAttribute("radius", new THREE.BufferAttribute(new Float32Array(capacity), 1));
@@ -60,7 +58,7 @@ const NodeBufferHelper = {
   },
 };
 
-const EdgeBufferHelper = {
+const EdgeBufferHelperType = {
   addAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
     geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 6), 3));
     geometry.addAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity * 2), 1));
@@ -73,7 +71,7 @@ const EdgeBufferHelper = {
 
 /**
  * Creates and manages the WebGL buffers for drawing skeletons (nodes, edges).
- * Skeletons are not recreated on every store change according to the functional
+ * Skeletons are not recreated on every store change in spite of the functional
  * react paradigm for performance reasons. Instead we identify more fine granular
  * actions like node cration/deletion/update etc.
  * Skeletons are stored in single, large buffers regardless of which tree they belong to.
@@ -96,9 +94,9 @@ class Skeleton {
     const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
 
     this.treeColorTexture = new THREE.DataTexture(
-      new Float32Array(1024 * 1024 * 3),
-      1024,
-      1024,
+      new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 3),
+      COLOR_TEXTURE_WIDTH,
+      COLOR_TEXTURE_WIDTH,
       THREE.RGBFormat,
       THREE.FloatType,
     );
@@ -106,8 +104,8 @@ class Skeleton {
     const nodeMaterial = new NodeShader(this.treeColorTexture).getMaterial();
     const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
 
-    this.nodes = this.initializeBufferCollection(nodeCount, nodeMaterial, NodeBufferHelper);
-    this.edges = this.initializeBufferCollection(edgeCount, edgeMaterial, EdgeBufferHelper);
+    this.nodes = this.initializeBufferCollection(nodeCount, nodeMaterial, NodeBufferHelperType);
+    this.edges = this.initializeBufferCollection(edgeCount, edgeMaterial, EdgeBufferHelperType);
 
     for (const tree of _.values(trees)) {
       this.createTree(tree);
@@ -123,7 +121,7 @@ class Skeleton {
     this.prevTracing = Store.getState().skeletonTracing;
   }
 
-  initializeBufferCollection(initialCapacity: number, material: THREE.Material, helper: BufferHelper): BufferCollection {
+  initializeBufferCollection(initialCapacity: number, material: THREE.Material, helper: BufferHelperType): BufferCollection {
     const initialBuffer = this.initializeBuffer(Math.max(initialCapacity, MAX_CAPACITY), material, helper);
 
     return {
@@ -135,7 +133,7 @@ class Skeleton {
     };
   }
 
-  initializeBuffer(capacity: number, material: THREE.Material, helper: BufferHelper): Buffer {
+  initializeBuffer(capacity: number, material: THREE.Material, helper: BufferHelperType): Buffer {
     const geometry = new THREE.BufferGeometry();
     helper.addAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
@@ -192,6 +190,8 @@ class Skeleton {
       }
       collection.idToBufferPosition.delete(id);
       collection.freeList.push(bufferPosition);
+    } else {
+      console.warn(`[Skeleton] Unable to find buffer position for id ${id}`);
     }
   }
 
@@ -208,13 +208,15 @@ class Skeleton {
       for (const attribute of changedAttributes) {
         attribute.needsUpdate = true;
       }
+    } else {
+      console.warn(`[Skeleton] Unable to find buffer position for id ${id}`);
     }
   }
 
   /**
    * Called on every store update. Diffs the old and new skeleton to identify
-   * more fine granular modify the manipulate the WebGL buffers instead of
-   * replacing them completely on every change.
+   * the changes and manipulate the WebGL buffers more fine granularly instead
+   * of replacing them completely on every change.
    * @param id - Id of a node or edge to look up its corresponding buffer
    * @param collection - collection of all buffers
    * @param deleteFunc - callback(buffer, index) that actually updates a node / edge
@@ -272,6 +274,7 @@ class Skeleton {
           break;
         }
         default:
+          break;
       }
     }
 
@@ -281,25 +284,27 @@ class Skeleton {
 
     // Uniforms
     const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
-    this.nodes.material.uniforms.planeZoomFactor.value = getPlaneScalingFactor(Store.getState().flycam);
-    this.nodes.material.uniforms.overrideParticleSize.value = particleSize;
-    this.nodes.material.uniforms.overrideNodeRadius.value = overrideNodeRadius;
-    this.nodes.material.uniforms.viewportScale.value = scale;
-    this.nodes.material.uniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
-    this.nodes.material.uniforms.activeNodeId.value = state.skeletonTracing.activeNodeId;
-    this.nodes.material.uniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
-    this.nodes.material.uniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
+    const nodeUniforms = this.nodes.material.uniforms;
+    nodeUniforms.planeZoomFactor.value = getPlaneScalingFactor(Store.getState().flycam);
+    nodeUniforms.overrideParticleSize.value = particleSize;
+    nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
+    nodeUniforms.viewportScale.value = scale;
+    nodeUniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
+    nodeUniforms.activeNodeId.value = state.skeletonTracing.activeNodeId;
+    nodeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
+    nodeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
 
+    const edgeUniforms = this.edges.material.uniforms;
+    edgeUniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
+    edgeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
+    edgeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
-    this.edges.material.uniforms.activeTreeId.value = state.skeletonTracing.activeTreeId;
-    this.edges.material.uniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
-    this.edges.material.uniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
 
     this.prevTracing = tracing;
   }
 
   getAllNodes(): Array<THREE.Mesh> {
-    return _.map(this.nodes.buffers, buffer => buffer.mesh);
+    return this.nodes.buffers.map(buffer => buffer.mesh);
   }
 
   getRootNode(): THREE.Object3D {

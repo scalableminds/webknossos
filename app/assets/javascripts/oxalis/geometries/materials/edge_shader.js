@@ -1,20 +1,14 @@
-/**
- * particle_material_factory.js
- * @flow
- */
+// @flow
 
 import * as THREE from "three";
 import Store from "oxalis/store";
+import { COLOR_TEXTURE_WIDTH } from "oxalis/geometries/materials/node_shader";
+import type { UniformsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 class EdgeShader {
 
   material: THREE.RawShaderMaterial;
-  uniforms: {
-    [key: string]: {
-      type: "f" | "i" | "t",
-      value: any,
-    }
-  };
+  uniforms: UniformsType;
 
   constructor(treeColorTexture: THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);
@@ -92,7 +86,7 @@ void main() {
     }
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / 1024.0), treeId / (1024.0 * 1024.0));
+    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / ${COLOR_TEXTURE_WIDTH.toFixed(1)}), treeId / (${COLOR_TEXTURE_WIDTH.toFixed(1)} * ${COLOR_TEXTURE_WIDTH.toFixed(1)}));
     color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
 }\
 `;

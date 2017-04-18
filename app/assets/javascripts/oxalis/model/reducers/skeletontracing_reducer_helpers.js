@@ -31,12 +31,12 @@ function generateTreeNamePrefix(state: OxalisState, timestamp) {
   }
 }
 
-function getMaximumNodeId(trees: Array<TreeType>): number {
+function getMaximumNodeId(trees: TreeMapType): number {
   const newMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, n => n.id)));
   return newMaxNodeId != null ? newMaxNodeId : -1;
 }
 
-function getMaximumTreeId(trees: Array<TreeType>): number {
+function getMaximumTreeId(trees: TreeMapType): number {
   return _.max(_.map(trees, "treeId"));
 }
 
@@ -299,7 +299,6 @@ export function deleteTree(state: OxalisState, tree: TreeType, timestamp: number
     // to create one.
     let newActiveTreeId;
     let newActiveNodeId;
-    let newMaxNodeId;
     if (_.size(newTrees) === 0) {
       const newTree = createTree(state, timestamp).get();
       newTrees = update(newTrees, { [newTree.treeId]: { $set: newTree } });
@@ -313,7 +312,7 @@ export function deleteTree(state: OxalisState, tree: TreeType, timestamp: number
       newActiveNodeId = _.first(Object.keys(newTrees[maxTreeId].nodes)) || null;
     }
 
-    newMaxNodeId = getMaximumNodeId(newTrees);
+    const newMaxNodeId = getMaximumNodeId(newTrees);
 
     return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
   }

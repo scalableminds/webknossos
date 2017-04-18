@@ -273,9 +273,9 @@ class Skeleton {
           }
           break;
         }
-        case deleteTree:
-        case moveTreeComponent:
-        case mergeTree:
+        case "deleteTree":
+        case "moveTreeComponent":
+        case "mergeTree":
           // Unused for now
           break;
         default:

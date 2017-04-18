@@ -7,6 +7,7 @@ import update from "immutability-helper";
 import Utils from "libs/utils";
 import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, mergeTrees } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getSkeletonTracing, findTreeByNodeId, getTree, getNodeAndTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import { zoomReducer } from "oxalis/model/reducers/flycam_reducer";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
 
@@ -49,7 +50,8 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         version: action.tracing.version,
       };
 
-      return update(state, { tracing: { $set: skeletonTracing } });
+      const newState = update(state, { tracing: { $set: skeletonTracing } });
+      return zoomReducer(newState, contentData.zoomLevel);
     }
     default:
       // pass

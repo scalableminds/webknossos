@@ -85,7 +85,7 @@ function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
   return update(state, { flycam: { currentMatrix: { $set: matrix } } });
 }
 
-function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
+export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
   return update(state, { flycam: {
     zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getMaxZoomStep(state)) },
   } });

@@ -1,25 +1,20 @@
 package models.task
 
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.FoxImplicits
+import models.basics.SecuredBaseDAO
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import com.scalableminds.util.reactivemongo.{GlobalAccessContext, DefaultAccessDefinitions, DBAccessContext}
-import models.basics.SecuredBaseDAO
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.user.{UserDAO, UserService, User}
-import play.api.libs.functional.syntax._
-import play.api.data.validation.ValidationError
-import scala.util.{Failure, Success}
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
 
 case class Script(
   name: String,
   gist: String,
+  _owner: String,
   _id: BSONObjectID = BSONObjectID.generate) {
 
-  lazy val id = _id.stringify
+  lazy val id: String = _id.stringify
 }
 
 object Script extends FoxImplicits {
@@ -28,10 +23,18 @@ object Script extends FoxImplicits {
 
   def fromForm(
     name: String,
-    gist: String) = {
+    gist: String,
+    _owner: String) = {
 
-    Script(name, gist)
+    Script(name, gist, _owner)
   }
+
+  def scriptPublicWrites: Writes[Script] =
+    ((__ \ "id").write[String] and
+      (__ \ "gist").write[String] and
+      (__ \ "name").write[String] and
+      (__ \ "owner").write[String])(s =>
+      (s.id, s.gist, s.name, s._owner))
 }
 
 object ScriptDAO extends SecuredBaseDAO[Script] with FoxImplicits {

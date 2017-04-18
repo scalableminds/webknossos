@@ -2,10 +2,8 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO, AnnotationSettings}
-import models.task._
-import models.task.Script
+import com.scalableminds.util.tools.FoxImplicits
+import models.task.{Script, _}
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -13,26 +11,26 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.twirl.api.Html
-import scala.concurrent.Future
 
 
-class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits{
+class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
 
   val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
-      (__ \ 'gist).read[String]) (Script.fromForm _)
+      (__ \ 'gist).read[String] and
+      (__ \ 'owner).read[String]) (Script.fromForm _)
 
   def empty(id: String) = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
   def create = Authenticated.async(parse.json) { implicit request =>
-    // TODO: security
     withJsonBodyUsing(scriptPublicReads) { script =>
       for {
+        _ <- request.user.hasAdminAccess ?~> Messages("notAllowed")
         _ <- ScriptDAO.insert(script)
       } yield {
-        Ok(Json.toJson(script))
+        Ok(Script.scriptPublicWrites.writes(script))
       }
     }
   }
@@ -40,32 +38,37 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   def get(scriptId: String) = Authenticated.async { implicit request =>
     for {
       script <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
-      // TODO: security
     } yield {
-      Ok(Json.toJson(script))
+      Ok(Script.scriptPublicWrites.writes(script))
     }
   }
 
   def list = Authenticated.async { implicit request =>
     for {
+      _ <- request.user.hasAdminAccess ?~> Messages("notAllowed")
       scripts <- ScriptDAO.findAll
-      // TODO: security
     } yield {
-      Ok(Json.toJson(scripts))
+      Ok(Writes.list(Script.scriptPublicWrites).writes(scripts))
     }
   }
 
   def update(scriptId: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonBodyUsing(Script.scriptFormat) { script =>
-      // TODO: update script
-      Future.successful(Ok("updated :)"))
+      for {
+        oldScript <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
+        _ <- (oldScript._owner == request.user.id) ?~> Messages("script.notOwner")
+      } yield {
+        Ok(Script.scriptPublicWrites.writes(script))
+      }
     }
   }
 
   def delete(scriptId: String) = Authenticated.async { implicit request =>
     for {
+      oldScript <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
+      _ <- (oldScript._owner == request.user.id) ?~> Messages("script.notOwner")
       _ <- ScriptDAO.removeById(scriptId) ?~> Messages("script.notFound")
-      // TODO: remove script from tasks
+      _ <- TaskService.removeScriptFromTasks(scriptId) ?~> Messages("script.taskRemoval.failed")
     } yield {
       Ok
     }

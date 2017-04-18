@@ -37,6 +37,10 @@ const initialState = {
   task: {
     id: 1,
   },
+  datasetConfiguration: {
+    fourBit: false,
+    interpolation: false,
+  },
   skeletonTracing: {
     trees: {
       "0": {

@@ -29,7 +29,10 @@ const initialState = {
     scale: [5, 5, 5],
   },
   userConfiguration: null,
-  datasetConfiguration: null,
+  datasetConfiguration: {
+    fourBit: false,
+    interpolation: false,
+  },
   task: {
     id: 1,
   },

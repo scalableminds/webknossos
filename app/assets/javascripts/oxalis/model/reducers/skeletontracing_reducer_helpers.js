@@ -54,8 +54,8 @@ export function createNode(state: OxalisState, tree: TreeType, position: Vector3
       resolution,
       id: nextNewId,
       timestamp,
-      bitDepth: 8, // datasetConfig.fourBit ? 4 : 8,
-      interpolation: true, // datasetConfig.interpolation,
+      bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,
+      interpolation: state.datasetConfiguration.interpolation,
     };
 
     // Create a new edge

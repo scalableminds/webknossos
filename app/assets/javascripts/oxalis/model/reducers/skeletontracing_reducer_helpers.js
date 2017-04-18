@@ -31,13 +31,13 @@ function generateTreeNamePrefix(state: OxalisState, timestamp) {
   }
 }
 
-export function createNode(skeletonTracing: SkeletonTracingType, datasetScale: Vector3, tree: TreeType, position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number): Maybe<[NodeType, Array<EdgeType>]> {
+export function createNode(state: OxalisState, skeletonTracing: SkeletonTracingType, tree: TreeType, position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number): Maybe<[NodeType, Array<EdgeType>]> {
   const { allowUpdate } = skeletonTracing.restrictions;
   const activeNodeMaybe = getActiveNodeFromTree(skeletonTracing, tree);
 
   if (allowUpdate) {
     // Use the same radius as current active node or revert to default value
-    const defaultRadius = 10 * getBaseVoxel(datasetScale);
+    const defaultRadius = 10 * getBaseVoxel(state.dataset.scale);
     const radius = activeNodeMaybe.map(activeNode => activeNode.radius).getOrElse(defaultRadius);
 
     // Find new node id by increasing the max node id.

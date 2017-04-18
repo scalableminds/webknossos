@@ -64,7 +64,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
         return getTree(skeletonTracing, treeId)
           .chain(tree =>
-            createNode(skeletonTracing, state.dataset.scale, tree, position, rotation, viewport, resolution, timestamp)
+            createNode(state, skeletonTracing, tree, position, rotation, viewport, resolution, timestamp)
               .map(([node, edges]) =>
                 update(state, { tracing: {
                   trees: {

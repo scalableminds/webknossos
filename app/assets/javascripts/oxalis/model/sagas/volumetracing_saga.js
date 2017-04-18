@@ -78,10 +78,8 @@ export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
 
 export function* disallowVolumeTracingWarning(): Generator<*, *, *> {
   while (true) {
-    const action = yield take(["SET_MODE", "TOGGLE_MODE"]);
-    const curMode = yield select(state => state.tracing.viewMode);
-    if (curMode !== action.mode) {
-      // If the mode didn't change, it was not allowed so display the warning
+    yield take(["SET_MODE", "TOGGLE_MODE"]);
+    if (yield select(state => isVolumeTracingDisallowed(state))) {
       Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
     }
   }

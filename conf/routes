@@ -189,6 +189,8 @@ GET           /scripts/:id/edit                                               co
 
 GET           /api/scripts                                                    controllers.ScriptsController.list
 POST          /api/scripts                                                    controllers.ScriptsController.create
+GET           /api/scripts/:id                                                controllers.ScriptsController.get(id: String)
+PUT           /api/scripts/:id                                                controllers.ScriptsController.update(id: String)
 DELETE        /api/scripts/:id                                                controllers.ScriptsController.delete(id: String)
 
 

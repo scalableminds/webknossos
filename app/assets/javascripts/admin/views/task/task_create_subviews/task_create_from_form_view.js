@@ -86,14 +86,19 @@ class TaskCreateFromFormView extends Marionette.View {
     // unblock submit button after model synched
     // show a status flash message
     try {
+      const method = this.parent.isEditingMode ? "PUT" : "POST";
       const response = await Request.sendJSONReceiveJSON(
         this.model.url(), {
-          method: "POST",
+          method,
           data: serializedForm,
           params: { type: "default" },
         },
       );
-      this.parent.showSaveSuccess(response);
+      if (this.parent.isEditingMode) {
+        app.router.loadURL("/tasks");
+      } else {
+        this.parent.showSaveSuccess(response);
+      }
     } catch (e) {
       this.parent.showSaveError();
     }

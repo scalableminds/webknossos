@@ -8,6 +8,7 @@ class ScriptModel extends Backbone.Model {
     this.prototype.defaults = {
       gist: "",
       name: "",
+      owner: "",
     }
   }
 

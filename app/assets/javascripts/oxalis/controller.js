@@ -154,7 +154,7 @@ class Controller {
   initTaskScript() {
     // Loads a Gist from GitHub with a user script if there is a
     // script assigned to the task
-    if (this.model.tracing.task) {
+    if (this.model.tracing.task && this.model.tracing.task.script) {
       const script = this.model.tracing.task.script;
       const gistId = _.last(script.gist.split("/"));
 

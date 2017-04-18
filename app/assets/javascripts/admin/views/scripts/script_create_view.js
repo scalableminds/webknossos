@@ -77,16 +77,7 @@ class ScriptCreateView extends Marionette.View {
       this.model.fetch();
     }
 
-    this.userSelectionView = new SelectionView({
-      collection: new UserCollection(),
-      childViewOptions: {
-        modelValue() { return this.model.id; },
-        modelLabel() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
-        defaultItem: { email: app.currentUser.email },
-      },
-      name: "owner",
-      data: "isAdmin=true",
-    });
+
   }
 
 
@@ -105,7 +96,17 @@ class ScriptCreateView extends Marionette.View {
   }
 
   onRender() {
-    this.showChildView("owner", this.userSelectionView);
+    const userSelectionView = new SelectionView({
+      collection: new UserCollection(),
+      childViewOptions: {
+        modelValue() { return this.model.id; },
+        modelLabel() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
+        defaultItem: { email: app.currentUser.email },
+      },
+      name: "owner",
+      data: "isAdmin=true",
+    });
+    this.showChildView("owner", userSelectionView);
   }
 
 }

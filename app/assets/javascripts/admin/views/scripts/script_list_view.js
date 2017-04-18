@@ -20,6 +20,7 @@ class ScriptListView extends Marionette.CompositeView {
       <th>Name</th>
       <th>Owner</th>
       <th>Gist URL</th>
+      <th>Actions</th>
     </tr>
   </thead>
   <tbody></tbody>

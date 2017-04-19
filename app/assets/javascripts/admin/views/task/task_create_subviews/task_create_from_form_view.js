@@ -1,4 +1,5 @@
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
 import DatasetCollection from "admin/models/dataset/dataset_collection";
 import SelectionView from "admin/views/selection_view";

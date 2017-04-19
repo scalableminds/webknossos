@@ -1,6 +1,5 @@
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import Toast from "libs/toast";
 import window from "libs/window";
 
 class ScriptListItemView extends Marionette.View {
@@ -18,12 +17,12 @@ class ScriptListItemView extends Marionette.View {
     `);
 
     this.prototype.events = {
-      "click .delete": "delete"
-    }
+      "click .delete": "delete",
+    };
   }
 
   delete() {
-    if (window.confirm("Do you really want to delete this script?")){
+    if (window.confirm("Do you really want to delete this script?")) {
       this.model.destroy();
     }
   }

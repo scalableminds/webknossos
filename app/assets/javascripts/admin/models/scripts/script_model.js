@@ -9,7 +9,7 @@ class ScriptModel extends Backbone.Model {
       gist: "",
       name: "",
       ownerId: "",
-    }
+    };
   }
 
 

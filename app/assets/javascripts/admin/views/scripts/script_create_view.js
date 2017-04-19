@@ -76,10 +76,7 @@ class ScriptCreateView extends Marionette.View {
       this.listenTo(this.model, "sync", this.render);
       this.model.fetch();
     }
-
-
   }
-
 
   submitForm(event) {
     event.preventDefault();

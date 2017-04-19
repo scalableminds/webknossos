@@ -11,8 +11,7 @@ class ScriptListView extends Marionette.CompositeView {
     this.prototype.childViewContainer = "tbody";
   }
 
-  template = () => {
-    return _.template(`\
+  template = () => _.template(`\
 <h3>Scripts</h3>
 <table class="table table-striped table-details">
   <thead>
@@ -26,8 +25,6 @@ class ScriptListView extends Marionette.CompositeView {
   <tbody></tbody>
 </table>\
 `);
-  }
-
 
   initialize() {
     this.collection.fetch();

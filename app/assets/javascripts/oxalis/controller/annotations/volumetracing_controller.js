@@ -1,6 +1,6 @@
 /**
  * volumetracing_controller.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -34,7 +34,7 @@ class VolumeTracingController {
   MERGE_MODE_CELL1 = 1;
   MERGE_MODE_CELL2 = 2;
 
-  constructor(model, volumeTracingView, sceneController) {
+  constructor(model: Model, volumeTracingView: VolumeTracingView, sceneController: SceneController) {
     this.model = model;
     this.volumeTracingView = volumeTracingView;
     this.sceneController = sceneController;
@@ -44,8 +44,8 @@ class VolumeTracingController {
 
     // Keyboard shortcuts
     this.keyboardNoLoop = new InputKeyboardNoLoop({
-      w: () => Store.dispatch(toggleModeAction()),
-      "1": () => Store.dispatch(toggleModeAction()),
+      w: () => { Store.dispatch(toggleModeAction()); },
+      "1": () => { Store.dispatch(toggleModeAction()); },
     });
 
     // no merging for now
@@ -95,7 +95,7 @@ class VolumeTracingController {
   }
 
 
-  handleCellSelection(cellId) {
+  handleCellSelection(cellId: number) {
     if (cellId > 0) {
       if (this.mergeMode === this.MERGE_MODE_NORMAL) {
         Store.dispatch(setActiveCellAction(cellId));

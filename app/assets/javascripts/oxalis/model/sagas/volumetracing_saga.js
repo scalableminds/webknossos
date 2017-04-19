@@ -90,6 +90,7 @@ export function* diffVolumeTracing(
   volumeTracing: VolumeTracingType,
   flycam: FlycamType,
 ): Generator<UpdateAction, *, *> {
+  // no diffing happening here (yet) as for volume tracings there are only updateTracing actions so far
   yield updateVolumeTracing(
     volumeTracing,
     V3.floor(getPosition(flycam)),

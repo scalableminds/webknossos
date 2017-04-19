@@ -1,6 +1,6 @@
 /**
  * contourgeometry.js
- * @flow weak
+ * @flow
  */
 
 import app from "app";
@@ -8,6 +8,7 @@ import ResizableBuffer from "libs/resizable_buffer";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Vector3 } from "oxalis/constants";
 
 const COLOR_NORMAL = new THREE.Color(0x0000ff);
 const COLOR_DELETE = new THREE.Color(0xff0000);
@@ -67,7 +68,7 @@ class ContourGeometry {
   }
 
 
-  addEdgePoint(pos) {
+  addEdgePoint(pos: Vector3) {
     this.edge.vertexBuffer.push(pos);
     this.finalizeMesh(this.edge);
 
@@ -75,7 +76,7 @@ class ContourGeometry {
   }
 
 
-  finalizeMesh(mesh) {
+  finalizeMesh(mesh: THREE.Line) {
     if (mesh.geometry.attributes.position.array !== mesh.vertexBuffer.getBuffer()) {
       // Need to rebuild Geometry
       const positionAttribute = new THREE.BufferAttribute(mesh.vertexBuffer.getBuffer(), 3);

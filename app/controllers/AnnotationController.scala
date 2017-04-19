@@ -20,6 +20,7 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsArray, JsObject, _}
 import play.twirl.api.Html
+import reactivemongo.bson.BSONObjectID
 
 /**
  * Company: scalableminds
@@ -237,7 +238,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 2097152)) { implicit request =>
+  def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 8388608)) { implicit request =>
     // Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
     AnnotationUpdateService.store(typ, id, version, request.body)
 
@@ -359,6 +360,22 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       result <- annotation.muta.transferToUser(user)
     } yield {
       JsonOk(Messages("annotation.transfered"))
+    }
+  }
+
+  def duplicate(typ: String, id: String) = Authenticated.async { implicit request =>
+    withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
+      for {
+        content <- annotation.content
+        temp <- content.temporaryDuplicate(BSONObjectID.generate().stringify)
+        clonedContent <- temp.saveToDB
+        dataSet <- DataSetDAO.findOneBySourceName(
+          content.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
+        clonedAnnotation <- AnnotationService.createFrom(
+          request.user, clonedContent, AnnotationType.Explorational, None) ?~> Messages("annotation.create.failed")
+      } yield {
+        Redirect(routes.AnnotationController.trace(clonedAnnotation.typ, clonedAnnotation.id))
+      }
     }
   }
 }

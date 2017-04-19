@@ -26,7 +26,9 @@
       "jsRoutes": false,
       "JQuery": false,
       "SyntheticInputEvent": false,
-      "$Keys": false
+      "$Keys": false,
+      "$Subtype": false,
+      "Generator": false
     },
     "rules": {
       "quotes": ["error", "double"],
@@ -46,6 +48,8 @@
       "no-param-reassign": "warn",
       "no-plusplus": "off",
       "no-restricted-syntax": "warn",
+      "array-callback-return": "warn",
+      "jsx-a11y/no-static-element-interactions": "warn",
       "no-restricted-properties": ["off", {"object": "Math", "property": "pow"}],
       "no-restricted-syntax": ["error", "ForInStatement"],
       "no-underscore-dangle": "off",

@@ -12,6 +12,7 @@ import Stats from "stats.js";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
@@ -19,14 +20,18 @@ import SkeletonTracingArbitraryController from "oxalis/controller/combinations/s
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import MinimalArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
+import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import View from "oxalis/view";
-import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
-import VolumeTracingView from "oxalis/view/volumetracing/volumetracing_view";
+import SkeletonTracingView from "oxalis/view/skeletontracing_view";
+import VolumeTracingView from "oxalis/view/volumetracing_view";
 import constants from "oxalis/constants";
 import Request from "libs/request";
+import { wkReadyAction } from "oxalis/model/actions/actions";
+import { saveNowAction } from "oxalis/model/actions/save_actions";
+import messages from "messages";
+
 
 import type { ToastType } from "libs/toast";
 
@@ -67,14 +72,14 @@ class Controller {
     this.model.set("state", this.urlManager.initialState);
 
     this.model.fetch()
-        .then(() => this.modelFetchDone())
-        .catch((error) => {
-          // Don't throw errors for errors already handled by the model.
-          if (error !== this.model.HANDLED_ERROR) {
-            throw error;
-          }
-        },
-        );
+        .then(() => this.modelFetchDone());
+        // .catch((error) => {
+        //   // Don't throw errors for errors already handled by the model.
+        //   if (error !== this.model.HANDLED_ERROR) {
+        //     throw error;
+        //   }
+        // },
+        // );
   }
 
 
@@ -86,39 +91,51 @@ class Controller {
 
     app.router.on("beforeunload", () => {
       if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
-        const { stateLogger } = this.model.annotationModel;
-        if (!stateLogger.stateSaved() && stateLogger.allowUpdate) {
-          stateLogger.pushNow();
-          return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.";
+        if (this.model.volumeTracing != null) {
+          const { stateLogger } = this.model.annotationModel;
+          if (!stateLogger.stateSaved() && stateLogger.allowUpdate) {
+            stateLogger.pushNow();
+            return messages["save.leave_page_unfinished"];
+          }
+        } else {
+          const state = Store.getState();
+          const stateSaved = !state.save.isBusy && state.save.queue.length === 0;
+          if (!stateSaved && state.skeletonTracing.restrictions.allowUpdate) {
+            Store.dispatch(saveNowAction());
+            return messages["save.leave_page_unfinished"];
+          }
         }
       }
       return null;
-    },
-    );
+    });
 
     this.urlManager.startUrlUpdater();
 
     this.sceneController = new SceneController(this.model);
 
-    if (this.model.skeletonTracing != null) {
-      this.view = new SkeletonTracingView(this.model);
-      this.annotationController = new SkeletonTracingController(
-        this.model, this.view, this.sceneController);
-      this.planeController = new SkeletonTracingPlaneController(
-        this.model, this.view, this.sceneController, this.annotationController);
+    // TODO: Replace with skeletonTracing from Store (which is non-null currently)
+    if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+      if (this.model.volumeTracing != null) {
+        // VOLUME MODE
+        this.view = new VolumeTracingView(this.model);
+        this.annotationController = new VolumeTracingController(
+          this.model, this.view, this.sceneController);
+        this.planeController = new VolumeTracingPlaneController(
+          this.model, this.view, this.sceneController, this.annotationController);
+      } else {
+        // SKELETONRACING MODE
+        this.view = new SkeletonTracingView(this.model);
+        this.annotationController = new SkeletonTracingController(
+          this.model, this.view, this.sceneController);
+        this.planeController = new SkeletonTracingPlaneController(
+          this.model, this.view, this.sceneController, this.annotationController);
 
-      const ArbitraryControllerClass = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalArbitraryController;
-      this.arbitraryController = new ArbitraryControllerClass(
-        this.model, this.view, this.sceneController, this.annotationController);
-    } else if (this.model.volumeTracing != null) {
-      this.view = new VolumeTracingView(this.model);
-      this.annotationController = new VolumeTracingController(
-        this.model, this.view, this.sceneController);
-      this.planeController = new VolumeTracingPlaneController(
-        this.model, this.view, this.sceneController, this.annotationController);
+        const ArbitraryControllerClass = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalSkeletonTracingArbitraryController;
+        this.arbitraryController = new ArbitraryControllerClass(
+          this.model, this.view, this.sceneController, this.annotationController);
+      }
     } else {
-      // View mode
-
+      // VIEW MODE
       this.view = new View(this.model);
       this.planeController = new PlaneController(
         this.model, this.view, this.sceneController);
@@ -145,10 +162,18 @@ class Controller {
 
     // Zoom step warning
     this.zoomStepWarningToast = null;
-    this.listenTo(this.model.flycam, "zoomStepChanged", this.onZoomStepChange);
+    let lastZoomStep = Store.getState().flycam.zoomStep;
+    Store.subscribe(() => {
+      const { zoomStep } = Store.getState().flycam;
+      if (lastZoomStep !== zoomStep) {
+        this.onZoomStepChange();
+        lastZoomStep = zoomStep;
+      }
+    });
     this.onZoomStepChange();
 
     app.vent.trigger("webknossos:ready");
+    Store.dispatch(wkReadyAction());
   }
 
   initTaskScript() {
@@ -241,7 +266,7 @@ class Controller {
       // save the progress
       model = this.model;
 
-      const tracingType = model.skeletonTracing || model.volumeTracing;
+      const tracingType = model.volumeTracing;
       tracingType.stateLogger.pushNow().then(() => {
         const url = `/annotations/${model.tracingType}/${model.tracingId}/finishAndRedirect`;
         app.router.loadURL(url);

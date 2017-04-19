@@ -4,7 +4,7 @@
  */
 
 import Toast from "libs/toast";
-import type { RestrictionsType } from "oxalis/model";
+import type { RestrictionsType } from "oxalis/store";
 
 const UPDATE_ERROR = "You cannot update this tracing, because you are in Read-only mode!";
 const UPDATE_WARNING = "This change will not be persisted, because your are in Read-only mode!";

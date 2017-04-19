@@ -1,118 +1,99 @@
-import _ from "lodash";
-import Marionette from "backbone.marionette";
+// @flow
+import React, { PureComponent } from "react";
+import type { OxalisState, FlycamType } from "oxalis/store";
+import type Model from "oxalis/model";
+import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
-import app from "app";
 import constants from "oxalis/constants";
-import utils from "libs/utils";
 import Toast from "libs/toast";
 import { V3 } from "libs/mjs";
+import Store from "oxalis/store";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { Button, Input } from "antd";
+import Vector3Input from "libs/vector3_input";
 
-class DatasetPositionView extends Marionette.View {
-  static initClass() {
-    this.prototype.tagName = "div";
-    this.prototype.className = "form-inline dataset-position-view";
-    this.prototype.template = _.template(`\
-<div class="form-group">
-  <div class="input-group">
-    <span class="input-group-btn">
-      <button class="btn btn-primary">Position</button>
-    </span>
-    <input id="trace-position-input" class="form-control" type="text" value="<%- position() %>">
-  </div>
-</div>
-<div class="form-group">
-  <% if(isArbitrayMode()) { %>
-    <div class="input-group">
-      <span class="input-group-addon">Rotation</span>
-      <input id="trace-rotation-input" class="form-control" type="text" value="<%- rotation() %>">
-    </div>
-  <% } %>
-</div>\
-`);
+class DatasetPositionView extends PureComponent {
+  props: {
+    oldModel: Model,
+    flycam: FlycamType,
+  };
 
-    this.prototype.templateContext = {
-      position() {
-        return V3.floor(this.flycam.getPosition()).join(", ");
-      },
-
-      rotation() {
-        return V3.round(this.flycam3d.getRotation()).join(", ");
-      },
-
-      isArbitrayMode() {
-        return constants.MODES_ARBITRARY.includes(this.mode);
-      },
-    };
-
-
-    this.prototype.events = {
-      "change #trace-position-input": "changePosition",
-      "change #trace-rotation-input": "changeRotation",
-      "click button": "copyToClipboard",
-    };
-
-    this.prototype.ui = {
-      positionInput: "#trace-position-input",
-      rotationInput: "#trace-rotation-input",
-    };
+  componentDidMount() {
+    this.props.oldModel.on("change:mode", this._forceUpdate);
   }
 
-
-  initialize() {
-    this.render = _.throttle(this.render, 100);
-    this.listenTo(this.model, "change:mode", this.render);
-
-    // TODO MEASURE PERFORMANCE HIT BECAUSE OF CONSTANT RE-RENDER
-    this.listenTo(this.model.get("flycam3d"), "changed", this.render);
-    this.listenTo(this.model.get("flycam"), "positionChanged", this.render);
+  componentWillUnmount() {
+    this.props.oldModel.off("change:mode", this._forceUpdate);
   }
 
+  _forceUpdate = () => { this.forceUpdate(); };
 
-  // Rendering performance optimization
-  attachElContent(html) {
-    this.el.innerHTML = html;
-    return html;
-  }
+  copyPositionToClipboard = async () => {
+    const position = V3.floor(getPosition(this.props.flycam)).join(", ");
+    await Clipboard.copy(position);
+    Toast.success("Position copied to clipboard");
+  };
 
+  copyRotationToClipboard = async () => {
+    const rotation = V3.round(getRotation(this.props.flycam)).join(", ");
+    await Clipboard.copy(rotation);
+    Toast.success("Rotation copied to clipboard");
+  };
 
-  changePosition(event) {
-    const posArray = utils.stringToNumberArray(event.target.value);
-    if (posArray.length === 3) {
-      this.model.flycam.setPosition(posArray);
-      app.vent.trigger("centerTDView");
-      this.ui.positionInput.get(0).setCustomValidity("");
-    } else {
-      this.ui.positionInput.get(0).setCustomValidity("Please supply a valid position, like 1,1,1!");
-      this.ui.positionInput.get(0).reportValidity();
-    }
-  }
+  handleChangePosition = (position) => {
+    Store.dispatch(setPositionAction(position));
+  };
 
+  handleChangeRotation = (rotation) => {
+    Store.dispatch(setRotationAction(rotation));
+  };
 
-  changeRotation(event) {
-    const rotArray = utils.stringToNumberArray(event.target.value);
-    if (rotArray.length === 3) {
-      this.model.flycam3d.setRotation(rotArray);
-      this.ui.rotationInput.get(0).setCustomValidity("");
-    } else {
-      this.ui.rotationInput.get(0).setCustomValidity("Please supply a valid rotation, like 1,1,1!");
-      this.ui.rotationInput.get(0).reportValidity();
-    }
-  }
+  render() {
+    const position = V3.floor(getPosition(this.props.flycam));
+    const rotation = V3.round(getRotation(this.props.flycam));
+    const isArbitraryMode = constants.MODES_ARBITRARY.includes(this.props.oldModel.mode);
 
-
-  copyToClipboard(evt) {
-    evt.preventDefault();
-
-    const positionString = this.ui.positionInput.val();
-    Clipboard.copy(positionString).then(
-      () => Toast.success("Position copied to clipboard"));
-  }
-
-  onDestroy() {
-    this.model.flycam3d.off("changed");
-    this.model.flycam.off("positionChanged");
+    return (
+      <div>
+        <div>
+          <Input.Group compact size="large">
+            <Button
+              onClick={this.copyPositionToClipboard}
+              size="large"
+            >Position</Button>
+            <Vector3Input
+              value={position}
+              onChange={this.handleChangePosition}
+              style={{ width: "120px" }}
+            />
+          </Input.Group>
+        </div>
+        <div>
+          {
+            isArbitraryMode ?
+              <Input.Group compact size="large">
+                <Button
+                  onClick={this.copyRotationToClipboard}
+                  size="large"
+                >Rotation</Button>
+                <Vector3Input
+                  value={rotation}
+                  onChange={this.handleChangeRotation}
+                  style={{ width: "120px" }}
+                />
+              </Input.Group> : null
+          }
+        </div>
+      </div>
+    );
   }
 }
-DatasetPositionView.initClass();
 
-export default DatasetPositionView;
+function mapStateToProps(state: OxalisState) {
+  return {
+    flycam: state.flycam,
+  };
+}
+
+export default connect(mapStateToProps)(DatasetPositionView);

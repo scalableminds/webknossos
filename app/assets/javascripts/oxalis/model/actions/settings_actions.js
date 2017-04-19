@@ -13,7 +13,7 @@ type UpdateLayerSettingActionType = {type: "UPDATE_LAYER_SETTING", layerName:str
 export type InitializeSettingsAction = {type: "INITIALIZE_SETTINGS", initialUserSettings: UserConfigurationType, initialDatasetSettings: DatasetConfigurationType};
 type SetDatasetAction = {type: "SET_DATASET", dataset: DatasetType};
 
-export type SettingActionTypes = (
+export type SettingActionType = (
   UpdateUserSettingActionType |
   UpdateDatasetSettingActionType |
   InitializeSettingsAction |

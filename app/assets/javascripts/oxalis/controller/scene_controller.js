@@ -8,17 +8,18 @@ import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 import * as THREE from "three";
-import Flycam2d from "oxalis/model/flycam2d";
+import { V3 } from "libs/mjs";
+import { getPosition, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import Cube from "oxalis/geometries/cube";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
 import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
-import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView, Vector3Indicies } from "oxalis/constants";
+import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { BoundingBoxType } from "oxalis/model";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
@@ -26,7 +27,6 @@ import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 class SceneController {
   skeleton: Skeleton;
   CUBE_COLOR: number;
-  flycam: Flycam2d;
   model: Model;
   current: number;
   displayPlane: OrthoViewMapType<boolean>;
@@ -54,7 +54,6 @@ class SceneController {
 
   constructor(model: Model) {
     _.extend(this, Backbone.Events);
-    this.flycam = model.flycam;
     this.model = model;
 
     this.current = 0;
@@ -95,16 +94,16 @@ class SceneController {
     }
 
     if (this.model.volumeTracing != null) {
-      this.contour = new ContourGeometry(this.model.volumeTracing, this.model.flycam);
+      this.contour = new ContourGeometry(this.model.volumeTracing);
     }
 
-    if (this.model.skeletonTracing != null) {
+    if (Store.getState().skeletonTracing != null) {
       this.skeleton = new Skeleton(this.model);
     }
 
     // create Meshes
     const createPlane = planeIndex =>
-      new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, this.flycam, planeIndex, this.model);
+      new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, planeIndex, this.model);
 
     this.planes = {
       [OrthoViews.PLANE_XY]: createPlane(OrthoViews.PLANE_XY),
@@ -178,7 +177,7 @@ class SceneController {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(true);
-          pos = this.flycam.getPosition().slice();
+          pos = _.clone(getPosition(Store.getState().flycam));
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] += planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
@@ -192,7 +191,7 @@ class SceneController {
         mesh.visible = true;
       }
       for (const planeId of OrthoViewValuesWithoutTDView) {
-        pos = this.flycam.getPosition();
+        pos = getPosition(Store.getState().flycam);
         this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(true);
@@ -203,9 +202,9 @@ class SceneController {
 
 
   update = (): void => {
-    const gPos = this.flycam.getPosition();
+    const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
-    const planeScale = this.flycam.getPlaneScalingFactor();
+    const planeScale = getPlaneScalingFactor(Store.getState().flycam);
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.planes[planeId].updateTexture();
       // Update plane position
@@ -226,9 +225,9 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    for (const i of Vector3Indicies) {
-      this.planeShift[i] = value * scaleInfo.voxelPerNM[i];
-    }
+    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.scale);
+    V3.scale(voxelPerNMVector, value, this.planeShift);
+
     app.vent.trigger("rerender");
   }
 

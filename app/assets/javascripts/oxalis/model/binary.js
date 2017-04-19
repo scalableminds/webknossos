@@ -38,7 +38,7 @@ type PingOptions = {
 class Binary {
   model: Model;
   cube: DataCube;
-  tracing: Tracing;
+  tracing: Tracing<*>;
   layer: Layer;
   category: CategoryType;
   name: string;
@@ -61,7 +61,7 @@ class Binary {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(model: Model, tracing: Tracing, layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
+  constructor(model: Model, tracing: Tracing<*>, layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
     this.model = model;
     this.tracing = tracing;
     this.layer = layer;
@@ -130,7 +130,6 @@ class Binary {
 
     const setMapping = (mapping) => {
       this.cube.setMapping(mapping);
-      this.model.flycam.update();
     };
 
     if (mappingName != null) {

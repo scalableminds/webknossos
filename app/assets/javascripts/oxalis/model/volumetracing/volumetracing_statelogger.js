@@ -1,43 +1,45 @@
 /**
  * volumetracing_statelogger.js
- * @flow weak
+ * @flow
  */
 
 import StateLogger from "oxalis/model/statelogger";
 import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import PushQueue from "oxalis/model/binary/pushqueue";
+import Store from "oxalis/store";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 
 class VolumeTracingStateLogger extends StateLogger {
 
   volumeTracing: VolumeTracing;
   pushQueue: PushQueue;
 
-  constructor(flycam, version, tracingId, tracingType, allowUpdate, volumeTracing, pushQueue) {
-    super(flycam, version, tracingId, tracingType, allowUpdate);
+  constructor(version: number, tracingId: string, tracingType: string, allowUpdate: boolean, volumeTracing: VolumeTracing, pushQueue: PushQueue) {
+    super(version, tracingId, tracingType, allowUpdate);
     this.volumeTracing = volumeTracing;
     this.pushQueue = pushQueue;
   }
 
 
-  pushDiff(action, value, push = true, ...args) {
+  pushDiff(action: string, value: Object, push: boolean = true) {
     this.pushQueue.pushImpl();
-    super.pushDiff(action, value, push, ...args);
+    super.pushDiff(action, value, push);
 
     if (push) {
-      this.pushImpl();
+      this.pushQueue.pushImpl();
     }
   }
 
 
-  pushNow(...args) {
+  pushNow() {
     const pushQueuePromise = this.pushQueue.pushImpl();
-    const stateLoggerPromise = super.pushNow(...args);
+    const stateLoggerPromise = super.pushNow();
     return Promise.all([pushQueuePromise, stateLoggerPromise]);
   }
 
 
-  stateSaved(...args) {
-    return super.stateSaved(...args) && this.pushQueue.stateSaved();
+  stateSaved() {
+    return super.stateSaved() && this.pushQueue.stateSaved();
   }
 
 
@@ -46,7 +48,7 @@ class VolumeTracingStateLogger extends StateLogger {
       "updateTracing",
       {
         activeCell: this.volumeTracing.getActiveCellId(),
-        editPosition: this.flycam.getPosition(),
+        editPosition: getPosition(Store.getState().flycam),
         nextCell: this.volumeTracing.idCount,
       },
       false,

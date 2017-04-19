@@ -12,12 +12,10 @@ import { OrthoViews } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import update from "immutability-helper";
 import { take, put, race, call } from "redux-saga/effects";
+import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
+import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
+import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 
-
-const KeyboardJS = {
-  bind: _.noop,
-  unbind: _.noop,
-};
 const mockedVolumeLayer = {
   isEmpty: () => false,
   finish: _.noop,
@@ -25,16 +23,10 @@ const mockedVolumeLayer = {
   getCentroid: _.noop,
 };
 
-mockRequire("keyboardjs", KeyboardJS);
-mockRequire("libs/window", { alert: console.log.bind(console) });
-mockRequire("bootstrap-toggle", {});
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 
 const { saveTracingAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
-const VolumeTracingActions = require("oxalis/model/actions/volumetracing_actions");
-const { pushSaveQueueAction } = require("oxalis/model/actions/save_actions");
-const VolumeTracingReducer = require("oxalis/model/reducers/volumetracing_reducer").default;
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 const { defaultState } = require("oxalis/store");
 

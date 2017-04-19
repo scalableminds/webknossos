@@ -160,7 +160,6 @@ export type VolumeTracingType = {
   +lastCentroid: ?Vector3,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMapType,
-  +controlMode: "Trace",
   +tracingId: string,
   +tracingType: VolumeTracingTypeTracingType,
   +restrictions: RestrictionsType & SettingsType,
@@ -171,20 +170,9 @@ export type ReadOnlyTracingType = {
   +name: string,
   +version: 0,
   +viewMode: 0,
-  +controlMode: "View",
   +tracingId: string,
   +tracingType: "View",
   +restrictions: RestrictionsType & SettingsType,
-  // restrictions: {
-  //   branchPointsAllowed: false,
-  //   allowUpdate: false,
-  //   allowFinish: false,
-  //   allowAccess: true,
-  //   allowDownload: false,
-  //   somaClickingAllowed: false,
-  //   advancedOptionsAllowed: false,
-  //   allowedModes: Array<"orthogonal">,
-  // },
 };
 
 export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;

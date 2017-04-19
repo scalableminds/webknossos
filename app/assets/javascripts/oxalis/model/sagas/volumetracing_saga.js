@@ -61,7 +61,7 @@ export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
     return;
   }
 
-  const start = (new Date()).getTime();
+  const start = Date.now();
   layer.finish();
   const iterator = layer.getVoxelIterator();
   const labelValue = yield select(state => state.tracing.activeCellId);
@@ -69,7 +69,7 @@ export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
     const binary = yield call([app.oxalis.model, app.oxalis.model.getSegmentationBinary]);
     yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
   }
-  console.log("Labeling time:", ((new Date()).getTime() - start));
+  console.log("Labeling time:", (Date.now() - start));
 
   yield put(updateDirectionAction(layer.getCentroid()));
   yield put(resetContourAction());

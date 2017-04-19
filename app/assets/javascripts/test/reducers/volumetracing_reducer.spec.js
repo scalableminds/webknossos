@@ -9,8 +9,9 @@ import mockRequire from "mock-require";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import update from "immutability-helper";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import type { TracingType, VolumeTracingType } from "oxalis/store";
 import Maybe from "data.maybe";
+import Constants from "oxalis/constants";
+import type { TracingType, VolumeTracingType } from "oxalis/store";
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 const { defaultState } = require("oxalis/store");
@@ -21,7 +22,7 @@ const volumeTracing = {
   name: "",
   activeCellId: 0,
   cells: [],
-  viewMode: 0,
+  viewMode: Constants.VOLUME_MODE_MOVE,
   idCount: 1,
   contourList: [],
   lastCentroid: null,
@@ -162,19 +163,19 @@ test("VolumeTracing should create cells and update the idCount", (t) => {
 });
 
 test("VolumeTracing should set trace/view mode", (t) => {
-  const setModeAction = VolumeTracingActions.setModeAction(1);
+  const setModeAction = VolumeTracingActions.setModeAction(Constants.VOLUME_MODE_TRACE);
 
   // Change mode to Trace
   const newState = VolumeTracingReducer(initialState, setModeAction);
 
   t.not(newState, initialState);
   getVolumeTracing(newState.tracing).map((tracing) => {
-    t.is(tracing.viewMode, 1);
+    t.is(tracing.viewMode, Constants.VOLUME_MODE_TRACE);
   });
 });
 
 test("VolumeTracing should not allow to set trace mode if the zoomStep is > 1", (t) => {
-  const setModeAction = VolumeTracingActions.setModeAction(1);
+  const setModeAction = VolumeTracingActions.setModeAction(Constants.VOLUME_MODE_TRACE);
   const alteredState = update(initialState, { flycam: {
     zoomStep: { $set: 2 },
   } });
@@ -185,25 +186,25 @@ test("VolumeTracing should not allow to set trace mode if the zoomStep is > 1", 
   t.is(alteredState, newState);
   getVolumeTracing(newState.tracing).map((tracing) => {
     // Mode should not be changed
-    t.is(tracing.viewMode, 0);
+    t.is(tracing.viewMode, Constants.VOLUME_MODE_MOVE);
   });
 });
 
 test("VolumeTracing should toggle trace/view mode", (t) => {
-  const toggleModeAction = VolumeTracingActions.toggleModeAction(1);
+  const toggleModeAction = VolumeTracingActions.toggleModeAction();
 
   // Toggle mode to Trace
   let newState = VolumeTracingReducer(initialState, toggleModeAction);
 
   getVolumeTracing(newState.tracing).map((tracing) => {
-    t.is(tracing.viewMode, 1);
+    t.is(tracing.viewMode, Constants.VOLUME_MODE_TRACE);
   });
 
   // Toggle mode back to View
   newState = VolumeTracingReducer(newState, toggleModeAction);
 
   getVolumeTracing(newState.tracing).map((tracing) => {
-    t.is(tracing.viewMode, 0);
+    t.is(tracing.viewMode, Constants.VOLUME_MODE_MOVE);
   });
 });
 

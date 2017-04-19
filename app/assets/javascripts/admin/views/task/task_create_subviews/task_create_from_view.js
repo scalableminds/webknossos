@@ -270,6 +270,7 @@ class TaskCreateFromView extends Marionette.View {
       },
       data: "amIAnAdmin=true",
       name: "scriptId",
+      emptyOption: true,
     });
 
     this.teamSelectionView = new SelectionView({
@@ -291,7 +292,6 @@ class TaskCreateFromView extends Marionette.View {
       data: "amIAnAdmin=true",
       name: "projectName",
       required: true,
-      emptyOption: true,
     });
 
     // render subviews in defined regions

@@ -16,6 +16,7 @@ class DatasetActionsView extends Marionette.View {
   <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
 <% } else { %>
   <button class="btn btn-primary disabled">Read only</button>
+  <a href="/annotations/<%- tracingType %>/<%- tracingId %>/duplicate" class="btn btn-primary"><i class="fa fa-code-fork"></i>Copy To My Account</a>
 <% } %>
 <% if (hasAdvancedOptions) { %>
   <div class="btn-group btn-group">

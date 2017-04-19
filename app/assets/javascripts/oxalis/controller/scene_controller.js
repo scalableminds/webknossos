@@ -104,7 +104,7 @@ class SceneController {
       this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
 
-    if (Store.getState().tracing != null) {
+    if (!this.model.isVolumeTracing()) {
       this.skeleton = new Skeleton();
       this.rootNode.add(this.skeleton.getRootNode());
     }

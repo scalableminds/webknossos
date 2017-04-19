@@ -96,12 +96,14 @@ class ScriptCreateView extends Marionette.View {
   }
 
   onRender() {
+    const owner = this.model.get("owner");
+    const defaultUserId = owner ? owner.id : app.currentUser.id;
     const userSelectionView = new SelectionView({
       collection: new UserCollection(),
       childViewOptions: {
         modelValue() { return this.model.id; },
         modelLabel() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
-        defaultItem: { email: app.currentUser.email },
+        defaultItem: { id: defaultUserId },
       },
       name: "ownerId",
       data: "isAdmin=true",

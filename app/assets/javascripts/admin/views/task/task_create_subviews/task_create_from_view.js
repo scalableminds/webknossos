@@ -261,12 +261,13 @@ class TaskCreateFromView extends Marionette.View {
       name: "taskTypeId",
     });
 
+    const defaultScriptId = this.model.get("script") ? this.model.get("script").id : null;
     this.scriptSelectionView = new SelectionView({
       collection: new ScriptCollection(),
       childViewOptions: {
         modelValue() { return `${this.model.get("id")}`; },
         modelLabel() { return `${this.model.get("name")}`; },
-        defaultItem: { id: this.model.get("script.id") },
+        defaultItem: { id: defaultScriptId },
       },
       data: "amIAnAdmin=true",
       name: "scriptId",

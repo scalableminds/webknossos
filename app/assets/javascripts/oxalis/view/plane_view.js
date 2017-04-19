@@ -7,11 +7,8 @@ import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
 import TWEEN from "tween.js";
-import scaleInfo from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Store from "oxalis/store";
-import modal from "oxalis/view/modal";
-import Toast from "libs/toast";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 import Model from "oxalis/model";
@@ -86,7 +83,7 @@ class PlaneView {
     // scene.scale does not have an effect.
     this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale.copy(scaleInfo.getNmPerVoxelVector());
+    this.group.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
     // Add scene to the group, all Geometries are than added to group
     this.scene.add(this.group);
 
@@ -107,6 +104,12 @@ class PlaneView {
 
     this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
+
+    Store.subscribe(() => {
+      if (this.running) {
+        this.scaleTrianglesPlane(Store.getState().userConfiguration.scale);
+      }
+    });
   }
 
 
@@ -250,37 +253,6 @@ class PlaneView {
 
   getCameras(): OrthoViewMapType<THREE.OrthographicCamera> {
     return this.cameras;
-  }
-
-
-  showBranchModalDouble(callback: () => void): void {
-    modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
-      "Jump again?",
-      [{ id: "jump-button", label: "Jump again", callback },
-       { id: "cancel-button", label: "Cancel" }]);
-  }
-
-
-  showBranchModalDelete(callback: () => void): void {
-    modal.show("You are about to delete an unused branchpoint, are you sure?",
-      "Delete branchpoint?",
-      [{ id: "delete-button", label: "Delete branchpoint", callback },
-       { id: "cancel-button", label: "Cancel" }]);
-  }
-
-
-  bindToEvents() {
-    if (this.model.skeletonTracing) {
-      this.listenTo(this.model.skeletonTracing, "doubleBranch", this.showBranchModalDouble);
-      this.listenTo(this.model.skeletonTracing, "deleteBranch", this.showBranchModalDelete);
-      this.listenTo(this.model.skeletonTracing, "mergeDifferentTrees", () => Toast.error("You can't merge nodes within the same tree", false));
-    }
-
-    Store.subscribe(() => {
-      if (this.running) {
-        this.scaleTrianglesPlane(Store.getState().userConfiguration.scale);
-      }
-    });
   }
 
 

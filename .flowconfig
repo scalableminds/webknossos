@@ -15,6 +15,7 @@
 <PROJECT_ROOT>/tools/.*
 <PROJECT_ROOT>/node_modules/flow-coverage-report/
 <PROJECT_ROOT>/node_modules/draft-js/
+<PROJECT_ROOT>/app/assets/.*\.spec\.js
 
 [options]
 module.ignore_non_literal_requires=true

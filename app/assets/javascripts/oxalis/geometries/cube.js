@@ -11,6 +11,8 @@ import Model from "oxalis/model";
 import type { Vector3, OrthoViewMapType } from "oxalis/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
+import Store from "oxalis/store";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 
 class Cube {
 
@@ -39,8 +41,6 @@ class Cube {
     this.initialized = false;
     this.visible = true;
 
-    this.listenTo(this.model.flycam, "positionChanged", pos => this.updatePosition(pos));
-
     const lineProperties = { color, linewidth: lineWidth };
 
     this.cube = new THREE.Line(
@@ -58,6 +58,10 @@ class Cube {
     if ((this.min != null) && (this.max != null)) {
       this.setCorners(this.min, this.max);
     }
+
+    Store.subscribe(() => {
+      this.updatePosition(getPosition(Store.getState().flycam));
+    });
   }
 
   setCorners(min1, max1) {
@@ -98,7 +102,7 @@ class Cube {
     }
 
     this.initialized = true;
-    this.updatePosition(this.model.flycam.getPosition());
+    this.updatePosition(getPosition(Store.getState().flycam));
     app.vent.trigger("rerender");
   }
 
@@ -132,7 +136,7 @@ class Cube {
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
-      const position = this.model.flycam.getPosition();
+      const position = getPosition(Store.getState().flycam);
       if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] <= this.max[thirdDim]) {
         this.crossSections[planeId].visible = this.visible && (planeId === id) && this.showCrossSections;
       } else {

@@ -54,6 +54,7 @@ class DataCube {
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
+  off: Function;
 
 
   // The cube stores the buckets in a seperate array for each zoomStep. For each

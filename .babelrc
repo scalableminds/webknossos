@@ -1,4 +1,25 @@
 {
+  "env": {
+    "test": {
+      "presets": [
+        ["env", {
+          "targets": {
+            "node": "current"
+          },
+          "exclude": [
+            "transform-regenerator"
+          ],
+        }],
+        "react",
+      ],
+      plugins: [
+        "transform-async-to-generator",
+        "transform-class-properties",
+        "transform-flow-strip-types",
+        ["import", { libraryName: "antd" }]
+      ],
+    }
+  },
   presets: [
     ["env", {
       "targets": {
@@ -16,6 +37,7 @@
       "modules": false,
     }],
     "react",
+    /*"react-optimize",*/
   ],
   plugins: [
     "transform-async-to-generator",

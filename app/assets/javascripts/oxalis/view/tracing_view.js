@@ -5,8 +5,8 @@
 
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import app from "app";
 import Constants from "oxalis/constants";
+import Store from "oxalis/store";
 
 class TracingView extends Marionette.View {
   static initClass() {
@@ -42,8 +42,9 @@ class TracingView extends Marionette.View {
   }
 
   initialize() {
-    this.listenTo(this.model.flycam, "zoomStepChanged", this.onZoomStepChange);
-    this.listenTo(app.vent, "webknossos:ready", this.onZoomStepChange);
+    Store.subscribe(() => {
+      this.onZoomStepChange();
+    });
   }
 
 

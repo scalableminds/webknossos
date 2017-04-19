@@ -7,10 +7,10 @@ import _ from "lodash";
 import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import scaleInfo from "oxalis/model/scaleinfo";
 import Constants from "oxalis/constants";
-import Flycam3d from "oxalis/model/flycam3d";
 import View from "oxalis/view";
+import Store from "oxalis/store";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 
 
 const DEFAULT_SCALE: number = 1.35;
@@ -46,17 +46,15 @@ class ArbitraryView {
   renderer: THREE.WebGLRenderer;
   geometries: Array<THREE.Geometry> = [];
   group: THREE.Object3D;
-  dataCam: Flycam3d;
   cameraPosition: Array<number>;
   container: JQuery;
   view: View;
 
-  constructor(canvas: JQuery, dataCam: Flycam3d, view: View, width: number) {
+  constructor(canvas: JQuery, view: View, width: number) {
     this.animate = this.animateImpl.bind(this);
     this.resize = this.resizeImpl.bind(this);
     this.applyScale = this.applyScaleImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
-    this.dataCam = dataCam;
     this.view = view;
     _.extend(this, Backbone.Events);
 
@@ -83,8 +81,9 @@ class ArbitraryView {
     this.cameraPosition = [0, 0, this.camDistance];
 
     this.group = new THREE.Object3D();
+    const nmPerVoxel = new THREE.Vector3(...Store.getState().dataset.scale);
     // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale.copy(new THREE.Vector3(...scaleInfo.nmPerVoxel));
+    this.group.scale.copy(nmPerVoxel);
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.group);
     this.group.add(this.camera);
@@ -149,7 +148,7 @@ class ArbitraryView {
       }
     }
 
-    const m = this.dataCam.getZoomedMatrix();
+    const m = getZoomedMatrix(Store.getState().flycam);
 
     camera.matrix.set(m[0], m[4], m[8], m[12],
                       m[1], m[5], m[9], m[13],

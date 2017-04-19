@@ -1,4 +1,5 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+import test from "ava";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
@@ -18,9 +19,6 @@ const Request = { receiveJSON: sinon.stub() };
 const ErrorHandling = {
   assertExtendContext: _.noop,
 };
-const scaleInfo = {
-  initialize: _.noop,
-};
 
 class Binary {
   category = "color"
@@ -32,18 +30,11 @@ class Layer {
   resolutions = [];
 }
 
-class Flycam2d {
-  setPosition() {}
-}
-
 mockRequire("libs/toast", { error: _.noop });
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", {});
 mockRequire("oxalis/model/binary", Binary);
-mockRequire("oxalis/model/scaleinfo", scaleInfo);
-mockRequire("oxalis/model/flycam2d", Flycam2d);
-mockRequire("oxalis/model/flycam3d", _.noop);
 mockRequire("oxalis/model/skeletontracing/skeletontracing", _.noop);
 mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
 mockRequire("oxalis/model/user", User);
@@ -79,63 +70,53 @@ const TRACING_OBJECT = {
 // Avoid node caching and make sure all mockRequires are applied
 const Model = mockRequire.reRequire("../../oxalis/model").default;
 
-describe("Model", () => {
-  let model = null;
+test.beforeEach((t) => {
+  const model = t.context.model = new Model();
+  model.set("state", { position: [1, 2, 3] });
+  model.set("tracingType", "tracingTypeValue");
+  model.set("tracingId", "tracingIdValue");
 
-  beforeEach(() => {
-    model = new Model();
-    model.set("state", { position: [1, 2, 3] });
-    model.set("tracingType", "tracingTypeValue");
-    model.set("tracingId", "tracingIdValue");
-  });
+  Request.receiveJSON.returns(Promise.resolve(TRACING_OBJECT));
+  User.prototype.fetch.returns(Promise.resolve());
+});
 
 
-  describe("Initialization", () => {
-    beforeEach(() => {
-      Request.receiveJSON.returns(Promise.resolve(TRACING_OBJECT));
-      User.prototype.fetch.returns(Promise.resolve());
+// TODO: fix for Store-based model
+// describe("Successful initialization", () => {
+//   it("should resolve", (done) => {
+//     model.fetch()
+//       .then(done)
+//       .catch((error) => {
+//         fail(error);
+//         done();
+//       });
+//   });
+// });
+
+test("Model Initialization: should throw a model.HANDLED_ERROR for missing dataset", (t) => {
+  t.plan(1);
+  const { model } = t.context;
+  const tracingObject = _.clone(TRACING_OBJECT);
+  delete tracingObject.content.dataSet;
+  Request.receiveJSON.returns(Promise.resolve(tracingObject));
+
+  return model.fetch()
+    .then(() => {
+      t.fail("Promise should not have been resolved.");
+    }).catch((error) => {
+      t.is(error, model.HANDLED_ERROR);
     });
+});
 
+test("Model Initialization: should throw an Error on unexpected failure", (t) => {
+  t.plan(1);
+  const { model } = t.context;
+  Request.receiveJSON.returns(Promise.reject(new Error("errorMessage")));
 
-    describe("Successful initialization", () => {
-      it("should resolve", (done) => {
-        model.fetch()
-          .then(done)
-          .catch((error) => {
-            fail(error.message);
-            done();
-          });
-      });
+  return model.fetch()
+    .then(() => {
+      t.fail("Promise should not have been resolved.");
+    }).catch((error) => {
+      t.is(error.message, "errorMessage");
     });
-
-    describe("Error handling", () => {
-      it("should throw a model.HANDLED_ERROR for missing dataset", (done) => {
-        const tracingObject = _.clone(TRACING_OBJECT);
-        delete tracingObject.content.dataSet;
-        Request.receiveJSON.returns(Promise.resolve(tracingObject));
-
-        model.fetch()
-          .then(() => {
-            fail("Promise should not have been resolved.");
-            done();
-          }).catch((error) => {
-            expect(error).toBe(model.HANDLED_ERROR);
-            done();
-          });
-      });
-
-      it("should throw an Error on unexpected failure", (done) => {
-        Request.receiveJSON.returns(Promise.reject(new Error("errorMessage")));
-
-        model.fetch()
-          .then(() => {
-            fail("Promise should not have been resolved.");
-            done();
-          }).catch((error) => {
-            expect(error.message).toBe("errorMessage");
-            done();
-          });
-      });
-    });
-  });
 });

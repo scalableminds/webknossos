@@ -1,15 +1,15 @@
 /**
  * statelogger.js
- * @flow weak
+ * @flow
  */
 
 import Backbone from "backbone";
 import _ from "lodash";
 import $ from "jquery";
 import app from "app";
+import Store from "oxalis/store";
 import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
-import Flycam2D from "oxalis/model/flycam2d";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
@@ -26,7 +26,7 @@ type DiffType = {
 function mutexPromise(func, timeout = 20000) {
   let promise = null;
 
-  return function (...args) {
+  return function (...args: Array<any>) {
     if (!promise) {
       let internalPromise;
       promise = internalPromise = func.apply(this, args);
@@ -47,7 +47,6 @@ function mutexPromise(func, timeout = 20000) {
 
 class StateLogger {
 
-  flycam: Flycam2D;
   version: number;
   tracingId: string;
   tracingType: string;
@@ -60,8 +59,7 @@ class StateLogger {
   on: Function;
 
 
-  constructor(flycam, version, tracingId, tracingType, allowUpdate) {
-    this.flycam = flycam;
+  constructor(version: number, tracingId: string, tracingType: string, allowUpdate: boolean) {
     this.version = version;
     this.tracingId = tracingId;
     this.tracingType = tracingType;
@@ -71,11 +69,11 @@ class StateLogger {
     this.newDiffs = [];
 
     // Push state to server whenever a user moves
-    this.listenTo(this.flycam, "positionChanged", this.push);
+    Store.subscribe(() => { this.push(); });
   }
 
 
-  pushDiff(action, value, push = true) {
+  pushDiff(action: string, value: Object, push: boolean = true): void {
     this.newDiffs.push({
       action,
       value,
@@ -125,7 +123,7 @@ class StateLogger {
   pushThrottled = _.throttle(this.mutexedPush, PUSH_THROTTLE_TIME);
 
 
-  pushImpl(notifyOnFailure) {
+  pushImpl(notifyOnFailure: boolean) {
     if (!this.allowUpdate) {
       return Promise.resolve();
     }
@@ -155,7 +153,7 @@ class StateLogger {
   }
 
 
-  pushFailCallback(response, notifyOnFailure) {
+  pushFailCallback(response: Response, notifyOnFailure: boolean) {
     $("body").addClass("save-error");
 
     // HTTP Code 409 'conflict' for dirty state

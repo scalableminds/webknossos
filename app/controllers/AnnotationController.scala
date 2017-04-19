@@ -238,7 +238,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 2097152)) { implicit request =>
+  def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 8388608)) { implicit request =>
     // Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
     AnnotationUpdateService.store(typ, id, version, request.body)
 

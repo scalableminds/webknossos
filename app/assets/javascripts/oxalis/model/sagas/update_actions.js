@@ -216,7 +216,7 @@ export function updateVolumeTracing(tracing: VolumeTracingType, position: Vector
     value: {
       activeCell: tracing.activeCellId,
       editPosition: position,
-      nextCell: tracing.idCount,
+      nextCell: tracing.maxCellId + 1,
     },
   };
 }

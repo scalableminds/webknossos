@@ -42,7 +42,7 @@ const volumeTracing = {
   activeCellId: 0,
   cells: [],
   viewMode: 0,
-  idCount: 1,
+  maxCellId: 0,
   contourList: [[1, 2, 3], [7, 8, 9]],
   restrictions: {
     branchPointsAllowed: true,

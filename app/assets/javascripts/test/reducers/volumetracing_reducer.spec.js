@@ -23,7 +23,7 @@ const volumeTracing = {
   activeCellId: 0,
   cells: [],
   viewMode: Constants.VOLUME_MODE_MOVE,
-  idCount: 1,
+  maxCellId: 0,
   contourList: [],
   lastCentroid: null,
   restrictions: {
@@ -123,33 +123,33 @@ test("VolumeTracing should create a cell and set it as the activeCell", (t) => {
   });
 });
 
-test("VolumeTracing should create a non-exisiting cell and update the idCount", (t) => {
+test("VolumeTracing should create a non-existing cell and update the maxCellId", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction(4);
 
-  // Create a cell with an id that is higher than the idCount
+  // Create a cell with an id that is higher than the maxCellId
   const newState = VolumeTracingReducer(initialState, createCellAction);
   getVolumeTracing(newState.tracing).map((tracing) => {
-    t.is(tracing.idCount, 5);
+    t.is(tracing.maxCellId, 4);
   });
 });
 
-test("VolumeTracing should create an existing cell and not update the idCount", (t) => {
+test("VolumeTracing should create an existing cell and not update the maxCellId", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction(2);
   const alteredState = update(initialState, { tracing: {
-    idCount: { $set: 5 },
+    maxCellId: { $set: 5 },
   } });
 
-  // Create cell with an id that is lower than the idCount
+  // Create cell with an id that is lower than the maxCellId
   const newState = VolumeTracingReducer(alteredState, createCellAction);
   getVolumeTracing(newState.tracing).map((tracing) => {
-    t.is(tracing.idCount, 5);
+    t.is(tracing.maxCellId, 5);
   });
 });
 
-test("VolumeTracing should create cells and update the idCount", (t) => {
+test("VolumeTracing should create cells and update the maxCellId", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction();
   const alteredState = update(initialState, { tracing: {
-    idCount: { $set: 5 },
+    maxCellId: { $set: 5 },
   } });
 
   // Create three cells without specifying an id
@@ -158,7 +158,7 @@ test("VolumeTracing should create cells and update the idCount", (t) => {
   newState = VolumeTracingReducer(newState, createCellAction);
 
   getVolumeTracing(newState.tracing).map((tracing) => {
-    t.is(tracing.idCount, 8);
+    t.is(tracing.maxCellId, 8);
   });
 });
 

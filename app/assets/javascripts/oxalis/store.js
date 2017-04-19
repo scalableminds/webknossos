@@ -154,7 +154,7 @@ export type VolumeTracingType = {
   +type: "volume",
   +name: string,
   +version: number,
-  +idCount: number,
+  +maxCellId: number,
   +viewMode: VolumeModeType,
   +cubes: [],
   +activeCellId: number,

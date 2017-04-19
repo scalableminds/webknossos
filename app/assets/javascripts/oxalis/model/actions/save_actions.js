@@ -17,7 +17,8 @@ export type SaveActionType =
   SaveNowActionType |
   ShiftSaveQueueActionType |
   SetSaveBusyActionType |
-  SetLastSaveTimestampActionType;
+  SetLastSaveTimestampActionType |
+  SetVersionNumberActionType;
 
 export const pushSaveQueueAction = (items: Array<UpdateAction>, pushNow?: boolean = false): PushSaveQueueActionType => ({
   type: "PUSH_SAVE_QUEUE",

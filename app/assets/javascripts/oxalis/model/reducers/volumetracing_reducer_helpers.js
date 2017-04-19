@@ -43,11 +43,12 @@ export function createCellReducer(state: OxalisState, volumeTracing: VolumeTraci
     // cellId 0 means there is no annotation, so there must not be a cell with id 0
     return state;
   }
-  let newIdCount = volumeTracing.idCount;
+  let newMaxCellId = volumeTracing.maxCellId;
   if (id == null) {
-    id = newIdCount++;
+    newMaxCellId++;
+    id = newMaxCellId;
   } else {
-    newIdCount = Math.max(id + 1, newIdCount);
+    newMaxCellId = Math.max(id, newMaxCellId);
   }
 
   // Create the new VolumeCell
@@ -56,7 +57,7 @@ export function createCellReducer(state: OxalisState, volumeTracing: VolumeTraci
   return update(state, { tracing: {
     activeCellId: { $set: cell.id },
     cells: { [cell.id]: { $set: cell } },
-    idCount: { $set: newIdCount },
+    maxCellId: { $set: newMaxCellId },
   } });
 }
 

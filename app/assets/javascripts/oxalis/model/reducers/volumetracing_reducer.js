@@ -17,9 +17,9 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
 
       // As the frontend doesn't know all cells, we have to keep track of the highest id
       // and cannot compute it
-      let idCount = 1;
+      let maxCellId = 1;
       if (contentData.nextCell != null) {
-        idCount = contentData.nextCell;
+        maxCellId = contentData.nextCell - 1;
       }
 
       const volumeTracing: VolumeTracingType = {
@@ -27,7 +27,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         activeCellId: 0,
         lastCentroid: null,
         contourList: [],
-        idCount,
+        maxCellId,
         cells: {},
         cubes: [],
         restrictions,

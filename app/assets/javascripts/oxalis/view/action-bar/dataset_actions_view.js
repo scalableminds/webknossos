@@ -147,7 +147,11 @@ class DatasetActionsView extends PureComponent {
           icon={this.getSaveButtonIcon()}
         >Save</Button>);
     } else {
-      elements.push(<Button type="primary" disabled>Read only</Button>);
+      elements.push(<Button
+        key="read-only-button"
+        type="primary"
+        disabled
+      >Read only</Button>);
       elements.push(<Button
         key="copy-button"
         icon="file-add"

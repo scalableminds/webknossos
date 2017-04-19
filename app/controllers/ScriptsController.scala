@@ -18,7 +18,7 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'gist).read[String] and
-      (__ \ 'owner).read[String]) (Script.fromForm _)
+      (__ \ 'ownerId).read[String]) (Script.fromForm _)
 
   def empty(id: String) = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
@@ -53,10 +53,11 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   }
 
   def update(scriptId: String) = Authenticated.async(parse.json) { implicit request =>
-    withJsonBodyUsing(Script.scriptFormat) { script =>
+    withJsonBodyUsing(scriptPublicReads) { script =>
       for {
         oldScript <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
         _ <- (oldScript._owner == request.user.id) ?~> Messages("script.notOwner")
+        _ <- ScriptDAO.update(oldScript._id, script.copy(_id = oldScript._id))
       } yield {
         Ok(Script.scriptPublicWrites.writes(script))
       }

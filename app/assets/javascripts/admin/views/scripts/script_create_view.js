@@ -33,8 +33,8 @@ class ScriptCreateView extends Marionette.View {
         </div>
 
         <div class="form-group">
-          <label class="col-sm-2 control-label" for="gist">Owner</label>
-          <div class="col-sm-9 owner">
+          <label class="col-sm-2 control-label" for="ownerId">Owner</label>
+          <div class="col-sm-9 ownerId">
           </div>
         </div>
 
@@ -54,7 +54,7 @@ class ScriptCreateView extends Marionette.View {
       { "submit form": "submitForm" };
 
     this.prototype.regions = {
-      owner: ".owner",
+      ownerId: ".ownerId",
     };
 
     this.prototype.ui = {
@@ -103,10 +103,10 @@ class ScriptCreateView extends Marionette.View {
         modelLabel() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
         defaultItem: { email: app.currentUser.email },
       },
-      name: "owner",
+      name: "ownerId",
       data: "isAdmin=true",
     });
-    this.showChildView("owner", userSelectionView);
+    this.showChildView("ownerId", userSelectionView);
   }
 
 }

@@ -9,7 +9,7 @@ class ScriptListItemView extends Marionette.View {
     this.prototype.tagName = "tr";
     this.prototype.template = _.template(`\
     <td><%- name %></td>
-    <td><%- owner %></td>
+    <td><%- ownerId %></td>
     <td><a href="<%- gist %>" target="_blank"><%- gist %></td>\
     <td class="nowrap">
       <a href="/scripts/<%- id %>/edit"><i class="fa fa-pencil"></i>edit</a><br>

@@ -51,7 +51,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       (__ \ 'status).read[CompletionStatus] and
       (__ \ 'team).read[String] and
       (__ \ 'projectName).read[String] and
-      (__ \ 'script).readNullable[String] and
+      (__ \ 'scriptId).readNullable[String] and
       (__ \ 'boundingBox).readNullable[BoundingBox]
 
   val taskNMLJsonReads = baseJsonReads.tupled

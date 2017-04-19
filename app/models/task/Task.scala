@@ -128,7 +128,7 @@ object Task extends FoxImplicits {
         "neededExperience" -> task.neededExperience,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
-        "script" -> scriptInfo.toOption,
+        "script" -> scriptInfo.toOption.map(Script.scriptPublicWrites.writes),
         "tracingTime" -> task.tracingTime,
         "creationInfo" -> task.creationInfo
       )

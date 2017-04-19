@@ -49,6 +49,11 @@ class DatasetActionsView extends PureComponent {
     await this.props.oldModel.save();
   };
 
+  handleCopyToAccount = async () => {
+    const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/duplicate`;
+    app.router.loadURL(url);
+  };
+
   handleFinish = async () => {
     const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/finishAndRedirect`;
     await this.handleSave();
@@ -115,6 +120,7 @@ class DatasetActionsView extends PureComponent {
     const archiveButtonText = this.isTask ? "Finish" : "Archive";
     const { tracing } = this.props.oldModel;
 
+
     const elements = [];
     if (tracing.restrictions.allowUpdate) {
       elements.push(
@@ -126,6 +132,11 @@ class DatasetActionsView extends PureComponent {
         >Save</Button>);
     } else {
       elements.push(<Button type="primary" disabled>Read only</Button>);
+      elements.push(<Button
+        key="copy-button"
+        icon="file-add"
+        onClick={this.handleCopyToAccount}
+      >Copy To My Account</Button>);
     }
 
     if (hasAdvancedOptions) {

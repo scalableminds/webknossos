@@ -25,6 +25,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       })), "id");
 
       const activeNodeId = contentData.activeNode ? contentData.activeNode : null;
+      let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
+      cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : -1;
+
       const activeTree = activeNodeId ? findTreeByNodeId(trees, activeNodeId).get() : null;
 
       let activeTreeId = null;
@@ -40,6 +43,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const skeletonTracing: SkeletonTracingType = {
         type: "skeleton",
         activeNodeId,
+        cachedMaxNodeId,
         activeTreeId,
         restrictions,
         trees,
@@ -74,6 +78,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
                     },
                   },
                   activeNodeId: { $set: node.id },
+                  cachedMaxNodeId: { $set: node.id },
                   activeTreeId: { $set: tree.treeId },
                 } })))
           .getOrElse(state);
@@ -83,11 +88,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         const { timestamp, nodeId, treeId } = action;
         return getNodeAndTree(skeletonTracing, nodeId, treeId)
           .chain(([tree, node]) => deleteNode(state, tree, node, timestamp))
-          .map(([trees, newActiveTreeId, newActiveNodeId]) =>
+          .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
             update(state, { tracing: {
               trees: { $set: trees },
               activeNodeId: { $set: newActiveNodeId },
               activeTreeId: { $set: newActiveTreeId },
+              cachedMaxNodeId: { $set: newMaxNodeId },
             } }),
           ).getOrElse(state);
       }
@@ -149,11 +155,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         const { timestamp, treeId } = action;
         return getTree(skeletonTracing, treeId)
           .chain(tree => deleteTree(state, tree, timestamp))
-          .map(([trees, newActiveTreeId, newActiveNodeId]) =>
+          .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
             update(state, { tracing: {
               trees: { $set: trees },
               activeTreeId: { $set: newActiveTreeId },
               activeNodeId: { $set: newActiveNodeId },
+              cachedMaxNodeId: { $set: newMaxNodeId },
             } }))
           .getOrElse(state);
       }

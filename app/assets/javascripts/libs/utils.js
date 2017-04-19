@@ -219,22 +219,11 @@ const Utils = {
 
 
   diffArrays<T>(stateA: Array<T>, stateB: Array<T>): { both: Array<T>, onlyA: Array<T>, onlyB: Array<T> } {
-    const both = [];
-    const onlyA = [];
-    const onlyB = [];
-
-    for (const itemA of stateA) {
-      if (stateB.includes(itemA)) {
-        both.push(itemA);
-      } else {
-        onlyA.push(itemA);
-      }
-    }
-    for (const itemB of stateB) {
-      if (!stateA.includes(itemB)) {
-        onlyB.push(itemB);
-      }
-    }
+    const setA = new Set(stateA);
+    const both = stateB.filter(x => setA.has(x));
+    const bothSet = new Set(both);
+    const onlyA = stateA.filter(x => !bothSet.has(x));
+    const onlyB = stateB.filter(x => !bothSet.has(x));
     return { both, onlyA, onlyB };
   },
 

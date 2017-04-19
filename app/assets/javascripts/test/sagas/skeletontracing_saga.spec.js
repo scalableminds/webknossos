@@ -58,6 +58,7 @@ const initialState = {
     name: "",
     activeTreeId: 0,
     activeNodeId: null,
+    cachedMaxNodeId: -1,
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,
@@ -137,7 +138,7 @@ test("SkeletonTracingSaga should emit createNode and createEdge update actions",
   t.is(updateActions[0].value.treeId, 0);
   t.is(updateActions[1].action, "createNode");
   t.is(updateActions[1].value.id, 1);
-  t.is(updateActions[0].value.treeId, 0);
+  t.is(updateActions[1].value.treeId, 0);
   t.is(updateActions[2].action, "createEdge");
   t.is(updateActions[2].value.treeId, 0);
   t.is(updateActions[2].value.source, 0);

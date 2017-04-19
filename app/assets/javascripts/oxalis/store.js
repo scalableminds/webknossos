@@ -137,6 +137,7 @@ export type SkeletonTracingType = {
   +tracingType: SkeletonTracingTypeTracingType,
   +activeTreeId: ?number,
   +activeNodeId: ?number,
+  +cachedMaxNodeId: number,
   +restrictions: RestrictionsType & SettingsType,
 };
 
@@ -189,6 +190,8 @@ export type UserConfigurationType = {
 
 export type TemporaryConfigurationType = {
   +boundingBox: Vector6,
+  +shouldHideInactiveTrees: boolean,
+  +shouldHideAllSkeletons: boolean,
 };
 
 export type TaskType = {
@@ -258,6 +261,8 @@ const defaultState: OxalisState = {
   },
   temporaryConfiguration: {
     boundingBox: [0, 0, 0, 0, 0, 0],
+    shouldHideInactiveTrees: false,
+    shouldHideAllSkeletons: false,
   },
   task: null,
   dataset: {
@@ -280,6 +285,7 @@ const defaultState: OxalisState = {
     tracingType: "Explorational",
     activeTreeId: null,
     activeNodeId: null,
+    cachedMaxNodeId: -1,
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,
@@ -307,6 +313,7 @@ const defaultState: OxalisState = {
     spaceDirectionOrtho: [1, 1, 1],
   },
 };
+
 
 const sagaMiddleware = createSagaMiddleware();
 const combinedReducers = reduceReducers(

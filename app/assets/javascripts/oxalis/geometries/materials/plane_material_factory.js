@@ -1,6 +1,6 @@
 /**
  * plane_material_factory.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -9,13 +9,15 @@ import app from "app";
 import Utils from "libs/utils";
 import Store from "oxalis/store";
 import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
+import type { Vector3 } from "oxalis/constants";
+import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
 
-  setupUniforms() {
+  setupUniforms(): void {
     super.setupUniforms();
 
     this.uniforms = _.extend(this.uniforms, {
@@ -36,12 +38,16 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
 
-  convertColor(color) {
-    return _.map(color, e => e / 255);
+  convertColor(color: Vector3): Vector3 {
+    return [
+      color[0] / 255,
+      color[1] / 255,
+      color[2] / 255,
+    ];
   }
 
 
-  createTextures() {
+  createTextures(): void {
     // create textures
     let shaderName;
     this.textures = {};
@@ -74,7 +80,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
 
-  makeMaterial(options) {
+  makeMaterial(options?: ShaderMaterialOptionsType):void {
     super.makeMaterial(options);
 
     this.material.setColorInterpolation = (interpolation) => {
@@ -98,7 +104,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
 
-  setupChangeListeners() {
+  setupChangeListeners(): void {
     super.setupChangeListeners();
 
     Store.subscribe(() => {
@@ -116,7 +122,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
 
-  getFragmentShader() {
+  getFragmentShader(): string {
     const colorLayerNames = _.map(this.model.getColorBinaries(), b => this.sanitizeName(b.name));
     const segmentationBinary = this.model.getSegmentationBinary();
 
@@ -185,7 +191,7 @@ void main() {
     )({
       layers: colorLayerNames,
       hasSegmentation: (segmentationBinary != null),
-      segmentationName: this.sanitizeName(Utils.__guard__(segmentationBinary, x => x.name)),
+      segmentationName: this.sanitizeName(segmentationBinary ? segmentationBinary.name : ""),
       isRgb: Utils.__guard__(this.model.binary.color, x1 => x1.targetBitDepth) === 24,
     },
     );

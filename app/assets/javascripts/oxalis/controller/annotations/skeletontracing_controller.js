@@ -57,7 +57,6 @@ class SkeletonTracingController {
 
 
   toggleSkeletonVisibility = (): void => {
-    this.sceneController.skeleton.toggleVisibility();
     // Show warning, if this is the first time to use
     // this function for this user
     if (Store.getState().userConfiguration.firstVisToggle) {

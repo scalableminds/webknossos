@@ -152,7 +152,6 @@ class VolumeTracingPlaneController extends PlaneController {
 
   render3dCell(id: number): void {
     if (!Store.getState().userConfiguration.isosurfaceDisplay) {
-      this.sceneController.removeShapes();
       return;
     }
     const bb = getViewportBoundingBox(Store.getState());

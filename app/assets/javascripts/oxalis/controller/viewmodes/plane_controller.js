@@ -113,11 +113,7 @@ class PlaneController {
     $("#TDViewControls button")
       .each((i, element) => $(element).on("click", () => { callbacks[i](); }));
 
-    const meshes = this.sceneController.getMeshes();
-
-    for (const mesh of meshes) {
-      this.planeView.addGeometry(mesh);
-    }
+    this.planeView.addNode(this.sceneController.getRootNode());
 
     this.initTrackballControls();
     this.bindToEvents();
@@ -316,27 +312,6 @@ class PlaneController {
   bindToEvents(): void {
     this.listenTo(this.planeView, "render", this.render);
     this.listenTo(this.planeView, "renderCam", this.sceneController.updateSceneForCam);
-
-    this.listenTo(this.sceneController, "newGeometries", list =>
-      list.map(geometry =>
-        this.planeView.addGeometry(geometry)),
-    );
-    this.listenTo(this.sceneController, "removeGeometries", list =>
-      list.map(geometry =>
-        this.planeView.removeGeometry(geometry)),
-    );
-
-    // TODO check for ControleMode rather the Object existence
-    if (this.sceneController.skeleton) {
-      this.listenTo(this.sceneController.skeleton, "newGeometries", list =>
-        list.map(geometry =>
-          this.planeView.addGeometry(geometry)),
-      );
-      this.listenTo(this.sceneController.skeleton, "removeGeometries", list =>
-        list.map(geometry =>
-          this.planeView.removeGeometry(geometry)),
-      );
-    }
   }
 
 

@@ -151,7 +151,9 @@ case class CreateNode(value: JsObject) extends TracingUpdater {
   import oxalis.nml.Node
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
-    val node = value.as[Node]
+    val positionTransform = (__ \ 'position).json.update(
+      __.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
+    val node = value.transform(positionTransform).get.as[Node]
     val treeId = (value \ "treeId").as[Int]
     TracingUpdate { t =>
       for {

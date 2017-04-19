@@ -53,6 +53,7 @@ const initialState = {
     name: "",
     activeTreeId: 0,
     activeNodeId: null,
+    cachedMaxNodeId: -1,
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,

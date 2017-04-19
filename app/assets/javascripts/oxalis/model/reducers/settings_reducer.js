@@ -25,6 +25,12 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
       return update(state, { temporaryConfiguration: { [propertyName]: { $set: value } } });
     }
 
+    case "TOGGLE_TEMPORARY_SETTING": {
+      const { propertyName } = action;
+      const value = !state.temporaryConfiguration[propertyName];
+      return update(state, { temporaryConfiguration: { [propertyName]: { $set: value } } });
+    }
+
     case "UPDATE_LAYER_SETTING": {
       const { layerName, propertyName, value } = action;
       return update(state, { datasetConfiguration: { layers: { [layerName]: { [propertyName]: { $set: value } } } } });

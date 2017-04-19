@@ -10,9 +10,9 @@ import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 import Model from "oxalis/model";
 import View from "oxalis/view";
+import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 
 class PlaneView {
 
@@ -176,17 +176,11 @@ class PlaneView {
     }
   }
 
-  addGeometry(geometry: THREE.Geometry): void {
+  addNode(node: THREE.Object3D): void {
     // Adds a new Three.js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
 
-    this.group.add(geometry);
-  }
-
-
-  removeGeometry(geometry: THREE.Geometry): void {
-    this.group.remove(geometry);
-    this.draw();
+    this.group.add(node);
   }
 
 

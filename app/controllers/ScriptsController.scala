@@ -2,6 +2,8 @@ package controllers
 
 import javax.inject.Inject
 
+import scala.concurrent.Future
+
 import com.scalableminds.util.tools.FoxImplicits
 import models.task.{Script, _}
 import oxalis.security.Secured
@@ -29,8 +31,9 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
       for {
         _ <- request.user.hasAdminAccess ?~> Messages("notAllowed")
         _ <- ScriptDAO.insert(script)
+        js <- Script.scriptPublicWrites(script)
       } yield {
-        Ok(Script.scriptPublicWrites.writes(script))
+        Ok(js)
       }
     }
   }
@@ -38,8 +41,9 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   def get(scriptId: String) = Authenticated.async { implicit request =>
     for {
       script <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
+      js <- Script.scriptPublicWrites(script)
     } yield {
-      Ok(Script.scriptPublicWrites.writes(script))
+      Ok(js)
     }
   }
 
@@ -47,8 +51,9 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
     for {
       _ <- request.user.hasAdminAccess ?~> Messages("notAllowed")
       scripts <- ScriptDAO.findAll
+      js <- Future.traverse(scripts)(s => Script.scriptPublicWrites(s))
     } yield {
-      Ok(Writes.list(Script.scriptPublicWrites).writes(scripts))
+      Ok(Json.toJson(js))
     }
   }
 
@@ -58,8 +63,9 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
         oldScript <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
         _ <- (oldScript._owner == request.user.id) ?~> Messages("script.notOwner")
         _ <- ScriptDAO.update(oldScript._id, script.copy(_id = oldScript._id))
+        js <- Script.scriptPublicWrites(script)
       } yield {
-        Ok(Script.scriptPublicWrites.writes(script))
+        Ok(js)
       }
     }
   }

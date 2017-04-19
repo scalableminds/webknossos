@@ -114,6 +114,7 @@ object Task extends FoxImplicits {
       status <- task.status.getOrElse(CompletionStatus(-1, -1, -1))
       scriptInfo <- task._script.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
+      scriptJs <- scriptInfo.toFox.flatMap(s => Script.scriptPublicWrites(s)).futureBox
     } yield {
       Json.obj(
         "id" -> task.id,
@@ -128,7 +129,7 @@ object Task extends FoxImplicits {
         "neededExperience" -> task.neededExperience,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
-        "script" -> scriptInfo.toOption.map(Script.scriptPublicWrites.writes),
+        "script" -> scriptJs.toOption,
         "tracingTime" -> task.tracingTime,
         "creationInfo" -> task.creationInfo
       )

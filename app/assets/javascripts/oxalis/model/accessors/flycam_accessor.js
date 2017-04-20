@@ -14,7 +14,7 @@ import * as THREE from "three";
 
 const MAX_TEXTURE_OFFSET = 31;
 const MAX_ZOOM_THRESHOLD = 2;
-const PIXEL_RAY_THRESHOLD = 10;
+export const PIXEL_RAY_THRESHOLD = 10;
 
 function log2(a: number): number {
   return Math.log(a) / Math.LN2;

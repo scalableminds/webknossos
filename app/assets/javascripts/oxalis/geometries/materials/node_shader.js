@@ -7,9 +7,9 @@ import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import type { UniformsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 export const NodeTypes = {
-  INVALID: -1.0,
-  NORMAL: 0.0,
-  BRANCH_POINT: 1.0,
+  INVALID: 0.0,
+  NORMAL: 1.0,
+  BRANCH_POINT: 2.0,
 };
 
 export const COLOR_TEXTURE_WIDTH = 1024.0;

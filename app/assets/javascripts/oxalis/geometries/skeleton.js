@@ -12,8 +12,8 @@ import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import NodeShader, { NodeTypes, COLOR_TEXTURE_WIDTH } from "oxalis/geometries/materials/node_shader";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import { OrthoViews } from "oxalis/constants";
-import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
 import type { Vector3, OrthoViewType } from "oxalis/constants";
 
@@ -90,8 +90,8 @@ class Skeleton {
     this.rootNode = new THREE.Object3D();
 
     const state = Store.getState();
-    getSkeletonTracing(state.tracing).map((tracing) => {
-      const trees = tracing.trees;
+    getSkeletonTracing(state.tracing).map((skeletonTracing) => {
+      const trees = skeletonTracing.trees;
       const nodeCount = _.sum(_.map(trees, tree => _.size(tree.nodes)));
       const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
 
@@ -120,7 +120,7 @@ class Skeleton {
       }
 
       Store.subscribe(() => this.refresh());
-      this.prevTracing = tracing;
+      this.prevTracing = skeletonTracing;
     });
   }
 
@@ -226,9 +226,8 @@ class Skeleton {
    */
   refresh() {
     const state = Store.getState();
-
-    getSkeletonTracing(state.tracing).map((tracing) => {
-      const diff = diffTrees(this.prevTracing.trees, tracing.trees);
+    getSkeletonTracing(state.tracing).map((skeletonTracing) => {
+      const diff = diffTrees(this.prevTracing.trees, skeletonTracing.trees);
 
       for (const update of diff) {
         switch (update.action) {
@@ -240,7 +239,7 @@ class Skeleton {
             this.deleteNode(update.value.treeId, update.value.id);
             break;
           case "createEdge": {
-            const tree = tracing.trees[update.value.treeId];
+            const tree = skeletonTracing.trees[update.value.treeId];
             const source = tree.nodes[update.value.source];
             const target = tree.nodes[update.value.target];
             this.createEdge(tree.treeId, source, target);
@@ -258,7 +257,7 @@ class Skeleton {
           case "updateTree": {
             // diff branchpoints
             const treeId = update.value.id;
-            const tree = tracing.trees[treeId];
+            const tree = skeletonTracing.trees[treeId];
             const prevTree = this.prevTracing.trees[treeId];
             const oldBranchPoints = prevTree.branchPoints.map(branchPoint => branchPoint.id);
             const newBranchPoints = tree.branchPoints.map(branchPoint => branchPoint.id);
@@ -287,15 +286,15 @@ class Skeleton {
         }
       }
 
-      if (tracing.activeNodeId !== this.prevTracing.activeNodeId) {
+      if (skeletonTracing.activeNodeId !== this.prevTracing.activeNodeId) {
         this.startNodeHighlightAnimation();
       }
 
       // Uniforms
       const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
-      let activeNodeId = tracing.activeNodeId;
+      let activeNodeId = skeletonTracing.activeNodeId;
       activeNodeId = activeNodeId == null ? -1 : activeNodeId;
-      let activeTreeId = tracing.activeTreeId;
+      let activeTreeId = skeletonTracing.activeTreeId;
       activeTreeId = activeTreeId == null ? -1 : activeTreeId;
 
       const nodeUniforms = this.nodes.material.uniforms;
@@ -314,7 +313,7 @@ class Skeleton {
       edgeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
       this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
 
-      this.prevTracing = tracing;
+      this.prevTracing = skeletonTracing;
     });
   }
 

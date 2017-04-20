@@ -103,6 +103,7 @@ test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) =
   saga.next(initialState.tracing);
   saga.next(false);
   saga.next();
+  saga.next(true);
   saga.next();
   saga.next(initialState.tracing);
   // only updateTracing
@@ -119,6 +120,7 @@ test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
   saga.next(initialState.tracing);
   saga.next(false);
   saga.next();
+  saga.next(true);
   saga.next();
   saga.next(newState.tracing);
   const items = execCall(t, saga.next(newState.flycam));

@@ -35,7 +35,7 @@ class Api {
   * @param {number} version
   *
   * @example
-  * window.webknossos.apiReady(1).then((api) => {
+  * window.webknossos.apiReady(2).then((api) => {
   *   // Your cool user script / wK plugin
   *   const nodes = api.tracing.getAllNodes();
   *   ...

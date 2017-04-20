@@ -14,7 +14,7 @@ import { setActiveNodeAction, createCommentAction, deleteNodeAction } from "oxal
 import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
-import type { NodeType, UserConfigurationType, DatasetConfigurationType } from "oxalis/store";
+import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
 
 /**
@@ -63,6 +63,15 @@ class TracingApi {
       const { trees } = skeletonTracing;
       return _.flatMap(trees, tree => _.values(tree.nodes));
     }).getOrElse([]);
+  }
+
+/**
+  * Returns all trees belonging to a tracing.
+  */
+  getAllTrees(): TreeMapType {
+    return getSkeletonTracing(Store.getState().tracing).map(skeletonTracing =>
+      skeletonTracing.trees,
+    ).getOrElse({});
   }
 
   /**
@@ -292,7 +301,7 @@ class UserApi {
   * @param key - Same keys as for getConfiguration()
   *
   * @example
-  * api.user.setConfiguration("keyboardDelay", 20);
+  * api.data.setConfiguration("keyboardDelay", 20);
   */
   setConfiguration(key: $Keys<UserConfigurationType>, value) {
     Store.dispatch(updateUserSettingAction(key, value));
@@ -326,24 +335,36 @@ class UtilsApi {
   }
 
  /**
-  * Overwrite existing wK methods.
-  * @param {string}  funcName - The method name you wish to override. Must be a skeletonTracing method.
-  * @param {function} newFunc - Your new implementation for the method in question. Receives the original function as the first argument
-  * and the original parameters in an array as the second argument
+  * Overwrite existing wK actions. wK uses [Redux](http://redux.js.org/) actions to trigger any changes to the application state.
+  * @param {function(store, next, originalAction)} overwriteFunction - Your new implementation for the method in question. Receives the central wK store, a callback to fire the next/original action and the original action.
+  * @param {string} actionName - The name of the action you wish to override:
+  *   - CREATE_NODE
+  *   - DELETE_NODE
+  *   - SET_ACTIVE_NODE
+  *   - SET_ACTIVE_NODE_RADIUS
+  *   - CREATE_BRANCHPOINT
+  *   - DELETE_BRANCHPOINT
+  *   - CREATE_TREE
+  *   - DELETE_TREE
+  *   - SET_ACTIVE_TREE
+  *   - SET_TREE_NAME
+  *   - MERGE_TREES
+  *   - SELECT_NEXT_TREE
+  *   - SHUFFLE_TREE_COLOR
+  *   - CREATE_COMMENT
+  *   - DELETE_COMMENT
+  *
   *
   * @example
-  * api.registerOverwrite("mergeTree", (oldMergeTreeFunc, args) => {
+  * api.utils.registerOverwrite("MERGE_TREES", (store, next, originalAction) => {
   *   // ... do stuff before the original function...
-  *   oldMergeTreeFunc(...args);
+  *   next(originalAction);
   *   // ... do something after the original function ...
   * });
   */
-  // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
-  // webknossos.registerOverwrite("addNode", b)
-  // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
   registerOverwrite<S, A>(
     actionName: string,
-    overwriteFunction: (store: S, next: ((action: A) => void), action: A) => void,
+    overwriteFunction: (store: S, next: ((action: A) => void), originalAction: A) => void,
   ) {
     overwriteAction(actionName, overwriteFunction);
   }

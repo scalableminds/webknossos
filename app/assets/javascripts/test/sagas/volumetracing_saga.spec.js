@@ -77,6 +77,7 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => 
   saga.next({ initVolume: true });
   saga.next(initialState.tracing);
   saga.next();
+  saga.next(true);
   saga.next();
   saga.next(initialState.tracing);
   // only updateTracing
@@ -92,6 +93,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   saga.next({ initVolume: true });
   saga.next(initialState.tracing);
   saga.next();
+  saga.next(true);
   saga.next();
   saga.next(newState.tracing);
   const items = execCall(t, saga.next(newState.flycam));

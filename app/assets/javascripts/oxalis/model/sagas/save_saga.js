@@ -127,6 +127,9 @@ export function* saveTracingAsync(): Generator<*, *, *> {
     }
   }
   yield take("WK_READY");
+  const allowUpdate = yield select(state => state.tracing.restrictions.allowUpdate);
+  if (!allowUpdate) return;
+
   while (true) {
     if (initSkeleton) {
       yield take([...SkeletonTracingActions, ...FlycamActions]);

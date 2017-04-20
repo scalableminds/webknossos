@@ -226,7 +226,7 @@ class DataApi {
    * @param key - Same keys as for getConfiguration()
    *
    * @example
-   * api.user.setConfiguration("segmentationOpacity", 20);
+   * api.data.setConfiguration("segmentationOpacity", 20);
    */
   setConfiguration(key: $Keys<DatasetConfigurationType>, value) {
     Store.dispatch(updateDatasetSettingAction(key, value));

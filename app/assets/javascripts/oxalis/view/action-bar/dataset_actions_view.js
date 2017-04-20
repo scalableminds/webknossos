@@ -54,6 +54,11 @@ class DatasetActionsView extends PureComponent {
     app.router.loadURL(url);
   };
 
+  handleCopyToAccount = async () => {
+    const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/duplicate`;
+    app.router.loadURL(url);
+  };
+
   handleFinish = async () => {
     const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/finishAndRedirect`;
     await this.handleSave();
@@ -117,7 +122,7 @@ class DatasetActionsView extends PureComponent {
   render() {
     const isSkeletonMode = _.includes(Constants.MODES_SKELETON, this.props.oldModel.get("mode"));
     const hasAdvancedOptions = this.props.oldModel.settings.advancedOptionsAllowed;
-    const archiveButtonText = this.isTask ? "Finish" : "Archive";
+    const archiveButtonText = this.props.oldModel.get("isTask") ? "Finish" : "Archive";
     const { tracing } = this.props.oldModel;
 
 
@@ -131,7 +136,11 @@ class DatasetActionsView extends PureComponent {
           icon={this.getSaveButtonIcon()}
         >Save</Button>);
     } else {
-      elements.push(<Button type="primary" disabled>Read only</Button>);
+      elements.push(<Button
+        key="read-only-button"
+        type="primary"
+        disabled
+      >Read only</Button>);
       elements.push(<Button
         key="copy-button"
         icon="file-add"

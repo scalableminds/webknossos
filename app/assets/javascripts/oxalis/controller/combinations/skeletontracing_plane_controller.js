@@ -14,15 +14,16 @@ import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import constants, { OrthoViews } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
 import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
+import { getRequestLogZoomStep, getRayThreshold, getRotationOrtho, getPosition, PIXEL_RAY_THRESHOLD } from "oxalis/model/accessors/flycam_accessor";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
-import { getRequestLogZoomStep, getRayThreshold, getRotationOrtho, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -138,9 +139,14 @@ class SkeletonTracingPlaneController extends PlaneController {
         (-(position.y / (constants.VIEWPORT_WIDTH * scaleFactor)) * 2) + 1);
 
     // create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
+    const state = Store.getState();
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(normalizedMousePos, camera);
-    raycaster.params.Points.threshold = getRayThreshold(Store.getState().flycam, plane);
+    if (plane === OrthoViews.TDView) {
+      raycaster.params.Points.threshold = PIXEL_RAY_THRESHOLD * (camera.right - camera.left) / constants.VIEWPORT_WIDTH / getBaseVoxel(state.dataset.scale);
+    } else {
+      raycaster.params.Points.threshold = getRayThreshold(Store.getState().flycam);
+    }
 
     // identify clicked object
     let intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());

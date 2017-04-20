@@ -320,21 +320,33 @@ class UtilsApi {
   }
 
  /**
-  * Overwrite existing wK methods.
-  * @param {string}  funcName - The method name you wish to override. Must be a skeletonTracing method.
-  * @param {function} newFunc - Your new implementation for the method in question. Receives the original function as the first argument
-  * and the original parameters in an array as the second argument
+  * Overwrite existing wK actions. wK uses [Redux](http://redux.js.org/) actions to trigger any changes to the application state.
+  * @param {function(store, next, originalAction)} overwriteFunction - Your new implementation for the method in question. Receives the central wK store, a callback to fire the next/original action and the original action.
+  * @param {string} actionName - The name of the action you wish to override:
+  *   - CREATE_NODE
+  *   - DELETE_NODE
+  *   - SET_ACTIVE_NODE
+  *   - SET_ACTIVE_NODE_RADIUS
+  *   - CREATE_BRANCHPOINT
+  *   - DELETE_BRANCHPOINT
+  *   - CREATE_TREE
+  *   - DELETE_TREE
+  *   - SET_ACTIVE_TREE
+  *   - SET_TREE_NAME
+  *   - MERGE_TREES
+  *   - SELECT_NEXT_TREE
+  *   - SHUFFLE_TREE_COLOR
+  *   - CREATE_COMMENT
+  *   - DELETE_COMMENT
+  *
   *
   * @example
-  * api.registerOverwrite("mergeTree", (oldMergeTreeFunc, args) => {
+  * api.utils.registerOverwrite("MERGE_TREES", (store, next) => {
   *   // ... do stuff before the original function...
-  *   oldMergeTreeFunc(...args);
+  *   next(originalAction);
   *   // ... do something after the original function ...
   * });
   */
-  // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
-  // webknossos.registerOverwrite("addNode", b)
-  // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
   registerOverwrite<S, A>(
     actionName: string,
     overwriteFunction: (store: S, next: ((action: A) => void), action: A) => void,

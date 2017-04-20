@@ -138,6 +138,9 @@ export function* saveSkeletonTracingAsync(): Generator<*, *, *> {
     yield put(createTreeAction());
   }
   yield take("WK_READY");
+  const allowUpdate = yield select(state => state.skeletonTracing.restrictions.allowUpdate);
+  if (!allowUpdate) return;
+
   while (true) {
     yield take(SkeletonTracingActions.concat(FlycamActions));
     const skeletonTracing = yield select(state => state.skeletonTracing);

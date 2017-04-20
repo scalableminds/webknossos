@@ -341,7 +341,7 @@ class UtilsApi {
   *
   *
   * @example
-  * api.utils.registerOverwrite("MERGE_TREES", (store, next) => {
+  * api.utils.registerOverwrite("MERGE_TREES", (store, next, originalAction) => {
   *   // ... do stuff before the original function...
   *   next(originalAction);
   *   // ... do something after the original function ...
@@ -349,7 +349,7 @@ class UtilsApi {
   */
   registerOverwrite<S, A>(
     actionName: string,
-    overwriteFunction: (store: S, next: ((action: A) => void), action: A) => void,
+    overwriteFunction: (store: S, next: ((action: A) => void), originalAction: A) => void,
   ) {
     overwriteAction(actionName, overwriteFunction);
   }

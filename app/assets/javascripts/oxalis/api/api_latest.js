@@ -14,7 +14,7 @@ import { setActiveNodeAction, createCommentAction, deleteNodeAction } from "oxal
 import { findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
-import type { NodeType, UserConfigurationType, DatasetConfigurationType } from "oxalis/store";
+import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
 
 /**
@@ -61,6 +61,13 @@ class TracingApi {
   getAllNodes(): Array<NodeType> {
     const { trees } = Store.getState().skeletonTracing;
     return _.flatMap(trees, tree => _.values(tree.nodes));
+  }
+
+/**
+  * Returns all trees belonging to a tracing.
+  */
+  getAllTrees(): TreeMapType {
+    return Store.getState().skeletonTracing.trees;
   }
 
   /**

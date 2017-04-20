@@ -286,7 +286,7 @@ class UserApi {
   * @param key - Same keys as for getConfiguration()
   *
   * @example
-  * api.user.setConfiguration("keyboardDelay", 20);
+  * api.data.setConfiguration("keyboardDelay", 20);
   */
   setConfiguration(key: $Keys<UserConfigurationType>, value) {
     Store.dispatch(updateUserSettingAction(key, value));

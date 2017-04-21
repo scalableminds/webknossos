@@ -1,6 +1,6 @@
 /**
  * cube.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -8,11 +8,19 @@ import app from "app";
 import * as THREE from "three";
 import Backbone from "backbone";
 import Model from "oxalis/model";
-import type { Vector3, OrthoViewMapType } from "oxalis/constants";
+import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
 import Store from "oxalis/store";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+
+type PropertiesType = {
+  min?: Vector3,
+  max: Vector3,
+  lineWidth?: number,
+  color?: number,
+  showCrossSections?: boolean,
+}
 
 class Cube {
 
@@ -28,7 +36,7 @@ class Cube {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(model: Model, properties) {
+  constructor(model: Model, properties: PropertiesType) {
     this.model = model;
     this.min = properties.min || [0, 0, 0];
     this.max = properties.max;
@@ -64,7 +72,7 @@ class Cube {
     });
   }
 
-  setCorners(min1, max1) {
+  setCorners(min1: Vector3, max1: Vector3) {
     this.min = min1;
     this.max = max1;
     const { min, max } = this;
@@ -106,7 +114,7 @@ class Cube {
     app.vent.trigger("rerender");
   }
 
-  updatePosition(position) {
+  updatePosition(position: Vector3) {
     if (!this.initialized) {
       return;
     }
@@ -129,7 +137,7 @@ class Cube {
     return [this.cube].concat(_.values(this.crossSections));
   }
 
-  updateForCam(id) {
+  updateForCam(id: OrthoViewType) {
     if (!this.initialized) {
       return;
     }
@@ -147,7 +155,7 @@ class Cube {
     this.cube.visible = this.visible && (id === OrthoViews.TDView);
   }
 
-  setVisibility(visible) {
+  setVisibility(visible: boolean) {
     this.visible = visible;
   }
 }

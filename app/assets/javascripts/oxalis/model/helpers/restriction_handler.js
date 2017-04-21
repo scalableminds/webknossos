@@ -1,6 +1,6 @@
 /**
  * restriction_handler.js
- * @flow weak
+ * @flow
  */
 
 import Toast from "libs/toast";
@@ -15,7 +15,7 @@ class RestrictionHandler {
   issuedUpdateError: boolean;
   issuedUpdateWarning: boolean;
 
-  constructor(restrictions) {
+  constructor(restrictions: RestrictionsType) {
     this.restrictions = restrictions;
     this.issuedUpdateError = false;
     this.issuedUpdateWarning = false;
@@ -24,7 +24,7 @@ class RestrictionHandler {
   // Should be called whenever the model is modified
   // Returns whether the modification is allowed
   // ==> return if not @restrictionHandler.updateAllowed()
-  updateAllowed(error = true) {
+  updateAllowed(error: boolean = true) {
     if (this.restrictions.allowUpdate) {
       return true;
     } else {

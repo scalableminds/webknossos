@@ -186,7 +186,7 @@ class Controller {
       Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then((gist) => {
         const firstFile = gist.files[Object.keys(gist.files)[0]];
 
-        if (firstFile || firstFile.content) {
+        if (firstFile && firstFile.content) {
           try {
             // eslint-disable-next-line no-eval
             eval(firstFile.content);

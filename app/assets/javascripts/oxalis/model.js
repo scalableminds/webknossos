@@ -25,6 +25,7 @@ import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
+import update from "immutability-helper";
 
 // This is THE model. It takes care of the data including the
 // communication with the server.
@@ -155,9 +156,7 @@ class Model extends Backbone.Model {
     }).then((tracing: Tracing<*>) => {
       const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
       return this.initializeWithData(tracing, layerInfos);
-    },
-
-    );
+    });
   }
 
 
@@ -338,10 +337,11 @@ class Model extends Backbone.Model {
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {
-      const existingLayer = _.find(layers, layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName));
+      const existingLayerIndex = _.findIndex(layers, layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName));
+      const existingLayer = layers[existingLayerIndex];
 
       if (existingLayer != null) {
-        _.extend(existingLayer, userLayer);
+        layers[existingLayerIndex] = update(existingLayer, { $merge: userLayer });
       } else {
         layers.push(userLayer);
       }

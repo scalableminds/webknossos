@@ -20,9 +20,11 @@ import ContourGeometry from "oxalis/geometries/contourgeometry";
 import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import PolygonFactory from "oxalis/view/polygons/polygon_factory";
+import { getViewportBoundingBox } from "oxalis/model/accessors/flycam_accessor";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { BoundingBoxType } from "oxalis/model";
-import PolygonFactory from "oxalis/view/polygons/polygon_factory";
+
 
 class SceneController {
   skeleton: Skeleton;
@@ -129,17 +131,31 @@ class SceneController {
   }
 
 
-  showShapes(bb: BoundingBoxType, resolution: number, id: number): void {
-    if (this.model.getSegmentationBinary() == null) { return; }
+  renderVolumeIsosurface(cellId: number): void {
+    const state = Store.getState();
+    if (!state.userConfiguration.isosurfaceDisplay || this.model.getSegmentationBinary() == null) {
+      return;
+    }
 
     if (this.polygonFactory != null) {
       this.polygonFactory.cancel();
     }
 
+    const factor = state.userConfiguration.isosurfaceBBsize;
+    const bb = getViewportBoundingBox(state);
+
+    for (let i = 0; i <= 2; i++) {
+      const width = bb.max[i] - bb.min[i];
+      const diff = ((factor - 1) * width) / 2;
+      bb.min[i] -= diff;
+      bb.max[i] += diff;
+    }
+
+
     this.polygonFactory = new PolygonFactory(
       this.model.getSegmentationBinary().cube,
-      resolution,
-      bb.min, bb.max, id,
+      state.userConfiguration.isosurfaceResolution,
+      bb.min, bb.max, cellId,
     );
     this.polygonFactory.getTriangles().then((triangles) => {
       if (triangles == null) {
@@ -155,7 +171,6 @@ class SceneController {
         const volume = new VolumeGeometry(triangles[triangleId], mappedId);
         volume.getMeshes().forEach(mesh => this.volumeMeshes.add(mesh));
       }
-
       app.vent.trigger("rerender");
       this.polygonFactory = null;
     });

@@ -70,7 +70,7 @@ module.exports = {
   externals: [
     { routes: "var jsRoutes" },
   ],
-  devtool: "cheap-source-map",
+  devtool: "cheap-module-source-map",
   plugins: [
     new ExtractTextPlugin("main.css"),
     new webpack.ProvidePlugin({

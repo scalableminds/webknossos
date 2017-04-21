@@ -1,22 +1,15 @@
-export ChainReducer = (state) => {
-  return {
-    apply(reducer, action) {
-      return ChainReducer(reducer(state, action));
-    }
-    unpack() {
-      return state;
-    }
-  }
-}
+// @flow
 
-export ChainReducerWithDiffs = (state, diffFn, diffActions=[]) => {
- return {
-   apply(reducer, action) {
-     const newState = reducer(state, action);
-     const diff = diffFn(state, newState)
-     return ChainReducer(newState, diffFn, diffActions.concat(diff));
-   }
-   unpack() {
-     return {state, diffActions};
-   }
- }
+import type { ActionType } from "oxalis/model/actions/actions";
+import type { OxalisState, ReducerType } from "oxalis/store";
+
+export default function ChainReducer(state: OxalisState) {
+  return {
+    apply(reducer: ReducerType, action: ActionType): ChainReducer {
+      return ChainReducer(reducer(state, action));
+    },
+    unpack(): OxalisState {
+      return state;
+    },
+  };
+}

@@ -18,6 +18,7 @@ import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { ActionType } from "oxalis/model/actions/actions";
 
 export type CommentType = {
   +node: number,
@@ -316,6 +317,9 @@ const defaultState: OxalisState = {
 
 
 const sagaMiddleware = createSagaMiddleware();
+
+export type ReducerType = (state: OxalisState, action: ActionType) => OxalisState
+
 const combinedReducers = reduceReducers(
   SettingsReducer,
   SkeletonTracingReducer,

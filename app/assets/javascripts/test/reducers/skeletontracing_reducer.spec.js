@@ -38,8 +38,8 @@ const initialState = {
   },
   skeletonTracing: {
     trees: {
-      [0]: {
-        treeId: 0,
+      [1]: {
+        treeId: 1,
         name: "TestTree",
         nodes: {},
         timestamp: Date.now(),
@@ -51,9 +51,9 @@ const initialState = {
     },
     tracingType: "Explorational",
     name: "",
-    activeTreeId: 0,
+    activeTreeId: 1,
     activeNodeId: null,
-    cachedMaxNodeId: -1,
+    cachedMaxNodeId: 0,
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,
@@ -78,23 +78,23 @@ test("SkeletonTracing should add a new node", (t) => {
   // This should be unchanged / sanity check
   t.is(newState.skeletonTracing.name, initialState.skeletonTracing.name);
   t.is(newState.skeletonTracing.activeTreeId, initialState.skeletonTracing.activeTreeId);
-  t.is(newState.skeletonTracing.trees[0].branchPoints, initialState.skeletonTracing.trees[0].branchPoints);
-  t.is(newState.skeletonTracing.trees[0].treeId, initialState.skeletonTracing.trees[0].treeId);
-  t.is(newState.skeletonTracing.trees[0].name, initialState.skeletonTracing.trees[0].name);
+  t.is(newState.skeletonTracing.trees[1].branchPoints, initialState.skeletonTracing.trees[1].branchPoints);
+  t.is(newState.skeletonTracing.trees[1].treeId, initialState.skeletonTracing.trees[1].treeId);
+  t.is(newState.skeletonTracing.trees[1].name, initialState.skeletonTracing.trees[1].name);
 
   // This should be changed
-  const maxNodeId = _.max(Object.keys(newState.skeletonTracing.trees[0].nodes));
+  const maxNodeId = _.max(Object.keys(newState.skeletonTracing.trees[1].nodes));
 
-  t.is(maxNodeId, "0");
-  t.is(newState.skeletonTracing.activeNodeId, 0);
-  t.deepEqual(_.size(newState.skeletonTracing.trees[0].edges), 0);
+  t.is(maxNodeId, "1");
+  t.is(newState.skeletonTracing.activeNodeId, 1);
+  t.deepEqual(_.size(newState.skeletonTracing.trees[1].edges), 0);
 
-  deepEqualObjectContaining(t, newState.skeletonTracing.trees[0].nodes[0], {
+  deepEqualObjectContaining(t, newState.skeletonTracing.trees[1].nodes[1], {
     position,
     rotation,
     viewport,
     resolution,
-    id: 0,
+    id: 1,
     radius: 50,
   });
 });
@@ -109,13 +109,13 @@ test("SkeletonTracing should add a several nodes", (t) => {
 
   t.not(newState, initialState);
   const maxNodeId = _.max(_.flatMap(newState.skeletonTracing.trees, tree => _.map(tree.nodes, node => node.id)));
-  t.is(maxNodeId, 2);
-  t.is(newState.skeletonTracing.activeNodeId, 2);
-  t.deepEqual(_.size(newState.skeletonTracing.trees[0].nodes), 3);
-  t.deepEqual(newState.skeletonTracing.trees[0].edges.length, 2);
-  t.deepEqual(newState.skeletonTracing.trees[0].edges, [
-    { source: 0, target: 1 },
+  t.is(maxNodeId, 3);
+  t.is(newState.skeletonTracing.activeNodeId, 3);
+  t.deepEqual(_.size(newState.skeletonTracing.trees[1].nodes), 3);
+  t.deepEqual(newState.skeletonTracing.trees[1].edges.length, 2);
+  t.deepEqual(newState.skeletonTracing.trees[1].edges, [
     { source: 1, target: 2 },
+    { source: 2, target: 3 },
   ]);
 });
 
@@ -131,14 +131,14 @@ test("SkeletonTracing should add nodes to a different tree", (t) => {
 
   t.not(newState, initialState);
   const maxNodeId = _.max(_.flatMap(newState.skeletonTracing.trees, tree => _.map(tree.nodes, node => node.id)));
-  t.is(maxNodeId, 2);
-  t.is(newState.skeletonTracing.activeTreeId, 1);
-  t.is(newState.skeletonTracing.activeNodeId, 2);
-  t.deepEqual(_.size(newState.skeletonTracing.trees[0].nodes), 1);
-  t.deepEqual(_.size(newState.skeletonTracing.trees[1].nodes), 2);
-  t.deepEqual(newState.skeletonTracing.trees[0].edges.length, 0);
-  t.deepEqual(newState.skeletonTracing.trees[1].edges, [
-    { source: 1, target: 2 },
+  t.is(maxNodeId, 3);
+  t.is(newState.skeletonTracing.activeTreeId, 2);
+  t.is(newState.skeletonTracing.activeNodeId, 3);
+  t.deepEqual(_.size(newState.skeletonTracing.trees[1].nodes), 1);
+  t.deepEqual(_.size(newState.skeletonTracing.trees[2].nodes), 2);
+  t.deepEqual(newState.skeletonTracing.trees[1].edges.length, 0);
+  t.deepEqual(newState.skeletonTracing.trees[2].edges, [
+    { source: 2, target: 3 },
   ]);
 });
 
@@ -165,7 +165,7 @@ test("SkeletonTracing should delete a node from a tree", (t) => {
   t.deepEqual(newStateB, newState);
 });
 
-test("SkeletonTracing should delete several nodes from a tree", (t) => {
+test.only("SkeletonTracing should delete several nodes from a tree", (t) => {
   const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
   const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
 
@@ -177,6 +177,7 @@ test("SkeletonTracing should delete several nodes from a tree", (t) => {
   t.not(newStateB, newState);
   t.not(newStateA, newState);
   t.is(newStateB, newStateA);
+  console.log(initialState.skeletonTracing, newStateA.skeletonTracing);
   t.deepEqual(Object.keys(newStateB.skeletonTracing.trees[1].nodes).length, 0);
 });
 

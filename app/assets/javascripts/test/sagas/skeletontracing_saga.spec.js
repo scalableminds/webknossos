@@ -43,8 +43,8 @@ const initialState = {
   },
   skeletonTracing: {
     trees: {
-      "0": {
-        treeId: 0,
+      "1": {
+        treeId: 1,
         name: "TestTree",
         nodes: {},
         timestamp: 12345678,
@@ -56,9 +56,9 @@ const initialState = {
     },
     tracingType: "Explorational",
     name: "",
-    activeTreeId: 0,
+    activeTreeId: 1,
     activeNodeId: null,
-    cachedMaxNodeId: -1,
+    cachedMaxNodeId: 0,
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,
@@ -126,8 +126,8 @@ test("SkeletonTracingSaga should emit createNode update actions", (t) => {
 
   const updateActions = testDiffing(initialState.skeletonTracing, newState.skeletonTracing, newState.flycam);
   t.is(updateActions[0].action, "createNode");
-  t.is(updateActions[0].value.id, 0);
-  t.is(updateActions[0].value.treeId, 0);
+  t.is(updateActions[0].value.id, 1);
+  t.is(updateActions[0].value.treeId, 1);
 });
 
 test("SkeletonTracingSaga should emit createNode and createEdge update actions", (t) => {
@@ -136,31 +136,35 @@ test("SkeletonTracingSaga should emit createNode and createEdge update actions",
   const updateActions = testDiffing(initialState.skeletonTracing, newState.skeletonTracing, newState.flycam);
 
   t.is(updateActions[0].action, "createNode");
-  t.is(updateActions[0].value.id, 0);
-  t.is(updateActions[0].value.treeId, 0);
+  t.is(updateActions[0].value.id, 1);
+  t.is(updateActions[0].value.treeId, 1);
   t.is(updateActions[1].action, "createNode");
-  t.is(updateActions[1].value.id, 1);
-  t.is(updateActions[1].value.treeId, 0);
+  t.is(updateActions[1].value.id, 2);
+  t.is(updateActions[1].value.treeId, 1);
   t.is(updateActions[2].action, "createEdge");
-  t.is(updateActions[2].value.treeId, 0);
-  t.is(updateActions[2].value.source, 0);
-  t.is(updateActions[2].value.target, 1);
+  t.is(updateActions[2].value.treeId, 1);
+  t.is(updateActions[2].value.source, 1);
+  t.is(updateActions[2].value.target, 2);
 });
 
 test("SkeletonTracingSaga should emit createNode and createTree update actions", (t) => {
-  let newState = SkeletonTracingReducer(initialState, createNodeAction);
-  newState = SkeletonTracingReducer(newState, createTreeAction);
-  newState = SkeletonTracingReducer(newState, createNodeAction);
-  const updateActions = testDiffing(initialState.skeletonTracing, newState.skeletonTracing, newState.flycam);
+  const newStateA = SkeletonTracingReducer(initialState, createNodeAction);
+  const newStateB = SkeletonTracingReducer(newStateA, createTreeAction);
+  const newStateC = SkeletonTracingReducer(newStateB, createNodeAction);
+  const updateActions = [].concat(
+    testDiffing(initialState.skeletonTracing, newStateA.skeletonTracing, newStateA.flycam),
+    testDiffing(newStateA.skeletonTracing, newStateB.skeletonTracing, newStateB.flycam),
+    testDiffing(newStateB.skeletonTracing, newStateC.skeletonTracing, newStateC.flycam),
+  );
 
-  t.is(updateActions[0].action, "createTree");
+  t.is(updateActions[0].action, "createNode");
   t.is(updateActions[0].value.id, 1);
-  t.is(updateActions[1].action, "createNode");
-  t.is(updateActions[1].value.id, 1);
-  t.is(updateActions[1].value.treeId, 1);
+  t.is(updateActions[0].value.treeId, 1);
+  t.is(updateActions[1].action, "createTree");
+  t.is(updateActions[1].value.id, 2);
   t.is(updateActions[2].action, "createNode");
-  t.is(updateActions[2].value.id, 0);
-  t.is(updateActions[2].value.treeId, 0);
+  t.is(updateActions[2].value.id, 2);
+  t.is(updateActions[2].value.treeId, 2);
 });
 
 

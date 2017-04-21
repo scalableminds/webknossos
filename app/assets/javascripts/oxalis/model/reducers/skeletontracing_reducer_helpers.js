@@ -267,7 +267,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
     // create a new tree id and name
     // tree id can become 0 after deleting all trees
     const maxTreeId = getMaximumTreeId(state.skeletonTracing.trees);
-    const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : 0;
+    const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : 1;
 
     const name = generateTreeNamePrefix(state, timestamp) + Utils.zeroPad(newTreeId, 2);
 

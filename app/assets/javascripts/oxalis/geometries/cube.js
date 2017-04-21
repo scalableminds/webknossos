@@ -14,7 +14,7 @@ import dimensions from "oxalis/model/dimensions";
 import Store from "oxalis/store";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 
-type Properties = {
+type PropertiesType = {
   min?: Vector3,
   max: Vector3,
   lineWidth?: number,
@@ -36,7 +36,7 @@ class Cube {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(model: Model, properties: Properties) {
+  constructor(model: Model, properties: PropertiesType) {
     this.model = model;
     this.min = properties.min || [0, 0, 0];
     this.max = properties.max;

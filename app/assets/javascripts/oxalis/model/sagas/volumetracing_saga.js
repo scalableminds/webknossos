@@ -3,18 +3,34 @@
  * @flow
  */
 import app from "app";
-import { call, select, put, take, race } from "redux-saga/effects";
+import { call, select, put, take, race, takeEvery } from "redux-saga/effects";
 import { updateDirectionAction, resetContourAction } from "oxalis/model/actions/volumetracing_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import Dimensions from "oxalis/model/dimensions";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
+import { isVolumeTracingDisallowed, getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { OrthoViewType } from "oxalis/constants";
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
+
+export function* updateIsosurface(): Generator<*, *, *> {
+  const shouldDisplayIsosurface = yield select(state => state.userConfiguration.isosurfaceDisplay);
+  const activeCellIdMaybe = yield select(state => getActiveCellId(state.tracing));
+
+  if (shouldDisplayIsosurface) {
+    activeCellIdMaybe.map(activeCellId => {
+      app.oxalis.sceneController.renderVolumeIsosurface(activeCellId);
+    });
+  }
+}
+
+export function* watchVolumeTracingAsync(): Generator<*, *, *> {
+  yield take("WK_READY");
+  yield takeEvery(["FINISH_EDITING"], updateIsosurface);
+}
 
 export function* editVolumeLayerAsync(): Generator<*, *, *> {
   const allowUpdate = yield select(state => state.tracing.restrictions.allowUpdate);

@@ -9,16 +9,16 @@ import Store from "oxalis/store";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import constants, { OrthoViews } from "oxalis/constants";
-import type { OrthoViewType, Point2 } from "oxalis/constants";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import type SceneController from "oxalis/controller/scene_controller";
-import type Model, { BoundingBoxType } from "oxalis/model";
-import type View from "oxalis/view";
-import { getPosition, getViewportBoundingBox } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { createCellAction, setModeAction, startEditingAction, addToLayerAction, finishEditingAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getMode } from "oxalis/model/accessors/volumetracing_accessor";
+import type { OrthoViewType, Point2 } from "oxalis/constants";
+import type SceneController from "oxalis/controller/scene_controller";
+import type Model from "oxalis/model";
+import type View from "oxalis/view";
 
 class VolumeTracingPlaneController extends PlaneController {
 
@@ -38,7 +38,7 @@ class VolumeTracingPlaneController extends PlaneController {
     Store.subscribe(() => {
       getActiveCellId(Store.getState().tracing).map((cellId) => {
         if (lastActiveCellId !== cellId) {
-          this.render3dCell(cellId);
+          this.sceneController.renderVolumeIsosurface(cellId);
           lastActiveCellId = cellId;
         }
       });
@@ -46,7 +46,7 @@ class VolumeTracingPlaneController extends PlaneController {
 
     // If a new mapping is activated the 3D cell has to be updated, although the activeCellId did not change
     this.listenTo(this.model.getSegmentationBinary().cube, "newMapping", () =>
-      this.render3dCell(lastActiveCellId),
+      this.sceneController.renderVolumeIsosurface(lastActiveCellId),
     );
 
     // TODO: This should be put in a saga with `take('INITIALIZE_SETTINGS')`as pre-condition
@@ -147,31 +147,6 @@ class VolumeTracingPlaneController extends PlaneController {
     return _.extend(super.getKeyboardControls(), {
       c: () => Store.dispatch(createCellAction()),
     });
-  }
-
-
-  render3dCell(id: number): void {
-    if (!Store.getState().userConfiguration.isosurfaceDisplay) {
-      return;
-    }
-    const bb = getViewportBoundingBox(Store.getState());
-    const res = Store.getState().userConfiguration.isosurfaceResolution;
-    this.sceneController.showShapes(this.scaleIsosurfaceBB(bb), res, id);
-  }
-
-  scaleIsosurfaceBB(bb: BoundingBoxType): BoundingBoxType {
-    const factor = Store.getState().userConfiguration.isosurfaceBBsize;
-    const result = {
-      min: [0, 0, 0],
-      max: [0, 0, 0],
-    };
-    for (let i = 0; i <= 2; i++) {
-      const width = bb.max[i] - bb.min[i];
-      const diff = ((factor - 1) * width) / 2;
-      result.min[i] = bb.min[i] - diff;
-      result.max[i] = bb.max[i] + diff;
-    }
-    return result;
   }
 }
 

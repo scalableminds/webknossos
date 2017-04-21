@@ -18,10 +18,11 @@ import type { NodeType, UserConfigurationType, DatasetConfigurationType } from "
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
 
 /**
- * All tracing related API methods.
+ * All tracing related API methods. This is version 1 of the api which is deprecated.
+ * @version 1
  * @class
  */
-class TracingApi {
+class TracingApi_DEPRECATED {
 
   model: OxalisModel;
  /**
@@ -134,7 +135,7 @@ class TracingApi {
 /**
  * All binary data / layer related API methods.
  */
-class DataApi {
+class DataApi_DEPRECATED {
 
   model: OxalisModel;
 
@@ -237,7 +238,7 @@ class DataApi {
 /**
  * All user configuration related API methods.
  */
-class UserApi {
+class UserApi_DEPRECATED {
 
   model: OxalisModel;
 
@@ -301,7 +302,7 @@ type Handler = {
 /**
  * Utility API methods to control wK.
  */
-class UtilsApi {
+class UtilsApi_DEPRECATED {
 
   model: OxalisModel;
 
@@ -371,17 +372,17 @@ class UtilsApi {
 
 
 type ApiInterface = {
-  tracing: TracingApi,
-  data: DataApi,
-  user: UserApi,
-  utils: UtilsApi,
+  tracing: TracingApi_DEPRECATED,
+  data: DataApi_DEPRECATED,
+  user: UserApi_DEPRECATED,
+  utils: UtilsApi_DEPRECATED,
 };
 
 export default function createApiInterface(model: OxalisModel): ApiInterface {
   return {
-    tracing: new TracingApi(model),
-    data: new DataApi(model),
-    user: new UserApi(model),
-    utils: new UtilsApi(model),
+    tracing: new TracingApi_DEPRECATED(model),
+    data: new DataApi_DEPRECATED(model),
+    user: new UserApi_DEPRECATED(model),
+    utils: new UtilsApi_DEPRECATED(model),
   };
 }

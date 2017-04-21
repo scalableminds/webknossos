@@ -165,7 +165,7 @@ test("SkeletonTracing should delete a node from a tree", (t) => {
   t.deepEqual(newStateB, newState);
 });
 
-test.only("SkeletonTracing should delete several nodes from a tree", (t) => {
+test("SkeletonTracing should delete several nodes from a tree", (t) => {
   const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
   const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
 
@@ -177,8 +177,6 @@ test.only("SkeletonTracing should delete several nodes from a tree", (t) => {
   t.not(newStateB, newState);
   t.not(newStateA, newState);
   t.is(newStateB, newStateA);
-  console.log(initialState.skeletonTracing, newStateA.skeletonTracing);
-  t.deepEqual(Object.keys(newStateB.skeletonTracing.trees[1].nodes).length, 0);
 });
 
 test("SkeletonTracing should delete nodes and split the tree", (t) => {
@@ -260,7 +258,7 @@ test("SkeletonTracing should delete nodes and split the tree", (t) => {
 
 test("SkeletonTracing should set a new active node", (t) => {
   const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
-  const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(0);
+  const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(1);
 
   // Create two nodes, then set first one active
   let newState = SkeletonTracingReducer(initialState, createNodeAction);
@@ -268,8 +266,8 @@ test("SkeletonTracing should set a new active node", (t) => {
   newState = SkeletonTracingReducer(newState, setActiveNodeAction);
 
   t.not(newState, initialState);
-  t.is(newState.skeletonTracing.activeNodeId, 0);
-  t.is(newState.skeletonTracing.activeTreeId, 0);
+  t.is(newState.skeletonTracing.activeNodeId, 1);
+  t.is(newState.skeletonTracing.activeTreeId, 1);
 });
 
 test("SkeletonTracing should set a new active node in a different tree", (t) => {
@@ -300,7 +298,7 @@ test("SkeletonTracing should set a new node radius", (t) => {
   newState = SkeletonTracingReducer(newState, setActiveNodeRadiusAction);
 
   t.not(newState, initialState);
-  t.deepEqual(newState.skeletonTracing.trees[0].nodes[0].radius, newRadius);
+  t.deepEqual(newState.skeletonTracing.trees[1].nodes[1].radius, newRadius);
 });
 
 test("SkeletonTracing should create a branchpoint", (t) => {
@@ -312,9 +310,9 @@ test("SkeletonTracing should create a branchpoint", (t) => {
   newState = SkeletonTracingReducer(newState, createBranchPointAction);
 
   t.not(newState, initialState);
-  t.deepEqual(newState.skeletonTracing.trees[0].branchPoints.length, 1);
-  deepEqualObjectContaining(t, newState.skeletonTracing.trees[0].branchPoints[0], {
-    id: 0,
+  t.deepEqual(newState.skeletonTracing.trees[1].branchPoints.length, 1);
+  deepEqualObjectContaining(t, newState.skeletonTracing.trees[1].branchPoints[0], {
+    id: 1,
   });
 });
 
@@ -339,7 +337,7 @@ test("SkeletonTracing shouldn't create a branchpoint without the correct permiss
   newState = SkeletonTracingReducer(newState, createBranchPointAction);
 
   t.not(newState, initialState);
-  t.deepEqual(newState.skeletonTracing.trees[0].branchPoints.length, 0);
+  t.deepEqual(newState.skeletonTracing.trees[1].branchPoints.length, 0);
 });
 
 test("SkeletonTracing shouldn't create more branchpoints than nodes", (t) => {
@@ -353,8 +351,8 @@ test("SkeletonTracing shouldn't create more branchpoints than nodes", (t) => {
   newState = SkeletonTracingReducer(newState, createBranchPointAction);
 
   t.not(newState, initialState);
-  t.deepEqual(newState.skeletonTracing.trees[0].branchPoints.length, 1);
-  deepEqualObjectContaining(t, newState.skeletonTracing.trees[0].branchPoints[0], {
+  t.deepEqual(newState.skeletonTracing.trees[1].branchPoints.length, 1);
+  deepEqualObjectContaining(t, newState.skeletonTracing.trees[1].branchPoints[0], {
     id: 0,
   });
 });
@@ -371,10 +369,10 @@ test("SkeletonTracing should delete a branchpoint", (t) => {
   newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
 
   t.not(newState, initialState);
-  t.is(newState.skeletonTracing.trees[0].branchPoints.length, 0);
-  t.is(_.size(newState.skeletonTracing.trees[0].nodes), 2);
-  t.is(newState.skeletonTracing.activeNodeId, 0);
-  t.is(newState.skeletonTracing.activeTreeId, 0);
+  t.is(newState.skeletonTracing.trees[1].branchPoints.length, 0);
+  t.is(_.size(newState.skeletonTracing.trees[1].nodes), 2);
+  t.is(newState.skeletonTracing.activeNodeId, 1);
+  t.is(newState.skeletonTracing.activeTreeId, 1);
 });
 
 test("SkeletonTracing should delete several branchpoints", (t) => {
@@ -392,10 +390,10 @@ test("SkeletonTracing should delete several branchpoints", (t) => {
   newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
 
   t.not(newState, initialState);
-  t.is(newState.skeletonTracing.trees[0].branchPoints.length, 0);
-  t.is(_.size(newState.skeletonTracing.trees[0].nodes), 2);
-  t.is(newState.skeletonTracing.activeNodeId, 0);
-  t.is(newState.skeletonTracing.activeTreeId, 0);
+  t.is(newState.skeletonTracing.trees[1].branchPoints.length, 0);
+  t.is(_.size(newState.skeletonTracing.trees[1].nodes), 2);
+  t.is(newState.skeletonTracing.activeNodeId, 1);
+  t.is(newState.skeletonTracing.activeTreeId, 1);
 });
 
 test("SkeletonTracing shouldn't delete more branchpoints than available", (t) => {
@@ -412,10 +410,10 @@ test("SkeletonTracing shouldn't delete more branchpoints than available", (t) =>
   newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
 
   t.not(newState, initialState);
-  t.is(newState.skeletonTracing.trees[0].branchPoints.length, 0);
-  t.is(_.size(newState.skeletonTracing.trees[0].nodes), 1);
-  t.is(newState.skeletonTracing.activeNodeId, 0);
-  t.is(newState.skeletonTracing.activeTreeId, 0);
+  t.is(newState.skeletonTracing.trees[1].branchPoints.length, 0);
+  t.is(_.size(newState.skeletonTracing.trees[1].nodes), 1);
+  t.is(newState.skeletonTracing.activeNodeId, 1);
+  t.is(newState.skeletonTracing.activeTreeId, 1);
 });
 
 test("SkeletonTracing should delete a branchpoint from a different tree", (t) => {
@@ -432,8 +430,8 @@ test("SkeletonTracing should delete a branchpoint from a different tree", (t) =>
   newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
 
   t.not(newState, initialState);
-  t.is(newState.skeletonTracing.trees[0].branchPoints.length, 0);
   t.is(newState.skeletonTracing.trees[1].branchPoints.length, 0);
+  t.is(newState.skeletonTracing.trees[2].branchPoints.length, 0);
 });
 
 test("SkeletonTracing should add a new tree", (t) => {

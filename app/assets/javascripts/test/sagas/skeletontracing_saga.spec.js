@@ -167,7 +167,6 @@ test("SkeletonTracingSaga should emit createNode and createTree update actions",
   t.is(updateActions[2].value.treeId, 2);
 });
 
-
 test("SkeletonTracingSaga should emit first deleteNode and then createNode update actions", (t) => {
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 0);
 

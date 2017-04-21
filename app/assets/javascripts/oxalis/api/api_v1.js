@@ -1,3 +1,5 @@
+/* eslint-disable camelcase */
+
 /*
  * api_v1.js
  * @flow strict

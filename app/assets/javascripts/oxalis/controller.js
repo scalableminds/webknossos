@@ -1,6 +1,6 @@
 /**
  * controller.js
- * @flow weak
+ * @flow
  */
 
 import $ from "jquery";
@@ -27,6 +27,7 @@ import View from "oxalis/view";
 import SkeletonTracingView from "oxalis/view/skeletontracing_view";
 import VolumeTracingView from "oxalis/view/volumetracing_view";
 import constants from "oxalis/constants";
+import type { ModeType } from "oxalis/constants";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import messages from "messages";
@@ -61,7 +62,7 @@ class Controller {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
 
-  constructor(options) {
+  constructor(options: Object) {
     this.model = options.model;
 
     _.extend(this, Backbone.Events);
@@ -216,7 +217,7 @@ class Controller {
   }
 
 
-  loadMode(newMode, force = false) {
+  loadMode(newMode: ModeType, force: boolean = false) {
     if ((newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) && (this.model.allowedModes.includes(newMode) || force)) {
       Utils.__guard__(this.planeController, x => x.stop());
       this.arbitraryController.start(newMode);

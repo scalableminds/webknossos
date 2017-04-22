@@ -9,7 +9,7 @@ import Utils from "libs/utils";
 import Backbone from "backbone";
 import * as THREE from "three";
 import { V3 } from "libs/mjs";
-import { getPosition, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getPlaneScalingFactor, getViewportBoundingBox } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
@@ -21,7 +21,6 @@ import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
-import { getViewportBoundingBox } from "oxalis/model/accessors/flycam_accessor";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { BoundingBoxType } from "oxalis/model";
 

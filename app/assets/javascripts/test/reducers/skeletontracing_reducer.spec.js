@@ -435,6 +435,27 @@ test("SkeletonTracing should delete a branchpoint from a different tree", (t) =>
   t.is(newState.skeletonTracing.trees[1].branchPoints.length, 0);
 });
 
+test("SkeletonTracing should delete a branchpoint from another tree than the active one", (t) => {
+  const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
+  const createTreeAction = SkeletonTracingActions.createTreeAction();
+  const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+  const deleteBranchPointAction = SkeletonTracingActions.deleteBranchPointAction();
+
+  // create a new tree, add a node, set it as branchpoint
+  let newState = SkeletonTracingReducer(initialState, createTreeAction);
+  newState = SkeletonTracingReducer(newState, createNodeAction);
+  newState = SkeletonTracingReducer(newState, createBranchPointAction);
+  // create another tree, delete the original branchpoint
+  newState = SkeletonTracingReducer(newState, createTreeAction);
+  newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
+
+  t.not(newState, initialState);
+  t.is(newState.skeletonTracing.trees[0].branchPoints.length, 0);
+  t.is(newState.skeletonTracing.trees[1].branchPoints.length, 0);
+  // as the branchpoint was in the first tree, the first tree should be active again
+  t.is(newState.skeletonTracing.activeTreeId, 1);
+});
+
 test("SkeletonTracing should add a new tree", (t) => {
   const createTreeAction = SkeletonTracingActions.createTreeAction();
   const newState = SkeletonTracingReducer(initialState, createTreeAction);

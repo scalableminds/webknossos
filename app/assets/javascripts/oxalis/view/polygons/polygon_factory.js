@@ -66,7 +66,7 @@ class PolygonFactory {
       i++;
       // If chunk size is reached, pause execution
       if (i % this.chunkSize === 0 && !position.done) {
-        await Utils.idleFrame(100);
+        await Utils.idleFrame(10);
       }
     }
     if (this.isCancelled) {

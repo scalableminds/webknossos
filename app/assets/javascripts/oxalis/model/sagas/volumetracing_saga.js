@@ -21,9 +21,10 @@ export function* updateIsosurface(): Generator<*, *, *> {
   const activeCellIdMaybe = yield select(state => getActiveCellId(state.tracing));
 
   if (shouldDisplayIsosurface) {
-    activeCellIdMaybe.map(activeCellId => {
-      app.oxalis.sceneController.renderVolumeIsosurface(activeCellId);
-    });
+    activeCellIdMaybe.map(activeCellId =>
+      // $FlowFixMe
+      app.oxalis.sceneController.renderVolumeIsosurface(activeCellId),
+    );
   }
 }
 

@@ -18,7 +18,8 @@ import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMap
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
 
 /**
- * All tracing related API methods.
+ * All tracing related API methods. This is the newest version of the API (version 2).
+ * @version 2
  * @class
  */
 class TracingApi {

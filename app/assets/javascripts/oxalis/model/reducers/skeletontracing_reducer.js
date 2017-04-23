@@ -1,7 +1,5 @@
-/**
- * settings_reducer.js
- * @flow
- */
+// @flow
+
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";

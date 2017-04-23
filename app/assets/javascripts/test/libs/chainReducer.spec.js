@@ -9,11 +9,11 @@ import test from "ava";
 
 import ChainReducer from "test/helpers/chainReducer";
 
-function IncrementReducer(state) {
+function IncrementReducer(state: number): number {
   return state + 1;
 }
 
-function SumReducer(state, action) {
+function SumReducer(state: number, action: number): number {
   return state + action;
 }
 

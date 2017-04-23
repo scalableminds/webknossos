@@ -4,6 +4,7 @@ import FormSyphon from "form-syphon";
 import TaskTypeCollection from "admin/models/tasktype/task_type_collection";
 import TeamCollection from "admin/models/team/team_collection";
 import ProjectCollection from "admin/models/project/project_collection";
+import ScriptCollection from "admin/models/scripts/script_collection";
 import SelectionView from "admin/views/selection_view";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
@@ -79,6 +80,12 @@ class TaskCreateFromView extends Marionette.View {
       </div>
 
       <div class="form-group">
+        <label class="col-sm-2 control-label" for="scriptId">Script</label>
+        <div class="col-sm-9 scripts">
+        </div>
+      </div>
+
+      <div class="form-group">
         <label class="col-sm-2 control-label" for="boundingBox">Bounding Box</label>
         <div class="col-sm-9">
           <span class="help-block hints"></span>
@@ -114,6 +121,7 @@ class TaskCreateFromView extends Marionette.View {
       taskType: ".taskType",
       team: ".team",
       project: ".project",
+      scripts: ".scripts",
       subview: ".subview",
     };
 
@@ -253,6 +261,19 @@ class TaskCreateFromView extends Marionette.View {
       name: "taskTypeId",
     });
 
+    const defaultScriptId = this.model.get("script") ? this.model.get("script").id : null;
+    this.scriptSelectionView = new SelectionView({
+      collection: new ScriptCollection(),
+      childViewOptions: {
+        modelValue() { return `${this.model.get("id")}`; },
+        modelLabel() { return `${this.model.get("name")}`; },
+        defaultItem: { id: defaultScriptId },
+      },
+      data: "amIAnAdmin=true",
+      name: "scriptId",
+      emptyOption: true,
+    });
+
     this.teamSelectionView = new SelectionView({
       collection: new TeamCollection(),
       childViewOptions: {
@@ -272,13 +293,13 @@ class TaskCreateFromView extends Marionette.View {
       data: "amIAnAdmin=true",
       name: "projectName",
       required: true,
-      emptyOption: true,
     });
 
     // render subviews in defined regions
     this.showChildView("taskType", this.taskTypeSelectionView);
     this.showChildView("team", this.teamSelectionView);
     this.showChildView("project", this.projectSelectionView);
+    this.showChildView("scripts", this.scriptSelectionView);
 
     // get create-subview type
     if (this.type === "from_form") {

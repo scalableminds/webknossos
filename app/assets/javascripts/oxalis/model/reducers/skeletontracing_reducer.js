@@ -129,6 +129,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           update(state, { skeletonTracing: {
             trees: { [treeId]: { branchPoints: { $set: branchPoints } } },
             activeNodeId: { $set: newActiveNodeId },
+            activeTreeId: { $set: treeId },
           } }))
         .getOrElse(state);
     }

@@ -11,7 +11,7 @@ import test from "ava";
 import _ from "lodash";
 import mock from "mock-require";
 import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-import ChainReducer from "test/helpers/ChainReducer";
+import ChainReducer from "test/helpers/chainReducer";
 import update from "immutability-helper";
 
 mock.stopAll();

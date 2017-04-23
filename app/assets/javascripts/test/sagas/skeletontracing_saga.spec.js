@@ -3,7 +3,7 @@ import test from "ava";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
 import _ from "lodash";
-import ChainReducer from "../helpers/ChainReducer";
+import ChainReducer from "test/helpers/chainReducer";
 
 const KeyboardJS = {
   bind: _.noop,

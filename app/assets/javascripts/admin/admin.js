@@ -20,6 +20,8 @@ import ProjectCollection from "admin/models/project/project_collection";
 import StatisticView from "admin/views/statistic/statistic_view";
 import WorkloadListView from "admin/views/workload/workload_list_view";
 import WorkloadCollection from "admin/models/workload/workload_collection";
+import ScriptListView from "admin/views/scripts/script_list_view";
+import ScriptCollection from "admin/models/scripts/script_collection";
 
 //
 // This exports all the modules listed above and mainly serves the purpose of
@@ -44,4 +46,6 @@ export {
   WorkloadCollection,
   DatasetAddView,
   DatasetListView,
+  ScriptListView,
+  ScriptCollection,
 };

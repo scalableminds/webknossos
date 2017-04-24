@@ -2,6 +2,7 @@
  * skeletontracing_reducer.js
  * @flow
  */
+
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
@@ -26,7 +27,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
       const activeNodeId = contentData.activeNode ? contentData.activeNode : null;
       let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
-      cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : -1;
+      cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : 0;
 
       const activeTree = activeNodeId ? findTreeByNodeId(trees, activeNodeId).get() : null;
 
@@ -135,6 +136,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             update(state, { tracing: {
               trees: { [treeId]: { branchPoints: { $set: branchPoints } } },
               activeNodeId: { $set: newActiveNodeId },
+              activeTreeId: { $set: treeId },
             } }))
           .getOrElse(state);
       }

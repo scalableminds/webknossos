@@ -3,6 +3,7 @@ import test from "ava";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
 import _ from "lodash";
+import ChainReducer from "test/helpers/chainReducer";
 
 const KeyboardJS = {
   bind: _.noop,
@@ -45,8 +46,8 @@ const initialState = {
   tracing: {
     type: "skeleton",
     trees: {
-      "0": {
-        treeId: 0,
+      "1": {
+        treeId: 1,
         name: "TestTree",
         nodes: {},
         timestamp: 12345678,
@@ -58,9 +59,9 @@ const initialState = {
     },
     tracingType: "Explorational",
     name: "",
-    activeTreeId: 0,
+    activeTreeId: 1,
     activeNodeId: null,
-    cachedMaxNodeId: -1,
+    cachedMaxNodeId: 0,
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,
@@ -133,65 +134,70 @@ test("SkeletonTracingSaga should emit createNode update actions", (t) => {
 
   const updateActions = testDiffing(initialState.tracing, newState.tracing, newState.flycam);
   t.is(updateActions[0].action, "createNode");
-  t.is(updateActions[0].value.id, 0);
-  t.is(updateActions[0].value.treeId, 0);
+  t.is(updateActions[0].value.id, 1);
+  t.is(updateActions[0].value.treeId, 1);
 });
 
 test("SkeletonTracingSaga should emit createNode and createEdge update actions", (t) => {
-  let newState = SkeletonTracingReducer(initialState, createNodeAction);
-  newState = SkeletonTracingReducer(newState, createNodeAction);
-  const updateActions = testDiffing(initialState.tracing, newState.tracing, newState.flycam);
+  const newState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .unpack();
 
+  const updateActions = testDiffing(initialState.tracing, newState.tracing, newState.flycam);
   t.is(updateActions[0].action, "createNode");
-  t.is(updateActions[0].value.id, 0);
-  t.is(updateActions[0].value.treeId, 0);
+  t.is(updateActions[0].value.id, 1);
+  t.is(updateActions[0].value.treeId, 1);
   t.is(updateActions[1].action, "createNode");
-  t.is(updateActions[1].value.id, 1);
-  t.is(updateActions[1].value.treeId, 0);
+  t.is(updateActions[1].value.id, 2);
+  t.is(updateActions[1].value.treeId, 1);
   t.is(updateActions[2].action, "createEdge");
-  t.is(updateActions[2].value.treeId, 0);
-  t.is(updateActions[2].value.source, 0);
-  t.is(updateActions[2].value.target, 1);
+  t.is(updateActions[2].value.treeId, 1);
+  t.is(updateActions[2].value.source, 1);
+  t.is(updateActions[2].value.target, 2);
 });
 
 test("SkeletonTracingSaga should emit createNode and createTree update actions", (t) => {
-  let newState = SkeletonTracingReducer(initialState, createNodeAction);
-  newState = SkeletonTracingReducer(newState, createTreeAction);
-  newState = SkeletonTracingReducer(newState, createNodeAction);
+  const newState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .unpack();
+
   const updateActions = testDiffing(initialState.tracing, newState.tracing, newState.flycam);
-
   t.is(updateActions[0].action, "createTree");
-  t.is(updateActions[0].value.id, 1);
+  t.is(updateActions[0].value.id, 2);
   t.is(updateActions[1].action, "createNode");
-  t.is(updateActions[1].value.id, 1);
-  t.is(updateActions[1].value.treeId, 1);
-  t.is(updateActions[2].action, "createNode");
-  t.is(updateActions[2].value.id, 0);
-  t.is(updateActions[2].value.treeId, 0);
-});
-
-
-test("SkeletonTracingSaga should emit first deleteNode and then createNode update actions", (t) => {
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 0);
-
-  let testState = SkeletonTracingReducer(initialState, createNodeAction);
-  testState = SkeletonTracingReducer(testState, createTreeAction);
-  testState = SkeletonTracingReducer(testState, createNodeAction);
-  const newState = SkeletonTracingReducer(testState, mergeTreesAction);
-  const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
-
-  t.is(updateActions[0].action, "deleteNode");
-  t.is(updateActions[0].value.id, 1);
-  t.is(updateActions[0].value.treeId, 1);
-  t.is(updateActions[1].action, "deleteTree");
-  t.is(updateActions[1].value.id, 1);
+  t.is(updateActions[1].value.id, 2);
+  t.is(updateActions[1].value.treeId, 2);
   t.is(updateActions[2].action, "createNode");
   t.is(updateActions[2].value.id, 1);
-  t.is(updateActions[2].value.treeId, 0);
+  t.is(updateActions[2].value.treeId, 1);
+});
+
+test("SkeletonTracingSaga should emit first deleteNode and then createNode update actions", (t) => {
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(2, 1);
+
+  const testState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .unpack();
+  const newState = SkeletonTracingReducer(testState, mergeTreesAction);
+
+  const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
+  t.is(updateActions[0].action, "deleteNode");
+  t.is(updateActions[0].value.id, 2);
+  t.is(updateActions[0].value.treeId, 2);
+  t.is(updateActions[1].action, "deleteTree");
+  t.is(updateActions[1].value.id, 2);
+  t.is(updateActions[2].action, "createNode");
+  t.is(updateActions[2].value.id, 2);
+  t.is(updateActions[2].value.treeId, 1);
   t.is(updateActions[3].action, "createEdge");
-  t.is(updateActions[3].value.treeId, 0);
-  t.is(updateActions[3].value.source, 1);
-  t.is(updateActions[3].value.target, 0);
+  t.is(updateActions[3].value.treeId, 1);
+  t.is(updateActions[3].value.source, 2);
+  t.is(updateActions[3].value.target, 1);
 });
 
 test("SkeletonTracingSaga should emit a deleteNode update action", (t) => {
@@ -200,23 +206,25 @@ test("SkeletonTracingSaga should emit a deleteNode update action", (t) => {
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.is(updateActions[0].action, "deleteNode");
-  t.is(updateActions[0].value.id, 0);
-  t.is(updateActions[0].value.treeId, 0);
+  t.is(updateActions[0].value.id, 1);
+  t.is(updateActions[0].value.treeId, 1);
 });
 
 test("SkeletonTracingSaga should emit a deleteEdge update action", (t) => {
-  let testState = SkeletonTracingReducer(initialState, createNodeAction);
-  testState = SkeletonTracingReducer(testState, createNodeAction);
+  const testState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .unpack();
   const newState = SkeletonTracingReducer(testState, deleteNodeAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.is(updateActions[0].action, "deleteNode");
-  t.is(updateActions[0].value.id, 1);
-  t.is(updateActions[0].value.treeId, 0);
+  t.is(updateActions[0].value.id, 2);
+  t.is(updateActions[0].value.treeId, 1);
   t.is(updateActions[1].action, "deleteEdge");
-  t.is(updateActions[1].value.treeId, 0);
-  t.is(updateActions[1].value.source, 0);
-  t.is(updateActions[1].value.target, 1);
+  t.is(updateActions[1].value.treeId, 1);
+  t.is(updateActions[1].value.source, 1);
+  t.is(updateActions[1].value.target, 2);
 });
 
 test("SkeletonTracingSaga should emit a deleteTree update action", (t) => {
@@ -225,7 +233,7 @@ test("SkeletonTracingSaga should emit a deleteTree update action", (t) => {
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.is(updateActions[0].action, "deleteTree");
-  t.is(updateActions[0].value.id, 1);
+  t.is(updateActions[0].value.id, 2);
 });
 
 test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
@@ -234,14 +242,16 @@ test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.is(updateActions[0].action, "updateNode");
-  t.is(updateActions[0].value.id, 0);
+  t.is(updateActions[0].value.id, 1);
   t.is(updateActions[0].value.radius, 12);
-  t.is(updateActions[0].value.treeId, 0);
+  t.is(updateActions[0].value.treeId, 1);
 });
 
 test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
-  let testState = SkeletonTracingReducer(initialState, createNodeAction);
-  testState = SkeletonTracingReducer(testState, setActiveNodeRadiusAction);
+  const testState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, setActiveNodeRadiusAction)
+    .unpack();
   const newState = SkeletonTracingReducer(testState, setActiveNodeRadiusAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
@@ -254,13 +264,15 @@ test("SkeletonTracingSaga should emit an updateTree update actions (comments)", 
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.is(updateActions[0].action, "updateTree");
-  t.is(updateActions[0].value.id, 0);
-  t.deepEqual(updateActions[0].value.comments, [{ node: 0, content: "Hallo" }]);
+  t.is(updateActions[0].value.id, 1);
+  t.deepEqual(updateActions[0].value.comments, [{ node: 1, content: "Hallo" }]);
 });
 
 test("SkeletonTracingSaga shouldn't emit an updateTree update actions (comments)", (t) => {
-  let testState = SkeletonTracingReducer(initialState, createNodeAction);
-  testState = SkeletonTracingReducer(testState, createCommentAction);
+  const testState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createCommentAction)
+    .unpack();
   const newState = SkeletonTracingReducer(testState, createCommentAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
@@ -273,73 +285,66 @@ test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.is(updateActions[0].action, "updateTree");
-  t.is(updateActions[0].value.id, 0);
-  t.deepEqual(updateActions[0].value.branchPoints, [{ id: 0, timestamp: 12345678 }]);
+  t.is(updateActions[0].value.id, 1);
+  t.deepEqual(updateActions[0].value.branchPoints, [{ id: 1, timestamp: 12345678 }]);
 });
 
 test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(0, 2);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
 
   // create a node in first tree, then create a second tree with three nodes and merge them
-  let testState = SkeletonTracingReducer(initialState, createNodeAction);
-  testState = SkeletonTracingReducer(testState, createTreeAction);
-  testState = SkeletonTracingReducer(testState, createNodeAction);
-  testState = SkeletonTracingReducer(testState, createNodeAction);
-  testState = SkeletonTracingReducer(testState, createNodeAction);
+  const testState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .unpack();
   const newState = SkeletonTracingReducer(testState, mergeTreesAction);
 
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
-
-  t.deepEqual(updateActions[0], { action: "deleteNode", value: { treeId: 0, id: 0 } });
-  t.deepEqual(updateActions[1], { action: "deleteTree", value: { id: 0 } });
+  t.deepEqual(updateActions[0], { action: "deleteNode", value: { treeId: 1, id: 1 } });
+  t.deepEqual(updateActions[1], { action: "deleteTree", value: { id: 1 } });
   t.is(updateActions[2].action, "createNode");
-  t.is(updateActions[2].value.id, 0);
-  t.is(updateActions[2].value.treeId, 1);
+  t.is(updateActions[2].value.id, 1);
+  t.is(updateActions[2].value.treeId, 2);
   t.deepEqual(updateActions[3], {
     action: "createEdge",
-    value: { treeId: 1, source: 0, target: 2 },
+    value: { treeId: 2, source: 1, target: 3 },
   });
 });
 
 test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(0, 2);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
 
   // create a node in first tree, then create a second tree with three nodes and merge them
-  let testState = SkeletonTracingReducer(initialState, createNodeAction);
-  testState = SkeletonTracingReducer(testState, createTreeAction);
-  testState = SkeletonTracingReducer(testState, createNodeAction);
-  testState = SkeletonTracingReducer(testState, createNodeAction);
-  testState = SkeletonTracingReducer(testState, createNodeAction);
-  testState = SkeletonTracingReducer(testState, mergeTreesAction);
+  const testState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, mergeTreesAction)
+    .unpack();
   const newState = SkeletonTracingReducer(testState, deleteNodeAction);
 
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
-
   t.is(updateActions[0].action, "createTree");
-  t.is(updateActions[0].value.id, 2);
+  t.is(updateActions[0].value.id, 3);
   t.is(updateActions[1].action, "createNode");
-  t.is(updateActions[1].value.id, 3);
-  t.is(updateActions[1].value.treeId, 2);
+  t.is(updateActions[1].value.id, 4);
+  t.is(updateActions[1].value.treeId, 3);
   t.is(updateActions[2].action, "createTree");
-  t.is(updateActions[2].value.id, 3);
+  t.is(updateActions[2].value.id, 4);
   t.is(updateActions[3].action, "createNode");
-  t.is(updateActions[3].value.id, 0);
-  t.is(updateActions[3].value.treeId, 3);
-  t.deepEqual(updateActions[4], { action: "deleteNode", value: { treeId: 1, id: 0 } });
-  t.deepEqual(updateActions[5], { action: "deleteNode", value: { treeId: 1, id: 2 } });
-  t.deepEqual(updateActions[6], { action: "deleteNode", value: { treeId: 1, id: 3 } });
-  t.deepEqual(updateActions[7], {
-    action: "deleteEdge",
-    value: { treeId: 1, source: 1, target: 2 },
-  });
-  t.deepEqual(updateActions[8], {
-    action: "deleteEdge",
-    value: { treeId: 1, source: 2, target: 3 },
-  });
-  t.deepEqual(updateActions[9], {
-    action: "deleteEdge",
-    value: { treeId: 1, source: 0, target: 2 },
-  });
+  t.is(updateActions[3].value.id, 1);
+  t.is(updateActions[3].value.treeId, 4);
+  t.deepEqual(updateActions[4], { action: "deleteNode", value: { treeId: 2, id: 1 } });
+  t.deepEqual(updateActions[5], { action: "deleteNode", value: { treeId: 2, id: 3 } });
+  t.deepEqual(updateActions[6], { action: "deleteNode", value: { treeId: 2, id: 4 } });
+  t.deepEqual(updateActions[7], { action: "deleteEdge", value: { treeId: 2, source: 2, target: 3 } });
+  t.deepEqual(updateActions[8], { action: "deleteEdge", value: { treeId: 2, source: 3, target: 4 } });
+  t.deepEqual(updateActions[9], { action: "deleteEdge", value: { treeId: 2, source: 1, target: 3 } });
   t.is(updateActions[10].action, "updateTree");
-  t.is(updateActions[10].value.id, 1);
+  t.is(updateActions[10].value.id, 2);
 });

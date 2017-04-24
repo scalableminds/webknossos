@@ -1,12 +1,25 @@
 /**
  * model.js
- * @flow weak
+ * @flow
  */
 
 import Backbone from "backbone";
+import type { Attrs, ModelOpts } from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
-import type { DatasetType, BoundingBoxObjectType, RestrictionsType, SettingsType, NodeType, EdgeType, CommentType, BranchPointType, SkeletonTracingTypeTracingType, VolumeTracingTypeTracingType } from "oxalis/store";
+import type {
+  DatasetType,
+  BoundingBoxObjectType,
+  RestrictionsType,
+  SettingsType,
+  NodeType,
+  EdgeType,
+  CommentType,
+  BranchPointType,
+  SkeletonTracingTypeTracingType,
+  VolumeTracingTypeTracingType,
+  DataLayerType,
+} from "oxalis/store";
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
@@ -61,7 +74,6 @@ export type VolumeContentDataType = {
   nextCell: ?number,
   customLayers: Array<Object>;
   maxCoordinates: BoundingBoxObjectType;
-  customLayers: ?Array<Object>;
   name: string;
 };
 
@@ -115,8 +127,8 @@ class Model extends Backbone.Model {
   tracingId: string;
   tracingType: "Explorational" | "Task" | "View";
 
-  constructor(...args) {
-    super(...args);
+  constructor(attributes?: Attrs, options?: ModelOpts) {
+    super(attributes, options);
     this.initialized = false;
   }
 
@@ -189,7 +201,7 @@ class Model extends Backbone.Model {
   }
 
 
-  initializeWithData(tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>, layerInfos) {
+  initializeWithData(tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>, layerInfos: Array<DataLayerType>) {
     const dataset = tracing.content.dataSet;
     const { dataStore } = dataset;
 
@@ -319,7 +331,7 @@ class Model extends Backbone.Model {
   }
 
 
-  getBinaryByName(name) {
+  getBinaryByName(name: string) {
     return this.binary[name];
   }
 
@@ -329,7 +341,7 @@ class Model extends Backbone.Model {
   }
 
 
-  getLayerInfos(userLayers) {
+  getLayerInfos(userLayers: ?Array<Object>) {
     // Overwrite or extend layers with userLayers
 
     const dataset = Store.getState().dataset;
@@ -385,7 +397,7 @@ class Model extends Backbone.Model {
   }
 
 
-  applyState(state, tracing) {
+  applyState(state: any, tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>) {
     Store.dispatch(setPositionAction(state.position || tracing.content.editPosition));
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));

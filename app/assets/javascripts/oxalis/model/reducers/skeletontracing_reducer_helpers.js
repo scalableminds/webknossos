@@ -33,7 +33,7 @@ function generateTreeNamePrefix(state: OxalisState, timestamp) {
 
 function getMaximumNodeId(trees: TreeMapType): number {
   const newMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, n => n.id)));
-  return newMaxNodeId != null ? newMaxNodeId : -1;
+  return newMaxNodeId != null ? newMaxNodeId : 0;
 }
 
 function getMaximumTreeId(trees: TreeMapType): number {
@@ -269,7 +269,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       // create a new tree id and name
       // tree id can become 0 after deleting all trees
       const maxTreeId = getMaximumTreeId(skeletonTracing.trees);
-      const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : 0;
+      const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : 1;
 
       const name = generateTreeNamePrefix(state, timestamp) + Utils.zeroPad(newTreeId, 2);
 

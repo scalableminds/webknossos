@@ -72,6 +72,10 @@ object TaskService
     } yield results.forall(identity)
   }
 
+  def removeScriptFromTasks(_script: String)(implicit ctx: DBAccessContext) = {
+    TaskDAO.removeScriptFromTasks(_script)
+  }
+
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
     for{
       tasks <- project.tasks

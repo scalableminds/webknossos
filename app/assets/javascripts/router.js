@@ -40,6 +40,9 @@ class Router extends BaseRouter {
       "/taskTypes/create": "taskTypesCreate",
       "/taskTypes/:id/edit": "taskTypesCreate",
       "/taskTypes/:id/tasks": "taskTypesTasks",
+      "/scripts": "scripts",
+      "/scripts/create": "scriptsCreate",
+      "/scripts/:id/edit": "scriptsCreate",
       "/spotlight": "spotlight",
       "/tasks/overview": "taskOverview",
       "/admin/taskTypes": "hideLoadingSpinner",
@@ -226,6 +229,10 @@ class Router extends BaseRouter {
     this.showWithPagination("TaskTypeListView", "TaskTypeCollection", { addButtonText: "Create New TaskType" });
   }
 
+  scripts() {
+    this.showWithPagination("ScriptListView", "ScriptCollection", { addButtonText: "Create New Script" });
+  }
+
 
   /**
    * Load layout view that shows task-creation subviews
@@ -278,6 +285,19 @@ class Router extends BaseRouter {
     require(["admin/views/tasktype/task_type_create_view", "admin/models/tasktype/task_type_model"], callback);
   }
 
+  scriptsCreate(scriptId) {
+    // Webpack `require` doesn't work with inline arrow functions
+    const callback = (ScriptCreateView, ScriptModel) => {
+      ScriptCreateView = ScriptCreateView.default;
+      ScriptModel = ScriptModel.default;
+
+      const model = new ScriptModel({ id: scriptId });
+      const view = new ScriptCreateView({ model });
+      this.changeView(view);
+      this.hideLoadingSpinner();
+    };
+    require(["admin/views/scripts/script_create_view", "admin/models/scripts/script_model"], callback);
+  }
 
   dashboard(userID) {
     // Webpack `require` doesn't work with inline arrow functions

@@ -437,7 +437,11 @@ class ArbitraryController {
     // interpolate the Quaternion representation instead
     // https://theory.org/software/qfa/writeup/node12.html
 
-    const result = [0, 0, 0];
+    const result = [
+      newRotation[0],
+      newRotation[1],
+      newRotation[2],
+    ];
     for (let i = 0; i <= 2; i++) {
       // a rotation about more than 180° is shorter when rotating the other direction
       if (newRotation[i] - curRotation[i] > 180) {

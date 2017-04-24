@@ -1,6 +1,6 @@
 /**
  * controller.js
- * @flow weak
+ * @flow
  */
 
 import $ from "jquery";
@@ -27,11 +27,13 @@ import View from "oxalis/view";
 import SkeletonTracingView from "oxalis/view/skeletontracing_view";
 import VolumeTracingView from "oxalis/view/volumetracing_view";
 import constants from "oxalis/constants";
+import Request from "libs/request";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import messages from "messages";
 
 import type { ToastType } from "libs/toast";
+import type { ModeType } from "oxalis/constants";
 
 class Controller {
 
@@ -61,7 +63,7 @@ class Controller {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
 
-  constructor(options) {
+  constructor(options: Object) {
     this.model = options.model;
 
     _.extend(this, Backbone.Events);
@@ -139,6 +141,7 @@ class Controller {
 
     this.initKeyboard();
     this.initTimeLimit();
+    this.initTaskScript();
 
     for (const binaryName of Object.keys(this.model.binary)) {
       this.listenTo(this.model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
@@ -165,6 +168,30 @@ class Controller {
     Store.dispatch(wkReadyAction());
   }
 
+  initTaskScript() {
+    // Loads a Gist from GitHub with a user script if there is a
+    // script assigned to the task
+    if (this.model.tracing.task && this.model.tracing.task.script) {
+      const script = this.model.tracing.task.script;
+      const gistId = _.last(script.gist.split("/"));
+
+      Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then((gist) => {
+        const firstFile = gist.files[Object.keys(gist.files)[0]];
+
+        if (firstFile && firstFile.content) {
+          try {
+            // eslint-disable-next-line no-eval
+            eval(firstFile.content);
+          } catch (error) {
+            console.error(error);
+            Toast.error(`Error executing the task script "${script.name}". See console for more information.`);
+          }
+        } else {
+          Toast.error(`Unable to retrieve script ${script.name}`);
+        }
+      });
+    }
+  }
 
   initKeyboard() {
     // avoid scrolling while pressing space
@@ -208,7 +235,7 @@ class Controller {
   }
 
 
-  loadMode(newMode, force = false) {
+  loadMode(newMode: ModeType, force: boolean = false) {
     if ((newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) && (this.model.allowedModes.includes(newMode) || force)) {
       Utils.__guard__(this.planeController, x => x.stop());
       this.arbitraryController.start(newMode);

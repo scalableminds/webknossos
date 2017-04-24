@@ -14,6 +14,7 @@ type SetActiveNodeActionType = {type: "SET_ACTIVE_NODE", nodeId: number};
 type SetActiveNodeRadiusActionType = {type: "SET_ACTIVE_NODE_RADIUS", radius: number};
 type CreateBranchPointActionType = {type: "CREATE_BRANCHPOINT", nodeId?: number, treeId?: number, timestamp: number};
 type DeleteBranchPointActionType = {type: "DELETE_BRANCHPOINT"};
+type RequestDeleteBranchPointActionType = {type: "REQUEST_DELETE_BRANCHPOINT"};
 type CreateTreeActionType = {type: "CREATE_TREE", timestamp: number};
 type DeleteTreeActionType = {type: "DELETE_TREE", treeId?: number, timestamp: number};
 type SetActiveTreeActionType = {type: "SET_ACTIVE_TREE", treeId: number};
@@ -25,7 +26,7 @@ type CreateCommentActionType = {type: "CREATE_COMMENT", commentText: string, nod
 type DeleteCommentActionType = {type: "DELETE_COMMENT", nodeId: ?number, treeId?: number};
 type SetVersionNumberActionType = {type: "SET_VERSION_NUMBER", version: number};
 
-export type SkeletonTracingActionType = (InitializeSkeletonTracingActionType | CreateNodeActionType | DeleteNodeActionType | SetActiveNodeActionType | SetActiveNodeRadiusActionType | CreateBranchPointActionType | DeleteBranchPointActionType | CreateTreeActionType | DeleteTreeActionType | SetActiveTreeActionType | MergeTreesActionType | SetTreeNameActionType | SetTreeNameActionType | SelectNextTreeActionType | ShuffleTreeColorActionType | CreateCommentActionType | DeleteCommentActionType | SetVersionNumberActionType);
+export type SkeletonTracingActionType = (InitializeSkeletonTracingActionType | CreateNodeActionType | DeleteNodeActionType | SetActiveNodeActionType | SetActiveNodeRadiusActionType | CreateBranchPointActionType | DeleteBranchPointActionType | RequestDeleteBranchPointActionType | CreateTreeActionType | DeleteTreeActionType | SetActiveTreeActionType | MergeTreesActionType | SetTreeNameActionType | SetTreeNameActionType | SelectNextTreeActionType | ShuffleTreeColorActionType | CreateCommentActionType | DeleteCommentActionType | SetVersionNumberActionType);
 export const SkeletonTracingActions = [
   "INITIALIZE_SKELETONTRACING",
   "CREATE_NODE",
@@ -34,6 +35,7 @@ export const SkeletonTracingActions = [
   "SET_ACTIVE_NODE_RADIUS",
   "CREATE_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
+  "REQUEST_DELETE_BRANCHPOINT",
   "CREATE_TREE",
   "DELETE_TREE",
   "SET_ACTIVE_TREE",
@@ -86,6 +88,10 @@ export const createBranchPointAction = (nodeId?: number, treeId?: number, timest
 
 export const deleteBranchPointAction = (): DeleteBranchPointActionType => ({
   type: "DELETE_BRANCHPOINT",
+});
+
+export const requestDeleteBranchPointAction = (): RequestDeleteBranchPointActionType => ({
+  type: "REQUEST_DELETE_BRANCHPOINT",
 });
 
 export const createTreeAction = (timestamp: number = Date.now()): CreateTreeActionType => ({

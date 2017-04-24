@@ -5,16 +5,18 @@
 import app from "app";
 import { call, put, take, takeEvery, select } from "redux-saga/effects";
 import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, FlycamType } from "oxalis/store";
-import { SkeletonTracingActions, createTreeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { SkeletonTracingActions, createTreeAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateTracing } from "oxalis/model/sagas/update_actions";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
 import _ from "lodash";
 import Utils from "libs/utils";
 import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
+import messages from "messages";
 
 function* centerActiveNode() {
   getActiveNode(yield select(state => state.skeletonTracing))
@@ -24,9 +26,20 @@ function* centerActiveNode() {
     });
 }
 
+export function* watchBranchPointDeletion(): Generator<*, *, *> {
+  const skeletonTracing = yield select(state => state.skeletonTracing);
+  if (getBranchPoints(skeletonTracing).length > 0) {
+    yield put(deleteBranchPointAction());
+    yield centerActiveNode();
+  } else {
+    Toast.warning(messages["tracing.no_more_branchpoints"]);
+  }
+}
+
 export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
   yield take("WK_READY");
-  yield takeEvery(["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE", "DELETE_BRANCHPOINT"], centerActiveNode);
+  yield takeEvery(["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE"], centerActiveNode);
+  yield takeEvery(["REQUEST_DELETE_BRANCHPOINT"], watchBranchPointDeletion);
 }
 
 function* diffNodes(prevNodes: NodeMapType, nodes: NodeMapType, treeId: number): Generator<UpdateAction, void, void> {

@@ -13,10 +13,10 @@ import SkeletonTracingController from "oxalis/controller/annotations/skeletontra
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import constants, { OrthoViews } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
-import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
 import { getRequestLogZoomStep, getRayThreshold, getRotationOrtho, getPosition, PIXEL_RAY_THRESHOLD } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import type Model from "oxalis/model";
@@ -24,8 +24,6 @@ import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
-import Toast from "libs/toast";
-import messages from "messages";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -110,7 +108,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
       // Branches
       b: () => Store.dispatch(createBranchPointAction()),
-      j: () => this.deleteBranchPoint(),
+      j: () => Store.dispatch(requestDeleteBranchPointAction()),
 
       s: () => {
         this.skeletonTracingController.centerActiveNode();
@@ -276,14 +274,6 @@ class SkeletonTracingPlaneController extends PlaneController {
       }
     })
     .start();
-  }
-
-  deleteBranchPoint(): void {
-    if (getBranchPoints(Store.getState().skeletonTracing).length === 0) {
-      Toast.error(messages["tracing.no_more_branchpoints"]);
-    } else {
-      Store.dispatch(deleteBranchPointAction());
-    }
   }
 }
 

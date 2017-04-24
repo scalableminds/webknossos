@@ -60,4 +60,14 @@ object TimeSpan {
   def groupByWeek(timeSpan: TimeSpan) = {
     Week(timeSpan.created.getWeekOfWeekyear, timeSpan.created.getWeekyear)
   }
+
+  def groupByDay(timeSpan: TimeSpan) = {
+    Day(timeSpan.created.getDayOfMonth, timeSpan.created.getMonthOfYear, timeSpan.created.getYear)
+  }
+}
+
+case class TimeSpanRequest(users: List[String], start: Long, end: Long)
+
+object TimeSpanRequest {
+  implicit val timeSpanRequest = Json.format[TimeSpanRequest]
 }

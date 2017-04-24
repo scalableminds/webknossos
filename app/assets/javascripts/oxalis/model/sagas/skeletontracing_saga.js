@@ -40,14 +40,16 @@ export function* watchBranchPointDeletion(): Generator<*, *, *> {
         createNodeAction: take("CREATE_NODE"),
       });
 
-      const hasBranchPoints2 = yield select(state => getBranchPoints(state.skeletonTracing).length > 0);
-      if (hasBranchPoints2 && deleteBranchpointAction) {
-        Modal.show(messages["tracing.branchpoint_jump_twice"],
-          "Jump again?",
-          [{ id: "jump-button", label: "Jump again", callback: () => { Store.dispatch(deleteBranchPointAction()); } },
-           { id: "cancel-button", label: "Cancel" }]);
-      } else {
-        Toast.warning(messages["tracing.no_more_branchpoints"]);
+      if (deleteBranchpointAction) {
+        const hasBranchPoints2 = yield select(state => getBranchPoints(state.skeletonTracing).length > 0);
+        if (hasBranchPoints2) {
+          Modal.show(messages["tracing.branchpoint_jump_twice"],
+            "Jump again?",
+            [{ id: "jump-button", label: "Jump again", callback: () => { Store.dispatch(deleteBranchPointAction()); } },
+             { id: "cancel-button", label: "Cancel" }]);
+        } else {
+          Toast.warning(messages["tracing.no_more_branchpoints"]);
+        }
       }
     } else {
       Toast.warning(messages["tracing.no_more_branchpoints"]);

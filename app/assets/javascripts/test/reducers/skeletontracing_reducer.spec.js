@@ -450,10 +450,10 @@ test("SkeletonTracing should delete a branchpoint from another tree than the act
   newState = SkeletonTracingReducer(newState, deleteBranchPointAction);
 
   t.not(newState, initialState);
-  t.is(newState.skeletonTracing.trees[0].branchPoints.length, 0);
   t.is(newState.skeletonTracing.trees[1].branchPoints.length, 0);
+  t.is(newState.skeletonTracing.trees[2].branchPoints.length, 0);
   // as the branchpoint was in the first tree, the first tree should be active again
-  t.is(newState.skeletonTracing.activeTreeId, 1);
+  t.is(newState.skeletonTracing.activeTreeId, 2);
 });
 
 test("SkeletonTracing should add a new tree", (t) => {

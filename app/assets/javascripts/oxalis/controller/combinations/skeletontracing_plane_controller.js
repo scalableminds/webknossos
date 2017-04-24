@@ -24,6 +24,9 @@ import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
+import { getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
+import Toast from "libs/toast";
+import messages from "messages";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -108,7 +111,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
       // Branches
       b: () => Store.dispatch(createBranchPointAction()),
-      j: () => Store.dispatch(deleteBranchPointAction()),
+      j: () => this.deleteBranchPoint(),
 
       s: () => {
         this.skeletonTracingController.centerActiveNode();
@@ -275,7 +278,14 @@ class SkeletonTracingPlaneController extends PlaneController {
     })
     .start();
   }
-}
 
+  deleteBranchPoint(): void {
+    if (getBranchPoints(Store.getState().skeletonTracing).length === 0) {
+      Toast.error(messages["tracing.no_more_branchpoints"]);
+    } else {
+      Store.dispatch(deleteBranchPointAction());
+    }
+  }
+}
 
 export default SkeletonTracingPlaneController;

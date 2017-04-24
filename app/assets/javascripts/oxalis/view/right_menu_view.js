@@ -28,9 +28,9 @@ class RightMenuView extends React.PureComponent {
     if (!this.props.isPublicViewMode) {
       if (this.props.oldModel.get("mode") in Constants.MODES_SKELETON) {
         return [
-          <TabPane tab="Tree Viewer" key="2" className="flex-column"><AbstractTreeTabView /></TabPane>,
           <TabPane tab="Trees" key="3" className="flex-column"><TreesTabView /></TabPane>,
           <TabPane tab="Comments" key="4" className="flex-column"><CommentTabView /></TabPane>,
+          <TabPane tab="Tree Viewer" key="2" className="flex-column"><AbstractTreeTabView /></TabPane>,
         ];
       } else {
         return <TabPane tab="Mappings" key="5"><MappingInfoView oldModel={this.props.oldModel} /></TabPane>;

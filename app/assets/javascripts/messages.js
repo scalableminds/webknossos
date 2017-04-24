@@ -13,4 +13,5 @@ In order to restore the current window, a reload is necessary.`,
   "download.close_window": "You may close this window after the download has started.",
   "tracing.no_more_branchpoints": "No more branchpoints",
   "tracing.branchpoint_set": "Branchpoint set",
+  "tracing.branchpoint_jump_twice": "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
 };

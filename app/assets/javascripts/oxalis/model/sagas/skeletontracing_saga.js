@@ -44,7 +44,7 @@ export function* watchBranchPointDeletion(): Generator<*, *, *> {
       if (hasBranchPoints2 && deleteBranchpointAction) {
         Modal.show(messages["tracing.branchpoint_jump_twice"],
           "Jump again?",
-          [{ id: "jump-button", label: "Jump again", callback: () => Store.dispatch(deleteBranchPointAction()) },
+          [{ id: "jump-button", label: "Jump again", callback: () => { Store.dispatch(deleteBranchPointAction()); } },
            { id: "cancel-button", label: "Cancel" }]);
       } else {
         Toast.warning(messages["tracing.no_more_branchpoints"]);

@@ -3,18 +3,22 @@
  * @flow
  */
 import app from "app";
-import { call, put, take, takeEvery, select } from "redux-saga/effects";
-import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, FlycamType } from "oxalis/store";
-import { SkeletonTracingActions, createTreeAction } from "oxalis/model/actions/skeletontracing_actions";
-import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
-import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateTracing } from "oxalis/model/sagas/update_actions";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import _ from "lodash";
 import Utils from "libs/utils";
+import Toast from "libs/toast";
+import messages from "messages";
+import Store from "oxalis/store";
+import Modal from "oxalis/view/modal";
+import { call, put, take, takeEvery, select, race } from "redux-saga/effects";
+import { SkeletonTracingActions, createTreeAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
+import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateTracing } from "oxalis/model/sagas/update_actions";
+import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";
+import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, FlycamType } from "oxalis/store";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 function* centerActiveNode() {
   getActiveNode(yield select(state => state.skeletonTracing))
@@ -24,9 +28,39 @@ function* centerActiveNode() {
     });
 }
 
+export function* watchBranchPointDeletion(): Generator<*, *, *> {
+  while (true) {
+    yield take("REQUEST_DELETE_BRANCHPOINT");
+    const hasBranchPoints = yield select(state => getBranchPoints(state.skeletonTracing).length > 0);
+    if (hasBranchPoints) {
+      yield put(deleteBranchPointAction());
+
+      const { deleteBranchpointAction } = yield race({
+        deleteBranchpointAction: take("REQUEST_DELETE_BRANCHPOINT"),
+        createNodeAction: take("CREATE_NODE"),
+      });
+
+      if (deleteBranchpointAction) {
+        const hasBranchPoints2 = yield select(state => getBranchPoints(state.skeletonTracing).length > 0);
+        if (hasBranchPoints2) {
+          Modal.show(messages["tracing.branchpoint_jump_twice"],
+            "Jump again?",
+            [{ id: "jump-button", label: "Jump again", callback: () => { Store.dispatch(deleteBranchPointAction()); } },
+             { id: "cancel-button", label: "Cancel" }]);
+        } else {
+          Toast.warning(messages["tracing.no_more_branchpoints"]);
+        }
+      }
+    } else {
+      Toast.warning(messages["tracing.no_more_branchpoints"]);
+    }
+  }
+}
+
 export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
   yield take("WK_READY");
   yield takeEvery(["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE", "DELETE_BRANCHPOINT"], centerActiveNode);
+  yield watchBranchPointDeletion();
 }
 
 function* diffNodes(prevNodes: NodeMapType, nodes: NodeMapType, treeId: number): Generator<UpdateAction, void, void> {

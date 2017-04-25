@@ -133,13 +133,21 @@ class SkeletonTracingPlaneController extends PlaneController {
     }
 
     // render the clicked viewport with picking enabled
+    // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
+    const pickingNode = this.sceneController.skeleton.startPicking();
     const pickingScene = new THREE.Scene();
-    pickingScene.add(this.sceneController.skeleton.startPicking());
-    const pickingBuffer = this.planeView.renderOrthoViewToTexture(plane, pickingScene);
-    // invert along the y-axis, because OpenGL has its origin bottom-left :/
+    pickingScene.add(pickingNode);
+
+    const buffer = this.planeView.renderOrthoViewToTexture(plane, pickingScene);
+    // compute the index of the pixel under the cursor,
+    // while inverting along the y-axis, because OpenGL has its origin bottom-left :/
     const index = (position.x + (this.planeView.curWidth - position.y) * this.planeView.curWidth) * 4;
-    const nodeId = pickingBuffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
+    // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
+    const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
     this.sceneController.skeleton.stopPicking();
+
+    // prevent flickering sometimes caused by picking
+    this.planeView.renderFunction();
 
     // otherwise we have hit the background and do nothing
     if (nodeId > 0) {

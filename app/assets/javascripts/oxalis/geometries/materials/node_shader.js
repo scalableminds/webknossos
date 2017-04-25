@@ -181,7 +181,12 @@ void main() {
 
     // NODE COLOR FOR PICKING
     if (isPicking == 1) {
-      color = fract(floor(nodeId / vec3(65025.0, 255.0, 1.0)) / 255.0);
+      // the nodeId is encoded in the RGB channels as a 3 digit base-255 number in a number of steps:
+      // - nodeId is divided by the first three powers of 255.
+      // - each quotient is rounded down to the nearest integer (since the fractional part of each quotient is covered by a less significant digit)
+      // - each digit is divided by 255 again, since color values in OpenGL must be in the range [0, 1]
+      // - finally, the non-fractional part of each digit is removed (since it is covered by a more significant digit)
+      color = fract(floor(nodeId / vec3(255.0 * 255.0, 255.0, 1.0)) / 255.0);
       gl_PointSize *= 1.5;
       return;
     }

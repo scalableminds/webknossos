@@ -123,16 +123,15 @@ class PlaneView {
 
   renderOrthoViewToTexture(plane: OrthoViewType, scene: THREE.Scene): Uint8Array {
     this.renderer.autoClear = true;
-
     this.renderer.setViewport(0, 0, this.curWidth, this.curWidth);
     this.renderer.setScissorTest(false);
     this.renderer.setClearColor(0x000000, 1);
 
     const renderTarget = new THREE.WebGLRenderTarget(this.curWidth, this.curWidth);
+    const buffer = new Uint8Array(this.curWidth * this.curWidth * 4);
 
     this.trigger("renderCam", plane);
     this.renderer.render(scene, this.cameras[plane], renderTarget);
-    const buffer = new Uint8Array(this.curWidth * this.curWidth * 4);
     this.renderer.readRenderTargetPixels(renderTarget, 0, 0, this.curWidth, this.curWidth, buffer);
     return buffer;
   }

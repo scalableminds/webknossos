@@ -29,7 +29,7 @@ export type ModifierKeys = "alt" | "shift" | "ctrl";
 type KeyboardKey = string;
 type KeyboardHandler = (event: JQueryInputEventObject) => void;
 type KeyboardLoopHandler = (number, isOriginalEvent: boolean) => void;
-type KeyboardBindingPress = [KeyboardKey, null, KeyboardHandler];
+type KeyboardBindingPress = [KeyboardKey, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type BindingMap<T: Function> = { [key: KeyboardKey]: T };
 type MouseButtonWhichType = 1 | 3;
@@ -67,7 +67,6 @@ export class InputKeyboardNoLoop {
   attach(key: KeyboardKey, callback: KeyboardHandler) {
     const binding = [
       key,
-      null,
       (event) => {
         if (!this.isStarted) { return; }
         if ($(":focus").length) { return; }

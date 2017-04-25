@@ -339,8 +339,8 @@ class Skeleton {
     for (const node of _.values(tree.nodes)) {
       this.createNode(tree.treeId, node, false);
     }
-    for (const branchpoint of tree.branchPoints) {
-      this.updateNodeType(tree.treeId, branchpoint.id, NodeTypes.BRANCH_POINT);
+    for (const nodeId of tree.branchPoints) {
+      this.updateNodeType(tree.treeId, nodeId, NodeTypes.BRANCH_POINT);
     }
     for (const edge of tree.edges) {
       const source = tree.nodes[edge.source];

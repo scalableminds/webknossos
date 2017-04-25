@@ -66,7 +66,6 @@ export class InputKeyboardNoLoop {
   }
 
   attach(key: KeyboardKey, callback: KeyboardHandler) {
-    this.isKeyActive.add(key);
     const binding = [
       key,
       (event) => {

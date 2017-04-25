@@ -15,6 +15,7 @@ import { OrthoViews } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
 import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { getPosition, getRotationOrtho, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import type Model from "oxalis/model";

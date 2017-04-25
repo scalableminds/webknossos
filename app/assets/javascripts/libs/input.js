@@ -29,7 +29,7 @@ export type ModifierKeys = "alt" | "shift" | "ctrl";
 type KeyboardKey = string;
 type KeyboardHandler = (event: JQueryInputEventObject) => void;
 type KeyboardLoopHandler = (number, isOriginalEvent: boolean) => void;
-type KeyboardBindingPress = [KeyboardKey, null, KeyboardHandler];
+type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type BindingMap<T: Function> = { [key: KeyboardKey]: T };
 type MouseButtonWhichType = 1 | 3;
@@ -55,6 +55,7 @@ function shouldIgnore(event: JQueryInputEventObject, key: KeyboardKey) {
 // Pressing a button will only fire an event once.
 export class InputKeyboardNoLoop {
   bindings: Array<KeyboardBindingPress> = [];
+  keyMap: Map<string, boolean> = new Map();
   isStarted: boolean = true;
 
   constructor(initialBindings: BindingMap<KeyboardHandler>) {
@@ -65,14 +66,20 @@ export class InputKeyboardNoLoop {
   }
 
   attach(key: KeyboardKey, callback: KeyboardHandler) {
+    this.keyMap.set(key, true);
     const binding = [
       key,
-      null,
       (event) => {
         if (!this.isStarted) { return; }
         if ($(":focus").length) { return; }
         if (shouldIgnore(event, key)) { return; }
-        callback(event);
+        if (this.keyMap.get(key)) {
+          callback(event);
+          this.keyMap.set(key, false);
+        }
+      },
+      () => {
+        this.keyMap.set(key, true);
       },
     ];
     KeyboardJS.bind(...binding);

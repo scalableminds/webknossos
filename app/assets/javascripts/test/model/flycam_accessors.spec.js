@@ -31,10 +31,6 @@ const initialState = {
   },
 };
 
-test("Flycam Accessors should calculate the ray threshold", (t) => {
-  t.is(accessors.getRayThreshold(initialState.flycam), 13);
-});
-
 test("Flycam Accessors should calculate the max zoom step", (t) => {
   t.is(accessors.getMaxZoomStep(initialState), 17);
 });

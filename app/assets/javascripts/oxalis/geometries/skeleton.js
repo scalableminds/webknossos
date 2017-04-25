@@ -56,6 +56,8 @@ const NodeBufferHelperType = {
   buildMesh(geometry: THREE.BufferGeometry, material: THREE.RawShaderMaterial): THREE.Mesh {
     return new THREE.Points(geometry, material);
   },
+
+  supportsPicking: true,
 };
 
 const EdgeBufferHelperType = {
@@ -67,6 +69,8 @@ const EdgeBufferHelperType = {
   buildMesh(geometry: THREE.BufferGeometry, material: THREE.LineBasicMaterial): THREE.Mesh {
     return new THREE.LineSegments(geometry, material);
   },
+
+  supportsPicking: false,
 };
 
 /**
@@ -80,6 +84,7 @@ const EdgeBufferHelperType = {
  */
 class Skeleton {
   rootNode: THREE.Object3D;
+  pickingNode: THREE.Object3D;
   prevTracing: SkeletonTracingType;
   nodes: BufferCollection;
   edges: BufferCollection;
@@ -87,6 +92,7 @@ class Skeleton {
 
   constructor() {
     this.rootNode = new THREE.Object3D();
+    this.pickingNode = new THREE.Object3D();
 
     const state = Store.getState();
     const trees = state.skeletonTracing.trees;
@@ -138,6 +144,10 @@ class Skeleton {
     helper.addAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
     this.rootNode.add(mesh);
+    if (helper.supportsPicking) {
+      const pickingMesh = helper.buildMesh(geometry, material);
+      this.pickingNode.add(pickingMesh);
+    }
 
     return {
       capacity,
@@ -319,6 +329,17 @@ class Skeleton {
 
   getRootNode(): THREE.Object3D {
     return this.rootNode;
+  }
+
+  startPicking(): THREE.Object3D {
+    this.pickingNode.matrixAutoUpdate = false;
+    this.pickingNode.matrix.copy(this.rootNode.matrixWorld);
+    this.nodes.material.uniforms.isPicking.value = 1;
+    return this.pickingNode;
+  }
+
+  stopPicking(): void {
+    this.nodes.material.uniforms.isPicking.value = 0;
   }
 
   // ######### API ###############

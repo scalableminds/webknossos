@@ -77,8 +77,8 @@ object BrainTracing extends LazyLogging {
         val taskTypeFox = task.toFox.flatMap(_.taskType)
         val project = task.toFox.flatMap(_.project)
         if (logTimeForExplorative || task.isDefined) {
-          NewRelic.recordMetric("Custom/BrainTracingReposter/reported-time-amount", time)
-          NewRelic.incrementCounter("Custom/BrainTracingReposter/reported-time-counter")
+          NewRelic.recordMetric("Custom/BrainTracingReporter/reported-time-amount", time)
+          NewRelic.incrementCounter("Custom/BrainTracingReporter/reported-time-counter")
           val hours = inHours(time)
           val projectName = await(project.map(_.name).getOrElse(""))
           val taskType = await(taskTypeFox.futureBox)

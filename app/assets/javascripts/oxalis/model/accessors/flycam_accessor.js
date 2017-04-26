@@ -14,7 +14,6 @@ import * as THREE from "three";
 
 const MAX_TEXTURE_OFFSET = 31;
 const MAX_ZOOM_THRESHOLD = 2;
-export const PIXEL_RAY_THRESHOLD = 10;
 
 function log2(a: number): number {
   return Math.log(a) / Math.LN2;
@@ -183,8 +182,4 @@ export function getAreas(state: OxalisState): OrthoViewMapType<Vector4> {
     [OrthoViews.PLANE_XZ]: getArea(state, OrthoViews.PLANE_XZ),
     [OrthoViews.PLANE_YZ]: getArea(state, OrthoViews.PLANE_YZ),
   };
-}
-
-export function getRayThreshold(flycam: FlycamType): number {
-  return PIXEL_RAY_THRESHOLD * flycam.zoomStep;
 }

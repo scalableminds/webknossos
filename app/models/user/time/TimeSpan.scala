@@ -15,8 +15,15 @@ import org.joda.time.DateTime
  * Date: 28.10.13
  * Time: 00:58
  */
-case class TimeSpan(time: Long, timestamp: Long, lastUpdate: Long, _user: BSONObjectID, note: Option[String] = None, annotation: Option[String] = None, _id: BSONObjectID = BSONObjectID.generate) {
-
+case class TimeSpan(
+                     time: Long,
+                     timestamp: Long,
+                     lastUpdate: Long,
+                     _user: BSONObjectID,
+                     note: Option[String] = None,
+                     annotation: Option[String] = None,
+                     _id: BSONObjectID = BSONObjectID.generate,
+                     numberOfUpdates: Option[Long] = Some(0)) {
   val created = new DateTime(timestamp)
 
   def annotationEquals(other: String): Boolean =
@@ -26,7 +33,7 @@ case class TimeSpan(time: Long, timestamp: Long, lastUpdate: Long, _user: BSONOb
     annotation == other
 
   def addTime(duration: Long, timestamp: Long) =
-    this.copy(time = time + duration, timestamp = timestamp)
+    this.copy(time = time + duration, timestamp = timestamp, numberOfUpdates = Some(this.numberOfUpdates.getOrElse(0L) + 1))
 }
 
 object TimeSpan {

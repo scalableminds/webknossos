@@ -50,7 +50,7 @@ export type BoundingBoxType = {
 
 type SkeletonContentTreeType = {
   id: number,
-  color: Vector3,
+  color: ?Vector3,
   name: string,
   timestamp: number,
   comments: Array<CommentType>,

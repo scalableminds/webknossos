@@ -8,6 +8,7 @@ In order to restore the current window, a reload is necessary.`,
 
 In order to restore the current window, a reload is necessary.`,
   "save.leave_page_unfinished": "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.",
+  "save.failed": "Failed to save tracing. Retrying.",
   "finish.confirm": "Are you sure you want to permanently finish this tracing?",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",

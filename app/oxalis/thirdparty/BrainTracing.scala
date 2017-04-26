@@ -12,6 +12,7 @@ import scala.concurrent.Future
 import scala.util._
 import models.annotation.AnnotationLike
 import com.scalableminds.util.reactivemongo.{DBAccessContext}
+import com.newrelic.api.agent.NewRelic
 
 object BrainTracing extends LazyLogging {
   val URL = "http://braintracing.org/"
@@ -76,6 +77,8 @@ object BrainTracing extends LazyLogging {
         val taskTypeFox = task.toFox.flatMap(_.taskType)
         val project = task.toFox.flatMap(_.project)
         if (logTimeForExplorative || task.isDefined) {
+          NewRelic.recordMetric("Custom/BrainTracingReposter/reported-time-amount", time)
+          NewRelic.incrementCounter("Custom/BrainTracingReposter/reported-time-counter")
           val hours = inHours(time)
           val projectName = await(project.map(_.name).getOrElse(""))
           val taskType = await(taskTypeFox.futureBox)

@@ -11,9 +11,14 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.indexes.{Index, IndexType}
 
-case class AnnotationUpdate(typ: String, annotationId: String, version: Int, content: JsValue, deleted: Option[Boolean] = None) {
-
-}
+case class AnnotationUpdate(
+                             typ: String,
+                             annotationId: String,
+                             version: Int,
+                             content: JsValue,
+                             deleted: Option[Boolean] = None,
+                             timestamp: Option[Long] = Some(System.currentTimeMillis)
+                           ) {}
 
 object AnnotationUpdate{
   implicit val annotationUpdateFormat = Json.format[AnnotationUpdate]

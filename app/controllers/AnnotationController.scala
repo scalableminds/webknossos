@@ -97,7 +97,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   // an evolution for this since it is to expensive to calculate the missing information to create the proper updates
 
    def combineUpdates(updates: List[AnnotationUpdate]) = updates.foldLeft(Seq.empty[JsValue]){
-     case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _)) =>
+     case (updates, AnnotationUpdate(_, _, _, JsArray(nextUpdates), _, _)) =>
        updates ++ nextUpdates
      case (updates, u) =>
        logger.warn("dropping update during replay! Update: " + u)

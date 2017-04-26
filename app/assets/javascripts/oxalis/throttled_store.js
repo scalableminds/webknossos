@@ -5,11 +5,18 @@ import Utils from "libs/utils";
 
 const listeners = [];
 let waitForUpdate = new Deferred();
+let prevState;
 
 Store.subscribe(() => {
-  waitForUpdate.resolve();
-  waitForUpdate = new Deferred();
+  const state = Store.getState();
+  // No need to do anything if the state didn't change
+  if (state !== prevState) {
+    prevState = state;
+    waitForUpdate.resolve();
+    waitForUpdate = new Deferred();
+  }
 });
+
 
 async function go() {
   while (true) {

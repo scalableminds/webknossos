@@ -141,13 +141,26 @@ export function* diffTrees(prevTrees: TreeMapType, trees: TreeMapType): Generato
   }
 }
 
+
+const diffTreeCache = {};
+
+export function cachedDiffTrees(prevTrees: TreeMapType, trees: TreeMapType): Array<UpdateAction> {
+  // Try to use the cached version of the diff if available to increase performance
+  if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
+    diffTreeCache.prevTrees = prevTrees;
+    diffTreeCache.trees = trees;
+    diffTreeCache.diff = Array.from(diffTrees(prevTrees, trees));
+  }
+  return diffTreeCache.diff;
+}
+
 export function* diffTracing(
   prevSkeletonTracing: SkeletonTracingType,
   skeletonTracing: SkeletonTracingType,
   flycam: FlycamType,
 ): Generator<UpdateAction, *, *> {
   if (prevSkeletonTracing !== skeletonTracing) {
-    yield* diffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
+    yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
   }
   yield updateTracing(
     skeletonTracing,

@@ -6419,10 +6419,6 @@ scroll-into-view-if-needed@^1.0.2:
   dependencies:
     amator "^1.0.1"
 
-seamless-immutable@^7.0.1:
-  version "7.1.2"
-  resolved "https://registry.yarnpkg.com/seamless-immutable/-/seamless-immutable-7.1.2.tgz#c87a1eba6767a32455311d76600ac5eddeafbb69"
-
 selenium-standalone@^5.6.0:
   version "5.11.2"
   resolved "https://registry.yarnpkg.com/selenium-standalone/-/selenium-standalone-5.11.2.tgz#724ccaa72fb26f3711e0e20989e478c4133df844"

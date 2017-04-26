@@ -260,7 +260,7 @@ class Request {
           return Promise.reject(textError);
         });
     } else {
-      Toast.error(error);
+      console.error(error);
       return Promise.reject(error);
     }
   }

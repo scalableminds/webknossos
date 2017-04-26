@@ -5,15 +5,16 @@
 
 import _ from "lodash";
 import $ from "jquery";
+import Request from "libs/request";
+import messages from "messages";
+import app from "app";
+import Toast from "libs/toast";
 import { call, put, take, select, race } from "redux-saga/effects";
 import { delay } from "redux-saga";
-import Request from "libs/request";
 import { shiftSaveQueueAction, setSaveBusyAction, setLastSaveTimestampAction } from "oxalis/model/actions/save_actions";
 import { setVersionNumber } from "oxalis/model/actions/skeletontracing_actions";
-import messages from "messages";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { alert } from "libs/window";
-import app from "app";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
@@ -66,6 +67,11 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
 
 function toggleErrorHighlighting(state: boolean) {
   $("body").toggleClass("save-error", state);
+  if (state) {
+    Toast.error(messages["save.failed"], true);
+  } else {
+    Toast.delete("danger", messages["save.failed"]);
+  }
 }
 
 export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<UpdateAction> {

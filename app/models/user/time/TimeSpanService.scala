@@ -28,7 +28,6 @@ object TimeSpanService extends FoxImplicits{
 
   def logUserInteraction(user: User, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
     val timestamp = System.currentTimeMillis
-
     timeSpanTracker ! TrackTime(timestamp, user._id, annotation, ctx)
   }
 
@@ -152,7 +151,7 @@ object TimeSpanService extends FoxImplicits{
         val timeSpan = lastUserActivity().get(_user) match {
           case Some(last) if isNotInterrupted(timestamp, last) =>
             val duration = timestamp - last.lastUpdate
-            val updated = last.copy(lastUpdate = timestamp, time = last.time + duration)
+            val updated = last.addTime(duration, timestamp)
 
             logTimeToTask(duration, annotation)
             logTimeToAnnotation(duration, annotation)

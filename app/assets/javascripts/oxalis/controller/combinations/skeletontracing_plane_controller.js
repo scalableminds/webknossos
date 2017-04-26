@@ -137,9 +137,11 @@ class SkeletonTracingPlaneController extends PlaneController {
     pickingScene.add(pickingNode);
 
     const buffer = this.planeView.renderOrthoViewToTexture(plane, pickingScene);
+    // Beware of the fact that new browsers yield float numbers for the mouse position
+    const [x, y] = [Math.round(position.x), Math.round(position.y)];
     // compute the index of the pixel under the cursor,
     // while inverting along the y-axis, because OpenGL has its origin bottom-left :/
-    const index = (position.x + (this.planeView.curWidth - position.y) * this.planeView.curWidth) * 4;
+    const index = (x + (this.planeView.curWidth - y) * this.planeView.curWidth) * 4;
     // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
     const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
     this.sceneController.skeleton.stopPicking();

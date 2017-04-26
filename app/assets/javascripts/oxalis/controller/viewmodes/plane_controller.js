@@ -254,6 +254,10 @@ class PlaneController {
       space: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
       f: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
       d: (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
+
+      // Zoom in/out
+      i: () => this.zoom(1, false),
+      o: () => this.zoom(-1, false),
     }, Store.getState().userConfiguration.keyboardDelay);
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop(this.getKeyboardControls());
@@ -269,10 +273,6 @@ class PlaneController {
 
   getKeyboardControls(): Object {
     return {
-      // Zoom in/out
-      i: () => this.zoom(1, false),
-      o: () => this.zoom(-1, false),
-
       // Change move value
       h: () => this.changeMoveValue(25),
       g: () => this.changeMoveValue(-25),

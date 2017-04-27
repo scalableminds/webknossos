@@ -36,7 +36,6 @@ case class TimeSpan(
     this.copy(
       lastUpdate = timestamp,
       time = time + duration,
-      timestamp = timestamp,
       numberOfUpdates = Some(this.numberOfUpdates.getOrElse(0L) + 1))
 }
 

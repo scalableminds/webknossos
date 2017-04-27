@@ -33,7 +33,11 @@ case class TimeSpan(
     annotation == other
 
   def addTime(duration: Long, timestamp: Long) =
-    this.copy(time = time + duration, timestamp = timestamp, numberOfUpdates = Some(this.numberOfUpdates.getOrElse(0L) + 1))
+    this.copy(
+      lastUpdate = timestamp,
+      time = time + duration,
+      timestamp = timestamp,
+      numberOfUpdates = Some(this.numberOfUpdates.getOrElse(0L) + 1))
 }
 
 object TimeSpan {

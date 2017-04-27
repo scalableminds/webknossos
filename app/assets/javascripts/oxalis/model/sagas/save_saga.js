@@ -45,6 +45,7 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
         yield put(setLastSaveTimestampAction());
         yield put(shiftSaveQueueAction(batch.length));
         yield call(toggleErrorHighlighting, false);
+        break; // one save once per 30s intervall even if the save queue is not empty yet
       } catch (error) {
         yield call(toggleErrorHighlighting, true);
         if (error.status >= 400 && error.status < 500) {

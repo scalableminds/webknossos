@@ -8,7 +8,7 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import Utils from "libs/utils";
 import Store from "oxalis/throttled_store";
-import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import NodeShader, { NodeTypes, COLOR_TEXTURE_WIDTH } from "oxalis/geometries/materials/node_shader";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import { OrthoViews } from "oxalis/constants";
@@ -234,7 +234,7 @@ class Skeleton {
   refresh() {
     const state = Store.getState();
     const tracing = state.skeletonTracing;
-    const diff = diffTrees(this.prevTracing.trees, tracing.trees);
+    const diff = cachedDiffTrees(this.prevTracing.trees, tracing.trees);
 
     for (const update of diff) {
       switch (update.action) {

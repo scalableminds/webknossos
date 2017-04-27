@@ -31,38 +31,43 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
       });
     }
     yield put(setSaveBusyAction(true));
-    while (yield select(state => state.save.queue.length > 0)) {
-      const batch = yield select(state => state.save.queue);
-      const compactBatch = compactUpdateActions(batch);
-      const { version, tracingType, id: tracingId } = yield select(state => state.skeletonTracing);
-      try {
-        yield call(Request.sendJSONReceiveJSON,
-          `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {
-            method: "PUT",
-            data: compactBatch,
-          });
-        yield put(setVersionNumber(version + 1));
-        yield put(setLastSaveTimestampAction());
-        yield put(shiftSaveQueueAction(batch.length));
-        yield call(toggleErrorHighlighting, false);
-        break; // one save once per 30s intervall even if the save queue is not empty yet
-      } catch (error) {
-        yield call(toggleErrorHighlighting, true);
-        if (error.status >= 400 && error.status < 500) {
-          app.router.off("beforeunload");
-          // HTTP Code 409 'conflict' for dirty state
-          if (error.status === 409) {
-            yield call(alert, messages["save.failed_simultaneous_tracing"]);
-          } else {
-            yield call(alert, messages["save.failed_client_error"]);
-          }
-          app.router.reload();
-          return;
-        }
-        yield delay(SAVE_RETRY_WAITING_TIME);
-      }
+    const saveQueue = yield select(state => state.save.queue);
+    if (saveQueue.length > 0) {
+      yield sendRequestToServer();
     }
     yield put(setSaveBusyAction(false));
+  }
+}
+
+export function* sendRequestToServer(): Generator<*, *, *> {
+  const batch = yield select(state => state.save.queue);
+  const compactBatch = compactUpdateActions(batch);
+  const { version, tracingType, id: tracingId } = yield select(state => state.skeletonTracing);
+  try {
+    yield call(Request.sendJSONReceiveJSON,
+      `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {
+        method: "PUT",
+        data: compactBatch,
+      });
+    yield put(setVersionNumber(version + 1));
+    yield put(setLastSaveTimestampAction());
+    yield put(shiftSaveQueueAction(batch.length));
+    yield call(toggleErrorHighlighting, false);
+  } catch (error) {
+    yield call(toggleErrorHighlighting, true);
+    if (error.status >= 400 && error.status < 500) {
+      app.router.off("beforeunload");
+      // HTTP Code 409 'conflict' for dirty state
+      if (error.status === 409) {
+        yield call(alert, messages["save.failed_simultaneous_tracing"]);
+      } else {
+        yield call(alert, messages["save.failed_client_error"]);
+      }
+      app.router.reload();
+      return;
+    }
+    yield delay(SAVE_RETRY_WAITING_TIME);
+    yield sendRequestToServer();
   }
 }
 

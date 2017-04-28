@@ -279,7 +279,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
   deleteBranchPoint(): void {
-    if (getBranchPoints(Store.getState().skeletonTracing).length === 0) {
+    if (getBranchPoints(Store.getState().tracing).length === 0) {
       Toast.error(messages["tracing.no_more_branchpoints"]);
     } else {
       Store.dispatch(deleteBranchPointAction());

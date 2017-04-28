@@ -64,6 +64,7 @@ class Controller {
   // cross in this matrix.
 
   constructor(options: Object) {
+    app.router.showLoadingSpinner();
     this.model = options.model;
 
     _.extend(this, Backbone.Events);
@@ -164,6 +165,7 @@ class Controller {
     });
     this.onZoomStepChange();
 
+    app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
   }

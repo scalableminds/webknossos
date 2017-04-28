@@ -6,6 +6,7 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
+import ColorGenerator from "libs/color_generator";
 import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, mergeTrees } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getSkeletonTracing, findTreeByNodeId, getTree, getNodeAndTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { zoomReducer } from "oxalis/model/reducers/flycam_reducer";
@@ -22,7 +23,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const trees = _.keyBy(contentData.trees.map(tree => update(tree, {
         treeId: { $set: tree.id },
         nodes: { $set: _.keyBy(tree.nodes, "id") },
-        color: { $set: tree.color.slice(0, 3) },
+        color: { $set: tree.color || ColorGenerator.distinctColorForId(tree.id) },
       })), "id");
 
       const activeNodeId = contentData.activeNode ? contentData.activeNode : null;

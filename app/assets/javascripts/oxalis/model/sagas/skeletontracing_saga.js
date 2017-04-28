@@ -3,15 +3,20 @@
  * @flow
  */
 import app from "app";
-import { take, takeEvery, select } from "redux-saga/effects";
-import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, FlycamType } from "oxalis/store";
-import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateSkeletonTracing } from "oxalis/model/sagas/update_actions";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import _ from "lodash";
 import Utils from "libs/utils";
+import Toast from "libs/toast";
+import messages from "messages";
+import Store from "oxalis/store";
+import Modal from "oxalis/view/modal";
+import { put, take, takeEvery, select, race } from "redux-saga/effects";
+import { deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateSkeletonTracing } from "oxalis/model/sagas/update_actions";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";
+import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, FlycamType } from "oxalis/store";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 function* centerActiveNode() {
   getActiveNode(yield select(state => state.tracing))
@@ -21,9 +26,39 @@ function* centerActiveNode() {
     });
 }
 
+export function* watchBranchPointDeletion(): Generator<*, *, *> {
+  while (true) {
+    yield take("REQUEST_DELETE_BRANCHPOINT");
+    const hasBranchPoints = yield select(state => getBranchPoints(state.tracing).getOrElse([]).length > 0);
+    if (hasBranchPoints) {
+      yield put(deleteBranchPointAction());
+
+      const { deleteBranchpointAction } = yield race({
+        deleteBranchpointAction: take("REQUEST_DELETE_BRANCHPOINT"),
+        createNodeAction: take("CREATE_NODE"),
+      });
+
+      if (deleteBranchpointAction) {
+        const hasBranchPoints2 = yield select(state => getBranchPoints(state.tracing).getOrElse([]).length > 0);
+        if (hasBranchPoints2) {
+          Modal.show(messages["tracing.branchpoint_jump_twice"],
+            "Jump again?",
+            [{ id: "jump-button", label: "Jump again", callback: () => { Store.dispatch(deleteBranchPointAction()); } },
+             { id: "cancel-button", label: "Cancel" }]);
+        } else {
+          Toast.warning(messages["tracing.no_more_branchpoints"]);
+        }
+      }
+    } else {
+      Toast.warning(messages["tracing.no_more_branchpoints"]);
+    }
+  }
+}
+
 export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
   yield take("WK_READY");
   yield takeEvery(["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE", "DELETE_BRANCHPOINT"], centerActiveNode);
+  yield watchBranchPointDeletion();
 }
 
 function* diffNodes(prevNodes: NodeMapType, nodes: NodeMapType, treeId: number): Generator<UpdateAction, void, void> {
@@ -104,13 +139,26 @@ export function* diffTrees(prevTrees: TreeMapType, trees: TreeMapType): Generato
   }
 }
 
+
+const diffTreeCache = {};
+
+export function cachedDiffTrees(prevTrees: TreeMapType, trees: TreeMapType): Array<UpdateAction> {
+  // Try to use the cached version of the diff if available to increase performance
+  if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
+    diffTreeCache.prevTrees = prevTrees;
+    diffTreeCache.trees = trees;
+    diffTreeCache.diff = Array.from(diffTrees(prevTrees, trees));
+  }
+  return diffTreeCache.diff;
+}
+
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracingType,
   skeletonTracing: SkeletonTracingType,
   flycam: FlycamType,
 ): Generator<UpdateAction, *, *> {
   if (prevSkeletonTracing !== skeletonTracing) {
-    yield* diffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
+    yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
   }
   yield updateSkeletonTracing(
     skeletonTracing,

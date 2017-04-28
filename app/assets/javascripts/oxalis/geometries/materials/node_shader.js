@@ -81,6 +81,10 @@ class NodeShader {
         type: "i",
         value: 0,
       },
+      isPicking: {
+        type: "i",
+        value: 0,
+      },
     };
   }
 
@@ -108,6 +112,7 @@ uniform int overrideNodeRadius; // bool activates equaly node radius for all nod
 uniform int shouldHideInactiveTrees; // bool show only the active tree hide everything else, triggered by shortcut "2"
 uniform int shouldHideAllSkeletons;  // bool hide all skeletons in the orthogonal planes (not 3DView), triggered by shortcut "1"
 uniform int is3DView; // bool indicates whether we are currently rendering the 3D viewport
+uniform int isPicking; // bool indicates whether we are currently rendering for node picking
 
 uniform sampler2D treeColors;
 
@@ -156,9 +161,13 @@ void main() {
       return;
     }
 
+    // DELETED NODE
+    if (type == ${NodeTypes.INVALID.toFixed(1)}) {
+      gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
+      return;
+    }
+
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / ${COLOR_TEXTURE_WIDTH.toFixed(1)}), treeId / (${COLOR_TEXTURE_WIDTH.toFixed(1)} * ${COLOR_TEXTURE_WIDTH.toFixed(1)}));
-    color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
 
     // NODE RADIUS
     if (overrideNodeRadius == 1 || is3DView == 1) {
@@ -170,10 +179,20 @@ void main() {
       ) * viewportScale;
     }
 
-    // DELETED NODE
-    if (type == ${NodeTypes.INVALID.toFixed(1)}) {
-      gl_Position = vec4(-1.0, -1.0, -1.0, 0.0);
+    // NODE COLOR FOR PICKING
+    if (isPicking == 1) {
+      // the nodeId is encoded in the RGB channels as a 3 digit base-255 number in a number of steps:
+      // - nodeId is divided by the first three powers of 255.
+      // - each quotient is rounded down to the nearest integer (since the fractional part of each quotient is covered by a less significant digit)
+      // - each digit is divided by 255 again, since color values in OpenGL must be in the range [0, 1]
+      // - finally, the non-fractional part of each digit is removed (since it is covered by a more significant digit)
+      color = fract(floor(nodeId / vec3(255.0 * 255.0, 255.0, 1.0)) / 255.0);
+      gl_PointSize *= 1.5;
+      return;
     }
+
+    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / ${COLOR_TEXTURE_WIDTH.toFixed(1)}), treeId / (${COLOR_TEXTURE_WIDTH.toFixed(1)} * ${COLOR_TEXTURE_WIDTH.toFixed(1)}));
+    color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
 
     // NODE COLOR FOR ACTIVE NODE
     if (activeNodeId == nodeId) {

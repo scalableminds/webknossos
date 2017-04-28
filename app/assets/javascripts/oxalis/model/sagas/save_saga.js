@@ -6,13 +6,14 @@
 import _ from "lodash";
 import $ from "jquery";
 import app from "app";
+import Request from "libs/request";
+import messages from "messages";
+import Toast from "libs/toast";
 import { call, put, take, select, race } from "redux-saga/effects";
 import { delay } from "redux-saga";
-import Request from "libs/request";
 import { shiftSaveQueueAction, setSaveBusyAction, setLastSaveTimestampAction, pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { createTreeAction, SkeletonTracingActions } from "oxalis/model/actions/skeletontracing_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import messages from "messages";
 import { alert } from "libs/window";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
@@ -34,42 +35,53 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
       });
     }
     yield put(setSaveBusyAction(true));
-    while (yield select(state => state.save.queue.length > 0)) {
-      const batch = yield select(state => state.save.queue);
-      const compactBatch = compactUpdateActions(batch);
-      const { version, tracingType, tracingId } = yield select(state => state.tracing);
-      try {
-        yield call(Request.sendJSONReceiveJSON,
-          `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {
-            method: "PUT",
-            data: compactBatch,
-          });
-        yield put(setVersionNumberAction(version + 1));
-        yield put(setLastSaveTimestampAction());
-        yield put(shiftSaveQueueAction(batch.length));
-        yield call(toggleErrorHighlighting, false);
-      } catch (error) {
-        yield call(toggleErrorHighlighting, true);
-        if (error.status >= 400 && error.status < 500) {
-          app.router.off("beforeunload");
-          // HTTP Code 409 'conflict' for dirty state
-          if (error.status === 409) {
-            yield call(alert, messages["save.failed_simultaneous_tracing"]);
-          } else {
-            yield call(alert, messages["save.failed_client_error"]);
-          }
-          app.router.reload();
-          return;
-        }
-        yield delay(SAVE_RETRY_WAITING_TIME);
-      }
+    const saveQueue = yield select(state => state.save.queue);
+    if (saveQueue.length > 0) {
+      yield call(sendRequestToServer);
     }
     yield put(setSaveBusyAction(false));
   }
 }
 
-function toggleErrorHighlighting(state: boolean) {
+export function* sendRequestToServer(): Generator<*, *, *> {
+  const batch = yield select(state => state.save.queue);
+  const compactBatch = compactUpdateActions(batch);
+  const { version, tracingType, tracingId } = yield select(state => state.tracing);
+  try {
+    yield call(Request.sendJSONReceiveJSON,
+      `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {
+        method: "PUT",
+        data: compactBatch,
+      });
+    yield put(setVersionNumberAction(version + 1));
+    yield put(setLastSaveTimestampAction());
+    yield put(shiftSaveQueueAction(batch.length));
+    yield call(toggleErrorHighlighting, false);
+  } catch (error) {
+    yield call(toggleErrorHighlighting, true);
+    if (error.status >= 400 && error.status < 500) {
+      app.router.off("beforeunload");
+      // HTTP Code 409 'conflict' for dirty state
+      if (error.status === 409) {
+        yield call(alert, messages["save.failed_simultaneous_tracing"]);
+      } else {
+        yield call(alert, messages["save.failed_client_error"]);
+      }
+      app.router.reload();
+      return;
+    }
+    yield delay(SAVE_RETRY_WAITING_TIME);
+    yield call(sendRequestToServer);
+  }
+}
+
+export function toggleErrorHighlighting(state: boolean) {
   $("body").toggleClass("save-error", state);
+  if (state) {
+    Toast.error(messages["save.failed"], true);
+  } else {
+    Toast.delete("danger", messages["save.failed"]);
+  }
 }
 
 export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<UpdateAction> {

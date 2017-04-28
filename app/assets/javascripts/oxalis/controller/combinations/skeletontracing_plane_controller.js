@@ -11,21 +11,18 @@ import _ from "lodash";
 import Store from "oxalis/store";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import constants, { OrthoViews } from "oxalis/constants";
+import { OrthoViews } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
-import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, deleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
-import { getRequestLogZoomStep, getRayThreshold, getRotationOrtho, getPosition, PIXEL_RAY_THRESHOLD } from "oxalis/model/accessors/flycam_accessor";
+import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getPosition, getRotationOrtho, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
-import Toast from "libs/toast";
-import messages from "messages";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -110,7 +107,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
       // Branches
       b: () => Store.dispatch(createBranchPointAction()),
-      j: () => this.deleteBranchPoint(),
+      j: () => Store.dispatch(requestDeleteBranchPointAction()),
 
       s: () => {
         this.skeletonTracingController.centerActiveNode();
@@ -133,64 +130,33 @@ class SkeletonTracingPlaneController extends PlaneController {
       return;
     }
 
-    const { scaleFactor } = this.planeView;
-    const camera = this.planeView.getCameras()[plane];
-    // vector with direction from camera position to click position
-    const normalizedMousePos = new THREE.Vector2(
-        ((position.x / (constants.VIEWPORT_WIDTH * scaleFactor)) * 2) - 1,
-        (-(position.y / (constants.VIEWPORT_WIDTH * scaleFactor)) * 2) + 1);
+    // render the clicked viewport with picking enabled
+    // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
+    const pickingNode = this.sceneController.skeleton.startPicking();
+    const pickingScene = new THREE.Scene();
+    pickingScene.add(pickingNode);
 
-    // create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
-    const state = Store.getState();
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(normalizedMousePos, camera);
-    if (plane === OrthoViews.TDView) {
-      raycaster.params.Points.threshold = PIXEL_RAY_THRESHOLD * (camera.right - camera.left) / constants.VIEWPORT_WIDTH / getBaseVoxel(state.dataset.scale);
-    } else {
-      raycaster.params.Points.threshold = getRayThreshold(Store.getState().flycam);
-    }
+    const buffer = this.planeView.renderOrthoViewToTexture(plane, pickingScene);
+    // Beware of the fact that new browsers yield float numbers for the mouse position
+    const [x, y] = [Math.round(position.x), Math.round(position.y)];
+    // compute the index of the pixel under the cursor,
+    // while inverting along the y-axis, because OpenGL has its origin bottom-left :/
+    const index = (x + (this.planeView.curWidth - y) * this.planeView.curWidth) * 4;
+    // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
+    const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
+    this.sceneController.skeleton.stopPicking();
 
-    // identify clicked object
-    let intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());
+    // prevent flickering sometimes caused by picking
+    this.planeView.renderFunction();
 
-    // Also look backwards: We want to detect object even when they are behind
-    // the camera. Later, we filter out invisible objects.
-    raycaster.ray.direction.multiplyScalar(-1);
-    intersects = intersects.concat(raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes()));
-
-    intersects = _.sortBy(intersects, intersect => intersect.distanceToRay);
-
-    for (const intersect of intersects) {
-      const { index } = intersect;
-      const { geometry } = intersect.object;
-
-      // Raycaster also intersects with vertices that have an
-      // index larger than numItems
-      if (geometry.attributes.nodeId.count <= index) {
-        continue;
+    // otherwise we have hit the background and do nothing
+    if (nodeId > 0) {
+      if (altPressed) {
+        getActiveNode(Store.getState().tracing)
+          .map(activeNode => Store.dispatch(mergeTreesAction(activeNode.id, nodeId)));
       }
 
-      const nodeId = geometry.attributes.nodeId.array[index];
-
-      const posArray = geometry.attributes.position.array;
-      const intersectsCoord = [posArray[3 * index], posArray[(3 * index) + 1], posArray[(3 * index) + 2]];
-      const globalPos = getPosition(Store.getState().flycam);
-
-      // make sure you can't click nodes, that are clipped away (one can't see)
-      const ind = dimensions.getIndices(plane);
-      if (intersect.object.visible &&
-        (plane === OrthoViews.TDView ||
-        (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
-        // merge two trees
-        if (shiftPressed && altPressed) {
-          getActiveNode(Store.getState().tracing)
-            .map(activeNode => Store.dispatch(mergeTreesAction(activeNode.id, nodeId)));
-        }
-
-        // set the active Node to the one that has the ID stored in the vertex
-        Store.dispatch(setActiveNodeAction(nodeId));
-        break;
-      }
+      Store.dispatch(setActiveNodeAction(nodeId));
     }
   };
 
@@ -276,14 +242,6 @@ class SkeletonTracingPlaneController extends PlaneController {
       }
     })
     .start();
-  }
-
-  deleteBranchPoint(): void {
-    if (getBranchPoints(Store.getState().tracing).length === 0) {
-      Toast.error(messages["tracing.no_more_branchpoints"]);
-    } else {
-      Store.dispatch(deleteBranchPointAction());
-    }
   }
 }
 

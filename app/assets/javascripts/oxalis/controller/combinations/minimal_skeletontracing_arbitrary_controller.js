@@ -6,13 +6,10 @@
 import _ from "lodash";
 import Store from "oxalis/store";
 import Constants from "oxalis/constants";
-import Toast from "libs/toast";
-import messages from "messages";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
-import { deleteNodeAction, createBranchPointAction, deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { deleteNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import { zoomInAction, zoomOutAction, yawFlycamAction, pitchFlycamAction } from "oxalis/model/actions/flycam_actions";
-import { getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
 import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
@@ -67,7 +64,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
       // Branches
       b: () => { Store.dispatch(createBranchPointAction()); },
-      j: () => this.deleteBranchPoint(),
+      j: () => { Store.dispatch(requestDeleteBranchPointAction()); },
 
       // Branchpointvideo
       ".": () => this.nextNode(true),
@@ -79,14 +76,6 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
       // Delete active node and recenter last node
       "shift + space": () => { Store.dispatch(deleteNodeAction()); },
     }, -1);
-  }
-
-  deleteBranchPoint(): void {
-    if (getBranchPoints(Store.getState().tracing).length === 0) {
-      Toast.error(messages["tracing.no_more_branchpoints"]);
-    } else {
-      Store.dispatch(deleteBranchPointAction());
-    }
   }
 
   // make sure that it is not possible to keep nodes from being created

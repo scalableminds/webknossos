@@ -47,6 +47,9 @@ object TracingUpdater extends LazyLogging {
 case class TracingUpdate(update: SkeletonTracing => Fox[SkeletonTracing])
 
 trait TracingUpdater extends FoxImplicits {
+  val positionTransform = (__ \ 'position).json.update(
+    __.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
+
   def createUpdate()(implicit ctx: DBAccessContext): TracingUpdate
 }
 
@@ -151,8 +154,6 @@ case class CreateNode(value: JsObject) extends TracingUpdater {
   import oxalis.nml.Node
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
-    val positionTransform = (__ \ 'position).json.update(
-      __.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
     val node = value.transform(positionTransform).get.as[Node]
     val treeId = (value \ "treeId").as[Int]
     TracingUpdate { t =>
@@ -188,7 +189,7 @@ case class UpdateNode(value: JsObject) extends TracingUpdater {
   import oxalis.nml.Node
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
-    val node = value.as[Node]
+    val node = value.transform(positionTransform).get.as[Node]
     val treeId = (value \ "treeId").as[Int]
     TracingUpdate { t =>
       for {

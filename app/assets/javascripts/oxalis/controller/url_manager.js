@@ -18,7 +18,7 @@ import window from "libs/window";
 const NO_MODIFY_TIMEOUT = 5000;
 const MAX_UPDATE_INTERVAL = 1000;
 
-type State = {
+export type UrlManagerState = {
   position?: Vector3,
   mode?: ModeType,
   zoomStep?: number,
@@ -29,7 +29,7 @@ type State = {
 class UrlManager {
   baseUrl: string;
   model: Model;
-  initialState: State;
+  initialState: UrlManagerState;
   lastUrl: ?string
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -56,12 +56,12 @@ class UrlManager {
     MAX_UPDATE_INTERVAL,
   );
 
-  parseUrl(): State {
+  parseUrl(): UrlManagerState {
     // State string format:
     // x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
 
     const stateString = location.hash.slice(1);
-    const state: State = {};
+    const state: UrlManagerState = {};
 
     if (stateString) {
       const stateArray = stateString.split(",").map(item => Number(item));

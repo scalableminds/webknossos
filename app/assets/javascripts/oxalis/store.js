@@ -113,6 +113,7 @@ export type AllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 export type SettingsType = {
   +advancedOptionsAllowed: boolean,
   +allowedModes: Array<AllowedModeType>,
+  +preferredMode: AllowedModeType,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
 };

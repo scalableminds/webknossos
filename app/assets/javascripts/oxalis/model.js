@@ -19,7 +19,9 @@ import type {
   SkeletonTracingTypeTracingType,
   VolumeTracingTypeTracingType,
   DataLayerType,
+  AllowedModeType,
 } from "oxalis/store";
+import type { UrlManagerState } from "oxalis/controller/url_manager";
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
@@ -96,7 +98,7 @@ export type Tracing<T> = {
   id: string,
   name: string,
   restrictions: RestrictionsType,
-  state: any,
+  state: UrlManagerState,
   stateLabel: string,
   stats: any,
   task: any,
@@ -126,6 +128,17 @@ class Model extends Backbone.Model {
   tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>;
   tracingId: string;
   tracingType: "Explorational" | "Task" | "View";
+  controlMode: mixed;
+  preferredMode: ModeType;
+  flightmodeRecording: mixed;
+  isTask: boolean;
+  state: UrlManagerState;
+
+  // Let's get rid of model attributes and enforce it by deleting these methods:
+  // let's keep this in here for some time. Otherwise, merging it
+  // with old usages won't raise flow errors
+  // $FlowFixMe
+  set: null; get: null;
 
   constructor(attributes?: Attrs, options?: ModelOpts) {
     super(attributes, options);
@@ -135,11 +148,11 @@ class Model extends Backbone.Model {
 
   fetch() {
     let infoUrl;
-    if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+    if (this.controlMode === constants.CONTROL_MODE_TRACE) {
       // Include /readOnly part whenever it is in the pathname
       infoUrl = `${window.location.pathname}/info`;
     } else {
-      infoUrl = `/annotations/${this.get("tracingType")}/${this.get("tracingId")}/info`;
+      infoUrl = `/annotations/${this.tracingType}/${this.tracingId}/info`;
     }
 
     return Request.receiveJSON(infoUrl).then((tracing: Tracing<*>) => {
@@ -174,7 +187,7 @@ class Model extends Backbone.Model {
 
   determineAllowedModes() {
     const allowedModes = [];
-    const settings = this.get("settings");
+    const settings = this.settings;
     for (const allowedMode of settings.allowedModes) {
       if (this.getColorBinaries()[0].cube.BIT_DEPTH === 8) {
         switch (allowedMode) {
@@ -192,14 +205,13 @@ class Model extends Backbone.Model {
     if (settings.preferredMode) {
       const modeId = constants.MODE_NAME_TO_ID[settings.preferredMode];
       if (allowedModes.includes(modeId)) {
-        this.set("preferredMode", modeId);
+        this.preferredMode = modeId;
       }
     }
 
     allowedModes.sort();
     return allowedModes;
   }
-
 
   initializeWithData(tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>, layerInfos: Array<DataLayerType>) {
     const dataset = tracing.content.dataSet;
@@ -216,7 +228,7 @@ class Model extends Backbone.Model {
     const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataStore));
 
     ErrorHandling.assertExtendContext({
-      task: this.get("tracingId"),
+      task: this.tracingId,
       dataSet: dataset.name,
     });
 
@@ -245,7 +257,7 @@ class Model extends Backbone.Model {
 
     this.isVolume = tracing.content.settings.allowedModes.includes("volume");
 
-    if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+    if (this.controlMode === constants.CONTROL_MODE_TRACE) {
       if (this.isVolumeTracing()) {
         ErrorHandling.assert((this.getSegmentationBinary() != null),
           "Volume is allowed, but segmentation does not exist");
@@ -259,25 +271,24 @@ class Model extends Backbone.Model {
       }
     }
 
-    this.applyState(this.get("state"), tracing);
+    this.applyState(this.state, tracing);
     this.computeBoundaries();
 
-    this.set("tracing", tracing);
-    this.set("flightmodeRecording", false);
-    this.set("settings", tracing.content.settings);
-    this.set("allowedModes", this.determineAllowedModes());
-    this.set("isTask", this.get("tracingType") === "Task");
+    this.tracing = tracing;
+    this.flightmodeRecording = false;
+    this.settings = tracing.content.settings;
+    this.allowedModes = this.determineAllowedModes();
+    this.isTask = this.tracingType === "Task";
 
     // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
-    if (this.get("allowedModes").length === 0) {
+    if (this.allowedModes.length === 0) {
       Toast.error("There was no valid allowed tracing mode specified.");
     } else {
-      const mode = this.get("preferredMode") || this.get("state").mode || this.get("allowedModes")[0];
+      const mode = this.preferredMode || this.state.mode || this.allowedModes[0];
       this.setMode(mode);
     }
 
 
-    this.initSettersGetter();
     this.initialized = true;
     this.trigger("sync");
 
@@ -286,7 +297,7 @@ class Model extends Backbone.Model {
 
 
   setMode(mode: ModeType) {
-    this.set("mode", mode);
+    this.mode = mode;
     this.trigger("change:mode", mode);
   }
 
@@ -381,23 +392,7 @@ class Model extends Backbone.Model {
     }
   }
 
-
-  // Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
-  initSettersGetter() {
-    _.forEach(this.attributes, (value, key) => Object.defineProperty(this, key, {
-      set(val) {
-        return this.set(key, val);
-      },
-      get() {
-        return this.get(key);
-      },
-    },
-      ),
-    );
-  }
-
-
-  applyState(state: any, tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>) {
+  applyState(state: UrlManagerState, tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>) {
     Store.dispatch(setPositionAction(state.position || tracing.content.editPosition));
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));

@@ -51,8 +51,8 @@ class DatasetInfoTabView extends Component {
   }
 
   render() {
-    let annotationType = this.props.oldModel.get("tracingType");
-    const tracing = this.props.oldModel.get("tracing");
+    let annotationType = this.props.oldModel.tracingType;
+    const tracing = this.props.oldModel.tracing;
     const { task, name } = tracing;
 
     // In case we have a task display its id as well
@@ -63,7 +63,7 @@ class DatasetInfoTabView extends Component {
     const zoomLevel = this.calculateZoomLevel();
     const dataSetName = this.props.dataset.name;
     const treeCount = _.size(this.props.skeletonTracing.trees);
-    const isPublicViewMode = this.props.oldModel.get("controlMode") === constants.CONTROL_MODE_VIEW;
+    const isPublicViewMode = this.props.oldModel.controlMode === constants.CONTROL_MODE_VIEW;
 
     return (
       <div>

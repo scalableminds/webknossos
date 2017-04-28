@@ -70,7 +70,7 @@ class Controller {
     _.extend(this, Backbone.Events);
 
     this.urlManager = new UrlManager(this.model);
-    this.model.set("state", this.urlManager.initialState);
+    this.model.state = this.urlManager.initialState;
 
     this.model.fetch()
         .then(() => this.modelFetchDone());
@@ -91,7 +91,7 @@ class Controller {
     }
 
     app.router.on("beforeunload", () => {
-      if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+      if (this.model.controlMode === constants.CONTROL_MODE_TRACE) {
         const state = Store.getState();
         const stateSaved = this.model.stateSaved();
         if (!stateSaved && state.tracing.restrictions.allowUpdate) {
@@ -107,7 +107,7 @@ class Controller {
     this.sceneController = new SceneController(this.model);
 
     // TODO: Replace with skeletonTracing from Store (which is non-null currently)
-    if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+    if (this.model.controlMode === constants.CONTROL_MODE_TRACE) {
       if (this.model.isVolumeTracing()) {
         // VOLUME MODE
         this.view = new VolumeTracingView(this.model);
@@ -150,7 +150,7 @@ class Controller {
 
 
     this.listenTo(this.model, "change:mode", this.loadMode);
-    this.loadMode(this.model.get("mode"));
+    this.loadMode(this.model.mode);
 
 
     // Zoom step warning
@@ -203,7 +203,7 @@ class Controller {
 
     const keyboardControls = {};
 
-    if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+    if (this.model.controlMode === constants.CONTROL_MODE_TRACE) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
         "shift + 1": () => this.model.setMode(constants.MODE_PLANE_TRACING),
@@ -214,7 +214,7 @@ class Controller {
 
         m: () => {
           // rotate allowed modes
-          const index = (this.model.allowedModes.indexOf(this.model.get("mode")) + 1) % this.model.allowedModes.length;
+          const index = (this.model.allowedModes.indexOf(this.model.mode) + 1) % this.model.allowedModes.length;
           this.model.setMode(this.model.allowedModes[index]);
         },
 

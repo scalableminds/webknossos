@@ -9,8 +9,8 @@ import Constants from "oxalis/constants";
 import { Button } from "antd";
 
 function ActionBarView({ oldModel }: { oldModel: Model }) {
-  const isTraceMode = oldModel.get("controlMode") === Constants.CONTROL_MODE_TRACE;
-  const isVolumeMode = oldModel.get("mode") === Constants.MODE_VOLUME;
+  const isTraceMode = oldModel.controlMode === Constants.CONTROL_MODE_TRACE;
+  const isVolumeMode = oldModel.mode === Constants.MODE_VOLUME;
   const hasAdvancedOptions = oldModel.settings.advancedOptionsAllowed;
 
   return (

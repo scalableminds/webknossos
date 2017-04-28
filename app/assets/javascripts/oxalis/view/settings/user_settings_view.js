@@ -72,7 +72,7 @@ class UserSettingsView extends Component {
   }
 
   getViewportOptions = () => {
-    const mode = this.props.oldModel.get("mode");
+    const mode = this.props.oldModel.mode;
     switch (mode) {
       case Constants.MODE_PLANE_TRACING:
         return (
@@ -106,7 +106,7 @@ class UserSettingsView extends Component {
   }
 
   getSkeletonOrVolumeOptions = () => {
-    const mode = this.props.oldModel.get("mode");
+    const mode = this.props.oldModel.mode;
 
     if (Constants.MODES_SKELETON.includes(mode) && !this.props.isPublicViewMode && this.props.tracing.type === "skeleton") {
       const activeNodeId = this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
@@ -135,7 +135,7 @@ class UserSettingsView extends Component {
   };
 
   render() {
-    const mode = this.props.oldModel.get("mode");
+    const mode = this.props.oldModel.mode;
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(mode) ?
       <NumberSliderSetting label="Move Value (nm/s)" min={30} max={1500} step={10} value={this.props.userConfiguration.moveValue3d} onChange={this.onChangeUser.moveValue3d} /> :
       <NumberSliderSetting label="Move Value (nm/s)" min={30} max={14000} step={10} value={this.props.userConfiguration.moveValue} onChange={this.onChangeUser.moveValue} />;

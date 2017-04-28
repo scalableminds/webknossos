@@ -233,8 +233,8 @@ class ArbitraryController {
 
 
   setRecord(record: boolean): void {
-    if (record !== this.model.get("flightmodeRecording")) {
-      this.model.set("flightmodeRecording", record);
+    if (record !== this.model.flightmodeRecording) {
+      this.model.flightmodeRecording = record;
       this.setWaypoint();
     }
   }
@@ -346,7 +346,7 @@ class ArbitraryController {
   }
 
   setWaypoint(): void {
-    if (!this.model.get("flightmodeRecording")) {
+    if (!this.model.flightmodeRecording) {
       return;
     }
 

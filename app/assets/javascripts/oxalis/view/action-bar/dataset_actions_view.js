@@ -120,9 +120,9 @@ class DatasetActionsView extends PureComponent {
   }
 
   render() {
-    const isSkeletonMode = _.includes(Constants.MODES_SKELETON, this.props.oldModel.get("mode"));
+    const isSkeletonMode = _.includes(Constants.MODES_SKELETON, this.props.oldModel.mode);
     const hasAdvancedOptions = this.props.oldModel.settings.advancedOptionsAllowed;
-    const archiveButtonText = this.props.oldModel.get("isTask") ? "Finish" : "Archive";
+    const archiveButtonText = this.props.oldModel.isTask ? "Finish" : "Archive";
     const { tracing } = this.props.oldModel;
 
 

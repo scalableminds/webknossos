@@ -470,7 +470,7 @@ test("SkeletonTracing should add a new tree", (t) => {
     branchPoints: [],
     nodes: {},
     treeId: 2,
-    color: [0.5835921350012601, 1, 0],
+    color: [0.0784313725490196, 0.4, 0.49019607843137253],
     // name: ...
   });
 });

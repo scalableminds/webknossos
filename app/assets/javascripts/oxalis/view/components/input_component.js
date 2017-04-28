@@ -18,6 +18,16 @@ type InputComponentStateType = {
   currentValue: string,
 };
 
+// TODO Double check if we still need this once React v16 is released.
+
+/*
+ * A lightweight wrapper around <Input> to deal with a "jumping cursor" bug.
+ * Modifying a input's value will always reset the cursor to the end even if
+ * you are editting the middle of a string. Saving the input's value in state
+ * remedies this. Rumors claim React v16 will fix this.
+ * Inspired by https://github.com/facebook/react/issues/955#issuecomment-281802381
+ * @class
+ */
 class InputComponent extends React.PureComponent {
 
   state: InputComponentStateType = {

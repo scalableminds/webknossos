@@ -33,7 +33,7 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
     yield put(setSaveBusyAction(true));
     const saveQueue = yield select(state => state.save.queue);
     if (saveQueue.length > 0) {
-      yield sendRequestToServer();
+      yield call(sendRequestToServer);
     }
     yield put(setSaveBusyAction(false));
   }
@@ -67,11 +67,11 @@ export function* sendRequestToServer(): Generator<*, *, *> {
       return;
     }
     yield delay(SAVE_RETRY_WAITING_TIME);
-    yield sendRequestToServer();
+    yield call(sendRequestToServer);
   }
 }
 
-function toggleErrorHighlighting(state: boolean) {
+export function toggleErrorHighlighting(state: boolean) {
   $("body").toggleClass("save-error", state);
   if (state) {
     Toast.error(messages["save.failed"], true);

@@ -4,7 +4,7 @@
 import test from "ava";
 import mockRequire from "mock-require";
 import _ from "lodash";
-import { createNodeAction, createTreeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { createNodeAction, createTreeAction, deleteNodeAction, createBranchPointAction, setActiveNodeRadiusAction, setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 
 mockRequire.stopAll();
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -98,13 +98,71 @@ test("Skeleton should initialize correctly using the store's state", (t) => {
   t.deepEqual(skeleton.treeColorTexture.image.data, textureData);
 });
 
-test("Skeleton should increase buffer once the max capacity is reached", async (t) => {
+test("Skeleton should increase its buffers once the max capacity is reached", async (t) => {
   const skeleton = new Skeleton();
 
   Store.dispatch(createNodeAction([2001, 2001, 2001], [0.5, 0.5, 0.5], 0, 0));
-  console.log("blub", skeleton.nodes.buffers)
-  await Utils.sleep(5)
+
+  await Utils.sleep(15);
   t.is(skeleton.nodes.buffers.length, 2);
   t.is(skeleton.edges.buffers.length, 2);
 });
 
+test("Skeleton should invalidate a node upon deletion", async (t) => {
+  const skeleton = new Skeleton();
+
+  Store.dispatch(deleteNodeAction(1, 1));
+
+  await Utils.sleep(5);
+  const index = skeleton.combineIds(1, 1);
+  t.is(skeleton.nodes.buffers[0].geometry.attributes.type.array[index], NodeShader.NodeTypes.INVALID);
+});
+
+test("Skeleton should invalidate an edge upon deletion", async (t) => {
+  const skeleton = new Skeleton();
+
+  Store.dispatch(deleteNodeAction(2, 2));
+
+  await Utils.sleep(5);
+  const index = skeleton.combineIds(2, 2, 3);
+  t.is(skeleton.nodes.buffers[0].geometry.attributes.type.array.subarray(index, 6), [0, 0, 0, 0, 0, 0]);
+});
+
+test("Skeleton should update node types for branchpoints", async (t) => {
+  const skeleton = new Skeleton();
+
+  Store.dispatch(createBranchPointAction(3, 3));
+
+  await Utils.sleep(5);
+  const index = skeleton.combineIds(3, 3);
+  t.is(skeleton.nodes.buffers[0].geometry.attributes.type.array[index], NodeShader.NodeTypes.BRANCH_POINT);
+});
+
+test("Skeleton should update node radius", async (t) => {
+  const skeleton = new Skeleton();
+  const { activeNodeId, activeTreeId } = Store.getState().skeletonTracing;
+
+  Store.dispatch(setActiveNodeRadiusAction(2));
+
+  await Utils.sleep(5);
+  const index = skeleton.combineIds(activeNodeId, activeTreeId);
+  t.is(skeleton.nodes.buffers[0].geometry.attributes.radius.array[index], 2);
+});
+
+test("Skeleton should update tree colors upon tree creation", async (t) => {
+  const skeleton = new Skeleton();
+
+  Store.dispatch(createTreeAction());
+  const { activeTreeId, trees } = Store.getState().skeletonTracing;
+
+  await Utils.sleep(5);
+  t.is(skeleton.treeColorTexture.image.data.subarray(activeTreeId, 3), trees[activeTreeId.color]);
+});
+
+test("Skeleton should start a node highlighting animation upon active node id change", async (t) => {
+  const skeleton = new Skeleton();
+
+  Store.dispatch(setActiveNodeAction(100));
+  await Utils.sleep(5);
+  t.truthy(skeleton.nodes.material.uniforms.activeNodeScaleFactor.value > 1.0 && skeleton.nodes.material.uniforms.activeNodeScaleFactor.value <= 2.0);
+});

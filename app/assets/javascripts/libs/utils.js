@@ -6,6 +6,7 @@
 import _ from "lodash";
 import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
 import Maybe from "data.maybe";
+import window from "libs/window";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
 

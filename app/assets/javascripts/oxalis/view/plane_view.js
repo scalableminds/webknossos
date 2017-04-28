@@ -13,7 +13,6 @@ import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/
 import Model from "oxalis/model";
 import View from "oxalis/view";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
 
 class PlaneView {
 
@@ -34,7 +33,6 @@ class PlaneView {
   curWidth: number;
   deviceScaleFactor: number;
   scaleFactor: number;
-  prevState: OxalisState;
 
   constructor(model: Model, view: View) {
     let HEIGHT;
@@ -106,6 +104,12 @@ class PlaneView {
 
     this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
+    Store.subscribe(() => {
+      // Render in the next frame after the change propagated everywhere
+      window.requestAnimationFrame(() => {
+        this.needsRerender = true;
+      });
+    });
 
     Store.subscribe(() => {
       if (this.running) {
@@ -157,12 +161,7 @@ class PlaneView {
       }
     }
 
-    // TODO Remove this.needsRerender once the store contains all state
-    const state = Store.getState();
-    const storeChanged = this.prevState !== state;
-    this.prevState = state;
-
-    if (this.needsRerender || modelChanged || storeChanged) {
+    if (this.needsRerender || modelChanged) {
       this.trigger("render");
 
       const viewport: OrthoViewMapType<Vector2> = {

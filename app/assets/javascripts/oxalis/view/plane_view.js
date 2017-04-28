@@ -13,6 +13,7 @@ import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/
 import Model from "oxalis/model";
 import View from "oxalis/view";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
 
 class PlaneView {
 
@@ -33,6 +34,7 @@ class PlaneView {
   curWidth: number;
   deviceScaleFactor: number;
   scaleFactor: number;
+  prevState: OxalisState;
 
   constructor(model: Model, view: View) {
     let HEIGHT;
@@ -145,7 +147,7 @@ class PlaneView {
     // skip rendering if nothing has changed
     // This prevents you the GPU/CPU from constantly
     // working and keeps your lap cool
-    // ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
+    // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
 
     let modelChanged: boolean = false;
     for (const name of Object.keys(this.model.binary)) {
@@ -155,7 +157,12 @@ class PlaneView {
       }
     }
 
-    if (this.needsRerender || modelChanged) {
+    // TODO Remove this.needsRerender once the store contains all state
+    const state = Store.getState();
+    const storeChanged = this.prevState !== state;
+    this.prevState = state;
+
+    if (this.needsRerender || modelChanged || storeChanged) {
       this.trigger("render");
 
       const viewport: OrthoViewMapType<Vector2> = {

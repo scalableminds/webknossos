@@ -4,9 +4,8 @@
  * skeletontracing_actions.js
  * @flow
  */
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, ModeType } from "oxalis/constants";
 import type { Tracing, SkeletonContentDataType } from "oxalis/model";
-import type { ModeType } from "oxalis/constants";
 
 type InitializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing<SkeletonContentDataType> };
 type CreateNodeActionType = {type: "CREATE_NODE", position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number, treeId?: number};

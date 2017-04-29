@@ -19,7 +19,6 @@ import type {
   SkeletonTracingTypeTracingType,
   VolumeTracingTypeTracingType,
   DataLayerType,
-  AllowedModeType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";

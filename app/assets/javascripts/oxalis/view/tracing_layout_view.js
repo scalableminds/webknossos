@@ -97,7 +97,7 @@ class TracingLayoutView extends Marionette.View {
     window.hotSwap = () => {
       this.model.tracingId = "59036d3e3e0000aa0b2f79ce";
       this.model.fetch();
-    }
+    };
 
     this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
     // this.listenTo(this.model, "change:mode", this.renderRegions);

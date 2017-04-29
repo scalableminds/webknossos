@@ -22,7 +22,7 @@ class DatasetPositionView extends PureComponent {
 
   componentDidMount() {
     this.unsubscribeFunction = listenToStoreProperty(
-      (storeState) => storeState.viewMode,
+      storeState => storeState.viewMode,
       () => this._forceUpdate(),
     );
   }

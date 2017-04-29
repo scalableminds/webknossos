@@ -58,15 +58,9 @@ class UserSettingsView extends Component {
     // remove public mode prop once oldModel is no longer a prop of this
     if (!this.props.isPublicViewMode) {
       this.unsubscribeFunction = listenToStoreProperty(
-        (storeState) => storeState.viewMode,
+        storeState => storeState.viewMode,
         () => this.forceUpdate(),
       );
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.unsubscribeFunction) {
-      this.unsubscribeFunction();
     }
   }
 
@@ -75,6 +69,12 @@ class UserSettingsView extends Component {
       || this.props.temporaryConfiguration !== nextProps.temporaryConfiguration
       || this.props.tracing !== nextProps.tracing
       || this.props.state !== nextProps.state;
+  }
+
+  componentWillUnmount() {
+    if (this.unsubscribeFunction) {
+      this.unsubscribeFunction();
+    }
   }
 
   onChangeBoundingBox = (boundingBox: Vector6) => {

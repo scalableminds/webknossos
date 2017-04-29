@@ -1,6 +1,5 @@
 // @flow
 import React, { PureComponent } from "react";
-import type Model from "oxalis/model";
 import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
 import { Radio } from "antd";
@@ -13,7 +12,7 @@ class ViewModesView extends PureComponent {
 
   componentDidMount() {
     this.unsubscribeFunction = listenToStoreProperty(
-      (storeState) => storeState.viewMode,
+      storeState => storeState.viewMode,
       () => this._forceUpdate(),
     );
   }

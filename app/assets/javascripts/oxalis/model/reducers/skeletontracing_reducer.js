@@ -61,7 +61,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
     }
     case "SET_VIEW_MODE": {
       return update(state, {
-        viewMode: {$set: action.viewMode}
+        viewMode: { $set: action.viewMode },
       });
     }
     default:

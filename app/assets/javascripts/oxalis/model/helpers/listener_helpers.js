@@ -37,3 +37,5 @@ export function listenToStoreProperty(
   // return the unsubscribe function
   return Store.subscribe(handleChange);
 }
+
+export default {};

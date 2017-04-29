@@ -151,7 +151,7 @@ class Controller {
       this.listenTo(this.model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
     }
 
-    listenToStoreProperty((store) => store.viewMode, (mode) => this.loadMode(mode), true);
+    listenToStoreProperty(store => store.viewMode, mode => this.loadMode(mode), true);
 
     // Zoom step warning
     this.zoomStepWarningToast = null;

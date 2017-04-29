@@ -9,7 +9,6 @@ import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { Collapse } from "antd";
 import Constants from "oxalis/constants";
-import Model from "oxalis/model";
 import { updateUserSettingAction, updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction, setUserBoundingBoxAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";

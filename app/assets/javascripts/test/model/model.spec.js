@@ -71,10 +71,11 @@ const TRACING_OBJECT = {
 const Model = mockRequire.reRequire("../../oxalis/model").default;
 
 test.beforeEach((t) => {
-  const model = t.context.model = new Model();
-  model.set("state", { position: [1, 2, 3] });
-  model.set("tracingType", "tracingTypeValue");
-  model.set("tracingId", "tracingIdValue");
+  const model = t.context.model = new Model({
+    tracingType: "tracingTypeValue",
+    tracingId: "tracingIdValue",
+  });
+  model.state = { position: [1, 2, 3] };
 
   Request.receiveJSON.returns(Promise.resolve(TRACING_OBJECT));
   User.prototype.fetch.returns(Promise.resolve());

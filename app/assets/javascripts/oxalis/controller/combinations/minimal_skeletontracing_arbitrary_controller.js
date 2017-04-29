@@ -8,7 +8,7 @@ import Store from "oxalis/store";
 import Constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
-import { deleteNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setFlightmodeRecordingAction, deleteNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import { zoomInAction, zoomOutAction, yawFlycamAction, pitchFlycamAction } from "oxalis/model/actions/flycam_actions";
 import type Model from "oxalis/model";
 import type View from "oxalis/view";
@@ -81,8 +81,8 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
   // make sure that it is not possible to keep nodes from being created
   setWaypoint(): void {
     if (this.isBranchpointvideoMode()) { return; }
-    if (!this.model.flightmodeRecording) {
-      this.model.flightmodeRecording = true;
+    if (!Store.getState().flightmodeRecording) {
+      Store.dispatch(setFlightmodeRecordingAction(true));
     }
     super.setWaypoint();
   }

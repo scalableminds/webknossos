@@ -126,9 +126,8 @@ class Model extends Backbone.Model {
   tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>;
   tracingId: string;
   tracingType: "Explorational" | "Task" | "View";
-  controlMode: mixed;
+  +controlMode: mixed;
   preferredMode: ModeType;
-  flightmodeRecording: mixed;
   isTask: boolean;
   state: UrlManagerState;
 
@@ -280,7 +279,6 @@ class Model extends Backbone.Model {
     this.computeBoundaries();
 
     this.tracing = tracing;
-    this.flightmodeRecording = false;
     this.settings = tracing.content.settings;
     this.allowedModes = this.determineAllowedModes();
     this.isTask = this.tracingType === "Task";

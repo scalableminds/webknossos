@@ -37,6 +37,9 @@ class UrlManager {
   update = _.throttle(
     () => {
       const url = this.buildUrl();
+      if (!url) {
+        return;
+      }
       // Don't tamper with URL if changed externally for some time
       if (this.lastUrl == null || window.location.href === this.lastUrl) {
         window.location.replace(url);
@@ -86,18 +89,14 @@ class UrlManager {
 
 
   startUrlUpdater(): void {
-    if (Store.getState().tracing) {
-      Store.subscribe(() => this.update());
-    } else {
-      // TODO:
-      console.warn("When does this happen? Why can't we always listen to store changes?");
-      // should we do something like this?
-      // this.listenTo(this.model, "change:mode", this.update);
-    }
+    Store.subscribe(() => this.update());
   }
 
 
-  buildUrl(): string {
+  buildUrl(): ?string {
+    if (!Store.getState().tracing) {
+      return null;
+    }
     const viewMode = Store.getState().viewMode;
     let state = V3.floor(getPosition(Store.getState().flycam));
     state.push(viewMode);

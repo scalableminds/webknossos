@@ -254,6 +254,8 @@ export type OxalisState = {
   // This mode value was originally stored in model.mode and should probably be in one of the subitems
   // of the store state.
   +viewMode: ModeType,
+  +flightmodeRecording: boolean,
+
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
   +temporaryConfiguration: TemporaryConfigurationType,
@@ -266,6 +268,7 @@ export type OxalisState = {
 
 export const defaultState: OxalisState = {
   viewMode: Constants.MODE_PLANE_TRACING,
+  flightmodeRecording: false,
   datasetConfiguration: {
     datasetName: "",
     fourBit: true,

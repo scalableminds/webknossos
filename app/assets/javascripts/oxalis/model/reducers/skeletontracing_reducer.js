@@ -64,6 +64,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         viewMode: { $set: action.viewMode },
       });
     }
+    case "SET_FLIGHTMODE_RECORDING": {
+      return update(state, {
+        flightmodeRecording: { $set: action.value },
+      })
+    }
     default:
       // pass
   }

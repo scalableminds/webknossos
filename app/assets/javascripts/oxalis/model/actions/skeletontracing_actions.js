@@ -25,6 +25,7 @@ type ShuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR", treeId?: number};
 type CreateCommentActionType = {type: "CREATE_COMMENT", commentText: string, nodeId: ?number, treeId: ?number};
 type DeleteCommentActionType = {type: "DELETE_COMMENT", nodeId: ?number, treeId?: number};
 type SetViewModeActionType = {type: "SET_VIEW_MODE", viewMode: ModeType};
+type SetFlightmodeRecordingActionType = {type: "SET_FLIGHTMODE_RECORDING", value: boolean};
 
 export type SkeletonTracingActionType =
   | InitializeSkeletonTracingActionType
@@ -167,7 +168,14 @@ export const deleteCommentAction = (nodeId?: number, treeId?: number): DeleteCom
   treeId,
 });
 
+
+// TODO: These actions should probably live somewhere else
 export const setViewModeAction = (viewMode: ModeType): SetViewModeActionType => ({
   type: "SET_VIEW_MODE",
   viewMode,
+});
+
+export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecordingActionType => ({
+  type: "SET_FLIGHTMODE_RECORDING",
+  value,
 });

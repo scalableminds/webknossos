@@ -17,7 +17,7 @@ import Model from "oxalis/model";
 import View from "oxalis/view";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, setViewModeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setFlightmodeRecordingAction, setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, setViewModeAction } from "oxalis/model/actions/skeletontracing_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -233,8 +233,8 @@ class ArbitraryController {
 
 
   setRecord(record: boolean): void {
-    if (record !== this.model.flightmodeRecording) {
-      this.model.flightmodeRecording = record;
+    if (record !== Store.getState().flightmodeRecording) {
+      Store.dispatch(setFlightmodeRecordingAction(record));
       this.setWaypoint();
     }
   }
@@ -346,7 +346,7 @@ class ArbitraryController {
   }
 
   setWaypoint(): void {
-    if (!this.model.flightmodeRecording) {
+    if (!Store.getState().flightmodeRecording) {
       return;
     }
 

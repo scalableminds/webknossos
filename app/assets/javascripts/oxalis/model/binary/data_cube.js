@@ -5,11 +5,10 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4, BoundingBoxType } from "oxalis/constants";
 import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import type { MappingArray } from "oxalis/model/binary/mappings";
-import type { BoundingBoxType } from "oxalis/model";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
 import { DataBucket, NullBucket, NULL_BUCKET, NULL_BUCKET_OUT_OF_BB, BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import type { Bucket } from "oxalis/model/binary/bucket";

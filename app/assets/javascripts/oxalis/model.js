@@ -33,7 +33,7 @@ import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { Vector3Indicies } from "oxalis/constants";
-import type { ModeType, Vector3, Vector6 } from "oxalis/constants";
+import type { ModeType, Vector3, BoundingBoxType } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
@@ -46,11 +46,6 @@ import update from "immutability-helper";
 
 // All public operations are **asynchronous**. We return a promise
 // which you can react on.
-
-export type BoundingBoxType = {
-  min: Vector3,
-  max: Vector3,
-};
 
 type SkeletonContentTreeType = {
   id: number,
@@ -117,7 +112,6 @@ class Model extends Backbone.Model {
     [key: string]: Binary,
   };
   taskBoundingBox: BoundingBoxType;
-  userBoundingBox: BoundingBoxType;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
   allowedModes: Array<ModeType>;
@@ -238,7 +232,7 @@ class Model extends Backbone.Model {
 
     const bb = tracing.content.boundingBox;
     if (bb != null) {
-      this.taskBoundingBox = this.computeBoundingBoxFromArray(Utils.concatVector3(bb.topLeft, [bb.width, bb.height, bb.depth]));
+      this.taskBoundingBox = Utils.computeBoundingBoxFromArray(Utils.concatVector3(bb.topLeft, [bb.width, bb.height, bb.depth]));
     }
 
     this.connectionInfo = new ConnectionInfo();
@@ -297,22 +291,6 @@ class Model extends Backbone.Model {
 
     // no error
   }
-
-  setUserBoundingBox(bb: Vector6) {
-    this.userBoundingBox = this.computeBoundingBoxFromArray(bb);
-    this.trigger("change:userBoundingBox", this.userBoundingBox);
-  }
-
-
-  computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
-    const [x, y, z, width, height, depth] = bb;
-
-    return {
-      min: [x, y, z],
-      max: [x + width, y + height, z + depth],
-    };
-  }
-
 
   // For now, since we have no UI for this
   buildMappingsObject() {

@@ -5,9 +5,8 @@
 
 import _ from "lodash";
 import DataCube from "oxalis/model/binary/data_cube";
-import type { BoundingBoxType } from "oxalis/model";
 import { Vector3Indicies } from "oxalis/constants";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4, BoundingBoxType } from "oxalis/constants";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 
 class BoundingBox {

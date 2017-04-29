@@ -9,7 +9,7 @@ import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import Constants from "oxalis/constants";
-import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType } from "oxalis/constants";
+import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType, BoundingBoxType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
@@ -255,6 +255,7 @@ export type OxalisState = {
   // of the store state.
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
+  +userBoundingBox: BoundingBoxType,
 
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
@@ -269,6 +270,10 @@ export type OxalisState = {
 export const defaultState: OxalisState = {
   viewMode: Constants.MODE_PLANE_TRACING,
   flightmodeRecording: false,
+  userBoundingBox: {
+    min: [0, 0, 0],
+    max: [0, 0, 0],
+  },
   datasetConfiguration: {
     datasetName: "",
     fourBit: true,

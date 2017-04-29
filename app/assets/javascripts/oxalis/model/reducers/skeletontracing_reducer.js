@@ -59,6 +59,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const newState = update(state, { tracing: { $set: skeletonTracing } });
       return zoomReducer(newState, contentData.zoomLevel);
     }
+    // TODO: these should probably live somewhere else
     case "SET_VIEW_MODE": {
       return update(state, {
         viewMode: { $set: action.viewMode },
@@ -67,7 +68,15 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
     case "SET_FLIGHTMODE_RECORDING": {
       return update(state, {
         flightmodeRecording: { $set: action.value },
-      })
+      });
+    }
+    case "SET_USER_BOUNDING_BOX": {
+      console.log("new user bounding box", action.boundingBox);
+      return update(state, {
+        userBoundingBox: {
+          $set: Utils.computeBoundingBoxFromArray(action.boundingBox),
+        },
+      });
     }
     default:
       // pass

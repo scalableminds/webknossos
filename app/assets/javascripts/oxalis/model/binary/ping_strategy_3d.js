@@ -5,7 +5,7 @@
 
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
-import type { BoundingBoxType } from "oxalis/model";
+import type { BoundingBoxType } from "oxalis/constants";
 import PolyhedronRasterizer from "oxalis/model/binary/polyhedron_rasterizer";
 import { AbstractPingStrategy } from "oxalis/model/binary/ping_strategy";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";

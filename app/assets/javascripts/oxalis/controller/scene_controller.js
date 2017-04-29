@@ -21,8 +21,8 @@ import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
-import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
-import type { BoundingBoxType } from "oxalis/model";
+import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 
 class SceneController {
@@ -320,7 +320,10 @@ class SceneController {
       this.setDisplayPlanes(tdViewDisplayPlanes);
       this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
     });
-    this.listenTo(this.model, "change:userBoundingBox", (bb) => { this.setUserBoundingBox(bb); });
+    listenToStoreProperty(
+      storeState => storeState.userBoundingBox,
+      bb => this.setUserBoundingBox(bb),
+    );
   }
 }
 SceneController.initClass();

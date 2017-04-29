@@ -13,6 +13,10 @@ export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
 export type Point2 = { x: number, y: number };
 export type Point3 = { x: number, y: number, z: number };
+export type BoundingBoxType = {
+  min: Vector3,
+  max: Vector3,
+};
 
 export const Vector2Indicies = [0, 1];
 export const Vector3Indicies = [0, 1, 2];

@@ -38,8 +38,8 @@ class ArbitraryPlaneInfo extends Marionette.View {
 
   initialize() {
     this.unsubscribeFunction = listenToStoreProperty(
-      (storeState) => storeState.flightmodeRecording,
-      () => this.updateCheckboxToggle()
+      storeState => storeState.flightmodeRecording,
+      () => this.updateCheckboxToggle(),
     );
   }
 

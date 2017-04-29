@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
+import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
@@ -62,6 +62,15 @@ const Utils = {
     const g = (bigint >> 8) & 255;
     const b = bigint & 255;
     return [r, g, b, 1];
+  },
+
+  computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
+    const [x, y, z, width, height, depth] = bb;
+
+    return {
+      min: [x, y, z],
+      max: [x + width, y + height, z + depth],
+    };
   },
 
   compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {

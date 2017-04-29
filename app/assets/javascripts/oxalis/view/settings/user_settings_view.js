@@ -11,7 +11,7 @@ import { Collapse } from "antd";
 import Constants from "oxalis/constants";
 import Model from "oxalis/model";
 import { updateUserSettingAction, updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction, setUserBoundingBoxAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
 import type { Vector6 } from "oxalis/constants";
@@ -36,7 +36,6 @@ type UserSettingsViewProps = {
   onChangeActiveCellId: (value: number) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
-  oldModel: Model,
   isPublicViewMode: boolean,
 };
 
@@ -56,6 +55,7 @@ class UserSettingsView extends Component {
 
   componentDidMount() {
     // remove public mode prop once oldModel is no longer a prop of this
+    // TODO: that would be now. @hotzenklotz, what should be done here?
     if (!this.props.isPublicViewMode) {
       this.unsubscribeFunction = listenToStoreProperty(
         storeState => storeState.viewMode,
@@ -78,7 +78,7 @@ class UserSettingsView extends Component {
   }
 
   onChangeBoundingBox = (boundingBox: Vector6) => {
-    this.props.oldModel.setUserBoundingBox(boundingBox);
+    Store.dispatch(setUserBoundingBoxAction(boundingBox));
     this.props.onChangeTemporary("boundingBox", boundingBox);
   }
 

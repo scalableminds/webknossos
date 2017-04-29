@@ -2,7 +2,7 @@
  * volumetracing_actions.js
  * @flow
  */
-import type { Vector3, OrthoViewType, VolumeModeType } from "oxalis/constants";
+import type { Vector3, OrthoViewType, VolumeTraceOrMoveModeType } from "oxalis/constants";
 import type { Tracing, VolumeContentDataType } from "oxalis/model";
 
 type InitializeVolumeTracingActionType = { type: "INITIALIZE_VOLUMETRACING", tracing: Tracing<VolumeContentDataType> };
@@ -11,7 +11,7 @@ type StartEditingActionType = { type: "START_EDITING", planeId: OrthoViewType };
 type AddToLayerActionType = { type: "ADD_TO_LAYER", position: Vector3 };
 type FinishEditingActionType = { type: "FINISH_EDITING" };
 type SetActiveCellActionType = { type: "SET_ACTIVE_CELL", cellId: number };
-type SetModeActionType = { type: "SET_MODE", mode: VolumeModeType };
+type SetModeActionType = { type: "SET_MODE", mode: VolumeTraceOrMoveModeType };
 type ToggleModeActionType = { type: "TOGGLE_MODE" };
 type UpdateDirectionActionType = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourActionType = { type: "RESET_CONTOUR" };
@@ -57,7 +57,7 @@ export const setActiveCellAction = (cellId: number): SetActiveCellActionType => 
   cellId,
 });
 
-export const setModeAction = (mode: VolumeModeType): SetModeActionType => ({
+export const setModeAction = (mode: VolumeTraceOrMoveModeType): SetModeActionType => ({
   type: "SET_MODE",
   mode,
 });

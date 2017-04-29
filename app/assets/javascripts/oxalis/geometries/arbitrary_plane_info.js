@@ -60,10 +60,10 @@ class ArbitraryPlaneInfo extends Marionette.View {
 
 
   updateCheckboxToggle() {
-    if (this.model.get("flightmodeRecording") === this.ui.checkbox.prop("checked")) {
+    if (this.model.flightmodeRecording === this.ui.checkbox.prop("checked")) {
       return;
     }
-    this.ui.checkbox.prop({ checked: this.model.get("flightmodeRecording") }).change();
+    this.ui.checkbox.prop({ checked: this.model.flightmodeRecording }).change();
   }
 
 

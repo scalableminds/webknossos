@@ -14,7 +14,7 @@ import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { createCellAction, setModeAction, startEditingAction, addToLayerAction, finishEditingAction } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId, getMode } from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OrthoViewType, Point2 } from "oxalis/constants";
 import type SceneController from "oxalis/controller/scene_controller";
 import type Model from "oxalis/model";
@@ -86,7 +86,7 @@ class VolumeTracingPlaneController extends PlaneController {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
         const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
 
-        const mode = getMode(Store.getState().tracing).get();
+        const mode = getVolumeTraceOrMoveMode(Store.getState().tracing).get();
         if (mode === constants.VOLUME_MODE_MOVE) {
           this.move([
             (delta.x * mouseInversionX) / this.planeView.scaleFactor,
@@ -111,7 +111,7 @@ class VolumeTracingPlaneController extends PlaneController {
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
-        const mode = getMode(Store.getState().tracing).get();
+        const mode = getVolumeTraceOrMoveMode(Store.getState().tracing).get();
         if (mode === constants.VOLUME_MODE_TRACE) {
           Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }

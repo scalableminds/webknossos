@@ -31,7 +31,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         cells: {},
         cubes: [],
         restrictions,
-        viewMode: Constants.VOLUME_MODE_MOVE,
+        volumeTraceOrMoveMode: Constants.VOLUME_MODE_MOVE,
         name: action.tracing.dataSetName,
         tracingType: action.tracing.typ,
         tracingId: action.tracing.id,

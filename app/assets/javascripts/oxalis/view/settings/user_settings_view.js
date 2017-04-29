@@ -15,9 +15,11 @@ import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction } f
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
 import type { Vector6 } from "oxalis/constants";
+import Store from "oxalis/store";
 import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, TracingType } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 const Panel = Collapse.Panel;
 
@@ -43,6 +45,7 @@ class UserSettingsView extends Component {
   props: UserSettingsViewProps;
   onChangeUser: {[$Keys<UserConfigurationType>]: Function};
   onChangeTemporary: {[$Keys<TemporaryConfigurationType>]: Function};
+  unsubscribeFunction: ?(() => void);
 
   componentWillMount() {
     // cache onChange handler
@@ -54,8 +57,16 @@ class UserSettingsView extends Component {
   componentDidMount() {
     // remove public mode prop once oldModel is no longer a prop of this
     if (!this.props.isPublicViewMode) {
-      const wkModel = this.props.oldModel;
-      wkModel.on("change:mode", () => this.forceUpdate());
+      this.unsubscribeFunction = listenToStoreProperty(
+        (storeState) => storeState.viewMode,
+        () => this.forceUpdate(),
+      );
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.unsubscribeFunction) {
+      this.unsubscribeFunction();
     }
   }
 
@@ -72,7 +83,7 @@ class UserSettingsView extends Component {
   }
 
   getViewportOptions = () => {
-    const mode = this.props.oldModel.mode;
+    const mode = Store.getState().viewMode;
     switch (mode) {
       case Constants.MODE_PLANE_TRACING:
         return (
@@ -106,7 +117,7 @@ class UserSettingsView extends Component {
   }
 
   getSkeletonOrVolumeOptions = () => {
-    const mode = this.props.oldModel.mode;
+    const mode = Store.getState().viewMode;
 
     if (Constants.MODES_SKELETON.includes(mode) && !this.props.isPublicViewMode && this.props.tracing.type === "skeleton") {
       const activeNodeId = this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
@@ -135,7 +146,7 @@ class UserSettingsView extends Component {
   };
 
   render() {
-    const mode = this.props.oldModel.mode;
+    const mode = Store.getState().viewMode;
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(mode) ?
       <NumberSliderSetting label="Move Value (nm/s)" min={30} max={1500} step={10} value={this.props.userConfiguration.moveValue3d} onChange={this.onChangeUser.moveValue3d} /> :
       <NumberSliderSetting label="Move Value (nm/s)" min={30} max={14000} step={10} value={this.props.userConfiguration.moveValue} onChange={this.onChangeUser.moveValue} />;

@@ -30,6 +30,9 @@ import constants from "oxalis/constants";
 import Request from "libs/request";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
+import { setViewModeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+
 import messages from "messages";
 
 import type { ToastType } from "libs/toast";
@@ -148,10 +151,7 @@ class Controller {
       this.listenTo(this.model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
     }
 
-
-    this.listenTo(this.model, "change:mode", this.loadMode);
-    this.loadMode(this.model.mode);
-
+    listenToStoreProperty((store) => store.viewMode, (mode) => this.loadMode(mode), true);
 
     // Zoom step warning
     this.zoomStepWarningToast = null;
@@ -206,16 +206,17 @@ class Controller {
     if (this.model.controlMode === constants.CONTROL_MODE_TRACE) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
-        "shift + 1": () => this.model.setMode(constants.MODE_PLANE_TRACING),
-        "shift + 2": () => this.model.setMode(constants.MODE_ARBITRARY),
-        "shift + 3": () => this.model.setMode(constants.MODE_ARBITRARY_PLANE),
+        "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
+        "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
+        "shift + 3": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE)),
 
         t: () => this.view.toggleTheme(),
 
         m: () => {
           // rotate allowed modes
-          const index = (this.model.allowedModes.indexOf(this.model.mode) + 1) % this.model.allowedModes.length;
-          this.model.setMode(this.model.allowedModes[index]);
+          const currentViewMode = Store.getState().viewMode;
+          const index = (this.model.allowedModes.indexOf(currentViewMode) + 1) % this.model.allowedModes.length;
+          Store.dispatch(setViewModeAction(this.model.allowedModes[index]));
         },
 
         "super + s": (event) => {

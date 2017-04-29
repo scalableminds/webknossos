@@ -7,13 +7,13 @@
  */
 
 import type { OxalisState, VolumeTracingType, VolumeCellType } from "oxalis/store";
-import type { VolumeModeType, Vector3 } from "oxalis/constants";
+import type { VolumeTraceOrMoveModeType, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import update from "immutability-helper";
 import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
 import { setRotationReducer } from "oxalis/model/reducers/flycam_reducer";
 
-export function setModeReducer(state: OxalisState, volumeTracing: VolumeTracingType, mode: VolumeModeType) {
+export function setModeReducer(state: OxalisState, volumeTracing: VolumeTracingType, mode: VolumeTraceOrMoveModeType) {
   if (mode === volumeTracing.viewMode) {
     return state;
   }

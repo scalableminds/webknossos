@@ -17,7 +17,7 @@ import Model from "oxalis/model";
 import View from "oxalis/view";
 import Store from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, setViewModeAction } from "oxalis/model/actions/skeletontracing_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -243,7 +243,7 @@ class ArbitraryController {
   createBranchMarker(pos: Point2): void {
     if (!this.isBranchpointvideoMode() && !this.isSynapseannotationMode()) { return; }
     const activeNodeId = getActiveNode(Store.getState().tracing).map(node => node.id).getOrElse(null);
-    this.model.setMode(2);
+    Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE));
     const f = Store.getState().flycam.zoomStep / (this.arbitraryView.width / this.WIDTH);
     Store.dispatch(moveFlycamAction([-(pos.x - (this.arbitraryView.width / 2)) * f, -(pos.y - (this.arbitraryView.width / 2)) * f, 0]));
     Store.dispatch(createTreeAction());
@@ -252,7 +252,7 @@ class ArbitraryController {
     if (this.isBranchpointvideoMode() && activeNodeId != null) {
       Store.dispatch(setActiveNodeAction(activeNodeId, true));
     }
-    this.model.setMode(1);
+    Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY));
     this.moved();
   }
 

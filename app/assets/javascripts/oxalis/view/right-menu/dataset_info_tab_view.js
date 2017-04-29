@@ -9,6 +9,7 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import Store from "oxalis/store";
 import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType } from "oxalis/store";
 import type Model from "oxalis/model";
 import TemplateHelpers from "libs/template_helpers";
@@ -26,14 +27,15 @@ class DatasetInfoTabView extends Component {
   calculateZoomLevel(): number {
     let width;
     let zoom;
-    if (constants.MODES_PLANE.includes(this.props.oldModel.mode)) {
+    const viewMode = Store.getState().viewMode;
+    if (constants.MODES_PLANE.includes(viewMode)) {
       zoom = getPlaneScalingFactor(this.props.flycam);
       width = constants.PLANE_WIDTH;
-    } else if (constants.MODES_ARBITRARY.includes(this.props.oldModel.mode)) {
+    } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
       zoom = this.props.flycam.zoomStep;
       width = ArbitraryController.prototype.WIDTH;
     } else {
-      throw Error("Model mode not recognized:", this.props.oldModel.mode);
+      throw Error("Model mode not recognized:", viewMode);
     }
     // unit is nm
     const baseVoxel = getBaseVoxel(this.props.dataset.scale);

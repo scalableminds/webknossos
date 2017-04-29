@@ -5,9 +5,7 @@
 
 import _ from "lodash";
 import Utils from "libs/utils";
-import Backbone from "backbone";
 import { V3 } from "libs/mjs";
-import Model from "oxalis/model";
 import Store from "oxalis/store";
 import type { Vector3, ModeType } from "oxalis/constants";
 import constants, { ModeValues } from "oxalis/constants";
@@ -28,18 +26,12 @@ export type UrlManagerState = {
 
 class UrlManager {
   baseUrl: string;
-  model: Model;
   initialState: UrlManagerState;
   lastUrl: ?string
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
 
-  constructor(model: Model) {
-    this.model = model;
+  constructor() {
     this.baseUrl = document.location.pathname + document.location.search;
     this.initialState = this.parseUrl();
-
-    _.extend(this, Backbone.Events);
   }
 
   update = _.throttle(
@@ -94,19 +86,23 @@ class UrlManager {
 
 
   startUrlUpdater(): void {
-    this.listenTo(this.model, "change:mode", this.update);
-
     if (Store.getState().tracing) {
       Store.subscribe(() => this.update());
+    } else {
+      // TODO:
+      console.warn("When does this happen? Why can't we always listen to store changes?");
+      // should we do something like this?
+      // this.listenTo(this.model, "change:mode", this.update);
     }
   }
 
 
   buildUrl(): string {
+    const viewMode = Store.getState().viewMode;
     let state = V3.floor(getPosition(Store.getState().flycam));
-    state.push(this.model.mode);
+    state.push(viewMode);
 
-    if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
+    if (constants.MODES_ARBITRARY.includes(viewMode)) {
       state = state
         .concat([Store.getState().flycam.zoomStep.toFixed(2)])
         .concat(getRotation(Store.getState().flycam).map(e => e.toFixed(2)));

@@ -59,6 +59,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const newState = update(state, { tracing: { $set: skeletonTracing } });
       return zoomReducer(newState, contentData.zoomLevel);
     }
+    case "SET_VIEW_MODE": {
+      return update(state, {
+        viewMode: {$set: action.viewMode}
+      });
+    }
     default:
       // pass
   }

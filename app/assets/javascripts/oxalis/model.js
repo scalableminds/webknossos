@@ -23,7 +23,7 @@ import type {
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, initializeSkeletonTracingAction, setViewModeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
@@ -121,7 +121,6 @@ class Model extends Backbone.Model {
   userBoundingBox: BoundingBoxType;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  mode: ModeType;
   allowedModes: Array<ModeType>;
   isVolume: boolean;
   settings: SettingsType;
@@ -143,6 +142,13 @@ class Model extends Backbone.Model {
   constructor(attributes?: Attrs, options?: ModelOpts) {
     super(attributes, options);
     this.initialized = false;
+    // Unpack the properties manually:
+    // $FlowFixMe
+    this.tracingType = attributes.tracingType;
+    // $FlowFixMe
+    this.tracingId = attributes.tracingId;
+    // $FlowFixMe
+    this.controlMode = attributes.controlMode;
   }
 
 
@@ -285,7 +291,7 @@ class Model extends Backbone.Model {
       Toast.error("There was no valid allowed tracing mode specified.");
     } else {
       const mode = this.preferredMode || this.state.mode || this.allowedModes[0];
-      this.setMode(mode);
+      Store.dispatch(setViewModeAction(mode));
     }
 
 
@@ -294,13 +300,6 @@ class Model extends Backbone.Model {
 
     // no error
   }
-
-
-  setMode(mode: ModeType) {
-    this.mode = mode;
-    this.trigger("change:mode", mode);
-  }
-
 
   setUserBoundingBox(bb: Vector6) {
     this.userBoundingBox = this.computeBoundingBoxFromArray(bb);

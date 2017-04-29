@@ -1,7 +1,7 @@
 // @flow
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
-import type { VolumeModeType } from "oxalis/constants";
+import type { VolumeTraceOrMoveModeType } from "oxalis/constants";
 import type { OxalisState, VolumeTracingType } from "oxalis/store";
 import Constants from "oxalis/constants";
 import Store from "oxalis/store";
@@ -13,7 +13,7 @@ class VolumeActionsView extends PureComponent {
     volumeTracing: VolumeTracingType,
   };
 
-  handleSetMode = (event: { target: { value: VolumeModeType } }) => {
+  handleSetMode = (event: { target: { value: VolumeTraceOrMoveModeType } }) => {
     Store.dispatch(setModeAction(
       event.target.value,
     ));

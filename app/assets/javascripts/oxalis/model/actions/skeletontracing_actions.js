@@ -6,6 +6,7 @@
  */
 import type { Vector3 } from "oxalis/constants";
 import type { Tracing, SkeletonContentDataType } from "oxalis/model";
+import type { ModeType } from "oxalis/constants";
 
 type InitializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing<SkeletonContentDataType> };
 type CreateNodeActionType = {type: "CREATE_NODE", position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number, treeId?: number};
@@ -24,6 +25,7 @@ type SelectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: ?boolean};
 type ShuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR", treeId?: number};
 type CreateCommentActionType = {type: "CREATE_COMMENT", commentText: string, nodeId: ?number, treeId: ?number};
 type DeleteCommentActionType = {type: "DELETE_COMMENT", nodeId: ?number, treeId?: number};
+type SetViewModeActionType = {type: "SET_VIEW_MODE", viewMode: ModeType};
 
 export type SkeletonTracingActionType =
   | InitializeSkeletonTracingActionType
@@ -43,7 +45,9 @@ export type SkeletonTracingActionType =
   | SelectNextTreeActionType
   | ShuffleTreeColorActionType
   | CreateCommentActionType
-  | DeleteCommentActionType;
+  | DeleteCommentActionType
+  | SetViewModeActionType
+;
 
 export const SkeletonTracingActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -63,6 +67,7 @@ export const SkeletonTracingActions = [
   "SHUFFLE_TREE_COLOR",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
+  "SET_VIEW_MODE",
 ];
 
 export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContentDataType>): InitializeSkeletonTracingActionType => ({
@@ -161,4 +166,9 @@ export const deleteCommentAction = (nodeId?: number, treeId?: number): DeleteCom
   type: "DELETE_COMMENT",
   nodeId,
   treeId,
+});
+
+export const setViewModeAction = (viewMode: ModeType): SetViewModeActionType => ({
+  type: "SET_VIEW_MODE",
+  viewMode,
 });

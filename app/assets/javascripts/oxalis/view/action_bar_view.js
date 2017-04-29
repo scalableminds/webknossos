@@ -7,10 +7,11 @@ import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
 import Constants from "oxalis/constants";
 import { Button } from "antd";
+import Store from "oxalis/store";
 
 function ActionBarView({ oldModel }: { oldModel: Model }) {
   const isTraceMode = oldModel.controlMode === Constants.CONTROL_MODE_TRACE;
-  const isVolumeMode = oldModel.mode === Constants.MODE_VOLUME;
+  const isVolumeMode = Store.getState().viewMode === Constants.MODE_VOLUME;
   const hasAdvancedOptions = oldModel.settings.advancedOptionsAllowed;
 
   return (
@@ -33,7 +34,7 @@ function ActionBarView({ oldModel }: { oldModel: Model }) {
       { isTraceMode ? <DatasetActionsView oldModel={oldModel} /> : null }
       { hasAdvancedOptions ? <DatasetPositionView oldModel={oldModel} /> : null }
       { isVolumeMode && hasAdvancedOptions ? <VolumeActionsView oldModel={oldModel} /> : null }
-      { !isVolumeMode && isTraceMode && hasAdvancedOptions ? <ViewModesView oldModel={oldModel} /> : null }
+      { !isVolumeMode && isTraceMode && hasAdvancedOptions ? <ViewModesView /> : null }
     </div>
   );
 }

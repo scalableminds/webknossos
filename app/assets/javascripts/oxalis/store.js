@@ -8,7 +8,8 @@
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import type { Vector3, Vector6, ModeType, VolumeModeType } from "oxalis/constants";
+import Constants from "oxalis/constants";
+import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
@@ -149,7 +150,6 @@ export type SkeletonTracingType = {
   +activeNodeId: ?number,
   +cachedMaxNodeId: number,
   +restrictions: RestrictionsType & SettingsType,
-  +viewMode: ModeType,
 };
 
 export type VolumeTracingType = {
@@ -157,7 +157,7 @@ export type VolumeTracingType = {
   +name: string,
   +version: number,
   +maxCellId: number,
-  +viewMode: VolumeModeType,
+  +volumeTraceOrMoveMode: VolumeTraceOrMoveModeType,
   +cubes: [],
   +activeCellId: number,
   +lastCentroid: ?Vector3,
@@ -247,9 +247,13 @@ export type FlycamType = {
   +zoomStep: number,
   +currentMatrix: Matrix4x4,
   +spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
-}
+};
 
 export type OxalisState = {
+  // TODO: we have to refactor all the modes, since the current state is way too confusing.
+  // This mode value was originally stored in model.mode and should probably be in one of the subitems
+  // of the store state.
+  +viewMode: ModeType,
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
   +temporaryConfiguration: TemporaryConfigurationType,
@@ -261,6 +265,7 @@ export type OxalisState = {
 };
 
 export const defaultState: OxalisState = {
+  viewMode: Constants.MODE_PLANE_TRACING,
   datasetConfiguration: {
     datasetName: "",
     fourBit: true,

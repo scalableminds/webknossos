@@ -31,7 +31,7 @@ class ArbitraryView {
   setClippingDistance: (value: number) => void;
 
 
-  forceUpdate: boolean = false;
+  needsRerender: boolean = false;
   additionalInfo: string = "";
   isRunning: boolean = true;
   animationRequestId: number = 0;
@@ -89,11 +89,11 @@ class ArbitraryView {
     this.scene.add(this.group);
     this.group.add(this.camera);
 
-    app.vent.on("rerender", () => { this.forceUpdate = true; });
+    app.vent.on("rerender", () => { this.needsRerender = true; });
     Store.subscribe(() => {
       // Render in the next frame after the change propagated everywhere
       window.requestAnimationFrame(() => {
-        this.forceUpdate = true;
+        this.needsRerender = true;
       });
     });
   }
@@ -145,10 +145,10 @@ class ArbitraryView {
     this.animationRequestId = 0;
     if (!this.isRunning) { return; }
 
-    if (this.forceUpdate) {
+    if (this.needsRerender) {
       TWEEN.update();
 
-      this.trigger("render", this.forceUpdate);
+      this.trigger("render");
 
       const { camera, geometries, renderer, scene } = this;
 
@@ -176,7 +176,7 @@ class ArbitraryView {
 
       renderer.render(scene, camera);
 
-      this.forceUpdate = false;
+      this.needsRerender = false;
     }
 
     this.animationRequestId = window.requestAnimationFrame(this.animate);
@@ -184,7 +184,7 @@ class ArbitraryView {
 
 
   draw(): void {
-    this.forceUpdate = true;
+    this.needsRerender = true;
   }
 
 

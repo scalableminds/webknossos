@@ -4,31 +4,21 @@ import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
 import { Radio } from "antd";
 import { setViewModeAction } from "oxalis/model/actions/skeletontracing_actions";
+import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { connect } from "react-redux";
 
 class ViewModesView extends PureComponent {
-  unsubscribeFunction: () => void;
-
-  componentDidMount() {
-    this.unsubscribeFunction = listenToStoreProperty(
-      storeState => storeState.viewMode,
-      () => this._forceUpdate(),
-    );
+  props: {
+    viewMode: ModeType,
   }
-
-  componentWillUnmount() {
-    this.unsubscribeFunction();
-  }
-
-  _forceUpdate = () => { this.forceUpdate(); };
 
   handleChange = (event: { target: { value: ModeType } }) => {
     Store.dispatch(setViewModeAction(event.target.value));
   };
 
   render() {
-    const viewMode = Store.getState().viewMode;
+    const viewMode = this.props.viewMode;
     return (
       <Radio.Group onChange={this.handleChange} value={viewMode} size="large">
         <Radio.Button value={constants.MODE_PLANE_TRACING}>Orthogonal</Radio.Button>
@@ -39,4 +29,10 @@ class ViewModesView extends PureComponent {
   }
 }
 
-export default ViewModesView;
+function mapStateToProps(state: OxalisState) {
+  return {
+    viewMode: state.viewMode,
+  };
+}
+
+export default connect(mapStateToProps)(ViewModesView);

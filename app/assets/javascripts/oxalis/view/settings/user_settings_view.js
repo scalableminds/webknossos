@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import React, { Component } from "react";
+import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { Collapse } from "antd";
@@ -13,12 +13,11 @@ import { updateUserSettingAction, updateTemporarySettingAction } from "oxalis/mo
 import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction, setUserBoundingBoxAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
-import type { Vector6 } from "oxalis/constants";
+import type { Vector6, ModeType } from "oxalis/constants";
 import Store from "oxalis/store";
 import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, TracingType } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 const Panel = Collapse.Panel;
 
@@ -36,14 +35,14 @@ type UserSettingsViewProps = {
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
   isPublicViewMode: boolean,
+  viewMode: ModeType,
 };
 
-class UserSettingsView extends Component {
+class UserSettingsView extends PureComponent {
 
   props: UserSettingsViewProps;
   onChangeUser: {[$Keys<UserConfigurationType>]: Function};
   onChangeTemporary: {[$Keys<TemporaryConfigurationType>]: Function};
-  unsubscribeFunction: ?(() => void);
 
   componentWillMount() {
     // cache onChange handler
@@ -52,38 +51,13 @@ class UserSettingsView extends Component {
     );
   }
 
-  componentDidMount() {
-    // remove public mode prop once oldModel is no longer a prop of this
-    // TODO: that would be now. @hotzenklotz, what should be done here?
-    if (!this.props.isPublicViewMode) {
-      this.unsubscribeFunction = listenToStoreProperty(
-        storeState => storeState.viewMode,
-        () => this.forceUpdate(),
-      );
-    }
-  }
-
-  shouldComponentUpdate(nextProps: UserSettingsViewProps) {
-    return this.props.userConfiguration !== nextProps.userConfiguration
-      || this.props.temporaryConfiguration !== nextProps.temporaryConfiguration
-      || this.props.tracing !== nextProps.tracing
-      || this.props.state !== nextProps.state;
-  }
-
-  componentWillUnmount() {
-    if (this.unsubscribeFunction) {
-      this.unsubscribeFunction();
-    }
-  }
-
   onChangeBoundingBox = (boundingBox: Vector6) => {
     Store.dispatch(setUserBoundingBoxAction(boundingBox));
     this.props.onChangeTemporary("boundingBox", boundingBox);
   }
 
   getViewportOptions = () => {
-    const mode = Store.getState().viewMode;
-    switch (mode) {
+    switch (this.props.viewMode) {
       case Constants.MODE_PLANE_TRACING:
         return (
           <Panel header="Viewport Options" key="2">
@@ -116,7 +90,7 @@ class UserSettingsView extends Component {
   }
 
   getSkeletonOrVolumeOptions = () => {
-    const mode = Store.getState().viewMode;
+    const mode = this.props.viewMode;
 
     if (Constants.MODES_SKELETON.includes(mode) && !this.props.isPublicViewMode && this.props.tracing.type === "skeleton") {
       const activeNodeId = this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
@@ -145,8 +119,7 @@ class UserSettingsView extends Component {
   };
 
   render() {
-    const mode = Store.getState().viewMode;
-    const moveValueSetting = Constants.MODES_ARBITRARY.includes(mode) ?
+    const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ?
       <NumberSliderSetting label="Move Value (nm/s)" min={30} max={1500} step={10} value={this.props.userConfiguration.moveValue3d} onChange={this.onChangeUser.moveValue3d} /> :
       <NumberSliderSetting label="Move Value (nm/s)" min={30} max={14000} step={10} value={this.props.userConfiguration.moveValue} onChange={this.onChangeUser.moveValue} />;
 
@@ -176,6 +149,7 @@ const mapStateToProps = (state: OxalisState) => ({
   tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
   state,
+  viewMode: state.viewMode,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

@@ -71,7 +71,6 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       });
     }
     case "SET_USER_BOUNDING_BOX": {
-      console.log("new user bounding box", action.boundingBox);
       return update(state, {
         userBoundingBox: {
           $set: Utils.computeBoundingBoxFromArray(action.boundingBox),

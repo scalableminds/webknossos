@@ -14,7 +14,7 @@ import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_
 import { setRotationReducer } from "oxalis/model/reducers/flycam_reducer";
 
 export function setModeReducer(state: OxalisState, volumeTracing: VolumeTracingType, mode: VolumeTraceOrMoveModeType) {
-  if (mode === volumeTracing.viewMode) {
+  if (mode === volumeTracing.volumeTraceOrMoveMode) {
     return state;
   }
   if (mode === Constants.VOLUME_MODE_TRACE && isVolumeTracingDisallowed(state)) {
@@ -22,7 +22,7 @@ export function setModeReducer(state: OxalisState, volumeTracing: VolumeTracingT
   }
 
   return update(state, { tracing: {
-    viewMode: { $set: mode },
+    volumeTraceOrMoveMode: { $set: mode },
   } });
 }
 

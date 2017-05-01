@@ -94,11 +94,6 @@ class TracingLayoutView extends Marionette.View {
 
     this.model = this.options.model;
 
-    window.hotSwap = () => {
-      this.model.tracingId = "59036d3e3e0000aa0b2f79ce";
-      this.model.fetch();
-    };
-
     this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
     this.listenTo(this.model, "sync", this.renderRegions);
     $(window).on("resize", this.resizeRightMenu.bind(this));
@@ -154,7 +149,7 @@ class TracingLayoutView extends Marionette.View {
 
     render(
       <Provider store={store}>
-        <SettingsView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
+        <SettingsView isPublicViewMode={!this.isTracingMode()} />
       </Provider>,
       this.ui.settings[0],
     );

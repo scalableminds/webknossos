@@ -1,10 +1,12 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
+// Integration tests for skeleton.js
+
 import test from "ava";
 import mockRequire from "mock-require";
 import _ from "lodash";
-import { createNodeAction, createTreeAction, deleteNodeAction, createBranchPointAction, setActiveNodeRadiusAction, setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { createNodeAction, createTreeAction, deleteNodeAction, createBranchPointAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 
 mockRequire.stopAll();
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -37,7 +39,7 @@ test.before((t) => {
   }
 });
 
-test("Skeleton should initialize correctly using the store's state", (t) => {
+test.serial("Skeleton should initialize correctly using the store's state", (t) => {
   const trees = Store.getState().skeletonTracing.trees;
   const skeleton = new Skeleton();
 
@@ -54,7 +56,7 @@ test("Skeleton should initialize correctly using the store's state", (t) => {
   const nodeTreeIds = [];
   let edgePositions = [];
   const edgeTreeIds = [];
-  let treeColors = [0,0,0]; // tree ids start at index 1
+  let treeColors = [0, 0, 0]; // tree ids start at index 1
 
   for (const tree of Object.values(trees)) {
     treeColors = treeColors.concat(tree.color);
@@ -111,33 +113,35 @@ test.serial("Skeleton should increase its buffers once the max capacity is reach
 test.serial("Skeleton should invalidate a node upon deletion", async (t) => {
   const skeleton = new Skeleton();
 
+  // do index lookup before "dispatch" because index will be deleted as well
+  const id = skeleton.combineIds(1, 1);
+  const index = skeleton.nodes.idToBufferPosition.get(id).index;
+
   Store.dispatch(deleteNodeAction(1, 1));
-  console.log(Date.now())
-  await Utils.sleep(1500);
-  console.log(Date.now())
-  const index = skeleton.combineIds(1, 1);
-  console.log("index", index)
-  console.log(skeleton.nodes.buffers[0].geometry.attributes.type.array)
+  await Utils.sleep(50);
   t.is(skeleton.nodes.buffers[0].geometry.attributes.type.array[index], NodeShader.NodeTypes.INVALID);
 });
 
 test.serial("Skeleton should invalidate an edge upon deletion", async (t) => {
   const skeleton = new Skeleton();
 
-  Store.dispatch(deleteNodeAction(2, 2));
+  // do index lookup before "dispatch" because index will be deleted as well
+  const id = skeleton.combineIds(2, 1);
+  const index = skeleton.nodes.idToBufferPosition.get(id).index;
 
-  await Utils.sleep(100);
-  const index = skeleton.combineIds(2, 2, 3);
-  t.is(skeleton.nodes.buffers[0].geometry.attributes.type.array.subarray(index, 6), [0, 0, 0, 0, 0, 0]);
+  Store.dispatch(deleteNodeAction(2, 1));
+  await Utils.sleep(50);
+  t.deepEqual(skeleton.edges.buffers[0].geometry.attributes.position.array.subarray(index * 6, index * 6 + 6), new Float32Array([0, 0, 0, 0, 0, 0]));
 });
 
 test.serial("Skeleton should update node types for branchpoints", async (t) => {
   const skeleton = new Skeleton();
 
-  Store.dispatch(createBranchPointAction(3, 3));
+  Store.dispatch(createBranchPointAction(3, 1));
 
-  await Utils.sleep(100);
-  const index = skeleton.combineIds(3, 3);
+  await Utils.sleep(50);
+  const id = skeleton.combineIds(3, 1);
+  const index = skeleton.nodes.idToBufferPosition.get(id).index;
   t.is(skeleton.nodes.buffers[0].geometry.attributes.type.array[index], NodeShader.NodeTypes.BRANCH_POINT);
 });
 
@@ -147,8 +151,9 @@ test.serial("Skeleton should update node radius", async (t) => {
 
   Store.dispatch(setActiveNodeRadiusAction(2));
 
-  await Utils.sleep(100);
-  const index = skeleton.combineIds(activeNodeId, activeTreeId);
+  await Utils.sleep(50);
+  const id = skeleton.combineIds(activeNodeId, activeTreeId);
+  const index = skeleton.nodes.idToBufferPosition.get(id).index;
   t.is(skeleton.nodes.buffers[0].geometry.attributes.radius.array[index], 2);
 });
 
@@ -158,14 +163,6 @@ test.serial("Skeleton should update tree colors upon tree creation", async (t) =
   Store.dispatch(createTreeAction());
   const { activeTreeId, trees } = Store.getState().skeletonTracing;
 
-  await Utils.sleep(100);
-  t.is(skeleton.treeColorTexture.image.data.subarray(activeTreeId, 3), trees[activeTreeId.color]);
-});
-
-test.serial("Skeleton should start a node highlighting animation upon active node id change", async (t) => {
-  const skeleton = new Skeleton();
-
-  Store.dispatch(setActiveNodeAction(100));
-  await Utils.sleep(100);
-  t.truthy(skeleton.nodes.material.uniforms.activeNodeScaleFactor.value > 1.0 && skeleton.nodes.material.uniforms.activeNodeScaleFactor.value <= 2.0);
+  await Utils.sleep(50);
+  t.deepEqual(skeleton.treeColorTexture.image.data.subarray(activeTreeId * 3, activeTreeId * 3 + 3), new Float32Array(trees[activeTreeId].color));
 });

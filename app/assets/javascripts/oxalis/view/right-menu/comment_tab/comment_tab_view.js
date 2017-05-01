@@ -9,6 +9,7 @@ import Maybe from "data.maybe";
 import Utils from "libs/utils";
 import { connect } from "react-redux";
 import { Button, Input } from "antd";
+import InputComponent from "oxalis/view/components/input_component";
 import { InputKeyboardNoLoop } from "libs/input";
 import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveNodeAction, createCommentAction, deleteCommentAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -143,7 +144,7 @@ class CommentTabView extends React.Component {
       <div className="flex-column">
         <InputGroup compact>
           <Button onClick={this.previousComment}><i className="fa fa-arrow-left" /></Button>
-          <Input
+          <InputComponent
             value={activeComment}
             onChange={this.handleChangeInput}
             placeholder="Add comment"

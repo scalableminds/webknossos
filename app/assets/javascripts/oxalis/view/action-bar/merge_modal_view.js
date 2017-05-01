@@ -6,7 +6,8 @@ import type { OxalisState } from "oxalis/store";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import app from "app";
-import { Modal, Button, Input, Upload, Select, Form } from "antd";
+import { Modal, Button, Upload, Select, Form } from "antd";
+import InputComponent from "oxalis/view/components/input_component";
 
 type AnnotationInfoType = {
   typ: string,
@@ -186,7 +187,7 @@ class MergeModalView extends PureComponent {
 
         <Form layout="inline" onSubmit={this.handleMergeExplorativeAnnotation}>
           <Form.Item label="Explorative Annotation">
-            <Input
+            <InputComponent
               value={this.state.selectedExplorativeAnnotation}
               style={{ width: 200 }}
               onChange={this.handleChangeMergeExplorativeAnnotation}

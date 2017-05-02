@@ -4,6 +4,7 @@
  */
 import $ from "jquery";
 import _ from "lodash";
+import app from "app";
 import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
@@ -30,7 +31,7 @@ class ArbitraryView {
   setClippingDistance: (value: number) => void;
 
 
-  forceUpdate: boolean = false;
+  needsRerender: boolean = false;
   additionalInfo: string = "";
   isRunning: boolean = true;
   animationRequestId: number = 0;
@@ -87,6 +88,14 @@ class ArbitraryView {
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.group);
     this.group.add(this.camera);
+
+    app.vent.on("rerender", () => { this.needsRerender = true; });
+    Store.subscribe(() => {
+      // Render in the next frame after the change propagated everywhere
+      window.requestAnimationFrame(() => {
+        this.needsRerender = true;
+      });
+    });
   }
 
 
@@ -136,44 +145,46 @@ class ArbitraryView {
     this.animationRequestId = 0;
     if (!this.isRunning) { return; }
 
-    TWEEN.update();
+    if (this.needsRerender) {
+      TWEEN.update();
 
-    this.trigger("render", this.forceUpdate);
+      this.trigger("render");
 
-    const { camera, geometries, renderer, scene } = this;
+      const { camera, geometries, renderer, scene } = this;
 
-    for (const geometry of geometries) {
-      if (geometry.update != null) {
-        geometry.update();
+      for (const geometry of geometries) {
+        if (geometry.update != null) {
+          geometry.update();
+        }
       }
+
+      const m = getZoomedMatrix(Store.getState().flycam);
+
+      camera.matrix.set(m[0], m[4], m[8], m[12],
+                        m[1], m[5], m[9], m[13],
+                        m[2], m[6], m[10], m[14],
+                        m[3], m[7], m[11], m[15]);
+
+      camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
+      camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
+      camera.matrixWorldNeedsUpdate = true;
+
+      renderer.setViewport(0, 0, this.width, this.height);
+      renderer.setScissor(0, 0, this.width, this.height);
+      renderer.setScissorTest(true);
+      renderer.setClearColor(0xFFFFFF, 1);
+
+      renderer.render(scene, camera);
+
+      this.needsRerender = false;
     }
-
-    const m = getZoomedMatrix(Store.getState().flycam);
-
-    camera.matrix.set(m[0], m[4], m[8], m[12],
-                      m[1], m[5], m[9], m[13],
-                      m[2], m[6], m[10], m[14],
-                      m[3], m[7], m[11], m[15]);
-
-    camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
-    camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
-    camera.matrixWorldNeedsUpdate = true;
-
-    renderer.setViewport(0, 0, this.width, this.height);
-    renderer.setScissor(0, 0, this.width, this.height);
-    renderer.setScissorTest(true);
-    renderer.setClearColor(0xFFFFFF, 1);
-
-    renderer.render(scene, camera);
-
-    this.forceUpdate = false;
 
     this.animationRequestId = window.requestAnimationFrame(this.animate);
   }
 
 
   draw(): void {
-    this.forceUpdate = true;
+    this.needsRerender = true;
   }
 
 

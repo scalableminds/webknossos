@@ -26,7 +26,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import View from "oxalis/view";
 import SkeletonTracingView from "oxalis/view/skeletontracing_view";
 import VolumeTracingView from "oxalis/view/volumetracing_view";
-import constants from "oxalis/constants";
+import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
@@ -94,7 +94,7 @@ class Controller {
     }
 
     app.router.on("beforeunload", () => {
-      if (model.controlMode === constants.CONTROL_MODE_TRACE) {
+      if (model.controlMode === ControlModeEnum.TRACE) {
         const state = Store.getState();
         const stateSaved = model.stateSaved();
         if (!stateSaved && state.tracing.restrictions.allowUpdate) {
@@ -110,7 +110,7 @@ class Controller {
     this.sceneController = new SceneController(model);
 
     // TODO: Replace with skeletonTracing from Store (which is non-null currently)
-    if (model.controlMode === constants.CONTROL_MODE_TRACE) {
+    if (model.controlMode === ControlModeEnum.TRACE) {
       if (model.isVolumeTracing()) {
         // VOLUME MODE
         this.view = new VolumeTracingView(model);
@@ -203,7 +203,7 @@ class Controller {
 
     const keyboardControls = {};
 
-    if (model.controlMode === constants.CONTROL_MODE_TRACE) {
+    if (model.controlMode === ControlModeEnum.TRACE) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
         "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),

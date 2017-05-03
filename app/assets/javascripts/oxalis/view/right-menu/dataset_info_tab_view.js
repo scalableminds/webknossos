@@ -6,7 +6,7 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import constants from "oxalis/constants";
+import constants, { ControlModeEnum } from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
@@ -65,7 +65,7 @@ class DatasetInfoTabView extends Component {
     const zoomLevel = this.calculateZoomLevel();
     const dataSetName = this.props.dataset.name;
     const treeCount = _.size(this.props.skeletonTracing.trees);
-    const isPublicViewMode = this.props.oldModel.controlMode === constants.CONTROL_MODE_VIEW;
+    const isPublicViewMode = this.props.oldModel.controlMode === ControlModeEnum.VIEW;
 
     return (
       <div>

@@ -31,7 +31,7 @@ import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import constants, { Vector3Indicies } from "oxalis/constants";
+import constants, { Vector3Indicies, ControlModeEnum } from "oxalis/constants";
 import type { ModeType, Vector3, BoundingBoxType } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -139,7 +139,7 @@ export class OxalisModel {
 
   fetch() {
     let infoUrl;
-    if (this.controlMode === constants.CONTROL_MODE_TRACE) {
+    if (this.controlMode === ControlModeEnum.TRACE) {
       // Include /readOnly part whenever it is in the pathname
       infoUrl = `${window.location.pathname}/info`;
     } else {
@@ -248,7 +248,7 @@ export class OxalisModel {
 
     this.isVolume = tracing.content.settings.allowedModes.includes("volume");
 
-    if (this.controlMode === constants.CONTROL_MODE_TRACE) {
+    if (this.controlMode === ControlModeEnum.TRACE) {
       if (this.isVolumeTracing()) {
         ErrorHandling.assert((this.getSegmentationBinary() != null),
           "Volume is allowed, but segmentation does not exist");

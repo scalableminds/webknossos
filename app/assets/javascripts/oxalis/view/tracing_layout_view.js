@@ -15,7 +15,7 @@ import OxalisController from "oxalis/controller";
 import model from "oxalis/model";
 import type { OxalisModel } from "oxalis/model";
 import OxalisApi from "oxalis/api/api_loader";
-import Constants from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import Modal from "oxalis/view/modal";
 import Utils from "libs/utils";
 import SettingsView from "oxalis/view/settings/settings_view";
@@ -194,7 +194,7 @@ class TracingLayoutView extends Marionette.View {
 
 
   isTracingMode() {
-    return this.model.controlMode !== Constants.CONTROL_MODE_VIEW;
+    return this.model.controlMode !== ControlModeEnum.VIEW;
   }
 
 

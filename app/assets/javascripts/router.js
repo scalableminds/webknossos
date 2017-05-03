@@ -8,7 +8,7 @@
 
 import $ from "jquery";
 import _ from "lodash";
-import constants from "oxalis/constants";
+import constants, { ControlModeEnum } from "oxalis/constants";
 import BaseRouter from "libs/base_router";
 import PaginationCollection from "admin/models/pagination_collection";
 
@@ -75,7 +75,7 @@ class Router extends BaseRouter {
       const view = new TracingLayoutView({
         tracingType: type,
         tracingId: id,
-        controlMode: constants.CONTROL_MODE_TRACE,
+        controlMode: ControlModeEnum.TRACE,
       });
       view.forcePageReload = true;
       this.changeView(view);
@@ -92,7 +92,7 @@ class Router extends BaseRouter {
       const view = new TracingLayoutView({
         tracingType: "View",
         tracingId: id,
-        controlMode: constants.CONTROL_MODE_VIEW,
+        controlMode: ControlModeEnum.VIEW,
       });
       view.forcePageReload = true;
       this.changeView(view);

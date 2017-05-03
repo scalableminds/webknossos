@@ -181,6 +181,7 @@ class TracingApi {
   */
   setVolumeMode(mode: VolumeModeType) {
     assertExists(mode, "Volume mode is missing.");
+    // TODO: Use an Enum for VolumeModeType and replace this ugly check - postponed to avoid merge conflicts
     if (mode !== 0 && mode !== 1) {
       throw Error("Volume mode has to be either 0 or 1.");
     }

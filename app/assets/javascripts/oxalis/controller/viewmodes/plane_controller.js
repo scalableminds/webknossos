@@ -11,7 +11,7 @@ import Utils from "libs/utils";
 import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
-import Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import View from "oxalis/view";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -28,7 +28,7 @@ import type { ModifierKeys } from "libs/input";
 
 class PlaneController {
   planeView: PlaneView;
-  model: Model;
+  model: OxalisModel
   view: View;
   input: {
     mouseControllers: OrthoViewMapType<InputMouse>;
@@ -78,7 +78,7 @@ class PlaneController {
 
 
   constructor(
-    model: Model,
+    model: OxalisModel,
     view: View,
     sceneController: SceneController,
   ) {

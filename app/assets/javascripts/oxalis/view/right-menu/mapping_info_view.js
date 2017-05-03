@@ -6,7 +6,7 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import Cube from "oxalis/model/binary/data_cube";
 import type { OxalisState } from "oxalis/store";
-import type Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import type { Vector3 } from "oxalis/constants";
 import { SwitchSetting } from "oxalis/view/settings/setting_input_views";

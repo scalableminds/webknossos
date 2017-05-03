@@ -102,7 +102,7 @@ export type Tracing<T> = {
 };
 
 // TODO: Non-reactive
-class Model {
+export class OxalisModel {
   HANDLED_ERROR = "error_was_handled";
 
   initialized: boolean;
@@ -125,16 +125,15 @@ class Model {
   state: UrlManagerState;
   eventHub: typeof Backbone.Events;
 
-  constructor(attributes: ?Object) {
+  constructor() {
     this.initialized = false;
     this.eventHub = _.extend({}, Backbone.Events);
-    if (attributes) {
-      this.tracingType = attributes.tracingType;
-      this.tracingId = attributes.tracingId;
-      this.controlMode = attributes.controlMode;
-    } else {
-      throw new Error("Model didn't receive attributes");
-    }
+  }
+
+  initialize(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: mixed) {
+    this.tracingType = tracingType;
+    this.tracingId = tracingId;
+    this.controlMode = controlMode;
   }
 
 
@@ -398,4 +397,7 @@ class Model {
   };
 }
 
-export default Model;
+// export the model as a singleton
+const a = new OxalisModel();
+a.save();
+export default a;

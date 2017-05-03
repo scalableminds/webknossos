@@ -10,7 +10,7 @@ import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import View from "oxalis/view";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 
@@ -21,7 +21,7 @@ class PlaneView {
   on: Function;
   listenTo: Function;
 
-  model: Model;
+  model: OxalisModel
   view: View;
   renderer: THREE.WebGLRenderer;
   cameras: OrthoViewMapType<THREE.OrthographicCamera>;
@@ -34,7 +34,7 @@ class PlaneView {
   deviceScaleFactor: number;
   scaleFactor: number;
 
-  constructor(model: Model, view: View) {
+  constructor(model: OxalisModel, view: View) {
     let HEIGHT;
     let WIDTH;
     this.model = model;

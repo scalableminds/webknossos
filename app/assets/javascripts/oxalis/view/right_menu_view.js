@@ -5,7 +5,7 @@
 
 import React from "react";
 import { Tabs } from "antd";
-import type Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
@@ -17,7 +17,7 @@ import Store from "oxalis/store";
 const TabPane = Tabs.TabPane;
 
 type RightMenuViewProps = {
-  oldModel: Model,
+  oldModel: OxalisModel,
   isPublicViewMode: boolean,
 };
 

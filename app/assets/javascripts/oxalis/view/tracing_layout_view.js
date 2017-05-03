@@ -12,7 +12,8 @@ import { Provider } from "react-redux";
 import app from "app";
 import store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
-import OxalisModel from "oxalis/model";
+import model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import OxalisApi from "oxalis/api/api_loader";
 import Constants from "oxalis/constants";
 import Modal from "oxalis/view/modal";
@@ -89,7 +90,7 @@ class TracingLayoutView extends Marionette.View {
     this.options = _.extend(
       {},
       options,
-      { model: new OxalisModel(options) },
+      { model: model },
     );
 
     this.model = this.options.model;

@@ -7,7 +7,7 @@ import _ from "lodash";
 import Backbone from "backbone";
 import Store from "oxalis/store";
 import constants from "oxalis/constants";
-import Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -24,12 +24,12 @@ class SkeletonTracingController {
   // Also, this would be the place to define general Skeleton Tracing
   // functions that can be called by the specific view mode controller.
 
-  model: Model;
+  model: OxalisModel;
   skeletonTracingView: SkeletonTracingView;
   sceneController: SceneController;
 
   constructor(
-    model: Model,
+    model: OxalisModel,
     skeletonTracingView: SkeletonTracingView,
     sceneController: SceneController,
   ) {

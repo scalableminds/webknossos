@@ -11,11 +11,11 @@ import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controlle
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType } from "oxalis/store";
-import type Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import TemplateHelpers from "libs/template_helpers";
 
 type DatasetInfoTabProps = {
-  oldModel: Model,
+  oldModel: OxalisModel,
   skeletonTracing: SkeletonTracingType,
   dataset: DatasetType,
   flycam: FlycamType,

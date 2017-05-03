@@ -1,7 +1,7 @@
 // @flow
 import React, { PureComponent } from "react";
 import _ from "lodash";
-import type Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import type { OxalisState, TracingType } from "oxalis/store";
 import { connect } from "react-redux";
@@ -21,7 +21,7 @@ class DatasetActionsView extends PureComponent {
   props: {
     // eslint-disable-next-line react/no-unused-prop-types
     tracing: TracingType,
-    oldModel: Model,
+    oldModel: OxalisModel,
     // eslint-disable-next-line react/no-unused-prop-types
     dispatch: Dispatch<*>,
   };

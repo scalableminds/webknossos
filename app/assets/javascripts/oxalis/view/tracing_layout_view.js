@@ -196,7 +196,7 @@ class TracingLayoutView extends Marionette.View {
 
 
   isSkeletonMode() {
-    return Constants.MODES_SKELETON.includes(store.getState().viewMode) && this.isTracingMode();
+    return Constants.MODES_SKELETON.includes(store.getState().temporaryConfiguration.viewMode) && this.isTracingMode();
   }
 
 
@@ -206,7 +206,7 @@ class TracingLayoutView extends Marionette.View {
 
 
   isArbitraryMode() {
-    return Constants.MODES_ARBITRARY.includes(store.getState().viewMode);
+    return Constants.MODES_ARBITRARY.includes(store.getState().temporaryConfiguration.viewMode);
   }
 
 

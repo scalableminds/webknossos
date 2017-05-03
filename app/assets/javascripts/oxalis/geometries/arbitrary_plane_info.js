@@ -8,7 +8,7 @@ import app from "app";
 import Marionette from "backbone.marionette";
 import "bootstrap-toggle";
 import Store from "oxalis/store";
-import { setFlightmodeRecordingAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 
@@ -69,7 +69,7 @@ class ArbitraryPlaneInfo extends Marionette.View {
 
 
   updateCheckboxToggle() {
-    const flightmodeRecording = Store.getState().flightmodeRecording;
+    const flightmodeRecording = Store.getState().temporaryConfiguration.flightmodeRecording;
     if (flightmodeRecording === this.ui.checkbox.prop("checked")) {
       return;
     }

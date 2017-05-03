@@ -121,7 +121,7 @@ class DatasetActionsView extends PureComponent {
   }
 
   render() {
-    const viewMode = Store.getState().viewMode;
+    const viewMode = Store.getState().temporaryConfiguration.viewMode;
     const isSkeletonMode = _.includes(Constants.MODES_SKELETON, viewMode);
     const hasAdvancedOptions = this.props.oldModel.settings.advancedOptionsAllowed;
     const archiveButtonText = this.props.oldModel.isTask ? "Finish" : "Archive";

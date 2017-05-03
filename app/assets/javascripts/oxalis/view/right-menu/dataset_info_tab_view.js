@@ -27,7 +27,7 @@ class DatasetInfoTabView extends Component {
   calculateZoomLevel(): number {
     let width;
     let zoom;
-    const viewMode = Store.getState().viewMode;
+    const viewMode = Store.getState().temporaryConfiguration.viewMode;
     if (constants.MODES_PLANE.includes(viewMode)) {
       zoom = getPlaneScalingFactor(this.props.flycam);
       width = constants.PLANE_WIDTH;

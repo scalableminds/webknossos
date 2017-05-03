@@ -30,7 +30,7 @@ import constants from "oxalis/constants";
 import Request from "libs/request";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
-import { setViewModeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 import messages from "messages";
@@ -151,7 +151,7 @@ class Controller {
       this.listenTo(this.model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
     }
 
-    listenToStoreProperty(store => store.viewMode, mode => this.loadMode(mode), true);
+    listenToStoreProperty(store => store.temporaryConfiguration.viewMode, mode => this.loadMode(mode), true);
 
     // Zoom step warning
     this.zoomStepWarningToast = null;
@@ -214,7 +214,7 @@ class Controller {
 
         m: () => {
           // rotate allowed modes
-          const currentViewMode = Store.getState().viewMode;
+          const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
           const index = (this.model.allowedModes.indexOf(currentViewMode) + 1) % this.model.allowedModes.length;
           Store.dispatch(setViewModeAction(this.model.allowedModes[index]));
         },

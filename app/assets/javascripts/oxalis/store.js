@@ -231,6 +231,8 @@ export type TemporaryConfigurationType = {
   +userBoundingBox: Vector6,
   +shouldHideInactiveTrees: boolean,
   +shouldHideAllSkeletons: boolean,
+  +viewMode: ModeType,
+  +flightmodeRecording: boolean,
 };
 
 export type TaskType = {
@@ -250,12 +252,6 @@ export type FlycamType = {
 };
 
 export type OxalisState = {
-  // TODO: we have to refactor all the modes, since the current state is way too confusing.
-  // This mode value was originally stored in model.mode and should probably be in one of the subitems
-  // of the store state.
-  +viewMode: ModeType,
-  +flightmodeRecording: boolean,
-
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
   +temporaryConfiguration: TemporaryConfigurationType,
@@ -267,12 +263,6 @@ export type OxalisState = {
 };
 
 export const defaultState: OxalisState = {
-  viewMode: Constants.MODE_PLANE_TRACING,
-  flightmodeRecording: false,
-  userBoundingBox: {
-    min: [0, 0, 0],
-    max: [0, 0, 0],
-  },
   datasetConfiguration: {
     datasetName: "",
     fourBit: true,
@@ -314,6 +304,8 @@ export const defaultState: OxalisState = {
     userBoundingBox: [0, 0, 0, 0, 0, 0],
     shouldHideInactiveTrees: false,
     shouldHideAllSkeletons: false,
+    viewMode: Constants.MODE_PLANE_TRACING,
+    flightmodeRecording: false,
   },
   task: null,
   dataset: {

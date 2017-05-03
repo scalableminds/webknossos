@@ -4,7 +4,7 @@
  * skeletontracing_actions.js
  * @flow
  */
-import type { Vector3, ModeType } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import type { Tracing, SkeletonContentDataType } from "oxalis/model";
 
 type InitializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing<SkeletonContentDataType> };
@@ -24,8 +24,7 @@ type SelectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: ?boolean};
 type ShuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR", treeId?: number};
 type CreateCommentActionType = {type: "CREATE_COMMENT", commentText: string, nodeId: ?number, treeId: ?number};
 type DeleteCommentActionType = {type: "DELETE_COMMENT", nodeId: ?number, treeId?: number};
-type SetViewModeActionType = {type: "SET_VIEW_MODE", viewMode: ModeType};
-type SetFlightmodeRecordingActionType = {type: "SET_FLIGHTMODE_RECORDING", value: boolean};
+
 
 export type SkeletonTracingActionType =
   | InitializeSkeletonTracingActionType
@@ -46,8 +45,6 @@ export type SkeletonTracingActionType =
   | ShuffleTreeColorActionType
   | CreateCommentActionType
   | DeleteCommentActionType
-  | SetViewModeActionType
-  | SetFlightmodeRecordingActionType
 ;
 
 export const SkeletonTracingActions = [
@@ -167,16 +164,4 @@ export const deleteCommentAction = (nodeId?: number, treeId?: number): DeleteCom
   type: "DELETE_COMMENT",
   nodeId,
   treeId,
-});
-
-
-// TODO: These actions should probably live somewhere else
-export const setViewModeAction = (viewMode: ModeType): SetViewModeActionType => ({
-  type: "SET_VIEW_MODE",
-  viewMode,
-});
-
-export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecordingActionType => ({
-  type: "SET_FLIGHTMODE_RECORDING",
-  value,
 });

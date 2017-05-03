@@ -11,7 +11,7 @@ import Store from "oxalis/store";
 
 function ActionBarView({ oldModel }: { oldModel: Model }) {
   const isTraceMode = oldModel.controlMode === Constants.CONTROL_MODE_TRACE;
-  const isVolumeMode = Store.getState().viewMode === Constants.MODE_VOLUME;
+  const isVolumeMode = Store.getState().temporaryConfiguration.viewMode === Constants.MODE_VOLUME;
   const hasAdvancedOptions = oldModel.settings.advancedOptionsAllowed;
 
   return (

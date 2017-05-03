@@ -147,7 +147,7 @@ const mapStateToProps = (state: OxalisState) => ({
   tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
   state,
-  viewMode: state.viewMode,
+  viewMode: state.temporaryConfiguration.viewMode,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

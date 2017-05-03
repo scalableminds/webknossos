@@ -21,8 +21,8 @@ import type {
   DataLayerType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
-import { setDatasetAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, initializeSkeletonTracingAction, setViewModeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setDatasetAction, setViewModeAction } from "oxalis/model/actions/settings_actions";
+import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam_actions";

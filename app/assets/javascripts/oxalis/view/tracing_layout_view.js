@@ -87,6 +87,8 @@ class TracingLayoutView extends Marionette.View {
 
 
   initialize(options?: Object): this {
+    // TODO: delete this line once the initalization is done in the router
+    model.initialize(options.tracingType, options.tracingId, options.controlMode);
     this.options = _.extend(
       {},
       options,

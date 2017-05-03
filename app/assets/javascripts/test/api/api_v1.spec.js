@@ -7,7 +7,7 @@ import Backbone from "backbone";
 import "backbone.marionette";
 import constants from "oxalis/constants";
 import { createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import TRACING_OBJECT from "../fixtures/tracing_object";
+import TRACING_OBJECT from "../fixtures/skeletontracing_object";
 
 function makeModelMock() {
   class ModelMock {}

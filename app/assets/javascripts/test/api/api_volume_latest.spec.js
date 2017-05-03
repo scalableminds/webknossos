@@ -3,7 +3,7 @@ import test from "ava";
 import "backbone.marionette";
 import sinon from "sinon";
 import Constants from "oxalis/constants";
-import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
+import { setupOxalis } from "test/helpers/apiHelpers";
 import VOLUMETRACING_OBJECT from "../fixtures/volumetracing_object";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
@@ -45,10 +45,10 @@ test("Data Api: labelVoxels should label a list of voxels", (t) => {
   const cube = model.getSegmentationBinary().cube;
   sinon.stub(model.getSegmentationBinary().layer, "requestFromStoreImpl").returns(new Uint8Array());
 
-  api.data.labelVoxels([[1,2,3], [7,8,9]], 34);
+  api.data.labelVoxels([[1, 2, 3], [7, 8, 9]], 34);
   // The specified voxels should be labeled with the new value
-  t.is(cube.getDataValue([1,2,3]), 34);
-  t.is(cube.getDataValue([7,8,9]), 34);
+  t.is(cube.getDataValue([1, 2, 3]), 34);
+  t.is(cube.getDataValue([7, 8, 9]), 34);
   // Some other voxel should not
-  t.not(cube.getDataValue([11,12,13]), 34);
+  t.not(cube.getDataValue([11, 12, 13]), 34);
 });

@@ -24,7 +24,10 @@ class View {
         "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>");
     }
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: document.getElementById("render-canvas"),
+      antialias: true
+    });
     this.scene = new THREE.Scene();
 
     this.setTheme(constants.THEME_BRIGHT);
@@ -33,6 +36,9 @@ class View {
     $("#loader").addClass("hidden");
   }
 
+  isWebGlSupported() {
+    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
+  }
 
   toggleTheme() {
     if (this.theme === constants.THEME_BRIGHT) {
@@ -55,9 +61,7 @@ class View {
   }
 
 
-  isWebGlSupported() {
-    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
-  }
+
 }
 
 export default View;

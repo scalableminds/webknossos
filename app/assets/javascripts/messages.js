@@ -15,4 +15,5 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.no_more_branchpoints": "No more branchpoints",
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice": "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+  "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
 };

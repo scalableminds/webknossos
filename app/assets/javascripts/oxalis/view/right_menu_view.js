@@ -5,7 +5,7 @@
 
 import React from "react";
 import { Tabs } from "antd";
-import type { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
@@ -16,17 +16,10 @@ import Store from "oxalis/store";
 
 const TabPane = Tabs.TabPane;
 
-type RightMenuViewProps = {
-  oldModel: OxalisModel,
-  isPublicViewMode: boolean,
-};
-
 class RightMenuView extends React.PureComponent {
 
-  props: RightMenuViewProps;
-
   getTabs() {
-    if (!this.props.isPublicViewMode) {
+    if (!Model.controlMode !== Constants.CONTROL_MODE_VIEW) {
       if (Store.getState().temporaryConfiguration.viewMode in Constants.MODES_SKELETON) {
         return [
           <TabPane tab="Trees" key="3" className="flex-column"><TreesTabView /></TabPane>,
@@ -34,7 +27,7 @@ class RightMenuView extends React.PureComponent {
           <TabPane tab="Tree Viewer" key="2" className="flex-column"><AbstractTreeTabView /></TabPane>,
         ];
       } else {
-        return <TabPane tab="Mappings" key="5"><MappingInfoView oldModel={this.props.oldModel} /></TabPane>;
+        return <TabPane tab="Mappings" key="5"><MappingInfoView /></TabPane>;
       }
     }
 
@@ -44,7 +37,7 @@ class RightMenuView extends React.PureComponent {
   render() {
     return (
       <Tabs destroyInactiveTabPane defaultActiveKey="1" className="flex-column flex-column-for-ant-tabs-container">
-        <TabPane tab="Info" key="1"><DatasetInfoTabView oldModel={this.props.oldModel} /></TabPane>
+        <TabPane tab="Info" key="1"><DatasetInfoTabView /></TabPane>
         { this.getTabs() }
       </Tabs>
     );

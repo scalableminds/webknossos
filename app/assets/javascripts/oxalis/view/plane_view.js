@@ -10,9 +10,9 @@ import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import type { OxalisModel } from "oxalis/model";
 import View from "oxalis/view";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
+import type { OxalisModel } from "oxalis/model";
 
 class PlaneView {
 
@@ -44,10 +44,6 @@ class PlaneView {
     this.renderer = this.view.renderer;
     this.scene = this.view.scene;
     this.running = false;
-
-    // The "render" div serves as a container for the canvas, that is
-    // attached to it once a renderer has been initalized.
-    const container = $("#render");
 
     // Create a 4x4 grid
     this.curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH;
@@ -97,8 +93,8 @@ class PlaneView {
 
     // Attach the canvas to the container
     this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
-    $(this.renderer.domElement).attr({ id: "render-canvas" });
-    container.append(this.renderer.domElement);
+    // $(this.renderer.domElement).attr({ id: "render-canvas" });
+    // container.append(this.renderer.domElement);
 
     this.setActiveViewport(OrthoViews.PLANE_XY);
 

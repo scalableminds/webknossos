@@ -10,12 +10,11 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
-import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType } from "oxalis/store";
-import type { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 import TemplateHelpers from "libs/template_helpers";
+import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType } from "oxalis/store";
 
 type DatasetInfoTabProps = {
-  oldModel: OxalisModel,
   skeletonTracing: SkeletonTracingType,
   dataset: DatasetType,
   flycam: FlycamType,
@@ -53,12 +52,11 @@ class DatasetInfoTabView extends Component {
   }
 
   render() {
-    let annotationType = this.props.oldModel.tracingType;
-    const tracing = this.props.oldModel.tracing;
-    const { task, name } = tracing;
+    const { tracingType, name } = this.props.skeletonTracing;
+    let annotationType = tracingType;
 
     // In case we have a task display its id as well
-    if (task) { annotationType += `: ${task.id}`; }
+    if (this.props.task) { annotationType += `: ${this.props.task.id}`; }
     // Or display an explorative tracings name if there is one
     if (name) { annotationType += `: ${name}`; }
 
@@ -108,6 +106,7 @@ function mapStateToProps(state: OxalisState) {
     skeletonTracing: state.tracing,
     dataset: state.dataset,
     flycam: state.flycam,
+    task: state.task,
   };
 }
 

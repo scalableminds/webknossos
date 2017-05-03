@@ -1,7 +1,7 @@
 // @flow
 import React, { PureComponent } from "react";
 import _ from "lodash";
-import type { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 import Store from "oxalis/store";
 import type { OxalisState, TracingType } from "oxalis/store";
 import { connect } from "react-redux";
@@ -21,7 +21,6 @@ class DatasetActionsView extends PureComponent {
   props: {
     // eslint-disable-next-line react/no-unused-prop-types
     tracing: TracingType,
-    oldModel: OxalisModel,
     // eslint-disable-next-line react/no-unused-prop-types
     dispatch: Dispatch<*>,
   };
@@ -47,21 +46,21 @@ class DatasetActionsView extends PureComponent {
   _forceUpdate = () => { this.forceUpdate(); };
 
   handleSave = async () => {
-    await this.props.oldModel.save();
+    await Model.save();
   };
 
   handleCopyToAccount = async () => {
-    const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/duplicate`;
+    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/duplicate`;
     app.router.loadURL(url);
   };
 
   handleCopyToAccount = async () => {
-    const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/duplicate`;
+    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/duplicate`;
     app.router.loadURL(url);
   };
 
   handleFinish = async () => {
-    const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/finishAndRedirect`;
+    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
       app.router.loadURL(url);
@@ -81,7 +80,7 @@ class DatasetActionsView extends PureComponent {
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
 
-    win.location.href = this.props.oldModel.tracing.downloadUrl;
+    win.location.href = Model.tracing.downloadUrl;
     win.document.body.innerHTML = messages["download.close_window"];
   };
 
@@ -94,7 +93,7 @@ class DatasetActionsView extends PureComponent {
     await Request.triggerRequest(finishUrl);
     try {
       const annotation = await Request.receiveJSON(requestTaskUrl);
-      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.oldModel.tracing.task, x => x.type.id);
+      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.task, x => x.type.id);
       const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
       app.router.loadURL(newTaskUrl);
@@ -113,7 +112,7 @@ class DatasetActionsView extends PureComponent {
   };
 
   getSaveButtonIcon() {
-    if (!this.props.oldModel.stateSaved()) {
+    if (!Model.stateSaved()) {
       return "hourglass";
     } else {
       return "check";
@@ -123,13 +122,13 @@ class DatasetActionsView extends PureComponent {
   render() {
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
     const isSkeletonMode = _.includes(Constants.MODES_SKELETON, viewMode);
-    const hasAdvancedOptions = this.props.oldModel.settings.advancedOptionsAllowed;
-    const archiveButtonText = this.props.oldModel.isTask ? "Finish" : "Archive";
-    const { tracing } = this.props.oldModel;
+    const hasAdvancedOptions = this.props.tracing.restrictions.advancedOptionsAllowed;
+    const archiveButtonText = this.props.task ? "Finish" : "Archive";
+    const restrictions = this.props.tracing.restrictions;
 
 
     const elements = [];
-    if (tracing.restrictions.allowUpdate) {
+    if (restrictions.allowUpdate) {
       elements.push(
         <Button
           key="save-button"
@@ -151,14 +150,14 @@ class DatasetActionsView extends PureComponent {
     }
 
     if (hasAdvancedOptions) {
-      if (tracing.restrictions.allowFinish) {
+      if (restrictions.allowFinish) {
         elements.push(<Button
           key="finish-button"
           icon="check-circle-o"
           onClick={this.handleFinish}
         >{archiveButtonText}</Button>);
       }
-      if (tracing.restrictions.allowDownload || !tracing.downloadUrl) {
+      if (restrictions.allowDownload || !tracing.downloadUrl) {
         elements.push(<Button
           key="download-button"
           icon="download"
@@ -176,7 +175,7 @@ class DatasetActionsView extends PureComponent {
         onOk={this.handleShareClose}
       />);
     }
-    if (tracing.restrictions.allowFinish && tracing.task) {
+    if (restrictions.allowFinish && this.props.task) {
       elements.push(<Button
         key="next-button"
         icon="verticle-left"
@@ -209,6 +208,7 @@ function mapStateToProps(state: OxalisState) {
   return {
     tracing: state.tracing,
     save: state.save,
+    task: state.task,
   };
 }
 

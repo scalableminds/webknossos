@@ -6,17 +6,18 @@
 import _ from "lodash";
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
-import type { Dispatch } from "redux";
 import { Collapse } from "antd";
 import Constants from "oxalis/constants";
+import Model from "oxalis/model";
 import { updateUserSettingAction, updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
-import type { Vector6, ModeType } from "oxalis/constants";
-import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, TracingType } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import type { Vector6, ModeType } from "oxalis/constants";
+import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, TracingType } from "oxalis/store";
+import type { Dispatch } from "redux";
 
 const Panel = Collapse.Panel;
 
@@ -33,7 +34,6 @@ type UserSettingsViewProps = {
   onChangeActiveCellId: (value: number) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
-  isPublicViewMode: boolean,
   viewMode: ModeType,
 };
 
@@ -89,8 +89,9 @@ class UserSettingsView extends PureComponent {
 
   getSkeletonOrVolumeOptions = () => {
     const mode = this.props.viewMode;
+    const isPublicViewMode = Model.controlMode !== Constants.CONTROL_MODE_VIEW;
 
-    if (Constants.MODES_SKELETON.includes(mode) && !this.props.isPublicViewMode && this.props.tracing.type === "skeleton") {
+    if (Constants.MODES_SKELETON.includes(mode) && !isPublicViewMode && this.props.tracing.type === "skeleton") {
       const activeNodeId = this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
       const activeTreeId = this.props.tracing.activeTreeId != null ? this.props.tracing.activeTreeId : "";
       return (

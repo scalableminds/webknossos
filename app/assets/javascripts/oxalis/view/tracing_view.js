@@ -1,72 +1,86 @@
 /**
  * tracing_view.js
- * @flow weak
+ * @flow
  */
 
-import _ from "lodash";
-import Marionette from "backbone.marionette";
+import React from "react";
+import { connect } from "react-redux";
+import { Button, Switch } from "antd";
 import Constants from "oxalis/constants";
-import Store from "oxalis/store";
+import app from "app";
+import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
+import type { OxalisState } from "oxalis/store";
+import type { Dispatch } from "redux";
 
-class TracingView extends Marionette.View {
-  static initClass() {
-    this.prototype.id = "render";
-    this.prototype.template = _.template(`\
-<div id="modal" class="modal fade" tabindex="-1" role="dialog"></div>
-<div id="inputcatchers">
-  <div id="inputcatcher_PLANE_XY" class="inputcatcher"></div>
-  <div id="inputcatcher_PLANE_YZ" class="inputcatcher"></div>
-  <div id="inputcatcher_PLANE_XZ" class="inputcatcher"></div>
-  <div id="inputcatcher_TDView" class="inputcatcher">
-    <div id="TDViewControls" class="btn-group">
-      <button type="button" class="btn btn-default btn-sm">3D</button>
-      <button type="button" class="btn btn-default btn-sm">
-        <span></span>XY
-      </button>
-      <button type="button" class="btn btn-default btn-sm">
-        <span></span>YZ
-      </button>
-      <button type="button" class="btn btn-default btn-sm">
-        <span></span>XZ
-      </button>
-    </div>
-  </div>
-</div>\
-`);
+const ButtonGroup = Button.Group;
 
-    this.prototype.events =
-      { contextmenu: "disableContextMenu" };
+class TracingView extends React.PureComponent {
 
-    this.prototype.ui =
-      { inputcatchers: ".inputcatcher" };
-  }
-
-  initialize() {
-    Store.subscribe(() => {
-      this.onZoomStepChange();
-    });
-  }
-
-
-  disableContextMenu(event) {
+  handleContextMenu(event: SyntheticInputEvent) {
     // hide contextmenu, while rightclicking a canvas
     event.preventDefault();
   }
 
-
-  onRender() {
-    // Hide the input catchers arbitrary model
-    const viewMode = Store.getState().temporaryConfiguration.viewMode;
-    if (Constants.MODES_ARBITRARY.includes(viewMode)) {
-      this.ui.inputcatchers.hide();
-    }
+  getInputCatchers() {
+    return (
+      <div id="inputcatchers">
+        <div id="inputcatcher_PLANE_XY" className="inputcatcher" />
+        <div id="inputcatcher_PLANE_YZ" className="inputcatcher" />
+        <div id="inputcatcher_PLANE_XZ" className="inputcatcher" />
+        <div id="inputcatcher_TDView" className="inputcatcher">
+          <ButtonGroup id="TDViewControls">
+            <Button size="small">3D</Button>
+            <Button size="small">
+              <span />XY
+            </Button>
+            <Button size="small">
+              <span />YZ
+            </Button>
+            <Button size="small">
+              <span />XZ
+            </Button>
+          </ButtonGroup>
+        </div>
+      </div>
+    );
   }
 
-  onZoomStepChange() {
-    this.$el.toggleClass("zoomstep-warning",
-      (this.model.isVolumeTracing()) && !this.model.canDisplaySegmentationData());
+  getRecordingSwitch = () =>
+    <Switch
+      checkedChildren="Recording"
+      unCheckedChildren="Watching"
+      checked={this.props.flightmodeRecording}
+      onChange={this.props.onChangeFlightmodeRecording}
+    />
+
+  render() {
+    const isArbitraryMode = Constants.MODES_ARBITRARY.includes(this.props.viewMode);
+    const inputCatchers = !isArbitraryMode ? this.getInputCatchers() : null;
+    const flightModeRecordingSwitch = isArbitraryMode ? this.getRecordingSwitch : null;
+
+    // canvas will be
+    return (
+      <div id="tracing" onContextMenu={this.handleContextMenu}>
+        { inputCatchers }
+        { flightModeRecordingSwitch }
+        <canvas id="render-canvas" />
+      </div>
+    );
   }
 }
-TracingView.initClass();
 
-export default TracingView;
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  onChangeFlightmodeRecording(value) {
+    dispatch(setFlightmodeRecordingAction(value));
+    if (app.oxalis) {
+      app.oxalis.arbitraryController.setWaypoint();
+    }
+  },
+});
+
+const mapStateToProps = (state: OxalisState) => ({
+  viewMode: state.temporaryConfiguration.viewMode,
+  flightmodeRecording: state.temporaryConfiguration.flightmodeRecording,
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(TracingView);

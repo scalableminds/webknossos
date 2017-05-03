@@ -13,6 +13,7 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import model from "oxalis/model";
 import Store from "oxalis/store";
+import View from "oxalis/view";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
@@ -23,11 +24,11 @@ import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controlle
 import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
-import View from "oxalis/view";
 import SkeletonTracingView from "oxalis/view/skeletontracing_view";
 import VolumeTracingView from "oxalis/view/volumetracing_view";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
+import OxalisApi from "oxalis/api/api_loader";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
@@ -43,13 +44,13 @@ class Controller {
 
   urlManager: UrlManager;
   sceneController: SceneController;
-  view: View;
   annotationController: SkeletonTracingController | VolumeTracingController;
   planeController: PlaneController;
   arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
   model: OxalisModel;
+  view: View;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -76,16 +77,15 @@ class Controller {
     model.state = this.urlManager.initialState;
 
     model.fetch()
-        .then(() => this.modelFetchDone());
-        // .catch((error) => {
-        //   // Don't throw errors for errors already handled by the model.
-        //   if (error !== model.HANDLED_ERROR) {
-        //     throw error;
-        //   }
-        // },
-        // );
+      .then(() => this.modelFetchDone())
+      .catch((error) => {
+        // Don't throw errors for errors already handled by the model.
+        if (error !== model.HANDLED_ERROR) {
+          throw error;
+        }
+      },
+      );
   }
-
 
   modelFetchDone() {
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
@@ -132,7 +132,7 @@ class Controller {
       }
     } else {
       // VIEW MODE
-      this.view = new View(model);
+      this.view = new View(this.model);
       this.planeController = new PlaneController(
         model, this.view, this.sceneController);
     }
@@ -165,6 +165,8 @@ class Controller {
     });
     this.onZoomStepChange();
 
+    window.webknossos = new OxalisApi(model);
+
     app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
@@ -194,6 +196,24 @@ class Controller {
       });
     }
   }
+
+  // TODO find a new home
+  maybeShowNewTaskTypeModal() {
+    // Users can aquire new tasks directly in the tracing view. Occasionally,
+    // they start working on a new TaskType and need to be instructed.
+    let text;
+    if (!Utils.getUrlParams("differentTaskType") || (model.tracing.task == null)) { return; }
+
+    const taskType = model.tracing.task.type;
+    const title = `Attention, new Task Type: ${taskType.summary}`;
+    if (taskType.description) {
+      text = `You are now tracing a new task with the following description:<br>${taskType.description}`;
+    } else {
+      text = "You are now tracing a new task with no description.";
+    }
+    Modal.show(text, title);
+  }
+
 
   initKeyboard() {
     // avoid scrolling while pressing space

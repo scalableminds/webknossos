@@ -5,16 +5,15 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import Cube from "oxalis/model/binary/data_cube";
-import type { OxalisState } from "oxalis/store";
-import type { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import type { Vector3 } from "oxalis/constants";
 import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
+import type { Vector3 } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
 
 class MappingInfoView extends Component {
   props: {
     position: Vector3,
-    oldModel: OxalisModel,
   };
 
   componentDidMount() {
@@ -34,7 +33,7 @@ class MappingInfoView extends Component {
   _forceUpdate = () => { this.forceUpdate(); };
 
   getCube(): Cube {
-    return this.props.oldModel.getSegmentationBinary().cube;
+    return Model.getSegmentationBinary().cube;
   }
 
   handleChangeMappingEnabled = (isEnabled: boolean) => {

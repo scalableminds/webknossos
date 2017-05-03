@@ -73,6 +73,11 @@ class Router extends BaseRouter {
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
 
+      Model.initialize(type, id, constants.CONTROL_MODE_VIEW);
+
+      // view.forcePageReload = true;
+      const view = new TracingLayoutView();
+      view.render();
     };
     require(["oxalis/view/tracing_layout_view"], callback);
   }
@@ -83,6 +88,11 @@ class Router extends BaseRouter {
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
 
+      Model.initialize(null, id, constants.CONTROL_MODE_VIEW);
+
+      // view.forcePageReload = true;
+      const view = new TracingLayoutView();
+      view.render();
     };
     require(["oxalis/view/tracing_layout_view"], callback);
   }

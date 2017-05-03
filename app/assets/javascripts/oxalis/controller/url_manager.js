@@ -97,7 +97,7 @@ class UrlManager {
     if (!Store.getState().tracing) {
       return null;
     }
-    const viewMode = Store.getState().viewMode;
+    const viewMode = Store.getState().temporaryConfiguration.viewMode;
     let state = V3.floor(getPosition(Store.getState().flycam));
     state.push(viewMode);
 

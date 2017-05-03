@@ -13,11 +13,11 @@ import { V3 } from "libs/mjs";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import type { ModeType, Vector3, Point2 } from "oxalis/constants";
-import Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import View from "oxalis/view";
 import Store from "oxalis/store";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { setFlightmodeRecordingAction, setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, setViewModeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { updateUserSettingAction, setFlightmodeRecordingAction, setViewModeAction } from "oxalis/model/actions/settings_actions";
+import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -34,7 +34,7 @@ import messages from "messages";
 
 class ArbitraryController {
   arbitraryView: ArbitraryView;
-  model: Model;
+  model: OxalisModel
   view: View;
   sceneController: SceneController;
   skeletonTracingController: SkeletonTracingController;
@@ -84,7 +84,7 @@ class ArbitraryController {
   }
 
   constructor(
-    model: Model,
+    model: OxalisModel,
     view: View,
     sceneController: SceneController,
     skeletonTracingController: SkeletonTracingController,

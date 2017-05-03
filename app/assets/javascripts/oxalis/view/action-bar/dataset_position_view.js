@@ -83,7 +83,7 @@ class DatasetPositionView extends PureComponent {
 function mapStateToProps(state: OxalisState) {
   return {
     flycam: state.flycam,
-    viewMode: state.viewMode,
+    viewMode: state.temporaryConfiguration.viewMode,
   };
 }
 

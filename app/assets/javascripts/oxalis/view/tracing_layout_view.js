@@ -3,7 +3,6 @@
  * @flow
  */
 
-import _ from "lodash";
 import $ from "jquery";
 import React from "react";
 import { render } from "react-dom";
@@ -11,7 +10,7 @@ import { Provider } from "react-redux";
 import app from "app";
 import store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
-
+import Model from "oxalis/model";
 import Constants from "oxalis/constants";
 import Modal from "oxalis/view/modal";
 import Utils from "libs/utils";
@@ -29,6 +28,7 @@ const { Header, Sider, Content } = Layout;
 class TracingLayoutView extends React.PureComponent {
 
   componentDidMount() {
+
     $(window).on("resize", this.resizeRightMenu.bind(this));
     const addScriptLink = document.getElementById("add-script-link");
     if (addScriptLink) {
@@ -108,14 +108,9 @@ class TracingLayoutView extends React.PureComponent {
     throw Error("TODO");
   }
 
-  isTracingMode() {
-    return Model.controlMode !== Constants.CONTROL_MODE_VIEW;
-  }
-
   isSkeletonMode() {
-    return Constants.MODES_SKELETON.includes(store.getState().viewMode) && this.isTracingMode();
+    return Constants.MODES_SKELETON.includes(store.getState().temporaryConfiguration.viewMode) && Model.controlMode !== Constants.CONTROL_MODE_VIEW;
   }
-
 }
 
 export default TracingLayoutView;

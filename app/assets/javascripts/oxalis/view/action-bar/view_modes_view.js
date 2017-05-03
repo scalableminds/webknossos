@@ -3,7 +3,7 @@ import React, { PureComponent } from "react";
 import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
 import { Radio } from "antd";
-import { setViewModeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
@@ -31,7 +31,7 @@ class ViewModesView extends PureComponent {
 
 function mapStateToProps(state: OxalisState) {
   return {
-    viewMode: state.viewMode,
+    viewMode: state.temporaryConfiguration.viewMode,
   };
 }
 

@@ -10,11 +10,10 @@ import type { Dispatch } from "redux";
 import { Collapse } from "antd";
 import Constants from "oxalis/constants";
 import { updateUserSettingAction, updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction, setUserBoundingBoxAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
 import type { Vector6, ModeType } from "oxalis/constants";
-import Store from "oxalis/store";
 import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, TracingType } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
@@ -51,8 +50,7 @@ class UserSettingsView extends PureComponent {
   }
 
   onChangeBoundingBox = (boundingBox: Vector6) => {
-    Store.dispatch(setUserBoundingBoxAction(boundingBox));
-    this.props.onChangeTemporary("boundingBox", boundingBox);
+    this.props.onChangeTemporary("userBoundingBox", boundingBox);
   }
 
   getViewportOptions = () => {
@@ -135,7 +133,7 @@ class UserSettingsView extends PureComponent {
         { this.getViewportOptions() }
         { this.getSkeletonOrVolumeOptions() }
         <Panel header="Other" key="4">
-          <Vector6InputSetting label="Bounding Box" tooltipTitle="Format: minX, minY, minZ, width, height, depth" value={this.props.temporaryConfiguration.boundingBox} onChange={this.onChangeBoundingBox} />
+          <Vector6InputSetting label="Bounding Box" tooltipTitle="Format: minX, minY, minZ, width, height, depth" value={this.props.temporaryConfiguration.userBoundingBox} onChange={this.onChangeBoundingBox} />
           <SwitchSetting label="Display Planes in 3D View" value={this.props.userConfiguration.tdViewDisplayPlanes} onChange={this.onChangeUser.tdViewDisplayPlanes} />
         </Panel>
       </Collapse>
@@ -149,7 +147,7 @@ const mapStateToProps = (state: OxalisState) => ({
   tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
   state,
-  viewMode: state.viewMode,
+  viewMode: state.temporaryConfiguration.viewMode,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

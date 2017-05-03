@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import { Button, Switch } from "antd";
 import Constants from "oxalis/constants";
 import app from "app";
-import { setFlightmodeRecordingAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
 import type { OxalisState } from "oxalis/store";
 import type { Dispatch } from "redux";
 
@@ -79,7 +79,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 });
 
 const mapStateToProps = (state: OxalisState) => ({
-  viewMode: state.viewMode,
+  viewMode: state.temporaryConfiguration.viewMode,
   flightmodeRecording: state.temporaryConfiguration.flightmodeRecording,
 });
 

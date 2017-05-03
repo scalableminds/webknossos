@@ -10,7 +10,7 @@ import Backbone from "backbone";
 import * as THREE from "three";
 import { V3 } from "libs/mjs";
 import { getPosition, getPlaneScalingFactor, getViewportBoundingBox } from "oxalis/model/accessors/flycam_accessor";
-import Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import Plane from "oxalis/geometries/plane";
@@ -28,7 +28,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 class SceneController {
   skeleton: Skeleton;
   CUBE_COLOR: number;
-  model: Model;
+  model: OxalisModel
   current: number;
   displayPlane: OrthoViewMapType<boolean>;
   planeShift: Vector3;
@@ -43,10 +43,6 @@ class SceneController {
   planes: OrthoViewMapType<Plane>;
   rootNode: THREE.Object3D;
 
-  // Copied from backbone events (TODO: handle this better)
-  trigger: Function;
-  listenTo: Function;
-
   static initClass() {
     // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
     // element depending on the provided flycam.
@@ -54,7 +50,7 @@ class SceneController {
     this.prototype.CUBE_COLOR = 0x999999;
   }
 
-  constructor(model: Model) {
+  constructor(model: OxalisModel) {
     _.extend(this, Backbone.Events);
     this.model = model;
 
@@ -321,8 +317,8 @@ class SceneController {
       this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
     });
     listenToStoreProperty(
-      storeState => storeState.userBoundingBox,
-      bb => this.setUserBoundingBox(bb),
+      storeState => storeState.temporaryConfiguration.userBoundingBox,
+      bb => this.setUserBoundingBox(Utils.computeBoundingBoxFromArray(bb)),
     );
   }
 }

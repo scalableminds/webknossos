@@ -9,7 +9,7 @@ import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
@@ -38,7 +38,7 @@ class CameraController {
 
   cameras: OrthoViewMapType<THREE.OrthographicCamera>;
   camera: THREE.OrthographicCamera;
-  model: Model;
+  model: OxalisModel
   tween: TWEEN.Tween;
   camDistance: number;
 
@@ -46,7 +46,7 @@ class CameraController {
   trigger: Function;
   listenTo: Function;
 
-  constructor(cameras: OrthoViewMapType<THREE.OrthographicCamera>, model: Model) {
+  constructor(cameras: OrthoViewMapType<THREE.OrthographicCamera>, model: OxalisModel) {
     _.extend(this, Backbone.Events);
     this.cameras = cameras;
     this.model = model;

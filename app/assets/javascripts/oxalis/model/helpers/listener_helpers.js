@@ -15,9 +15,9 @@ import type { OxalisState } from "oxalis/store";
 // );
 // Don't forget to call unsubscribe(); if the handler is not needed anymore.
 
-export function listenToStoreProperty(
-  select: (OxalisState) => any,
-  onChange: (value: any) => void,
+export function listenToStoreProperty<T>(
+  select: (OxalisState) => T,
+  onChange: (value: T) => void,
   callHandlerOnSubscribe: ?boolean = false,
 ): (() => void) {
   let currentValue;

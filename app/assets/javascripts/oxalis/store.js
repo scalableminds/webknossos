@@ -9,7 +9,7 @@ import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import Constants from "oxalis/constants";
-import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType, BoundingBoxType } from "oxalis/constants";
+import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
@@ -228,9 +228,11 @@ export type UserConfigurationType = {
 };
 
 export type TemporaryConfigurationType = {
-  +boundingBox: Vector6,
+  +userBoundingBox: Vector6,
   +shouldHideInactiveTrees: boolean,
   +shouldHideAllSkeletons: boolean,
+  +viewMode: ModeType,
+  +flightmodeRecording: boolean,
 };
 
 export type TaskType = {
@@ -250,13 +252,6 @@ export type FlycamType = {
 };
 
 export type OxalisState = {
-  // TODO: we have to refactor all the modes, since the current state is way too confusing.
-  // This mode value was originally stored in model.mode and should probably be in one of the subitems
-  // of the store state.
-  +viewMode: ModeType,
-  +flightmodeRecording: boolean,
-  +userBoundingBox: BoundingBoxType,
-
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
   +temporaryConfiguration: TemporaryConfigurationType,
@@ -268,12 +263,6 @@ export type OxalisState = {
 };
 
 export const defaultState: OxalisState = {
-  viewMode: Constants.MODE_PLANE_TRACING,
-  flightmodeRecording: false,
-  userBoundingBox: {
-    min: [0, 0, 0],
-    max: [0, 0, 0],
-  },
   datasetConfiguration: {
     datasetName: "",
     fourBit: true,
@@ -312,9 +301,11 @@ export const defaultState: OxalisState = {
     tdViewDisplayPlanes: true,
   },
   temporaryConfiguration: {
-    boundingBox: [0, 0, 0, 0, 0, 0],
+    userBoundingBox: [0, 0, 0, 0, 0, 0],
     shouldHideInactiveTrees: false,
     shouldHideAllSkeletons: false,
+    viewMode: Constants.MODE_PLANE_TRACING,
+    flightmodeRecording: false,
   },
   task: null,
   dataset: {

@@ -1,6 +1,6 @@
 // @flow
 import React from "react";
-import type Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import DatasetActionsView from "oxalis/view/action-bar/dataset_actions_view";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
@@ -9,9 +9,9 @@ import Constants from "oxalis/constants";
 import { Button } from "antd";
 import Store from "oxalis/store";
 
-function ActionBarView({ oldModel }: { oldModel: Model }) {
+function ActionBarView({ oldModel }: { oldModel: OxalisModel }) {
   const isTraceMode = oldModel.controlMode === Constants.CONTROL_MODE_TRACE;
-  const isVolumeMode = Store.getState().viewMode === Constants.MODE_VOLUME;
+  const isVolumeMode = Store.getState().temporaryConfiguration.viewMode === Constants.MODE_VOLUME;
   const hasAdvancedOptions = oldModel.settings.advancedOptionsAllowed;
 
   return (

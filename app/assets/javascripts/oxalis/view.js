@@ -7,12 +7,12 @@ import $ from "jquery";
 import app from "app";
 import * as THREE from "three";
 import constants from "oxalis/constants";
-import Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import Toast from "libs/toast";
 
 class View {
 
-  model: Model;
+  model: OxalisModel
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   theme: 0 | 1;

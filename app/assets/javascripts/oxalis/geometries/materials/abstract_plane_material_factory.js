@@ -7,7 +7,7 @@ import _ from "lodash";
 import * as THREE from "three";
 import app from "app";
 import Utils from "libs/utils";
-import Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 
 export type UniformsType = {
@@ -25,7 +25,7 @@ export type ShaderMaterialOptionsType = {
 
 class AbstractPlaneMaterialFactory {
 
-  model: Model;
+  model: OxalisModel
   material: THREE.ShaderMaterial;
   uniforms: UniformsType;
   attributes: Object;
@@ -36,7 +36,7 @@ class AbstractPlaneMaterialFactory {
   maxFilter: THREE.NearestFilter;
   tWidth: number;
 
-  constructor(model: Model, tWidth: number) {
+  constructor(model: OxalisModel, tWidth: number) {
     this.model = model;
 
     this.setupUniforms();

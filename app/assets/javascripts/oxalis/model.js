@@ -4,7 +4,6 @@
  */
 
 import Backbone from "backbone";
-import type { Attrs, ModelOpts } from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
 import type {
@@ -103,7 +102,7 @@ export type Tracing<T> = {
 };
 
 // TODO: Non-reactive
-class Model extends Backbone.Model {
+class Model {
   HANDLED_ERROR = "error_was_handled";
 
   initialized: boolean;
@@ -119,28 +118,23 @@ class Model extends Backbone.Model {
   settings: SettingsType;
   tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>;
   tracingId: string;
-  tracingType: "Explorational" | "Task" | "View";
-  +controlMode: mixed;
+  tracingType: SkeletonTracingTypeTracingType;
+  controlMode: mixed;
   preferredMode: ModeType;
   isTask: boolean;
   state: UrlManagerState;
+  eventHub: typeof Backbone.Events;
 
-  // Let's get rid of model attributes and enforce it by deleting these methods:
-  // let's keep this in here for some time. Otherwise, merging it
-  // with old usages won't raise flow errors
-  // $FlowFixMe
-  set: null; get: null;
-
-  constructor(attributes?: Attrs, options?: ModelOpts) {
-    super(attributes, options);
+  constructor(attributes: ?Object) {
     this.initialized = false;
-    // Unpack the properties manually:
-    // $FlowFixMe
-    this.tracingType = attributes.tracingType;
-    // $FlowFixMe
-    this.tracingId = attributes.tracingId;
-    // $FlowFixMe
-    this.controlMode = attributes.controlMode;
+    this.eventHub = _.extend({}, Backbone.Events);
+    if (attributes) {
+      this.tracingType = attributes.tracingType;
+      this.tracingId = attributes.tracingId;
+      this.controlMode = attributes.controlMode;
+    } else {
+      throw new Error("Model didn't receive attributes");
+    }
   }
 
 
@@ -287,7 +281,8 @@ class Model extends Backbone.Model {
 
 
     this.initialized = true;
-    this.trigger("sync");
+    // TODO: shouldn't be necessary once tracing_layout_view is reactified
+    this.eventHub.trigger("sync");
 
     // no error
   }

@@ -95,7 +95,7 @@ class TracingLayoutView extends Marionette.View {
     this.model = this.options.model;
 
     this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
-    this.listenTo(this.model, "sync", this.renderRegions);
+    this.model.eventHub.on("sync", () => this.renderRegions());
     $(window).on("resize", this.resizeRightMenu.bind(this));
 
     $("#add-script-link")

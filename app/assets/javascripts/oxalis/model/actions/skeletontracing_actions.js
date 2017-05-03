@@ -25,6 +25,7 @@ type ShuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR", treeId?: number};
 type CreateCommentActionType = {type: "CREATE_COMMENT", commentText: string, nodeId: ?number, treeId: ?number};
 type DeleteCommentActionType = {type: "DELETE_COMMENT", nodeId: ?number, treeId?: number};
 
+
 export type SkeletonTracingActionType =
   | InitializeSkeletonTracingActionType
   | CreateNodeActionType
@@ -43,7 +44,8 @@ export type SkeletonTracingActionType =
   | SelectNextTreeActionType
   | ShuffleTreeColorActionType
   | CreateCommentActionType
-  | DeleteCommentActionType;
+  | DeleteCommentActionType
+;
 
 export const SkeletonTracingActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -63,6 +65,7 @@ export const SkeletonTracingActions = [
   "SHUFFLE_TREE_COLOR",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
+  "SET_VIEW_MODE",
 ];
 
 export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContentDataType>): InitializeSkeletonTracingActionType => ({

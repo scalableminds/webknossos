@@ -9,6 +9,7 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import Store from "oxalis/store";
 import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType } from "oxalis/store";
 import type Model from "oxalis/model";
 import TemplateHelpers from "libs/template_helpers";
@@ -26,14 +27,15 @@ class DatasetInfoTabView extends Component {
   calculateZoomLevel(): number {
     let width;
     let zoom;
-    if (constants.MODES_PLANE.includes(this.props.oldModel.mode)) {
+    const viewMode = Store.getState().temporaryConfiguration.viewMode;
+    if (constants.MODES_PLANE.includes(viewMode)) {
       zoom = getPlaneScalingFactor(this.props.flycam);
       width = constants.PLANE_WIDTH;
-    } else if (constants.MODES_ARBITRARY.includes(this.props.oldModel.mode)) {
+    } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
       zoom = this.props.flycam.zoomStep;
       width = ArbitraryController.prototype.WIDTH;
     } else {
-      throw Error("Model mode not recognized:", this.props.oldModel.mode);
+      throw Error("Model mode not recognized:", viewMode);
     }
     // unit is nm
     const baseVoxel = getBaseVoxel(this.props.dataset.scale);
@@ -51,8 +53,8 @@ class DatasetInfoTabView extends Component {
   }
 
   render() {
-    let annotationType = this.props.oldModel.get("tracingType");
-    const tracing = this.props.oldModel.get("tracing");
+    let annotationType = this.props.oldModel.tracingType;
+    const tracing = this.props.oldModel.tracing;
     const { task, name } = tracing;
 
     // In case we have a task display its id as well
@@ -63,7 +65,7 @@ class DatasetInfoTabView extends Component {
     const zoomLevel = this.calculateZoomLevel();
     const dataSetName = this.props.dataset.name;
     const treeCount = _.size(this.props.skeletonTracing.trees);
-    const isPublicViewMode = this.props.oldModel.get("controlMode") === constants.CONTROL_MODE_VIEW;
+    const isPublicViewMode = this.props.oldModel.controlMode === constants.CONTROL_MODE_VIEW;
 
     return (
       <div>

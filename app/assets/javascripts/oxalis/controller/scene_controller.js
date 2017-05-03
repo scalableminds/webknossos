@@ -21,8 +21,8 @@ import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
-import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
-import type { BoundingBoxType } from "oxalis/model";
+import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 
 class SceneController {
@@ -42,10 +42,6 @@ class SceneController {
   contour: ContourGeometry;
   planes: OrthoViewMapType<Plane>;
   rootNode: THREE.Object3D;
-
-  // Copied from backbone events (TODO: handle this better)
-  trigger: Function;
-  listenTo: Function;
 
   static initClass() {
     // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
@@ -320,7 +316,10 @@ class SceneController {
       this.setDisplayPlanes(tdViewDisplayPlanes);
       this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
     });
-    this.listenTo(this.model, "change:userBoundingBox", (bb) => { this.setUserBoundingBox(bb); });
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.userBoundingBox,
+      bb => this.setUserBoundingBox(Utils.computeBoundingBoxFromArray(bb)),
+    );
   }
 }
 SceneController.initClass();

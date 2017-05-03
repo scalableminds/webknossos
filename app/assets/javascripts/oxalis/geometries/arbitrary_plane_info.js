@@ -7,8 +7,14 @@ import _ from "lodash";
 import app from "app";
 import Marionette from "backbone.marionette";
 import "bootstrap-toggle";
+import Store from "oxalis/store";
+import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+
 
 class ArbitraryPlaneInfo extends Marionette.View {
+  unsubscribeFunction: () => void;
+
   static initClass() {
     this.prototype.id = "arbitrary-info-canvas";
 
@@ -18,7 +24,7 @@ class ArbitraryPlaneInfo extends Marionette.View {
 
     this.prototype.templateContext = {
       getCheckedStatus() {
-        return this.flightmodeRecording ? "checked" : "";
+        return Store.getState().flightmodeRecording ? "checked" : "";
       },
     };
 
@@ -31,7 +37,10 @@ class ArbitraryPlaneInfo extends Marionette.View {
 
 
   initialize() {
-    this.listenTo(this.model, "change:flightmodeRecording", this.updateCheckboxToggle);
+    this.unsubscribeFunction = listenToStoreProperty(
+      storeState => storeState.flightmodeRecording,
+      () => this.updateCheckboxToggle(),
+    );
   }
 
 
@@ -49,7 +58,7 @@ class ArbitraryPlaneInfo extends Marionette.View {
 
   handleCheckboxChange(evt) {
     const value = evt.target.checked;
-    this.model.set("flightmodeRecording", value);
+    Store.dispatch(setFlightmodeRecordingAction(value));
 
     // Set a inital waypoint when enabling flight mode
     // TODO: use the offical wK API
@@ -60,15 +69,17 @@ class ArbitraryPlaneInfo extends Marionette.View {
 
 
   updateCheckboxToggle() {
-    if (this.model.get("flightmodeRecording") === this.ui.checkbox.prop("checked")) {
+    const flightmodeRecording = Store.getState().temporaryConfiguration.flightmodeRecording;
+    if (flightmodeRecording === this.ui.checkbox.prop("checked")) {
       return;
     }
-    this.ui.checkbox.prop({ checked: this.model.get("flightmodeRecording") }).change();
+    this.ui.checkbox.prop({ checked: flightmodeRecording }).change();
   }
 
 
   onDestroy() {
     this.ui.checkbox.bootstrapToggle("destroy");
+    this.unsubscribeFunction();
   }
 }
 ArbitraryPlaneInfo.initClass();

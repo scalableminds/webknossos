@@ -3,8 +3,8 @@
  * @flow
  */
 
-export const ModeValues = [0, 1, 2, 3];
-export type VolumeModeType = 0 | 1;
+export const ModeValues = [0, 1, 2, 3]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
+export type VolumeTraceOrMoveModeType = 0 | 1; // VOLUME_MODE_MOVE | VOLUME_MODE_TRACE
 export type ModeType = 0 | 1 | 2 | 3;
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
@@ -13,6 +13,10 @@ export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
 export type Point2 = { x: number, y: number };
 export type Point3 = { x: number, y: number, z: number };
+export type BoundingBoxType = {
+  min: Vector3,
+  max: Vector3,
+};
 
 export const Vector2Indicies = [0, 1];
 export const Vector3Indicies = [0, 1, 2];

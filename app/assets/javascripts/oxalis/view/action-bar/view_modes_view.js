@@ -1,32 +1,26 @@
 // @flow
 import React, { PureComponent } from "react";
-import type Model from "oxalis/model";
 import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
 import { Radio } from "antd";
+import { setViewModeAction } from "oxalis/model/actions/settings_actions";
+import type { OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
+import { connect } from "react-redux";
 
 class ViewModesView extends PureComponent {
   props: {
-    oldModel: Model,
-  };
-
-  componentDidMount() {
-    this.props.oldModel.on("change:mode", this._forceUpdate);
+    viewMode: ModeType,
   }
-
-  componentWillUnmount() {
-    this.props.oldModel.off("change:mode", this._forceUpdate);
-  }
-
-  _forceUpdate = () => { this.forceUpdate(); };
 
   handleChange = (event: { target: { value: ModeType } }) => {
-    this.props.oldModel.setMode(event.target.value);
+    Store.dispatch(setViewModeAction(event.target.value));
   };
 
   render() {
+    const viewMode = this.props.viewMode;
     return (
-      <Radio.Group onChange={this.handleChange} value={this.props.oldModel.get("mode")} size="large">
+      <Radio.Group onChange={this.handleChange} value={viewMode} size="large">
         <Radio.Button value={constants.MODE_PLANE_TRACING}>Orthogonal</Radio.Button>
         <Radio.Button value={constants.MODE_ARBITRARY}>Flight</Radio.Button>
         <Radio.Button value={constants.MODE_ARBITRARY_PLANE}>Oblique</Radio.Button>
@@ -35,4 +29,10 @@ class ViewModesView extends PureComponent {
   }
 }
 
-export default ViewModesView;
+function mapStateToProps(state: OxalisState) {
+  return {
+    viewMode: state.temporaryConfiguration.viewMode,
+  };
+}
+
+export default connect(mapStateToProps)(ViewModesView);

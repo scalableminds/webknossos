@@ -8,7 +8,8 @@
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import type { Vector3, Vector6, ModeType, VolumeModeType } from "oxalis/constants";
+import Constants from "oxalis/constants";
+import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
@@ -113,6 +114,7 @@ export type AllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 export type SettingsType = {
   +advancedOptionsAllowed: boolean,
   +allowedModes: Array<AllowedModeType>,
+  +preferredMode: AllowedModeType,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
 };
@@ -148,7 +150,6 @@ export type SkeletonTracingType = {
   +activeNodeId: ?number,
   +cachedMaxNodeId: number,
   +restrictions: RestrictionsType & SettingsType,
-  +viewMode: ModeType,
 };
 
 export type VolumeTracingType = {
@@ -156,7 +157,7 @@ export type VolumeTracingType = {
   +name: string,
   +version: number,
   +maxCellId: number,
-  +viewMode: VolumeModeType,
+  +volumeTraceOrMoveMode: VolumeTraceOrMoveModeType,
   +cubes: [],
   +activeCellId: number,
   +lastCentroid: ?Vector3,
@@ -227,9 +228,11 @@ export type UserConfigurationType = {
 };
 
 export type TemporaryConfigurationType = {
-  +boundingBox: Vector6,
+  +userBoundingBox: Vector6,
   +shouldHideInactiveTrees: boolean,
   +shouldHideAllSkeletons: boolean,
+  +viewMode: ModeType,
+  +flightmodeRecording: boolean,
 };
 
 export type TaskType = {
@@ -246,7 +249,7 @@ export type FlycamType = {
   +zoomStep: number,
   +currentMatrix: Matrix4x4,
   +spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
-}
+};
 
 export type OxalisState = {
   +datasetConfiguration: DatasetConfigurationType,
@@ -298,9 +301,11 @@ export const defaultState: OxalisState = {
     tdViewDisplayPlanes: true,
   },
   temporaryConfiguration: {
-    boundingBox: [0, 0, 0, 0, 0, 0],
+    userBoundingBox: [0, 0, 0, 0, 0, 0],
     shouldHideInactiveTrees: false,
     shouldHideAllSkeletons: false,
+    viewMode: Constants.MODE_PLANE_TRACING,
+    flightmodeRecording: false,
   },
   task: null,
   dataset: {
@@ -318,7 +323,6 @@ export const defaultState: OxalisState = {
     trees: {},
     name: "",
     version: 0,
-    viewMode: 0,
     tracingId: "",
     tracingType: "Explorational",
     activeTreeId: null,

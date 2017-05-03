@@ -12,6 +12,7 @@ import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import Constants from "oxalis/constants";
+import Store from "oxalis/store";
 
 const TabPane = Tabs.TabPane;
 
@@ -26,7 +27,7 @@ class RightMenuView extends React.PureComponent {
 
   getTabs() {
     if (!this.props.isPublicViewMode) {
-      if (this.props.oldModel.get("mode") in Constants.MODES_SKELETON) {
+      if (Store.getState().temporaryConfiguration.viewMode in Constants.MODES_SKELETON) {
         return [
           <TabPane tab="Trees" key="3" className="flex-column"><TreesTabView /></TabPane>,
           <TabPane tab="Comments" key="4" className="flex-column"><CommentTabView /></TabPane>,

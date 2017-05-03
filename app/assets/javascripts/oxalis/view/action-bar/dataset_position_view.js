@@ -1,9 +1,9 @@
 // @flow
 import React, { PureComponent } from "react";
 import type { OxalisState, FlycamType } from "oxalis/store";
-import type Model from "oxalis/model";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
+import type { ModeType } from "oxalis/constants";
 import constants from "oxalis/constants";
 import Toast from "libs/toast";
 import { V3 } from "libs/mjs";
@@ -15,19 +15,9 @@ import Vector3Input from "libs/vector3_input";
 
 class DatasetPositionView extends PureComponent {
   props: {
-    oldModel: Model,
     flycam: FlycamType,
+    viewMode: ModeType
   };
-
-  componentDidMount() {
-    this.props.oldModel.on("change:mode", this._forceUpdate);
-  }
-
-  componentWillUnmount() {
-    this.props.oldModel.off("change:mode", this._forceUpdate);
-  }
-
-  _forceUpdate = () => { this.forceUpdate(); };
 
   copyPositionToClipboard = async () => {
     const position = V3.floor(getPosition(this.props.flycam)).join(", ");
@@ -52,7 +42,7 @@ class DatasetPositionView extends PureComponent {
   render() {
     const position = V3.floor(getPosition(this.props.flycam));
     const rotation = V3.round(getRotation(this.props.flycam));
-    const isArbitraryMode = constants.MODES_ARBITRARY.includes(this.props.oldModel.mode);
+    const isArbitraryMode = constants.MODES_ARBITRARY.includes(this.props.viewMode);
 
     return (
       <div>
@@ -93,6 +83,7 @@ class DatasetPositionView extends PureComponent {
 function mapStateToProps(state: OxalisState) {
   return {
     flycam: state.flycam,
+    viewMode: state.temporaryConfiguration.viewMode,
   };
 }
 

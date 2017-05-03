@@ -31,7 +31,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         cells: {},
         cubes: [],
         restrictions,
-        viewMode: Constants.VOLUME_MODE_MOVE,
+        volumeTraceOrMoveMode: Constants.VOLUME_MODE_MOVE,
         name: action.tracing.dataSetName,
         tracingType: action.tracing.typ,
         tracingId: action.tracing.id,
@@ -52,7 +52,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
       }
 
       case "TOGGLE_MODE": {
-        const newMode = volumeTracing.viewMode === Constants.VOLUME_MODE_TRACE ?
+        const newMode = volumeTracing.volumeTraceOrMoveMode === Constants.VOLUME_MODE_TRACE ?
             Constants.VOLUME_MODE_MOVE :
             Constants.VOLUME_MODE_TRACE;
         return setModeReducer(state, volumeTracing, newMode);

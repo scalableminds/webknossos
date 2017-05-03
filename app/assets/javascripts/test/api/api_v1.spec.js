@@ -66,11 +66,12 @@ const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 const Store = mockRequire.reRequire("oxalis/store").default;
 
 test.beforeEach((t) => {
-  const model = t.context.model = new Model();
-  model.set("state", { position: [1, 2, 3] });
-  model.set("tracingType", "tracingTypeValue");
-  model.set("tracingId", "tracingIdValue");
-  model.set("controlMode", constants.CONTROL_MODE_TRACE);
+  const model = t.context.model = new Model({
+    tracingType: "tracingTypeValue",
+    tracingId: "tracingIdValue",
+    controlMode: constants.CONTROL_MODE_TRACE,
+  });
+  model.state = { position: [1, 2, 3] };
 
   const webknossos = t.context.webknossos = new OxalisApi(model);
 

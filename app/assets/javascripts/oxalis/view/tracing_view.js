@@ -56,7 +56,8 @@ class TracingView extends Marionette.View {
 
   onRender() {
     // Hide the input catchers arbitrary model
-    if (Constants.MODES_ARBITRARY.includes(this.model.get("mode"))) {
+    const viewMode = Store.getState().temporaryConfiguration.viewMode;
+    if (Constants.MODES_ARBITRARY.includes(viewMode)) {
       this.ui.inputcatchers.hide();
     }
   }

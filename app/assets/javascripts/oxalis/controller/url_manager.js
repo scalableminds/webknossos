@@ -5,9 +5,7 @@
 
 import _ from "lodash";
 import Utils from "libs/utils";
-import Backbone from "backbone";
 import { V3 } from "libs/mjs";
-import Model from "oxalis/model";
 import Store from "oxalis/store";
 import type { Vector3, ModeType } from "oxalis/constants";
 import constants, { ModeValues } from "oxalis/constants";
@@ -18,7 +16,7 @@ import window from "libs/window";
 const NO_MODIFY_TIMEOUT = 5000;
 const MAX_UPDATE_INTERVAL = 1000;
 
-type State = {
+export type UrlManagerState = {
   position?: Vector3,
   mode?: ModeType,
   zoomStep?: number,
@@ -28,23 +26,20 @@ type State = {
 
 class UrlManager {
   baseUrl: string;
-  model: Model;
-  initialState: State;
+  initialState: UrlManagerState;
   lastUrl: ?string
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
 
-  constructor(model: Model) {
-    this.model = model;
+  constructor() {
     this.baseUrl = document.location.pathname + document.location.search;
     this.initialState = this.parseUrl();
-
-    _.extend(this, Backbone.Events);
   }
 
   update = _.throttle(
     () => {
       const url = this.buildUrl();
+      if (!url) {
+        return;
+      }
       // Don't tamper with URL if changed externally for some time
       if (this.lastUrl == null || window.location.href === this.lastUrl) {
         window.location.replace(url);
@@ -56,12 +51,12 @@ class UrlManager {
     MAX_UPDATE_INTERVAL,
   );
 
-  parseUrl(): State {
+  parseUrl(): UrlManagerState {
     // State string format:
     // x,y,z,mode,zoomStep[,rotX,rotY,rotZ][,activeNode]
 
     const stateString = location.hash.slice(1);
-    const state: State = {};
+    const state: UrlManagerState = {};
 
     if (stateString) {
       const stateArray = stateString.split(",").map(item => Number(item));
@@ -94,19 +89,19 @@ class UrlManager {
 
 
   startUrlUpdater(): void {
-    this.listenTo(this.model, "change:mode", this.update);
-
-    if (Store.getState().tracing) {
-      Store.subscribe(() => this.update());
-    }
+    Store.subscribe(() => this.update());
   }
 
 
-  buildUrl(): string {
+  buildUrl(): ?string {
+    if (!Store.getState().tracing) {
+      return null;
+    }
+    const viewMode = Store.getState().temporaryConfiguration.viewMode;
     let state = V3.floor(getPosition(Store.getState().flycam));
-    state.push(this.model.mode);
+    state.push(viewMode);
 
-    if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
+    if (constants.MODES_ARBITRARY.includes(viewMode)) {
       state = state
         .concat([Store.getState().flycam.zoomStep.toFixed(2)])
         .concat(getRotation(Store.getState().flycam).map(e => e.toFixed(2)));

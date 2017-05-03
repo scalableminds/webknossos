@@ -2,6 +2,7 @@
 import React, { PureComponent } from "react";
 import _ from "lodash";
 import type Model from "oxalis/model";
+import Store from "oxalis/store";
 import type { OxalisState, TracingType } from "oxalis/store";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
@@ -120,9 +121,10 @@ class DatasetActionsView extends PureComponent {
   }
 
   render() {
-    const isSkeletonMode = _.includes(Constants.MODES_SKELETON, this.props.oldModel.get("mode"));
+    const viewMode = Store.getState().temporaryConfiguration.viewMode;
+    const isSkeletonMode = _.includes(Constants.MODES_SKELETON, viewMode);
     const hasAdvancedOptions = this.props.oldModel.settings.advancedOptionsAllowed;
-    const archiveButtonText = this.props.oldModel.get("isTask") ? "Finish" : "Archive";
+    const archiveButtonText = this.props.oldModel.isTask ? "Finish" : "Archive";
     const { tracing } = this.props.oldModel;
 
 

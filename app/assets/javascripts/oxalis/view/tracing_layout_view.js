@@ -1,6 +1,6 @@
 /**
  * tracing_layout_view.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -32,6 +32,7 @@ class TracingLayoutView extends Marionette.View {
   traceTemplate: (data: Object) => string;
   viewTemplate: (data: Object) => string;
   rightMenuView: Marionette.View<*>;
+  model: OxalisModel;
 
   static initClass() {
     this.prototype.className = "text-nowrap";
@@ -84,7 +85,7 @@ class TracingLayoutView extends Marionette.View {
   }
 
 
-  initialize(options) {
+  initialize(options?: Object): this {
     this.options = _.extend(
       {},
       options,
@@ -94,7 +95,6 @@ class TracingLayoutView extends Marionette.View {
     this.model = this.options.model;
 
     this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
-    // this.listenTo(this.model, "change:mode", this.renderRegions);
     this.listenTo(this.model, "sync", this.renderRegions);
     $(window).on("resize", this.resizeRightMenu.bind(this));
 
@@ -104,6 +104,7 @@ class TracingLayoutView extends Marionette.View {
 
     app.oxalis = new OxalisController(this.options);
     window.webknossos = new OxalisApi(this.model);
+    return this;
   }
 
 
@@ -148,7 +149,7 @@ class TracingLayoutView extends Marionette.View {
 
     render(
       <Provider store={store}>
-        <SettingsView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
+        <SettingsView isPublicViewMode={!this.isTracingMode()} />
       </Provider>,
       this.ui.settings[0],
     );
@@ -164,7 +165,7 @@ class TracingLayoutView extends Marionette.View {
   }
 
 
-  showUserScriptsModal(event) {
+  showUserScriptsModal(event: Event) {
     event.preventDefault();
     const modalView = new UserScriptsModalView();
     this.showChildView("modalWrapper", modalView);
@@ -190,22 +191,22 @@ class TracingLayoutView extends Marionette.View {
 
 
   isTracingMode() {
-    return this.model.get("controlMode") !== Constants.CONTROL_MODE_VIEW;
+    return this.model.controlMode !== Constants.CONTROL_MODE_VIEW;
   }
 
 
   isSkeletonMode() {
-    return Constants.MODES_SKELETON.includes(this.model.get("mode")) && this.isTracingMode();
+    return Constants.MODES_SKELETON.includes(store.getState().temporaryConfiguration.viewMode) && this.isTracingMode();
   }
 
 
   isVolumeMode() {
-    return this.model.get("mode") === Constants.MODE_VOLUME && this.isTracingMode();
+    return store.getState().viewMode === Constants.MODE_VOLUME && this.isTracingMode();
   }
 
 
   isArbitraryMode() {
-    return Constants.MODES_ARBITRARY.includes(this.model.get("mode"));
+    return Constants.MODES_ARBITRARY.includes(store.getState().temporaryConfiguration.viewMode);
   }
 
 

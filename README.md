@@ -99,8 +99,8 @@ systemctl stop webknossos-datastore
 ### Modify the user inside the docker container
 By default the datastore runs with a Linux user account that has uid=1000 and gid=1000. If your setup requires a different user, e.g. because of file permissions, you may add the user flag to your docker create command `-u <uid>:<gid>`. You can find the uid and gid with the Linux `id <username>` command.
 
-### Using a cluster firewall for HTTP(S) routing
-If your cluster enviroment has a firewall that supports HTTP(S) routing, you can expose the datastore directly on Port 80. For that, change the port flag to `-p 9090:80`
+### Using a cluster proxy/firewall for HTTP(S) routing
+If your cluster enviroment has a firewall that supports HTTP(S) routing, you can expose the datastore directly on Port 80. For that, change the port flag to `-p 80:9090`
 
 ### Using nginx for HTTP(S) routing
 Nginx is a high performance HTTP server that allows for proxing HTTP(S) request. This is useful, because the datastore doesn't support HTTPS by itself. So, you can put the nginx in front of the datastore to accept HTTPS requests from the outside and route them as regular HTTP requests to the datastore.

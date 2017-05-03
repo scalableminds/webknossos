@@ -19,10 +19,6 @@ class View {
 
   constructor(model) {
     this.model = model;
-    if (!this.isWebGlSupported()) {
-      Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>" +
-        "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>");
-    }
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.scene = new THREE.Scene();
@@ -55,9 +51,7 @@ class View {
   }
 
 
-  isWebGlSupported() {
-    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
-  }
+
 }
 
 export default View;

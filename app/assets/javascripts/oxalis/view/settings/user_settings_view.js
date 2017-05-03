@@ -34,7 +34,6 @@ type UserSettingsViewProps = {
   onChangeActiveCellId: (value: number) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
-  isPublicViewMode: boolean,
   viewMode: ModeType,
 };
 
@@ -91,8 +90,9 @@ class UserSettingsView extends PureComponent {
 
   getSkeletonOrVolumeOptions = () => {
     const mode = this.props.viewMode;
+    const isPublicViewMode = Model.controlMode !== Constants.CONTROL_MODE_VIEW;
 
-    if (Constants.MODES_SKELETON.includes(mode) && !this.props.isPublicViewMode && this.props.tracing.type === "skeleton") {
+    if (Constants.MODES_SKELETON.includes(mode) && !isPublicViewMode && this.props.tracing.type === "skeleton") {
       const activeNodeId = this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
       const activeTreeId = this.props.tracing.activeTreeId != null ? this.props.tracing.activeTreeId : "";
       return (

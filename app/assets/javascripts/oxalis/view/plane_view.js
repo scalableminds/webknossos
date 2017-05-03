@@ -22,7 +22,6 @@ class PlaneView {
   listenTo: Function;
 
   model: Model;
-  view: View;
   renderer: THREE.WebGLRenderer;
   cameras: OrthoViewMapType<THREE.OrthographicCamera>;
   group: THREE.Object3D;
@@ -34,20 +33,18 @@ class PlaneView {
   deviceScaleFactor: number;
   scaleFactor: number;
 
-  constructor(model: Model, view: View) {
+  constructor(model: Model) {
     let HEIGHT;
     let WIDTH;
     this.model = model;
-    this.view = view;
     _.extend(this, Backbone.Events);
 
-    this.renderer = this.view.renderer;
-    this.scene = this.view.scene;
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: document.getElementById("render-canvas"),
+      antialias: true
+    });
+    this.scene = new THREE.Scene();
     this.running = false;
-
-    // The "render" div serves as a container for the canvas, that is
-    // attached to it once a renderer has been initalized.
-    const container = $("#render");
 
     // Create a 4x4 grid
     this.curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH;
@@ -97,8 +94,8 @@ class PlaneView {
 
     // Attach the canvas to the container
     this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
-    $(this.renderer.domElement).attr({ id: "render-canvas" });
-    container.append(this.renderer.domElement);
+    // $(this.renderer.domElement).attr({ id: "render-canvas" });
+    // container.append(this.renderer.domElement);
 
     this.setActiveViewport(OrthoViews.PLANE_XY);
 

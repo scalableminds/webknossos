@@ -11,6 +11,7 @@ import _ from "lodash";
 import constants from "oxalis/constants";
 import BaseRouter from "libs/base_router";
 import PaginationCollection from "admin/models/pagination_collection";
+import Model from "oxalis/model";
 
 // #####
 // This Router contains all the routes for views that have been
@@ -72,13 +73,6 @@ class Router extends BaseRouter {
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
 
-      const view = new TracingLayoutView({
-        tracingType: type,
-        tracingId: id,
-        controlMode: constants.CONTROL_MODE_TRACE,
-      });
-      view.forcePageReload = true;
-      this.changeView(view);
     };
     require(["oxalis/view/tracing_layout_view"], callback);
   }
@@ -89,13 +83,6 @@ class Router extends BaseRouter {
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
 
-      const view = new TracingLayoutView({
-        tracingType: "View",
-        tracingId: id,
-        controlMode: constants.CONTROL_MODE_VIEW,
-      });
-      view.forcePageReload = true;
-      this.changeView(view);
     };
     require(["oxalis/view/tracing_layout_view"], callback);
   }

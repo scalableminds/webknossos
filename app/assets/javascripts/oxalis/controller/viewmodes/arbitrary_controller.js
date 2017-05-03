@@ -105,12 +105,6 @@ class ArbitraryController {
     this.plane = new ArbitraryPlane(this.model, this, this.WIDTH);
     this.arbitraryView.addGeometry(this.plane);
 
-    // render HTML element to indicate recording status
-    this.infoPlane = new ArbitraryPlaneInfo({ model: this.model });
-    this.infoPlane.render();
-    $("#render").append(this.infoPlane.el);
-
-
     this.input = _.extend({}, this.input);
 
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);

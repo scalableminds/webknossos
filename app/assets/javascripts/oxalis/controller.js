@@ -23,11 +23,11 @@ import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controlle
 import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
-import View from "oxalis/view";
 import SkeletonTracingView from "oxalis/view/skeletontracing_view";
 import VolumeTracingView from "oxalis/view/volumetracing_view";
 import constants from "oxalis/constants";
 import Request from "libs/request";
+import OxalisApi from "oxalis/api/api_loader";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -43,7 +43,6 @@ class Controller {
   model: Model;
   urlManager: UrlManager;
   sceneController: SceneController;
-  view: View;
   annotationController: SkeletonTracingController | VolumeTracingController;
   planeController: PlaneController;
   arbitraryController: ArbitraryController;
@@ -75,6 +74,10 @@ class Controller {
     this.urlManager = new UrlManager(this.model);
     this.model.state = this.urlManager.initialState;
 
+    if (!this.isWebGlSupported()) {
+      Toast.error(messages["webgl.disabled"]);
+    }
+
     this.model.fetch()
         .then(() => this.modelFetchDone());
         // .catch((error) => {
@@ -86,6 +89,9 @@ class Controller {
         // );
   }
 
+  isWebGlSupported() {
+    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
+  }
 
   modelFetchDone() {
     if (!this.model.tracing.restrictions.allowAccess) {
@@ -132,9 +138,8 @@ class Controller {
       }
     } else {
       // VIEW MODE
-      this.view = new View(this.model);
       this.planeController = new PlaneController(
-        this.model, this.view, this.sceneController);
+        this.model, this.sceneController);
     }
 
     // FPS stats
@@ -165,6 +170,8 @@ class Controller {
     });
     this.onZoomStepChange();
 
+    window.webknossos = new OxalisApi(this.model);
+
     app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
@@ -194,6 +201,24 @@ class Controller {
       });
     }
   }
+
+  // TODO find a new home
+  maybeShowNewTaskTypeModal() {
+    // Users can aquire new tasks directly in the tracing view. Occasionally,
+    // they start working on a new TaskType and need to be instructed.
+    let text;
+    if (!Utils.getUrlParams("differentTaskType") || (this.model.tracing.task == null)) { return; }
+
+    const taskType = this.model.tracing.task.type;
+    const title = `Attention, new Task Type: ${taskType.summary}`;
+    if (taskType.description) {
+      text = `You are now tracing a new task with the following description:<br>${taskType.description}`;
+    } else {
+      text = "You are now tracing a new task with no description.";
+    }
+    Modal.show(text, title);
+  }
+
 
   initKeyboard() {
     // avoid scrolling while pressing space

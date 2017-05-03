@@ -10,9 +10,9 @@ import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
 
 const TabPane = Tabs.TabPane;
 
-const SettingsView = ({ isPublicViewMode }:{isPublicViewMode: boolean}) =>
+const SettingsView = () =>
   <Tabs destroyInactiveTabPane>
-    <TabPane tab="Tracing" key="1"><UserSettingsView isPublicViewMode={isPublicViewMode} /></TabPane>
+    <TabPane tab="Tracing" key="1"><UserSettingsView /></TabPane>
     <TabPane tab="Dataset" key="2"><DatasetSettingsView /></TabPane>
   </Tabs>;
 

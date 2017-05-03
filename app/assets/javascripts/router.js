@@ -9,7 +9,7 @@
 import $ from "jquery";
 import _ from "lodash";
 import React from "react";
-import constants, { ControlModeEnum } from "oxalis/constants";
+import { ControlModeEnum } from "oxalis/constants";
 import { SkeletonTracingTypeTracingEnum } from "oxalis/store";
 import BaseRouter from "libs/base_router";
 import PaginationCollection from "admin/models/pagination_collection";

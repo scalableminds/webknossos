@@ -180,7 +180,7 @@ class DatasetActionsView extends PureComponent {
       elements.push(<Button
         key="next-button"
         icon="verticle-left"
-        onClick={this.handleNextTask.bind(this)}
+        onClick={this.handleNextTask}
       >
         Finish and Get Next Task
       </Button>);

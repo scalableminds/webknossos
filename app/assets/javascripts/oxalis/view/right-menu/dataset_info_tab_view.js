@@ -10,7 +10,6 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
-import Model from "oxalis/model";
 import TemplateHelpers from "libs/template_helpers";
 import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
 

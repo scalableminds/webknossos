@@ -3,27 +3,20 @@
  * @flow
  */
 
-import $ from "jquery";
 import React from "react";
 import { Provider } from "react-redux";
 import app from "app";
 import Store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
-import Model from "oxalis/model";
 import Constants, { ControlModeEnum } from "oxalis/constants";
-import Modal from "oxalis/view/modal";
-import Utils from "libs/utils";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
-import UserScriptsModalView from "oxalis/view/user_scripts_modal";
 import TracingView from "oxalis/view/tracing_view";
 import enUS from "antd/lib/locale-provider/en_US";
-import { LocaleProvider, Layout, Button, Icon, Menu } from "antd";
+import { LocaleProvider, Layout, Button, Icon } from "antd";
 
-const MARGIN = 40;
 const { Header, Sider, Content } = Layout;
-const MenuItem = Menu.Item;
 
 class TracingLayoutView extends React.PureComponent {
 
@@ -63,6 +56,21 @@ class TracingLayoutView extends React.PureComponent {
     this.setState({
       settingsCollapsed: !this.state.settingsCollapsed,
     });
+  }
+
+  // this.maybeShowNewTaskTypeModal();
+
+  showUserScriptsModal(event: Event): void {
+    event.preventDefault();
+    // const modalView = new UserScriptsModalView();
+    // this.showChildView("modalWrapper", modalView);
+    // return modalView.show();
+    throw Error("TODO");
+  }
+
+  isSkeletonMode() {
+    const temporaryConfiguration = Store.getState().temporaryConfiguration;
+    return Constants.MODES_SKELETON.includes(temporaryConfiguration.viewMode) && temporaryConfiguration.controlMode !== ControlModeEnum.VIEW;
   }
 
   render() {
@@ -118,20 +126,6 @@ class TracingLayoutView extends React.PureComponent {
         </Provider>
       </LocaleProvider>
     );
-  }
-  // this.maybeShowNewTaskTypeModal();
-
-  showUserScriptsModal(event: Event): void {
-    event.preventDefault();
-    // const modalView = new UserScriptsModalView();
-    // this.showChildView("modalWrapper", modalView);
-    // return modalView.show();
-    throw Error("TODO");
-  }
-
-  isSkeletonMode() {
-    const temporaryConfiguration = Store.getState().temporaryConfiguration;
-    return Constants.MODES_SKELETON.includes(temporaryConfiguration.viewMode) && temporaryConfiguration.controlMode !== ControlModeEnum.VIEW;
   }
 }
 

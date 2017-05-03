@@ -7,16 +7,14 @@ import _ from "lodash";
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import { Collapse } from "antd";
-import type { ControlModeType } from "oxalis/constants";
+import type { ControlModeType, Vector6, ModeType } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
-import Model from "oxalis/model";
 import { updateUserSettingAction, updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import type { Vector6, ModeType } from "oxalis/constants";
 import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, TracingType } from "oxalis/store";
 import type { Dispatch } from "redux";
 

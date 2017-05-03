@@ -74,6 +74,7 @@
     "bootstrap": "^3.3.6",
     "bootstrap-daterangepicker": "^2.1.17",
     "bootstrap-multiselect": "^0.9.13",
+    "bootstrap-toggle": "^2.2.2",
     "brace": "^0.8.0",
     "c3": "^0.4.10",
     "classnames": "^2.2.5",

@@ -1,6 +1,5 @@
 // @flow
 import React from "react";
-import Model from "oxalis/model";
 import DatasetActionsView from "oxalis/view/action-bar/dataset_actions_view";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";

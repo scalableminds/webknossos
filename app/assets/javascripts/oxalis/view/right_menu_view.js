@@ -5,15 +5,13 @@
 
 import React from "react";
 import { Tabs } from "antd";
-import Model from "oxalis/model";
 import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
-import type { ControlModeType } from "oxalis/constants";
+import type { ControlModeType, ModeType } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
-import Store from "oxalis/store";
 import type { OxalisState } from "oxalis/store";
 import { connect } from "react-redux";
 

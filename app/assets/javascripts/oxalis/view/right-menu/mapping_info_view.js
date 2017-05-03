@@ -14,7 +14,7 @@ import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 class MappingInfoView extends Component {
   props: {
     position: Vector3,
-    oldModel: Model,
+    oldModel: OxalisModel,
   };
 
   componentDidMount() {

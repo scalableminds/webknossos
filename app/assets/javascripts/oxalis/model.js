@@ -398,6 +398,4 @@ export class OxalisModel {
 }
 
 // export the model as a singleton
-const a = new OxalisModel();
-a.save();
-export default a;
+export default new OxalisModel();

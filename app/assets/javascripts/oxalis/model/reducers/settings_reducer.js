@@ -76,6 +76,11 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
         temporaryConfiguration: { flightmodeRecording: { $set: action.value } },
       });
     }
+    case "SET_CONTROL_MODE": {
+      return update(state, {
+        temporaryConfiguration: { controlMode: { $set: action.controlMode }},
+      });
+    }
     default:
       // pass;
   }

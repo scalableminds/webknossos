@@ -88,13 +88,14 @@ class Controller {
 
 
   modelFetchDone() {
+    const controlMode = Store.getState().temporaryConfiguration.controlMode;
     if (!model.tracing.restrictions.allowAccess) {
       Toast.Error("You are not allowed to access this tracing");
       return;
     }
 
     app.router.on("beforeunload", () => {
-      if (model.controlMode === ControlModeEnum.TRACE) {
+      if (controlMode === ControlModeEnum.TRACE) {
         const state = Store.getState();
         const stateSaved = model.stateSaved();
         if (!stateSaved && state.tracing.restrictions.allowUpdate) {
@@ -108,9 +109,8 @@ class Controller {
     this.urlManager.startUrlUpdater();
 
     this.sceneController = new SceneController(model);
-
     // TODO: Replace with skeletonTracing from Store (which is non-null currently)
-    if (model.controlMode === ControlModeEnum.TRACE) {
+    if (controlMode === ControlModeEnum.TRACE) {
       if (model.isVolumeTracing()) {
         // VOLUME MODE
         this.view = new VolumeTracingView(model);
@@ -201,9 +201,9 @@ class Controller {
       if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) { event.preventDefault(); }
     });
 
+    const controlMode = Store.getState().temporaryConfiguration.controlMode;
     const keyboardControls = {};
-
-    if (model.controlMode === ControlModeEnum.TRACE) {
+    if (controlMode === ControlModeEnum.TRACE) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
         "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),

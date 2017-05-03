@@ -10,8 +10,9 @@ import { Button } from "antd";
 import Store from "oxalis/store";
 
 function ActionBarView({ oldModel }: { oldModel: OxalisModel }) {
-  const isTraceMode = oldModel.controlMode === ControlModeEnum.TRACE;
-  const isVolumeMode = Store.getState().temporaryConfiguration.viewMode === Constants.MODE_VOLUME;
+  const temporaryConfiguration = Store.getState().temporaryConfiguration;
+  const isTraceMode = temporaryConfiguration.controlMode === ControlModeEnum.TRACE;
+  const isVolumeMode = temporaryConfiguration.viewMode === Constants.MODE_VOLUME;
   const hasAdvancedOptions = oldModel.settings.advancedOptionsAllowed;
 
   return (

@@ -5,7 +5,7 @@
  * @flow
  */
 import type { UserConfigurationType, DatasetConfigurationType, DatasetLayerConfigurationType, TemporaryConfigurationType, DatasetType } from "oxalis/store";
-import type { ModeType } from "oxalis/constants";
+import type { ModeType, ControlModeType } from "oxalis/constants";
 
 type UpdateUserSettingActionType = {type: "UPDATE_USER_SETTING", propertyName: $Keys<UserConfigurationType>, value: any};
 type UpdateDatasetSettingActionType = {type: "UPDATE_DATASET_SETTING", propertyName: $Keys<DatasetConfigurationType>, value: any};
@@ -16,14 +16,15 @@ export type InitializeSettingsAction = {type: "INITIALIZE_SETTINGS", initialUser
 type SetDatasetAction = {type: "SET_DATASET", dataset: DatasetType};
 type SetViewModeActionType = {type: "SET_VIEW_MODE", viewMode: ModeType};
 type SetFlightmodeRecordingActionType = {type: "SET_FLIGHTMODE_RECORDING", value: boolean};
-
+type SetControlModeActionType = {type: "SET_CONTROL_MODE", controlMode: ControlModeType};
 export type SettingActionType = (
   UpdateUserSettingActionType |
   UpdateDatasetSettingActionType |
   ToggleTemporarySettingActionType |
   InitializeSettingsAction |
   UpdateLayerSettingActionType |
-  SetDatasetAction
+  SetDatasetAction |
+  SetControlModeActionType
 );
 
 export const updateUserSettingAction = (propertyName: $Keys<UserConfigurationType>, value: any): UpdateUserSettingActionType => ({
@@ -75,4 +76,10 @@ export const setViewModeAction = (viewMode: ModeType): SetViewModeActionType => 
 export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecordingActionType => ({
   type: "SET_FLIGHTMODE_RECORDING",
   value,
+});
+
+
+export const setControlModeAction = (controlMode: ControlModeType): SetControlModeActionType => ({
+  type: "SET_CONTROL_MODE",
+  controlMode,
 });

@@ -307,7 +307,7 @@ export const defaultState: OxalisState = {
     shouldHideAllSkeletons: false,
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
-    controlMode: ControlModeEnum.VIEW,
+    controlMode: ControlModeEnum.TRACE,
   },
   task: null,
   dataset: {

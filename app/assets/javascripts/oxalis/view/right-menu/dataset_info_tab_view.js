@@ -65,7 +65,7 @@ class DatasetInfoTabView extends Component {
     const zoomLevel = this.calculateZoomLevel();
     const dataSetName = this.props.dataset.name;
     const treeCount = _.size(this.props.skeletonTracing.trees);
-    const isPublicViewMode = this.props.oldModel.controlMode === ControlModeEnum.VIEW;
+    const isPublicViewMode = Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     return (
       <div>

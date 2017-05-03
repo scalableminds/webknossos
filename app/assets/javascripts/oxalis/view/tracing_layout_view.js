@@ -10,7 +10,7 @@ import React from "react";
 import { render } from "react-dom";
 import { Provider } from "react-redux";
 import app from "app";
-import store from "oxalis/throttled_store";
+import Store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
 import model from "oxalis/model";
 import type { OxalisModel } from "oxalis/model";
@@ -143,7 +143,7 @@ class TracingLayoutView extends Marionette.View {
 
     render(
       <LocaleProvider locale={enUS}>
-        <Provider store={store}>
+        <Provider store={Store}>
           <ActionBarView oldModel={this.model} />
         </Provider>
       </LocaleProvider>,
@@ -151,14 +151,14 @@ class TracingLayoutView extends Marionette.View {
     );
 
     render(
-      <Provider store={store}>
+      <Provider store={Store}>
         <SettingsView isPublicViewMode={!this.isTracingMode()} />
       </Provider>,
       this.ui.settings[0],
     );
 
     render(
-      <Provider store={store}>
+      <Provider store={Store}>
         <RightMenuView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
       </Provider>,
       this.ui.rightMenu[0],
@@ -194,22 +194,22 @@ class TracingLayoutView extends Marionette.View {
 
 
   isTracingMode() {
-    return this.model.controlMode !== ControlModeEnum.VIEW;
+    return Store.getState().temporaryConfiguration.controlMode !== ControlModeEnum.VIEW;
   }
 
 
   isSkeletonMode() {
-    return Constants.MODES_SKELETON.includes(store.getState().temporaryConfiguration.viewMode) && this.isTracingMode();
+    return Constants.MODES_SKELETON.includes(Store.getState().temporaryConfiguration.viewMode) && this.isTracingMode();
   }
 
 
   isVolumeMode() {
-    return store.getState().viewMode === Constants.MODE_VOLUME && this.isTracingMode();
+    return Store.getState().viewMode === Constants.MODE_VOLUME && this.isTracingMode();
   }
 
 
   isArbitraryMode() {
-    return Constants.MODES_ARBITRARY.includes(store.getState().temporaryConfiguration.viewMode);
+    return Constants.MODES_ARBITRARY.includes(Store.getState().temporaryConfiguration.viewMode);
   }
 
 

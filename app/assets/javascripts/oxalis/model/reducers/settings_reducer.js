@@ -78,7 +78,7 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
     }
     case "SET_CONTROL_MODE": {
       return update(state, {
-        temporaryConfiguration: { controlMode: { $set: action.controlMode }},
+        temporaryConfiguration: { controlMode: { $set: action.controlMode } },
       });
     }
     default:

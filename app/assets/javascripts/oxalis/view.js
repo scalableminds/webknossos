@@ -26,7 +26,7 @@ class View {
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: document.getElementById("render-canvas"),
-      antialias: true
+      antialias: true,
     });
     this.scene = new THREE.Scene();
 
@@ -59,7 +59,6 @@ class View {
       return $("body").attr("class", "dark");
     }
   }
-
 
 
 }

@@ -12,12 +12,13 @@ import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
 import TemplateHelpers from "libs/template_helpers";
-import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
 
 type DatasetInfoTabProps = {
   skeletonTracing: SkeletonTracingType,
   dataset: DatasetType,
   flycam: FlycamType,
+  task: TaskType,
 };
 
 class DatasetInfoTabView extends Component {
@@ -56,7 +57,7 @@ class DatasetInfoTabView extends Component {
     let annotationType = tracingType;
 
     // In case we have a task display its id as well
-    if (this.props.task) { annotationType += `: ${this.props.task.id}`; }
+    if (this.props.task) { annotationType += `: ${this.props.task.taskId}`; }
     // Or display an explorative tracings name if there is one
     if (name) { annotationType += `: ${name}`; }
 

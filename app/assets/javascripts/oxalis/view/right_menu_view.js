@@ -11,16 +11,25 @@ import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
-import Constants from "oxalis/constants";
+import type { ControlModeType } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import Store from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
+import { connect } from "react-redux";
 
 const TabPane = Tabs.TabPane;
 
+type Props = {
+  controlMode: ControlModeType,
+  viewMode: ModeType,
+};
+
 class RightMenuView extends React.PureComponent {
+  props: Props;
 
   getTabs() {
-    if (!Model.controlMode !== Constants.CONTROL_MODE_VIEW) {
-      if (Store.getState().temporaryConfiguration.viewMode in Constants.MODES_SKELETON) {
+    if (!this.props.controlMode !== ControlModeEnum.VIEW) {
+      if (this.props.viewMode in Constants.MODES_SKELETON) {
         return [
           <TabPane tab="Trees" key="3" className="flex-column"><TreesTabView /></TabPane>,
           <TabPane tab="Comments" key="4" className="flex-column"><CommentTabView /></TabPane>,
@@ -44,4 +53,11 @@ class RightMenuView extends React.PureComponent {
   }
 }
 
-export default RightMenuView;
+function mapStateToProps(state: OxalisState) {
+  return {
+    controlMode: state.temporaryConfiguration.controlMode,
+    viewMode: state.temporaryConfiguration.viewMode,
+  };
+}
+
+export default connect(mapStateToProps)(RightMenuView);

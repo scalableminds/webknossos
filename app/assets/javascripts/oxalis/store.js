@@ -135,8 +135,17 @@ export type DatasetType = {
 
 export type TreeMapType = {+[number]: TreeType};
 
-export type SkeletonTracingTypeTracingType =
-  "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType";
+export const SkeletonTracingTypeTracingEnum = {
+  Explorational: "Explorational",
+  Task: "Task",
+  View: "View",
+  CompoundTask: "CompoundTask",
+  CompoundProject: "CompoundProject",
+  CompoundTaskType: "CompoundTaskType",
+};
+
+export type SkeletonTracingTypeTracingType = $Keys<typeof SkeletonTracingTypeTracingEnum>;
+
 export type VolumeTracingTypeTracingType = SkeletonTracingTypeTracingType;
 
 export type SkeletonTracingType = {

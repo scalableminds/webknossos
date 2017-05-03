@@ -34,6 +34,7 @@ import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { OxalisModel } from "oxalis/model";
+import Modal from "oxalis/view/modal";
 
 import messages from "messages";
 
@@ -41,7 +42,6 @@ import type { ToastType } from "libs/toast";
 import type { ModeType } from "oxalis/constants";
 
 class Controller {
-
   urlManager: UrlManager;
   sceneController: SceneController;
   annotationController: SkeletonTracingController | VolumeTracingController;
@@ -68,7 +68,7 @@ class Controller {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
 
-  constructor(options: Object) {
+  constructor() {
     app.router.showLoadingSpinner();
 
     _.extend(this, Backbone.Events);

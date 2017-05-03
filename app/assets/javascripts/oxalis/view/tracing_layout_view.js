@@ -36,7 +36,7 @@ class TracingLayoutView extends React.PureComponent {
     const addScriptLink = document.getElementById("add-script-link");
     if (addScriptLink) {
       addScriptLink.classList.remove("hide");
-      addScriptLink.addEventListener("click", this.showUserScriptsModal);
+      addScriptLink.addEventListener("click", this.showUserScriptsModal.bind(this));
     }
 
     // this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
@@ -88,7 +88,8 @@ class TracingLayoutView extends React.PureComponent {
             <Header>
               <Button
                 size="large"
-                onClick={this.handleSettingsCollapse} style={{ float: "left", marginTop: "10px" }}>
+                onClick={this.handleSettingsCollapse} style={{ float: "left", marginTop: "10px" }}
+              >
                 <Icon type={this.state.settingsCollapsed ? "menu-unfold" : "menu-fold"} />
                 Settings
               </Button>
@@ -120,7 +121,7 @@ class TracingLayoutView extends React.PureComponent {
   }
   // this.maybeShowNewTaskTypeModal();
 
-  showUserScriptsModal = (event: SyntheticInputEvent) => {
+  showUserScriptsModal(event: Event): void {
     event.preventDefault();
     // const modalView = new UserScriptsModalView();
     // this.showChildView("modalWrapper", modalView);

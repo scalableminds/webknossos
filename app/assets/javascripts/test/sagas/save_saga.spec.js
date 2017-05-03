@@ -10,6 +10,7 @@ mockRequire.stopAll();
 
 mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("app", { router: { off: _.noop, reload: _.noop } });
+mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
 
 const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");

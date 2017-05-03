@@ -8,10 +8,13 @@
 
 import $ from "jquery";
 import _ from "lodash";
+import React from "react";
 import constants from "oxalis/constants";
 import BaseRouter from "libs/base_router";
 import PaginationCollection from "admin/models/pagination_collection";
 import Model from "oxalis/model";
+import { render } from "react-dom";
+
 
 // #####
 // This Router contains all the routes for views that have been
@@ -76,8 +79,7 @@ class Router extends BaseRouter {
       Model.initialize(type, id, constants.CONTROL_MODE_VIEW);
 
       // view.forcePageReload = true;
-      const view = new TracingLayoutView();
-      view.render();
+      render(<TracingLayoutView />, this.$mainContainer[0]);
     };
     require(["oxalis/view/tracing_layout_view"], callback);
   }
@@ -91,8 +93,7 @@ class Router extends BaseRouter {
       Model.initialize(null, id, constants.CONTROL_MODE_VIEW);
 
       // view.forcePageReload = true;
-      const view = new TracingLayoutView();
-      view.render();
+      render(<TracingLayoutView />, this.$mainContainer[0]);
     };
     require(["oxalis/view/tracing_layout_view"], callback);
   }

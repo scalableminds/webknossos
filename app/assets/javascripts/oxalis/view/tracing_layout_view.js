@@ -5,7 +5,6 @@
 
 import $ from "jquery";
 import React from "react";
-import { render } from "react-dom";
 import { Provider } from "react-redux";
 import app from "app";
 import store from "oxalis/throttled_store";
@@ -20,16 +19,20 @@ import RightMenuView from "oxalis/view/right_menu_view";
 import UserScriptsModalView from "oxalis/view/user_scripts_modal";
 import TracingView from "oxalis/view/tracing_view";
 import enUS from "antd/lib/locale-provider/en_US";
-import { LocaleProvider, Layout} from "antd";
+import { LocaleProvider, Layout, Button, Icon } from "antd";
 
 const MARGIN = 40;
 const { Header, Sider, Content } = Layout;
 
 class TracingLayoutView extends React.PureComponent {
 
+  state = {
+    settingsCollapsed: false,
+  }
+
   componentDidMount() {
 
-    $(window).on("resize", this.resizeRightMenu.bind(this));
+    // $(window).on("resize", this.resizeRightMenu.bind(this));
     const addScriptLink = document.getElementById("add-script-link");
     if (addScriptLink) {
       addScriptLink.classList.remove("hide");
@@ -56,6 +59,11 @@ class TracingLayoutView extends React.PureComponent {
   //     }
   //   }
   // }
+  handleSettingsCollapse = () => {
+    this.setState({
+      settingsCollapsed: !this.state.settingsCollapsed,
+    });
+  }
 
   render() {
     // if (!this.model.settings.advancedOptionsAllowed) {
@@ -73,28 +81,37 @@ class TracingLayoutView extends React.PureComponent {
       <div className="modal-wrapper" />
     </div>
     */
-    return render(
+    return (
       <LocaleProvider locale={enUS}>
         <Provider store={store}>
           <Layout>
-            <Sider>
-              <SettingsView />
-            </Sider>
+            <Header>
+              <Button onClick={this.handleSettingsCollapse}>
+                <Icon type={this.state.settingsCollapsed ? "menu-unfold" : "menu-fold"} />
+                Settings
+              </Button>
+              <ActionBarView />
+            </Header>
             <Layout>
-              <Header>
-                <ActionBarView />
-              </Header>
-              <Content>
-                <TracingView />
-              </Content>
-              <Sider>
-                <RightMenuView />
+              <Sider
+                collapsible
+                trigger={null}
+                collapsed={this.state.settingsCollapsed}
+              >
+                <SettingsView />
               </Sider>
+              <Layout>
+                <Content>
+                  <TracingView />
+                </Content>
+                <Sider>
+                  <RightMenuView />
+                </Sider>
+              </Layout>
             </Layout>
           </Layout>
         </Provider>
-      </LocaleProvider>,
-      document.getElementById("main-container"),
+      </LocaleProvider>
     );
   }
     // this.maybeShowNewTaskTypeModal();

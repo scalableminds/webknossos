@@ -10,9 +10,9 @@ import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import type { OxalisModel } from "oxalis/model";
 import View from "oxalis/view";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
+import type { OxalisModel } from "oxalis/model";
 
 class PlaneView {
 
@@ -34,17 +34,15 @@ class PlaneView {
   deviceScaleFactor: number;
   scaleFactor: number;
 
-  constructor(model: Model) {
+  constructor(model: OxalisModel, view: View) {
     let HEIGHT;
     let WIDTH;
     this.model = model;
+    this.view = view;
     _.extend(this, Backbone.Events);
 
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: document.getElementById("render-canvas"),
-      antialias: true
-    });
-    this.scene = new THREE.Scene();
+    this.renderer = this.view.renderer;
+    this.scene = this.view.scene;
     this.running = false;
 
     // Create a 4x4 grid

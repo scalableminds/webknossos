@@ -79,10 +79,12 @@ class PlaneController {
 
   constructor(
     model: OxalisModel,
+    view: View,
     sceneController: SceneController,
   ) {
     _.extend(this, Backbone.Events);
     this.model = model;
+    this.view = view;
     this.sceneController = sceneController;
 
     this.isStarted = false;
@@ -90,7 +92,7 @@ class PlaneController {
     const state = Store.getState();
     this.oldNmPos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
 
-    this.planeView = new PlaneView(this.model);
+    this.planeView = new PlaneView(this.model, this.view);
 
     this.activeViewport = OrthoViews.PLANE_XY;
 

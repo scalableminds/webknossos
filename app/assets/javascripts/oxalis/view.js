@@ -19,8 +19,15 @@ class View {
 
   constructor(model) {
     this.model = model;
+    if (!this.isWebGlSupported()) {
+      Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>" +
+        "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>");
+    }
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: document.getElementById("render-canvas"),
+      antialias: true
+    });
     this.scene = new THREE.Scene();
 
     this.setTheme(constants.THEME_BRIGHT);
@@ -29,6 +36,9 @@ class View {
     $("#loader").addClass("hidden");
   }
 
+  isWebGlSupported() {
+    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
+  }
 
   toggleTheme() {
     if (this.theme === constants.THEME_BRIGHT) {

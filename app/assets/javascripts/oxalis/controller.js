@@ -13,6 +13,7 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import model from "oxalis/model";
 import Store from "oxalis/store";
+import View from "oxalis/view";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
@@ -48,7 +49,8 @@ class Controller {
   arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
-  model: OxalisModel;
+  model: Oxalismodel;
+  view: View;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -74,10 +76,6 @@ class Controller {
     this.urlManager = new UrlManager(model);
     model.state = this.urlManager.initialState;
 
-    if (!this.isWebGlSupported()) {
-      Toast.error(messages["webgl.disabled"]);
-    }
-
     model.fetch()
       .then(() => this.modelFetchDone())
       .catch((error) => {
@@ -87,10 +85,6 @@ class Controller {
         }
       },
       );
-  }
-
-  isWebGlSupported() {
-    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
   }
 
   modelFetchDone() {
@@ -138,11 +132,9 @@ class Controller {
       }
     } else {
       // VIEW MODE
+      this.view = new View(this.model);
       this.planeController = new PlaneController(
-        this.model, this.sceneController);
-      this.view = new View(model);
-      this.planeController = new PlaneController(
-        model, this.sceneController);
+        model, this.view, this.sceneController);
     }
 
     // FPS stats
@@ -173,7 +165,7 @@ class Controller {
     });
     this.onZoomStepChange();
 
-    window.webknossos = new OxalisApi(this.model);
+    window.webknossos = new OxalisApi(model);
 
     app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
@@ -210,9 +202,9 @@ class Controller {
     // Users can aquire new tasks directly in the tracing view. Occasionally,
     // they start working on a new TaskType and need to be instructed.
     let text;
-    if (!Utils.getUrlParams("differentTaskType") || (this.model.tracing.task == null)) { return; }
+    if (!Utils.getUrlParams("differentTaskType") || (model.tracing.task == null)) { return; }
 
-    const taskType = this.model.tracing.task.type;
+    const taskType = model.tracing.task.type;
     const title = `Attention, new Task Type: ${taskType.summary}`;
     if (taskType.description) {
       text = `You are now tracing a new task with the following description:<br>${taskType.description}`;

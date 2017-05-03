@@ -3,7 +3,6 @@
  * @flow strict
  */
 
-// only relative imports are followed by documentationjs
 import _ from "lodash";
 import { InputKeyboardNoLoop } from "libs/input";
 import OxalisModel from "oxalis/model";
@@ -12,10 +11,13 @@ import Binary from "oxalis/model/binary";
 import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, createCommentAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3 } from "oxalis/constants";
+import { setActiveCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveCellId, getMode } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Vector3, VolumeModeType } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
+import Utils from "libs/utils";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -37,6 +39,8 @@ class TracingApi {
   constructor(model: OxalisModel) {
     this.model = model;
   }
+
+  //  SKELETONTRACING API
 
  /**
   * Returns the id of the current active node.
@@ -138,6 +142,51 @@ class TracingApi {
     }).getOrElse(null);
   }
 
+
+  //  VOLUMETRACING API
+
+ /**
+  * Returns the id of the current active cell.
+  * _Volume tracing only!_
+  */
+  getActiveCellId(): ?number {
+    return Utils.unpackMaybe(getActiveCellId(Store.getState().tracing));
+  }
+
+ /**
+  * Sets the active cell given a cell id.
+  * If a cell with the given id doesn't exist, it is created.
+  * _Volume tracing only!_
+  */
+  setActiveCell(id: number) {
+    assertExists(id, "Cell id is missing.");
+    Store.dispatch(setActiveCellAction(id));
+  }
+
+ /**
+  * Returns the current volume mode which is either
+  * 0 for "Move" or
+  * 1 for "Trace".
+  * _Volume tracing only!_
+  */
+  getVolumeMode(): ?VolumeModeType {
+    return Utils.unpackMaybe(getMode(Store.getState().tracing));
+  }
+
+ /**
+  * Sets the current volume mode which is either
+  * 0 for "Move" or
+  * 1 for "Trace".
+  * _Volume tracing only!_
+  */
+  setVolumeMode(mode: VolumeModeType) {
+    assertExists(mode, "Volume mode is missing.");
+    if (mode !== 0 && mode !== 1) {
+      throw Error("Volume mode has to be either 0 or 1.");
+    }
+    Store.dispatch(setModeAction(mode));
+  }
+
 }
 
 /**
@@ -213,6 +262,25 @@ class DataApi {
   }
 
   /**
+  * Label voxels with the supplied value.
+  * _Volume tracing only!_
+  *
+  * @example // Set the segmentation id for some voxels to 1337
+  * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
+  */
+  labelVoxels(voxels: Array<Vector3>, label: number): void {
+    const layer = this.model.getSegmentationBinary();
+    assertExists(layer, "Segmentation layer not found!");
+
+    for (const voxel of voxels) {
+      layer.cube.labelVoxel(voxel, label);
+    }
+
+    layer.cube.pushQueue.push();
+    layer.cube.trigger("volumeLabeled");
+  }
+
+  /**
    * Returns the dataset's setting for the tracing view.
    * @param key - One of the following keys:
      - segmentationOpacity
@@ -222,7 +290,6 @@ class DataApi {
      - keyboardDelay
      - layers
      - quality
-     - segmentationOpacity
    *
    * @example
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");

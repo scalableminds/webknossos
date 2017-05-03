@@ -5,7 +5,6 @@
  * @flow strict
  */
 
-// only relative imports are followed by documentationjs
 import _ from "lodash";
 import { InputKeyboardNoLoop } from "libs/input";
 import OxalisModel from "oxalis/model";
@@ -215,7 +214,6 @@ class DataApi_DEPRECATED {
      - keyboardDelay
      - layers
      - quality
-     - segmentationOpacity
    *
    * @example
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");

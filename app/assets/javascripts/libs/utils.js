@@ -230,6 +230,12 @@ const Utils = {
   zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
     return maybeA.chain(valueA => maybeB.map(valueB => [valueA, valueB]));
   },
+
+  // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
+  // you can't do getOrElse(null) without flow complaining
+  unpackMaybe<T>(maybe: Maybe<T>): ?T {
+    return maybe.isJust ? maybe.get() : null;
+  },
 };
 
 export default Utils;

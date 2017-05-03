@@ -43,10 +43,6 @@ class SceneController {
   planes: OrthoViewMapType<Plane>;
   rootNode: THREE.Object3D;
 
-  // Copied from backbone events (TODO: handle this better)
-  trigger: Function;
-  listenTo: Function;
-
   static initClass() {
     // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
     // element depending on the provided flycam.
@@ -321,8 +317,8 @@ class SceneController {
       this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
     });
     listenToStoreProperty(
-      storeState => storeState.userBoundingBox,
-      bb => this.setUserBoundingBox(bb),
+      storeState => storeState.temporaryConfiguration.userBoundingBox,
+      bb => this.setUserBoundingBox(Utils.computeBoundingBoxFromArray(bb)),
     );
   }
 }

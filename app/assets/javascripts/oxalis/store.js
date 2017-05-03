@@ -9,7 +9,7 @@ import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import Constants from "oxalis/constants";
-import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType, BoundingBoxType } from "oxalis/constants";
+import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
@@ -228,7 +228,7 @@ export type UserConfigurationType = {
 };
 
 export type TemporaryConfigurationType = {
-  +boundingBox: Vector6,
+  +userBoundingBox: Vector6,
   +shouldHideInactiveTrees: boolean,
   +shouldHideAllSkeletons: boolean,
 };
@@ -255,7 +255,6 @@ export type OxalisState = {
   // of the store state.
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
-  +userBoundingBox: BoundingBoxType,
 
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
@@ -312,7 +311,7 @@ export const defaultState: OxalisState = {
     tdViewDisplayPlanes: true,
   },
   temporaryConfiguration: {
-    boundingBox: [0, 0, 0, 0, 0, 0],
+    userBoundingBox: [0, 0, 0, 0, 0, 0],
     shouldHideInactiveTrees: false,
     shouldHideAllSkeletons: false,
   },

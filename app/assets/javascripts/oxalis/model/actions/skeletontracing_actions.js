@@ -4,7 +4,7 @@
  * skeletontracing_actions.js
  * @flow
  */
-import type { Vector3, Vector6, ModeType } from "oxalis/constants";
+import type { Vector3, ModeType } from "oxalis/constants";
 import type { Tracing, SkeletonContentDataType } from "oxalis/model";
 
 type InitializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing<SkeletonContentDataType> };
@@ -26,7 +26,6 @@ type CreateCommentActionType = {type: "CREATE_COMMENT", commentText: string, nod
 type DeleteCommentActionType = {type: "DELETE_COMMENT", nodeId: ?number, treeId?: number};
 type SetViewModeActionType = {type: "SET_VIEW_MODE", viewMode: ModeType};
 type SetFlightmodeRecordingActionType = {type: "SET_FLIGHTMODE_RECORDING", value: boolean};
-type SetUserBoundingBoxActionType = { type: "SET_USER_BOUNDING_BOX", boundingBox: Vector6};
 
 export type SkeletonTracingActionType =
   | InitializeSkeletonTracingActionType
@@ -49,7 +48,6 @@ export type SkeletonTracingActionType =
   | DeleteCommentActionType
   | SetViewModeActionType
   | SetFlightmodeRecordingActionType
-  | SetUserBoundingBoxActionType
 ;
 
 export const SkeletonTracingActions = [
@@ -181,9 +179,4 @@ export const setViewModeAction = (viewMode: ModeType): SetViewModeActionType => 
 export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecordingActionType => ({
   type: "SET_FLIGHTMODE_RECORDING",
   value,
-});
-
-export const setUserBoundingBoxAction = (boundingBox: Vector6): SetUserBoundingBoxActionType => ({
-  type: "SET_USER_BOUNDING_BOX",
-  boundingBox,
 });

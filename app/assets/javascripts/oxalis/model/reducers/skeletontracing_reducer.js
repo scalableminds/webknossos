@@ -70,13 +70,6 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         flightmodeRecording: { $set: action.value },
       });
     }
-    case "SET_USER_BOUNDING_BOX": {
-      return update(state, {
-        userBoundingBox: {
-          $set: Utils.computeBoundingBoxFromArray(action.boundingBox),
-        },
-      });
-    }
     default:
       // pass
   }

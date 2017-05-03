@@ -60,7 +60,7 @@ class TracingView extends React.PureComponent {
 
     // canvas will be
     return (
-      <div id="render" onContextMenu={this.handleContextMenu}>
+      <div id="tracing" onContextMenu={this.handleContextMenu}>
         { inputCatchers }
         { flightModeRecordingSwitch }
         <canvas id="render-canvas" />

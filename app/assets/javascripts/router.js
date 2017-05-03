@@ -76,7 +76,7 @@ class Router extends BaseRouter {
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
 
-      Model.initialize(type, id, constants.CONTROL_MODE_VIEW);
+      Model.initialize(type, id, constants.CONTROL_MODE_TRACE);
 
       // view.forcePageReload = true;
       render(<TracingLayoutView />, this.$mainContainer[0]);

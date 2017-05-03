@@ -19,10 +19,11 @@ import RightMenuView from "oxalis/view/right_menu_view";
 import UserScriptsModalView from "oxalis/view/user_scripts_modal";
 import TracingView from "oxalis/view/tracing_view";
 import enUS from "antd/lib/locale-provider/en_US";
-import { LocaleProvider, Layout, Button, Icon } from "antd";
+import { LocaleProvider, Layout, Button, Icon, Menu } from "antd";
 
 const MARGIN = 40;
 const { Header, Sider, Content } = Layout;
+const MenuItem = Menu.Item;
 
 class TracingLayoutView extends React.PureComponent {
 
@@ -86,7 +87,9 @@ class TracingLayoutView extends React.PureComponent {
         <Provider store={store}>
           <Layout>
             <Header>
-              <Button onClick={this.handleSettingsCollapse}>
+              <Button
+                size="large"
+                onClick={this.handleSettingsCollapse} style={{ float: "left", marginTop: "10px" }}>
                 <Icon type={this.state.settingsCollapsed ? "menu-unfold" : "menu-fold"} />
                 Settings
               </Button>
@@ -97,6 +100,8 @@ class TracingLayoutView extends React.PureComponent {
                 collapsible
                 trigger={null}
                 collapsed={this.state.settingsCollapsed}
+                collapsedWidth={0}
+                width={350}
               >
                 <SettingsView />
               </Sider>

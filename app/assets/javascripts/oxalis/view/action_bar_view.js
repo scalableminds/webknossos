@@ -1,6 +1,6 @@
 // @flow
 import React from "react";
-import type { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 import DatasetActionsView from "oxalis/view/action-bar/dataset_actions_view";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
@@ -9,10 +9,10 @@ import Constants from "oxalis/constants";
 import { Button } from "antd";
 import Store from "oxalis/store";
 
-function ActionBarView({ oldModel }: { oldModel: OxalisModel }) {
-  const isTraceMode = oldModel.controlMode === Constants.CONTROL_MODE_TRACE;
+function ActionBarView() {
+  const isTraceMode = Model.controlMode === Constants.CONTROL_MODE_TRACE;
   const isVolumeMode = Store.getState().temporaryConfiguration.viewMode === Constants.MODE_VOLUME;
-  const hasAdvancedOptions = oldModel.settings.advancedOptionsAllowed;
+  const hasAdvancedOptions = Store.getState().tracing.restrictions.advancedOptionsAllowed;
 
   return (
     <div className="container-fluid">
@@ -31,9 +31,9 @@ function ActionBarView({ oldModel }: { oldModel: OxalisModel }) {
           >Menu</Button> :
           null
       }
-      { isTraceMode ? <DatasetActionsView oldModel={oldModel} /> : null }
-      { hasAdvancedOptions ? <DatasetPositionView oldModel={oldModel} /> : null }
-      { isVolumeMode && hasAdvancedOptions ? <VolumeActionsView oldModel={oldModel} /> : null }
+      { isTraceMode ? <DatasetActionsView /> : null }
+      { hasAdvancedOptions ? <DatasetPositionView /> : null }
+      { isVolumeMode && hasAdvancedOptions ? <VolumeActionsView /> : null }
       { !isVolumeMode && isTraceMode && hasAdvancedOptions ? <ViewModesView /> : null }
     </div>
   );

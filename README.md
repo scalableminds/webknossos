@@ -4,6 +4,7 @@ Datastore component for webKnossos intended for deployment on storage servers.
 ## Deploy webknossos-datastore with Docker
 
 ### Requirements
+* Linux (we have good experiences with Ubuntu and Debian, but others should work as well)
 * Docker 1.12+
 * Public domain name with SSL certificate
 
@@ -95,9 +96,18 @@ systemctl start webknossos-datastore
 systemctl stop webknossos-datastore
 ```
 
-### Setup a reverse proxy for SSL termination
-* Install nginx
-* Configure it as a reverse proxy for `localhost:9090`, [reference](https://www.digitalocean.com/community/tutorials/understanding-nginx-http-proxying-load-balancing-buffering-and-caching)
+### Modify the user inside the docker container
+By default the datastore runs with a Linux user account that has uid=1000 and gid=1000. If your setup requires a different user, e.g. because of file permissions, you may add the user flag to your docker create command `-u <uid>:<gid>`. You can find the uid and gid with the Linux `id <username>` command.
+
+### Using a cluster firewall for HTTP(S) routing
+If your cluster enviroment has a firewall that supports HTTP(S) routing, you can expose the datastore directly on Port 80. For that, change the port flag to `-p 9090:80`
+
+### Using nginx for HTTP(S) routing
+Nginx is a high performance HTTP server that allows for proxing HTTP(S) request. This is useful, because the datastore doesn't support HTTPS by itself. So, you can put the nginx in front of the datastore to accept HTTPS requests from the outside and route them as regular HTTP requests to the datastore.
+
+[DigitalOcean has a great tutorial for setting up nginx](https://www.digitalocean.com/community/tutorials/understanding-nginx-http-proxying-load-balancing-buffering-and-caching).
+
+We use the free and automatad [Letsencrypt](https://letsencrypt.org/) service for our SSL certificates. [Tutorial: Setting up Letsencrypt with nginx](https://www.digitalocean.com/community/tutorials/how-to-secure-nginx-with-let-s-encrypt-on-ubuntu-16-04).
 
 Example configuration:
 ```

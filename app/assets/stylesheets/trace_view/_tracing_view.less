@@ -32,9 +32,7 @@
     -moz-box-sizing: border-box;
     float: left;
   }
-  .active {
-    border-color: #ff0;
-  }
+
   #inputcatcher_PLANE_YZ {
     margin-left: 20px;
   }
@@ -53,21 +51,21 @@
     top: 0px;
     z-index: 30;
 
-    .btn {
-      & > span {
+    .ant-btn {
+      & > .colored-dot {
         display: inline-block;
         width: 10px;
         height: 10px;
         border-radius: 50%;
         margin-right: 5px;
       }
-      &:nth-child(2) span {
+      &:nth-child(2) .colored-dot {
         background-color: red;
       }
-      &:nth-child(3) span {
+      &:nth-child(3) .colored-dot {
         background-color: blue;
       }
-      &:nth-child(4) span {
+      &:nth-child(4) .colored-dot {
         background-color: #0f0;
       }
     }

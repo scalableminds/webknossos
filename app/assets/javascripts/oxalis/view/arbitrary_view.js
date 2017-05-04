@@ -38,7 +38,6 @@ class ArbitraryView {
 
   width: number;
   height: number;
-  deviceScaleFactor: number;
   scaleFactor: number;
   camDistance: number;
 

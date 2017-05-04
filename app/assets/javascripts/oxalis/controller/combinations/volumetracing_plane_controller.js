@@ -79,8 +79,8 @@ class VolumeTracingPlaneController extends PlaneController {
   };
 
 
-  getPlaneMouseControls(planeId: OrthoViewType): Object {
-    return _.extend(super.getPlaneMouseControls(planeId), {
+  getPlaneMouseControls(): Object {
+    return _.extend(super.getPlaneMouseControls(), {
 
       leftDownMove: (delta: Point2, pos: Point2) => {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
@@ -88,9 +88,10 @@ class VolumeTracingPlaneController extends PlaneController {
 
         const mode = getVolumeTraceOrMoveMode(Store.getState().tracing).get();
         if (mode === constants.VOLUME_MODE_MOVE) {
+          const viewportScale = Store.getState().userConfiguration.scale;
           this.move([
-            (delta.x * mouseInversionX) / this.planeView.scaleFactor,
-            (delta.y * mouseInversionY) / this.planeView.scaleFactor,
+            (delta.x * mouseInversionX) / viewportScale,
+            (delta.y * mouseInversionY) / viewportScale,
             0,
           ]);
         } else {

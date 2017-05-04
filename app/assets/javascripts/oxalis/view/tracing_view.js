@@ -9,40 +9,15 @@ import { Button, Switch } from "antd";
 import Constants from "oxalis/constants";
 import app from "app";
 import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
+import InputCatchers from "oxalis/view/input_catchers";
 import type { OxalisState } from "oxalis/store";
 import type { Dispatch } from "redux";
-
-const ButtonGroup = Button.Group;
 
 class TracingView extends React.PureComponent {
 
   handleContextMenu(event: SyntheticInputEvent) {
     // hide contextmenu, while rightclicking a canvas
     event.preventDefault();
-  }
-
-  getInputCatchers() {
-    return (
-      <div id="inputcatchers">
-        <div id="inputcatcher_PLANE_XY" className="inputcatcher" />
-        <div id="inputcatcher_PLANE_YZ" className="inputcatcher" />
-        <div id="inputcatcher_PLANE_XZ" className="inputcatcher" />
-        <div id="inputcatcher_TDView" className="inputcatcher">
-          <ButtonGroup id="TDViewControls">
-            <Button size="small">3D</Button>
-            <Button size="small">
-              <span />XY
-            </Button>
-            <Button size="small">
-              <span />YZ
-            </Button>
-            <Button size="small">
-              <span />XZ
-            </Button>
-          </ButtonGroup>
-        </div>
-      </div>
-    );
   }
 
   getRecordingSwitch = () =>
@@ -55,15 +30,20 @@ class TracingView extends React.PureComponent {
 
   render() {
     const isArbitraryMode = Constants.MODES_ARBITRARY.includes(this.props.viewMode);
-    const inputCatchers = !isArbitraryMode ? this.getInputCatchers() : null;
+    const inputCatchers = !isArbitraryMode ? <InputCatchers /> : null;
     const flightModeRecordingSwitch = isArbitraryMode ? this.getRecordingSwitch : null;
 
-    // canvas will be
+    const canvasWidth = Math.round(this.props.scale * Constants.VIEWPORT_WIDTH) * 2 + 20;
+    const canvasStyle = {
+      width: canvasWidth,
+      height: canvasWidth,
+    };
+
     return (
       <div id="tracing" onContextMenu={this.handleContextMenu}>
         { inputCatchers }
         { flightModeRecordingSwitch }
-        <canvas id="render-canvas" />
+        <canvas id="render-canvas" style={canvasStyle} />
       </div>
     );
   }
@@ -81,6 +61,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 const mapStateToProps = (state: OxalisState) => ({
   viewMode: state.temporaryConfiguration.viewMode,
   flightmodeRecording: state.temporaryConfiguration.flightmodeRecording,
+  scale: state.userConfiguration.scale,
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(TracingView);

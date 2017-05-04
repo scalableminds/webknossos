@@ -247,6 +247,11 @@ export type TemporaryConfigurationType = {
 
 export type TaskType = {
   +taskId: number,
+  +type: "string",
+  +script?: {
+    gist: string,
+    name: string,
+  }
 };
 
 export type SaveStateType = {

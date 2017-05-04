@@ -26,7 +26,7 @@ class RightMenuView extends React.PureComponent {
   props: Props;
 
   getTabs() {
-    if (!this.props.controlMode !== ControlModeEnum.VIEW) {
+    if (this.props.controlMode !== ControlModeEnum.VIEW) {
       if (this.props.viewMode in Constants.MODES_SKELETON) {
         return [
           <TabPane tab="Trees" key="3"><TreesTabView /></TabPane>,

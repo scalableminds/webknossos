@@ -4,7 +4,6 @@
  */
 
 import _ from "lodash";
-import $ from "jquery";
 import app from "app";
 import Request from "libs/request";
 import messages from "messages";
@@ -61,6 +60,7 @@ export function* sendRequestToServer(): Generator<*, *, *> {
     yield call(toggleErrorHighlighting, true);
     if (error.status >= 400 && error.status < 500) {
       app.router.off("beforeunload");
+      debugger
       // HTTP Code 409 'conflict' for dirty state
       if (error.status === 409) {
         yield call(alert, messages["save.failed_simultaneous_tracing"]);
@@ -76,7 +76,9 @@ export function* sendRequestToServer(): Generator<*, *, *> {
 }
 
 export function toggleErrorHighlighting(state: boolean) {
-  $("body").toggleClass("save-error", state);
+  if (document.body) {
+    document.body.classList.toggle("save-error", state);
+  }
   if (state) {
     Toast.error(messages["save.failed"], true);
   } else {

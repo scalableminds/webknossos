@@ -23,7 +23,6 @@ import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controlle
 import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
-import VolumeTracingView from "oxalis/view/volumetracing_view";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
 import OxalisApi from "oxalis/api/api_loader";
@@ -111,7 +110,7 @@ class Controller {
     if (controlMode === ControlModeEnum.TRACE) {
       if (Model.isVolumeTracing()) {
         // VOLUME MODE
-        this.view = new VolumeTracingView(Model);
+        this.view = new View(Model);
         this.annotationController = new VolumeTracingController(
           Model, this.view, this.sceneController);
         this.planeController = new VolumeTracingPlaneController(

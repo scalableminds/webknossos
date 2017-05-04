@@ -116,7 +116,7 @@ class TracingLayoutView extends React.PureComponent {
               >
                 <SettingsView />
               </Sider>
-              <Layout>
+              <Layout className="tracing-layout">
                 <Content>
                   <TracingView />
                 </Content>

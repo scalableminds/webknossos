@@ -100,7 +100,7 @@ const Constants = {
 
   FPS: 50,
 
-  MIN_SCALE: 0.05,
+  MIN_SCALE: 0.5,
   MAX_SCALE: 20,
 
   MIN_PARTICLE_SIZE: 1,

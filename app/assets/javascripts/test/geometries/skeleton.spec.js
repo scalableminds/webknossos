@@ -6,6 +6,7 @@
 import test from "ava";
 import mockRequire from "mock-require";
 import _ from "lodash";
+import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { createNodeAction, createTreeAction, deleteNodeAction, createBranchPointAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 
 mockRequire.stopAll();
@@ -32,72 +33,77 @@ test.before((t) => {
     }
     Store.dispatch(createNodeAction([i, i, i], rotation, viewport, resolution));
   }
-  const trees = Store.getState().skeletonTracing.trees;
-  t.is(_.size(trees), 20);
-  for (const tree of Object.values(trees)) {
-    t.is(_.size(tree.nodes), 100);
-  }
+
+  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    const trees = skeletonTracing.trees;
+    t.is(_.size(trees), 20);
+    for (const tree of Object.values(trees)) {
+      t.is(_.size(tree.nodes), 100);
+    }
+  });
 });
 
 test.serial("Skeleton should initialize correctly using the store's state", (t) => {
-  const trees = Store.getState().skeletonTracing.trees;
-  const skeleton = new Skeleton();
+  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    const trees = skeletonTracing.trees;
+    const skeleton = new Skeleton();
 
-  t.is(skeleton.nodes.buffers.length, 1);
-  t.is(skeleton.edges.buffers.length, 1);
+    t.is(skeleton.nodes.buffers.length, 1);
+    t.is(skeleton.edges.buffers.length, 1);
 
-  const nodeCapacity = 2000;
-  const edgeCapacity = 1980;
+    const nodeCapacity = 2000;
+    const edgeCapacity = 1980;
 
-  let nodePositions = [];
-  const nodeTypes = [];
-  const nodeRadii = [];
-  const nodeIds = [];
-  const nodeTreeIds = [];
-  let edgePositions = [];
-  const edgeTreeIds = [];
-  let treeColors = [0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
+    let nodePositions = [];
+    const nodeTypes = [];
+    const nodeRadii = [];
+    const nodeIds = [];
+    const nodeTreeIds = [];
+    let edgePositions = [];
+    const edgeTreeIds = [];
+    let treeColors = [0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
 
-  for (const tree of Object.values(trees)) {
-    treeColors = treeColors.concat(tree.color);
-    for (const node of Object.values(tree.nodes)) {
-      nodePositions = nodePositions.concat(node.position);
-      nodeTreeIds.push(tree.treeId);
-      nodeRadii.push(node.radius);
-      nodeIds.push(node.id);
-      nodeTypes.push(NodeShader.NodeTypes.NORMAL);
+    for (const tree of Object.values(trees)) {
+      treeColors = treeColors.concat(tree.color);
+      for (const node of Object.values(tree.nodes)) {
+        nodePositions = nodePositions.concat(node.position);
+        nodeTreeIds.push(tree.treeId);
+        nodeRadii.push(node.radius);
+        nodeIds.push(node.id);
+        nodeTypes.push(NodeShader.NodeTypes.NORMAL);
+      }
+      for (const edge of tree.edges) {
+        const sourcePosition = tree.nodes[edge.source].position;
+        const targetPosition = tree.nodes[edge.target].position;
+        edgePositions = edgePositions.concat(sourcePosition).concat(targetPosition);
+        edgeTreeIds.push(tree.treeId, tree.treeId);
+      }
     }
-    for (const edge of tree.edges) {
-      const sourcePosition = tree.nodes[edge.source].position;
-      const targetPosition = tree.nodes[edge.target].position;
-      edgePositions = edgePositions.concat(sourcePosition).concat(targetPosition);
-      edgeTreeIds.push(tree.treeId, tree.treeId);
-    }
-  }
 
-  const nodeBufferGeometryAttributes = skeleton.nodes.buffers[0].geometry.attributes;
-  t.is(nodeBufferGeometryAttributes.position.array.length, 3 * nodeCapacity);
-  t.is(nodeBufferGeometryAttributes.radius.array.length, nodeCapacity);
-  t.is(nodeBufferGeometryAttributes.type.array.length, nodeCapacity);
-  t.is(nodeBufferGeometryAttributes.nodeId.array.length, nodeCapacity);
-  t.is(nodeBufferGeometryAttributes.treeId.array.length, nodeCapacity);
+    const nodeBufferGeometryAttributes = skeleton.nodes.buffers[0].geometry.attributes;
+    t.is(nodeBufferGeometryAttributes.position.array.length, 3 * nodeCapacity);
+    t.is(nodeBufferGeometryAttributes.radius.array.length, nodeCapacity);
+    t.is(nodeBufferGeometryAttributes.type.array.length, nodeCapacity);
+    t.is(nodeBufferGeometryAttributes.nodeId.array.length, nodeCapacity);
+    t.is(nodeBufferGeometryAttributes.treeId.array.length, nodeCapacity);
 
-  t.deepEqual(nodeBufferGeometryAttributes.position.array, new Float32Array(nodePositions));
-  t.deepEqual(nodeBufferGeometryAttributes.radius.array, new Float32Array(nodeRadii));
-  t.deepEqual(nodeBufferGeometryAttributes.type.array, new Float32Array(nodeTypes));
-  t.deepEqual(nodeBufferGeometryAttributes.nodeId.array, new Float32Array(nodeIds));
-  t.deepEqual(nodeBufferGeometryAttributes.treeId.array, new Float32Array(nodeTreeIds));
+    t.deepEqual(nodeBufferGeometryAttributes.position.array, new Float32Array(nodePositions));
+    t.deepEqual(nodeBufferGeometryAttributes.radius.array, new Float32Array(nodeRadii));
+    t.deepEqual(nodeBufferGeometryAttributes.type.array, new Float32Array(nodeTypes));
+    t.deepEqual(nodeBufferGeometryAttributes.nodeId.array, new Float32Array(nodeIds));
+    t.deepEqual(nodeBufferGeometryAttributes.treeId.array, new Float32Array(nodeTreeIds));
 
-  const edgeBufferGeometryAttributes = skeleton.edges.buffers[0].geometry.attributes;
-  t.is(edgeBufferGeometryAttributes.position.array.length, 6 * edgeCapacity);
-  t.is(edgeBufferGeometryAttributes.treeId.array.length, 2 * edgeCapacity);
+    const edgeBufferGeometryAttributes = skeleton.edges.buffers[0].geometry.attributes;
+    t.is(edgeBufferGeometryAttributes.position.array.length, 6 * edgeCapacity);
+    t.is(edgeBufferGeometryAttributes.treeId.array.length, 2 * edgeCapacity);
 
-  t.deepEqual(edgeBufferGeometryAttributes.position.array, new Float32Array(edgePositions));
-  t.deepEqual(edgeBufferGeometryAttributes.treeId.array, new Float32Array(edgeTreeIds));
+    t.deepEqual(edgeBufferGeometryAttributes.position.array, new Float32Array(edgePositions));
+    t.deepEqual(edgeBufferGeometryAttributes.treeId.array, new Float32Array(edgeTreeIds));
 
-  const textureData = new Float32Array(NodeShader.COLOR_TEXTURE_WIDTH * NodeShader.COLOR_TEXTURE_WIDTH * 3);
-  textureData.set(treeColors);
-  t.deepEqual(skeleton.treeColorTexture.image.data, textureData);
+    const textureData = new Float32Array(NodeShader.COLOR_TEXTURE_WIDTH * NodeShader.COLOR_TEXTURE_WIDTH * 3);
+    textureData.set(treeColors);
+    t.deepEqual(skeleton.treeColorTexture.image.data, textureData);
+  });
 });
 
 test.serial("Skeleton should increase its buffers once the max capacity is reached", async (t) => {
@@ -145,24 +151,31 @@ test.serial("Skeleton should update node types for branchpoints", async (t) => {
   t.is(skeleton.nodes.buffers[0].geometry.attributes.type.array[index], NodeShader.NodeTypes.BRANCH_POINT);
 });
 
-test.serial("Skeleton should update node radius", async (t) => {
+test.serial("Skeleton should update node radius", (t) => {
   const skeleton = new Skeleton();
-  const { activeNodeId, activeTreeId } = Store.getState().skeletonTracing;
 
-  Store.dispatch(setActiveNodeRadiusAction(2));
+  getSkeletonTracing(Store.getState().tracing).map(async (skeletonTracing) => {
+    const { activeNodeId, activeTreeId } = skeletonTracing;
 
-  await Utils.sleep(50);
-  const id = skeleton.combineIds(activeNodeId, activeTreeId);
-  const index = skeleton.nodes.idToBufferPosition.get(id).index;
-  t.is(skeleton.nodes.buffers[0].geometry.attributes.radius.array[index], 2);
+    Store.dispatch(setActiveNodeRadiusAction(2));
+
+    await Utils.sleep(50);
+    const id = skeleton.combineIds(activeNodeId, activeTreeId);
+    const index = skeleton.nodes.idToBufferPosition.get(id).index;
+    t.is(skeleton.nodes.buffers[0].geometry.attributes.radius.array[index], 2);
+  });
 });
 
-test.serial("Skeleton should update tree colors upon tree creation", async (t) => {
+test.serial("Skeleton should update tree colors upon tree creation", (t) => {
   const skeleton = new Skeleton();
 
   Store.dispatch(createTreeAction());
-  const { activeTreeId, trees } = Store.getState().skeletonTracing;
+  getSkeletonTracing(Store.getState().tracing).map(async (skeletonTracing) => {
+    const { activeTreeId, trees } = skeletonTracing;
 
-  await Utils.sleep(50);
-  t.deepEqual(skeleton.treeColorTexture.image.data.subarray(activeTreeId * 3, activeTreeId * 3 + 3), new Float32Array(trees[activeTreeId].color));
+    if (activeTreeId != null) {
+      await Utils.sleep(50);
+      t.deepEqual(skeleton.treeColorTexture.image.data.subarray(activeTreeId * 3, activeTreeId * 3 + 3), new Float32Array(trees[activeTreeId].color));
+    }
+  });
 });

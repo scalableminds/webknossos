@@ -293,7 +293,7 @@ class PlaneController {
 
     this.initKeyboard();
     this.init();
-    this.initMouse();
+    _.defer(() => this.initMouse());
 
     this.isStarted = true;
   }

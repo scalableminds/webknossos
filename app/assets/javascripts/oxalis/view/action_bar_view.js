@@ -6,9 +6,6 @@ import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import Store from "oxalis/store";
-import { Menu } from "antd";
-
-const MenuItem = Menu.Item;
 
 function ActionBarView() {
   const temporaryConfiguration = Store.getState().temporaryConfiguration;
@@ -17,12 +14,12 @@ function ActionBarView() {
   const hasAdvancedOptions = Store.getState().tracing.restrictions.advancedOptionsAllowed;
 
   return (
-    <Menu mode="horizontal">
-      { isTraceMode ? <MenuItem><DatasetActionsView /></MenuItem> : null }
-      { hasAdvancedOptions ? <MenuItem><DatasetPositionView /></MenuItem> : null }
-      { isVolumeMode && hasAdvancedOptions ? <MenuItem><VolumeActionsView /></MenuItem> : null }
-      { !isVolumeMode && isTraceMode && hasAdvancedOptions ? <MenuItem><ViewModesView /></MenuItem> : null }
-    </Menu>
+    <div className="action-bar">
+      { isTraceMode ? <DatasetActionsView /> : null }
+      { hasAdvancedOptions ? <DatasetPositionView /> : null }
+      { isVolumeMode && hasAdvancedOptions ? <VolumeActionsView /> : null }
+      { !isVolumeMode && isTraceMode && hasAdvancedOptions ? <ViewModesView /> : null }
+    </div>
   );
 }
 

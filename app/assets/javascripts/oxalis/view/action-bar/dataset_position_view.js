@@ -59,9 +59,9 @@ class DatasetPositionView extends PureComponent {
             />
           </Input.Group>
         </div>
-        <div>
-          {
-            isArbitraryMode ?
+        {
+          isArbitraryMode ?
+            <div style={{ marginLeft: 10 }}>
               <Input.Group compact size="large">
                 <Button
                   onClick={this.copyRotationToClipboard}
@@ -72,9 +72,9 @@ class DatasetPositionView extends PureComponent {
                   onChange={this.handleChangeRotation}
                   style={{ width: "120px" }}
                 />
-              </Input.Group> : null
-          }
-        </div>
+              </Input.Group>
+            </div> : null
+        }
       </div>
     );
   }

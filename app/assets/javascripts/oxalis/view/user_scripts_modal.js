@@ -1,63 +1,59 @@
-/**
- * user_scripts_modal.js
- * @flow weak
- */
+// @flow
 
 /* eslint-disable no-eval, no-alert */
-import _ from "lodash";
-import Marionette from "backbone.marionette";
+import React from "react";
+import { Modal, Input } from "antd";
 
-class UserScriptsModalView extends Marionette.View {
-  static initClass() {
-    this.prototype.className = "modal fade";
-    this.prototype.template = _.template(`\
-<div class="modal-dialog modal-lg">
-  <div class="modal-content">
-    <div class="modal-header">
-      <button type="button" class="close" data-dismiss="modal">&times;</button>
-      <h3>Add user script</h3>
-    </div>
-    <div class="modal-body">
-      <textarea id="add-script-input" rows="10" autofocus></textarea>
-    </div>
-    <div class="modal-footer">
-      <a href="#" id="add-script-button" class="btn btn-default">Add</a>
-      <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>
-    </div>
-  </div>
-</div>\
-`);
+type UserScriptsModalViewPropsType = {
+  onClose: Function,
+  visible: boolean,
+};
 
-    this.prototype.ui =
-      { inputBox: "#add-script-input" };
+class UserScriptsModalView extends React.PureComponent {
 
-    this.prototype.events =
-      { "click #add-script-button": "handleAddClick" };
+  props: UserScriptsModalViewPropsType
 
-    this.prototype.attributes = {
-      tabindex: "-1",
-      role: "dialog",
-    };
+  state = {
+    code: "",
   }
 
-
-  show() {
-    return this.$el.modal("show");
+  handleCodeChange = (event: SyntheticInputEvent) => {
+    this.setState({
+      code: event.target.value,
+    });
   }
 
-
-  handleAddClick() {
+  handleClick = () => {
     try {
-      eval(this.ui.inputBox.val());
+      eval(this.state.code);
       // close modal if the script executed successfully
-      return this.$el.modal("hide");
+      return this.props.onClose();
     } catch (error) {
       console.error(error);
       return alert(error);
     }
   }
+
+  render() {
+    return (
+      <Modal
+        visible={this.props.visible}
+        title="Add user script"
+        okText="Add"
+        cancelText="Close"
+        onOk={this.handleClick}
+        onCancel={this.props.onClose}
+      >
+        <Input
+          type="textarea"
+          rows={4}
+          onChange={this.handleCodeChange}
+          value={this.state.code}
+        />
+      </Modal>
+    );
+  }
 }
-UserScriptsModalView.initClass();
 
 
 export default UserScriptsModalView;

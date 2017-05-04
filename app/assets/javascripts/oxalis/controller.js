@@ -143,6 +143,7 @@ class Controller {
     this.initKeyboard();
     this.initTimeLimit();
     this.initTaskScript();
+    this.maybeShowNewTaskTypeModal();
 
     for (const binaryName of Object.keys(Model.binary)) {
       this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));

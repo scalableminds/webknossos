@@ -8,11 +8,11 @@ import { Provider } from "react-redux";
 import app from "app";
 import Store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
-import Constants, { ControlModeEnum } from "oxalis/constants";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
 import TracingView from "oxalis/view/tracing_view";
+import UserScriptsModal from "oxalis/view/user_scripts_modal";
 import enUS from "antd/lib/locale-provider/en_US";
 import { LocaleProvider, Layout, Button, Icon } from "antd";
 
@@ -21,18 +21,16 @@ const { Header, Sider, Content } = Layout;
 class TracingLayoutView extends React.PureComponent {
 
   state = {
-    settingsCollapsed: true,
+    isSettingsCollapsed: true,
+    isUserScriptsModalOpen: false,
   }
 
   componentDidMount() {
-    // $(window).on("resize", this.resizeRightMenu.bind(this));
     const addScriptLink = document.getElementById("add-script-link");
     if (addScriptLink) {
       addScriptLink.classList.remove("hide");
-      addScriptLink.addEventListener("click", this.showUserScriptsModal.bind(this));
+      addScriptLink.addEventListener("click", () => this.showUserScriptsModal());
     }
-
-    // this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
     app.oxalis = new OxalisController();
   }
 
@@ -40,58 +38,28 @@ class TracingLayoutView extends React.PureComponent {
     window.app.oxalis = null;
   }
 
-  // resizeRightMenu() {
-  //   if (this.isSkeletonMode()) {
-  //     const menuPosition = this.ui.rightMenu.position();
-  //     const slidingCanvasOffset = this.ui.slidingCanvas.position().left;
-
-  //     const newWidth = window.innerWidth - menuPosition.left - slidingCanvasOffset - MARGIN;
-
-  //     if (menuPosition.left < window.innerWidth && newWidth > 350) {
-  //       this.ui.rightMenu.width(newWidth);
-  //     }
-  //   }
-  // }
-
-      // this.maybeShowNewTaskTypeModal();
-
-
-  showUserScriptsModal = (event: SyntheticInputEvent) => {
-    event.preventDefault();
-    // const modalView = new UserScriptsModalView();
-    // this.showChildView("modalWrapper", modalView);
-    // return modalView.show();
-    throw Error("TODO");
+  showUserScriptsModal = () => {
+    this.setState({
+      isSettingsCollapsed: this.state.isSettingsCollapsed,
+      isUserScriptsModalOpen: true,
+    });
   }
 
-  isSkeletonMode() {
-    return Constants.MODES_SKELETON.includes(store.getState().temporaryConfiguration.viewMode) && Model.controlMode !== Constants.CONTROL_MODE_VIEW;
+  closeUserScriptsModal = () => {
+    this.setState({
+      isSettingsCollapsed: this.state.isSettingsCollapsed,
+      isUserScriptsModalOpen: false,
+    });
   }
 
   handleSettingsCollapse = () => {
     this.setState({
-      settingsCollapsed: !this.state.settingsCollapsed,
+      isSettingsCollapsed: this.state.isSettingsCollapsed,
+      isUserScriptsModalOpen: this.state.isUserScriptsModalOpen,
     });
   }
 
-  // this.maybeShowNewTaskTypeModal();
-
-  showUserScriptsModal(event: Event): void {
-    event.preventDefault();
-    // const modalView = new UserScriptsModalView();
-    // this.showChildView("modalWrapper", modalView);
-    // return modalView.show();
-    throw Error("TODO");
-  }
-
-  isSkeletonMode() {
-    const temporaryConfiguration = Store.getState().temporaryConfiguration;
-    return Constants.MODES_SKELETON.includes(temporaryConfiguration.viewMode) && temporaryConfiguration.controlMode !== ControlModeEnum.VIEW;
-  }
-
   render() {
-    // if (!this.model.settings.advancedOptionsAllowed) {
-
     return (
       <LocaleProvider locale={enUS}>
         <Provider store={Store}>
@@ -101,7 +69,7 @@ class TracingLayoutView extends React.PureComponent {
                 size="large"
                 onClick={this.handleSettingsCollapse} style={{ float: "left", marginTop: "10px" }}
               >
-                <Icon type={this.state.settingsCollapsed ? "menu-unfold" : "menu-fold"} />
+                <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
                 Settings
               </Button>
               <ActionBarView />
@@ -110,7 +78,7 @@ class TracingLayoutView extends React.PureComponent {
               <Sider
                 collapsible
                 trigger={null}
-                collapsed={this.state.settingsCollapsed}
+                collapsed={this.state.isSettingsCollapsed}
                 collapsedWidth={0}
                 width={350}
               >
@@ -118,6 +86,10 @@ class TracingLayoutView extends React.PureComponent {
               </Sider>
               <Layout className="tracing-layout">
                 <Content>
+                  <UserScriptsModal
+                    visible={this.state.isUserScriptsModalOpen}
+                    onClose={this.closeUserScriptsModal}
+                  />
                   <TracingView />
                 </Content>
                 <Sider>

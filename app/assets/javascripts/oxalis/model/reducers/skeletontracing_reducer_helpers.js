@@ -34,7 +34,7 @@ function generateTreeNamePrefix(state: OxalisState, timestamp) {
 
 function getMaximumNodeId(trees: TreeMapType): number {
   const newMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, n => n.id)));
-  return newMaxNodeId != null ? newMaxNodeId : 0;
+  return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
 
 function getMaximumTreeId(trees: TreeMapType): number {

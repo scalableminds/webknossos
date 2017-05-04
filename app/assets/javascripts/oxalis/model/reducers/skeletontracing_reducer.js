@@ -26,7 +26,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
       const activeNodeId = contentData.activeNode ? contentData.activeNode : null;
       let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
-      cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : 0;
+      cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
       const activeTree = activeNodeId ? findTreeByNodeId(trees, activeNodeId).get() : null;
 

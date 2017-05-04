@@ -251,6 +251,10 @@ export type TaskType = {
   +script?: {
     gist: string,
     name: string,
+  },
+  +type: {
+    +summary: string,
+    +description: string,
   }
 };
 

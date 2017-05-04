@@ -75,7 +75,7 @@ export function* sendRequestToServer(): Generator<*, *, *> {
 }
 
 export function toggleErrorHighlighting(state: boolean) {
-  if (document.body) {
+  if (document.body != null) {
     document.body.classList.toggle("save-error", state);
   }
   if (state) {

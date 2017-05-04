@@ -56,7 +56,7 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
   const nodeTreeIds = [];
   let edgePositions = [];
   const edgeTreeIds = [];
-  let treeColors = [0, 0, 0]; // tree ids start at index 1
+  let treeColors = [0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
 
   for (const tree of Object.values(trees)) {
     treeColors = treeColors.concat(tree.color);

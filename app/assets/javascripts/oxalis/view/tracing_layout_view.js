@@ -3,7 +3,6 @@
  * @flow
  */
 
-import $ from "jquery";
 import React from "react";
 import { Provider } from "react-redux";
 import app from "app";
@@ -19,16 +18,14 @@ import RightMenuView from "oxalis/view/right_menu_view";
 import UserScriptsModalView from "oxalis/view/user_scripts_modal";
 import TracingView from "oxalis/view/tracing_view";
 import enUS from "antd/lib/locale-provider/en_US";
-import { LocaleProvider, Layout, Button, Icon, Menu } from "antd";
+import { LocaleProvider, Layout, Button, Icon } from "antd";
 
-const MARGIN = 40;
 const { Header, Sider, Content } = Layout;
-const MenuItem = Menu.Item;
 
 class TracingLayoutView extends React.PureComponent {
 
   state = {
-    settingsCollapsed: false,
+    settingsCollapsed: true,
   }
 
   componentDidMount() {
@@ -60,6 +57,22 @@ class TracingLayoutView extends React.PureComponent {
   //     }
   //   }
   // }
+
+      // this.maybeShowNewTaskTypeModal();
+
+
+  showUserScriptsModal = (event: SyntheticInputEvent) => {
+    event.preventDefault();
+    // const modalView = new UserScriptsModalView();
+    // this.showChildView("modalWrapper", modalView);
+    // return modalView.show();
+    throw Error("TODO");
+  }
+
+  isSkeletonMode() {
+    return Constants.MODES_SKELETON.includes(store.getState().temporaryConfiguration.viewMode) && Model.controlMode !== Constants.CONTROL_MODE_VIEW;
+  }
+
   handleSettingsCollapse = () => {
     this.setState({
       settingsCollapsed: !this.state.settingsCollapsed,
@@ -69,19 +82,6 @@ class TracingLayoutView extends React.PureComponent {
   render() {
     // if (!this.model.settings.advancedOptionsAllowed) {
 
-    /*
-          <div className="text-nowrap">
-      <div id="action-bar"></div>
-      <div id="sliding-canvas">
-        <div id="settings-menu-wrapper" className="navmenu-fixed-left offcanvas">
-        </div>
-      </div>
-      <div id="right-menu">
-      </div>
-      <div id="modal" className="modal fade" tabIndex="-1" role="dialog" />
-      <div className="modal-wrapper" />
-    </div>
-    */
     return (
       <LocaleProvider locale={enUS}>
         <Provider store={store}>
@@ -118,20 +118,6 @@ class TracingLayoutView extends React.PureComponent {
         </Provider>
       </LocaleProvider>
     );
-  }
-    // this.maybeShowNewTaskTypeModal();
-
-
-  showUserScriptsModal = (event: SyntheticInputEvent) => {
-    event.preventDefault();
-    // const modalView = new UserScriptsModalView();
-    // this.showChildView("modalWrapper", modalView);
-    // return modalView.show();
-    throw Error("TODO");
-  }
-
-  isSkeletonMode() {
-    return Constants.MODES_SKELETON.includes(store.getState().temporaryConfiguration.viewMode) && Model.controlMode !== Constants.CONTROL_MODE_VIEW;
   }
 }
 

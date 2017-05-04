@@ -68,7 +68,7 @@ class Controller {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
 
-  constructor(options: Object) {
+  constructor() {
     app.router.showLoadingSpinner();
 
     _.extend(this, Backbone.Events);

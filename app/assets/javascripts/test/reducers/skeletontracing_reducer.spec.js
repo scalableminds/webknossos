@@ -695,7 +695,7 @@ test("SkeletonTracing should not decrease the activeTreeId below 1", (t) => {
     .unpack();
 
   t.not(newState, initialState);
-  t.is(newState.skeletonTracing.activeTreeId, 1);
+  t.is(newState.tracing.activeTreeId, 1);
 });
 
 test("SkeletonTracing should shuffle the color of a specified tree", (t) => {

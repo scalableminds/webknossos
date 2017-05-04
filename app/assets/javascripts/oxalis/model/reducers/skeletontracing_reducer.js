@@ -7,6 +7,7 @@ import ColorGenerator from "libs/color_generator";
 import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, mergeTrees } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { findTreeByNodeId, getTree, getNodeAndTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { zoomReducer } from "oxalis/model/reducers/flycam_reducer";
+import Constants from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
 
@@ -25,7 +26,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
       const activeNodeId = contentData.activeNode ? contentData.activeNode : null;
       let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
-      cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : 0;
+      cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
       const activeTree = activeNodeId ? findTreeByNodeId(trees, activeNodeId).get() : null;
 
@@ -202,7 +203,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
       const increaseDecrease = action.forward ? 1 : -1;
       const maxTreeId = _.max(_.map(trees, "treeId"));
-      const newActiveTreeId = _.clamp((activeTreeId || 0) + increaseDecrease, 0, maxTreeId);
+      const newActiveTreeId = _.clamp((activeTreeId || Constants.MIN_TREE_ID) + increaseDecrease, Constants.MIN_TREE_ID, maxTreeId);
 
       return update(state, { skeletonTracing: { activeTreeId: { $set: newActiveTreeId } } });
     }

@@ -16,7 +16,7 @@ import Plane2D from "oxalis/model/binary/plane2d";
 import { PingStrategy, SkeletonPingStrategy, VolumePingStrategy } from "oxalis/model/binary/ping_strategy";
 import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
-import { OrthoViewValues } from "oxalis/constants";
+import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import Model from "oxalis/model";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 
@@ -102,7 +102,7 @@ class Binary {
     ];
 
     this.planes = {};
-    for (const planeId of OrthoViewValues) {
+    for (const planeId of OrthoViewValuesWithoutTDView) {
       this.planes[planeId] = new Plane2D(planeId, this.cube,
         this.layer.bitDepth, this.targetBitDepth, 32, this.category === "segmentation");
     }

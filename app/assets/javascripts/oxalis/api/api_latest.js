@@ -17,6 +17,12 @@ import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
 
+function assertExists(value: any, message: string) {
+  if (value == null) {
+    throw Error(message);
+  }
+}
+
 /**
  * All tracing related API methods. This is the newest version of the API (version 2).
  * @version 2
@@ -50,9 +56,7 @@ class TracingApi {
   * Sets the active node given a node id.
   */
   setActiveNode(id: number) {
-    if (id == null) {
-      throw new Error("Node id is missing.");
-    }
+    assertExists(id, "Node id is missing.");
     Store.dispatch(setActiveNodeAction(id));
   }
 
@@ -90,18 +94,14 @@ class TracingApi {
   * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
   */
   setCommentForNode(commentText: string, nodeId: number, treeId?: number): void {
-    if (commentText == null) {
-      throw new Error("Comment text is missing.");
-    }
+    assertExists(commentText, "Comment text is missing.");
     getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
       // Convert nodeId to node
       if (_.isNumber(nodeId)) {
         const tree = treeId != null ?
           skeletonTracing.trees[treeId] :
           findTreeByNodeId(skeletonTracing.trees, nodeId).get();
-        if (tree == null) {
-          throw Error(`Couldn't find node ${nodeId}.`);
-        }
+        assertExists(tree, `Couldn't find node ${nodeId}.`);
         Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
       } else {
         throw Error("Node id is missing.");
@@ -120,26 +120,19 @@ class TracingApi {
   * const comment = api.tracing.getCommentForNode(23, api.getActiveTreeid());
   */
   getCommentForNode(nodeId: number, treeId?: number): ?string {
-    if (nodeId == null) {
-      throw new Error("Node id is missing.");
-    }
+    assertExists(nodeId, "Node id is missing.");
     return getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
       // Convert treeId to tree
       let tree = null;
       if (treeId != null) {
         tree = skeletonTracing.trees[treeId];
-        if (tree == null) {
-          throw Error(`Couldn't find tree ${treeId}.`);
-        }
-        if (tree.nodes[nodeId] == null) {
-          throw Error(`Couldn't find node ${nodeId} in tree ${treeId}.`);
-        }
+        assertExists(tree, `Couldn't find tree ${treeId}.`);
+        assertExists(tree.nodes[nodeId], `Couldn't find node ${nodeId} in tree ${treeId}.`);
       } else {
         tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
-        if (tree == null) {
-          throw Error(`Couldn't find node ${nodeId}.`);
-        }
+        assertExists(tree, `Couldn't find node ${nodeId}.`);
       }
+      // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
       const comment = tree.comments.find(__ => __.node === nodeId);
       return comment != null ? comment.content : null;
     }).getOrElse(null);

@@ -226,7 +226,7 @@ class ArbitraryController {
 
 
   setRecord(record: boolean): void {
-    if (record !== Store.getState().flightmodeRecording) {
+    if (record !== Store.getState().temporaryConfiguration.flightmodeRecording) {
       Store.dispatch(setFlightmodeRecordingAction(record));
       this.setWaypoint();
     }
@@ -339,10 +339,9 @@ class ArbitraryController {
   }
 
   setWaypoint(): void {
-    if (!Store.getState().flightmodeRecording) {
+    if (!Store.getState().temporaryConfiguration.flightmodeRecording) {
       return;
     }
-
     const position = getPosition(Store.getState().flycam);
     const rotation = getRotation(Store.getState().flycam);
 

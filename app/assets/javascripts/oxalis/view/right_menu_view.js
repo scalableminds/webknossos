@@ -43,7 +43,7 @@ class RightMenuView extends React.PureComponent {
 
   render() {
     return (
-      <Tabs destroyInactiveTabPane defaultActiveKey="1" className="flex-column flex-column-for-ant-tabs-container">
+      <Tabs destroyInactiveTabPane defaultActiveKey="1">
         <TabPane tab="Info" key="1"><DatasetInfoTabView /></TabPane>
         { this.getTabs() }
       </Tabs>

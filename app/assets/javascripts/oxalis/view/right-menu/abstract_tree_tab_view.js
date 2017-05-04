@@ -54,7 +54,7 @@ class AbstractTreeView extends Component {
 
   render() {
     return (
-      <div className="flex-column">
+      <div>
         <canvas
           id="abstract-tree-canvas"
           ref={(canvas) => { this.canvas = canvas; }}

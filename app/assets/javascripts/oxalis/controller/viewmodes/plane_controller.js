@@ -290,6 +290,9 @@ class PlaneController {
 
     this.initKeyboard();
     this.init();
+    // Workaround: defer mouse initialization to make sure DOM elements have
+    // acutally been rendered by React (InputCatchers Component)
+    // DOM Elements get deleted when switching between ortho and arbitrary mode
     _.defer(() => this.initMouse());
 
     this.isStarted = true;

@@ -107,8 +107,6 @@ class ArbitraryView {
         element.setVisibility(true);
       }
 
-      $(".skeleton-arbitrary-controls").show();
-      $("#arbitrary-info-canvas").show();
 
       this.resize();
       // start the rendering loop
@@ -133,9 +131,6 @@ class ArbitraryView {
       }
 
       $(window).off("resize", this.resize);
-
-      $(".skeleton-arbitrary-controls").hide();
-      $("#arbitrary-info-canvas").hide();
     }
   }
 

@@ -24,7 +24,6 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
 import ArbitraryView from "oxalis/view/arbitrary_view";
-import ArbitraryPlaneInfo from "oxalis/geometries/arbitrary_plane_info";
 import constants from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import { yawFlycamAction, pitchFlycamAction, setPositionAction, setRotationAction, zoomInAction, zoomOutAction, moveFlycamAction } from "oxalis/model/actions/flycam_actions";

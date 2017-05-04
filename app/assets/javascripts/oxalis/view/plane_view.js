@@ -235,6 +235,7 @@ class PlaneView {
   start(): void {
     this.running = true;
 
+    this.resize();
     this.animate();
   }
 }

@@ -22,6 +22,7 @@ class TracingView extends React.PureComponent {
 
   getRecordingSwitch = () =>
     <Switch
+      id="flightmode-switch"
       checkedChildren="Recording"
       unCheckedChildren="Watching"
       checked={this.props.flightmodeRecording}
@@ -31,7 +32,7 @@ class TracingView extends React.PureComponent {
   render() {
     const isArbitraryMode = Constants.MODES_ARBITRARY.includes(this.props.viewMode);
     const inputCatchers = !isArbitraryMode ? <InputCatchers /> : null;
-    const flightModeRecordingSwitch = isArbitraryMode ? this.getRecordingSwitch : null;
+    const flightModeRecordingSwitch = isArbitraryMode ? this.getRecordingSwitch() : null;
 
     const canvasWidth = Math.round(this.props.scale * Constants.VIEWPORT_WIDTH) * 2 + 20;
     const canvasStyle = {

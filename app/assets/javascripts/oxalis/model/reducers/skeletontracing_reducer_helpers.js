@@ -13,9 +13,10 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
 import Utils from "libs/utils";
+import Constants from "oxalis/constants";
+import { getSkeletonTracing, getActiveNodeFromTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, TemporaryMutableTreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
-import { getSkeletonTracing, getActiveNodeFromTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 
 function generateTreeNamePrefix(state: OxalisState, timestamp) {
   let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
@@ -33,7 +34,7 @@ function generateTreeNamePrefix(state: OxalisState, timestamp) {
 
 function getMaximumNodeId(trees: TreeMapType): number {
   const newMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, n => n.id)));
-  return newMaxNodeId != null ? newMaxNodeId : 0;
+  return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
 
 function getMaximumTreeId(trees: TreeMapType): number {
@@ -269,7 +270,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       // create a new tree id and name
       // tree id can become 0 after deleting all trees
       const maxTreeId = getMaximumTreeId(skeletonTracing.trees);
-      const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : 1;
+      const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : Constants.MIN_TREE_ID;
 
       const name = generateTreeNamePrefix(state, timestamp) + Utils.zeroPad(newTreeId, 2);
 

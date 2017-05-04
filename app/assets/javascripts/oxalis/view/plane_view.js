@@ -88,8 +88,6 @@ class PlaneView {
 
     // Attach the canvas to the container
     this.renderer.setSize((2 * this.curWidth) + 20, (2 * this.curWidth) + 20);
-    // $(this.renderer.domElement).attr({ id: "render-canvas" });
-    // container.append(this.renderer.domElement);
 
     this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
@@ -210,7 +208,7 @@ class PlaneView {
 
   resize = (): void => {
     // Call this after the canvas was resized to fix the viewport
-    const viewportWidth = Math.round(Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH)
+    const viewportWidth = Math.round(Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH);
     const canvasWidth = viewportWidth * 2 + 20;
     this.curWidth = viewportWidth;
 

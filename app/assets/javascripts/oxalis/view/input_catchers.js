@@ -2,22 +2,19 @@
 
 import React from "react";
 import { connect } from "react-redux";
-import { Button, Switch } from "antd";
+import { Button } from "antd";
 import Constants, { OrthoViews } from "oxalis/constants";
-import app from "app";
-import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
 import type { OxalisState } from "oxalis/store";
-import type { Dispatch } from "redux";
 
 const ButtonGroup = Button.Group;
 
 class InputCatchers extends React.PureComponent {
 
   state = {
-    activeInputCatcher: null,
+    activeInputCatcher: "",
   }
 
-  handleMouseOver = (event: SyntheticEvent) => {
+  handleMouseOver = (event: SyntheticInputEvent) => {
     this.setState({
       activeInputCatcher: event.target.dataset.value,
     });
@@ -27,12 +24,11 @@ class InputCatchers extends React.PureComponent {
     const width = Math.round(this.props.scale * Constants.VIEWPORT_WIDTH);
     const TDButtonStyle = {
       width: (width / 4) - 0.5,
-    }
+    };
 
     const activeInputCatcher = this.state.activeInputCatcher;
 
     return (
-
       <div id="inputcatchers">
         <div
           id="inputcatcher_PLANE_XY"
@@ -40,9 +36,9 @@ class InputCatchers extends React.PureComponent {
           className="inputcatcher"
           onMouseOver={this.handleMouseOver}
           style={{
-            width: width,
+            width,
             height: width,
-            borderColor: activeInputCatcher === OrthoViews.PLANE_XY ? "#ff0" : "white"
+            borderColor: activeInputCatcher === OrthoViews.PLANE_XY ? "#ff0" : "white",
           }}
         />
         <div
@@ -51,9 +47,9 @@ class InputCatchers extends React.PureComponent {
           className="inputcatcher"
           onMouseOver={this.handleMouseOver}
           style={{
-            width: width,
+            width,
             height: width,
-            borderColor: activeInputCatcher === OrthoViews.PLANE_YZ ? "#ff0" : "white"
+            borderColor: activeInputCatcher === OrthoViews.PLANE_YZ ? "#ff0" : "white",
           }}
         />
         <div
@@ -62,9 +58,9 @@ class InputCatchers extends React.PureComponent {
           className="inputcatcher"
           onMouseOver={this.handleMouseOver}
           style={{
-            width: width,
+            width,
             height: width,
-            borderColor: activeInputCatcher === OrthoViews.PLANE_XZ ? "#ff0" : "white"
+            borderColor: activeInputCatcher === OrthoViews.PLANE_XZ ? "#ff0" : "white",
           }}
         />
         <div
@@ -73,9 +69,9 @@ class InputCatchers extends React.PureComponent {
           className="inputcatcher"
           onMouseOver={this.handleMouseOver}
           style={{
-            width: width,
+            width,
             height: width,
-            borderColor: activeInputCatcher === OrthoViews.TDView ? "#ff0" : "white"
+            borderColor: activeInputCatcher === OrthoViews.TDView ? "#ff0" : "white",
           }}
         >
           <ButtonGroup id="TDViewControls">

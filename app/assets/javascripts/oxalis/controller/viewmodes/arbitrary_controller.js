@@ -40,7 +40,6 @@ class ArbitraryController {
   isStarted: boolean;
   canvas: JQuery;
   plane: ArbitraryPlane;
-  infoPlane: ArbitraryPlaneInfo;
   crosshair: Crosshair;
   WIDTH: number;
   TIMETOCENTER: number;

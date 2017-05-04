@@ -3,7 +3,6 @@
  * @flow
  */
 
-import Backbone from "backbone";
 import _ from "lodash";
 import Store from "oxalis/store";
 import type {
@@ -122,11 +121,9 @@ export class OxalisModel {
   preferredMode: ModeType;
   isTask: boolean;
   state: UrlManagerState;
-  eventHub: typeof Backbone.Events;
 
   constructor() {
     this.initialized = false;
-    this.eventHub = _.extend({}, Backbone.Events);
   }
 
   initialize(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
@@ -279,12 +276,7 @@ export class OxalisModel {
       Store.dispatch(setViewModeAction(mode));
     }
 
-
     this.initialized = true;
-    // TODO: shouldn't be necessary once tracing_layout_view is reactified
-    this.eventHub.trigger("sync");
-
-    // no error
   }
 
   // For now, since we have no UI for this

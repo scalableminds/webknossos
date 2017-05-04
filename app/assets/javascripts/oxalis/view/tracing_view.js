@@ -5,7 +5,7 @@
 
 import React from "react";
 import { connect } from "react-redux";
-import { Button, Switch } from "antd";
+import { Switch } from "antd";
 import Constants from "oxalis/constants";
 import app from "app";
 import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";

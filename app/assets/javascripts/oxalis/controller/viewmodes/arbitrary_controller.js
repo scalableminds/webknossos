@@ -31,6 +31,8 @@ import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor
 import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 
+const CANVAS_SELECTOR = "#render-canvas";
+
 class ArbitraryController {
   arbitraryView: ArbitraryView;
   model: OxalisModel
@@ -96,7 +98,7 @@ class ArbitraryController {
 
     this.isStarted = false;
 
-    this.canvas = canvas = $("#render-canvas");
+    this.canvas = canvas = $(CANVAS_SELECTOR);
 
     this.arbitraryView = new ArbitraryView(canvas, this.view, this.WIDTH);
 
@@ -126,7 +128,7 @@ class ArbitraryController {
 
   initMouse(): void {
     this.input.mouse = new InputMouse(
-      this.canvas, {
+      CANVAS_SELECTOR, {
         leftDownMove: (delta: Point2) => {
           const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
           const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;

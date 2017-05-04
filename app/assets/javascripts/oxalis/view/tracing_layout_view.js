@@ -40,22 +40,19 @@ class TracingLayoutView extends React.PureComponent {
 
   showUserScriptsModal = () => {
     this.setState({
-      isSettingsCollapsed: this.state.isSettingsCollapsed,
       isUserScriptsModalOpen: true,
     });
   }
 
   closeUserScriptsModal = () => {
     this.setState({
-      isSettingsCollapsed: this.state.isSettingsCollapsed,
       isUserScriptsModalOpen: false,
     });
   }
 
   handleSettingsCollapse = () => {
     this.setState({
-      isSettingsCollapsed: this.state.isSettingsCollapsed,
-      isUserScriptsModalOpen: this.state.isUserScriptsModalOpen,
+      isSettingsCollapsed: !this.state.isSettingsCollapsed,
     });
   }
 

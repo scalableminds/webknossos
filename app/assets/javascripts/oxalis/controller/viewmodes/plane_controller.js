@@ -124,12 +124,12 @@ class PlaneController {
   initMouse(): void {
     for (const id of OrthoViewValues) {
       if (id !== OrthoViews.TDView) {
-        const inputcatcher = $(`#inputcatcher_${OrthoViews[id]}`);
+        const inputcatcherSelector = `#inputcatcher_${OrthoViews[id]}`;
         this.input.mouseControllers[id] =
-          new InputMouse(inputcatcher, this.getPlaneMouseControls(id), id);
+          new InputMouse(inputcatcherSelector, this.getPlaneMouseControls(id), id);
       } else {
         this.input.mouseControllers[id] =
-          new InputMouse($("#inputcatcher_TDView"), this.getTDViewMouseControls(), id);
+          new InputMouse("#inputcatcher_TDView", this.getTDViewMouseControls(), id);
       }
     }
   }

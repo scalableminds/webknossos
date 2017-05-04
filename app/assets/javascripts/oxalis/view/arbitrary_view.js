@@ -139,9 +139,9 @@ class ArbitraryView {
     this.animationRequestId = 0;
     if (!this.isRunning) { return; }
 
-    if (this.needsRerender) {
-      TWEEN.update();
+    TWEEN.update();
 
+    if (this.needsRerender) {
       this.trigger("render");
 
       const { camera, geometries, renderer, scene } = this;

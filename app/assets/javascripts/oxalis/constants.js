@@ -110,6 +110,9 @@ const Constants = {
 
   RESIZE_THROTTLE_TIME: 250,
   BRANCHPOINT_VIDEO_CLIPPING_DISTANCE: 3,
+
+  MIN_TREE_ID: 1,
+  MIN_NODE_ID: 1,
 };
 
 export default Constants;

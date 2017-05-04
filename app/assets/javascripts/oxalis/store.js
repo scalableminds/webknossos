@@ -8,8 +8,8 @@
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import Constants from "oxalis/constants";
-import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
+import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType, ControlModeType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
@@ -135,8 +135,17 @@ export type DatasetType = {
 
 export type TreeMapType = {+[number]: TreeType};
 
-export type SkeletonTracingTypeTracingType =
-  "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType";
+export const SkeletonTracingTypeTracingEnum = {
+  Explorational: "Explorational",
+  Task: "Task",
+  View: "View",
+  CompoundTask: "CompoundTask",
+  CompoundProject: "CompoundProject",
+  CompoundTaskType: "CompoundTaskType",
+};
+
+export type SkeletonTracingTypeTracingType = $Keys<typeof SkeletonTracingTypeTracingEnum>;
+
 export type VolumeTracingTypeTracingType = SkeletonTracingTypeTracingType;
 
 export type SkeletonTracingType = {
@@ -233,6 +242,7 @@ export type TemporaryConfigurationType = {
   +shouldHideAllSkeletons: boolean,
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
+  +controlMode: ControlModeType
 };
 
 export type TaskType = {
@@ -306,6 +316,7 @@ export const defaultState: OxalisState = {
     shouldHideAllSkeletons: false,
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
+    controlMode: ControlModeEnum.TRACE,
   },
   task: null,
   dataset: {

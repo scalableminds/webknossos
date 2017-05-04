@@ -24,6 +24,7 @@ const mockedVolumeLayer = {
 };
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
+mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
 
 const { saveTracingAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");

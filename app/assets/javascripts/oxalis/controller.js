@@ -11,7 +11,6 @@ import Backbone from "backbone";
 import Stats from "stats.js";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
-import model from "oxalis/model";
 import Store from "oxalis/store";
 import View from "oxalis/view";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
@@ -26,14 +25,15 @@ import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import SkeletonTracingView from "oxalis/view/skeletontracing_view";
 import VolumeTracingView from "oxalis/view/volumetracing_view";
-import constants from "oxalis/constants";
+import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
 import OxalisApi from "oxalis/api/api_loader";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { OxalisModel } from "oxalis/model";
+import Model, { OxalisModel } from "oxalis/model";
+import Modal from "oxalis/view/modal";
 
 import messages from "messages";
 
@@ -41,7 +41,6 @@ import type { ToastType } from "libs/toast";
 import type { ModeType } from "oxalis/constants";
 
 class Controller {
-
   urlManager: UrlManager;
   sceneController: SceneController;
   annotationController: SkeletonTracingController | VolumeTracingController;
@@ -49,7 +48,7 @@ class Controller {
   arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
-  model: Oxalismodel;
+  model: OxalisModel;
   view: View;
 
   // Copied from backbone events (TODO: handle this better)
@@ -73,14 +72,14 @@ class Controller {
 
     _.extend(this, Backbone.Events);
 
-    this.urlManager = new UrlManager(model);
-    model.state = this.urlManager.initialState;
+    this.urlManager = new UrlManager(Model);
+    Model.state = this.urlManager.initialState;
 
-    model.fetch()
+    Model.fetch()
       .then(() => this.modelFetchDone())
       .catch((error) => {
         // Don't throw errors for errors already handled by the model.
-        if (error !== model.HANDLED_ERROR) {
+        if (error !== Model.HANDLED_ERROR) {
           throw error;
         }
       },
@@ -88,15 +87,16 @@ class Controller {
   }
 
   modelFetchDone() {
-    if (!model.tracing.restrictions.allowAccess) {
+    const controlMode = Store.getState().temporaryConfiguration.controlMode;
+    if (!Model.tracing.restrictions.allowAccess) {
       Toast.Error("You are not allowed to access this tracing");
       return;
     }
 
     app.router.on("beforeunload", () => {
-      if (model.controlMode === constants.CONTROL_MODE_TRACE) {
+      if (controlMode === ControlModeEnum.TRACE) {
         const state = Store.getState();
-        const stateSaved = model.stateSaved();
+        const stateSaved = Model.stateSaved();
         if (!stateSaved && state.tracing.restrictions.allowUpdate) {
           Store.dispatch(saveNowAction());
           return messages["save.leave_page_unfinished"];
@@ -107,34 +107,33 @@ class Controller {
 
     this.urlManager.startUrlUpdater();
 
-    this.sceneController = new SceneController(model);
-
+    this.sceneController = new SceneController(Model);
     // TODO: Replace with skeletonTracing from Store (which is non-null currently)
-    if (model.controlMode === constants.CONTROL_MODE_TRACE) {
-      if (model.isVolumeTracing()) {
+    if (controlMode === ControlModeEnum.TRACE) {
+      if (Model.isVolumeTracing()) {
         // VOLUME MODE
-        this.view = new VolumeTracingView(model);
+        this.view = new VolumeTracingView(Model);
         this.annotationController = new VolumeTracingController(
-          model, this.view, this.sceneController);
+          Model, this.view, this.sceneController);
         this.planeController = new VolumeTracingPlaneController(
-          model, this.view, this.sceneController, this.annotationController);
+          Model, this.view, this.sceneController, this.annotationController);
       } else {
         // SKELETONRACING MODE
-        this.view = new SkeletonTracingView(model);
+        this.view = new SkeletonTracingView(Model);
         this.annotationController = new SkeletonTracingController(
-          model, this.view, this.sceneController);
+          Model, this.view, this.sceneController);
         this.planeController = new SkeletonTracingPlaneController(
-          model, this.view, this.sceneController, this.annotationController);
+          Model, this.view, this.sceneController, this.annotationController);
 
-        const ArbitraryControllerClass = model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalSkeletonTracingArbitraryController;
+        const ArbitraryControllerClass = Model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalSkeletonTracingArbitraryController;
         this.arbitraryController = new ArbitraryControllerClass(
-          model, this.view, this.sceneController, this.annotationController);
+          Model, this.view, this.sceneController, this.annotationController);
       }
     } else {
       // VIEW MODE
-      this.view = new View(this.model);
+      this.view = new View(Model);
       this.planeController = new PlaneController(
-        model, this.view, this.sceneController);
+        Model, this.view, this.sceneController);
     }
 
     // FPS stats
@@ -147,8 +146,8 @@ class Controller {
     this.initTimeLimit();
     this.initTaskScript();
 
-    for (const binaryName of Object.keys(model.binary)) {
-      this.listenTo(model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
+    for (const binaryName of Object.keys(Model.binary)) {
+      this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
     }
 
     listenToStoreProperty(store => store.temporaryConfiguration.viewMode, mode => this.loadMode(mode), true);
@@ -165,7 +164,7 @@ class Controller {
     });
     this.onZoomStepChange();
 
-    window.webknossos = new OxalisApi(model);
+    window.webknossos = new OxalisApi(Model);
 
     app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
@@ -175,8 +174,8 @@ class Controller {
   initTaskScript() {
     // Loads a Gist from GitHub with a user script if there is a
     // script assigned to the task
-    if (model.tracing.task && model.tracing.task.script) {
-      const script = model.tracing.task.script;
+    if (Model.tracing.task && Model.tracing.task.script) {
+      const script = Model.tracing.task.script;
       const gistId = _.last(script.gist.split("/"));
 
       Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then((gist) => {
@@ -202,9 +201,9 @@ class Controller {
     // Users can aquire new tasks directly in the tracing view. Occasionally,
     // they start working on a new TaskType and need to be instructed.
     let text;
-    if (!Utils.getUrlParams("differentTaskType") || (model.tracing.task == null)) { return; }
+    if (!Utils.getUrlParams("differentTaskType") || (Model.tracing.task == null)) { return; }
 
-    const taskType = model.tracing.task.type;
+    const taskType = Model.tracing.task.type;
     const title = `Attention, new Task Type: ${taskType.summary}`;
     if (taskType.description) {
       text = `You are now tracing a new task with the following description:<br>${taskType.description}`;
@@ -221,9 +220,9 @@ class Controller {
       if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) { event.preventDefault(); }
     });
 
+    const controlMode = Store.getState().temporaryConfiguration.controlMode;
     const keyboardControls = {};
-
-    if (model.controlMode === constants.CONTROL_MODE_TRACE) {
+    if (controlMode === ControlModeEnum.TRACE) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
         "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
@@ -235,20 +234,20 @@ class Controller {
         m: () => {
           // rotate allowed modes
           const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
-          const index = (model.allowedModes.indexOf(currentViewMode) + 1) % model.allowedModes.length;
-          Store.dispatch(setViewModeAction(model.allowedModes[index]));
+          const index = (Model.allowedModes.indexOf(currentViewMode) + 1) % Model.allowedModes.length;
+          Store.dispatch(setViewModeAction(Model.allowedModes[index]));
         },
 
         "super + s": (event) => {
           event.preventDefault();
           event.stopPropagation();
-          model.save();
+          Model.save();
         },
 
         "ctrl + s": (event) => {
           event.preventDefault();
           event.stopPropagation();
-          model.save();
+          Model.save();
         },
 
       });
@@ -259,10 +258,10 @@ class Controller {
 
 
   loadMode(newMode: ModeType, force: boolean = false) {
-    if ((newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) && (model.allowedModes.includes(newMode) || force)) {
+    if ((newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) && (Model.allowedModes.includes(newMode) || force)) {
       Utils.__guard__(this.planeController, x => x.stop());
       this.arbitraryController.start(newMode);
-    } else if ((newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) && (model.allowedModes.includes(newMode) || force)) {
+    } else if ((newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) && (Model.allowedModes.includes(newMode) || force)) {
       Utils.__guard__(this.arbitraryController, x1 => x1.stop());
       this.planeController.start(newMode);
     }
@@ -271,20 +270,20 @@ class Controller {
 
   initTimeLimit() {
     // only enable hard time limit for anonymous users so far
-    if (!model.tracing.task || !model.tracing.user.isAnonymous) {
+    if (!Model.tracing.task || !Model.tracing.user.isAnonymous) {
       return;
     }
 
     // TODO move that somewhere else
     const finishTracing = async () => {
       // save the progress
-      await model.save();
-      const url = `/annotations/${model.tracingType}/${model.tracingId}/finishAndRedirect`;
+      await Model.save();
+      const url = `/annotations/${Model.tracingType}/${Model.tracingId}/finishAndRedirect`;
       app.router.loadURL(url);
     };
 
     // parse hard time limit and convert from min to ms
-    const { expectedTime } = model.tracing.task.type;
+    const { expectedTime } = Model.tracing.task.type;
     let timeLimit = (expectedTime.maxHard * 60 * 1000) || 0;
 
     // setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
@@ -304,9 +303,9 @@ class Controller {
   }
 
   onZoomStepChange() {
-    const shouldWarn = !model.canDisplaySegmentationData();
+    const shouldWarn = !Model.canDisplaySegmentationData();
     if (shouldWarn && (this.zoomStepWarningToast == null)) {
-      const toastType = model.isVolumeTracing() ? "danger" : "info";
+      const toastType = Model.isVolumeTracing() ? "danger" : "info";
       this.zoomStepWarningToast = Toast.message(toastType,
         "Segmentation data and volume tracing is only fully supported at a smaller zoom level.", true);
     } else if (!shouldWarn && (this.zoomStepWarningToast != null)) {

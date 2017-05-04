@@ -14,6 +14,7 @@ mockRequire("keyboardjs", KeyboardJS);
 mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("bootstrap-toggle", {});
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
+mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
 
 const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
 const { saveTracingAsync } = mockRequire.reRequire("oxalis/model/sagas/save_saga");

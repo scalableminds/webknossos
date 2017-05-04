@@ -60,15 +60,16 @@ mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
 mockRequire("keyboardjs", KeyboardJS);
 
 // Avoid node caching and make sure all mockRequires are applied
-const Model = mockRequire.reRequire("oxalis/model").default;
+const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 
 test.beforeEach((t) => {
-  const model = t.context.model = new Model({
-    tracingType: "tracingTypeValue",
-    tracingId: "tracingIdValue",
-    controlMode: constants.CONTROL_MODE_TRACE,
-  });
+  const model = t.context.model = new Model();
+  model.initialize(
+    "tracingTypeValue",
+    "tracingIdValue",
+    constants.CONTROL_MODE_TRACE,
+  );
   model.state = { position: [1, 2, 3] };
 
   const webknossos = t.context.webknossos = new OxalisApi(model);

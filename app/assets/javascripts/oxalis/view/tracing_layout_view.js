@@ -6,16 +6,12 @@
 import React from "react";
 import { Provider } from "react-redux";
 import app from "app";
-import store from "oxalis/throttled_store";
+import Store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
-import Model from "oxalis/model";
-import Constants from "oxalis/constants";
-import Modal from "oxalis/view/modal";
-import Utils from "libs/utils";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
-import UserScriptsModalView from "oxalis/view/user_scripts_modal";
 import TracingView from "oxalis/view/tracing_view";
 import enUS from "antd/lib/locale-provider/en_US";
 import { LocaleProvider, Layout, Button, Icon } from "antd";
@@ -29,12 +25,11 @@ class TracingLayoutView extends React.PureComponent {
   }
 
   componentDidMount() {
-
     // $(window).on("resize", this.resizeRightMenu.bind(this));
     const addScriptLink = document.getElementById("add-script-link");
     if (addScriptLink) {
       addScriptLink.classList.remove("hide");
-      addScriptLink.addEventListener("click", this.showUserScriptsModal);
+      addScriptLink.addEventListener("click", this.showUserScriptsModal.bind(this));
     }
 
     // this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
@@ -79,17 +74,33 @@ class TracingLayoutView extends React.PureComponent {
     });
   }
 
+  // this.maybeShowNewTaskTypeModal();
+
+  showUserScriptsModal(event: Event): void {
+    event.preventDefault();
+    // const modalView = new UserScriptsModalView();
+    // this.showChildView("modalWrapper", modalView);
+    // return modalView.show();
+    throw Error("TODO");
+  }
+
+  isSkeletonMode() {
+    const temporaryConfiguration = Store.getState().temporaryConfiguration;
+    return Constants.MODES_SKELETON.includes(temporaryConfiguration.viewMode) && temporaryConfiguration.controlMode !== ControlModeEnum.VIEW;
+  }
+
   render() {
     // if (!this.model.settings.advancedOptionsAllowed) {
 
     return (
       <LocaleProvider locale={enUS}>
-        <Provider store={store}>
+        <Provider store={Store}>
           <Layout>
             <Header>
               <Button
                 size="large"
-                onClick={this.handleSettingsCollapse} style={{ float: "left", marginTop: "10px" }}>
+                onClick={this.handleSettingsCollapse} style={{ float: "left", marginTop: "10px" }}
+              >
                 <Icon type={this.state.settingsCollapsed ? "menu-unfold" : "menu-fold"} />
                 Settings
               </Button>

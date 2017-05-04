@@ -20,7 +20,7 @@ import type {
   DataLayerType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
-import { setDatasetAction, setViewModeAction } from "oxalis/model/actions/settings_actions";
+import { setDatasetAction, setViewModeAction, setControlModeAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
@@ -31,8 +31,8 @@ import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import constants, { Vector3Indicies } from "oxalis/constants";
-import type { ModeType, Vector3, BoundingBoxType } from "oxalis/constants";
+import constants, { Vector3Indicies, ControlModeEnum } from "oxalis/constants";
+import type { ModeType, Vector3, BoundingBoxType, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
@@ -119,7 +119,6 @@ export class OxalisModel {
   tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>;
   tracingId: string;
   tracingType: SkeletonTracingTypeTracingType;
-  controlMode: mixed;
   preferredMode: ModeType;
   isTask: boolean;
   state: UrlManagerState;
@@ -130,16 +129,17 @@ export class OxalisModel {
     this.eventHub = _.extend({}, Backbone.Events);
   }
 
-  initialize(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: mixed) {
+  initialize(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
     this.tracingType = tracingType;
     this.tracingId = tracingId;
-    this.controlMode = controlMode;
+    Store.dispatch(setControlModeAction(controlMode));
   }
 
 
   fetch() {
     let infoUrl;
-    if (this.controlMode === constants.CONTROL_MODE_TRACE) {
+    const controlMode = Store.getState().temporaryConfiguration.controlMode;
+    if (controlMode === ControlModeEnum.TRACE) {
       // Include /readOnly part whenever it is in the pathname
       infoUrl = `${window.location.pathname}/info`;
     } else {
@@ -248,7 +248,8 @@ export class OxalisModel {
 
     this.isVolume = tracing.content.settings.allowedModes.includes("volume");
 
-    if (this.controlMode === constants.CONTROL_MODE_TRACE) {
+    const controlMode = Store.getState().temporaryConfiguration.controlMode;
+    if (controlMode === ControlModeEnum.TRACE) {
       if (this.isVolumeTracing()) {
         ErrorHandling.assert((this.getSegmentationBinary() != null),
           "Volume is allowed, but segmentation does not exist");

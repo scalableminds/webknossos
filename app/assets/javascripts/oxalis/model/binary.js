@@ -16,13 +16,12 @@ import Plane2D from "oxalis/model/binary/plane2d";
 import { PingStrategy, SkeletonPingStrategy, VolumePingStrategy } from "oxalis/model/binary/ping_strategy";
 import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
-import { OrthoViewValues } from "oxalis/constants";
-import type { OxalisModel } from "oxalis/model";
+import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import type { Tracing, OxalisModel } from "oxalis/model";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 
 import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
-import type { Tracing } from "oxalis/model";
 import type Layer from "oxalis/model/binary/layers/layer";
 
 const PING_THROTTLE_TIME = 50;
@@ -102,7 +101,7 @@ class Binary {
     ];
 
     this.planes = {};
-    for (const planeId of OrthoViewValues) {
+    for (const planeId of OrthoViewValuesWithoutTDView) {
       this.planes[planeId] = new Plane2D(planeId, this.cube,
         this.layer.bitDepth, this.targetBitDepth, 32, this.category === "segmentation");
     }

@@ -100,6 +100,12 @@ class PlaneView {
 
     this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
+    Store.subscribe(() => {
+      // Render in the next frame after the change propagated everywhere
+      window.requestAnimationFrame(() => {
+        this.needsRerender = true;
+      });
+    });
 
     Store.subscribe(() => {
       if (this.running) {
@@ -141,7 +147,7 @@ class PlaneView {
     // skip rendering if nothing has changed
     // This prevents you the GPU/CPU from constantly
     // working and keeps your lap cool
-    // ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
+    // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
 
     let modelChanged: boolean = false;
     for (const name of Object.keys(this.model.binary)) {

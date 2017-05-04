@@ -68,7 +68,7 @@ const TRACING_OBJECT = {
 };
 
 // Avoid node caching and make sure all mockRequires are applied
-const Model = mockRequire.reRequire("../../oxalis/model").default;
+const Model = mockRequire.reRequire("../../oxalis/model").OxalisModel;
 
 test.beforeEach((t) => {
   const model = t.context.model = new Model({

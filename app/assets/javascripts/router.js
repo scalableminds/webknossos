@@ -9,7 +9,8 @@
 import $ from "jquery";
 import _ from "lodash";
 import React from "react";
-import constants from "oxalis/constants";
+import { ControlModeEnum } from "oxalis/constants";
+import { SkeletonTracingTypeTracingEnum } from "oxalis/store";
 import BaseRouter from "libs/base_router";
 import PaginationCollection from "admin/models/pagination_collection";
 import Model from "oxalis/model";
@@ -75,8 +76,7 @@ class Router extends BaseRouter {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
-
-      Model.initialize(type, id, constants.CONTROL_MODE_TRACE);
+      Model.initialize(type, id, ControlModeEnum.TRACE);
 
       // view.forcePageReload = true;
       render(<TracingLayoutView />, this.$mainContainer[0]);
@@ -89,8 +89,7 @@ class Router extends BaseRouter {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
-
-      Model.initialize(null, id, constants.CONTROL_MODE_VIEW);
+      Model.initialize(SkeletonTracingTypeTracingEnum.View, id, ControlModeEnum.VIEW);
 
       // view.forcePageReload = true;
       render(<TracingLayoutView />, this.$mainContainer[0]);

@@ -3,7 +3,7 @@ import React, { PureComponent } from "react";
 import _ from "lodash";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import type { OxalisState, TracingType } from "oxalis/store";
+import type { OxalisState, TracingType, TaskType } from "oxalis/store";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import app from "app";
@@ -23,6 +23,7 @@ class DatasetActionsView extends PureComponent {
     tracing: TracingType,
     // eslint-disable-next-line react/no-unused-prop-types
     dispatch: Dispatch<*>,
+    task: ?TaskType,
   };
 
   state: {
@@ -93,7 +94,7 @@ class DatasetActionsView extends PureComponent {
     await Request.triggerRequest(finishUrl);
     try {
       const annotation = await Request.receiveJSON(requestTaskUrl);
-      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.task, x => x.type.id);
+      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.task, x => x.taskId);
       const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
       app.router.loadURL(newTaskUrl);
@@ -157,7 +158,7 @@ class DatasetActionsView extends PureComponent {
           onClick={this.handleFinish}
         >{archiveButtonText}</Button>);
       }
-      if (restrictions.allowDownload || !tracing.downloadUrl) {
+      if (restrictions.allowDownload || !this.props.tracing.downloadUrl) {
         elements.push(<Button
           key="download-button"
           icon="download"

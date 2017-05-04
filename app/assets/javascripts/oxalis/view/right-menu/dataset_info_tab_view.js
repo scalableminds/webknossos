@@ -6,18 +6,18 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import constants from "oxalis/constants";
+import constants, { ControlModeEnum } from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
-import Model from "oxalis/model";
 import TemplateHelpers from "libs/template_helpers";
-import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
 
 type DatasetInfoTabProps = {
   skeletonTracing: SkeletonTracingType,
   dataset: DatasetType,
   flycam: FlycamType,
+  task: TaskType,
 };
 
 class DatasetInfoTabView extends Component {
@@ -56,14 +56,14 @@ class DatasetInfoTabView extends Component {
     let annotationType = tracingType;
 
     // In case we have a task display its id as well
-    if (this.props.task) { annotationType += `: ${this.props.task.id}`; }
+    if (this.props.task) { annotationType += `: ${this.props.task.taskId}`; }
     // Or display an explorative tracings name if there is one
     if (name) { annotationType += `: ${name}`; }
 
     const zoomLevel = this.calculateZoomLevel();
     const dataSetName = this.props.dataset.name;
     const treeCount = _.size(this.props.skeletonTracing.trees);
-    const isPublicViewMode = Model.controlMode === constants.CONTROL_MODE_VIEW;
+    const isPublicViewMode = Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     return (
       <div>

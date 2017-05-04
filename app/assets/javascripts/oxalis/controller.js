@@ -23,7 +23,6 @@ import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controlle
 import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
-import SkeletonTracingView from "oxalis/view/skeletontracing_view";
 import VolumeTracingView from "oxalis/view/volumetracing_view";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
@@ -119,7 +118,7 @@ class Controller {
           Model, this.view, this.sceneController, this.annotationController);
       } else {
         // SKELETONRACING MODE
-        this.view = new SkeletonTracingView(Model);
+        this.view = new View(Model);
         this.annotationController = new SkeletonTracingController(
           Model, this.view, this.sceneController);
         this.planeController = new SkeletonTracingPlaneController(

@@ -81,18 +81,18 @@ class TreesTabView extends React.Component {
           <Button onClick={this.deleteTree}><i className="fa fa-trash-o" /> Delete tree</Button>
           <Button onClick={this.shuffleTreeColor} title="Change color"><i className="fa fa-adjust" /> Change Color</Button>
           <Button onClick={this.shuffleAllTreeColors} title="Shuffle all Colors"><i className="fa fa-random" /> Shuffle All Colors</Button>
-          <Dropdown overlay={this.getSettingsDropdown()}>
-            <Button title="Sort"><i className="fa fa-sort-alpha-asc" />Sort</Button>
-          </Dropdown>
         </ButtonGroup>
         <InputGroup compact>
           <Button onClick={this.props.onSelectNextTreeBackward}><i className="fa fa-arrow-left" /></Button>
           <InputComponent
             onChange={this.handleChangeTreeName}
             value={activeTreeName}
-            style={{ width: "70%" }}
+            style={{ width: "60%" }}
           />
           <Button onClick={this.props.onSelectNextTreeForward}><i className="fa fa-arrow-right" /></Button>
+          <Dropdown overlay={this.getSettingsDropdown()}>
+            <Button title="Sort"><i className="fa fa-sort-alpha-asc" /></Button>
+          </Dropdown>
         </InputGroup>
 
         <ul className="flex-overflow">

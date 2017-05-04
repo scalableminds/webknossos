@@ -9,6 +9,7 @@ import * as THREE from "three";
 import constants from "oxalis/constants";
 import type { OxalisModel } from "oxalis/model";
 import Toast from "libs/toast";
+import messages from "messages";
 
 class View {
 
@@ -20,8 +21,7 @@ class View {
   constructor(model) {
     this.model = model;
     if (!this.isWebGlSupported()) {
-      Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>" +
-        "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>");
+      Toast.error(messages["webgl.disabled"]);
     }
 
     this.renderer = new THREE.WebGLRenderer({

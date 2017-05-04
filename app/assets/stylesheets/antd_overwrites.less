@@ -12,5 +12,9 @@
 }
 
 .ant-menu-horizontal {
-  border: none;
+  border: none!important;
+
+  & > .ant-menu-item-active, & > .ant-menu-item-selected {
+    border: none!important;
+  }
 }

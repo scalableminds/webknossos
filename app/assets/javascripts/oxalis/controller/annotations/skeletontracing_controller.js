@@ -12,8 +12,10 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import SkeletonTracingView from "oxalis/view/skeletontracing_view";
+import View from "oxalis/view";
 import SceneController from "oxalis/controller/scene_controller";
+import modal from "oxalis/view/modal";
+
 
 class SkeletonTracingController {
 
@@ -25,12 +27,12 @@ class SkeletonTracingController {
   // functions that can be called by the specific view mode controller.
 
   model: OxalisModel;
-  skeletonTracingView: SkeletonTracingView;
+  skeletonTracingView: View;
   sceneController: SceneController;
 
   constructor(
     model: OxalisModel,
-    skeletonTracingView: SkeletonTracingView,
+    skeletonTracingView: View,
     sceneController: SceneController,
   ) {
     _.extend(this, Backbone.Events);
@@ -60,7 +62,7 @@ class SkeletonTracingController {
     // Show warning, if this is the first time to use
     // this function for this user
     if (Store.getState().userConfiguration.firstVisToggle) {
-      this.skeletonTracingView.showFirstVisToggle();
+      this.showFirstVisToggle();
       Store.dispatch(updateUserSettingAction("firstVisToggle", false));
     }
   }
@@ -69,6 +71,13 @@ class SkeletonTracingController {
   centerActiveNode = (): void => {
     getActiveNode(Store.getState().tracing)
       .map(activeNode => Store.dispatch(setPositionAction(activeNode.position)));
+  }
+
+  showFirstVisToggle() {
+    modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
+      "Skeleton visibility",
+      [{ id: "ok-button", label: "OK, Got it." }],
+    );
   }
 }
 

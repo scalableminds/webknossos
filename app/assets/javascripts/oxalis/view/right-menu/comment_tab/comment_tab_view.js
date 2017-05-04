@@ -148,7 +148,7 @@ class CommentTabView extends React.Component {
             value={activeComment}
             onChange={this.handleChangeInput}
             placeholder="Add comment"
-            style={{ width: "70%" }}
+            style={{ width: "60%" }}
           />
           <Button onClick={this.nextComment}><i className="fa fa-arrow-right" /></Button>
           <Button onClick={this.handleChangeSorting} title="sort">

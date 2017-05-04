@@ -173,8 +173,9 @@ class Controller {
   initTaskScript() {
     // Loads a Gist from GitHub with a user script if there is a
     // script assigned to the task
-    if (Model.tracing.task && Model.tracing.task.script) {
-      const script = Model.tracing.task.script;
+    const task = Store.getState().task;
+    if (task && task.script) {
+      const script = task.script;
       const gistId = _.last(script.gist.split("/"));
 
       Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then((gist) => {
@@ -189,7 +190,7 @@ class Controller {
             Toast.error(`Error executing the task script "${script.name}". See console for more information.`);
           }
         } else {
-          Toast.error(`Unable to retrieve script ${script.name}`);
+          Toast.error(`${messages["task.user_script_retrieval_error"]} ${script.name}`);
         }
       });
     }
@@ -200,14 +201,15 @@ class Controller {
     // Users can aquire new tasks directly in the tracing view. Occasionally,
     // they start working on a new TaskType and need to be instructed.
     let text;
-    if (!Utils.getUrlParams("differentTaskType") || (Model.tracing.task == null)) { return; }
+    const task = Store.getState().task;
+    if (!Utils.getUrlParams("differentTaskType") || (task == null)) { return; }
 
-    const taskType = Model.tracing.task.type;
+    const taskType = task.type;
     const title = `Attention, new Task Type: ${taskType.summary}`;
     if (taskType.description) {
-      text = `You are now tracing a new task with the following description:<br>${taskType.description}`;
+      text = `${messages["task.new_description"]}:<br>${taskType.description}`;
     } else {
-      text = "You are now tracing a new task with no description.";
+      text = messages["task.no_description"];
     }
     Modal.show(text, title);
   }

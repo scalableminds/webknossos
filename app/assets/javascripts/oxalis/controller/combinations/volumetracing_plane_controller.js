@@ -79,8 +79,8 @@ class VolumeTracingPlaneController extends PlaneController {
   };
 
 
-  getPlaneMouseControls(): Object {
-    return _.extend(super.getPlaneMouseControls(), {
+  getPlaneMouseControls(planeId: OrthoViewType): Object {
+    return _.extend(super.getPlaneMouseControls(planeId), {
 
       leftDownMove: (delta: Point2, pos: Point2) => {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;

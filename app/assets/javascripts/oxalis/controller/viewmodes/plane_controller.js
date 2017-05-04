@@ -126,7 +126,7 @@ class PlaneController {
       if (id !== OrthoViews.TDView) {
         const inputcatcher = $(`#inputcatcher_${OrthoViews[id]}`);
         this.input.mouseControllers[id] =
-          new InputMouse(inputcatcher, this.getPlaneMouseControls(), id);
+          new InputMouse(inputcatcher, this.getPlaneMouseControls(id), id);
       } else {
         this.input.mouseControllers[id] =
           new InputMouse($("#inputcatcher_TDView"), this.getTDViewMouseControls(), id);
@@ -139,11 +139,12 @@ class PlaneController {
     return {
       leftDownMove: (delta: Point2) => this.moveTDView(delta),
       scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
+      over: () => { this.activeViewport = OrthoViews.TDView; },
     };
   }
 
 
-  getPlaneMouseControls(): Object {
+  getPlaneMouseControls(planeId: OrthoViewType): Object {
     return {
       leftDownMove: (delta: Point2) => {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
@@ -157,6 +158,7 @@ class PlaneController {
       },
 
       scroll: this.scrollPlanes.bind(this),
+      over: () => { this.activeViewport = planeId; },
     };
   }
 

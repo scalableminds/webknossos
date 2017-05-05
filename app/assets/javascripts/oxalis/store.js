@@ -42,6 +42,7 @@ export type NodeType = {
   +timestamp: number,
 };
 
+export type NodeWithTreeIdType = { treeId: number } & NodeType;
 
 export type BranchPointType = {
   +id: number,

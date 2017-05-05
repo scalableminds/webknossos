@@ -1,8 +1,6 @@
 // @flow
-import type { SkeletonTracingType, BranchPointType, CommentType, TreeType, NodeType } from "oxalis/store";
+import type { NodeWithTreeIdType, SkeletonTracingType, BranchPointType, CommentType, TreeType, NodeType } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-
-export type NodeWithTreeIdType = { treeId: number } & NodeType;
 
 type UpdateTreeUpdateAction = {
   action: "createTree" | "updateTree",

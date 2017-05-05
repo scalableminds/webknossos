@@ -43,7 +43,7 @@ class RightMenuView extends React.PureComponent {
 
   render() {
     return (
-      <Tabs destroyInactiveTabPane defaultActiveKey="1">
+      <Tabs destroyInactiveTabPane defaultActiveKey="1" className="tracing-right-menu">
         <TabPane tab="Info" key="1"><DatasetInfoTabView /></TabPane>
         { this.getTabs() }
       </Tabs>

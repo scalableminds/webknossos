@@ -41,7 +41,9 @@ class AbstractTreeView extends Component {
     const { activeTreeId, activeNodeId, trees } = this.props.skeletonTracing;
     const { canvas } = this;
     if (canvas != null) {
-      this.nodeList = AbstractTreeRenderer.drawTree(canvas, activeTreeId != null ? trees[activeTreeId] : null, activeNodeId);
+      this.nodeList = AbstractTreeRenderer.drawTree(
+        canvas, activeTreeId != null ? trees[activeTreeId] : null,
+        activeNodeId, [canvas.offsetWidth, canvas.offsetHeight]);
     }
   }, 1000);
 

@@ -71,11 +71,37 @@
 }
 
 .tracing-layout {
-
+  padding-bottom: 20px;
+  padding-right: 20px;
+  &.ant-layout, & .ant-layout {
+    overflow: initial;
+  }
   .ant-layout-content {
     overflow: initial;
   }
   .ant-layout-sider {
-    min-width: 450px;
+    overflow: hidden;
   }
+}
+.tracing-settings-menu {
+  width: @left-menu-width;
+  padding-left: 20px;
+
+  .ant-collapse-header {
+    font-size: 14px;
+  }
+
+  .settings-row {
+    margin-bottom: 10px;
+  }
+
+  .setting-label {
+    word-wrap: break-word;
+    white-space: normal;
+    margin-right: 5px;
+    display: inline-block;
+  }
+}
+.tracing-right-menu {
+  min-width: 450px;
 }

@@ -60,7 +60,7 @@ class TracingLayoutView extends React.PureComponent {
     return (
       <LocaleProvider locale={enUS}>
         <Provider store={Store}>
-          <Layout>
+          <Layout className="tracing-layout">
             <Header>
               <Button
                 size="large"
@@ -78,21 +78,22 @@ class TracingLayoutView extends React.PureComponent {
                 collapsed={this.state.isSettingsCollapsed}
                 collapsedWidth={0}
                 width={350}
+                style={{ zIndex: 100 }}
               >
                 <SettingsView />
               </Sider>
-              <Layout className="tracing-layout">
-                <Content>
+              <div style={{ zIndex: 200, display: "flex", flex: 1 }}>
+                <div>
                   <UserScriptsModal
                     visible={this.state.isUserScriptsModalOpen}
                     onClose={this.closeUserScriptsModal}
                   />
                   <TracingView />
-                </Content>
-                <Sider>
+                </div>
+                <div style={{ flex: "1" }}>
                   <RightMenuView />
-                </Sider>
-              </Layout>
+                </div>
+              </div>
             </Layout>
           </Layout>
         </Provider>

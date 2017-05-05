@@ -11,7 +11,7 @@ import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";
 const TabPane = Tabs.TabPane;
 
 const SettingsView = () =>
-  <Tabs destroyInactiveTabPane>
+  <Tabs destroyInactiveTabPane className="tracing-settings-menu">
     <TabPane tab="Tracing" key="1"><UserSettingsView /></TabPane>
     <TabPane tab="Dataset" key="2"><DatasetSettingsView /></TabPane>
   </Tabs>;

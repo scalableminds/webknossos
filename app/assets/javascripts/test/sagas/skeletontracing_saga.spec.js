@@ -5,15 +5,22 @@ import mockRequire from "mock-require";
 import _ from "lodash";
 import ChainReducer from "test/helpers/chainReducer";
 
+const TIMESTAMP = 1494347146379;
+
 const KeyboardJS = {
   bind: _.noop,
   unbind: _.noop,
+};
+
+const DateMock = {
+  now: () => TIMESTAMP,
 };
 
 mockRequire("keyboardjs", KeyboardJS);
 mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("bootstrap-toggle", {});
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
+mockRequire("libs/date", DateMock);
 
 const { saveSkeletonTracingAsync, diffTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
 const SkeletonTracingActions = mockRequire.reRequire("oxalis/model/actions/skeletontracing_actions");
@@ -296,13 +303,14 @@ test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
   const newState = SkeletonTracingReducer(testState, mergeTreesAction);
 
   const updateActions = testDiffing(testState.skeletonTracing, newState.skeletonTracing, newState.flycam);
-  t.deepEqual(updateActions[0], { action: "deleteNode", value: { treeId: 1, id: 1 } });
-  t.deepEqual(updateActions[1], { action: "deleteTree", value: { id: 1 } });
+  t.deepEqual(updateActions[0], { action: "deleteNode", timestamp: TIMESTAMP, value: { treeId: 1, id: 1 } });
+  t.deepEqual(updateActions[1], { action: "deleteTree", timestamp: TIMESTAMP, value: { id: 1 } });
   t.is(updateActions[2].action, "createNode");
   t.is(updateActions[2].value.id, 1);
   t.is(updateActions[2].value.treeId, 2);
   t.deepEqual(updateActions[3], {
     action: "createEdge",
+    timestamp: TIMESTAMP,
     value: { treeId: 2, source: 1, target: 3 },
   });
 });
@@ -332,12 +340,12 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   t.is(updateActions[3].action, "createNode");
   t.is(updateActions[3].value.id, 1);
   t.is(updateActions[3].value.treeId, 4);
-  t.deepEqual(updateActions[4], { action: "deleteNode", value: { treeId: 2, id: 1 } });
-  t.deepEqual(updateActions[5], { action: "deleteNode", value: { treeId: 2, id: 3 } });
-  t.deepEqual(updateActions[6], { action: "deleteNode", value: { treeId: 2, id: 4 } });
-  t.deepEqual(updateActions[7], { action: "deleteEdge", value: { treeId: 2, source: 2, target: 3 } });
-  t.deepEqual(updateActions[8], { action: "deleteEdge", value: { treeId: 2, source: 3, target: 4 } });
-  t.deepEqual(updateActions[9], { action: "deleteEdge", value: { treeId: 2, source: 1, target: 3 } });
+  t.deepEqual(updateActions[4], { action: "deleteNode", timestamp: TIMESTAMP, value: { treeId: 2, id: 1 } });
+  t.deepEqual(updateActions[5], { action: "deleteNode", timestamp: TIMESTAMP, value: { treeId: 2, id: 3 } });
+  t.deepEqual(updateActions[6], { action: "deleteNode", timestamp: TIMESTAMP, value: { treeId: 2, id: 4 } });
+  t.deepEqual(updateActions[7], { action: "deleteEdge", timestamp: TIMESTAMP, value: { treeId: 2, source: 2, target: 3 } });
+  t.deepEqual(updateActions[8], { action: "deleteEdge", timestamp: TIMESTAMP, value: { treeId: 2, source: 3, target: 4 } });
+  t.deepEqual(updateActions[9], { action: "deleteEdge", timestamp: TIMESTAMP, value: { treeId: 2, source: 1, target: 3 } });
   t.is(updateActions[10].action, "updateTree");
   t.is(updateActions[10].value.id, 2);
 });

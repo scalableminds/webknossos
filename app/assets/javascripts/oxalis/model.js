@@ -138,7 +138,9 @@ export class OxalisModel {
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
     if (controlMode === ControlModeEnum.TRACE) {
       // Include /readOnly part whenever it is in the pathname
-      infoUrl = `${window.location.pathname}/info`;
+      const isReadOnly = window.location.pathname.endsWith("/readOnly");
+      const readOnlyPart = isReadOnly ? "readOnly/" : "";
+      infoUrl = `/annotations/${this.tracingType}/${this.tracingId}/${readOnlyPart}info`;
     } else {
       infoUrl = `/annotations/${this.tracingType}/${this.tracingId}/info`;
     }

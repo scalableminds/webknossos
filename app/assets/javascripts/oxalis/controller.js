@@ -26,11 +26,11 @@ import UrlManager from "oxalis/controller/url_manager";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
 import OxalisApi from "oxalis/api/api_loader";
-import { wkReadyAction } from "oxalis/model/actions/actions";
+import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import Model, { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
 
 import messages from "messages";
@@ -46,7 +46,6 @@ class Controller {
   arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
-  model: OxalisModel;
   view: View;
 
   // Copied from backbone events (TODO: handle this better)
@@ -82,6 +81,18 @@ class Controller {
         }
       },
       );
+
+    // TODO: only for testing, remove again!
+    // Call app.oxalis.model.initialize("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
+    // with a tracing id of your choice from the dev console beforehand
+    this.model = Model;
+    this.restart = () => {
+      Store.dispatch(restartSagaAction());
+      Model.fetch()
+      .then(() => {
+        Store.dispatch(wkReadyAction());
+      });
+    };
   }
 
   modelFetchDone() {

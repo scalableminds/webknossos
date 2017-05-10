@@ -17,3 +17,7 @@ export type ActionType =
 export const wkReadyAction = () => ({
   type: "WK_READY",
 });
+
+export const restartSagaAction = () => ({
+  type: "RESTART_SAGA",
+});

@@ -23,11 +23,11 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
   user = user.replace(/ /g, "_");   // Replace spaces in user names
 
   let prefix = "";
-  if (state.skeletonTracing.tracingType === "Explorational" && !state.task) {
+  if (state.skeletonTracing.tracingType === "Explorational") {
     // Get YYYY-MM-DD string
     const creationDate = new Date(timestamp).toJSON().slice(0, 10);
     prefix = `explorative_${creationDate}_${user}_`;
-  } else {
+  } else if (state.task) {
     prefix = `task_${state.task.id}_${user}_`;
   }
 

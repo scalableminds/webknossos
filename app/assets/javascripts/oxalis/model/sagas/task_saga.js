@@ -3,14 +3,13 @@
 import { select, put, take } from "redux-saga/effects";
 import { setTreeNameAction } from "oxalis/model/actions/skeletontracing_actions";
 import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import type { TreeType } from "oxalis/store";
 
-
+// eslint-disable-next-line import/prefer-default-export
 export function* initializeTaskAsync(): Generator<*, *, *> {
   yield take("SET_TASK");
   yield take("INITIALIZE_SKELETONTRACING");
 
-  const state = yield select(state => state);
+  const state = yield select(_state => _state);
   const trees = state.skeletonTracing.trees;
 
   // rename trees without an empty/default tree name for tasks

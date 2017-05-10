@@ -6,7 +6,7 @@
 // only relative imports are followed by documentationjs
 import _ from "lodash";
 import { InputKeyboardNoLoop } from "libs/input";
-import OxalisModel from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
 import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";

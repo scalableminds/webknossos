@@ -5,36 +5,36 @@
 
 import React from "react";
 import { Tabs } from "antd";
-import type Model from "oxalis/model";
 import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
-import Constants from "oxalis/constants";
-import Store from "oxalis/store";
+import type { ControlModeType, ModeType } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
+import { connect } from "react-redux";
 
 const TabPane = Tabs.TabPane;
 
-type RightMenuViewProps = {
-  oldModel: Model,
-  isPublicViewMode: boolean,
+type Props = {
+  controlMode: ControlModeType,
+  viewMode: ModeType,
 };
 
 class RightMenuView extends React.PureComponent {
-
-  props: RightMenuViewProps;
+  props: Props;
 
   getTabs() {
-    if (!this.props.isPublicViewMode) {
-      if (Store.getState().temporaryConfiguration.viewMode in Constants.MODES_SKELETON) {
+    if (this.props.controlMode !== ControlModeEnum.VIEW) {
+      if (this.props.viewMode in Constants.MODES_SKELETON) {
         return [
-          <TabPane tab="Trees" key="3" className="flex-column"><TreesTabView /></TabPane>,
-          <TabPane tab="Comments" key="4" className="flex-column"><CommentTabView /></TabPane>,
-          <TabPane tab="Tree Viewer" key="2" className="flex-column"><AbstractTreeTabView /></TabPane>,
+          <TabPane tab="Trees" key="3"><TreesTabView /></TabPane>,
+          <TabPane tab="Comments" key="4"><CommentTabView /></TabPane>,
+          <TabPane tab="Tree Viewer" key="2"><AbstractTreeTabView /></TabPane>,
         ];
       } else {
-        return <TabPane tab="Mappings" key="5"><MappingInfoView oldModel={this.props.oldModel} /></TabPane>;
+        return <TabPane tab="Mappings" key="5"><MappingInfoView /></TabPane>;
       }
     }
 
@@ -43,12 +43,19 @@ class RightMenuView extends React.PureComponent {
 
   render() {
     return (
-      <Tabs destroyInactiveTabPane defaultActiveKey="1" className="flex-column flex-column-for-ant-tabs-container">
-        <TabPane tab="Info" key="1"><DatasetInfoTabView oldModel={this.props.oldModel} /></TabPane>
+      <Tabs destroyInactiveTabPane defaultActiveKey="1" className="tracing-right-menu">
+        <TabPane tab="Info" key="1"><DatasetInfoTabView /></TabPane>
         { this.getTabs() }
       </Tabs>
     );
   }
 }
 
-export default RightMenuView;
+function mapStateToProps(state: OxalisState) {
+  return {
+    controlMode: state.temporaryConfiguration.controlMode,
+    viewMode: state.temporaryConfiguration.viewMode,
+  };
+}
+
+export default connect(mapStateToProps)(RightMenuView);

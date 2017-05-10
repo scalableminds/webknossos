@@ -5,14 +5,14 @@
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
-import $ from "jquery";
 import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
-import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import Model from "oxalis/model";
+import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
 import View from "oxalis/view";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
+import type { OxalisModel } from "oxalis/model";
 
 class PlaneView {
 
@@ -21,7 +21,7 @@ class PlaneView {
   on: Function;
   listenTo: Function;
 
-  model: Model;
+  model: OxalisModel
   view: View;
   renderer: THREE.WebGLRenderer;
   cameras: OrthoViewMapType<THREE.OrthographicCamera>;
@@ -31,12 +31,8 @@ class PlaneView {
   running: boolean;
   needsRerender: boolean;
   curWidth: number;
-  deviceScaleFactor: number;
-  scaleFactor: number;
 
-  constructor(model: Model, view: View) {
-    let HEIGHT;
-    let WIDTH;
+  constructor(model: OxalisModel, view: View) {
     this.model = model;
     this.view = view;
     _.extend(this, Backbone.Events);
@@ -45,13 +41,8 @@ class PlaneView {
     this.scene = this.view.scene;
     this.running = false;
 
-    // The "render" div serves as a container for the canvas, that is
-    // attached to it once a renderer has been initalized.
-    const container = $("#render");
-
     // Create a 4x4 grid
-    this.curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH;
-    this.scaleFactor = 1;
+    this.curWidth = Constants.VIEWPORT_WIDTH;
 
     // Initialize main THREE.js components
     this.cameras = {};
@@ -96,11 +87,7 @@ class PlaneView {
     this.scene.add(directionalLight);
 
     // Attach the canvas to the container
-    this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
-    $(this.renderer.domElement).attr({ id: "render-canvas" });
-    container.append(this.renderer.domElement);
-
-    this.setActiveViewport(OrthoViews.PLANE_XY);
+    this.renderer.setSize((2 * this.curWidth) + 20, (2 * this.curWidth) + 20);
 
     this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
@@ -111,11 +98,14 @@ class PlaneView {
       });
     });
 
-    Store.subscribe(() => {
-      if (this.running) {
-        this.scaleTrianglesPlane(Store.getState().userConfiguration.scale);
-      }
-    });
+    listenToStoreProperty(
+      store => store.userConfiguration.scale,
+      () => {
+        if (this.running) {
+          this.resizeThrottled();
+        }
+      },
+    );
   }
 
 
@@ -213,58 +203,22 @@ class PlaneView {
   resizeThrottled = _.throttle((): void => {
     // throttle resize to avoid annoying flickering
     this.resize();
-    app.vent.trigger("planes:resize");
-  }, constants.RESIZE_THROTTLE_TIME);
+  }, Constants.RESIZE_THROTTLE_TIME);
 
 
   resize = (): void => {
     // Call this after the canvas was resized to fix the viewport
-    const canvas = $("#render-canvas");
-    const WIDTH = (canvas.width() - 20) / 2;
-    const HEIGHT = (canvas.height() - 20) / 2;
+    const viewportWidth = Math.round(Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH);
+    const canvasWidth = viewportWidth * 2 + 20;
+    this.curWidth = viewportWidth;
 
-    this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
+    this.renderer.setSize(canvasWidth, canvasWidth);
     for (const plane of OrthoViewValues) {
-      this.cameras[plane].aspect = WIDTH / HEIGHT;
+      this.cameras[plane].aspect = canvasWidth / canvasWidth;
       this.cameras[plane].updateProjectionMatrix();
     }
     this.draw();
   };
-
-
-  scaleTrianglesPlane = (scale: number): void => {
-    let HEIGHT;
-    let WIDTH;
-    this.scaleFactor = scale;
-    this.curWidth = WIDTH = HEIGHT = Math.round(this.scaleFactor * constants.VIEWPORT_WIDTH);
-    const canvas = $("#render-canvas");
-    canvas.width((2 * WIDTH) + 20);
-    canvas.height((2 * HEIGHT) + 20);
-
-    $("#TDViewControls button").outerWidth((this.curWidth / 4) - 0.5);
-
-    $(".inputcatcher")
-      .css({
-        width: WIDTH,
-        height: HEIGHT,
-      });
-
-    this.resizeThrottled();
-  };
-
-
-  setActiveViewport = (viewportID: OrthoViewType): void => {
-    for (const plane of OrthoViewValues) {
-      if (plane === viewportID) {
-        $(`#inputcatcher_${plane}`).removeClass("inactive").addClass("active");
-      } else {
-        $(`#inputcatcher_${plane}`).removeClass("active").addClass("inactive");
-      }
-    }
-
-    this.draw();
-  };
-
 
   getCameras(): OrthoViewMapType<THREE.OrthographicCamera> {
     return this.cameras;
@@ -272,8 +226,6 @@ class PlaneView {
 
 
   stop(): void {
-    $(".inputcatcher").hide();
-
     this.running = false;
   }
 
@@ -281,9 +233,7 @@ class PlaneView {
   start(): void {
     this.running = true;
 
-    $(".inputcatcher").show();
-    this.scaleTrianglesPlane(Store.getState().userConfiguration.scale);
-
+    this.resize();
     this.animate();
   }
 }

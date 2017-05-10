@@ -6,7 +6,7 @@
 import app from "app";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
-import Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import { getArea, getRequestLogZoomStep, getTexturePosition } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
@@ -21,7 +21,7 @@ class Plane {
 
   plane: THREE.Mesh;
   planeID: OrthoViewType;
-  model: Model;
+  model: OxalisModel
   planeWidth: number;
   textureWidth: number;
   displayCosshair: boolean;
@@ -29,7 +29,7 @@ class Plane {
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
 
-  constructor(planeWidth: number, textureWidth: number, planeID: OrthoViewType, model: Model) {
+  constructor(planeWidth: number, textureWidth: number, planeID: OrthoViewType, model: OxalisModel) {
     this.planeID = planeID;
     this.model = model;
     this.planeWidth = planeWidth;

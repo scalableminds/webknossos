@@ -16,8 +16,8 @@ import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
-import Constants from "oxalis/constants";
-import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
+import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType, ControlModeType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
@@ -135,8 +135,17 @@ export type DatasetType = {
 
 export type TreeMapType = {+[number]: TreeType};
 
-export type SkeletonTracingTypeTracingType =
-  "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType";
+export const SkeletonTracingTypeTracingEnum = {
+  Explorational: "Explorational",
+  Task: "Task",
+  View: "View",
+  CompoundTask: "CompoundTask",
+  CompoundProject: "CompoundProject",
+  CompoundTaskType: "CompoundTaskType",
+};
+
+export type SkeletonTracingTypeTracingType = $Keys<typeof SkeletonTracingTypeTracingEnum>;
+
 export type VolumeTracingTypeTracingType = SkeletonTracingTypeTracingType;
 
 export type SkeletonTracingType = {
@@ -233,10 +242,20 @@ export type TemporaryConfigurationType = {
   +shouldHideAllSkeletons: boolean,
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
+  +controlMode: ControlModeType
 };
 
 export type TaskType = {
   +taskId: number,
+  +type: "string",
+  +script?: {
+    gist: string,
+    name: string,
+  },
+  +type: {
+    +summary: string,
+    +description: string,
+  }
 };
 
 export type SaveStateType = {
@@ -306,6 +325,7 @@ export const defaultState: OxalisState = {
     shouldHideAllSkeletons: false,
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
+    controlMode: ControlModeEnum.TRACE,
   },
   task: null,
   dataset: {

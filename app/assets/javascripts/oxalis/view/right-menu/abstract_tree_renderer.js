@@ -7,6 +7,7 @@ import _ from "lodash";
 import Backbone from "backbone";
 import app from "app";
 import Constants from "oxalis/constants";
+import type { Vector2 } from "oxalis/constants";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
 import type { TreeType } from "oxalis/store";
@@ -49,9 +50,11 @@ class AbstractTreeRenderer {
   vgColor: string;
   commentColor: string;
 
-  static drawTree(canvas: HTMLCanvasElement, tree: ?TreeType, activeNodeId: ?number) {
+  static drawTree(canvas: HTMLCanvasElement, tree: ?TreeType, activeNodeId: ?number, size?: Vector2 = [450, 600]) {
     const renderer = new AbstractTreeRenderer(canvas);
     if (tree != null && activeNodeId != null) {
+      renderer.setDimensions(size[0], size[1]);
+      renderer.clearBackground();
       renderer.drawTree(tree, activeNodeId);
     } else {
       renderer.clearBackground();
@@ -112,9 +115,6 @@ class AbstractTreeRenderer {
     let root;
     this.tree = tree;
     this.activeNodeId = activeNodeId;
-
-    this.setDimensions(this.canvas.offsetWidth, this.canvas.offsetHeight);
-    this.clearBackground();
     this.setupColors();
 
     // List of {x : ..., y : ..., id: ...} objects

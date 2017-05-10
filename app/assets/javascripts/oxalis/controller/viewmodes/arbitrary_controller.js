@@ -13,7 +13,7 @@ import { V3 } from "libs/mjs";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import type { ModeType, Vector3, Point2 } from "oxalis/constants";
-import Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import View from "oxalis/view";
 import Store from "oxalis/store";
 import { updateUserSettingAction, setFlightmodeRecordingAction, setViewModeAction } from "oxalis/model/actions/settings_actions";
@@ -24,7 +24,6 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
 import ArbitraryView from "oxalis/view/arbitrary_view";
-import ArbitraryPlaneInfo from "oxalis/geometries/arbitrary_plane_info";
 import constants from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import { yawFlycamAction, pitchFlycamAction, setPositionAction, setRotationAction, zoomInAction, zoomOutAction, moveFlycamAction } from "oxalis/model/actions/flycam_actions";
@@ -32,16 +31,17 @@ import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor
 import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 
+const CANVAS_SELECTOR = "#render-canvas";
+
 class ArbitraryController {
   arbitraryView: ArbitraryView;
-  model: Model;
+  model: OxalisModel
   view: View;
   sceneController: SceneController;
   skeletonTracingController: SkeletonTracingController;
   isStarted: boolean;
   canvas: JQuery;
   plane: ArbitraryPlane;
-  infoPlane: ArbitraryPlaneInfo;
   crosshair: Crosshair;
   WIDTH: number;
   TIMETOCENTER: number;
@@ -84,7 +84,7 @@ class ArbitraryController {
   }
 
   constructor(
-    model: Model,
+    model: OxalisModel,
     view: View,
     sceneController: SceneController,
     skeletonTracingController: SkeletonTracingController,
@@ -98,18 +98,12 @@ class ArbitraryController {
 
     this.isStarted = false;
 
-    this.canvas = canvas = $("#render-canvas");
+    this.canvas = canvas = $(CANVAS_SELECTOR);
 
     this.arbitraryView = new ArbitraryView(canvas, this.view, this.WIDTH);
 
     this.plane = new ArbitraryPlane(this.model, this, this.WIDTH);
     this.arbitraryView.addGeometry(this.plane);
-
-    // render HTML element to indicate recording status
-    this.infoPlane = new ArbitraryPlaneInfo({ model: this.model });
-    this.infoPlane.render();
-    $("#render").append(this.infoPlane.el);
-
 
     this.input = _.extend({}, this.input);
 
@@ -134,7 +128,7 @@ class ArbitraryController {
 
   initMouse(): void {
     this.input.mouse = new InputMouse(
-      this.canvas, {
+      CANVAS_SELECTOR, {
         leftDownMove: (delta: Point2) => {
           const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
           const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
@@ -233,7 +227,7 @@ class ArbitraryController {
 
 
   setRecord(record: boolean): void {
-    if (record !== Store.getState().flightmodeRecording) {
+    if (record !== Store.getState().temporaryConfiguration.flightmodeRecording) {
       Store.dispatch(setFlightmodeRecordingAction(record));
       this.setWaypoint();
     }
@@ -346,10 +340,9 @@ class ArbitraryController {
   }
 
   setWaypoint(): void {
-    if (!Store.getState().flightmodeRecording) {
+    if (!Store.getState().temporaryConfiguration.flightmodeRecording) {
       return;
     }
-
     const position = getPosition(Store.getState().flycam);
     const rotation = getRotation(Store.getState().flycam);
 

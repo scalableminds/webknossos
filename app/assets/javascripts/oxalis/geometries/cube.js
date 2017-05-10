@@ -7,7 +7,7 @@ import _ from "lodash";
 import app from "app";
 import * as THREE from "three";
 import Backbone from "backbone";
-import Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
@@ -24,7 +24,7 @@ type PropertiesType = {
 
 class Cube {
 
-  model: Model;
+  model: OxalisModel
   crossSections: OrthoViewMapType<THREE.Line>;
   cube: THREE.Line;
   min: Vector3;
@@ -36,7 +36,7 @@ class Cube {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(model: Model, properties: PropertiesType) {
+  constructor(model: OxalisModel, properties: PropertiesType) {
     this.model = model;
     this.min = properties.min || [0, 0, 0];
     this.max = properties.max;

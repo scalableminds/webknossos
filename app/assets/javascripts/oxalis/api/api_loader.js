@@ -5,7 +5,7 @@
 
 // only relative imports are followed by documentationjs
 import app from "app";
-import OxalisModel from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import createApiLatest from "./api_latest";
 import createApiV1 from "./api_v1";
 

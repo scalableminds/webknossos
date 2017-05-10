@@ -6,17 +6,17 @@
 import _ from "lodash";
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
-import type { Dispatch } from "redux";
 import { Collapse } from "antd";
-import Constants from "oxalis/constants";
+import type { ControlModeType, Vector6, ModeType } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import { updateUserSettingAction, updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
-import type { Vector6, ModeType } from "oxalis/constants";
-import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, TracingType } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import type { UserConfigurationType, TemporaryConfigurationType, OxalisState, TracingType } from "oxalis/store";
+import type { Dispatch } from "redux";
 
 const Panel = Collapse.Panel;
 
@@ -33,8 +33,8 @@ type UserSettingsViewProps = {
   onChangeActiveCellId: (value: number) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
-  isPublicViewMode: boolean,
   viewMode: ModeType,
+  controlMode: ControlModeType,
 };
 
 class UserSettingsView extends PureComponent {
@@ -60,7 +60,7 @@ class UserSettingsView extends PureComponent {
         return (
           <Panel header="Viewport Options" key="2">
             <LogSliderSetting label="Zoom" roundTo={3} min={0.001} max={getMaxZoomStep(this.props.state)} value={this.props.zoomStep} onChange={this.props.onChangeZoomStep} />
-            <LogSliderSetting label="Viewport Scale" roundTo={3} min={0.05} max={20} step={0.1} value={this.props.userConfiguration.scale} onChange={this.onChangeUser.scale} />
+            <LogSliderSetting label="Viewport Scale" roundTo={3} min={Constants.MIN_SCALE} max={Constants.MAX_SCALE} step={0.1} value={this.props.userConfiguration.scale} onChange={this.onChangeUser.scale} />
             <LogSliderSetting label="Clipping Distance" roundTo={3} min={1} max={12000} value={this.props.userConfiguration.clippingDistance} onChange={this.onChangeUser.clippingDistance} />
             <SwitchSetting label="Show Crosshairs" value={this.props.userConfiguration.displayCrosshair} onChange={this.onChangeUser.displayCrosshair} />
           </Panel>
@@ -89,8 +89,9 @@ class UserSettingsView extends PureComponent {
 
   getSkeletonOrVolumeOptions = () => {
     const mode = this.props.viewMode;
+    const isPublicViewMode = this.props.controlMode !== ControlModeEnum.VIEW;
 
-    if (Constants.MODES_SKELETON.includes(mode) && !this.props.isPublicViewMode && this.props.tracing.type === "skeleton") {
+    if (Constants.MODES_SKELETON.includes(mode) && !isPublicViewMode && this.props.tracing.type === "skeleton") {
       const activeNodeId = this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
       const activeTreeId = this.props.tracing.activeTreeId != null ? this.props.tracing.activeTreeId : "";
       return (
@@ -148,6 +149,7 @@ const mapStateToProps = (state: OxalisState) => ({
   zoomStep: state.flycam.zoomStep,
   state,
   viewMode: state.temporaryConfiguration.viewMode,
+  controlMode: state.temporaryConfiguration.controlMode,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

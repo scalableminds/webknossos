@@ -4,7 +4,6 @@
  */
 
 import _ from "lodash";
-import $ from "jquery";
 import app from "app";
 import Request from "libs/request";
 import messages from "messages";
@@ -76,7 +75,9 @@ export function* sendRequestToServer(): Generator<*, *, *> {
 }
 
 export function toggleErrorHighlighting(state: boolean) {
-  $("body").toggleClass("save-error", state);
+  if (document.body != null) {
+    document.body.classList.toggle("save-error", state);
+  }
   if (state) {
     Toast.error(messages["save.failed"], true);
   } else {

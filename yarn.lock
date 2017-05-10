@@ -129,9 +129,9 @@ ansi-styles@~1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/ansi-styles/-/ansi-styles-1.0.0.tgz#cb102df1c56f5123eab8b67cd7b98027a0279178"
 
-antd@^2.7.0:
-  version "2.9.1"
-  resolved "https://registry.yarnpkg.com/antd/-/antd-2.9.1.tgz#327ecee8264b77cb6c14fcb1e1ecd0d8a2da5d5f"
+antd@^2.9.3:
+  version "2.9.3"
+  resolved "https://registry.yarnpkg.com/antd/-/antd-2.9.3.tgz#5b40349827fab882d73bd97707d614709a620863"
   dependencies:
     array-tree-filter "~1.0.0"
     babel-runtime "6.x"
@@ -139,14 +139,15 @@ antd@^2.7.0:
     css-animation "^1.2.5"
     dom-closest "^0.2.0"
     lodash.debounce "^4.0.8"
-    moment "~2.18.0"
+    moment "^2.18.1"
     object-assign "~4.1.0"
     omit.js "^0.1.0"
+    prop-types "^15.5.7"
     rc-animate "~2.3.0"
-    rc-calendar "~7.8.0"
+    rc-calendar "~8.0.0"
     rc-cascader "~0.11.0"
     rc-checkbox "~1.5.0"
-    rc-collapse "~1.6.4"
+    rc-collapse "~1.7.0"
     rc-dialog "~6.5.0"
     rc-dropdown "~1.4.8"
     rc-editor-mention "~0.5.2"
@@ -4630,7 +4631,7 @@ module-deps-sortable@4.0.6:
     through2 "^2.0.0"
     xtend "^4.0.0"
 
-moment@^2.10.6, moment@^2.9.0, moment@~2.18.0, moment@2.x:
+moment@^2.10.6, moment@^2.18.1, moment@^2.9.0, moment@2.x:
   version "2.18.1"
   resolved "https://registry.yarnpkg.com/moment/-/moment-2.18.1.tgz#c36193dd3ce1c2eed2adb7c802dbbc77a81b1c0f"
 
@@ -5495,9 +5496,9 @@ promise@^7.1.1:
   dependencies:
     asap "~2.0.3"
 
-prop-types@^15.0.0, prop-types@^15.5.2, prop-types@~15.5.0:
-  version "15.5.6"
-  resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.5.6.tgz#797a915b1714b645ebb7c5d6cc690346205bd2aa"
+prop-types@^15.0.0, prop-types@^15.5.6, prop-types@^15.5.7, prop-types@~15.5.7:
+  version "15.5.8"
+  resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.5.8.tgz#6b7b2e141083be38c8595aa51fc55775c7199394"
   dependencies:
     fbjs "^0.8.9"
 
@@ -5598,9 +5599,9 @@ rc-animate@^2.0.2, rc-animate@^2.3.0, rc-animate@~2.3.0, rc-animate@2.x:
   dependencies:
     css-animation "^1.3.0"
 
-rc-calendar@~7.8.0:
-  version "7.8.0"
-  resolved "https://registry.yarnpkg.com/rc-calendar/-/rc-calendar-7.8.0.tgz#11e1e4fccfb318fd51dd97ba4d278c78022fe1fb"
+rc-calendar@~8.0.0:
+  version "8.0.1"
+  resolved "https://registry.yarnpkg.com/rc-calendar/-/rc-calendar-8.0.1.tgz#923f3b2a5336fdcc7b5e3ccbfb7b3bb8be42c835"
   dependencies:
     babel-runtime "6.x"
     classnames "2.x"
@@ -5624,12 +5625,13 @@ rc-checkbox@~1.5.0, rc-checkbox@1.x:
     classnames "2.x"
     rc-util "^4.0.1"
 
-rc-collapse@~1.6.4:
-  version "1.6.12"
-  resolved "https://registry.yarnpkg.com/rc-collapse/-/rc-collapse-1.6.12.tgz#4eb3a866cdeea7eea9962e8072ecbbf0025f427b"
+rc-collapse@~1.7.0:
+  version "1.7.3"
+  resolved "https://registry.yarnpkg.com/rc-collapse/-/rc-collapse-1.7.3.tgz#3ef64cb7b845b91d50cc73df1adc2c95e79ac1c5"
   dependencies:
     classnames "2.x"
     css-animation "1.x"
+    prop-types "^15.5.6"
     rc-animate "2.x"
 
 rc-dialog@~6.5.0:
@@ -5865,14 +5867,14 @@ rc@^1.0.1, rc@^1.1.0, rc@^1.1.6, rc@^1.1.7:
     minimist "^1.2.0"
     strip-json-comments "~2.0.1"
 
-react-dom@^15.1.0:
-  version "15.5.3"
-  resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-15.5.3.tgz#2ee127ce942df55da53111ae303316e68072b5c5"
+react-dom@^15.5.4:
+  version "15.5.4"
+  resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-15.5.4.tgz#ba0c28786fd52ed7e4f2135fe0288d462aef93da"
   dependencies:
     fbjs "^0.8.9"
     loose-envify "^1.1.0"
     object-assign "^4.1.0"
-    prop-types "~15.5.0"
+    prop-types "~15.5.7"
 
 react-dom@15.3.1:
   version "15.3.1"
@@ -5922,14 +5924,14 @@ react-slick@~0.14.2:
     react-responsive-mixin "^0.4.0"
     slick-carousel "^1.6.0"
 
-react@^15.4.2:
-  version "15.5.3"
-  resolved "https://registry.yarnpkg.com/react/-/react-15.5.3.tgz#84055382c025dec4e3b902bb61a8697cc79c1258"
+react@^15.5.4:
+  version "15.5.4"
+  resolved "https://registry.yarnpkg.com/react/-/react-15.5.4.tgz#fa83eb01506ab237cdc1c8c3b1cea8de012bf047"
   dependencies:
     fbjs "^0.8.9"
     loose-envify "^1.1.0"
     object-assign "^4.1.0"
-    prop-types "^15.5.2"
+    prop-types "^15.5.7"
 
 react@15.3.1:
   version "15.3.1"

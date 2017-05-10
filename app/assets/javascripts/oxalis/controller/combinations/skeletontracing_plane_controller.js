@@ -18,7 +18,7 @@ import { setPositionAction, setRotationAction } from "oxalis/model/actions/flyca
 import { getPosition, getRotationOrtho, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import type Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
@@ -42,7 +42,7 @@ class SkeletonTracingPlaneController extends PlaneController {
   skeletonTracingController: SkeletonTracingController;
 
   constructor(
-    model: Model,
+    model: OxalisModel,
     view: View,
     sceneController: SceneController,
     skeletonTracingController: SkeletonTracingController,

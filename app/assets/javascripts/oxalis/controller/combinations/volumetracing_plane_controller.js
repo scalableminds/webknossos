@@ -17,7 +17,7 @@ import { createCellAction, setModeAction, startEditingAction, addToLayerAction, 
 import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OrthoViewType, Point2 } from "oxalis/constants";
 import type SceneController from "oxalis/controller/scene_controller";
-import type Model from "oxalis/model";
+import type { OxalisModel } from "oxalis/model";
 import type View from "oxalis/view";
 
 class VolumeTracingPlaneController extends PlaneController {
@@ -30,7 +30,7 @@ class VolumeTracingPlaneController extends PlaneController {
 
   volumeTracingController: VolumeTracingController;
 
-  constructor(model: Model, view: View, sceneController: SceneController, volumeTracingController: VolumeTracingController) {
+  constructor(model: OxalisModel, view: View, sceneController: SceneController, volumeTracingController: VolumeTracingController) {
     super(model, view, sceneController);
     this.volumeTracingController = volumeTracingController;
 
@@ -88,9 +88,10 @@ class VolumeTracingPlaneController extends PlaneController {
 
         const mode = getVolumeTraceOrMoveMode(Store.getState().tracing).get();
         if (mode === constants.VOLUME_MODE_MOVE) {
+          const viewportScale = Store.getState().userConfiguration.scale;
           this.move([
-            (delta.x * mouseInversionX) / this.planeView.scaleFactor,
-            (delta.y * mouseInversionY) / this.planeView.scaleFactor,
+            (delta.x * mouseInversionX) / viewportScale,
+            (delta.y * mouseInversionY) / viewportScale,
             0,
           ]);
         } else {

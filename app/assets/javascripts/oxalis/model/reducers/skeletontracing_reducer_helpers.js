@@ -22,7 +22,7 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
   let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
   user = user.replace(/ /g, "_");   // Replace spaces in user names
 
-  let prefix = "";
+  let prefix = "Tree";
   if (state.skeletonTracing.tracingType === "Explorational") {
     // Get YYYY-MM-DD string
     const creationDate = new Date(timestamp).toJSON().slice(0, 10);
@@ -31,7 +31,7 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
     prefix = `task_${state.task.id}_${user}_`;
   }
 
-  return `${prefix}${Utils.zeroPad(treeId, 2)}`;
+  return `${prefix}${Utils.zeroPad(treeId, 3)}`;
 }
 
 function getMaximumNodeId(trees: TreeMapType): number {

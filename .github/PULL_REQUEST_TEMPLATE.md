@@ -1,10 +1,10 @@
-Mailable description of changes (needs to be understandable by webknossos mailing list people):
+### Mailable description of changes (needs to be understandable by webknossos mailing list people):
 - abc
 
-Steps to test:
+### Steps to test:
 - abc
 
-Issues:
+### Issues:
 - fixes #123
 
 ------

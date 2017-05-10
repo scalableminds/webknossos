@@ -126,6 +126,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
         }
         outputFile = new RandomAccessFile(path.toFile, "rw")
         copyBucketToCube(outputFile, dataInfo)
+        outputFile.getFD().sync()
         logger.trace(s"Data was saved. Compressed: false Size: ${dataInfo.data.length} Location: $path")
         Full(true)
       } catch {

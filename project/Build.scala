@@ -7,6 +7,8 @@ import play.sbt.routes.RoutesKeys._
 import play.twirl.sbt.Import._
 import sbt.Keys._
 import sbt.{Task, _}
+import sbtbuildinfo._
+import sbtbuildinfo.BuildInfoKeys._
 
 object Dependencies{
   val akkaVersion = "2.4.1"
@@ -255,7 +257,24 @@ object ApplicationBuild extends Build {
     }
   )
 
+  lazy val buildInfoSettings = Seq(
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion,
+      "gitHash" -> new java.lang.Object() {
+        override def toString(): String = {
+          try {
+            val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git rev-parse HEAD").getInputStream())
+            (new java.io.BufferedReader(extracted)).readLine()
+          } catch {
+            case t: Throwable => "get git hash failed"
+          }
+        }
+      }.toString()
+    ),
+    buildInfoPackage := "buildinfo"
+  )
+
   lazy val oxalis: Project = Project(appName, file("."))
     .enablePlugins(play.sbt.PlayScala)
-    .settings((oxalisSettings ++ AssetCompilation.settings):_*)
+    .enablePlugins(BuildInfoPlugin)
+    .settings((oxalisSettings ++ AssetCompilation.settings ++ buildInfoSettings):_*)
 }

@@ -11,13 +11,11 @@
       data-airbrake-project-id=@play.api.Play.current.configuration.getString("airbrake.projectID")
       data-airbrake-project-key=@play.api.Play.current.configuration.getString("airbrake.projectKey")
       data-airbrake-environment-name=@play.api.Play.current.configuration.getString("airbrake.environment")></script>
+    <script type="text/javascript" src="@routes.Assets.at("javascripts/routes.js")?nocache=@(buildinfo.BuildInfo.gitHash)"></script>
+    <script type="text/javascript" src="@routes.Assets.at("bundle/main.js")?nocache=@(buildinfo.BuildInfo.gitHash)"></script>
     @if(play.api.Play.current.mode == play.api.Mode.Dev) {
       <link href='@routes.Assets.at("fonts/fonts-local.css")' rel='stylesheet' type='text/css' media="screen">
-      <script type="text/javascript" src="@routes.Assets.at("javascripts/routes.js")"></script>
-      <script type="text/javascript" src="@routes.Assets.at("bundle/main.js")"></script>
     } else {
-      <script type="text/javascript" src="@routes.Assets.at("javascripts/routes.js")"></script>
-      <script type="text/javascript" src="@routes.Assets.at("bundle/main.js")"></script>
       <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700' rel='stylesheet' type='text/css'>
     }
 

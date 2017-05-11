@@ -60,10 +60,9 @@ export function* watchBranchPointDeletion(): Generator<*, *, *> {
 
 export function* watchTreeNames(): Generator<*, *, *> {
   const state = yield select(_state => _state);
-  const trees: TreeMapType = state.skeletonTracing.trees;
 
   // rename trees with an empty/default tree name
-  for (const tree of Object.values(trees)) {
+  for (const tree: TreeType of _.values(state.skeletonTracing.trees)) {
     if (tree.name === "") {
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
       yield put(setTreeNameAction(newName, tree.treeId));

@@ -7,6 +7,8 @@ import play.sbt.routes.RoutesKeys._
 import play.twirl.sbt.Import._
 import sbt.Keys._
 import sbt.{Task, _}
+import sbtbuildinfo._
+import sbtbuildinfo.BuildInfoKeys._
 
 object Dependencies{
   val akkaVersion = "2.4.1"
@@ -167,7 +169,7 @@ object AssetCompilation {
 
   private def assetsGenerationTask: Def.Initialize[Task[Unit]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
     try{
-      val exitValue = startProcess(webpack, List("--define", "process.env.NODE_ENV=\"production\""), base) ! s.log
+      val exitValue = startProcess(webpack, List("--env.production"), base) ! s.log
       if(exitValue != 0)
         throw new Error(s"Running webpack failed with exit code: $exitValue")
     } catch {
@@ -255,7 +257,26 @@ object ApplicationBuild extends Build {
     }
   )
 
+  lazy val buildInfoSettings = Seq(
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion,
+      "braingamesVersion" -> Dependencies.braingamesVersion,
+      "commitHash" -> new java.lang.Object() {
+        override def toString(): String = {
+          try {
+            val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git rev-parse HEAD").getInputStream())
+            (new java.io.BufferedReader(extracted)).readLine()
+          } catch {
+            case t: Throwable => "get git hash failed"
+          }
+        }
+      }.toString()
+    ),
+    buildInfoPackage := "buildinfo",
+    buildInfoOptions := Seq(BuildInfoOption.ToJson, BuildInfoOption.BuildTime)
+  )
+
   lazy val oxalis: Project = Project(appName, file("."))
     .enablePlugins(play.sbt.PlayScala)
-    .settings((oxalisSettings ++ AssetCompilation.settings):_*)
+    .enablePlugins(BuildInfoPlugin)
+    .settings((oxalisSettings ++ AssetCompilation.settings ++ buildInfoSettings):_*)
 }

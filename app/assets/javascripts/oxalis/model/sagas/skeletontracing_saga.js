@@ -10,11 +10,12 @@ import messages from "messages";
 import Store from "oxalis/store";
 import Modal from "oxalis/view/modal";
 import { put, take, takeEvery, select, race } from "redux-saga/effects";
-import { deleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { deleteBranchPointAction, setTreeNameAction } from "oxalis/model/actions/skeletontracing_actions";
 import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateSkeletonTracing } from "oxalis/model/sagas/update_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";
+import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, FlycamType } from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
@@ -55,9 +56,21 @@ export function* watchBranchPointDeletion(): Generator<*, *, *> {
   }
 }
 
+export function* watchTreeNames(): Generator<*, *, *> {
+  const state = yield select(_state => _state);
+
+  // rename trees with an empty/default tree name
+  for (const tree: TreeType of _.values(state.tracing.trees)) {
+    if (tree.name === "") {
+      const newName = generateTreeName(state, tree.timestamp, tree.treeId);
+      yield put(setTreeNameAction(newName, tree.treeId));
+    }
+  }
+}
+
 export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
-  yield take("WK_READY");
   yield takeEvery(["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE", "DELETE_BRANCHPOINT"], centerActiveNode);
+  yield takeEvery(["INITIALIZE_SKELETONTRACING"], watchTreeNames);
   yield watchBranchPointDeletion();
 }
 

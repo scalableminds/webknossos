@@ -18,8 +18,6 @@ ansiColor('xterm') {
         env.DOCKER_CACHE_PREFIX = "~/.webknossos-build-cache"
         sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
         sh "docker-compose pull sbt"
-
-        sh "echo ${commit} > public/commit.txt"
       }
 
 
@@ -35,7 +33,7 @@ ansiColor('xterm') {
       stage("Test") {
 
         sh "docker-compose run frontend-linting"
-        // sh "docker-compose run frontend-flow"
+        sh "docker-compose run frontend-flow"
         sh "docker-compose run frontend-tests"
         // retry(3) {
         //  sh "docker-compose run e2e-tests"

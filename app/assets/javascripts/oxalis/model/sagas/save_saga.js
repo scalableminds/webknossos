@@ -47,6 +47,7 @@ export function* sendRequestToServer(): Generator<*, *, *> {
     yield call(Request.sendJSONReceiveJSON,
       `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {
         method: "PUT",
+        headers: { "X-Date": Date.now() },
         data: compactBatch,
       });
     yield put(setVersionNumber(version + 1));

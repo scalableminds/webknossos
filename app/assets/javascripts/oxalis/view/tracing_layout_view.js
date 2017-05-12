@@ -18,7 +18,7 @@ import { LocaleProvider, Layout, Button, Icon } from "antd";
 import type { SkeletonTracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType } from "oxalis/constants";
 
-const { Header, Sider, Content } = Layout;
+const { Header, Sider } = Layout;
 
 class TracingLayoutView extends React.PureComponent {
 
@@ -42,7 +42,7 @@ class TracingLayoutView extends React.PureComponent {
     app.oxalis = new OxalisController(
       this.props.initialTracingType,
       this.props.initialTracingId,
-      this.props.initialControlmode
+      this.props.initialControlmode,
     );
   }
 

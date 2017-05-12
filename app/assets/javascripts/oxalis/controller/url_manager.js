@@ -122,11 +122,11 @@ export function updateTypeAndId(baseUrl: string, tracingType: string, tracingId:
   // both here. Chaining the replace function is possible, since they are mutually
   // exclusive and thus can't apply both simultaneously.
   return baseUrl
-    .replace(/^(.*\/annotations)\/(.*?)\/([^\/]*)(\/?.*)$/, (all, base, type, id, rest) =>
-      base + "/" + tracingType + "/" + tracingId + rest
+    .replace(/^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/, (all, base, type, id, rest) =>
+      `${base}/${tracingType}/${tracingId}${rest}`,
     )
-    .replace(/^(.*\/datasets)\/([^\/]*)(\/.*)$/, (all, base, id, rest) =>
-      base + "/" + tracingId + rest
+    .replace(/^(.*\/datasets)\/([^/]*)(\/.*)$/, (all, base, id, rest) =>
+      `${base}/${tracingId}${rest}`,
     );
 }
 

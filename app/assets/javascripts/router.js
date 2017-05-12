@@ -13,7 +13,6 @@ import { SkeletonTracingTypeTracingEnum } from "oxalis/store";
 import BaseRouter from "libs/base_router";
 import ReactBackboneWrapper from "libs/react_backbone_wrapper";
 import PaginationCollection from "admin/models/pagination_collection";
-import Model from "oxalis/model";
 
 // #####
 // This Router contains all the routes for views that have been
@@ -77,7 +76,7 @@ class Router extends BaseRouter {
       const view = new ReactBackboneWrapper(TracingLayoutView, {
         initialTracingType: type,
         initialTracingId: id,
-        initialControlmode: ControlModeEnum.TRACE
+        initialControlmode: ControlModeEnum.TRACE,
       });
       view.forcePageReload = true;
       this.changeView(view);

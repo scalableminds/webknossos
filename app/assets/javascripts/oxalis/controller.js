@@ -84,9 +84,9 @@ class Controller {
     // TODO: only for testing, remove again!
     // Call app.oxalis.restart("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
     // with a tracing id of your choice from the dev console
-    this.restart = (tracingType, tracingId, controlMode) => {
+    this.restart = (newTracingType, newTracingId, newControlMode) => {
       Store.dispatch(restartSagaAction());
-      Model.fetch(tracingType, tracingId, controlMode)
+      Model.fetch(newTracingType, newTracingId, newControlMode)
       .then(() => {
         Store.dispatch(wkReadyAction());
       });

@@ -15,10 +15,18 @@ import TracingView from "oxalis/view/tracing_view";
 import UserScriptsModal from "oxalis/view/user_scripts_modal";
 import enUS from "antd/lib/locale-provider/en_US";
 import { LocaleProvider, Layout, Button, Icon } from "antd";
+import type { SkeletonTracingTypeTracingType } from "oxalis/store";
+import type { ControlModeType } from "oxalis/constants";
 
-const { Header, Sider, Content } = Layout;
+const { Header, Sider } = Layout;
 
 class TracingLayoutView extends React.PureComponent {
+
+  props: {
+    initialTracingType: SkeletonTracingTypeTracingType,
+    initialTracingId: string,
+    initialControlmode: ControlModeType,
+  }
 
   state = {
     isSettingsCollapsed: true,
@@ -31,7 +39,11 @@ class TracingLayoutView extends React.PureComponent {
       addScriptLink.classList.remove("hide");
       addScriptLink.addEventListener("click", () => this.showUserScriptsModal());
     }
-    app.oxalis = new OxalisController();
+    app.oxalis = new OxalisController(
+      this.props.initialTracingType,
+      this.props.initialTracingId,
+      this.props.initialControlmode,
+    );
   }
 
   componentWillUnmount() {

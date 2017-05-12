@@ -13,8 +13,6 @@ function makeModelMock() {
   class ModelMock {}
   ModelMock.prototype.fetch = sinon.stub();
   ModelMock.prototype.fetch.returns(Promise.resolve());
-  ModelMock.prototype.get = function (key) { return this[key]; };
-  ModelMock.prototype.set = function (key, val) { this[key] = val; };
   return ModelMock;
 }
 
@@ -67,11 +65,6 @@ const Store = mockRequire.reRequire("oxalis/store").default;
 
 test.beforeEach((t) => {
   const model = t.context.model = new Model();
-  model.initialize(
-    "tracingTypeValue",
-    "tracingIdValue",
-    constants.CONTROL_MODE_TRACE,
-  );
   model.state = { position: [1, 2, 3] };
 
   const webknossos = t.context.webknossos = new OxalisApi(model);
@@ -79,7 +72,7 @@ test.beforeEach((t) => {
   Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
   User.prototype.fetch.returns(Promise.resolve());
 
-  return model.fetch()
+  return model.fetch("tracingTypeValue", "tracingIdValue", constants.CONTROL_MODE_TRACE)
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");

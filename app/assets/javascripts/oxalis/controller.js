@@ -32,11 +32,11 @@ import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
-
 import messages from "messages";
 
 import type { ToastType } from "libs/toast";
-import type { ModeType } from "oxalis/constants";
+import type { ModeType, ControlModeType } from "oxalis/constants";
+import type { SkeletonTracingTypeTracingType } from "oxalis/store";
 
 class Controller {
   urlManager: UrlManager;
@@ -64,7 +64,7 @@ class Controller {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
 
-  constructor() {
+  constructor(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
     app.router.showLoadingSpinner();
 
     _.extend(this, Backbone.Events);
@@ -72,23 +72,21 @@ class Controller {
     this.urlManager = new UrlManager(Model);
     Model.state = this.urlManager.initialState;
 
-    Model.fetch()
+    Model.fetch(tracingType, tracingId, controlMode)
       .then(() => this.modelFetchDone())
       .catch((error) => {
         // Don't throw errors for errors already handled by the model.
         if (error !== Model.HANDLED_ERROR) {
           throw error;
         }
-      },
-      );
+      });
 
     // TODO: only for testing, remove again!
-    // Call app.oxalis.model.initialize("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
-    // with a tracing id of your choice from the dev console beforehand
-    this.model = Model;
-    this.restart = () => {
+    // Call app.oxalis.restart("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
+    // with a tracing id of your choice from the dev console
+    this.restart = (newTracingType, newTracingId, newControlMode) => {
       Store.dispatch(restartSagaAction());
-      Model.fetch()
+      Model.fetch(newTracingType, newTracingId, newControlMode)
       .then(() => {
         Store.dispatch(wkReadyAction());
       });

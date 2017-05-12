@@ -26,7 +26,7 @@ class ErrorHandling {
     this.throwAssertions = options.throwAssertions;
     this.sendLocalErrors = options.sendLocalErrors;
 
-    this.commitHash = $("meta[name='git-hash']").attr("content");
+    this.commitHash = $("meta[name='commit-hash']").attr("content");
 
     this.initializeAirbrake();
   }

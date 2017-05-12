@@ -259,7 +259,8 @@ object ApplicationBuild extends Build {
 
   lazy val buildInfoSettings = Seq(
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion,
-      "gitHash" -> new java.lang.Object() {
+      "braingamesVersion" -> Dependencies.braingamesVersion,
+      "commitHash" -> new java.lang.Object() {
         override def toString(): String = {
           try {
             val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git rev-parse HEAD").getInputStream())
@@ -270,7 +271,8 @@ object ApplicationBuild extends Build {
         }
       }.toString()
     ),
-    buildInfoPackage := "buildinfo"
+    buildInfoPackage := "buildinfo",
+    buildInfoOptions := Seq(BuildInfoOption.ToJson, BuildInfoOption.BuildTime)
   )
 
   lazy val oxalis: Project = Project(appName, file("."))

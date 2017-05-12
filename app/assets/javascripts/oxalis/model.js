@@ -161,8 +161,7 @@ export class OxalisModel {
 
       Store.dispatch(setDatasetAction(dataset));
       Store.dispatch(setTaskAction(tracing.task));
-      return tracing;
-    }).then((tracing: Tracing<*>) => {
+
       const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
       return this.initializeWithData(tracing, layerInfos);
     });

@@ -11,6 +11,7 @@ import runAsync from "test/helpers/run-async";
 
 mockRequire.stopAll();
 
+mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
 mockRequire("app", {});
 mockRequire("jquery", { fn: {} });
 mockRequire("libs/error_handling", {

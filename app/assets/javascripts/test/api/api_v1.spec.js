@@ -5,7 +5,7 @@ import sinon from "sinon";
 import _ from "lodash";
 import Backbone from "backbone";
 import "backbone.marionette";
-import constants from "oxalis/constants";
+import { ControlModeEnum } from "oxalis/constants";
 import { createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import TRACING_OBJECT from "../fixtures/tracing_object";
 
@@ -72,7 +72,7 @@ test.beforeEach((t) => {
   Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
   User.prototype.fetch.returns(Promise.resolve());
 
-  return model.fetch("tracingTypeValue", "tracingIdValue", constants.CONTROL_MODE_TRACE)
+  return model.fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE)
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");
@@ -82,7 +82,7 @@ test.beforeEach((t) => {
     })
     .catch((error) => {
       console.error("model.fetch() failed", error);
-      fail(error.message);
+      t.fail(error.message);
     });
 });
 

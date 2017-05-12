@@ -8,6 +8,7 @@ import runAsync from "test/helpers/run-async";
 const RequestMock = {
   always: (promise, func) => promise.then(func, func),
 };
+mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
 mockRequire("libs/request", RequestMock);
 mockRequire("libs/window", {});
 

@@ -26,9 +26,7 @@ class ErrorHandling {
     this.throwAssertions = options.throwAssertions;
     this.sendLocalErrors = options.sendLocalErrors;
 
-    fetch("/assets/commit.txt")
-      .then(res => res.text())
-      .then((commitHash) => { this.commitHash = commitHash.trim(); });
+    this.commitHash = $("meta[name='git-hash']").attr("content");
 
     this.initializeAirbrake();
   }

@@ -3,6 +3,7 @@
 <!doctype html>
 <html>
   <head>
+    <meta name="git-hash" content="@(buildinfo.BuildInfo.gitHash)">
     <title>webKnossos</title>
     <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
     <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("bundle/main.css")?nocache=@(buildinfo.BuildInfo.gitHash)">
@@ -18,7 +19,6 @@
     } else {
       <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700' rel='stylesheet' type='text/css'>
     }
-    <meta name="git-hash" content="@(buildinfo.BuildInfo.gitHash)">
   </head>
   <body>
     @body

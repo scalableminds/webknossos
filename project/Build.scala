@@ -169,7 +169,7 @@ object AssetCompilation {
 
   private def assetsGenerationTask: Def.Initialize[Task[Unit]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
     try{
-      val exitValue = startProcess(webpack, List("--define", "process.env.NODE_ENV=\"production\""), base) ! s.log
+      val exitValue = startProcess(webpack, List("--env.production"), base) ! s.log
       if(exitValue != 0)
         throw new Error(s"Running webpack failed with exit code: $exitValue")
     } catch {

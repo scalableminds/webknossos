@@ -3,7 +3,6 @@ package controllers
 import javax.inject.Inject
 
 import scala.concurrent.duration._
-
 import akka.util.Timeout
 import com.scalableminds.util.mvc.JsonResult
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
@@ -21,6 +20,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsArray, JsObject, _}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
+
+import scala.util.Try
 
 /**
  * Company: scalableminds
@@ -243,15 +244,16 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def updateWithJson(typ: String, id: String, version: Int, timestamp: Long) = Authenticated.async(parse.json(maxLength = 8388608)) { implicit request =>
+  def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 8388608)) { implicit request =>
     // Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
     AnnotationUpdateService.store(typ, id, version, request.body)
-
+    val clientTimestamp = request.headers.get("x-date").flatMap(s => Try(s.toLong).toOption).getOrElse(System.currentTimeMillis)
+    
     for {
       oldAnnotation <- findAnnotation(typ, id)
       updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
       isAllowed <- isUpdateAllowed(oldAnnotation, version).toFox
-      result <- executeUpdateIfAllowed(updateableAnnotation, isAllowed, request.body, version, request.user, timestamp)
+      result <- executeUpdateIfAllowed(updateableAnnotation, isAllowed, request.body, version, request.user, clientTimestamp)
     } yield {
       result
     }

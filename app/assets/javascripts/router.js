@@ -76,10 +76,15 @@ class Router extends BaseRouter {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
-      Model.initialize(type, id, ControlModeEnum.TRACE);
 
       // view.forcePageReload = true;
-      render(<TracingLayoutView />, this.$mainContainer[0]);
+      render(
+        <TracingLayoutView
+          initialTracingType={type}
+          initialTracingId={id}
+          initialControlmode={ControlModeEnum.TRACE} />,
+        this.$mainContainer[0]
+      );
     };
     require(["oxalis/view/tracing_layout_view"], callback);
   }
@@ -89,10 +94,15 @@ class Router extends BaseRouter {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
-      Model.initialize(SkeletonTracingTypeTracingEnum.View, id, ControlModeEnum.VIEW);
 
       // view.forcePageReload = true;
-      render(<TracingLayoutView />, this.$mainContainer[0]);
+      render(
+        <TracingLayoutView
+          initialTracingType={SkeletonTracingTypeTracingEnum.View}
+          initialTracingId={id}
+          initialControlmode={ControlModeEnum.VIEW} />,
+        this.$mainContainer[0]
+      );
     };
     require(["oxalis/view/tracing_layout_view"], callback);
   }

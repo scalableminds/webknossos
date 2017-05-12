@@ -126,23 +126,17 @@ export class OxalisModel {
     this.initialized = false;
   }
 
-  initialize(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
-    this.tracingType = tracingType;
-    this.tracingId = tracingId;
+  fetch(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
     Store.dispatch(setControlModeAction(controlMode));
-  }
 
-
-  fetch() {
     let infoUrl;
-    const controlMode = Store.getState().temporaryConfiguration.controlMode;
     if (controlMode === ControlModeEnum.TRACE) {
       // Include /readOnly part whenever it is in the pathname
       const isReadOnly = window.location.pathname.endsWith("/readOnly");
       const readOnlyPart = isReadOnly ? "readOnly/" : "";
-      infoUrl = `/annotations/${this.tracingType}/${this.tracingId}/${readOnlyPart}info`;
+      infoUrl = `/annotations/${tracingType}/${tracingId}/${readOnlyPart}info`;
     } else {
-      infoUrl = `/annotations/${this.tracingType}/${this.tracingId}/info`;
+      infoUrl = `/annotations/${tracingType}/${tracingId}/info`;
     }
 
     return Request.receiveJSON(infoUrl).then((tracing: Tracing<*>) => {
@@ -218,7 +212,7 @@ export class OxalisModel {
     const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataStore));
 
     ErrorHandling.assertExtendContext({
-      task: this.tracingId,
+      task: tracing.id,
       dataSet: dataset.name,
     });
 

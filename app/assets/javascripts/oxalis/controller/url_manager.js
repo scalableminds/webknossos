@@ -42,7 +42,7 @@ class UrlManager {
       }
       // Don't tamper with URL if changed externally for some time
       if (this.lastUrl == null || window.location.href === this.lastUrl) {
-        window.location.replace(url);
+        window.history.replaceState({}, null, url);
         this.lastUrl = window.location.href;
       } else {
         setTimeout(() => { this.lastUrl = null; }, NO_MODIFY_TIMEOUT);
@@ -94,7 +94,8 @@ class UrlManager {
 
 
   buildUrl(): ?string {
-    if (!Store.getState().tracing) {
+    const tracing = Store.getState().tracing;
+    if (!tracing) {
       return null;
     }
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
@@ -109,9 +110,24 @@ class UrlManager {
       state = state.concat([Store.getState().flycam.zoomStep.toFixed(2)]);
     }
 
-    getActiveNode(Store.getState().tracing).map(node => state.push(node.id));
-    return `${this.baseUrl}#${state.join(",")}`;
+    getActiveNode(tracing).map(node => state.push(node.id));
+    const newBaseUrl = updateTypeAndId(this.baseUrl, tracing.tracingType, tracing.tracingId);
+    return `${newBaseUrl}#${state.join(",")}`;
   }
+}
+
+export function updateTypeAndId(baseUrl: string, tracingType: string, tracingId: string): string {
+  // Update the baseUrl with a potentially new tracing id and or tracing type.
+  // There are two possible routes (annotations or datasets) which will be handled
+  // both here. Chaining the replace function is possible, since they are mutually
+  // exclusive and thus can't apply both simultaneously.
+  return baseUrl
+    .replace(/^(.*\/annotations)\/(.*?)\/([^\/]*)(\/?.*)$/, (all, base, type, id, rest) =>
+      base + "/" + tracingType + "/" + tracingId + rest
+    )
+    .replace(/^(.*\/datasets)\/([^\/]*)(\/.*)$/, (all, base, id, rest) =>
+      base + "/" + tracingId + rest
+    );
 }
 
 export default UrlManager;

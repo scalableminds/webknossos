@@ -20,6 +20,10 @@ class ViewModesView extends PureComponent {
 
   _forceUpdate = () => { this.forceUpdate(); };
 
+  blurElement = (event: SyntheticInputEvent) => {
+    event.target.blur();
+  }
+
   handleChange = (event: { target: { value: ModeType } }) => {
     this.props.oldModel.setMode(event.target.value);
   };
@@ -27,9 +31,9 @@ class ViewModesView extends PureComponent {
   render() {
     return (
       <Radio.Group onChange={this.handleChange} value={this.props.oldModel.get("mode")} size="large">
-        <Radio.Button value={constants.MODE_PLANE_TRACING}>Orthogonal</Radio.Button>
-        <Radio.Button value={constants.MODE_ARBITRARY}>Flight</Radio.Button>
-        <Radio.Button value={constants.MODE_ARBITRARY_PLANE}>Oblique</Radio.Button>
+        <Radio.Button onClick={this.blurElement} value={constants.MODE_PLANE_TRACING}>Orthogonal</Radio.Button>
+        <Radio.Button onClick={this.blurElement} value={constants.MODE_ARBITRARY}>Flight</Radio.Button>
+        <Radio.Button onClick={this.blurElement} value={constants.MODE_ARBITRARY_PLANE}>Oblique</Radio.Button>
       </Radio.Group>
     );
   }

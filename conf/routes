@@ -111,7 +111,7 @@ GET           /annotations/:typ/:id/finish                                      
 GET           /annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)
 POST          /annotations/:typ/finish                                          controllers.AnnotationController.finishAll(typ: String)
 GET           /annotations/:typ/:id/reopen                                      controllers.AnnotationController.reopen(typ: String, id: String)
-# GET           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
+GET           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
 
 # Deaktivated due to changes in the format of updates in the saved annotation updates
 # GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)

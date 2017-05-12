@@ -152,17 +152,17 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   //   }
   // }
 
-  // def reset(typ: String, id: String) = Authenticated.async { implicit request =>
-  //  withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
-  //    for {
-  //      _ <- ensureTeamAdministration(request.user, annotation.team)
-  //      reset <- annotation.muta.resetToBase() ?~> Messages("annotation.reset.failed")
-  //      json <- annotationJson(request.user, reset,  List("content"))
-  //    } yield {
-  //      JsonOk(json, Messages("annotation.reset.success"))
-  //    }
-  //  }
-  // }
+  def reset(typ: String, id: String) = Authenticated.async { implicit request =>
+    withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
+      for {
+        _ <- ensureTeamAdministration(request.user, annotation.team)
+        reset <- annotation.muta.resetToBase() ?~> Messages("annotation.reset.failed")
+        json <- annotationJson(request.user, reset,  List("content"))
+      } yield {
+        JsonOk(json, Messages("annotation.reset.success"))
+      }
+    }
+  }
 
   def reopen(typ: String, id: String) = Authenticated.async { implicit request =>
     // Reopening an annotation is allowed if either the user owns the annotation or the user is allowed to administrate

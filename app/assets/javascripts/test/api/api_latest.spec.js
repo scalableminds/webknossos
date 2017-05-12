@@ -140,8 +140,8 @@ test("setCommentForNode should throw an error if the supplied nodeId doesn't exi
 test("Data Api getLayerNames should get an array of all layer names", (t) => {
   const api = t.context.api;
   t.is(api.data.getLayerNames().length, 2);
-  t.regex(api.data.getLayerNames(), /segmentation/);
-  t.regex(api.data.getLayerNames(), /color/);
+  t.true(api.data.getLayerNames().includes("segmentation"));
+  t.true(api.data.getLayerNames().includes("color"));
 });
 
 test("setMapping should throw an error if the layer name is not valid", (t) => {

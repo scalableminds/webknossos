@@ -32,7 +32,11 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
   def logUserInteraction(user: User, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
     val timestamp = System.currentTimeMillis
-    timeSpanTracker ! TrackTime(timestamp, user._id, annotation, ctx)
+    logUserInteraction(timestamp, timestamp, user, annotation)
+  }
+
+  def logUserInteraction(start: Long, end: Long, user: User, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
+    timeSpanTracker ! TrackTime(start, end, user._id, annotation, ctx)
   }
 
   def loggedTimeOfUser[T](
@@ -100,19 +104,21 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
   }
 
 
-  protected case class TrackTime(timestamp: Long, _user: BSONObjectID, annotation: Option[AnnotationLike], ctx: DBAccessContext)
+  protected case class TrackTime(start: Long, end: Long, _user: BSONObjectID, annotation: Option[AnnotationLike], ctx: DBAccessContext)
 
   protected class TimeSpanTracker extends Actor{
     private val lastUserActivity = mutable.HashMap.empty[BSONObjectID, TimeSpan]
 
-    private def isNotInterrupted(current: Long, last: TimeSpan) =
-      current - last.lastUpdate < MaxTracingPause
+    private def isNotInterrupted(current: Long, last: TimeSpan) = {
+      val duration = current - last.lastUpdate
+      duration >= 0 && duration < MaxTracingPause
+    }
 
     private def belongsToSameTracing( last: TimeSpan, annotation: Option[AnnotationLike]) =
       last.annotationEquals(annotation.map(_.id))
 
-    private def createNewTimeSpan(timestamp: Long, _user: BSONObjectID, annotation: Option[AnnotationLike], ctx: DBAccessContext) = {
-      val timeSpan = TimeSpan.create(timestamp, _user, annotation)
+    private def createNewTimeSpan(start: Long, end: Long, _user: BSONObjectID, annotation: Option[AnnotationLike], ctx: DBAccessContext) = {
+      val timeSpan = TimeSpan.create(start, end, _user, annotation)
       TimeSpanDAO.insert(timeSpan)(ctx)
       timeSpan
     }
@@ -153,19 +159,19 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     }
 
     def receive = {
-      case TrackTime(timestamp, _user, _annotation, ctx) =>
+      case TrackTime(start, end, _user, _annotation, ctx) =>
         // Only if the annotation belongs to the user, we are going to log the time on the annotation
         val annotation = _annotation.filter(_._user.contains(_user))
         lastUserActivity.get(_user) match {
-          case Some(last) if isNotInterrupted(timestamp, last) =>
-            val duration = timestamp - last.lastUpdate
-            val updated = last.addTime(duration, timestamp)
+          case Some(last) if isNotInterrupted(start, last) =>
+            val duration = end - last.lastUpdate
+            val updated = last.addTime(duration, end)
 
             val timeSpan =
               if (belongsToSameTracing(last, annotation))
                 updated
               else
-                createNewTimeSpan(timestamp, _user, annotation, ctx)
+                createNewTimeSpan(start, end, _user, annotation, ctx)
             lastUserActivity.update(_user, timeSpan)
 
             val updateResult = for{
@@ -182,7 +188,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
                 logger.warn(s"Failed to save all time updates. Annotation: ${annotation.map(_.id)} Error: $x")
             }
           case _ =>
-            val timeSpan = createNewTimeSpan(timestamp, _user, annotation, ctx)
+            val timeSpan = createNewTimeSpan(start, end, _user, annotation, ctx)
             lastUserActivity.update(_user, timeSpan)
         }
     }

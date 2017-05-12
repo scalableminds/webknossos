@@ -104,17 +104,17 @@ GET           /api/datasetToken/validate                                        
 # SkeletonTracing Stuff
 POST          /annotations/createExplorational                                  controllers.AnnotationController.createExplorational
 POST          /admin/nml/upload                                                 controllers.AnnotationIOController.upload
-PUT           /annotations/:typ/:id                                             controllers.AnnotationController.updateWithJson(typ: String, id: String, version: Int)
+PUT           /annotations/:typ/:id                                             controllers.AnnotationController.updateWithJson(typ: String, id: String, version: Int, timestamp: Long ?= System.currentTimeMillis)
 POST          /annotations/:typ/:id/name                                        controllers.AnnotationController.nameExplorativeAnnotation(typ: String, id: String)
 GET           /annotations/:typ/:id/finishAndRedirect                           controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
 GET           /annotations/:typ/:id/finish                                      controllers.AnnotationController.finish(typ: String, id: String)
 GET           /annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)
 POST          /annotations/:typ/finish                                          controllers.AnnotationController.finishAll(typ: String)
 GET           /annotations/:typ/:id/reopen                                      controllers.AnnotationController.reopen(typ: String, id: String)
-GET           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
+# GET           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
 
 # Deaktivated due to changes in the format of updates in the saved annotation updates
-GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
+# GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
 # GET           /annotations/:typ/:id/updates                                     controllers.AnnotationController.listUpdates(typ: String, id: String)
 # POST          /annotations/:typ/:id/updates/transfer                            controllers.AnnotationController.transferUpdates(typ: String, id: String, fromId: String, fromTyp: String, maxVersion: Int)
 

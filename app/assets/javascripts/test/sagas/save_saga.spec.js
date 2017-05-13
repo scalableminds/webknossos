@@ -54,6 +54,8 @@ const initialState = {
   },
 };
 
+const TIMESTAMP = 1494695001688;
+
 test("SaveSaga should compact multiple updateTracing update actions", (t) => {
   const updateActions = [
     UpdateActions.updateTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
@@ -88,7 +90,7 @@ test("SaveSaga should send request to server", (t) => {
     UpdateActions.createEdge(0, 1, 2),
   ];
 
-  const saga = sendRequestToServer();
+  const saga = sendRequestToServer(TIMESTAMP);
   saga.next();
   saga.next(updateActions);
   expectValueDeepEqual(
@@ -96,6 +98,7 @@ test("SaveSaga should send request to server", (t) => {
     saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }),
     call(Request.sendJSONReceiveJSON, "/annotations/Explorational/1234567890?version=3", {
       method: "PUT",
+      headers: { "X-Date": TIMESTAMP },
       data: updateActions,
     }),
   );
@@ -107,7 +110,7 @@ test("SaveSaga should retry update actions", (t) => {
     UpdateActions.createEdge(0, 1, 2),
   ];
 
-  const saga = sendRequestToServer();
+  const saga = sendRequestToServer(TIMESTAMP);
   saga.next();
   saga.next(updateActions);
   expectValueDeepEqual(
@@ -115,6 +118,7 @@ test("SaveSaga should retry update actions", (t) => {
     saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }),
     call(Request.sendJSONReceiveJSON, "/annotations/Explorational/1234567890?version=3", {
       method: "PUT",
+      headers: { "X-Date": TIMESTAMP },
       data: updateActions,
     }),
   );
@@ -132,7 +136,7 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
     UpdateActions.createEdge(0, 1, 2),
   ];
 
-  const saga = sendRequestToServer();
+  const saga = sendRequestToServer(TIMESTAMP);
   saga.next();
   saga.next(updateActions);
   expectValueDeepEqual(
@@ -140,6 +144,7 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
     saga.next({ version: 2, tracingType: "Explorational", id: "1234567890" }),
     call(Request.sendJSONReceiveJSON, "/annotations/Explorational/1234567890?version=3", {
       method: "PUT",
+      headers: { "X-Date": TIMESTAMP },
       data: updateActions,
     }),
   );

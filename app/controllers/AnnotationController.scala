@@ -202,10 +202,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
         for {
           updated <- annotation.muta.updateFromJson(jsUpdates) //?~> Messages("format.json.invalid")
         } yield {
-          val timestamps = jsUpdates.map(update => (update \ "timestamp").as[Long])
-          val start = timestamps.min + timestampOffset
-          val end = timestamps.max + timestampOffset
-          TimeSpanService.logUserInteraction(start, end, request.user, Some(updated))
+          val timestamps = jsUpdates.map(update => (update \ "timestamp").as[Long]).sorted
+          TimeSpanService.logUserInteraction(timestamps, request.user, Some(updated))
           Json.obj("version" -> version)
         }
       case t =>
@@ -248,7 +246,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     // Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
     AnnotationUpdateService.store(typ, id, version, request.body)
     val clientTimestamp = request.headers.get("x-date").flatMap(s => Try(s.toLong).toOption).getOrElse(System.currentTimeMillis)
-    
+
     for {
       oldAnnotation <- findAnnotation(typ, id)
       updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")

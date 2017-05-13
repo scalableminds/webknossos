@@ -24,9 +24,8 @@ import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 function* centerActiveNode() {
   getActiveNode(yield select(state => state.skeletonTracing))
     .map((activeNode) => {
-      if (app.oxalis.planeController != null) {
-        app.oxalis.planeController.centerPositionAnimated(activeNode.position, false);
-      }
+      // $FlowFixMe
+      app.oxalis.planeController.centerPositionAnimated(activeNode.position, false);
     });
 }
 

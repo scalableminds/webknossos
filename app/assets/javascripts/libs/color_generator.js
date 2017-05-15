@@ -15,7 +15,7 @@ const rgbs: Array<Vector3> = _.chunk(rawRgbs, 3).map(rgb =>
 
 const ColorGenerator = {
   distinctColorForId(id: number): Vector3 {
-    return rgbs[(id - 1) % rgbs.length];
+    return rgbs[(id - 1 + rgbs.length) % rgbs.length];
   },
 };
 

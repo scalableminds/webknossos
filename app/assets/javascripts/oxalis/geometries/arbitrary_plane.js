@@ -10,7 +10,7 @@ import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import type { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 
@@ -31,7 +31,6 @@ import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary
 
 class ArbitraryPlane {
 
-  model: OxalisModel
   controller: ArbitraryController;
   mesh: THREE.Mesh;
   isDirty: boolean;
@@ -45,9 +44,8 @@ class ArbitraryPlane {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(model: OxalisModel, controller: ArbitraryController, width: number = 128) {
+  constructor(controller: ArbitraryController, width: number = 128) {
     this.isDirty = true;
-    this.model = model;
     this.controller = controller;
     this.height = 0;
     this.width = width;
@@ -55,8 +53,8 @@ class ArbitraryPlane {
 
     this.mesh = this.createMesh();
 
-    for (const name of Object.keys(this.model.binary)) {
-      const binary = this.model.binary[name];
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
       binary.cube.on("bucketLoaded", () => { this.isDirty = true; });
     }
 
@@ -97,7 +95,7 @@ class ArbitraryPlane {
       const matrix = getZoomedMatrix(Store.getState().flycam);
 
       const newVertices = M4x4.transformPointsAffine(matrix, this.queryVertices);
-      const newColors = this.model.getColorBinaries()[0].getByVerticesSync(newVertices);
+      const newColors = Model.getColorBinaries()[0].getByVerticesSync(newVertices);
 
       this.textureMaterial.setData("color", newColors);
 
@@ -182,11 +180,11 @@ class ArbitraryPlane {
         polygonOffsetUnits: 40.0,
       };
 
-      const factory = new ArbitraryPlaneMaterialFactory(this.model, this.width);
+      const factory = new ArbitraryPlaneMaterialFactory(this.width);
       factory.makeMaterial(options);
       this.textureMaterial = factory.getMaterial();
     } else {
-      this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.model, this.width).getMaterial();
+      this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.width).getMaterial();
     }
 
     // create mesh

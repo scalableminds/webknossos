@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import type { Vector3, Vector4, BoundingBoxType } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import type { MappingArray } from "oxalis/model/binary/mappings";
@@ -15,6 +15,7 @@ import type { Bucket } from "oxalis/model/binary/bucket";
 import ArbitraryCubeAdapter from "oxalis/model/binary/arbitrary_cube_adapter";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import BoundingBox from "oxalis/model/binary/bounding_box";
+import Store from "oxalis/store";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -70,7 +71,7 @@ class DataCube {
   // It is then removed from the cube.
 
 
-  constructor(globalBoundingBox: BoundingBoxType, upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
+  constructor(upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
     this.upperBoundary = upperBoundary;
     this.ZOOM_STEP_COUNT = zoomStepCount;
     this.BIT_DEPTH = bitDepth;
@@ -106,7 +107,7 @@ class DataCube {
       ];
     }
 
-    this.boundingBox = new BoundingBox(globalBoundingBox, this);
+    this.boundingBox = new BoundingBox(Store.getState().tracing.boundingBox, this);
   }
 
 

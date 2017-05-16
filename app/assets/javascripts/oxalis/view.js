@@ -7,19 +7,15 @@ import $ from "jquery";
 import app from "app";
 import * as THREE from "three";
 import constants from "oxalis/constants";
-import type { OxalisModel } from "oxalis/model";
 import Toast from "libs/toast";
 import messages from "messages";
 
 class View {
-
-  model: OxalisModel
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   theme: 0 | 1;
 
-  constructor(model) {
-    this.model = model;
+  constructor() {
     if (!this.isWebGlSupported()) {
       Toast.error(messages["webgl.disabled"]);
     }

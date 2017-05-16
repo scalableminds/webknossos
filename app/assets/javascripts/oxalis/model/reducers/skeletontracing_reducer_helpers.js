@@ -15,8 +15,14 @@ import update from "immutability-helper";
 import Utils from "libs/utils";
 import Constants from "oxalis/constants";
 import { getSkeletonTracing, getActiveNodeFromTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3 } from "oxalis/constants";
-import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, TemporaryMutableTreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
+import type { Vector3, BoundingBoxType } from "oxalis/constants";
+import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, TemporaryMutableTreeType, BranchPointType, TreeMapType, CommentType, BoundingBoxObjectType } from "oxalis/store";
+
+export function convertBoundingBox(boundingBox: ?BoundingBoxObjectType): ?BoundingBoxType {
+  return Maybe.fromNullable(boundingBox)
+    .map(bb => Utils.computeBoundingBoxFromArray(Utils.concatVector3(bb.topLeft, [bb.width, bb.height, bb.depth])))
+    .getOrElse(null);
+}
 
 function generateTreeNamePrefix(state: OxalisState, timestamp) {
   let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;

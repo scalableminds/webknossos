@@ -13,11 +13,12 @@ import TaskReducer from "oxalis/model/reducers/task_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import ReadOnlyTracingReducer from "oxalis/model/reducers/readonlytracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import Constants, { ControlModeEnum } from "oxalis/constants";
-import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType, ControlModeType } from "oxalis/constants";
+import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType, ControlModeType, BoundingBoxType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
@@ -158,6 +159,7 @@ export type SkeletonTracingType = {
   +activeTreeId: ?number,
   +activeNodeId: ?number,
   +cachedMaxNodeId: number,
+  +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
 };
 
@@ -167,23 +169,23 @@ export type VolumeTracingType = {
   +version: number,
   +maxCellId: number,
   +volumeTraceOrMoveMode: VolumeTraceOrMoveModeType,
-  +cubes: [],
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMapType,
   +tracingId: string,
   +tracingType: VolumeTracingTypeTracingType,
+  +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
 };
 
 export type ReadOnlyTracingType = {
   +type: "readonly",
   +name: string,
-  +version: 0,
-  +viewMode: 0,
+  +version: number,
   +tracingId: string,
   +tracingType: "View",
+  +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
 };
 
@@ -245,6 +247,12 @@ export type TemporaryConfigurationType = {
   +controlMode: ControlModeType
 };
 
+export type TraceLimitType = {
+  +min: number,
+  +max: number,
+  +maxHard: number,
+};
+
 export type TaskType = {
   +taskId: number,
   +type: "string",
@@ -255,7 +263,8 @@ export type TaskType = {
   +type: {
     +summary: string,
     +description: string,
-  }
+    +expectedTime: TraceLimitType,
+  },
 };
 
 export type SaveStateType = {
@@ -385,6 +394,7 @@ const combinedReducers = reduceReducers(
   SettingsReducer,
   SkeletonTracingReducer,
   VolumeTracingReducer,
+  ReadOnlyTracingReducer,
   TaskReducer,
   SaveReducer,
   FlycamReducer,

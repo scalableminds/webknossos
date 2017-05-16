@@ -17,7 +17,7 @@ import { PingStrategy, SkeletonPingStrategy, VolumePingStrategy } from "oxalis/m
 import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
 import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import type { Tracing, OxalisModel } from "oxalis/model";
+import type { Tracing } from "oxalis/model";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 
 import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
@@ -35,7 +35,6 @@ type PingOptions = {
 
 // TODO: Non-reactive
 class Binary {
-  model: OxalisModel
   cube: DataCube;
   tracing: Tracing<*>;
   layer: Layer;
@@ -60,8 +59,7 @@ class Binary {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(model: OxalisModel, tracing: Tracing<*>, layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
-    this.model = model;
+  constructor(tracing: Tracing<*>, layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
     this.tracing = tracing;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
@@ -76,7 +74,7 @@ class Binary {
     this.lowerBoundary = this.layer.lowerBoundary = topLeft;
     this.upperBoundary = this.layer.upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
 
-    this.cube = new DataCube(this.model.taskBoundingBox, this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
+    this.cube = new DataCube(this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
 
     const taskQueue = new AsyncTaskQueue(Infinity);
 

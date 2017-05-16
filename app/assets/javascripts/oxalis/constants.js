@@ -3,9 +3,9 @@
  * @flow
  */
 
-export const ModeValues = [0, 1, 2, 3]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
+export const ModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
 export type VolumeTraceOrMoveModeType = 0 | 1; // VOLUME_MODE_MOVE | VOLUME_MODE_TRACE
-export type ModeType = 0 | 1 | 2 | 3;
+export type ModeType = "orthogonal" | "oblique" | "flight" | "volume";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
@@ -65,19 +65,13 @@ export type ControlModeType = $Keys<typeof ControlModeEnum>
 const Constants = {
   ARBITRARY_VIEW: 4,
 
-  MODE_PLANE_TRACING: 0,
-  MODE_ARBITRARY: 1,
-  MODE_ARBITRARY_PLANE: 2,
-  MODE_VOLUME: 3,
-  MODES_PLANE: [0, 3],
-  MODES_ARBITRARY: [1, 2],
-  MODES_SKELETON: [0, 1, 2],
-  MODE_NAME_TO_ID: {
-    orthogonal: 0,
-    flight: 1,
-    oblique: 2,
-    volume: 3,
-  },
+  MODE_PLANE_TRACING: "orthogonal",
+  MODE_ARBITRARY: "flight",
+  MODE_ARBITRARY_PLANE: "oblique",
+  MODE_VOLUME: "volume",
+  MODES_PLANE: ["orthogonal", "volume"],
+  MODES_ARBITRARY: ["flight", "oblique"],
+  MODES_SKELETON: ["orthogonal", "flight", "oblique"],
 
   VOLUME_MODE_MOVE: 0,
   VOLUME_MODE_TRACE: 1,

@@ -7,6 +7,7 @@ import type { OxalisState, VolumeTracingType } from "oxalis/store";
 import type { VolumeTracingActionType } from "oxalis/model/actions/volumetracing_actions";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setModeReducer, setActiveCellReducer, createCellReducer, updateDirectionReducer, addToLayerReducer, resetContourReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
+import { convertBoundingBox } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Constants from "oxalis/constants";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionType): OxalisState {
@@ -29,13 +30,13 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         contourList: [],
         maxCellId,
         cells: {},
-        cubes: [],
         restrictions,
         volumeTraceOrMoveMode: Constants.VOLUME_MODE_MOVE,
         name: action.tracing.dataSetName,
         tracingType: action.tracing.typ,
         tracingId: action.tracing.id,
         version: action.tracing.version,
+        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
       };
 
       const newState = update(state, { tracing: { $set: volumeTracing } });

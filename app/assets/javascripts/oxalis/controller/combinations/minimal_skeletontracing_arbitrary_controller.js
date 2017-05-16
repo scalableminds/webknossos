@@ -11,7 +11,6 @@ import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 import { deleteNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
 import { zoomInAction, zoomOutAction, yawFlycamAction, pitchFlycamAction } from "oxalis/model/actions/flycam_actions";
-import type { OxalisModel } from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
@@ -26,12 +25,11 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
   // Mainly used to simplify mechanical turk tracings
 
   constructor(
-    model: OxalisModel,
     view: View,
     sceneController: SceneController,
     skeletonTracingController: SkeletonTracingController,
   ) {
-    super(model, view, sceneController, skeletonTracingController);
+    super(view, sceneController, skeletonTracingController);
 
     _.defer(() => this.setRecord(true));
   }

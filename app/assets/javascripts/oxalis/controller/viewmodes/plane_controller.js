@@ -11,7 +11,7 @@ import Utils from "libs/utils";
 import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
-import type { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 import Store from "oxalis/store";
 import View from "oxalis/view";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -28,7 +28,6 @@ import type { ModifierKeys } from "libs/input";
 
 class PlaneController {
   planeView: PlaneView;
-  model: OxalisModel
   view: View;
   input: {
     mouseControllers: OrthoViewMapType<InputMouse>;
@@ -78,12 +77,10 @@ class PlaneController {
 
 
   constructor(
-    model: OxalisModel,
     view: View,
     sceneController: SceneController,
   ) {
     _.extend(this, Backbone.Events);
-    this.model = model;
     this.view = view;
     this.sceneController = sceneController;
 
@@ -92,12 +89,12 @@ class PlaneController {
     const state = Store.getState();
     this.oldNmPos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
 
-    this.planeView = new PlaneView(this.model, this.view);
+    this.planeView = new PlaneView(this.view);
 
     this.activeViewport = OrthoViews.PLANE_XY;
 
     // initialize Camera Controller
-    this.cameraController = new CameraController(this.planeView.getCameras(), this.model);
+    this.cameraController = new CameraController(this.planeView.getCameras());
 
     this.canvasesAndNav = $("#main")[0];
 
@@ -316,9 +313,9 @@ class PlaneController {
 
 
   render(): void {
-    for (const dataLayerName of Object.keys(this.model.binary)) {
+    for (const dataLayerName of Object.keys(Model.binary)) {
       if (this.sceneController.pingDataLayer(dataLayerName)) {
-        this.model.binary[dataLayerName].ping(getPosition(Store.getState().flycam), {
+        Model.binary[dataLayerName].ping(getPosition(Store.getState().flycam), {
           zoomStep: getRequestLogZoomStep(Store.getState()),
           areas: getAreas(Store.getState()),
           activePlane: this.activeViewport,

@@ -13,9 +13,9 @@ import { V3 } from "libs/mjs";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import type { ModeType, Vector3, Point2 } from "oxalis/constants";
-import type { OxalisModel } from "oxalis/model";
 import View from "oxalis/view";
 import Store from "oxalis/store";
+import Model from "oxalis/model";
 import { updateUserSettingAction, setFlightmodeRecordingAction, setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import SceneController from "oxalis/controller/scene_controller";
@@ -35,7 +35,6 @@ const CANVAS_SELECTOR = "#render-canvas";
 
 class ArbitraryController {
   arbitraryView: ArbitraryView;
-  model: OxalisModel
   view: View;
   sceneController: SceneController;
   skeletonTracingController: SkeletonTracingController;
@@ -54,7 +53,7 @@ class ArbitraryController {
     keyboardOnce: ?InputKeyboard;
     destroy: () => void;
   };
-  mode: ModeType = 0;
+  mode: ModeType = "orthogonal";
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -84,13 +83,11 @@ class ArbitraryController {
   }
 
   constructor(
-    model: OxalisModel,
     view: View,
     sceneController: SceneController,
     skeletonTracingController: SkeletonTracingController,
   ) {
     let canvas;
-    this.model = model;
     this.view = view;
     this.sceneController = sceneController;
     this.skeletonTracingController = skeletonTracingController;
@@ -102,7 +99,7 @@ class ArbitraryController {
 
     this.arbitraryView = new ArbitraryView(canvas, this.view, this.WIDTH);
 
-    this.plane = new ArbitraryPlane(this.model, this, this.WIDTH);
+    this.plane = new ArbitraryPlane(this, this.WIDTH);
     this.arbitraryView.addGeometry(this.plane);
 
     this.input = _.extend({}, this.input);
@@ -121,7 +118,7 @@ class ArbitraryController {
 
   render(): void {
     const matrix = Store.getState().flycam.currentMatrix;
-    this.model.getColorBinaries().forEach(binary =>
+    Model.getColorBinaries().forEach(binary =>
       binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality));
   }
 
@@ -292,8 +289,8 @@ class ArbitraryController {
   bindToEvents(): void {
     this.listenTo(this.arbitraryView, "render", this.render);
 
-    for (const name of Object.keys(this.model.binary)) {
-      const binary = this.model.binary[name];
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
       this.listenTo(binary.cube, "bucketLoaded", this.arbitraryView.draw);
     }
 
@@ -463,12 +460,12 @@ class ArbitraryController {
 
 
   isBranchpointvideoMode(): boolean {
-    return Utils.__guard__(this.model.tracing.task, x => x.type.summary) === "branchpointvideo";
+    return Utils.__guard__(Store.getState().task, x => x.type.summary) === "branchpointvideo";
   }
 
 
   isSynapseannotationMode(): boolean {
-    return Utils.__guard__(this.model.tracing.task, x => x.type.summary) === "synapseannotation";
+    return Utils.__guard__(Store.getState().task, x => x.type.summary) === "synapseannotation";
   }
 }
 ArbitraryController.initClass();

@@ -7,7 +7,7 @@ import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
 import ColorGenerator from "libs/color_generator";
-import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, mergeTrees } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, mergeTrees, convertBoundingBox } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getSkeletonTracing, findTreeByNodeId, getTree, getNodeAndTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { zoomReducer } from "oxalis/model/reducers/flycam_reducer";
 import Constants from "oxalis/constants";
@@ -50,11 +50,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         activeTreeId,
         restrictions,
         trees,
-        viewMode: 0,
         name: action.tracing.dataSetName,
         tracingType: action.tracing.typ,
         tracingId: action.tracing.id,
         version: action.tracing.version,
+        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
       };
 
       const newState = update(state, { tracing: { $set: skeletonTracing } });

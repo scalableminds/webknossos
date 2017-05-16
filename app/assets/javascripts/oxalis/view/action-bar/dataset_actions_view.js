@@ -1,6 +1,5 @@
 // @flow
 import React, { PureComponent } from "react";
-import _ from "lodash";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import type { OxalisState, TracingType, TaskType } from "oxalis/store";
@@ -122,7 +121,7 @@ class DatasetActionsView extends PureComponent {
 
   render() {
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
-    const isSkeletonMode = _.includes(Constants.MODES_SKELETON, viewMode);
+    const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const hasAdvancedOptions = this.props.tracing.restrictions.advancedOptionsAllowed;
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
     const restrictions = this.props.tracing.restrictions;

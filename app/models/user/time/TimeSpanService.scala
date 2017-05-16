@@ -157,12 +157,15 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       }
     }
 
+    // We intentionally return a Fox[Option] here, since the calling for-comprehension expects an Option[AnnotationLike]. In case
+    // None is passed in as "annotation", we want to pass this None on as Fox.successful(None) and not break the for-comprehension
+    // by returning Fox.empty.
     private def getAnnotation(annotation: Option[String])(implicit ctx: DBAccessContext): Fox[Option[AnnotationLike]] = {
       annotation match {
         case Some(annotationId) =>
           AnnotationDAO.findOneById(annotationId).map(Some(_))
         case _ =>
-          Fox.empty
+          Fox.successful(None)
       }
     }
 

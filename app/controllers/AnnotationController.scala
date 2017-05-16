@@ -195,10 +195,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   }
 
   def handleUpdates(annotation: Annotation, js: JsValue, version: Int, clientTimestamp: Long)(implicit request: AuthenticatedRequest[_]): Fox[JsObject] = {
-    val timestampOffset: Long = System.currentTimeMillis - clientTimestamp
-
     js match {
-      case JsArray(jsUpdates) =>
+      case JsArray(jsUpdates) if jsUpdates.length >= 1 =>
         for {
           updated <- annotation.muta.updateFromJson(jsUpdates) //?~> Messages("format.json.invalid")
         } yield {

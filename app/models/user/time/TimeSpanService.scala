@@ -162,7 +162,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
         case Some(annotationId) =>
           AnnotationDAO.findOneById(annotationId).map(Some(_))
         case _ =>
-          Fox.successful(None)
+          Fox.empty
       }
     }
 

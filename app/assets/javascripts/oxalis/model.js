@@ -65,7 +65,7 @@ export type VolumeContentDataType = {
   name: string;
 };
 
-export type Tracing<T> = {
+export type ServerTracing<T> = {
   actions: Array<any>,
   content: {
     boundingBox: BoundingBoxObjectType,
@@ -104,7 +104,7 @@ export class OxalisModel {
   };
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>;
+  tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>;
   state: UrlManagerState;
 
   async fetch(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
@@ -120,7 +120,7 @@ export class OxalisModel {
       infoUrl = `/annotations/${tracingType}/${tracingId}/info`;
     }
 
-    const tracing: Tracing<*> = await Request.receiveJSON(infoUrl);
+    const tracing: ServerTracing<*> = await Request.receiveJSON(infoUrl);
 
     if (!tracing.restrictions.allowAccess) {
       Toast.Error("You are not allowed to access this tracing");
@@ -177,7 +177,7 @@ export class OxalisModel {
     return { preferredMode, allowedModes };
   }
 
-  initializeTracing(tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>) {
+  initializeTracing(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
     const { allowedModes, preferredMode } = this.determineAllowedModes(tracing.content.settings);
     _.extend(tracing.content.settings, { allowedModes, preferredMode });
 
@@ -185,19 +185,16 @@ export class OxalisModel {
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
     if (controlMode === ControlModeEnum.TRACE) {
       if (isVolume) {
-        // ErrorHandling.assert((this.getSegmentationBinary() != null),
-        //   "Volume is allowed, but segmentation does not exist");
-        // $FlowFixMe
-        const volumeTracing: Tracing<VolumeContentDataType> = tracing;
+        ErrorHandling.assert((this.getSegmentationBinary() != null),
+          "Volume is allowed, but segmentation does not exist");
+        const volumeTracing: ServerTracing<VolumeContentDataType> = (tracing: ServerTracing<any>);
         Store.dispatch(initializeVolumeTracingAction(volumeTracing));
       } else {
-        // $FlowFixMe
-        const skeletonTracing: Tracing<SkeletonContentDataType> = tracing;
+        const skeletonTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<any>);
         Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
       }
     } else {
-      // $FlowFixMe
-      const readOnlyTracing: Tracing<SkeletonContentDataType> = tracing;
+      const readOnlyTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<any>);
       Store.dispatch(initializeReadOnlyTracingAction(readOnlyTracing));
     }
 
@@ -210,7 +207,7 @@ export class OxalisModel {
     }
   }
 
-  initializeModel(tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>) {
+  initializeModel(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
     const dataset = tracing.content.dataSet;
     const { dataStore } = dataset;
 
@@ -313,7 +310,7 @@ export class OxalisModel {
     }
   }
 
-  applyState(state: UrlManagerState, tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>) {
+  applyState(state: UrlManagerState, tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
     Store.dispatch(setPositionAction(state.position || tracing.content.editPosition));
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));

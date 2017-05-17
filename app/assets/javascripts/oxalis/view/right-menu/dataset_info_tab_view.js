@@ -56,9 +56,12 @@ class DatasetInfoTabView extends Component {
     let annotationType = tracingType;
 
     // In case we have a task display its id as well
-    if (this.props.task) { annotationType += `: ${this.props.task.taskId}`; }
-    // Or display an explorative tracings name if there is one
-    if (name) { annotationType += `: ${name}`; }
+    if (this.props.task) {
+      annotationType += `: ${this.props.task.id}`;
+    } else if (name) {
+      // Or display an explorative tracings name if there is one
+      annotationType += `: ${name}`;
+    }
 
     const zoomLevel = this.calculateZoomLevel();
     const dataSetName = this.props.dataset.name;

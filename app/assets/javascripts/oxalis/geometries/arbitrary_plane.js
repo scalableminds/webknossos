@@ -94,7 +94,9 @@ class ArbitraryPlane {
 
       const matrix = getZoomedMatrix(Store.getState().flycam);
 
-      const newVertices = M4x4.transformPointsAffine(matrix, this.queryVertices);
+      // const queryMatrix = M4x4.scale1(constants.VIEWPORT_WIDTH / this.width, matrix);
+      const queryMatrix = M4x4.scale1(1, matrix);
+      const newVertices = M4x4.transformPointsAffine(queryMatrix, this.queryVertices);
       const newColors = Model.getColorBinaries()[0].getByVerticesSync(newVertices);
 
       this.textureMaterial.setData("color", newColors);

@@ -8,6 +8,7 @@ GET           /dashboard                                                        
 GET           /impressum                                                        controllers.Application.impressum
 GET           /info                                                             controllers.Application.info
 GET           /thankyou                                                         controllers.Application.thankyou
+GET           /buildinfo                                                        controllers.Application.buildInfo
 
 # Github Issues integration
 GET           /issues                                                           controllers.GithubIssues.index

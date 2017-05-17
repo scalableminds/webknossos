@@ -58,4 +58,8 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller wit
   def impressum = UserAwareAction { implicit request =>
     Ok(views.html.impressum())
   }
+
+  def buildInfo = UserAwareAction { implicit request =>
+    Ok(buildinfo.BuildInfo.toJson)
+  }
 }

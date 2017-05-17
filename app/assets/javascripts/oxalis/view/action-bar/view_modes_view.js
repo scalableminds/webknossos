@@ -13,6 +13,10 @@ class ViewModesView extends PureComponent {
     viewMode: ModeType,
   }
 
+  blurElement = (event: SyntheticInputEvent) => {
+    event.target.blur();
+  }
+
   handleChange = (event: { target: { value: ModeType } }) => {
     Store.dispatch(setViewModeAction(event.target.value));
   };
@@ -21,9 +25,9 @@ class ViewModesView extends PureComponent {
     const viewMode = this.props.viewMode;
     return (
       <Radio.Group onChange={this.handleChange} value={viewMode} size="large">
-        <Radio.Button value={constants.MODE_PLANE_TRACING}>Orthogonal</Radio.Button>
-        <Radio.Button value={constants.MODE_ARBITRARY}>Flight</Radio.Button>
-        <Radio.Button value={constants.MODE_ARBITRARY_PLANE}>Oblique</Radio.Button>
+        <Radio.Button onClick={this.blurElement} value={constants.MODE_PLANE_TRACING}>Orthogonal</Radio.Button>
+        <Radio.Button onClick={this.blurElement} value={constants.MODE_ARBITRARY}>Flight</Radio.Button>
+        <Radio.Button onClick={this.blurElement} value={constants.MODE_ARBITRARY_PLANE}>Oblique</Radio.Button>
       </Radio.Group>
     );
   }

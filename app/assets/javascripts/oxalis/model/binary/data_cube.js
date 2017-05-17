@@ -16,6 +16,7 @@ import ArbitraryCubeAdapter from "oxalis/model/binary/arbitrary_cube_adapter";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import BoundingBox from "oxalis/model/binary/bounding_box";
 import Store from "oxalis/store";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -108,6 +109,13 @@ class DataCube {
     }
 
     this.boundingBox = new BoundingBox(Store.getState().tracing.boundingBox, this);
+
+    listenToStoreProperty(
+      state => state.tracing.boundingBox,
+      (boundingBox) => {
+        this.boundingBox = new BoundingBox(boundingBox, this);
+      },
+    );
   }
 
 

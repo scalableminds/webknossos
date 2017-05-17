@@ -81,24 +81,6 @@ class Controller {
           throw error;
         }
       });
-
-    // TODO: only for testing, remove again!
-    // Call app.oxalis.restart("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
-    // with a tracing id of your choice from the dev console
-    // $FlowFixMe
-    this.restart = async (newTracingType, newTracingId, newControlMode) => {
-      for (const binaryName of Object.keys(Model.binary)) {
-        this.stopListening(Model.binary[binaryName].cube);
-      }
-      Store.dispatch(restartSagaAction());
-      await Model.fetch(newTracingType, newTracingId, newControlMode);
-
-      for (const binaryName of Object.keys(Model.binary)) {
-        this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
-      }
-
-      Store.dispatch(wkReadyAction());
-    };
   }
 
   modelFetchDone() {
@@ -175,6 +157,15 @@ class Controller {
 
     app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
+    Store.dispatch(wkReadyAction());
+  }
+
+  // For tracing swap testing, call
+  // app.oxalis.restart("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
+  // with a tracing id of your choice from the dev console
+  async restart(newTracingType: SkeletonTracingTypeTracingType, newTracingId: string, newControlMode: ControlModeType) {
+    Store.dispatch(restartSagaAction());
+    await Model.fetch(newTracingType, newTracingId, newControlMode);
     Store.dispatch(wkReadyAction());
   }
 

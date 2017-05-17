@@ -147,6 +147,12 @@ export class OxalisModel {
       throw this.HANDLED_ERROR;
     }
 
+    // Make sure subsequent fetch calls are always for the same dataset
+    if (!_.isEmpty(this.binary)) {
+      ErrorHandling.assert(_.isEqual(dataset, Store.getState().dataset),
+        "Model.fetch was called for a task with another dataset, without reloading the page.");
+    }
+
     ErrorHandling.assertExtendContext({
       task: tracing.id,
       dataSet: dataset.name,
@@ -155,7 +161,11 @@ export class OxalisModel {
     Store.dispatch(setDatasetAction(dataset));
     Store.dispatch(setTaskAction(tracing.task));
 
-    this.initializeModel(tracing);
+    // Only initialize the model once.
+    // There is no need to reinstantiate the binaries if the dataset didn't change.
+    if (_.isEmpty(this.binary)) {
+      this.initializeModel(tracing);
+    }
     this.initializeTracing(tracing);
 
     return tracing;

@@ -8,7 +8,7 @@ import type { Dispatch } from "redux";
 import app from "app";
 import Utils from "libs/utils";
 import Request from "libs/request";
-import Constants from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import { Button } from "antd";
@@ -93,11 +93,22 @@ class DatasetActionsView extends PureComponent {
     await Request.triggerRequest(finishUrl);
     try {
       const annotation = await Request.receiveJSON(requestTaskUrl);
-      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.task, x => x.id);
+      const state = Store.getState();
+
+      const differentDataset = state.dataset.name !== annotation.dataSetName;
+      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.task, x => x.type.id);
       const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
-      app.router.loadURL(newTaskUrl);
+
+      // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
+      if (differentDataset || differentTaskType) {
+        app.router.loadURL(newTaskUrl);
+      } else {
+        // $FlowFixMe
+        app.oxalis.restart(tracingType, tracingId, ControlModeEnum.TRACE);
+      }
     } catch (err) {
+      console.error(err);
       await Utils.sleep(2000);
       app.router.loadURL("/dashboard");
     }

@@ -255,7 +255,6 @@ export type TraceLimitType = {
 
 export type TaskType = {
   +id: number,
-  +type: "string",
   +script?: {
     gist: string,
     name: string,
@@ -264,6 +263,8 @@ export type TaskType = {
     +summary: string,
     +description: string,
     +expectedTime: TraceLimitType,
+    +id: string,
+    +team: string,
   },
 };
 

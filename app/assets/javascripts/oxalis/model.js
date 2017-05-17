@@ -173,7 +173,6 @@ export class OxalisModel {
       }
     }
 
-    allowedModes.sort();
     return { preferredMode, allowedModes };
   }
 

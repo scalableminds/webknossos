@@ -164,7 +164,7 @@ export class OxalisModel {
   determineAllowedModes(settings: SettingsType) {
     let allowedModes = settings.allowedModes;
     if (Store.getState().dataset.dataLayers[0].elementClass !== "uint8") {
-      allowedModes = allowedModes.filter(mode => constants.MODES_ARBITRARY.includes(mode));
+      allowedModes = allowedModes.filter(mode => !constants.MODES_ARBITRARY.includes(mode));
     }
 
     let preferredMode = null;

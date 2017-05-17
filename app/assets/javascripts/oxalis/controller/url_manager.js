@@ -63,9 +63,9 @@ class UrlManager {
       if (stateArray.length >= 5) {
         state.position = Utils.numberArrayToVector3(stateArray.slice(0, 3));
 
-        const modeNumber = ModeValues.find(el => el === stateArray[3]);
-        if (modeNumber) {
-          state.mode = modeNumber;
+        const modeString = ModeValues[stateArray[3]];
+        if (modeString) {
+          state.mode = modeString;
         } else {
           // Let's default to MODE_PLANE_TRACING
           state.mode = "orthogonal";
@@ -100,7 +100,8 @@ class UrlManager {
     }
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
     let state = V3.floor(getPosition(Store.getState().flycam));
-    state.push(viewMode);
+    // Convert viewMode to number
+    state.push(ModeValues.indexOf(viewMode));
 
     if (constants.MODES_ARBITRARY.includes(viewMode)) {
       state = state

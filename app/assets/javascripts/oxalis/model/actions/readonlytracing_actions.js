@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable import/prefer-default-export */
 import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
 
 type InitializeReadOnlyTracingActionType = { type: "INITIALIZE_READONLYTRACING", tracing: ServerTracing<SkeletonContentDataType> };

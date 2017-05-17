@@ -3,7 +3,7 @@
 import update from "immutability-helper";
 import type { OxalisState, ReadOnlyTracingType } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
-import { convertBoundingBox } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 
 
 function ReadOnlyTracingReducer(state: OxalisState, action: ActionType): OxalisState {

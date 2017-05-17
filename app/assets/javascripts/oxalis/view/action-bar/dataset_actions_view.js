@@ -93,7 +93,7 @@ class DatasetActionsView extends PureComponent {
     await Request.triggerRequest(finishUrl);
     try {
       const annotation = await Request.receiveJSON(requestTaskUrl);
-      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.task, x => x.taskId);
+      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.task, x => x.id);
       const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
       app.router.loadURL(newTaskUrl);

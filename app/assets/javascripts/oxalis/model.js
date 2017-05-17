@@ -16,6 +16,7 @@ import type {
   BranchPointType,
   SkeletonTracingTypeTracingType,
   VolumeTracingTypeTracingType,
+  TaskType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import { setDatasetAction, setViewModeAction, setControlModeAction } from "oxalis/model/actions/settings_actions";
@@ -87,7 +88,7 @@ export type ServerTracing<T> = {
   state: UrlManagerState,
   stateLabel: string,
   stats: any,
-  task: any,
+  task: TaskType,
   tracingTime: number,
   typ: SkeletonTracingTypeTracingType | VolumeTracingTypeTracingType,
   user: any,

@@ -122,10 +122,6 @@ export class OxalisModel {
 
     const tracing: Tracing<*> = await Request.receiveJSON(infoUrl);
 
-    if (!tracing.restrictions.allowAccess) {
-      Toast.Error("You are not allowed to access this tracing");
-      throw this.HANDLED_ERROR;
-    }
     let error;
     const dataset = tracing.content.dataSet;
     if (tracing.error) {
@@ -142,6 +138,11 @@ export class OxalisModel {
 
     if (error) {
       Toast.error(error);
+      throw this.HANDLED_ERROR;
+    }
+
+    if (!tracing.restrictions.allowAccess) {
+      error = "You are not allowed to access this tracing";
       throw this.HANDLED_ERROR;
     }
 

@@ -25,7 +25,7 @@ mockRequire("libs/toast", { error: _.noop });
 const Cube = mockRequire.reRequire("oxalis/model/binary/data_cube").default;
 
 test.beforeEach((t) => {
-  const cube = new Cube({ min: [0, 0, 0], max: [128, 128, 128] }, [100, 100, 100], 3, 24);
+  const cube = new Cube([100, 100, 100], 3, 24);
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),

@@ -85,6 +85,7 @@ class Controller {
     // TODO: only for testing, remove again!
     // Call app.oxalis.restart("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
     // with a tracing id of your choice from the dev console
+    // $FlowFixMe
     this.restart = async (newTracingType, newTracingId, newControlMode) => {
       for (const binaryName of Object.keys(Model.binary)) {
         this.stopListening(Model.binary[binaryName].cube);

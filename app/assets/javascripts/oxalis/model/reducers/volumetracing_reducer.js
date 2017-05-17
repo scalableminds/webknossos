@@ -7,7 +7,7 @@ import type { OxalisState, VolumeTracingType } from "oxalis/store";
 import type { VolumeTracingActionType } from "oxalis/model/actions/volumetracing_actions";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setModeReducer, setActiveCellReducer, createCellReducer, updateDirectionReducer, addToLayerReducer, resetContourReducer } from "oxalis/model/reducers/volumetracing_reducer_helpers";
-import { convertBoundingBox } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import Constants from "oxalis/constants";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionType): OxalisState {

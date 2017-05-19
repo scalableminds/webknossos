@@ -29,9 +29,10 @@ class UrlManager {
   initialState: UrlManagerState;
   lastUrl: ?string
 
-  constructor() {
+  initialize(): UrlManager {
     this.baseUrl = document.location.pathname + document.location.search;
     this.initialState = this.parseUrl();
+    return this;
   }
 
   update = _.throttle(
@@ -131,4 +132,4 @@ export function updateTypeAndId(baseUrl: string, tracingType: string, tracingId:
     );
 }
 
-export default UrlManager;
+export default new UrlManager();

@@ -39,6 +39,7 @@ import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import update from "immutability-helper";
+import UrlManager from "oxalis/controller/url_manager";
 
 type SkeletonContentTreeType = {
   id: number,
@@ -106,7 +107,6 @@ export class OxalisModel {
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
   tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>;
-  state: UrlManagerState;
 
   async fetch(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
     Store.dispatch(setControlModeAction(controlMode));
@@ -213,9 +213,11 @@ export class OxalisModel {
     if (allowedModes.length === 0) {
       Toast.error("There was no valid allowed tracing mode specified.");
     } else {
-      const mode = preferredMode || this.state.mode || allowedModes[0];
+      const mode = preferredMode || UrlManager.initialState.mode || allowedModes[0];
       Store.dispatch(setViewModeAction(mode));
     }
+
+    this.applyState(UrlManager.initialState, tracing);
   }
 
   initializeModel(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
@@ -251,7 +253,6 @@ export class OxalisModel {
       throw this.HANDLED_ERROR;
     }
 
-    this.applyState(this.state, tracing);
     this.computeBoundaries();
 
     // TODO: remove

@@ -91,9 +91,9 @@ class PullQueue {
       let offset = 0;
       for (const bucketAddress of batch) {
         bucketData = responseBuffer.subarray(offset, offset += this.cube.BUCKET_LENGTH);
-        this.cube.boundingBox.removeOutsideArea(bucketAddress, bucketData);
-        this.maybeWhitenEmptyBucket(bucketData);
         const bucket = this.cube.getBucket(bucketAddress);
+        this.cube.boundingBox.removeOutsideArea(bucket, bucketAddress, bucketData);
+        this.maybeWhitenEmptyBucket(bucketData);
         if (bucket.type === "data") {
           bucket.receiveData(bucketData);
         }

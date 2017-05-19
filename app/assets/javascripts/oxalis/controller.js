@@ -165,6 +165,7 @@ class Controller {
   // with a tracing id of your choice from the dev console
   async restart(newTracingType: SkeletonTracingTypeTracingType, newTracingId: string, newControlMode: ControlModeType) {
     Store.dispatch(restartSagaAction());
+    UrlManager.reset();
     await Model.fetch(newTracingType, newTracingId, newControlMode, false);
     Store.dispatch(wkReadyAction());
   }

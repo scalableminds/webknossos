@@ -35,6 +35,12 @@ class UrlManager {
     return this;
   }
 
+  reset(): void {
+    // don't use document.location.hash = ""; since it refreshes the page
+    window.history.replaceState({}, null, document.location.pathname + document.location.search);
+    this.initialize();
+  }
+
   update = _.throttle(
     () => {
       const url = this.buildUrl();

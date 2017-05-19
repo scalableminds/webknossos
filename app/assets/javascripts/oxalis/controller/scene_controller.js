@@ -84,14 +84,7 @@ class SceneController {
     this.userBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
     const taskBoundingBox = Store.getState().tracing.boundingBox;
-    if (taskBoundingBox != null) {
-      this.taskBoundingBox = new Cube({
-        min: taskBoundingBox.min,
-        max: taskBoundingBox.max,
-        color: 0x00ff00,
-        showCrossSections: true });
-      this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
-    }
+    this.buildTaskingBoundingBox(taskBoundingBox);
 
     this.volumeMeshes = new THREE.Object3D();
     if (Store.getState().tracing.type === "volume") {
@@ -120,6 +113,21 @@ class SceneController {
 
     for (const plane of _.values(this.planes)) {
       plane.getMeshes().forEach(mesh => this.rootNode.add(mesh));
+    }
+  }
+
+  buildTaskingBoundingBox(taskBoundingBox: ?BoundingBoxType): void {
+    if (taskBoundingBox != null) {
+      if (this.taskBoundingBox != null) {
+        this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.remove(mesh));
+      }
+
+      this.taskBoundingBox = new Cube({
+        min: taskBoundingBox.min,
+        max: taskBoundingBox.max,
+        color: 0x00ff00,
+        showCrossSections: true });
+      this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
   }
 
@@ -317,6 +325,10 @@ class SceneController {
     listenToStoreProperty(
       storeState => storeState.temporaryConfiguration.userBoundingBox,
       bb => this.setUserBoundingBox(Utils.computeBoundingBoxFromArray(bb)),
+    );
+    listenToStoreProperty(
+      storeState => storeState.tracing.boundingBox,
+      bb => this.buildTaskingBoundingBox(bb),
     );
   }
 }

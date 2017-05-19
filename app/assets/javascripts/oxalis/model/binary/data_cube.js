@@ -114,6 +114,7 @@ class DataCube {
       state => state.tracing.boundingBox,
       (boundingBox) => {
         this.boundingBox = new BoundingBox(boundingBox, this);
+        this.forgetOutOfBoundaryBuckets();
       },
     );
   }
@@ -197,7 +198,6 @@ class DataCube {
   getBucketIndex([x, y, z, zoomStep]: Vector4): ?number {
     // Removed for performance reasons
     // ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
-
     const cube = this.cubes[zoomStep];
     if (cube != null) {
       const { boundary } = cube;
@@ -288,6 +288,19 @@ class DataCube {
     }
   }
 
+  forgetOutOfBoundaryBuckets(): void {
+    for (const cube of this.cubes) {
+      if (!cube) {
+        continue;
+      }
+      for (const bucketIndex of cube.data.keys()) {
+        const bucket = cube.data.get(bucketIndex);
+        if (bucket instanceof DataBucket && bucket.isPartlyOutsideBoundingBox) {
+          cube.data.delete(bucketIndex);
+        }
+      }
+    }
+  }
 
   labelTestShape(): void {
     // draw a sphere, centered at (100, 100, 100) with radius 50

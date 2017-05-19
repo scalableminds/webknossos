@@ -52,7 +52,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               belong to any tracing (nodeId: ${nodeId}). WebKnossos will fall back to
               the last tree instead.`,
               null,
-              true
+              true,
             );
             activeNodeId = null;
           }

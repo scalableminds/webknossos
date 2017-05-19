@@ -303,7 +303,7 @@ class DataCube {
   }
 
   labelTestShape(): void {
-    // draw a sqhere, centered at (100, 100, 100) with radius 50
+    // draw a sphere, centered at (100, 100, 100) with radius 50
 
     for (let x = 80; x <= 120; x++) {
       for (let y = 80; y <= 120; y++) {

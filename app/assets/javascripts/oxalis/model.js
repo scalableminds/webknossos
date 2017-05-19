@@ -31,7 +31,7 @@ import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import constants, { Vector3Indicies, ControlModeEnum } from "oxalis/constants";
+import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
 import type { Vector3, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -172,7 +172,8 @@ export class OxalisModel {
   }
 
   determineAllowedModes(settings: SettingsType) {
-    let allowedModes = settings.allowedModes;
+    // The order of allowedModes should be independent from the server and instead be similar to ModeValues
+    let allowedModes = _.intersection(ModeValues, settings.allowedModes);
     if (Store.getState().dataset.dataLayers[0].elementClass !== "uint8") {
       allowedModes = allowedModes.filter(mode => !constants.MODES_ARBITRARY.includes(mode));
     }

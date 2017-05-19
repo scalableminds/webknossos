@@ -682,6 +682,21 @@ test("SkeletonTracing should decrease the activeTreeId", (t) => {
   t.is(newState.skeletonTracing.activeTreeId, 1);
 });
 
+test("SkeletonTracing should not decrease the activeTreeId below 1", (t) => {
+  const createTreeAction = SkeletonTracingActions.createTreeAction();
+  const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction(false);
+
+  // create a second tree then decrease activeTreeId twice
+  const newState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, selectNextTreeAction)
+    .apply(SkeletonTracingReducer, selectNextTreeAction)
+    .unpack();
+
+  t.not(newState, initialState);
+  t.is(newState.skeletonTracing.activeTreeId, 1);
+});
+
 test("SkeletonTracing should shuffle the color of a specified tree", (t) => {
   const shuffleTreeColorAction = SkeletonTracingActions.shuffleTreeColorAction(1);
   const newState = SkeletonTracingReducer(initialState, shuffleTreeColorAction);

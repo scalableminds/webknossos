@@ -8,8 +8,6 @@
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
-import type { Vector3, Vector6 } from "oxalis/constants";
-import type { Matrix4x4 } from "libs/mjs";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
@@ -17,6 +15,9 @@ import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reduce
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
+import Constants from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
+import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
 
@@ -196,7 +197,16 @@ export type TemporaryConfigurationType = {
 };
 
 export type TaskType = {
-  +taskId: number,
+  +id: number,
+  +type: "string",
+  +script?: {
+    +gist: string,
+    +name: string,
+  },
+  +type: {
+    +summary: string,
+    +description: string,
+  }
 };
 
 export type SaveStateType = {
@@ -286,7 +296,7 @@ const defaultState: OxalisState = {
     tracingType: "Explorational",
     activeTreeId: null,
     activeNodeId: null,
-    cachedMaxNodeId: 0,
+    cachedMaxNodeId: Constants.MIN_NODE_ID - 1,
     restrictions: {
       branchPointsAllowed: true,
       allowUpdate: true,

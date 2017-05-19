@@ -9,6 +9,7 @@ import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu } from "antd";
 import Window from "libs/window";
 import TreesTabItemView from "oxalis/view/right-menu/trees_tab_item_view";
+import InputComponent from "oxalis/view/components/input_component";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setTreeNameAction, createTreeAction, deleteTreeAction, shuffleTreeColorAction, selectNextTreeAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -86,7 +87,7 @@ class TreesTabView extends React.Component {
         </ButtonGroup>
         <InputGroup compact>
           <Button onClick={this.props.onSelectNextTreeBackward}><i className="fa fa-arrow-left" /></Button>
-          <Input
+          <InputComponent
             onChange={this.handleChangeTreeName}
             value={activeTreeName}
             style={{ width: "70%" }}

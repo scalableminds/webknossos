@@ -73,7 +73,7 @@ test.beforeEach((t) => {
   Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
   User.prototype.fetch.returns(Promise.resolve());
 
-  return model.fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE)
+  return model.fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");

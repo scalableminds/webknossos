@@ -57,6 +57,7 @@ export type SkeletonContentDataType = {
   trees: Array<SkeletonContentTreeType>;
   zoomLevel: number;
   customLayers: null;
+  zoomLevel: number;
 };
 
 export type VolumeContentDataType = {
@@ -65,6 +66,7 @@ export type VolumeContentDataType = {
   customLayers: Array<Object>;
   maxCoordinates: BoundingBoxObjectType;
   name: string;
+  zoomLevel: number;
 };
 
 export type ServerTracing<T> = {

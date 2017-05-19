@@ -105,7 +105,7 @@ class DatasetActionsView extends PureComponent {
         app.router.loadURL(newTaskUrl);
       } else {
         // $FlowFixMe
-        app.oxalis.restart(tracingType, tracingId, ControlModeEnum.TRACE);
+        app.oxalis.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);

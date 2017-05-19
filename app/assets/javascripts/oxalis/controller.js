@@ -72,7 +72,7 @@ class Controller {
 
     this.urlManager = UrlManager.initialize();
 
-    Model.fetch(tracingType, tracingId, controlMode)
+    Model.fetch(tracingType, tracingId, controlMode, true)
       .then(() => this.modelFetchDone())
       .catch((error) => {
         // Don't throw errors for errors already handled by the model.
@@ -165,7 +165,7 @@ class Controller {
   // with a tracing id of your choice from the dev console
   async restart(newTracingType: SkeletonTracingTypeTracingType, newTracingId: string, newControlMode: ControlModeType) {
     Store.dispatch(restartSagaAction());
-    await Model.fetch(newTracingType, newTracingId, newControlMode);
+    await Model.fetch(newTracingType, newTracingId, newControlMode, false);
     Store.dispatch(wkReadyAction());
   }
 

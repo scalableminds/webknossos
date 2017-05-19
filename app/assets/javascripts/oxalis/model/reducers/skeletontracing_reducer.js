@@ -10,7 +10,6 @@ import ColorGenerator from "libs/color_generator";
 import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, mergeTrees } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import { getSkeletonTracing, findTreeByNodeId, getTree, getNodeAndTree } from "oxalis/model/accessors/skeletontracing_accessor";
-import { zoomReducer } from "oxalis/model/reducers/flycam_reducer";
 import Constants from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
@@ -33,15 +32,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
       cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
-      // const activeTree = activeNodeId ? findTreeByNodeId(trees, activeNodeId) : null;
-
       let activeNodeId = Utils.unpackMaybe(activeNodeIdMaybe);
       const activeTreeIdMaybe = activeNodeIdMaybe
-        .chain(nodeId => {
+        .chain((nodeId) => {
           // use activeNodeId to find active tree
-          const treeIdMaybe = findTreeByNodeId(trees, nodeId).map(tree => {
-            return tree.treeId;
-          });
+          const treeIdMaybe = findTreeByNodeId(trees, nodeId).map(tree => tree.treeId);
           if (treeIdMaybe.isNothing) {
             // There is an activeNodeId without a corresponding tree.
             // Log this, since this shouldn't happen, but clear the activeNodeId
@@ -78,8 +73,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
       };
 
-      const newState = update(state, { tracing: { $set: skeletonTracing } });
-      return zoomReducer(newState, contentData.zoomLevel);
+      return update(state, { tracing: { $set: skeletonTracing } });
     }
     default:
       // pass

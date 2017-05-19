@@ -108,7 +108,7 @@ export class OxalisModel {
   upperBoundary: Vector3;
   tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>;
 
-  async fetch(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
+  async fetch(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType, initialFetch: boolean) {
     Store.dispatch(setControlModeAction(controlMode));
 
     let infoUrl;
@@ -163,10 +163,10 @@ export class OxalisModel {
 
     // Only initialize the model once.
     // There is no need to reinstantiate the binaries if the dataset didn't change.
-    if (_.isEmpty(this.binary)) {
+    if (initialFetch) {
       this.initializeModel(tracing);
     }
-    this.initializeTracing(tracing);
+    this.initializeTracing(tracing, initialFetch);
 
     return tracing;
   }
@@ -189,7 +189,7 @@ export class OxalisModel {
     return { preferredMode, allowedModes };
   }
 
-  initializeTracing(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
+  initializeTracing(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>, initialFetch: boolean) {
     const { allowedModes, preferredMode } = this.determineAllowedModes(tracing.content.settings);
     _.extend(tracing.content.settings, { allowedModes, preferredMode });
 
@@ -208,6 +208,10 @@ export class OxalisModel {
     } else {
       const readOnlyTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<any>);
       Store.dispatch(initializeReadOnlyTracingAction(readOnlyTracing));
+    }
+
+    if (initialFetch) {
+      Store.dispatch(setZoomStepAction(tracing.content.contentData.zoomLevel));
     }
 
     // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode

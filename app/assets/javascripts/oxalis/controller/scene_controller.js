@@ -83,7 +83,8 @@ class SceneController {
       showCrossSections: true });
     this.userBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
-    this.buildTaskingBoundingBox();
+    const taskBoundingBox = Store.getState().tracing.boundingBox;
+    this.buildTaskingBoundingBox(taskBoundingBox);
 
     this.volumeMeshes = new THREE.Object3D();
     if (Store.getState().tracing.type === "volume") {
@@ -115,8 +116,7 @@ class SceneController {
     }
   }
 
-  buildTaskingBoundingBox(): void {
-    const taskBoundingBox = Store.getState().tracing.boundingBox;
+  buildTaskingBoundingBox(taskBoundingBox: ?BoundingBoxType): void {
     if (taskBoundingBox != null) {
       if (this.taskBoundingBox != null) {
         this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.remove(mesh));
@@ -328,7 +328,7 @@ class SceneController {
     );
     listenToStoreProperty(
       storeState => storeState.tracing.boundingBox,
-      bb => this.buildTaskingBoundingBox(),
+      bb => this.buildTaskingBoundingBox(bb),
     );
   }
 }

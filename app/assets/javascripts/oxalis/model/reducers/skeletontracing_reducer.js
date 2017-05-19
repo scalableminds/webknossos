@@ -37,11 +37,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
       let activeNodeId = Utils.unpackMaybe(activeNodeIdMaybe);
       const activeTreeIdMaybe = activeNodeIdMaybe
-        .chain(nodeId => {
+        .chain((nodeId) => {
           // use activeNodeId to find active tree
-          const treeIdMaybe = findTreeByNodeId(trees, nodeId).map(tree => {
-            return tree.treeId;
-          });
+          const treeIdMaybe = findTreeByNodeId(trees, nodeId).map(tree => tree.treeId);
           if (treeIdMaybe.isNothing) {
             // There is an activeNodeId without a corresponding tree.
             // Log this, since this shouldn't happen, but clear the activeNodeId

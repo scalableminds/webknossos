@@ -176,7 +176,9 @@ export class OxalisModel {
   determineAllowedModes(settings: SettingsType) {
     // The order of allowedModes should be independent from the server and instead be similar to ModeValues
     let allowedModes = _.intersection(ModeValues, settings.allowedModes);
-    if (Store.getState().dataset.dataLayers[0].elementClass !== "uint8") {
+
+    const colorLayer = _.find(Store.getState().dataset.dataLayers, { category: "color" });
+    if (colorLayer != null && colorLayer.elementClass !== "uint8") {
       allowedModes = allowedModes.filter(mode => !constants.MODES_ARBITRARY.includes(mode));
     }
 

@@ -67,9 +67,14 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
     }
 
     case "SET_VIEW_MODE": {
-      return update(state, {
-        temporaryConfiguration: { viewMode: { $set: action.viewMode } },
-      });
+      const allowedModes = state.tracing.restrictions.allowedModes;
+      if (allowedModes.includes(action.viewMode)) {
+        return update(state, {
+          temporaryConfiguration: { viewMode: { $set: action.viewMode } },
+        });
+      } else {
+        return state;
+      }
     }
     case "SET_FLIGHTMODE_RECORDING": {
       return update(state, {

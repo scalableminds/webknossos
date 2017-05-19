@@ -4,13 +4,15 @@ import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
 import { Radio } from "antd";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, AllowedModeType } from "oxalis/store";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
+import Utils from "libs/utils";
 
 class ViewModesView extends PureComponent {
   props: {
     viewMode: ModeType,
+    allowedModes: Array<AllowedModeType>,
   }
 
   blurElement = (event: SyntheticInputEvent) => {
@@ -21,13 +23,22 @@ class ViewModesView extends PureComponent {
     Store.dispatch(setViewModeAction(event.target.value));
   };
 
+  isDisabled(mode: ModeType) {
+    return !this.props.allowedModes.includes(mode);
+  }
+
   render() {
     const viewMode = this.props.viewMode;
     return (
       <Radio.Group onChange={this.handleChange} value={viewMode} size="large">
-        <Radio.Button onClick={this.blurElement} value={constants.MODE_PLANE_TRACING}>Orthogonal</Radio.Button>
-        <Radio.Button onClick={this.blurElement} value={constants.MODE_ARBITRARY}>Flight</Radio.Button>
-        <Radio.Button onClick={this.blurElement} value={constants.MODE_ARBITRARY_PLANE}>Oblique</Radio.Button>
+        {constants.MODES_SKELETON.map(mode =>
+          <Radio.Button
+            onClick={this.blurElement}
+            key={mode}
+            disabled={this.isDisabled(mode)}
+            value={mode}
+          >{Utils.capitalize(mode)}</Radio.Button>,
+        )}
       </Radio.Group>
     );
   }
@@ -36,6 +47,7 @@ class ViewModesView extends PureComponent {
 function mapStateToProps(state: OxalisState) {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
+    allowedModes: state.tracing.restrictions.allowedModes,
   };
 }
 

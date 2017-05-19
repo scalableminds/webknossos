@@ -59,13 +59,14 @@ mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
 mockRequire("keyboardjs", KeyboardJS);
 
 // Avoid node caching and make sure all mockRequires are applied
+const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
 const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 const Store = mockRequire.reRequire("oxalis/store").default;
 
 test.beforeEach((t) => {
+  UrlManager.initialState = { position: [1, 2, 3] };
   const model = t.context.model = new Model();
-  model.state = { position: [1, 2, 3] };
 
   const webknossos = t.context.webknossos = new OxalisApi(model);
 

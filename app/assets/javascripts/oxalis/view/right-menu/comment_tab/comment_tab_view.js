@@ -15,7 +15,8 @@ import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontra
 import { setActiveNodeAction, createCommentAction, deleteCommentAction } from "oxalis/model/actions/skeletontracing_actions";
 import TreeCommentList from "oxalis/view/right-menu/comment_tab/tree_comment_list";
 import type { Dispatch } from "redux";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType } from "oxalis/store";
+import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 
 const InputGroup = Input.Group;
 
@@ -24,10 +25,16 @@ type CommentTabStateType = {
 };
 
 class CommentTabView extends React.Component {
+  props: {
+    skeletonTracing: SkeletonTracingType,
+    setActiveNode: (nodeId: number) => void,
+    deleteComment: () => void,
+    createComment: (text: string) => void,
+  };
 
   state: CommentTabStateType = {
     isSortedAscending: true,
-  }
+  };
 
   componentWillUnmount() {
     this.keyboard.destroy();
@@ -49,9 +56,10 @@ class CommentTabView extends React.Component {
 
       // get tree of active comment or activeTree if there is no active comment
       let nextComment = null;
+      // $FlowFixMe
       let nextTree = _.find(trees, tree => _.some(tree.comments, comment => comment.node === activeNode.id));
       if (nextTree != null) {
-        const sortedComments = _.orderBy(nextTree.comments, ["node"], [sortOrder]);
+        const sortedComments = _.orderBy(nextTree.comments, comment => comment.node, [sortOrder]);
 
         // try to find next comment for this tree
         nextComment = _.find(sortedComments,
@@ -59,6 +67,7 @@ class CommentTabView extends React.Component {
 
         // try to find next tree with at least one comment
         if (nextComment == null) {
+          // $FlowFixMe
           nextTree = _.find(trees,
             tree => this.comparator(tree.treeId, sortAscending) > this.comparator(activeTree.treeId, sortAscending) && tree.comments.length);
         }
@@ -66,6 +75,7 @@ class CommentTabView extends React.Component {
 
       // try to find any tree with at least one comment, starting from the beginning
       if (nextTree == null) {
+        // $FlowFixMe
         nextTree = _.find(trees, tree => tree.comments.length);
       }
 
@@ -154,7 +164,7 @@ class CommentTabView extends React.Component {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  skeletonTracing: state.skeletonTracing,
+  skeletonTracing: state.tracing,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -163,4 +173,4 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   createComment(text) { dispatch(createCommentAction(text)); },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(CommentTabView);
+export default connect(mapStateToProps, mapDispatchToProps)(makeSkeletonTracingGuard(CommentTabView));

@@ -13,6 +13,7 @@ import NodeShader, { NodeTypes, COLOR_TEXTURE_WIDTH } from "oxalis/geometries/ma
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import { OrthoViews } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
 import type { Vector3, OrthoViewType } from "oxalis/constants";
 
@@ -95,36 +96,38 @@ class Skeleton {
     this.pickingNode = new THREE.Object3D();
 
     const state = Store.getState();
-    const trees = state.skeletonTracing.trees;
-    const nodeCount = _.sum(_.map(trees, tree => _.size(tree.nodes)));
-    const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
+    getSkeletonTracing(state.tracing).map((skeletonTracing) => {
+      const trees = skeletonTracing.trees;
+      const nodeCount = _.sum(_.map(trees, tree => _.size(tree.nodes)));
+      const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
 
-    this.treeColorTexture = new THREE.DataTexture(
-      new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 3),
-      COLOR_TEXTURE_WIDTH,
-      COLOR_TEXTURE_WIDTH,
-      THREE.RGBFormat,
-      THREE.FloatType,
-    );
+      this.treeColorTexture = new THREE.DataTexture(
+        new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 3),
+        COLOR_TEXTURE_WIDTH,
+        COLOR_TEXTURE_WIDTH,
+        THREE.RGBFormat,
+        THREE.FloatType,
+      );
 
-    const nodeMaterial = new NodeShader(this.treeColorTexture).getMaterial();
-    const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
+      const nodeMaterial = new NodeShader(this.treeColorTexture).getMaterial();
+      const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
 
-    this.nodes = this.initializeBufferCollection(nodeCount, nodeMaterial, NodeBufferHelperType);
-    this.edges = this.initializeBufferCollection(edgeCount, edgeMaterial, EdgeBufferHelperType);
+      this.nodes = this.initializeBufferCollection(nodeCount, nodeMaterial, NodeBufferHelperType);
+      this.edges = this.initializeBufferCollection(edgeCount, edgeMaterial, EdgeBufferHelperType);
 
-    for (const tree of _.values(trees)) {
-      this.createTree(tree);
-    }
-    for (const nodes of this.nodes.buffers) {
-      nodes.geometry.computeBoundingSphere();
-    }
-    for (const edges of this.edges.buffers) {
-      edges.geometry.computeBoundingSphere();
-    }
+      for (const tree of _.values(trees)) {
+        this.createTree(tree);
+      }
+      for (const nodes of this.nodes.buffers) {
+        nodes.geometry.computeBoundingSphere();
+      }
+      for (const edges of this.edges.buffers) {
+        edges.geometry.computeBoundingSphere();
+      }
 
-    Store.subscribe(() => this.refresh());
-    this.prevTracing = Store.getState().skeletonTracing;
+      Store.subscribe(() => this.refresh());
+      this.prevTracing = skeletonTracing;
+    });
   }
 
   initializeBufferCollection(initialCapacity: number, material: THREE.Material, helper: BufferHelperType): BufferCollection {
@@ -233,94 +236,95 @@ class Skeleton {
    */
   refresh() {
     const state = Store.getState();
-    const tracing = state.skeletonTracing;
-    const diff = cachedDiffTrees(this.prevTracing.trees, tracing.trees);
+    getSkeletonTracing(state.tracing).map((skeletonTracing) => {
+      const diff = cachedDiffTrees(this.prevTracing.trees, skeletonTracing.trees);
 
-    for (const update of diff) {
-      switch (update.action) {
-        case "createNode": {
-          this.createNode(update.value.treeId, update.value);
-          break;
-        }
-        case "deleteNode":
-          this.deleteNode(update.value.treeId, update.value.id);
-          break;
-        case "createEdge": {
-          const tree = tracing.trees[update.value.treeId];
-          const source = tree.nodes[update.value.source];
-          const target = tree.nodes[update.value.target];
-          this.createEdge(tree.treeId, source, target);
-          break;
-        }
-        case "deleteEdge":
-          this.deleteEdge(update.value.treeId, update.value.source, update.value.target);
-          break;
-        case "updateNode":
-          this.updateNodeRadius(update.value.treeId, update.value.id, update.value.radius);
-          break;
-        case "createTree":
-          this.updateTreeColor(update.value.id, update.value.color);
-          break;
-        case "updateTree": {
-          // diff branchpoints
-          const treeId = update.value.id;
-          const tree = tracing.trees[treeId];
-          const prevTree = this.prevTracing.trees[treeId];
-          const oldBranchPoints = prevTree.branchPoints.map(branchPoint => branchPoint.id);
-          const newBranchPoints = tree.branchPoints.map(branchPoint => branchPoint.id);
-          const { onlyA: deletedBranchPoints, onlyB: createdBranchPoints } = Utils.diffArrays(oldBranchPoints, newBranchPoints);
-
-          for (const nodeId of deletedBranchPoints) {
-            this.updateNodeType(treeId, nodeId, NodeTypes.NORMAL);
+      for (const update of diff) {
+        switch (update.action) {
+          case "createNode": {
+            this.createNode(update.value.treeId, update.value);
+            break;
           }
-
-          for (const nodeId of createdBranchPoints) {
-            this.updateNodeType(treeId, nodeId, NodeTypes.BRANCH_POINT);
+          case "deleteNode":
+            this.deleteNode(update.value.treeId, update.value.id);
+            break;
+          case "createEdge": {
+            const tree = skeletonTracing.trees[update.value.treeId];
+            const source = tree.nodes[update.value.source];
+            const target = tree.nodes[update.value.target];
+            this.createEdge(tree.treeId, source, target);
+            break;
           }
+          case "deleteEdge":
+            this.deleteEdge(update.value.treeId, update.value.source, update.value.target);
+            break;
+          case "updateNode":
+            this.updateNodeRadius(update.value.treeId, update.value.id, update.value.radius);
+            break;
+          case "createTree":
+            this.updateTreeColor(update.value.id, update.value.color);
+            break;
+          case "updateTree": {
+            // diff branchpoints
+            const treeId = update.value.id;
+            const tree = skeletonTracing.trees[treeId];
+            const prevTree = this.prevTracing.trees[treeId];
+            const oldBranchPoints = prevTree.branchPoints.map(branchPoint => branchPoint.id);
+            const newBranchPoints = tree.branchPoints.map(branchPoint => branchPoint.id);
+            const { onlyA: deletedBranchPoints, onlyB: createdBranchPoints } = Utils.diffArrays(oldBranchPoints, newBranchPoints);
 
-          if (tree.color !== prevTree.color) {
-            this.updateTreeColor(treeId, update.value.color);
+            for (const nodeId of deletedBranchPoints) {
+              this.updateNodeType(treeId, nodeId, NodeTypes.NORMAL);
+            }
+
+            for (const nodeId of createdBranchPoints) {
+              this.updateNodeType(treeId, nodeId, NodeTypes.BRANCH_POINT);
+            }
+
+            if (tree.color !== prevTree.color) {
+              this.updateTreeColor(treeId, update.value.color);
+            }
+            break;
           }
-          break;
+          case "deleteTree":
+          case "moveTreeComponent":
+          case "mergeTree":
+            // Unused for now
+            break;
+          default:
+            throw new Error("[Skeleton] Unhandled skeletontracing diff action");
         }
-        case "deleteTree":
-        case "moveTreeComponent":
-        case "mergeTree":
-          // Unused for now
-          break;
-        default:
-          throw new Error("[Skeleton] Unhandled skeletontracing diff action");
       }
-    }
 
-    if (tracing.activeNodeId !== this.prevTracing.activeNodeId) {
-      this.startNodeHighlightAnimation();
-    }
+      if (skeletonTracing.activeNodeId !== this.prevTracing.activeNodeId) {
+        this.startNodeHighlightAnimation();
+      }
 
-    // Uniforms
-    const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
-    let activeNodeId = state.skeletonTracing.activeNodeId;
-    activeNodeId = activeNodeId == null ? -1 : activeNodeId;
-    let activeTreeId = state.skeletonTracing.activeTreeId;
-    activeTreeId = activeTreeId == null ? -1 : activeTreeId;
+      // Uniforms
+      const { particleSize, scale, overrideNodeRadius } = state.userConfiguration;
+      let activeNodeId = skeletonTracing.activeNodeId;
+      activeNodeId = activeNodeId == null ? -1 : activeNodeId;
+      let activeTreeId = skeletonTracing.activeTreeId;
+      activeTreeId = activeTreeId == null ? -1 : activeTreeId;
 
-    const nodeUniforms = this.nodes.material.uniforms;
-    nodeUniforms.planeZoomFactor.value = getPlaneScalingFactor(state.flycam);
-    nodeUniforms.overrideParticleSize.value = particleSize;
-    nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
-    nodeUniforms.viewportScale.value = scale;
-    nodeUniforms.activeTreeId.value = activeTreeId;
-    nodeUniforms.activeNodeId.value = activeNodeId;
-    nodeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
-    nodeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
+      const nodeUniforms = this.nodes.material.uniforms;
+      nodeUniforms.planeZoomFactor.value = getPlaneScalingFactor(state.flycam);
+      nodeUniforms.overrideParticleSize.value = particleSize;
+      nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
+      nodeUniforms.viewportScale.value = scale;
+      nodeUniforms.activeTreeId.value = activeTreeId;
+      nodeUniforms.activeNodeId.value = activeNodeId;
+      nodeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
+      nodeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
 
-    const edgeUniforms = this.edges.material.uniforms;
-    edgeUniforms.activeTreeId.value = activeTreeId;
-    edgeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
-    edgeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
-    this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
+      const edgeUniforms = this.edges.material.uniforms;
+      edgeUniforms.activeTreeId.value = activeTreeId;
+      edgeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
+      edgeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
+      this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
 
-    this.prevTracing = tracing;
+      this.prevTracing = skeletonTracing;
+    });
   }
 
   getAllNodes(): Array<THREE.Mesh> {

@@ -12,11 +12,12 @@ import SettingsReducer from "oxalis/model/reducers/settings_reducer";
 import TaskReducer from "oxalis/model/reducers/task_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import Constants from "oxalis/constants";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import type { Vector3, Vector6, ModeType, VolumeModeType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
@@ -82,6 +83,12 @@ export type MappingType = {
   +classes?: Array<Array<number>>;
 };
 
+export type VolumeCellType = {
+  +id: number;
+};
+
+export type VolumeCellMapType = {[number]: VolumeCellType};
+
 export type CategoryType = "color" | "segmentation";
 export type ElementClassType = "uint8" | "uint16" | "uint32";
 
@@ -129,19 +136,49 @@ export type TreeMapType = {+[number]: TreeType};
 
 export type SkeletonTracingTypeTracingType =
   "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType";
+export type VolumeTracingTypeTracingType = SkeletonTracingTypeTracingType;
 
 export type SkeletonTracingType = {
   +type: "skeleton",
   +trees: TreeMapType,
   +name: string,
   +version: number,
-  +id: string,
+  +tracingId: string,
   +tracingType: SkeletonTracingTypeTracingType,
   +activeTreeId: ?number,
   +activeNodeId: ?number,
   +cachedMaxNodeId: number,
   +restrictions: RestrictionsType & SettingsType,
+  +viewMode: ModeType,
 };
+
+export type VolumeTracingType = {
+  +type: "volume",
+  +name: string,
+  +version: number,
+  +maxCellId: number,
+  +viewMode: VolumeModeType,
+  +cubes: [],
+  +activeCellId: number,
+  +lastCentroid: ?Vector3,
+  +contourList: Array<Vector3>,
+  +cells: VolumeCellMapType,
+  +tracingId: string,
+  +tracingType: VolumeTracingTypeTracingType,
+  +restrictions: RestrictionsType & SettingsType,
+};
+
+export type ReadOnlyTracingType = {
+  +type: "readonly",
+  +name: string,
+  +version: 0,
+  +viewMode: 0,
+  +tracingId: string,
+  +tracingType: "View",
+  +restrictions: RestrictionsType & SettingsType,
+};
+
+export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;
 
 export type DatasetLayerConfigurationType = {
   +color: Vector3,
@@ -226,13 +263,13 @@ export type OxalisState = {
   +userConfiguration: UserConfigurationType,
   +temporaryConfiguration: TemporaryConfigurationType,
   +dataset: DatasetType,
-  +skeletonTracing: SkeletonTracingType,
+  +tracing: TracingType,
   +task: ?TaskType,
   +save: SaveStateType,
   +flycam: FlycamType,
 };
 
-const defaultState: OxalisState = {
+export const defaultState: OxalisState = {
   datasetConfiguration: {
     datasetName: "",
     fourBit: true,
@@ -286,12 +323,12 @@ const defaultState: OxalisState = {
     },
     dataLayers: [],
   },
-  skeletonTracing: {
+  tracing: {
     type: "skeleton",
     trees: {},
     name: "",
     version: 0,
-    id: "",
+    viewMode: 0,
     tracingId: "",
     tracingType: "Explorational",
     activeTreeId: null,
@@ -333,6 +370,7 @@ export type ReducerType = (state: OxalisState, action: ActionType) => OxalisStat
 const combinedReducers = reduceReducers(
   SettingsReducer,
   SkeletonTracingReducer,
+  VolumeTracingReducer,
   TaskReducer,
   SaveReducer,
   FlycamReducer,

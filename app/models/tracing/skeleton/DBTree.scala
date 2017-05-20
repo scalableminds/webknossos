@@ -112,17 +112,10 @@ object DBTree {
     List.empty,
     List.empty,
     System.currentTimeMillis(),
-    nameFromId(1))
-
-  def nameFromId(treeId: Int) = f"Tree$treeId%03d"
+    "")
 
   def createFrom(tracingId: BSONObjectID, t: TreeLike) = {
-    val name =
-      if (t.name != "")
-        t.name
-      else
-        DBTree.nameFromId(t.treeId)
-    DBTree(tracingId, t.treeId, t.color, t.branchPoints, t.comments, t.timestamp, name)
+    DBTree(tracingId, t.treeId, t.color, t.branchPoints, t.comments, t.timestamp, t.name)
   }
 
   def createCopy(t: DBTree, tid: BSONObjectID) =

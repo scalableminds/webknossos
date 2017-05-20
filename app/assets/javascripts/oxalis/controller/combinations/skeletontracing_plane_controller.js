@@ -111,7 +111,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
       s: () => {
         this.skeletonTracingController.centerActiveNode();
-        return this.cameraController.centerTDView();
+        this.cameraController.centerTDView();
       },
     });
   }

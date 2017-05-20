@@ -58,7 +58,7 @@ case class CreateTree(value: JsObject) extends TracingUpdater {
     val id = (value \ "id").as[Int]
     val color = (value \ "color").asOpt[Color]
     val timestamp = (value \ "timestamp").as[Long]
-    val name = (value \ "name").asOpt[String].getOrElse(DBTree.nameFromId(id))
+    val name = (value \ "name").as[String]
     val branchPoints = (value \ "branchPoints").as[List[BranchPoint]]
     val comments = (value \ "comments").as[List[Comment]]
     TracingUpdate { t =>
@@ -88,7 +88,7 @@ case class UpdateTree(value: JsObject) extends TracingUpdater {
     val id = (value \ "id").as[Int]
     val updatedId = (value \ "updatedId").asOpt[Int].getOrElse(id)
     val color = (value \ "color").asOpt[Color]
-    val name = (value \ "name").asOpt[String].getOrElse(DBTree.nameFromId(id))
+    val name = (value \ "name").as[String]
     val branchPoints = (value \ "branchPoints").as[List[BranchPoint]]
     val comments = (value \ "comments").as[List[Comment]]
     TracingUpdate { t =>

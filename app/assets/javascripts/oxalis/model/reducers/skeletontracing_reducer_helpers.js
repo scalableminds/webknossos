@@ -2,7 +2,7 @@
  * skeletontracing_reducer_helpers.js
  * @flow
  *
- * THESE HELPERFUNCTIONS MUST ONLY BE CALLED FROM A REDUCER
+ * THESE HELPER FUNCTIONS MUST ONLY BE CALLED FROM A REDUCER
  *
  */
 
@@ -18,18 +18,20 @@ import { getSkeletonTracing, getActiveNodeFromTree, findTreeByNodeId } from "oxa
 import type { Vector3 } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, TemporaryMutableTreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
 
-function generateTreeNamePrefix(state: OxalisState, timestamp) {
+export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
+  user = user.replace(/ /g, "_");   // Replace spaces in user names
 
-  // Replace spaces in user names
-  user = user.replace(/ /g, "_");
-  if (state.tracing.tracingType === "Explorational" || !state.task) {
+  let prefix = "Tree";
+  if (state.tracing.tracingType === "Explorational") {
     // Get YYYY-MM-DD string
     const creationDate = new Date(timestamp).toJSON().slice(0, 10);
-    return `explorative_${creationDate}_${user}_`;
-  } else {
-    return `task_${state.task.taskId}_${user}_`;
+    prefix = `explorative_${creationDate}_${user}_`;
+  } else if (state.task) {
+    prefix = `task_${state.task.id}_${user}_`;
   }
+
+  return `${prefix}${Utils.zeroPad(treeId, 3)}`;
 }
 
 function getMaximumNodeId(trees: TreeMapType): number {
@@ -272,7 +274,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       const maxTreeId = getMaximumTreeId(skeletonTracing.trees);
       const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : Constants.MIN_TREE_ID;
 
-      const name = generateTreeNamePrefix(state, timestamp) + Utils.zeroPad(newTreeId, 2);
+      const name = generateTreeName(state, timestamp, newTreeId);
 
       // Create the new tree
       const tree: TreeType = {

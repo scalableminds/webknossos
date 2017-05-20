@@ -64,7 +64,7 @@ services:
   frontend-tests:
     extends:
       service: sbt
-    command: bash -c "yarn test"
+    command: bash -c "yarn test-verbose"
 
   frontend-docs:
     extends:

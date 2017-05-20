@@ -24,9 +24,27 @@ type SelectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: ?boolean};
 type ShuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR", treeId?: number};
 type CreateCommentActionType = {type: "CREATE_COMMENT", commentText: string, nodeId: ?number, treeId: ?number};
 type DeleteCommentActionType = {type: "DELETE_COMMENT", nodeId: ?number, treeId?: number};
-type SetVersionNumberActionType = {type: "SET_VERSION_NUMBER", version: number};
 
-export type SkeletonTracingActionType = (InitializeSkeletonTracingActionType | CreateNodeActionType | DeleteNodeActionType | SetActiveNodeActionType | SetActiveNodeRadiusActionType | CreateBranchPointActionType | DeleteBranchPointActionType | RequestDeleteBranchPointActionType | CreateTreeActionType | DeleteTreeActionType | SetActiveTreeActionType | MergeTreesActionType | SetTreeNameActionType | SetTreeNameActionType | SelectNextTreeActionType | ShuffleTreeColorActionType | CreateCommentActionType | DeleteCommentActionType | SetVersionNumberActionType);
+export type SkeletonTracingActionType =
+  | InitializeSkeletonTracingActionType
+  | CreateNodeActionType
+  | DeleteNodeActionType
+  | SetActiveNodeActionType
+  | SetActiveNodeRadiusActionType
+  | CreateBranchPointActionType
+  | DeleteBranchPointActionType
+  | RequestDeleteBranchPointActionType
+  | CreateTreeActionType
+  | DeleteTreeActionType
+  | SetActiveTreeActionType
+  | MergeTreesActionType
+  | SetTreeNameActionType
+  | SetTreeNameActionType
+  | SelectNextTreeActionType
+  | ShuffleTreeColorActionType
+  | CreateCommentActionType
+  | DeleteCommentActionType;
+
 export const SkeletonTracingActions = [
   "INITIALIZE_SKELETONTRACING",
   "CREATE_NODE",
@@ -143,9 +161,4 @@ export const deleteCommentAction = (nodeId?: number, treeId?: number): DeleteCom
   type: "DELETE_COMMENT",
   nodeId,
   treeId,
-});
-
-export const setVersionNumber = (version: number): SetVersionNumberActionType => ({
-  type: "SET_VERSION_NUMBER",
-  version,
 });

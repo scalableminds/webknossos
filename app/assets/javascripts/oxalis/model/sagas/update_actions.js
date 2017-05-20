@@ -1,6 +1,6 @@
 // @flow
 import Date from "libs/date";
-import type { SkeletonTracingType, BranchPointType, CommentType, TreeType, NodeType } from "oxalis/store";
+import type { SkeletonTracingType, VolumeTracingType, BranchPointType, CommentType, TreeType, NodeType } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
@@ -76,7 +76,7 @@ type DeleteEdgeUpdateAction = {
     target: number,
   }
 };
-type UpdateTracingUpdateAction = {
+type UpdateSkeletonTracingUpdateAction = {
   action: "updateTracing",
   timestamp: number,
   value: {
@@ -86,6 +86,15 @@ type UpdateTracingUpdateAction = {
     zoomLevel: number,
   },
 };
+type UpdateVolumeTracingUpdateAction = {
+  action: "updateTracing",
+  value: {
+    activeCell: number,
+    editPosition: Vector3,
+    nextCell: number,
+  }
+}
+type UpdateTracingUpdateAction = UpdateSkeletonTracingUpdateAction | UpdateVolumeTracingUpdateAction;
 
 export type UpdateAction =
   UpdateTreeUpdateAction |
@@ -192,7 +201,7 @@ export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateActi
     value: { treeId, id: nodeId },
   };
 }
-export function updateTracing(tracing: SkeletonTracingType, position: Vector3, rotation: Vector3, zoomLevel: number): UpdateTracingUpdateAction {
+export function updateSkeletonTracing(tracing: SkeletonTracingType, position: Vector3, rotation: Vector3, zoomLevel: number): UpdateSkeletonTracingUpdateAction {
   const curTime = Date.now();
   if (tracing.activeNodeId != null) {
     return {
@@ -224,6 +233,17 @@ export function moveTreeComponent(sourceTreeId: number, targetTreeId: number, no
       sourceId: sourceTreeId,
       targetId: targetTreeId,
       nodeIds,
+    },
+  };
+}
+export function updateVolumeTracing(tracing: VolumeTracingType, position: Vector3): UpdateVolumeTracingUpdateAction {
+  return {
+    action: "updateTracing",
+    timestamp: Date.now(),
+    value: {
+      activeCell: tracing.activeCellId,
+      editPosition: position,
+      nextCell: tracing.maxCellId + 1,
     },
   };
 }

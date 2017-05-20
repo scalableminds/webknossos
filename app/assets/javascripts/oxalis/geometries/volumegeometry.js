@@ -1,17 +1,18 @@
 /**
  * volumegeometry.js
- * @flow weak
+ * @flow
  */
 
 import * as THREE from "three";
 import ColorGenerator from "libs/color_generator";
+import type { Vector3 } from "oxalis/constants";
 
 class VolumeGeometry {
 
   id: number;
   mesh: THREE.Mesh;
 
-  constructor(triangles, id) {
+  constructor(triangles: Vector3[][], id: number) {
     this.id = id;
     const geo = new THREE.Geometry();
     const color = ColorGenerator.distinctColorForId(this.id % 256);
@@ -33,7 +34,7 @@ class VolumeGeometry {
   }
 
 
-  getTriangleNormal(triangle) {
+  getTriangleNormal(triangle: Vector3[]) {
     const v1 = new THREE.Vector3(triangle[1][0] - triangle[0][0],
                             triangle[1][1] - triangle[0][1],
                             triangle[1][2] - triangle[0][2]);

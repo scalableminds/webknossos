@@ -50,7 +50,7 @@ class SkeletonTracingController {
 
 
   setRadius(delta: number): void {
-    getActiveNode(Store.getState().skeletonTracing)
+    getActiveNode(Store.getState().tracing)
       .map(activeNode =>
         Store.dispatch(setActiveNodeRadiusAction(activeNode.radius * Math.pow(1.05, delta))));
   }
@@ -67,7 +67,7 @@ class SkeletonTracingController {
 
 
   centerActiveNode = (): void => {
-    getActiveNode(Store.getState().skeletonTracing)
+    getActiveNode(Store.getState().tracing)
       .map(activeNode => Store.dispatch(setPositionAction(activeNode.position)));
   }
 }

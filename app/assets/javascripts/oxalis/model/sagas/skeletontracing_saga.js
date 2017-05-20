@@ -9,11 +9,9 @@ import Toast from "libs/toast";
 import messages from "messages";
 import Store from "oxalis/store";
 import Modal from "oxalis/view/modal";
-import { call, put, take, takeEvery, select, race } from "redux-saga/effects";
-import { SkeletonTracingActions, createTreeAction, deleteBranchPointAction, setTreeNameAction } from "oxalis/model/actions/skeletontracing_actions";
-import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
-import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateTracing } from "oxalis/model/sagas/update_actions";
-import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import { put, take, takeEvery, select, race } from "redux-saga/effects";
+import { deleteBranchPointAction, setTreeNameAction } from "oxalis/model/actions/skeletontracing_actions";
+import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateSkeletonTracing } from "oxalis/model/sagas/update_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";
@@ -22,7 +20,7 @@ import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType,
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 function* centerActiveNode() {
-  getActiveNode(yield select(state => state.skeletonTracing))
+  getActiveNode(yield select(state => state.tracing))
     .map((activeNode) => {
       // $FlowFixMe
       app.oxalis.planeController.centerPositionAnimated(activeNode.position, false);
@@ -32,7 +30,7 @@ function* centerActiveNode() {
 export function* watchBranchPointDeletion(): Generator<*, *, *> {
   while (true) {
     yield take("REQUEST_DELETE_BRANCHPOINT");
-    const hasBranchPoints = yield select(state => getBranchPoints(state.skeletonTracing).length > 0);
+    const hasBranchPoints = yield select(state => getBranchPoints(state.tracing).getOrElse([]).length > 0);
     if (hasBranchPoints) {
       yield put(deleteBranchPointAction());
 
@@ -42,7 +40,7 @@ export function* watchBranchPointDeletion(): Generator<*, *, *> {
       });
 
       if (deleteBranchpointAction) {
-        const hasBranchPoints2 = yield select(state => getBranchPoints(state.skeletonTracing).length > 0);
+        const hasBranchPoints2 = yield select(state => getBranchPoints(state.tracing).getOrElse([]).length > 0);
         if (hasBranchPoints2) {
           Modal.show(messages["tracing.branchpoint_jump_twice"],
             "Jump again?",
@@ -62,7 +60,7 @@ export function* watchTreeNames(): Generator<*, *, *> {
   const state = yield select(_state => _state);
 
   // rename trees with an empty/default tree name
-  for (const tree: TreeType of _.values(state.skeletonTracing.trees)) {
+  for (const tree: TreeType of _.values(state.tracing.trees)) {
     if (tree.name === "") {
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
       yield put(setTreeNameAction(newName, tree.treeId));
@@ -168,7 +166,7 @@ export function cachedDiffTrees(prevTrees: TreeMapType, trees: TreeMapType): Arr
   return diffTreeCache.diff;
 }
 
-export function* diffTracing(
+export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracingType,
   skeletonTracing: SkeletonTracingType,
   flycam: FlycamType,
@@ -176,41 +174,10 @@ export function* diffTracing(
   if (prevSkeletonTracing !== skeletonTracing) {
     yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
   }
-  yield updateTracing(
+  yield updateSkeletonTracing(
     skeletonTracing,
     V3.floor(getPosition(flycam)),
     getRotation(flycam),
     flycam.zoomStep,
   );
-}
-
-export function performDiffTracing(
-  prevSkeletonTracing: SkeletonTracingType,
-  skeletonTracing: SkeletonTracingType,
-  flycam: FlycamType,
-): Array<UpdateAction> {
-  return Array.from(diffTracing(prevSkeletonTracing, skeletonTracing, flycam));
-}
-
-export function* saveSkeletonTracingAsync(): Generator<*, *, *> {
-  yield take("INITIALIZE_SKELETONTRACING");
-  let prevSkeletonTracing = yield select(state => state.skeletonTracing);
-  if (yield select(state => state.skeletonTracing.activeTreeId == null)) {
-    yield put(createTreeAction());
-  }
-  yield take("WK_READY");
-  const allowUpdate = yield select(state => state.skeletonTracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
-
-  while (true) {
-    yield take(SkeletonTracingActions.concat(FlycamActions));
-    const skeletonTracing = yield select(state => state.skeletonTracing);
-    const flycam = yield select(state => state.flycam);
-    const items = Array.from(yield call(performDiffTracing,
-      prevSkeletonTracing, skeletonTracing, flycam));
-    if (items.length > 0) {
-      yield put(pushSaveQueueAction(items));
-    }
-    prevSkeletonTracing = skeletonTracing;
-  }
 }

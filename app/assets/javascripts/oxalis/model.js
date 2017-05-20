@@ -17,16 +17,18 @@ import type {
   CommentType,
   BranchPointType,
   SkeletonTracingTypeTracingType,
+  VolumeTracingTypeTracingType,
   DataLayerType,
 } from "oxalis/store";
 import { setDatasetAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
+import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { saveNowAction } from "oxalis/model/actions/save_actions";
 import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
-import VolumeTracing from "oxalis/model/volumetracing/volumetracing";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { Vector3Indicies } from "oxalis/constants";
@@ -36,6 +38,7 @@ import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
+import update from "immutability-helper";
 
 // This is THE model. It takes care of the data including the
 // communication with the server.
@@ -68,7 +71,7 @@ export type SkeletonContentDataType = {
 
 export type VolumeContentDataType = {
   activeCell: null | number;
-  nextCell?: number,
+  nextCell: ?number,
   customLayers: Array<Object>;
   maxCoordinates: BoundingBoxObjectType;
   name: string;
@@ -98,7 +101,7 @@ export type Tracing<T> = {
   stats: any,
   task: any,
   tracingTime: number,
-  typ: SkeletonTracingTypeTracingType,
+  typ: SkeletonTracingTypeTracingType | VolumeTracingTypeTracingType,
   user: any,
   version: number,
 };
@@ -114,12 +117,11 @@ class Model extends Backbone.Model {
   };
   taskBoundingBox: BoundingBoxType;
   userBoundingBox: BoundingBoxType;
-  annotationModel: VolumeTracing;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  volumeTracing: VolumeTracing;
   mode: ModeType;
   allowedModes: Array<ModeType>;
+  isVolume: boolean;
   settings: SettingsType;
   tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>;
   tracingId: string;
@@ -166,9 +168,7 @@ class Model extends Backbone.Model {
     }).then((tracing: Tracing<*>) => {
       const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
       return this.initializeWithData(tracing, layerInfos);
-    },
-
-    );
+    });
   }
 
 
@@ -243,16 +243,15 @@ class Model extends Backbone.Model {
       throw this.HANDLED_ERROR;
     }
 
-    const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
+    this.isVolume = tracing.content.settings.allowedModes.includes("volume");
 
     if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
-      if (isVolumeTracing) {
-        // $FlowFixMe
-        const volumeTracing: Tracing<VolumeContentDataType> = tracing;
+      if (this.isVolumeTracing()) {
         ErrorHandling.assert((this.getSegmentationBinary() != null),
           "Volume is allowed, but segmentation does not exist");
-        this.set("volumeTracing", new VolumeTracing(volumeTracing, this.getSegmentationBinary()));
-        this.annotationModel = this.get("volumeTracing");
+        // $FlowFixMe
+        const volumeTracing: Tracing<VolumeContentDataType> = tracing;
+        Store.dispatch(initializeVolumeTracingAction(volumeTracing));
       } else {
         // $FlowFixMe
         const skeletonTracing: Tracing<SkeletonContentDataType> = tracing;
@@ -337,6 +336,11 @@ class Model extends Backbone.Model {
   }
 
 
+  isVolumeTracing() {
+    return this.isVolume;
+  }
+
+
   getLayerInfos(userLayers: ?Array<Object>) {
     // Overwrite or extend layers with userLayers
 
@@ -345,10 +349,11 @@ class Model extends Backbone.Model {
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {
-      const existingLayer = _.find(layers, layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName));
+      const existingLayerIndex = _.findIndex(layers, layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName));
+      const existingLayer = layers[existingLayerIndex];
 
       if (existingLayer != null) {
-        _.extend(existingLayer, userLayer);
+        layers[existingLayerIndex] = update(existingLayer, { $merge: userLayer });
       } else {
         layers.push(userLayer);
       }
@@ -374,32 +379,6 @@ class Model extends Backbone.Model {
         this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]);
       }
     }
-  }
-
-  // delegate save request to all submodules
-  save = function save() {
-    const submodels = [];
-    const promises = [];
-
-    if (this.get("volumeTracing") != null) {
-      submodels.push(this.get("volumeTracing").stateLogger);
-    }
-
-    if (this.get("skeletonTracing") != null) {
-      submodels.push(this.get("skeletonTracing").stateLogger);
-    }
-
-    _.each(submodels, model => promises.push(model.save()));
-
-    return Promise.all(promises).then(
-      (...args) => {
-        Toast.success("Saved!");
-        return Promise.resolve(...args);
-      },
-      (...args) => {
-        Toast.error("Couldn't save. Please try again.");
-        return Promise.reject(...args);
-      });
   }
 
 
@@ -433,6 +412,26 @@ class Model extends Backbone.Model {
       Store.dispatch(setActiveNodeAction(state.activeNode));
     }
   }
+
+
+  stateSaved() {
+    const state = Store.getState();
+    const storeStateSaved = !state.save.isBusy && state.save.queue.length === 0;
+    const pushQueuesSaved = _.reduce(
+      this.binary,
+      (saved, binary) => saved && binary.pushQueue.stateSaved(),
+      true,
+    );
+    return storeStateSaved && pushQueuesSaved;
+  }
+
+
+  save = async () => {
+    Store.dispatch(saveNowAction());
+    while (!this.stateSaved()) {
+      await Utils.sleep(500);
+    }
+  };
 }
 
 export default Model;

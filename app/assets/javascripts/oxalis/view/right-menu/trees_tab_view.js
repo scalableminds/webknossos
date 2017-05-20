@@ -104,7 +104,7 @@ class TreesTabView extends React.Component {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  skeletonTracing: state.skeletonTracing,
+  skeletonTracing: state.tracing,
   userConfiguration: state.userConfiguration,
 });
 

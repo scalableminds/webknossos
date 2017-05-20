@@ -1,8 +1,9 @@
 // @flow
 
 import { watchPushSettingsAsync, initializeSettingsAsync } from "oxalis/model/sagas/settings_saga";
-import { watchSkeletonTracingAsync, saveSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
-import { pushAnnotationAsync } from "oxalis/model/sagas/save_saga";
+import { watchSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
+import { pushAnnotationAsync, saveTracingAsync } from "oxalis/model/sagas/save_saga";
+import { editVolumeLayerAsync, disallowVolumeTracingWarning, watchVolumeTracingAsync } from "oxalis/model/sagas/volumetracing_saga";
 import { alert } from "libs/window";
 
 export default function* rootSaga(): Generator<*, *, *> {
@@ -11,8 +12,11 @@ export default function* rootSaga(): Generator<*, *, *> {
       initializeSettingsAsync(),
       watchPushSettingsAsync(),
       watchSkeletonTracingAsync(),
-      saveSkeletonTracingAsync(),
+      saveTracingAsync(),
       pushAnnotationAsync(),
+      editVolumeLayerAsync(),
+      disallowVolumeTracingWarning(),
+      watchVolumeTracingAsync(),
     ];
   } catch (err) {
     alert(`\

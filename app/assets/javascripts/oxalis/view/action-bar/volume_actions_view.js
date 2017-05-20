@@ -1,30 +1,34 @@
 // @flow
 import React, { PureComponent } from "react";
-import type Model from "oxalis/model";
+import { connect } from "react-redux";
+import type { VolumeModeType } from "oxalis/constants";
+import type { OxalisState, VolumeTracingType } from "oxalis/store";
 import Constants from "oxalis/constants";
+import Store from "oxalis/store";
+import { setModeAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { Button, Radio } from "antd";
 
 class VolumeActionsView extends PureComponent {
   props: {
-    oldModel: Model,
+    volumeTracing: VolumeTracingType,
   };
 
-  componentDidMount() {
-    this.props.oldModel.volumeTracing.on("change:mode", this._forceUpdate);
+  handleSetMode = (event: { target: { value: VolumeModeType } }) => {
+    Store.dispatch(setModeAction(
+      event.target.value,
+    ));
   }
 
-  componentWillUnmount() {
-    this.props.oldModel.volumeTracing.off("change:mode", this._forceUpdate);
+  handleCreateCell = () => {
+    Store.dispatch(createCellAction());
   }
-
-  _forceUpdate = () => { this.forceUpdate(); };
 
   render() {
     return (
       <div>
         <Radio.Group
-          onChange={event => this.props.oldModel.volumeTracing.setMode(event.target.value)}
-          value={this.props.oldModel.volumeTracing.mode}
+          onChange={this.handleSetMode}
+          value={this.props.volumeTracing.viewMode}
           style={{ marginRight: 10 }}
           size="large"
         >
@@ -33,7 +37,7 @@ class VolumeActionsView extends PureComponent {
         </Radio.Group>
         <Button.Group size="large">
           <Button
-            onClick={() => { this.props.oldModel.volumeTracing.createCell(); }}
+            onClick={this.handleCreateCell}
           >Create new cell (C)</Button>
         </Button.Group>
       </div>
@@ -41,4 +45,10 @@ class VolumeActionsView extends PureComponent {
   }
 }
 
-export default VolumeActionsView;
+function mapStateToProps(state: OxalisState) {
+  return {
+    volumeTracing: state.tracing,
+  };
+}
+
+export default connect(mapStateToProps)(VolumeActionsView);

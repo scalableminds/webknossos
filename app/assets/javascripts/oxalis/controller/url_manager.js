@@ -12,6 +12,7 @@ import Store from "oxalis/store";
 import type { Vector3, ModeType } from "oxalis/constants";
 import constants, { ModeValues } from "oxalis/constants";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import window from "libs/window";
 
 const NO_MODIFY_TIMEOUT = 5000;
@@ -95,7 +96,7 @@ class UrlManager {
   startUrlUpdater(): void {
     this.listenTo(this.model, "change:mode", this.update);
 
-    if (Store.getState().skeletonTracing) {
+    if (Store.getState().tracing) {
       Store.subscribe(() => this.update());
     }
   }
@@ -113,10 +114,7 @@ class UrlManager {
       state = state.concat([Store.getState().flycam.zoomStep.toFixed(2)]);
     }
 
-    if (Store.getState().skeletonTracing.activeNodeId != null) {
-      state.push(Store.getState().skeletonTracing.activeNodeId);
-    }
-
+    getActiveNode(Store.getState().tracing).map(node => state.push(node.id));
     return `${this.baseUrl}#${state.join(",")}`;
   }
 }

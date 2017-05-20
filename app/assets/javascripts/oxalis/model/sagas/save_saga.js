@@ -5,22 +5,26 @@
 
 import _ from "lodash";
 import $ from "jquery";
+import app from "app";
 import Request from "libs/request";
 import messages from "messages";
-import app from "app";
 import Toast from "libs/toast";
 import { call, put, take, select, race } from "redux-saga/effects";
 import { delay } from "redux-saga";
-import { shiftSaveQueueAction, setSaveBusyAction, setLastSaveTimestampAction } from "oxalis/model/actions/save_actions";
-import { setVersionNumber } from "oxalis/model/actions/skeletontracing_actions";
+import { shiftSaveQueueAction, setSaveBusyAction, setLastSaveTimestampAction, pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
+import { createTreeAction, SkeletonTracingActions } from "oxalis/model/actions/skeletontracing_actions";
+import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { alert } from "libs/window";
+import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
+import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { TracingType, FlycamType } from "oxalis/store";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
 
 export function* pushAnnotationAsync(): Generator<*, *, *> {
-  yield take("INITIALIZE_SKELETONTRACING");
+  yield take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   yield put(setLastSaveTimestampAction());
   while (true) {
     const pushAction = yield take("PUSH_SAVE_QUEUE");
@@ -42,7 +46,7 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
 export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
   const batch = yield select(state => state.save.queue);
   const compactBatch = compactUpdateActions(batch);
-  const { version, tracingType, id: tracingId } = yield select(state => state.skeletonTracing);
+  const { version, tracingType, tracingId } = yield select(state => state.tracing);
   try {
     yield call(Request.sendJSONReceiveJSON,
       `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {
@@ -50,7 +54,7 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
         headers: { "X-Date": timestamp },
         data: compactBatch,
       });
-    yield put(setVersionNumber(version + 1));
+    yield put(setVersionNumberAction(version + 1));
     yield put(setLastSaveTimestampAction());
     yield put(shiftSaveQueueAction(batch.length));
     yield call(toggleErrorHighlighting, false);
@@ -108,4 +112,50 @@ export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<
   // }
 
   return result;
+}
+
+export function performDiffTracing(
+  prevTracing: TracingType,
+  tracing: TracingType,
+  flycam: FlycamType,
+): Array<UpdateAction> {
+  if (tracing.type === "skeleton" && prevTracing.type === "skeleton") {
+    return Array.from(diffSkeletonTracing(prevTracing, tracing, flycam));
+  } else if (tracing.type === "volume" && prevTracing.type === "volume") {
+    return Array.from(diffVolumeTracing(prevTracing, tracing, flycam));
+  } else {
+    return [];
+  }
+}
+
+export function* saveTracingAsync(): Generator<*, *, *> {
+  const { initSkeleton } = yield race({
+    initSkeleton: take("INITIALIZE_SKELETONTRACING"),
+    initVolume: take("INITIALIZE_VOLUMETRACING"),
+  });
+  let prevTracing = yield select(state => state.tracing);
+  if (initSkeleton) {
+    if (yield select(state => state.tracing.activeTreeId == null)) {
+      yield put(createTreeAction());
+    }
+  }
+  yield take("WK_READY");
+  const allowUpdate = yield select(state => state.tracing.restrictions.allowUpdate);
+  if (!allowUpdate) return;
+
+  while (true) {
+    if (initSkeleton) {
+      yield take([...SkeletonTracingActions, ...FlycamActions]);
+    } else {
+      yield take(FlycamActions);
+    }
+    const tracing = yield select(state => state.tracing);
+    const flycam = yield select(state => state.flycam);
+    const items = Array.from(yield call(performDiffTracing,
+      prevTracing, tracing, flycam));
+    if (items.length > 0) {
+      yield put(pushSaveQueueAction(items));
+    }
+    prevTracing = tracing;
+  }
 }

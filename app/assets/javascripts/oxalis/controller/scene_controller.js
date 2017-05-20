@@ -9,7 +9,7 @@ import Utils from "libs/utils";
 import Backbone from "backbone";
 import * as THREE from "three";
 import { V3 } from "libs/mjs";
-import { getPosition, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getPlaneScalingFactor, getViewportBoundingBox } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
@@ -20,9 +20,10 @@ import ContourGeometry from "oxalis/geometries/contourgeometry";
 import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { BoundingBoxType } from "oxalis/model";
-import PolygonFactory from "oxalis/view/polygons/polygon_factory";
+
 
 class SceneController {
   skeleton: Skeleton;
@@ -99,12 +100,12 @@ class SceneController {
     }
 
     this.volumeMeshes = new THREE.Object3D();
-    if (this.model.volumeTracing != null) {
-      this.contour = new ContourGeometry(this.model.volumeTracing);
+    if (this.model.isVolumeTracing()) {
+      this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
 
-    if (Store.getState().skeletonTracing != null) {
+    if (!this.model.isVolumeTracing()) {
       this.skeleton = new Skeleton();
       this.rootNode.add(this.skeleton.getRootNode());
     }
@@ -129,19 +130,32 @@ class SceneController {
   }
 
 
-  showShapes(bb: BoundingBoxType, resolution: number, id: number): void {
-    if (this.model.getSegmentationBinary() == null) { return; }
+  renderVolumeIsosurface(cellId: number): void {
+    const state = Store.getState();
+    if (!state.userConfiguration.isosurfaceDisplay || this.model.getSegmentationBinary() == null) {
+      return;
+    }
 
     if (this.polygonFactory != null) {
       this.polygonFactory.cancel();
     }
 
+    const factor = state.userConfiguration.isosurfaceBBsize;
+    const bb = getViewportBoundingBox(state);
+
+    for (let i = 0; i <= 2; i++) {
+      const width = bb.max[i] - bb.min[i];
+      const diff = ((factor - 1) * width) / 2;
+      bb.min[i] -= diff;
+      bb.max[i] += diff;
+    }
+
+
     this.polygonFactory = new PolygonFactory(
       this.model.getSegmentationBinary().cube,
-      resolution,
-      bb.min, bb.max, id,
+      state.userConfiguration.isosurfaceResolution,
+      bb.min, bb.max, cellId,
     );
-
     this.polygonFactory.getTriangles().then((triangles) => {
       if (triangles == null) {
         return;
@@ -156,7 +170,6 @@ class SceneController {
         const volume = new VolumeGeometry(triangles[triangleId], mappedId);
         volume.getMeshes().forEach(mesh => this.volumeMeshes.add(mesh));
       }
-
       app.vent.trigger("rerender");
       this.polygonFactory = null;
     });

@@ -242,7 +242,7 @@ class ArbitraryController {
 
   createBranchMarker(pos: Point2): void {
     if (!this.isBranchpointvideoMode() && !this.isSynapseannotationMode()) { return; }
-    const activeNodeId = Store.getState().skeletonTracing.activeNodeId;
+    const activeNodeId = getActiveNode(Store.getState().tracing).map(node => node.id).getOrElse(null);
     this.model.setMode(2);
     const f = Store.getState().flycam.zoomStep / (this.arbitraryView.width / this.WIDTH);
     Store.dispatch(moveFlycamAction([-(pos.x - (this.arbitraryView.width / 2)) * f, -(pos.y - (this.arbitraryView.width / 2)) * f, 0]));
@@ -261,8 +261,8 @@ class ArbitraryController {
     if (!this.isBranchpointvideoMode()) { return; }
 
     Utils.zipMaybe(
-      getActiveNode(Store.getState().skeletonTracing),
-      getMaxNodeId(Store.getState().skeletonTracing),
+      getActiveNode(Store.getState().tracing),
+      getMaxNodeId(Store.getState().tracing),
     ).map(([activeNode, maxNodeId]) => {
       if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
         return;
@@ -391,7 +391,7 @@ class ArbitraryController {
 
 
   centerActiveNode(): void {
-    getActiveNode(Store.getState().skeletonTracing).map((activeNode) => {
+    getActiveNode(Store.getState().tracing).map((activeNode) => {
       // animate the change to the new position and new rotation
       const curPos = getPosition(Store.getState().flycam);
       const newPos = activeNode.position;

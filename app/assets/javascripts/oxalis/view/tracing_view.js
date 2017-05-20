@@ -63,7 +63,7 @@ class TracingView extends Marionette.View {
 
   onZoomStepChange() {
     this.$el.toggleClass("zoomstep-warning",
-      (this.model.volumeTracing != null) && !this.model.canDisplaySegmentationData());
+      (this.model.isVolumeTracing()) && !this.model.canDisplaySegmentationData());
   }
 }
 TracingView.initClass();

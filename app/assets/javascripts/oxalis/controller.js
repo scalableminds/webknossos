@@ -92,19 +92,11 @@ class Controller {
 
     app.router.on("beforeunload", () => {
       if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
-        if (this.model.volumeTracing != null) {
-          const { stateLogger } = this.model.annotationModel;
-          if (!stateLogger.stateSaved() && stateLogger.allowUpdate) {
-            stateLogger.pushNow();
-            return messages["save.leave_page_unfinished"];
-          }
-        } else {
-          const state = Store.getState();
-          const stateSaved = !state.save.isBusy && state.save.queue.length === 0;
-          if (!stateSaved && state.skeletonTracing.restrictions.allowUpdate) {
-            Store.dispatch(saveNowAction());
-            return messages["save.leave_page_unfinished"];
-          }
+        const state = Store.getState();
+        const stateSaved = this.model.stateSaved();
+        if (!stateSaved && state.tracing.restrictions.allowUpdate) {
+          Store.dispatch(saveNowAction());
+          return messages["save.leave_page_unfinished"];
         }
       }
       return null;
@@ -116,7 +108,7 @@ class Controller {
 
     // TODO: Replace with skeletonTracing from Store (which is non-null currently)
     if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
-      if (this.model.volumeTracing != null) {
+      if (this.model.isVolumeTracing()) {
         // VOLUME MODE
         this.view = new VolumeTracingView(this.model);
         this.annotationController = new VolumeTracingController(
@@ -258,21 +250,16 @@ class Controller {
 
   initTimeLimit() {
     // only enable hard time limit for anonymous users so far
-    let model;
     if (!this.model.tracing.task || !this.model.tracing.user.isAnonymous) {
       return;
     }
 
-    // TODO move that somehwere else
-    const finishTracing = () => {
+    // TODO move that somewhere else
+    const finishTracing = async () => {
       // save the progress
-      model = this.model;
-
-      const tracingType = model.volumeTracing;
-      tracingType.stateLogger.pushNow().then(() => {
-        const url = `/annotations/${model.tracingType}/${model.tracingId}/finishAndRedirect`;
-        app.router.loadURL(url);
-      });
+      await this.model.save();
+      const url = `/annotations/${this.model.tracingType}/${this.model.tracingId}/finishAndRedirect`;
+      app.router.loadURL(url);
     };
 
     // parse hard time limit and convert from min to ms
@@ -298,7 +285,7 @@ class Controller {
   onZoomStepChange() {
     const shouldWarn = !this.model.canDisplaySegmentationData();
     if (shouldWarn && (this.zoomStepWarningToast == null)) {
-      const toastType = (this.model.volumeTracing != null) ? "danger" : "info";
+      const toastType = this.model.isVolumeTracing() ? "danger" : "info";
       this.zoomStepWarningToast = Toast.message(toastType,
         "Segmentation data and volume tracing is only fully supported at a smaller zoom level.", true);
     } else if (!shouldWarn && (this.zoomStepWarningToast != null)) {

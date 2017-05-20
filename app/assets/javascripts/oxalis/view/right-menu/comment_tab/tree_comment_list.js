@@ -8,12 +8,11 @@ import React from "react";
 import { connect } from "react-redux";
 import classNames from "classnames";
 import Comment from "oxalis/view/right-menu/comment_tab/comment";
-import type { OxalisState, TreeType } from "oxalis/store";
+import type { OxalisState, TreeType, SkeletonTracingType } from "oxalis/store";
 
 type TreeCommentListProps = {
   tree: TreeType,
-  activeTreeId: ?number,
-  activeNodeId: ?number,
+  skeletonTracing: SkeletonTracingType,
   sortOrder: "asc" | "desc";
 }
 
@@ -29,7 +28,7 @@ class TreeCommentList extends React.PureComponent {
   }
 
   render() {
-    const containsActiveNode = this.props.tree.treeId === this.props.activeTreeId;
+    const containsActiveNode = this.props.tree.treeId === this.props.skeletonTracing.activeTreeId;
 
     // don't render the comment nodes if the tree is collapsed
     const commentNodes = !this.state.collapsed ?
@@ -38,7 +37,7 @@ class TreeCommentList extends React.PureComponent {
           key={comment.node}
           data={comment}
           treeId={this.props.tree.treeId}
-          isActive={comment.node === this.props.activeNodeId}
+          isActive={comment.node === this.props.skeletonTracing.activeNodeId}
         />,
       ) :
       null;
@@ -66,8 +65,7 @@ class TreeCommentList extends React.PureComponent {
 
 function mapStateToProps(state: OxalisState) {
   return {
-    activeNodeId: state.skeletonTracing.activeNodeId,
-    activeTreeId: state.skeletonTracing.activeTreeId,
+    skeletonTracing: state.tracing,
   };
 }
 

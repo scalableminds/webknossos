@@ -8,6 +8,7 @@ import Drawing from "libs/drawing";
 import Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 import { Vector3Indicies } from "oxalis/constants";
+import Store from "oxalis/store";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
 
 export class VoxelIterator {
@@ -65,14 +66,12 @@ class VolumeLayer {
   constructor(plane: OrthoViewType, thirdDimensionValue: number) {
     this.plane = plane;
     this.thirdDimensionValue = thirdDimensionValue;
-    this.contourList = [];
     this.maxCoord = null;
     this.minCoord = null;
   }
 
 
   addContour(pos: Vector3): void {
-    this.contourList.push(pos);
     this.updateArea(pos);
   }
 
@@ -95,20 +94,30 @@ class VolumeLayer {
   }
 
 
+  getContourList() {
+    const volumeTracing = Store.getState().tracing;
+    if (volumeTracing.type !== "volume") {
+      throw Error("getContourList must only be called in a volume tracing!");
+    } else {
+      return volumeTracing.contourList;
+    }
+  }
+
+
   getSmoothedContourList() {
-    return Drawing.smoothLine(this.contourList, (pos => this.updateArea(pos)));
+    return Drawing.smoothLine(this.getContourList(), (pos => this.updateArea(pos)));
   }
 
 
   finish(): void {
     if (!this.isEmpty()) {
-      this.addContour(this.contourList[0]);
+      this.addContour(this.getContourList()[0]);
     }
   }
 
 
   isEmpty(): boolean {
-    return this.contourList.length === 0;
+    return this.getContourList().length === 0;
   }
 
 
@@ -168,9 +177,9 @@ class VolumeLayer {
   drawOutlineVoxels(setMap: (number, number) => void): void {
     let p1;
     let p2;
-    for (let i = 0; i < this.contourList.length; i++) {
-      p1 = this.get2DCoordinate(this.contourList[i]);
-      p2 = this.get2DCoordinate(this.contourList[(i + 1) % this.contourList.length]);
+    for (let i = 0; i < this.getContourList().length; i++) {
+      p1 = this.get2DCoordinate(this.getContourList()[i]);
+      p2 = this.get2DCoordinate(this.getContourList()[(i + 1) % this.getContourList().length]);
 
       Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
     }
@@ -255,9 +264,9 @@ class VolumeLayer {
     let sumArea = 0;
     let sumCx = 0;
     let sumCy = 0;
-    for (const i of Utils.__range__(0, (this.contourList.length - 1), false)) {
-      const [x, y] = this.get2DCoordinate(this.contourList[i]);
-      const [x1, y1] = this.get2DCoordinate(this.contourList[i + 1]);
+    for (const i of Utils.__range__(0, (this.getContourList().length - 1), false)) {
+      const [x, y] = this.get2DCoordinate(this.getContourList()[i]);
+      const [x1, y1] = this.get2DCoordinate(this.getContourList()[i + 1]);
       sumArea += (x * y1) - (x1 * y);
       sumCx += (x + x1) * ((x * y1) - (x1 * y));
       sumCy += (y + y1) * ((x * y1) - (x1 * y));

@@ -5,17 +5,16 @@ package models.user.time
 
 import scala.collection.mutable
 import scala.concurrent.Future
-
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task.TaskService
 import play.api.Play
 import play.api.libs.concurrent.Akka
 import akka.actor.{Actor, Props}
 import models.user.{User, UserDAO}
-import models.annotation.{Annotation, AnnotationLike, AnnotationService}
+import models.annotation.{Annotation, AnnotationDAO, AnnotationLike, AnnotationService}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import net.liftweb.common.Full
 import reactivemongo.bson.BSONObjectID
 import akka.agent.Agent
@@ -32,7 +31,11 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
   def logUserInteraction(user: User, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
     val timestamp = System.currentTimeMillis
-    timeSpanTracker ! TrackTime(timestamp, user._id, annotation, ctx)
+    logUserInteraction(Seq(timestamp), user, annotation)
+  }
+
+  def logUserInteraction(timestamps: Seq[Long], user: User, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Unit = {
+    timeSpanTracker ! TrackTime(timestamps, user._id, annotation, ctx)
   }
 
   def loggedTimeOfUser[T](
@@ -100,19 +103,21 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
   }
 
 
-  protected case class TrackTime(timestamp: Long, _user: BSONObjectID, annotation: Option[AnnotationLike], ctx: DBAccessContext)
+  protected case class TrackTime(timestamps: Seq[Long], _user: BSONObjectID, annotation: Option[AnnotationLike], ctx: DBAccessContext)
 
   protected class TimeSpanTracker extends Actor{
     private val lastUserActivity = mutable.HashMap.empty[BSONObjectID, TimeSpan]
 
-    private def isNotInterrupted(current: Long, last: TimeSpan) =
-      current - last.lastUpdate < MaxTracingPause
+    private def isNotInterrupted(current: Long, last: TimeSpan) = {
+      val duration = current - last.lastUpdate
+      duration >= 0 && duration < MaxTracingPause
+    }
 
     private def belongsToSameTracing( last: TimeSpan, annotation: Option[AnnotationLike]) =
       last.annotationEquals(annotation.map(_.id))
 
     private def createNewTimeSpan(timestamp: Long, _user: BSONObjectID, annotation: Option[AnnotationLike], ctx: DBAccessContext) = {
-      val timeSpan = TimeSpan.create(timestamp, _user, annotation)
+      val timeSpan = TimeSpan.create(timestamp, timestamp, _user, annotation)
       TimeSpanDAO.insert(timeSpan)(ctx)
       timeSpan
     }
@@ -152,39 +157,66 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       }
     }
 
+    // We intentionally return a Fox[Option] here, since the calling for-comprehension expects an Option[AnnotationLike]. In case
+    // None is passed in as "annotation", we want to pass this None on as Fox.successful(None) and not break the for-comprehension
+    // by returning Fox.empty.
+    private def getAnnotation(annotation: Option[String])(implicit ctx: DBAccessContext): Fox[Option[AnnotationLike]] = {
+      annotation match {
+        case Some(annotationId) =>
+          AnnotationDAO.findOneById(annotationId).map(Some(_))
+        case _ =>
+          Fox.successful(None)
+      }
+    }
+
+    private def updateTimeSpan(timeSpan: TimeSpan, timestamp: Long)(implicit ctx: DBAccessContext) = {
+      val duration = timestamp - timeSpan.lastUpdate
+      val updated = timeSpan.addTime(duration, timestamp)
+
+      val updateResult = for {
+        annotation <- getAnnotation(updated.annotation)
+        _ <- TimeSpanDAO.update(updated._id, updated)(ctx)
+        _ <- logTimeToTask(duration, annotation)
+        _ <- logTimeToAnnotation(duration, annotation)
+        _ <- logTimeToUser(duration, annotation, updated._user)
+      } yield {}
+
+      updateResult.onComplete{ x =>
+        if(x.isFailure || x.get.isEmpty)
+          logger.warn(s"Failed to save all time updates. Annotation: ${updated.annotation} Error: $x")
+      }
+
+      updated
+    }
+
     def receive = {
-      case TrackTime(timestamp, _user, _annotation, ctx) =>
+      case TrackTime(timestamps, _user, _annotation, ctx) =>
         // Only if the annotation belongs to the user, we are going to log the time on the annotation
         val annotation = _annotation.filter(_._user.contains(_user))
-        lastUserActivity.get(_user) match {
-          case Some(last) if isNotInterrupted(timestamp, last) =>
-            val duration = timestamp - last.lastUpdate
-            val updated = last.addTime(duration, timestamp)
+        val start = timestamps.head
 
-            val timeSpan =
-              if (belongsToSameTracing(last, annotation))
-                updated
-              else
-                createNewTimeSpan(timestamp, _user, annotation, ctx)
-            lastUserActivity.update(_user, timeSpan)
-
-            val updateResult = for{
-              _ <- TimeSpanDAO.update(updated._id, updated)(ctx)
-              _ <- logTimeToTask(duration, annotation)
-              _ <- logTimeToAnnotation(duration, annotation)
-              _ <- logTimeToUser(duration, annotation, _user)
-            } yield {
-              true
+        var current = lastUserActivity.get(_user).flatMap(last => {
+          if (isNotInterrupted(start, last)) {
+            if (belongsToSameTracing(last, annotation)) {
+              Some(last)
+            } else {
+              updateTimeSpan(last, start)(ctx)
+              None
             }
+          } else None
+        }).getOrElse(createNewTimeSpan(start, _user, annotation, ctx))
 
-            updateResult.onComplete{ x =>
-              if(x.isFailure || x.get.isEmpty)
-                logger.warn(s"Failed to save all time updates. Annotation: ${annotation.map(_.id)} Error: $x")
-            }
-          case _ =>
-            val timeSpan = createNewTimeSpan(timestamp, _user, annotation, ctx)
-            lastUserActivity.update(_user, timeSpan)
+        timestamps.sliding(2).foreach{ pair =>
+          val start = pair.head
+          val end = pair.last
+          val duration = end - start
+          if (duration >= MaxTracingPause) {
+            updateTimeSpan(current, start)(ctx)
+            current = createNewTimeSpan(end, _user, annotation, ctx)
+          }
         }
+        current = updateTimeSpan(current, timestamps.last)(ctx)
+        lastUserActivity.update(_user, current)
     }
   }
 }

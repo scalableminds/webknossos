@@ -6,6 +6,7 @@ import models.user.UserAgentTrackingDAO
 import oxalis.security.Secured
 import play.api._
 import play.api.i18n.MessagesApi
+import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.routing.JavaScriptReverseRouter
 import play.twirl.api.Html
@@ -60,6 +61,10 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller wit
   }
 
   def buildInfo = UserAwareAction { implicit request =>
-    Ok(buildinfo.BuildInfo.toJson)
+    Ok(Json.obj(
+      "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
+      "braingames-libs" -> braingameslibs.BuildInfo.toMap.mapValues(_.toString),
+      "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
+    ))
   }
 }

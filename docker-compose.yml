@@ -1,4 +1,4 @@
-version: '2.1'
+version: '2'
 
 services:
   webknossos-datastore:
@@ -10,9 +10,9 @@ services:
     image: scalableminds/sbt:$SBT_VERSION_TAG
     volumes:
       - ".:/project"
-      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/root/.ivy2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
+      - "~/.m2:/root/.m2"
+      - "~/.ivy2:/root/.ivy2"
+      - "~/.sbt:/root/.sbt"
 
   dev:
     extends:

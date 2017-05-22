@@ -8,6 +8,11 @@ import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 
 mockRequire.stopAll();
 
+const TIMESTAMP = 1494695001688;
+const DateMock = {
+  now: () => TIMESTAMP,
+};
+mockRequire("libs/date", DateMock);
 mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("app", { router: { off: _.noop, reload: _.noop } });
 mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
@@ -55,7 +60,6 @@ const initialState = {
   },
 };
 
-const TIMESTAMP = 1494695001688;
 const INIT_ACTIONS = ["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"];
 
 test("SaveSaga should compact multiple updateTracing update actions", (t) => {

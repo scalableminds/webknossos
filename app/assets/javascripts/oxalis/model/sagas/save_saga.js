@@ -43,7 +43,7 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
   }
 }
 
-export function* sendRequestToServer(): Generator<*, *, *> {
+export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
   const batch = yield select(state => state.save.queue);
   const compactBatch = compactUpdateActions(batch);
   const { version, tracingType, tracingId } = yield select(state => state.tracing);
@@ -51,6 +51,7 @@ export function* sendRequestToServer(): Generator<*, *, *> {
     yield call(Request.sendJSONReceiveJSON,
       `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {
         method: "PUT",
+        headers: { "X-Date": timestamp },
         data: compactBatch,
       });
     yield put(setVersionNumberAction(version + 1));

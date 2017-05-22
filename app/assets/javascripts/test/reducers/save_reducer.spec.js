@@ -7,10 +7,19 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
 import test from "ava";
+import mockRequire from "mock-require";
 
-import * as SaveActions from "oxalis/model/actions/save_actions";
-import SaveReducer from "oxalis/model/reducers/save_reducer";
-import { createEdge } from "oxalis/model/sagas/update_actions";
+mockRequire.stopAll();
+
+const TIMESTAMP = 1494695001688;
+const DateMock = {
+  now: () => TIMESTAMP,
+};
+mockRequire("libs/date", DateMock);
+
+const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
+const SaveReducer = mockRequire.reRequire("oxalis/model/reducers/save_reducer").default;
+const { createEdge } = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 
 const initialState = {
   save: {

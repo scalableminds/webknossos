@@ -5,9 +5,11 @@ import sbtassembly.PathList
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.sbt.routes.RoutesKeys._
+import sbtbuildinfo._
+import sbtbuildinfo.BuildInfoKeys._
 
 object Dependencies{
-  val braingamesVersion = "10.1.6"
+  val braingamesVersion = "10.1.16"
 
   val braingamesDataStore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
 
@@ -62,7 +64,25 @@ object ApplicationBuild extends Build with sbtassembly.AssemblyKeys {
     }
   )
 
+  lazy val buildInfoSettings = Seq(
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion,
+      "commitHash" -> new java.lang.Object() {
+        override def toString(): String = {
+          try {
+            val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git rev-parse HEAD").getInputStream())
+            (new java.io.BufferedReader(extracted)).readLine()
+          } catch {
+            case t: Throwable => "get git hash failed"
+          }
+        }
+      }.toString()
+    ),
+    buildInfoPackage := "datastore",
+    buildInfoOptions := Seq(BuildInfoOption.ToJson, BuildInfoOption.BuildTime)
+  )
+
   lazy val standaloneDatastore: Project = Project("standalone-datastore", file("."))
     .enablePlugins(play.PlayScala)
-    .settings(datastoreSettings:_*)
+    .enablePlugins(BuildInfoPlugin)
+    .settings((datastoreSettings ++ buildInfoSettings):_*)
 }

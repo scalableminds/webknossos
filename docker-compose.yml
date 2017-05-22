@@ -1,7 +1,6 @@
-version: '2'
+version: '2.1'
 
 services:
-
   webknossos-datastore:
     image: scalableminds/webknossos-datastore:$DOCKER_TAG
     ports:
@@ -11,6 +10,23 @@ services:
     image: scalableminds/sbt:$SBT_VERSION_TAG
     volumes:
       - ".:/project"
-      - "~/.m2:/root/.m2"
-      - "~/.ivy2:/root/.ivy2"
-      - "~/.sbt:/root/.sbt"
+      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/root/.ivy2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
+
+  dev:
+    extends:
+      service: sbt
+    ports:
+      - "9090:9090"
+      - "5005:5005"
+    command: >
+      bash -c
+      "sbt -v -d -jvm-debug 5005 \"run
+      -Djava.net.preferIPv4Stack=true
+      -Dhttp.address=0.0.0.0
+      -Dhttp.port=$${PORT}
+      \""
+    environment:
+      - PORT=9090
+    stdin_open: true

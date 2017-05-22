@@ -12,14 +12,14 @@ type RequestOptions = {
   headers?: { [key: string]: string };
   method?: 'GET' | 'POST' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH';
   timeout?: number;
-}
+};
 
 type RequestOptionsWithData<T> = {
   data: T;
   headers?: { [key: string]: string };
   method?: 'GET' | 'POST' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH';
   timeout?: number;
-}
+};
 
 class Request {
 

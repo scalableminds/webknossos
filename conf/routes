@@ -8,7 +8,7 @@ GET           /dashboard                                                        
 GET           /impressum                                                        controllers.Application.impressum
 GET           /info                                                             controllers.Application.info
 GET           /thankyou                                                         controllers.Application.thankyou
-GET           /buildinfo                                                        controllers.Application.buildInfo
+GET           /api/buildinfo                                                    controllers.Application.buildInfo
 
 # Github Issues integration
 GET           /issues                                                           controllers.GithubIssues.index
@@ -115,7 +115,7 @@ GET           /annotations/:typ/:id/reopen                                      
 GET           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
 
 # Deaktivated due to changes in the format of updates in the saved annotation updates
-GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
+# GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
 # GET           /annotations/:typ/:id/updates                                     controllers.AnnotationController.listUpdates(typ: String, id: String)
 # POST          /annotations/:typ/:id/updates/transfer                            controllers.AnnotationController.transferUpdates(typ: String, id: String, fromId: String, fromTyp: String, maxVersion: Int)
 

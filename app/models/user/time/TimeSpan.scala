@@ -46,8 +46,8 @@ object TimeSpan {
 
   val hoursRx = "[0-9]+".r
 
-  def create(timestamp: Long, _user: BSONObjectID, annotation: Option[AnnotationLike]) =
-    TimeSpan(0, timestamp, timestamp, _user = _user, annotation = annotation.map(_.id))
+  def create(start: Long, end: Long, _user: BSONObjectID, annotation: Option[AnnotationLike]) =
+    TimeSpan(end - start, start, end, _user = _user, annotation = annotation.map(_.id))
 
   def inMillis(days: Int, hours: Int, minutes: Int) =
     (days.days + hours.hours + minutes.minutes).toMillis

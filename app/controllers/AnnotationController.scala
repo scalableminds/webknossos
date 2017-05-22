@@ -3,7 +3,6 @@ package controllers
 import javax.inject.Inject
 
 import scala.concurrent.duration._
-
 import akka.util.Timeout
 import com.scalableminds.util.mvc.JsonResult
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
@@ -21,6 +20,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsArray, JsObject, _}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
+
+import scala.util.Try
 
 /**
  * Company: scalableminds
@@ -135,22 +136,22 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   //   } yield JsonOk(Messages("annotation.updates.transfered"))
   // }
 
-   def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
-     for {
-       oldAnnotation <- findAnnotation(typ, id)
-       _ <- isUpdateAllowed(oldAnnotation, version).toFox
-       _ <- oldAnnotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
-       updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion=version) ?~> Messages("annotation.revert.findUpdatesFailed")
-       combinedUpdate = JsArray(combineUpdates(updates))
-       resetAnnotation <- oldAnnotation.muta.resetToBase() ?~> Messages("annotation.revert.resetToBaseFailed")
-       updateableAnnotation <- isUpdateable(resetAnnotation) ?~> Messages("annotation.update.impossible")
-       result <- handleUpdates(updateableAnnotation, combinedUpdate, version) ?~> Messages("annotation.revert.handlingUpdatesFailed")
-       _ <- AnnotationUpdateService.removeAll(typ, id, aboveVersion = version) ?~> Messages("annotation.revert.deleteUpdatesFailed")
-     } yield {
-       logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
-       JsonOk(result, "annotation.reverted")
-     }
-   }
+  // def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
+  //   for {
+  //     oldAnnotation <- findAnnotation(typ, id)
+  //     _ <- isUpdateAllowed(oldAnnotation, version).toFox
+  //     _ <- oldAnnotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
+  //     updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion=version) ?~> Messages("annotation.revert.findUpdatesFailed")
+  //     combinedUpdate = JsArray(combineUpdates(updates))
+  //     resetAnnotation <- oldAnnotation.muta.resetToBase() ?~> Messages("annotation.revert.resetToBaseFailed")
+  //     updateableAnnotation <- isUpdateable(resetAnnotation) ?~> Messages("annotation.update.impossible")
+  //     result <- handleUpdates(updateableAnnotation, combinedUpdate, version) ?~> Messages("annotation.revert.handlingUpdatesFailed")
+  //     _ <- AnnotationUpdateService.removeAll(typ, id, aboveVersion = version) ?~> Messages("annotation.revert.deleteUpdatesFailed")
+  //   } yield {
+  //     logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
+  //     JsonOk(result, "annotation.reverted")
+  //   }
+  // }
 
   def reset(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
@@ -193,16 +194,17 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def handleUpdates(annotation: Annotation, js: JsValue, version: Int)(implicit request: AuthenticatedRequest[_]): Fox[JsObject] = {
+  def handleUpdates(annotation: Annotation, js: JsValue, version: Int, clientTimestamp: Long)(implicit request: AuthenticatedRequest[_]): Fox[JsObject] = {
     js match {
-      case JsArray(jsUpdates) =>
+      case JsArray(jsUpdates) if jsUpdates.length >= 1 =>
         for {
           updated <- annotation.muta.updateFromJson(jsUpdates) //?~> Messages("format.json.invalid")
         } yield {
-          TimeSpanService.logUserInteraction(request.user, Some(updated))
+          val timestamps = jsUpdates.map(update => (update \ "timestamp").as[Long]).sorted
+          TimeSpanService.logUserInteraction(timestamps, request.user, Some(updated))
           Json.obj("version" -> version)
         }
-      case t                  =>
+      case t =>
         logger.info("Failed to handle json update. Tried: " + t)
         Failure(Messages("format.json.invalid"))
     }
@@ -222,10 +224,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       Failure(Messages("notAllowed")) ~> FORBIDDEN
   }
 
-  def executeUpdateIfAllowed(oldAnnotation: Annotation, isAllowed: Boolean, updates: JsValue, version: Int, user: User)(implicit request: AuthenticatedRequest[_]) = {
+  def executeUpdateIfAllowed(oldAnnotation: Annotation, isAllowed: Boolean, updates: JsValue, version: Int, user: User, clientTimestamp: Long)(implicit request: AuthenticatedRequest[_]) = {
     if (isAllowed)
       for {
-        result <- handleUpdates(oldAnnotation, updates, version)
+        result <- handleUpdates(oldAnnotation, updates, version, clientTimestamp)
       } yield {
         JsonOk(result, "annotation.saved")
       }
@@ -241,12 +243,13 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 8388608)) { implicit request =>
     // Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
     AnnotationUpdateService.store(typ, id, version, request.body)
+    val clientTimestamp = request.headers.get("x-date").flatMap(s => Try(s.toLong).toOption).getOrElse(System.currentTimeMillis)
 
     for {
       oldAnnotation <- findAnnotation(typ, id)
       updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
       isAllowed <- isUpdateAllowed(oldAnnotation, version).toFox
-      result <- executeUpdateIfAllowed(updateableAnnotation, isAllowed, request.body, version, request.user)
+      result <- executeUpdateIfAllowed(updateableAnnotation, isAllowed, request.body, version, request.user, clientTimestamp)
     } yield {
       result
     }

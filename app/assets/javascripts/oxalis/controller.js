@@ -131,7 +131,6 @@ class Controller {
     this.listenTo(this.planeController.planeView, "render", () => stats.update());
 
     this.initKeyboard();
-    // this.initTimeLimit();
     this.initTaskScript();
     this.maybeShowNewTaskTypeModal();
 
@@ -273,42 +272,6 @@ class Controller {
     ) {
       Utils.__guard__(this.arbitraryController, x1 => x1.stop());
       this.planeController.start(newMode);
-    }
-  }
-
-
-  initTimeLimit() {
-    // only enable hard time limit for anonymous users so far
-    const task = Store.getState().task;
-    if (task == null || !Model.tracing.user.isAnonymous) {
-      return;
-    }
-
-    // TODO move that somewhere else
-    const finishTracing = async () => {
-      // save the progress
-      await Model.save();
-      const url = `/annotations/${Store.getState().tracing.tracingType}/${Store.getState().tracing.tracingId}/finishAndRedirect`;
-      app.router.loadURL(url);
-    };
-
-    // parse hard time limit and convert from min to ms
-    const { expectedTime } = task.type;
-    let timeLimit = (expectedTime.maxHard * 60 * 1000) || 0;
-
-    // setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
-    if (timeLimit >= Math.pow(2, 32) / 2) {
-      Toast.error("Time limit was reduced as it cannot be bigger than 35791 minutes.");
-      timeLimit = (Math.pow(2, 32) / 2) - 1;
-    }
-    console.log(`TimeLimit is ${timeLimit / 60 / 1000} min`);
-
-    if (timeLimit) {
-      setTimeout(() => {
-        window.alert("Time limit is reached, thanks for tracing!");
-        finishTracing();
-      }
-      , timeLimit);
     }
   }
 

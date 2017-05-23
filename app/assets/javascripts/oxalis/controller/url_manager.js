@@ -29,10 +29,9 @@ class UrlManager {
   initialState: UrlManagerState;
   lastUrl: ?string
 
-  initialize(): UrlManager {
+  initialize() {
     this.baseUrl = document.location.pathname + document.location.search;
     this.initialState = this.parseUrl();
-    return this;
   }
 
   reset(): void {

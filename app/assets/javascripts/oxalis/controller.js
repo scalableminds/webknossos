@@ -39,7 +39,6 @@ import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { SkeletonTracingTypeTracingType } from "oxalis/store";
 
 class Controller {
-  urlManager: typeof UrlManager;
   sceneController: SceneController;
   annotationController: SkeletonTracingController | VolumeTracingController;
   planeController: PlaneController;
@@ -70,7 +69,7 @@ class Controller {
 
     _.extend(this, Backbone.Events);
 
-    this.urlManager = UrlManager.initialize();
+    UrlManager.initialize();
 
     Model.fetch(tracingType, tracingId, controlMode, true)
       .then(() => this.modelFetchDone())
@@ -93,7 +92,7 @@ class Controller {
       return null;
     });
 
-    this.urlManager.startUrlUpdater();
+    UrlManager.startUrlUpdater();
 
     this.view = new View();
     this.sceneController = new SceneController();

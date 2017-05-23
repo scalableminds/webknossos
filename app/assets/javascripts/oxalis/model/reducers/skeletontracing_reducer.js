@@ -32,7 +32,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
       cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
-      let activeNodeId = Utils.unpackMaybe(activeNodeIdMaybe);
+      let activeNodeId = Utils.toNullable(activeNodeIdMaybe);
       const activeTreeIdMaybe = activeNodeIdMaybe
         .chain((nodeId) => {
           // use activeNodeId to find active tree
@@ -57,7 +57,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           const lastTree = Maybe.fromNullable(_.maxBy(_.values(trees), tree => tree.id));
           return lastTree.map(t => t.treeId);
         });
-      const activeTreeId = Utils.unpackMaybe(activeTreeIdMaybe);
+      const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
 
       const skeletonTracing: SkeletonTracingType = {
         type: "skeleton",

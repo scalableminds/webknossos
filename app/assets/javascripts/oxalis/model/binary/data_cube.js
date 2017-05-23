@@ -42,7 +42,7 @@ class DataCube {
   BIT_DEPTH: number;
   MAX_ZOOM_STEP: number;
   BYTE_OFFSET: number;
-  cubes: Array<?CubeEntry>;
+  cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
   pullQueue: PullQueue;
   pushQueue: PushQueue;
@@ -290,9 +290,6 @@ class DataCube {
 
   forgetOutOfBoundaryBuckets(): void {
     for (const cube of this.cubes) {
-      if (!cube) {
-        continue;
-      }
       for (const bucketIndex of cube.data.keys()) {
         const bucket = cube.data.get(bucketIndex);
         if (bucket instanceof DataBucket && bucket.isPartlyOutsideBoundingBox) {

@@ -45,21 +45,21 @@ class DatasetActionsView extends PureComponent {
   savedPollingInterval: number = 0;
   _forceUpdate = () => { this.forceUpdate(); };
 
-  handleSave = async () => {
+  handleSave = async (event?: SyntheticInputEvent) => {
+    if (event != null) {
+      event.target.blur();
+    }
     await Model.save();
   };
 
-  handleCopyToAccount = async () => {
+  handleCopyToAccount = async (event: SyntheticInputEvent) => {
+    event.target.blur();
     const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/duplicate`;
     app.router.loadURL(url);
   };
 
-  handleCopyToAccount = async () => {
-    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/duplicate`;
-    app.router.loadURL(url);
-  };
-
-  handleFinish = async () => {
+  handleFinish = async (event: SyntheticInputEvent) => {
+    event.target.blur();
     const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
@@ -75,7 +75,8 @@ class DatasetActionsView extends PureComponent {
     this.setState({ shareModalOpen: false });
   };
 
-  handleDownload = async () => {
+  handleDownload = async (event: SyntheticInputEvent) => {
+    event.target.blur();
     const win = window.open("about:blank", "_blank");
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
@@ -84,7 +85,8 @@ class DatasetActionsView extends PureComponent {
     win.document.body.innerHTML = messages["download.close_window"];
   };
 
-  handleNextTask = async () => {
+  handleNextTask = async (event: SyntheticInputEvent) => {
+    event.target.blur();
     const { tracingType, tracingId } = this.props.tracing;
     const finishUrl = `/annotations/${tracingType}/${tracingId}/finish`;
     const requestTaskUrl = "/user/tasks/request";

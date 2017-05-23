@@ -255,9 +255,10 @@ export type TraceLimitType = {
 
 export type TaskType = {
   +id: number,
+  +type: "string",
   +script?: {
-    gist: string,
-    name: string,
+    +gist: string,
+    +name: string,
   },
   +type: {
     +summary: string,

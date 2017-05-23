@@ -97,13 +97,13 @@ class DatasetActionsView extends PureComponent {
       const annotation = await Request.receiveJSON(requestTaskUrl);
       const state = Store.getState();
 
-      const differentDataset = state.dataset.name !== annotation.dataSetName;
-      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.task, x => x.type.id);
-      const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
+      const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
+      const isDifferentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.task, x => x.type.id);
+      const differentTaskTypeParam = isDifferentTaskType ? "?differentTaskType" : "";
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
-      if (differentDataset || differentTaskType) {
+      if (isDifferentDataset || isDifferentTaskType) {
         app.router.loadURL(newTaskUrl);
       } else {
         // $FlowFixMe

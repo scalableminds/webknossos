@@ -175,19 +175,7 @@ class ArbitraryPlane {
 
 
   createMesh() {
-    if (this.controller.isBranchpointvideoMode()) {
-      const options = {
-        polygonOffset: true,
-        polygonOffsetFactor: 10.0,
-        polygonOffsetUnits: 40.0,
-      };
-
-      const factory = new ArbitraryPlaneMaterialFactory(this.width);
-      factory.makeMaterial(options);
-      this.textureMaterial = factory.getMaterial();
-    } else {
-      this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.width).getMaterial();
-    }
+    this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.width).getMaterial();
 
     // create mesh
     const plane = new THREE.Mesh(

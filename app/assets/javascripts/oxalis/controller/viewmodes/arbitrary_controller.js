@@ -232,25 +232,18 @@ class ArbitraryController {
 
 
   createBranchMarker(pos: Point2): void {
-    if (!this.isBranchpointvideoMode() && !this.isSynapseannotationMode()) { return; }
-    const activeNodeId = getActiveNode(Store.getState().tracing).map(node => node.id).getOrElse(null);
     Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE));
     const f = Store.getState().flycam.zoomStep / (this.arbitraryView.width / this.WIDTH);
     Store.dispatch(moveFlycamAction([-(pos.x - (this.arbitraryView.width / 2)) * f, -(pos.y - (this.arbitraryView.width / 2)) * f, 0]));
     Store.dispatch(createTreeAction());
     this.setWaypoint();
     Store.dispatch(moveFlycamAction([(pos.x - (this.arbitraryView.width / 2)) * f, (pos.y - (this.arbitraryView.width / 2)) * f, 0]));
-    if (this.isBranchpointvideoMode() && activeNodeId != null) {
-      Store.dispatch(setActiveNodeAction(activeNodeId, true));
-    }
     Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY));
     this.moved();
   }
 
 
   nextNode(nextOne: boolean): void {
-    if (!this.isBranchpointvideoMode()) { return; }
-
     Utils.zipMaybe(
       getActiveNode(Store.getState().tracing),
       getMaxNodeId(Store.getState().tracing),
@@ -274,7 +267,6 @@ class ArbitraryController {
 
   move(timeFactor: number): void {
     if (!this.isStarted) { return; }
-    if (this.isBranchpointvideoMode()) { return; }
     Store.dispatch(moveFlycamAction([0, 0, this.getVoxelOffset(timeFactor)]));
     this.moved();
   }
@@ -365,9 +357,6 @@ class ArbitraryController {
 
 
   setClippingDistance(value: number): void {
-    if (this.isBranchpointvideoMode()) {
-      this.arbitraryView.setClippingDistance(constants.BRANCHPOINT_VIDEO_CLIPPING_DISTANCE);
-    }
     this.arbitraryView.setClippingDistance(value);
   }
 
@@ -456,16 +445,6 @@ class ArbitraryController {
       this.setWaypoint();
       this.lastNodeMatrix = matrix;
     }
-  }
-
-
-  isBranchpointvideoMode(): boolean {
-    return Utils.__guard__(Store.getState().task, x => x.type.summary) === "branchpointvideo";
-  }
-
-
-  isSynapseannotationMode(): boolean {
-    return Utils.__guard__(Store.getState().task, x => x.type.summary) === "synapseannotation";
   }
 }
 ArbitraryController.initClass();

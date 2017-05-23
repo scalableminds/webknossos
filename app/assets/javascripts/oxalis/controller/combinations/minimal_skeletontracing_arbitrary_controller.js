@@ -79,7 +79,6 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
   // make sure that it is not possible to keep nodes from being created
   setWaypoint(): void {
-    if (this.isBranchpointvideoMode()) { return; }
     if (!Store.getState().flightmodeRecording) {
       Store.dispatch(setFlightmodeRecordingAction(true));
     }

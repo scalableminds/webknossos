@@ -53,7 +53,7 @@ class ArbitraryController {
     keyboardOnce: ?InputKeyboard;
     destroy: () => void;
   };
-  mode: ModeType = "orthogonal";
+  mode: ModeType = constants.MODE_PLANE_TRACING;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;

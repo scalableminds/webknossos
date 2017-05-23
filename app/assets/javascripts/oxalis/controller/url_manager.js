@@ -75,7 +75,7 @@ class UrlManager {
           state.mode = modeString;
         } else {
           // Let's default to MODE_PLANE_TRACING
-          state.mode = "orthogonal";
+          state.mode = constants.MODE_PLANE_TRACING;
         }
         state.zoomStep = stateArray[4];
 

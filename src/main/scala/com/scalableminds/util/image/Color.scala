@@ -29,15 +29,19 @@ object Color {
 
   implicit object ColorFormat extends Format[Color] {
 
-    def writes(c: Color) = Json.arr(c.r, c.g, c.b, c.a)
+    def writes(c: Color) = if (c.a == 1)  Json.arr(c.r, c.g, c.b) else Json.arr(c.r, c.g, c.b, c.a)
 
     def reads(json: JsValue) = json match {
-      case JsArray(ts) if ts.size == 4 =>
+      case JsArray(ts) =>
         val c = ts.map(fromJson[Float](_)).flatMap(_.asOpt)
-        if (c.size != 4)
+        if (c.size != ts.size)
           JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.array.invalidContent"))))
         else
-          JsSuccess(Color(c(0), c(1), c(2), c(3)))
+          c.size match {
+            case 3 => JsSuccess(Color(c(0), c(1), c(2), 1))
+            case 4 => JsSuccess(Color(c(0), c(1), c(2), c(3)))
+            case _ => JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.array.invalidContent"))))
+          }
       case _ =>
         JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.point3DArray"))))
     }

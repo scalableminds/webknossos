@@ -16,7 +16,6 @@ import com.typesafe.config.Config
 import com.scalableminds.util.tools.{Fox, FoxImplicits, ProgressState}
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
 import com.scalableminds.braingames.binary.store.{DataStore, FileDataStore}
-import com.scalableminds.util.geometry.Point3D
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import net.liftweb.common.{Box, Full}

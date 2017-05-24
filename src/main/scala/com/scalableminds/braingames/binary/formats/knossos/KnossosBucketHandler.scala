@@ -6,6 +6,7 @@ package com.scalableminds.braingames.binary.formats.knossos
 import java.io.{FileInputStream, RandomAccessFile}
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
+import java.nio.file.{Files, Path}
 import java.util.concurrent.TimeoutException
 
 import com.scalableminds.braingames.binary.models._
@@ -181,7 +182,7 @@ class KnossosBucketHandler(val cache: DataCubeCache)
   private def saveBucketToUnderlying(saveBucket: BucketWriteInstruction, section: KnossosDataLayerSection, timeout: FiniteDuration): Fox[Boolean] = {
     Future {
       blocking {
-        val saveResult = dataStore.save(saveBucket, section).futureBox
+        val saveResult = dataStore.save(saveBucket, section, None).futureBox
         Await.result(saveResult, timeout)
       }
     }.recover {

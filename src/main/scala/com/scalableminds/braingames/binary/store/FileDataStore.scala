@@ -79,8 +79,8 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     }
   }
 
-  def save(dataInfo: BucketWriteInstruction, section: KnossosDataLayerSection): Fox[Boolean] = {
-    save(knossosBaseDir(dataInfo, section), dataInfo)
+  def save(dataInfo: BucketWriteInstruction, section: KnossosDataLayerSection, originalFile: Option[Path]): Fox[Boolean] = {
+    save(knossosBaseDir(dataInfo, section), dataInfo, originalFile)
   }
 
   private def copyBucketToCube(outputFile: RandomAccessFile, dataInfo: BucketWriteInstruction) = {
@@ -106,7 +106,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
     }
   }
 
-  def save(dataSetDir: Path, dataInfo: BucketWriteInstruction): Fox[Boolean] = {
+  def save(dataSetDir: Path, dataInfo: BucketWriteInstruction, originalFile: Option[Path] = None): Fox[Boolean] = {
     Future {
       val cubePosition = dataInfo.position.toCube(dataInfo.dataLayer.cubeLength)
 
@@ -114,9 +114,12 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
       var outputFile: RandomAccessFile = null
       try {
         PathUtils.parent(path.toAbsolutePath).map(p => Files.createDirectories(p))
-        outputFile = new RandomAccessFile(path.toFile, "rwd")
-
+        if (!Files.exists(path.toAbsolutePath)) {
+          originalFile.map(Files.copy(_, path.toAbsolutePath))
+        }
+        outputFile = new RandomAccessFile(path.toFile, "rw")
         copyBucketToCube(outputFile, dataInfo)
+        outputFile.getFD().sync()
         logger.trace(s"Data was saved. Compressed: false Size: ${dataInfo.data.length} Location: $path")
         Full(true)
       } catch {

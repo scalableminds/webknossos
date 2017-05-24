@@ -62,8 +62,8 @@ trait Controller extends PlayController
       )
     )
 
-  def bulk2StatusJson(results: List[Box[String]]) = {
-    def singleResult2Status(e: Box[String]) =
+  def bulk2StatusJson(results: List[Box[JsObject]]) = {
+    def singleResult2Status(e: Box[JsObject]) =
       e match {
         case Full(s)                                 =>
           Json.obj("status" -> OK, jsonSuccess -> s)

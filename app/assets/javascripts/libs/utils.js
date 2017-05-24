@@ -4,7 +4,9 @@
  */
 
 import _ from "lodash";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
+import Maybe from "data.maybe";
+import window from "libs/window";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
 
@@ -52,8 +54,15 @@ const Utils = {
     const r = (bigint >> 16) & 255;
     const g = (bigint >> 8) & 255;
     const b = bigint & 255;
-
     return [r, g, b];
+  },
+
+  hexToRgba(hex: string): Vector4 {
+    const bigint = parseInt(hex.slice(1), 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return [r, g, b, 1];
   },
 
   compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {
@@ -189,6 +198,12 @@ const Utils = {
     return new Promise((resolve) => { setTimeout(resolve, timeout); });
   },
 
+  animationFrame(): Promise<void> {
+    return new Promise((resolve) => {
+      window.requestAnimationFrame(resolve);
+    });
+  },
+
   idleFrame(timeout: ?number = null): Promise<void> {
     return new Promise((resolve) => {
       if (_.isFunction(window.reqeustIdleCallback)) {
@@ -201,6 +216,20 @@ const Utils = {
         this.sleep(timeout != null ? timeout : 100).then(resolve);
       }
     });
+  },
+
+
+  diffArrays<T>(stateA: Array<T>, stateB: Array<T>): { both: Array<T>, onlyA: Array<T>, onlyB: Array<T> } {
+    const setA = new Set(stateA);
+    const both = stateB.filter(x => setA.has(x));
+    const bothSet = new Set(both);
+    const onlyA = stateA.filter(x => !bothSet.has(x));
+    const onlyB = stateB.filter(x => !bothSet.has(x));
+    return { both, onlyA, onlyB };
+  },
+
+  zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
+    return maybeA.chain(valueA => maybeB.map(valueB => [valueA, valueB]));
   },
 };
 

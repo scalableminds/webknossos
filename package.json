@@ -10,18 +10,21 @@
     "url": "git://github.com/scalableminds/webknossos.git"
   },
   "devDependencies": {
-    "babel-cli": "^6.16.0",
-    "babel-core": "^6.21.0",
-    "babel-eslint": "^7.1.1",
-    "babel-loader": "^6.2.10",
-    "babel-plugin-transform-async-to-generator": "^6.16.0",
-    "babel-plugin-transform-class-properties": "^6.19.0",
-    "babel-plugin-transform-flow-strip-types": "^6.21.0",
-    "babel-preset-env": "^1.1.4",
-    "babel-preset-react": "^6.16.0",
+    "ava": "^0.19.1",
+    "babel-cli": "^6.24.1",
+    "babel-core": "^6.24.1",
+    "babel-eslint": "^7.2.3",
+    "babel-loader": "^7.0.0",
+    "babel-plugin-transform-async-to-generator": "^6.24.1",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-flow-strip-types": "^6.22.0",
+    "babel-polyfill": "^6.23.0",
+    "babel-preset-env": "^1.4.0",
+    "babel-preset-react": "^6.24.1",
+    "babel-preset-react-optimize": "^1.0.1",
     "babel-register": "^6.9.0",
-    "css-loader": "^0.26.1",
-    "documentation": "^4.0.0-beta.18",
+    "css-loader": "^0.28.1",
+    "documentation": "4.0.0-rc.1",
     "eslint": "^3.12.2",
     "eslint-config-airbnb": "^13.0.0",
     "eslint-import-resolver-webpack": "^0.8.0",
@@ -29,34 +32,36 @@
     "eslint-plugin-jasmine": "^2.2.0",
     "eslint-plugin-jsx-a11y": "2.2.3",
     "eslint-plugin-react": "^6.8.0",
-    "exports-loader": "^0.6.3",
-    "extract-text-webpack-plugin": "2.0.0",
-    "file-loader": "^0.9.0",
-    "flow-bin": "^0.40.0",
-    "imports-loader": "^0.7.0",
+    "exports-loader": "^0.6.4",
+    "extract-text-webpack-plugin": "^2.1.0",
+    "file-loader": "^0.11.1",
+    "flow-bin": "^0.43.1",
+    "imports-loader": "^0.7.1",
     "isomorphic-fetch": "^2.2.0",
-    "jasmine": "^2.5.2",
-    "jasmine-spec-reporter": "^3.2.0",
     "less": "^2.7.2",
     "less-loader": "^2.2.3",
     "mock-require": "^1.2.1",
+    "redux-mock-store": "^1.2.2",
     "sinon": "^1.17.3",
-    "style-loader": "^0.13.1",
-    "url-loader": "^0.5.7",
+    "style-loader": "^0.17.0",
+    "url-loader": "^0.5.8",
     "wdio-jasmine-framework": "^0.2.19",
     "wdio-selenium-standalone-service": "0.0.7",
     "wdio-spec-reporter": "0.0.3",
     "webdriverio": "^4.4.0",
-    "webpack": "2.2.0",
-    "worker-loader": "^0.7.1"
+    "webpack": "^2.5.1"
   },
   "scripts": {
-    "test": "export NODE_PATH=app/assets/javascripts && node_modules/.bin/babel-node app/assets/javascripts/test/run-jasmine.js",
+    "test": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --timeout=30s",
+    "test-verbose": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --timeout=30s --verbose",
+    "test-watch": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --watch",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
-    "flow": "node_modules/.bin/flow check",
+    "flow": "node_modules/.bin/flow",
+    "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
+    "lint-fix": "node_modules/.bin/eslint --fix --quiet app/assets/javascripts/",
     "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
-    "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api.js app/assets/javascripts/oxalis/api.js --github --sort-order alpha --name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api"
+    "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api"
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",
@@ -75,6 +80,8 @@
     "classnames": "^2.2.5",
     "clipboard-js": "^0.2.0",
     "d3": "^3.5.12",
+    "data.maybe": "^1.2.2",
+    "deep-freeze": "0.0.1",
     "es6-promise": "^3.0.2",
     "flow-coverage-report": "^0.2.0",
     "font-awesome": "^4.5.0",
@@ -92,6 +99,7 @@
     "react-dom": "^15.1.0",
     "react-redux": "^5.0.2",
     "redux": "^3.6.0",
+    "redux-logger": "^3.0.0",
     "redux-saga": "^0.14.3",
     "scroll-into-view-if-needed": "^1.0.2",
     "stats.js": "^1.0.0",
@@ -100,5 +108,21 @@
     "underscore": "^1.8.3",
     "webcola": "3.3.0",
     "whatwg-fetch": "^1.1.0"
+  },
+  "ava": {
+    "files": [
+      "app/assets/javascripts/test/**/*.spec.js"
+    ],
+    "source": [
+      "app/assets/javascripts/**/*.{js,jsx}"
+    ],
+    "modules": true,
+    "failFast": true,
+    "failWithoutAssertions": false,
+    "babel": "inherit",
+    "powerAssert": true,
+    "require": [
+      "babel-register"
+    ]
   }
 }

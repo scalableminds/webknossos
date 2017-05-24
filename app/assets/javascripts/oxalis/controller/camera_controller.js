@@ -8,10 +8,10 @@ import app from "app";
 import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import Flycam2d from "oxalis/model/flycam2d";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
@@ -23,7 +23,6 @@ type TweenState = {
   upY: number,
   upZ: number,
   camera: THREE.OrthographicCamera,
-  flycam: Flycam2d,
   dx: number,
   dy: number,
   dz: number,
@@ -39,7 +38,6 @@ class CameraController {
 
   cameras: OrthoViewMapType<THREE.OrthographicCamera>;
   camera: THREE.OrthographicCamera;
-  flycam: Flycam2d;
   model: Model;
   tween: TWEEN.Tween;
   camDistance: number;
@@ -48,10 +46,9 @@ class CameraController {
   trigger: Function;
   listenTo: Function;
 
-  constructor(cameras: OrthoViewMapType<THREE.OrthographicCamera>, flycam: Flycam2d, model: Model) {
+  constructor(cameras: OrthoViewMapType<THREE.OrthographicCamera>, model: Model) {
     _.extend(this, Backbone.Events);
     this.cameras = cameras;
-    this.flycam = flycam;
     this.model = model;
 
     app.vent.on({
@@ -70,9 +67,10 @@ class CameraController {
   }
 
   update = (): void => {
-    const gPos = this.flycam.getPosition();
+    const state = Store.getState();
+    const gPos = getPosition(state.flycam);
     // camera porition's unit is nm, so convert it.
-    const cPos = scaleInfo.voxelToNm(gPos);
+    const cPos = voxelToNm(state.dataset.scale, gPos);
     this.cameras[OrthoViews.PLANE_XY].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
     this.cameras[OrthoViews.PLANE_YZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
     this.cameras[OrthoViews.PLANE_XZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
@@ -92,13 +90,14 @@ class CameraController {
     };
 
     const camera = this.cameras[OrthoViews.TDView];
-    const b = scaleInfo.voxelToNm(this.model.upperBoundary);
+    const state = Store.getState();
+    const b = voxelToNm(state.dataset.scale, this.model.upperBoundary);
 
-    const pos = scaleInfo.voxelToNm(this.model.flycam.getPosition());
+    const pos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
     const time = 800;
 
     const notify = () => this.trigger("cameraPositionChanged");
-    const getConvertedPosition = () => scaleInfo.voxelToNm(this.model.flycam.getPosition());
+    const getConvertedPosition = () => voxelToNm(Store.getState().dataset.scale, getPosition(Store.getState().flycam));
 
     const from = {
       notify,
@@ -107,7 +106,6 @@ class CameraController {
       upY: camera.up.y,
       upZ: camera.up.z,
       camera,
-      flycam: this.flycam,
       dx: camera.position.x - pos[0],
       dy: camera.position.y - pos[1],
       dz: camera.position.z - pos[2],
@@ -144,7 +142,6 @@ class CameraController {
         camera,
         notify,
         getConvertedPosition,
-        flycam: this.flycam,
         dx: b[1] / diagonal,
         dy: b[0] / diagonal,
         dz: -1 / 2,
@@ -170,7 +167,6 @@ class CameraController {
         camera,
         notify,
         getConvertedPosition,
-        flycam: this.flycam,
         dx: positionOffset[id][0],
         dy: positionOffset[id][1],
         dz: positionOffset[id][2],
@@ -221,7 +217,6 @@ class CameraController {
     tweenState.camera.up = new THREE.Vector3(tweenState.upX, tweenState.upY, tweenState.upZ);
     tweenState.camera.lookAt(new THREE.Vector3(p[0], p[1], p[2]));
 
-    tweenState.flycam.update3DViewSize(tweenState.camera.right, tweenState.camera.left);
     tweenState.camera.updateProjectionMatrix();
     tweenState.notify();
     app.vent.trigger("rerender");
@@ -258,7 +253,6 @@ class CameraController {
     camera.bottom = (middleY - baseOffset) + offsetY;
     camera.updateProjectionMatrix();
 
-    this.flycam.update3DViewSize(camera.right, camera.left);
     app.vent.trigger("rerender");
   };
 
@@ -318,13 +312,15 @@ class CameraController {
 
 
   getClippingDistance(dim: number): number {
-    return this.camDistance * scaleInfo.voxelPerNM[dim];
+    const voxelPerNMVector = Store.getState().dataset.scale;
+    return this.camDistance * voxelPerNMVector[dim];
   }
 
 
   updateCamViewport(): void {
-    const scaleFactor = scaleInfo.baseVoxel;
-    const zoom = Store.getState().userConfiguration.zoom;
+    const state = Store.getState();
+    const scaleFactor = getBaseVoxel(state.dataset.scale);
+    const zoom = Store.getState().flycam.zoomStep;
     const boundary = (constants.VIEWPORT_WIDTH / 2) * zoom;
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.cameras[planeId].near = -this.camDistance;

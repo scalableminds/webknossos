@@ -21,7 +21,6 @@ import type { Point2 } from "oxalis/constants";
 // Each input method is contained in its own module. We tried to
 // provide similar public interfaces for the input methods.
 // In most cases the heavy lifting is done by librarys in the background.
-
 const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 30;
 
@@ -30,7 +29,7 @@ export type ModifierKeys = "alt" | "shift" | "ctrl";
 type KeyboardKey = string;
 type KeyboardHandler = (event: JQueryInputEventObject) => void;
 type KeyboardLoopHandler = (number, isOriginalEvent: boolean) => void;
-type KeyboardBindingPress = [KeyboardKey, KeyboardHandler];
+type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type BindingMap<T: Function> = { [key: KeyboardKey]: T };
 type MouseButtonWhichType = 1 | 3;
@@ -56,6 +55,7 @@ function shouldIgnore(event: JQueryInputEventObject, key: KeyboardKey) {
 // Pressing a button will only fire an event once.
 export class InputKeyboardNoLoop {
   bindings: Array<KeyboardBindingPress> = [];
+  isKeyActive: Set<string> = new Set();
   isStarted: boolean = true;
 
   constructor(initialBindings: BindingMap<KeyboardHandler>) {
@@ -72,7 +72,13 @@ export class InputKeyboardNoLoop {
         if (!this.isStarted) { return; }
         if ($(":focus").length) { return; }
         if (shouldIgnore(event, key)) { return; }
-        callback(event);
+        if (!this.isKeyActive.has(key)) {
+          callback(event);
+          this.isKeyActive.add(key);
+        }
+      },
+      () => {
+        this.isKeyActive.delete(key);
       },
     ];
     KeyboardJS.bind(...binding);

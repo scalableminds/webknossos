@@ -1,6 +1,6 @@
 /**
  * controller.js
- * @flow weak
+ * @flow
  */
 
 import $ from "jquery";
@@ -12,6 +12,7 @@ import Stats from "stats.js";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
@@ -19,15 +20,20 @@ import SkeletonTracingArbitraryController from "oxalis/controller/combinations/s
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import MinimalArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
+import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import View from "oxalis/view";
-import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
-import VolumeTracingView from "oxalis/view/volumetracing/volumetracing_view";
+import SkeletonTracingView from "oxalis/view/skeletontracing_view";
+import VolumeTracingView from "oxalis/view/volumetracing_view";
 import constants from "oxalis/constants";
+import Request from "libs/request";
+import { wkReadyAction } from "oxalis/model/actions/actions";
+import { saveNowAction } from "oxalis/model/actions/save_actions";
+import messages from "messages";
 
 import type { ToastType } from "libs/toast";
+import type { ModeType } from "oxalis/constants";
 
 class Controller {
 
@@ -57,7 +63,8 @@ class Controller {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
 
-  constructor(options) {
+  constructor(options: Object) {
+    app.router.showLoadingSpinner();
     this.model = options.model;
 
     _.extend(this, Backbone.Events);
@@ -66,14 +73,14 @@ class Controller {
     this.model.set("state", this.urlManager.initialState);
 
     this.model.fetch()
-        .then(() => this.modelFetchDone())
-        .catch((error) => {
-          // Don't throw errors for errors already handled by the model.
-          if (error !== this.model.HANDLED_ERROR) {
-            throw error;
-          }
-        },
-        );
+        .then(() => this.modelFetchDone());
+        // .catch((error) => {
+        //   // Don't throw errors for errors already handled by the model.
+        //   if (error !== this.model.HANDLED_ERROR) {
+        //     throw error;
+        //   }
+        // },
+        // );
   }
 
 
@@ -85,39 +92,43 @@ class Controller {
 
     app.router.on("beforeunload", () => {
       if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
-        const { stateLogger } = this.model.annotationModel;
-        if (!stateLogger.stateSaved() && stateLogger.allowUpdate) {
-          stateLogger.pushNow();
-          return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.";
+        const state = Store.getState();
+        const stateSaved = this.model.stateSaved();
+        if (!stateSaved && state.tracing.restrictions.allowUpdate) {
+          Store.dispatch(saveNowAction());
+          return messages["save.leave_page_unfinished"];
         }
       }
       return null;
-    },
-    );
+    });
 
     this.urlManager.startUrlUpdater();
 
     this.sceneController = new SceneController(this.model);
 
-    if (this.model.skeletonTracing != null) {
-      this.view = new SkeletonTracingView(this.model);
-      this.annotationController = new SkeletonTracingController(
-        this.model, this.view, this.sceneController);
-      this.planeController = new SkeletonTracingPlaneController(
-        this.model, this.view, this.sceneController, this.annotationController);
+    // TODO: Replace with skeletonTracing from Store (which is non-null currently)
+    if (this.model.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+      if (this.model.isVolumeTracing()) {
+        // VOLUME MODE
+        this.view = new VolumeTracingView(this.model);
+        this.annotationController = new VolumeTracingController(
+          this.model, this.view, this.sceneController);
+        this.planeController = new VolumeTracingPlaneController(
+          this.model, this.view, this.sceneController, this.annotationController);
+      } else {
+        // SKELETONRACING MODE
+        this.view = new SkeletonTracingView(this.model);
+        this.annotationController = new SkeletonTracingController(
+          this.model, this.view, this.sceneController);
+        this.planeController = new SkeletonTracingPlaneController(
+          this.model, this.view, this.sceneController, this.annotationController);
 
-      const ArbitraryControllerClass = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalArbitraryController;
-      this.arbitraryController = new ArbitraryControllerClass(
-        this.model, this.view, this.sceneController, this.annotationController);
-    } else if (this.model.volumeTracing != null) {
-      this.view = new VolumeTracingView(this.model);
-      this.annotationController = new VolumeTracingController(
-        this.model, this.view, this.sceneController);
-      this.planeController = new VolumeTracingPlaneController(
-        this.model, this.view, this.sceneController, this.annotationController);
+        const ArbitraryControllerClass = this.model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalSkeletonTracingArbitraryController;
+        this.arbitraryController = new ArbitraryControllerClass(
+          this.model, this.view, this.sceneController, this.annotationController);
+      }
     } else {
-      // View mode
-
+      // VIEW MODE
       this.view = new View(this.model);
       this.planeController = new PlaneController(
         this.model, this.view, this.sceneController);
@@ -131,6 +142,7 @@ class Controller {
 
     this.initKeyboard();
     this.initTimeLimit();
+    this.initTaskScript();
 
     for (const binaryName of Object.keys(this.model.binary)) {
       this.listenTo(this.model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
@@ -143,12 +155,45 @@ class Controller {
 
     // Zoom step warning
     this.zoomStepWarningToast = null;
-    this.listenTo(this.model.flycam, "zoomStepChanged", this.onZoomStepChange);
+    let lastZoomStep = Store.getState().flycam.zoomStep;
+    Store.subscribe(() => {
+      const { zoomStep } = Store.getState().flycam;
+      if (lastZoomStep !== zoomStep) {
+        this.onZoomStepChange();
+        lastZoomStep = zoomStep;
+      }
+    });
     this.onZoomStepChange();
 
+    app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
+    Store.dispatch(wkReadyAction());
   }
 
+  initTaskScript() {
+    // Loads a Gist from GitHub with a user script if there is a
+    // script assigned to the task
+    if (this.model.tracing.task && this.model.tracing.task.script) {
+      const script = this.model.tracing.task.script;
+      const gistId = _.last(script.gist.split("/"));
+
+      Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then((gist) => {
+        const firstFile = gist.files[Object.keys(gist.files)[0]];
+
+        if (firstFile && firstFile.content) {
+          try {
+            // eslint-disable-next-line no-eval
+            eval(firstFile.content);
+          } catch (error) {
+            console.error(error);
+            Toast.error(`Error executing the task script "${script.name}". See console for more information.`);
+          }
+        } else {
+          Toast.error(`Unable to retrieve script ${script.name}`);
+        }
+      });
+    }
+  }
 
   initKeyboard() {
     // avoid scrolling while pressing space
@@ -192,7 +237,7 @@ class Controller {
   }
 
 
-  loadMode(newMode, force = false) {
+  loadMode(newMode: ModeType, force: boolean = false) {
     if ((newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) && (this.model.allowedModes.includes(newMode) || force)) {
       Utils.__guard__(this.planeController, x => x.stop());
       this.arbitraryController.start(newMode);
@@ -205,21 +250,16 @@ class Controller {
 
   initTimeLimit() {
     // only enable hard time limit for anonymous users so far
-    let model;
     if (!this.model.tracing.task || !this.model.tracing.user.isAnonymous) {
       return;
     }
 
-    // TODO move that somehwere else
-    const finishTracing = () => {
+    // TODO move that somewhere else
+    const finishTracing = async () => {
       // save the progress
-      model = this.model;
-
-      const tracingType = model.skeletonTracing || model.volumeTracing;
-      tracingType.stateLogger.pushNow().then(() => {
-        const url = `/annotations/${model.tracingType}/${model.tracingId}/finishAndRedirect`;
-        app.router.loadURL(url);
-      });
+      await this.model.save();
+      const url = `/annotations/${this.model.tracingType}/${this.model.tracingId}/finishAndRedirect`;
+      app.router.loadURL(url);
     };
 
     // parse hard time limit and convert from min to ms
@@ -245,7 +285,7 @@ class Controller {
   onZoomStepChange() {
     const shouldWarn = !this.model.canDisplaySegmentationData();
     if (shouldWarn && (this.zoomStepWarningToast == null)) {
-      const toastType = (this.model.volumeTracing != null) ? "danger" : "info";
+      const toastType = this.model.isVolumeTracing() ? "danger" : "info";
       this.zoomStepWarningToast = Toast.message(toastType,
         "Segmentation data and volume tracing is only fully supported at a smaller zoom level.", true);
     } else if (!shouldWarn && (this.zoomStepWarningToast != null)) {

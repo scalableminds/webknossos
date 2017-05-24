@@ -16,7 +16,7 @@ import Plane2D from "oxalis/model/binary/plane2d";
 import { PingStrategy, SkeletonPingStrategy, VolumePingStrategy } from "oxalis/model/binary/ping_strategy";
 import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
-import { OrthoViewValues } from "oxalis/constants";
+import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import Model from "oxalis/model";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 
@@ -38,7 +38,7 @@ type PingOptions = {
 class Binary {
   model: Model;
   cube: DataCube;
-  tracing: Tracing;
+  tracing: Tracing<*>;
   layer: Layer;
   category: CategoryType;
   name: string;
@@ -61,7 +61,7 @@ class Binary {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(model: Model, tracing: Tracing, layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
+  constructor(model: Model, tracing: Tracing<*>, layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
     this.model = model;
     this.tracing = tracing;
     this.layer = layer;
@@ -102,7 +102,7 @@ class Binary {
     ];
 
     this.planes = {};
-    for (const planeId of OrthoViewValues) {
+    for (const planeId of OrthoViewValuesWithoutTDView) {
       this.planes[planeId] = new Plane2D(planeId, this.cube,
         this.layer.bitDepth, this.targetBitDepth, 32, this.category === "segmentation");
     }
@@ -130,7 +130,6 @@ class Binary {
 
     const setMapping = (mapping) => {
       this.cube.setMapping(mapping);
-      this.model.flycam.update();
     };
 
     if (mappingName != null) {

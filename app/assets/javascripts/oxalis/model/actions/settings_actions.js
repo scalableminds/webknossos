@@ -9,13 +9,15 @@ import type { UserConfigurationType, DatasetConfigurationType, DatasetLayerConfi
 type UpdateUserSettingActionType = {type: "UPDATE_USER_SETTING", propertyName: $Keys<UserConfigurationType>, value: any};
 type UpdateDatasetSettingActionType = {type: "UPDATE_DATASET_SETTING", propertyName: $Keys<DatasetConfigurationType>, value: any};
 type UpdateTemporarySettingActionType = {type: "UPDATE_TEMPORARY_SETTING", propertyName: $Keys<TemporaryConfigurationType>, value: any};
+type ToggleTemporarySettingActionType = {type: "TOGGLE_TEMPORARY_SETTING", propertyName: $Keys<TemporaryConfigurationType>};
 type UpdateLayerSettingActionType = {type: "UPDATE_LAYER_SETTING", layerName:string, propertyName: $Keys<DatasetLayerConfigurationType>, value: any};
 export type InitializeSettingsAction = {type: "INITIALIZE_SETTINGS", initialUserSettings: UserConfigurationType, initialDatasetSettings: DatasetConfigurationType};
 type SetDatasetAction = {type: "SET_DATASET", dataset: DatasetType};
 
-export type SettingActionTypes = (
+export type SettingActionType = (
   UpdateUserSettingActionType |
   UpdateDatasetSettingActionType |
+  ToggleTemporarySettingActionType |
   InitializeSettingsAction |
   UpdateLayerSettingActionType |
   SetDatasetAction
@@ -37,6 +39,11 @@ export const updateTemporarySettingAction = (propertyName: $Keys<TemporaryConfig
   type: "UPDATE_TEMPORARY_SETTING",
   propertyName,
   value,
+});
+
+export const toggleTemporarySettingAction = (propertyName: $Keys<TemporaryConfigurationType>): ToggleTemporarySettingActionType => ({
+  type: "TOGGLE_TEMPORARY_SETTING",
+  propertyName,
 });
 
 export const updateLayerSettingAction = (layerName: string, propertyName: $Keys<DatasetLayerConfigurationType>, value: any): UpdateLayerSettingActionType => ({

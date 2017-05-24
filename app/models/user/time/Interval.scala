@@ -47,7 +47,7 @@ object Month {
 
 case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
 
-  def compare(p: Week): Int = 12 * (year - p.year) + (week - p.week)
+  def compare(p: Week): Int = 53 * (year - p.year) + (week - p.week)
 
   override def <(that: Week): Boolean = (this compare that) < 0
 
@@ -72,4 +72,33 @@ case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
 
 object Week {
   implicit val weekFormat = Json.format[Week]
+}
+
+case class Day(day: Int, month: Int, year: Int) extends Interval with Ordered[Day] {
+
+  def compare(p: Day): Int = 500 * (year - p.year) + 40 * (month - p.month) + (day - p.day)
+
+  override def <(that: Day): Boolean = (this compare that) < 0
+
+  override def >(that: Day): Boolean = (this compare that) > 0
+
+  override def <=(that: Day): Boolean = (this compare that) <= 0
+
+  override def >=(that: Day): Boolean = (this compare that) >= 0
+
+  override def toString = f"$year%d-$month%02d-$day%02d"
+
+  def start = {
+    jodaDay.millisOfDay().withMinimumValue()
+  }
+
+  def jodaDay = new DateTime().withDate(year, month, day)
+
+  def end = {
+    jodaDay.millisOfDay().withMaximumValue()
+  }
+}
+
+object Day {
+  implicit val dayFormat = Json.format[Day]
 }

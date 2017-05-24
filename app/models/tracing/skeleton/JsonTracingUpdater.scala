@@ -47,6 +47,9 @@ object TracingUpdater extends LazyLogging {
 case class TracingUpdate(update: SkeletonTracing => Fox[SkeletonTracing])
 
 trait TracingUpdater extends FoxImplicits {
+  val positionTransform = (__ \ 'position).json.update(
+    __.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
+
   def createUpdate()(implicit ctx: DBAccessContext): TracingUpdate
 }
 
@@ -55,7 +58,7 @@ case class CreateTree(value: JsObject) extends TracingUpdater {
     val id = (value \ "id").as[Int]
     val color = (value \ "color").asOpt[Color]
     val timestamp = (value \ "timestamp").as[Long]
-    val name = (value \ "name").asOpt[String].getOrElse(DBTree.nameFromId(id))
+    val name = (value \ "name").as[String]
     val branchPoints = (value \ "branchPoints").as[List[BranchPoint]]
     val comments = (value \ "comments").as[List[Comment]]
     TracingUpdate { t =>
@@ -85,7 +88,7 @@ case class UpdateTree(value: JsObject) extends TracingUpdater {
     val id = (value \ "id").as[Int]
     val updatedId = (value \ "updatedId").asOpt[Int].getOrElse(id)
     val color = (value \ "color").asOpt[Color]
-    val name = (value \ "name").asOpt[String].getOrElse(DBTree.nameFromId(id))
+    val name = (value \ "name").as[String]
     val branchPoints = (value \ "branchPoints").as[List[BranchPoint]]
     val comments = (value \ "comments").as[List[Comment]]
     TracingUpdate { t =>
@@ -151,7 +154,7 @@ case class CreateNode(value: JsObject) extends TracingUpdater {
   import oxalis.nml.Node
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
-    val node = value.as[Node]
+    val node = value.transform(positionTransform).get.as[Node]
     val treeId = (value \ "treeId").as[Int]
     TracingUpdate { t =>
       for {
@@ -186,7 +189,7 @@ case class UpdateNode(value: JsObject) extends TracingUpdater {
   import oxalis.nml.Node
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
-    val node = value.as[Node]
+    val node = value.transform(positionTransform).get.as[Node]
     val treeId = (value \ "treeId").as[Int]
     TracingUpdate { t =>
       for {

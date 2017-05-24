@@ -7,15 +7,12 @@ import app from "app";
 import Backbone from "backbone";
 import $ from "jquery";
 import TWEEN from "tween.js";
-import scaleInfo from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Store from "oxalis/store";
-import modal from "oxalis/view/modal";
-import Toast from "libs/toast";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 import Model from "oxalis/model";
 import View from "oxalis/view";
+import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 
 class PlaneView {
 
@@ -86,7 +83,7 @@ class PlaneView {
     // scene.scale does not have an effect.
     this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale.copy(scaleInfo.getNmPerVoxelVector());
+    this.group.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
     // Add scene to the group, all Geometries are than added to group
     this.scene.add(this.group);
 
@@ -107,6 +104,18 @@ class PlaneView {
 
     this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
+    Store.subscribe(() => {
+      // Render in the next frame after the change propagated everywhere
+      window.requestAnimationFrame(() => {
+        this.needsRerender = true;
+      });
+    });
+
+    Store.subscribe(() => {
+      if (this.running) {
+        this.scaleTrianglesPlane(Store.getState().userConfiguration.scale);
+      }
+    });
   }
 
 
@@ -118,6 +127,21 @@ class PlaneView {
     window.requestAnimationFrame(() => this.animate());
   }
 
+  renderOrthoViewToTexture(plane: OrthoViewType, scene: THREE.Scene): Uint8Array {
+    this.renderer.autoClear = true;
+    this.renderer.setViewport(0, 0, this.curWidth, this.curWidth);
+    this.renderer.setScissorTest(false);
+    this.renderer.setClearColor(0x000000, 1);
+
+    const renderTarget = new THREE.WebGLRenderTarget(this.curWidth, this.curWidth);
+    const buffer = new Uint8Array(this.curWidth * this.curWidth * 4);
+
+    this.trigger("renderCam", plane);
+    this.renderer.render(scene, this.cameras[plane], renderTarget);
+    this.renderer.readRenderTargetPixels(renderTarget, 0, 0, this.curWidth, this.curWidth, buffer);
+    return buffer;
+  }
+
   renderFunction(): void {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
@@ -127,7 +151,7 @@ class PlaneView {
     // skip rendering if nothing has changed
     // This prevents you the GPU/CPU from constantly
     // working and keeps your lap cool
-    // ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
+    // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
 
     let modelChanged: boolean = false;
     for (const name of Object.keys(this.model.binary)) {
@@ -173,17 +197,11 @@ class PlaneView {
     }
   }
 
-  addGeometry(geometry: THREE.Geometry): void {
+  addNode(node: THREE.Object3D): void {
     // Adds a new Three.js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
 
-    this.group.add(geometry);
-  }
-
-
-  removeGeometry(geometry: THREE.Geometry): void {
-    this.group.remove(geometry);
-    this.draw();
+    this.group.add(node);
   }
 
 
@@ -250,37 +268,6 @@ class PlaneView {
 
   getCameras(): OrthoViewMapType<THREE.OrthographicCamera> {
     return this.cameras;
-  }
-
-
-  showBranchModalDouble(callback: () => void): void {
-    modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
-      "Jump again?",
-      [{ id: "jump-button", label: "Jump again", callback },
-       { id: "cancel-button", label: "Cancel" }]);
-  }
-
-
-  showBranchModalDelete(callback: () => void): void {
-    modal.show("You are about to delete an unused branchpoint, are you sure?",
-      "Delete branchpoint?",
-      [{ id: "delete-button", label: "Delete branchpoint", callback },
-       { id: "cancel-button", label: "Cancel" }]);
-  }
-
-
-  bindToEvents() {
-    if (this.model.skeletonTracing) {
-      this.listenTo(this.model.skeletonTracing, "doubleBranch", this.showBranchModalDouble);
-      this.listenTo(this.model.skeletonTracing, "deleteBranch", this.showBranchModalDelete);
-      this.listenTo(this.model.skeletonTracing, "mergeDifferentTrees", () => Toast.error("You can't merge nodes within the same tree", false));
-    }
-
-    Store.subscribe(() => {
-      if (this.running) {
-        this.scaleTrianglesPlane(Store.getState().userConfiguration.scale);
-      }
-    });
   }
 
 

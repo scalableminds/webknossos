@@ -41,6 +41,7 @@ const Dimensions = {
     }
   },
 
+
   thirdDimensionForPlane(planeID: OrthoViewType): DimensionIndicesType {
     // Opposite of planeForThirdDimension
     switch (planeID) {

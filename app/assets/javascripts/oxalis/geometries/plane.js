@@ -4,30 +4,22 @@
  */
 
 import app from "app";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Model from "oxalis/model";
-import Flycam2d from "oxalis/model/flycam2d";
+import { getArea, getRequestLogZoomStep, getTexturePosition } from "oxalis/model/accessors/flycam_accessor";
+import Store from "oxalis/store";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";
-import { OrthoViews, OrthoViewColors } from "oxalis/constants";
+import { OrthoViews, OrthoViewColors, OrthoViewCrosshairColors, OrthoViewGrayCrosshairColor } from "oxalis/constants";
 import type { OrthoViewType, Vector3 } from "oxalis/constants";
 import _ from "lodash";
-
-const CROSSHAIR_COLORS = {
-  [OrthoViews.PLANE_XY]: [0x0000ff, 0x00ff00],
-  [OrthoViews.PLANE_XZ]: [0xff0000, 0x00ff00],
-  [OrthoViews.PLANE_YZ]: [0x0000ff, 0xff0000],
-  [OrthoViews.TDView]: [0x000000, 0x000000],
-};
-const GRAY_CH_COLOR = 0x222222;
 
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
 
   plane: THREE.Mesh;
-  flycam: Flycam2d;
   planeID: OrthoViewType;
   model: Model;
   planeWidth: number;
@@ -37,8 +29,7 @@ class Plane {
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
 
-  constructor(planeWidth: number, textureWidth: number, flycam: Flycam2d, planeID: OrthoViewType, model: Model) {
-    this.flycam = flycam;
+  constructor(planeWidth: number, textureWidth: number, planeID: OrthoViewType, model: Model) {
     this.planeID = planeID;
     this.model = model;
     this.planeWidth = planeWidth;
@@ -49,7 +40,8 @@ class Plane {
     // dimension with the highest resolution. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
-    const scaleArray = Dimensions.transDim(scaleInfo.baseVoxelFactors, this.planeID);
+    const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.scale);
+    const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.scaleVector = new THREE.Vector3(...scaleArray);
 
     this.createMeshes(planeWidth, textureWidth);
@@ -70,7 +62,7 @@ class Plane {
       crosshairGeometries[i].vertices.push(new THREE.Vector3(-25 * i, -25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3(25 * i, 25 * (1 - i), 0));
       crosshairGeometries[i].vertices.push(new THREE.Vector3((pWidth / 2) * i, (pWidth / 2) * (1 - i), 0));
-      this.crosshair[i] = new THREE.LineSegments(crosshairGeometries[i], this.getLineBasicMaterial(CROSSHAIR_COLORS[this.planeID][i], 1));
+      this.crosshair[i] = new THREE.LineSegments(crosshairGeometries[i], this.getLineBasicMaterial(OrthoViewCrosshairColors[this.planeID][i], 1));
     }
 
     // create borders
@@ -96,25 +88,25 @@ class Plane {
 
   setOriginalCrosshairColor = (): void => {
     [0, 1].forEach((i) => {
-      this.crosshair[i].material = this.getLineBasicMaterial(CROSSHAIR_COLORS[this.planeID][i], 1);
+      this.crosshair[i].material = this.getLineBasicMaterial(OrthoViewCrosshairColors[this.planeID][i], 1);
     });
   }
 
   setGrayCrosshairColor = (): void => {
     [0, 1].forEach((i) => {
-      this.crosshair[i].material = this.getLineBasicMaterial(GRAY_CH_COLOR, 1);
+      this.crosshair[i].material = this.getLineBasicMaterial(OrthoViewGrayCrosshairColor, 1);
     });
   }
 
   updateTexture(): void {
-    const area = this.flycam.getArea(this.planeID);
+    const area = getArea(Store.getState(), this.planeID);
     if (this.model != null) {
       for (const name of Object.keys(this.model.binary)) {
         const binary = this.model.binary[name];
         const dataBuffer = binary.planes[this.planeID].get({
-          position: this.flycam.getTexturePosition(this.planeID),
-          zoomStep: this.flycam.getIntegerZoomStep(),
-          area: this.flycam.getArea(this.planeID),
+          position: getTexturePosition(Store.getState(), this.planeID),
+          zoomStep: getRequestLogZoomStep(Store.getState()),
+          area,
         });
 
         if (dataBuffer) {

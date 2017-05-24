@@ -16,7 +16,6 @@ import type { Bucket } from "oxalis/model/binary/bucket";
 import ArbitraryCubeAdapter from "oxalis/model/binary/arbitrary_cube_adapter";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import BoundingBox from "oxalis/model/binary/bounding_box";
-import ErrorHandling from "libs/error_handling";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -54,6 +53,7 @@ class DataCube {
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
+  off: Function;
 
 
   // The cube stores the buckets in a seperate array for each zoomStep. For each
@@ -182,21 +182,13 @@ class DataCube {
       return false;
     }
 
-    ErrorHandling.assertExists(
-      this.cubes[zoomStep],
-      "Cube for given zoomStep does not exist", {
-        cubeCount: this.cubes.length,
-        zoomStep,
-        zoomStepCount: this.ZOOM_STEP_COUNT,
-      },
-    );
-
     return this.boundingBox.containsBucket([x, y, z, zoomStep]);
   }
 
 
   getBucketIndex([x, y, z, zoomStep]: Vector4): ?number {
-    ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
+    // Removed for performance reasons
+    // ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
 
     const cube = this.cubes[zoomStep];
     if (cube != null) {

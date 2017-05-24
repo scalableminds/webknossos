@@ -4,11 +4,12 @@
  */
 
 import _ from "lodash";
-import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
-import Toast from "libs/toast";
 import Store from "oxalis/store";
-import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import Constants from "oxalis/constants";
+import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
+import { deleteNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { zoomInAction, zoomOutAction, yawFlycamAction, pitchFlycamAction } from "oxalis/model/actions/flycam_actions";
 import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
@@ -20,6 +21,8 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
   //
   // Minimal Skeleton Tracing Arbitrary Controller:
   // Extends Arbitrary controller to add controls that are specific to minimal Arbitrary mode.
+  // Initiated on TaskTypes with "Advanced Tracing Options"
+  // Mainly used to simplify mechanical turk tracings
 
   constructor(
     model: Model,
@@ -36,32 +39,32 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
     this.input.keyboard = new InputKeyboard({
       space: timeFactor => this.move(timeFactor),
       // Zoom in/out
-      i: () => this.cam.zoomIn(),
-      o: () => this.cam.zoomOut(),
+      i: () => { Store.dispatch(zoomInAction()); },
+      o: () => { Store.dispatch(zoomOutAction()); },
       // Rotate in distance
       left: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        this.cam.yaw(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY);
+        Store.dispatch(yawFlycamAction(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
       },
       right: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        this.cam.yaw(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY);
+        Store.dispatch(yawFlycamAction(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
       },
       up: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        this.cam.pitch(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY);
+        Store.dispatch(pitchFlycamAction(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
       },
       down: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        this.cam.pitch(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY);
+        Store.dispatch(pitchFlycamAction(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
       },
     });
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
 
       // Branches
-      b: () => this.pushBranch(),
-      j: () => this.popBranch(),
+      b: () => { Store.dispatch(createBranchPointAction()); },
+      j: () => { Store.dispatch(requestDeleteBranchPointAction()); },
 
       // Branchpointvideo
       ".": () => this.nextNode(true),
@@ -71,10 +74,9 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
     this.input.keyboardOnce = new InputKeyboard({
       // Delete active node and recenter last node
-      "shift + space": () => this.deleteActiveNode(),
+      "shift + space": () => { Store.dispatch(deleteNodeAction()); },
     }, -1);
   }
-
 
   // make sure that it is not possible to keep nodes from being created
   setWaypoint(): void {
@@ -83,18 +85,6 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
       this.model.set("flightmodeRecording", true);
     }
     super.setWaypoint();
-  }
-
-
-  deleteActiveNode(): void {
-    if (this.isBranchpointvideoMode()) { return; }
-    const { skeletonTracing } = this.model;
-    const activeNode = skeletonTracing.getActiveNode();
-    if (activeNode.id === 1) {
-      Toast.error("Unable: Attempting to delete first node");
-    } else {
-      _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(() => this.centerActiveNode()));
-    }
   }
 }
 

@@ -12,29 +12,29 @@ type RequestOptions = {
   headers?: { [key: string]: string };
   method?: 'GET' | 'POST' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH';
   timeout?: number;
-}
+};
 
 type RequestOptionsWithData<T> = {
   data: T;
   headers?: { [key: string]: string };
   method?: 'GET' | 'POST' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH';
   timeout?: number;
-}
+};
 
 class Request {
+
   // IN:  nothing
   // OUT: json
-  receiveJSON(url: string, options: RequestOptions = {}): Promise<any> {
-    return this.triggerRequest(
+  receiveJSON = (url: string, options: RequestOptions = {}): Promise<any> =>
+    this.triggerRequest(
       url,
       _.defaultsDeep(options, { headers: { Accept: "application/json" } }),
       this.handleEmptyJsonResponse,
-    );
-  }
+    )
 
   // IN:  json
   // OUT: json
-  sendJSONReceiveJSON(url: string, options: RequestOptionsWithData<any>): Promise<any> {
+  sendJSONReceiveJSON = (url: string, options: RequestOptionsWithData<any>): Promise<any> => {
     // Sanity check
     // Requests without body should not send 'json' header and use 'receiveJSON' instead
     if (!options.data) {
@@ -62,7 +62,7 @@ class Request {
 
   // IN:  multipart formdata
   // OUT: json
-  sendMultipartFormReceiveJSON(url: string, options: RequestOptionsWithData<FormData | Object>): Promise<any> {
+  sendMultipartFormReceiveJSON = (url: string, options: RequestOptionsWithData<FormData | Object>): Promise<any> => {
     function toFormData(input: { [key: string]: Array<string> | File | Object | string },
       form: ?FormData = null, namespace: ?string = null): FormData {
       let formData;
@@ -111,8 +111,8 @@ class Request {
 
   // IN:  url-encoded formdata
   // OUT: json
-  sendUrlEncodedFormReceiveJSON(url: string, options: RequestOptionsWithData<string>): Promise<any> {
-    return this.receiveJSON(
+  sendUrlEncodedFormReceiveJSON = (url: string, options: RequestOptionsWithData<string>): Promise<any> =>
+    this.receiveJSON(
       url,
       _.defaultsDeep(options, {
         method: "POST",
@@ -121,20 +121,17 @@ class Request {
           "Content-Type": "application/x-www-form-urlencoded",
         },
       }),
-    );
-  }
+    )
 
-  receiveArraybuffer(url: string, options: RequestOptions = {}): Promise<ArrayBuffer> {
-    return this.triggerRequest(
+  receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<ArrayBuffer> =>
+    this.triggerRequest(
       url,
       _.defaultsDeep(options, { headers: { Accept: "application/octet-stream" } }),
-      response => response.arrayBuffer());
-  }
+      response => response.arrayBuffer())
 
   // IN:  arraybuffer
   // OUT: arraybuffer
-  sendArraybufferReceiveArraybuffer(url: string,
-    options: RequestOptionsWithData<ArrayBuffer | $TypedArray>): Promise<ArrayBuffer> {
+  sendArraybufferReceiveArraybuffer = (url: string, options: RequestOptionsWithData<ArrayBuffer | $TypedArray>): Promise<ArrayBuffer> => {
     let body = options.data instanceof ArrayBuffer ?
         options.data :
         options.data.buffer.slice(0, options.data.byteLength);
@@ -162,8 +159,8 @@ class Request {
     );
   }
 
-  triggerRequest<T>(url: string, options: RequestOptions | RequestOptionsWithData<T> = {},
-    responseDataHandler: ?Function = null): Promise<*> {
+  // TODO: babel doesn't support generic arrow-functions yet
+  triggerRequest<T>(url: string, options: RequestOptions | RequestOptionsWithData<T> = {}, responseDataHandler: ?Function = null): Promise<*> {
     const defaultOptions = {
       method: "GET",
       host: "",
@@ -224,23 +221,22 @@ class Request {
     }
   }
 
-  timeoutPromise(timeout: number): Promise<string> {
-    return new Promise((resolve) => {
+  timeoutPromise = (timeout: number): Promise<string> =>
+    new Promise((resolve) => {
       setTimeout(
         () => resolve("timeout"),
         timeout,
       );
     });
-  }
 
-  handleStatus(response: Response): Promise<Response> {
+  handleStatus = (response: Response): Promise<Response> => {
     if (response.status >= 200 && response.status < 400) {
       return Promise.resolve(response);
     }
     return Promise.reject(response);
   }
 
-  handleError(error: Response | Error): Promise<void> {
+  handleError = (error: Response | Error): Promise<void> => {
     if (error instanceof Response) {
       return error.text().then(
         (text) => {
@@ -264,12 +260,12 @@ class Request {
           return Promise.reject(textError);
         });
     } else {
-      Toast.error(error);
+      console.error(error);
       return Promise.reject(error);
     }
   }
 
-  handleEmptyJsonResponse(response: Response): Promise<{}> {
+  handleEmptyJsonResponse = (response: Response): Promise<{}> => {
     const contentLength = parseInt(response.headers.get("Content-Length"));
     if (contentLength === 0) {
       return Promise.resolve({});

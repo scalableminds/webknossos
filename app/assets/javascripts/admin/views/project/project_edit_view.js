@@ -3,6 +3,7 @@ import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
+import Request from "libs/request";
 
 class ProjectEditView extends Marionette.View {
   static initClass() {
@@ -11,7 +12,7 @@ class ProjectEditView extends Marionette.View {
   <div class="col-sm-12">
     <div class="well">
       <div class="col-sm-9 col-sm-offset-2">
-        <h3>Update project</h3>
+        <h3>Update project: <%- name %> <% if (paused) { %>(paused) <% } %></h3>
       </div>
 
       <form method="POST" class="form-horizontal">
@@ -40,8 +41,15 @@ class ProjectEditView extends Marionette.View {
           </div>
         </div>
         <div class="form-group">
-          <div class="col-sm-2 col-sm-offset-9">
-          <button type="submit" class="form-control btn btn-primary">Update</button>
+          <div class="col-sm-2 col-sm-offset-8">
+          <% if (paused) { %>
+            <button class="form-control btn btn-default resume-button">Resume</button>
+          <% } else { %>
+            <button class="form-control btn btn-default pause-button">Pause</button>
+          <% } %>
+          </div>
+          <div class="col-sm-2">
+            <button type="submit" class="form-control btn btn-primary">Update</button>
           </div>
         </div>
       </form>
@@ -51,8 +59,11 @@ class ProjectEditView extends Marionette.View {
 `);
 
     this.prototype.className = "container wide project-administration";
-    this.prototype.events =
-      { "submit form": "submitForm" };
+    this.prototype.events = {
+      "submit form": "submitForm",
+      "click .pause-button": "handlePauseClick",
+      "click .resume-button": "handleResumeClick",
+    };
 
     this.prototype.ui =
       { form: "form" };
@@ -63,7 +74,6 @@ class ProjectEditView extends Marionette.View {
     this.listenTo(this.model, "sync", this.render);
     this.model.fetch();
   }
-
 
   submitForm(event) {
     event.preventDefault();
@@ -81,6 +91,20 @@ class ProjectEditView extends Marionette.View {
       Toast.success("Saved!"),
       app.router.loadURL(`/projects#${this.model.get("name")}`),
     );
+  }
+
+  async handlePauseClick(event) {
+    event.preventDefault();
+
+    await Request.receiveJSON(`/api/projects/${this.model.id}/pause`);
+    app.router.reload();
+  }
+
+  async handleResumeClick(event) {
+    event.preventDefault();
+
+    await Request.receiveJSON(`/api/projects/${this.model.id}/resume`);
+    app.router.reload();
   }
 }
 ProjectEditView.initClass();

@@ -1,6 +1,6 @@
 /**
  * abstract_plane_material_factory.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -9,10 +9,26 @@ import app from "app";
 import Utils from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import AbstractMaterialFactory from "oxalis/geometries/materials/abstract_material_factory";
 
-class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
+export type UniformsType = {
+  [key: string]: {
+    type: "f" | "i" | "t" | "v2" | "v3",
+    value: any,
+  }
+};
 
+export type ShaderMaterialOptionsType = {
+  polygonOffset?: boolean,
+  polygonOffsetFactor?: number,
+  polygonOffsetUnits?: number,
+}
+
+class AbstractPlaneMaterialFactory {
+
+  model: Model;
+  material: THREE.ShaderMaterial;
+  uniforms: UniformsType;
+  attributes: Object;
   textures: {
     [key: string]: THREE.DataTexture;
   };
@@ -20,11 +36,12 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
   maxFilter: THREE.NearestFilter;
   tWidth: number;
 
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-
   constructor(model: Model, tWidth: number) {
-    super(model);
+    this.model = model;
+
+    this.setupUniforms();
+    this.makeMaterial();
+    this.setupChangeListeners();
     this.tWidth = tWidth;
     this.minFilter = THREE.NearestFilter;
     this.maxFilter = THREE.NearestFilter;
@@ -32,8 +49,8 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
   }
 
 
-  setupUniforms() {
-    super.setupUniforms();
+  setupUniforms(): void {
+    this.uniforms = {};
 
     for (const binary of this.model.getColorBinaries()) {
       const name = this.sanitizeName(binary.name);
@@ -49,8 +66,12 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
   }
 
 
-  makeMaterial(options) {
-    super.makeMaterial(options);
+  makeMaterial(options?: ShaderMaterialOptionsType): void {
+    this.material = new THREE.ShaderMaterial(_.extend(options, {
+      uniforms: this.uniforms,
+      vertexShader: this.getVertexShader(),
+      fragmentShader: this.getFragmentShader(),
+    }));
 
     this.material.setData = (name, data) => {
       const textureName = this.sanitizeName(name);
@@ -60,7 +81,7 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
   }
 
 
-  setupChangeListeners() {
+  setupChangeListeners(): void {
     Store.subscribe(() => {
       const layerSettings = Store.getState().datasetConfiguration.layers;
       _.forEach(layerSettings, (settings, layerName) => {
@@ -73,22 +94,25 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
     });
   }
 
+  getMaterial(): THREE.ShaderMaterial {
+    return this.material;
+  }
 
-  createTextures() {
+  createTextures(): void {
     throw new Error("Subclass responsibility");
   }
 
 
-  sanitizeName(name) {
+  sanitizeName(name: ?string): string {
     // Make sure name starts with a letter and contains
     // no "-" signs
 
-    if (name == null) { return null; }
+    if (name == null) { return ""; }
     return `binary_${name.replace(/-/g, "_")}`;
   }
 
 
-  createDataTexture(width, bytes) {
+  createDataTexture(width: number, bytes: number): void {
     const format = bytes === 1 ? THREE.LuminanceFormat : THREE.RGBFormat;
 
     return new THREE.DataTexture(
@@ -100,10 +124,17 @@ class AbstractPlaneMaterialFactory extends AbstractMaterialFactory {
     );
   }
 
+  getFragmentShader(): string {
+    throw new Error("Subclass responsibility");
+  }
 
-  getVertexShader() {
+
+  getVertexShader(): string {
     return `\
+
+
 varying vec2 vUv;
+
 void main() {
   vUv = uv;
   gl_Position =   projectionMatrix *

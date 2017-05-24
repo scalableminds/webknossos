@@ -6,9 +6,9 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import type { OxalisState } from "oxalis/store";
-import type { SettingActionTypes } from "oxalis/model/actions/settings_actions";
+import type { ActionType } from "oxalis/model/actions/actions";
 
-function SettingsReducer(state: OxalisState, action: SettingActionTypes): OxalisState {
+function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "UPDATE_USER_SETTING": {
       const { propertyName, value } = action;
@@ -22,6 +22,12 @@ function SettingsReducer(state: OxalisState, action: SettingActionTypes): Oxalis
 
     case "UPDATE_TEMPORARY_SETTING": {
       const { propertyName, value } = action;
+      return update(state, { temporaryConfiguration: { [propertyName]: { $set: value } } });
+    }
+
+    case "TOGGLE_TEMPORARY_SETTING": {
+      const { propertyName } = action;
+      const value = !state.temporaryConfiguration[propertyName];
       return update(state, { temporaryConfiguration: { [propertyName]: { $set: value } } });
     }
 

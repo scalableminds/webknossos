@@ -1,6 +1,6 @@
 /**
  * cube.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -8,9 +8,19 @@ import app from "app";
 import * as THREE from "three";
 import Backbone from "backbone";
 import Model from "oxalis/model";
-import type { Vector3, OrthoViewMapType } from "oxalis/constants";
+import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
+import Store from "oxalis/store";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+
+type PropertiesType = {
+  min?: Vector3,
+  max: Vector3,
+  lineWidth?: number,
+  color?: number,
+  showCrossSections?: boolean,
+}
 
 class Cube {
 
@@ -26,7 +36,7 @@ class Cube {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(model: Model, properties) {
+  constructor(model: Model, properties: PropertiesType) {
     this.model = model;
     this.min = properties.min || [0, 0, 0];
     this.max = properties.max;
@@ -38,8 +48,6 @@ class Cube {
 
     this.initialized = false;
     this.visible = true;
-
-    this.listenTo(this.model.flycam, "positionChanged", pos => this.updatePosition(pos));
 
     const lineProperties = { color, linewidth: lineWidth };
 
@@ -58,9 +66,13 @@ class Cube {
     if ((this.min != null) && (this.max != null)) {
       this.setCorners(this.min, this.max);
     }
+
+    Store.subscribe(() => {
+      this.updatePosition(getPosition(Store.getState().flycam));
+    });
   }
 
-  setCorners(min1, max1) {
+  setCorners(min1: Vector3, max1: Vector3) {
     this.min = min1;
     this.max = max1;
     const { min, max } = this;
@@ -98,11 +110,11 @@ class Cube {
     }
 
     this.initialized = true;
-    this.updatePosition(this.model.flycam.getPosition());
+    this.updatePosition(getPosition(Store.getState().flycam));
     app.vent.trigger("rerender");
   }
 
-  updatePosition(position) {
+  updatePosition(position: Vector3) {
     if (!this.initialized) {
       return;
     }
@@ -125,14 +137,14 @@ class Cube {
     return [this.cube].concat(_.values(this.crossSections));
   }
 
-  updateForCam(id) {
+  updateForCam(id: OrthoViewType) {
     if (!this.initialized) {
       return;
     }
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
-      const position = this.model.flycam.getPosition();
+      const position = getPosition(Store.getState().flycam);
       if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] <= this.max[thirdDim]) {
         this.crossSections[planeId].visible = this.visible && (planeId === id) && this.showCrossSections;
       } else {
@@ -143,7 +155,7 @@ class Cube {
     this.cube.visible = this.visible && (id === OrthoViews.TDView);
   }
 
-  setVisibility(visible) {
+  setVisibility(visible: boolean) {
     this.visible = visible;
   }
 }

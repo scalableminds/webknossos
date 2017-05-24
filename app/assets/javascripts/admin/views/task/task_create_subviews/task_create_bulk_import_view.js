@@ -2,6 +2,7 @@ import _ from "lodash";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import Request from "libs/request";
+import Modal from "oxalis/view/modal";
 
 class TaskCreateBulkImportView extends Marionette.View {
   constructor(...args) {
@@ -83,7 +84,13 @@ class TaskCreateBulkImportView extends Marionette.View {
       this.handleSuccessfulRequest(response.items);
     } else {
       this.ui.bulkText.val("");
-      Toast.success("All tasks were successfully created");
+    }
+    const successItems = response.items.filter(item => item.status === 200);
+    if (successItems.length > 0) {
+      Toast.success(`${successItems.length} tasks were successfully created.`);
+      const csvContent = successItems.map(({ success: task }) =>
+      `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`).join("\n");
+      Modal.show(`<pre>taskId,filename,position\n${csvContent}</pre>`, "Task IDs");
     }
 
     this.toggleSubmitButton(true);
@@ -122,7 +129,7 @@ class TaskCreateBulkImportView extends Marionette.View {
     errorMessages = errorMessages.map((text, i) => `Line ${i} : ${text}`);
 
     this.ui.bulkText.val(failedTasks.join("\n"));
-    Toast.error(errorMessages.join("\n"));
+    Toast.error(errorMessages.join("\n"), true);
   }
 
 

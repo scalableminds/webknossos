@@ -10,20 +10,20 @@ import React from "react";
 import { render } from "react-dom";
 import { Provider } from "react-redux";
 import app from "app";
-import store from "oxalis/store";
+import store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
 import OxalisModel from "oxalis/model";
-import OxalisApi from "oxalis/api";
+import OxalisApi from "oxalis/api/api_loader";
 import Constants from "oxalis/constants";
 import Modal from "oxalis/view/modal";
 import Utils from "libs/utils";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
-import SkeletonTracingRightMenuView from "oxalis/view/skeletontracing/skeletontracing_right_menu_view";
-import VolumeTracingRightMenuView from "oxalis/view/volumetracing/volumetracing_right_menu_view";
-import ViewmodeRightMenuView from "oxalis/view/viewmode/viewmode_right_menu_view";
+import RightMenuView from "oxalis/view/right_menu_view";
 import UserScriptsModalView from "oxalis/view/user_scripts_modal";
 import TracingView from "oxalis/view/tracing_view";
+import enUS from "antd/lib/locale-provider/en_US";
+import { LocaleProvider } from "antd";
 
 const MARGIN = 40;
 
@@ -59,11 +59,11 @@ class TracingLayoutView extends Marionette.View {
     this.prototype.ui = {
       rightMenu: "#right-menu",
       slidingCanvas: "#sliding-canvas",
+      actionBar: "#action-bar",
       settings: "#settings-menu",
     };
 
     this.prototype.regions = {
-      actionBar: "#action-bar",
       rightMenu: "#right-menu",
       tracingContainer: "#tracing",
       modalWrapper: ".modal-wrapper",
@@ -94,7 +94,7 @@ class TracingLayoutView extends Marionette.View {
     this.model = this.options.model;
 
     this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
-    this.listenTo(this.model, "change:mode", this.renderSettings);
+    // this.listenTo(this.model, "change:mode", this.renderRegions);
     this.listenTo(this.model, "sync", this.renderRegions);
     $(window).on("resize", this.resizeRightMenu.bind(this));
 
@@ -129,27 +129,37 @@ class TracingLayoutView extends Marionette.View {
   renderRegions() {
     this.render();
 
-    const actionBarView = new ActionBarView(this.options);
     const tracingView = new TracingView(this.options);
 
     this.showChildView("tracingContainer", tracingView, { preventDestroy: true });
-
-    this.showChildView("actionBar", actionBarView, { preventDestroy: true });
 
     if (!this.model.settings.advancedOptionsAllowed) {
       return;
     }
 
-    if (this.isSkeletonMode()) {
-      this.rightMenuView = new SkeletonTracingRightMenuView(this.options);
-    } else if (this.isVolumeMode()) {
-      this.rightMenuView = new VolumeTracingRightMenuView(this.options);
-    } else {
-      this.rightMenuView = new ViewmodeRightMenuView(this.options);
-    }
+    render(
+      <LocaleProvider locale={enUS}>
+        <Provider store={store}>
+          <ActionBarView oldModel={this.model} />
+        </Provider>
+      </LocaleProvider>,
+      this.ui.actionBar[0],
+    );
 
-    this.showChildView("rightMenu", this.rightMenuView);
-    this.renderSettings();
+    render(
+      <Provider store={store}>
+        <SettingsView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
+      </Provider>,
+      this.ui.settings[0],
+    );
+
+    render(
+      <Provider store={store}>
+        <RightMenuView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
+      </Provider>,
+      this.ui.rightMenu[0],
+    );
+
     this.maybeShowNewTaskTypeModal();
   }
 
@@ -176,16 +186,6 @@ class TracingLayoutView extends Marionette.View {
       text = "You are now tracing a new task with no description.";
     }
     Modal.show(text, title);
-  }
-
-
-  renderSettings() {
-    render(
-      <Provider store={store}>
-        <SettingsView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
-      </Provider>,
-      this.ui.settings[0],
-    );
   }
 
 

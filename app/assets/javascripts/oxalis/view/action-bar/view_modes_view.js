@@ -1,65 +1,42 @@
-import _ from "lodash";
-import $ from "jquery";
-import Marionette from "backbone.marionette";
+// @flow
+import React, { PureComponent } from "react";
+import type Model from "oxalis/model";
 import constants from "oxalis/constants";
+import type { ModeType } from "oxalis/constants";
+import { Radio } from "antd";
 
-class ViewModesView extends Marionette.View {
-  static initClass() {
-    this.prototype.template = _.template(`\
-<div class="btn-group btn-group">
-  <div class="btn-group">
-    <button type="button" class="btn btn-default" id="mode-3planes">Orthogonal</button>
-  </div>
-  <div class="btn-group">
-    <button type="button" class="btn btn-default" id="mode-sphere">Flight</button>
-  </div>
-  <div class="btn-group">
-    <button type="button" class="btn btn-default" id="mode-arbitraryplane">Oblique</button>
-  </div>
-</div>\
-`);
+class ViewModesView extends PureComponent {
+  props: {
+    oldModel: Model,
+  };
 
-    this.prototype.modeMapping = {
-      "mode-3planes": constants.MODE_PLANE_TRACING,
-      "mode-sphere": constants.MODE_ARBITRARY,
-      "mode-arbitraryplane": constants.MODE_ARBITRARY_PLANE,
-    };
-
-    this.prototype.events =
-      { "click button": "changeMode" };
+  componentDidMount() {
+    this.props.oldModel.on("change:mode", this._forceUpdate);
   }
 
-
-  initialize() {
-    this.listenTo(this.model, "change:mode", this.updateForMode);
-    this.listenTo(this, "attach", this.afterAttach);
+  componentWillUnmount() {
+    this.props.oldModel.off("change:mode", this._forceUpdate);
   }
 
+  _forceUpdate = () => { this.forceUpdate(); };
 
-  afterAttach() {
-    for (const mode of Object.keys(this.modeMapping)) {
-      const modeValue = this.modeMapping[mode];
-      $(`#${mode}`).attr("disabled", !this.model.get("allowedModes").includes(modeValue));
-    }
-
-    this.updateForMode(this.model.get("mode"));
+  blurElement = (event: SyntheticInputEvent) => {
+    event.target.blur();
   }
 
+  handleChange = (event: { target: { value: ModeType } }) => {
+    this.props.oldModel.setMode(event.target.value);
+  };
 
-  changeMode(evt) {
-    evt.target.blur();
-    const mode = this.modeMapping[evt.target.id];
-    this.model.setMode(mode);
-  }
-
-
-  updateForMode(mode) {
-    this.$("button").removeClass("btn-primary");
-
-    const buttonId = _.invert(this.modeMapping)[mode];
-    this.$(`#${buttonId}`).addClass("btn-primary");
+  render() {
+    return (
+      <Radio.Group onChange={this.handleChange} value={this.props.oldModel.get("mode")} size="large">
+        <Radio.Button onClick={this.blurElement} value={constants.MODE_PLANE_TRACING}>Orthogonal</Radio.Button>
+        <Radio.Button onClick={this.blurElement} value={constants.MODE_ARBITRARY}>Flight</Radio.Button>
+        <Radio.Button onClick={this.blurElement} value={constants.MODE_ARBITRARY_PLANE}>Oblique</Radio.Button>
+      </Radio.Group>
+    );
   }
 }
-ViewModesView.initClass();
 
 export default ViewModesView;

@@ -8,8 +8,15 @@ import Utils from "libs/utils";
 import Backbone from "backbone";
 import { V3 } from "libs/mjs";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import type { Vector3, ModeType } from "oxalis/constants";
 import constants, { ModeValues } from "oxalis/constants";
+import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import window from "libs/window";
+
+const NO_MODIFY_TIMEOUT = 5000;
+const MAX_UPDATE_INTERVAL = 1000;
 
 type State = {
   position?: Vector3,
@@ -23,10 +30,9 @@ class UrlManager {
   baseUrl: string;
   model: Model;
   initialState: State;
+  lastUrl: ?string
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
-
-  MAX_UPDATE_INTERVAL = 1000;
 
   constructor(model: Model) {
     this.model = model;
@@ -37,8 +43,17 @@ class UrlManager {
   }
 
   update = _.throttle(
-    () => { location.replace(this.buildUrl()); },
-    this.MAX_UPDATE_INTERVAL,
+    () => {
+      const url = this.buildUrl();
+      // Don't tamper with URL if changed externally for some time
+      if (this.lastUrl == null || window.location.href === this.lastUrl) {
+        window.location.replace(url);
+        this.lastUrl = window.location.href;
+      } else {
+        setTimeout(() => { this.lastUrl = null; }, NO_MODIFY_TIMEOUT);
+      }
+    },
+    MAX_UPDATE_INTERVAL,
   );
 
   parseUrl(): State {
@@ -79,33 +94,27 @@ class UrlManager {
 
 
   startUrlUpdater(): void {
-    this.listenTo(this.model.flycam, "changed", this.update);
-    this.listenTo(this.model.flycam3d, "changed", this.update);
     this.listenTo(this.model, "change:mode", this.update);
 
-    if (this.model.skeletonTracing) {
-      this.listenTo(this.model.skeletonTracing, "newActiveNode", this.update);
+    if (Store.getState().tracing) {
+      Store.subscribe(() => this.update());
     }
   }
 
 
   buildUrl(): string {
-    const { flycam, flycam3d } = this.model;
-    let state = V3.floor(flycam.getPosition());
+    let state = V3.floor(getPosition(Store.getState().flycam));
     state.push(this.model.mode);
 
     if (constants.MODES_ARBITRARY.includes(this.model.mode)) {
       state = state
-        .concat([flycam3d.getZoomStep().toFixed(2)])
-        .concat(flycam3d.getRotation().map(e => e.toFixed(2)));
+        .concat([Store.getState().flycam.zoomStep.toFixed(2)])
+        .concat(getRotation(Store.getState().flycam).map(e => e.toFixed(2)));
     } else {
-      state = state.concat([flycam.getZoomStep().toFixed(2)]);
+      state = state.concat([Store.getState().flycam.zoomStep.toFixed(2)]);
     }
 
-    if (Utils.__guard__(this.model.skeletonTracing, x => x.getActiveNodeId()) != null) {
-      state.push(this.model.skeletonTracing.getActiveNodeId());
-    }
-
+    getActiveNode(Store.getState().tracing).map(node => state.push(node.id));
     return `${this.baseUrl}#${state.join(",")}`;
   }
 }

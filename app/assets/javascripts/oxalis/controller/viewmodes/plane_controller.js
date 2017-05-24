@@ -16,8 +16,9 @@ import Store from "oxalis/store";
 import View from "oxalis/view";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
-import Flycam2d from "oxalis/model/flycam2d";
-import scaleInfo from "oxalis/model/scaleinfo";
+import { getPosition, getRequestLogZoomStep, getIntegerZoomStep, getAreas, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { movePlaneFlycamOrthoAction, moveFlycamOrthoAction, zoomByDeltaAction } from "oxalis/model/actions/flycam_actions";
+import { voxelToNm, getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneView from "oxalis/view/plane_view";
@@ -38,7 +39,6 @@ class PlaneController {
   };
   sceneController: SceneController;
   isStarted: boolean;
-  flycam: Flycam2d;
   oldNmPos: Vector3;
   planeView: PlaneView;
   activeViewport: OrthoViewType;
@@ -89,16 +89,15 @@ class PlaneController {
 
     this.isStarted = false;
 
-    this.flycam = this.model.flycam;
-
-    this.oldNmPos = scaleInfo.voxelToNm(this.flycam.getPosition());
+    const state = Store.getState();
+    this.oldNmPos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
 
     this.planeView = new PlaneView(this.model, this.view);
 
     this.activeViewport = OrthoViews.PLANE_XY;
 
     // initialize Camera Controller
-    this.cameraController = new CameraController(this.planeView.getCameras(), this.flycam, this.model);
+    this.cameraController = new CameraController(this.planeView.getCameras(), this.model);
 
     this.canvasesAndNav = $("#main")[0];
 
@@ -114,11 +113,7 @@ class PlaneController {
     $("#TDViewControls button")
       .each((i, element) => $(element).on("click", () => { callbacks[i](); }));
 
-    const meshes = this.sceneController.getMeshes();
-
-    for (const mesh of meshes) {
-      this.planeView.addGeometry(mesh);
-    }
+    this.planeView.addNode(this.sceneController.getRootNode());
 
     this.initTrackballControls();
     this.bindToEvents();
@@ -173,7 +168,8 @@ class PlaneController {
 
   initTrackballControls(): void {
     const view = $("#inputcatcher_TDView")[0];
-    const pos = scaleInfo.voxelToNm(this.flycam.getPosition());
+    const state = Store.getState();
+    const pos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
     this.controls = new TrackballControls(
       this.planeView.getCameras()[OrthoViews.TDView],
       view,
@@ -185,10 +181,12 @@ class PlaneController {
     this.controls.staticMoving = true;
 
     this.controls.target.set(
-      ...scaleInfo.voxelToNm(this.flycam.getPosition()));
+      ...pos);
 
-    this.listenTo(this.flycam, "positionChanged", (position) => {
-      const nmPosition = scaleInfo.voxelToNm(position);
+    Store.subscribe(() => {
+      const newState = Store.getState();
+      const position = getPosition(newState.flycam);
+      const nmPosition = voxelToNm(newState.dataset.scale, position);
 
       this.controls.target.set(...nmPosition);
       this.controls.update();
@@ -220,10 +218,11 @@ class PlaneController {
     });
 
     const getMoveValue = (timeFactor) => {
+      const state = Store.getState();
       if (this.activeViewport === OrthoViews.TDView) {
-        return (constants.TDView_MOVE_SPEED * timeFactor) / constants.FPS;
+        return (state.userConfiguration.moveValue * timeFactor) / getBaseVoxel(state.dataset.scale) / constants.FPS;
       }
-      return (Store.getState().userConfiguration.moveValue * timeFactor) / scaleInfo.baseVoxel / constants.FPS;
+      return (state.userConfiguration.moveValue * timeFactor) / getBaseVoxel(state.dataset.scale) / constants.FPS;
     };
 
     this.input.keyboard = new InputKeyboard({
@@ -255,6 +254,10 @@ class PlaneController {
       space: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
       f: (timeFactor, first) => this.moveZ(getMoveValue(timeFactor), first),
       d: (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
+
+      // Zoom in/out
+      i: () => this.zoom(1, false),
+      o: () => this.zoom(-1, false),
     }, Store.getState().userConfiguration.keyboardDelay);
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop(this.getKeyboardControls());
@@ -270,10 +273,6 @@ class PlaneController {
 
   getKeyboardControls(): Object {
     return {
-      // Zoom in/out
-      i: () => this.zoom(1, false),
-      o: () => this.zoom(-1, false),
-
       // Change move value
       h: () => this.changeMoveValue(25),
       g: () => this.changeMoveValue(-25),
@@ -311,40 +310,17 @@ class PlaneController {
   }
 
   bindToEvents(): void {
-    this.planeView.bindToEvents();
-
     this.listenTo(this.planeView, "render", this.render);
     this.listenTo(this.planeView, "renderCam", this.sceneController.updateSceneForCam);
-
-    this.listenTo(this.sceneController, "newGeometries", list =>
-      list.map(geometry =>
-        this.planeView.addGeometry(geometry)),
-    );
-    this.listenTo(this.sceneController, "removeGeometries", list =>
-      list.map(geometry =>
-        this.planeView.removeGeometry(geometry)),
-    );
-
-    // TODO check for ControleMode rather the Object existence
-    if (this.sceneController.skeleton) {
-      this.listenTo(this.sceneController.skeleton, "newGeometries", list =>
-        list.map(geometry =>
-          this.planeView.addGeometry(geometry)),
-      );
-      this.listenTo(this.sceneController.skeleton, "removeGeometries", list =>
-        list.map(geometry =>
-          this.planeView.removeGeometry(geometry)),
-      );
-    }
   }
 
 
   render(): void {
     for (const dataLayerName of Object.keys(this.model.binary)) {
       if (this.sceneController.pingDataLayer(dataLayerName)) {
-        this.model.binary[dataLayerName].ping(this.flycam.getPosition(), {
-          zoomStep: this.flycam.getIntegerZoomStep(),
-          areas: this.flycam.getAreas(),
+        this.model.binary[dataLayerName].ping(getPosition(Store.getState().flycam), {
+          zoomStep: getRequestLogZoomStep(Store.getState()),
+          areas: getAreas(Store.getState()),
           activePlane: this.activeViewport,
         });
       }
@@ -358,7 +334,7 @@ class PlaneController {
   move = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
     const { activeViewport } = this;
     if (activeViewport !== OrthoViews.TDView) {
-      this.flycam.movePlane(v, activeViewport, increaseSpeedWithZoom);
+      Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
     } else {
       this.moveTDView({ x: -v[0], y: -v[1] });
     }
@@ -376,11 +352,11 @@ class PlaneController {
     }
 
     if (oneSlide) {
-      this.flycam.move(
+      Store.dispatch(moveFlycamOrthoAction(
         Dimensions.transDim(
-          [0, 0, (z < 0 ? -1 : 1) << this.flycam.getIntegerZoomStep()],
+          [0, 0, (z < 0 ? -1 : 1) * Math.max(1, getIntegerZoomStep(Store.getState()))],
           activeViewport),
-        activeViewport);
+        activeViewport));
     } else {
       this.move([0, 0, z], false);
     }
@@ -401,8 +377,7 @@ class PlaneController {
       this.zoomPos = this.getMousePosition();
     }
 
-    this.flycam.zoomByDelta(value);
-    Store.dispatch(updateUserSettingAction("zoom", this.flycam.getPlaneScalingFactor()));
+    Store.dispatch(zoomByDeltaAction(value));
 
     if (zoomToMouse) {
       this.finishZoom();
@@ -435,7 +410,7 @@ class PlaneController {
       const moveVector = [this.zoomPos[0] - mousePos[0],
         this.zoomPos[1] - mousePos[1],
         this.zoomPos[2] - mousePos[2]];
-      this.flycam.move(moveVector, activeViewport);
+      Store.dispatch(moveFlycamOrthoAction(moveVector, activeViewport));
     }
   }
 
@@ -485,10 +460,11 @@ class PlaneController {
 
   calculateGlobalPos = (clickPos: Point2): Vector3 => {
     let position;
-    const curGlobalPos = this.flycam.getPosition();
-    const zoomFactor = this.flycam.getPlaneScalingFactor();
+    const state = Store.getState();
+    const curGlobalPos = getPosition(state.flycam);
+    const zoomFactor = getPlaneScalingFactor(state.flycam);
     const { scaleFactor } = this.planeView;
-    const planeRatio = scaleInfo.baseVoxelFactors;
+    const planeRatio = getBaseVoxelFactors(state.dataset.scale);
     switch (this.activeViewport) {
       case OrthoViews.PLANE_XY:
         position = [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * scaleFactor) / 2) - clickPos.x) / scaleFactor) * planeRatio[0] * zoomFactor),

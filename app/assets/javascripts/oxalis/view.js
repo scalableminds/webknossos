@@ -24,7 +24,7 @@ class View {
         "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>");
     }
 
-    this.renderer = new THREE.WebGLRenderer({ clearColor: 0x000000, clearAlpha: 1.0, antialias: false });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.scene = new THREE.Scene();
 
     this.setTheme(constants.THEME_BRIGHT);

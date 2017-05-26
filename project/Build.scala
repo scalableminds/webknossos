@@ -9,7 +9,7 @@ import sbtbuildinfo._
 import sbtbuildinfo.BuildInfoKeys._
 
 object Dependencies{
-  val braingamesVersion = "10.1.16"
+  val braingamesVersion = "10.1.17"
 
   val braingamesDataStore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
 

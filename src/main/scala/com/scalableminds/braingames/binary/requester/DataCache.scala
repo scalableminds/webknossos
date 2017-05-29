@@ -70,7 +70,7 @@ trait Cube extends LazyLogging{
 /**
   * A data store implementation which uses the hdd as data storage
   */
-trait DataCache extends FoxImplicits{
+trait DataCache extends FoxImplicits with LazyLogging {
   def cache: LRUConcurrentCache[CachedCube, Fox[Cube]]
 
   /**
@@ -85,6 +85,7 @@ trait DataCache extends FoxImplicits{
         cubeFox.flatMap { cube =>
           cube.startAccess()
           NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
+          logger.trace(s"Cache hit: ${blockInfo}")
           val result = f(cube)
           cube.finishAccess()
           result.toFox

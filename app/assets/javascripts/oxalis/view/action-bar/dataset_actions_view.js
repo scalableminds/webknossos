@@ -6,14 +6,14 @@ import type { OxalisState, TracingType, TaskType } from "oxalis/store";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import app from "app";
-import Utils from "libs/utils";
-import Request from "libs/request";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import { Button } from "antd";
 import messages from "messages";
+import createApi from "oxalis/api/api_latest";
 
+const api = createApi(Model);
 const SAVED_POLLING_INTERVAL = 100;
 
 class DatasetActionsView extends PureComponent {
@@ -85,35 +85,9 @@ class DatasetActionsView extends PureComponent {
     win.document.body.innerHTML = messages["download.close_window"];
   };
 
-  handleNextTask = async (event: SyntheticInputEvent) => {
+  handleFinishAndGetNextTask = async (event: SyntheticInputEvent) => {
     event.target.blur();
-    const { tracingType, tracingId } = this.props.tracing;
-    const finishUrl = `/annotations/${tracingType}/${tracingId}/finish`;
-    const requestTaskUrl = "/user/tasks/request";
-
-    await this.handleSave();
-    await Request.triggerRequest(finishUrl);
-    try {
-      const annotation = await Request.receiveJSON(requestTaskUrl);
-      const state = Store.getState();
-
-      const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
-      const isDifferentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.task, x => x.type.id);
-      const differentTaskTypeParam = isDifferentTaskType ? "?differentTaskType" : "";
-      const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
-
-      // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
-      if (isDifferentDataset || isDifferentTaskType) {
-        app.router.loadURL(newTaskUrl);
-      } else {
-        // $FlowFixMe
-        app.oxalis.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
-      }
-    } catch (err) {
-      console.error(err);
-      await Utils.sleep(2000);
-      app.router.loadURL("/dashboard");
-    }
+    api.tracing.finishAndGetNextTask();
   };
 
   handleMergeOpen = () => {
@@ -192,7 +166,7 @@ class DatasetActionsView extends PureComponent {
       elements.push(<Button
         key="next-button"
         icon="verticle-left"
-        onClick={this.handleNextTask}
+        onClick={this.handleFinishAndGetNextTask}
       >
         Finish and Get Next Task
       </Button>);

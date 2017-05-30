@@ -130,12 +130,28 @@ class Skeleton {
     const nodeMaterial = new NodeShader(this.treeColorTexture).getMaterial();
     const edgeMaterial = new EdgeShader(this.treeColorTexture).getMaterial();
 
+    // delete actual GPU buffers in case there were any
+    if (this.nodes != null) {
+      for (const nodes of this.nodes.buffers) {
+        nodes.geometry.dispose();
+      }
+    }
+    if (this.edges != null) {
+      for (const edges of this.edges.buffers) {
+        edges.geometry.dispose();
+      }
+    }
+
+    // create new buffers
     this.nodes = this.initializeBufferCollection(nodeCount, nodeMaterial, NodeBufferHelperType);
     this.edges = this.initializeBufferCollection(edgeCount, edgeMaterial, EdgeBufferHelperType);
 
+    // fill buffers with data
     for (const tree of _.values(trees)) {
       this.createTree(tree);
     }
+
+    // compute bounding sphere to make ThreeJS happy
     for (const nodes of this.nodes.buffers) {
       nodes.geometry.computeBoundingSphere();
     }

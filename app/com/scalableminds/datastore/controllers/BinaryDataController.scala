@@ -359,7 +359,8 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
   protected def createRequestCollection(
                                          dataSource: DataSource,
                                          dataLayer: DataLayer,
-                                         requests: List[DataProtocolWriteRequest]) = {
+                                         requests: List[DataProtocolWriteRequest],
+                                         version: Long) = {
     val dataRequests = requests.map(r =>
       DataStorePlugin.binaryDataService.createDataWriteRequest(
         dataSource,
@@ -369,6 +370,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
         r.header.cubeSize,
         r.header.cubeSize,
         new VoxelPosition(r.header.position.x, r.header.position.y, r.header.position.z, math.pow(2,r.header.zoomStep).toInt),
+        version,
         r.data))
     DataRequestCollection(dataRequests)
   }
@@ -395,7 +397,7 @@ trait BinaryDataWriteController extends BinaryDataCommonController {
           _ <- dataLayer.isWritable ?~> "Can not write to data layer. Read only."
           // unpack parsed requests from their FileParts
           requests <- validateRequests(request.body.files.map(_.ref), dataLayer).toFox
-          dataRequestCollection = createRequestCollection(dataSource, dataLayer, requests)
+          dataRequestCollection = createRequestCollection(dataSource, dataLayer, requests, 123)
           _ <- Fox.combined(dataRequestCollection.requests.map(VolumeUpdateService.store))
           _ <- DataStorePlugin.binaryDataService.handleRequests(dataRequestCollection) ?~> "Data request couldn't get handled"
         } yield Ok

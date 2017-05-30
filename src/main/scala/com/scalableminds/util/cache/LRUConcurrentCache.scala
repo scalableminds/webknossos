@@ -35,6 +35,14 @@ trait LRUConcurrentCache[K, V] {
     }
   }
 
+  def remove(key: K): Unit = {
+    cache.synchronized {
+      val previous = cache.remove(key)
+      if(previous != null)
+        onElementRemoval(key, previous)
+    }
+  }
+
   def size(): Int = {
     cache.size()
   }

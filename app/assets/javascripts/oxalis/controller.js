@@ -275,7 +275,7 @@ class Controller {
   }
 
   onZoomStepChange() {
-    const shouldWarn = !Model.canDisplaySegmentationData();
+    const shouldWarn = Model.hasSegmentationData() && !Model.canDisplaySegmentationData();
     if (shouldWarn && (this.zoomStepWarningToast == null)) {
       const toastType = Store.getState().tracing.type === "volume" ? "danger" : "info";
       this.zoomStepWarningToast = Toast.message(toastType,

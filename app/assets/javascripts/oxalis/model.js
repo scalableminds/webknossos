@@ -314,8 +314,12 @@ export class OxalisModel {
     return layers;
   }
 
+  hasSegmentationData(): boolean {
+    return this.getSegmentationBinary() != null;
+  }
+
   canDisplaySegmentationData(): boolean {
-    return !(getIntegerZoomStep(Store.getState()) > 1) || !this.getSegmentationBinary();
+    return !(getIntegerZoomStep(Store.getState()) > 1);
   }
 
   computeBoundaries() {

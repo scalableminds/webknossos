@@ -10,7 +10,7 @@ import com.scalableminds.braingames.binary.models.{BucketReadInstruction, CubeRe
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Empty, Failure, Full}
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
@@ -68,7 +68,7 @@ trait Cube extends LazyLogging{
 /**
   * A data store implementation which uses the hdd as data storage
   */
-trait DataCache extends FoxImplicits{
+trait DataCache extends FoxImplicits with LazyLogging {
   def cache: LRUConcurrentCache[CachedCube, Fox[Cube]]
 
   /**
@@ -88,11 +88,17 @@ trait DataCache extends FoxImplicits{
           result.toFox
         }
       case _ =>
-        val cubeF = loadF.map{ cube =>
-          cube.startAccess()
-          cube
-        }
-        cache.put(cachedBlockInfo,cubeF)
+        val cubeF = loadF.futureBox.map{
+          case Full(cube) =>
+            cube.startAccess()
+            Full(cube)
+          case f: Failure =>
+            cache.remove(cachedBlockInfo)
+            f
+          case Empty =>
+            Empty
+        }.toFox
+        cache.put(cachedBlockInfo, cubeF)
         NewRelic.incrementCounter("Custom/FileDataStore/Cache/miss")
         NewRelic.recordMetric("Custom/FileDataStore/Cache/size", cache.size())
 

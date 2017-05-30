@@ -169,7 +169,7 @@ class DataRequester(
     layer: DataLayer,
     modifiedData: Array[Byte]): Fox[Boolean] = {
 
-    val saveBucket = BucketWriteInstruction(request.dataSource, layer, bucket, modifiedData)
+    val saveBucket = BucketWriteInstruction(request.dataSource, layer, bucket, request.version, modifiedData)
     saveToLayer(saveBucket)
   }
 

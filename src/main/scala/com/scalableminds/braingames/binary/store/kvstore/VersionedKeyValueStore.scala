@@ -24,40 +24,35 @@ object VersionedKey {
   }
 }
 
-case class VersionedKeyValuePair(versionedKey: VersionedKey, value: Array[Byte])
+case class VersionedKeyValuePair(versionedKey: VersionedKey, value: Array[Byte]) {
+  def key = versionedKey.key
+  def version = versionedKey.version
+}
 
-class VersionFilterIterator(it: Iterator[KeyValuePair], version: Option[Long]) extends Iterator[KeyValuePair] {
+class VersionFilterIterator(it: Iterator[KeyValuePair], version: Option[Long]) extends Iterator[VersionedKeyValuePair] {
   private var currentKey: Option[String] = None
 
-  private var versionedIt = it.flatMap(kv => VersionedKey(kv.key).map(VersionedKeyValuePair(_, kv.value)))
+  private var versionedIterator = it.flatMap(kv => VersionedKey(kv.key).map(VersionedKeyValuePair(_, kv.value)))
 
   override def hasNext: Boolean = {
-    versionedIt = versionedIt.dropWhile { kv =>
-      currentKey.contains(kv.versionedKey.key) || version.exists(kv.versionedKey.version > _)
+    versionedIterator = versionedIterator.dropWhile { kv =>
+      currentKey.contains(kv.key) || version.exists(kv.version > _)
     }
-    versionedIt.hasNext
+    versionedIterator.hasNext
   }
 
-  override def next(): KeyValuePair = {
-    val value = versionedIt.next()
-    currentKey = Some(value.versionedKey.key)
-    KeyValuePair(value.versionedKey.key, value.value)
+  override def next(): VersionedKeyValuePair = {
+    val value = versionedIterator.next()
+    currentKey = Some(value.key)
+    value
   }
 }
 
 class VersionedKeyValueStore(underlying: KeyValueStore) {
-  def get(key: String, version: Option[Long] = None): Box[Array[Byte]] = {
-    val it = version match {
-      case Some(version) =>
-        underlying.scan(key, Some(key)).dropWhile(kv =>
-          VersionedKey(kv.key).forall(_.version > version))
-      case None =>
-        underlying.scan(key, Some(key))
-    }
-    it.toStream.headOption.map(_.value)
-  }
+  def get(key: String, version: Option[Long] = None): Box[VersionedKeyValuePair] =
+    scan(key, Some(key), version).toStream.headOption
 
-  def scan(key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[KeyValuePair] =
+  def scan(key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair] =
     new VersionFilterIterator(underlying.scan(key, prefix), version)
 
   def put(key: String, version: Long, value: Array[Byte]): Box[Unit] =

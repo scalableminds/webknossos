@@ -112,7 +112,7 @@ class KnossosMultiResCreator(dataRequester: DataRequester)
             loadedData, layer.cubeLength, layer.cubeLength,
             layer.cubeLength, layer.bytesPerElement)
           val request = BucketWriteInstruction(
-            dataSource, layer, targetCubePosition, scaledData)
+            dataSource, layer, targetCubePosition, 0, scaledData)
           dataStore.save(target, request)
         }
       } .map { r =>

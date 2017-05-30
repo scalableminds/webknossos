@@ -32,9 +32,10 @@ trait BinaryDataRequestBuilder {
                               height: Int,
                               depth: Int,
                               position: VoxelPosition,
+                              version: Long,
                               data: Array[Byte]): DataWriteRequest = {
 
     val cuboid = Cuboid(position, width, height, depth)
-    DataWriteRequest(dataSource, dataLayer, dataSection, cuboid, data)
+    DataWriteRequest(dataSource, dataLayer, dataSection, cuboid, version, data)
   }
 }

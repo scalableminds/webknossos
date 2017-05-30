@@ -7,6 +7,7 @@ import java.io.OutputStream
 
 import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, FallbackLayer}
 import com.scalableminds.braingames.binary.requester.DataCubeCache
+import com.scalableminds.braingames.binary.store.AnnotationStore
 import com.scalableminds.util.geometry.BoundingBox
 import com.typesafe.config.ConfigFactory
 import play.api.libs.json.Json
@@ -40,15 +41,7 @@ case class RocksDbDataLayer(
 object RocksDbDataLayer {
   val layerType = "rocksdb"
 
-  val config = ConfigFactory.load()
-  println("Start")
-
-  lazy val db = initializeRocksDb("userBinaryData/rocksDb")
-
-  private def initializeRocksDb(path: String): RocksDB = {
-    RocksDB.loadLibrary()
-    RocksDB.open(new Options().setCreateIfMissing(true), path)
-  }
+  lazy val db = AnnotationStore.volumeStore
 
   implicit val rocksDbDataLayerFormat = Json.format[RocksDbDataLayer]
 }

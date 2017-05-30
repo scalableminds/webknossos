@@ -39,6 +39,7 @@ case class DataWriteRequest(
   dataLayer: DataLayer,
   dataSection: Option[String],
   cuboid: Cuboid,
+  version: Long,
   data: Array[Byte])
   extends DataRequest {
 

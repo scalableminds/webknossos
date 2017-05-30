@@ -29,4 +29,5 @@ case class BucketWriteInstruction(
   dataSource: DataSource,
   dataLayer: DataLayer,
   position: BucketPosition,
+  version: Long,
   data: Array[Byte]) extends DataAccessInstruction

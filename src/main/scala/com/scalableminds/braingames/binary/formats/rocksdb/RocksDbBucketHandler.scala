@@ -4,62 +4,60 @@
 package com.scalableminds.braingames.binary.formats.rocksdb
 
 import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.requester.handlers.BucketHandler
 import com.scalableminds.braingames.binary.requester.{Cube, DataCubeCache}
+import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box
 
-import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.ExecutionContext.Implicits._
-import com.scalableminds.braingames.binary.requester.handlers.BucketHandler
-import net.liftweb.common.{Box, Empty, Full}
-import net.liftweb.util.Helpers.tryo
-import org.rocksdb.RocksDB
+import scala.concurrent.duration.FiniteDuration
 
-case class RocksDbCube(db: RocksDB, key: Array[Byte]) extends Cube {
+case class RocksDbCube(db: VersionedKeyValueStore, key: String) extends Cube {
   def cutOutBucket(requestedBucket: BucketReadInstruction): Box[Array[Byte]] = {
-    val data = db.get(key)
-    if (data == null) {
-      Empty
-    } else {
-      Full(data)
-    }
+    db.get(key).map(_.value)
   }
 }
 
-class RocksDbBucketHandler(val cache: DataCubeCache, val db: RocksDB) extends BucketHandler
+class RocksDbBucketHandler(val cache: DataCubeCache, val db: VersionedKeyValueStore) extends BucketHandler
   with FoxImplicits
   with LazyLogging {
 
-  private def buildBucketKey(loadBlock: CubeReadInstruction): Array[Byte] = {
-    List(
+  private def mortonEncode(x: Long, y: Long, z: Long): Long = {
+    var morton = 0L
+    val bitLength = math.ceil(math.log(List(x, y, z).max + 1) / math.log(2)).toInt
+
+    (0 until bitLength).foreach { i =>
+      morton |= ((x & (1L << i)) << (2 * i)) |
+        ((y & (1L << i)) << (2 * i + 1)) |
+        ((z & (1L << i)) << (2 * i + 2))
+    }
+    morton
+  }
+
+  private def buildBucketKey(dataLayerName: String, resolution: Int, x: Long, y: Long, z: Long): String = {
+    val mortonIndex = mortonEncode(x, y, z)
+    s"${dataLayerName}-${resolution}-${mortonIndex}-${x}_${y}_${z}"
+  }
+
+  override def loadFromUnderlying(loadBlock: CubeReadInstruction, timeout: FiniteDuration): Fox[Cube] = {
+    val key = buildBucketKey(
       loadBlock.dataLayer.name,
       loadBlock.position.resolution,
       loadBlock.position.x,
       loadBlock.position.y,
-      loadBlock.position.z
-    ).mkString("-").toCharArray.map(_.toByte)
-  }
-
-  private def buildBucketKey(saveBlock: BucketWriteInstruction): Array[Byte] = {
-    List(
-      saveBlock.dataLayer.name,
-      saveBlock.position.resolution,
-      saveBlock.position.x,
-      saveBlock.position.y,
-      saveBlock.position.z
-    ).mkString("-").toCharArray.map(_.toByte)
-  }
-
-  override def loadFromUnderlying(loadBlock: CubeReadInstruction, timeout: FiniteDuration): Fox[Cube] = {
-    val key = buildBucketKey(loadBlock)
+      loadBlock.position.z)
     Fox.successful(new RocksDbCube(db, key))
   }
 
   override def saveToUnderlying(saveBlock: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {
-    val key = buildBucketKey(saveBlock)
-    tryo {
-      db.put(key, saveBlock.data)
-      true
-    }
+    val key = buildBucketKey(
+      saveBlock.dataLayer.name,
+      saveBlock.position.resolution,
+      saveBlock.position.x,
+      saveBlock.position.y,
+      saveBlock.position.z)
+    db.put(key, saveBlock.version, saveBlock.data).map(_ => true)
   }
 }

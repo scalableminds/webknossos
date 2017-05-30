@@ -188,11 +188,13 @@ class BaseRouter {
 
 
   loadURL(url) {
+    window.isNavigating = true;
     window.location.href = url;
   }
 
 
   reload() {
+    window.isNavigating = true;
     window.location.reload();
   }
 }

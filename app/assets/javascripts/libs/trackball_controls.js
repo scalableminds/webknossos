@@ -329,7 +329,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     event.preventDefault();
-    event.stopPropagation();
 
     if (_state === STATE.NONE) {
       _state = event.button;
@@ -355,7 +354,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     event.preventDefault();
-    event.stopPropagation();
 
     if (_state === STATE.ROTATE && !_this.noRotate) {
       _this.getMouseProjectionOnBall(event.pageX, event.pageY, _rotateEnd);
@@ -373,7 +371,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     event.preventDefault();
-    event.stopPropagation();
 
     _state = STATE.NONE;
 
@@ -386,7 +383,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     event.preventDefault();
-    event.stopPropagation();
 
     let delta = 0;
 
@@ -435,7 +431,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     event.preventDefault();
-    event.stopPropagation();
 
     switch (event.touches.length) {
 

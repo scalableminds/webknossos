@@ -11,7 +11,6 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 
 case class WebKnossosWrapDataSourceSettings(
-                                           name: Option[String],
                                            scale: Scale,
                                            priority: Option[Int],
                                            layers: List[WebKnossosWrapDataLayerSettings])

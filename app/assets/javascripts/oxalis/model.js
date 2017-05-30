@@ -314,12 +314,15 @@ export class OxalisModel {
     return layers;
   }
 
-  hasSegmentationData(): boolean {
-    return this.getSegmentationBinary() != null;
+  shouldDisplaySegmentationData(): boolean {
+    const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
+    // Currently segmentation data can only be displayed in orthogonal and volume mode
+    const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
+    return this.getSegmentationBinary() != null && canModeDisplaySegmentationData;
   }
 
   canDisplaySegmentationData(): boolean {
-    return !(getIntegerZoomStep(Store.getState()) > 1);
+    return getIntegerZoomStep(Store.getState()) <= 1;
   }
 
   computeBoundaries() {

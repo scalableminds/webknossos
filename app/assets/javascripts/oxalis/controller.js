@@ -140,7 +140,6 @@ class Controller {
     listenToStoreProperty(store => store.temporaryConfiguration.viewMode, mode => this.loadMode(mode), true);
 
     // Zoom step warning
-    this.zoomStepWarningToast = null;
     let lastZoomStep = Store.getState().flycam.zoomStep;
     Store.subscribe(() => {
       const { zoomStep } = Store.getState().flycam;
@@ -272,10 +271,13 @@ class Controller {
       Utils.__guard__(this.arbitraryController, x1 => x1.stop());
       this.planeController.start(newMode);
     }
+
+    // Hide/show zoomstep warning if appropriate
+    this.onZoomStepChange();
   }
 
   onZoomStepChange() {
-    const shouldWarn = Model.hasSegmentationData() && !Model.canDisplaySegmentationData();
+    const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
     if (shouldWarn && (this.zoomStepWarningToast == null)) {
       const toastType = Store.getState().tracing.type === "volume" ? "danger" : "info";
       this.zoomStepWarningToast = Toast.message(toastType,

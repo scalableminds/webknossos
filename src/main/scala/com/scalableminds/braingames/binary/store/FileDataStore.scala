@@ -66,7 +66,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
       } catch {
         case e: FileNotFoundException =>
           logger.info("File data store couldn't find file: " + path.toAbsolutePath)
-          Failure("Couldn't find file: " + e.getMessage, Full(e), Empty)
+          Empty
         case e: Exception =>
           Failure("An exception occurred while trying to load: " + e.getMessage, Full(e), Empty)
       }

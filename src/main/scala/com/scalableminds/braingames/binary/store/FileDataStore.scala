@@ -56,7 +56,7 @@ class FileDataStore extends DataStore with LazyLogging with FoxImplicits {
           .filter(_.exists())
           .orElse(fallback)
           .map { file =>
-            logger.trace("Accessing file: " + path)
+            logger.trace("Accessing file: " + file.getAbsolutePath)
             val t = System.currentTimeMillis
             val r = new RandomAccessFile(file, "r")
             NewRelic.recordResponseTimeMetric("Custom/FileDataStore/files-response-time", System.currentTimeMillis - t)

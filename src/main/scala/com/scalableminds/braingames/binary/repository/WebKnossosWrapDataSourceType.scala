@@ -36,7 +36,7 @@ class WebKnossosWrapDataSourceType(val messagesApi: MessagesApi) extends DataSou
       layers <- extractLayers(path, settings.layers) ?~> "Could not extract layers."
     } yield {
       DataSource(
-        settings.name getOrElse path.getFileName.toString,
+        path.getFileName.toString,
         path.toAbsolutePath.toString,
         settings.scale,
         settings.priority.getOrElse(DEFAULT_PRIORITY),

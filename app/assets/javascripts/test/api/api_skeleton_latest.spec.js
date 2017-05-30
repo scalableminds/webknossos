@@ -150,3 +150,8 @@ test("Utils Api: registerOverwrite should overwrite an existing function", (t) =
   // And the original method should have been called
   t.is(api.tracing.getActiveNodeId(), 2);
 });
+
+test("Calling a volume api function in a skeleton tracing should throw an error", (t) => {
+  const api = t.context.api;
+  t.throws(() => api.tracing.getVolumeMode());
+});

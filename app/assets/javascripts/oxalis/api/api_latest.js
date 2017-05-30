@@ -15,7 +15,7 @@ import { setActiveCellAction, setModeAction } from "oxalis/model/actions/volumet
 import { getActiveCellId, getMode } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, VolumeModeType } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
-import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType } from "oxalis/store";
+import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType, TracingType } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
 import Utils from "libs/utils";
 
@@ -25,6 +25,17 @@ function assertExists(value: any, message: string) {
   }
 }
 
+function assertSkeleton(tracing: TracingType) {
+  if (tracing.type !== "skeleton") {
+    throw Error("This api function should only be called in a skeleton tracing.");
+  }
+}
+
+function assertVolume(tracing: TracingType) {
+  if (tracing.type !== "volume") {
+    throw Error("This api function should only be called in a volume tracing.");
+  }
+}
 /**
  * All tracing related API methods. This is the newest version of the API (version 2).
  * @version 2
@@ -46,20 +57,25 @@ class TracingApi {
   * Returns the id of the current active node.
   */
   getActiveNodeId(): ?number {
-    return getActiveNode(Store.getState().tracing).map(node => node.id).getOrElse(null);
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    return getActiveNode(tracing).map(node => node.id).getOrElse(null);
   }
 
  /**
   * Returns the id of the current active tree.
   */
   getActiveTreeId(): ?number {
-    return getActiveTree(Store.getState().tracing).map(tree => tree.treeId).getOrElse(null);
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    return getActiveTree(tracing).map(tree => tree.treeId).getOrElse(null);
   }
 
  /**
   * Sets the active node given a node id.
   */
   setActiveNode(id: number) {
+    assertSkeleton(Store.getState().tracing);
     assertExists(id, "Node id is missing.");
     Store.dispatch(setActiveNodeAction(id));
   }
@@ -68,7 +84,9 @@ class TracingApi {
   * Returns all nodes belonging to a tracing.
   */
   getAllNodes(): Array<NodeType> {
-    return getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    return getSkeletonTracing(tracing).map((skeletonTracing) => {
       const { trees } = skeletonTracing;
       return _.flatMap(trees, tree => _.values(tree.nodes));
     }).getOrElse([]);
@@ -78,7 +96,9 @@ class TracingApi {
   * Returns all trees belonging to a tracing.
   */
   getAllTrees(): TreeMapType {
-    return getSkeletonTracing(Store.getState().tracing).map(skeletonTracing =>
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    return getSkeletonTracing(tracing).map(skeletonTracing =>
       skeletonTracing.trees,
     ).getOrElse({});
   }
@@ -87,6 +107,7 @@ class TracingApi {
    * Deletes the node with nodeId in the tree with treeId
    */
   deleteNode(nodeId: number, treeId: number) {
+    assertSkeleton(Store.getState().tracing);
     Store.dispatch(deleteNodeAction(nodeId, treeId));
   }
 
@@ -98,8 +119,10 @@ class TracingApi {
   * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
   */
   setCommentForNode(commentText: string, nodeId: number, treeId?: number): void {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
     assertExists(commentText, "Comment text is missing.");
-    getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    getSkeletonTracing(tracing).map((skeletonTracing) => {
       // Convert nodeId to node
       if (_.isNumber(nodeId)) {
         const tree = treeId != null ?
@@ -124,8 +147,10 @@ class TracingApi {
   * const comment = api.tracing.getCommentForNode(23, api.getActiveTreeid());
   */
   getCommentForNode(nodeId: number, treeId?: number): ?string {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
     assertExists(nodeId, "Node id is missing.");
-    return getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    return getSkeletonTracing(tracing).map((skeletonTracing) => {
       // Convert treeId to tree
       let tree = null;
       if (treeId != null) {
@@ -150,7 +175,9 @@ class TracingApi {
   * _Volume tracing only!_
   */
   getActiveCellId(): ?number {
-    return Utils.unpackMaybe(getActiveCellId(Store.getState().tracing));
+    const tracing = Store.getState().tracing;
+    assertVolume(tracing);
+    return Utils.unpackMaybe(getActiveCellId(tracing));
   }
 
  /**
@@ -159,6 +186,7 @@ class TracingApi {
   * _Volume tracing only!_
   */
   setActiveCell(id: number) {
+    assertVolume(Store.getState().tracing);
     assertExists(id, "Cell id is missing.");
     Store.dispatch(setActiveCellAction(id));
   }
@@ -170,7 +198,9 @@ class TracingApi {
   * _Volume tracing only!_
   */
   getVolumeMode(): ?VolumeModeType {
-    return Utils.unpackMaybe(getMode(Store.getState().tracing));
+    const tracing = Store.getState().tracing;
+    assertVolume(tracing);
+    return Utils.unpackMaybe(getMode(tracing));
   }
 
  /**
@@ -180,6 +210,7 @@ class TracingApi {
   * _Volume tracing only!_
   */
   setVolumeMode(mode: VolumeModeType) {
+    assertVolume(Store.getState().tracing);
     assertExists(mode, "Volume mode is missing.");
     // TODO: Use an Enum for VolumeModeType and replace this ugly check - postponed to avoid merge conflicts
     if (mode !== 0 && mode !== 1) {
@@ -270,6 +301,7 @@ class DataApi {
   * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
   */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
+    assertVolume(Store.getState().tracing);
     const layer = this.model.getSegmentationBinary();
     assertExists(layer, "Segmentation layer not found!");
 

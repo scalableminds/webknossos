@@ -52,3 +52,8 @@ test("Data Api: labelVoxels should label a list of voxels", (t) => {
   // Some other voxel should not
   t.not(cube.getDataValue([11, 12, 13]), 34);
 });
+
+test("Calling a skeleton api function in a volume tracing should throw an error", (t) => {
+  const api = t.context.api;
+  t.throws(() => api.tracing.getActiveNodeId());
+});

@@ -26,4 +26,3 @@ object UserDataLayerService extends FoxImplicits {
     }
   }
 }
-

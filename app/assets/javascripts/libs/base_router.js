@@ -164,17 +164,18 @@ class BaseRouter {
     // Remove current views
     if (this.activeViews.length > 0) {
       for (const view of this.activeViews) {
-        // prefer Marionette's.destroy() function to Backbone's remove()
-        if (view.destroy) {
-          view.destroy();
-        } else {
-          view.remove();
-        }
 
         if (view.forcePageReload) {
           window.removeEventListener("beforeunload", this.handleBeforeunload);
           this.reload();
           return false;
+        }
+
+        // prefer Marionette's.destroy() function to Backbone's remove()
+        if (view.destroy) {
+          view.destroy();
+        } else {
+          view.remove();
         }
       }
       this.activeViews = [];

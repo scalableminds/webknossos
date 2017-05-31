@@ -47,7 +47,7 @@ class UrlManager {
         return;
       }
       // Don't tamper with URL if changed externally for some time
-      if (this.lastUrl == null || window.location.href === this.lastUrl) {
+      if (!window.isNavigating && this.lastUrl == null || window.location.href === this.lastUrl) {
         window.history.replaceState({}, null, url);
         this.lastUrl = window.location.href;
       } else {

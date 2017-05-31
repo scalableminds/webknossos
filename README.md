@@ -111,4 +111,4 @@ These tests are run on our CI server. Running the tests manually in not encourag
 
 # License
 AGPLv3
-
+Copyright scalable minds 2017

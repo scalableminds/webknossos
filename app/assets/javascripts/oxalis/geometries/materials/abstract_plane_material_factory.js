@@ -7,7 +7,7 @@ import _ from "lodash";
 import * as THREE from "three";
 import app from "app";
 import Utils from "libs/utils";
-import type { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 import Store from "oxalis/store";
 
 export type UniformsType = {
@@ -24,8 +24,6 @@ export type ShaderMaterialOptionsType = {
 }
 
 class AbstractPlaneMaterialFactory {
-
-  model: OxalisModel
   material: THREE.ShaderMaterial;
   uniforms: UniformsType;
   attributes: Object;
@@ -36,9 +34,7 @@ class AbstractPlaneMaterialFactory {
   maxFilter: THREE.NearestFilter;
   tWidth: number;
 
-  constructor(model: OxalisModel, tWidth: number) {
-    this.model = model;
-
+  constructor(tWidth: number) {
     this.setupUniforms();
     this.makeMaterial();
     this.setupChangeListeners();
@@ -52,7 +48,7 @@ class AbstractPlaneMaterialFactory {
   setupUniforms(): void {
     this.uniforms = {};
 
-    for (const binary of this.model.getColorBinaries()) {
+    for (const binary of Model.getColorBinaries()) {
       const name = this.sanitizeName(binary.name);
       this.uniforms[`${name}_brightness`] = {
         type: "f",

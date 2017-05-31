@@ -5,9 +5,9 @@
  * @flow
  */
 import type { Vector3 } from "oxalis/constants";
-import type { Tracing, SkeletonContentDataType } from "oxalis/model";
+import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
 
-type InitializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing<SkeletonContentDataType> };
+type InitializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: ServerTracing<SkeletonContentDataType> };
 type CreateNodeActionType = {type: "CREATE_NODE", position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number, treeId?: number};
 type DeleteNodeActionType = {type: "DELETE_NODE", nodeId?: number, treeId?: number, timestamp: number};
 type SetActiveNodeActionType = {type: "SET_ACTIVE_NODE", nodeId: number};
@@ -68,7 +68,7 @@ export const SkeletonTracingActions = [
   "SET_VIEW_MODE",
 ];
 
-export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContentDataType>): InitializeSkeletonTracingActionType => ({
+export const initializeSkeletonTracingAction = (tracing: ServerTracing<SkeletonContentDataType>): InitializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",
   tracing,
 });

@@ -29,9 +29,15 @@ class UrlManager {
   initialState: UrlManagerState;
   lastUrl: ?string
 
-  constructor() {
+  initialize() {
     this.baseUrl = document.location.pathname + document.location.search;
     this.initialState = this.parseUrl();
+  }
+
+  reset(): void {
+    // don't use document.location.hash = ""; since it refreshes the page
+    window.history.replaceState({}, null, document.location.pathname + document.location.search);
+    this.initialize();
   }
 
   update = _.throttle(
@@ -41,8 +47,8 @@ class UrlManager {
         return;
       }
       // Don't tamper with URL if changed externally for some time
-      if (!window.isNavigating && (this.lastUrl == null || window.location.href === this.lastUrl)) {
-        window.location.replace(url);
+      if (!window.isNavigating && this.lastUrl == null || window.location.href === this.lastUrl) {
+        window.history.replaceState({}, null, url);
         this.lastUrl = window.location.href;
       } else {
         setTimeout(() => { this.lastUrl = null; }, NO_MODIFY_TIMEOUT);
@@ -63,12 +69,12 @@ class UrlManager {
       if (stateArray.length >= 5) {
         state.position = Utils.numberArrayToVector3(stateArray.slice(0, 3));
 
-        const modeNumber = ModeValues.find(el => el === stateArray[3]);
-        if (modeNumber) {
-          state.mode = modeNumber;
+        const modeString = ModeValues[stateArray[3]];
+        if (modeString) {
+          state.mode = modeString;
         } else {
           // Let's default to MODE_PLANE_TRACING
-          state.mode = 0;
+          state.mode = constants.MODE_PLANE_TRACING;
         }
         state.zoomStep = stateArray[4];
 
@@ -94,12 +100,14 @@ class UrlManager {
 
 
   buildUrl(): ?string {
-    if (!Store.getState().tracing) {
+    const tracing = Store.getState().tracing;
+    if (!tracing) {
       return null;
     }
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
     let state = V3.floor(getPosition(Store.getState().flycam));
-    state.push(viewMode);
+    // Convert viewMode to number
+    state.push(ModeValues.indexOf(viewMode));
 
     if (constants.MODES_ARBITRARY.includes(viewMode)) {
       state = state
@@ -109,9 +117,24 @@ class UrlManager {
       state = state.concat([Store.getState().flycam.zoomStep.toFixed(2)]);
     }
 
-    getActiveNode(Store.getState().tracing).map(node => state.push(node.id));
-    return `${this.baseUrl}#${state.join(",")}`;
+    getActiveNode(tracing).map(node => state.push(node.id));
+    const newBaseUrl = updateTypeAndId(this.baseUrl, tracing.tracingType, tracing.tracingId);
+    return `${newBaseUrl}#${state.join(",")}`;
   }
 }
 
-export default UrlManager;
+export function updateTypeAndId(baseUrl: string, tracingType: string, tracingId: string): string {
+  // Update the baseUrl with a potentially new tracing id and or tracing type.
+  // There are two possible routes (annotations or datasets) which will be handled
+  // both here. Chaining the replace function is possible, since they are mutually
+  // exclusive and thus can't apply both simultaneously.
+  return baseUrl
+    .replace(/^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/, (all, base, type, id, rest) =>
+      `${base}/${tracingType}/${tracingId}${rest}`,
+    )
+    .replace(/^(.*\/datasets)\/([^/]*)(\/.*)$/, (all, base, id, rest) =>
+      `${base}/${tracingId}${rest}`,
+    );
+}
+
+export default new UrlManager();

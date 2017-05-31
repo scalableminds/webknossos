@@ -6,7 +6,7 @@
 import app from "app";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
-import type { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 import { getArea, getRequestLogZoomStep, getTexturePosition } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
@@ -21,7 +21,6 @@ class Plane {
 
   plane: THREE.Mesh;
   planeID: OrthoViewType;
-  model: OxalisModel
   planeWidth: number;
   textureWidth: number;
   displayCosshair: boolean;
@@ -29,9 +28,8 @@ class Plane {
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
 
-  constructor(planeWidth: number, textureWidth: number, planeID: OrthoViewType, model: OxalisModel) {
+  constructor(planeWidth: number, textureWidth: number, planeID: OrthoViewType) {
     this.planeID = planeID;
-    this.model = model;
     this.planeWidth = planeWidth;
     this.textureWidth = textureWidth;
     this.displayCosshair = true;
@@ -50,7 +48,7 @@ class Plane {
   createMeshes(pWidth: number, tWidth: number): void {
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
-    const textureMaterial = new PlaneMaterialFactory(this.model, tWidth).getMaterial();
+    const textureMaterial = new PlaneMaterialFactory(tWidth).getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 
     // create crosshair
@@ -100,19 +98,17 @@ class Plane {
 
   updateTexture(): void {
     const area = getArea(Store.getState(), this.planeID);
-    if (this.model != null) {
-      for (const name of Object.keys(this.model.binary)) {
-        const binary = this.model.binary[name];
-        const dataBuffer = binary.planes[this.planeID].get({
-          position: getTexturePosition(Store.getState(), this.planeID),
-          zoomStep: getRequestLogZoomStep(Store.getState()),
-          area,
-        });
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
+      const dataBuffer = binary.planes[this.planeID].get({
+        position: getTexturePosition(Store.getState(), this.planeID),
+        zoomStep: getRequestLogZoomStep(Store.getState()),
+        area,
+      });
 
-        if (dataBuffer) {
-          this.plane.material.setData(name, dataBuffer);
-          app.vent.trigger("rerender");
-        }
+      if (dataBuffer) {
+        this.plane.material.setData(name, dataBuffer);
+        app.vent.trigger("rerender");
       }
     }
 

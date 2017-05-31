@@ -8,14 +8,11 @@
 
 import $ from "jquery";
 import _ from "lodash";
-import React from "react";
 import { ControlModeEnum } from "oxalis/constants";
 import { SkeletonTracingTypeTracingEnum } from "oxalis/store";
 import BaseRouter from "libs/base_router";
+import ReactBackboneWrapper from "libs/react_backbone_wrapper";
 import PaginationCollection from "admin/models/pagination_collection";
-import Model from "oxalis/model";
-import { render } from "react-dom";
-
 
 // #####
 // This Router contains all the routes for views that have been
@@ -71,28 +68,34 @@ class Router extends BaseRouter {
     this.$loadingSpinner.addClass("hidden");
   }
 
-
   tracingView(type, id) {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
-      Model.initialize(type, id, ControlModeEnum.TRACE);
 
-      // view.forcePageReload = true;
-      render(<TracingLayoutView />, this.$mainContainer[0]);
+      const view = new ReactBackboneWrapper(TracingLayoutView, {
+        initialTracingType: type,
+        initialTracingId: id,
+        initialControlmode: ControlModeEnum.TRACE,
+      });
+      view.forcePageReload = true;
+      this.changeView(view);
     };
     require(["oxalis/view/tracing_layout_view"], callback);
   }
-
 
   tracingViewPublic(id) {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
-      Model.initialize(SkeletonTracingTypeTracingEnum.View, id, ControlModeEnum.VIEW);
 
-      // view.forcePageReload = true;
-      render(<TracingLayoutView />, this.$mainContainer[0]);
+      const view = new ReactBackboneWrapper(TracingLayoutView, {
+        initialTracingType: SkeletonTracingTypeTracingEnum.View,
+        initialTracingId: id,
+        initialControlmode: ControlModeEnum.VIEW,
+      });
+      view.forcePageReload = true;
+      this.changeView(view);
     };
     require(["oxalis/view/tracing_layout_view"], callback);
   }

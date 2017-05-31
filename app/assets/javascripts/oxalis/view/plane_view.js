@@ -12,7 +12,7 @@ import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/
 import View from "oxalis/view";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
-import type { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 
 class PlaneView {
 
@@ -21,7 +21,6 @@ class PlaneView {
   on: Function;
   listenTo: Function;
 
-  model: OxalisModel
   view: View;
   renderer: THREE.WebGLRenderer;
   cameras: OrthoViewMapType<THREE.OrthographicCamera>;
@@ -32,8 +31,7 @@ class PlaneView {
   needsRerender: boolean;
   curWidth: number;
 
-  constructor(model: OxalisModel, view: View) {
-    this.model = model;
+  constructor(view: View) {
     this.view = view;
     _.extend(this, Backbone.Events);
 
@@ -144,8 +142,8 @@ class PlaneView {
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
 
     let modelChanged: boolean = false;
-    for (const name of Object.keys(this.model.binary)) {
-      const binary = this.model.binary[name];
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
       for (const plane of _.values(binary.planes)) {
         modelChanged = modelChanged || plane.hasChanged();
       }

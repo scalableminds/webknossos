@@ -6,6 +6,7 @@
 // only relative imports are followed by documentationjs
 import _ from "lodash";
 import { InputKeyboardNoLoop } from "libs/input";
+import Model from "oxalis/model";
 import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
@@ -15,7 +16,12 @@ import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } fr
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType } from "oxalis/store";
-import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
+import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
+import Toast from "libs/toast";
+import Request from "libs/request";
+import app from "app";
+import Utils from "libs/utils";
+import { ControlModeEnum } from "oxalis/constants";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -136,6 +142,63 @@ class TracingApi {
       const comment = tree.comments.find(__ => __.node === nodeId);
       return comment != null ? comment.content : null;
     }).getOrElse(null);
+  }
+
+  /**
+   * Saves the tracing and returns a promise (which you can call `then` on or use await with).
+   *
+   * @example
+   * api.tracing.save().then(() => ... );
+   *
+   * @example
+   * await api.tracing.save();
+   */
+  async save() {
+    await Model.save();
+  }
+
+  /**
+   * Finishes the task and gets the next one. It returns a promise (which you can call `then` on or use await with).
+   * Don't assume that code after the finishAndGetNextTask call will be executed.
+   * It can happen that there is no further task, in which case the user will be redirected to the dashboard.
+   * Or the the page can be reloaded (e.g., if the dataset changed), which also means that no further JS code will
+   // be executed in this site context.
+   *
+   * @example
+   * api.tracing.save().then(() => ... );
+   *
+   * @example
+   * await api.tracing.save();
+   */
+  async finishAndGetNextTask() {
+    const state = Store.getState();
+    const { tracingType, tracingId } = state.tracing;
+    const task = state.task;
+    const finishUrl = `/annotations/${tracingType}/${tracingId}/finish`;
+    const requestTaskUrl = "/user/tasks/request";
+
+    await Model.save();
+    await Request.triggerRequest(finishUrl);
+    try {
+      const annotation = await Request.receiveJSON(requestTaskUrl);
+
+      const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
+      const isDifferentTaskType = annotation.task.type.id !== Utils.__guard__(task, x => x.type.id);
+      const differentTaskTypeParam = isDifferentTaskType ? "?differentTaskType" : "";
+      const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
+
+      // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
+      if (isDifferentDataset || isDifferentTaskType) {
+        app.router.loadURL(newTaskUrl);
+      } else {
+        // $FlowFixMe
+        app.oxalis.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
+      }
+    } catch (err) {
+      console.error(err);
+      await Utils.sleep(2000);
+      app.router.loadURL("/dashboard");
+    }
   }
 
 }
@@ -326,6 +389,22 @@ class UtilsApi {
   */
   sleep(milliseconds: number) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
+  }
+
+  /**
+   * Show a toast to the user. Returns a function which can be used to remove the toast again.
+   *
+   * @param {string} type - Can be one of the following: "info", "warning", "success" or "danger"
+   * @param {string} message - The message string you want to show
+   * @param {number} timeout - Time period in milliseconds after which the toast will be hidden. Time is measured as soon as the user moves the mouse. A value of 0 means that the toast will only hide by clicking on it's X button.
+   * @example // Show a toast for 5 seconds
+   * const removeToast = api.utils.showToast("info", "You just got toasted", false, 5000);
+   * // ... optionally:
+   * // removeToast();
+   */
+  showToast(type: string, message: string, timeout: number): ?Function {
+    const noop = () => {};
+    return Toast.message(type, message, timeout === 0, timeout).remove || noop;
   }
 
  /**

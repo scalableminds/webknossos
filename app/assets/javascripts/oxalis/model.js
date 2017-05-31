@@ -16,12 +16,13 @@ import type {
   BranchPointType,
   SkeletonTracingTypeTracingType,
   VolumeTracingTypeTracingType,
-  DataLayerType,
+  TaskType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import { setDatasetAction, setViewModeAction, setControlModeAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
+import { initializeReadOnlyTracingAction } from "oxalis/model/actions/readonlytracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
@@ -30,20 +31,15 @@ import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import constants, { Vector3Indicies, ControlModeEnum } from "oxalis/constants";
-import type { ModeType, Vector3, BoundingBoxType, ControlModeType } from "oxalis/constants";
+import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
+import type { Vector3, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import update from "immutability-helper";
-
-// This is THE model. It takes care of the data including the
-// communication with the server.
-
-// All public operations are **asynchronous**. We return a promise
-// which you can react on.
+import UrlManager from "oxalis/controller/url_manager";
 
 type SkeletonContentTreeType = {
   id: number,
@@ -61,6 +57,7 @@ export type SkeletonContentDataType = {
   trees: Array<SkeletonContentTreeType>;
   zoomLevel: number;
   customLayers: null;
+  zoomLevel: number;
 };
 
 export type VolumeContentDataType = {
@@ -69,9 +66,10 @@ export type VolumeContentDataType = {
   customLayers: Array<Object>;
   maxCoordinates: BoundingBoxObjectType;
   name: string;
+  zoomLevel: number;
 };
 
-export type Tracing<T> = {
+export type ServerTracing<T> = {
   actions: Array<any>,
   content: {
     boundingBox: BoundingBoxObjectType,
@@ -93,7 +91,7 @@ export type Tracing<T> = {
   state: UrlManagerState,
   stateLabel: string,
   stats: any,
-  task: any,
+  task: TaskType,
   tracingTime: number,
   typ: SkeletonTracingTypeTracingType | VolumeTracingTypeTracingType,
   user: any,
@@ -104,106 +102,134 @@ export type Tracing<T> = {
 export class OxalisModel {
   HANDLED_ERROR = "error_was_handled";
 
-  initialized: boolean;
   connectionInfo: ConnectionInfo;
   binary: {
     [key: string]: Binary,
   };
-  taskBoundingBox: BoundingBoxType;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  allowedModes: Array<ModeType>;
-  isVolume: boolean;
-  settings: SettingsType;
-  tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>;
-  tracingId: string;
-  tracingType: SkeletonTracingTypeTracingType;
-  preferredMode: ModeType;
-  isTask: boolean;
-  state: UrlManagerState;
+  tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>;
 
-  constructor() {
-    this.initialized = false;
-  }
-
-  initialize(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
-    this.tracingType = tracingType;
-    this.tracingId = tracingId;
+  async fetch(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType, initialFetch: boolean) {
     Store.dispatch(setControlModeAction(controlMode));
-  }
 
-
-  fetch() {
     let infoUrl;
-    const controlMode = Store.getState().temporaryConfiguration.controlMode;
     if (controlMode === ControlModeEnum.TRACE) {
       // Include /readOnly part whenever it is in the pathname
       const isReadOnly = window.location.pathname.endsWith("/readOnly");
       const readOnlyPart = isReadOnly ? "readOnly/" : "";
-      infoUrl = `/annotations/${this.tracingType}/${this.tracingId}/${readOnlyPart}info`;
+      infoUrl = `/annotations/${tracingType}/${tracingId}/${readOnlyPart}info`;
     } else {
-      infoUrl = `/annotations/${this.tracingType}/${this.tracingId}/info`;
+      infoUrl = `/annotations/${tracingType}/${tracingId}/info`;
     }
 
-    return Request.receiveJSON(infoUrl).then((tracing: Tracing<*>) => {
-      let error;
-      const dataset = tracing.content.dataSet;
-      if (tracing.error) {
-        ({ error } = tracing);
-      } else if (!dataset) {
-        error = "Selected dataset doesn't exist";
-      } else if (!dataset.dataLayers) {
-        if (dataset.name) {
-          error = `Please, double check if you have the dataset '${dataset.name}' imported.`;
-        } else {
-          error = "Please, make sure you have a dataset imported.";
-        }
-      }
+    const tracing: ServerTracing<*> = await Request.receiveJSON(infoUrl);
 
-      if (error) {
-        Toast.error(error);
-        throw this.HANDLED_ERROR;
+    let error;
+    const dataset = tracing.content.dataSet;
+    if (tracing.error) {
+      ({ error } = tracing);
+    } else if (!dataset) {
+      error = "Selected dataset doesn't exist";
+    } else if (!dataset.dataLayers) {
+      if (dataset.name) {
+        error = `Please, double check if you have the dataset '${dataset.name}' imported.`;
+      } else {
+        error = "Please, make sure you have a dataset imported.";
       }
+    }
 
-      Store.dispatch(setDatasetAction(dataset));
-      Store.dispatch(setTaskAction(tracing.task));
-      return tracing;
-    }).then((tracing: Tracing<*>) => {
-      const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
-      return this.initializeWithData(tracing, layerInfos);
+    if (error) {
+      Toast.error(error);
+      throw this.HANDLED_ERROR;
+    }
+
+    if (!tracing.restrictions.allowAccess) {
+      error = "You are not allowed to access this tracing";
+      throw this.HANDLED_ERROR;
+    }
+
+    // Make sure subsequent fetch calls are always for the same dataset
+    if (!_.isEmpty(this.binary)) {
+      ErrorHandling.assert(_.isEqual(dataset, Store.getState().dataset),
+        "Model.fetch was called for a task with another dataset, without reloading the page.");
+    }
+
+    ErrorHandling.assertExtendContext({
+      task: tracing.id,
+      dataSet: dataset.name,
     });
+
+    Store.dispatch(setDatasetAction(dataset));
+    Store.dispatch(setTaskAction(tracing.task));
+
+    // Only initialize the model once.
+    // There is no need to reinstantiate the binaries if the dataset didn't change.
+    if (initialFetch) {
+      this.initializeModel(tracing);
+    }
+    this.initializeTracing(tracing, initialFetch);
+
+    return tracing;
   }
 
+  determineAllowedModes(settings: SettingsType) {
+    // The order of allowedModes should be independent from the server and instead be similar to ModeValues
+    let allowedModes = _.intersection(ModeValues, settings.allowedModes);
 
-  determineAllowedModes() {
-    const allowedModes = [];
-    const settings = this.settings;
-    for (const allowedMode of settings.allowedModes) {
-      if (this.getColorBinaries()[0].cube.BIT_DEPTH === 8) {
-        switch (allowedMode) {
-          case "flight": allowedModes.push(constants.MODE_ARBITRARY); break;
-          case "oblique": allowedModes.push(constants.MODE_ARBITRARY_PLANE); break;
-          default: // ignore other modes for now
-        }
-      }
-
-      if (["orthogonal", "volume"].includes(allowedMode)) {
-        allowedModes.push(constants.MODE_NAME_TO_ID[allowedMode]);
-      }
+    const colorLayer = _.find(Store.getState().dataset.dataLayers, { category: "color" });
+    if (colorLayer != null && colorLayer.elementClass !== "uint8") {
+      allowedModes = allowedModes.filter(mode => !constants.MODES_ARBITRARY.includes(mode));
     }
 
-    if (settings.preferredMode) {
-      const modeId = constants.MODE_NAME_TO_ID[settings.preferredMode];
+    let preferredMode = null;
+    if (settings.preferredMode != null) {
+      const modeId = settings.preferredMode;
       if (allowedModes.includes(modeId)) {
-        this.preferredMode = modeId;
+        preferredMode = modeId;
       }
     }
 
-    allowedModes.sort();
-    return allowedModes;
+    return { preferredMode, allowedModes };
   }
 
-  initializeWithData(tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>, layerInfos: Array<DataLayerType>) {
+  initializeTracing(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>, initialFetch: boolean) {
+    const { allowedModes, preferredMode } = this.determineAllowedModes(tracing.content.settings);
+    _.extend(tracing.content.settings, { allowedModes, preferredMode });
+
+    const isVolume = tracing.content.settings.allowedModes.includes("volume");
+    const controlMode = Store.getState().temporaryConfiguration.controlMode;
+    if (controlMode === ControlModeEnum.TRACE) {
+      if (isVolume) {
+        ErrorHandling.assert((this.getSegmentationBinary() != null),
+          "Volume is allowed, but segmentation does not exist");
+        const volumeTracing: ServerTracing<VolumeContentDataType> = (tracing: ServerTracing<any>);
+        Store.dispatch(initializeVolumeTracingAction(volumeTracing));
+      } else {
+        const skeletonTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<any>);
+        Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
+      }
+    } else {
+      const readOnlyTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<any>);
+      Store.dispatch(initializeReadOnlyTracingAction(readOnlyTracing));
+    }
+
+    if (initialFetch) {
+      Store.dispatch(setZoomStepAction(tracing.content.contentData.zoomLevel));
+    }
+
+    // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
+    if (allowedModes.length === 0) {
+      Toast.error("There was no valid allowed tracing mode specified.");
+    } else {
+      const mode = preferredMode || UrlManager.initialState.mode || allowedModes[0];
+      Store.dispatch(setViewModeAction(mode));
+    }
+
+    this.applyState(UrlManager.initialState, tracing);
+  }
+
+  initializeModel(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
     const dataset = tracing.content.dataSet;
     const { dataStore } = dataset;
 
@@ -215,17 +241,8 @@ export class OxalisModel {
       }
     })();
 
-    const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataStore));
-
-    ErrorHandling.assertExtendContext({
-      task: this.tracingId,
-      dataSet: dataset.name,
-    });
-
-    const bb = tracing.content.boundingBox;
-    if (bb != null) {
-      this.taskBoundingBox = Utils.computeBoundingBoxFromArray(Utils.concatVector3(bb.topLeft, [bb.width, bb.height, bb.depth]));
-    }
+    const layers = this.getLayerInfos(tracing.content.contentData.customLayers)
+      .map(layerInfo => new LayerClass(layerInfo, dataStore));
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
@@ -234,7 +251,7 @@ export class OxalisModel {
 
     for (const layer of layers) {
       const maxLayerZoomStep = Math.log(Math.max(...layer.resolutions)) / Math.LN2;
-      this.binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, this.connectionInfo);
+      this.binary[layer.name] = new Binary(tracing, layer, maxLayerZoomStep, this.connectionInfo);
       maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep);
     }
 
@@ -245,40 +262,10 @@ export class OxalisModel {
       throw this.HANDLED_ERROR;
     }
 
-    this.isVolume = tracing.content.settings.allowedModes.includes("volume");
-
-    const controlMode = Store.getState().temporaryConfiguration.controlMode;
-    if (controlMode === ControlModeEnum.TRACE) {
-      if (this.isVolumeTracing()) {
-        ErrorHandling.assert((this.getSegmentationBinary() != null),
-          "Volume is allowed, but segmentation does not exist");
-        // $FlowFixMe
-        const volumeTracing: Tracing<VolumeContentDataType> = tracing;
-        Store.dispatch(initializeVolumeTracingAction(volumeTracing));
-      } else {
-        // $FlowFixMe
-        const skeletonTracing: Tracing<SkeletonContentDataType> = tracing;
-        Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
-      }
-    }
-
-    this.applyState(this.state, tracing);
     this.computeBoundaries();
 
+    // TODO: remove
     this.tracing = tracing;
-    this.settings = tracing.content.settings;
-    this.allowedModes = this.determineAllowedModes();
-    this.isTask = this.tracingType === "Task";
-
-    // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
-    if (this.allowedModes.length === 0) {
-      Toast.error("There was no valid allowed tracing mode specified.");
-    } else {
-      const mode = this.preferredMode || this.state.mode || this.allowedModes[0];
-      Store.dispatch(setViewModeAction(mode));
-    }
-
-    this.initialized = true;
   }
 
   // For now, since we have no UI for this
@@ -294,26 +281,17 @@ export class OxalisModel {
     }
   }
 
-
   getColorBinaries() {
     return _.filter(this.binary, binary => binary.category === "color");
   }
-
 
   getSegmentationBinary() {
     return _.find(this.binary, binary => binary.category === "segmentation");
   }
 
-
   getBinaryByName(name: string) {
     return this.binary[name];
   }
-
-
-  isVolumeTracing() {
-    return this.isVolume;
-  }
-
 
   getLayerInfos(userLayers: ?Array<Object>) {
     // Overwrite or extend layers with userLayers
@@ -336,11 +314,16 @@ export class OxalisModel {
     return layers;
   }
 
-
-  canDisplaySegmentationData(): boolean {
-    return !(getIntegerZoomStep(Store.getState()) > 1) || !this.getSegmentationBinary();
+  shouldDisplaySegmentationData(): boolean {
+    const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
+    // Currently segmentation data can only be displayed in orthogonal and volume mode
+    const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
+    return this.getSegmentationBinary() != null && canModeDisplaySegmentationData;
   }
 
+  canDisplaySegmentationData(): boolean {
+    return getIntegerZoomStep(Store.getState()) <= 1;
+  }
 
   computeBoundaries() {
     this.lowerBoundary = [Infinity, Infinity, Infinity];
@@ -355,7 +338,7 @@ export class OxalisModel {
     }
   }
 
-  applyState(state: UrlManagerState, tracing: Tracing<SkeletonContentDataType | VolumeContentDataType>) {
+  applyState(state: UrlManagerState, tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
     Store.dispatch(setPositionAction(state.position || tracing.content.editPosition));
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));

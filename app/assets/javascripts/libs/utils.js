@@ -41,6 +41,10 @@ const Utils = {
     return Math.round(value * digitMultiplier) / digitMultiplier;
   },
 
+  capitalize(str: string): string {
+    return str[0].toUpperCase() + str.slice(1);
+  },
+
   intToHex(int: number, digits: number = 6): string {
     return (_.repeat("0", digits) + int.toString(16)).slice(-digits);
   },
@@ -239,6 +243,14 @@ const Utils = {
 
   zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
     return maybeA.chain(valueA => maybeB.map(valueB => [valueA, valueB]));
+  },
+
+  // TODO: You should see a merge conflict now. Please use the toNullable version
+  // and rename unpackMaybe to toNullable everywhere where it's used.
+  // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
+  // you can't do getOrElse(null) without flow complaining
+  toNullable<T>(maybe: Maybe<T>): ?T {
+    return maybe.isJust ? maybe.get() : null;
   },
 };
 

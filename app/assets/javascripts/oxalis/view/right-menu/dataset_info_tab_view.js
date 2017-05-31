@@ -55,9 +55,9 @@ class DatasetInfoTabView extends Component {
     const { tracingType, name } = this.props.skeletonTracing;
     let annotationType = tracingType;
 
-    if (this.props.task) {
+    if (this.props.task != null) {
       // In case we have a task display its id as well
-      annotationType += `: ${this.props.task.taskId}`;
+      annotationType += `: ${this.props.task.id}`;
     } else if (name) {
       // Or display an explorative tracings name if there is one
       annotationType += `: ${name}`;

@@ -32,14 +32,13 @@ import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
-
 import messages from "messages";
 
 import type { ToastType } from "libs/toast";
-import type { ModeType } from "oxalis/constants";
+import type { ModeType, ControlModeType } from "oxalis/constants";
+import type { SkeletonTracingTypeTracingType } from "oxalis/store";
 
 class Controller {
-  urlManager: UrlManager;
   sceneController: SceneController;
   annotationController: SkeletonTracingController | VolumeTracingController;
   planeController: PlaneController;
@@ -50,6 +49,7 @@ class Controller {
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
+  stopListening: Function;
 
   // Main controller, responsible for setting modes and everything
   // that has to be controlled in any mode.
@@ -64,85 +64,63 @@ class Controller {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
 
-  constructor() {
+  constructor(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
     app.router.showLoadingSpinner();
 
     _.extend(this, Backbone.Events);
 
-    this.urlManager = new UrlManager(Model);
-    Model.state = this.urlManager.initialState;
+    UrlManager.initialize();
 
-    Model.fetch()
+    Model.fetch(tracingType, tracingId, controlMode, true)
       .then(() => this.modelFetchDone())
       .catch((error) => {
         // Don't throw errors for errors already handled by the model.
         if (error !== Model.HANDLED_ERROR) {
           throw error;
         }
-      },
-      );
-
-    // TODO: only for testing, remove again!
-    // Call app.oxalis.model.initialize("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
-    // with a tracing id of your choice from the dev console beforehand
-    this.model = Model;
-    this.restart = () => {
-      Store.dispatch(restartSagaAction());
-      Model.fetch()
-      .then(() => {
-        Store.dispatch(wkReadyAction());
       });
-    };
   }
 
   modelFetchDone() {
-    const controlMode = Store.getState().temporaryConfiguration.controlMode;
-    if (!Model.tracing.restrictions.allowAccess) {
-      Toast.Error("You are not allowed to access this tracing");
-      return;
-    }
-
+    const state = Store.getState();
     app.router.on("beforeunload", () => {
-      if (controlMode === ControlModeEnum.TRACE) {
-        const state = Store.getState();
-        const stateSaved = Model.stateSaved();
-        if (!stateSaved && state.tracing.restrictions.allowUpdate) {
-          Store.dispatch(saveNowAction());
-          return messages["save.leave_page_unfinished"];
-        }
+      const stateSaved = Model.stateSaved();
+      if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
+        Store.dispatch(saveNowAction());
+        return messages["save.leave_page_unfinished"];
       }
       return null;
     });
 
-    this.urlManager.startUrlUpdater();
+    UrlManager.startUrlUpdater();
 
-    this.sceneController = new SceneController(Model);
-    // TODO: Replace with skeletonTracing from Store (which is non-null currently)
-    if (controlMode === ControlModeEnum.TRACE) {
-      if (Model.isVolumeTracing()) {
-        // VOLUME MODE
-        this.view = new View(Model);
+    this.view = new View();
+    this.sceneController = new SceneController();
+    switch (state.tracing.type) {
+      case "volume": {
         this.annotationController = new VolumeTracingController(
-          Model, this.view, this.sceneController);
+          this.view, this.sceneController);
         this.planeController = new VolumeTracingPlaneController(
-          Model, this.view, this.sceneController, this.annotationController);
-      } else {
-        // SKELETONRACING MODE
-        this.view = new View(Model);
-        this.annotationController = new SkeletonTracingController(
-          Model, this.view, this.sceneController);
-        this.planeController = new SkeletonTracingPlaneController(
-          Model, this.view, this.sceneController, this.annotationController);
-
-        const ArbitraryControllerClass = Model.tracing.content.settings.advancedOptionsAllowed ? SkeletonTracingArbitraryController : MinimalSkeletonTracingArbitraryController;
-        this.arbitraryController = new ArbitraryControllerClass(
-          Model, this.view, this.sceneController, this.annotationController);
+          this.view, this.sceneController, this.annotationController);
+        break;
       }
-    } else {
-      // VIEW MODE
-      this.view = new View(Model);
-      this.planeController = new PlaneController(
-        Model, this.view, this.sceneController);
+      case "skeleton": {
+        this.annotationController = new SkeletonTracingController(
+          this.view, this.sceneController);
+        this.planeController = new SkeletonTracingPlaneController(
+          this.view, this.sceneController, this.annotationController);
+        const ArbitraryControllerClass = state.tracing.restrictions.advancedOptionsAllowed ?
+          SkeletonTracingArbitraryController :
+          MinimalSkeletonTracingArbitraryController;
+        this.arbitraryController = new ArbitraryControllerClass(
+          this.view, this.sceneController, this.annotationController);
+        break;
+      }
+      default: {
+        this.planeController = new PlaneController(
+          this.view, this.sceneController);
+        break;
+      }
     }
 
     // FPS stats
@@ -152,7 +130,6 @@ class Controller {
     this.listenTo(this.planeController.planeView, "render", () => stats.update());
 
     this.initKeyboard();
-    this.initTimeLimit();
     this.initTaskScript();
     this.maybeShowNewTaskTypeModal();
 
@@ -163,7 +140,6 @@ class Controller {
     listenToStoreProperty(store => store.temporaryConfiguration.viewMode, mode => this.loadMode(mode), true);
 
     // Zoom step warning
-    this.zoomStepWarningToast = null;
     let lastZoomStep = Store.getState().flycam.zoomStep;
     Store.subscribe(() => {
       const { zoomStep } = Store.getState().flycam;
@@ -181,11 +157,21 @@ class Controller {
     Store.dispatch(wkReadyAction());
   }
 
+  // For tracing swap testing, call
+  // app.oxalis.restart("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
+  // with a tracing id of your choice from the dev console
+  async restart(newTracingType: SkeletonTracingTypeTracingType, newTracingId: string, newControlMode: ControlModeType) {
+    Store.dispatch(restartSagaAction());
+    UrlManager.reset();
+    await Model.fetch(newTracingType, newTracingId, newControlMode, false);
+    Store.dispatch(wkReadyAction());
+  }
+
   initTaskScript() {
     // Loads a Gist from GitHub with a user script if there is a
     // script assigned to the task
     const task = Store.getState().task;
-    if (task && task.script) {
+    if (task != null && task.script != null) {
       const script = task.script;
       const gistId = _.last(script.gist.split("/"));
 
@@ -246,8 +232,9 @@ class Controller {
         m: () => {
           // rotate allowed modes
           const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
-          const index = (Model.allowedModes.indexOf(currentViewMode) + 1) % Model.allowedModes.length;
-          Store.dispatch(setViewModeAction(Model.allowedModes[index]));
+          const allowedModes = Store.getState().tracing.restrictions.allowedModes;
+          const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
+          Store.dispatch(setViewModeAction(allowedModes[index]));
         },
 
         "super + s": (event) => {
@@ -269,55 +256,30 @@ class Controller {
   }
 
 
-  loadMode(newMode: ModeType, force: boolean = false) {
-    if ((newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) && (Model.allowedModes.includes(newMode) || force)) {
+  loadMode(newMode: ModeType) {
+    const allowedModes = Store.getState().tracing.restrictions.allowedModes;
+    if (
+      (newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) &&
+      allowedModes.includes(newMode)
+    ) {
       Utils.__guard__(this.planeController, x => x.stop());
       this.arbitraryController.start(newMode);
-    } else if ((newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) && (Model.allowedModes.includes(newMode) || force)) {
+    } else if (
+      (newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) &&
+      allowedModes.includes(newMode)
+    ) {
       Utils.__guard__(this.arbitraryController, x1 => x1.stop());
       this.planeController.start(newMode);
     }
-  }
 
-
-  initTimeLimit() {
-    // only enable hard time limit for anonymous users so far
-    if (!Model.tracing.task || !Model.tracing.user.isAnonymous) {
-      return;
-    }
-
-    // TODO move that somewhere else
-    const finishTracing = async () => {
-      // save the progress
-      await Model.save();
-      const url = `/annotations/${Model.tracingType}/${Model.tracingId}/finishAndRedirect`;
-      app.router.loadURL(url);
-    };
-
-    // parse hard time limit and convert from min to ms
-    const { expectedTime } = Model.tracing.task.type;
-    let timeLimit = (expectedTime.maxHard * 60 * 1000) || 0;
-
-    // setTimeout uses signed 32-bit integers, an overflow would cause immediate timeout execution
-    if (timeLimit >= Math.pow(2, 32) / 2) {
-      Toast.error("Time limit was reduced as it cannot be bigger than 35791 minutes.");
-      timeLimit = (Math.pow(2, 32) / 2) - 1;
-    }
-    console.log(`TimeLimit is ${timeLimit / 60 / 1000} min`);
-
-    if (timeLimit) {
-      setTimeout(() => {
-        window.alert("Time limit is reached, thanks for tracing!");
-        finishTracing();
-      }
-      , timeLimit);
-    }
+    // Hide/show zoomstep warning if appropriate
+    this.onZoomStepChange();
   }
 
   onZoomStepChange() {
-    const shouldWarn = !Model.canDisplaySegmentationData();
+    const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
     if (shouldWarn && (this.zoomStepWarningToast == null)) {
-      const toastType = Model.isVolumeTracing() ? "danger" : "info";
+      const toastType = Store.getState().tracing.type === "volume" ? "danger" : "info";
       this.zoomStepWarningToast = Toast.message(toastType,
         "Segmentation data and volume tracing is only fully supported at a smaller zoom level.", true);
     } else if (!shouldWarn && (this.zoomStepWarningToast != null)) {

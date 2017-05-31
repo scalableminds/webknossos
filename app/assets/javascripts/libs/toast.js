@@ -38,7 +38,7 @@ const shouldDisplayToast = (type, message, sticky) =>
 
 const Toast = {
 
-  message(type, message, sticky = false): ToastType {
+  message(type, message, sticky = false, optTimeout): ToastType {
     let messages;
     if (_.isArray(type) && (message == null)) {
       messages = type;
@@ -67,7 +67,7 @@ const Toast = {
       if (sticky) {
         $messageElement.alert();
       } else {
-        const timeout = type === "danger" ? 6000 : 3000;
+        const timeout = optTimeout || (type === "danger" ? 6000 : 3000);
         alertWithTimeout($messageElement, timeout);
       }
       $("#alert-container").append($messageElement);

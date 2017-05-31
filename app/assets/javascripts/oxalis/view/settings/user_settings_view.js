@@ -89,7 +89,7 @@ class UserSettingsView extends PureComponent {
 
   getSkeletonOrVolumeOptions = () => {
     const mode = this.props.viewMode;
-    const isPublicViewMode = this.props.controlMode !== ControlModeEnum.VIEW;
+    const isPublicViewMode = this.props.controlMode === ControlModeEnum.VIEW;
 
     if (Constants.MODES_SKELETON.includes(mode) && !isPublicViewMode && this.props.tracing.type === "skeleton") {
       const activeNodeId = this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";

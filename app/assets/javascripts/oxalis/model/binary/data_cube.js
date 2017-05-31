@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import type { Vector3, Vector4, BoundingBoxType } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import type { MappingArray } from "oxalis/model/binary/mappings";
@@ -15,6 +15,8 @@ import type { Bucket } from "oxalis/model/binary/bucket";
 import ArbitraryCubeAdapter from "oxalis/model/binary/arbitrary_cube_adapter";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import BoundingBox from "oxalis/model/binary/bounding_box";
+import Store from "oxalis/store";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -40,7 +42,7 @@ class DataCube {
   BIT_DEPTH: number;
   MAX_ZOOM_STEP: number;
   BYTE_OFFSET: number;
-  cubes: Array<?CubeEntry>;
+  cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
   pullQueue: PullQueue;
   pushQueue: PushQueue;
@@ -70,7 +72,7 @@ class DataCube {
   // It is then removed from the cube.
 
 
-  constructor(globalBoundingBox: BoundingBoxType, upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
+  constructor(upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
     this.upperBoundary = upperBoundary;
     this.ZOOM_STEP_COUNT = zoomStepCount;
     this.BIT_DEPTH = bitDepth;
@@ -106,7 +108,15 @@ class DataCube {
       ];
     }
 
-    this.boundingBox = new BoundingBox(globalBoundingBox, this);
+    this.boundingBox = new BoundingBox(Store.getState().tracing.boundingBox, this);
+
+    listenToStoreProperty(
+      state => state.tracing.boundingBox,
+      (boundingBox) => {
+        this.boundingBox = new BoundingBox(boundingBox, this);
+        this.forgetOutOfBoundaryBuckets();
+      },
+    );
   }
 
 
@@ -188,7 +198,6 @@ class DataCube {
   getBucketIndex([x, y, z, zoomStep]: Vector4): ?number {
     // Removed for performance reasons
     // ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
-
     const cube = this.cubes[zoomStep];
     if (cube != null) {
       const { boundary } = cube;
@@ -279,9 +288,19 @@ class DataCube {
     }
   }
 
+  forgetOutOfBoundaryBuckets(): void {
+    for (const cube of this.cubes) {
+      for (const bucketIndex of cube.data.keys()) {
+        const bucket = cube.data.get(bucketIndex);
+        if (bucket instanceof DataBucket && bucket.isPartlyOutsideBoundingBox) {
+          cube.data.delete(bucketIndex);
+        }
+      }
+    }
+  }
 
   labelTestShape(): void {
-    // draw a sqhere, centered at (100, 100, 100) with radius 50
+    // draw a sphere, centered at (100, 100, 100) with radius 50
 
     for (let x = 80; x <= 120; x++) {
       for (let y = 80; y <= 120; y++) {

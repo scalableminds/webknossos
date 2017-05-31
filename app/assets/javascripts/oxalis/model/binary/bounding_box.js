@@ -8,15 +8,16 @@ import DataCube from "oxalis/model/binary/data_cube";
 import { Vector3Indicies } from "oxalis/constants";
 import type { Vector3, Vector4, BoundingBoxType } from "oxalis/constants";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
+import type { Bucket } from "oxalis/model/binary/bucket";
 
 class BoundingBox {
-  boundingBox: BoundingBoxType;
+  boundingBox: ?BoundingBoxType;
   cube: DataCube;
   BYTE_OFFSET: number;
   min: Vector3;
   max: Vector3;
 
-  constructor(boundingBox: BoundingBoxType, cube: DataCube) {
+  constructor(boundingBox: ?BoundingBoxType, cube: DataCube) {
     this.boundingBox = boundingBox;
     this.cube = cube;
     this.BYTE_OFFSET = this.cube.BYTE_OFFSET;
@@ -25,10 +26,10 @@ class BoundingBox {
     // Max is excluding
     this.max = _.clone(this.cube.upperBoundary);
 
-    if (this.boundingBox != null) {
+    if (boundingBox != null) {
       for (const i of Vector3Indicies) {
-        this.min[i] = Math.max(this.min[i], this.boundingBox.min[i]);
-        this.max[i] = Math.min(this.max[i], this.boundingBox.max[i]);
+        this.min[i] = Math.max(this.min[i], boundingBox.min[i]);
+        this.max[i] = Math.min(this.max[i], boundingBox.max[i]);
       }
     }
   }
@@ -78,18 +79,21 @@ class BoundingBox {
   }
 
 
-  removeOutsideArea(bucket: Vector4, bucketData: Uint8Array): void {
-    if (this.containsFullBucket(bucket)) { return; }
+  removeOutsideArea(bucket: Bucket, bucketAddress: Vector4, bucketData: Uint8Array): void {
+    if (this.containsFullBucket(bucketAddress)) { return; }
+    if (bucket.type === "data") {
+      bucket.isPartlyOutsideBoundingBox = true;
+    }
 
-    const baseVoxel = bucket.slice(0, 3)
-      .map(e => e << (BUCKET_SIZE_P + bucket[3]));
+    const baseVoxel = bucketAddress.slice(0, 3)
+      .map(e => e << (BUCKET_SIZE_P + bucketAddress[3]));
 
     for (let dx = 0; dx < (1 << BUCKET_SIZE_P); dx++) {
       for (let dy = 0; dy < (1 << BUCKET_SIZE_P); dy++) {
         for (let dz = 0; dz < (1 << BUCKET_SIZE_P); dz++) {
-          const x = baseVoxel[0] + (dx << bucket[3]);
-          const y = baseVoxel[1] + (dy << bucket[3]);
-          const z = baseVoxel[2] + (dz << bucket[3]);
+          const x = baseVoxel[0] + (dx << bucketAddress[3]);
+          const y = baseVoxel[1] + (dy << bucketAddress[3]);
+          const z = baseVoxel[2] + (dz << bucketAddress[3]);
 
           if (
             this.min[0] <= x && x < this.max[0] &&

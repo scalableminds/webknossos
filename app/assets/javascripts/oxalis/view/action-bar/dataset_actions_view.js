@@ -1,20 +1,19 @@
 // @flow
 import React, { PureComponent } from "react";
-import _ from "lodash";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import type { OxalisState, TracingType, TaskType } from "oxalis/store";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import app from "app";
-import Utils from "libs/utils";
-import Request from "libs/request";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import { Button } from "antd";
 import messages from "messages";
+import createApi from "oxalis/api/api_latest";
 
+const api = createApi(Model);
 const SAVED_POLLING_INTERVAL = 100;
 
 class DatasetActionsView extends PureComponent {
@@ -46,21 +45,21 @@ class DatasetActionsView extends PureComponent {
   savedPollingInterval: number = 0;
   _forceUpdate = () => { this.forceUpdate(); };
 
-  handleSave = async () => {
+  handleSave = async (event?: SyntheticInputEvent) => {
+    if (event != null) {
+      event.target.blur();
+    }
     await Model.save();
   };
 
-  handleCopyToAccount = async () => {
+  handleCopyToAccount = async (event: SyntheticInputEvent) => {
+    event.target.blur();
     const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/duplicate`;
     app.router.loadURL(url);
   };
 
-  handleCopyToAccount = async () => {
-    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/duplicate`;
-    app.router.loadURL(url);
-  };
-
-  handleFinish = async () => {
+  handleFinish = async (event: SyntheticInputEvent) => {
+    event.target.blur();
     const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
@@ -76,7 +75,8 @@ class DatasetActionsView extends PureComponent {
     this.setState({ shareModalOpen: false });
   };
 
-  handleDownload = async () => {
+  handleDownload = async (event: SyntheticInputEvent) => {
+    event.target.blur();
     const win = window.open("about:blank", "_blank");
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
@@ -85,23 +85,9 @@ class DatasetActionsView extends PureComponent {
     win.document.body.innerHTML = messages["download.close_window"];
   };
 
-  handleNextTask = async () => {
-    const { tracingType, tracingId } = this.props.tracing;
-    const finishUrl = `/annotations/${tracingType}/${tracingId}/finish`;
-    const requestTaskUrl = "/user/tasks/request";
-
-    await this.handleSave();
-    await Request.triggerRequest(finishUrl);
-    try {
-      const annotation = await Request.receiveJSON(requestTaskUrl);
-      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.task, x => x.taskId);
-      const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
-      const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
-      app.router.loadURL(newTaskUrl);
-    } catch (err) {
-      await Utils.sleep(2000);
-      app.router.loadURL("/dashboard");
-    }
+  handleFinishAndGetNextTask = async (event: SyntheticInputEvent) => {
+    event.target.blur();
+    api.tracing.finishAndGetNextTask();
   };
 
   handleMergeOpen = () => {
@@ -122,7 +108,7 @@ class DatasetActionsView extends PureComponent {
 
   render() {
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
-    const isSkeletonMode = _.includes(Constants.MODES_SKELETON, viewMode);
+    const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const hasAdvancedOptions = this.props.tracing.restrictions.advancedOptionsAllowed;
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
     const restrictions = this.props.tracing.restrictions;
@@ -180,7 +166,7 @@ class DatasetActionsView extends PureComponent {
       elements.push(<Button
         key="next-button"
         icon="verticle-left"
-        onClick={this.handleNextTask}
+        onClick={this.handleFinishAndGetNextTask}
       >
         Finish and Get Next Task
       </Button>);

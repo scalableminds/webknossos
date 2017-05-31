@@ -17,7 +17,7 @@ import { createCellAction, setModeAction, startEditingAction, addToLayerAction, 
 import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OrthoViewType, Point2 } from "oxalis/constants";
 import type SceneController from "oxalis/controller/scene_controller";
-import type { OxalisModel } from "oxalis/model";
+import Model from "oxalis/model";
 import type View from "oxalis/view";
 
 class VolumeTracingPlaneController extends PlaneController {
@@ -30,8 +30,8 @@ class VolumeTracingPlaneController extends PlaneController {
 
   volumeTracingController: VolumeTracingController;
 
-  constructor(model: OxalisModel, view: View, sceneController: SceneController, volumeTracingController: VolumeTracingController) {
-    super(model, view, sceneController);
+  constructor(view: View, sceneController: SceneController, volumeTracingController: VolumeTracingController) {
+    super(view, sceneController);
     this.volumeTracingController = volumeTracingController;
 
     let lastActiveCellId = getActiveCellId(Store.getState().tracing).get();
@@ -45,7 +45,7 @@ class VolumeTracingPlaneController extends PlaneController {
     });
 
     // If a new mapping is activated the 3D cell has to be updated, although the activeCellId did not change
-    this.listenTo(this.model.getSegmentationBinary().cube, "newMapping", () =>
+    this.listenTo(Model.getSegmentationBinary().cube, "newMapping", () =>
       this.sceneController.renderVolumeIsosurface(lastActiveCellId),
     );
 
@@ -129,7 +129,7 @@ class VolumeTracingPlaneController extends PlaneController {
       },
 
       leftClick: (pos: Point2) => {
-        const cellId = this.model.getSegmentationBinary().cube.getDataValue(this.calculateGlobalPos(pos));
+        const cellId = Model.getSegmentationBinary().cube.getDataValue(this.calculateGlobalPos(pos));
 
         this.volumeTracingController.handleCellSelection(cellId);
       },

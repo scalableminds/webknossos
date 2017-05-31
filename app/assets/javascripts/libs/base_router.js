@@ -164,7 +164,6 @@ class BaseRouter {
     // Remove current views
     if (this.activeViews.length > 0) {
       for (const view of this.activeViews) {
-
         if (view.forcePageReload) {
           window.removeEventListener("beforeunload", this.handleBeforeunload);
           this.reload();

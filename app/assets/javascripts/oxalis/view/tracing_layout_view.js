@@ -1,221 +1,117 @@
 /**
  * tracing_layout_view.js
- * @flow weak
+ * @flow
  */
 
-import _ from "lodash";
-import $ from "jquery";
-import Marionette from "backbone.marionette";
 import React from "react";
-import { render } from "react-dom";
 import { Provider } from "react-redux";
 import app from "app";
-import store from "oxalis/throttled_store";
+import Store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
-import OxalisModel from "oxalis/model";
-import OxalisApi from "oxalis/api/api_loader";
-import Constants from "oxalis/constants";
-import Modal from "oxalis/view/modal";
-import Utils from "libs/utils";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
-import UserScriptsModalView from "oxalis/view/user_scripts_modal";
 import TracingView from "oxalis/view/tracing_view";
+import UserScriptsModal from "oxalis/view/user_scripts_modal";
 import enUS from "antd/lib/locale-provider/en_US";
-import { LocaleProvider } from "antd";
+import { LocaleProvider, Layout, Button, Icon } from "antd";
+import type { SkeletonTracingTypeTracingType } from "oxalis/store";
+import type { ControlModeType } from "oxalis/constants";
 
-const MARGIN = 40;
+const { Header, Sider } = Layout;
 
-class TracingLayoutView extends Marionette.View {
+class TracingLayoutView extends React.PureComponent {
 
-  traceTemplate: (data: Object) => string;
-  viewTemplate: (data: Object) => string;
-  rightMenuView: Marionette.View<*>;
-
-  static initClass() {
-    this.prototype.className = "text-nowrap";
-
-    this.prototype.traceTemplate = _.template(`\
-<div id="action-bar"></div>
-<div id="sliding-canvas">
-  <div id="settings-menu-wrapper" class="navmenu-fixed-left offcanvas">
-    <div id="settings-menu"></div>
-  </div>
-  <div id="tracing"></div>
-  <div id="right-menu"></div>
-</div>
-<div class="modal-wrapper"></div>\
-`);
-
-    this.prototype.viewTemplate = _.template(`\
-<div id="action-bar"></div>
-<div id="settings-menu"></div>
-<div id="tracing"></div>
-<div id="right-menu"></div>
-<div class="modal-wrapper"></div>\
-`);
-
-    this.prototype.ui = {
-      rightMenu: "#right-menu",
-      slidingCanvas: "#sliding-canvas",
-      actionBar: "#action-bar",
-      settings: "#settings-menu",
-    };
-
-    this.prototype.regions = {
-      rightMenu: "#right-menu",
-      tracingContainer: "#tracing",
-      modalWrapper: ".modal-wrapper",
-    };
-
-    this.prototype.events = {
-      "hidden.bs.offcanvas #settings-menu-wrapper": "doneSliding",
-      "shown.bs.offcanvas #settings-menu-wrapper": "doneSliding",
-    };
+  props: {
+    initialTracingType: SkeletonTracingTypeTracingType,
+    initialTracingId: string,
+    initialControlmode: ControlModeType,
   }
 
-  getTemplate() {
-    if (this.isTracingMode()) {
-      return this.traceTemplate;
-    } else {
-      return this.viewTemplate;
+  state = {
+    isSettingsCollapsed: true,
+    isUserScriptsModalOpen: false,
+  }
+
+  componentDidMount() {
+    const addScriptLink = document.getElementById("add-script-link");
+    if (addScriptLink) {
+      addScriptLink.classList.remove("hide");
+      addScriptLink.addEventListener("click", () => this.showUserScriptsModal());
     }
-  }
-
-
-  initialize(options) {
-    this.options = _.extend(
-      {},
-      options,
-      { model: new OxalisModel(options) },
+    app.oxalis = new OxalisController(
+      this.props.initialTracingType,
+      this.props.initialTracingId,
+      this.props.initialControlmode,
     );
-
-    this.model = this.options.model;
-
-    this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
-    // this.listenTo(this.model, "change:mode", this.renderRegions);
-    this.listenTo(this.model, "sync", this.renderRegions);
-    $(window).on("resize", this.resizeRightMenu.bind(this));
-
-    $("#add-script-link")
-      .removeClass("hide")
-      .on("click", this.showUserScriptsModal.bind(this));
-
-    app.oxalis = new OxalisController(this.options);
-    window.webknossos = new OxalisApi(this.model);
   }
 
-
-  doneSliding() {
-    return this.resizeRightMenu();
+  componentWillUnmount() {
+    window.app.oxalis = null;
   }
 
-
-  resizeRightMenu() {
-    if (this.isSkeletonMode()) {
-      const menuPosition = this.ui.rightMenu.position();
-      const slidingCanvasOffset = this.ui.slidingCanvas.position().left;
-
-      const newWidth = window.innerWidth - menuPosition.left - slidingCanvasOffset - MARGIN;
-
-      if (menuPosition.left < window.innerWidth && newWidth > 350) {
-        this.ui.rightMenu.width(newWidth);
-      }
-    }
+  showUserScriptsModal = () => {
+    this.setState({
+      isUserScriptsModalOpen: true,
+    });
   }
 
+  closeUserScriptsModal = () => {
+    this.setState({
+      isUserScriptsModalOpen: false,
+    });
+  }
 
-  renderRegions() {
-    this.render();
+  handleSettingsCollapse = () => {
+    this.setState({
+      isSettingsCollapsed: !this.state.isSettingsCollapsed,
+    });
+  }
 
-    const tracingView = new TracingView(this.options);
-
-    this.showChildView("tracingContainer", tracingView, { preventDestroy: true });
-
-    if (!this.model.settings.advancedOptionsAllowed) {
-      return;
-    }
-
-    render(
+  render() {
+    return (
       <LocaleProvider locale={enUS}>
-        <Provider store={store}>
-          <ActionBarView oldModel={this.model} />
+        <Provider store={Store}>
+          <Layout className="tracing-layout">
+            <Header>
+              <Button
+                size="large"
+                onClick={this.handleSettingsCollapse} style={{ float: "left", marginTop: "10px" }}
+              >
+                <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
+                Settings
+              </Button>
+              <ActionBarView />
+            </Header>
+            <Layout>
+              <Sider
+                collapsible
+                trigger={null}
+                collapsed={this.state.isSettingsCollapsed}
+                collapsedWidth={0}
+                width={350}
+                style={{ zIndex: 100 }}
+              >
+                <SettingsView />
+              </Sider>
+              <div style={{ zIndex: 200, display: "flex", flex: 1 }}>
+                <div>
+                  <UserScriptsModal
+                    visible={this.state.isUserScriptsModalOpen}
+                    onClose={this.closeUserScriptsModal}
+                  />
+                  <TracingView />
+                </div>
+                <div style={{ flex: "1" }}>
+                  <RightMenuView />
+                </div>
+              </div>
+            </Layout>
+          </Layout>
         </Provider>
-      </LocaleProvider>,
-      this.ui.actionBar[0],
+      </LocaleProvider>
     );
-
-    render(
-      <Provider store={store}>
-        <SettingsView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
-      </Provider>,
-      this.ui.settings[0],
-    );
-
-    render(
-      <Provider store={store}>
-        <RightMenuView oldModel={this.model} isPublicViewMode={!this.isTracingMode()} />
-      </Provider>,
-      this.ui.rightMenu[0],
-    );
-
-    this.maybeShowNewTaskTypeModal();
-  }
-
-
-  showUserScriptsModal(event) {
-    event.preventDefault();
-    const modalView = new UserScriptsModalView();
-    this.showChildView("modalWrapper", modalView);
-    return modalView.show();
-  }
-
-
-  maybeShowNewTaskTypeModal() {
-    // Users can aquire new tasks directly in the tracing view. Occasionally,
-    // they start working on a new TaskType and need to be instructed.
-    let text;
-    if (!Utils.getUrlParams("differentTaskType") || (this.model.tracing.task == null)) { return; }
-
-    const taskType = this.model.tracing.task.type;
-    const title = `Attention, new Task Type: ${taskType.summary}`;
-    if (taskType.description) {
-      text = `You are now tracing a new task with the following description:<br>${taskType.description}`;
-    } else {
-      text = "You are now tracing a new task with no description.";
-    }
-    Modal.show(text, title);
-  }
-
-
-  isTracingMode() {
-    return this.model.get("controlMode") !== Constants.CONTROL_MODE_VIEW;
-  }
-
-
-  isSkeletonMode() {
-    return Constants.MODES_SKELETON.includes(this.model.get("mode")) && this.isTracingMode();
-  }
-
-
-  isVolumeMode() {
-    return this.model.get("mode") === Constants.MODE_VOLUME && this.isTracingMode();
-  }
-
-
-  isArbitraryMode() {
-    return Constants.MODES_ARBITRARY.includes(this.model.get("mode"));
-  }
-
-
-  onDestroy() {
-    $("#add-script-link")
-      .addClass("hide")
-      .off("click");
-    app.oxalis = null;
   }
 }
-TracingLayoutView.initClass();
 
 export default TracingLayoutView;

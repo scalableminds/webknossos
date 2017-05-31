@@ -6,18 +6,18 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import constants from "oxalis/constants";
+import constants, { ControlModeEnum } from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType } from "oxalis/store";
-import type Model from "oxalis/model";
+import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
+import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
 
 type DatasetInfoTabProps = {
-  oldModel: Model,
   skeletonTracing: SkeletonTracingType,
   dataset: DatasetType,
   flycam: FlycamType,
+  task: TaskType,
 };
 
 class DatasetInfoTabView extends Component {
@@ -26,14 +26,15 @@ class DatasetInfoTabView extends Component {
   calculateZoomLevel(): number {
     let width;
     let zoom;
-    if (constants.MODES_PLANE.includes(this.props.oldModel.mode)) {
+    const viewMode = Store.getState().temporaryConfiguration.viewMode;
+    if (constants.MODES_PLANE.includes(viewMode)) {
       zoom = getPlaneScalingFactor(this.props.flycam);
       width = constants.PLANE_WIDTH;
-    } else if (constants.MODES_ARBITRARY.includes(this.props.oldModel.mode)) {
+    } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
       zoom = this.props.flycam.zoomStep;
       width = ArbitraryController.prototype.WIDTH;
     } else {
-      throw Error("Model mode not recognized:", this.props.oldModel.mode);
+      throw Error("Model mode not recognized:", viewMode);
     }
     // unit is nm
     const baseVoxel = getBaseVoxel(this.props.dataset.scale);
@@ -51,13 +52,12 @@ class DatasetInfoTabView extends Component {
   }
 
   render() {
-    let annotationType = this.props.oldModel.get("tracingType");
-    const tracing = this.props.oldModel.get("tracing");
-    const { task, name } = tracing;
+    const { tracingType, name } = this.props.skeletonTracing;
+    let annotationType = tracingType;
 
-    // In case we have a task display its id as well
-    if (task) {
-      annotationType += `: ${task.id}`;
+    if (this.props.task != null) {
+      // In case we have a task display its id as well
+      annotationType += `: ${this.props.task.id}`;
     } else if (name) {
       // Or display an explorative tracings name if there is one
       annotationType += `: ${name}`;
@@ -66,7 +66,7 @@ class DatasetInfoTabView extends Component {
     const zoomLevel = this.calculateZoomLevel();
     const dataSetName = this.props.dataset.name;
     const treeCount = _.size(this.props.skeletonTracing.trees);
-    const isPublicViewMode = this.props.oldModel.get("controlMode") === constants.CONTROL_MODE_VIEW;
+    const isPublicViewMode = Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     return (
       <div>
@@ -109,6 +109,7 @@ function mapStateToProps(state: OxalisState) {
     skeletonTracing: state.tracing,
     dataset: state.dataset,
     flycam: state.flycam,
+    task: state.task,
   };
 }
 

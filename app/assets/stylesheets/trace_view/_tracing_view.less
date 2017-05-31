@@ -1,20 +1,19 @@
 #tracing {
 
-  margin-top: 10px;
   position: relative;
   display: inline-block;
   vertical-align: top;
+
+  margin: 0 20px;
 
   canvas {
     z-index: 10;
   }
 
-  #arbitrary-info-canvas {
+  #flightmode-switch {
     position: absolute;
     top: 12px;
     left: 12px;
-    padding: 4px;
-    width: 148px;
   }
 
   #inputcatchers {
@@ -31,9 +30,7 @@
     -moz-box-sizing: border-box;
     float: left;
   }
-  .active {
-    border-color: #ff0;
-  }
+
   #inputcatcher_PLANE_YZ {
     margin-left: 20px;
   }
@@ -52,31 +49,68 @@
     top: 0px;
     z-index: 30;
 
-    .btn {
-      & > span {
+    .ant-btn {
+      & > .colored-dot {
         display: inline-block;
         width: 10px;
         height: 10px;
         border-radius: 50%;
         margin-right: 5px;
       }
-      &:nth-child(2) span {
+      &:nth-child(2) .colored-dot {
         background-color: red;
       }
-      &:nth-child(3) span {
+      &:nth-child(3) .colored-dot {
         background-color: blue;
       }
-      &:nth-child(4) span {
+      &:nth-child(4) .colored-dot {
         background-color: #0f0;
       }
     }
   }
-
-  .zoomstep-warning {
-    border: 5px solid red;
-  }
 }
 
-#sliding-canvas #tracing {
-  margin-left: 10px;
+.zoomstep-warning {
+  border: 5px solid red;
+}
+
+.tracing-layout {
+  padding-bottom: 20px;
+  padding-right: 20px;
+  padding-right: 20px;
+  .ant-layout-header {
+    height: auto;
+    min-height: 64px;
+  }
+  &.ant-layout, & .ant-layout {
+    overflow: initial;
+  }
+  .ant-layout-content {
+    overflow: initial;
+  }
+  .ant-layout-sider {
+    overflow: hidden;
+  }
+}
+.tracing-settings-menu {
+  width: @left-menu-width;
+  padding-left: 20px;
+
+  .ant-collapse-header {
+    font-size: 14px;
+  }
+
+  .settings-row {
+    margin-bottom: 10px;
+  }
+
+  .setting-label {
+    word-wrap: break-word;
+    white-space: normal;
+    margin-right: 5px;
+    display: inline-block;
+  }
+}
+.tracing-right-menu {
+  min-width: 450px;
 }

@@ -11,7 +11,7 @@ import java.util.UUID
 import java.util.zip.ZipFile
 
 import com.scalableminds.braingames.binary.formats.knossos.{KnossosDataLayer, KnossosDataLayerSection}
-import com.scalableminds.braingames.binary.formats.rocksdb.RocksDbDataLayer
+import com.scalableminds.braingames.binary.formats.kvstore.KVStoreDataLayer
 import com.typesafe.config.Config
 import com.scalableminds.util.tools.{Fox, FoxImplicits, ProgressState}
 import com.scalableminds.braingames.binary.repository.DataSourceInbox
@@ -41,7 +41,7 @@ trait DataSourceService extends FoxImplicits with LazyLogging{
     val name = userDataLayerName()
     val basePath = userDataLayerFolder(name).toAbsolutePath
     val fallbackLayer = baseDataSource.getByCategory(category)
-    val preliminaryDataLayer = RocksDbDataLayer(
+    val preliminaryDataLayer = KVStoreDataLayer(
       name,
       category,
       fallbackLayer.map(l => l.elementClass).getOrElse(DataLayer.SEGMENTATION.defaultElementClass),

@@ -6,7 +6,7 @@ package com.scalableminds.braingames.binary.models
 import java.io.OutputStream
 
 import com.scalableminds.braingames.binary.formats.knossos.KnossosDataLayer
-import com.scalableminds.braingames.binary.formats.rocksdb.RocksDbDataLayer
+import com.scalableminds.braingames.binary.formats.kvstore.KVStoreDataLayer
 import com.scalableminds.braingames.binary.formats.wkw.WKWDataLayer
 import com.scalableminds.braingames.binary.requester.DataCubeCache
 import com.scalableminds.braingames.binary.requester.handlers.BucketHandler
@@ -94,8 +94,8 @@ object DataLayer extends LazyLogging{
           json.validate[KnossosDataLayer]
         case WKWDataLayer.layerType =>
           json.validate[WKWDataLayer]
-        case RocksDbDataLayer.layerType =>
-          json.validate[RocksDbDataLayer]
+        case KVStoreDataLayer.layerType =>
+          json.validate[KVStoreDataLayer]
         case unknownType =>
           JsError(s"Unexpected data layer type: ${unknownType}")
       }
@@ -109,7 +109,7 @@ object DataLayer extends LazyLogging{
           Json.toJson(layer)
         case layer: WKWDataLayer =>
           Json.toJson(layer)
-        case layer: RocksDbDataLayer =>
+        case layer: KVStoreDataLayer =>
           Json.toJson(layer)
         case _ =>
           Json.obj()

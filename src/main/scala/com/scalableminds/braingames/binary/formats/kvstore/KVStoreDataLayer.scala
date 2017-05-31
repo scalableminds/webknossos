@@ -1,20 +1,19 @@
 /*
  * Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.formats.rocksdb
+package com.scalableminds.braingames.binary.formats.kvstore
 
 import java.io.OutputStream
 
 import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, FallbackLayer}
 import com.scalableminds.braingames.binary.requester.DataCubeCache
-import com.scalableminds.braingames.binary.store.AnnotationStore
 import com.scalableminds.util.geometry.BoundingBox
 import com.typesafe.config.ConfigFactory
 import play.api.libs.json.Json
 import com.typesafe.scalalogging.LazyLogging
 import org.rocksdb.{Options, RocksDB}
 
-case class RocksDbDataLayer(
+case class KVStoreDataLayer(
                              name: String,
                              category: String,
                              elementClass: String = "uint8",
@@ -24,7 +23,7 @@ case class RocksDbDataLayer(
                              boundingBox: BoundingBox,
                              nextSegmentationId: Option[Long] = None,
                              mappings: List[DataLayerMapping] = Nil,
-                             layerType: String = RocksDbDataLayer.layerType
+                             layerType: String = KVStoreDataLayer.layerType
                             ) extends DataLayer with LazyLogging {
   val cubeLength = 32
 
@@ -32,16 +31,16 @@ case class RocksDbDataLayer(
 
   val baseDir = ""
 
-  def bucketHandler(cache: DataCubeCache) = new RocksDbBucketHandler(cache, RocksDbDataLayer.db)
+  def bucketHandler(cache: DataCubeCache) = new KVStoreBucketHandler(cache, KVStoreDataLayer.db)
 
   def writeTo(outputStream: OutputStream): Unit = {
   }
 }
 
-object RocksDbDataLayer {
-  val layerType = "rocksdb"
+object KVStoreDataLayer {
+  val layerType = "kvstore"
 
   lazy val db = AnnotationStore.volumeStore
 
-  implicit val rocksDbDataLayerFormat = Json.format[RocksDbDataLayer]
+  implicit val kvStoreDataLayerFormat = Json.format[KVStoreDataLayer]
 }

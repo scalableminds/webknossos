@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.formats.rocksdb
+package com.scalableminds.braingames.binary.formats.kvstore
 
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.requester.handlers.BucketHandler
@@ -14,13 +14,13 @@ import net.liftweb.common.Box
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration.FiniteDuration
 
-case class RocksDbCube(db: VersionedKeyValueStore, key: String) extends Cube {
+case class KVStoreCube(db: VersionedKeyValueStore, key: String) extends Cube {
   def cutOutBucket(requestedBucket: BucketReadInstruction): Box[Array[Byte]] = {
     db.get(key).map(_.value)
   }
 }
 
-class RocksDbBucketHandler(val cache: DataCubeCache, val db: VersionedKeyValueStore) extends BucketHandler
+class KVStoreBucketHandler(val cache: DataCubeCache, val db: VersionedKeyValueStore) extends BucketHandler
   with FoxImplicits
   with LazyLogging {
 
@@ -48,7 +48,7 @@ class RocksDbBucketHandler(val cache: DataCubeCache, val db: VersionedKeyValueSt
       loadBlock.position.x,
       loadBlock.position.y,
       loadBlock.position.z)
-    Fox.successful(new RocksDbCube(db, key))
+    Fox.successful(new KVStoreCube(db, key))
   }
 
   override def saveToUnderlying(saveBlock: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {

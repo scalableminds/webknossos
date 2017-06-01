@@ -112,7 +112,6 @@ class PlaneController {
 
     this.planeView.addNode(this.sceneController.getRootNode());
 
-    this.initTrackballControls();
     this.bindToEvents();
     this.stop();
   }
@@ -290,7 +289,10 @@ class PlaneController {
     // Workaround: defer mouse initialization to make sure DOM elements have
     // acutally been rendered by React (InputCatchers Component)
     // DOM Elements get deleted when switching between ortho and arbitrary mode
-    _.defer(() => this.initMouse());
+    _.defer(() => {
+      this.initTrackballControls();
+      this.initMouse()
+    });
 
     this.isStarted = true;
   }
@@ -298,6 +300,8 @@ class PlaneController {
   stop(): void {
     if (this.isStarted) {
       this.input.destroy();
+      debugger
+      this.controls.destroy();
     }
 
     this.sceneController.stop();

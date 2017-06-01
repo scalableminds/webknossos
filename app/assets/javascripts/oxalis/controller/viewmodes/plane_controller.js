@@ -286,10 +286,16 @@ class PlaneController {
     // Workaround: defer mouse initialization to make sure DOM elements have
     // acutally been rendered by React (InputCatchers Component)
     // DOM Elements get deleted when switching between ortho and arbitrary mode
-    _.defer(() => {
-      this.initTrackballControls();
-      this.initMouse();
-    });
+    const initInputHandlers = () => {
+      if ($("#inputcatcher_TDView").length === 0) {
+        window.requestAnimationFrame(initInputHandlers);
+      } else {
+        this.initTrackballControls();
+        this.initMouse();
+      }
+    };
+    initInputHandlers();
+
 
     this.isStarted = true;
   }

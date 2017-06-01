@@ -296,7 +296,6 @@ class PlaneController {
     };
     initInputHandlers();
 
-
     this.isStarted = true;
   }
 

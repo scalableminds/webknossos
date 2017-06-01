@@ -18,6 +18,7 @@ import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { TracingType, FlycamType } from "oxalis/store";
+import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
@@ -86,6 +87,10 @@ export function toggleErrorHighlighting(state: boolean) {
   }
 }
 
+function cantor(a, b) {
+  return 0.5 * (a + b) * (a + b + 1) + b;
+}
+
 export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<UpdateAction> {
   let result = updateActions;
 
@@ -95,22 +100,48 @@ export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<
     result = _.without(result, ...updateTracingUpdateActions.slice(0, -1));
   }
 
-  // // Detect moved nodes
-  // const movedNodes = [];
-  // for (const createUA of result) {
-  //   if (createUA.action === "createNode") {
-  //     const deleteUA = result.find(ua =>
-  //       ua.action === "deleteNode" &&
-  //       ua.value.id === createUA.value.id &&
-  //       ua.value.treeId !== createUA.value.treeId);
-  //     if (deleteUA != null) {
-  //       movedNodes.push([createUA, deleteUA]);
-  //     }
-  //   }
-  // }
-  // for (const [createUA, deleteUA] of movedNodes) {
-  //   moveTreeComponent(deleteUA.value.treeId, createUA.value.treeId, [createUA.value.id]);
-  // }
+  // Detect moved nodes and edges
+  const movedNodes = [];
+  const movedEdgesUpdateActions = [];
+  for (const createUA of result) {
+    if (createUA.action === "createNode") {
+      const deleteUA = result.find(ua =>
+        ua.action === "deleteNode" &&
+        ua.value.id === createUA.value.id &&
+        ua.value.treeId !== createUA.value.treeId);
+      if (deleteUA != null && deleteUA.action === "deleteNode") {
+        movedNodes.push([createUA, deleteUA]);
+      }
+    } else if (createUA.action === "createEdge") {
+      const deleteUA = result.find(ua =>
+        ua.action === "deleteEdge" &&
+        ua.value.source === createUA.value.source &&
+        ua.value.target === createUA.value.target &&
+        ua.value.treeId !== createUA.value.treeId);
+      if (deleteUA != null) {
+        movedEdgesUpdateActions.push(createUA, deleteUA);
+      }
+    }
+  }
+
+  // Group moved nodes by their old and new treeId using the cantor pairing function
+  // to create a single unique id
+  const groupedMovedNodes = _.groupBy(movedNodes, ([createUA, deleteUA]) =>
+    cantor(createUA.value.treeId, deleteUA.value.treeId));
+
+  // Create a moveTreeComponent update action for each of the groups
+  for (const movedPairings of _.values(groupedMovedNodes)) {
+    const oldTreeId = movedPairings[0][1].value.treeId;
+    const newTreeId = movedPairings[0][0].value.treeId;
+    const nodeIds = movedPairings.map(([createUA]) => createUA.value.id);
+    // TODO insert moveTreeComponent at the right spot
+    result.unshift(moveTreeComponent(oldTreeId, newTreeId, nodeIds));
+  }
+
+  // Remove the original create/delete update actions of the moved nodes and edges
+  const movedNodesUpdateActions = _.flatten(movedNodes);
+  result = _.without(result, ...movedNodesUpdateActions, ...movedEdgesUpdateActions);
+
 
   return result;
 }

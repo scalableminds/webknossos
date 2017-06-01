@@ -45,7 +45,6 @@ class PlaneController {
   zoomPos: Vector3;
   controls: TrackballControls;
   canvasesAndNav: any;
-  TDViewControls: any;
   bindings: Array<any>;
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -98,21 +97,8 @@ class PlaneController {
 
     this.canvasesAndNav = $("#main")[0];
 
-    this.TDViewControls = $("#TDViewControls");
-    this.TDViewControls.addClass("btn-group");
-
-    const callbacks = [
-      this.cameraController.changeTDViewDiagonal,
-      this.cameraController.changeTDViewXY,
-      this.cameraController.changeTDViewYZ,
-      this.cameraController.changeTDViewXZ,
-    ];
-    $("#TDViewControls button")
-      .each((i, element) => $(element).on("click", () => { callbacks[i](); }));
-
     this.planeView.addNode(this.sceneController.getRootNode());
 
-    this.initTrackballControls();
     this.bindToEvents();
     this.stop();
   }
@@ -198,6 +184,16 @@ class PlaneController {
         new THREE.Vector3(...invertedDiff),
       );
     });
+
+    const callbacks = [
+      this.cameraController.changeTDViewDiagonal,
+      this.cameraController.changeTDViewXY,
+      this.cameraController.changeTDViewYZ,
+      this.cameraController.changeTDViewXZ,
+    ];
+
+    $("#TDViewControls button")
+      .each((i, element) => $(element).on("click", () => { callbacks[i](); }));
 
     this.listenTo(this.cameraController, "cameraPositionChanged", this.controls.update);
   }
@@ -290,7 +286,10 @@ class PlaneController {
     // Workaround: defer mouse initialization to make sure DOM elements have
     // acutally been rendered by React (InputCatchers Component)
     // DOM Elements get deleted when switching between ortho and arbitrary mode
-    _.defer(() => this.initMouse());
+    _.defer(() => {
+      this.initTrackballControls();
+      this.initMouse();
+    });
 
     this.isStarted = true;
   }
@@ -298,6 +297,9 @@ class PlaneController {
   stop(): void {
     if (this.isStarted) {
       this.input.destroy();
+      this.controls.destroy();
+
+      $("#TDViewControls button").off();
     }
 
     this.sceneController.stop();

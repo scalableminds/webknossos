@@ -288,7 +288,7 @@ class PlaneController {
     // DOM Elements get deleted when switching between ortho and arbitrary mode
     _.defer(() => {
       this.initTrackballControls();
-      this.initMouse()
+      this.initMouse();
     });
 
     this.isStarted = true;

@@ -45,7 +45,6 @@ class PlaneController {
   zoomPos: Vector3;
   controls: TrackballControls;
   canvasesAndNav: any;
-  TDViewControls: any;
   bindings: Array<any>;
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -97,18 +96,6 @@ class PlaneController {
     this.cameraController = new CameraController(this.planeView.getCameras());
 
     this.canvasesAndNav = $("#main")[0];
-
-    this.TDViewControls = $("#TDViewControls");
-    this.TDViewControls.addClass("btn-group");
-
-    const callbacks = [
-      this.cameraController.changeTDViewDiagonal,
-      this.cameraController.changeTDViewXY,
-      this.cameraController.changeTDViewYZ,
-      this.cameraController.changeTDViewXZ,
-    ];
-    $("#TDViewControls button")
-      .each((i, element) => $(element).on("click", () => { callbacks[i](); }));
 
     this.planeView.addNode(this.sceneController.getRootNode());
 
@@ -197,6 +184,16 @@ class PlaneController {
         new THREE.Vector3(...invertedDiff),
       );
     });
+
+    const callbacks = [
+      this.cameraController.changeTDViewDiagonal,
+      this.cameraController.changeTDViewXY,
+      this.cameraController.changeTDViewYZ,
+      this.cameraController.changeTDViewXZ,
+    ];
+
+    $("#TDViewControls button")
+      .each((i, element) => $(element).on("click", () => { callbacks[i](); }));
 
     this.listenTo(this.cameraController, "cameraPositionChanged", this.controls.update);
   }
@@ -300,8 +297,9 @@ class PlaneController {
   stop(): void {
     if (this.isStarted) {
       this.input.destroy();
-      debugger
       this.controls.destroy();
+
+      $("#TDViewControls button").off();
     }
 
     this.sceneController.stop();

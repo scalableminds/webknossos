@@ -471,7 +471,7 @@ class Plane2D {
 
       let sourceValue = 0;
       for (let b = 0; b < bytesSrc; b++) {
-        sourceValue += (1 << (b * 8)) * source.buffer[src + b];
+        sourceValue = sourceValue + (1 << (b * 8)) * source.buffer[src + b];
       }
       sourceValue = (mapping != null) && (mapping[sourceValue] != null) ? mapping[sourceValue] : sourceValue;
 

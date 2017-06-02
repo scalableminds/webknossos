@@ -289,7 +289,7 @@ class PlaneController {
     const initInputHandlers = () => {
       if ($("#inputcatcher_TDView").length === 0) {
         window.requestAnimationFrame(initInputHandlers);
-      } else {
+      } else if (this.isStarted === true) {
         this.initTrackballControls();
         this.initMouse();
       }

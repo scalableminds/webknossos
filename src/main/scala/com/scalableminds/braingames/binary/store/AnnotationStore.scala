@@ -1,8 +1,8 @@
 
 package com.scalableminds.braingames.binary.store
 
-import com.scalableminds.braingames.binary.store.kvstore.{RocksDBStore, VersionedKeyValueStore}
+import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
 
-object AnnotationStore {
-  val volumeStore = new VersionedKeyValueStore(new RocksDBStore("rockssdb-data/volumes"))
+trait AnnotationStore {
+  def volumeStore: VersionedKeyValueStore
 }

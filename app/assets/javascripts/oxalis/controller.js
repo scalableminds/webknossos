@@ -3,6 +3,7 @@
  * @flow
  */
 
+import React from "react";
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
@@ -38,7 +39,13 @@ import type { ToastType } from "libs/toast";
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { SkeletonTracingTypeTracingType } from "oxalis/store";
 
-class Controller {
+class Controller extends React.PureComponent {
+  props: {
+    initialTracingType: SkeletonTracingTypeTracingType,
+    initialTracingId: string,
+    initialControlmode: ControlModeType,
+  }
+
   sceneController: SceneController;
   annotationController: SkeletonTracingController | VolumeTracingController;
   planeController: PlaneController;
@@ -64,14 +71,14 @@ class Controller {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
 
-  constructor(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
+  componentDidMount() {
     app.router.showLoadingSpinner();
 
     _.extend(this, Backbone.Events);
 
     UrlManager.initialize();
 
-    Model.fetch(tracingType, tracingId, controlMode, true)
+    Model.fetch(this.props.initialTracingType, this.props.initialTracingId, this.props.initialControlmode, true)
       .then(() => this.modelFetchDone())
       .catch((error) => {
         // Don't throw errors for errors already handled by the model.
@@ -79,6 +86,10 @@ class Controller {
           throw error;
         }
       });
+  }
+
+  render() {
+    return null;
   }
 
   modelFetchDone() {

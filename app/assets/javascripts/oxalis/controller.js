@@ -17,7 +17,6 @@ import View from "oxalis/view";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
-import SkeletonTracingArbitraryController from "oxalis/controller/combinations/skeletontracing_arbitrary_controller";
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
@@ -121,7 +120,7 @@ class Controller extends React.PureComponent {
         this.planeController = new SkeletonTracingPlaneController(
           this.view, this.sceneController, this.annotationController);
         const ArbitraryControllerClass = state.tracing.restrictions.advancedOptionsAllowed ?
-          SkeletonTracingArbitraryController :
+          ArbitraryController :
           MinimalSkeletonTracingArbitraryController;
         this.arbitraryController = new ArbitraryControllerClass(
           this.view, this.sceneController, this.annotationController);

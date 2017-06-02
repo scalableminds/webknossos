@@ -10,14 +10,14 @@ import play.api.Play
 import play.api.i18n.MessagesApi
 import play.api.mvc.Action
 
-class AnnotationStoreController @Inject()(val messagesApi: MessagesApi) extends Controller {
+class AnnotationStoreController @Inject()(store: AnnotationStore, val messagesApi: MessagesApi) extends Controller {
 
   lazy val config = Play.current.configuration.underlying
 
   def backupVolumeTracings = Action { implicit request =>
     val path = Paths.get(config.getString("braingames.binary.annotation.volumes.backupFolder"))
     PathUtils.ensureDirectory(path)
-    DataStorePlugin.annotationStore.volumeStore.backup(path)
+    store.volumeStore.backup
     Ok
   }
 }

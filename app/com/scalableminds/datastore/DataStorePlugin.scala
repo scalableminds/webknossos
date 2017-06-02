@@ -9,7 +9,8 @@ import akka.actor.ActorSystem
 import com.scalableminds.datastore.services._
 import com.typesafe.scalalogging.LazyLogging
 import play.api.i18n.MessagesApi
-import play.api.{Play, Plugin}
+import play.api.inject.Module
+import play.api.{Configuration, Environment, Play, Plugin}
 
 class DataStorePlugin @Inject()(implicit app: play.api.Application, messagesApi: MessagesApi)
   extends Plugin
@@ -57,4 +58,11 @@ object DataStorePlugin {
 
   def binaryDataService: BinaryDataService =
     DataStorePlugin.current.get.binaryDataService
+}
+
+class DataStoreModule extends Module {
+  def bindings(environment: Environment, configuration: Configuration) = Seq(
+    // bind[Hello].qualifiedWith("en").to[EnglishHello],
+    // bind[Hello].qualifiedWith("de").to[GermanHello]
+  )
 }

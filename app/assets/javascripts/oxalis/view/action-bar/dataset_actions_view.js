@@ -1,28 +1,28 @@
 // @flow
 import React, { PureComponent } from "react";
-import _ from "lodash";
-import type Model from "oxalis/model";
-import type { OxalisState, TracingType } from "oxalis/store";
+import Model from "oxalis/model";
+import Store from "oxalis/store";
+import type { OxalisState, TracingType, TaskType } from "oxalis/store";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import app from "app";
-import Utils from "libs/utils";
-import Request from "libs/request";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import { Button } from "antd";
 import messages from "messages";
+import createApi from "oxalis/api/api_latest";
 
+const api = createApi(Model);
 const SAVED_POLLING_INTERVAL = 100;
 
 class DatasetActionsView extends PureComponent {
   props: {
     // eslint-disable-next-line react/no-unused-prop-types
     tracing: TracingType,
-    oldModel: Model,
     // eslint-disable-next-line react/no-unused-prop-types
     dispatch: Dispatch<*>,
+    task: ?TaskType,
   };
 
   state: {
@@ -45,22 +45,22 @@ class DatasetActionsView extends PureComponent {
   savedPollingInterval: number = 0;
   _forceUpdate = () => { this.forceUpdate(); };
 
-  handleSave = async () => {
-    await this.props.oldModel.save();
+  handleSave = async (event?: SyntheticInputEvent) => {
+    if (event != null) {
+      event.target.blur();
+    }
+    await Model.save();
   };
 
-  handleCopyToAccount = async () => {
-    const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/duplicate`;
+  handleCopyToAccount = async (event: SyntheticInputEvent) => {
+    event.target.blur();
+    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/duplicate`;
     app.router.loadURL(url);
   };
 
-  handleCopyToAccount = async () => {
-    const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/duplicate`;
-    app.router.loadURL(url);
-  };
-
-  handleFinish = async () => {
-    const url = `/annotations/${this.props.oldModel.tracingType}/${this.props.oldModel.tracingId}/finishAndRedirect`;
+  handleFinish = async (event: SyntheticInputEvent) => {
+    event.target.blur();
+    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
       app.router.loadURL(url);
@@ -75,32 +75,19 @@ class DatasetActionsView extends PureComponent {
     this.setState({ shareModalOpen: false });
   };
 
-  handleDownload = async () => {
+  handleDownload = async (event: SyntheticInputEvent) => {
+    event.target.blur();
     const win = window.open("about:blank", "_blank");
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
 
-    win.location.href = this.props.oldModel.tracing.downloadUrl;
+    win.location.href = Model.tracing.downloadUrl;
     win.document.body.innerHTML = messages["download.close_window"];
   };
 
-  handleNextTask = async () => {
-    const { tracingType, tracingId } = this.props.tracing;
-    const finishUrl = `/annotations/${tracingType}/${tracingId}/finish`;
-    const requestTaskUrl = "/user/tasks/request";
-
-    await this.handleSave();
-    await Request.triggerRequest(finishUrl);
-    try {
-      const annotation = await Request.receiveJSON(requestTaskUrl);
-      const differentTaskType = annotation.task.type.id !== Utils.__guard__(this.props.oldModel.tracing.task, x => x.type.id);
-      const differentTaskTypeParam = differentTaskType ? "?differentTaskType" : "";
-      const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
-      app.router.loadURL(newTaskUrl);
-    } catch (err) {
-      await Utils.sleep(2000);
-      app.router.loadURL("/dashboard");
-    }
+  handleFinishAndGetNextTask = async (event: SyntheticInputEvent) => {
+    event.target.blur();
+    api.tracing.finishAndGetNextTask();
   };
 
   handleMergeOpen = () => {
@@ -112,7 +99,7 @@ class DatasetActionsView extends PureComponent {
   };
 
   getSaveButtonIcon() {
-    if (!this.props.oldModel.stateSaved()) {
+    if (!Model.stateSaved()) {
       return "hourglass";
     } else {
       return "check";
@@ -120,14 +107,15 @@ class DatasetActionsView extends PureComponent {
   }
 
   render() {
-    const isSkeletonMode = _.includes(Constants.MODES_SKELETON, this.props.oldModel.get("mode"));
-    const hasAdvancedOptions = this.props.oldModel.settings.advancedOptionsAllowed;
-    const archiveButtonText = this.props.oldModel.get("isTask") ? "Finish" : "Archive";
-    const { tracing } = this.props.oldModel;
+    const viewMode = Store.getState().temporaryConfiguration.viewMode;
+    const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
+    const hasAdvancedOptions = this.props.tracing.restrictions.advancedOptionsAllowed;
+    const archiveButtonText = this.props.task ? "Finish" : "Archive";
+    const restrictions = this.props.tracing.restrictions;
 
 
     const elements = [];
-    if (tracing.restrictions.allowUpdate) {
+    if (restrictions.allowUpdate) {
       elements.push(
         <Button
           key="save-button"
@@ -149,14 +137,14 @@ class DatasetActionsView extends PureComponent {
     }
 
     if (hasAdvancedOptions) {
-      if (tracing.restrictions.allowFinish) {
+      if (restrictions.allowFinish) {
         elements.push(<Button
           key="finish-button"
           icon="check-circle-o"
           onClick={this.handleFinish}
         >{archiveButtonText}</Button>);
       }
-      if (tracing.restrictions.allowDownload || !tracing.downloadUrl) {
+      if (restrictions.allowDownload || !this.props.tracing.downloadUrl) {
         elements.push(<Button
           key="download-button"
           icon="download"
@@ -174,11 +162,11 @@ class DatasetActionsView extends PureComponent {
         onOk={this.handleShareClose}
       />);
     }
-    if (tracing.restrictions.allowFinish && tracing.task) {
+    if (restrictions.allowFinish && this.props.task) {
       elements.push(<Button
         key="next-button"
         icon="verticle-left"
-        onClick={this.handleNextTask}
+        onClick={this.handleFinishAndGetNextTask}
       >
         Finish and Get Next Task
       </Button>);
@@ -207,6 +195,7 @@ function mapStateToProps(state: OxalisState) {
   return {
     tracing: state.tracing,
     save: state.save,
+    task: state.task,
   };
 }
 

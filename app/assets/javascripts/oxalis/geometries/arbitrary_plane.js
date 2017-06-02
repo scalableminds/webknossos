@@ -31,7 +31,6 @@ import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary
 
 class ArbitraryPlane {
 
-  model: Model;
   controller: ArbitraryController;
   mesh: THREE.Mesh;
   isDirty: boolean;
@@ -45,9 +44,8 @@ class ArbitraryPlane {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(model: Model, controller: ArbitraryController, width: number = 128) {
+  constructor(controller: ArbitraryController, width: number = 128) {
     this.isDirty = true;
-    this.model = model;
     this.controller = controller;
     this.height = 0;
     this.width = width;
@@ -55,8 +53,8 @@ class ArbitraryPlane {
 
     this.mesh = this.createMesh();
 
-    for (const name of Object.keys(this.model.binary)) {
-      const binary = this.model.binary[name];
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
       binary.cube.on("bucketLoaded", () => { this.isDirty = true; });
     }
 
@@ -99,7 +97,7 @@ class ArbitraryPlane {
       // const queryMatrix = M4x4.scale1(constants.VIEWPORT_WIDTH / this.width, matrix);
       const queryMatrix = M4x4.scale1(1, matrix);
       const newVertices = M4x4.transformPointsAffine(queryMatrix, this.queryVertices);
-      const newColors = this.model.getColorBinaries()[0].getByVerticesSync(newVertices);
+      const newColors = Model.getColorBinaries()[0].getByVerticesSync(newVertices);
 
       this.textureMaterial.setData("color", newColors);
 
@@ -177,19 +175,7 @@ class ArbitraryPlane {
 
 
   createMesh() {
-    if (this.controller.isBranchpointvideoMode()) {
-      const options = {
-        polygonOffset: true,
-        polygonOffsetFactor: 10.0,
-        polygonOffsetUnits: 40.0,
-      };
-
-      const factory = new ArbitraryPlaneMaterialFactory(this.model, this.width);
-      factory.makeMaterial(options);
-      this.textureMaterial = factory.getMaterial();
-    } else {
-      this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.model, this.width).getMaterial();
-    }
+    this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.width).getMaterial();
 
     // create mesh
     const plane = new THREE.Mesh(

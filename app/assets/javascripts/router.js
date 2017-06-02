@@ -8,8 +8,10 @@
 
 import $ from "jquery";
 import _ from "lodash";
-import constants from "oxalis/constants";
+import { ControlModeEnum } from "oxalis/constants";
+import { SkeletonTracingTypeTracingEnum } from "oxalis/store";
 import BaseRouter from "libs/base_router";
+import ReactBackboneWrapper from "libs/react_backbone_wrapper";
 import PaginationCollection from "admin/models/pagination_collection";
 
 // #####
@@ -66,16 +68,15 @@ class Router extends BaseRouter {
     this.$loadingSpinner.addClass("hidden");
   }
 
-
   tracingView(type, id) {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
 
-      const view = new TracingLayoutView({
-        tracingType: type,
-        tracingId: id,
-        controlMode: constants.CONTROL_MODE_TRACE,
+      const view = new ReactBackboneWrapper(TracingLayoutView, {
+        initialTracingType: type,
+        initialTracingId: id,
+        initialControlmode: ControlModeEnum.TRACE,
       });
       view.forcePageReload = true;
       this.changeView(view);
@@ -83,16 +84,15 @@ class Router extends BaseRouter {
     require(["oxalis/view/tracing_layout_view"], callback);
   }
 
-
   tracingViewPublic(id) {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
 
-      const view = new TracingLayoutView({
-        tracingType: "View",
-        tracingId: id,
-        controlMode: constants.CONTROL_MODE_VIEW,
+      const view = new ReactBackboneWrapper(TracingLayoutView, {
+        initialTracingType: SkeletonTracingTypeTracingEnum.View,
+        initialTracingId: id,
+        initialControlmode: ControlModeEnum.VIEW,
       });
       view.forcePageReload = true;
       this.changeView(view);

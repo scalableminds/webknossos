@@ -74,7 +74,7 @@ class ErrorHandling {
     });
   }
 
-  assert = (bool, message, assertionContext) => {
+  assert = (bool, message, assertionContext, dontThrowError) => {
     if (bool) {
       return;
     }
@@ -86,7 +86,7 @@ class ErrorHandling {
 
     Toast.error(`Assertion violated - ${message}`);
 
-    if (this.throwAssertions) {
+    if (this.throwAssertions && !dontThrowError) {
       // error will be automatically pushed to airbrake due to global handler
       throw error;
     } else {

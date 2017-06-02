@@ -238,7 +238,7 @@ class InputMouseButton {
 
 
 export class InputMouse {
-  $target: JQuery;
+  $targetSelector: string;
   id: ?string;
 
   leftMouseButton: InputMouseButton;
@@ -252,9 +252,9 @@ export class InputMouse {
   attach: (bindings: BindingMap<MouseHandlerType>) => void;
   trigger: Function;
 
-  constructor($target: JQuery, initialBindings: BindingMap<MouseHandlerType> = {}, id: ?string = null) {
+  constructor($targetSelector: string, initialBindings: BindingMap<MouseHandlerType> = {}, id: ?string = null) {
     _.extend(this, Backbone.Events);
-    this.$target = $target;
+    this.$targetSelector = $targetSelector;
     this.id = id;
 
     this.leftMouseButton = new InputMouseButton("left", 1, this, this.id);
@@ -266,12 +266,12 @@ export class InputMouse {
       mouseup: this.mouseUp,
     });
 
-    this.$target.on({
+    $(document).on({
       mousedown: this.mouseDown,
       mouseenter: this.mouseEnter,
       mouseleave: this.mouseLeave,
       wheel: this.mouseWheel,
-    });
+    }, this.$targetSelector);
 
     this.on(initialBindings);
     this.attach = this.on;
@@ -284,29 +284,31 @@ export class InputMouse {
       mouseup: this.mouseUp,
     });
 
-    this.$target.off({
+    $(document).off({
       mousedown: this.mouseDown,
       mouseenter: this.mouseEnter,
       mouseleave: this.mouseLeave,
       wheel: this.mouseWheel,
-    });
+    }, this.$targetSelector);
   }
 
 
   isHit(event: JQueryInputEventObject) {
     const { pageX, pageY } = event;
-    const { left, top } = this.$target.offset();
+    const $target = $(this.$targetSelector);
+    const { left, top } = $target.offset();
 
-    return left <= pageX && pageX <= left + this.$target.width() &&
-    top <= pageY && pageY <= top + this.$target.height();
+    return left <= pageX && pageX <= left + $target.width() &&
+    top <= pageY && pageY <= top + $target.height();
   }
 
   mouseDown = (event: JQueryInputEventObject): void => {
     event.preventDefault();
+    const $target = $(this.$targetSelector);
 
     this.lastPosition = {
-      x: event.pageX - this.$target.offset().left,
-      y: event.pageY - this.$target.offset().top,
+      x: event.pageX - $target.offset().left,
+      y: event.pageY - $target.offset().top,
     };
 
     this.leftMouseButton.handleMouseDown(event);
@@ -333,10 +335,12 @@ export class InputMouse {
 
 
   mouseMove = (event: JQueryInputEventObject): void => {
+    const $target = $(this.$targetSelector);
     let delta = null;
+
     this.position = {
-      x: event.pageX - this.$target.offset().left,
-      y: event.pageY - this.$target.offset().top,
+      x: event.pageX - $target.offset().left,
+      y: event.pageY - $target.offset().top,
     };
 
     if (this.lastPosition != null) {

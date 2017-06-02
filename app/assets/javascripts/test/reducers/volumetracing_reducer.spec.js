@@ -22,7 +22,7 @@ const volumeTracing = {
   name: "",
   activeCellId: 0,
   cells: [],
-  viewMode: Constants.VOLUME_MODE_MOVE,
+  volumeTraceOrMoveMode: Constants.VOLUME_MODE_MOVE,
   maxCellId: 0,
   contourList: [],
   lastCentroid: null,
@@ -170,7 +170,7 @@ test("VolumeTracing should set trace/view mode", (t) => {
 
   t.not(newState, initialState);
   getVolumeTracing(newState.tracing).map((tracing) => {
-    t.is(tracing.viewMode, Constants.VOLUME_MODE_TRACE);
+    t.is(tracing.volumeTraceOrMoveMode, Constants.VOLUME_MODE_TRACE);
   });
 });
 
@@ -186,7 +186,7 @@ test("VolumeTracing should not allow to set trace mode if the zoomStep is > 1", 
   t.is(alteredState, newState);
   getVolumeTracing(newState.tracing).map((tracing) => {
     // Mode should not be changed
-    t.is(tracing.viewMode, Constants.VOLUME_MODE_MOVE);
+    t.is(tracing.volumeTraceOrMoveMode, Constants.VOLUME_MODE_MOVE);
   });
 });
 
@@ -197,14 +197,14 @@ test("VolumeTracing should toggle trace/view mode", (t) => {
   let newState = VolumeTracingReducer(initialState, toggleModeAction);
 
   getVolumeTracing(newState.tracing).map((tracing) => {
-    t.is(tracing.viewMode, Constants.VOLUME_MODE_TRACE);
+    t.is(tracing.volumeTraceOrMoveMode, Constants.VOLUME_MODE_TRACE);
   });
 
   // Toggle mode back to View
   newState = VolumeTracingReducer(newState, toggleModeAction);
 
   getVolumeTracing(newState.tracing).map((tracing) => {
-    t.is(tracing.viewMode, Constants.VOLUME_MODE_MOVE);
+    t.is(tracing.volumeTraceOrMoveMode, Constants.VOLUME_MODE_MOVE);
   });
 });
 

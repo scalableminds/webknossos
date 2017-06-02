@@ -329,7 +329,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     event.preventDefault();
-    event.stopPropagation();
 
     if (_state === STATE.NONE) {
       _state = event.button;
@@ -355,7 +354,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     event.preventDefault();
-    event.stopPropagation();
 
     if (_state === STATE.ROTATE && !_this.noRotate) {
       _this.getMouseProjectionOnBall(event.pageX, event.pageY, _rotateEnd);
@@ -373,7 +371,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     event.preventDefault();
-    event.stopPropagation();
 
     _state = STATE.NONE;
 
@@ -386,7 +383,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     event.preventDefault();
-    event.stopPropagation();
 
     let delta = 0;
 
@@ -435,7 +431,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     event.preventDefault();
-    event.stopPropagation();
 
     switch (event.touches.length) {
 
@@ -485,6 +480,22 @@ function TrackballControls(object, domElement, target, updateCallback) {
     _state = STATE.NONE;
     _this.dispatchEvent(endEvent);
   }
+
+  this.destroy = () => {
+    this.domElement.removeEventListener("contextmenu", (event) => { event.preventDefault(); }, false);
+
+    this.domElement.removeEventListener("mousedown", mousedown, false);
+
+    this.domElement.removeEventListener("mousewheel", mousewheel, false);
+    this.domElement.removeEventListener("DOMMouseScroll", mousewheel, false); // firefox
+
+    this.domElement.removeEventListener("touchstart", touchstart, false);
+    this.domElement.removeEventListener("touchend", touchend, false);
+    this.domElement.removeEventListener("touchmove", touchmove, false);
+
+    window.removeEventListener("keydown", keydown, false);
+    window.removeEventListener("keyup", keyup, false);
+  };
 
   this.domElement.addEventListener("contextmenu", (event) => { event.preventDefault(); }, false);
 

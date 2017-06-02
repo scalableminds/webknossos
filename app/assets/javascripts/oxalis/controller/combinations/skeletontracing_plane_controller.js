@@ -18,7 +18,6 @@ import { setPositionAction, setRotationAction } from "oxalis/model/actions/flyca
 import { getPosition, getRotationOrtho, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import type Model from "oxalis/model";
 import type View from "oxalis/view";
 import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
@@ -42,12 +41,11 @@ class SkeletonTracingPlaneController extends PlaneController {
   skeletonTracingController: SkeletonTracingController;
 
   constructor(
-    model: Model,
     view: View,
     sceneController: SceneController,
     skeletonTracingController: SkeletonTracingController,
   ) {
-    super(model, view, sceneController);
+    super(view, sceneController);
     this.skeletonTracingController = skeletonTracingController;
   }
 
@@ -188,10 +186,11 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   addNode = (position: Vector3, rotation: Vector3, centered: boolean): void => {
-    const { newNodeNewTree } = Store.getState().userConfiguration;
-    const activeNodeMaybe = getActiveNode(Store.getState().tracing);
+    const state = Store.getState();
+    const { newNodeNewTree } = state.userConfiguration;
+    const activeNodeMaybe = getActiveNode(state.tracing);
 
-    if (this.model.settings.somaClickingAllowed && newNodeNewTree) {
+    if (state.tracing.restrictions.somaClickingAllowed && newNodeNewTree) {
       Store.dispatch(createTreeAction());
     }
 
@@ -204,11 +203,11 @@ class SkeletonTracingPlaneController extends PlaneController {
       position,
       rotation,
       OrthoViewToNumber[this.activeViewport],
-      getRequestLogZoomStep(Store.getState()),
+      getRequestLogZoomStep(state),
     ));
 
     if (centered) {
-      // we created a new node, so use it's reference
+      // we created a new node, so get a new reference
       getActiveNode(Store.getState().tracing)
         .map(newActiveNode => this.centerPositionAnimated(newActiveNode.position));
     }

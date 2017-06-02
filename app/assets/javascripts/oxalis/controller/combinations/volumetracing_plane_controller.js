@@ -14,10 +14,10 @@ import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { createCellAction, setModeAction, startEditingAction, addToLayerAction, finishEditingAction } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId, getMode } from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OrthoViewType, Point2 } from "oxalis/constants";
 import type SceneController from "oxalis/controller/scene_controller";
-import type Model from "oxalis/model";
+import Model from "oxalis/model";
 import type View from "oxalis/view";
 
 class VolumeTracingPlaneController extends PlaneController {
@@ -30,8 +30,8 @@ class VolumeTracingPlaneController extends PlaneController {
 
   volumeTracingController: VolumeTracingController;
 
-  constructor(model: Model, view: View, sceneController: SceneController, volumeTracingController: VolumeTracingController) {
-    super(model, view, sceneController);
+  constructor(view: View, sceneController: SceneController, volumeTracingController: VolumeTracingController) {
+    super(view, sceneController);
     this.volumeTracingController = volumeTracingController;
 
     let lastActiveCellId = getActiveCellId(Store.getState().tracing).get();
@@ -45,7 +45,7 @@ class VolumeTracingPlaneController extends PlaneController {
     });
 
     // If a new mapping is activated the 3D cell has to be updated, although the activeCellId did not change
-    this.listenTo(this.model.getSegmentationBinary().cube, "newMapping", () =>
+    this.listenTo(Model.getSegmentationBinary().cube, "newMapping", () =>
       this.sceneController.renderVolumeIsosurface(lastActiveCellId),
     );
 
@@ -86,11 +86,12 @@ class VolumeTracingPlaneController extends PlaneController {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
         const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
 
-        const mode = getMode(Store.getState().tracing).get();
+        const mode = getVolumeTraceOrMoveMode(Store.getState().tracing).get();
         if (mode === constants.VOLUME_MODE_MOVE) {
+          const viewportScale = Store.getState().userConfiguration.scale;
           this.move([
-            (delta.x * mouseInversionX) / this.planeView.scaleFactor,
-            (delta.y * mouseInversionY) / this.planeView.scaleFactor,
+            (delta.x * mouseInversionX) / viewportScale,
+            (delta.y * mouseInversionY) / viewportScale,
             0,
           ]);
         } else {
@@ -111,7 +112,7 @@ class VolumeTracingPlaneController extends PlaneController {
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
-        const mode = getMode(Store.getState().tracing).get();
+        const mode = getVolumeTraceOrMoveMode(Store.getState().tracing).get();
         if (mode === constants.VOLUME_MODE_TRACE) {
           Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }
@@ -128,7 +129,7 @@ class VolumeTracingPlaneController extends PlaneController {
       },
 
       leftClick: (pos: Point2) => {
-        const cellId = this.model.getSegmentationBinary().cube.getDataValue(this.calculateGlobalPos(pos));
+        const cellId = Model.getSegmentationBinary().cube.getDataValue(this.calculateGlobalPos(pos));
 
         this.volumeTracingController.handleCellSelection(cellId);
       },

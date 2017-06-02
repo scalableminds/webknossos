@@ -7,11 +7,10 @@ import _ from "lodash";
 import $ from "jquery";
 import Backbone from "backbone";
 import { InputKeyboardNoLoop } from "libs/input";
-import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { toggleModeAction, setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
-import VolumeTracingView from "oxalis/view/volumetracing_view";
+import View from "oxalis/view";
 import SceneController from "oxalis/controller/scene_controller";
 
 class VolumeTracingController {
@@ -22,8 +21,7 @@ class VolumeTracingController {
   // Also, this would be the place to define general Volume Tracing
   // functions that can be called by the specific view mode controller.
 
-  model: Model;
-  volumeTracingView: VolumeTracingView;
+  volumeTracingView: View;
   sceneController: SceneController;
   inDeleteMode: boolean;
   mergeMode: 0 | 1 | 2;
@@ -34,8 +32,7 @@ class VolumeTracingController {
   MERGE_MODE_CELL1 = 1;
   MERGE_MODE_CELL2 = 2;
 
-  constructor(model: Model, volumeTracingView: VolumeTracingView, sceneController: SceneController) {
-    this.model = model;
+  constructor(volumeTracingView: View, sceneController: SceneController) {
     this.volumeTracingView = volumeTracingView;
     this.sceneController = sceneController;
     this.inDeleteMode = false;

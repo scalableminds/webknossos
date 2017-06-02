@@ -5,6 +5,7 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 import runAsync from "test/helpers/run-async";
 
+mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
 mockRequire("libs/window", {});
 mockRequire("jquery", { fn: {} });
 mockRequire("libs/request", null);

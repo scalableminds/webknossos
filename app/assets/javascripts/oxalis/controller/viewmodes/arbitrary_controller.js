@@ -13,10 +13,10 @@ import { V3 } from "libs/mjs";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import type { ModeType, Vector3, Point2 } from "oxalis/constants";
-import Model from "oxalis/model";
 import View from "oxalis/view";
 import Store from "oxalis/store";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import Model from "oxalis/model";
+import { updateUserSettingAction, setFlightmodeRecordingAction, setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
@@ -24,7 +24,6 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
 import ArbitraryView from "oxalis/view/arbitrary_view";
-import ArbitraryPlaneInfo from "oxalis/geometries/arbitrary_plane_info";
 import constants from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import { yawFlycamAction, pitchFlycamAction, setPositionAction, setRotationAction, zoomInAction, zoomOutAction, moveFlycamAction } from "oxalis/model/actions/flycam_actions";
@@ -32,16 +31,16 @@ import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor
 import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 
+const CANVAS_SELECTOR = "#render-canvas";
+
 class ArbitraryController {
   arbitraryView: ArbitraryView;
-  model: Model;
   view: View;
   sceneController: SceneController;
   skeletonTracingController: SkeletonTracingController;
   isStarted: boolean;
   canvas: JQuery;
   plane: ArbitraryPlane;
-  infoPlane: ArbitraryPlaneInfo;
   crosshair: Crosshair;
   WIDTH: number;
   TIMETOCENTER: number;
@@ -54,7 +53,7 @@ class ArbitraryController {
     keyboardOnce: ?InputKeyboard;
     destroy: () => void;
   };
-  mode: ModeType = 0;
+  mode: ModeType = constants.MODE_PLANE_TRACING;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -84,13 +83,11 @@ class ArbitraryController {
   }
 
   constructor(
-    model: Model,
     view: View,
     sceneController: SceneController,
     skeletonTracingController: SkeletonTracingController,
   ) {
     let canvas;
-    this.model = model;
     this.view = view;
     this.sceneController = sceneController;
     this.skeletonTracingController = skeletonTracingController;
@@ -98,18 +95,12 @@ class ArbitraryController {
 
     this.isStarted = false;
 
-    this.canvas = canvas = $("#render-canvas");
+    this.canvas = canvas = $(CANVAS_SELECTOR);
 
     this.arbitraryView = new ArbitraryView(canvas, this.view, this.WIDTH);
 
-    this.plane = new ArbitraryPlane(this.model, this, this.WIDTH);
+    this.plane = new ArbitraryPlane(this, this.WIDTH);
     this.arbitraryView.addGeometry(this.plane);
-
-    // render HTML element to indicate recording status
-    this.infoPlane = new ArbitraryPlaneInfo({ model: this.model });
-    this.infoPlane.render();
-    $("#render").append(this.infoPlane.el);
-
 
     this.input = _.extend({}, this.input);
 
@@ -127,14 +118,14 @@ class ArbitraryController {
 
   render(): void {
     const matrix = Store.getState().flycam.currentMatrix;
-    this.model.getColorBinaries().forEach(binary =>
+    Model.getColorBinaries().forEach(binary =>
       binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality));
   }
 
 
   initMouse(): void {
     this.input.mouse = new InputMouse(
-      this.canvas, {
+      CANVAS_SELECTOR, {
         leftDownMove: (delta: Point2) => {
           const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
           const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
@@ -233,33 +224,26 @@ class ArbitraryController {
 
 
   setRecord(record: boolean): void {
-    if (record !== this.model.get("flightmodeRecording")) {
-      this.model.set("flightmodeRecording", record);
+    if (record !== Store.getState().temporaryConfiguration.flightmodeRecording) {
+      Store.dispatch(setFlightmodeRecordingAction(record));
       this.setWaypoint();
     }
   }
 
 
   createBranchMarker(pos: Point2): void {
-    if (!this.isBranchpointvideoMode() && !this.isSynapseannotationMode()) { return; }
-    const activeNodeId = getActiveNode(Store.getState().tracing).map(node => node.id).getOrElse(null);
-    this.model.setMode(2);
+    Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE));
     const f = Store.getState().flycam.zoomStep / (this.arbitraryView.width / this.WIDTH);
     Store.dispatch(moveFlycamAction([-(pos.x - (this.arbitraryView.width / 2)) * f, -(pos.y - (this.arbitraryView.width / 2)) * f, 0]));
     Store.dispatch(createTreeAction());
     this.setWaypoint();
     Store.dispatch(moveFlycamAction([(pos.x - (this.arbitraryView.width / 2)) * f, (pos.y - (this.arbitraryView.width / 2)) * f, 0]));
-    if (this.isBranchpointvideoMode() && activeNodeId != null) {
-      Store.dispatch(setActiveNodeAction(activeNodeId, true));
-    }
-    this.model.setMode(1);
+    Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY));
     this.moved();
   }
 
 
   nextNode(nextOne: boolean): void {
-    if (!this.isBranchpointvideoMode()) { return; }
-
     Utils.zipMaybe(
       getActiveNode(Store.getState().tracing),
       getMaxNodeId(Store.getState().tracing),
@@ -283,7 +267,6 @@ class ArbitraryController {
 
   move(timeFactor: number): void {
     if (!this.isStarted) { return; }
-    if (this.isBranchpointvideoMode()) { return; }
     Store.dispatch(moveFlycamAction([0, 0, this.getVoxelOffset(timeFactor)]));
     this.moved();
   }
@@ -298,8 +281,8 @@ class ArbitraryController {
   bindToEvents(): void {
     this.listenTo(this.arbitraryView, "render", this.render);
 
-    for (const name of Object.keys(this.model.binary)) {
-      const binary = this.model.binary[name];
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
       this.listenTo(binary.cube, "bucketLoaded", this.arbitraryView.draw);
     }
 
@@ -346,10 +329,9 @@ class ArbitraryController {
   }
 
   setWaypoint(): void {
-    if (!this.model.get("flightmodeRecording")) {
+    if (!Store.getState().temporaryConfiguration.flightmodeRecording) {
       return;
     }
-
     const position = getPosition(Store.getState().flycam);
     const rotation = getRotation(Store.getState().flycam);
 
@@ -375,9 +357,6 @@ class ArbitraryController {
 
 
   setClippingDistance(value: number): void {
-    if (this.isBranchpointvideoMode()) {
-      this.arbitraryView.setClippingDistance(constants.BRANCHPOINT_VIDEO_CLIPPING_DISTANCE);
-    }
     this.arbitraryView.setClippingDistance(value);
   }
 
@@ -466,16 +445,6 @@ class ArbitraryController {
       this.setWaypoint();
       this.lastNodeMatrix = matrix;
     }
-  }
-
-
-  isBranchpointvideoMode(): boolean {
-    return Utils.__guard__(this.model.tracing.task, x => x.type.summary) === "branchpointvideo";
-  }
-
-
-  isSynapseannotationMode(): boolean {
-    return Utils.__guard__(this.model.tracing.task, x => x.type.summary) === "synapseannotation";
   }
 }
 ArbitraryController.initClass();

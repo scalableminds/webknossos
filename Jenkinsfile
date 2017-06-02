@@ -18,8 +18,6 @@ ansiColor('xterm') {
         env.DOCKER_CACHE_PREFIX = "~/.webknossos-build-cache"
         sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
         sh "docker-compose pull sbt"
-
-        sh "echo ${commit} > public/commit.txt"
       }
 
 

@@ -1,22 +1,26 @@
 /**
  * polygon_factory.js
- * @flow weak
+ * @flow
  */
+/* globals Generator:false */
 
-import _ from "lodash";
-import DataCube from "../../model/binary/data_cube";
-import tlt from "./tlt";
-import Deferred from "../../../libs/deferred";
+import Utils from "libs/utils";
+import DataCube from "oxalis/model/binary/data_cube";
+import tlt from "oxalis/view/polygons/tlt";
+import type { Vector3 } from "oxalis/constants";
+
+export type PolygonResultType = {
+  [cellId: number]: Vector3[][];
+};
 
 // This class is capable of turning voxel data into triangles
 // Based on the marching cubes algorithm
 class PolygonFactory {
-  chunkSize: number;
-  deferred: Deferred;
+  chunkSize: number = 1000;
   endX: number;
   endY: number;
   endZ: number;
-  id: number;
+  id: ?number;
   isCancelled: boolean;
   modelCube: DataCube;
   startX: number;
@@ -24,11 +28,10 @@ class PolygonFactory {
   startZ: number;
   voxelsToSkip: number;
 
-  constructor(modelCube, resolution, min, max, id) {
+  constructor(modelCube: DataCube, resolution: number, min: Vector3, max: Vector3, id: ?number) {
     this.modelCube = modelCube;
     this.id = id;
     this.voxelsToSkip = Math.ceil((max[0] - min[0]) / resolution) || 1;
-    this.chunkSize = 10000;
 
     const round = number => Math.floor(number / this.voxelsToSkip) * this.voxelsToSkip;
 
@@ -41,13 +44,9 @@ class PolygonFactory {
   }
 
 
-  getTriangles() {
-    const result = {};
-    this.deferred = new Deferred();
+  getTriangles(): Promise<PolygonResultType | null> {
     this.isCancelled = false;
-
-    _.defer(this.calculateTrianglesAsync, result);
-    return this.deferred.promise();
+    return this.calculateTrianglesAsync();
   }
 
 
@@ -56,32 +55,28 @@ class PolygonFactory {
   }
 
 
-  calculateTrianglesAsync = (result, lastPosition) => {
-    if (this.isCancelled) {
-      return;
-    }
-
+  async calculateTrianglesAsync(): Promise<PolygonResultType | null> {
+    const result: PolygonResultType = {};
+    const positionGenerator = this.getPositionGenerator();
+    let position = positionGenerator.next();
     let i = 0;
-    let position = this.getNextPosition(lastPosition);
-
-    while (this.isPositionInBoundingBox(position)) {
-      this.updateTriangles(result, position);
-
-      // If chunk size is reached, pause execution
-      if (i === this.chunkSize) {
-        _.defer(this.calculateTrianglesAsync, result, position);
-        return;
-      }
+    while (!this.isCancelled && !position.done) {
+      this.updateTriangles(result, position.value);
+      position = positionGenerator.next();
       i++;
-
-      position = this.getNextPosition(position);
+      // If chunk size is reached, pause execution
+      if (i % this.chunkSize === 0 && !position.done) {
+        await Utils.idleFrame(10);
+      }
     }
-
-    this.deferred.resolve(result);
+    if (this.isCancelled) {
+      return null;
+    }
+    return result;
   }
 
 
-  isPositionInBoundingBox(position) {
+  isPositionInBoundingBox(position: Vector3): boolean {
     if (position != null) {
       const [x, y, z] = position;
       return (x >= this.startX && y >= this.startY && z >= this.startZ) &&
@@ -90,42 +85,33 @@ class PolygonFactory {
     return false;
   }
 
-
-  getNextPosition(lastPosition) {
-    if (lastPosition == null) {
-      return [this.startX, this.startY, this.startZ];
-    } else {
-      const [oldX, oldY, oldZ] = lastPosition;
-
-      if (oldX + this.voxelsToSkip < this.endX) {
-        return [oldX + this.voxelsToSkip, oldY, oldZ];
-      }
-      if (oldY + this.voxelsToSkip < this.endY) {
-        return [this.startX, oldY + this.voxelsToSkip, oldZ];
-      } else {
-        // For z coordinate, always sample in maximal resolution
-        return [this.startX, this.startY, oldZ + 1];
+  getPositionGenerator = function* (): Generator<Vector3, void, void> {
+    // For z coordinate, always sample in maximal resolution
+    for (let z = this.startZ; z < this.endZ; z += 1) {
+      for (let y = this.startY; y < this.endY; y += this.voxelsToSkip) {
+        for (let x = this.startX; x < this.endX; x += this.voxelsToSkip) {
+          yield [x, y, z];
+        }
       }
     }
   }
 
-
-  updateTriangles(result, position) {
+  updateTriangles(result: PolygonResultType, position: Vector3): void {
     const cubeIndices = this.getCubeIndices(position);
 
-    for (const cellId of Object.keys(cubeIndices)) {
+    for (const cellIdString of Object.keys(cubeIndices)) {
+      const cellId = parseInt(cellIdString, 10);
       const cubeIndex = cubeIndices[cellId];
       if (result[cellId] == null) {
         result[cellId] = [];
       }
       if (cubeIndex !== 0 && cubeIndex !== 256) {
-        this.addNewTriangles(result[cellId], cubeIndex, position);
+        result[cellId] = result[cellId].concat(this.getCellTriangles(cubeIndex, position));
       }
     }
   }
 
-
-  getCubeIndices([x, y, z]) {
+  getCubeIndices([x, y, z]: Vector3): { [cellId: number]: number } {
     const labels = [
       this.modelCube.getDataValue([x, y, z]),
       this.modelCube.getDataValue([x + this.voxelsToSkip, y, z]),
@@ -134,24 +120,17 @@ class PolygonFactory {
       this.modelCube.getDataValue([x, y + this.voxelsToSkip, z]),
       this.modelCube.getDataValue([x + this.voxelsToSkip, y + this.voxelsToSkip, z]),
       this.modelCube.getDataValue([x + this.voxelsToSkip, y + this.voxelsToSkip, z + this.voxelsToSkip]),
-      this.modelCube.getDataValue([x, y + this.voxelsToSkip, z + this.voxelsToSkip])];
-
-    const cellIds = [];
-    for (const label of labels) {
-      if (!cellIds.includes(label) && label !== 0 && ((this.id == null) || this.id === label)) {
-        cellIds.push(label);
-      }
-    }
+      this.modelCube.getDataValue([x, y + this.voxelsToSkip, z + this.voxelsToSkip]),
+    ];
+    const cellIds = new Set(labels.filter(label => label !== 0 && ((this.id == null) || this.id === label)));
 
     const result = {};
     for (const cellId of cellIds) {
       let cubeIndex = 0;
-
       for (let i = 0; i <= 7; i++) {
         const bit = cellId === labels[i] ? 1 : 0;
         cubeIndex |= bit << i;
       }
-
       result[cellId] = cubeIndex;
     }
 
@@ -159,19 +138,22 @@ class PolygonFactory {
   }
 
 
-  addNewTriangles(triangleList, cubeIndex, [x, y, z]) {
-    for (const triangle of Array.from(tlt[cubeIndex])) {
+  getCellTriangles(cubeIndex: number, [x, y, z]: Vector3): Vector3[][] {
+    const triangleList = [];
+    for (const triangle of tlt[cubeIndex]) {
       const vertices = [];
 
-      for (const vertex of Array.from(triangle)) {
+      for (const vertex of triangle) {
         vertices.push([
           (vertex[0] * this.voxelsToSkip) + x,
           (vertex[1] * this.voxelsToSkip) + y,
-          (vertex[2] * this.voxelsToSkip) + z]);
+          (vertex[2] * this.voxelsToSkip) + z,
+        ]);
       }
 
       triangleList.push(vertices);
     }
+    return triangleList;
   }
 }
 

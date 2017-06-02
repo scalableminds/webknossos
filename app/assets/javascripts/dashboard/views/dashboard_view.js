@@ -5,10 +5,10 @@
 
 import _ from "lodash";
 import Marionette from "backbone.marionette";
-import DashboardTaskListView from "./dashboard_task_list_view";
-import ExplorativeTracingListView from "./explorative_tracing_list_view";
-import LoggedTimeView from "./logged_time_view";
-import DatasetSwitchView from "./dataset/dataset_switch_view";
+import DashboardTaskListView from "dashboard/views/dashboard_task_list_view";
+import ExplorativeTracingListView from "dashboard/views/explorative_tracing_list_view";
+import LoggedTimeView from "dashboard/views/logged_time_view";
+import DatasetSwitchView from "dashboard/views/dataset/dataset_switch_view";
 
 class DashboardView extends Marionette.View {
 

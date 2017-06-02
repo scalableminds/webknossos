@@ -1,6 +1,6 @@
 /**
  * binarydata_connection_info.js
- * @flow weak
+ * @flow
  */
 
 const ROUND_TRIP_TIME_SMOOTHER = 0.125;
@@ -23,7 +23,7 @@ class BinaryDataConnectionInfo {
     this.totalBytes = 0;
   }
 
-  log(dataLayerName, startTime, loadedBuckets, loadedBytes) {
+  log(dataLayerName: string, startTime: number, loadedBuckets: number, loadedBytes: number): void {
     const endTime = new Date().getTime();
     const roundTripTime = endTime - startTime;
     const bandwidth = (loadedBytes / roundTripTime) * 1000;

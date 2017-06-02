@@ -33,6 +33,8 @@ case class Task(
   @info("Date of creation") created: DateTime = DateTime.now(),
   @info("Flag indicating deletion") isActive: Boolean = true,
   @info("Reference to project") _project: String,
+  @info("Script to be executed on task start") _script: Option[String],
+  @info("Optional information on the tasks creation") creationInfo: Option[String] = None,
   @info("Unique ID") _id: BSONObjectID = BSONObjectID.generate
 ) extends FoxImplicits {
 
@@ -110,7 +112,9 @@ object Task extends FoxImplicits {
       editRotation = annotationContent.map(_.editRotation).openOr(Vector3D(0, 0, 0))
       boundingBox = annotationContent.flatMap(_.boundingBox).toOption
       status <- task.status.getOrElse(CompletionStatus(-1, -1, -1))
+      scriptInfo <- task._script.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
+      scriptJs <- scriptInfo.toFox.flatMap(s => Script.scriptPublicWrites(s)).futureBox
     } yield {
       Json.obj(
         "id" -> task.id,
@@ -125,7 +129,9 @@ object Task extends FoxImplicits {
         "neededExperience" -> task.neededExperience,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
-        "tracingTime" -> task.tracingTime
+        "script" -> scriptJs.toOption,
+        "tracingTime" -> task.tracingTime,
+        "creationInfo" -> task.creationInfo
       )
     }
   }
@@ -189,6 +195,10 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     find("_project", project).collect[List]()
   }
 
+  def removeScriptFromTasks(_script: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    update(Json.obj("_script" -> _script), Json.obj("$unset" -> Json.obj("_script" -> 1)), multi = true)
+  }
+
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
 
@@ -198,6 +208,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     neededExperience: Experience,
     instances: Int,
     team: String,
+    _script: Option[String],
     _project: Option[String]
   )(implicit ctx: DBAccessContext): Fox[Task] =
     findAndModify(
@@ -208,6 +219,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
           "instances" -> instances,
           "team" -> team,
           "_taskType" -> _taskType,
+          "_script" -> _script,
           "_project" -> _project)),
       returnNew = true)
 

@@ -5,7 +5,7 @@
 
 import SortedCollection from "admin/models/sorted_collection";
 import Backbone from "backbone";
-import DashboardTaskModel from "./dashboard_task_model";
+import DashboardTaskModel from "dashboard/models/dashboard_task_model";
 
 const NEW_TASK_URL = "/user/tasks/request";
 

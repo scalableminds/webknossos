@@ -1,6 +1,6 @@
 /**
  * scene_controller.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
@@ -8,41 +8,39 @@ import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 import * as THREE from "three";
-import Flycam2d from "oxalis/model/flycam2d";
+import { V3 } from "libs/mjs";
+import { getPosition, getPlaneScalingFactor, getViewportBoundingBox } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
-import type { Vector3 } from "oxalis/constants";
-import scaleInfo from "oxalis/model/scaleinfo";
-import Plane from "../geometries/plane";
-import Skeleton from "../geometries/skeleton";
-import Cube from "../geometries/cube";
-import ContourGeometry from "../geometries/contourgeometry";
-import VolumeGeometry from "../geometries/volumegeometry";
-import Dimensions from "../model/dimensions";
-import constants from "../constants";
-import PolygonFactory from "../view/polygons/polygon_factory";
+import Store from "oxalis/store";
+import { getVoxelPerNM } from "oxalis/model/scaleinfo";
+import Plane from "oxalis/geometries/plane";
+import Skeleton from "oxalis/geometries/skeleton";
+import Cube from "oxalis/geometries/cube";
+import ContourGeometry from "oxalis/geometries/contourgeometry";
+import VolumeGeometry from "oxalis/geometries/volumegeometry";
+import Dimensions from "oxalis/model/dimensions";
+import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import PolygonFactory from "oxalis/view/polygons/polygon_factory";
+import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+
 
 class SceneController {
   skeleton: Skeleton;
   CUBE_COLOR: number;
-  upperBoundary: Vector3;
-  flycam: Flycam2d;
-  model: Model;
   current: number;
-  displayPlane: [boolean, boolean, boolean];
-  planeShift: [number, number, number];
+  displayPlane: OrthoViewMapType<boolean>;
+  planeShift: Vector3;
   pingBinary: boolean;
   pingBinarySeg: boolean;
-  volumeMeshes: any;
+  volumeMeshes: THREE.Object3D;
   polygonFactory: ?PolygonFactory;
   cube: Cube;
   userBoundingBox: Cube;
-  taskBoundingBox: Cube;
+  taskBoundingBox: ?Cube;
   contour: ContourGeometry;
-  planes: [Plane, Plane, Plane];
-
-  // Copied from backbone events (TODO: handle this better)
-  trigger: Function;
-  listenTo: Function;
+  planes: OrthoViewMapType<Plane>;
+  rootNode: THREE.Object3D;
 
   static initClass() {
     // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
@@ -51,280 +49,287 @@ class SceneController {
     this.prototype.CUBE_COLOR = 0x999999;
   }
 
-  constructor(upperBoundary, flycam, model) {
-    this.upperBoundary = upperBoundary;
-    this.flycam = flycam;
-    this.model = model;
+  constructor() {
     _.extend(this, Backbone.Events);
-
     this.current = 0;
-    this.displayPlane = [true, true, true];
+    this.displayPlane = {
+      [OrthoViews.PLANE_XY]: true,
+      [OrthoViews.PLANE_YZ]: true,
+      [OrthoViews.PLANE_XZ]: true,
+    };
     this.planeShift = [0, 0, 0];
     this.pingBinary = true;
     this.pingBinarySeg = true;
-
-    this.volumeMeshes = [];
 
     this.createMeshes();
     this.bindToEvents();
   }
 
 
-  createMeshes() {
+  createMeshes(): void {
+    this.rootNode = new THREE.Object3D();
+
     // Cubes
-    this.cube = new Cube(this.model, {
-      max: this.upperBoundary,
+    this.cube = new Cube({
+      min: Model.lowerBoundary,
+      max: Model.upperBoundary,
       color: this.CUBE_COLOR,
       showCrossSections: true });
-    this.userBoundingBox = new Cube(this.model, {
+    this.cube.getMeshes().forEach(mesh => this.rootNode.add(mesh));
+
+    this.userBoundingBox = new Cube({
       max: [0, 0, 0],
       color: 0xffaa00,
       showCrossSections: true });
+    this.userBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
-    if (this.model.taskBoundingBox != null) {
-      this.taskBoundingBox = new Cube(this.model, {
-        min: this.model.taskBoundingBox.min,
-        max: this.model.taskBoundingBox.max,
-        color: 0x00ff00,
-        showCrossSections: true });
+    const taskBoundingBox = Store.getState().tracing.boundingBox;
+    this.buildTaskingBoundingBox(taskBoundingBox);
+
+    this.volumeMeshes = new THREE.Object3D();
+    if (Store.getState().tracing.type === "volume") {
+      this.contour = new ContourGeometry();
+      this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
 
-    // TODO: Implement text
-
-    if (this.model.volumeTracing != null) {
-      this.contour = new ContourGeometry(this.model.volumeTracing, this.model.flycam);
-    }
-
-    if (this.model.skeletonTracing != null) {
-      this.skeleton = new Skeleton(this.model);
+    if (Store.getState().tracing.type === "skeleton") {
+      this.skeleton = new Skeleton();
+      this.rootNode.add(this.skeleton.getRootNode());
     }
 
     // create Meshes
-    const createPlane = planeIndex => new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, this.flycam, planeIndex, this.model);
+    const createPlane = planeIndex =>
+      new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, planeIndex, Model);
 
-    this.planes = [
-      createPlane(constants.PLANE_XY),
-      createPlane(constants.PLANE_YZ),
-      createPlane(constants.PLANE_XZ),
-    ];
+    this.planes = {
+      [OrthoViews.PLANE_XY]: createPlane(OrthoViews.PLANE_XY),
+      [OrthoViews.PLANE_YZ]: createPlane(OrthoViews.PLANE_YZ),
+      [OrthoViews.PLANE_XZ]: createPlane(OrthoViews.PLANE_XZ),
+    };
 
-    this.planes[constants.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
-    this.planes[constants.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
-    this.planes[constants.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
+    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
+
+    for (const plane of _.values(this.planes)) {
+      plane.getMeshes().forEach(mesh => this.rootNode.add(mesh));
+    }
+  }
+
+  buildTaskingBoundingBox(taskBoundingBox: ?BoundingBoxType): void {
+    if (taskBoundingBox != null) {
+      if (this.taskBoundingBox != null) {
+        this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.remove(mesh));
+      }
+
+      this.taskBoundingBox = new Cube({
+        min: taskBoundingBox.min,
+        max: taskBoundingBox.max,
+        color: 0x00ff00,
+        showCrossSections: true });
+      this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
+    }
   }
 
 
-  removeShapes() {
-    this.trigger("removeGeometries", this.volumeMeshes);
-  }
-
-
-  showShapes(bb, resolution, id) {
-    if (this.model.getSegmentationBinary() == null) { return; }
+  renderVolumeIsosurface(cellId: number): void {
+    const state = Store.getState();
+    if (!state.userConfiguration.isosurfaceDisplay || Model.getSegmentationBinary() == null) {
+      return;
+    }
 
     if (this.polygonFactory != null) {
       this.polygonFactory.cancel();
     }
 
+    const factor = state.userConfiguration.isosurfaceBBsize;
+    const bb = getViewportBoundingBox(state);
+
+    for (let i = 0; i <= 2; i++) {
+      const width = bb.max[i] - bb.min[i];
+      const diff = ((factor - 1) * width) / 2;
+      bb.min[i] -= diff;
+      bb.max[i] += diff;
+    }
+
+
     this.polygonFactory = new PolygonFactory(
-      this.model.getSegmentationBinary().cube,
-      resolution,
-      bb.min, bb.max, id,
+      Model.getSegmentationBinary().cube,
+      state.userConfiguration.isosurfaceResolution,
+      bb.min, bb.max, cellId,
     );
-
     this.polygonFactory.getTriangles().then((triangles) => {
-      this.removeShapes();
-      this.volumeMeshes = [];
-
-      for (id of Object.keys(triangles)) {
-        const mappedId = this.model.getSegmentationBinary().cube.mapId(parseInt(id));
-        const volume = new VolumeGeometry(triangles[id], mappedId);
-        this.volumeMeshes = this.volumeMeshes.concat(volume.getMeshes());
+      if (triangles == null) {
+        return;
       }
+      this.rootNode.remove(this.volumeMeshes);
+      this.volumeMeshes = new THREE.Object3D();
+      this.rootNode.add(this.volumeMeshes);
 
-      this.trigger("newGeometries", this.volumeMeshes);
+      for (const triangleIdString of Object.keys(triangles)) {
+        const triangleId = parseInt(triangleIdString, 10);
+        const mappedId = Model.getSegmentationBinary().cube.mapId(triangleId);
+        const volume = new VolumeGeometry(triangles[triangleId], mappedId);
+        volume.getMeshes().forEach(mesh => this.volumeMeshes.add(mesh));
+      }
       app.vent.trigger("rerender");
       this.polygonFactory = null;
-    },
-    );
+    });
   }
 
 
-  updateSceneForCam = (id) => {
+  updateSceneForCam = (id: OrthoViewType): void => {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
 
-    let mesh;
     let pos;
     this.cube.updateForCam(id);
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
     Utils.__guard__(this.skeleton, x1 => x1.updateForCam(id));
 
-    if (constants.ALL_PLANES.includes(id)) {
+    if (id !== OrthoViews.TDView) {
       let ind;
-      for (mesh of this.volumeMeshes) {
-        mesh.visible = false;
-      }
-      for (const i of constants.ALL_PLANES) {
-        if (i === id) {
-          this.planes[i].setOriginalCrosshairColor();
-          this.planes[i].setVisible(true);
-          pos = this.flycam.getPosition().slice();
-          ind = Dimensions.getIndices(i);
+      this.volumeMeshes.visible = false;
+      for (const planeId of OrthoViewValuesWithoutTDView) {
+        if (planeId === id) {
+          this.planes[planeId].setOriginalCrosshairColor();
+          this.planes[planeId].setVisible(true);
+          pos = _.clone(getPosition(Store.getState().flycam));
+          ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
-          pos[ind[2]] += i === constants.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
-          this.planes[i].setPosition(new THREE.Vector3(...pos));
+          pos[ind[2]] += planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
+          this.planes[planeId].setPosition(new THREE.Vector3(...pos));
         } else {
-          this.planes[i].setVisible(false);
+          this.planes[planeId].setVisible(false);
         }
       }
     } else {
-      for (mesh of this.volumeMeshes) {
-        mesh.visible = true;
-      }
-      for (const i of constants.ALL_PLANES) {
-        pos = this.flycam.getPosition();
-        this.planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
-        this.planes[i].setGrayCrosshairColor();
-        this.planes[i].setVisible(true);
-        this.planes[i].plane.visible = this.displayPlane[i];
+      this.volumeMeshes.visible = true;
+      for (const planeId of OrthoViewValuesWithoutTDView) {
+        pos = getPosition(Store.getState().flycam);
+        this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
+        this.planes[planeId].setGrayCrosshairColor();
+        this.planes[planeId].setVisible(true);
+        this.planes[planeId].plane.visible = this.displayPlane[planeId];
       }
     }
   }
 
 
-  update = () => {
-    const gPos = this.flycam.getPosition();
+  update = (): void => {
+    const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
-    const planeScale = this.flycam.getPlaneScalingFactor();
-    for (const i of constants.ALL_PLANES) {
-      this.planes[i].updateTexture();
-
+    const planeScale = getPlaneScalingFactor(Store.getState().flycam);
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      this.planes[planeId].updateTexture();
       // Update plane position
-      this.planes[i].setPosition(globalPosVec);
-
+      this.planes[planeId].setPosition(globalPosVec);
       // Update plane scale
-      this.planes[i].setScale(planeScale);
+      this.planes[planeId].setScale(planeScale);
     }
   }
 
 
-  setTextRotation() {}
-
-    // TODO: Implement
-
-
-  setDisplayCrosshair(value) {
-    for (const plane of this.planes) {
+  setDisplayCrosshair(value: boolean): void {
+    for (const plane of _.values(this.planes)) {
       plane.setDisplayCrosshair(value);
     }
     app.vent.trigger("rerender");
   }
 
 
-  setClippingDistance(value) {
+  setClippingDistance(value: number): void {
     // convert nm to voxel
-    for (const i of constants.ALL_PLANES) {
-      this.planeShift[i] = value * scaleInfo.voxelPerNM[i];
-    }
+    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.scale);
+    V3.scale(voxelPerNMVector, value, this.planeShift);
+
     app.vent.trigger("rerender");
   }
 
 
-  setInterpolation(value) {
-    for (const plane of this.planes) {
+  setInterpolation(value: boolean): void {
+    for (const plane of _.values(this.planes)) {
       plane.setLinearInterpolationEnabled(value);
     }
     app.vent.trigger("rerender");
   }
 
 
-  setDisplayPlanes = (value) => {
-    for (let i = 0; i <= 2; i++) {
-      this.displayPlane[i] = value;
+  setDisplayPlanes = (value: boolean): void => {
+    for (const planeId of OrthoViewValues) {
+      this.displayPlane[planeId] = value;
     }
     app.vent.trigger("rerender");
   }
 
 
-  getMeshes = () => {
-    let result = [];
-    for (const plane of this.planes) {
-      result = result.concat(plane.getMeshes());
-    }
-
-    for (const geometry of [this.skeleton, this.contour, this.cube, this.userBoundingBox, this.taskBoundingBox]) {
-      if (geometry != null) {
-        result = result.concat(geometry.getMeshes());
-      }
-    }
-
-    return result;
+  getRootNode(): THREE.Object3D {
+    return this.rootNode;
   }
 
 
-  setUserBoundingBox(bb) {
+  setUserBoundingBox(bb: BoundingBoxType): void {
     this.userBoundingBox.setCorners(bb.min, bb.max);
   }
 
-
-  setSegmentationAlpha(alpha) {
-    for (const plane of this.planes) {
+  setSegmentationAlpha(alpha: number): void {
+    for (const plane of _.values(this.planes)) {
       plane.setSegmentationAlpha(alpha);
     }
     this.pingBinarySeg = alpha !== 0;
   }
 
-  pingDataLayer(dataLayerName) {
-    if (this.model.binary[dataLayerName].category === "color") {
+  pingDataLayer(dataLayerName: string): boolean {
+    if (Model.binary[dataLayerName].category === "color") {
       return this.pingBinary;
     }
-    if (this.model.binary[dataLayerName].category === "segmentation") {
+    if (Model.binary[dataLayerName].category === "segmentation") {
       return this.pingBinarySeg;
     }
     return false;
   }
 
 
-  stop() {
-    for (const plane of this.planes) {
+  stop(): void {
+    for (const plane of _.values(this.planes)) {
       plane.setVisible(false);
     }
     this.cube.setVisibility(false);
     this.userBoundingBox.setVisibility(false);
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(false));
-
-    Utils.__guard__(this.skeleton, x1 => x1.restoreVisibility());
-    Utils.__guard__(this.skeleton, x2 => x2.setSizeAttenuation(true));
   }
 
 
-  start() {
-    for (const plane of this.planes) {
+  start(): void {
+    for (const plane of _.values(this.planes)) {
       plane.setVisible(true);
     }
     this.cube.setVisibility(true);
     this.userBoundingBox.setVisibility(true);
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(true));
-
-    Utils.__guard__(this.skeleton, x1 => x1.setSizeAttenuation(false));
   }
 
 
-  bindToEvents() {
-    const { user } = this.model;
-    this.listenTo(this.model, "change:userBoundingBox", function (bb) { this.setUserBoundingBox(bb); });
-    this.listenTo(user, "change:segmentationOpacity", function (model, opacity) {
-      this.setSegmentationAlpha(opacity);
+  bindToEvents(): void {
+    Store.subscribe(() => {
+      const { clippingDistance, displayCrosshair, tdViewDisplayPlanes } = Store.getState().userConfiguration;
+      const { segmentationOpacity } = Store.getState().datasetConfiguration;
+      this.setSegmentationAlpha(segmentationOpacity);
+      this.setClippingDistance(clippingDistance);
+      this.setDisplayCrosshair(displayCrosshair);
+      this.setDisplayPlanes(tdViewDisplayPlanes);
+      this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
     });
-    this.listenTo(user, "change:clippingDistance", function (model, value) { this.setClippingDistance(value); });
-    this.listenTo(user, "change:displayCrosshair", function (model, value) { this.setDisplayCrosshair(value); });
-    this.listenTo(this.model.datasetConfiguration, "change:interpolation", function (model, value) {
-      this.setInterpolation(value);
-    });
-    this.listenTo(user, "change:tdViewDisplayPlanes", function (model, value) { this.setDisplayPlanes(value); });
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.userBoundingBox,
+      bb => this.setUserBoundingBox(Utils.computeBoundingBoxFromArray(bb)),
+    );
+    listenToStoreProperty(
+      storeState => storeState.tracing.boundingBox,
+      bb => this.buildTaskingBoundingBox(bb),
+    );
   }
 }
 SceneController.initClass();

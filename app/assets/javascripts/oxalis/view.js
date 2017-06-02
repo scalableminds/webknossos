@@ -6,25 +6,24 @@
 import $ from "jquery";
 import app from "app";
 import * as THREE from "three";
-import constants from "./constants";
-import Model from "./model";
-import Toast from "../libs/toast";
+import constants from "oxalis/constants";
+import Toast from "libs/toast";
+import messages from "messages";
 
 class View {
-
-  model: Model;
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   theme: 0 | 1;
 
-  constructor(model) {
-    this.model = model;
+  constructor() {
     if (!this.isWebGlSupported()) {
-      Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>" +
-        "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>");
+      Toast.error(messages["webgl.disabled"]);
     }
 
-    this.renderer = new THREE.WebGLRenderer({ clearColor: 0x000000, clearAlpha: 1.0, antialias: false });
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: document.getElementById("render-canvas"),
+      antialias: true,
+    });
     this.scene = new THREE.Scene();
 
     this.setTheme(constants.THEME_BRIGHT);
@@ -33,6 +32,9 @@ class View {
     $("#loader").addClass("hidden");
   }
 
+  isWebGlSupported() {
+    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
+  }
 
   toggleTheme() {
     if (this.theme === constants.THEME_BRIGHT) {
@@ -55,9 +57,6 @@ class View {
   }
 
 
-  isWebGlSupported() {
-    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
-  }
 }
 
 export default View;

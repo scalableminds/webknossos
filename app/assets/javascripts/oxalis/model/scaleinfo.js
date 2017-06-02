@@ -1,54 +1,40 @@
 /**
  * scaleinfo.js
- * @flow weak
+ * @flow
  */
 
-import Utils from "libs/utils";
-import * as THREE from "three";
-import type { Vector3 } from "../constants";
+import type { Vector3 } from "oxalis/constants";
 
-// This class encapsulates any conversions between the nm and voxel
-// coordinate system.
-// It is a Singleton that is initalized once.
-// Include with import scaleInfo from "oxalis/model/scaleinfo"
-
-class ScaleInfo {
-  baseVoxel: number;
-  baseVoxelFactors: Vector3;
-  nmPerVoxel: Vector3;
-  voxelPerNM: Vector3;
-
-  initialize(scale) {
-    this.nmPerVoxel = scale;
-
-    this.voxelPerNM = [0, 0, 0];
-    for (const i of Utils.__range__(0, (this.nmPerVoxel.length - 1), true)) {
-      this.voxelPerNM[i] = 1 / this.nmPerVoxel[i];
-    }
-
-    // base voxel should be a cube with highest resolution
-    this.baseVoxel = Math.min.apply(null, this.nmPerVoxel);
-
-    // scale factor to calculate the voxels in a certain
-    // dimension from baseVoxels
-    this.baseVoxelFactors = [this.baseVoxel / this.nmPerVoxel[0],
-      this.baseVoxel / this.nmPerVoxel[1],
-      this.baseVoxel / this.nmPerVoxel[2]];
-  }
-
-  getNmPerVoxelVector() {
-    return new THREE.Vector3(...this.nmPerVoxel);
-  }
-
-
-  getVoxelPerNMVector() {
-    return new THREE.Vector3(...this.voxelPerNM);
-  }
-
-
-  voxelToNm(posArray) {
-    return [0, 1, 2].map(i => posArray[i] * this.nmPerVoxel[i]);
-  }
+export function getBaseVoxel(dataSetScale: Vector3): number {
+  // base voxel should be a cube with highest resolution
+  return Math.min(...dataSetScale);
 }
 
-export default new ScaleInfo();
+export function getBaseVoxelFactors(dataSetScale: Vector3): Vector3 {
+  // base voxel should be a cube with highest resolution
+  const baseVoxel = getBaseVoxel(dataSetScale);
+
+  // scale factor to calculate the voxels in a certain
+  // dimension from baseVoxels
+  return [
+    baseVoxel / dataSetScale[0],
+    baseVoxel / dataSetScale[1],
+    baseVoxel / dataSetScale[2],
+  ];
+}
+
+export function getVoxelPerNM(dataSetScale: Vector3): Vector3 {
+  const voxelPerNM = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    voxelPerNM[i] = 1 / dataSetScale[i];
+  }
+  return voxelPerNM;
+}
+
+export function voxelToNm(dataSetScale: Vector3, posArray: Vector3): Vector3 {
+  const result = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    result[i] = posArray[i] * dataSetScale[i];
+  }
+  return result;
+}

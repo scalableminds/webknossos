@@ -4,8 +4,9 @@
  */
 
 import Marionette from "backbone.marionette";
-import Router from "router";
-import OxalisController from "oxalis/controller";
+import type Router from "router";
+import type OxalisController from "oxalis/controller";
+import window from "libs/window";
 
 type UserType = {
   firstName: string,
@@ -16,13 +17,13 @@ type UserType = {
 }
 
 class OxalisApplication extends Marionette.Application {
-
   router: Router;
   oxalis: ?OxalisController;
   currentUser: UserType;
 }
 
 // eslint-disable-next-line no-unused-vars
-let app;
+const app = new OxalisApplication();
+window.app = app;
 
-export default window.app = app = new OxalisApplication();
+export default app;

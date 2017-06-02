@@ -102,9 +102,12 @@ object DataSetService extends FoxImplicits with LazyLogging {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
     logger.debug(s"Found datasets: " + dataSources.map(_.id).mkString(", "))
-    Fox.serialCombined(dataSources) { dataSource =>
+    Fox.serialSequence(dataSources) { dataSource =>
       DataSetService.updateDataSource(
         DataStoreInfo(dataStore.name, dataSource.serverUrl, dataStore.typ, None), dataSource)
+    }.map{ _.filter(_.isEmpty).foreach{ r =>
+        logger.warn("Updating DS failed. Result: " + r)
+      }
     }
   }
 }

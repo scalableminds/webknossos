@@ -1,23 +1,31 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+/*
+ * cube.spec.js
+ * @flow
+ */
+import test from "ava";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
-import runAsync from "../../helpers/run-async";
+import runAsync from "test/helpers/run-async";
 
 mockRequire.stopAll();
 
+mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
+mockRequire("app", {});
 mockRequire("jquery", { fn: {} });
-mockRequire("../../../libs/error_handling", {
+mockRequire("libs/error_handling", {
   assertExists(expr) { this.assert(expr != null); },
   assert(expr) { if (!expr) throw new Error("Assertion failed"); },
 });
-mockRequire("../../../libs/toast", { error: _.noop });
+mockRequire("libs/toast", { error: _.noop });
+
 
 // Avoid node caching and make sure all mockRequires are applied
-const Cube = mockRequire.reRequire("../../../oxalis/model/binary/data_cube").default;
+const Cube = mockRequire.reRequire("oxalis/model/binary/data_cube").default;
 
-describe("Cube", () => {
-  let cube = null;
+test.beforeEach((t) => {
+  const cube = new Cube([100, 100, 100], 3, 24);
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),
@@ -26,192 +34,199 @@ describe("Cube", () => {
     insert: sinon.stub(),
     push: sinon.stub(),
   };
+  cube.initializeWithQueues(pullQueue, pushQueue);
 
-  beforeEach(() => {
-    cube = new Cube(null, [100, 100, 100], 3, 24);
-    cube.initializeWithQueues(pullQueue, pushQueue);
-  });
+  // workaround, which shouldn't be necessary after this landed:
+  // https://github.com/avajs/ava/pull/1344
+  const context = ((t: any).context: any);
+  context.cube = cube;
+  context.pullQueue = pullQueue;
+  context.pushQueue = pushQueue;
+});
 
+test("GetBucket should return a NullBucket on getBucket()", (t) => {
+  const { cube } = t.context;
+  const bucket = cube.getBucket([0, 0, 0, 0]);
+  t.is(bucket.type, "null");
+  t.is(cube.bucketCount, 0);
+});
 
-  describe("GetBucket", () => {
-    it("should return a NullBucket on getBucket()", () => {
+test("GetBucket should create a new bucket on getOrCreateBucket()", (t) => {
+  const { cube } = t.context;
+  t.is(cube.bucketCount, 0);
+
+  const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
+  t.is(bucket.type, "data");
+  t.is(cube.bucketCount, 1);
+});
+
+test("GetBucket should only create one bucket on getOrCreateBucket()", (t) => {
+  const { cube } = t.context;
+  const bucket1 = cube.getOrCreateBucket([0, 0, 0, 0]);
+  const bucket2 = cube.getOrCreateBucket([0, 0, 0, 0]);
+  t.is(bucket1, bucket2);
+  t.is(cube.bucketCount, 1);
+});
+
+test("Voxel Labeling should request buckets when temporal buckets are created", (t) => {
+  const { cube, pullQueue } = t.context;
+  cube.labelVoxel([1, 1, 1], 42);
+
+  t.plan(2);
+  return runAsync([
+    () => {
+      t.true(pullQueue.add.calledWith({
+        bucket: [0, 0, 0, 0],
+        priority: -1 }),
+      );
+      t.true(pullQueue.pull.called);
+    },
+  ]);
+});
+
+test("Voxel Labeling should push buckets after they were pulled", (t) => {
+  const { cube, pushQueue } = t.context;
+  cube.labelVoxel([1, 1, 1], 42);
+
+  t.plan(3);
+  return runAsync([
+    () => {
+      t.is(pushQueue.insert.called, false);
+    },
+    () => {
       const bucket = cube.getBucket([0, 0, 0, 0]);
-      expect(bucket.isNullBucket).toBe(true);
-      expect(cube.bucketCount).toBe(0);
-    });
+      bucket.pull();
+      bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
+      t.pass();
+    },
+    () => {
+      t.true(pushQueue.insert.calledWith(
+        [0, 0, 0, 0],
+      ));
+    },
+  ]);
+});
 
-    it("should create a new bucket on getOrCreateBucket()", () => {
-      expect(cube.bucketCount).toBe(0);
+test("Voxel Labeling should push buckets immediately if they are pulled already", (t) => {
+  const { cube, pushQueue } = t.context;
+  const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
+  bucket.pull();
+  bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
 
-      const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
-      expect(bucket.isNullBucket).toBe(false);
-      expect(cube.bucketCount).toBe(1);
-    });
+  cube.labelVoxel([0, 0, 0], 42);
 
-    it("should only create one bucket on getOrCreateBucket()", () => {
-      const bucket1 = cube.getOrCreateBucket([0, 0, 0, 0]);
-      const bucket2 = cube.getOrCreateBucket([0, 0, 0, 0]);
-      expect(bucket1).toBe(bucket2);
-      expect(cube.bucketCount).toBe(1);
-    });
-  });
+  t.plan(1);
+  return runAsync([
+    () => {
+      t.true(pushQueue.insert.calledWith(
+        [0, 0, 0, 0],
+      ));
+    },
+  ]);
+});
 
-  describe("Volume Annotation Handling", () => {
-    describe("Voxel Labeling", () => {
-      it("should request buckets when temporal buckets are created", (done) => {
-        cube.labelVoxel([1, 1, 1], 42);
+test("Voxel Labeling should only create one temporal bucket", (t) => {
+  const { cube } = t.context;
+  // Creates temporal bucket
+  cube.labelVoxel([0, 0, 0], 42);
+  // Uses existing temporal bucket
+  cube.labelVoxel([1, 0, 0], 43);
 
-        runAsync([
-          () => {
-            expect(pullQueue.add.calledWith({
-              bucket: [0, 0, 0, 0],
-              priority: -1 }),
-            ).toBe(true);
+  const data = cube.getBucket([0, 0, 0, 0]).getData();
 
-            expect(pullQueue.pull.called).toBe(true);
+  // Both values should be in the bucket, at positions 0 and 3 because of
+  // the bit(depth of 2function() {
+  t.is(data[0], 42);
+  t.is(data[3], 43);
+});
 
-            done();
-          },
-        ]);
-      });
+test("Voxel Labeling should merge incoming buckets", (t) => {
+  const { cube } = t.context;
+  const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
 
-      it("should push buckets after they were pulled", (done) => {
-        cube.labelVoxel([1, 1, 1], 42);
+  const oldData = new Uint8Array(32 * 32 * 32 * 3);
+  // First voxel should be overwritten by new data
+  oldData[0] = 1;
+  oldData[1] = 2;
+  oldData[2] = 3;
+  // Second voxel should be merged into new data
+  oldData[3] = 4;
+  oldData[4] = 5;
+  oldData[5] = 6;
 
-        runAsync([
-          () => {
-            expect(pushQueue.insert.called).toBe(false);
-          },
-          () => {
-            const bucket = cube.getBucket([0, 0, 0, 0]);
-            bucket.pull();
-            bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
-          },
-          () => {
-            expect(pushQueue.insert.calledWith(
-              [0, 0, 0, 0],
-            )).toBe(true);
-            done();
-          },
-        ]);
-      });
+  cube.labelVoxel([0, 0, 0], 42);
 
-      it("should push buckets immediately if they are pulled already", (done) => {
-        const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
-        bucket.pull();
-        bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
+  bucket.pull();
+  bucket.receiveData(oldData);
 
-        cube.labelVoxel([0, 0, 0], 42);
+  const newData = bucket.getData();
+  t.is(newData[0], 42);
+  t.is(newData[1], 0);
+  t.is(newData[2], 0);
+  t.is(newData[3], 4);
+  t.is(newData[4], 5);
+  t.is(newData[5], 6);
+});
 
-        runAsync([
-          () => {
-            expect(pushQueue.insert.calledWith(
-              [0, 0, 0, 0],
-            )).toBe(true);
-            done();
-          },
-        ]);
-      });
+test("getDataValue() should return the raw value without a mapping", (t) => {
+  const { cube } = t.context;
+  const value = 1 * (1 << 16) + 2 * (1 << 8) + 3;
+  cube.labelVoxel([0, 0, 0], value);
 
-      it("should only create one temporal bucket", () => {
-        // Creates temporal bucket
-        cube.labelVoxel([0, 0, 0], 42);
-        // Uses existing temporal bucket
-        cube.labelVoxel([1, 0, 0], 43);
+  t.is(cube.getDataValue([0, 0, 0]), value);
+});
 
-        const data = cube.getBucket([0, 0, 0, 0]).getData();
+test("getDataValue() should return the mapping value if available", (t) => {
+  const { cube } = t.context;
+  cube.labelVoxel([0, 0, 0], 42);
+  cube.labelVoxel([1, 1, 1], 43);
 
-        // Both values should be in the bucket, at positions 0 and 3 because of
-        // the bit(depth of 2function() {
-        expect(data[0]).toBe(42);
-        expect(data[3]).toBe(43);
-      });
+  const mapping = [];
+  mapping[42] = 1;
 
-      it("should merge incoming buckets", () => {
-        const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
+  t.is(cube.getDataValue([0, 0, 0], mapping), 1);
+  t.is(cube.getDataValue([1, 1, 1], mapping), 43);
+});
 
-        const oldData = new Uint8Array(32 * 32 * 32 * 3);
-        // First voxel should be overwritten by new data
-        oldData[0] = 1;
-        oldData[1] = 2;
-        oldData[2] = 3;
-        // Second voxel should be merged into new data
-        oldData[3] = 4;
-        oldData[4] = 5;
-        oldData[5] = 6;
+test("Garbage Collection should only keep 3 buckets", (t) => {
+  const { cube } = t.context;
+  cube.MAXIMUM_BUCKET_COUNT = 3;
+  cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
 
-        cube.labelVoxel([0, 0, 0], 42);
+  cube.getOrCreateBucket([0, 0, 0, 0]);
+  cube.getOrCreateBucket([1, 1, 1, 0]);
+  cube.getOrCreateBucket([2, 2, 2, 0]);
+  cube.getOrCreateBucket([3, 3, 3, 0]);
 
-        bucket.pull();
-        bucket.receiveData(oldData);
+  t.is(cube.bucketCount, 3);
+});
 
-        const newData = bucket.getData();
-        expect(newData[0]).toBe(42);
-        expect(newData[1]).toBe(0);
-        expect(newData[2]).toBe(0);
-        expect(newData[3]).toBe(4);
-        expect(newData[4]).toBe(5);
-        expect(newData[5]).toBe(6);
-      });
-    });
+test("Garbage Collection should not collect buckets with shouldCollect() == false", (t) => {
+  const { cube } = t.context;
+  cube.MAXIMUM_BUCKET_COUNT = 3;
+  cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
 
-    describe("getDataValue()", () => {
-      it("should return the raw value without a mapping", () => {
-        const value = 1 * (1 << 16) + 2 * (1 << 8) + 3;
-        cube.labelVoxel([0, 0, 0], value);
+  const b1 = cube.getOrCreateBucket([0, 0, 0, 0]);
+  b1.pull();
 
-        expect(cube.getDataValue([0, 0, 0])).toBe(value);
-      });
+  cube.getOrCreateBucket([1, 1, 1, 0]);
+  cube.getOrCreateBucket([2, 2, 2, 0]);
+  cube.getOrCreateBucket([3, 3, 3, 0]);
 
-      it("should return the mapping value if available", () => {
-        cube.labelVoxel([0, 0, 0], 42);
-        cube.labelVoxel([1, 1, 1], 43);
+  t.is(b1.shouldCollect(), false);
 
-        const mapping = [];
-        mapping[42] = 1;
+  const addresses = cube.buckets.map(b => b.zoomedAddress);
+  t.deepEqual(addresses, [[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]]);
+});
 
-        expect(cube.getDataValue([0, 0, 0], mapping)).toBe(1);
-        expect(cube.getDataValue([1, 1, 1], mapping)).toBe(43);
-      });
-    });
-  });
+test("Garbage Collection should throw an exception if no bucket is collectable", (t) => {
+  const { cube } = t.context;
+  cube.MAXIMUM_BUCKET_COUNT = 3;
+  cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
 
-  describe("Garbage Collection", () => {
-    beforeEach(() => {
-      cube.MAXIMUM_BUCKET_COUNT = 3;
-      cube.buckets = new Array(cube.MAXIMUM_BUCKET_COUNT);
-    });
+  cube.getOrCreateBucket([0, 0, 0, 0]).pull();
+  cube.getOrCreateBucket([1, 1, 1, 0]).pull();
+  cube.getOrCreateBucket([2, 2, 2, 0]).pull();
 
-
-    it("should only keep 3 buckets", () => {
-      cube.getOrCreateBucket([0, 0, 0, 0]);
-      cube.getOrCreateBucket([1, 1, 1, 0]);
-      cube.getOrCreateBucket([2, 2, 2, 0]);
-      cube.getOrCreateBucket([3, 3, 3, 0]);
-
-      expect(cube.bucketCount).toBe(3);
-    });
-
-    it("should not collect buckets with shouldCollect() == false", () => {
-      const b1 = cube.getOrCreateBucket([0, 0, 0, 0]);
-      b1.pull();
-
-      cube.getOrCreateBucket([1, 1, 1, 0]);
-      cube.getOrCreateBucket([2, 2, 2, 0]);
-      cube.getOrCreateBucket([3, 3, 3, 0]);
-
-      expect(b1.shouldCollect()).toBe(false);
-
-      const addresses = cube.buckets.map(b => b.zoomedAddress);
-      expect(addresses).toEqual([[0, 0, 0, 0], [3, 3, 3, 0], [2, 2, 2, 0]]);
-    });
-
-    it("should throw an exception if no bucket is collectable", () => {
-      cube.getOrCreateBucket([0, 0, 0, 0]).pull();
-      cube.getOrCreateBucket([1, 1, 1, 0]).pull();
-      cube.getOrCreateBucket([2, 2, 2, 0]).pull();
-
-      expect(() => cube.getOrCreateBucket([3, 3, 3, 0])).toThrow();
-    });
-  });
+  t.throws(() => cube.getOrCreateBucket([3, 3, 3, 0]));
 });

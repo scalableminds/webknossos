@@ -134,7 +134,6 @@ class PaginationView extends Marionette.View {
 
 
   render() {
-    this._ensureViewIsIntact();
     this.triggerMethod("before:render", this);
 
     const obj = this.templateContext();

@@ -1,45 +1,77 @@
 /**
  * constants.js
- * @flow weak
+ * @flow
  */
 
-export const ModeValues = [0, 1, 2, 3];
-export type VolumeModeType = 0 | 1;
-export type PlaneType = 0 | 1 | 2;
-export type ModeType = PlaneType | 3;
-export type ViewType = 0 | 1 | 2 | 3;
+export const ModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
+export type VolumeTraceOrMoveModeType = 0 | 1; // VOLUME_MODE_MOVE | VOLUME_MODE_TRACE
+export type ModeType = "orthogonal" | "oblique" | "flight" | "volume";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
+export type Vector5 = [number, number, number, number, number];
+export type Vector6 = [number, number, number, number, number, number];
+export type Point2 = { x: number, y: number };
+export type Point3 = { x: number, y: number, z: number };
+export type BoundingBoxType = {
+  min: Vector3,
+  max: Vector3,
+};
+
+export const Vector2Indicies = [0, 1];
+export const Vector3Indicies = [0, 1, 2];
+export const Vector4Indicies = [0, 1, 2, 3];
+export const Vector5Indicies = [0, 1, 2, 3, 4];
+export const Vector6Indicies = [0, 1, 2, 3, 4, 5];
+
+export const OrthoViews = {
+  PLANE_XY: "PLANE_XY",
+  PLANE_YZ: "PLANE_YZ",
+  PLANE_XZ: "PLANE_XZ",
+  TDView: "TDView",
+};
+export const OrthoViewValues = Object.keys(OrthoViews);
+export const OrthoViewValuesWithoutTDView = [
+  OrthoViews.PLANE_XY,
+  OrthoViews.PLANE_YZ,
+  OrthoViews.PLANE_XZ,
+];
+export type OrthoViewType = $Keys<typeof OrthoViews>;
+export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
+
+export const OrthoViewColors: OrthoViewMapType<number> = {
+  [OrthoViews.PLANE_XY]: 0xff0000,
+  [OrthoViews.PLANE_YZ]: 0x0000ff,
+  [OrthoViews.PLANE_XZ]: 0x00ff00,
+  [OrthoViews.TDView]: 0xffffff,
+};
+
+export const OrthoViewCrosshairColors: OrthoViewMapType<[number, number]> = {
+  [OrthoViews.PLANE_XY]: [0x0000ff, 0x00ff00],
+  [OrthoViews.PLANE_YZ]: [0xff0000, 0x00ff00],
+  [OrthoViews.PLANE_XZ]: [0x0000ff, 0xff0000],
+  [OrthoViews.TDView]: [0x000000, 0x000000],
+};
+
+export const OrthoViewGrayCrosshairColor = 0x222222;
+
+
+export const ControlModeEnum = {
+  TRACE: "TRACE",
+  VIEW: "VIEW",
+};
+export type ControlModeType = $Keys<typeof ControlModeEnum>
 
 const Constants = {
-
-  PLANE_XY: 0,
-  PLANE_YZ: 1,
-  PLANE_XZ: 2,
-  TDView: 3,
   ARBITRARY_VIEW: 4,
-  PLANE_NAMES: ["xy", "yz", "xz"],
-  ALL_PLANES: [0, 1, 2],
-  ALL_VIEWPORTS: [0, 1, 2, 3],
-  PLANE_COLORS: [0xff0000, 0x0000ff, 0x00ff00, 0xffffff],
 
-  MODE_PLANE_TRACING: 0,
-  MODE_ARBITRARY: 1,
-  MODE_ARBITRARY_PLANE: 2,
-  MODE_VOLUME: 3,
-  MODES_PLANE: [0, 3],
-  MODES_ARBITRARY: [1, 2],
-  MODES_SKELETON: [0, 1, 2],
-  MODE_NAME_TO_ID: {
-    orthogonal: 0,
-    flight: 1,
-    oblique: 2,
-    volume: 3,
-  },
-
-  CONTROL_MODE_TRACE: 0,
-  CONTROL_MODE_VIEW: 1,
+  MODE_PLANE_TRACING: "orthogonal",
+  MODE_ARBITRARY: "flight",
+  MODE_ARBITRARY_PLANE: "oblique",
+  MODE_VOLUME: "volume",
+  MODES_PLANE: ["orthogonal", "volume"],
+  MODES_ARBITRARY: ["flight", "oblique"],
+  MODES_SKELETON: ["orthogonal", "flight", "oblique"],
 
   VOLUME_MODE_MOVE: 0,
   VOLUME_MODE_TRACE: 1,
@@ -62,7 +94,7 @@ const Constants = {
 
   FPS: 50,
 
-  MIN_SCALE: 0.05,
+  MIN_SCALE: 0.5,
   MAX_SCALE: 20,
 
   MIN_PARTICLE_SIZE: 1,
@@ -71,7 +103,9 @@ const Constants = {
   ZOOM_DIFF: 0.1,
 
   RESIZE_THROTTLE_TIME: 250,
-  BRANCHPOINT_VIDEO_CLIPPING_DISTANCE: 3,
+
+  MIN_TREE_ID: 1,
+  MIN_NODE_ID: 1,
 };
 
 export default Constants;

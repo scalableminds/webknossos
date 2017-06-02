@@ -1,231 +1,117 @@
 /**
  * tracing_layout_view.js
- * @flow weak
+ * @flow
  */
 
-import _ from "lodash";
-import $ from "jquery";
-import Marionette from "backbone.marionette";
+import React from "react";
+import { Provider } from "react-redux";
 import app from "app";
+import Store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
-import OxalisModel from "oxalis/model";
-import OxalisApi from "oxalis/api";
-import Constants from "oxalis/constants";
-import BackboneToOxalisAdapterModel from "oxalis/model/settings/backbone_to_oxalis_adapter_model";
-import Modal from "oxalis/view/modal";
-import Utils from "libs/utils";
-import ActionBarView from "./action_bar_view";
-import SkeletonPlaneTabView from "./settings/tab_views/skeleton_plane_tab_view";
-import SkeletonArbitraryTabView from "./settings/tab_views/skeleton_arbitrary_tab_view";
-import VolumeTabView from "./settings/tab_views/volume_tab_view";
-import ViewmodeTabView from "./settings/tab_views/viewmode_tab_view";
-import SkeletonTracingRightMenuView from "./skeletontracing/skeletontracing_right_menu_view";
-import VolumeTracingRightMenuView from "./volumetracing/volumetracing_right_menu_view";
-import ViewmodeRightMenuView from "./viewmode/viewmode_right_menu_view";
-import UserScriptsModalView from "./user_scripts_modal";
-import TracingView from "./tracing_view";
+import SettingsView from "oxalis/view/settings/settings_view";
+import ActionBarView from "oxalis/view/action_bar_view";
+import RightMenuView from "oxalis/view/right_menu_view";
+import TracingView from "oxalis/view/tracing_view";
+import UserScriptsModal from "oxalis/view/user_scripts_modal";
+import enUS from "antd/lib/locale-provider/en_US";
+import { LocaleProvider, Layout, Button, Icon } from "antd";
+import type { SkeletonTracingTypeTracingType } from "oxalis/store";
+import type { ControlModeType } from "oxalis/constants";
 
-const MARGIN = 40;
+const { Header, Sider } = Layout;
 
-class TracingLayoutView extends Marionette.View {
+class TracingLayoutView extends React.PureComponent {
 
-  traceTemplate: (data: Object) => string;
-  viewTemplate: (data: Object) => string;
-  rightMenuView: Marionette.View<*>;
-
-  static initClass() {
-    this.prototype.className = "text-nowrap";
-
-    this.prototype.traceTemplate = _.template(`\
-<div id="action-bar"></div>
-<div id="sliding-canvas">
-  <div id="settings-menu-wrapper" class="navmenu-fixed-left offcanvas">
-    <div id="settings-menu"></div>
-  </div>
-  <div id="tracing"></div>
-  <div id="right-menu"></div>
-</div>
-<div class="modal-wrapper"></div>\
-`);
-
-    this.prototype.viewTemplate = _.template(`\
-<div id="action-bar"></div>
-<div id="settings-menu"></div>
-<div id="tracing"></div>
-<div id="right-menu"></div>
-<div class="modal-wrapper"></div>\
-`);
-
-    this.prototype.ui = {
-      rightMenu: "#right-menu",
-      slidingCanvas: "#sliding-canvas",
-    };
-
-    this.prototype.regions = {
-      actionBar: "#action-bar",
-      rightMenu: "#right-menu",
-      tracingContainer: "#tracing",
-      settings: "#settings-menu",
-      modalWrapper: ".modal-wrapper",
-    };
-
-    this.prototype.events = {
-      "hidden.bs.offcanvas #settings-menu-wrapper": "doneSliding",
-      "shown.bs.offcanvas #settings-menu-wrapper": "doneSliding",
-    };
+  props: {
+    initialTracingType: SkeletonTracingTypeTracingType,
+    initialTracingId: string,
+    initialControlmode: ControlModeType,
   }
 
-  getTemplate() {
-    if (this.isTracingMode()) {
-      return this.traceTemplate;
-    } else {
-      return this.viewTemplate;
+  state = {
+    isSettingsCollapsed: true,
+    isUserScriptsModalOpen: false,
+  }
+
+  componentDidMount() {
+    const addScriptLink = document.getElementById("add-script-link");
+    if (addScriptLink) {
+      addScriptLink.classList.remove("hide");
+      addScriptLink.addEventListener("click", () => this.showUserScriptsModal());
     }
-  }
-
-
-  initialize(options) {
-    this.options = _.extend(
-      {},
-      options,
-      { model: new OxalisModel(options) },
+    app.oxalis = new OxalisController(
+      this.props.initialTracingType,
+      this.props.initialTracingId,
+      this.props.initialControlmode,
     );
-
-    this.model = this.options.model;
-    this.options.adapterModel = new BackboneToOxalisAdapterModel(this.model);
-
-    this.listenTo(app.vent, "planes:resize", this.resizeRightMenu);
-    this.listenTo(this.model, "change:mode", this.renderSettings);
-    this.listenTo(this.model, "sync", this.renderRegions);
-    $(window).on("resize", this.resizeRightMenu.bind(this));
-
-    $("#add-script-link")
-      .removeClass("hide")
-      .on("click", this.showUserScriptsModal.bind(this));
-
-    app.oxalis = new OxalisController(this.options);
-    window.webknossos = new OxalisApi(this.model);
   }
 
-
-  doneSliding() {
-    return this.resizeRightMenu();
+  componentWillUnmount() {
+    window.app.oxalis = null;
   }
 
-
-  resizeRightMenu() {
-    if (this.isSkeletonMode()) {
-      const menuPosition = this.ui.rightMenu.position();
-      const slidingCanvasOffset = this.ui.slidingCanvas.position().left;
-
-      const newWidth = window.innerWidth - menuPosition.left - slidingCanvasOffset - MARGIN;
-
-      if (menuPosition.left < window.innerWidth && newWidth > 350) {
-        this.ui.rightMenu.width(newWidth);
-      }
-    }
+  showUserScriptsModal = () => {
+    this.setState({
+      isUserScriptsModalOpen: true,
+    });
   }
 
-
-  renderRegions() {
-    this.render();
-
-    const actionBarView = new ActionBarView(this.options);
-    const tracingView = new TracingView(this.options);
-
-    this.showChildView("tracingContainer", tracingView, { preventDestroy: true });
-
-    this.showChildView("actionBar", actionBarView, { preventDestroy: true });
-
-    if (!this.model.settings.advancedOptionsAllowed) {
-      return;
-    }
-
-    if (this.isSkeletonMode()) {
-      this.rightMenuView = new SkeletonTracingRightMenuView(this.options);
-    } else if (this.isVolumeMode()) {
-      this.rightMenuView = new VolumeTracingRightMenuView(this.options);
-    } else {
-      this.rightMenuView = new ViewmodeRightMenuView(this.options);
-    }
-
-    this.showChildView("rightMenu", this.rightMenuView);
-    this.renderSettings();
-    this.maybeShowNewTaskTypeModal();
+  closeUserScriptsModal = () => {
+    this.setState({
+      isUserScriptsModalOpen: false,
+    });
   }
 
-
-  showUserScriptsModal(event) {
-    event.preventDefault();
-    const modalView = new UserScriptsModalView();
-    this.showChildView("modalWrapper", modalView);
-    return modalView.show();
+  handleSettingsCollapse = () => {
+    this.setState({
+      isSettingsCollapsed: !this.state.isSettingsCollapsed,
+    });
   }
 
-
-  maybeShowNewTaskTypeModal() {
-    // Users can aquire new tasks directly in the tracing view. Occasionally,
-    // they start working on a new TaskType and need to be instructed.
-    let text;
-    if (!Utils.getUrlParams("differentTaskType") || (this.model.tracing.task == null)) { return; }
-
-    const taskType = this.model.tracing.task.type;
-    const title = `Attention, new Task Type: ${taskType.summary}`;
-    if (taskType.description) {
-      text = `You are now tracing a new task with the following description:<br>${taskType.description}`;
-    } else {
-      text = "You are now tracing a new task with no description.";
-    }
-    Modal.show(text, title);
-  }
-
-
-  renderSettings() {
-    // This method will be invoked again once the model is initialized as part of
-    // the "sync" event callback.
-    let settingsTabView;
-    if (!this.model.initialized) { return; }
-
-    if (this.isSkeletonMode()) {
-      const SettingsTabClass = this.isArbitraryMode() ? SkeletonArbitraryTabView : SkeletonPlaneTabView;
-      settingsTabView = new SettingsTabClass(this.options);
-    } else if (this.isVolumeMode()) {
-      settingsTabView = new VolumeTabView(this.options);
-    } else {
-      settingsTabView = new ViewmodeTabView(this.options);
-    }
-
-    this.showChildView("settings", settingsTabView);
-  }
-
-
-  isTracingMode() {
-    return this.model.get("controlMode") !== Constants.CONTROL_MODE_VIEW;
-  }
-
-
-  isSkeletonMode() {
-    return Constants.MODES_SKELETON.includes(this.model.get("mode")) && this.isTracingMode();
-  }
-
-
-  isVolumeMode() {
-    return this.model.get("mode") === Constants.MODE_VOLUME && this.isTracingMode();
-  }
-
-
-  isArbitraryMode() {
-    return Constants.MODES_ARBITRARY.includes(this.model.get("mode"));
-  }
-
-
-  onDestroy() {
-    $("#add-script-link")
-      .addClass("hide")
-      .off("click");
-    app.oxalis = null;
+  render() {
+    return (
+      <LocaleProvider locale={enUS}>
+        <Provider store={Store}>
+          <Layout className="tracing-layout">
+            <Header>
+              <Button
+                size="large"
+                onClick={this.handleSettingsCollapse} style={{ float: "left", marginTop: "10px" }}
+              >
+                <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
+                Settings
+              </Button>
+              <ActionBarView />
+            </Header>
+            <Layout>
+              <Sider
+                collapsible
+                trigger={null}
+                collapsed={this.state.isSettingsCollapsed}
+                collapsedWidth={0}
+                width={350}
+                style={{ zIndex: 100 }}
+              >
+                <SettingsView />
+              </Sider>
+              <div style={{ zIndex: 200, display: "flex", flex: 1 }}>
+                <div>
+                  <UserScriptsModal
+                    visible={this.state.isUserScriptsModalOpen}
+                    onClose={this.closeUserScriptsModal}
+                  />
+                  <TracingView />
+                </div>
+                <div style={{ flex: "1" }}>
+                  <RightMenuView />
+                </div>
+              </div>
+            </Layout>
+          </Layout>
+        </Provider>
+      </LocaleProvider>
+    );
   }
 }
-TracingLayoutView.initClass();
 
 export default TracingLayoutView;

@@ -8,6 +8,7 @@ GET           /dashboard                                                        
 GET           /impressum                                                        controllers.Application.impressum
 GET           /info                                                             controllers.Application.info
 GET           /thankyou                                                         controllers.Application.thankyou
+GET           /api/buildinfo                                                    controllers.Application.buildInfo
 
 # Github Issues integration
 GET           /issues                                                           controllers.GithubIssues.index
@@ -51,6 +52,7 @@ GET           /api/users/:id                                                    
 PUT           /api/users/:id                                                    controllers.UserController.update(id: String)
 GET           /api/users/:id/tasks                                              controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int])
 GET           /api/users/:id/loggedTime                                         controllers.UserController.userLoggedTime(id: String)
+POST          /api/users/loggedTime                                             controllers.UserController.usersLoggedTime
 GET           /api/users/:id/annotations                                        controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int])
 GET           /api/users/:id/annotations/download                               controllers.AnnotationIOController.userDownload(id: String)
 
@@ -107,12 +109,14 @@ PUT           /annotations/:typ/:id                                             
 POST          /annotations/:typ/:id/name                                        controllers.AnnotationController.nameExplorativeAnnotation(typ: String, id: String)
 GET           /annotations/:typ/:id/finishAndRedirect                           controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
 GET           /annotations/:typ/:id/finish                                      controllers.AnnotationController.finish(typ: String, id: String)
+GET           /annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)
 POST          /annotations/:typ/finish                                          controllers.AnnotationController.finishAll(typ: String)
 GET           /annotations/:typ/:id/reopen                                      controllers.AnnotationController.reopen(typ: String, id: String)
 GET           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
 
-# Deaktivated due to changes in the format of updates in the saved annotation updates
 GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
+
+# Deactivated due to changes in the format of updates in the saved annotation updates
 # GET           /annotations/:typ/:id/updates                                     controllers.AnnotationController.listUpdates(typ: String, id: String)
 # POST          /annotations/:typ/:id/updates/transfer                            controllers.AnnotationController.transferUpdates(typ: String, id: String, fromId: String, fromTyp: String, maxVersion: Int)
 
@@ -182,6 +186,17 @@ GET           /api/taskTypes/:id/tasks                                          
 GET           /api/taskTypes/:id/download                                       controllers.AnnotationIOController.taskTypeDownload(id: String)
 GET           /api/taskTypes/:id                                                controllers.TaskTypeController.get(id: String)
 PUT           /api/taskTypes/:id                                                controllers.TaskTypeController.update(id: String)
+
+GET           /scripts                                                        controllers.ScriptsController.empty(id: String = "")
+GET           /scripts/create                                                 controllers.ScriptsController.empty(id: String = "")
+GET           /scripts/:id/edit                                               controllers.UserController.emptyWithWildcard(id: String)
+
+GET           /api/scripts                                                    controllers.ScriptsController.list
+POST          /api/scripts                                                    controllers.ScriptsController.create
+GET           /api/scripts/:id                                                controllers.ScriptsController.get(id: String)
+PUT           /api/scripts/:id                                                controllers.ScriptsController.update(id: String)
+DELETE        /api/scripts/:id                                                controllers.ScriptsController.delete(id: String)
+
 
 # ID Validation
 GET           /api/find                                                         controllers.SearchController.find(q: String, type: String)

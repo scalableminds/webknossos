@@ -1,14 +1,20 @@
 /**
  * skeletontracing_controller.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import Backbone from "backbone";
+import Store from "oxalis/store";
 import constants from "oxalis/constants";
-import Model from "oxalis/model";
-import SkeletonTracingView from "oxalis/view/skeletontracing/skeletontracing_view";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import View from "oxalis/view";
 import SceneController from "oxalis/controller/scene_controller";
+import modal from "oxalis/view/modal";
+
 
 class SkeletonTracingController {
 
@@ -19,57 +25,55 @@ class SkeletonTracingController {
   // Also, this would be the place to define general Skeleton Tracing
   // functions that can be called by the specific view mode controller.
 
-  model: Model;
-  skeletonTracingView: SkeletonTracingView;
+  skeletonTracingView: View;
   sceneController: SceneController;
 
-  constructor(model, skeletonTracingView, sceneController) {
-    this.model = model;
+  constructor(
+    skeletonTracingView: View,
+    sceneController: SceneController,
+  ) {
+    _.extend(this, Backbone.Events);
     this.skeletonTracingView = skeletonTracingView;
     this.sceneController = sceneController;
-    _.extend(this, Backbone.Events);
   }
 
 
-  setParticleSize = (delta) => {
-    let particleSize = this.model.user.get("particleSize") + delta;
+  setParticleSize = (delta: number): void => {
+    let particleSize = Store.getState().userConfiguration.particleSize + delta;
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize);
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize);
 
-    this.model.user.set("particleSize", (Number)(particleSize));
+    Store.dispatch(updateUserSettingAction("particleSize", particleSize));
   }
 
 
-  setRadius(delta) {
-    this.model.skeletonTracing.setActiveNodeRadius(
-      this.model.skeletonTracing.getActiveNodeRadius() * Math.pow(1.05, delta),
-    );
+  setRadius(delta: number): void {
+    getActiveNode(Store.getState().tracing)
+      .map(activeNode =>
+        Store.dispatch(setActiveNodeRadiusAction(activeNode.radius * Math.pow(1.05, delta))));
   }
 
 
-  toggleSkeletonVisibility = () => {
-    this.sceneController.skeleton.toggleVisibility();
+  toggleSkeletonVisibility = (): void => {
     // Show warning, if this is the first time to use
     // this function for this user
-    if (this.model.user.get("firstVisToggle")) {
-      this.skeletonTracingView.showFirstVisToggle();
-      this.model.user.set("firstVisToggle", false);
-      this.model.user.push();
+    if (Store.getState().userConfiguration.firstVisToggle) {
+      this.showFirstVisToggle();
+      Store.dispatch(updateUserSettingAction("firstVisToggle", false));
     }
   }
 
 
-  setActiveNode(nodeId, merge = false, centered = false) {
-    this.model.skeletonTracing.setActiveNode(nodeId, merge);
-    if (centered) { this.model.skeletonTracing.centerActiveNode(); }
+  centerActiveNode = (): void => {
+    getActiveNode(Store.getState().tracing)
+      .map(activeNode => Store.dispatch(setPositionAction(activeNode.position)));
   }
 
-
-  centerActiveNode = () => {
-    const position = this.model.skeletonTracing.getActiveNodePos();
-    if (position) {
-      this.model.flycam.setPosition(position);
-    }
+  showFirstVisToggle() {
+    modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
+      "Skeleton visibility",
+      [{ id: "ok-button", label: "OK, Got it." }],
+    );
   }
 }
 

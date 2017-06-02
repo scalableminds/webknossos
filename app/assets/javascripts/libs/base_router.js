@@ -2,6 +2,7 @@ import $ from "jquery";
 import _ from "lodash";
 import Utils from "libs/utils";
 import Backbone from "backbone";
+import window from "libs/window";
 
 class BaseRouter {
   static initClass() {
@@ -163,17 +164,17 @@ class BaseRouter {
     // Remove current views
     if (this.activeViews.length > 0) {
       for (const view of this.activeViews) {
+        if (view.forcePageReload) {
+          window.removeEventListener("beforeunload", this.handleBeforeunload);
+          this.reload();
+          return false;
+        }
+
         // prefer Marionette's.destroy() function to Backbone's remove()
         if (view.destroy) {
           view.destroy();
         } else {
           view.remove();
-        }
-
-        if (view.forcePageReload) {
-          window.removeEventListener("beforeunload", this.handleBeforeunload);
-          this.reload();
-          return false;
         }
       }
       this.activeViews = [];
@@ -187,11 +188,13 @@ class BaseRouter {
 
 
   loadURL(url) {
+    window.isNavigating = true;
     window.location.href = url;
   }
 
 
   reload() {
+    window.isNavigating = true;
     window.location.reload();
   }
 }

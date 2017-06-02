@@ -114,9 +114,7 @@ class TeamRoleModalView extends ModalView {
           ) || [];
 
           // Find unselected teams
-          const removedTeamsNames = _.map(this.$("input[type=checkbox]:not(:checked)"), (unselectedTeamEl) => {
-            $(unselectedTeamEl).data("teamname");
-          }) || [];
+          const removedTeamsNames = this.$("input[type=checkbox]:not(:checked)").map((index, unselectedTeamEl) => unselectedTeamEl.dataset.teamname);
 
           // Add / remove teams
           const teamNames = _.map(teams, "team");

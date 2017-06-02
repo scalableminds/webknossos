@@ -8,8 +8,10 @@
 
 import $ from "jquery";
 import _ from "lodash";
-import constants from "oxalis/constants";
+import { ControlModeEnum } from "oxalis/constants";
+import { SkeletonTracingTypeTracingEnum } from "oxalis/store";
 import BaseRouter from "libs/base_router";
+import ReactBackboneWrapper from "libs/react_backbone_wrapper";
 import PaginationCollection from "admin/models/pagination_collection";
 
 // #####
@@ -40,6 +42,9 @@ class Router extends BaseRouter {
       "/taskTypes/create": "taskTypesCreate",
       "/taskTypes/:id/edit": "taskTypesCreate",
       "/taskTypes/:id/tasks": "taskTypesTasks",
+      "/scripts": "scripts",
+      "/scripts/create": "scriptsCreate",
+      "/scripts/:id/edit": "scriptsCreate",
       "/spotlight": "spotlight",
       "/tasks/overview": "taskOverview",
       "/admin/taskTypes": "hideLoadingSpinner",
@@ -63,16 +68,15 @@ class Router extends BaseRouter {
     this.$loadingSpinner.addClass("hidden");
   }
 
-
   tracingView(type, id) {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
 
-      const view = new TracingLayoutView({
-        tracingType: type,
-        tracingId: id,
-        controlMode: constants.CONTROL_MODE_TRACE,
+      const view = new ReactBackboneWrapper(TracingLayoutView, {
+        initialTracingType: type,
+        initialTracingId: id,
+        initialControlmode: ControlModeEnum.TRACE,
       });
       view.forcePageReload = true;
       this.changeView(view);
@@ -80,16 +84,15 @@ class Router extends BaseRouter {
     require(["oxalis/view/tracing_layout_view"], callback);
   }
 
-
   tracingViewPublic(id) {
     // Webpack `require` doesn't work with inline arrow functions
     const callback = (TracingLayoutView) => {
       TracingLayoutView = TracingLayoutView.default;
 
-      const view = new TracingLayoutView({
-        tracingType: "View",
-        tracingId: id,
-        controlMode: constants.CONTROL_MODE_VIEW,
+      const view = new ReactBackboneWrapper(TracingLayoutView, {
+        initialTracingType: SkeletonTracingTypeTracingEnum.View,
+        initialTracingId: id,
+        initialControlmode: ControlModeEnum.VIEW,
       });
       view.forcePageReload = true;
       this.changeView(view);
@@ -226,6 +229,10 @@ class Router extends BaseRouter {
     this.showWithPagination("TaskTypeListView", "TaskTypeCollection", { addButtonText: "Create New TaskType" });
   }
 
+  scripts() {
+    this.showWithPagination("ScriptListView", "ScriptCollection", { addButtonText: "Create New Script" });
+  }
+
 
   /**
    * Load layout view that shows task-creation subviews
@@ -278,6 +285,19 @@ class Router extends BaseRouter {
     require(["admin/views/tasktype/task_type_create_view", "admin/models/tasktype/task_type_model"], callback);
   }
 
+  scriptsCreate(scriptId) {
+    // Webpack `require` doesn't work with inline arrow functions
+    const callback = (ScriptCreateView, ScriptModel) => {
+      ScriptCreateView = ScriptCreateView.default;
+      ScriptModel = ScriptModel.default;
+
+      const model = new ScriptModel({ id: scriptId });
+      const view = new ScriptCreateView({ model });
+      this.changeView(view);
+      this.hideLoadingSpinner();
+    };
+    require(["admin/views/scripts/script_create_view", "admin/models/scripts/script_model"], callback);
+  }
 
   dashboard(userID) {
     // Webpack `require` doesn't work with inline arrow functions

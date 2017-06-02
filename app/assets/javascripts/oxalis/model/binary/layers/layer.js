@@ -1,43 +1,28 @@
 /**
  * layer.js
- * @flow weak
+ * @flow
  */
 
-import type { Vector3 } from "oxalis/constants";
-import type { MappingType } from "oxalis/model/binary/mappings";
+import Store from "oxalis/store";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
+import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
+import Request from "libs/request";
+import type { DataStoreInfoType, CategoryType, ElementClassType, BoundingBoxObjectType, DataLayerType, MappingType } from "oxalis/store";
 
-import type { BoundingBoxObjectType } from "oxalis/model";
-
-import Request from "../../../../libs/request";
-
-export type CategoryType = "color" | "segmentation";
-type ElementClassType = string; // TODO: Can/should we be more precise like "uint16" | "Uint32"?
-
-export type DataStoreInfoType = {
-  typ: string;
-  url: string;
-  accessToken: string;
+export type BucketRequestOptions = {
+  fourBit: boolean;
 };
 
-type LayerInfoType = {
-  name: string;
-  category: CategoryType;
-  elementClass: ElementClassType;
-  mappings: Array<MappingType>;
-  maxCoordinates: BoundingBoxObjectType;
-  resolutions: Array<number>;
-}
+export const REQUEST_TIMEOUT = 30000;
 
-export const REQUEST_TIMEOUT = 10000;
-
+// TODO: Non-reactive
 // Abstract class that defines the Layer interface and implements common
 // functionality.
 class Layer {
   fourBit: boolean;
   dataStoreInfo: DataStoreInfoType;
   name: string;
-  dataSetName: string;
   bitDepth: number;
   tokenPromise: Promise<string>;
   tokenRequestPromise: ?Promise<string>;
@@ -50,8 +35,7 @@ class Layer {
   resolutions: Array<number>;
 
 
-  constructor(layerInfo: LayerInfoType, dataSetName: string, dataStoreInfo: DataStoreInfoType) {
-    this.dataSetName = dataSetName;
+  constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
     this.dataStoreInfo = dataStoreInfo;
 
     this.name = layerInfo.name;
@@ -65,23 +49,31 @@ class Layer {
     this.tokenPromise = this.requestDataToken();
   }
 
+  getDatasetName(): string {
+    const dataset = Store.getState().dataset;
+    if (dataset == null) {
+      throw new Error("Dataset needs to be available.");
+    }
+    return dataset.name;
+  }
 
-  requestDataToken() {
+
+  requestDataToken(): Promise<string> {
     if (this.tokenRequestPromise) { return this.tokenRequestPromise; }
 
+    const datasetName = this.getDatasetName();
     this.tokenRequestPromise = Request.receiveJSON(
-      `/dataToken/generate?dataSetName=${this.dataSetName}&dataLayerName=${this.name}`,
+      `/dataToken/generate?dataSetName=${datasetName}&dataLayerName=${this.name}`,
     ).then((dataStore) => {
       this.tokenRequestPromise = null;
       return dataStore.token;
-    },
-    );
+    });
 
     return this.tokenRequestPromise;
   }
 
 
-  doWithToken<T>(fn: (token: string) => T): Promise<T> {
+  doWithToken<T, U>(fn: (token: string) => T): Promise<U> {
     return this.tokenPromise
         .then(fn)
         .catch((error) => {
@@ -95,34 +87,36 @@ class Layer {
   }
 
 
-  buildBuckets(batch, options) {
+  buildBuckets(batch: Array<Vector4>, options: ?BucketRequestOptions): Array<BucketInfo> {
     return batch.map(bucketAddress => BucketBuilder.fromZoomedAddress(bucketAddress, options));
   }
 
 
   // Requests the data, ensures it has the right tokens and resolves with
   // an UInt8Array.
-  requestFromStore(batch, options) {
-    return this.doWithToken(token => this.requestFromStoreImpl(this.buildBuckets(batch, options), token),
-    );
+  requestFromStore(batch: Array<Vector4>, options: ?BucketRequestOptions): Promise<Uint8Array> {
+    return this.doWithToken(token => this.requestFromStoreImpl(this.buildBuckets(batch, options), token));
   }
 
 
   // Sends the batch to the store. `getBucketData(zoomedAddress) -> Uint8Array`
   // converts bucket addresses to the data to send to the server.
-  sendToStore(batch, getBucketData) {
-    return this.doWithToken(token => this.sendToStoreImpl(this.buildBuckets(batch), getBucketData, token),
-    );
+  sendToStore(batch: Array<Vector4>, getBucketData: (Vector4) => Uint8Array): Promise<void> {
+    return this.doWithToken(token => this.sendToStoreImpl(this.buildBuckets(batch), getBucketData, token));
   }
 
   // eslint-disable-next-line no-unused-vars
-  requestFromStoreImpl(batch, token) {
+  requestFromStoreImpl(batch: Array<BucketInfo>, token: string): Promise<Uint8Array> {
     throw new Error("Subclass responsibility");
   }
 
+  // eslint-disable-next-line no-unused-vars
+  setFourBit(newFourBit: boolean): void {
+    throw new Error("Subclass responsibility");
+  }
 
   // eslint-disable-next-line no-unused-vars
-  sendToStoreImpl(batch, getBucketData, token) {
+  sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<void> {
     throw new Error("Subclass responsibility");
   }
 }

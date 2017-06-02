@@ -1,5 +1,5 @@
 import Backbone from "backbone";
-import DatastoreModel from "./datastore_model";
+import DatastoreModel from "admin/models/datastore/datastore_model";
 
 class DatastoreCollection extends Backbone.Collection {
   static initClass() {

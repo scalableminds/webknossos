@@ -1,64 +1,59 @@
-import _ from "lodash";
-import Marionette from "backbone.marionette";
+// @flow
+import React, { PureComponent } from "react";
+import { connect } from "react-redux";
+import type { VolumeTraceOrMoveModeType } from "oxalis/constants";
+import type { OxalisState, VolumeTracingType } from "oxalis/store";
 import Constants from "oxalis/constants";
+import Store from "oxalis/store";
+import { setModeAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { Button, Radio } from "antd";
 
-class VolumeActionsView extends Marionette.View {
-  static initClass() {
-    this.prototype.template = _.template(`\
-<div class="btn-group">
-  <button
-    type="button"
-    class="btn btn-default <% if (isMoveMode) { %> btn-primary <% } %>"
-    id="mode-move">
-      Move
-  </button>
-  <button
-    type="button"
-    class="btn btn-default <% if (!isMoveMode) { %> btn-primary <% } %>"
-    id="mode-trace">
-      Trace
-  </button>
-</div>
-<div class="btn-group">
-  <button type="button" class="btn btn-default" id="create-cell">Create new cell (C)</button>
-</div>\
-`);
+// Workaround until github.com/facebook/flow/issues/1113 is fixed
+const RadioGroup = Radio.Group;
+const RadioButton = Radio.Button;
+const ButtonGroup = Button.Group;
 
-    this.prototype.modeMapping = {
-      "mode-trace": Constants.VOLUME_MODE_TRACE,
-      "mode-move": Constants.VOLUME_MODE_MOVE,
-    };
+class VolumeActionsView extends PureComponent {
+  props: {
+    volumeTracing: VolumeTracingType,
+  };
 
-    this.prototype.events = {
-      "click [id^=mode]": "changeMode",
-      "click #create-cell": "createCell",
-    };
+  handleSetMode = (event: { target: { value: VolumeTraceOrMoveModeType } }) => {
+    Store.dispatch(setModeAction(
+      event.target.value,
+    ));
   }
 
-
-  initialize() {
-    this.listenTo(this.model.volumeTracing, "change:mode", this.render);
+  handleCreateCell = () => {
+    Store.dispatch(createCellAction());
   }
 
-
-  createCell() {
-    return this.model.volumeTracing.createCell();
-  }
-
-
-  changeMode(evt) {
-    const mode = this.modeMapping[evt.target.id];
-    return this.model.volumeTracing.setMode(mode);
-  }
-
-
-  serializeData() {
-    return {
-      isMoveMode: this.model.volumeTracing.mode === Constants.VOLUME_MODE_MOVE,
-    };
+  render() {
+    return (
+      <div>
+        <RadioGroup
+          onChange={this.handleSetMode}
+          value={this.props.volumeTracing.volumeTraceOrMoveMode}
+          style={{ marginRight: 10 }}
+          size="large"
+        >
+          <RadioButton value={Constants.VOLUME_MODE_MOVE}>Move</RadioButton>
+          <RadioButton value={Constants.VOLUME_MODE_TRACE}>Trace</RadioButton>
+        </RadioGroup>
+        <ButtonGroup size="large">
+          <Button
+            onClick={this.handleCreateCell}
+          >Create new cell (C)</Button>
+        </ButtonGroup>
+      </div>
+    );
   }
 }
-VolumeActionsView.initClass();
 
+function mapStateToProps(state: OxalisState) {
+  return {
+    volumeTracing: state.tracing,
+  };
+}
 
-export default VolumeActionsView;
+export default connect(mapStateToProps)(VolumeActionsView);

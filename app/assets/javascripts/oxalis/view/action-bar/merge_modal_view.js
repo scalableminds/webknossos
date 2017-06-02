@@ -1,227 +1,224 @@
-import _ from "lodash";
+// @flow
+/* globals SyntheticEvent: 0 */
+import React, { PureComponent } from "react";
+import { connect } from "react-redux";
+import type { OxalisState } from "oxalis/store";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import app from "app";
-import SelectionView from "admin/views/selection_view";
-import ModalView from "admin/views/modal_view";
-import TaskTypeCollection from "admin/models/tasktype/task_type_collection";
-import ProjectCollection from "admin/models/project/project_collection";
+import { Modal, Button, Upload, Select, Form } from "antd";
+import InputComponent from "oxalis/view/components/input_component";
 
-class MergeModalView extends ModalView {
-  static initClass() {
-    this.prototype.headerTemplate = "<h4 class=\"modal-title\">Merge</h4>";
-    this.prototype.bodyTemplate = _.template(`\
-<div class="form-group">
-  <label for="task-type">Task type</label>
-  <div class="row">
-    <div class="col-md-10 task-type"></div>
-    <div class="col-md-2">
-      <button class="btn btn-primary" id="task-type-merge">Merge</button>
-    </div>
-  </div>
-</div>
-<div class="form-group">
-  <label for="project">Project</label>
-  <div class="row">
-    <div class="col-md-10 project"></div>
-    <div class="col-md-2">
-      <button class="btn btn-primary" id="project-merge">Merge</button>
-    </div>
-  </div>
-</div>
-<div class="form-group">
-  <label for="nml">NML</label>
-  <div class="row">
-    <div class="col-md-10">
-      <form action="<%- jsRoutes.controllers.AnnotationIOController.upload().url %>"
-          method="POST"
-          enctype="multipart/form-data"
-          id="upload-and-explore-form"
-          class="inline-block">
+type AnnotationInfoType = {
+  typ: string,
+  id: string,
+};
 
-          <div class="fileinput fileinput-new input-group" data-provides="fileinput">
-            <div class="form-control" data-trigger="fileinput">
-              <span class="fileinput-filename"></span>
-            </div>
-            <span class="input-group-addon btn btn-default btn-file">
-              <span class="fileinput-new">
-                <i class="fa fa-upload"></i>
-                Upload NML
-              </span>
-              <span class="fileinput-exists">
-                <i class="fa fa-upload hide" id="form-upload-icon"></i>
-                <i class="fa fa-spinner fa-spin" id="form-spinner-icon"></i>
-                Change</span>
-              <input type="file" name="nmlFile" accept=".nml">
-            </span>
-          </div>
-      </form>
-    </div>
-    <div class="col-md-2">
-      <button class="btn btn-primary" id="nml-merge">Merge</button>
-    </div>
-  </div>
-</div>
-<div class="form-group">
-  <label for="explorative">Explorative annotations</label>
-  <div class="row">
-    <div class="col-md-10 explorative">
-      <input type="text" class="form-control" placeholder="Explorative annotation id"></input>
-    </div>
-    <div class="col-md-2">
-      <button class="btn btn-primary" id="explorative-merge">Merge</button>
-    </div>
-  </div>
-</div>
-<hr>
-<div class="checkbox hidden">
-  <label>
-    <input type="checkbox" id="checkbox-read-only">
-    The merged tracing will be read-only.
-  </label>
-</div>
-<div>
-  The merged tracing will be saved as a new explorative tracing.
-</div>\
-`);
+type TaskTypeInfoType = {
+  id: string,
+  label: string,
+}
 
-    this.prototype.regions = {
-      tasktype: ".task-type",
-      project: ".project",
-    };
+type MergeModalViewState = {
+  taskTypes: Array<TaskTypeInfoType>,
+  projects: Array<string>,
+  selectedTaskType: ?string,
+  selectedProject: ?string,
+  selectedExplorativeAnnotation: string,
+  selectedNML: ?AnnotationInfoType,
+  readOnly: boolean,
+};
 
-    this.prototype.events = {
-      "click #task-type-merge": "mergeTaskType",
-      "click #project-merge": "mergeProject",
-      "click #nml-merge": "mergeNml",
-      "change input[type=file]": "selectFiles",
-      "submit @ui.uploadAndExploreForm": "uploadFiles",
-      "click #explorative-merge": "mergeExplorative",
-      "change.bs.fileinput": "selectFiles",
-    };
+type UploadInfoType<T> = {
+  file: {
+    status: "uploading" | "error",
+  } | {
+    status: "done",
+    response: T,
+  },
+};
 
-    this.prototype.ui = {
-      tasktype: ".task-type",
-      project: ".project",
-      explorative: ".explorative",
-      uploadAndExploreForm: "#upload-and-explore-form",
-      formSpinnerIcon: "#form-spinner-icon",
-      formUploadIcon: "#form-upload-icon",
-      fileInput: ":file",
-    };
-  }
+class MergeModalView extends PureComponent {
+  props: {
+    isVisible: boolean,
+    onOk: () => void,
+    tracingId: string,
+    tracingType: string,
+  };
 
+  state: MergeModalViewState = {
+    taskTypes: [],
+    projects: [],
+    selectedTaskType: null,
+    selectedProject: null,
+    selectedExplorativeAnnotation: "",
+    selectedNML: null,
+    readOnly: false,
+  };
 
-  initialize() {
-    this.nml = undefined;
-  }
-
-
-  onRender() {
-    Request.receiveJSON("/api/user").then(() => {
-      this.taskTypeSelectionView = new SelectionView({
-        collection: new TaskTypeCollection(),
-        childViewOptions: {
-          modelValue() { return `${this.model.get("summary")}`; },
-        },
+  componentWillMount() {
+    (async () => {
+      const taskTypes = await Request.receiveJSON("/api/taskTypes");
+      const projects = await Request.receiveJSON("/api/projects");
+      this.setState({
+        taskTypes: taskTypes.map(taskType => ({ id: taskType.id, label: taskType.summary })),
+        projects: projects.map(project => project.name),
       });
-      this.projectSelectionView = new SelectionView({
-        collection: new ProjectCollection(),
-        childViewOptions: {
-          modelValue() { return `${this.model.get("name")}`; },
-        },
-      });
-
-      this.showChildView("tasktype", this.taskTypeSelectionView);
-      this.showChildView("project", this.projectSelectionView);
-    },
-    );
+    })();
   }
 
-  mergeTaskType() {
-    const taskTypeId = this.ui.tasktype.find("select :selected").prop("id");
-    const url = `/annotations/CompoundTaskType/${taskTypeId}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
-    this.merge(url);
-  }
-
-
-  mergeProject() {
-    const projectId = this.ui.project.find("select :selected").prop("value");
-    const url = `/annotations/CompoundProject/${projectId}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
-    this.merge(url);
-  }
-
-
-  mergeNml() {
-    if (this.nml) {
-      const url = `/annotations/${this.nml.typ}/${this.nml.id}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
-      this.merge(url);
-    } else {
-      Toast.error("Please upload NML file");
-    }
-  }
-
-
-  mergeExplorative() {
-    const explorativeId = this.ui.explorative.find("input").val();
-    this.validateId(explorativeId).then(() => {
-      const url = `/annotations/Explorational/${explorativeId}/merge/${this.model.get("tracingType")}/${this.model.get("tracingId")}`;
-      this.merge(url);
-    },
-    );
-  }
-
-
-  merge(url) {
-    const readOnly = document.getElementById("checkbox-read-only").checked;
-
-    Request.receiveJSON(`${url}/${readOnly}`).then((annotation) => {
-      Toast.message(annotation.messages);
-
-      const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
-      app.router.loadURL(redirectUrl);
-    });
-  }
-
-
-  selectFiles() {
-    if (this.ui.fileInput[0].files.length) {
-      this.ui.uploadAndExploreForm.submit();
-    }
-  }
-
-
-  toggleIcon(state) {
-    this.ui.formSpinnerIcon.toggleClass("hide", state);
-    this.ui.formUploadIcon.toggleClass("hide", !state);
-  }
-
-
-  uploadFiles(event) {
-    event.preventDefault();
-    this.toggleIcon(false);
-
-    const form = this.ui.uploadAndExploreForm;
-
-    Request.always(
-      Request.sendMultipartFormReceiveJSON(
-        form.attr("action"),
-        { data: new FormData(form[0]) },
-      ).then((data) => {
-        this.nml = data.annotation;
-        Toast.message(data.messages);
-      },
-      ),
-      () => this.toggleIcon(true),
-    );
-  }
-
-
-  validateId(id) {
+  validateId(id: string) {
     return Request.receiveJSON(`/api/find?q=${id}&type=id`);
   }
+
+  async merge(url: string) {
+    const annotation = await Request.receiveJSON(`${url}/${this.state.readOnly ? "true" : "false"}`);
+    Toast.message(annotation.messages);
+    const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
+    app.router.loadURL(redirectUrl);
+  }
+
+  handleChangeMergeTaskType = (taskType: string) => {
+    this.setState({ selectedTaskType: taskType });
+  };
+
+  handleChangeMergeProject = (project: string) => {
+    this.setState({ selectedProject: project });
+  };
+
+  handleChangeMergeExplorativeAnnotation = (event: SyntheticInputEvent) => {
+    this.setState({ selectedExplorativeAnnotation: event.target.value });
+  };
+
+  handleChangeNML = (info: UploadInfoType<{ annotation: AnnotationInfoType, messages: Array<any> }>) => {
+    if (info.file.status === "done") {
+      const { annotation } = info.file.response;
+      Toast.message(info.file.response.messages);
+      const url = `/annotations/${annotation.typ}/${annotation.id}/merge/` +
+        `${this.props.tracingType}/${this.props.tracingId}`;
+      this.merge(url);
+    }
+  };
+
+  handleMergeTaskType = (event: SyntheticEvent) => {
+    event.preventDefault();
+    const { selectedTaskType } = this.state;
+    if (selectedTaskType != null) {
+      const url = `/annotations/CompoundTaskType/${selectedTaskType}/` +
+        `merge/${this.props.tracingType}/${this.props.tracingId}`;
+      this.merge(url);
+    }
+  };
+
+  handleMergeProject = (event: SyntheticEvent) => {
+    event.preventDefault();
+    const { selectedProject } = this.state;
+    if (selectedProject != null) {
+      const url = `/annotations/CompoundProject/${selectedProject}/merge/` +
+        `${this.props.tracingType}/${this.props.tracingId}`;
+      this.merge(url);
+    }
+  };
+
+  handleMergeExplorativeAnnotation = async (event: SyntheticEvent) => {
+    event.preventDefault();
+    const { selectedExplorativeAnnotation } = this.state;
+
+    if (selectedExplorativeAnnotation != null) {
+      await this.validateId(selectedExplorativeAnnotation);
+      const url = `/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
+        `${this.props.tracingType}/${this.props.tracingId}`;
+      this.merge(url);
+    }
+  };
+
+  render() {
+    return (
+      <Modal
+        title="Merge"
+        visible={this.props.isVisible}
+        onOk={this.props.onOk}
+        onCancel={this.props.onOk}
+        className="merge-modal"
+      >
+        <Form layout="inline" onSubmit={this.handleMergeTaskType}>
+          <Form.Item label="Task Type">
+            <Select value={this.state.selectedTaskType} style={{ width: 200 }} onChange={this.handleChangeMergeTaskType}>
+              {
+                this.state.taskTypes.map(taskType =>
+                  <Select.Option key={taskType.id} value={taskType.id}>{taskType.label}</Select.Option>)
+              }
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" size="default">Merge</Button>
+          </Form.Item>
+        </Form>
+
+        <Form layout="inline" onSubmit={this.handleMergeProject}>
+          <Form.Item label="Project">
+            <Select value={this.state.selectedProject} style={{ width: 200 }} onChange={this.handleChangeMergeProject}>
+              {
+                this.state.projects.map(project =>
+                  <Select.Option key={project} value={project}>{project}</Select.Option>)
+              }
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" size="default">Merge</Button>
+          </Form.Item>
+        </Form>
+
+        <Form layout="inline">
+          <Form.Item label="NML">
+            <Upload
+              name="nmlFile"
+              action={jsRoutes.controllers.AnnotationIOController.upload().url}
+              headers={{ authorization: "authorization-text" }}
+              onChange={this.handleChangeNML}
+              value={this.state.selectedNML}
+              accept=".nml"
+              showUploadList={false}
+            >
+              <Button icon="upload" style={{ width: 200 }}>Upload NML and merge</Button>
+            </Upload>
+          </Form.Item>
+        </Form>
+
+        <Form layout="inline" onSubmit={this.handleMergeExplorativeAnnotation}>
+          <Form.Item label="Explorative Annotation">
+            <InputComponent
+              value={this.state.selectedExplorativeAnnotation}
+              style={{ width: 200 }}
+              onChange={this.handleChangeMergeExplorativeAnnotation}
+            />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" size="default">Merge</Button>
+          </Form.Item>
+        </Form>
+        <hr />
+        <p>
+          The merged tracing will be saved as a new explorative tracing.
+        </p>
+        {/* <p>
+          <Switch
+            value={this.state.readOnly}
+            onChange={value => this.setState({ readOnly: value })}
+            style={{ marginRight: 5 }}
+          />
+          The merged tracing will be {this.state.readOnly ? "read-only" : "writeable"}.
+        </p> */}
+      </Modal>
+    );
+  }
 }
-MergeModalView.initClass();
 
+function mapStateToProps(state: OxalisState) {
+  return {
+    tracingId: state.tracing.tracingId,
+    tracingType: state.tracing.tracingType,
+  };
+}
 
-export default MergeModalView;
+export default connect(mapStateToProps)(MergeModalView);

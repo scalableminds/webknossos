@@ -42,16 +42,11 @@ object UserConfiguration extends BasicSettings {
       "inverseX" -> JsBoolean(false),
       "inverseY" -> JsBoolean(false),
       "keyboardDelay" -> JsNumber(200),
-      "mouseActive" -> JsBoolean(true),
-      "keyboardActive" -> JsBoolean(true),
-      "gamepadActive" -> JsBoolean(false),
-      "motionsensorActive" -> JsBoolean(false),
       "firstVisToggle" -> JsBoolean(true),
       "particleSize" -> JsNumber(5),
       "overrideNodeRadius" -> JsBoolean(true),
       "sortTreesByName" -> JsBoolean(false),
       "sortCommentsAsc" -> JsBoolean(true),
-      "segmentationOpacity" -> JsNumber(20),
       "sphericalCapRadius" -> JsNumber(140),
       "renderComments" -> JsBoolean(false)))
 

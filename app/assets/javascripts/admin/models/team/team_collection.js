@@ -1,5 +1,5 @@
-import TeamModel from "./team_model";
-import SortedCollection from "../sorted_collection";
+import TeamModel from "admin/models/team/team_model";
+import SortedCollection from "admin/models/sorted_collection";
 
 class TeamCollection extends SortedCollection {
   static initClass() {

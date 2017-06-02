@@ -20,6 +20,5 @@ object DataSetConfiguration extends BasicSettings {
       "fourBit" -> JsBoolean(true),
       "quality" -> JsNumber(0),
       "interpolation" -> JsBoolean(true),
-      "layers" -> Json.obj()))
-
+      "segmentationOpacity" -> JsNumber(20)))
 }

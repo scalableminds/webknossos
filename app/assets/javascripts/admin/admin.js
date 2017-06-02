@@ -3,23 +3,25 @@
  * @flow weak
  */
 
-import DatasetListView from "../dashboard/views/dataset/dataset_list_view";
-import PaginationView from "./views/pagination_view";
-import DatasetCollection from "./models/dataset/dataset_collection";
-import DatasetAddView from "./views/dataset/dataset_add_view";
-import UserListView from "./views/user/user_list_view";
-import UserCollection from "./models/user/user_collection";
-import TeamListView from "./views/team/team_list_view";
-import TeamCollection from "./models/team/team_collection";
-import TaskListView from "./views/task/task_list_view";
-import TaskCollection from "./models/task/task_collection";
-import TaskTypeListView from "./views/tasktype/task_type_list_view";
-import TaskTypeCollection from "./models/tasktype/task_type_collection";
-import ProjectListView from "./views/project/project_list_view";
-import ProjectCollection from "./models/project/project_collection";
-import StatisticView from "./views/statistic/statistic_view";
-import WorkloadListView from "./views/workload/workload_list_view";
-import WorkloadCollection from "./models/workload/workload_collection";
+import DatasetListView from "dashboard/views/dataset/dataset_list_view";
+import PaginationView from "admin/views/pagination_view";
+import DatasetCollection from "admin/models/dataset/dataset_collection";
+import DatasetAddView from "admin/views/dataset/dataset_add_view";
+import UserListView from "admin/views/user/user_list_view";
+import UserCollection from "admin/models/user/user_collection";
+import TeamListView from "admin/views/team/team_list_view";
+import TeamCollection from "admin/models/team/team_collection";
+import TaskListView from "admin/views/task/task_list_view";
+import TaskCollection from "admin/models/task/task_collection";
+import TaskTypeListView from "admin/views/tasktype/task_type_list_view";
+import TaskTypeCollection from "admin/models/tasktype/task_type_collection";
+import ProjectListView from "admin/views/project/project_list_view";
+import ProjectCollection from "admin/models/project/project_collection";
+import StatisticView from "admin/views/statistic/statistic_view";
+import WorkloadListView from "admin/views/workload/workload_list_view";
+import WorkloadCollection from "admin/models/workload/workload_collection";
+import ScriptListView from "admin/views/scripts/script_list_view";
+import ScriptCollection from "admin/models/scripts/script_collection";
 
 //
 // This exports all the modules listed above and mainly serves the purpose of
@@ -44,4 +46,6 @@ export {
   WorkloadCollection,
   DatasetAddView,
   DatasetListView,
+  ScriptListView,
+  ScriptCollection,
 };

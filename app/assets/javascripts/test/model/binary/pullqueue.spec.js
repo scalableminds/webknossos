@@ -1,21 +1,22 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+import test from "ava";
 import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
-import runAsync from "../../helpers/run-async";
-import { Bucket, BucketStateEnum } from "../../../oxalis/model/binary/bucket";
-
-mockRequire.stopAll();
+import runAsync from "test/helpers/run-async";
 
 const RequestMock = {
   always: (promise, func) => promise.then(func, func),
 };
-mockRequire("../../../libs/request", RequestMock);
+mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
+mockRequire("libs/request", RequestMock);
+mockRequire("libs/window", {});
 
 // Avoid node caching and make sure all mockRequires are applied
-const PullQueue = mockRequire.reRequire("../../../oxalis/model/binary/pullqueue").default;
+const PullQueue = mockRequire.reRequire("oxalis/model/binary/pullqueue").default;
+const { DataBucket, BucketStateEnum } = mockRequire.reRequire("oxalis/model/binary/bucket");
 
-describe("PullQueue", () => {
+test.beforeEach((t) => {
   const layer = {
     url: "url",
     name: "layername",
@@ -38,86 +39,78 @@ describe("PullQueue", () => {
     typ: "webknossos-store",
   };
 
-  let pullQueue = null;
-  let buckets = null;
+  const pullQueue = new PullQueue(cube, layer, connectionInfo, datastoreInfo);
 
-  beforeEach(() => {
-    pullQueue = new PullQueue(cube, layer, connectionInfo, datastoreInfo);
+  const buckets = [
+    new DataBucket(8, [0, 0, 0, 0], null),
+    new DataBucket(8, [1, 1, 1, 1], null),
+  ];
 
-    buckets = [
-      new Bucket(8, [0, 0, 0, 0], null),
-      new Bucket(8, [1, 1, 1, 1], null),
-    ];
+  for (const bucket of buckets) {
+    pullQueue.add({ bucket: bucket.zoomedAddress, priority: 0 });
+    cube.getBucket.withArgs(bucket.zoomedAddress).returns(bucket);
+    cube.getOrCreateBucket.withArgs(bucket.zoomedAddress).returns(bucket);
+  }
 
-    for (const bucket of buckets) {
-      pullQueue.add({ bucket: bucket.zoomedAddress, priority: 0 });
-      cube.getBucket.withArgs(bucket.zoomedAddress).returns(bucket);
-      cube.getOrCreateBucket.withArgs(bucket.zoomedAddress).returns(bucket);
-    }
-  });
-
-  describe("Successful pulling", () => {
-    const bucketData1 = _.range(0, 32 * 32 * 32).map(i => i % 256);
-    const bucketData2 = _.range(0, 32 * 32 * 32).map(i => (2 * i) % 256);
-
-    beforeEach(() => {
-      const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
-      layer.requestFromStore = sinon.stub();
-      layer.requestFromStore.returns(Promise.resolve(responseBuffer));
-    });
+  t.context = { buckets, pullQueue, layer };
+});
 
 
-    it("should receive the correct data", (done) => {
-      pullQueue.pull();
+test("Successful pulling: should receive the correct data", (t) => {
+  const { pullQueue, buckets, layer } = t.context;
+  const bucketData1 = _.range(0, 32 * 32 * 32).map(i => i % 256);
+  const bucketData2 = _.range(0, 32 * 32 * 32).map(i => (2 * i) % 256);
+  const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
+  layer.requestFromStore = sinon.stub();
+  layer.requestFromStore.returns(Promise.resolve(responseBuffer));
 
-      runAsync([
-        () => {
-          expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
-          expect(buckets[1].state).toBe(BucketStateEnum.LOADED);
-          expect(buckets[0].getData()).toEqual(new Uint8Array(bucketData1));
-          expect(buckets[1].getData()).toEqual(new Uint8Array(bucketData2));
-          done();
-        },
-      ]);
-    });
-  });
+  pullQueue.pull();
 
-  describe("Request Failure", () => {
-    beforeEach(() => {
-      layer.requestFromStore = sinon.stub();
-      layer.requestFromStore.onFirstCall().returns(Promise.reject());
-      layer.requestFromStore.onSecondCall().returns(
-        Promise.resolve(new Uint8Array(32 * 32 * 32)),
-      );
-    });
+  return runAsync([
+    () => {
+      t.is(buckets[0].state, BucketStateEnum.LOADED);
+      t.is(buckets[1].state, BucketStateEnum.LOADED);
+      t.deepEqual(buckets[0].getData(), new Uint8Array(bucketData1));
+      t.deepEqual(buckets[1].getData(), new Uint8Array(bucketData2));
+    },
+  ]);
+});
 
+function prepare(t) {
+  const { layer } = t.context;
+  layer.requestFromStore = sinon.stub();
+  layer.requestFromStore.onFirstCall().returns(Promise.reject());
+  layer.requestFromStore.onSecondCall().returns(
+    Promise.resolve(new Uint8Array(32 * 32 * 32)),
+  );
+}
 
-    it("should not request twice if not bucket dirty", (done) => {
-      pullQueue.pull();
+test("Request Failure: should not request twice if not bucket dirty", (t) => {
+  const { pullQueue, buckets, layer } = t.context;
+  prepare(t);
+  pullQueue.pull();
 
-      runAsync([
-        () => {
-          expect(layer.requestFromStore.callCount).toBe(1);
-          expect(buckets[0].state).toBe(BucketStateEnum.UNREQUESTED);
-          expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
-          done();
-        },
-      ]);
-    });
+  return runAsync([
+    () => {
+      t.is(layer.requestFromStore.callCount, 1);
+      t.is(buckets[0].state, BucketStateEnum.UNREQUESTED);
+      t.is(buckets[1].state, BucketStateEnum.UNREQUESTED);
+    },
+  ]);
+});
 
-    it("should reinsert dirty buckets", (done) => {
-      buckets[0].dirty = true;
-      buckets[0].data = new Uint8Array(32 * 32 * 32);
-      pullQueue.pull();
+test("Request Failure: should reinsert dirty buckets", (t) => {
+  const { pullQueue, buckets, layer } = t.context;
+  prepare(t);
+  buckets[0].dirty = true;
+  buckets[0].data = new Uint8Array(32 * 32 * 32);
+  pullQueue.pull();
 
-      runAsync([
-        () => {
-          expect(layer.requestFromStore.callCount).toBe(2);
-          expect(buckets[0].state).toBe(BucketStateEnum.LOADED);
-          expect(buckets[1].state).toBe(BucketStateEnum.UNREQUESTED);
-          done();
-        },
-      ]);
-    });
-  });
+  return runAsync([
+    () => {
+      t.is(layer.requestFromStore.callCount, 2);
+      t.is(buckets[0].state, BucketStateEnum.LOADED);
+      t.is(buckets[1].state, BucketStateEnum.UNREQUESTED);
+    },
+  ]);
 });

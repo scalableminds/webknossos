@@ -5,15 +5,14 @@
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
-import $ from "jquery";
 import TWEEN from "tween.js";
-import scaleInfo from "oxalis/model/scaleinfo";
 import * as THREE from "three";
-import modal from "./modal";
-import Toast from "../../libs/toast";
-import constants from "../constants";
-import Model from "../model";
-import View from "../view";
+import Store from "oxalis/store";
+import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
+import View from "oxalis/view";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
+import Model from "oxalis/model";
 
 class PlaneView {
 
@@ -22,23 +21,17 @@ class PlaneView {
   on: Function;
   listenTo: Function;
 
-  model: Model;
   view: View;
   renderer: THREE.WebGLRenderer;
-  cameras: Array<THREE.OrthographicCamera>;
+  cameras: OrthoViewMapType<THREE.OrthographicCamera>;
   group: THREE.Object3D;
   scene: THREE.Scene;
 
   running: boolean;
   needsRerender: boolean;
   curWidth: number;
-  deviceScaleFactor: number;
-  scaleFactor: number;
 
-  constructor(model: Model, view: View) {
-    let HEIGHT;
-    let WIDTH;
-    this.model = model;
+  constructor(view: View) {
     this.view = view;
     _.extend(this, Backbone.Events);
 
@@ -46,35 +39,30 @@ class PlaneView {
     this.scene = this.view.scene;
     this.running = false;
 
-    // The "render" div serves as a container for the canvas, that is
-    // attached to it once a renderer has been initalized.
-    const container = $("#render");
-
     // Create a 4x4 grid
-    this.curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH;
-    this.scaleFactor = 1;
+    this.curWidth = Constants.VIEWPORT_WIDTH;
 
     // Initialize main THREE.js components
-    this.cameras = new Array(4);
+    this.cameras = {};
 
-    for (const i of constants.ALL_VIEWPORTS) {
+    for (const plane of OrthoViewValues) {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
-      this.cameras[i] = new THREE.OrthographicCamera(0, 0, 0, 0);
-      this.scene.add(this.cameras[i]);
+      this.cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
+      this.scene.add(this.cameras[plane]);
     }
 
 
-    this.cameras[constants.PLANE_XY].position.z = -1;
-    this.cameras[constants.PLANE_YZ].position.x = 1;
-    this.cameras[constants.PLANE_XZ].position.y = 1;
-    this.cameras[constants.TDView].position.copy(new THREE.Vector3(10, 10, -10));
-    this.cameras[constants.PLANE_XY].up = new THREE.Vector3(0, -1, 0);
-    this.cameras[constants.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
-    this.cameras[constants.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
-    this.cameras[constants.TDView].up = new THREE.Vector3(0, 0, -1);
-    for (const cam of this.cameras) {
-      cam.lookAt(new THREE.Vector3(0, 0, 0));
+    this.cameras[OrthoViews.PLANE_XY].position.z = -1;
+    this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
+    this.cameras[OrthoViews.PLANE_XZ].position.y = 1;
+    this.cameras[OrthoViews.TDView].position.copy(new THREE.Vector3(10, 10, -10));
+    this.cameras[OrthoViews.PLANE_XY].up = new THREE.Vector3(0, -1, 0);
+    this.cameras[OrthoViews.PLANE_YZ].up = new THREE.Vector3(0, -1, 0);
+    this.cameras[OrthoViews.PLANE_XZ].up = new THREE.Vector3(0, 0, -1);
+    this.cameras[OrthoViews.TDView].up = new THREE.Vector3(0, 0, -1);
+    for (const plane of OrthoViewValues) {
+      this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
     }
 
     // Because the voxel coordinates do not have a cube shape but are distorted,
@@ -84,7 +72,7 @@ class PlaneView {
     // scene.scale does not have an effect.
     this.group = new THREE.Object3D();
     // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale.copy(scaleInfo.getNmPerVoxelVector());
+    this.group.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
     // Add scene to the group, all Geometries are than added to group
     this.scene.add(this.group);
 
@@ -97,18 +85,29 @@ class PlaneView {
     this.scene.add(directionalLight);
 
     // Attach the canvas to the container
-    this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
-    $(this.renderer.domElement).attr({ id: "render-canvas" });
-    container.append(this.renderer.domElement);
-
-    this.setActiveViewport(constants.PLANE_XY);
+    this.renderer.setSize((2 * this.curWidth) + 20, (2 * this.curWidth) + 20);
 
     this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
+    Store.subscribe(() => {
+      // Render in the next frame after the change propagated everywhere
+      window.requestAnimationFrame(() => {
+        this.needsRerender = true;
+      });
+    });
+
+    listenToStoreProperty(
+      store => store.userConfiguration.scale,
+      () => {
+        if (this.running) {
+          this.resizeThrottled();
+        }
+      },
+    );
   }
 
 
-  animate() {
+  animate(): void {
     if (!this.running) { return; }
 
     this.renderFunction();
@@ -116,7 +115,22 @@ class PlaneView {
     window.requestAnimationFrame(() => this.animate());
   }
 
-  renderFunction() {
+  renderOrthoViewToTexture(plane: OrthoViewType, scene: THREE.Scene): Uint8Array {
+    this.renderer.autoClear = true;
+    this.renderer.setViewport(0, 0, this.curWidth, this.curWidth);
+    this.renderer.setScissorTest(false);
+    this.renderer.setClearColor(0x000000, 1);
+
+    const renderTarget = new THREE.WebGLRenderTarget(this.curWidth, this.curWidth);
+    const buffer = new Uint8Array(this.curWidth * this.curWidth * 4);
+
+    this.trigger("renderCam", plane);
+    this.renderer.render(scene, this.cameras[plane], renderTarget);
+    this.renderer.readRenderTargetPixels(renderTarget, 0, 0, this.curWidth, this.curWidth, buffer);
+    return buffer;
+  }
+
+  renderFunction(): void {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
 
@@ -125,12 +139,12 @@ class PlaneView {
     // skip rendering if nothing has changed
     // This prevents you the GPU/CPU from constantly
     // working and keeps your lap cool
-    // ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
+    // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
 
     let modelChanged: boolean = false;
-    for (const name of Object.keys(this.model.binary)) {
-      const binary = this.model.binary[name];
-      for (const plane of binary.planes) {
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
+      for (const plane of _.values(binary.planes)) {
         modelChanged = modelChanged || plane.hasChanged();
       }
     }
@@ -138,12 +152,12 @@ class PlaneView {
     if (this.needsRerender || modelChanged) {
       this.trigger("render");
 
-      const viewport = [
-        [0, this.curWidth + 20],
-        [this.curWidth + 20, this.curWidth + 20],
-        [0, 0],
-        [this.curWidth + 20, 0],
-      ];
+      const viewport: OrthoViewMapType<Vector2> = {
+        [OrthoViews.PLANE_XY]: [0, this.curWidth + 20],
+        [OrthoViews.PLANE_YZ]: [this.curWidth + 20, this.curWidth + 20],
+        [OrthoViews.PLANE_XZ]: [0, 0],
+        [OrthoViews.TDView]: [this.curWidth + 20, 0],
+      };
       this.renderer.autoClear = true;
 
       const setupRenderArea = (x, y, width, color) => {
@@ -156,149 +170,68 @@ class PlaneView {
       setupRenderArea(0, 0, this.renderer.domElement.width, 0xffffff);
       this.renderer.clear();
 
-      for (const i of constants.ALL_VIEWPORTS) {
-        this.trigger("renderCam", i);
+      for (const plane of OrthoViewValues) {
+        this.trigger("renderCam", plane);
         setupRenderArea(
-          viewport[i][0],
-          viewport[i][1],
+          viewport[plane][0],
+          viewport[plane][1],
           this.curWidth,
-          constants.PLANE_COLORS[i],
+          OrthoViewColors[plane],
         );
-        this.renderer.render(this.scene, this.cameras[i]);
+        this.renderer.render(this.scene, this.cameras[plane]);
       }
 
       this.needsRerender = false;
     }
   }
 
-  addGeometry(geometry: THREE.Geometry): void {
+  addNode(node: THREE.Object3D): void {
     // Adds a new Three.js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
 
-    this.group.add(geometry);
+    this.group.add(node);
   }
 
 
-  removeGeometry(geometry: THREE.Geometry): void {
-    this.group.remove(geometry);
-    this.draw();
-  }
-
-
-  draw() {
+  draw(): void {
     app.vent.trigger("rerender");
   }
 
 
-  resizeThrottled = () => {
+  resizeThrottled = _.throttle((): void => {
     // throttle resize to avoid annoying flickering
-    this.resizeThrottled = _.throttle(
-      () => {
-        this.resize();
-        app.vent.trigger("planes:resize");
-      },
-      constants.RESIZE_THROTTLE_TIME,
-    );
-    this.resizeThrottled();
-  };
+    this.resize();
+  }, Constants.RESIZE_THROTTLE_TIME);
 
 
-  resize = () => {
+  resize = (): void => {
     // Call this after the canvas was resized to fix the viewport
-    const canvas = $("#render-canvas");
-    const WIDTH = (canvas.width() - 20) / 2;
-    const HEIGHT = (canvas.height() - 20) / 2;
+    const viewportWidth = Math.round(Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH);
+    const canvasWidth = viewportWidth * 2 + 20;
+    this.curWidth = viewportWidth;
 
-    this.renderer.setSize((2 * WIDTH) + 20, (2 * HEIGHT) + 20);
-    for (const i of constants.ALL_VIEWPORTS) {
-      this.cameras[i].aspect = WIDTH / HEIGHT;
-      this.cameras[i].updateProjectionMatrix();
+    this.renderer.setSize(canvasWidth, canvasWidth);
+    for (const plane of OrthoViewValues) {
+      this.cameras[plane].aspect = canvasWidth / canvasWidth;
+      this.cameras[plane].updateProjectionMatrix();
     }
     this.draw();
   };
 
-
-  scaleTrianglesPlane = (scale: number): void => {
-    let HEIGHT;
-    let WIDTH;
-    this.scaleFactor = scale;
-    this.curWidth = WIDTH = HEIGHT = Math.round(this.scaleFactor * constants.VIEWPORT_WIDTH);
-    const canvas = $("#render-canvas");
-    canvas.width((2 * WIDTH) + 20);
-    canvas.height((2 * HEIGHT) + 20);
-
-    $("#TDViewControls button").outerWidth((this.curWidth / 4) - 0.5);
-
-    $(".inputcatcher")
-      .css({
-        width: WIDTH,
-        height: HEIGHT,
-      });
-
-    this.resizeThrottled();
-  };
-
-
-  setActiveViewport = (viewportID: number): void => {
-    for (let i = 0; i <= 3; i++) {
-      if (i === viewportID) {
-        $(".inputcatcher").eq(i).removeClass("inactive").addClass("active");
-      } else {
-        $(".inputcatcher").eq(i).removeClass("active").addClass("inactive");
-      }
-    }
-
-    this.draw();
-  };
-
-
-  getCameras() {
+  getCameras(): OrthoViewMapType<THREE.OrthographicCamera> {
     return this.cameras;
   }
 
 
-  showBranchModalDouble(callback: () => void) {
-    modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
-      "Jump again?",
-      [{ id: "jump-button", label: "Jump again", callback },
-       { id: "cancel-button", label: "Cancel" }]);
-  }
-
-
-  showBranchModalDelete(callback: () => void) {
-    modal.show("You are about to delete an unused branchpoint, are you sure?",
-      "Delete branchpoint?",
-      [{ id: "delete-button", label: "Delete branchpoint", callback },
-       { id: "cancel-button", label: "Cancel" }]);
-  }
-
-
-  bindToEvents() {
-    if (this.model.skeletonTracing) {
-      this.listenTo(this.model.skeletonTracing, "doubleBranch", this.showBranchModalDouble);
-      this.listenTo(this.model.skeletonTracing, "deleteBranch", this.showBranchModalDelete);
-      this.listenTo(this.model.skeletonTracing, "mergeDifferentTrees", () => Toast.error("You can't merge nodes within the same tree", false));
-    }
-
-    this.listenTo(this.model.user, "change:scale", function (model, scale) {
-      if (this.running) { this.scaleTrianglesPlane(scale); }
-    });
-  }
-
-
-  stop() {
-    $(".inputcatcher").hide();
-
+  stop(): void {
     this.running = false;
   }
 
 
-  start() {
+  start(): void {
     this.running = true;
 
-    $(".inputcatcher").show();
-    this.scaleTrianglesPlane(this.model.user.get("scale"));
-
+    this.resize();
     this.animate();
   }
 }

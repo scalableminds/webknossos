@@ -1,23 +1,24 @@
 /**
  * arbitrary_plane_material_factory.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import * as THREE from "three";
-import AbstractPlaneMaterialFactory from "./abstract_plane_material_factory";
+import Model from "oxalis/model";
+import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
 
-  getColorName() {
+  getColorName(): string {
     return this.sanitizeName(
-      this.model.getColorBinaries()[0].name,
+      Model.getColorBinaries()[0].name,
     );
   }
 
 
-  createTextures() {
+  createTextures(): void {
     this.textures = {};
     this.textures[this.getColorName()] = this.createDataTexture(this.tWidth, 1);
 
@@ -28,13 +29,13 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
 
-  createDataTexture(width, bytes) {
+  createDataTexture(width: number, bytes: number): void {
     this.minFilter = THREE.LinearFilter;
     return super.createDataTexture(width, bytes);
   }
 
 
-  getFragmentShader() {
+  getFragmentShader(): string {
     return _.template(
       `\
 uniform sampler2D <%= colorName %>_texture;
@@ -44,7 +45,7 @@ varying vec2 vUv;
 void main()
 {
   float color_value = 0.0;
-  
+
   // Need to mirror y for some reason.
   vec2 texture_pos = vec2(vUv.x, 1.0 - vUv.y);
 

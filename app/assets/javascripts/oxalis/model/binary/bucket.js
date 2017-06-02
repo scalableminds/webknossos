@@ -1,37 +1,39 @@
 /**
  * bucket.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import Backbone from "backbone";
 import type { Vector4 } from "oxalis/constants";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
-import Utils from "../../../libs/utils";
+import Utils from "libs/utils";
 
 export const BucketStateEnum = {
-  UNREQUESTED: 0,
-  REQUESTED: 1,
-  LOADED: 2,
+  UNREQUESTED: "UNREQUESTED",
+  REQUESTED: "REQUESTED",
+  LOADED: "LOADED",
 };
-const BucketStateNames = ["unrequested", "requested", "loaded"];
+export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
 
 export const BUCKET_SIZE_P = 5;
 
-export class Bucket {
+export class DataBucket {
+  type: "data" = "data";
   BIT_DEPTH: number;
   BUCKET_LENGTH: number;
   BYTE_OFFSET: number;
 
-  state: 0 | 1 | 2;
+  state: BucketStateEnumType;
   dirty: boolean;
   accessed: boolean;
   data: ?Uint8Array;
   temporalBucketManager: TemporalBucketManager;
   zoomedAddress: Vector4;
-  isNullBucket = false;
+  isPartlyOutsideBoundingBox: boolean;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
+  on: Function;
 
 
   constructor(BIT_DEPTH: number, zoomedAddress: Vector4, temporalBucketManager: TemporalBucketManager) {
@@ -46,40 +48,41 @@ export class Bucket {
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
     this.accessed = true;
+    this.isPartlyOutsideBoundingBox = false;
 
     this.data = null;
   }
 
 
-  shouldCollect() {
+  shouldCollect(): boolean {
     const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
     this.accessed = false;
     return collect;
   }
 
 
-  needsRequest() {
+  needsRequest(): boolean {
     return this.state === BucketStateEnum.UNREQUESTED;
   }
 
 
-  isLoaded() {
+  isLoaded(): boolean {
     return this.state === BucketStateEnum.LOADED;
   }
 
 
-  label(labelFunc) {
+  label(labelFunc: (Uint8Array) => void) {
     labelFunc(this.getOrCreateData());
     this.dirty = true;
   }
 
 
-  hasData() {
+  hasData(): boolean {
     return (this.data != null);
   }
 
 
-  getData() {
+  getData(): Uint8Array {
     if (this.data == null) {
       throw new Error("Bucket.getData() called, but data does not exist.");
     }
@@ -89,7 +92,7 @@ export class Bucket {
   }
 
 
-  getOrCreateData() {
+  getOrCreateData(): Uint8Array {
     if (this.data == null) {
       this.data = new Uint8Array(this.BUCKET_LENGTH);
       this.temporalBucketManager.addBucket(this);
@@ -99,45 +102,46 @@ export class Bucket {
   }
 
 
-  pull() {
-    this.state = (() => {
-      switch (this.state) {
-        case BucketStateEnum.UNREQUESTED: return BucketStateEnum.REQUESTED;
-        default: return this.unexpectedState();
-      }
-    })();
+  pull(): void {
+    switch (this.state) {
+      case BucketStateEnum.UNREQUESTED:
+        this.state = BucketStateEnum.REQUESTED;
+        break;
+      default:
+        this.unexpectedState();
+    }
   }
 
 
-  pullFailed() {
-    this.state = (() => {
-      switch (this.state) {
-        case BucketStateEnum.REQUESTED: return BucketStateEnum.UNREQUESTED;
-        default: return this.unexpectedState();
-      }
-    })();
+  pullFailed(): void {
+    switch (this.state) {
+      case BucketStateEnum.REQUESTED:
+        this.state = BucketStateEnum.UNREQUESTED;
+        break;
+      default:
+        this.unexpectedState();
+    }
   }
 
 
-  receiveData(data) {
-    this.state = (() => {
-      switch (this.state) {
-        case BucketStateEnum.REQUESTED:
-          if (this.dirty) {
-            this.merge(data);
-          } else {
-            this.data = data;
-          }
-          this.trigger("bucketLoaded");
-          return BucketStateEnum.LOADED;
-        default:
-          return this.unexpectedState();
-      }
-    })();
+  receiveData(data: Uint8Array): void {
+    switch (this.state) {
+      case BucketStateEnum.REQUESTED:
+        if (this.dirty) {
+          this.merge(data);
+        } else {
+          this.data = data;
+        }
+        this.trigger("bucketLoaded");
+        this.state = BucketStateEnum.LOADED;
+        break;
+      default:
+        this.unexpectedState();
+    }
   }
 
 
-  push() {
+  push(): void {
     switch (this.state) {
       case BucketStateEnum.LOADED:
         this.dirty = false;
@@ -148,12 +152,12 @@ export class Bucket {
   }
 
 
-  unexpectedState() {
-    throw new Error(`Unexpected state: ${BucketStateNames[this.state]}`);
+  unexpectedState(): void {
+    throw new Error(`Unexpected state: ${this.state}`);
   }
 
 
-  merge(newData) {
+  merge(newData: Uint8Array): void {
     if (this.data == null) {
       throw new Error("Bucket.merge() called, but data does not exist.");
     }
@@ -175,17 +179,19 @@ export class Bucket {
 
 
 export class NullBucket {
-  isNullBucket = true;
+  type: "null" = "null";
   isOutOfBoundingBox: boolean;
 
-  constructor(isOutOfBoundingBox) {
+  constructor(isOutOfBoundingBox: boolean) {
     this.isOutOfBoundingBox = isOutOfBoundingBox;
   }
 
-  hasData() { return false; }
-  needsRequest() { return false; }
+  hasData(): boolean { return false; }
+  needsRequest(): boolean { return false; }
+  getData(): Uint8Array { throw new Error("NullBucket has no data."); }
 }
 
 export const NULL_BUCKET = new NullBucket(false);
 export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
 
+export type Bucket = DataBucket | NullBucket;

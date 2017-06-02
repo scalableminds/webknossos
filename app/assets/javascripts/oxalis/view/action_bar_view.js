@@ -1,119 +1,34 @@
-import _ from "lodash";
-import Marionette from "backbone.marionette";
-import DatasetActionsView from "./action-bar/dataset_actions_view";
-import DatasetPositionView from "./action-bar/dataset_position_view";
-import ViewModesView from "./action-bar/view_modes_view";
-import VolumeActionsView from "./action-bar/volume_actions_view";
-import SkeletonActionsView from "./action-bar/skeleton_actions_view";
-import Constants from "../constants";
+// @flow
+import React from "react";
+import { connect } from "react-redux";
+import DatasetActionsView from "oxalis/view/action-bar/dataset_actions_view";
+import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
+import ViewModesView from "oxalis/view/action-bar/view_modes_view";
+import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
+import Constants, { ControlModeEnum } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
 
-class ActionBarView extends Marionette.View {
-  static initClass() {
-    this.prototype.className = "container-fluid";
+// eslint-disable-next-line react/prefer-stateless-function
+class ActionBarView extends React.PureComponent {
+  render() {
+    const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
+    const isVolumeMode = this.props.viewMode === Constants.MODE_VOLUME;
+    const hasAdvancedOptions = this.props.restrictions.advancedOptionsAllowed;
 
-    this.prototype.template = _.template(`\
-
-<% if (isTraceMode && hasAdvancedOptions) { %>
-  <Button id="menu-toggle-button" class="btn btn-default"
-    data-toggle="offcanvas"
-    data-target="#settings-menu-wrapper"
-    data-canvas="#sliding-canvas"
-    data-placement="left"
-    data-autohide="false"
-    data-disable-scrolling="false"><i class="fa fa-bars"></i>Menu</Button>
-<% } %>
-
-<% if (isTraceMode) { %>
-  <div id="dataset-actions"></div>
-<% } %>
-
-<% if (hasAdvancedOptions) { %>
-  <div id="dataset-position"></div>
-<% } %>
-
-<% if (isVolumeMode && hasAdvancedOptions) { %>
-  <div id="volume-actions"></div>
-<% } %>
-
-<% if (isTraceMode && hasAdvancedOptions) { %>
-  <div id="view-modes"></div>
-  <div id="skeleton-actions"></div>
-<% } %>\
-`);
-
-
-    this.prototype.regions = {
-      datasetActionButtons: "#dataset-actions",
-      datasetPosition: "#dataset-position",
-      viewModes: "#view-modes",
-      volumeActions: "#volume-actions",
-      skeletonActions: "#skeleton-actions",
-    };
-  }
-
-  templateContext() {
-    return {
-      isTraceMode: this.isTraceMode(),
-      isVolumeMode: this.isVolumeMode(),
-      hasAdvancedOptions: this.hasAdvancedOptions(),
-    };
-  }
-
-
-  initialize(options) {
-    this.datasetPositionView = new DatasetPositionView(options);
-
-    if (this.isTraceMode()) {
-      this.datasetActionsView = new DatasetActionsView(options);
-
-      if (this.isVolumeMode()) {
-        this.volumeActionsView = new VolumeActionsView(options);
-      } else {
-        this.viewModesView = new ViewModesView(options);
-        this.skeletonActionsView = new SkeletonActionsView(options);
-      }
-    }
-
-
-    this.listenTo(this, "render", this.afterRender);
-  }
-
-
-  afterRender() {
-    if (this.hasAdvancedOptions()) {
-      this.showChildView("datasetPosition", this.datasetPositionView);
-    }
-
-    if (this.isTraceMode()) {
-      this.showChildView("datasetActionButtons", this.datasetActionsView);
-
-      if (this.hasAdvancedOptions()) {
-        if (this.isVolumeMode()) {
-          this.showChildView("volumeActions", this.volumeActionsView);
-        } else {
-          this.showChildView("viewModes", this.viewModesView);
-          this.showChildView("skeletonActions", this.skeletonActionsView);
-        }
-      }
-    }
-  }
-
-
-  isTraceMode() {
-    return this.model.get("controlMode") === Constants.CONTROL_MODE_TRACE;
-  }
-
-
-  isVolumeMode() {
-    return this.model.get("mode") === Constants.MODE_VOLUME;
-  }
-
-
-  hasAdvancedOptions() {
-    return this.model.settings.advancedOptionsAllowed;
+    return (
+      <div className="action-bar">
+        { isTraceMode ? <DatasetActionsView /> : null }
+        { hasAdvancedOptions ? <DatasetPositionView /> : null }
+        { isVolumeMode && hasAdvancedOptions ? <VolumeActionsView /> : null }
+        { !isVolumeMode && isTraceMode && hasAdvancedOptions ? <ViewModesView /> : null }
+      </div>
+    );
   }
 }
-ActionBarView.initClass();
+const mapStateToProps = (state: OxalisState) => ({
+  viewMode: state.temporaryConfiguration.viewMode,
+  controlMode: state.temporaryConfiguration.controlMode,
+  restrictions: state.tracing.restrictions,
+});
 
-
-export default ActionBarView;
+export default connect(mapStateToProps)(ActionBarView);

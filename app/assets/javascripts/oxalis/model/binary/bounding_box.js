@@ -1,61 +1,65 @@
 /**
  * bounding_box.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import DataCube from "oxalis/model/binary/data_cube";
-import type { BoundingBoxType } from "oxalis/model";
-import type { Vector3 } from "oxalis/constants";
+import { Vector3Indicies } from "oxalis/constants";
+import type { Vector3, Vector4, BoundingBoxType } from "oxalis/constants";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
+import type { Bucket } from "oxalis/model/binary/bucket";
 
 class BoundingBox {
-  boundingBox: BoundingBoxType;
+  boundingBox: ?BoundingBoxType;
   cube: DataCube;
   BYTE_OFFSET: number;
   min: Vector3;
   max: Vector3;
 
-  constructor(boundingBox: BoundingBoxType, cube: DataCube) {
+  constructor(boundingBox: ?BoundingBoxType, cube: DataCube) {
     this.boundingBox = boundingBox;
     this.cube = cube;
     this.BYTE_OFFSET = this.cube.BYTE_OFFSET;
     // Min is including
     this.min = [0, 0, 0];
     // Max is excluding
-    this.max = this.cube.upperBoundary.slice();
+    this.max = _.clone(this.cube.upperBoundary);
 
-    if (this.boundingBox != null) {
-      for (let i = 0; i <= 2; i++) {
-        this.min[i] = Math.max(this.min[i], this.boundingBox.min[i]);
-        this.max[i] = Math.min(this.max[i], this.boundingBox.max[i]);
+    if (boundingBox != null) {
+      for (const i of Vector3Indicies) {
+        this.min[i] = Math.max(this.min[i], boundingBox.min[i]);
+        this.max[i] = Math.min(this.max[i], boundingBox.max[i]);
       }
     }
   }
 
+  getBoxForZoomStep = _.memoize((zoomStep: number): BoundingBoxType => {
+    // No `map` for performance reasons
+    const min = [0, 0, 0];
+    const max = [0, 0, 0];
 
-  getBoxForZoomStep(zoomStep) {
-    return {
-      min: _.map(this.min, e => e >> (BUCKET_SIZE_P + zoomStep)),
-      max: _.map(this.max, (e) => {
-        const shift = BUCKET_SIZE_P + zoomStep;
-        let res = e >> shift;
+    for (let i = 0; i < 3; i++) {
+      min[i] = this.min[i] >> (BUCKET_SIZE_P + zoomStep);
 
-        // Computing ceil(e / 2^shift)
-        const remainder = e & ((1 << shift) - 1);
-        if (remainder !== 0) {
-          res += 1;
-        }
+      const maxI = this.max[i];
+      const shift = BUCKET_SIZE_P + zoomStep;
+      let res = maxI >> shift;
 
-        return res;
-      }),
-    };
-  }
+      // Computing ceil(e / 2^shift)
+      const remainder = maxI & ((1 << shift) - 1);
+      if (remainder !== 0) {
+        res += 1;
+      }
 
+      max[i] = res;
+    }
 
-  containsBucket([x, y, z, zoomStep]) {
+    return { min, max };
+  });
+
+  containsBucket([x, y, z, zoomStep]: Vector4): boolean {
     const { min, max } = this.getBoxForZoomStep(zoomStep);
-
     return (
       min[0] <= x && x < max[0] &&
       min[1] <= y && y < max[1] &&
@@ -64,7 +68,7 @@ class BoundingBox {
   }
 
 
-  containsFullBucket([x, y, z, zoomStep]) {
+  containsFullBucket([x, y, z, zoomStep]: Vector4): boolean {
     const { min, max } = this.getBoxForZoomStep(zoomStep);
 
     return (
@@ -75,17 +79,21 @@ class BoundingBox {
   }
 
 
-  removeOutsideArea(bucket, bucketData) {
-    if (this.containsFullBucket(bucket)) { return; }
+  removeOutsideArea(bucket: Bucket, bucketAddress: Vector4, bucketData: Uint8Array): void {
+    if (this.containsFullBucket(bucketAddress)) { return; }
+    if (bucket.type === "data") {
+      bucket.isPartlyOutsideBoundingBox = true;
+    }
 
-    const baseVoxel = _.map(bucket.slice(0, 3), e => e << (BUCKET_SIZE_P + bucket[3]));
+    const baseVoxel = bucketAddress.slice(0, 3)
+      .map(e => e << (BUCKET_SIZE_P + bucketAddress[3]));
 
     for (let dx = 0; dx < (1 << BUCKET_SIZE_P); dx++) {
       for (let dy = 0; dy < (1 << BUCKET_SIZE_P); dy++) {
         for (let dz = 0; dz < (1 << BUCKET_SIZE_P); dz++) {
-          const x = baseVoxel[0] + (dx << bucket[3]);
-          const y = baseVoxel[1] + (dy << bucket[3]);
-          const z = baseVoxel[2] + (dz << bucket[3]);
+          const x = baseVoxel[0] + (dx << bucketAddress[3]);
+          const y = baseVoxel[1] + (dy << bucketAddress[3]);
+          const z = baseVoxel[2] + (dz << bucketAddress[3]);
 
           if (
             this.min[0] <= x && x < this.max[0] &&

@@ -1,126 +1,121 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+import test from "ava";
 import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
-import runAsync from "../../helpers/run-async";
-import { Bucket } from "../../../oxalis/model/binary/bucket";
-import TemporalBucketManager from "../../../oxalis/model/binary/temporal_bucket_manager";
+import runAsync from "test/helpers/run-async";
 
-mockRequire.stopAll();
-
+mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
+mockRequire("libs/window", {});
 mockRequire("jquery", { fn: {} });
-mockRequire("../../../libs/request", null);
-require("../../../libs/core_ext");
+mockRequire("libs/request", null);
+require("libs/core_ext");
 
+const { DataBucket } = mockRequire.reRequire("oxalis/model/binary/bucket");
+const TemporalBucketManager = mockRequire.reRequire("oxalis/model/binary/temporal_bucket_manager").default;
 
-describe("TemporalBucketManager", () => {
-  let pullQueue = null;
-  let pushQueue = null;
-  let manager = null;
+test.beforeEach((t) => {
+  const pullQueue = {
+    add: sinon.stub(),
+    pull: sinon.stub(),
+  };
 
+  const pushQueue = {
+    insert: sinon.stub(),
+    push: sinon.stub(),
+  };
 
-  beforeEach(() => {
-    pullQueue = {
-      add: sinon.stub(),
-      pull: sinon.stub(),
-    };
+  const manager = new TemporalBucketManager(pullQueue, pushQueue);
 
-    pushQueue = {
-      insert: sinon.stub(),
-      push: sinon.stub(),
-    };
+  t.context.manager = manager;
+});
 
-    manager = new TemporalBucketManager(pullQueue, pushQueue);
-  });
+test("Add / Remove should be added when bucket has not been requested", (t) => {
+  const { manager } = t.context;
+  const bucket = new DataBucket(8, [0, 0, 0, 0], manager);
+  bucket.label(_.noop);
+  t.is(manager.getCount(), 1);
+});
 
+test("Add / Remove should be added when bucket has not been received", (t) => {
+  const { manager } = t.context;
+  const bucket = new DataBucket(8, [0, 0, 0, 0], manager);
+  bucket.pull();
+  t.is(bucket.needsRequest(), false);
 
-  describe("Add / Remove", () => {
-    it("should be added when bucket has not been requested", () => {
-      const bucket = new Bucket(8, [0, 0, 0, 0], manager);
-      bucket.label(_.noop);
-      expect(manager.getCount()).toBe(1);
-    });
+  bucket.label(_.noop);
+  t.is(manager.getCount(), 1);
+});
 
-    it("should be added when bucket has not been received", () => {
-      const bucket = new Bucket(8, [0, 0, 0, 0], manager);
-      bucket.pull();
-      expect(bucket.needsRequest()).toBe(false);
+test("Add / Remove should not be added when bucket has been received", (t) => {
+  const { manager } = t.context;
+  const bucket = new DataBucket(8, [0, 0, 0, 0], manager);
+  bucket.pull();
+  bucket.receiveData(new Uint8Array(1 << 15));
+  t.is(bucket.isLoaded(), true);
 
-      bucket.label(_.noop);
-      expect(manager.getCount()).toBe(1);
-    });
+  bucket.label(_.noop);
+  t.is(manager.getCount(), 0);
+});
 
-    it("should not be added when bucket has been received", () => {
-      const bucket = new Bucket(8, [0, 0, 0, 0], manager);
-      bucket.pull();
-      bucket.receiveData(new Uint8Array(1 << 15));
-      expect(bucket.isLoaded()).toBe(true);
+test("Add / Remove should be removed once it is loaded", (t) => {
+  const { manager } = t.context;
+  const bucket = new DataBucket(8, [0, 0, 0, 0], manager);
+  bucket.label(_.noop);
+  bucket.pull();
+  bucket.receiveData(new Uint8Array(1 << 15));
 
-      bucket.label(_.noop);
-      expect(manager.getCount()).toBe(0);
-    });
+  t.is(manager.getCount(), 0);
+});
 
-    it("should be removed once it is loaded", () => {
-      const bucket = new Bucket(8, [0, 0, 0, 0], manager);
-      bucket.label(_.noop);
-      bucket.pull();
-      bucket.receiveData(new Uint8Array(1 << 15));
+function prepareBuckets(manager) {
+  // Insert two buckets into manager
+  const bucket1 = new DataBucket(8, [0, 0, 0, 0], manager);
+  const bucket2 = new DataBucket(8, [1, 0, 0, 0], manager);
+  for (const bucket of [bucket1, bucket2]) {
+    bucket.label(_.noop);
+    bucket.pull();
+  }
+  return { bucket1, bucket2 };
+}
 
-      expect(manager.getCount()).toBe(0);
-    });
-  });
+test("Make Loaded Promise should be initially unresolved", (t) => {
+  const { manager } = t.context;
+  prepareBuckets(manager);
+  let resolved = false;
+  manager.getAllLoadedPromise().then(() => { resolved = true; });
+  return runAsync([
+    () => {
+      t.is(resolved, false);
+    },
+  ]);
+});
 
-  describe("Make Loaded Promise", () => {
-    let bucket1 = null;
-    let bucket2 = null;
+test("Make Loaded Promise should be unresolved when only one bucket is loaded", (t) => {
+  const { manager } = t.context;
+  const { bucket1 } = prepareBuckets(manager);
+  let resolved = false;
+  manager.getAllLoadedPromise().then(() => { resolved = true; });
+  bucket1.receiveData(new Uint8Array(1 << 15));
 
-    beforeEach(() => {
-      // Insert two buckets into manager
-      bucket1 = new Bucket(8, [0, 0, 0, 0], manager);
-      bucket2 = new Bucket(8, [1, 0, 0, 0], manager);
-      for (const bucket of [bucket1, bucket2]) {
-        bucket.label(_.noop);
-        bucket.pull();
-      }
-    });
+  return runAsync([
+    () => {
+      t.is(resolved, false);
+    },
+  ]);
+});
 
+test("Make Loaded Promise should be resolved when both buckets are loaded", (t) => {
+  const { manager } = t.context;
+  const { bucket1, bucket2 } = prepareBuckets(manager);
+  let resolved = false;
+  manager.getAllLoadedPromise().then(() => { resolved = true; });
+  bucket1.receiveData(new Uint8Array(1 << 15));
+  bucket2.receiveData(new Uint8Array(1 << 15));
 
-    it("should be initially unresolved", (done) => {
-      let resolved = false;
-      manager.getAllLoadedPromise().then(() => { resolved = true; });
-      runAsync([
-        () => {
-          expect(resolved).toBe(false);
-          done();
-        },
-      ]);
-    });
-
-    it("should be unresolved when only one bucket is loaded", (done) => {
-      let resolved = false;
-      manager.getAllLoadedPromise().then(() => { resolved = true; });
-      bucket1.receiveData(new Uint8Array(1 << 15));
-
-      runAsync([
-        () => {
-          expect(resolved).toBe(false);
-          done();
-        },
-      ]);
-    });
-
-    it("should be resolved when both buckets are loaded", (done) => {
-      let resolved = false;
-      manager.getAllLoadedPromise().then(() => { resolved = true; });
-      bucket1.receiveData(new Uint8Array(1 << 15));
-      bucket2.receiveData(new Uint8Array(1 << 15));
-
-      runAsync([
-        () => {
-          expect(resolved).toBe(true);
-          done();
-        },
-      ]);
-    });
-  });
+  return runAsync([
+    () => {
+      t.is(resolved, true);
+    },
+  ]);
 });

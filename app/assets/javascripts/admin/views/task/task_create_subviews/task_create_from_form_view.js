@@ -1,8 +1,10 @@
 import _ from "lodash";
+import app from "app";
 import Marionette from "backbone.marionette";
 import DatasetCollection from "admin/models/dataset/dataset_collection";
 import SelectionView from "admin/views/selection_view";
 import Utils from "libs/utils";
+import Request from "libs/request";
 
 
 class TaskCreateFromFormView extends Marionette.View {
@@ -78,21 +80,29 @@ class TaskCreateFromFormView extends Marionette.View {
    * Submit Form via AJAX to server.
    * @return {Boolean} false, prevent page reload
   */
-  submit() {
+  async submit(event) {
+    event.preventDefault();
     const serializedForm = this.serializeForm();
 
     // unblock submit button after model synched
     // show a status flash message
-    this.model.save(serializedForm, {
-      params: { type: "default" },
-      error: () => this.parent.showSaveError(),
-
-      success: task => this.parent.showSaveSuccess(task),
-    },
-    );
-
-    // prevent page reload
-    return false;
+    try {
+      const method = this.parent.isEditingMode ? "PUT" : "POST";
+      const response = await Request.sendJSONReceiveJSON(
+        this.model.url(), {
+          method,
+          data: serializedForm,
+          params: { type: "default" },
+        },
+      );
+      if (this.parent.isEditingMode) {
+        app.router.loadURL("/tasks");
+      } else {
+        this.parent.showSaveSuccess(response);
+      }
+    } catch (e) {
+      this.parent.showSaveError();
+    }
   }
 
 

@@ -3,8 +3,8 @@ import app from "app";
 import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
-import TaskListItemView from "./task_list_item_view";
-import AnonymousTaskLinkModal from "./anonymous_task_link_modal";
+import TaskListItemView from "admin/views/task/task_list_item_view";
+import AnonymousTaskLinkModal from "admin/views/task/anonymous_task_link_modal";
 
 class TaskListView extends Marionette.CompositeView {
   static initClass() {

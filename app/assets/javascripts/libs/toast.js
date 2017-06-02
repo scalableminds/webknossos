@@ -5,31 +5,32 @@ export type ToastType = {
   remove: () => void
 };
 
-$.fn.alertWithTimeout = function (timeout = 3000) {
-  this.each(function () {
-    const $this = $(this);
-    $this.alert();
-    let timerId = -1;
+function hashCode(s) {
+  return s.split("").reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+}
 
-    $this.hover(
-      () => clearTimeout(timerId),
-      () => {
-        timerId = setTimeout(
-          () => $this.alert("close"),
-          timeout,
-        );
-      },
-    );
-    $(window).one("mousemove", () => $this.mouseout());
-  });
-};
+function alertWithTimeout($this: JQuery, timeout = 3000) {
+  $this.alert();
+  let timerId = -1;
 
+  $this.hover(
+    () => clearTimeout(timerId),
+    () => {
+      timerId = setTimeout(
+        () => $this.alert("close"),
+        timeout,
+      );
+    },
+  );
+  $(window).one("mousemove", () => $this.mouseout());
+}
 
-const getToasts = (type, message) => $(`.alert-${type}[data-id='${message}']`);
-
+const getToasts = (type, message) => $(`.alert-${type}[data-id='${hashCode(message)}']`);
 
 const shouldDisplayToast = (type, message, sticky) =>
-
   // Don't show duplicate sticky toasts
   !sticky || getToasts(type, message).length === 0
 ;
@@ -37,7 +38,7 @@ const shouldDisplayToast = (type, message, sticky) =>
 
 const Toast = {
 
-  message(type, message, sticky = false): ToastType {
+  message(type, message, sticky = false, optTimeout): ToastType {
     let messages;
     if (_.isArray(type) && (message == null)) {
       messages = type;
@@ -60,14 +61,14 @@ const Toast = {
       } else {
         displayMessage = message;
       }
-      const $messageElement = $("<div>", { class: `alert alert-${type} fade in`, "data-id": message }).html(displayMessage);
+      const $messageElement = $("<div>", { class: `alert alert-${type} fade in`, "data-id": hashCode(message) }).html(displayMessage);
       const $closeButton = $("<button>", { type: "button", class: "close", "data-dismiss": "alert" }).html("&times;");
       $messageElement.prepend($closeButton);
       if (sticky) {
         $messageElement.alert();
       } else {
-        const timeout = type === "danger" ? 6000 : 3000;
-        $messageElement.alertWithTimeout(timeout);
+        const timeout = optTimeout || (type === "danger" ? 6000 : 3000);
+        alertWithTimeout($messageElement, timeout);
       }
       $("#alert-container").append($messageElement);
 

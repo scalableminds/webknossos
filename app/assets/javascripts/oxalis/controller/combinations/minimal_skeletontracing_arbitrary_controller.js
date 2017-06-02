@@ -1,13 +1,19 @@
 /**
  * minimal_skeletontracing_arbitrary_controller.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
-import Input from "libs/input";
-import Toast from "libs/toast";
-import ArbitraryController from "../viewmodes/arbitrary_controller";
-import Constants from "../../constants";
+import Store from "oxalis/store";
+import Constants from "oxalis/constants";
+import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
+import { deleteNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
+import { zoomInAction, zoomOutAction, yawFlycamAction, pitchFlycamAction } from "oxalis/model/actions/flycam_actions";
+import type View from "oxalis/view";
+import type SceneController from "oxalis/controller/scene_controller";
+import type SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
@@ -15,35 +21,49 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
   //
   // Minimal Skeleton Tracing Arbitrary Controller:
   // Extends Arbitrary controller to add controls that are specific to minimal Arbitrary mode.
+  // Initiated on TaskTypes with "Advanced Tracing Options"
+  // Mainly used to simplify mechanical turk tracings
 
-  constructor(...args) {
-    super(...args);
+  constructor(
+    view: View,
+    sceneController: SceneController,
+    skeletonTracingController: SkeletonTracingController,
+  ) {
+    super(view, sceneController, skeletonTracingController);
 
     _.defer(() => this.setRecord(true));
   }
 
-
-  initKeyboard() {
-    this.input.keyboard = new Input.Keyboard({
-
+  initKeyboard(): void {
+    this.input.keyboard = new InputKeyboard({
       space: timeFactor => this.move(timeFactor),
-
       // Zoom in/out
-      i: () => this.cam.zoomIn(),
-      o: () => this.cam.zoomOut(),
-
+      i: () => { Store.dispatch(zoomInAction()); },
+      o: () => { Store.dispatch(zoomOutAction()); },
       // Rotate in distance
-      left: timeFactor => this.cam.yaw(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
-      right: timeFactor => this.cam.yaw(-this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
-      up: timeFactor => this.cam.pitch(-this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
-      down: timeFactor => this.cam.pitch(this.model.user.get("rotateValue") * timeFactor, this.mode === Constants.MODE_ARBITRARY),
+      left: (timeFactor) => {
+        const rotateValue = Store.getState().userConfiguration.rotateValue;
+        Store.dispatch(yawFlycamAction(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
+      },
+      right: (timeFactor) => {
+        const rotateValue = Store.getState().userConfiguration.rotateValue;
+        Store.dispatch(yawFlycamAction(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
+      },
+      up: (timeFactor) => {
+        const rotateValue = Store.getState().userConfiguration.rotateValue;
+        Store.dispatch(pitchFlycamAction(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
+      },
+      down: (timeFactor) => {
+        const rotateValue = Store.getState().userConfiguration.rotateValue;
+        Store.dispatch(pitchFlycamAction(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
+      },
     });
 
-    this.input.keyboardNoLoop = new Input.KeyboardNoLoop({
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop({
 
       // Branches
-      b: () => this.pushBranch(),
-      j: () => this.popBranch(),
+      b: () => { Store.dispatch(createBranchPointAction()); },
+      j: () => { Store.dispatch(requestDeleteBranchPointAction()); },
 
       // Branchpointvideo
       ".": () => this.nextNode(true),
@@ -51,35 +71,18 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
     });
 
-    this.input.keyboardOnce = new Input.Keyboard({
-
+    this.input.keyboardOnce = new InputKeyboard({
       // Delete active node and recenter last node
-      "shift + space": () => this.deleteActiveNode(),
-    }
-
-    , -1);
+      "shift + space": () => { Store.dispatch(deleteNodeAction()); },
+    }, -1);
   }
-
 
   // make sure that it is not possible to keep nodes from being created
-  setWaypoint(...args) {
-    if (this.isBranchpointvideoMode()) { return; }
-    if (!this.model.get("flightmodeRecording")) {
-      this.model.set("flightmodeRecording", true);
+  setWaypoint(): void {
+    if (!Store.getState().flightmodeRecording) {
+      Store.dispatch(setFlightmodeRecordingAction(true));
     }
-    super.setWaypoint(...args);
-  }
-
-
-  deleteActiveNode() {
-    if (this.isBranchpointvideoMode()) { return; }
-    const { skeletonTracing } = this.model;
-    const activeNode = skeletonTracing.getActiveNode();
-    if (activeNode.id === 1) {
-      Toast.error("Unable: Attempting to delete first node");
-    } else {
-      _.defer(() => this.model.skeletonTracing.deleteActiveNode().then(() => this.centerActiveNode()));
-    }
+    super.setWaypoint();
   }
 }
 

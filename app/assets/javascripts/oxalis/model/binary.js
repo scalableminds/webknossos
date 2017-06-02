@@ -1,38 +1,45 @@
 /**
  * binary.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import Backbone from "backbone";
-import Pipeline from "libs/pipeline";
+import Store from "oxalis/store";
+import type { CategoryType } from "oxalis/store";
+import AsyncTaskQueue from "libs/async_task_queue";
 import InterpolationCollector from "oxalis/model/binary/interpolation_collector";
 import DataCube from "oxalis/model/binary/data_cube";
 import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import Plane2D from "oxalis/model/binary/plane2d";
-import PingStrategyBase, * as PingStrategy from "oxalis/model/binary/ping_strategy";
-import PingStrategy3dBase, * as PingStrategy3d from "oxalis/model/binary/ping_strategy_3d";
+import { PingStrategy, SkeletonPingStrategy, VolumePingStrategy } from "oxalis/model/binary/ping_strategy";
+import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
-import constants from "oxalis/constants";
-import Model from "oxalis/model";
+import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import type { ServerTracing } from "oxalis/model";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 
-import type { Vector3, Vector4 } from "oxalis/constants";
-import type { Tracing } from "oxalis/model";
-import type { CategoryType } from "oxalis/model/binary/layers/layer";
+import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
+import type { Matrix4x4 } from "libs/mjs";
+import type Layer from "oxalis/model/binary/layers/layer";
 
 const PING_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
 
-class Binary {
+type PingOptions = {
+  zoomStep: number;
+  areas: OrthoViewMapType<Vector4>;
+  activePlane: OrthoViewType;
+};
 
-  model: Model;
+// TODO: Non-reactive
+class Binary {
   cube: DataCube;
-  tracing: Tracing;
-  layer: Object;
+  tracing: ServerTracing<*>;
+  layer: Layer;
   category: CategoryType;
-  name: String;
+  name: string;
   targetBitDepth: number;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
@@ -40,20 +47,19 @@ class Binary {
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   mappings: Mappings;
-  pingStrategies: Array<PingStrategyBase>;
-  pingStrategies3d: Array<PingStrategy3dBase>;
-  planes: Array<Plane2D>;
+  pingStrategies: Array<PingStrategy>;
+  pingStrategies3d: Array<PingStrategy3d>;
+  planes: OrthoViewMapType<Plane2D>;
   direction: Vector3;
-  activeMapping: String | null;
-  lastPosition: Vector3 | null;
-  lastZoomStep: number | null;
-  lastAreas: Array<Vector4> | null;
+  activeMapping: ?string;
+  lastPosition: ?Vector3;
+  lastZoomStep: ?number;
+  lastAreas: ?OrthoViewMapType<Vector4>;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(model, tracing, layer, maxZoomStep, connectionInfo) {
-    this.model = model;
+  constructor(tracing: ServerTracing<*>, layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
     this.tracing = tracing;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
@@ -68,37 +74,39 @@ class Binary {
     this.lowerBoundary = this.layer.lowerBoundary = topLeft;
     this.upperBoundary = this.layer.upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
 
-    this.cube = new DataCube(this.model.taskBoundingBox, this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
+    this.cube = new DataCube(this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
 
-    const updatePipeline = new Pipeline([this.tracing.version]);
+    const taskQueue = new AsyncTaskQueue(Infinity);
 
-    const datasetName = this.model.get("dataset").get("name");
-    const datastoreInfo = this.model.get("dataset").get("dataStore");
+    const dataset = Store.getState().dataset;
+    if (dataset == null) {
+      throw new Error("Dataset needs to be available before constructing the Binary.");
+    }
+    const datastoreInfo = dataset.dataStore;
     this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
-    this.pushQueue = new PushQueue(datasetName, this.cube, this.layer, this.tracing.id, updatePipeline);
+    this.pushQueue = new PushQueue(this.cube, this.layer, this.tracing.id, taskQueue);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
-    this.mappings = new Mappings(datastoreInfo, datasetName, this.layer);
+    this.mappings = new Mappings(datastoreInfo, this.layer);
     this.activeMapping = null;
     this.direction = [0, 0, 0];
 
     this.pingStrategies = [
-      new PingStrategy.Skeleton(this.cube, constants.TEXTURE_SIZE_P),
-      new PingStrategy.Volume(this.cube, constants.TEXTURE_SIZE_P),
+      new SkeletonPingStrategy(this.cube),
+      new VolumePingStrategy(this.cube),
     ];
     this.pingStrategies3d = [
-      new PingStrategy3d.DslSlow(),
+      new DslSlowPingStrategy3d(this.cube),
     ];
 
-    this.planes = [];
-    for (const planeId of constants.ALL_PLANES) {
-      this.planes.push(new Plane2D(planeId, this.cube, this.layer.bitDepth, this.targetBitDepth,
-                                32, this.category === "segmentation"));
+    this.planes = {};
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      this.planes[planeId] = new Plane2D(planeId, this.cube,
+        this.layer.bitDepth, this.targetBitDepth, 32, this.category === "segmentation");
     }
 
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {
-      this.layer.setFourBit(this.model.get("datasetConfiguration").get("fourBit"));
-      this.listenTo(this.model.get("datasetConfiguration"), "change:fourBit",
-                function (datasetModel, fourBit) { this.layer.setFourBit(fourBit); });
+      this.layer.setFourBit(Store.getState().datasetConfiguration.fourBit);
+      Store.subscribe(() => { this.layer.setFourBit(Store.getState().datasetConfiguration.fourBit); });
     }
 
     this.cube.on({
@@ -107,18 +115,18 @@ class Binary {
   }
 
 
-  forcePlaneRedraw() {
-    this.planes.forEach(plane =>
-      plane.forceRedraw());
+  forcePlaneRedraw(): void {
+    for (const plane of _.values(this.planes)) {
+      plane.forceRedraw();
+    }
   }
 
 
-  setActiveMapping(mappingName) {
+  setActiveMapping(mappingName: string): void {
     this.activeMapping = mappingName;
 
     const setMapping = (mapping) => {
       this.cube.setMapping(mapping);
-      this.model.flycam.update();
     };
 
     if (mappingName != null) {
@@ -129,7 +137,7 @@ class Binary {
   }
 
 
-  pingStop() {
+  pingStop(): void {
     this.pullQueue.clearNormalPriorities();
   }
 
@@ -137,7 +145,7 @@ class Binary {
   ping = _.throttle(this.pingImpl, PING_THROTTLE_TIME);
 
 
-  pingImpl(position, { zoomStep, areas, activePlane }) {
+  pingImpl(position: Vector3, { zoomStep, areas, activePlane }: PingOptions): void {
     if (this.lastPosition != null) {
       this.direction = [
         ((1 - DIRECTION_VECTOR_SMOOTHER) * this.direction[0]) + (DIRECTION_VECTOR_SMOOTHER * (position[0] - this.lastPosition[0])),
@@ -147,9 +155,9 @@ class Binary {
     }
 
     if (!_.isEqual(position, this.lastPosition) || zoomStep !== this.lastZoomStep || !_.isEqual(areas, this.lastAreas)) {
-      this.lastPosition = position.slice();
+      this.lastPosition = _.clone(position);
       this.lastZoomStep = zoomStep;
-      this.lastAreas = areas.slice();
+      this.lastAreas = Object.assign({}, areas);
 
       for (const strategy of this.pingStrategies) {
         if (strategy.forContentType(this.tracing.contentType) && strategy.inVelocityRange(this.connectionInfo.bandwidth) && strategy.inRoundTripTimeRange(this.connectionInfo.roundTripTime)) {
@@ -166,7 +174,7 @@ class Binary {
   }
 
 
-  arbitraryPingImpl(matrix, zoomStep) {
+  arbitraryPingImpl(matrix: Matrix4x4, zoomStep: number): void {
     for (const strategy of this.pingStrategies3d) {
       if (strategy.forContentType(this.tracing.contentType) && strategy.inVelocityRange(1) && strategy.inRoundTripTimeRange(this.pullQueue.roundTripTime)) {
         this.pullQueue.clearNormalPriorities();
@@ -179,13 +187,13 @@ class Binary {
   }
 
 
-  arbitraryPing = _.once(function (matrix, zoomStep) {
+  arbitraryPing = _.once(function (matrix: Matrix4x4, zoomStep: number) {
     this.arbitraryPing = _.throttle(this.arbitraryPingImpl, PING_THROTTLE_TIME);
     this.arbitraryPing(matrix, zoomStep);
   });
 
 
-  getByVerticesSync(vertices) {
+  getByVerticesSync(vertices: Array<number>): Uint8Array {
     // A synchronized implementation of `get`. Cuz its faster.
 
     const { buffer, missingBuckets } = InterpolationCollector.bulkCollect(
@@ -193,13 +201,10 @@ class Binary {
       this.cube.getArbitraryCube(),
     );
 
-    this.pullQueue.addAll(missingBuckets.map(
-      bucket =>
-        ({
-          bucket,
-          priority: PullQueueConstants.PRIORITY_HIGHEST,
-        }),
-    ));
+    this.pullQueue.addAll(missingBuckets.map(bucket => ({
+      bucket,
+      priority: PullQueueConstants.PRIORITY_HIGHEST,
+    })));
     this.pullQueue.pull();
 
     return buffer;

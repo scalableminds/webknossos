@@ -16,7 +16,6 @@ services:
       service: sbt
     ports:
       - "9000:9000"
-      - "5005:5005"
     links:
       - mongo-dev
     command: >
@@ -39,6 +38,8 @@ services:
 
   sbt:
     image: scalableminds/sbt:sbt-0.13.9_mongo-3.2.1_node-7.x_jdk-8
+    ports:
+      - "5005:5005"
     volumes:
       - ".:/project"
       - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
@@ -64,7 +65,7 @@ services:
   frontend-tests:
     extends:
       service: sbt
-    command: bash -c "yarn test"
+    command: bash -c "yarn test-verbose"
 
   frontend-docs:
     extends:

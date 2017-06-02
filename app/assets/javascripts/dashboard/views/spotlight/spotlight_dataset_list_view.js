@@ -1,6 +1,6 @@
 import app from "app";
 import Marionette from "backbone.marionette";
-import SpotlightDatasetView from "./spotlight_dataset_view";
+import SpotlightDatasetView from "dashboard/views/spotlight/spotlight_dataset_view";
 
 class SpotlightDatasetListView extends Marionette.CollectionView {
   static initClass() {

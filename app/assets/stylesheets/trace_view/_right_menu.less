@@ -3,72 +3,18 @@
 
 #abstract-tree-canvas {
   flex-grow: 1;
-}
-
-#tab-trees {
-  p {
-    width: 260px;
-    margin-top: 5px;
-    margin-bottom: 5px;
-  }
-  .input-group {
-    margin: 10px 0px;
-  }
-
-  // bootstrap doesn't support two button-groups on one side
-  .input-group-btn:nth-of-type(2) .btn {
-    border-radius: 0px;
-    margin-left: -1px;
-
-  }
-}
-
-.tab-menu {
-  display: inline-flex;
-  flex-direction: column;
-  margin: 10px;
-  overflow: hidden;
-  height: calc(100vh ~"-" @navbar-height ~"-" 20px ~"-" @action-bar-height); // 20px = 2 * 10px margin
-
-  .tab-pane {
-    min-height: 100px;
-    word-wrap: break-word;
-    white-space: normal;
-  }
-
-  .tab-pane.active {
-    .flex-column;
-  }
-}
-
-.flex-overflow {
-  overflow-y: auto;
-  flex-grow: 1;
-  height: 0;
-}
-
-#right-menu {
-
-  .tab-menu;
-  padding: 10px 0px;
-  width: 351px; // will be set dynamically in JS
-
-  .nav-tabs {
-    margin-bottom: 20px;
-  }
-
-  .tab-pane {
-    ul {
-      list-style: none;
-      padding-left: 5px;
-    }
-  }
+  min-height: 600px;
+  width: 100%;
 }
 
 #tree-list {
   .fa-angle-right {
     width: 11px;
     margin-left: 5px;
+  }
+
+  .ant-input-group {
+    margin: 10px 0px;
   }
 }
 
@@ -80,4 +26,3 @@
     margin-left: 20px;
   }
 }
-

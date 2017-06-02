@@ -1,4 +1,11 @@
-import Utils from "libs/utils";
+/*
+ * drawing.js
+ * @flow
+ */
+
+import type { Vector3 } from "oxalis/constants";
+
+type RangeItem = [number, number, number, boolean | null, boolean, boolean];
 
 // This is a class with static methods and constants dealing with drawing
 // lines and filling polygons
@@ -8,10 +15,13 @@ import Utils from "libs/utils";
 const SMOOTH_LENGTH = 4;
 const SMOOTH_ALPHA = 0.2;
 
-const Drawing = {
+class Drawing {
+
+  alpha: number = SMOOTH_ALPHA;
+  smoothLength: number = SMOOTH_LENGTH;
 
   // Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
-  drawLine2d(x, y, x1, y1, draw) {
+  drawLine2d(x: number, y: number, x1: number, y1: number, draw: (number, number) => void) {
     let d;
     let mode;
     let dx = x1 - x;
@@ -67,10 +77,11 @@ const Drawing = {
         draw(x, y);
       }
     }
-  },
+  }
 
-
-  addNextLine(newY, isNext, downwards, minX, maxX, r, ranges, test, paint) {
+  addNextLine(newY: number, isNext: boolean, downwards: boolean,
+    minX: number, maxX: number, r: RangeItem, ranges: Array<RangeItem>,
+    test: (number, number) => boolean, paint: (number, number) => void) {
     let rMinX = minX;
     let inRange = false;
     let x = minX;
@@ -92,13 +103,14 @@ const Drawing = {
       x++;
     }
     if (inRange) { ranges.push([rMinX, x - 1, newY, downwards, rMinX === minX, true]); }
-  },
+  }
 
 
   // Source: http://will.thimbleby.net/scanline-flood-fill/
-  fillArea(x, y, width, height, diagonal, test, paint) {
+  fillArea(x: number, y: number, width: number, height: number, diagonal: boolean,
+    test: (number, number) => boolean, paint: (number, number) => void) {
     // xMin, xMax, y, down[true] / up[false], extendLeft, extendRight
-    const ranges = [[x, x, y, null, true, true]];
+    const ranges: Array<RangeItem> = [[x, x, y, null, true, true]];
     paint(x, y);
     while (ranges.length) {
       const r = ranges.pop();
@@ -131,23 +143,22 @@ const Drawing = {
       if (y < height) { this.addNextLine(y + 1, !up, true, minX, maxX, r, ranges, test, paint); }
       if (y > 0) { this.addNextLine(y - 1, !down, false, minX, maxX, r, ranges, test, paint); }
     }
-  },
-
+  }
 
   // Source : http://twistedoakstudios.com/blog/Post3138_mouse-path-smoothing-for-jack-lumber
-  smoothLine(points, callback) {
+  smoothLine(points: Array<Vector3>, callback: (Vector3) => void): Array<Vector3> {
     const smoothLength = this.smoothLength || SMOOTH_LENGTH;
     const a = this.alpha || SMOOTH_ALPHA;
 
     if (points.length > 2 + smoothLength) {
-      for (const i of Utils.__range__(0, smoothLength, false)) {
+      for (let i = 0; i < smoothLength; i++) {
         const j = points.length - i - 2;
         const p0 = points[j];
         const p1 = points[j + 1];
 
-        const p = [];
-        for (const k of Utils.__range__(0, p0.length, false)) {
-          p.push((p0[k] * (1 - a)) + (p1[k] * a));
+        const p = [0, 0, 0];
+        for (let k = 0; k < 3; k++) {
+          p[k] = (p0[k] * (1 - a)) + (p1[k] * a);
         }
 
         callback(p);
@@ -156,12 +167,16 @@ const Drawing = {
     }
 
     return points;
-  },
+  }
 
+  setSmoothLength(v: number): void {
+    this.smoothLength = v;
+  }
 
-  setSmoothLength(v) { this.smoothLength = v; },
-  setAlpha(v) { this.alpha = v; },
+  setAlpha(v: number): void {
+    this.alpha = v;
+  }
 
-};
+}
 
-export default Drawing;
+export default new Drawing();

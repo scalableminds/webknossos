@@ -1,104 +1,84 @@
 /**
  * model.js
- * @flow weak
+ * @flow
  */
 
-import Backbone from "backbone";
 import _ from "lodash";
-import Tracepoint from "oxalis/model/skeletontracing/tracepoint";
+import Store from "oxalis/store";
+import type {
+  DatasetType,
+  BoundingBoxObjectType,
+  RestrictionsType,
+  SettingsType,
+  NodeType,
+  EdgeType,
+  CommentType,
+  BranchPointType,
+  SkeletonTracingTypeTracingType,
+  VolumeTracingTypeTracingType,
+  TaskType,
+} from "oxalis/store";
+import type { UrlManagerState } from "oxalis/controller/url_manager";
+import { setDatasetAction, setViewModeAction, setControlModeAction } from "oxalis/model/actions/settings_actions";
+import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
+import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
+import { initializeReadOnlyTracingAction } from "oxalis/model/actions/readonlytracing_actions";
+import { setTaskAction } from "oxalis/model/actions/task_actions";
+import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { saveNowAction } from "oxalis/model/actions/save_actions";
 import window from "libs/window";
-import Utils from "../libs/utils";
-import Binary from "./model/binary";
-import SkeletonTracing from "./model/skeletontracing/skeletontracing";
-import User from "./model/user";
-import DatasetConfiguration from "./model/dataset_configuration";
-import VolumeTracing from "./model/volumetracing/volumetracing";
-import ConnectionInfo from "./model/binarydata_connection_info";
-import scaleInfo from "./model/scaleinfo";
-import Flycam2d from "./model/flycam2d";
-import Flycam3d from "./model/flycam3d";
-import constants from "./constants";
-import type { ModeType, Vector3, Vector4 } from "./constants";
-import Request from "../libs/request";
-import Toast from "../libs/toast";
-import ErrorHandling from "../libs/error_handling";
-import WkLayer from "./model/binary/layers/wk_layer";
-import NdStoreLayer from "./model/binary/layers/nd_store_layer";
+import Utils from "libs/utils";
+import Binary from "oxalis/model/binary";
+import ConnectionInfo from "oxalis/model/binarydata_connection_info";
+import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
+import type { Vector3, ControlModeType } from "oxalis/constants";
+import Request from "libs/request";
+import Toast from "libs/toast";
+import ErrorHandling from "libs/error_handling";
+import WkLayer from "oxalis/model/binary/layers/wk_layer";
+import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
+import update from "immutability-helper";
+import UrlManager from "oxalis/controller/url_manager";
 
-// This is THE model. It takes care of the data including the
-// communication with the server.
-
-// All public operations are **asynchronous**. We return a promise
-// which you can react on.
-
-export type BranchPoint = {
-  id: number;
-  timestamp: number;
-}
-export type BoundingBoxType = {
-  min: Vector3,
-  max: Vector3,
-};
-export type LayerType = WkLayer | NdStoreLayer;
-export type RestrictionsType = {
-  allowAccess: boolean,
-  allowUpdate: boolean,
-  allowFinish: boolean,
-  allowDownload: boolean,
-};
-type Settings = {
-  advancedOptionsAllowed: boolean,
-  allowedModes: "orthogonal" | "oblique" | "flight" | "volume",
-  branchPointsAllowed: boolean,
-  somaClickingAllowed: boolean,
-};
-export type CommentType = {
-  node: number;
-  comment: string;
-};
-export type TreeData = {
-  id: number;
-  color: Vector4;
-  name: string;
-  timestamp: number;
-  comments: Array<CommentType>;
-  branchPoints: Array<BranchPoint>;
-  edges: Array<{source: number, target: number}>;
-  nodes: Array<Tracepoint>;
-};
-
-export type BoundingBoxObjectType = {
-  topLeft: Vector3,
-  width: number,
-  height: number,
-  depth: number,
+type SkeletonContentTreeType = {
+  id: number,
+  color: ?Vector3,
+  name: string,
+  timestamp: number,
+  comments: Array<CommentType>,
+  branchPoints: Array<BranchPointType>,
+  edges: Array<EdgeType>,
+  nodes: Array<NodeType>,
 };
 
 export type SkeletonContentDataType = {
   activeNode: null | number;
-  trees: Array<TreeData>;
+  trees: Array<SkeletonContentTreeType>;
   zoomLevel: number;
   customLayers: null;
+  zoomLevel: number;
 };
 
 export type VolumeContentDataType = {
   activeCell: null | number;
+  nextCell: ?number,
   customLayers: Array<Object>;
   maxCoordinates: BoundingBoxObjectType;
-  customLayers: ?Array<Object>;
   name: string;
+  zoomLevel: number;
 };
 
-export type Tracing = {
+export type ServerTracing<T> = {
   actions: Array<any>,
   content: {
     boundingBox: BoundingBoxObjectType,
-    contentData: VolumeContentDataType | SkeletonContentDataType,
+    contentData: T,
     contentType: string,
-    dataSet: Object,
+    dataSet: DatasetType,
     editPosition: Vector3,
     editRotation: Vector3,
-    settings: Settings,
+    settings: SettingsType,
   },
   contentType: string,
   created: string,
@@ -108,136 +88,150 @@ export type Tracing = {
   id: string,
   name: string,
   restrictions: RestrictionsType,
-  state: any,
+  state: UrlManagerState,
   stateLabel: string,
   stats: any,
-  task: any,
+  task: TaskType,
   tracingTime: number,
-  typ: string,
+  typ: SkeletonTracingTypeTracingType | VolumeTracingTypeTracingType,
   user: any,
   version: number,
 };
 
-class Model extends Backbone.Model {
+// TODO: Non-reactive
+export class OxalisModel {
   HANDLED_ERROR = "error_was_handled";
 
-  initialized: boolean;
-  user: User;
   connectionInfo: ConnectionInfo;
   binary: {
     [key: string]: Binary,
   };
-  taskBoundingBox: BoundingBoxType;
-  userBoundingBox: BoundingBoxType;
-  annotationModel: SkeletonTracing | VolumeTracing;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  flycam: Flycam2d;
-  flycam3d: Flycam3d;
-  volumeTracing: VolumeTracing;
-  skeletonTracing: SkeletonTracing;
-  datasetConfiguration: DatasetConfiguration;
-  tracing: Tracing;
-  mode: ModeType;
-  allowedModes: Array<ModeType>;
-  settings: Settings;
-  tracingId: string;
-  tracingType: "Explorational" | "Task" | "View";
+  tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>;
 
-  constructor(...args) {
-    super(...args);
-    this.initialized = false;
-  }
+  async fetch(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType, initialFetch: boolean) {
+    Store.dispatch(setControlModeAction(controlMode));
 
-
-  fetch() {
     let infoUrl;
-    if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
+    if (controlMode === ControlModeEnum.TRACE) {
       // Include /readOnly part whenever it is in the pathname
-      infoUrl = `${window.location.pathname}/info`;
+      const isReadOnly = window.location.pathname.endsWith("/readOnly");
+      const readOnlyPart = isReadOnly ? "readOnly/" : "";
+      infoUrl = `/annotations/${tracingType}/${tracingId}/${readOnlyPart}info`;
     } else {
-      infoUrl = `/annotations/${this.get("tracingType")}/${this.get("tracingId")}/info`;
+      infoUrl = `/annotations/${tracingType}/${tracingId}/info`;
     }
 
-    return Request.receiveJSON(infoUrl).then((tracing: Tracing) => {
-      let error;
-      if (tracing.error) {
-        ({ error } = tracing);
-      } else if (!tracing.content.dataSet) {
-        error = "Selected dataset doesn't exist";
-      } else if (!tracing.content.dataSet.dataLayers) {
-        const datasetName = tracing.content.dataSet.name;
-        if (datasetName) {
-          error = `Please, double check if you have the dataset '${datasetName}' imported.`;
-        } else {
-          error = "Please, make sure you have a dataset imported.";
-        }
+    const tracing: ServerTracing<*> = await Request.receiveJSON(infoUrl);
+
+    let error;
+    const dataset = tracing.content.dataSet;
+    if (tracing.error) {
+      ({ error } = tracing);
+    } else if (!dataset) {
+      error = "Selected dataset doesn't exist";
+    } else if (!dataset.dataLayers) {
+      if (dataset.name) {
+        error = `Please, double check if you have the dataset '${dataset.name}' imported.`;
+      } else {
+        error = "Please, make sure you have a dataset imported.";
       }
+    }
 
-      if (error) {
-        Toast.error(error);
-        throw this.HANDLED_ERROR;
-      }
+    if (error) {
+      Toast.error(error);
+      throw this.HANDLED_ERROR;
+    }
 
-      this.user = new User();
-      this.set("user", this.user);
-      this.set("datasetName", tracing.content.dataSet.name);
+    if (!tracing.restrictions.allowAccess) {
+      error = "You are not allowed to access this tracing";
+      throw this.HANDLED_ERROR;
+    }
 
-      return this.user.fetch().then(() => Promise.resolve(tracing));
-    },
+    // Make sure subsequent fetch calls are always for the same dataset
+    if (!_.isEmpty(this.binary)) {
+      ErrorHandling.assert(_.isEqual(dataset, Store.getState().dataset),
+        "Model.fetch was called for a task with another dataset, without reloading the page.");
+    }
 
-    ).then((tracing: Tracing) => {
-      this.set("dataset", new Backbone.Model(tracing.content.dataSet));
-      const colorLayers = _.filter(this.get("dataset").get("dataLayers"),
-                              layer => layer.category === "color");
-      this.set("datasetConfiguration", new DatasetConfiguration({
-        datasetName: this.get("datasetName"),
-        dataLayerNames: _.map(colorLayers, "name"),
-      }));
-      return this.get("datasetConfiguration").fetch().then(() => Promise.resolve(tracing));
-    },
+    ErrorHandling.assertExtendContext({
+      task: tracing.id,
+      dataSet: dataset.name,
+    });
 
-    ).then((tracing: Tracing) => {
-      const layerInfos = this.getLayerInfos(tracing.content.contentData.customLayers);
-      return this.initializeWithData(tracing, layerInfos);
-    },
+    Store.dispatch(setDatasetAction(dataset));
+    Store.dispatch(setTaskAction(tracing.task));
 
-    );
+    // Only initialize the model once.
+    // There is no need to reinstantiate the binaries if the dataset didn't change.
+    if (initialFetch) {
+      this.initializeModel(tracing);
+    }
+    this.initializeTracing(tracing, initialFetch);
+
+    return tracing;
   }
 
+  determineAllowedModes(settings: SettingsType) {
+    // The order of allowedModes should be independent from the server and instead be similar to ModeValues
+    let allowedModes = _.intersection(ModeValues, settings.allowedModes);
 
-  determineAllowedModes() {
-    const allowedModes = [];
-    const settings = this.get("settings");
-    for (const allowedMode of settings.allowedModes) {
-      if (this.getColorBinaries()[0].cube.BIT_DEPTH === 8) {
-        switch (allowedMode) {
-          case "flight": allowedModes.push(constants.MODE_ARBITRARY); break;
-          case "oblique": allowedModes.push(constants.MODE_ARBITRARY_PLANE); break;
-          default: // ignore other modes for now
-        }
-      }
-
-      if (["orthogonal", "volume"].includes(allowedMode)) {
-        allowedModes.push(constants.MODE_NAME_TO_ID[allowedMode]);
-      }
+    const colorLayer = _.find(Store.getState().dataset.dataLayers, { category: "color" });
+    if (colorLayer != null && colorLayer.elementClass !== "uint8") {
+      allowedModes = allowedModes.filter(mode => !constants.MODES_ARBITRARY.includes(mode));
     }
 
-    if (settings.preferredMode) {
-      const modeId = constants.MODE_NAME_TO_ID[settings.preferredMode];
+    let preferredMode = null;
+    if (settings.preferredMode != null) {
+      const modeId = settings.preferredMode;
       if (allowedModes.includes(modeId)) {
-        this.set("preferredMode", modeId);
+        preferredMode = modeId;
       }
     }
 
-    allowedModes.sort();
-    return allowedModes;
+    return { preferredMode, allowedModes };
   }
 
+  initializeTracing(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>, initialFetch: boolean) {
+    const { allowedModes, preferredMode } = this.determineAllowedModes(tracing.content.settings);
+    _.extend(tracing.content.settings, { allowedModes, preferredMode });
 
-  initializeWithData(tracing: Tracing, layerInfos) {
-    const { dataStore } = tracing.content.dataSet;
-    const dataset = this.get("dataset");
+    const isVolume = tracing.content.settings.allowedModes.includes("volume");
+    const controlMode = Store.getState().temporaryConfiguration.controlMode;
+    if (controlMode === ControlModeEnum.TRACE) {
+      if (isVolume) {
+        ErrorHandling.assert((this.getSegmentationBinary() != null),
+          "Volume is allowed, but segmentation does not exist");
+        const volumeTracing: ServerTracing<VolumeContentDataType> = (tracing: ServerTracing<any>);
+        Store.dispatch(initializeVolumeTracingAction(volumeTracing));
+      } else {
+        const skeletonTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<any>);
+        Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
+      }
+    } else {
+      const readOnlyTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<any>);
+      Store.dispatch(initializeReadOnlyTracingAction(readOnlyTracing));
+    }
+
+    if (initialFetch) {
+      Store.dispatch(setZoomStepAction(tracing.content.contentData.zoomLevel));
+    }
+
+    // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
+    if (allowedModes.length === 0) {
+      Toast.error("There was no valid allowed tracing mode specified.");
+    } else {
+      const mode = preferredMode || UrlManager.initialState.mode || allowedModes[0];
+      Store.dispatch(setViewModeAction(mode));
+    }
+
+    this.applyState(UrlManager.initialState, tracing);
+  }
+
+  initializeModel(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
+    const dataset = tracing.content.dataSet;
+    const { dataStore } = dataset;
 
     const LayerClass = (() => {
       switch (dataStore.typ) {
@@ -247,23 +241,8 @@ class Model extends Backbone.Model {
       }
     })();
 
-    const layers = layerInfos.map(layerInfo => new LayerClass(layerInfo, dataset.get("name"), dataStore));
-
-    ErrorHandling.assertExtendContext({
-      task: this.get("tracingId"),
-      dataSet: dataset.get("name"),
-    });
-
-    console.log("tracing", tracing);
-    console.log("user", this.user);
-
-    const isVolumeTracing = tracing.content.settings.allowedModes.includes("volume");
-    scaleInfo.initialize(dataset.get("scale"));
-
-    const bb = tracing.content.boundingBox;
-    if (bb != null) {
-      this.taskBoundingBox = this.computeBoundingBoxFromArray(bb.topLeft.concat([bb.width, bb.height, bb.depth]));
-    }
+    const layers = this.getLayerInfos(tracing.content.contentData.customLayers)
+      .map(layerInfo => new LayerClass(layerInfo, dataStore));
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
@@ -272,7 +251,7 @@ class Model extends Backbone.Model {
 
     for (const layer of layers) {
       const maxLayerZoomStep = Math.log(Math.max(...layer.resolutions)) / Math.LN2;
-      this.binary[layer.name] = new Binary(this, tracing, layer, maxLayerZoomStep, this.connectionInfo);
+      this.binary[layer.name] = new Binary(tracing, layer, maxLayerZoomStep, this.connectionInfo);
       maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep);
     }
 
@@ -283,72 +262,11 @@ class Model extends Backbone.Model {
       throw this.HANDLED_ERROR;
     }
 
-    const flycam = new Flycam2d(constants.PLANE_WIDTH, maxZoomStep + 1, this);
-    const flycam3d = new Flycam3d(constants.DISTANCE_3D, dataset.get("scale"));
-    this.set("flycam", flycam);
-    this.set("flycam3d", flycam3d);
-    this.listenTo(flycam3d, "changed", matrix => flycam.setPosition(matrix.slice(12, 15)));
-    this.listenTo(flycam, "positionChanged", position => flycam3d.setPositionSilent(position));
-
-    if (this.get("controlMode") === constants.CONTROL_MODE_TRACE) {
-      if (isVolumeTracing) {
-        ErrorHandling.assert((this.getSegmentationBinary() != null),
-          "Volume is allowed, but segmentation does not exist");
-        this.set("volumeTracing", new VolumeTracing(tracing, flycam, flycam3d, this.getSegmentationBinary()));
-        this.annotationModel = this.get("volumeTracing");
-      } else {
-        this.set("skeletonTracing", new SkeletonTracing(tracing, flycam, flycam3d, this.user));
-        this.annotationModel = this.get("skeletonTracing");
-      }
-    }
-
-    this.applyState(this.get("state"), tracing);
     this.computeBoundaries();
 
-    this.set("tracing", tracing);
-    this.set("flightmodeRecording", false);
-    this.set("settings", tracing.content.settings);
-    this.set("allowedModes", this.determineAllowedModes());
-    this.set("isTask", this.get("tracingType") === "Task");
-
-    // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
-    if (this.get("allowedModes").length === 0) {
-      Toast.error("There was no valid allowed tracing mode specified.");
-    } else {
-      const mode = this.get("preferredMode") || this.get("state").mode || this.get("allowedModes")[0];
-      this.setMode(mode);
-    }
-
-
-    this.initSettersGetter();
-    this.initialized = true;
-    this.trigger("sync");
-
-    // no error
+    // TODO: remove
+    this.tracing = tracing;
   }
-
-
-  setMode(mode: ModeType) {
-    this.set("mode", mode);
-    this.trigger("change:mode", mode);
-  }
-
-
-  setUserBoundingBox(bb: Array<number>) {
-    this.userBoundingBox = this.computeBoundingBoxFromArray(bb);
-    this.trigger("change:userBoundingBox", this.userBoundingBox);
-  }
-
-
-  computeBoundingBoxFromArray(bb: Array<number>): BoundingBoxType {
-    const [x, y, z, width, height, depth] = bb;
-
-    return {
-      min: [x, y, z],
-      max: [x + width, y + height, z + depth],
-    };
-  }
-
 
   // For now, since we have no UI for this
   buildMappingsObject() {
@@ -363,33 +281,31 @@ class Model extends Backbone.Model {
     }
   }
 
-
   getColorBinaries() {
     return _.filter(this.binary, binary => binary.category === "color");
   }
-
 
   getSegmentationBinary() {
     return _.find(this.binary, binary => binary.category === "segmentation");
   }
 
-
-  getBinaryByName(name) {
+  getBinaryByName(name: string) {
     return this.binary[name];
   }
 
-
-  getLayerInfos(userLayers) {
+  getLayerInfos(userLayers: ?Array<Object>) {
     // Overwrite or extend layers with userLayers
 
-    const layers = this.get("dataset").get("dataLayers");
+    const dataset = Store.getState().dataset;
+    const layers = dataset == null ? [] : _.clone(dataset.dataLayers);
     if (userLayers == null) { return layers; }
 
     for (const userLayer of userLayers) {
-      const existingLayer = _.find(layers, layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName));
+      const existingLayerIndex = _.findIndex(layers, layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName));
+      const existingLayer = layers[existingLayerIndex];
 
       if (existingLayer != null) {
-        _.extend(existingLayer, userLayer);
+        layers[existingLayerIndex] = update(existingLayer, { $merge: userLayer });
       } else {
         layers.push(userLayer);
       }
@@ -398,11 +314,16 @@ class Model extends Backbone.Model {
     return layers;
   }
 
-
-  canDisplaySegmentationData() {
-    return !this.flycam.getIntegerZoomStep() > 0 || !this.getSegmentationBinary();
+  shouldDisplaySegmentationData(): boolean {
+    const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
+    // Currently segmentation data can only be displayed in orthogonal and volume mode
+    const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
+    return this.getSegmentationBinary() != null && canModeDisplaySegmentationData;
   }
 
+  canDisplaySegmentationData(): boolean {
+    return getIntegerZoomStep(Store.getState()) <= 1;
+  }
 
   computeBoundaries() {
     this.lowerBoundary = [Infinity, Infinity, Infinity];
@@ -410,71 +331,49 @@ class Model extends Backbone.Model {
 
     for (const key of Object.keys(this.binary)) {
       const binary = this.binary[key];
-      for (let i = 0; i <= 2; i++) {
+      for (const i of Vector3Indicies) {
         this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]);
         this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]);
       }
     }
   }
 
-  // delegate save request to all submodules
-  save = function save() {
-    const submodels = [];
-    const promises = [];
-
-    if (this.get("volumeTracing") != null) {
-      submodels.push(this.get("volumeTracing").stateLogger);
-    }
-
-    if (this.get("skeletonTracing") != null) {
-      submodels.push(this.get("skeletonTracing").stateLogger);
-    }
-
-    _.each(submodels, model => promises.push(model.save()));
-
-    return Promise.all(promises).then(
-      (...args) => {
-        Toast.success("Saved!");
-        return Promise.resolve(...args);
-      },
-      (...args) => {
-        Toast.error("Couldn't save. Please try again.");
-        return Promise.reject(...args);
-      });
-  }
-
-
-  // Make the Model compatible between legacy Oxalis style and Backbone.Models/Views
-  initSettersGetter() {
-    _.forEach(this.attributes, (value, key) => Object.defineProperty(this, key, {
-      set(val) {
-        return this.set(key, val);
-      },
-      get() {
-        return this.get(key);
-      },
-    },
-      ),
-    );
-  }
-
-
-  applyState(state, tracing) {
-    this.get("flycam").setPosition(state.position || tracing.content.editPosition);
+  applyState(state: UrlManagerState, tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
+    Store.dispatch(setPositionAction(state.position || tracing.content.editPosition));
     if (state.zoomStep != null) {
-      this.get("user").set("zoom", Math.exp(Math.LN2 * state.zoomStep));
-      this.get("flycam3d").setZoomStep(state.zoomStep);
+      Store.dispatch(setZoomStepAction(state.zoomStep));
     }
 
     const rotation = state.rotation || tracing.content.editRotation;
     if (rotation != null) {
-      this.get("flycam3d").setRotation(rotation);
+      Store.dispatch(setRotationAction(rotation));
     }
 
     if (state.activeNode != null) {
-      Utils.__guard__(this.get("skeletonTracing"), x => x.setActiveNode(state.activeNode));
+      Store.dispatch(setActiveNodeAction(state.activeNode));
     }
   }
+
+
+  stateSaved() {
+    const state = Store.getState();
+    const storeStateSaved = !state.save.isBusy && state.save.queue.length === 0;
+    const pushQueuesSaved = _.reduce(
+      this.binary,
+      (saved, binary) => saved && binary.pushQueue.stateSaved(),
+      true,
+    );
+    return storeStateSaved && pushQueuesSaved;
+  }
+
+
+  save = async () => {
+    Store.dispatch(saveNowAction());
+    while (!this.stateSaved()) {
+      await Utils.sleep(500);
+    }
+  };
 }
 
-export default Model;
+// export the model as a singleton
+export default new OxalisModel();

@@ -1,30 +1,16 @@
-#action-bar {
+.action-bar {
+  line-height: 48px;
 
-  padding-top: 10px;
-
-  :invalid {
-    border: 1px solid red;
-  }
-
-  #trace-save-button {
-    width: 80px;
-  }
-
-  .dataset-position-view .input-group {
-    width: 200px;
-  }
-
-  #trace-position-input {
-    width: 160px;
-  }
-
-  & > .container-fluid > div {
+  div {
     display: inline-block;
-    margin-right: 15px;
+    vertical-align: bottom;
   }
 
-  #upload-and-explore-form {
-    width: 100%;
+  & > div {
+    margin-left: 10px;
   }
+}
 
+.merge-modal .ant-form-item-label {
+  width: 150px;
 }

@@ -16,6 +16,7 @@ import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.twirl.api.Html
 import views.html
+
 import scala.concurrent.Future
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team._
@@ -23,6 +24,8 @@ import play.api.libs.functional.syntax._
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import models.user.time._
 import com.scalableminds.util.tools.DefaultConverters._
+import models.annotation.{Annotation, AnnotationDAO}
+
 import scala.text
 
 class UserController @Inject()(val messagesApi: MessagesApi)
@@ -50,6 +53,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def user(userId: String) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
     } yield {
       Ok(Json.toJson(user)(User.userPublicWrites(request.user)))
     }
@@ -74,6 +78,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def userLoggedTime(userId: String) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
       loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
@@ -84,9 +89,47 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
+  private def groupByAnnotationAndDay(timeSpan: TimeSpan) = {
+    (timeSpan.annotation.getOrElse("<none>"), TimeSpan.groupByDay(timeSpan))
+  }
+
+  def usersLoggedTime = Authenticated.async(parse.json) { implicit request =>
+    request.body.validate[TimeSpanRequest] match {
+      case JsSuccess(timeSpanRequest, _) =>
+        Fox.combined(timeSpanRequest.users.map { userId =>
+          for {
+            user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+            _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
+            result <- TimeSpanService.loggedTimeOfUser(user, groupByAnnotationAndDay, Some(timeSpanRequest.start), Some(timeSpanRequest.end))
+          } yield {
+            Json.obj(
+              "user" -> Json.obj(
+                "userId" -> user.id,
+                "firstName" -> user.firstName,
+                "lastName" -> user.lastName,
+                "email" -> user.email
+              ),
+              "loggedTime" -> result.map {
+                case ((annotation, day), duration) =>
+                  Json.obj(
+                    "annotation" -> annotation,
+                    "day" -> day,
+                    "durationInSeconds" -> duration.toSeconds
+                  )
+              }
+            )
+          }
+        }).map(loggedTime => Ok(Json.toJson(loggedTime)))
+
+      case e: JsError =>
+        Future.successful(JsonBadRequest(JsError.toFlatJson(e)))
+    }
+  }
+
   def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
       content <- dashboardExploratoryAnnotations(user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
@@ -96,6 +139,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+        _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
       content <- dashboardTaskAnnotations(user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)

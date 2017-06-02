@@ -5,7 +5,7 @@
 import _ from "lodash";
 import $ from "jquery";
 import AirbrakeClient from "airbrake-js";
-import Toast from "./toast";
+import Toast from "libs/toast";
 
 class ErrorWithParams extends Error {
   params: ?mixed;
@@ -26,9 +26,7 @@ class ErrorHandling {
     this.throwAssertions = options.throwAssertions;
     this.sendLocalErrors = options.sendLocalErrors;
 
-    fetch("/assets/commit.txt")
-      .then(res => res.text())
-      .then((commitHash) => { this.commitHash = commitHash.trim(); });
+    this.commitHash = $("meta[name='commit-hash']").attr("content");
 
     this.initializeAirbrake();
   }
@@ -76,7 +74,7 @@ class ErrorHandling {
     });
   }
 
-  assert = (bool, message, assertionContext) => {
+  assert = (bool, message, assertionContext, dontThrowError) => {
     if (bool) {
       return;
     }
@@ -88,7 +86,7 @@ class ErrorHandling {
 
     Toast.error(`Assertion violated - ${message}`);
 
-    if (this.throwAssertions) {
+    if (this.throwAssertions && !dontThrowError) {
       // error will be automatically pushed to airbrake due to global handler
       throw error;
     } else {

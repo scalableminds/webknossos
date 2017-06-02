@@ -1,14 +1,16 @@
 /**
  * volumetracing_controller.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import $ from "jquery";
 import Backbone from "backbone";
-import Input from "libs/input";
-import Model from "oxalis/model";
-import VolumeTracingView from "oxalis/view/volumetracing/volumetracing_view";
+import { InputKeyboardNoLoop } from "libs/input";
+import Store from "oxalis/store";
+import { toggleModeAction, setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
+import View from "oxalis/view";
 import SceneController from "oxalis/controller/scene_controller";
 
 class VolumeTracingController {
@@ -19,33 +21,28 @@ class VolumeTracingController {
   // Also, this would be the place to define general Volume Tracing
   // functions that can be called by the specific view mode controller.
 
-  model: Model;
-  volumeTracingView: VolumeTracingView;
+  volumeTracingView: View;
   sceneController: SceneController;
   inDeleteMode: boolean;
   mergeMode: 0 | 1 | 2;
-  prevActiveCell: number;
-  keyboardNoLoop: Input.KeyboardNoLoop;
+  prevActiveCellId: number;
+  keyboardNoLoop: InputKeyboardNoLoop;
 
   MERGE_MODE_NORMAL = 0;
   MERGE_MODE_CELL1 = 1;
   MERGE_MODE_CELL2 = 2;
 
-  constructor(model, volumeTracingView, sceneController) {
-    this.model = model;
+  constructor(volumeTracingView: View, sceneController: SceneController) {
     this.volumeTracingView = volumeTracingView;
     this.sceneController = sceneController;
     this.inDeleteMode = false;
 
     _.extend(this, Backbone.Events);
 
-    $("#create-cell-button").on("click", () => this.model.volumeTracing.createCell(),
-    );
-
     // Keyboard shortcuts
-    this.keyboardNoLoop = new Input.KeyboardNoLoop({
-      w: () => this.model.volumeTracing.toggleMode(),
-      "1": () => this.model.volumeTracing.toggleMode(),
+    this.keyboardNoLoop = new InputKeyboardNoLoop({
+      w: () => { Store.dispatch(toggleModeAction()); },
+      "1": () => { Store.dispatch(toggleModeAction()); },
     });
 
     // no merging for now
@@ -72,14 +69,12 @@ class VolumeTracingController {
         $(inputId).on("focus", () => {
           this.mergeMode = inputModeMapping[inputId];
           console.log(this.mergeMode);
-        },
-        );
+        });
         $(inputId).keypress((event) => {
           if (event.which === 13) {
             this.merge();
           }
-        },
-        );
+        });
       })(input);
     }
   }
@@ -97,10 +92,10 @@ class VolumeTracingController {
   }
 
 
-  handleCellSelection(cellId) {
+  handleCellSelection(cellId: number) {
     if (cellId > 0) {
       if (this.mergeMode === this.MERGE_MODE_NORMAL) {
-        this.model.volumeTracing.setActiveCell(cellId);
+        Store.dispatch(setActiveCellAction(cellId));
       } else if (this.mergeMode === this.MERGE_MODE_CELL1) {
         $("#merge-cell1").val(cellId);
         $("#merge-cell2").focus();
@@ -117,21 +112,18 @@ class VolumeTracingController {
 
     this.inDeleteMode = true;
 
-    this.prevActiveCell = this.model.volumeTracing.getActiveCellId();
-    this.model.volumeTracing.setActiveCell(0);
+    getActiveCellId(Store.getState().tracing).map((activeCellId) => {
+      this.prevActiveCellId = activeCellId;
+    });
+    Store.dispatch(setActiveCellAction(0));
   }
 
 
   restoreAfterDeleteMode() {
     if (this.inDeleteMode) {
-      this.model.volumeTracing.setActiveCell(this.prevActiveCell);
+      Store.dispatch(setActiveCellAction(this.prevActiveCellId));
     }
     this.inDeleteMode = false;
-  }
-
-
-  drawVolume(pos) {
-    this.model.volumeTracing.addToLayer(pos);
   }
 }
 

@@ -1,16 +1,34 @@
 /**
  * skeletontracing_plane_controller.js
- * @flow weak
+ * @flow
  */
+/* globals JQueryInputEventObject:false */
 
 import $ from "jquery";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
+import Store from "oxalis/store";
 import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
-import PlaneController from "../viewmodes/plane_controller";
-import constants from "../../constants";
-import dimensions from "../../model/dimensions";
+import PlaneController from "oxalis/controller/viewmodes/plane_controller";
+import { OrthoViews } from "oxalis/constants";
+import dimensions from "oxalis/model/dimensions";
+import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { getPosition, getRotationOrtho, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
+import type View from "oxalis/view";
+import type SceneController from "oxalis/controller/scene_controller";
+import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { ModifierKeys } from "libs/input";
+
+const OrthoViewToNumber: OrthoViewMapType<number> = {
+  [OrthoViews.PLANE_XY]: 0,
+  [OrthoViews.PLANE_YZ]: 1,
+  [OrthoViews.PLANE_XZ]: 2,
+  [OrthoViews.TDView]: 3,
+};
 
 class SkeletonTracingPlaneController extends PlaneController {
 
@@ -22,91 +40,81 @@ class SkeletonTracingPlaneController extends PlaneController {
 
   skeletonTracingController: SkeletonTracingController;
 
-  constructor(model, view, sceneController, skeletonTracingController) {
-    super(model, view, sceneController);
+  constructor(
+    view: View,
+    sceneController: SceneController,
+    skeletonTracingController: SkeletonTracingController,
+  ) {
+    super(view, sceneController);
     this.skeletonTracingController = skeletonTracingController;
   }
 
 
-  simulateTracing(nodesPerTree = -1, nodesAlreadySet = 0) {
+  simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0): void {
     // For debugging purposes.
     if (nodesPerTree === nodesAlreadySet) {
-      this.model.skeletonTracing.createNewTree();
+      Store.dispatch(createTreeAction());
       nodesAlreadySet = 0;
     }
 
-    const [x, y, z] = this.flycam.getPosition();
+    const [x, y, z] = getPosition(Store.getState().flycam);
     this.setWaypoint([x + 1, y + 1, z], false);
     _.defer(() => this.simulateTracing(nodesPerTree, nodesAlreadySet + 1));
   }
 
 
-  start() {
+  start(): void {
     super.start();
-    return $(".skeleton-plane-controls").show();
+    $(".skeleton-plane-controls").show();
   }
 
 
-  stop() {
+  stop(): void {
     super.stop();
-    return $(".skeleton-plane-controls").hide();
+    $(".skeleton-plane-controls").hide();
   }
 
 
-  getPlaneMouseControls(planeId) {
+  getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
-
-      leftClick: (pos, plane, event) => this.onClick(pos, event.shiftKey, event.altKey, plane),
-
-
-      rightClick: (pos, plane, event) => this.setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
-    },
-    );
+      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
+        this.onClick(pos, event.shiftKey, event.altKey, plane),
+      rightClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
+        this.setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
+    });
   }
 
 
-  getTDViewMouseControls() {
+  getTDViewMouseControls(): Object {
     return _.extend(super.getTDViewMouseControls(), {
-
-      leftClick: (position, plane, event) => this.onClick(position, event.shiftKey, event.altKey, constants.TDView),
-    },
-    );
+      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
+        this.onClick(pos, event.shiftKey, event.altKey, OrthoViews.TDView),
+    });
   }
 
 
-  getKeyboardControls() {
+  getKeyboardControls(): Object {
     return _.extend(super.getKeyboardControls(), {
 
-      "1": () => this.skeletonTracingController.toggleSkeletonVisibility(),
-      "2": () => this.sceneController.skeleton.toggleInactiveTreeVisibility(),
+      "1": () => Store.dispatch(toggleTemporarySettingAction("shouldHideAllSkeletons")),
+      "2": () => Store.dispatch(toggleTemporarySettingAction("shouldHideInactiveTrees")),
 
       // Delete active node
-      delete: () => _.defer(() => this.model.skeletonTracing.deleteActiveNode()),
-      c: () => this.model.skeletonTracing.createNewTree(),
+      delete: () => Store.dispatch(deleteNodeAction()),
+      c: () => Store.dispatch(createTreeAction()),
 
       // Branches
-      b: () => this.model.skeletonTracing.pushBranch(),
-      j: () => this.popBranch(),
+      b: () => Store.dispatch(createBranchPointAction()),
+      j: () => Store.dispatch(requestDeleteBranchPointAction()),
 
       s: () => {
         this.skeletonTracingController.centerActiveNode();
-        return this.cameraController.centerTDView();
+        this.cameraController.centerTDView();
       },
-    },
-    );
+    });
   }
 
-
-  popBranch = () => _.defer(
-    () => {
-      this.model.skeletonTracing.popBranch().then(
-        id => this.skeletonTracingController.setActiveNode(id, false, true),
-      );
-    },
-  );
-
-
-  scrollPlanes(delta, type) {
+  scrollPlanes(delta: number, type: ?ModifierKeys): void {
     super.scrollPlanes(delta, type);
 
     if (type === "shift") {
@@ -115,138 +123,125 @@ class SkeletonTracingPlaneController extends PlaneController {
   }
 
 
-  onClick = (position, shiftPressed, altPressed, plane) => {
+  onClick = (position: Point2, shiftPressed: boolean, altPressed: boolean, plane: OrthoViewType): void => {
     if (!shiftPressed) { // do nothing
       return;
     }
 
-    const { scaleFactor } = this.planeView;
-    const camera = this.planeView.getCameras()[plane];
-    // vector with direction from camera position to click position
-    const normalizedMousePos = new THREE.Vector2(
-        ((position.x / (constants.VIEWPORT_WIDTH * scaleFactor)) * 2) - 1,
-        (-(position.y / (constants.VIEWPORT_WIDTH * scaleFactor)) * 2) + 1);
+    // render the clicked viewport with picking enabled
+    // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
+    const pickingNode = this.sceneController.skeleton.startPicking();
+    const pickingScene = new THREE.Scene();
+    pickingScene.add(pickingNode);
 
-    // create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(normalizedMousePos, camera);
-    raycaster.params.Points.threshold = this.model.flycam.getRayThreshold(plane);
+    const buffer = this.planeView.renderOrthoViewToTexture(plane, pickingScene);
+    // Beware of the fact that new browsers yield float numbers for the mouse position
+    const [x, y] = [Math.round(position.x), Math.round(position.y)];
+    // compute the index of the pixel under the cursor,
+    // while inverting along the y-axis, because OpenGL has its origin bottom-left :/
+    const index = (x + (this.planeView.curWidth - y) * this.planeView.curWidth) * 4;
+    // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
+    const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
+    this.sceneController.skeleton.stopPicking();
 
-    // identify clicked object
-    let intersects = raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes());
+    // prevent flickering sometimes caused by picking
+    this.planeView.renderFunction();
 
-    // Also look backwards: We want to detect object even when they are behind
-    // the camera. Later, we filter out invisible objects.
-    raycaster.ray.direction.multiplyScalar(-1);
-    intersects = intersects.concat(raycaster.intersectObjects(this.sceneController.skeleton.getAllNodes()));
-
-    intersects = _.sortBy(intersects, intersect => intersect.distanceToRay);
-
-    for (const intersect of intersects) {
-      const { index } = intersect;
-      const { geometry } = intersect.object;
-
-      // Raycaster also intersects with vertices that have an
-      // index larger than numItems
-      if (geometry.nodeIDs.getLength() <= index) {
-        continue;
+    // otherwise we have hit the background and do nothing
+    if (nodeId > 0) {
+      if (altPressed) {
+        getActiveNode(Store.getState().tracing)
+          .map(activeNode => Store.dispatch(mergeTreesAction(activeNode.id, nodeId)));
       }
 
-      const nodeID = geometry.nodeIDs.getAllElements()[index];
-
-      const posArray = geometry.attributes.position.array;
-      const intersectsCoord = [posArray[3 * index], posArray[(3 * index) + 1], posArray[(3 * index) + 2]];
-      const globalPos = this.model.flycam.getPosition();
-
-      // make sure you can't click nodes, that are clipped away (one can't see)
-      const ind = dimensions.getIndices(plane);
-      if (intersect.object.visible &&
-        (plane === constants.TDView ||
-          (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < this.cameraController.getClippingDistance(ind[2]) + 1))) {
-        // set the active Node to the one that has the ID stored in the vertex
-        // center the node if click was in 3d-view
-        const centered = plane === constants.TDView;
-        this.skeletonTracingController.setActiveNode(nodeID, shiftPressed && altPressed, centered);
-        break;
-      }
+      Store.dispatch(setActiveNodeAction(nodeId));
     }
   };
 
 
-  setWaypoint(position, ctrlPressed) {
-    const activeNode = this.model.skeletonTracing.getActiveNode();
-    // set the new trace direction
-    if (activeNode) {
-      this.model.flycam.setDirection([
-        position[0] - activeNode.position[0],
-        position[1] - activeNode.position[1],
-        position[2] - activeNode.position[2],
-      ]);
+  setWaypoint(position: Vector3, ctrlPressed: boolean): void {
+    const { activeViewport } = this;
+    if (activeViewport === OrthoViews.TDView) {
+      return;
     }
+    const activeNodeMaybe = getActiveNode(Store.getState().tracing);
 
-    const rotation = this.model.flycam.getRotation(this.activeViewport);
+    // set the new trace direction
+    activeNodeMaybe.map(activeNode => Store.dispatch(setRotationAction([
+      position[0] - activeNode.position[0],
+      position[1] - activeNode.position[1],
+      position[2] - activeNode.position[2],
+    ])));
+
+    const rotation = getRotationOrtho(activeViewport);
     this.addNode(position, rotation, !ctrlPressed);
 
     // Strg + Rightclick to set new not active branchpoint
-    if (ctrlPressed && !this.model.user.get("newNodeNewTree")) {
-      this.model.skeletonTracing.pushBranch();
-      this.skeletonTracingController.setActiveNode(activeNode.id);
+    const newNodeNewTree = Store.getState().userConfiguration.newNodeNewTree;
+    if (ctrlPressed && !newNodeNewTree) {
+      Store.dispatch(createBranchPointAction());
+      activeNodeMaybe.map(activeNode => Store.dispatch(setActiveNodeAction(activeNode.id)));
     }
   }
 
 
-  addNode = (position, rotation, centered) => {
-    if (this.model.settings.somaClickingAllowed && this.model.user.get("newNodeNewTree")) {
-      this.model.skeletonTracing.createNewTree();
+  addNode = (position: Vector3, rotation: Vector3, centered: boolean): void => {
+    const state = Store.getState();
+    const { newNodeNewTree } = state.userConfiguration;
+    const activeNodeMaybe = getActiveNode(state.tracing);
+
+    if (state.tracing.restrictions.somaClickingAllowed && newNodeNewTree) {
+      Store.dispatch(createTreeAction());
     }
 
-    if (this.model.skeletonTracing.getActiveNode() == null) {
+    if (activeNodeMaybe.isNothing) {
+      // when placing very first node of a tracing
       centered = true;
     }
 
-    const datasetConfig = this.model.get("datasetConfiguration");
-
-    this.model.skeletonTracing.addNode(
+    Store.dispatch(createNodeAction(
       position,
       rotation,
-      this.activeViewport,
-      this.model.flycam.getIntegerZoomStep(),
-      datasetConfig.get("fourBit") ? 4 : 8,
-      datasetConfig.get("interpolation"),
-    );
+      OrthoViewToNumber[this.activeViewport],
+      getRequestLogZoomStep(state),
+    ));
 
     if (centered) {
-      this.centerPositionAnimated(this.model.skeletonTracing.getActiveNodePos());
+      // we created a new node, so get a new reference
+      getActiveNode(Store.getState().tracing)
+        .map(newActiveNode => this.centerPositionAnimated(newActiveNode.position));
     }
   };
 
 
-  centerPositionAnimated(position) {
+  centerPositionAnimated(position: Vector3, skipDimensions: boolean = true): void {
     // Let the user still manipulate the "third dimension" during animation
-    const dimensionToSkip = dimensions.thirdDimensionForPlane(this.activeViewport);
+    const dimensionToSkip = skipDimensions && this.activeViewport !== OrthoViews.TDView ?
+      dimensions.thirdDimensionForPlane(this.activeViewport) :
+      null;
 
-    const curGlobalPos = this.flycam.getPosition();
+    const curGlobalPos = getPosition(Store.getState().flycam);
 
-    return (new TWEEN.Tween({
+    const tween = new TWEEN.Tween({
       globalPosX: curGlobalPos[0],
       globalPosY: curGlobalPos[1],
       globalPosZ: curGlobalPos[2],
-      flycam: this.flycam,
-      dimensionToSkip,
-    }))
-    .to({
+    });
+    tween.to({
       globalPosX: position[0],
       globalPosY: position[1],
       globalPosZ: position[2],
     }, 200)
-    .onUpdate(function () {
+    .onUpdate(function () { // needs to be a normal (non-bound) function
       const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
-      curPos[this.dimensionToSkip] = null;
-      this.flycam.setPosition(curPos);
+      if (dimensionToSkip != null) {
+        Store.dispatch(setPositionAction(curPos, dimensionToSkip));
+      } else {
+        Store.dispatch(setPositionAction(curPos));
+      }
     })
     .start();
   }
 }
-
 
 export default SkeletonTracingPlaneController;

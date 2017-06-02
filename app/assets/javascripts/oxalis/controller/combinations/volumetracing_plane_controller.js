@@ -1,12 +1,24 @@
 /**
  * volumetracing_plane_controller.js
- * @flow weak
+ * @flow
  */
+/* globals JQueryInputEventObject:false */
 
 import _ from "lodash";
-import Constants from "oxalis/constants";
+import Store from "oxalis/store";
+import Utils from "libs/utils";
+import Toast from "libs/toast";
+import constants, { OrthoViews } from "oxalis/constants";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
-import PlaneController from "../viewmodes/plane_controller";
+import PlaneController from "oxalis/controller/viewmodes/plane_controller";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { createCellAction, setModeAction, startEditingAction, addToLayerAction, finishEditingAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
+import type { OrthoViewType, Point2 } from "oxalis/constants";
+import type SceneController from "oxalis/controller/scene_controller";
+import Model from "oxalis/model";
+import type View from "oxalis/view";
 
 class VolumeTracingPlaneController extends PlaneController {
 
@@ -18,150 +30,124 @@ class VolumeTracingPlaneController extends PlaneController {
 
   volumeTracingController: VolumeTracingController;
 
-  constructor(model, view, sceneController, volumeTracingController) {
-    super(model, view, sceneController);
+  constructor(view: View, sceneController: SceneController, volumeTracingController: VolumeTracingController) {
+    super(view, sceneController);
     this.volumeTracingController = volumeTracingController;
 
-    this.listenTo(this.model.flycam, "positionChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()),
-    );
-    this.listenTo(this.model.flycam, "zoomStepChanged", () => this.render3dCell(this.model.volumeTracing.getActiveCellId()),
+    let lastActiveCellId = getActiveCellId(Store.getState().tracing).get();
+    Store.subscribe(() => {
+      getActiveCellId(Store.getState().tracing).map((cellId) => {
+        if (lastActiveCellId !== cellId) {
+          this.sceneController.renderVolumeIsosurface(cellId);
+          lastActiveCellId = cellId;
+        }
+      });
+    });
+
+    // If a new mapping is activated the 3D cell has to be updated, although the activeCellId did not change
+    this.listenTo(Model.getSegmentationBinary().cube, "newMapping", () =>
+      this.sceneController.renderVolumeIsosurface(lastActiveCellId),
     );
 
-    this.listenTo(this.model.user, "change:isosurfaceDisplay", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "change:isosurfaceBBsize", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.user, "change:isosurfaceResolution", function () { this.render3dCell(this.model.volumeTracing.getActiveCellId()); });
-    this.listenTo(this.model.volumeTracing, "newActiveCell", function (id) {
-      id = this.model.volumeTracing.getActiveCellId();
-      if (id > 0) {
-        this.render3dCell(id);
-      }
-    });
+    // TODO: This should be put in a saga with `take('INITIALIZE_SETTINGS')`as pre-condition
+    setTimeout(this.adjustSegmentationOpacity, 500);
   }
 
 
-  simulateTracing = () => {
-    this.model.volumeTracing.setMode(Constants.VOLUME_MODE_TRACE);
+  simulateTracing = async (): Promise<void> => {
+    Store.dispatch(setModeAction(constants.VOLUME_MODE_TRACE));
 
-    const controls = this.getPlaneMouseControls();
+    const controls = this.getPlaneMouseControls(OrthoViews.PLANE_XY);
     let pos = (x, y) => ({ x, y });
 
-    controls.leftMouseDown(pos(100, 100), 0, {});
-
-    return _.defer(() => {
-      controls.leftDownMove(null, pos(200, 100));
-      return _.defer(() => {
-        controls.leftDownMove(null, pos(200, 200));
-        return _.defer(() => {
-          controls.leftDownMove(null, pos(100, 200));
-          return _.defer(() => {
-            controls.leftDownMove(null, pos(100, 100));
-            controls.leftMouseUp();
-            return _.defer(() => {
-              pos = this.model.flycam.getPosition();
-              pos[2]++;
-              this.model.flycam.setPosition(pos);
-              return _.defer(this.simulateTracing);
-            },
-            );
-          },
-          );
-        },
-        );
-      },
-      );
-    },
-    );
+    controls.leftMouseDown(pos(100, 100), OrthoViews.PLANE_XY, {});
+    await Utils.sleep(100);
+    controls.leftDownMove(null, pos(200, 100));
+    await Utils.sleep(100);
+    controls.leftDownMove(null, pos(200, 200));
+    await Utils.sleep(100);
+    controls.leftDownMove(null, pos(100, 200));
+    await Utils.sleep(100);
+    controls.leftDownMove(null, pos(100, 100));
+    controls.leftMouseUp();
+    await Utils.sleep(100);
+    pos = _.clone(getPosition(Store.getState().flycam));
+    pos[2]++;
+    Store.dispatch(setPositionAction(pos));
+    await Utils.sleep(100);
+    await this.simulateTracing();
   };
 
 
-  getPlaneMouseControls(planeId) {
+  getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
 
-      leftDownMove: (delta, pos) => {
-        if (this.model.volumeTracing.mode === Constants.VOLUME_MODE_MOVE) {
+      leftDownMove: (delta: Point2, pos: Point2) => {
+        const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+        const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
+
+        const mode = getVolumeTraceOrMoveMode(Store.getState().tracing).get();
+        if (mode === constants.VOLUME_MODE_MOVE) {
+          const viewportScale = Store.getState().userConfiguration.scale;
           this.move([
-            (delta.x * this.model.user.getMouseInversionX()) / this.planeView.scaleFactor,
-            (delta.y * this.model.user.getMouseInversionY()) / this.planeView.scaleFactor,
+            (delta.x * mouseInversionX) / viewportScale,
+            (delta.y * mouseInversionY) / viewportScale,
             0,
           ]);
         } else {
-          this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
+          Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }
       },
 
-      leftMouseDown: (pos, plane, event) => {
+      leftMouseDown: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) => {
         if (event.shiftKey) {
           this.volumeTracingController.enterDeleteMode();
         }
-        this.model.volumeTracing.startEditing(plane);
-        this.adjustSegmentationOpacity();
+        Store.dispatch(startEditingAction(plane));
       },
 
       leftMouseUp: () => {
-        this.model.volumeTracing.finishLayer();
+        Store.dispatch(finishEditingAction());
         this.volumeTracingController.restoreAfterDeleteMode();
       },
 
-      rightDownMove: (delta, pos) => {
-        if (this.model.volumeTracing.mode === Constants.VOLUME_MODE_TRACE) {
-          this.model.volumeTracing.addToLayer(this.calculateGlobalPos(pos));
+      rightDownMove: (delta: Point2, pos: Point2) => {
+        const mode = getVolumeTraceOrMoveMode(Store.getState().tracing).get();
+        if (mode === constants.VOLUME_MODE_TRACE) {
+          Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }
       },
 
-      rightMouseDown: (pos, plane) => {
+      rightMouseDown: (pos: Point2, plane: OrthoViewType) => {
         this.volumeTracingController.enterDeleteMode();
-        this.model.volumeTracing.startEditing(plane);
-        this.adjustSegmentationOpacity();
+        Store.dispatch(startEditingAction(plane));
       },
 
       rightMouseUp: () => {
-        this.model.volumeTracing.finishLayer();
+        Store.dispatch(finishEditingAction());
         this.volumeTracingController.restoreAfterDeleteMode();
       },
 
-      leftClick: (pos) => {
-        const cellId = this.model.getSegmentationBinary().cube.getDataValue(this.calculateGlobalPos(pos));
+      leftClick: (pos: Point2) => {
+        const cellId = Model.getSegmentationBinary().cube.getDataValue(this.calculateGlobalPos(pos));
 
         this.volumeTracingController.handleCellSelection(cellId);
       },
-    },
-    );
-  }
-
-
-  adjustSegmentationOpacity() {
-    if (this.model.user.get("segmentationOpacity") < 10) {
-      this.model.user.set("segmentationOpacity", 50);
-    }
-  }
-
-
-  getKeyboardControls() {
-    return _.extend(super.getKeyboardControls(), {
-      c: () => this.model.volumeTracing.createCell(),
     });
   }
 
 
-  render3dCell(id) {
-    if (!this.model.user.get("isosurfaceDisplay")) {
-      this.sceneController.removeShapes();
-      return;
+  adjustSegmentationOpacity(): void {
+    if (Store.getState().datasetConfiguration.segmentationOpacity < 10) {
+      Toast.warning("Your setting for \"segmentation opacity\" is set very low.<br />Increase it for better visibility while volume tracing.");
     }
-    const bb = this.model.flycam.getViewportBoundingBox();
-    const res = this.model.user.get("isosurfaceResolution");
-    this.sceneController.showShapes(this.scaleIsosurfaceBB(bb), res, id);
   }
 
-  scaleIsosurfaceBB(bb) {
-    const factor = this.model.user.get("isosurfaceBBsize");
-    for (let i = 0; i <= 2; i++) {
-      const width = bb.max[i] - bb.min[i];
-      const diff = ((factor - 1) * width) / 2;
-      bb.min[i] -= diff;
-      bb.max[i] += diff;
-    }
-    return bb;
+
+  getKeyboardControls(): Object {
+    return _.extend(super.getKeyboardControls(), {
+      c: () => Store.dispatch(createCellAction()),
+    });
   }
 }
 

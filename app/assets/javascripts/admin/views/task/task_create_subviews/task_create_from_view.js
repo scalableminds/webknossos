@@ -1,15 +1,16 @@
 import _ from "lodash";
-import app from "app";
 import Marionette from "backbone.marionette";
 import FormSyphon from "form-syphon";
 import TaskTypeCollection from "admin/models/tasktype/task_type_collection";
 import TeamCollection from "admin/models/team/team_collection";
 import ProjectCollection from "admin/models/project/project_collection";
+import ScriptCollection from "admin/models/scripts/script_collection";
 import SelectionView from "admin/views/selection_view";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
-import TaskCreateFromFormView from "./task_create_from_form_view";
-import TaskCreateFromNMLView from "./task_create_from_nml_view";
+import TaskCreateFromFormView from "admin/views/task/task_create_subviews/task_create_from_form_view";
+import TaskCreateFromNMLView from "admin/views/task/task_create_subviews/task_create_from_nml_view";
+import Modal from "oxalis/view/modal";
 
 class TaskCreateFromView extends Marionette.View {
   static initClass() {
@@ -79,6 +80,12 @@ class TaskCreateFromView extends Marionette.View {
       </div>
 
       <div class="form-group">
+        <label class="col-sm-2 control-label" for="scriptId">Script</label>
+        <div class="col-sm-9 scripts">
+        </div>
+      </div>
+
+      <div class="form-group">
         <label class="col-sm-2 control-label" for="boundingBox">Bounding Box</label>
         <div class="col-sm-9">
           <span class="help-block hints"></span>
@@ -114,6 +121,7 @@ class TaskCreateFromView extends Marionette.View {
       taskType: ".taskType",
       team: ".team",
       project: ".project",
+      scripts: ".scripts",
       subview: ".subview",
     };
 
@@ -165,17 +173,19 @@ class TaskCreateFromView extends Marionette.View {
 
 
   // Submit form data as json
-  submit() {
+  submit(event) {
     this.toggleSubmitButton(true);
 
     // send form data to server
-    this.createSubview.submit();
+    this.createSubview.submit(event);
   }
 
 
   toggleSubmitButton(state) {
-    this.ui.submitButton.prop("disabled", state);
-    this.ui.submitButton.toggleClass("disabled", state);
+    if (this.ui.submitButton.prop != null) {
+      this.ui.submitButton.prop("disabled", state);
+      this.ui.submitButton.toggleClass("disabled", state);
+    }
   }
 
 
@@ -210,12 +220,17 @@ class TaskCreateFromView extends Marionette.View {
   }
 
 
-  showSaveSuccess(task) {
-    Toast.success(`The task was successfully ${this.getActionName().toLowerCase()}d`);
-
-    const url = `/projects/${task.get("projectName")}/tasks`;
-
-    app.router.navigate(`${url}#${task.id}`, { trigger: true });
+  showSaveSuccess(response) {
+    const successCount = response.items.filter(item => item.status === 200).length;
+    if (successCount === response.items.length) {
+      Toast.success(`${successCount} tasks were successfully ${this.getActionName().toLowerCase()}d.`);
+      const csvContent = response.items.map(({ success: task }) =>
+        `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`).join("\n");
+      Modal.show(`<pre>taskId,filename,position\n${csvContent}</pre>`, "Task IDs");
+    } else {
+      Toast.error(`${response.items.length - successCount}/${response.items.length} tasks weren't ${this.getActionName().toLowerCase()}d.`);
+    }
+    this.toggleSubmitButton(false);
   }
 
 
@@ -246,6 +261,19 @@ class TaskCreateFromView extends Marionette.View {
       name: "taskTypeId",
     });
 
+    const defaultScriptId = this.model.get("script") ? this.model.get("script").id : null;
+    this.scriptSelectionView = new SelectionView({
+      collection: new ScriptCollection(),
+      childViewOptions: {
+        modelValue() { return `${this.model.get("id")}`; },
+        modelLabel() { return `${this.model.get("name")}`; },
+        defaultItem: { id: defaultScriptId },
+      },
+      data: "amIAnAdmin=true",
+      name: "scriptId",
+      emptyOption: true,
+    });
+
     this.teamSelectionView = new SelectionView({
       collection: new TeamCollection(),
       childViewOptions: {
@@ -265,13 +293,13 @@ class TaskCreateFromView extends Marionette.View {
       data: "amIAnAdmin=true",
       name: "projectName",
       required: true,
-      emptyOption: true,
     });
 
     // render subviews in defined regions
     this.showChildView("taskType", this.taskTypeSelectionView);
     this.showChildView("team", this.teamSelectionView);
     this.showChildView("project", this.projectSelectionView);
+    this.showChildView("scripts", this.scriptSelectionView);
 
     // get create-subview type
     if (this.type === "from_form") {

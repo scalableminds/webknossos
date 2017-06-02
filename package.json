@@ -19,7 +19,7 @@
     "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-flow-strip-types": "^6.22.0",
     "babel-polyfill": "^6.23.0",
-    "babel-preset-env": "^1.4.0",
+    "babel-preset-env": "^1.5.1",
     "babel-preset-react": "^6.24.1",
     "babel-preset-react-optimize": "^1.0.1",
     "babel-register": "^6.9.0",
@@ -29,7 +29,7 @@
     "eslint-config-airbnb": "^13.0.0",
     "eslint-config-prettier": "^1.4.0",
     "eslint-import-resolver-webpack": "^0.8.0",
-    "eslint-plugin-flowtype": "^2.30.0",
+    "eslint-plugin-flowtype": "^2.34.0",
     "eslint-plugin-import": "^2.2.0",
     "eslint-plugin-jasmine": "^2.2.0",
     "eslint-plugin-jsx-a11y": "2.2.3",
@@ -55,7 +55,7 @@
     "webpack": "^2.5.1"
   },
   "scripts": {
-    "test": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --timeout=30s",
+    "test": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --timeout=60s",
     "test-verbose": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --timeout=60s --verbose",
     "test-watch": "export NODE_PATH=app/assets/javascripts && BABEL_ENV=test ava --watch",
     "test-e2e": "node_modules/.bin/wdio wdio.conf.js",

@@ -15,7 +15,6 @@ import Toast from "libs/toast";
 import Store from "oxalis/store";
 import View from "oxalis/view";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
@@ -46,7 +45,6 @@ class Controller extends React.PureComponent {
   }
 
   sceneController: SceneController;
-  annotationController: SkeletonTracingController | VolumeTracingController;
   planeController: PlaneController;
   arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
@@ -108,22 +106,18 @@ class Controller extends React.PureComponent {
     this.sceneController = new SceneController();
     switch (state.tracing.type) {
       case "volume": {
-        this.annotationController = new VolumeTracingController(
-          this.view, this.sceneController);
+        const volumeTracingController = new VolumeTracingController();
         this.planeController = new VolumeTracingPlaneController(
-          this.view, this.sceneController, this.annotationController);
+          this.view, this.sceneController, volumeTracingController);
         break;
       }
       case "skeleton": {
-        this.annotationController = new SkeletonTracingController(
-          this.view, this.sceneController);
         this.planeController = new SkeletonTracingPlaneController(
-          this.view, this.sceneController, this.annotationController);
+          this.view, this.sceneController);
         const ArbitraryControllerClass = state.tracing.restrictions.advancedOptionsAllowed ?
           ArbitraryController :
           MinimalSkeletonTracingArbitraryController;
-        this.arbitraryController = new ArbitraryControllerClass(
-          this.view, this.sceneController, this.annotationController);
+        this.arbitraryController = new ArbitraryControllerClass(this.view);
         break;
       }
       default: {

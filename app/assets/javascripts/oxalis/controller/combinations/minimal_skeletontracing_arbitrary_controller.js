@@ -12,8 +12,6 @@ import { deleteNodeAction, createBranchPointAction, requestDeleteBranchPointActi
 import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
 import { zoomInAction, zoomOutAction, yawFlycamAction, pitchFlycamAction } from "oxalis/model/actions/flycam_actions";
 import type View from "oxalis/view";
-import type SceneController from "oxalis/controller/scene_controller";
-import type SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
@@ -24,12 +22,8 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
   // Initiated on TaskTypes with "Advanced Tracing Options"
   // Mainly used to simplify mechanical turk tracings
 
-  constructor(
-    view: View,
-    sceneController: SceneController,
-    skeletonTracingController: SkeletonTracingController,
-  ) {
-    super(view, sceneController, skeletonTracingController);
+  constructor(view: View) {
+    super(view);
 
     _.defer(() => this.setRecord(true));
   }

@@ -18,8 +18,6 @@ import Store from "oxalis/store";
 import Model from "oxalis/model";
 import { updateUserSettingAction, setFlightmodeRecordingAction, setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
-import SceneController from "oxalis/controller/scene_controller";
-import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
@@ -36,8 +34,6 @@ const CANVAS_SELECTOR = "#render-canvas";
 class ArbitraryController {
   arbitraryView: ArbitraryView;
   view: View;
-  sceneController: SceneController;
-  skeletonTracingController: SkeletonTracingController;
   isStarted: boolean;
   canvas: JQuery;
   plane: ArbitraryPlane;
@@ -82,15 +78,9 @@ class ArbitraryController {
     };
   }
 
-  constructor(
-    view: View,
-    sceneController: SceneController,
-    skeletonTracingController: SkeletonTracingController,
-  ) {
+  constructor(view: View) {
     let canvas;
     this.view = view;
-    this.sceneController = sceneController;
-    this.skeletonTracingController = skeletonTracingController;
     _.extend(this, Backbone.Events);
 
     this.isStarted = false;

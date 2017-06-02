@@ -11,7 +11,7 @@ import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
 import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, createCommentAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, createCommentAction, deleteNodeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
@@ -22,6 +22,7 @@ import Request from "libs/request";
 import app from "app";
 import Utils from "libs/utils";
 import { ControlModeEnum } from "oxalis/constants";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -201,6 +202,29 @@ class TracingApi {
     }
   }
 
+  /**
+   * Increases the node radius of the active node by multiplying it with 1.05^delta.
+   *
+   * @example
+   * api.tracing.setRadius(1)
+   */
+  setRadius(delta: number): void {
+    getActiveNode(Store.getState().tracing)
+      .map(activeNode =>
+        Store.dispatch(setActiveNodeRadiusAction(activeNode.radius * Math.pow(1.05, delta))));
+  }
+
+
+  /**
+   * Centers the active node.
+   *
+   * @example
+   * api.tracing.centerActiveNode()
+   */
+  centerActiveNode = (): void => {
+    getActiveNode(Store.getState().tracing)
+      .map(activeNode => Store.dispatch(setPositionAction(activeNode.position)));
+  }
 }
 
 /**

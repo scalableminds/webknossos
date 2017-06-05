@@ -133,33 +133,33 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
       // The moveTreeComponent update action needs to be placed:
       // BEFORE the possible deleteTree update action of the oldTreeId and
       // AFTER the possible createTree update action of the newTreeId
-      const deleteTreeUAIndex = batch.findIndex(ua =>
+      const deleteTreeUAIndex = compactedBatch.findIndex(ua =>
         ua.action === "deleteTree" &&
         ua.value.id === oldTreeId);
-      const createTreeUAIndex = batch.findIndex(ua =>
+      const createTreeUAIndex = compactedBatch.findIndex(ua =>
         ua.action === "createTree" &&
         ua.value.id === newTreeId);
       console.log(deleteTreeUAIndex, createTreeUAIndex);
       if (deleteTreeUAIndex > -1 && createTreeUAIndex > -1) {
         // This should not happen, but in case it does, the moveTreeComponent update action
         // cannot be inserted as the createTreeUA is after the deleteTreeUA
-        compactedBatch = _.without(batch, ..._.flatten(movedPairings));
+        compactedBatch = _.without(compactedBatch, ..._.flatten(movedPairings));
         continue;
       } else if (createTreeUAIndex > -1) {
         // Insert after the createTreeUA
         compactedBatch = [
-          ...batch.slice(0, createTreeUAIndex + 1),
+          ...compactedBatch.slice(0, createTreeUAIndex + 1),
           moveTreeComponent(oldTreeId, newTreeId, nodeIds),
-          ...batch.slice(createTreeUAIndex + 1)];
+          ...compactedBatch.slice(createTreeUAIndex + 1)];
       } else if (deleteTreeUAIndex > -1) {
         // Insert before the deleteTreeUA
         compactedBatch = [
-          ...batch.slice(0, deleteTreeUAIndex),
+          ...compactedBatch.slice(0, deleteTreeUAIndex),
           moveTreeComponent(oldTreeId, newTreeId, nodeIds),
-          ...batch.slice(deleteTreeUAIndex)];
+          ...compactedBatch.slice(deleteTreeUAIndex)];
       } else {
         // Insert in front
-        compactedBatch = [moveTreeComponent(oldTreeId, newTreeId, nodeIds), ...batch];
+        compactedBatch = [moveTreeComponent(oldTreeId, newTreeId, nodeIds), ...compactedBatch];
       }
     }
 

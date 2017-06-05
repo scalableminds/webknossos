@@ -91,59 +91,92 @@ function cantor(a, b) {
   return 0.5 * (a + b) * (a + b + 1) + b;
 }
 
-export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<UpdateAction> {
-  let result = updateActions;
+export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAction>>): Array<UpdateAction> {
+  let result = updateActionsBatches;
 
-  // Remove all but the last updateTracing update actions
-  const updateTracingUpdateActions = result.filter(ua => ua.action === "updateTracing");
-  if (updateTracingUpdateActions.length > 1) {
-    result = _.without(result, ...updateTracingUpdateActions.slice(0, -1));
-  }
-
-  // Detect moved nodes and edges
-  const movedNodes = [];
-  const movedEdgesUpdateActions = [];
-  for (const createUA of result) {
-    if (createUA.action === "createNode") {
-      const deleteUA = result.find(ua =>
-        ua.action === "deleteNode" &&
-        ua.value.id === createUA.value.id &&
-        ua.value.treeId !== createUA.value.treeId);
-      if (deleteUA != null && deleteUA.action === "deleteNode") {
-        movedNodes.push([createUA, deleteUA]);
-      }
-    } else if (createUA.action === "createEdge") {
-      const deleteUA = result.find(ua =>
-        ua.action === "deleteEdge" &&
-        ua.value.source === createUA.value.source &&
-        ua.value.target === createUA.value.target &&
-        ua.value.treeId !== createUA.value.treeId);
-      if (deleteUA != null) {
-        movedEdgesUpdateActions.push(createUA, deleteUA);
+  result = result.map((batch) => {
+    // Detect moved nodes and edges
+    let compactedBatch = batch;
+    const movedNodes = [];
+    const movedEdgesUpdateActions = [];
+    for (const createUA of batch) {
+      if (createUA.action === "createNode") {
+        const deleteUA = batch.find(ua =>
+          ua.action === "deleteNode" &&
+          ua.value.id === createUA.value.id &&
+          ua.value.treeId !== createUA.value.treeId);
+        if (deleteUA != null && deleteUA.action === "deleteNode") {
+          movedNodes.push([createUA, deleteUA]);
+        }
+      } else if (createUA.action === "createEdge") {
+        const deleteUA = batch.find(ua =>
+          ua.action === "deleteEdge" &&
+          ua.value.source === createUA.value.source &&
+          ua.value.target === createUA.value.target &&
+          ua.value.treeId !== createUA.value.treeId);
+        if (deleteUA != null) {
+          movedEdgesUpdateActions.push(createUA, deleteUA);
+        }
       }
     }
+
+    // Group moved nodes by their old and new treeId using the cantor pairing function
+    // to create a single unique id
+    const groupedMovedNodes = _.groupBy(movedNodes, ([createUA, deleteUA]) =>
+      cantor(createUA.value.treeId, deleteUA.value.treeId));
+
+    // Create a moveTreeComponent update action for each of the groups and insert it at the right spot
+    for (const movedPairings of _.values(groupedMovedNodes)) {
+      const oldTreeId = movedPairings[0][1].value.treeId;
+      const newTreeId = movedPairings[0][0].value.treeId;
+      const nodeIds = movedPairings.map(([createUA]) => createUA.value.id);
+      // The moveTreeComponent update action needs to be placed:
+      // BEFORE the possible deleteTree update action of the oldTreeId and
+      // AFTER the possible createTree update action of the newTreeId
+      const deleteTreeUAIndex = batch.findIndex(ua =>
+        ua.action === "deleteTree" &&
+        ua.value.id === oldTreeId);
+      const createTreeUAIndex = batch.findIndex(ua =>
+        ua.action === "createTree" &&
+        ua.value.id === newTreeId);
+      console.log(deleteTreeUAIndex, createTreeUAIndex);
+      if (deleteTreeUAIndex > -1 && createTreeUAIndex > -1) {
+        // This should not happen, but in case it does, the moveTreeComponent update action
+        // cannot be inserted as the createTreeUA is after the deleteTreeUA
+        compactedBatch = _.without(batch, ..._.flatten(movedPairings));
+        continue;
+      } else if (createTreeUAIndex > -1) {
+        // Insert after the createTreeUA
+        compactedBatch = [
+          ...batch.slice(0, createTreeUAIndex + 1),
+          moveTreeComponent(oldTreeId, newTreeId, nodeIds),
+          ...batch.slice(createTreeUAIndex + 1)];
+      } else if (deleteTreeUAIndex > -1) {
+        // Insert before the deleteTreeUA
+        compactedBatch = [
+          ...batch.slice(0, deleteTreeUAIndex),
+          moveTreeComponent(oldTreeId, newTreeId, nodeIds),
+          ...batch.slice(deleteTreeUAIndex)];
+      } else {
+        // Insert in front
+        compactedBatch = [moveTreeComponent(oldTreeId, newTreeId, nodeIds), ...batch];
+      }
+    }
+
+    // Remove the original create/delete update actions of the moved nodes and edges
+    const movedNodesUpdateActions = _.flatten(movedNodes);
+    return _.without(compactedBatch, ...movedNodesUpdateActions, ...movedEdgesUpdateActions);
+  });
+
+
+  // Remove all but the last updateTracing update actions
+  let flatResult = _.flatten(result);
+  const updateTracingUpdateActions = flatResult.filter(ua => ua.action === "updateTracing");
+  if (updateTracingUpdateActions.length > 1) {
+    flatResult = _.without(flatResult, ...updateTracingUpdateActions.slice(0, -1));
   }
 
-  // Group moved nodes by their old and new treeId using the cantor pairing function
-  // to create a single unique id
-  const groupedMovedNodes = _.groupBy(movedNodes, ([createUA, deleteUA]) =>
-    cantor(createUA.value.treeId, deleteUA.value.treeId));
-
-  // Create a moveTreeComponent update action for each of the groups
-  for (const movedPairings of _.values(groupedMovedNodes)) {
-    const oldTreeId = movedPairings[0][1].value.treeId;
-    const newTreeId = movedPairings[0][0].value.treeId;
-    const nodeIds = movedPairings.map(([createUA]) => createUA.value.id);
-    // TODO insert moveTreeComponent at the right spot
-    result.unshift(moveTreeComponent(oldTreeId, newTreeId, nodeIds));
-  }
-
-  // Remove the original create/delete update actions of the moved nodes and edges
-  const movedNodesUpdateActions = _.flatten(movedNodes);
-  result = _.without(result, ...movedNodesUpdateActions, ...movedEdgesUpdateActions);
-
-
-  return result;
+  return flatResult;
 }
 
 export function performDiffTracing(

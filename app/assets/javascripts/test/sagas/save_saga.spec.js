@@ -68,7 +68,7 @@ test("SaveSaga should compact multiple updateTracing update actions", (t) => {
     UpdateActions.updateSkeletonTracing(initialState, [2, 3, 4], [0, 0, 1], 2),
   ];
 
-  t.deepEqual(compactUpdateActions(updateActions), [updateActions[1]]);
+  t.deepEqual(compactUpdateActions([updateActions]), [updateActions[1]]);
 });
 
 test("SaveSaga should send update actions", (t) => {
@@ -83,7 +83,7 @@ test("SaveSaga should send update actions", (t) => {
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
   saga.next();
-  expectValueDeepEqual(t, saga.next(updateActions), call(sendRequestToServer));
+  expectValueDeepEqual(t, saga.next([updateActions]), call(sendRequestToServer));
   saga.next(); // SET_SAVE_BUSY
 
   // Test that loop repeats
@@ -98,7 +98,7 @@ test("SaveSaga should send request to server", (t) => {
 
   const saga = sendRequestToServer(TIMESTAMP);
   saga.next();
-  saga.next(updateActions);
+  saga.next([updateActions]);
   expectValueDeepEqual(
     t,
     saga.next({ version: 2, tracingType: "Explorational", tracingId: "1234567890" }),
@@ -118,7 +118,7 @@ test("SaveSaga should retry update actions", (t) => {
 
   const saga = sendRequestToServer(TIMESTAMP);
   saga.next();
-  saga.next(updateActions);
+  saga.next([updateActions]);
   expectValueDeepEqual(
     t,
     saga.next({ version: 2, tracingType: "Explorational", tracingId: "1234567890" }),
@@ -144,7 +144,7 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
 
   const saga = sendRequestToServer(TIMESTAMP);
   saga.next();
-  saga.next(updateActions);
+  saga.next([updateActions]);
   expectValueDeepEqual(
     t,
     saga.next({ version: 2, tracingType: "Explorational", tracingId: "1234567890" }),
@@ -172,7 +172,7 @@ test("SaveSaga should send update actions right away", (t) => {
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
   saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
   saga.next(SaveActions.saveNowAction());
-  saga.next(updateActions);
+  saga.next([updateActions]);
   saga.next();
 });
 
@@ -184,9 +184,9 @@ test("SaveSaga should remove the correct update actions", (t) => {
 
   const saga = sendRequestToServer();
   saga.next();
-  saga.next(updateActions);
+  saga.next([updateActions]);
   saga.next({ version: 2, tracingType: "Explorational", tracingId: "1234567890" });
   expectValueDeepEqual(t, saga.next(), put(SaveActions.setVersionNumberAction(3)));
   expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
-  expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(2)));
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.shiftSaveQueueAction(1)));
 });

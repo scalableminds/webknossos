@@ -297,7 +297,6 @@ class PlaneController {
       }
     };
     initInputHandlers();
-
   }
 
   stop(): void {

@@ -3,7 +3,6 @@
 @import (inline) "../../../node_modules/c3/c3.css";
 @import (inline) "../../../node_modules/bootstrap-daterangepicker/daterangepicker.css";
 @import (inline) "../../../node_modules/nouislider/distribute/nouislider.min.css";
-@import (inline) "../../../node_modules/bootstrap-toggle/css/bootstrap-toggle.css";
 @import "../../../node_modules/font-awesome/less/font-awesome.less";
 @import "../../../node_modules/bootstrap-multiselect/dist/less/bootstrap-multiselect.less";
 @import "../../../node_modules/jasny-bootstrap/less/build/jasny-bootstrap.less";
@@ -22,9 +21,9 @@
 @import "trace_view/_tracing_view.less";
 @import "trace_view/_action_bar.less";
 @import "trace_view/_right_menu.less";
-@import "trace_view/_settings.less";
 @import "_help.less";
 @import "_sort_table_icons.less";
+@import "antd_overwrites.less";
 
 
 // ----------------------- MAIN STYLES
@@ -340,10 +339,6 @@ td.nowrap * {
     visibility: hidden;
 }
 
-#optionswindow select {
-  color: black;
-}
-
 //submit issue form
 textarea[name=description] {
   height: 100px;
@@ -367,16 +362,6 @@ i {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-}
-
-.flex-column-for-ant-tabs-container > div.ant-tabs-content {
-  flex-grow: 1;
-}
-
-.flex-overflow {
-  overflow-y: auto;
-  flex-grow: 1;
-  height: 0;
 }
 
 #add-script-input {

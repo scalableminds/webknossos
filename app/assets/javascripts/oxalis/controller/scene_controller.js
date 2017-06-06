@@ -21,14 +21,13 @@ import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
-import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
-import type { BoundingBoxType } from "oxalis/model";
+import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 
 class SceneController {
   skeleton: Skeleton;
   CUBE_COLOR: number;
-  model: Model;
   current: number;
   displayPlane: OrthoViewMapType<boolean>;
   planeShift: Vector3;
@@ -38,14 +37,10 @@ class SceneController {
   polygonFactory: ?PolygonFactory;
   cube: Cube;
   userBoundingBox: Cube;
-  taskBoundingBox: Cube;
+  taskBoundingBox: ?Cube;
   contour: ContourGeometry;
   planes: OrthoViewMapType<Plane>;
   rootNode: THREE.Object3D;
-
-  // Copied from backbone events (TODO: handle this better)
-  trigger: Function;
-  listenTo: Function;
 
   static initClass() {
     // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
@@ -54,10 +49,8 @@ class SceneController {
     this.prototype.CUBE_COLOR = 0x999999;
   }
 
-  constructor(model: Model) {
+  constructor() {
     _.extend(this, Backbone.Events);
-    this.model = model;
-
     this.current = 0;
     this.displayPlane = {
       [OrthoViews.PLANE_XY]: true,
@@ -77,42 +70,36 @@ class SceneController {
     this.rootNode = new THREE.Object3D();
 
     // Cubes
-    this.cube = new Cube(this.model, {
-      min: this.model.lowerBoundary,
-      max: this.model.upperBoundary,
+    this.cube = new Cube({
+      min: Model.lowerBoundary,
+      max: Model.upperBoundary,
       color: this.CUBE_COLOR,
       showCrossSections: true });
     this.cube.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
-    this.userBoundingBox = new Cube(this.model, {
+    this.userBoundingBox = new Cube({
       max: [0, 0, 0],
       color: 0xffaa00,
       showCrossSections: true });
     this.userBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
-    if (this.model.taskBoundingBox != null) {
-      this.taskBoundingBox = new Cube(this.model, {
-        min: this.model.taskBoundingBox.min,
-        max: this.model.taskBoundingBox.max,
-        color: 0x00ff00,
-        showCrossSections: true });
-      this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
-    }
+    const taskBoundingBox = Store.getState().tracing.boundingBox;
+    this.buildTaskingBoundingBox(taskBoundingBox);
 
     this.volumeMeshes = new THREE.Object3D();
-    if (this.model.isVolumeTracing()) {
+    if (Store.getState().tracing.type === "volume") {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
 
-    if (!this.model.isVolumeTracing()) {
+    if (Store.getState().tracing.type === "skeleton") {
       this.skeleton = new Skeleton();
       this.rootNode.add(this.skeleton.getRootNode());
     }
 
     // create Meshes
     const createPlane = planeIndex =>
-      new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, planeIndex, this.model);
+      new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, planeIndex, Model);
 
     this.planes = {
       [OrthoViews.PLANE_XY]: createPlane(OrthoViews.PLANE_XY),
@@ -129,10 +116,25 @@ class SceneController {
     }
   }
 
+  buildTaskingBoundingBox(taskBoundingBox: ?BoundingBoxType): void {
+    if (taskBoundingBox != null) {
+      if (this.taskBoundingBox != null) {
+        this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.remove(mesh));
+      }
+
+      this.taskBoundingBox = new Cube({
+        min: taskBoundingBox.min,
+        max: taskBoundingBox.max,
+        color: 0x00ff00,
+        showCrossSections: true });
+      this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
+    }
+  }
+
 
   renderVolumeIsosurface(cellId: number): void {
     const state = Store.getState();
-    if (!state.userConfiguration.isosurfaceDisplay || this.model.getSegmentationBinary() == null) {
+    if (!state.userConfiguration.isosurfaceDisplay || Model.getSegmentationBinary() == null) {
       return;
     }
 
@@ -152,7 +154,7 @@ class SceneController {
 
 
     this.polygonFactory = new PolygonFactory(
-      this.model.getSegmentationBinary().cube,
+      Model.getSegmentationBinary().cube,
       state.userConfiguration.isosurfaceResolution,
       bb.min, bb.max, cellId,
     );
@@ -166,7 +168,7 @@ class SceneController {
 
       for (const triangleIdString of Object.keys(triangles)) {
         const triangleId = parseInt(triangleIdString, 10);
-        const mappedId = this.model.getSegmentationBinary().cube.mapId(triangleId);
+        const mappedId = Model.getSegmentationBinary().cube.mapId(triangleId);
         const volume = new VolumeGeometry(triangles[triangleId], mappedId);
         volume.getMeshes().forEach(mesh => this.volumeMeshes.add(mesh));
       }
@@ -280,10 +282,10 @@ class SceneController {
   }
 
   pingDataLayer(dataLayerName: string): boolean {
-    if (this.model.binary[dataLayerName].category === "color") {
+    if (Model.binary[dataLayerName].category === "color") {
       return this.pingBinary;
     }
-    if (this.model.binary[dataLayerName].category === "segmentation") {
+    if (Model.binary[dataLayerName].category === "segmentation") {
       return this.pingBinarySeg;
     }
     return false;
@@ -320,7 +322,14 @@ class SceneController {
       this.setDisplayPlanes(tdViewDisplayPlanes);
       this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
     });
-    this.listenTo(this.model, "change:userBoundingBox", (bb) => { this.setUserBoundingBox(bb); });
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.userBoundingBox,
+      bb => this.setUserBoundingBox(Utils.computeBoundingBoxFromArray(bb)),
+    );
+    listenToStoreProperty(
+      storeState => storeState.tracing.boundingBox,
+      bb => this.buildTaskingBoundingBox(bb),
+    );
   }
 }
 SceneController.initClass();

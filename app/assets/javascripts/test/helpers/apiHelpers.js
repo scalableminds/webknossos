@@ -3,7 +3,7 @@ import Backbone from "backbone";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
-import constants from "oxalis/constants";
+import { ControlModeEnum } from "oxalis/constants";
 import SKELETONTRACING_OBJECT from "../fixtures/skeletontracing_object";
 import VOLUMETRACING_OBJECT from "../fixtures/volumetracing_object";
 
@@ -46,7 +46,8 @@ mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
 mockRequire("keyboardjs", KeyboardJS);
 
 // Avoid node caching and make sure all mockRequires are applied
-const Model = mockRequire.reRequire("oxalis/model").default;
+const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
+const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 
 const modelData = {
@@ -55,17 +56,14 @@ const modelData = {
 };
 
 export function setupOxalis(t, mode) {
+  UrlManager.initialState = { position: [1, 2, 3] };
   const model = t.context.model = new Model();
-  model.set("state", { position: [1, 2, 3] });
-  model.set("tracingType", "tracingTypeValue");
-  model.set("tracingId", "tracingIdValue");
-  model.set("controlMode", constants.CONTROL_MODE_TRACE);
 
   const webknossos = new OxalisApi(model);
 
   Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(modelData[mode])));
 
-  return model.fetch()
+  return model.fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");

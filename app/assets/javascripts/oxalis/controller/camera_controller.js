@@ -9,12 +9,12 @@ import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
+import Model from "oxalis/model";
 
 type TweenState = {
   notify: () => void,
@@ -38,7 +38,6 @@ class CameraController {
 
   cameras: OrthoViewMapType<THREE.OrthographicCamera>;
   camera: THREE.OrthographicCamera;
-  model: Model;
   tween: TWEEN.Tween;
   camDistance: number;
 
@@ -46,10 +45,9 @@ class CameraController {
   trigger: Function;
   listenTo: Function;
 
-  constructor(cameras: OrthoViewMapType<THREE.OrthographicCamera>, model: Model) {
+  constructor(cameras: OrthoViewMapType<THREE.OrthographicCamera>) {
     _.extend(this, Backbone.Events);
     this.cameras = cameras;
-    this.model = model;
 
     app.vent.on({
       centerTDView: () => this.centerTDView(),
@@ -91,7 +89,7 @@ class CameraController {
 
     const camera = this.cameras[OrthoViews.TDView];
     const state = Store.getState();
-    const b = voxelToNm(state.dataset.scale, this.model.upperBoundary);
+    const b = voxelToNm(state.dataset.scale, Model.upperBoundary);
 
     const pos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
     const time = 800;

@@ -5,7 +5,7 @@
 import Maybe from "data.maybe";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type { TracingType, VolumeTracingType, OxalisState } from "oxalis/store";
-import type { VolumeModeType } from "oxalis/constants";
+import type { VolumeTraceOrMoveModeType } from "oxalis/constants";
 
 export function getVolumeTracing(tracing: TracingType): Maybe<VolumeTracingType> {
   if (tracing.type === "volume") {
@@ -21,10 +21,10 @@ export function getActiveCellId(tracing: TracingType): Maybe<number> {
   });
 }
 
-export function getMode(tracing: TracingType): Maybe<VolumeModeType> {
+export function getVolumeTraceOrMoveMode(tracing: TracingType): Maybe<VolumeTraceOrMoveModeType> {
   return getVolumeTracing(tracing).map((volumeTracing) => {
-    const { viewMode } = volumeTracing;
-    return viewMode;
+    const { volumeTraceOrMoveMode } = volumeTracing;
+    return volumeTraceOrMoveMode;
   });
 }
 

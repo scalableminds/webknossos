@@ -5,6 +5,7 @@
 
 import _ from "lodash";
 import * as THREE from "three";
+import Model from "oxalis/model";
 import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
@@ -12,7 +13,7 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
   getColorName(): string {
     return this.sanitizeName(
-      this.model.getColorBinaries()[0].name,
+      Model.getColorBinaries()[0].name,
     );
   }
 

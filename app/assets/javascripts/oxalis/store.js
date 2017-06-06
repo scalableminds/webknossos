@@ -13,11 +13,12 @@ import TaskReducer from "oxalis/model/reducers/task_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import ReadOnlyTracingReducer from "oxalis/model/reducers/readonlytracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
-import Constants from "oxalis/constants";
-import type { Vector3, Vector6, ModeType, VolumeModeType } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
+import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType, ControlModeType, BoundingBoxType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
@@ -114,6 +115,7 @@ export type AllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 export type SettingsType = {
   +advancedOptionsAllowed: boolean,
   +allowedModes: Array<AllowedModeType>,
+  +preferredMode: AllowedModeType,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
 };
@@ -134,8 +136,17 @@ export type DatasetType = {
 
 export type TreeMapType = {+[number]: TreeType};
 
-export type SkeletonTracingTypeTracingType =
-  "Explorational" | "Task" | "View" | "CompoundTask" | "CompoundProject" | "CompoundTaskType";
+export const SkeletonTracingTypeTracingEnum = {
+  Explorational: "Explorational",
+  Task: "Task",
+  View: "View",
+  CompoundTask: "CompoundTask",
+  CompoundProject: "CompoundProject",
+  CompoundTaskType: "CompoundTaskType",
+};
+
+export type SkeletonTracingTypeTracingType = $Keys<typeof SkeletonTracingTypeTracingEnum>;
+
 export type VolumeTracingTypeTracingType = SkeletonTracingTypeTracingType;
 
 export type SkeletonTracingType = {
@@ -148,8 +159,8 @@ export type SkeletonTracingType = {
   +activeTreeId: ?number,
   +activeNodeId: ?number,
   +cachedMaxNodeId: number,
+  +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
-  +viewMode: ModeType,
 };
 
 export type VolumeTracingType = {
@@ -157,24 +168,24 @@ export type VolumeTracingType = {
   +name: string,
   +version: number,
   +maxCellId: number,
-  +viewMode: VolumeModeType,
-  +cubes: [],
+  +volumeTraceOrMoveMode: VolumeTraceOrMoveModeType,
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMapType,
   +tracingId: string,
   +tracingType: VolumeTracingTypeTracingType,
+  +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
 };
 
 export type ReadOnlyTracingType = {
   +type: "readonly",
   +name: string,
-  +version: 0,
-  +viewMode: 0,
+  +version: number,
   +tracingId: string,
   +tracingType: "View",
+  +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
 };
 
@@ -228,9 +239,18 @@ export type UserConfigurationType = {
 };
 
 export type TemporaryConfigurationType = {
-  +boundingBox: Vector6,
+  +userBoundingBox: Vector6,
   +shouldHideInactiveTrees: boolean,
   +shouldHideAllSkeletons: boolean,
+  +viewMode: ModeType,
+  +flightmodeRecording: boolean,
+  +controlMode: ControlModeType
+};
+
+export type TraceLimitType = {
+  +min: number,
+  +max: number,
+  +maxHard: number,
 };
 
 export type TaskType = {
@@ -243,7 +263,10 @@ export type TaskType = {
   +type: {
     +summary: string,
     +description: string,
-  }
+    +expectedTime: TraceLimitType,
+    +id: string,
+    +team: string,
+  },
 };
 
 export type SaveStateType = {
@@ -256,7 +279,7 @@ export type FlycamType = {
   +zoomStep: number,
   +currentMatrix: Matrix4x4,
   +spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
-}
+};
 
 export type OxalisState = {
   +datasetConfiguration: DatasetConfigurationType,
@@ -308,9 +331,12 @@ export const defaultState: OxalisState = {
     tdViewDisplayPlanes: true,
   },
   temporaryConfiguration: {
-    boundingBox: [0, 0, 0, 0, 0, 0],
+    userBoundingBox: [0, 0, 0, 0, 0, 0],
     shouldHideInactiveTrees: false,
     shouldHideAllSkeletons: false,
+    viewMode: Constants.MODE_PLANE_TRACING,
+    flightmodeRecording: false,
+    controlMode: ControlModeEnum.TRACE,
   },
   task: null,
   dataset: {
@@ -328,7 +354,6 @@ export const defaultState: OxalisState = {
     trees: {},
     name: "",
     version: 0,
-    viewMode: 0,
     tracingId: "",
     tracingType: "Explorational",
     activeTreeId: null,
@@ -371,6 +396,7 @@ const combinedReducers = reduceReducers(
   SettingsReducer,
   SkeletonTracingReducer,
   VolumeTracingReducer,
+  ReadOnlyTracingReducer,
   TaskReducer,
   SaveReducer,
   FlycamReducer,

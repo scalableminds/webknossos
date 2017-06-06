@@ -66,6 +66,26 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
       });
     }
 
+    case "SET_VIEW_MODE": {
+      const allowedModes = state.tracing.restrictions.allowedModes;
+      if (allowedModes.includes(action.viewMode)) {
+        return update(state, {
+          temporaryConfiguration: { viewMode: { $set: action.viewMode } },
+        });
+      } else {
+        return state;
+      }
+    }
+    case "SET_FLIGHTMODE_RECORDING": {
+      return update(state, {
+        temporaryConfiguration: { flightmodeRecording: { $set: action.value } },
+      });
+    }
+    case "SET_CONTROL_MODE": {
+      return update(state, {
+        temporaryConfiguration: { controlMode: { $set: action.controlMode } },
+      });
+    }
     default:
       // pass;
   }

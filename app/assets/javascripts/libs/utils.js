@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
+import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
 import window from "libs/window";
 
@@ -41,6 +41,10 @@ const Utils = {
     return Math.round(value * digitMultiplier) / digitMultiplier;
   },
 
+  capitalize(str: string): string {
+    return str[0].toUpperCase() + str.slice(1);
+  },
+
   intToHex(int: number, digits: number = 6): string {
     return (_.repeat("0", digits) + int.toString(16)).slice(-digits);
   },
@@ -63,6 +67,15 @@ const Utils = {
     const g = (bigint >> 8) & 255;
     const b = bigint & 255;
     return [r, g, b, 1];
+  },
+
+  computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
+    const [x, y, z, width, height, depth] = bb;
+
+    return {
+      min: [x, y, z],
+      max: [x + width, y + height, z + depth],
+    };
   },
 
   compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {
@@ -234,7 +247,7 @@ const Utils = {
 
   // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
   // you can't do getOrElse(null) without flow complaining
-  unpackMaybe<T>(maybe: Maybe<T>): ?T {
+  toNullable<T>(maybe: Maybe<T>): ?T {
     return maybe.isJust ? maybe.get() : null;
   },
 };

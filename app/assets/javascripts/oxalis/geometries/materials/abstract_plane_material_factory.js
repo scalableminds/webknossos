@@ -24,8 +24,6 @@ export type ShaderMaterialOptionsType = {
 }
 
 class AbstractPlaneMaterialFactory {
-
-  model: Model;
   material: THREE.ShaderMaterial;
   uniforms: UniformsType;
   attributes: Object;
@@ -36,9 +34,7 @@ class AbstractPlaneMaterialFactory {
   maxFilter: THREE.NearestFilter;
   tWidth: number;
 
-  constructor(model: Model, tWidth: number) {
-    this.model = model;
-
+  constructor(tWidth: number) {
     this.setupUniforms();
     this.makeMaterial();
     this.setupChangeListeners();
@@ -52,7 +48,7 @@ class AbstractPlaneMaterialFactory {
   setupUniforms(): void {
     this.uniforms = {};
 
-    for (const binary of this.model.getColorBinaries()) {
+    for (const binary of Model.getColorBinaries()) {
       const name = this.sanitizeName(binary.name);
       this.uniforms[`${name}_brightness`] = {
         type: "f",

@@ -5,9 +5,9 @@
  * @flow
  */
 import type { Vector3 } from "oxalis/constants";
-import type { Tracing, SkeletonContentDataType } from "oxalis/model";
+import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
 
-type InitializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: Tracing<SkeletonContentDataType> };
+type InitializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: ServerTracing<SkeletonContentDataType> };
 type CreateNodeActionType = {type: "CREATE_NODE", position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number, treeId?: number};
 type DeleteNodeActionType = {type: "DELETE_NODE", nodeId?: number, treeId?: number, timestamp: number};
 type SetActiveNodeActionType = {type: "SET_ACTIVE_NODE", nodeId: number};
@@ -24,6 +24,7 @@ type SelectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: ?boolean};
 type ShuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR", treeId?: number};
 type CreateCommentActionType = {type: "CREATE_COMMENT", commentText: string, nodeId: ?number, treeId: ?number};
 type DeleteCommentActionType = {type: "DELETE_COMMENT", nodeId: ?number, treeId?: number};
+
 
 export type SkeletonTracingActionType =
   | InitializeSkeletonTracingActionType
@@ -43,7 +44,8 @@ export type SkeletonTracingActionType =
   | SelectNextTreeActionType
   | ShuffleTreeColorActionType
   | CreateCommentActionType
-  | DeleteCommentActionType;
+  | DeleteCommentActionType
+;
 
 export const SkeletonTracingActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -63,9 +65,10 @@ export const SkeletonTracingActions = [
   "SHUFFLE_TREE_COLOR",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
+  "SET_VIEW_MODE",
 ];
 
-export const initializeSkeletonTracingAction = (tracing: Tracing<SkeletonContentDataType>): InitializeSkeletonTracingActionType => ({
+export const initializeSkeletonTracingAction = (tracing: ServerTracing<SkeletonContentDataType>): InitializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",
   tracing,
 });

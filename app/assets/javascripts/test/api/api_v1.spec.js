@@ -5,7 +5,7 @@ import sinon from "sinon";
 import _ from "lodash";
 import Backbone from "backbone";
 import "backbone.marionette";
-import constants from "oxalis/constants";
+import { ControlModeEnum } from "oxalis/constants";
 import { createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import TRACING_OBJECT from "../fixtures/skeletontracing_object";
 
@@ -13,8 +13,6 @@ function makeModelMock() {
   class ModelMock {}
   ModelMock.prototype.fetch = sinon.stub();
   ModelMock.prototype.fetch.returns(Promise.resolve());
-  ModelMock.prototype.get = function (key) { return this[key]; };
-  ModelMock.prototype.set = function (key, val) { this[key] = val; };
   return ModelMock;
 }
 
@@ -61,23 +59,21 @@ mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
 mockRequire("keyboardjs", KeyboardJS);
 
 // Avoid node caching and make sure all mockRequires are applied
-const Model = mockRequire.reRequire("oxalis/model").default;
+const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
+const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 const Store = mockRequire.reRequire("oxalis/store").default;
 
 test.beforeEach((t) => {
+  UrlManager.initialState = { position: [1, 2, 3] };
   const model = t.context.model = new Model();
-  model.set("state", { position: [1, 2, 3] });
-  model.set("tracingType", "tracingTypeValue");
-  model.set("tracingId", "tracingIdValue");
-  model.set("controlMode", constants.CONTROL_MODE_TRACE);
 
   const webknossos = t.context.webknossos = new OxalisApi(model);
 
   Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
   User.prototype.fetch.returns(Promise.resolve());
 
-  return model.fetch()
+  return model.fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");
@@ -87,7 +83,7 @@ test.beforeEach((t) => {
     })
     .catch((error) => {
       console.error("model.fetch() failed", error);
-      fail(error.message);
+      t.fail(error.message);
     });
 });
 

@@ -12,6 +12,7 @@ import { isVolumeTracingDisallowed, getActiveCellId } from "oxalis/model/accesso
 import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
+import Model from "oxalis/model";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { OrthoViewType } from "oxalis/constants";
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
@@ -83,7 +84,7 @@ export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
   const iterator = layer.getVoxelIterator();
   const labelValue = yield select(state => state.tracing.activeCellId);
   if (app.oxalis) {
-    const binary = yield call([app.oxalis.model, app.oxalis.model.getSegmentationBinary]);
+    const binary = yield call([Model, Model.getSegmentationBinary]);
     yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
   }
   console.log("Labeling time:", (Date.now() - start));

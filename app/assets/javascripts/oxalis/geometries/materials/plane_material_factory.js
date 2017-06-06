@@ -8,6 +8,7 @@ import * as THREE from "three";
 import app from "app";
 import Utils from "libs/utils";
 import Store from "oxalis/store";
+import Model from "oxalis/model";
 import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type { Vector3 } from "oxalis/constants";
 import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
@@ -15,7 +16,6 @@ import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abst
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
-
 
   setupUniforms(): void {
     super.setupUniforms();
@@ -51,8 +51,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     // create textures
     let shaderName;
     this.textures = {};
-    for (const name of Object.keys(this.model.binary)) {
-      const binary = this.model.binary[name];
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
       const bytes = binary.targetBitDepth >> 3;
       shaderName = this.sanitizeName(name);
       this.textures[shaderName] = this.createDataTexture(this.tWidth, bytes);
@@ -123,8 +123,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
 
   getFragmentShader(): string {
-    const colorLayerNames = _.map(this.model.getColorBinaries(), b => this.sanitizeName(b.name));
-    const segmentationBinary = this.model.getSegmentationBinary();
+    const colorLayerNames = _.map(Model.getColorBinaries(), b => this.sanitizeName(b.name));
+    const segmentationBinary = Model.getSegmentationBinary();
 
     return _.template(
       `\
@@ -192,7 +192,7 @@ void main() {
       layers: colorLayerNames,
       hasSegmentation: (segmentationBinary != null),
       segmentationName: this.sanitizeName(segmentationBinary ? segmentationBinary.name : ""),
-      isRgb: Utils.__guard__(this.model.binary.color, x1 => x1.targetBitDepth) === 24,
+      isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
     },
     );
   }

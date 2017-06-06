@@ -100,17 +100,18 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
     const movedNodes = [];
     const movedEdgesUpdateActions = [];
     for (const createUA of batch) {
+      const deleteNodeActions = batch.filter(ua => ua.action === "deleteNode");
+      const deleteEdgeActions = batch.filter(ua => ua.action === "deleteEdge");
+
       if (createUA.action === "createNode") {
-        const deleteUA = batch.find(ua =>
-          ua.action === "deleteNode" &&
+        const deleteUA = deleteNodeActions.find(ua =>
           ua.value.id === createUA.value.id &&
           ua.value.treeId !== createUA.value.treeId);
         if (deleteUA != null && deleteUA.action === "deleteNode") {
           movedNodes.push([createUA, deleteUA]);
         }
       } else if (createUA.action === "createEdge") {
-        const deleteUA = batch.find(ua =>
-          ua.action === "deleteEdge" &&
+        const deleteUA = deleteEdgeActions.find(ua =>
           ua.value.source === createUA.value.source &&
           ua.value.target === createUA.value.target &&
           ua.value.treeId !== createUA.value.treeId);

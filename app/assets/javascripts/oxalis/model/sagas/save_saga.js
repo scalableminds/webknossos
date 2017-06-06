@@ -99,12 +99,14 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
     let compactedBatch = batch;
     const movedNodes = [];
     const movedEdgesUpdateActions = [];
+    const deleteNodeActions = batch.filter(ua => ua.action === "deleteNode");
+    const deleteEdgeActions = batch.filter(ua => ua.action === "deleteEdge");
     for (const createUA of batch) {
-      const deleteNodeActions = batch.filter(ua => ua.action === "deleteNode");
-      const deleteEdgeActions = batch.filter(ua => ua.action === "deleteEdge");
-
       if (createUA.action === "createNode") {
         const deleteUA = deleteNodeActions.find(ua =>
+          // The first predicate will always be true, since we already filtered
+          // for that, but we still need it here to satisfy flow :(
+          ua.action === "deleteNode" &&
           ua.value.id === createUA.value.id &&
           ua.value.treeId !== createUA.value.treeId);
         if (deleteUA != null && deleteUA.action === "deleteNode") {
@@ -112,6 +114,9 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
         }
       } else if (createUA.action === "createEdge") {
         const deleteUA = deleteEdgeActions.find(ua =>
+          // The first predicate will always be true, since we already filtered
+          // for that, but we still need it here to satisfy flow :(
+          ua.action === "deleteEdge" &&
           ua.value.source === createUA.value.source &&
           ua.value.target === createUA.value.target &&
           ua.value.treeId !== createUA.value.treeId);

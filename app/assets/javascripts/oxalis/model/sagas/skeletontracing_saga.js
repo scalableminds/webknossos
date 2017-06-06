@@ -28,30 +28,30 @@ function* centerActiveNode() {
 }
 
 export function* watchBranchPointDeletion(): Generator<*, *, *> {
+  let lastActionCreatedNode = true;
   while (true) {
-    yield take("REQUEST_DELETE_BRANCHPOINT");
-    const hasBranchPoints = yield select(state => getBranchPoints(state.tracing).getOrElse([]).length > 0);
-    if (hasBranchPoints) {
-      yield put(deleteBranchPointAction());
+    const { deleteBranchpointAction } = yield race({
+      deleteBranchpointAction: take("REQUEST_DELETE_BRANCHPOINT"),
+      createNodeAction: take("CREATE_NODE"),
+    });
 
-      const { deleteBranchpointAction } = yield race({
-        deleteBranchpointAction: take("REQUEST_DELETE_BRANCHPOINT"),
-        createNodeAction: take("CREATE_NODE"),
-      });
-
-      if (deleteBranchpointAction) {
-        const hasBranchPoints2 = yield select(state => getBranchPoints(state.tracing).getOrElse([]).length > 0);
-        if (hasBranchPoints2) {
+    if (deleteBranchpointAction) {
+      const hasBranchPoints = yield select(state => getBranchPoints(state.tracing).getOrElse([]).length > 0);
+      if (hasBranchPoints) {
+        if (lastActionCreatedNode === true) {
+          yield put(deleteBranchPointAction());
+        } else {
           Modal.show(messages["tracing.branchpoint_jump_twice"],
             "Jump again?",
             [{ id: "jump-button", label: "Jump again", callback: () => { Store.dispatch(deleteBranchPointAction()); } },
              { id: "cancel-button", label: "Cancel" }]);
-        } else {
-          Toast.warning(messages["tracing.no_more_branchpoints"]);
         }
+        lastActionCreatedNode = false;
+      } else {
+        Toast.warning(messages["tracing.no_more_branchpoints"]);
       }
     } else {
-      Toast.warning(messages["tracing.no_more_branchpoints"]);
+      lastActionCreatedNode = true;
     }
   }
 }

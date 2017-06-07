@@ -14,7 +14,7 @@ import { setActiveNodeAction, createCommentAction, deleteNodeAction } from "oxal
 import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
-import type { Vector3, VolumeModeType } from "oxalis/constants";
+import type { Vector3, VolumeTraceOrMoveModeType } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType, TracingType } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
@@ -258,7 +258,7 @@ class TracingApi {
   * 1 for "Trace".
   * _Volume tracing only!_
   */
-  getVolumeMode(): ?VolumeModeType {
+  getVolumeMode(): ?VolumeTraceOrMoveModeType {
     const tracing = Store.getState().tracing;
     assertVolume(tracing);
     return Utils.toNullable(getVolumeTraceOrMoveMode(tracing));
@@ -270,10 +270,10 @@ class TracingApi {
   * 1 for "Trace".
   * _Volume tracing only!_
   */
-  setVolumeMode(mode: VolumeModeType) {
+  setVolumeMode(mode: VolumeTraceOrMoveModeType) {
     assertVolume(Store.getState().tracing);
     assertExists(mode, "Volume mode is missing.");
-    // TODO: Use an Enum for VolumeModeType and replace this ugly check - postponed to avoid merge conflicts
+    // TODO: Use an Enum for VolumeTraceOrMoveModeType and replace this ugly check - postponed to avoid merge conflicts
     if (mode !== 0 && mode !== 1) {
       throw Error("Volume mode has to be either 0 or 1.");
     }

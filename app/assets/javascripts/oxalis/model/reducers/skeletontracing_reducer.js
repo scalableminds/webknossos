@@ -66,7 +66,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         activeTreeId,
         restrictions,
         trees,
-        name: action.tracing.dataSetName,
+        name: action.tracing.name,
         tracingType: action.tracing.typ,
         tracingId: action.tracing.id,
         version: action.tracing.version,

@@ -68,7 +68,12 @@ class TracingLayoutView extends React.PureComponent {
       <LocaleProvider locale={enUS}>
         <Provider store={Store}>
           <div>
-            <OxalisController {...this.props} ref={(ref) => app.oxalis = ref} />
+            <OxalisController
+              initialTracingType={this.props.initialTracingType}
+              initialTracingId={this.props.initialTracingId}
+              initialControlmode={this.props.initialControlmode}
+              ref={(ref) => { app.oxalis = ref; }}
+            />
 
             <Layout className="tracing-layout">
               <Header>

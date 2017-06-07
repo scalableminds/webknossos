@@ -85,10 +85,6 @@ class Controller extends React.PureComponent {
       });
   }
 
-  render() {
-    return null;
-  }
-
   modelFetchDone() {
     const state = Store.getState();
     app.router.on("beforeunload", () => {
@@ -291,6 +287,11 @@ class Controller extends React.PureComponent {
       this.zoomStepWarningToast = null;
     }
   }
+
+  render() {
+    return null;
+  }
+
 }
 
 

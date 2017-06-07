@@ -10,7 +10,6 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Store from "oxalis/store";
 import { toggleModeAction, setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
-import View from "oxalis/view";
 
 class VolumeTracingController {
   // See comment in Controller class on general controller architecture.

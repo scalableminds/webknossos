@@ -5,8 +5,6 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import app from "app";
-import Constants from "oxalis/constants";
 import type { Vector2 } from "oxalis/constants";
 import Toast from "libs/toast";
 import Utils from "libs/utils";

@@ -115,7 +115,8 @@ class AbstractTreeRenderer {
     let root;
     this.tree = tree;
     this.activeNodeId = activeNodeId;
-    this.setupColors();
+    this.vgColor = "black";
+    this.commentColor = "red";
 
     // List of {x : ..., y : ..., id: ...} objects
     this.nodeList = [];
@@ -540,24 +541,6 @@ class AbstractTreeRenderer {
   */
   clearBackground(): void {
     return this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-  }
-
-
-  /**
-   * Apply a color theme according to the overall oxalis theme for
-   *  - comments
-   *  - nodes & edges
-  */
-  setupColors(): void {
-    // apply color scheme
-    // $FlowFixMe
-    if (app.oxalis.view.theme === Constants.THEME_BRIGHT) {
-      this.vgColor = "black";
-      this.commentColor = "red";
-    } else {
-      this.vgColor = "white";
-      this.commentColor = "blue";
-    }
   }
 
   /**

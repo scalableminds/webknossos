@@ -22,7 +22,6 @@ class AbstractTreeView extends Component {
   canvas: ?HTMLCanvasElement;
 
   componentDidMount() {
-    app.vent.on("view:setTheme", this.drawTree);
     window.addEventListener("resize", this.drawTree, false);
     this.drawTree();
   }
@@ -32,7 +31,6 @@ class AbstractTreeView extends Component {
   }
 
   componentWillUnmount() {
-    app.vent.off("view:setTheme", this.drawTree);
     window.removeEventListener("resize", this.drawTree, false);
   }
 

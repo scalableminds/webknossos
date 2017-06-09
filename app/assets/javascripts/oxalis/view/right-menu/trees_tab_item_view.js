@@ -40,12 +40,12 @@ class ListTreeItemView extends React.PureComponent {
     const iconClass = this.props.tree.treeId === this.props.activeTreeId ? "fa fa-angle-right" : "fa fa-bull";
     const rgbColorString = this.props.tree.color.map(c => Math.round(c * 255)).join(",");
     const containsActiveNode = this.props.tree.treeId === this.props.activeTreeId;
-    const liClassName = classNames({ bold: containsActiveNode });
+    const aClassName = classNames({ bold: containsActiveNode });
 
     return (
       <li ref={(domElement) => { this.domElement = domElement; }}>
         <i className={iconClass} />
-        <a onClick={this.handleSetActive} className={liClassName}>
+        <a onClick={this.handleSetActive} className={aClassName}>
           <span
             title="Node count"
             className="inline-block tree-node-count"

@@ -9,6 +9,7 @@ import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import Store from "oxalis/store";
 import { setActiveTreeAction } from "oxalis/model/actions/skeletontracing_actions";
 import type { TreeType } from "oxalis/store";
+import classNames from "classnames";
 
 type ListTreeItemViewProps = {
   activeTreeId: number,
@@ -23,21 +24,27 @@ class ListTreeItemView extends React.PureComponent {
     Store.dispatch(setActiveTreeAction(this.props.tree.treeId));
   }
 
-  scrollIntoView = (domElement: ?HTMLElement) => {
+  ensureVisible = () => {
     // scroll to active tree
-    if (domElement && this.props.tree.treeId === this.props.activeTreeId) {
-      scrollIntoViewIfNeeded(domElement);
+    if (this.props.tree.treeId === this.props.activeTreeId) {
+      scrollIntoViewIfNeeded(this.domElement);
     }
+  }
+
+  componentDidUpdate() {
+    this.ensureVisible();
   }
 
   render() {
     const iconClass = this.props.tree.treeId === this.props.activeTreeId ? "fa fa-angle-right" : "fa fa-bull";
     const rgbColorString = this.props.tree.color.map(c => Math.round(c * 255)).join(",");
+    const containsActiveNode = this.props.tree.treeId === this.props.activeTreeId
+    const liClassName = classNames({ bold: containsActiveNode });
 
     return (
-      <li ref={this.scrollIntoView}>
+      <li ref={domElement => this.domElement = domElement}>
         <i className={iconClass} />
-        <a onClick={this.handleSetActive}>
+        <a onClick={this.handleSetActive} className={liClassName}>
           <span
             title="Node count"
             className="inline-block tree-node-count"

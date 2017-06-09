@@ -15,6 +15,8 @@ const MAX_NODE_DISTANCE = 100;
 const CLICK_TRESHOLD = 6;
 const MODE_NORMAL = 0;     // draw every node and the complete tree
 const MODE_NOCHAIN = 1;     // draw only decision points
+const VG_COLOR = "black";
+const COMMENT_COLOR = "red";
 
 type DecisionType = {
   node: Object,
@@ -45,8 +47,6 @@ class AbstractTreeRenderer {
   cyclicTreeWarningIssued: boolean;
   tree: TreeType;
   nodeDistance: number;
-  vgColor: string;
-  commentColor: string;
 
   static drawTree(canvas: HTMLCanvasElement, tree: ?TreeType, activeNodeId: ?number, size?: Vector2 = [450, 600]) {
     const renderer = new AbstractTreeRenderer(canvas);
@@ -113,8 +113,6 @@ class AbstractTreeRenderer {
     let root;
     this.tree = tree;
     this.activeNodeId = activeNodeId;
-    this.vgColor = "black";
-    this.commentColor = "red";
 
     // List of {x : ..., y : ..., id: ...} objects
     this.nodeList = [];
@@ -387,7 +385,7 @@ class AbstractTreeRenderer {
 
   /**
    * Draw a single node onto the canvas.
-   * Take active state, theme and comment into consideration.
+   * Take active state and comment into consideration.
    * @param  {Number} x
    * @param  {Number} y
    * @param  {Number} id AbstractNodeType id
@@ -395,9 +393,9 @@ class AbstractTreeRenderer {
   drawNode(x: number, y: number, id: number): void {
     this.ctx.beginPath();
 
-    this.ctx.fillStyle = this.vgColor;
+    this.ctx.fillStyle = VG_COLOR;
     if (this.nodeIdHasComment(id)) {
-      this.ctx.fillStyle = this.commentColor;
+      this.ctx.fillStyle = COMMENT_COLOR;
     }
 
     let radius = NODE_RADIUS;
@@ -412,7 +410,6 @@ class AbstractTreeRenderer {
 
   /**
    * Draw an edge of the tree (a connector line) onto the canvas.
-   * Take theme into consideration.
    * @param  {Number} x1 start coordinate
    * @param  {Number} y1
    * @param  {Number} x2 end coordinate
@@ -420,7 +417,7 @@ class AbstractTreeRenderer {
   */
   drawEdge(x1: number, y1: number, x2: number, y2: number): void {
     this.ctx.beginPath();
-    this.ctx.strokeStyle = this.vgColor;
+    this.ctx.strokeStyle = VG_COLOR;
     this.ctx.moveTo(x1, y1);
     this.ctx.lineTo(x2, y2);
     this.ctx.stroke();
@@ -429,7 +426,7 @@ class AbstractTreeRenderer {
 
   /**
    * Draw a dashed edge, which indicates a straight chain of nodes.
-   * Take active state and theme into consideration.
+   * Take active state into consideration.
    * @param  {Number} x
    * @param  {Number} top         start y coordinate
    * @param  {Number} bottom      end y coordinate
@@ -441,7 +438,7 @@ class AbstractTreeRenderer {
       this.ctx.lineWidth = 4;
     }
     this.ctx.beginPath();
-    this.ctx.strokeStyle = this.vgColor;
+    this.ctx.strokeStyle = VG_COLOR;
     for (const i of [0, 1, 2]) {
       this.ctx.moveTo(x, top + (((2 * i) + 1) * dashLength));
       this.ctx.lineTo(x, top + (((2 * i) + 2) * dashLength));

@@ -11,7 +11,6 @@ import messages from "messages";
 class View {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
-  theme: 0 | 1;
 
   constructor() {
     if (!this.isWebGlSupported()) {

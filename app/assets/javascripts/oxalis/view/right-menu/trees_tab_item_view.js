@@ -19,30 +19,31 @@ type ListTreeItemViewProps = {
 class ListTreeItemView extends React.PureComponent {
 
   props: ListTreeItemViewProps;
+  domElement: HTMLElement;
+
+  componentDidUpdate() {
+    this.ensureVisible();
+  }
 
   handleSetActive = () => {
     Store.dispatch(setActiveTreeAction(this.props.tree.treeId));
   }
 
-  ensureVisible = () => {
+  ensureVisible() {
     // scroll to active tree
     if (this.props.tree.treeId === this.props.activeTreeId) {
       scrollIntoViewIfNeeded(this.domElement);
     }
   }
 
-  componentDidUpdate() {
-    this.ensureVisible();
-  }
-
   render() {
     const iconClass = this.props.tree.treeId === this.props.activeTreeId ? "fa fa-angle-right" : "fa fa-bull";
     const rgbColorString = this.props.tree.color.map(c => Math.round(c * 255)).join(",");
-    const containsActiveNode = this.props.tree.treeId === this.props.activeTreeId
+    const containsActiveNode = this.props.tree.treeId === this.props.activeTreeId;
     const liClassName = classNames({ bold: containsActiveNode });
 
     return (
-      <li ref={domElement => this.domElement = domElement}>
+      <li ref={(domElement) => { this.domElement = domElement; }}>
         <i className={iconClass} />
         <a onClick={this.handleSetActive} className={liClassName}>
           <span

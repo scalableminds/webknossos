@@ -229,14 +229,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
         const orderAttribute = state.userConfiguration.sortTreesByName ? "name" : "timestamp";
         const treeIds = _.orderBy(_.values(trees), [orderAttribute]).map(t => t.treeId);
-        const activeTreeIdIndex = treeIds.indexOf(activeTreeId);
 
         // default to the first tree
-        let newActiveTreeIdIndex = 0;
-        if (activeTreeIdIndex !== null) {
-          // treeIds.length is taken into account in this calculation, because -1 % n == -1
-          newActiveTreeIdIndex = (activeTreeIdIndex + increaseDecrease + treeIds.length) % treeIds.length;
-        }
+        const activeTreeIdIndex = activeTreeId != null ? treeIds.indexOf(activeTreeId) : 0;
+
+        // treeIds.length is taken into account in this calculation, because -1 % n == -1
+        const newActiveTreeIdIndex = (activeTreeIdIndex + increaseDecrease + treeIds.length) % treeIds.length;
 
         const newActiveTreeId = treeIds[newActiveTreeIdIndex];
         const newActiveNodeId = _.max(_.map(trees[newActiveTreeId].nodes, "id")) || null;
@@ -244,7 +242,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         return update(state, { tracing: {
           activeTreeId: { $set: newActiveTreeId },
           activeNodeId: { $set: newActiveNodeId },
-        }});
+        } });
       }
 
       case "SHUFFLE_TREE_COLOR": {

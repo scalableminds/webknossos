@@ -251,7 +251,7 @@ class ArbitraryController {
       if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
         return;
       }
-      Store.dispatch(setActiveNodeAction((activeNode.id + (2 * Number(nextOne))) - 1), true);// implicit cast from boolean to int
+      Store.dispatch(setActiveNodeAction((activeNode.id + (2 * Number(nextOne))) - 1));// implicit cast from boolean to int
       if ((this.view.theme === constants.THEME_BRIGHT) !== nextOne) { // switch background to black for backwards move
         this.view.toggleTheme();
       }

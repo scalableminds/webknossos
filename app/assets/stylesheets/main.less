@@ -34,6 +34,7 @@ body {
   font-weight: 400;
   font-size: 16px;
   -webkit-font-smoothing: antialised;
+  height: ~"calc(100vh - 41px)";
 }
 body:-webkit-full-screen {
   width: 100%;
@@ -332,6 +333,16 @@ i {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+}
+
+.flex-column-for-ant-tabs-container > div.ant-tabs-content {
+  flex-grow: 1;
+}
+
+.flex-overflow {
+  overflow-y: auto;
+  flex-grow: 1;
+  height: 0;
 }
 
 #add-script-input {

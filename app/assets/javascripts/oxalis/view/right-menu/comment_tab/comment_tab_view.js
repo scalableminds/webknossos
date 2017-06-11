@@ -141,7 +141,7 @@ class CommentTabView extends React.Component {
     const treesAndComments = this.getTreeComponents();
 
     return (
-      <div>
+      <div className="flex-column">
         <InputGroup compact>
           <Button onClick={this.previousComment}><i className="fa fa-arrow-left" /></Button>
           <InputComponent
@@ -155,7 +155,7 @@ class CommentTabView extends React.Component {
             <i className={sortingIconClass} />
           </Button>
         </InputGroup>
-        <ul id="comment-list">
+        <ul id="comment-list" className="flex-overflow">
           {treesAndComments}
         </ul>
       </div>

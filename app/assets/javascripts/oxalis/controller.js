@@ -227,8 +227,6 @@ class Controller {
         "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
         "shift + 3": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE)),
 
-        t: () => this.view.toggleTheme(),
-
         m: () => {
           // rotate allowed modes
           const currentViewMode = Store.getState().temporaryConfiguration.viewMode;

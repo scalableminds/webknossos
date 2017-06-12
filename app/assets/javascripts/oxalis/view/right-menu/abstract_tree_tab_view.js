@@ -6,7 +6,6 @@ import _ from "lodash";
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import app from "app";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import AbstractTreeRenderer from "oxalis/view/right-menu/abstract_tree_renderer";
 import type { NodeListItemType } from "oxalis/view/right-menu/abstract_tree_renderer";
@@ -22,7 +21,6 @@ class AbstractTreeView extends Component {
   canvas: ?HTMLCanvasElement;
 
   componentDidMount() {
-    app.vent.on("view:setTheme", this.drawTree);
     window.addEventListener("resize", this.drawTree, false);
     this.drawTree();
   }
@@ -32,7 +30,6 @@ class AbstractTreeView extends Component {
   }
 
   componentWillUnmount() {
-    app.vent.off("view:setTheme", this.drawTree);
     window.removeEventListener("resize", this.drawTree, false);
   }
 

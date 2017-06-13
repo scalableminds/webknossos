@@ -94,11 +94,20 @@ function cantor(a, b) {
 export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAction>>): Array<UpdateAction> {
   let result = updateActionsBatches;
 
+  // This part of the code detects tree merges and splits.
+  // It does so by identifying nodes and edges that were deleted in one tree only to be created
+  // in another tree again afterwards.
+  // It replaces the original deleteNode/createNode and deleteEdge/createEdge update actions
+  // with a moveTreeComponent update action.
+  // As in theory multiple tree merges/splits could be part of one updateActionBatch, the moved nodes
+  // and edges have to be grouped by their old and new treeId. Then one moveTreeComponent update action
+  // is inserted for each group, containing the respective moved node ids.
+  // The exact spot where the moveTreeComponent update action is inserted is important. This is
+  // described later.
   result = result.map((batch) => {
-    // Detect moved nodes and edges
     let compactedBatch = batch;
-    const movedNodes = [];
-    const movedEdgesUpdateActions = [];
+    // Detect moved nodes and edges
+    const movedNodesAndEdges = [];
     const deleteNodeActions = batch.filter(ua => ua.action === "deleteNode");
     const deleteEdgeActions = batch.filter(ua => ua.action === "deleteEdge");
     for (const createUA of batch) {
@@ -110,7 +119,7 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
           ua.value.id === createUA.value.id &&
           ua.value.treeId !== createUA.value.treeId);
         if (deleteUA != null && deleteUA.action === "deleteNode") {
-          movedNodes.push([createUA, deleteUA]);
+          movedNodesAndEdges.push([createUA, deleteUA]);
         }
       } else if (createUA.action === "createEdge") {
         const deleteUA = deleteEdgeActions.find(ua =>
@@ -120,22 +129,24 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
           ua.value.source === createUA.value.source &&
           ua.value.target === createUA.value.target &&
           ua.value.treeId !== createUA.value.treeId);
-        if (deleteUA != null) {
-          movedEdgesUpdateActions.push(createUA, deleteUA);
+        if (deleteUA != null && deleteUA.action === "deleteEdge") {
+          movedNodesAndEdges.push([createUA, deleteUA]);
         }
       }
     }
 
-    // Group moved nodes by their old and new treeId using the cantor pairing function
+    // Group moved nodes and edges by their old and new treeId using the cantor pairing function
     // to create a single unique id
-    const groupedMovedNodes = _.groupBy(movedNodes, ([createUA, deleteUA]) =>
+    const groupedMovedNodesAndEdges = _.groupBy(movedNodesAndEdges, ([createUA, deleteUA]) =>
       cantor(createUA.value.treeId, deleteUA.value.treeId));
 
     // Create a moveTreeComponent update action for each of the groups and insert it at the right spot
-    for (const movedPairings of _.values(groupedMovedNodes)) {
+    for (const movedPairings of _.values(groupedMovedNodesAndEdges)) {
       const oldTreeId = movedPairings[0][1].value.treeId;
       const newTreeId = movedPairings[0][0].value.treeId;
-      const nodeIds = movedPairings.map(([createUA]) => createUA.value.id);
+      const nodeIds = movedPairings
+        .filter(([createUA]) => createUA.action === "createNode")
+        .map(([createUA]) => createUA.value.id);
       // The moveTreeComponent update action needs to be placed:
       // BEFORE the possible deleteTree update action of the oldTreeId and
       // AFTER the possible createTree update action of the newTreeId
@@ -145,33 +156,28 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
       const createTreeUAIndex = compactedBatch.findIndex(ua =>
         ua.action === "createTree" &&
         ua.value.id === newTreeId);
-      console.log(deleteTreeUAIndex, createTreeUAIndex);
+
       if (deleteTreeUAIndex > -1 && createTreeUAIndex > -1) {
         // This should not happen, but in case it does, the moveTreeComponent update action
         // cannot be inserted as the createTreeUA is after the deleteTreeUA
-        compactedBatch = _.without(compactedBatch, ..._.flatten(movedPairings));
+        // Skip the removal of the original create/delete update actions!
         continue;
       } else if (createTreeUAIndex > -1) {
         // Insert after the createTreeUA
-        compactedBatch = [
-          ...compactedBatch.slice(0, createTreeUAIndex + 1),
-          moveTreeComponent(oldTreeId, newTreeId, nodeIds),
-          ...compactedBatch.slice(createTreeUAIndex + 1)];
+        compactedBatch.splice(createTreeUAIndex + 1, 0, moveTreeComponent(oldTreeId, newTreeId, nodeIds));
       } else if (deleteTreeUAIndex > -1) {
         // Insert before the deleteTreeUA
-        compactedBatch = [
-          ...compactedBatch.slice(0, deleteTreeUAIndex),
-          moveTreeComponent(oldTreeId, newTreeId, nodeIds),
-          ...compactedBatch.slice(deleteTreeUAIndex)];
+        compactedBatch.splice(deleteTreeUAIndex, 0, moveTreeComponent(oldTreeId, newTreeId, nodeIds));
       } else {
         // Insert in front
-        compactedBatch = [moveTreeComponent(oldTreeId, newTreeId, nodeIds), ...compactedBatch];
+        compactedBatch.unshift(moveTreeComponent(oldTreeId, newTreeId, nodeIds));
       }
+
+      // Remove the original create/delete update actions of the moved nodes and edges
+      compactedBatch = _.without(compactedBatch, ..._.flatten(movedPairings));
     }
 
-    // Remove the original create/delete update actions of the moved nodes and edges
-    const movedNodesUpdateActions = _.flatten(movedNodes);
-    return _.without(compactedBatch, ...movedNodesUpdateActions, ...movedEdgesUpdateActions);
+    return compactedBatch;
   });
 
 

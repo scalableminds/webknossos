@@ -667,3 +667,32 @@ test("compactUpdateActions should detect a tree split (3/3)", (t) => {
   t.is(simplifiedUpdateActions[11].action, "updateTree");
   t.is(simplifiedUpdateActions.length, 12);
 });
+
+test("compactUpdateActions should do nothing if it cannot compact ", (t) => {
+  // The moveTreeComponent update action moves a list of nodeIds from and oldTreeId to a newTreeId
+  // If the tree with the oldTreeId is deleted and the tree with the newTreeId is created
+  // in the same diff, compactUpdateActions cannot insert the moveTreeComponent update action at
+  // the right spot (see code comments for why)
+  // This case cannot happen currently as there is no action in webknossos that results in such a diff,
+  // it could however exist in the future and this test makes sure things won't break then
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 2);
+
+  // Create three nodes in the first tree, then create a second tree with one node and merge them
+  const testState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .unpack();
+
+  // Create the tree that is merged to and merge the trees at the same time
+  const newState = ChainReducer(testState)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, mergeTreesAction)
+    .unpack();
+
+  // This will currently never be the result of one diff (see description of the test)
+  const updateActions = [testDiffing(testState.tracing, newState.tracing, newState.flycam)];
+  const simplifiedUpdateActions = compactUpdateActions(updateActions);
+
+  // Nothing should be changed as the moveTreeComponent update action cannot be inserted
+  t.deepEqual(simplifiedUpdateActions, updateActions[0]);
+});

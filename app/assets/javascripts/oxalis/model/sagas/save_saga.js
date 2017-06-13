@@ -92,8 +92,6 @@ function cantor(a, b) {
 }
 
 export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAction>>): Array<UpdateAction> {
-  let result = updateActionsBatches;
-
   // This part of the code detects tree merges and splits.
   // It does so by identifying nodes and edges that were deleted in one tree only to be created
   // in another tree again afterwards.
@@ -104,8 +102,8 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
   // is inserted for each group, containing the respective moved node ids.
   // The exact spot where the moveTreeComponent update action is inserted is important. This is
   // described later.
-  result = result.map((batch) => {
-    let compactedBatch = batch;
+  const result = updateActionsBatches.map((batch) => {
+    let compactedBatch = [...batch];
     // Detect moved nodes and edges
     const movedNodesAndEdges = [];
     const deleteNodeActions = batch.filter(ua => ua.action === "deleteNode");
@@ -181,7 +179,7 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
   });
 
 
-  // Remove all but the last updateTracing update actions
+  // This part of the code removes all but the last updateTracing update actions
   let flatResult = _.flatten(result);
   const updateTracingUpdateActions = flatResult.filter(ua => ua.action === "updateTracing");
   if (updateTracingUpdateActions.length > 1) {

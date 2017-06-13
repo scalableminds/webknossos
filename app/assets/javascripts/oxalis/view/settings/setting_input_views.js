@@ -291,27 +291,13 @@ export class Vector6InputSetting extends React.PureComponent {
 
 type ColorSettingPropTypes = {
   // eslint-disable-next-line react/no-unused-prop-types
-  value: Vector3,
+  value: string,
   label: string,
   onChange: (value: Vector3) => void,
 };
 
 export class ColorSetting extends React.PureComponent {
   props: ColorSettingPropTypes;
-  state: {
-    value: string;
-  }
-
-  constructor(props:ColorSettingPropTypes) {
-    super(props);
-    this.state = {
-      value: "#000000",
-    };
-  }
-
-  componentWillReceiveProps(newProps:ColorSettingPropTypes) {
-    this.setState({ value: Utils.rgbToHex(newProps.value) });
-  }
 
   onColorChange = (evt: SyntheticInputEvent) => {
     this.props.onChange(Utils.hexToRgb(evt.target.value));
@@ -322,7 +308,7 @@ export class ColorSetting extends React.PureComponent {
       <Row className="settings-row">
         <Col span={8}><label className="setting-label">{this.props.label}</label></Col>
         <Col span={16}>
-          <input type="color" onChange={this.onColorChange} value={this.state.value} />
+          <input type="color" onChange={this.onColorChange} value={this.props.value} />
         </Col>
       </Row>
     );

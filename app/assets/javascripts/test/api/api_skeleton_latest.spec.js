@@ -1,89 +1,11 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
-import mockRequire from "mock-require";
-import sinon from "sinon";
-import _ from "lodash";
-import Backbone from "backbone";
 import "backbone.marionette";
-import { ControlModeEnum } from "oxalis/constants";
-import TRACING_OBJECT from "../fixtures/tracing_object";
+import sinon from "sinon";
+import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 
-function makeModelMock() {
-  class ModelMock {}
-  ModelMock.prototype.fetch = sinon.stub();
-  ModelMock.prototype.fetch.returns(Promise.resolve());
-  return ModelMock;
-}
-
-const User = makeModelMock();
-const DatasetConfiguration = makeModelMock();
-const Request = {
-  receiveJSON: sinon.stub(),
-  sendJSONReceiveJSON: sinon.stub(),
-  sendArraybufferReceiveArraybuffer: sinon.stub(),
-  always: () => Promise.resolve(),
-};
-const ErrorHandling = {
-  assertExtendContext: _.noop,
-  assertExists: _.noop,
-  assert: _.noop,
-};
-const window = {
-  location: {
-    pathname: "annotationUrl",
-  },
-  alert: console.log.bind(console),
-};
-const currentUser = {
-  firstName: "SCM",
-  lastName: "Boy",
-};
-const app = {
-  vent: Backbone.Radio.channel("global"),
-  currentUser,
-};
-const KeyboardJS = {
-  bind: _.noop,
-  unbind: _.noop,
-};
-
-mockRequire("libs/toast", { error: _.noop });
-mockRequire("libs/window", window);
-mockRequire("libs/request", Request);
-mockRequire("libs/error_handling", ErrorHandling);
-mockRequire("app", app);
-mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
-mockRequire("oxalis/model/user", User);
-mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
-mockRequire("keyboardjs", KeyboardJS);
-
-// Avoid node caching and make sure all mockRequires are applied
-const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
-const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
-const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
-
-test.beforeEach((t) => {
-  UrlManager.initialState = { position: [1, 2, 3] };
-  const model = t.context.model = new Model();
-
-  const webknossos = t.context.webknossos = new OxalisApi(model);
-
-  Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
-  User.prototype.fetch.returns(Promise.resolve());
-
-  return model.fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
-    .then(() => {
-      // Trigger the event ourselves, as the OxalisController is not instantiated
-      app.vent.trigger("webknossos:ready");
-      webknossos.apiReady(2).then((apiObject) => {
-        t.context.api = apiObject;
-      });
-    })
-    .catch((error) => {
-      console.error("model.fetch() failed", error);
-      t.fail(error.message);
-    });
-});
+// All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
+test.beforeEach(t => setupOxalis(t, "skeleton"));
 
 test("getActiveNodeId should get the active node id", (t) => {
   const api = t.context.api;
@@ -133,19 +55,19 @@ test("setCommentForNode should throw an error if the supplied nodeId doesn't exi
 });
 
 
-test("Data Api getLayerNames should get an array of all layer names", (t) => {
+test("Data Api: getLayerNames should get an array of all layer names", (t) => {
   const api = t.context.api;
   t.is(api.data.getLayerNames().length, 2);
   t.true(api.data.getLayerNames().includes("segmentation"));
   t.true(api.data.getLayerNames().includes("color"));
 });
 
-test("setMapping should throw an error if the layer name is not valid", (t) => {
+test("Data Api: setMapping should throw an error if the layer name is not valid", (t) => {
   const api = t.context.api;
   t.throws(() => api.data.setMapping("nonExistingLayer", [1, 3]));
 });
 
-test("setMapping should set a mapping of a layer", (t) => {
+test("Data Api: setMapping should set a mapping of a layer", (t) => {
   const { api, model } = t.context;
   const cube = model.getBinaryByName("segmentation").cube;
   t.is(cube.hasMapping(), false);
@@ -154,24 +76,24 @@ test("setMapping should set a mapping of a layer", (t) => {
   t.is(cube.mapId(1), 3);
 });
 
-test("getBoundingBox should throw an error if the layer name is not valid", (t) => {
+test("Data Api: getBoundingBox should throw an error if the layer name is not valid", (t) => {
   const api = t.context.api;
   t.throws(() => api.data.getBoundingBox("nonExistingLayer"));
 });
 
-test("getBoundingBox should get the bounding box of a layer", (t) => {
+test("Data Api: getBoundingBox should get the bounding box of a layer", (t) => {
   const api = t.context.api;
   const correctBoundingBox = [[3840, 4220, 2304], [3968, 4351, 2688]];
   const boundingBox = api.data.getBoundingBox("color");
   t.deepEqual(boundingBox, correctBoundingBox);
 });
 
-test("getDataValue should throw an error if the layer name is not valid", (t) => {
+test("Data Api: getDataValue should throw an error if the layer name is not valid", (t) => {
   const api = t.context.api;
   t.throws(() => api.data.getDataValue("nonExistingLayer", [1, 2, 3]));
 });
 
-test("getDataValue should get the data value for a layer, position and zoomstep", (t) => {
+test("Data Api: getDataValue should get the data value for a layer, position and zoomstep", (t) => {
   // Currently, this test only makes sure pullQueue.pull is being called.
   // There is another spec for pullqueue.js
   const { api, model } = t.context;
@@ -203,7 +125,7 @@ test.serial.cb("Utils Api: sleep should sleep", (t) => {
   }, 400);
 });
 
-test("registerKeyHandler should register a key handler and return a handler to unregister it again", (t) => {
+test("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", (t) => {
   const api = t.context.api;
   // Unfortunately this is not properly testable as KeyboardJS doesn't work without a DOM
   sinon.spy(KeyboardJS, "bind");
@@ -214,7 +136,7 @@ test("registerKeyHandler should register a key handler and return a handler to u
   t.true(KeyboardJS.unbind.calledOnce);
 });
 
-test("registerOverwrite should overwrite an existing function", (t) => {
+test("Utils Api: registerOverwrite should overwrite an existing function", (t) => {
   const api = t.context.api;
   let bool = false;
   api.utils.registerOverwrite("SET_ACTIVE_NODE", (store, call, action) => {
@@ -227,4 +149,9 @@ test("registerOverwrite should overwrite an existing function", (t) => {
   t.true(bool);
   // And the original method should have been called
   t.is(api.tracing.getActiveNodeId(), 2);
+});
+
+test("Calling a volume api function in a skeleton tracing should throw an error", (t) => {
+  const api = t.context.api;
+  t.throws(() => api.tracing.getVolumeMode());
 });

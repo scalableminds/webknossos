@@ -245,8 +245,6 @@ const Utils = {
     return maybeA.chain(valueA => maybeB.map(valueB => [valueA, valueB]));
   },
 
-  // TODO: You should see a merge conflict now. Please use the toNullable version
-  // and rename unpackMaybe to toNullable everywhere where it's used.
   // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
   // you can't do getOrElse(null) without flow complaining
   toNullable<T>(maybe: Maybe<T>): ?T {

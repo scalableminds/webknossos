@@ -97,8 +97,13 @@ class DashboardTaskListView extends Marionette.CompositeView {
     // If you know how to do this better, do it. Backbones Collection type is not compatible to Marionettes
     // Collection type according to flow - although they actually should be...
     this.collection = ((new UserTasksCollection([], { userID: this.options.userID }): any): Marionette.Collection);
-    this.listenTo(this.collection, "fetch", () => app.router.showLoadingSpinner());
-    this.listenTo(this.collection, "sync", () => app.router.hideLoadingSpinner());
+
+    // Show a loading spinner for long running requests
+    this.listenTo(this.collection, "request", () => app.router.showLoadingSpinner());
+    this.listenTo(this.collection, "error", () => app.router.hideLoadingSpinner());
+    // Hide the spinner if the collection is empty or after rendering all elements of the (long) table
+    this.listenTo(this.collection, "sync", () => { if (this.collection.length === 0) app.router.hideLoadingSpinner(); });
+    this.listenTo(this, "add:child", () => app.router.hideLoadingSpinner());
 
     this.collection.fetch();
 
@@ -119,8 +124,12 @@ class DashboardTaskListView extends Marionette.CompositeView {
     if (this.collection.filter(UserTasksCollection.prototype.unfinishedTasksFilter).length === 0 || confirm("Do you really want another task?")) {
       // Need to make sure this.collection is a UserTasksCollection with the getNewTask
       // method, otherwise flow complains
+      app.router.showLoadingSpinner();
       if (this.collection instanceof UserTasksCollection) {
-        this.collection.getNewTask();
+        this.collection.getNewTask().then(
+          () => app.router.hideLoadingSpinner(),
+          () => app.router.hideLoadingSpinner(),
+        );
       }
     }
   }

@@ -252,9 +252,6 @@ class ArbitraryController {
         return;
       }
       Store.dispatch(setActiveNodeAction((activeNode.id + (2 * Number(nextOne))) - 1), true);// implicit cast from boolean to int
-      if ((this.view.theme === constants.THEME_BRIGHT) !== nextOne) { // switch background to black for backwards move
-        this.view.toggleTheme();
-      }
     });
   }
 

@@ -71,7 +71,10 @@ export function* watchTreeNames(): Generator<*, *, *> {
 export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
   yield takeEvery(["INITIALIZE_SKELETONTRACING"], watchTreeNames);
   yield take("WK_READY");
-  yield takeEvery(["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE", "DELETE_BRANCHPOINT"], centerActiveNode);
+  yield takeEvery(
+    ["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE", "DELETE_BRANCHPOINT", "SELECT_NEXT_TREE"],
+    centerActiveNode,
+  );
   yield watchBranchPointDeletion();
 }
 

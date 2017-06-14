@@ -106,7 +106,7 @@ class CommentTabView extends React.Component {
     if (commentText) {
       this.props.createComment(commentText);
     } else {
-      this.props.deleteComment(commentText);
+      this.props.deleteComment();
     }
   }
 

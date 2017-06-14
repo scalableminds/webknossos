@@ -8,6 +8,7 @@ import $ from "jquery";
 import Backbone from "backbone";
 import constants from "oxalis/constants";
 import KeyboardJS from "keyboardjs";
+import Date from "libs/date";
 import type { Point2 } from "oxalis/constants";
 
 // This is the main Input implementation.

@@ -2,6 +2,7 @@
  * volumetracing_controller.js
  * @flow
  */
+/* globals JQueryInputEventObject:false */
 
 import _ from "lodash";
 import $ from "jquery";
@@ -64,7 +65,7 @@ class VolumeTracingController {
           this.mergeMode = inputModeMapping[inputId];
           console.log(this.mergeMode);
         });
-        $(inputId).keypress((event) => {
+        $(inputId).keypress((event: JQueryInputEventObject) => {
           if (event.which === 13) {
             this.merge();
           }

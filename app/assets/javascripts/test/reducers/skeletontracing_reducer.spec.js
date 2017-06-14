@@ -29,7 +29,9 @@ const initialState = {
   dataset: {
     scale: [5, 5, 5],
   },
-  userConfiguration: null,
+  userConfiguration: {
+    sortTreesByName: "timestamp",
+  },
   datasetConfiguration: {
     fourBit: false,
     interpolation: false,
@@ -655,7 +657,7 @@ test("SkeletonTracing should rename the active tree to a default name", (t) => {
 
 test("SkeletonTracing should increase the activeTreeId", (t) => {
   const createTreeAction = SkeletonTracingActions.createTreeAction();
-  const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(0);
+  const setActiveTreeAction = SkeletonTracingActions.setActiveTreeAction(1);
   const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction();
 
   // create a second tree, set first tree active then increase activeTreeId
@@ -683,7 +685,7 @@ test("SkeletonTracing should decrease the activeTreeId", (t) => {
   t.is(newState.tracing.activeTreeId, 1);
 });
 
-test("SkeletonTracing should not decrease the activeTreeId below 1", (t) => {
+test("SkeletonTracing should wrap around when decreasing the activeTreeId below 1", (t) => {
   const createTreeAction = SkeletonTracingActions.createTreeAction();
   const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction(false);
 
@@ -695,7 +697,25 @@ test("SkeletonTracing should not decrease the activeTreeId below 1", (t) => {
     .unpack();
 
   t.not(newState, initialState);
-  t.is(newState.tracing.activeTreeId, 1);
+  t.is(newState.tracing.activeTreeId, 2);
+});
+
+test("SkeletonTracing should be able to select next tree when tree ids are not consecutive", (t) => {
+  const createTreeAction = SkeletonTracingActions.createTreeAction();
+  const deleteTreeAction = SkeletonTracingActions.deleteTreeAction(2);
+  const selectNextTreeAction = SkeletonTracingActions.selectNextTreeAction();
+
+  // create a second tree then decrease activeTreeId twice
+  const newState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, deleteTreeAction)
+    .apply(SkeletonTracingReducer, selectNextTreeAction)
+    .apply(SkeletonTracingReducer, selectNextTreeAction)
+    .unpack();
+
+  t.not(newState, initialState);
+  t.is(newState.tracing.activeTreeId, 3);
 });
 
 test("SkeletonTracing should shuffle the color of a specified tree", (t) => {

@@ -3,7 +3,6 @@
  * @flow strict
  */
 
-// only relative imports are followed by documentationjs
 import _ from "lodash";
 import { InputKeyboardNoLoop } from "libs/input";
 import Model from "oxalis/model";
@@ -13,9 +12,11 @@ import Binary from "oxalis/model/binary";
 import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { setActiveNodeAction, createCommentAction, deleteNodeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3 } from "oxalis/constants";
+import { setActiveCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Vector3, VolumeTraceOrMoveModeType } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
-import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType } from "oxalis/store";
+import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType, TracingType } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
 import Request from "libs/request";
@@ -30,6 +31,17 @@ function assertExists(value: any, message: string) {
   }
 }
 
+function assertSkeleton(tracing: TracingType) {
+  if (tracing.type !== "skeleton") {
+    throw Error("This api function should only be called in a skeleton tracing.");
+  }
+}
+
+function assertVolume(tracing: TracingType) {
+  if (tracing.type !== "volume") {
+    throw Error("This api function should only be called in a volume tracing.");
+  }
+}
 /**
  * All tracing related API methods. This is the newest version of the API (version 2).
  * @version 2
@@ -45,24 +57,31 @@ class TracingApi {
     this.model = model;
   }
 
+  //  SKELETONTRACING API
+
  /**
   * Returns the id of the current active node.
   */
   getActiveNodeId(): ?number {
-    return getActiveNode(Store.getState().tracing).map(node => node.id).getOrElse(null);
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    return getActiveNode(tracing).map(node => node.id).getOrElse(null);
   }
 
  /**
   * Returns the id of the current active tree.
   */
   getActiveTreeId(): ?number {
-    return getActiveTree(Store.getState().tracing).map(tree => tree.treeId).getOrElse(null);
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    return getActiveTree(tracing).map(tree => tree.treeId).getOrElse(null);
   }
 
  /**
   * Sets the active node given a node id.
   */
   setActiveNode(id: number) {
+    assertSkeleton(Store.getState().tracing);
     assertExists(id, "Node id is missing.");
     Store.dispatch(setActiveNodeAction(id));
   }
@@ -71,7 +90,9 @@ class TracingApi {
   * Returns all nodes belonging to a tracing.
   */
   getAllNodes(): Array<NodeType> {
-    return getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    return getSkeletonTracing(tracing).map((skeletonTracing) => {
       const { trees } = skeletonTracing;
       return _.flatMap(trees, tree => _.values(tree.nodes));
     }).getOrElse([]);
@@ -81,7 +102,9 @@ class TracingApi {
   * Returns all trees belonging to a tracing.
   */
   getAllTrees(): TreeMapType {
-    return getSkeletonTracing(Store.getState().tracing).map(skeletonTracing =>
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    return getSkeletonTracing(tracing).map(skeletonTracing =>
       skeletonTracing.trees,
     ).getOrElse({});
   }
@@ -90,6 +113,7 @@ class TracingApi {
    * Deletes the node with nodeId in the tree with treeId
    */
   deleteNode(nodeId: number, treeId: number) {
+    assertSkeleton(Store.getState().tracing);
     Store.dispatch(deleteNodeAction(nodeId, treeId));
   }
 
@@ -101,8 +125,10 @@ class TracingApi {
   * api.tracing.setCommentForNode("This is a branch point", activeNodeId);
   */
   setCommentForNode(commentText: string, nodeId: number, treeId?: number): void {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
     assertExists(commentText, "Comment text is missing.");
-    getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    getSkeletonTracing(tracing).map((skeletonTracing) => {
       // Convert nodeId to node
       if (_.isNumber(nodeId)) {
         const tree = treeId != null ?
@@ -127,8 +153,10 @@ class TracingApi {
   * const comment = api.tracing.getCommentForNode(23, api.getActiveTreeid());
   */
   getCommentForNode(nodeId: number, treeId?: number): ?string {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
     assertExists(nodeId, "Node id is missing.");
-    return getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    return getSkeletonTracing(tracing).map((skeletonTracing) => {
       // Convert treeId to tree
       let tree = null;
       if (treeId != null) {
@@ -202,6 +230,8 @@ class TracingApi {
     }
   }
 
+  //  SKELETONTRACING API
+
   /**
    * Increases the node radius of the active node by multiplying it with 1.05^delta.
    *
@@ -224,6 +254,57 @@ class TracingApi {
   centerActiveNode = (): void => {
     getActiveNode(Store.getState().tracing)
       .map(activeNode => Store.dispatch(setPositionAction(activeNode.position)));
+  }
+
+  //  VOLUMETRACING API
+
+ /**
+  * Returns the id of the current active cell.
+  * _Volume tracing only!_
+  */
+  getActiveCellId(): ?number {
+    const tracing = Store.getState().tracing;
+    assertVolume(tracing);
+    return Utils.toNullable(getActiveCellId(tracing));
+  }
+
+ /**
+  * Sets the active cell given a cell id.
+  * If a cell with the given id doesn't exist, it is created.
+  * _Volume tracing only!_
+  */
+  setActiveCell(id: number) {
+    assertVolume(Store.getState().tracing);
+    assertExists(id, "Cell id is missing.");
+    Store.dispatch(setActiveCellAction(id));
+  }
+
+ /**
+  * Returns the current volume mode which is either
+  * 0 for "Move" or
+  * 1 for "Trace".
+  * _Volume tracing only!_
+  */
+  getVolumeMode(): ?VolumeTraceOrMoveModeType {
+    const tracing = Store.getState().tracing;
+    assertVolume(tracing);
+    return Utils.toNullable(getVolumeTraceOrMoveMode(tracing));
+  }
+
+ /**
+  * Sets the current volume mode which is either
+  * 0 for "Move" or
+  * 1 for "Trace".
+  * _Volume tracing only!_
+  */
+  setVolumeMode(mode: VolumeTraceOrMoveModeType) {
+    assertVolume(Store.getState().tracing);
+    assertExists(mode, "Volume mode is missing.");
+    // TODO: Use an Enum for VolumeTraceOrMoveModeType and replace this ugly check - postponed to avoid merge conflicts
+    if (mode !== 0 && mode !== 1) {
+      throw Error("Volume mode has to be either 0 or 1.");
+    }
+    Store.dispatch(setModeAction(mode));
   }
 }
 
@@ -300,6 +381,26 @@ class DataApi {
   }
 
   /**
+  * Label voxels with the supplied value.
+  * _Volume tracing only!_
+  *
+  * @example // Set the segmentation id for some voxels to 1337
+  * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
+  */
+  labelVoxels(voxels: Array<Vector3>, label: number): void {
+    assertVolume(Store.getState().tracing);
+    const layer = this.model.getSegmentationBinary();
+    assertExists(layer, "Segmentation layer not found!");
+
+    for (const voxel of voxels) {
+      layer.cube.labelVoxel(voxel, label);
+    }
+
+    layer.cube.pushQueue.push();
+    layer.cube.trigger("volumeLabeled");
+  }
+
+  /**
    * Returns the dataset's setting for the tracing view.
    * @param key - One of the following keys:
      - segmentationOpacity
@@ -309,7 +410,6 @@ class DataApi {
      - keyboardDelay
      - layers
      - quality
-     - segmentationOpacity
    *
    * @example
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");

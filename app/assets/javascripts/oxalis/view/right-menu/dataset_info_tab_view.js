@@ -34,7 +34,7 @@ class DatasetInfoTabView extends Component {
       zoom = this.props.flycam.zoomStep;
       width = ArbitraryController.prototype.WIDTH;
     } else {
-      throw Error("Model mode not recognized:", viewMode);
+      throw Error(`Model mode not recognized: ${viewMode}`);
     }
     // unit is nm
     const baseVoxel = getBaseVoxel(this.props.dataset.scale);

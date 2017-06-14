@@ -105,7 +105,7 @@ class TracingLayoutView extends React.PureComponent {
                     />
                     <TracingView />
                   </div>
-                  <div style={{ flex: "1" }}>
+                  <div style={{ flex: "1", display: "inline-flex" }}>
                     <RightMenuView />
                   </div>
                 </div>

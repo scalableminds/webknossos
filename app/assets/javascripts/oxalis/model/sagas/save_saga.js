@@ -16,9 +16,10 @@ import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { alert } from "libs/window";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
+import ErrorHandling from "libs/error_handling";
+import { moveTreeComponent, updateActionReducer } from "oxalis/model/sagas/update_actions";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { TracingType, FlycamType } from "oxalis/store";
-import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
+import type { TracingType, FlycamType, TreeMapType } from "oxalis/store";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
@@ -26,6 +27,7 @@ const SAVE_RETRY_WAITING_TIME = 5000;
 export function* pushAnnotationAsync(): Generator<*, *, *> {
   yield take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   yield put(setLastSaveTimestampAction());
+  let oldTrees = yield select(state => state.tracing.trees);
   while (true) {
     const pushAction = yield take("PUSH_SAVE_QUEUE");
     if (!pushAction.pushNow) {
@@ -37,16 +39,18 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
     yield put(setSaveBusyAction(true));
     const saveQueue = yield select(state => state.save.queue);
     if (saveQueue.length > 0) {
-      yield call(sendRequestToServer);
+      const trees = yield select(state => state.tracing.trees);
+      yield call(sendRequestToServer, oldTrees);
+      oldTrees = trees;
     }
     yield put(setSaveBusyAction(false));
   }
 }
 
-export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
+export function* sendRequestToServer(oldTrees: TreeMapType, timestamp: number = Date.now()): Generator<*, *, *> {
   const batch = yield select(state => state.save.queue);
-  const compactBatch = compactUpdateActions(batch);
   const { version, tracingType, tracingId } = yield select(state => state.tracing);
+  const compactBatch = compactUpdateActions(batch, oldTrees, version);
   try {
     yield call(Request.sendJSONReceiveJSON,
       `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {
@@ -72,7 +76,7 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
       return;
     }
     yield delay(SAVE_RETRY_WAITING_TIME);
-    yield call(sendRequestToServer);
+    yield call(sendRequestToServer, oldTrees);
   }
 }
 
@@ -91,7 +95,7 @@ function cantor(a, b) {
   return 0.5 * (a + b) * (a + b + 1) + b;
 }
 
-export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAction>>): Array<UpdateAction> {
+export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAction>>, trees: TreeMapType, version: number): Array<UpdateAction> {
   // This part of the code detects tree merges and splits.
   // It does so by identifying nodes and edges that were deleted in one tree only to be created
   // in another tree again afterwards.
@@ -175,9 +179,23 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
       compactedBatch = _.without(compactedBatch, ..._.flatten(movedPairings));
     }
 
+    // TODO: Remove this code after one month or so
+    // This tests whether the compacted update actions produce the same tracing as the original ones.
+    // Once we're certain that no errors happen, this code can be removed.
+    const newTreesFromNormalBatch = updateActionReducer(trees, batch);
+    const newTreesFromCompactBatch = updateActionReducer(trees, compactedBatch);
+    if (!_.isEqual(newTreesFromNormalBatch, newTreesFromCompactBatch)) {
+      ErrorHandling.airbrake.notify({
+        error: new Error("compactUpdateActions encountered a mismatch between the original and compacted batch."),
+        context: { tracingVersion: version },
+      });
+      // Do not compact this batch and send the original update actions as there seems to be an error
+      compactedBatch = batch;
+    }
+    trees = newTreesFromNormalBatch;
+
     return compactedBatch;
   });
-
 
   // This part of the code removes all but the last updateTracing update actions
   let flatResult = _.flatten(result);

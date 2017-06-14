@@ -73,10 +73,14 @@ export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
 };
 
+export type TreeMapType = {+[number]: TreeType};
+
 type TemporaryMutableNodeMapType = {[number]: NodeType};
+
 export type TemporaryMutableTreeType = TreeTypeBase & {
   +nodes: TemporaryMutableNodeMapType,
 };
+export type TemporaryMutableTreeMapType = {[number]: TemporaryMutableTreeType};
 
 export type MappingType = {
   +parent?: string;
@@ -133,8 +137,6 @@ export type DatasetType = {
  +scale: Vector3,
  +dataLayers: Array<DataLayerType>
 };
-
-export type TreeMapType = {+[number]: TreeType};
 
 export const SkeletonTracingTypeTracingEnum = {
   Explorational: "Explorational",

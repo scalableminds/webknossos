@@ -372,7 +372,7 @@ test("compactUpdateActions should detect a tree merge (1/3)", (t) => {
   const newState = SkeletonTracingReducer(testState, mergeTreesAction);
 
   const updateActions = [testDiffing(testState.tracing, newState.tracing, newState.flycam)];
-  const simplifiedUpdateActions = compactUpdateActions(updateActions);
+  const simplifiedUpdateActions = compactUpdateActions(updateActions, testState.tracing.trees);
 
   // This should result in a moved treeComponent of size three
   t.deepEqual(simplifiedUpdateActions[0], {
@@ -420,7 +420,7 @@ test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
   updateActions.push(testDiffing(newState1.tracing, newState2.tracing, newState2.flycam));
 
   // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
-  const simplifiedUpdateActions = compactUpdateActions(updateActions);
+  const simplifiedUpdateActions = compactUpdateActions(updateActions, testState.tracing.trees);
 
   // This should result in one created node and its edge (a)
   t.is(simplifiedUpdateActions[0].action, "createNode");
@@ -484,7 +484,7 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
   updateActions.push(testDiffing(newState.tracing, stateAfterSecondMerge.tracing, stateAfterSecondMerge.flycam));
 
   // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
-  const simplifiedUpdateActions = compactUpdateActions(updateActions);
+  const simplifiedUpdateActions = compactUpdateActions(updateActions, testState.tracing.trees);
 
   // This should result in a moved treeComponent of size one (a)
   t.deepEqual(simplifiedUpdateActions[0], {
@@ -538,7 +538,7 @@ test("compactUpdateActions should detect a tree split (1/3)", (t) => {
   const newState = SkeletonTracingReducer(testState, deleteMiddleNodeAction);
 
   const updateActions = [testDiffing(testState.tracing, newState.tracing, newState.flycam)];
-  const simplifiedUpdateActions = compactUpdateActions(updateActions);
+  const simplifiedUpdateActions = compactUpdateActions(updateActions, testState.tracing.trees);
 
   // This should result in a new tree
   t.is(simplifiedUpdateActions[0].action, "createTree");
@@ -580,7 +580,7 @@ test("compactUpdateActions should detect a tree split (2/3)", (t) => {
   const newState = SkeletonTracingReducer(testState, deleteMiddleNodeAction);
 
   const updateActions = [testDiffing(testState.tracing, newState.tracing, newState.flycam)];
-  const simplifiedUpdateActions = compactUpdateActions(updateActions);
+  const simplifiedUpdateActions = compactUpdateActions(updateActions, testState.tracing.trees);
 
   // This should result in two new trees and two moved treeComponents of size three and two
   t.is(simplifiedUpdateActions[0].action, "createTree");
@@ -631,7 +631,7 @@ test("compactUpdateActions should detect a tree split (3/3)", (t) => {
   const newState2 = SkeletonTracingReducer(newState1, deleteOtherMiddleNodeAction);
   updateActions.push(testDiffing(newState1.tracing, newState2.tracing, newState2.flycam));
 
-  const simplifiedUpdateActions = compactUpdateActions(updateActions);
+  const simplifiedUpdateActions = compactUpdateActions(updateActions, testState.tracing.trees);
 
   // This should result in the creation of a new tree (a)
   t.is(simplifiedUpdateActions[0].action, "createTree");
@@ -668,7 +668,7 @@ test("compactUpdateActions should detect a tree split (3/3)", (t) => {
   t.is(simplifiedUpdateActions.length, 12);
 });
 
-test("compactUpdateActions should do nothing if it cannot compact ", (t) => {
+test("compactUpdateActions should do nothing if it cannot compact", (t) => {
   // The moveTreeComponent update action moves a list of nodeIds from and oldTreeId to a newTreeId
   // If the tree with the oldTreeId is deleted and the tree with the newTreeId is created
   // in the same diff, compactUpdateActions cannot insert the moveTreeComponent update action at
@@ -691,7 +691,7 @@ test("compactUpdateActions should do nothing if it cannot compact ", (t) => {
 
   // This will currently never be the result of one diff (see description of the test)
   const updateActions = [testDiffing(testState.tracing, newState.tracing, newState.flycam)];
-  const simplifiedUpdateActions = compactUpdateActions(updateActions);
+  const simplifiedUpdateActions = compactUpdateActions(updateActions, testState.tracing.trees);
 
   // Nothing should be changed as the moveTreeComponent update action cannot be inserted
   t.deepEqual(simplifiedUpdateActions, updateActions[0]);

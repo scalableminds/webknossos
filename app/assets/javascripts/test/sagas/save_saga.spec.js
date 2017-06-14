@@ -35,8 +35,8 @@ const initialState = {
   tracing: {
     type: "skeleton",
     trees: {
-      "0": {
-        treeId: 0,
+      "1": {
+        treeId: 1,
         name: "TestTree",
         nodes: {},
         timestamp: 12345678,
@@ -48,7 +48,7 @@ const initialState = {
     },
     tracingType: "Explorational",
     name: "",
-    activeTreeId: 0,
+    activeTreeId: 1,
     activeNodeId: null,
     restrictions: {
       branchPointsAllowed: true,
@@ -68,22 +68,25 @@ test("SaveSaga should compact multiple updateTracing update actions", (t) => {
     UpdateActions.updateSkeletonTracing(initialState, [2, 3, 4], [0, 0, 1], 2),
   ];
 
-  t.deepEqual(compactUpdateActions([updateActions]), [updateActions[1]]);
+  t.deepEqual(compactUpdateActions([updateActions], initialState.tracing.trees), [updateActions[1]]);
 });
 
 test("SaveSaga should send update actions", (t) => {
   const updateActions = [
-    UpdateActions.createEdge(0, 0, 1),
-    UpdateActions.createEdge(0, 1, 2),
+    UpdateActions.createEdge(1, 0, 1),
+    UpdateActions.createEdge(1, 1, 2),
   ];
+  const oldTrees = initialState.tracing.trees;
 
   const saga = pushAnnotationAsync();
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
+  saga.next(); // select
   saga.next(); // setLastSaveTimestampAction
-  expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next(oldTrees), take("PUSH_SAVE_QUEUE"));
   saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
   saga.next();
-  expectValueDeepEqual(t, saga.next([updateActions]), call(sendRequestToServer));
+  saga.next([updateActions]);
+  expectValueDeepEqual(t, saga.next(oldTrees), call(sendRequestToServer, oldTrees));
   saga.next(); // SET_SAVE_BUSY
 
   // Test that loop repeats
@@ -92,11 +95,12 @@ test("SaveSaga should send update actions", (t) => {
 
 test("SaveSaga should send request to server", (t) => {
   const updateActions = [
-    UpdateActions.createEdge(0, 0, 1),
-    UpdateActions.createEdge(0, 1, 2),
+    UpdateActions.createEdge(1, 0, 1),
+    UpdateActions.createEdge(1, 1, 2),
   ];
+  const oldTrees = initialState.tracing.trees;
 
-  const saga = sendRequestToServer(TIMESTAMP);
+  const saga = sendRequestToServer(oldTrees, TIMESTAMP);
   saga.next();
   saga.next([updateActions]);
   expectValueDeepEqual(
@@ -112,11 +116,12 @@ test("SaveSaga should send request to server", (t) => {
 
 test("SaveSaga should retry update actions", (t) => {
   const updateActions = [
-    UpdateActions.createEdge(0, 0, 1),
-    UpdateActions.createEdge(0, 1, 2),
+    UpdateActions.createEdge(1, 0, 1),
+    UpdateActions.createEdge(1, 1, 2),
   ];
+  const oldTrees = initialState.tracing.trees;
 
-  const saga = sendRequestToServer(TIMESTAMP);
+  const saga = sendRequestToServer(oldTrees, TIMESTAMP);
   saga.next();
   saga.next([updateActions]);
   expectValueDeepEqual(
@@ -133,16 +138,17 @@ test("SaveSaga should retry update actions", (t) => {
   // wait for retry
   saga.next();
   // should retry
-  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer));
+  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer, oldTrees));
 });
 
 test("SaveSaga should escalate on permanent client error update actions", (t) => {
   const updateActions = [
-    UpdateActions.createEdge(0, 0, 1),
-    UpdateActions.createEdge(0, 1, 2),
+    UpdateActions.createEdge(1, 0, 1),
+    UpdateActions.createEdge(1, 1, 2),
   ];
+  const oldTrees = initialState.tracing.trees;
 
-  const saga = sendRequestToServer(TIMESTAMP);
+  const saga = sendRequestToServer(oldTrees, TIMESTAMP);
   saga.next();
   saga.next([updateActions]);
   expectValueDeepEqual(
@@ -163,16 +169,20 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
 
 test("SaveSaga should send update actions right away", (t) => {
   const updateActions = [
-    UpdateActions.createEdge(0, 0, 1),
-    UpdateActions.createEdge(0, 1, 2),
+    UpdateActions.createEdge(1, 0, 1),
+    UpdateActions.createEdge(1, 1, 2),
   ];
+  const oldTrees = initialState.tracing.trees;
+
   const saga = pushAnnotationAsync();
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
   saga.next();
-  expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
+  saga.next();
+  expectValueDeepEqual(t, saga.next(oldTrees), take("PUSH_SAVE_QUEUE"));
   saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
   saga.next(SaveActions.saveNowAction());
   saga.next([updateActions]);
+  saga.next(oldTrees);
   saga.next();
 });
 
@@ -181,8 +191,9 @@ test("SaveSaga should remove the correct update actions", (t) => {
     UpdateActions.updateSkeletonTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
     UpdateActions.updateSkeletonTracing(initialState, [2, 3, 4], [0, 0, 1], 2),
   ];
+  const oldTrees = initialState.tracing.trees;
 
-  const saga = sendRequestToServer();
+  const saga = sendRequestToServer(oldTrees);
   saga.next();
   saga.next([updateActions]);
   saga.next({ version: 2, tracingType: "Explorational", tracingId: "1234567890" });

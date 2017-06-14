@@ -1,6 +1,16 @@
 // @flow
+import _ from "lodash";
 import Date from "libs/date";
-import type { SkeletonTracingType, VolumeTracingType, BranchPointType, CommentType, TreeType, NodeType } from "oxalis/store";
+import type {
+  SkeletonTracingType,
+  VolumeTracingType,
+  BranchPointType,
+  CommentType,
+  TreeType,
+  NodeType,
+  TreeMapType,
+  TemporaryMutableTreeMapType,
+} from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
@@ -184,14 +194,14 @@ export function createNode(treeId: number, node: NodeType): CreateNodeUpdateActi
   return {
     action: "createNode",
     timestamp: Date.now(),
-    value: Object.assign({}, node, { treeId, position: node.position }),
+    value: Object.assign({}, node, { treeId }),
   };
 }
 export function updateNode(treeId: number, node: NodeType): UpdateNodeUpdateAction {
   return {
     action: "updateNode",
     timestamp: Date.now(),
-    value: Object.assign({}, node, { treeId, position: node.position }),
+    value: Object.assign({}, node, { treeId }),
   };
 }
 export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateAction {
@@ -246,4 +256,91 @@ export function updateVolumeTracing(tracing: VolumeTracingType, position: Vector
       nextCell: tracing.maxCellId + 1,
     },
   };
+}
+
+export function updateActionReducer(trees: TreeMapType, updateActions: Array<UpdateAction>): TreeMapType {
+  // Clone the trees object and flow-cast to allow to modify the deep clone
+  const clonedTrees = ((_.cloneDeep(trees): any): TemporaryMutableTreeMapType);
+
+  // Apply all update actions on the trees object
+  return updateActions.reduce((acc, ua) => {
+    switch (ua.action) {
+      case "updateTree": {
+        const uaTree = ua.value;
+        acc[uaTree.id] = Object.assign({}, acc[uaTree.id], {
+          branchPoints: uaTree.branchPoints,
+          color: uaTree.color,
+          comments: uaTree.comments,
+          name: uaTree.name,
+          timestamp: uaTree.timestamp,
+          treeId: uaTree.id,
+        });
+        return acc;
+      }
+      case "createTree": {
+        const uaTree = ua.value;
+        acc[uaTree.id] = {
+          branchPoints: uaTree.branchPoints,
+          color: uaTree.color,
+          comments: uaTree.comments,
+          edges: [],
+          name: uaTree.name,
+          nodes: {},
+          timestamp: uaTree.timestamp,
+          treeId: uaTree.id,
+        };
+        return acc;
+      }
+      case "deleteTree": {
+        delete acc[ua.value.id];
+        return acc;
+      }
+      case "createEdge": {
+        const uaEdge = ua.value;
+        acc[uaEdge.treeId].edges.push({
+          source: uaEdge.source,
+          target: uaEdge.target,
+        });
+        return acc;
+      }
+      case "deleteEdge": {
+        const uaEdge = ua.value;
+        _.remove(acc[uaEdge.treeId].edges, edge =>
+          edge.source === uaEdge.source &&
+            edge.target === uaEdge.target,
+        );
+        return acc;
+      }
+      case "updateNode":
+      case "createNode": {
+        const uaNodeCopy = _.cloneDeep(ua.value);
+        delete uaNodeCopy.treeId;
+        acc[ua.value.treeId].nodes[uaNodeCopy.id] = uaNodeCopy;
+        return acc;
+      }
+      case "deleteNode": {
+        delete acc[ua.value.treeId].nodes[ua.value.id];
+        return acc;
+      }
+      case "moveTreeComponent": {
+        // Move all nodes that are part of the moveTreeComponent update action
+        for (const nodeId of ua.value.nodeIds) {
+          acc[ua.value.targetId].nodes[nodeId] = acc[ua.value.sourceId].nodes[nodeId];
+          delete acc[ua.value.sourceId].nodes[nodeId];
+        }
+        // Move all edges that are between nodes that are part of the moveTreeComponent update action
+        const edges = _.clone(acc[ua.value.sourceId].edges);
+        for (const edge of edges) {
+          if (_.indexOf(ua.value.nodeIds, edge.source) >= 0 && _.indexOf(ua.value.nodeIds, edge.target) >= 0) {
+            acc[ua.value.targetId].edges.push(edge);
+            _.remove(acc[ua.value.sourceId].edges, edge);
+          }
+        }
+        return acc;
+      }
+      default: {
+        return acc;
+      }
+    }
+  }, clonedTrees);
 }

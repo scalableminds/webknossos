@@ -2,6 +2,7 @@
  * plane_controller.js
  * @flow
  */
+ /* globals JQueryInputEventObject:false */
 
 import app from "app";
 import Backbone from "backbone";
@@ -201,7 +202,7 @@ class PlaneController {
 
   initKeyboard(): void {
     // avoid scrolling while pressing space
-    $(document).keydown((event) => {
+    $(document).keydown((event: JQueryInputEventObject) => {
       if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) {
         event.preventDefault();
       }
@@ -485,7 +486,7 @@ class PlaneController {
           curGlobalPos[1],
           curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.y) / viewportScale) * planeRatio[2] * zoomFactor)];
         break;
-      default: throw new Error("Trying to calculate the global position, but no viewport is active:", this.activeViewport);
+      default: throw new Error(`Trying to calculate the global position, but no viewport is active: ${this.activeViewport}`);
     }
 
     return position;

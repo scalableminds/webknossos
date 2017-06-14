@@ -45,7 +45,7 @@ class ContourGeometry {
 
   createMeshes() {
     const edgeGeometry = new THREE.BufferGeometry();
-    const positionAttribute = new THREE.BufferAttribute(new Float32Array(), 3);
+    const positionAttribute = new THREE.BufferAttribute(new Float32Array(3), 3);
     positionAttribute.setDynamic(true);
     edgeGeometry.addAttribute("position", positionAttribute);
 

@@ -29,7 +29,6 @@ import type { ModifierKeys } from "libs/input";
 
 class PlaneController {
   planeView: PlaneView;
-  view: View;
   input: {
     mouseControllers: OrthoViewMapType<InputMouse>;
     keyboard: ?InputKeyboard;
@@ -40,7 +39,6 @@ class PlaneController {
   sceneController: SceneController;
   isStarted: boolean;
   oldNmPos: Vector3;
-  planeView: PlaneView;
   activeViewport: OrthoViewType;
   cameraController: CameraController;
   zoomPos: Vector3;
@@ -81,7 +79,6 @@ class PlaneController {
     sceneController: SceneController,
   ) {
     _.extend(this, Backbone.Events);
-    this.view = view;
     this.sceneController = sceneController;
 
     this.isStarted = false;
@@ -89,7 +86,7 @@ class PlaneController {
     const state = Store.getState();
     this.oldNmPos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
 
-    this.planeView = new PlaneView(this.view);
+    this.planeView = new PlaneView(view);
 
     this.activeViewport = OrthoViews.PLANE_XY;
 

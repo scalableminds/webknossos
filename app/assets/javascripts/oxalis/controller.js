@@ -2,6 +2,7 @@
  * controller.js
  * @flow
  */
+ /* globals JQueryInputEventObject:false */
 
 import $ from "jquery";
 import _ from "lodash";
@@ -214,7 +215,7 @@ class Controller {
 
   initKeyboard() {
     // avoid scrolling while pressing space
-    $(document).keydown((event) => {
+    $(document).keydown((event: JQueryInputEventObject) => {
       if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) { event.preventDefault(); }
     });
 
@@ -226,8 +227,6 @@ class Controller {
         "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
         "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
         "shift + 3": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE)),
-
-        t: () => this.view.toggleTheme(),
 
         m: () => {
           // rotate allowed modes
@@ -269,7 +268,7 @@ class Controller {
       allowedModes.includes(newMode)
     ) {
       Utils.__guard__(this.arbitraryController, x1 => x1.stop());
-      this.planeController.start(newMode);
+      this.planeController.start();
     }
 
     // Hide/show zoomstep warning if appropriate

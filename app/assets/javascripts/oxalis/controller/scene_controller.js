@@ -99,7 +99,7 @@ class SceneController {
 
     // create Meshes
     const createPlane = planeIndex =>
-      new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, planeIndex, Model);
+      new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, planeIndex);
 
     this.planes = {
       [OrthoViews.PLANE_XY]: createPlane(OrthoViews.PLANE_XY),

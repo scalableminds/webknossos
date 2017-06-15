@@ -5,7 +5,7 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.braingames.binary.models.DataLayer
+import com.scalableminds.braingames.binary.models.datasource.DataLayer
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.binary._
@@ -24,7 +24,7 @@ class DataTokenController @Inject()(val messagesApi: MessagesApi) extends Contro
 
     dataSet.dataSource.flatMap(_.getDataLayer(dataLayerName))
     .toFox
-    .orElse(UserDataLayerDAO.findOneByName(dataLayerName).map(_.dataLayer))
+    // TODO jfrohnhofen .orElse(UserDataLayerDAO.findOneByName(dataLayerName).map(_.dataLayer))
   }
 
   def generateToken(dataSetNameOpt: Option[String], dataLayerName: Option[String]) = UserAwareAction.async {

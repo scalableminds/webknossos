@@ -6,8 +6,8 @@ package controllers
 import javax.inject.Inject
 
 import scala.concurrent.Future
-
 import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.models.datasource.InboxDataSource
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
@@ -50,7 +50,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
 
   def updateAll(name: String) = DataStoreAction(name)(parse.json) {
     implicit request =>
-      request.body.validate[List[DataSourceLike]] match {
+      request.body.validate[List[InboxDataSource]] match {
         case JsSuccess(dataSources, _) =>
           DataSetService.updateDataSources(request.dataStore, dataSources)(GlobalAccessContext)
           JsonOk
@@ -61,7 +61,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   }
 
   def updateOne(name: String, dataSourceId: String) = DataStoreAction(name)(parse.json) { implicit request =>
-    request.body.validate[DataSourceLike] match {
+    request.body.validate[InboxDataSource] match {
       case JsSuccess(dataSource, _) =>
         DataSetService.updateDataSources(request.dataStore, List(dataSource))(GlobalAccessContext)
         JsonOk

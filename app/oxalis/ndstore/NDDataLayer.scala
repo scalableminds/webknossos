@@ -3,17 +3,15 @@
  */
 package oxalis.ndstore
 
-import java.io.OutputStream
-
-import com.scalableminds.braingames.binary.models.DataLayer
-import com.scalableminds.braingames.binary.requester.DataCubeCache
+import com.scalableminds.braingames.binary.dataformats.CubeLoader
+import com.scalableminds.braingames.binary.models.datasource.{Category, DataFormat, DataLayer, ElementClass}
 import com.scalableminds.util.geometry.BoundingBox
 import play.api.libs.json.Json
 
 case class NDDataLayer(
                        name: String,
-                       category: String,
-                       elementClass: String,
+                       category: Category.Value,
+                       elementClass: ElementClass.Value,
                        resolutions: List[Int],
                        boundingBox: BoundingBox
                       ) extends DataLayer {
@@ -27,11 +25,10 @@ case class NDDataLayer(
   val mappings = Nil
   val nextSegmentationId = None
 
-  def bucketHandler(cache: DataCubeCache) =
-    throw new Exception("To supported for NDStore data sources.")
-
-  def writeTo(outputStream: OutputStream): Unit =
-    throw new Exception("Download not supported for NDStore data sources.")
+  // TODO jfrohnhofen should not be necessary
+  val lengthOfUnderlyingCubes: Int = 0
+  val layerFormat = DataFormat.wkw
+  def cubeLoader: CubeLoader = throw new Exception("To supported for NDStore data sources.")
 }
 
 object NDDataLayer {

@@ -1,6 +1,6 @@
 package models.binary
 
-import com.scalableminds.braingames.binary.models.DataSource
+import com.scalableminds.braingames.binary.models.datasource.DataSource
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
@@ -8,7 +8,7 @@ import models.basics._
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
-import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
+import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSource}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import models.annotation.AnnotationDAO._
 import models.configuration.DataSetConfiguration

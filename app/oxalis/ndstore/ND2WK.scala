@@ -3,7 +3,7 @@
  */
 package oxalis.ndstore
 
-import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
+import com.scalableminds.braingames.binary.models.datasource.{Category, DataLayer, DataSource, DataSourceId}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataSet, DataStoreInfo, NDStore}
@@ -13,8 +13,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 object ND2WK extends FoxImplicits {
 
   val channelTypeMapping = Map(
-    "annotation" -> "segmentation",
-    "image" -> "color"
+    "annotation" -> Category.segmentation,
+    "image" -> Category.color
   )
 
   def dataSetFromNDProject(ndp: NDProject, team: String)(implicit messages: Messages) = {
@@ -44,7 +44,9 @@ object ND2WK extends FoxImplicits {
       vr <- nd.voxelRes.get("0").filter(_.length >= 3) ?~> Messages("ndstore.invalid.voxelres.zero")
       scale = Scale(vr(0), vr(1), vr(2))
     } yield {
-      DataSource(name, "", scale, "external", dataLayers = dataLayers)
+      val id = DataSourceId(name, "Connectomics department")
+      // TODO jfrohnhofen
+      DataSource(id, dataLayers, scale)
     }
   }
 
@@ -68,7 +70,7 @@ object ND2WK extends FoxImplicits {
       } yield {
         NDDataLayer(
           channel.name,
-          channelTypeMapping.get(channel.channelType).get,
+          channel.channelType,
           elementClass = channel.dataType,
           nd.resolutions.map(r => math.pow(2, r).toInt),
           bbox

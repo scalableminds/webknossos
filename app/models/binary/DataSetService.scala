@@ -3,12 +3,12 @@
  */
 package models.binary
 
-import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSource, InboxDataSource}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Full
+import net.liftweb.common.{Empty, Full}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
@@ -60,9 +60,10 @@ object DataSetService extends FoxImplicits with LazyLogging {
 
   def updateDataSource(
     dataStoreInfo: DataStoreInfo,
-    dataSource: DataSourceLike)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
+    dataSource: InboxDataSource)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
 
-    DataSetDAO.findOneBySourceName(dataSource.id)(GlobalAccessContext).futureBox.flatMap {
+    // TODO jfrohnhofen
+    /* DataSetDAO.findOneBySourceName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
       case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name && dataSet.owningTeam == dataSource.owningTeam =>
         DataSetDAO.updateDataSource(
           dataSource.id,
@@ -79,10 +80,11 @@ object DataSetService extends FoxImplicits with LazyLogging {
           dataSource.id,
           dataStoreInfo,
           dataSource.sourceType,
-          dataSource.owningTeam,
-          dataSource.source,
+          dataSource.id.team,
+          dataSource,
           isActive = dataSource.isUsable).futureBox
-    }
+    }*/
+    Empty
   }
 
   def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] = {
@@ -92,19 +94,20 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def getDataLayer(dataSet: DataSet, dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] = {
     dataSet
     .dataSource.flatMap(_.getDataLayer(dataLayerName)).toFox
-    .orElse(UserDataLayerDAO.findOneByName(dataLayerName).filter(_.dataSourceName == dataSet.name).map(_.dataLayer))
+    // TODO jfrohnhofen .orElse(UserDataLayerDAO.findOneByName(dataLayerName).filter(_.dataSourceName == dataSet.name).map(_.dataLayer))
   }
 
   def findDataSource(name: String)(implicit ctx: DBAccessContext) =
     DataSetDAO.findOneBySourceName(name).flatMap(_.dataSource)
 
-  def updateDataSources(dataStore: DataStore, dataSources: List[DataSourceLike])(implicit ctx: DBAccessContext) = {
+  def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
     logger.debug(s"Found datasets: " + dataSources.map(_.id).mkString(", "))
     Fox.serialSequence(dataSources) { dataSource =>
       DataSetService.updateDataSource(
-        DataStoreInfo(dataStore.name, dataSource.serverUrl, dataStore.typ, None), dataSource)
+        // TODO jfrohnhofen remove Option?
+        DataStoreInfo(dataStore.name, dataStore.url.getOrElse("TODO"), dataStore.typ, None), dataSource)
     }.map{ _.filter(_.isEmpty).foreach{ r =>
         logger.warn("Updating DS failed. Result: " + r)
       }

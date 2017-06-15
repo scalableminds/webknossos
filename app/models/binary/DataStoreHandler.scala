@@ -3,7 +3,7 @@
  */
 package models.binary
 
-import com.scalableminds.braingames.binary.models.{DataLayerHelpers, DataSource, UserDataLayer}
+import com.scalableminds.braingames.binary.models.datasource.{DataLayerHelpers, DataSource, UserDataLayer}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}

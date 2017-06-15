@@ -96,12 +96,12 @@ trait NMLParsingService extends LazyLogging {
     var parseResults = List.empty[NMLParseResult]
     ZipIO.withUnziped(file, includeHiddenFiles = false) { (filename, file) =>
       if (filename.endsWith(".nml")) {
-        val result = extractFromNML(file, filename)
+        val result = extractFromNML(file, filename.toString)
         parseResults ::= result
       } else {
-        val tempFile = TemporaryFile(filename)
+        val tempFile = TemporaryFile(filename.toString)
         Files.copy(file, tempFile.file.toPath, StandardCopyOption.REPLACE_EXISTING)
-        otherFiles += (filename -> tempFile)
+        otherFiles += (filename.toString -> tempFile)
       }
     }
     ZipParseResult(parseResults, otherFiles)

@@ -124,14 +124,16 @@ case class VolumeTracing(
   def downloadFileExtension: String = ".zip"
 
   override def contentData = {
-    UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map { userDataLayer =>
+    Fox.successful(Json.obj())
+    // TODO jfrohnhofen
+    /*UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map { userDataLayer =>
       Json.obj(
         "activeCell" -> activeCellId,
         "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
         "nextCell" -> userDataLayer.dataLayer.nextSegmentationId.getOrElse[Long](1),
         "zoomLevel" -> zoomLevel
       )
-    }
+    }*/
   }
 }
 
@@ -148,7 +150,7 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
       baseSource <- baseDataSet.dataSource.toFox
       dataLayer <- DataStoreHandler.createUserDataLayer(baseDataSet.dataStoreInfo, baseSource)
       volumeTracing = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, editPosition = baseDataSet.defaultStart, zoomLevel = VolumeTracing.defaultZoomLevel)
-      _ <- UserDataLayerDAO.insert(dataLayer)
+      // TODO jfrohnhofen _ <- UserDataLayerDAO.insert(dataLayer)
       _ <- VolumeTracingDAO.insert(volumeTracing)
     } yield {
       volumeTracing
@@ -177,7 +179,7 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
           editPosition = start,
           editRotation = nml.editRotation.getOrElse(Vector3D(0,0,0)),
           zoomLevel = nml.zoomLevel.getOrElse(VolumeTracing.defaultZoomLevel))
-        _ <- UserDataLayerDAO.insert(dataLayer) ?~> "dataLayer.creation.failed"
+        // TODO jfrohnhofen _ <- UserDataLayerDAO.insert(dataLayer) ?~> "dataLayer.creation.failed"
         _ <- VolumeTracingDAO.insert(volumeTracing) ?~> "segmentation.creation.failed"
       } yield {
         volumeTracing

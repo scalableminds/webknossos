@@ -3,9 +3,7 @@ package models.annotation
 import java.util.Date
 import javax.xml.stream.XMLStreamWriter
 
-import scala.xml.NodeSeq
-
-import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, FallbackLayer}
+import com.scalableminds.braingames.binary.models.datasource.{Category, DataLayer, ElementClass}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -63,13 +61,13 @@ object AnnotationContent extends FoxImplicits {
 
   implicit val dataLayerWrites: Writes[DataLayer] =
     ((__ \ 'name).write[String] and
-      (__ \ 'category).write[String] and
+      (__ \ 'category).write[Category.Value] and
       (__ \ 'maxCoordinates).write[BoundingBox] and
       (__ \ 'resolutions).write[List[Int]] and
-      (__ \ 'fallback).write[Option[FallbackLayer]] and
-      (__ \ 'elementClass).write[String] and
-      (__ \ 'mappings).write[List[DataLayerMapping]]) (l =>
-      (l.name, l.category, l.boundingBox, l.resolutions, l.fallback, l.elementClass, l.mappings))
+      (__ \ 'elementClass).write[ElementClass.Value] and
+      (__ \ 'mappings).write[List[String]]) (l =>
+      (l.name, l.category, l.boundingBox, l.resolutions, l.elementClass, Nil))
+  // TODO jfrohnhofen
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and

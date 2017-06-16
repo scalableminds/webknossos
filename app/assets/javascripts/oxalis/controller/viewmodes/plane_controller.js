@@ -88,8 +88,6 @@ class PlaneController {
 
     this.canvasesAndNav = $("#main")[0];
 
-    this.planeView.addNode(SceneController.getRootNode());
-
     this.bindToEvents();
     this.stop();
   }

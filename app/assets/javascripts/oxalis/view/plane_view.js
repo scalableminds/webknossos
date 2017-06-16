@@ -32,8 +32,8 @@ class PlaneView {
   constructor() {
     _.extend(this, Backbone.Events);
 
-
     this.running = false;
+    const { scene, renderer } = SceneController;
 
     // Create a 4x4 grid
     this.curWidth = Constants.VIEWPORT_WIDTH;
@@ -45,7 +45,7 @@ class PlaneView {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
       this.cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
-      SceneController.scene.add(this.cameras[plane]);
+      scene.add(this.cameras[plane]);
     }
 
 
@@ -67,21 +67,23 @@ class PlaneView {
     // For some reason, all objects have to be put into a group object. Changing
     // scene.scale does not have an effect.
     this.group = new THREE.Object3D();
+    this.group.add(SceneController.getRootNode());
+
     // The dimension(s) with the highest resolution will not be distorted
     this.group.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
     // Add scene to the group, all Geometries are than added to group
-    SceneController.scene.add(this.group);
+    scene.add(this.group);
 
-    SceneController.scene.add(new THREE.AmbientLight(0x333333));
+    scene.add(new THREE.AmbientLight(0x333333));
     let directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
     directionalLight.position.set(1, 1, -1).normalize();
-    SceneController.scene.add(directionalLight);
+    scene.add(directionalLight);
     directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
     directionalLight.position.set(-1, -1, -1).normalize();
-    SceneController.scene.add(directionalLight);
+    scene.add(directionalLight);
 
     // Attach the canvas to the container
-    SceneController.renderer.setSize((2 * this.curWidth) + 20, (2 * this.curWidth) + 20);
+    renderer.setSize((2 * this.curWidth) + 20, (2 * this.curWidth) + 20);
 
     this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
@@ -148,6 +150,8 @@ class PlaneView {
     }
 
     if (this.needsRerender || modelChanged) {
+      const { renderer, scene } = SceneController;
+
       this.trigger("render");
 
       const viewport: OrthoViewMapType<Vector2> = {
@@ -156,17 +160,17 @@ class PlaneView {
         [OrthoViews.PLANE_XZ]: [0, 0],
         [OrthoViews.TDView]: [this.curWidth + 20, 0],
       };
-      SceneController.renderer.autoClear = true;
+      renderer.autoClear = true;
 
       const setupRenderArea = (x, y, width, color) => {
-        SceneController.renderer.setViewport(x, y, width, width);
-        SceneController.renderer.setScissor(x, y, width, width);
-        SceneController.renderer.setScissorTest(true);
-        SceneController.renderer.setClearColor(color, 1);
+        renderer.setViewport(x, y, width, width);
+        renderer.setScissor(x, y, width, width);
+        renderer.setScissorTest(true);
+        renderer.setClearColor(color, 1);
       };
 
-      setupRenderArea(0, 0, SceneController.renderer.domElement.width, 0xffffff);
-      SceneController.renderer.clear();
+      setupRenderArea(0, 0, renderer.domElement.width, 0xffffff);
+      renderer.clear();
 
       for (const plane of OrthoViewValues) {
         this.trigger("renderCam", plane);
@@ -176,20 +180,12 @@ class PlaneView {
           this.curWidth,
           OrthoViewColors[plane],
         );
-        SceneController.renderer.render(SceneController.scene, this.cameras[plane]);
+        renderer.render(scene, this.cameras[plane]);
       }
 
       this.needsRerender = false;
     }
   }
-
-  addNode(node: THREE.Object3D): void {
-    // Adds a new Three.js geometry to the scene.
-    // This provides the public interface to the GeometryFactory.
-
-    this.group.add(node);
-  }
-
 
   draw(): void {
     app.vent.trigger("rerender");

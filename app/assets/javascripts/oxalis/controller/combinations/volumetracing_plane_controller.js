@@ -9,7 +9,7 @@ import Store from "oxalis/store";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import constants, { OrthoViews } from "oxalis/constants";
-import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
+import type VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";

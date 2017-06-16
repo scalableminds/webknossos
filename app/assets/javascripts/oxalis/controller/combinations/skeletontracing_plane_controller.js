@@ -9,7 +9,6 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 import Store from "oxalis/store";
-import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import { OrthoViews } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
@@ -18,10 +17,9 @@ import { setPositionAction, setRotationAction } from "oxalis/model/actions/flyca
 import { getPosition, getRotationOrtho, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import type View from "oxalis/view";
-import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
+import api from "oxalis/api/internal_api";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -37,18 +35,6 @@ class SkeletonTracingPlaneController extends PlaneController {
   // Skeleton Tracing Plane Controller:
   // Extends Plane controller to add controls that are specific to Skeleton
   // Tracing.
-
-  skeletonTracingController: SkeletonTracingController;
-
-  constructor(
-    view: View,
-    sceneController: SceneController,
-    skeletonTracingController: SkeletonTracingController,
-  ) {
-    super(view, sceneController);
-    this.skeletonTracingController = skeletonTracingController;
-  }
-
 
   simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0): void {
     // For debugging purposes.
@@ -108,7 +94,7 @@ class SkeletonTracingPlaneController extends PlaneController {
       j: () => Store.dispatch(requestDeleteBranchPointAction()),
 
       s: () => {
-        this.skeletonTracingController.centerActiveNode();
+        api.tracing.centerNode();
         this.cameraController.centerTDView();
       },
     });
@@ -118,7 +104,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     super.scrollPlanes(delta, type);
 
     if (type === "shift") {
-      this.skeletonTracingController.setRadius(delta);
+      api.tracing.setNodeRadius(delta);
     }
   }
 

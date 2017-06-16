@@ -12,6 +12,8 @@ import Modal from "oxalis/view/modal";
 import { put, take, takeEvery, select, race } from "redux-saga/effects";
 import { deleteBranchPointAction, setTreeNameAction } from "oxalis/model/actions/skeletontracing_actions";
 import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateSkeletonTracing } from "oxalis/model/sagas/update_actions";
+import type { ToggleTemporarySettingActionType } from "oxalis/model/actions/settings_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";
@@ -27,7 +29,7 @@ function* centerActiveNode() {
     });
 }
 
-export function* watchBranchPointDeletion(): Generator<*, *, *> {
+function* watchBranchPointDeletion(): Generator<*, *, *> {
   let lastActionCreatedNode = true;
   while (true) {
     const { deleteBranchpointAction } = yield race({
@@ -72,10 +74,33 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
   yield takeEvery(["INITIALIZE_SKELETONTRACING"], watchTreeNames);
   yield take("WK_READY");
   yield takeEvery(
-    ["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE", "DELETE_BRANCHPOINT", "SELECT_NEXT_TREE"],
+    [
+      "SET_ACTIVE_TREE",
+      "SET_ACTIVE_NODE",
+      "DELETE_NODE",
+      "DELETE_BRANCHPOINT",
+      "SELECT_NEXT_TREE",
+    ],
     centerActiveNode,
   );
+  yield takeEvery("TOGGLE_TEMPORARY_SETTING", warnAboutSkeletonInvisibility);
   yield watchBranchPointDeletion();
+}
+
+function* warnAboutSkeletonInvisibility(action: ToggleTemporarySettingActionType): Generator<*, *, *> {
+  let msg;
+  if (action.propertyName === "shouldHideAllSkeletons") {
+    msg = "You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.";
+  } else if (action.propertyName === "shouldHideInactiveTrees") {
+    msg = "You just toggled the skeleton visibility of inactive trees. To toggle back, just hit the 2-Key.";
+  } else {
+    return;
+  }
+
+  if (Store.getState().userConfiguration.firstVisToggle) {
+    Toast.warning(msg);
+    yield put(updateUserSettingAction("firstVisToggle", false));
+  }
 }
 
 function* diffNodes(prevNodes: NodeMapType, nodes: NodeMapType, treeId: number): Generator<UpdateAction, void, void> {

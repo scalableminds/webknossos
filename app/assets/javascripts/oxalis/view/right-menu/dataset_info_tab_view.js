@@ -34,7 +34,7 @@ class DatasetInfoTabView extends Component {
       zoom = this.props.flycam.zoomStep;
       width = ArbitraryController.prototype.WIDTH;
     } else {
-      throw Error("Model mode not recognized:", viewMode);
+      throw Error(`Model mode not recognized: ${viewMode}`);
     }
     // unit is nm
     const baseVoxel = getBaseVoxel(this.props.dataset.scale);
@@ -69,7 +69,7 @@ class DatasetInfoTabView extends Component {
     const isPublicViewMode = Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     return (
-      <div>
+      <div className="flex-overflow">
         <p>{annotationType}</p>
         <p>DataSet: {dataSetName}</p>
         <p>Viewport width: {this.chooseUnit(zoomLevel)}</p>

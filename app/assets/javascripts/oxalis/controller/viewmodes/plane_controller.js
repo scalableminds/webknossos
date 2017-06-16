@@ -2,6 +2,7 @@
  * plane_controller.js
  * @flow
  */
+ /* globals JQueryInputEventObject:false */
 
 import app from "app";
 import Backbone from "backbone";
@@ -28,7 +29,6 @@ import type { ModifierKeys } from "libs/input";
 
 class PlaneController {
   planeView: PlaneView;
-  view: View;
   input: {
     mouseControllers: OrthoViewMapType<InputMouse>;
     keyboard: ?InputKeyboard;
@@ -39,7 +39,6 @@ class PlaneController {
   sceneController: SceneController;
   isStarted: boolean;
   oldNmPos: Vector3;
-  planeView: PlaneView;
   activeViewport: OrthoViewType;
   cameraController: CameraController;
   zoomPos: Vector3;
@@ -80,7 +79,6 @@ class PlaneController {
     sceneController: SceneController,
   ) {
     _.extend(this, Backbone.Events);
-    this.view = view;
     this.sceneController = sceneController;
 
     this.isStarted = false;
@@ -88,7 +86,7 @@ class PlaneController {
     const state = Store.getState();
     this.oldNmPos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
 
-    this.planeView = new PlaneView(this.view);
+    this.planeView = new PlaneView(view);
 
     this.activeViewport = OrthoViews.PLANE_XY;
 
@@ -201,7 +199,7 @@ class PlaneController {
 
   initKeyboard(): void {
     // avoid scrolling while pressing space
-    $(document).keydown((event) => {
+    $(document).keydown((event: JQueryInputEventObject) => {
       if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) {
         event.preventDefault();
       }
@@ -485,7 +483,7 @@ class PlaneController {
           curGlobalPos[1],
           curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.y) / viewportScale) * planeRatio[2] * zoomFactor)];
         break;
-      default: throw new Error("Trying to calculate the global position, but no viewport is active:", this.activeViewport);
+      default: throw new Error(`Trying to calculate the global position, but no viewport is active: ${this.activeViewport}`);
     }
 
     return position;

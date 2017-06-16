@@ -2,7 +2,9 @@
  * controller.js
  * @flow
  */
+ /* globals JQueryInputEventObject:false */
 
+import React from "react";
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
@@ -14,9 +16,7 @@ import Toast from "libs/toast";
 import Store from "oxalis/store";
 import View from "oxalis/view";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
-import SkeletonTracingArbitraryController from "oxalis/controller/combinations/skeletontracing_arbitrary_controller";
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
@@ -38,9 +38,14 @@ import type { ToastType } from "libs/toast";
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { SkeletonTracingTypeTracingType } from "oxalis/store";
 
-class Controller {
+class Controller extends React.PureComponent {
+  props: {
+    initialTracingType: SkeletonTracingTypeTracingType,
+    initialTracingId: string,
+    initialControlmode: ControlModeType,
+  }
+
   sceneController: SceneController;
-  annotationController: SkeletonTracingController | VolumeTracingController;
   planeController: PlaneController;
   arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
@@ -64,14 +69,14 @@ class Controller {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
 
-  constructor(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
+  componentDidMount() {
     app.router.showLoadingSpinner();
 
     _.extend(this, Backbone.Events);
 
     UrlManager.initialize();
 
-    Model.fetch(tracingType, tracingId, controlMode, true)
+    Model.fetch(this.props.initialTracingType, this.props.initialTracingId, this.props.initialControlmode, true)
       .then(() => this.modelFetchDone())
       .catch((error) => {
         // Don't throw errors for errors already handled by the model.
@@ -98,22 +103,18 @@ class Controller {
     this.sceneController = new SceneController();
     switch (state.tracing.type) {
       case "volume": {
-        this.annotationController = new VolumeTracingController(
-          this.view, this.sceneController);
+        const volumeTracingController = new VolumeTracingController();
         this.planeController = new VolumeTracingPlaneController(
-          this.view, this.sceneController, this.annotationController);
+          this.view, this.sceneController, volumeTracingController);
         break;
       }
       case "skeleton": {
-        this.annotationController = new SkeletonTracingController(
-          this.view, this.sceneController);
         this.planeController = new SkeletonTracingPlaneController(
-          this.view, this.sceneController, this.annotationController);
+          this.view, this.sceneController);
         const ArbitraryControllerClass = state.tracing.restrictions.advancedOptionsAllowed ?
-          SkeletonTracingArbitraryController :
+          ArbitraryController :
           MinimalSkeletonTracingArbitraryController;
-        this.arbitraryController = new ArbitraryControllerClass(
-          this.view, this.sceneController, this.annotationController);
+        this.arbitraryController = new ArbitraryControllerClass(this.view);
         break;
       }
       default: {
@@ -214,7 +215,7 @@ class Controller {
 
   initKeyboard() {
     // avoid scrolling while pressing space
-    $(document).keydown((event) => {
+    $(document).keydown((event: JQueryInputEventObject) => {
       if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) { event.preventDefault(); }
     });
 
@@ -267,7 +268,7 @@ class Controller {
       allowedModes.includes(newMode)
     ) {
       Utils.__guard__(this.arbitraryController, x1 => x1.stop());
-      this.planeController.start(newMode);
+      this.planeController.start();
     }
 
     // Hide/show zoomstep warning if appropriate
@@ -285,6 +286,11 @@ class Controller {
       this.zoomStepWarningToast = null;
     }
   }
+
+  render() {
+    return null;
+  }
+
 }
 
 

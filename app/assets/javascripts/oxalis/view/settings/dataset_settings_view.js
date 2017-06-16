@@ -11,6 +11,7 @@ import { Collapse, Row, Col, Select } from "antd";
 import type { DatasetConfigurationType, DatasetLayerConfigurationType, OxalisState } from "oxalis/store";
 import { updateDatasetSettingAction, updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { SwitchSetting, NumberSliderSetting, DropdownSetting, ColorSetting } from "oxalis/view/settings/setting_input_views";
+import Utils from "libs/utils";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
@@ -36,7 +37,7 @@ class DatasetSettings extends Component {
       </Row>
       <NumberSliderSetting label="Brightness" min={-255} max={255} step={5} value={layer.brightness} onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")} />
       <NumberSliderSetting label="Contrast" min={0.5} max={5} step={0.1} value={layer.contrast} onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")} />
-      <ColorSetting label="Color" value={layer.color} onChange={_.partial(this.props.onChangeLayer, layerName, "color")} className="ant-btn" />
+      <ColorSetting label="Color" value={Utils.rgbToHex(layer.color)} onChange={_.partial(this.props.onChangeLayer, layerName, "color")} className="ant-btn" />
     </div>
   );
 

@@ -10,8 +10,8 @@ import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
 import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, createCommentAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { setActiveNodeAction, createCommentAction, deleteNodeAction, setNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
+import { findTreeByNodeId, getNodeAndTree, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, VolumeTraceOrMoveModeType } from "oxalis/constants";
@@ -23,6 +23,7 @@ import Request from "libs/request";
 import app from "app";
 import Utils from "libs/utils";
 import { ControlModeEnum } from "oxalis/constants";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -190,7 +191,7 @@ class TracingApi {
    * Don't assume that code after the finishAndGetNextTask call will be executed.
    * It can happen that there is no further task, in which case the user will be redirected to the dashboard.
    * Or the the page can be reloaded (e.g., if the dataset changed), which also means that no further JS code will
-   // be executed in this site context.
+   * be executed in this site context.
    *
    * @example
    * api.tracing.save().then(() => ... );
@@ -212,11 +213,16 @@ class TracingApi {
 
       const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
       const isDifferentTaskType = annotation.task.type.id !== Utils.__guard__(task, x => x.type.id);
+
+      const currentScript = (task != null && task.script != null) ? task.script.gist : null;
+      const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
+      const isDifferentScript = currentScript !== nextScript;
+
       const differentTaskTypeParam = isDifferentTaskType ? "?differentTaskType" : "";
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
-      if (isDifferentDataset || isDifferentTaskType) {
+      if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
         app.router.loadURL(newTaskUrl);
       } else {
         // $FlowFixMe
@@ -227,6 +233,38 @@ class TracingApi {
       await Utils.sleep(2000);
       app.router.loadURL("/dashboard");
     }
+  }
+
+  //  SKELETONTRACING API
+
+  /**
+   * Increases the node radius of the given node by multiplying it with 1.05^delta.
+   * If no nodeId and/or treeId are provided, it defaults to the current tree and current node.
+   *
+   * @example
+   * api.tracing.setNodeRadius(1)
+   */
+  setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
+    getNodeAndTree(Store.getState().tracing, nodeId, treeId)
+      .map(([, node]) =>
+        Store.dispatch(setNodeRadiusAction(
+          node.radius * Math.pow(1.05, delta),
+          nodeId,
+          treeId,
+        ),
+      ));
+  }
+
+
+  /**
+   * Centers the given node. If no node is provided, the active node is centered.
+   *
+   * @example
+   * api.tracing.centerNode()
+   */
+  centerNode = (nodeId?: number): void => {
+    getNodeAndTree(Store.getState().tracing, nodeId)
+      .map(([, node]) => Store.dispatch(setPositionAction(node.position)));
   }
 
   //  VOLUMETRACING API
@@ -511,7 +549,7 @@ class UtilsApi {
   *   - CREATE_NODE
   *   - DELETE_NODE
   *   - SET_ACTIVE_NODE
-  *   - SET_ACTIVE_NODE_RADIUS
+  *   - SET_NODE_RADIUS
   *   - CREATE_BRANCHPOINT
   *   - DELETE_BRANCHPOINT
   *   - CREATE_TREE

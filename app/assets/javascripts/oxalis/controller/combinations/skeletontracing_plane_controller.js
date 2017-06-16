@@ -147,7 +147,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   setWaypoint(position: Vector3, ctrlPressed: boolean): void {
-    const { activeViewport } = this;
+    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
     if (activeViewport === OrthoViews.TDView) {
       return;
     }
@@ -189,7 +189,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     Store.dispatch(createNodeAction(
       position,
       rotation,
-      OrthoViewToNumber[this.activeViewport],
+      OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
       getRequestLogZoomStep(state),
     ));
 
@@ -203,8 +203,9 @@ class SkeletonTracingPlaneController extends PlaneController {
 
   centerPositionAnimated(position: Vector3, skipDimensions: boolean = true): void {
     // Let the user still manipulate the "third dimension" during animation
-    const dimensionToSkip = skipDimensions && this.activeViewport !== OrthoViews.TDView ?
-      dimensions.thirdDimensionForPlane(this.activeViewport) :
+    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const dimensionToSkip = skipDimensions && activeViewport !== OrthoViews.TDView ?
+      dimensions.thirdDimensionForPlane(activeViewport) :
       null;
 
     const curGlobalPos = getPosition(Store.getState().flycam);

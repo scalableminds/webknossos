@@ -10,8 +10,8 @@ import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
 import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, createCommentAction, deleteNodeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
-import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { setActiveNodeAction, createCommentAction, deleteNodeAction, setNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
+import { findTreeByNodeId, getNodeAndTree, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, VolumeTraceOrMoveModeType } from "oxalis/constants";
@@ -238,27 +238,33 @@ class TracingApi {
   //  SKELETONTRACING API
 
   /**
-   * Increases the node radius of the active node by multiplying it with 1.05^delta.
+   * Increases the node radius of the given node by multiplying it with 1.05^delta.
+   * If no nodeId and/or treeId are provided, it defaults to the current tree and current node.
    *
    * @example
-   * api.tracing.setRadius(1)
+   * api.tracing.setNodeRadius(1)
    */
-  setRadius(delta: number): void {
-    getActiveNode(Store.getState().tracing)
-      .map(activeNode =>
-        Store.dispatch(setActiveNodeRadiusAction(activeNode.radius * Math.pow(1.05, delta))));
+  setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
+    getNodeAndTree(Store.getState().tracing, nodeId, treeId)
+      .map(([, node]) =>
+        Store.dispatch(setNodeRadiusAction(
+          node.radius * Math.pow(1.05, delta),
+          nodeId,
+          treeId,
+        ),
+      ));
   }
 
 
   /**
-   * Centers the active node.
+   * Centers the given node. If no node is provided, the active node is centered.
    *
    * @example
-   * api.tracing.centerActiveNode()
+   * api.tracing.centerNode()
    */
-  centerActiveNode = (): void => {
-    getActiveNode(Store.getState().tracing)
-      .map(activeNode => Store.dispatch(setPositionAction(activeNode.position)));
+  centerNode = (nodeId?: number): void => {
+    getNodeAndTree(Store.getState().tracing, nodeId)
+      .map(([, node]) => Store.dispatch(setPositionAction(node.position)));
   }
 
   //  VOLUMETRACING API
@@ -543,7 +549,7 @@ class UtilsApi {
   *   - CREATE_NODE
   *   - DELETE_NODE
   *   - SET_ACTIVE_NODE
-  *   - SET_ACTIVE_NODE_RADIUS
+  *   - SET_NODE_RADIUS
   *   - CREATE_BRANCHPOINT
   *   - DELETE_BRANCHPOINT
   *   - CREATE_TREE

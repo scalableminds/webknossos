@@ -94,7 +94,7 @@ class SkeletonTracingPlaneController extends PlaneController {
       j: () => Store.dispatch(requestDeleteBranchPointAction()),
 
       s: () => {
-        api.tracing.centerActiveNode();
+        api.tracing.centerNode();
         this.cameraController.centerTDView();
       },
     });
@@ -104,7 +104,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     super.scrollPlanes(delta, type);
 
     if (type === "shift") {
-      api.tracing.setRadius(delta);
+      api.tracing.setNodeRadius(delta);
     }
   }
 

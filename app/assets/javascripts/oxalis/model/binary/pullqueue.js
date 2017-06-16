@@ -4,9 +4,9 @@
  */
 
 import _ from "lodash";
-import DataCube from "oxalis/model/binary/data_cube";
 import BinaryDataConnectionInfo from "oxalis/model/binarydata_connection_info";
-import Layer from "oxalis/model/binary/layers/layer";
+import type Layer from "oxalis/model/binary/layers/layer";
+import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector4 } from "oxalis/constants";
 import type { DataStoreInfoType } from "oxalis/store";
 

@@ -2,6 +2,7 @@ module.exports = function (env = {}) {
   /* eslint no-var:0, import/no-extraneous-dependencies:0 */
   var webpack = require("webpack");
   var ExtractTextPlugin = require("extract-text-webpack-plugin");
+  var CircularDependencyPlugin = require("circular-dependency-plugin");
   var fs = require("fs");
   var path = require("path");
 
@@ -84,6 +85,12 @@ module.exports = function (env = {}) {
         jQuery: "jquery",
         "window.jQuery": "jquery",
         _: "lodash",
+      }),
+      new CircularDependencyPlugin({
+        // exclude detection of files based on a RegExp
+        exclude: /a\.js|node_modules/,
+        // add errors to webpack instead of warnings
+        failOnError: true
       }),
     ],
   };

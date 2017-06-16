@@ -14,7 +14,6 @@ import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import View from "oxalis/view";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import { getPosition, getRequestLogZoomStep, getIntegerZoomStep, getAreas, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
@@ -36,7 +35,6 @@ class PlaneController {
     keyboardLoopDelayed: ?InputKeyboard;
     destroy(): void;
   };
-  sceneController: SceneController;
   isStarted: boolean;
   oldNmPos: Vector3;
   activeViewport: OrthoViewType;
@@ -74,19 +72,14 @@ class PlaneController {
   }
 
 
-  constructor(
-    view: View,
-    sceneController: SceneController,
-  ) {
+  constructor() {
     _.extend(this, Backbone.Events);
-    this.sceneController = sceneController;
-
     this.isStarted = false;
 
     const state = Store.getState();
     this.oldNmPos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
 
-    this.planeView = new PlaneView(view);
+    this.planeView = new PlaneView();
 
     this.activeViewport = OrthoViews.PLANE_XY;
 
@@ -95,7 +88,7 @@ class PlaneController {
 
     this.canvasesAndNav = $("#main")[0];
 
-    this.planeView.addNode(this.sceneController.getRootNode());
+    this.planeView.addNode(SceneController.getRootNode());
 
     this.bindToEvents();
     this.stop();
@@ -270,13 +263,13 @@ class PlaneController {
   init(): void {
     const clippingDistance = Store.getState().userConfiguration.clippingDistance;
     this.cameraController.setClippingDistance(clippingDistance);
-    this.sceneController.setClippingDistance(clippingDistance);
+    SceneController.setClippingDistance(clippingDistance);
   }
 
   start(): void {
     this.stop();
 
-    this.sceneController.start();
+    SceneController.start();
     this.planeView.start();
 
     this.initKeyboard();
@@ -305,7 +298,7 @@ class PlaneController {
       $("#TDViewControls button").off();
     }
 
-    this.sceneController.stop();
+    SceneController.stop();
     this.planeView.stop();
 
     this.isStarted = false;
@@ -313,13 +306,13 @@ class PlaneController {
 
   bindToEvents(): void {
     this.listenTo(this.planeView, "render", this.render);
-    this.listenTo(this.planeView, "renderCam", this.sceneController.updateSceneForCam);
+    this.listenTo(this.planeView, "renderCam", SceneController.updateSceneForCam);
   }
 
 
   render(): void {
     for (const dataLayerName of Object.keys(Model.binary)) {
-      if (this.sceneController.pingDataLayer(dataLayerName)) {
+      if (SceneController.pingDataLayer(dataLayerName)) {
         Model.binary[dataLayerName].ping(getPosition(Store.getState().flycam), {
           zoomStep: getRequestLogZoomStep(Store.getState()),
           areas: getAreas(Store.getState()),
@@ -329,7 +322,7 @@ class PlaneController {
     }
 
     this.cameraController.update();
-    this.sceneController.update();
+    SceneController.update();
   }
 
 

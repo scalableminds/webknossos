@@ -10,6 +10,7 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
+import SceneController from "oxalis/controller/scene_controller";
 import { OrthoViews } from "oxalis/constants";
 import dimensions from "oxalis/model/dimensions";
 import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -116,7 +117,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
     // render the clicked viewport with picking enabled
     // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
-    const pickingNode = this.sceneController.skeleton.startPicking();
+    const pickingNode = SceneController.skeleton.startPicking();
     const pickingScene = new THREE.Scene();
     pickingScene.add(pickingNode);
 
@@ -128,7 +129,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     const index = (x + (this.planeView.curWidth - y) * this.planeView.curWidth) * 4;
     // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
     const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
-    this.sceneController.skeleton.stopPicking();
+    SceneController.skeleton.stopPicking();
 
     // prevent flickering sometimes caused by picking
     this.planeView.renderFunction();

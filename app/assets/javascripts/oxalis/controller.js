@@ -14,7 +14,6 @@ import Stats from "stats.js";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import Store from "oxalis/store";
-import View from "oxalis/view";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
@@ -45,12 +44,10 @@ class Controller extends React.PureComponent {
     initialControlmode: ControlModeType,
   }
 
-  sceneController: SceneController;
   planeController: PlaneController;
   arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
-  view: View;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -76,6 +73,10 @@ class Controller extends React.PureComponent {
 
     UrlManager.initialize();
 
+    if (!this.isWebGlSupported()) {
+      Toast.error(messages["webgl.disabled"]);
+    }
+
     Model.fetch(this.props.initialTracingType, this.props.initialTracingId, this.props.initialControlmode, true)
       .then(() => this.modelFetchDone())
       .catch((error) => {
@@ -98,28 +99,24 @@ class Controller extends React.PureComponent {
     });
 
     UrlManager.startUrlUpdater();
+    SceneController.initialize();
 
-    this.view = new View();
-    this.sceneController = new SceneController();
     switch (state.tracing.type) {
       case "volume": {
         const volumeTracingController = new VolumeTracingController();
-        this.planeController = new VolumeTracingPlaneController(
-          this.view, this.sceneController, volumeTracingController);
+        this.planeController = new VolumeTracingPlaneController(volumeTracingController);
         break;
       }
       case "skeleton": {
-        this.planeController = new SkeletonTracingPlaneController(
-          this.view, this.sceneController);
+        this.planeController = new SkeletonTracingPlaneController();
         const ArbitraryControllerClass = state.tracing.restrictions.advancedOptionsAllowed ?
           ArbitraryController :
           MinimalSkeletonTracingArbitraryController;
-        this.arbitraryController = new ArbitraryControllerClass(this.view);
+        this.arbitraryController = new ArbitraryControllerClass();
         break;
       }
       default: {
-        this.planeController = new PlaneController(
-          this.view, this.sceneController);
+        this.planeController = new PlaneController();
         break;
       }
     }
@@ -212,6 +209,9 @@ class Controller extends React.PureComponent {
     Modal.show(text, title);
   }
 
+  isWebGlSupported() {
+    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
+  }
 
   initKeyboard() {
     // avoid scrolling while pressing space

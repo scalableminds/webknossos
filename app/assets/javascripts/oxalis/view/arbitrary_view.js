@@ -9,8 +9,8 @@ import Backbone from "backbone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import Constants from "oxalis/constants";
-import View from "oxalis/view";
 import Store from "oxalis/store";
+import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 
 
@@ -41,21 +41,17 @@ class ArbitraryView {
   scaleFactor: number;
   camDistance: number;
 
-  scene: THREE.Scene = null;
   camera: THREE.PerspectiveCamera = null;
-  renderer: THREE.WebGLRenderer;
   geometries: Array<THREE.Geometry> = [];
   group: THREE.Object3D;
   cameraPosition: Array<number>;
   container: JQuery;
-  view: View;
 
-  constructor(canvas: JQuery, view: View, width: number) {
+  constructor(canvasSelector: string, width: number) {
     this.animate = this.animateImpl.bind(this);
     this.resize = this.resizeImpl.bind(this);
     this.applyScale = this.applyScaleImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
-    this.view = view;
     _.extend(this, Backbone.Events);
 
     // camDistance has to be calculates such that with cam
@@ -65,12 +61,9 @@ class ArbitraryView {
 
     // The "render" div serves as a container for the canvas, that is
     // attached to it once a renderer has been initalized.
-    this.container = $(canvas);
+    this.container = $(canvasSelector);
     this.width = this.container.width();
     this.height = this.container.height();
-
-    this.renderer = this.view.renderer;
-    this.scene = this.view.scene;
 
     // Initialize main THREE.js components
 
@@ -85,7 +78,7 @@ class ArbitraryView {
     // The dimension(s) with the highest resolution will not be distorted
     this.group.scale.copy(nmPerVoxel);
     // Add scene to the group, all Geometries are then added to group
-    this.scene.add(this.group);
+    SceneController.scene.add(this.group);
     this.group.add(this.camera);
 
     app.vent.on("rerender", () => { this.needsRerender = true; });
@@ -144,7 +137,8 @@ class ArbitraryView {
     if (this.needsRerender) {
       this.trigger("render");
 
-      const { camera, geometries, renderer, scene } = this;
+      const { camera, geometries } = this;
+      const { renderer, scene } = SceneController;
 
       for (const geometry of geometries) {
         if (geometry.update != null) {
@@ -204,7 +198,7 @@ class ArbitraryView {
     this.width = this.container.width();
     this.height = this.container.height();
 
-    this.renderer.setSize(this.width, this.height);
+    SceneController.renderer.setSize(this.width, this.height);
 
     this.camera.aspect = this.width / this.height;
     this.camera.updateProjectionMatrix();

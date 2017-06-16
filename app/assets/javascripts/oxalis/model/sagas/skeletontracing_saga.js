@@ -87,12 +87,12 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
   yield watchBranchPointDeletion();
 }
 
-function *warnAboutSkeletonInvisibility(action: ToggleTemporarySettingActionType): Generator<*, *, *> {
+function* warnAboutSkeletonInvisibility(action: ToggleTemporarySettingActionType): Generator<*, *, *> {
   let msg;
   if (action.propertyName === "shouldHideAllSkeletons") {
-    msg = "You just toggled the skeleton visibility. To toggle back, just hit the 1-Key."
+    msg = "You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.";
   } else if (action.propertyName === "shouldHideInactiveTrees") {
-    msg = "You just toggled the skeleton visibility of inactive trees. To toggle back, just hit the 2-Key."
+    msg = "You just toggled the skeleton visibility of inactive trees. To toggle back, just hit the 2-Key.";
   } else {
     return;
   }

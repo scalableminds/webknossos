@@ -15,7 +15,6 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
@@ -38,20 +37,30 @@ import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { SkeletonTracingTypeTracingType } from "oxalis/store";
 
 class Controller extends React.PureComponent {
+  // TODO: the initial loading should probably be done in a saga and for the other
+  // state we should use connect()
   props: {
     initialTracingType: SkeletonTracingTypeTracingType,
     initialTracingId: string,
     initialControlmode: ControlModeType,
   }
 
-  planeController: PlaneController;
   arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
+  stats: Stats;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
+
+  state: {
+    ready: boolean,
+    viewMode: ModeType,
+  } = {
+    ready: false,
+    viewMode: constants.MODE_PLANE_TRACING,
+  }
 
   // Main controller, responsible for setting modes and everything
   // that has to be controlled in any mode.
@@ -102,13 +111,7 @@ class Controller extends React.PureComponent {
     SceneController.initialize();
 
     switch (state.tracing.type) {
-      case "volume": {
-        const volumeTracingController = new VolumeTracingController();
-        this.planeController = new VolumeTracingPlaneController(volumeTracingController);
-        break;
-      }
       case "skeleton": {
-        this.planeController = new SkeletonTracingPlaneController();
         const ArbitraryControllerClass = state.tracing.restrictions.advancedOptionsAllowed ?
           ArbitraryController :
           MinimalSkeletonTracingArbitraryController;
@@ -116,16 +119,16 @@ class Controller extends React.PureComponent {
         break;
       }
       default: {
-        this.planeController = new PlaneController();
         break;
       }
     }
 
     // FPS stats
-    const stats = new Stats();
-    $("body").append(stats.domElement);
-    if (this.arbitraryController) { this.listenTo(this.arbitraryController.arbitraryView, "render", () => stats.update()); }
-    this.listenTo(this.planeController.planeView, "render", () => stats.update());
+    this.stats = new Stats();
+    $("body").append(this.stats.domElement);
+    if (this.arbitraryController) {
+      this.listenTo(this.arbitraryController.arbitraryView, "render", () => this.stats.update());
+    }
 
     this.initKeyboard();
     this.initTaskScript();
@@ -135,7 +138,10 @@ class Controller extends React.PureComponent {
       this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
     }
 
-    listenToStoreProperty(store => store.temporaryConfiguration.viewMode, mode => this.loadMode(mode), true);
+    listenToStoreProperty(store => store.temporaryConfiguration.viewMode, (mode) => {
+      this.loadMode(mode);
+      this.setState({ viewMode: mode });
+    }, true);
 
     // Zoom step warning
     let lastZoomStep = Store.getState().flycam.zoomStep;
@@ -153,6 +159,7 @@ class Controller extends React.PureComponent {
     app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
+    this.setState({ ready: true });
   }
 
   // For tracing swap testing, call
@@ -261,14 +268,12 @@ class Controller extends React.PureComponent {
       (newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) &&
       allowedModes.includes(newMode)
     ) {
-      Utils.__guard__(this.planeController, x => x.stop());
       this.arbitraryController.start(newMode);
     } else if (
       (newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) &&
       allowedModes.includes(newMode)
     ) {
       Utils.__guard__(this.arbitraryController, x1 => x1.stop());
-      this.planeController.start();
     }
 
     // Hide/show zoomstep warning if appropriate
@@ -288,10 +293,45 @@ class Controller extends React.PureComponent {
   }
 
   render() {
-    return null;
+    if (!this.state.ready) {
+      return null;
+    }
+    let activeController;
+
+    const allowedModes = Store.getState().tracing.restrictions.allowedModes;
+    const newMode = this.state.viewMode;
+    if (
+      (newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) &&
+      allowedModes.includes(newMode)
+    ) {
+      // TODO: use arbitraryController here once it is a react component
+      activeController = null;
+    } else if (
+      (newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) &&
+      allowedModes.includes(newMode)
+    ) {
+      switch (Store.getState().tracing.type) {
+        case "volume": {
+          activeController = <VolumeTracingPlaneController onRender={() => this.stats.update()} />;
+          break;
+        }
+        case "skeleton": {
+          activeController = <SkeletonTracingPlaneController onRender={() => this.stats.update()} />;
+          break;
+        }
+        default: {
+          activeController = <PlaneController onRender={() => this.stats.update()} />;
+          break;
+        }
+      }
+    }
+
+    return (
+      <div>
+        {activeController}
+      </div>
+    );
   }
-
 }
-
 
 export default Controller;

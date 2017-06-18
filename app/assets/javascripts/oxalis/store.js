@@ -402,7 +402,7 @@ export const defaultState: OxalisState = {
   },
   viewModeData: {
     plane: {
-      activeViewport: OrthoViews.PLANE_XY
+      activeViewport: OrthoViews.PLANE_XY,
     },
     arbitrary: null,
     flight: null,

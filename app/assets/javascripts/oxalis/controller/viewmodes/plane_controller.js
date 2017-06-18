@@ -5,6 +5,7 @@
  /* globals JQueryInputEventObject:false */
 
 import app from "app";
+import React from "react";
 import Backbone from "backbone";
 import $ from "jquery";
 import _ from "lodash";
@@ -27,8 +28,11 @@ import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/co
 import type { ModifierKeys } from "libs/input";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 
-class PlaneController {
+class PlaneController extends React.PureComponent {
   planeView: PlaneView;
+  props: {
+    onRender: () => void,
+  }
   input: {
     mouseControllers: OrthoViewMapType<InputMouse>;
     keyboard: ?InputKeyboard;
@@ -42,16 +46,14 @@ class PlaneController {
   zoomPos: Vector3;
   controls: TrackballControls;
   canvasesAndNav: any;
-  bindings: Array<any>;
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
+  stopListening: Function;
 
   static initClass() {
     // See comment in Controller class on general controller architecture.
     //
     // Plane Controller: Responsible for Plane Modes
-
-    this.prototype.bindings = [];
 
     this.prototype.input = {
       mouseControllers: {},
@@ -72,7 +74,7 @@ class PlaneController {
   }
 
 
-  constructor() {
+  componentDidMount() {
     _.extend(this, Backbone.Events);
     this.isStarted = false;
 
@@ -88,10 +90,12 @@ class PlaneController {
 
     this.canvasesAndNav = $("#main")[0];
 
-    this.bindToEvents();
-    this.stop();
+    this.start();
   }
 
+  componentWillUnmount() {
+    this.stop();
+  }
 
   initMouse(): void {
     for (const id of OrthoViewValues) {
@@ -266,6 +270,7 @@ class PlaneController {
 
   start(): void {
     this.stop();
+    this.bindToEvents();
 
     SceneController.start();
     this.planeView.start();
@@ -298,17 +303,19 @@ class PlaneController {
 
     SceneController.stop();
     this.planeView.stop();
+    this.stopListening();
 
     this.isStarted = false;
   }
 
   bindToEvents(): void {
-    this.listenTo(this.planeView, "render", this.render);
+    this.listenTo(this.planeView, "render", this.oldRender);
     this.listenTo(this.planeView, "renderCam", SceneController.updateSceneForCam);
+    this.listenTo(this.planeView, "render", this.props.onRender);
   }
 
 
-  render(): void {
+  oldRender(): void {
     const state = Store.getState();
     const activeViewport = state.viewModeData.plane.activeViewport;
     for (const dataLayerName of Object.keys(Model.binary)) {
@@ -456,6 +463,10 @@ class PlaneController {
 
 
   calculateGlobalPos = (clickPos: Point2): Vector3 => calculateGlobalPos(clickPos)
+
+  render() {
+    return null;
+  }
 }
 PlaneController.initClass();
 

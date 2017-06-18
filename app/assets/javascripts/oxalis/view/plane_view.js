@@ -19,7 +19,6 @@ class PlaneView {
 
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
-  on: Function;
   listenTo: Function;
 
   cameras: OrthoViewMapType<THREE.OrthographicCamera>;

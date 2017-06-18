@@ -10,7 +10,7 @@ function ViewModeReducer(state: OxalisState, action: ActionType): OxalisState {
       return update(state, {
         viewModeData: {
           plane: {
-            activeViewport: { $set: action.viewport }
+            activeViewport: { $set: action.viewport },
           },
         },
       });

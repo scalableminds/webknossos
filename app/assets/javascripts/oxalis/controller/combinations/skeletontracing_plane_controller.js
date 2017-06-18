@@ -6,15 +6,13 @@
 
 import $ from "jquery";
 import * as THREE from "three";
-import TWEEN from "tween.js";
 import _ from "lodash";
 import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import { OrthoViews } from "oxalis/constants";
-import dimensions from "oxalis/model/dimensions";
 import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotationOrtho, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
@@ -196,40 +194,9 @@ class SkeletonTracingPlaneController extends PlaneController {
     if (centered) {
       // we created a new node, so get a new reference
       getActiveNode(Store.getState().tracing)
-        .map(newActiveNode => this.centerPositionAnimated(newActiveNode.position));
+        .map(newActiveNode => api.tracing.centerPositionAnimated(newActiveNode.position));
     }
   };
-
-
-  centerPositionAnimated(position: Vector3, skipDimensions: boolean = true): void {
-    // Let the user still manipulate the "third dimension" during animation
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
-    const dimensionToSkip = skipDimensions && activeViewport !== OrthoViews.TDView ?
-      dimensions.thirdDimensionForPlane(activeViewport) :
-      null;
-
-    const curGlobalPos = getPosition(Store.getState().flycam);
-
-    const tween = new TWEEN.Tween({
-      globalPosX: curGlobalPos[0],
-      globalPosY: curGlobalPos[1],
-      globalPosZ: curGlobalPos[2],
-    });
-    tween.to({
-      globalPosX: position[0],
-      globalPosY: position[1],
-      globalPosZ: position[2],
-    }, 200)
-    .onUpdate(function () { // needs to be a normal (non-bound) function
-      const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
-      if (dimensionToSkip != null) {
-        Store.dispatch(setPositionAction(curPos, dimensionToSkip));
-      } else {
-        Store.dispatch(setPositionAction(curPos));
-      }
-    })
-    .start();
-  }
 }
 
 export default SkeletonTracingPlaneController;

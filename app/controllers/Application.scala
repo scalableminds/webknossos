@@ -1,6 +1,8 @@
+/*
+* Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+*/
 package controllers
 
-import play.api._
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.mvc.Results._

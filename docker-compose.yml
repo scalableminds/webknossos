@@ -30,3 +30,14 @@ services:
     environment:
       - PORT=9090
     stdin_open: true
+
+  prod:
+    extends:
+      service: dev
+    command: >
+      bash -c
+      "sbt -v -d -jvm-debug 5005 \"testProd
+      -Djava.net.preferIPv4Stack=true
+      -Dhttp.address=0.0.0.0
+      -Dhttp.port=$${PORT}
+      \""

@@ -1,35 +1,25 @@
 /*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.formats.knossos
+package com.scalableminds.braingames.binary.dataformats.knossos
 
-import java.io.{FileInputStream, RandomAccessFile}
+import java.io.{FileInputStream, FileNotFoundException, RandomAccessFile}
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
-import java.nio.file.{Files, Path}
-import java.util.concurrent.TimeoutException
+import java.nio.file.Path
 
+import com.newrelic.api.agent.NewRelic
+import com.scalableminds.braingames.binary.dataformats.{Cube, CubeLoader}
 import com.scalableminds.braingames.binary.models._
-import com.scalableminds.braingames.binary.requester.handlers.BucketHandler
-import com.scalableminds.braingames.binary.requester.{Cube, DataCubeCache}
-import com.scalableminds.braingames.binary.store._
+import com.scalableminds.braingames.binary.models.datasource.DataLayer
+import com.scalableminds.braingames.binary.models.requests.CubeLoadInstruction
+import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedRandomAccessFile
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.lang3.reflect.FieldUtils
 import play.api.libs.concurrent.Execution.Implicits._
-
-import scala.concurrent._
-import scala.concurrent.duration.FiniteDuration
-
-object KnossosCube{
-  def create(file: RandomAccessFile): KnossosCube = {
-    val channel = new FileInputStream(file.getPath).getChannel
-    val buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size())
-    new KnossosCube(buffer, channel, file)
-  }
-}
 
 class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: RandomAccessFile)
   extends Cube
@@ -55,12 +45,12 @@ class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: Rando
     m
   }
 
-  def cutOutBucket(requestedBucket: BucketReadInstruction): Box[Array[Byte]] = {
+  def cutOutBucket(dataLayer: DataLayer, bucket: BucketPosition): Box[Array[Byte]] = {
     try {
-      val offset: VoxelPosition = requestedBucket.position.topLeft
-      val bytesPerElement = requestedBucket.dataLayer.bytesPerElement
-      val bucketLength = requestedBucket.dataLayer.lengthOfLoadedBuckets
-      val cubeLength = requestedBucket.dataLayer.cubeLength
+      val offset: VoxelPosition = bucket.topLeft
+      val bytesPerElement = dataLayer.bytesPerElement
+      val bucketLength = dataLayer.lengthOfProvidedBuckets
+      val cubeLength = dataLayer.lengthOfUnderlyingCubes
       val bucketSize = bytesPerElement * bucketLength * bucketLength * bucketLength
       val result = new Array[Byte](bucketSize)
 
@@ -120,14 +110,19 @@ class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: Rando
   }
 }
 
-class KnossosBucketHandler(val cache: DataCubeCache)
-  extends BucketHandler
-    with FoxImplicits
-    with LazyLogging {
+object KnossosCube {
 
-  lazy val dataStore = new FileDataStore
+  def apply(file: RandomAccessFile): KnossosCube = {
+    val channel = new FileInputStream(file.getPath).getChannel
+    val buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size())
+    new KnossosCube(buffer, channel, file)
+  }
+}
 
-  private def loadCubeFromUnderlying(loadCube: CubeReadInstruction, section: KnossosDataLayerSection, timeout: FiniteDuration): Fox[KnossosCube] = {
+
+class KnossosCubeLoader extends CubeLoader with FoxImplicits with LazyLogging {
+
+  /*private def loadCubeFromUnderlying(loadCube: CubeReadInstruction, section: KnossosDataLayerSection, timeout: FiniteDuration): Fox[KnossosCube] = {
     Future {
       blocking {
         val bucket = dataStore.load(loadCube, section)
@@ -148,77 +143,55 @@ class KnossosBucketHandler(val cache: DataCubeCache)
           s"Block: (${loadCube.position.x},${loadCube.position.y},${loadCube.position.z})")
         Failure("dataStore.load.timeout")
     }
-  }
+  }*/
 
-  def loadFromUnderlying(loadCube: CubeReadInstruction, timeout: FiniteDuration): Fox[KnossosCube] = {
-    def loadFromSections(sections: List[KnossosDataLayerSection]): Fox[KnossosCube] = {
-      sections match {
-        case section :: tail =>
-          loadCubeFromUnderlying(loadCube, section, timeout).futureBox.flatMap {
-            case Full(knossosCube) =>
-              Fox.successful(knossosCube)
-            case f: Failure =>
-              logger.error(s"DataStore Failure: ${f.msg}")
-              Fox.empty
-            case _ =>
-              loadFromSections(tail)
-          }
-        case _ =>
-          // We couldn't find the data in any section.
-          Fox.empty
-      }
-    }
-
-    loadCube.dataLayer match {
-      case knossosDataLayer: KnossosDataLayer =>
-        loadFromSections(knossosDataLayer.sections)
+  def load(cubeInstruction: CubeLoadInstruction): Fox[KnossosCube] = {
+    cubeInstruction.dataLayer match {
+      case layer: KnossosDataLayer =>
+        for {
+          section <- layer.sections.find(_.doesContainCube(cubeInstruction.position))
+          knossosFile <- loadKnossosFile(cubeInstruction, section)
+        } yield {
+          KnossosCube(knossosFile)
+        }
       case _ =>
-        // This should not happen!
-        logger.error(s"DataStore Failure: Unexpected layer type.")
-        Empty
+        // This should never happen!
+        val errorMsg = "DataStore failure: Unexpected layer type."
+        logger.error(errorMsg)
+        Failure(errorMsg)
     }
   }
 
-  private def saveBucketToUnderlying(saveBucket: BucketWriteInstruction, section: KnossosDataLayerSection, timeout: FiniteDuration): Fox[Boolean] = {
-    Future {
-      blocking {
-        val saveResult = dataStore.save(saveBucket, section, None).futureBox
-        Await.result(saveResult, timeout)
-      }
-    }.recover {
-      case _: TimeoutException | _: InterruptedException =>
-        logger.warn(s"No response in time for block during save: " +
-          s"(${saveBucket.dataSource.id}/${section.baseDir} ${saveBucket.position})")
-        Failure("dataStore.save.timeout")
-    }
+  private def knossosFilePath(cubeInstruction: CubeLoadInstruction, section: KnossosSection): Path = {
+    cubeInstruction.baseDir
+      .resolve(cubeInstruction.dataSource.id.team)
+      .resolve(cubeInstruction.dataSource.id.name)
+      .resolve(cubeInstruction.dataLayer.name)
+      .resolve(section.name)
+      .resolve(cubeInstruction.position.resolution.toString)
+      .resolve("x%04d".format(cubeInstruction.position.x))
+      .resolve("y%04d".format(cubeInstruction.position.y))
+      .resolve("z%04d".format(cubeInstruction.position.z))
   }
 
-  override def saveToUnderlying(saveBucket: BucketWriteInstruction, timeout: FiniteDuration): Fox[Boolean] = {
-    def saveToSections(sections: List[KnossosDataLayerSection]): Fox[Boolean] = {
-      sections match {
-        case section :: tail =>
-          saveBucketToUnderlying(saveBucket, section, timeout).futureBox.flatMap {
-            case Full(result) =>
-              Fox.successful(result)
-            case f: Failure =>
-              logger.error(s"DataStore Failure: ${f.msg}")
-              Fox.empty
-            case _ =>
-              saveToSections(tail)
-          }
-        case _ =>
-          // We couldn't find the data in any section.
-          Fox.empty
+  private def loadKnossosFile(cubeInstruction: CubeLoadInstruction, section: KnossosSection): Box[RandomAccessFile] = {
+    val dataDirectory = knossosFilePath(cubeInstruction, section)
+    val knossosFileFilter = PathUtils.fileExtensionFilter(KnossosDataFormat.dataFileExtension) _
+    PathUtils.listFiles(dataDirectory, knossosFileFilter).flatMap(_.headOption).flatMap { file =>
+      try {
+        logger.trace(s"Accessing file: ${file.toAbsolutePath}")
+        val t = System.currentTimeMillis
+        val r = new RandomAccessFile(file.toString, "r")
+        NewRelic.recordResponseTimeMetric("Custom/FileDataStore/files-response-time", System.currentTimeMillis - t)
+        NewRelic.incrementCounter("Custom/FileDataStore/files-loaded")
+        Full(r)
+      } catch {
+        case e: FileNotFoundException =>
+          logger.info(s"DataStore couldn't find file: ${file.toAbsolutePath}")
+          Empty
+        case e: Exception =>
+          Failure(s"An exception occurred while trying to load: ${e.getMessage}")
       }
-    }
-
-    saveBucket.dataLayer match {
-      case knossosDataLayer: KnossosDataLayer =>
-        saveToSections(knossosDataLayer.sections)
-      case _ =>
-        // This should not happen!
-        logger.error(s"DataStore Failure: Unexpected layer type.")
-        Empty
     }
   }
 }

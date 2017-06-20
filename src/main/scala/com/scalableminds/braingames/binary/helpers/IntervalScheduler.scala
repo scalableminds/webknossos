@@ -1,4 +1,4 @@
-package com.scalableminds.braingames.binary.services
+package com.scalableminds.braingames.binary.helpers
 
 import akka.actor.{ActorSystem, Cancellable}
 import play.api.inject.ApplicationLifecycle

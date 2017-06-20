@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.services
+package com.scalableminds.braingames.binary.helpers
 
 import com.scalableminds.braingames.binary.models.datasource.inbox.InboxDataSource
 import com.scalableminds.braingames.binary.models.datasource.{DataSource, DataSourceId}

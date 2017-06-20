@@ -14,7 +14,7 @@ import com.scalableminds.braingames.binary.dataformats.knossos.KnossosDataFormat
 import com.scalableminds.braingames.binary.dataformats.wkw.WKWDataFormat
 import com.scalableminds.braingames.binary.models.datasource._
 import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
-import com.scalableminds.braingames.binary.services.{DataSourceRepository, IntervalScheduler}
+import com.scalableminds.braingames.binary.helpers.{DataSourceRepository, IntervalScheduler}
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging

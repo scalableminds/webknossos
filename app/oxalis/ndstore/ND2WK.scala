@@ -3,7 +3,7 @@
  */
 package oxalis.ndstore
 
-import com.scalableminds.braingames.binary.models.datasource.{Category, DataLayer, DataSource, DataSourceId}
+import com.scalableminds.braingames.binary.models.datasource.{Category, DataSourceId, DataLayerLike => DataLayer, AbstractDataLayer => NDDataLayer, DataSourceLike => DataSource, GenericDataSource => NDDataSource}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataSet, DataStoreInfo, NDStore}
@@ -46,7 +46,7 @@ object ND2WK extends FoxImplicits {
     } yield {
       val id = DataSourceId(name, "Connectomics department")
       // TODO jfrohnhofen
-      DataSource(id, dataLayers, scale)
+      NDDataSource(id, dataLayers, scale)
     }
   }
 
@@ -71,9 +71,9 @@ object ND2WK extends FoxImplicits {
         NDDataLayer(
           channel.name,
           channel.channelType,
-          elementClass = channel.dataType,
+          bbox,
           nd.resolutions.map(r => math.pow(2, r).toInt),
-          bbox
+          channel.dataType
         )
       }
     }

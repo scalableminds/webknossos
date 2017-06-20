@@ -1,13 +1,17 @@
+/*
+* Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+*/
 package com.scalableminds.braingames.binary.models
 
 import com.scalableminds.util.geometry.GenericPosition
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 class VoxelPosition(
-  protected val globalX: Int,
-  protected val globalY: Int,
-  protected val globalZ: Int,
-  val resolution: Int) extends GenericPosition {
+                      protected val globalX: Int,
+                      protected val globalY: Int,
+                      protected val globalZ: Int,
+                      val resolution: Int
+                   ) extends GenericPosition {
 
   val x: Int = globalX / resolution
 
@@ -47,11 +51,12 @@ class VoxelPosition(
 }
 
 class BucketPosition(
-  protected val globalX: Int,
-  protected val globalY: Int,
-  protected val globalZ: Int,
-  val resolution: Int,
-  val bucketLength: Int) extends GenericPosition {
+                       protected val globalX: Int,
+                       protected val globalY: Int,
+                       protected val globalZ: Int,
+                       val resolution: Int,
+                       val bucketLength: Int
+                    ) extends GenericPosition {
 
   val x: Int = globalX / bucketLength / resolution
 
@@ -85,13 +90,13 @@ class BucketPosition(
   }
 }
 
-
 class CubePosition(
-  protected val globalX: Int,
-  protected val globalY: Int,
-  protected val globalZ: Int,
-  val resolution: Int,
-  val cubeLength: Int) extends GenericPosition {
+                     protected val globalX: Int,
+                     protected val globalY: Int,
+                     protected val globalZ: Int,
+                     val resolution: Int,
+                     val cubeLength: Int
+                  ) extends GenericPosition {
 
   val x: Int = globalX / cubeLength / resolution
 
@@ -99,8 +104,15 @@ class CubePosition(
 
   val z: Int = globalZ / cubeLength / resolution
 
+  def topLeft: VoxelPosition = {
+    val tlx: Int = globalX - globalX % (cubeLength * resolution)
+    val tly: Int = globalY - globalY % (cubeLength * resolution)
+    val tlz: Int = globalZ - globalZ % (cubeLength * resolution)
+
+    new VoxelPosition(tlx, tly, tlz, resolution)
+  }
+
   override def toString: String = {
     s"CPos($x,$y,$z,res=$resolution)"
   }
 }
-

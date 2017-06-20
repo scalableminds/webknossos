@@ -5,12 +5,11 @@ package com.scalableminds.util.io
 
 import java.io._
 
-import com.scalableminds.util.tools.Fox
+import net.liftweb.common.{Box, Failure, Full}
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 
 import scala.concurrent.{Future, blocking}
-import play.api.libs.concurrent.Execution.Implicits._
-
 
 trait NamedStream {
   def name: String
@@ -60,14 +59,18 @@ case class NamedFileStream(file: File, name: String) extends NamedStream{
 }
 
 object FileIO {
-  def printToFile(s: String)(op: java.io.PrintWriter => Unit): Unit = {
+  def printToFile(s: String)(op: java.io.PrintWriter => Unit): Box[Unit] = {
     printToFile(new File(s))(op)
   }
 
-  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit): Unit = {
+  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit): Box[Unit] = {
     val p = new java.io.PrintWriter(f)
     try {
       op(p)
+      Full(())
+    } catch {
+      case ex: Exception =>
+        Failure(ex.getMessage)
     } finally {
       p.close()
     }

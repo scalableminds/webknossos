@@ -3,10 +3,10 @@
  */
 package com.scalableminds.util.image
 
+import java.awt.image.{BufferedImage, DataBufferByte}
 import java.io._
 import javax.imageio._
 import javax.imageio.stream._
-import java.awt.image.{BufferedImage, DataBufferByte}
 
 class ImageWriter(imageType: String, imageExt: String) {
   val imageQuality = 1F
@@ -32,6 +32,17 @@ class ImageWriter(imageType: String, imageExt: String) {
       if(output != null) output.close()
     }
     file
+  }
+
+  def writeToOutputStream(buffered: BufferedImage)(output: OutputStream) = {
+    try {
+      writer.setOutput(output)
+      val image = new IIOImage(buffered, null, null)
+      writer.write(null, image, iwp)
+      writer.reset()
+    } finally{
+      if(output != null) output.close()
+    }
   }
 }
 

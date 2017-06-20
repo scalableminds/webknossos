@@ -3,7 +3,8 @@
  */
 package models.binary
 
-import com.scalableminds.braingames.binary.models.datasource.{DataLayerHelpers, DataSource, UserDataLayer}
+import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
+import com.scalableminds.braingames.binary.models.datasource.{UserDataLayer, DataSourceLike => DataSource}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
@@ -93,8 +94,9 @@ object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplici
     for {
       dataLayer <- dataSet.dataSource.flatMap(ds => ds.getDataLayer(dataLayerName)).toFox
       accessToken <- dataSet.dataStoreInfo.accessToken ?~> "ndstore.accesstoken.missing"
-      (x, y, z, resolution) = DataLayerHelpers.goodThumbnailParameters(dataLayer, width, height)
-      imageParams = s"$resolution/$x,${x + width}/$y,${y + height}/$z,${z + 1}"
+      thumbnail = ThumbnailHelpers.goodThumbnailParameters(dataLayer, width, height)
+      resolution = (math.log(thumbnail.resolution) / math.log(2)).toInt
+      imageParams = s"${resolution}/${thumbnail.x},${thumbnail.x + width}/${thumbnail.y},${thumbnail.y + height}/${thumbnail.z},${thumbnail.z + 1}"
       baseUrl = s"${dataSet.dataStoreInfo.url}/nd/ca"
       _ = logger.error(s"$baseUrl/$accessToken/$dataLayerName/jpeg/$imageParams")
       response <- WS.url(s"$baseUrl/$accessToken/$dataLayerName/jpeg/$imageParams").get().toFox

@@ -1,93 +1,167 @@
 /*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
 package com.scalableminds.braingames.binary.api
 
 import java.nio.file.Paths
 
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.util.Timeout
-import com.scalableminds.braingames.binary.requester
-import com.scalableminds.braingames.binary.requester.DataCubeCache
-import com.scalableminds.braingames.binary.models._
-import com.scalableminds.braingames.binary.repository.DataSourceInbox
-import com.scalableminds.braingames.binary.watcher._
+import com.google.inject.Inject
+import com.scalableminds.braingames.binary.dataformats.Cube
+import com.scalableminds.braingames.binary.models.BucketPosition
+import com.scalableminds.braingames.binary.models.requests.{CubeLoadInstruction, DataServiceRequest, SegmentationMappingRequest}
+import com.scalableminds.braingames.binary.storage.DataCubeCache
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
-import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.Fox
-import com.typesafe.config.Config
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import play.api.i18n.I18nSupport
+import net.liftweb.common.{Empty, Failure, Full}
+import play.api.Configuration
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future, TimeoutException}
 
-trait BinaryDataService
-  extends DataSourceService
-    with BinaryDataRequestBuilder
-    with DataLayerMappingService
-    with DataDownloadService
-    with I18nSupport
-    with LazyLogging {
+class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits with LazyLogging {
 
-  implicit def system: ActorSystem
+  val dataBaseDir = Paths.get(config.getString("braingames.binary.baseFolder").getOrElse("binaryData"))
 
-  def dataSourceRepository: DataSourceRepository
+  val loadTimeout: FiniteDuration = config.getInt("braingames.binary.loadTimeout").getOrElse(5).seconds
 
-  def config: Config
+  val maxCacheSize: Int = config.getInt("braingames.binary.maxCacheSize").getOrElse(100)
 
-  def serverUrl: String
+  lazy val cache = new DataCubeCache(maxCacheSize)
 
-  lazy implicit val executor: ExecutionContextExecutor =
-    system.dispatcher
-
-  var repositoryWatcher: Option[ActorRef] =
-    None
-
-  private lazy val dataSourceRepositoryDir =
-    PathUtils.ensureDirectory(Paths.get(config.getString("braingames.binary.baseFolder")))
-
-  private val binDataCache =
-    new DataCubeCache(config.getInt("braingames.binary.cacheMaxSize"))
-
-  private lazy val dataRequester =
-    new requester.DataRequester(config.getConfig("braingames.binary"), binDataCache, dataSourceRepository)
-
-  lazy val dataSourceInbox: DataSourceInbox =
-    DataSourceInbox.create(dataSourceRepository, serverUrl, dataRequester, system)(messagesApi)
-
-  def start(): Unit = {
-    val repositoryWatcherConfig =
-      config.getConfig("braingames.binary.changeHandler")
-
-    val repositoryWatchActor =
-      system.actorOf(
-        Props(classOf[DirectoryWatcherActor],
-          repositoryWatcherConfig,
-          dataSourceRepositoryDir,
-          true,
-          dataSourceInbox.handler),
-        name = "directoryWatcher")
-
-    repositoryWatcher = Some(repositoryWatchActor)
-
-    repositoryWatchActor ! DirectoryWatcherActor.StartWatching
+  def handleDataRequests(requests: List[DataServiceRequest]): Fox[Array[Byte]] = {
+    Fox.combined(requests.map(handleRequest)).map(_.appendArrays)
   }
 
-  def handleRequests[T <: DataRequest](coll: DataRequestCollection[T]): Fox[Array[Byte]] = {
-    val resultsPromise = Fox.combined(coll.requests.map{
-      case r: DataReadRequest => handleReadRequest(r)
-      case w: DataWriteRequest => handleWriteRequest(w)
-    })
-    resultsPromise.map(_.appendArrays)
+  def handleSegmentationMappingRequest(request: SegmentationMappingRequest): Fox[Array[Byte]] = {
+    Fox.successful(Array.emptyByteArray)
   }
 
-  def handleWriteRequest(request: DataWriteRequest): Fox[Array[Byte]] = {
-    dataRequester.handleWriteRequest(request)
+  private def handleRequest(request: DataServiceRequest): Fox[Array[Byte]] = {
+    getDataForRequest(request).map { data =>
+      if (request.settings.halfByte) {
+        convertToHalfByte(data)
+      } else {
+        data
+      }
+    }
   }
 
-  def handleReadRequest(request: DataReadRequest): Fox[Array[Byte]] = {
-    dataRequester.handleReadRequest(request)
+  private def getDataForRequest(request: DataServiceRequest): Fox[Array[Byte]] = {
+
+    def isSingleBucketRequest = {
+      request.cuboid.width == request.dataLayer.lengthOfProvidedBuckets &&
+        request.cuboid.height == request.dataLayer.lengthOfProvidedBuckets &&
+        request.cuboid.depth == request.dataLayer.lengthOfProvidedBuckets &&
+        request.cuboid.topLeft == request.cuboid.topLeft.toBucket(request.dataLayer.lengthOfProvidedBuckets).topLeft
+    }
+
+    val bucketQueue = request.cuboid.allBucketsInCuboid(request.dataLayer.lengthOfProvidedBuckets)
+
+    if (isSingleBucketRequest) {
+      bucketQueue.headOption.toFox.flatMap { bucket =>
+        handleBucketRequest(request, bucket)
+      }
+    } else {
+      Fox.serialCombined(bucketQueue.toList) { bucket =>
+        handleBucketRequest(request, bucket).map(r => bucket -> r)
+      }.map {
+        cutOutCuboid(request, _)
+      }
+    }
+  }
+
+  private def handleBucketRequest(request: DataServiceRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
+    if (request.dataLayer.doesContainBucket(bucket)) {
+      val cubeInstruction = CubeLoadInstruction(
+        dataBaseDir,
+        request.dataSource,
+        request.dataLayer,
+        bucket.toCube(request.dataLayer.lengthOfUnderlyingCubes))
+      cache.withCache[Array[Byte]](cubeInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(request.dataLayer, bucket)).futureBox.map {
+        case Full(data) =>
+          Full(data)
+        case Empty =>
+          Full(emptyResult(request))
+        case f: Failure =>
+          logger.error(s"DataStore failure: ${f.msg}")
+          f
+      }
+    } else {
+      Fox.successful(emptyResult(request))
+    }
+  }
+
+  private def emptyResult(request: DataServiceRequest) = {
+    new Array[Byte](request.cuboid.volume * request.dataLayer.bytesPerElement)
+  }
+
+  /**
+    * Given a list of loaded buckets, cutout the data of the cuboid
+    */
+  private def cutOutCuboid(request: DataServiceRequest, rs: List[(BucketPosition, Array[Byte])]): Array[Byte] = {
+    val bytesPerElement = request.dataLayer.bytesPerElement
+    val cuboid = request.cuboid
+    val result = new Array[Byte](cuboid.volume * bytesPerElement)
+    val bucketLength = request.dataLayer.lengthOfProvidedBuckets
+
+    rs.reverse.foreach {
+      case (bucket, data) =>
+        val x = math.max(cuboid.topLeft.x, bucket.topLeft.x)
+        var y = math.max(cuboid.topLeft.y, bucket.topLeft.y)
+        var z = math.max(cuboid.topLeft.z, bucket.topLeft.z)
+
+        val xMax = math.min(bucket.topLeft.x + bucketLength, cuboid.bottomRight.x)
+        val yMax = math.min(bucket.topLeft.y + bucketLength, cuboid.bottomRight.y)
+        val zMax = math.min(bucket.topLeft.z + bucketLength, cuboid.bottomRight.z)
+
+        while (z < zMax) {
+          y = math.max(cuboid.topLeft.y, bucket.topLeft.y)
+          while (y < yMax) {
+            val dataOffset =
+              (x % bucketLength +
+                y % bucketLength * bucketLength +
+                z % bucketLength * bucketLength * bucketLength) * bytesPerElement
+            val rx = x - cuboid.topLeft.x
+            val ry = y - cuboid.topLeft.y
+            val rz = z - cuboid.topLeft.z
+
+            val resultOffset = (rx + ry * cuboid.width + rz * cuboid.width * cuboid.height) * bytesPerElement
+            System.arraycopy(data, dataOffset, result, resultOffset, (xMax - x) * bytesPerElement)
+            y += 1
+          }
+          z += 1
+        }
+    }
+    result
+  }
+
+  private def convertToHalfByte(a: Array[Byte]) = {
+    val aSize = a.length
+    val compressedSize = (aSize + 1) / 2
+    val compressed = new Array[Byte](compressedSize)
+    var i = 0
+    while (i * 2 + 1 < aSize) {
+      val first = (a(i * 2) & 0xF0).toByte
+      val second = (a(i * 2 + 1) & 0xF0).toByte >> 4 & 0x0F
+      val value = (first | second).asInstanceOf[Byte]
+      compressed(i) = value
+      i += 1
+    }
+    compressed
+  }
+
+  private def loadFromUnderlyingWithTimeout(cubeInstruction: CubeLoadInstruction): Fox[Cube] = {
+    Future {
+      val cube = cubeInstruction.dataLayer.cubeLoader.load(cubeInstruction)
+      Await.result(cube, loadTimeout)
+    }.recover {
+      case _: TimeoutException | _: InterruptedException =>
+        logger.warn(s"Load from dataStore timed out. " +
+          s"(${cubeInstruction.dataSource.id.team}/${cubeInstruction.dataSource.id.name}/${cubeInstruction.dataLayer.name}, " +
+          s"Block: (${cubeInstruction.position.x}, ${cubeInstruction.position.y}, ${cubeInstruction.position.z})")
+        Failure("dataStore.load.timeout")
+    }
   }
 }

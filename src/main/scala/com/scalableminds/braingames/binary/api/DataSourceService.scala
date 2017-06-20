@@ -1,73 +1,145 @@
 /*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
 package com.scalableminds.braingames.binary.api
 
 import java.io.File
-import java.nio.file.{Files, Path, Paths}
+import java.nio.file.{Path, Paths}
 
-import com.scalableminds.braingames.binary.models._
-import java.util.UUID
-import java.util.zip.ZipFile
-
-import com.scalableminds.braingames.binary.formats.knossos.{KnossosDataLayer, KnossosDataLayerSection}
-import com.scalableminds.braingames.binary.formats.kvstore.KVStoreDataLayer
-import com.typesafe.config.Config
-import com.scalableminds.util.tools.{Fox, FoxImplicits, ProgressState}
-import com.scalableminds.braingames.binary.repository.DataSourceInbox
-import com.scalableminds.braingames.binary.store.{DataStore, FileDataStore}
-import play.api.libs.concurrent.Execution.Implicits._
+import akka.actor.{ActorSystem, Cancellable}
+import com.google.inject.Inject
+import com.google.inject.name.Named
+import com.scalableminds.braingames.binary.`import`.{DataSourceImportReport, DataSourceImporter}
+import com.scalableminds.braingames.binary.dataformats.knossos.KnossosDataFormat
+import com.scalableminds.braingames.binary.dataformats.wkw.WKWDataFormat
+import com.scalableminds.braingames.binary.models.datasource._
+import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
+import com.scalableminds.braingames.binary.services.{DataSourceRepository, IntervalScheduler}
 import com.scalableminds.util.io.{PathUtils, ZipIO}
-import net.liftweb.common.{Box, Full}
-import org.apache.commons.io.IOUtils
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.util.Helpers.tryo
+import play.api.Configuration
+import play.api.inject.ApplicationLifecycle
+import play.api.libs.json.Json
 
-trait DataSourceService extends FoxImplicits with LazyLogging{
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
-  def config: Config
+class DataSourceService @Inject()(
+                                   config: Configuration,
+                                   dataSourceRepository: DataSourceRepository,
+                                   val lifecycle: ApplicationLifecycle,
+                                   @Named("braingames-binary") val system: ActorSystem
+                                 ) extends IntervalScheduler with LazyLogging with FoxImplicits {
 
-  def dataSourceInbox: DataSourceInbox
+  override protected lazy val enabled: Boolean = config.getBoolean("braingames.binary.changeHandler.enabled").getOrElse(true)
+  protected lazy val tickerInterval: FiniteDuration = config.getInt("braingames.binary.changeHandler.interval").getOrElse(10).minutes
 
-  lazy val userBaseFolder = PathUtils.ensureDirectory(Paths.get(config.getString("braingames.binary.userBaseFolder")))
+  private val MaxNumberOfFilesForDataFormatGuessing = 10
+  private val dataBaseDir = Paths.get(config.getString("braingames.binary.baseFolder").getOrElse("binaryData"))
 
-  def userDataLayerFolder(name: String): Path = userBaseFolder.resolve(name)
+  private val propertiesFileName = Paths.get("datasource-properties.json")
 
-  def userDataLayerName(): String = {
-    UUID.randomUUID().toString
-  }
+  def tick(): Unit = checkInbox()
 
-  def createUserDataLayer(baseDataSource: DataSource, initialContent: Option[File]): Fox[UserDataLayer] = {
-    val category = DataLayer.SEGMENTATION.category
-    val name = userDataLayerName()
-    val basePath = userDataLayerFolder(name).toAbsolutePath
-    val fallbackLayer = baseDataSource.getByCategory(category)
-    val preliminaryDataLayer = KVStoreDataLayer(
-      name,
-      category,
-      fallbackLayer.map(l => l.elementClass).getOrElse(DataLayer.SEGMENTATION.defaultElementClass),
-      true,
-      fallbackLayer.map(l => FallbackLayer(baseDataSource.id, l.name)),
-      List(1),
-      baseDataSource.boundingBox,
-      baseDataSource.getByCategory(category).flatMap(_.nextSegmentationId),
-      fallbackLayer.map(_.mappings).getOrElse(Nil)
-    )
-
-    PathUtils.ensureDirectory(basePath)
-
-    initialContent match {
-      case Some(zip) =>
-        Fox.failure("Initial content is currently not supported.")
-      case _ =>
-        Fox.successful(UserDataLayer(baseDataSource.id, preliminaryDataLayer))
+  def checkInbox(): Fox[Unit] = {
+    Future {
+      logger.info(s"Scanning inbox at: ${dataBaseDir}")
+      PathUtils.listDirectories(dataBaseDir) match {
+        case Full(dirs) =>
+          val foundInboxSources = dirs.flatMap(teamAwareInboxSources)
+          val dataSourceString = foundInboxSources.map { ds =>
+            s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
+          }.mkString(", ")
+          logger.info(s"Finished scanning inbox: $dataSourceString")
+          dataSourceRepository.updateDataSources(foundInboxSources)
+          Full(())
+        case e =>
+          val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
+          logger.error(errorMsg)
+          Failure(errorMsg)
+      }
     }
   }
 
-  def importDataSource(id: String): Fox[Fox[UsableDataSource]] = {
-    dataSourceInbox.importDataSource(id)
+  def handleUpload(id: DataSourceId, dataSetZip: File): Box[Unit] = {
+    val dataSourceDir = dataBaseDir.resolve(id.team).resolve(id.name)
+    PathUtils.ensureDirectory(dataSourceDir)
+
+    logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
+
+    ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true) match {
+      case Full(_) =>
+        dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
+        Full(())
+      case e =>
+        val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
+        logger.warn(errorMsg)
+        Failure(errorMsg)
+    }
   }
 
-  def progressForImport(id: String): ProgressState =
-    dataSourceInbox.progressForImport(id)
+  def exploreDataSource(id: DataSourceId, previous: Option[DataSource]): Box[(DataSource, List[(String, String)])] = {
+    val path = dataBaseDir.resolve(id.team).resolve(id.name)
+    val report = DataSourceImportReport[Path](dataBaseDir.relativize(path))
+    for {
+      dataFormat <- guessDataFormat(path)
+      result <- dataFormat.exploreDataSource(id, path, previous, report)
+    } yield {
+      (result, report.messages.toList)
+    }
+  }
 
+  def updateDataSource(dataSource: DataSource): Box[Unit] = {
+    val propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
+    print(Json.toJson(dataSource))
+    JsonHelper.jsonToFile(propertiesFile, dataSource).map { _ =>
+      dataSourceRepository.updateDataSource(dataSource)
+    }
+  }
+
+  private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
+    val team = path.getFileName.toString
+
+    PathUtils.listDirectories(path) match {
+      case Full(Nil) =>
+        logger.error(s"Failed to read datasets for team $team. Empty path: $path")
+        Nil
+      case Full(dirs) =>
+        val dataSources = dirs.map(path => dataSourceFromFolder(path, team))
+        logger.debug(s"Datasets for team $team: ${dataSources.map(_.id.name).mkString(", ") }")
+        dataSources
+      case _ =>
+        logger.error(s"Failed to list directories for team $team at path $path")
+        Nil
+    }
+  }
+
+  private def dataSourceFromFolder(path: Path, team: String): InboxDataSource = {
+    val id = DataSourceId(path.getFileName.toString, team)
+    val propertiesFile = path.resolve(propertiesFileName)
+
+    if (new File(propertiesFile.toString).exists()) {
+      JsonHelper.validatedJsonFromFile[DataSource](propertiesFile, path) match {
+        case Full(dataSource) =>
+          dataSource
+        case e =>
+          UnusableDataSource(id, s"Error: Invalid json format in ${propertiesFile}: $e")
+      }
+    } else {
+      UnusableDataSource(id, "Not imported yet.")
+    }
+  }
+
+  private def guessDataFormat(path: Path): Box[DataSourceImporter] = {
+    val dataFormat = List(KnossosDataFormat, WKWDataFormat)
+
+    PathUtils.lazyFileStreamRecursive(path) { files =>
+      val fileNames = files.take(MaxNumberOfFilesForDataFormatGuessing).map(_.getFileName).toList
+      tryo(dataFormat.maxBy(format => fileNames.count(_.endsWith(format.dataFileExtension))))
+    }
+  }
 }

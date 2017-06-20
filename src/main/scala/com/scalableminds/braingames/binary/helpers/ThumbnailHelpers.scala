@@ -11,15 +11,16 @@ object ThumbnailHelpers {
     val wr = math.floor(math.log(dataLayer.boundingBox.width.toDouble / width) / math.log(2)).toInt - 1
     val hr = math.floor(math.log(dataLayer.boundingBox.height.toDouble / height) / math.log(2)).toInt - 1
 
-    math.max(0, List(wr, hr, (dataLayer.resolutions.size - 1)).min)
+    val resolutionExponent = math.max(0, List(wr, hr, dataLayer.resolutions.size - 1).min)
+    math.pow(2, resolutionExponent).toInt
   }
 
   def goodThumbnailParameters(dataLayer: DataLayerLike, width: Int, height: Int): VoxelPosition = {
     // Parameters that seem to be working good enough
     val center = dataLayer.boundingBox.center
     val resolution = bestResolution(dataLayer, width, height)
-    val x = center.x - width * math.pow(2, resolution) / 2
-    val y = center.y - height * math.pow(2, resolution) / 2
+    val x = center.x - width * resolution / 2
+    val y = center.y - height * resolution / 2
     val z = center.z
     new VoxelPosition(x.toInt, y.toInt, z.toInt, resolution)
   }

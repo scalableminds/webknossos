@@ -6,18 +6,27 @@ package com.scalableminds.util.tools
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 
-import play.api.libs.ws.{WSAuthScheme, WSRequest}
-
-import scala.math._
-import scala.reflect.ClassTag
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits._
-import scala.collection.immutable.Queue
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.Math._
-import org.apache.commons.lang3.ArrayUtils
+import net.liftweb.common.{Box, Failure}
+import play.api.libs.ws.{WSAuthScheme, WSRequest}
+
+import scala.collection.immutable.Queue
+import scala.concurrent.ExecutionContext.Implicits._
+import scala.concurrent.Future
+import scala.math._
+import scala.reflect.ClassTag
 
 object ExtendedTypes {
+
+  implicit class ExtendedBox[A](val box: Box[A]) extends AnyVal {
+    def passFailure(f: Failure => Unit): Box[A] = {
+      box.pass {
+        case failure: Failure => f(failure)
+        case _ => ()
+      }
+    }
+  }
 
   implicit class ExtendedList[A](val list: List[A]) extends AnyVal {
     def futureSort[B](f: A => Future[B])(implicit ord: Ordering[B]): Future[List[A]] = {
@@ -171,6 +180,7 @@ object ExtendedTypes {
   }
 
   import net.liftweb.common._
+
   import scala.concurrent.Future
 
   implicit class ExtendedFutureBox[T](b: Box[Future[Box[T]]]) {

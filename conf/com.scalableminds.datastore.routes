@@ -2,34 +2,32 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# Health Endpoint
-GET         /health                                                                            @com.scalableminds.datastore.controllers.Application.health
+# Health endpoint
+GET         /health                                                                            @com.scalableminds.braingames.datastore.controllers.Application.health
 
-# Upload
-POST        /datasets                                                                          @com.scalableminds.datastore.controllers.DataSourceController.upload(token: String)
-
-# Read data
-POST        /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.datastore.controllers.BinaryDataController.requestViaAjax(dataSetName: String, dataLayerName: String)
-POST        /datasets/:dataSetName/import                                                      @com.scalableminds.datastore.controllers.DataSourceController.startImport(dataSetName: String)
-GET         /datasets/:dataSetName/import                                                      @com.scalableminds.datastore.controllers.DataSourceController.importProgress(dataSetName: String)
-GET         /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.datastore.controllers.BinaryDataController.requestViaAjaxDebug(dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false)
-GET         /datasets/:dataSetName/layers/:dataLayerName/sprite                                @com.scalableminds.datastore.controllers.BinaryDataController.requestSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int ?=128, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false)
-GET         /datasets/:dataSetName/layers/:dataLayerName/image.jpg                             @com.scalableminds.datastore.controllers.BinaryDataController.requestImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false, blackAndWhite: Boolean ?= false)
-GET         /datasets/:dataSetName/layers/:dataLayerName/thumbnail.json                        @com.scalableminds.datastore.controllers.BinaryDataController.requestImageThumbnailJson(dataSetName: String, dataLayerName: String, width: Int, height: Int)
-GET         /datasets/:dataSetName/layers/:dataLayerName/thumbnail.jpg                         @com.scalableminds.datastore.controllers.BinaryDataController.requestImageThumbnailJpeg(dataSetName: String, dataLayerName: String, width: Int, height: Int)
-POST        /datasets/:dataSetName/layers                                                      @com.scalableminds.datastore.controllers.DataLayerController.create(dataSetName: String)
+# Read binary data
+POST        /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.braingames.datastore.controllers.BinaryDataController.requestViaWebKnossos(dataSetName: String, dataLayerName: String)
+GET         /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.braingames.datastore.controllers.BinaryDataController.requestViaAjaxDebug(dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false)
+GET         /datasets/:dataSetName/layers/:dataLayerName/sprite                                @com.scalableminds.braingames.datastore.controllers.BinaryDataController.requestSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int ?=128, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false)
+GET         /datasets/:dataSetName/layers/:dataLayerName/image.jpg                             @com.scalableminds.braingames.datastore.controllers.BinaryDataController.requestImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int, halfByte: Boolean ?= false, blackAndWhite: Boolean ?= false)
+GET         /datasets/:dataSetName/layers/:dataLayerName/thumbnail.json                        @com.scalableminds.braingames.datastore.controllers.BinaryDataController.requestImageThumbnailJson(dataSetName: String, dataLayerName: String, width: Int, height: Int)
+GET         /datasets/:dataSetName/layers/:dataLayerName/thumbnail.jpg                         @com.scalableminds.braingames.datastore.controllers.BinaryDataController.requestImageThumbnailJpeg(dataSetName: String, dataLayerName: String, width: Int, height: Int)
 
 # Knossos compatibale routes
-GET         /datasets/:dataSetName/layers/:dataLayerName/mag:resolution/x:x/y:y/z:z/bucket.raw @com.scalableminds.datastore.controllers.BinaryDataController.requestViaKnossos(dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int)
+GET         /datasets/:dataSetName/layers/:dataLayerName/mag:resolution/x:x/y:y/z:z/bucket.raw @com.scalableminds.braingames.datastore.controllers.BinaryDataController.requestViaKnossos(dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int)
 
-# Write data
-PUT         /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.datastore.controllers.BinaryDataController.writeViaAjax(dataSetName: String, dataLayerName: String)
+# Segmentation mappings
+#GET         /datasets/:dataSetName/layers/:dataLayerName/mappings/:dataLayerMappingName        @com.scalableminds.braingames.datastore.controllers.BinaryDataController.requestSegmentationMapping(dataSetName: String, dataLayerName: String, dataLayerMappingName: String)
 
-# Volume download
-GET         /datasets/:dataSetName/layers/:dataLayerName/download                              @com.scalableminds.datastore.controllers.BinaryDataController.downloadDataLayer(dataSetName: String, dataLayerName: String)
+# DataSource management
+GET         /datasets                                                                          @com.scalableminds.braingames.datastore.controllers.DataSourceController.list
+POST        /datasets                                                                          @com.scalableminds.braingames.datastore.controllers.DataSourceController.upload(token: String)
+POST        /datasets/:dataSetName                                                             @com.scalableminds.braingames.datastore.controllers.DataSourceController.update(dataSetName: String)
+GET         /datasets/:dataSetName                                                             @com.scalableminds.braingames.datastore.controllers.DataSourceController.explore(dataSetName: String)
 
-# Segmentation Mapping
-GET         /datasets/:dataSetName/layers/:dataLayerName/mappings/:dataLayerMappingName        @com.scalableminds.datastore.controllers.BinaryDataController.requestSegmentationMapping(dataSetName: String, dataLayerName: String, dataLayerMappingName: String)
+# Volume tracings
+#PUT         /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.datastore.controllers.BinaryDataController.writeViaAjax(dataSetName: String, dataLayerName: String)
+#GET         /datasets/:dataSetName/layers/:dataLayerName/download                              @com.scalableminds.datastore.controllers.BinaryDataController.downloadDataLayer(dataSetName: String, dataLayerName: String)
 
 # Actions
-GET         /triggers/checkInbox                                                               @com.scalableminds.datastore.controllers.DataSourceController.triggerInboxCheck()
+GET         /triggers/checkInbox                                                               @com.scalableminds.braingames.datastore.controllers.DataSourceController.triggerInboxCheck()

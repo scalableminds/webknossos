@@ -22,7 +22,7 @@ package object datasource {
     def getDataLayer(name: String): Option[T] =
       dataLayers.find(_.name == name)
 
-    lazy val boundinBox: BoundingBox =
+    lazy val boundingBox: BoundingBox =
       BoundingBox.combine(dataLayers.map(_.boundingBox))
   }
 

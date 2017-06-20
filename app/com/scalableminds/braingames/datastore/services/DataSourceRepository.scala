@@ -8,7 +8,7 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.models.datasource.inbox.InboxDataSource
 import com.scalableminds.braingames.binary.models.datasource.{DataSource, DataSourceId}
-import com.scalableminds.braingames.binary.services.{DataSourceRepository => AbstractDataSourceRepository}
+import com.scalableminds.braingames.binary.helpers.{DataSourceRepository => AbstractDataSourceRepository}
 import com.scalableminds.braingames.binary.storage.TemporaryStore
 import com.scalableminds.util.tools.FoxImplicits
 

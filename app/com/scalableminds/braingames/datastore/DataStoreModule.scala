@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.braingames.binary.api.{BinaryDataService, DataSourceService}
-import com.scalableminds.braingames.binary.services.{DataSourceRepository => AbstractDataSourceRepository}
+import com.scalableminds.braingames.binary.helpers.{DataSourceRepository => AbstractDataSourceRepository}
 import com.scalableminds.braingames.datastore.services.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 

@@ -8,7 +8,7 @@ import java.io.File
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.api.DataSourceService
 import com.scalableminds.braingames.binary.models.datasource.{DataSource, DataSourceId}
-import com.scalableminds.braingames.binary.services.DataSourceRepository
+import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import play.api.data.Form
 import play.api.data.Forms.{nonEmptyText, tuple}

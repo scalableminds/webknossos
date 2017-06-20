@@ -3,8 +3,9 @@
  */
 package com.scalableminds.util.mvc
 
-import java.util.Date
 import java.text.SimpleDateFormat
+import java.util.Date
+
 import scala.concurrent.duration.Duration
 
 object Formatter extends Formatter

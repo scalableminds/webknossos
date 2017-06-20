@@ -4,13 +4,13 @@
 package com.scalableminds.util.tools
 
 import akka.agent.Agent
+import com.scalableminds.util.tools.ExtendedTypes._
+import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.tools.ProgressTracking.ProgressTracker
 
 import scala.collection.immutable.Queue
-import com.scalableminds.util.tools.ExtendedTypes._
-import com.typesafe.scalalogging.LazyLogging
 
 object ProgressTracking {
   trait ProgressTracker {

@@ -4,6 +4,7 @@
 package com.scalableminds.util.tools
 
 import java.io.{File, FilenameFilter}
+
 import scala.util.matching.Regex
 
 class FileExtensionFilter(fileExtension: String) extends FilenameFilter{

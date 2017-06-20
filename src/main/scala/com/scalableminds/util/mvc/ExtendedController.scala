@@ -3,19 +3,17 @@
 */
 package com.scalableminds.util.mvc
 
-import net.liftweb.common._
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import net.liftweb.common.{Full, _}
 import play.api.http.Status._
+import play.api.http.{HeaderNames, Status, Writeable}
 import play.api.i18n.{I18nSupport, Messages}
-import scala.concurrent.{ExecutionContext, Future}
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.Json
-import play.api.http.{HeaderNames, Writeable}
-import play.api.http.Status
+import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.{Request, ResponseHeader, Result}
 import play.twirl.api._
-import net.liftweb.common.Full
-import play.api.mvc.{Request, Result, ResponseHeader}
-import play.api.libs.json.JsObject
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+
+import scala.concurrent.{ExecutionContext, Future}
 
 trait ResultBox extends I18nSupport{
 
@@ -32,6 +30,7 @@ trait ResultBox extends I18nSupport{
 }
 
 trait ResultImplicits extends ResultBox with I18nSupport{
+
   implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext): Future[Result] =
     b.futureBox.map(asResult)
 
@@ -146,11 +145,11 @@ trait PostRequestHelpers {
 
 trait ExtendedController
   extends JsonResults
-  with BoxImplicits
-  with FoxImplicits
-  with ResultImplicits
-  with Status
-  with WithHighlightableResult
-  with PostRequestHelpers
-  with WithFilters
-  with I18nSupport
+    with BoxImplicits
+    with FoxImplicits
+    with ResultImplicits
+    with Status
+    with WithHighlightableResult
+    with PostRequestHelpers
+    with WithFilters
+    with I18nSupport

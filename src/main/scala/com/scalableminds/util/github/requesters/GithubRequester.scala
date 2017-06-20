@@ -5,7 +5,6 @@ package com.scalableminds.util.github.requesters
 
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.ws.WS
-import play.api.libs.concurrent.Execution.Implicits._
 
 trait GithubRequester extends LazyLogging{
   val GH = "https://api.github.com"

@@ -3,12 +3,10 @@
  */
 package com.scalableminds.util.image
 
-import play.api.libs.json.Json._
-import play.api.libs.json._
-import play.api.libs.json.JsValue
-import play.api.libs.json.Format
-import play.api.data.validation.ValidationError
 import com.scalableminds.util.tools.ExtendedTypes._
+import play.api.data.validation.ValidationError
+import play.api.libs.json.Json._
+import play.api.libs.json.{Format, JsValue, _}
 
 case class Color(r: Double, g: Double, b: Double, a: Double) {
   def toHtml = "#%02x%02x%02x".format((r * 255).toInt, (g * 255).toInt, (b * 255).toInt)

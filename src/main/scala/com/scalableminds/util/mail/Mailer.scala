@@ -3,10 +3,11 @@
 */
 package com.scalableminds.util.mail
 
-import akka.actor._
-import org.apache.commons.mail._
 import javax.mail.internet.InternetAddress
+
+import akka.actor._
 import com.typesafe.config.Config
+import org.apache.commons.mail._
 
 case class Send(mail: Mail)
 
@@ -21,8 +22,8 @@ case class Send(mail: Mail)
  */
 
 object Mailer {
-  
-  
+
+
 }
 
 class Mailer(conf: Config) extends Actor {

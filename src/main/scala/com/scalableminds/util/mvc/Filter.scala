@@ -3,8 +3,8 @@
  */
 package com.scalableminds.util.mvc
 
-import play.api.mvc.Request
 import com.scalableminds.util.tools.Converter
+import play.api.mvc.Request
 
 case class Filter[A, T](name: String, predicate: (A, T) => Boolean)(implicit converter: Converter[String, A]) {
   def applyOn(list: List[T])(implicit request: Request[_]): List[T] = {

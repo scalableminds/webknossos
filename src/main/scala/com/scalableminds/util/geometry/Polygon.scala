@@ -3,9 +3,10 @@
  */
 package com.scalableminds.util.geometry
 
-import scala.math._
-import play.api.libs.json._
 import play.api.libs.json.Json._
+import play.api.libs.json._
+
+import scala.math._
 
 /**
  * Representation of a regular polygon in a 2 dimensional space

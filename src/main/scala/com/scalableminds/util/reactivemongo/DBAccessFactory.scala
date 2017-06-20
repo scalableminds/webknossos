@@ -3,7 +3,7 @@
  */
 package com.scalableminds.util.reactivemongo
 
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{JsObject, Json}
 
 trait DBAccessFactory {
   def createACL(toInsert: JsObject)(implicit ctx: DBAccessContext): JsObject

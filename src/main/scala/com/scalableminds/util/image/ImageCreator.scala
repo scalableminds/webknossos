@@ -5,6 +5,7 @@ package com.scalableminds.util.image
 
 import java.awt.image.BufferedImage
 import java.io.IOException
+
 import com.typesafe.scalalogging.LazyLogging
 
 case class ImagePartInfo(page: Int, x: Int, y: Int, height: Int, width: Int)

@@ -3,15 +3,14 @@
 */
 package com.scalableminds.util.js
 
-import javax.script.ScriptEngineManager
-import javax.script.ScriptContext
-import scala.concurrent.duration._
-import scala.util._
-import scala.concurrent.{Future, Promise}
-import scala.concurrent.ExecutionContext.Implicits._
 import java.util.concurrent.TimeoutException
+import javax.script.{ScriptContext, ScriptEngineManager}
+
 import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.{Future, Promise}
+import scala.util._
 
 class JsExecutor(scheduler: => akka.actor.Scheduler) {
   val functionDef = "var executeMe = %s; executeMe(%s);"

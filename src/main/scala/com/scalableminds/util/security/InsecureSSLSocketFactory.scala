@@ -3,11 +3,8 @@
 */
 package com.scalableminds.util.security
 
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
 import java.security.cert.X509Certificate
-import javax.net.ssl.SSLContext
-import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.{HttpsURLConnection, SSLContext, TrustManager, X509TrustManager}
 
 object InsecureSSLSocketFactory {
   lazy val default = HttpsURLConnection.getDefaultSSLSocketFactory()

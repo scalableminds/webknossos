@@ -3,10 +3,10 @@
  */
 package com.scalableminds.util.reactivemongo
 
-import play.api.libs.json.Writes
-import reactivemongo.api.commands.{WriteResult, LastError}
-import reactivemongo.bson.BSONObjectID
 import com.scalableminds.util.tools.Fox
+import play.api.libs.json.Writes
+import reactivemongo.api.commands.WriteResult
+import reactivemongo.bson.BSONObjectID
 
 trait DAO[T]{
 

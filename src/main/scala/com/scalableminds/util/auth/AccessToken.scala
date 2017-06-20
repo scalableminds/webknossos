@@ -3,7 +3,6 @@
  */
 package com.scalableminds.util.auth
 
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class AccessToken(accessToken: String, scope: String, tokenType: String)

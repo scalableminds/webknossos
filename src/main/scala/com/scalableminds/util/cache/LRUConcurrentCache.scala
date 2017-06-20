@@ -3,8 +3,6 @@
  */
 package com.scalableminds.util.cache
 
-import play.api.libs
-
 trait LRUConcurrentCache[K, V] {
   def maxEntries: Int
 

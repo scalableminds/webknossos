@@ -3,11 +3,9 @@
  */
 package com.scalableminds.util.geometry
 
-import play.api.libs.json._
-import play.api.libs.json.Json._
-import play.api.libs.json.Reads._
-import play.api.libs.json.Writes._
 import play.api.data.validation.ValidationError
+import play.api.libs.json.Json._
+import play.api.libs.json._
 
 trait GenericPosition {
   def x: Int
@@ -55,7 +53,7 @@ case class Point3D(x: Int, y: Int, z: Int) {
   def to(bottomRight: Point3D) =
     range(bottomRight, _ to _)
 
-  def until(bottomRight: Point3D) = 
+  def until(bottomRight: Point3D) =
     range(bottomRight, _ until _)
 
   private def range(other: Point3D, func: (Int, Int) => Range) =

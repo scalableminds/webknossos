@@ -3,11 +3,11 @@
  */
 package com.scalableminds.util.geometry
 
-import scala.math._
-import scala.collection.mutable.ArrayBuilder
-import scala.collection.mutable.ArrayBuffer
-import com.scalableminds.util.tools.Math._
 import com.scalableminds.util.tools.ExtendedTypes._
+import com.scalableminds.util.tools.Math._
+
+import scala.collection.mutable.{ArrayBuffer, ArrayBuilder}
+import scala.math._
 
 abstract class Figure
 

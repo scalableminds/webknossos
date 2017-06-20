@@ -3,13 +3,14 @@
  */
 package com.scalableminds.util.github.requesters
 
-import play.api.libs.json._
-import scala.concurrent.Future
-import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.Reads._
 import com.scalableminds.util.github.ResultSet
 import com.scalableminds.util.github.models.GithubIssue
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.Reads._
+import play.api.libs.json._
+
+import scala.concurrent.Future
 
 trait GithuIssueRequester extends GithubRequester with LazyLogging {
 

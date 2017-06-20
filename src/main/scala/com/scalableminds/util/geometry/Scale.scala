@@ -23,7 +23,7 @@ object Scale{
   val scaleWrites: Writes[Scale] =
     Writes{s: Scale => JsArray(List(JsNumber(s.x), JsNumber(s.y), JsNumber(s.z)))}
 
-  implicit val scaleFormat = Format.apply(scaleReads, scaleWrites)
+  implicit val scaleFormat = Format(scaleReads, scaleWrites)
 
   def default = Scale(12, 12, 24)
 

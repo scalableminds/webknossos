@@ -3,15 +3,15 @@
  */
 package com.scalableminds.util.github
 
+import com.scalableminds.util.github.models.LinkHeader
+import com.scalableminds.util.github.requesters.GithubRequester
+import com.typesafe.scalalogging.LazyLogging
+import play.api.http.Status
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Reads
 import play.api.libs.ws.WSRequest
 
 import scala.concurrent.Future
-import play.api.http.Status
-import com.scalableminds.util.github.requesters.GithubRequester
-import com.scalableminds.util.github.models.LinkHeader
-import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.concurrent.Execution.Implicits._
 
 class ResultSet[T](requestUrl: String, deserializer: Reads[T], token: String) extends GithubRequester with LazyLogging {
 

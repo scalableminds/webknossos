@@ -3,11 +3,12 @@
  */
 package com.scalableminds.util.geometry
 
-import scala.math._
-import play.api.libs.json._
-import play.api.libs.json.Json._
-import play.api.data.validation.ValidationError
 import com.scalableminds.util.tools.Math._
+import play.api.data.validation.ValidationError
+import play.api.libs.json.Json._
+import play.api.libs.json._
+
+import scala.math._
 
 /**
  * Vector in 3D space
@@ -21,17 +22,17 @@ case class Vector3D(x: Double = 0, y: Double = 0, z: Double = 0) {
     else
       this
   }
-  
+
   def neg = Vector3D(-x, -y, -z)
 
   def -(o: Vector3D): Vector3D = {
     new Vector3D(x - o.x, y - o.y, z - o.z)
   }
-  
+
   def +(o: Vector3D): Vector3D = {
     new Vector3D(x + o.x, y + o.y, z + o.z)
   }
-  
+
   def x(o: Vector3D): Vector3D = {
     new Vector3D(
       y * o.z - z * o.y,

@@ -3,17 +3,17 @@
  */
 package com.scalableminds.util.reactivemongo
 
-import play.api.libs.json._
-import play.api.libs.json.Json._
-import reactivemongo.bson.BSONObjectID
+import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Failure
 import play.api.libs.functional.syntax._
+import play.api.libs.json.Json._
 import play.api.libs.json.Reads._
+import play.api.libs.json._
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Success
-import net.liftweb.common.Failure
-import com.scalableminds.util.tools.Fox
-import com.typesafe.scalalogging.LazyLogging
 
 trait MongoHelpers extends LazyLogging {
   /** Writes an ID in Json Extended Notation */

@@ -5,16 +5,14 @@ package com.scalableminds.util.auth
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.ws.WS
-import play.api.libs.json._
 import net.liftweb.common.{Failure, Full}
-import play.api.http.Status._
 import play.api.http.HeaderNames._
 import play.api.http.MimeTypes
+import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.JsSuccess
-import net.liftweb.common.Full
 import play.api.libs.functional.syntax._
+import play.api.libs.json.{JsSuccess, _}
+import play.api.libs.ws.WS
 
 trait GithubOauth extends FoxImplicits with LazyLogging {
 

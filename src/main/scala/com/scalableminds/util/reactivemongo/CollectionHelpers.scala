@@ -3,23 +3,18 @@
 */
 package com.scalableminds.util.reactivemongo
 
-import net.liftweb.common.{Failure, Full}
-import play.api.libs.json._
-import reactivemongo.play.json.JSONSerializationPack
-import reactivemongo.api.commands.{LastError, WriteResult}
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
-import play.api.libs.json.Writes
-
-import scala.concurrent.ExecutionContext.Implicits._
-import reactivemongo.api.collections.GenericQueryBuilder
-
-import scala.Some
-import reactivemongo.api.{Cursor, QueryOpts}
-import play.api.libs.json.JsObject
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.iteratee.Enumerator
+import net.liftweb.common.{Failure, Full}
+import play.api.libs.json.{JsObject, Writes, _}
+import reactivemongo.api.collections.GenericQueryBuilder
+import reactivemongo.api.commands.{LastError, WriteResult}
+import reactivemongo.api.{Cursor, QueryOpts}
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
+import reactivemongo.play.json.JSONSerializationPack
+
+import scala.concurrent.ExecutionContext.Implicits._
 
 trait CollectionHelpers[T]
   extends DAO[T]

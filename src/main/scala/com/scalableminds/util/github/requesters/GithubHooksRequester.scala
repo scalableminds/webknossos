@@ -3,9 +3,9 @@
  */
 package com.scalableminds.util.github.requesters
 
-import play.api.libs.json.Json
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.Json
 
 trait GithubHooksRequester extends GithubRequester with LazyLogging {
 

@@ -3,16 +3,17 @@
  */
 package com.scalableminds.util.geometry
 
-import scala.math._
-import play.api.libs.json._
-import play.api.libs.json.Json._
 import play.api.data.validation.ValidationError
+import play.api.libs.json.Json._
+import play.api.libs.json._
+
+import scala.math._
 
 case class Vector3I( val x: Int, val y: Int, val z: Int){
 
   def -( o: Vector3I) = Vector3I( x - o.x, y - o.y, z - o.z )
   def +( o: Vector3I) = Vector3I( x + o.x, y + o.y, z + o.z )
-  
+
   def fillGapTill( dest: Vector3I ): List[Vector3I] = {
     val dx = x - dest.x
     val dy = y - dest.y
@@ -29,7 +30,7 @@ case class Vector3I( val x: Int, val y: Int, val z: Int){
 }
 
 object Vector3I{
-  
+
   val defaultSize = 3
 
   implicit def Vector3IToIntTuple( v: Vector3I ) = ( v.x, v.y, v.z )
@@ -37,7 +38,7 @@ object Vector3I{
   implicit def Vector3IToIntArray( v: Vector3I ) = Array( v.x, v.y, v.z )
   implicit def IntListToVector3I( l: List[Int] ) = Vector3I( l(0), l(1), l(2) )
   implicit def IntListToVector3I( l: Array[Int] ) = Vector3I( l(0), l(1), l(2) )
-  
+
   // json converter
   implicit object Vector3IWrites extends Writes[Vector3I] {
     def writes( v: Vector3I ) = {

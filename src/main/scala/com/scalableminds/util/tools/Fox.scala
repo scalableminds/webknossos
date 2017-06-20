@@ -3,11 +3,9 @@
  */
 package com.scalableminds.util.tools
 
-import scala.concurrent.{ExecutionContext, Future}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
-import scala.collection.generic.CanBuildFrom
-import scala.collection.{TraversableLike, breakOut}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 trait FoxImplicits {
@@ -187,8 +185,8 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
       case Empty => Full(true)
       case f: Failure => f
     })
-  } 
-  
+  }
+
 
   /**
    * Makes Fox play better with Scala 2.8 for comprehensions

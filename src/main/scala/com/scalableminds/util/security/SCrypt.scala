@@ -8,8 +8,7 @@ package com.scalableminds.util.security
  */
 object SCrypt {
 
-  import java.security.SecureRandom
-  import java.security.MessageDigest
+  import java.security.{MessageDigest, SecureRandom}
 
   /**
    * For readability.

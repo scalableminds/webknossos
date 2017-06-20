@@ -3,8 +3,8 @@
 */
 package com.scalableminds.util.mvc
 
-import play.api.mvc.Result
 import play.api.http.HeaderNames._
+import play.api.mvc.Result
 
 trait WithHighlightableResult {
 

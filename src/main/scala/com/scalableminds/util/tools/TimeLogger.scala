@@ -3,7 +3,7 @@
  */
 package com.scalableminds.util.tools
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 object TimeLogger {
   def logTime[A](caption: String, log: String => Unit)(op: => A): A = {

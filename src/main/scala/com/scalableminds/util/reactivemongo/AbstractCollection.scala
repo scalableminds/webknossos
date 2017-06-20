@@ -3,12 +3,11 @@
  */
 package com.scalableminds.util.reactivemongo
 
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{Json, JsObject}
-import reactivemongo.api.collections.GenericQueryBuilder
-import reactivemongo.api.commands.{WriteResult, LastError}
-import reactivemongo.bson.BSONDocument
 import com.scalableminds.util.tools.Fox
+import play.api.libs.json.{JsObject, Json}
+import reactivemongo.api.collections.GenericQueryBuilder
+import reactivemongo.api.commands.WriteResult
+import reactivemongo.bson.BSONDocument
 import reactivemongo.play.json.JSONSerializationPack
 
 trait AbstractCollection[T]{

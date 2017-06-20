@@ -3,7 +3,7 @@
  */
 package com.scalableminds.util.auth
 
-import play.api.libs.json.{Json, Format}
+import play.api.libs.json.{Format, Json}
 
 case class OAuth2Info(accessToken: String)
 

@@ -1,5 +1,6 @@
 package models.binary
 
+import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
@@ -16,8 +17,7 @@ import reactivemongo.api.indexes.{Index, IndexType}
 case class DataSet(
   name: String,
   dataStoreInfo: DataStoreInfo,
-  dataSource: Option[DataSource],
-  sourceType: String,
+  dataSource: InboxDataSource,
   owningTeam: String,
   allowedTeams: List[String],
   isActive: Boolean = false,
@@ -34,7 +34,7 @@ case class DataSet(
     user.exists(_.isAdminOf(owningTeam))
 
   def defaultStart =
-    dataSource.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))
+    dataSource.toUsable.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))
 
   def defaultRotation =
     Vector3D(0, 0, 0)
@@ -45,7 +45,7 @@ object DataSet {
 
   def dataSetPublicWrites(user: Option[User]): Writes[DataSet] =
     ((__ \ 'name).write[String] and
-      (__ \ 'dataSource).write[Option[DataSource]] and
+      (__ \ 'dataSource).write[InboxDataSource] and
       (__ \ 'dataStore).write[DataStoreInfo] and
       (__ \ 'sourceType).write[String] and
       (__ \ 'owningTeam).write[String] and
@@ -56,7 +56,7 @@ object DataSet {
       (__ \ 'description).write[Option[String]] and
       (__ \ 'created).write[Long] and
       (__ \ "isEditable").write[Boolean]) (d =>
-      (d.name, d.dataSource, d.dataStoreInfo, d.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.accessToken, d.isPublic, d.description, d.created, d.isEditableBy(user)))
+      (d.name, d.dataSource, d.dataStoreInfo, d.dataSource.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.accessToken, d.isPublic, d.description, d.created, d.isEditableBy(user)))
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {
@@ -98,7 +98,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
   def updateDataSource(
     name: String,
     dataStoreInfo: DataStoreInfo,
-    source: Option[DataSource],
+    source: InboxDataSource,
     isActive: Boolean)(implicit ctx: DBAccessContext) = {
     update(
       byNameQ(name),

@@ -22,7 +22,7 @@ class DataTokenController @Inject()(val messagesApi: MessagesApi) extends Contro
     dataSet: DataSet,
     dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] = {
 
-    dataSet.dataSource.flatMap(_.getDataLayer(dataLayerName)).toFox
+    dataSet.dataSource.toUsable.flatMap(_.getDataLayer(dataLayerName)).toFox
     // TODO jfrohnhofen .orElse(UserDataLayerDAO.findOneByName(dataLayerName).map(_.dataLayer))
   }
 

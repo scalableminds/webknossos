@@ -75,7 +75,7 @@ object AnnotationContent extends FoxImplicits {
       (__ \ 'dataStore).write[DataStoreInfo] and
       (__ \ 'scale).write[Option[Scale]] and
       (__ \ 'dataLayers).write[Option[List[DataLayer]]]) (d =>
-      (d.name, d.dataStoreInfo, d.dataSource.map(_.scale), d.dataSource.map(_.dataLayers)))
+      (d.name, d.dataStoreInfo, d.dataSource.toUsable.map(_.scale), d.dataSource.toUsable.map(_.dataLayers)))
 
   def writeAsJson(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
     for {
@@ -99,7 +99,7 @@ object AnnotationContent extends FoxImplicits {
 
     for {
       dataSet <- DataSetDAO.findOneBySourceName(ac.dataSetName)
-      dataSource <- dataSet.dataSource.toFox
+      dataSource <- dataSet.dataSource.toUsable
     } yield {
       writer.writeStartElement("experiment")
       writer.writeAttribute("name", dataSet.name)

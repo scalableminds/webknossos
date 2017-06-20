@@ -92,7 +92,7 @@ object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplici
     }
 
     for {
-      dataLayer <- dataSet.dataSource.flatMap(ds => ds.getDataLayer(dataLayerName)).toFox
+      dataLayer <- dataSet.dataSource.toUsable.flatMap(ds => ds.getDataLayer(dataLayerName)).toFox
       accessToken <- dataSet.dataStoreInfo.accessToken ?~> "ndstore.accesstoken.missing"
       thumbnail = ThumbnailHelpers.goodThumbnailParameters(dataLayer, width, height)
       resolution = (math.log(thumbnail.resolution) / math.log(2)).toInt

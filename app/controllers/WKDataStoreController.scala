@@ -8,6 +8,7 @@ import javax.inject.Inject
 import scala.concurrent.Future
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.braingames.datastore.services.DataStoreStatus
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
@@ -52,6 +53,8 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     implicit request =>
       request.body.validate[List[InboxDataSource]] match {
         case JsSuccess(dataSources, _) =>
+          // TODO jfrohnhofen what should happen to DataSources, that are no longer reported by the DataStore?
+          // Should they be assumed to be no longer available and be deleted / deactivated?
           DataSetService.updateDataSources(request.dataStore, dataSources)(GlobalAccessContext)
           JsonOk
         case e: JsError                =>

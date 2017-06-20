@@ -120,7 +120,7 @@ object InitialData extends GlobalDBAccess with LazyLogging{
   def insertLocalDataStore() = {
     DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
-        DataStoreDAO.insert(DataStore("localhost", None, WebKnossosStore, "something-secure"))
+        DataStoreDAO.insert(DataStore("localhost", "http://localhost:9000", WebKnossosStore, "something-secure"))
       }
     }
   }

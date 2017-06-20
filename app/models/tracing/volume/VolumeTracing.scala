@@ -147,7 +147,7 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
 
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
     for {
-      baseSource <- baseDataSet.dataSource.toFox
+      baseSource <- baseDataSet.dataSource.toUsable.toFox
       dataLayer <- DataStoreHandler.createUserDataLayer(baseDataSet.dataStoreInfo, baseSource)
       volumeTracing = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, editPosition = baseDataSet.defaultStart, zoomLevel = VolumeTracing.defaultZoomLevel)
       // TODO jfrohnhofen _ <- UserDataLayerDAO.insert(dataLayer)
@@ -163,12 +163,12 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
     boundingBox: Option[BoundingBox],
     settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[VolumeTracing] = {
 
-    nmls.headOption.toFox.flatMap{ nml =>
+    nmls.headOption.toFox.flatMap { nml =>
       val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
 
       for {
         dataSet <- DataSetDAO.findOneBySourceName(nml.dataSetName) ?~> "dataSet.notFound"
-        baseSource <- dataSet.dataSource.toFox ?~> "dataSource.notFound"
+        baseSource <- dataSet.dataSource.toUsable ?~> "dataSource.notFound"
         start <- nml.editPosition.toFox.orElse(DataSetService.defaultDataSetPosition(nml.dataSetName))
         nmlVolume <- nml.volumes.headOption.toFox ?~> "nml.volume.notFound"
         volume <- additionalFiles.get(nmlVolume.location).toFox ?~> "nml.volume.volumeFileNotFound"

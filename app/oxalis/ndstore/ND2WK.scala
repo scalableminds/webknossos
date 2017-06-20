@@ -23,16 +23,17 @@ object ND2WK extends FoxImplicits {
     for {
       dataLayers <- dataLayersFromNDChannels(ndp.dataset, ndp.channels)
       dataSource <- dataSourceFromNDDataSet(ndp.name, ndp.dataset, dataLayers)
-    } yield DataSet(
-      ndp.name,
-      dataStoreInfo,
-      Some(dataSource),
-      sourceType = "external",
-      team,
-      List(team),
-      isActive = true,
-      isPublic = false,
-      accessToken = None)
+    } yield {
+      DataSet(
+        ndp.name,
+        dataStoreInfo,
+        dataSource,
+        team,
+        List(team),
+        isActive = true,
+        isPublic = false,
+        accessToken = None)
+    }
   }
 
   private def dataSourceFromNDDataSet(

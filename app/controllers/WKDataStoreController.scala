@@ -7,7 +7,7 @@ import javax.inject.Inject
 
 import scala.concurrent.Future
 import com.scalableminds.braingames.binary.models._
-import com.scalableminds.braingames.binary.models.datasource.InboxDataSource
+import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
@@ -60,7 +60,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
       }
   }
 
-  def updateOne(name: String, dataSourceId: String) = DataStoreAction(name)(parse.json) { implicit request =>
+  def updateOne(name: String) = DataStoreAction(name)(parse.json) { implicit request =>
     request.body.validate[InboxDataSource] match {
       case JsSuccess(dataSource, _) =>
         DataSetService.updateDataSources(request.dataStore, List(dataSource))(GlobalAccessContext)
@@ -68,16 +68,6 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
       case e: JsError               =>
         logger.warn("Data store reported invalid json for data source.")
         JsonBadRequest(JsError.toFlatJson(e))
-    }
-  }
-
-  def layerRead(name: String, dsName: String, layerName: String) = DataStoreAction(name).async { implicit request =>
-    for {
-      ds <- DataSetDAO.findOneBySourceName(dsName)(GlobalAccessContext) ?~> Messages("dataSet.notFound", dsName)
-      _ <- (ds.dataStoreInfo.name == request.dataStore.name) ?~> Messages("dataStore.notAllowed")
-      layer <- DataSetService.getDataLayer(ds, layerName)(GlobalAccessContext) ?~> Messages("dataLayer.notFound", layerName)
-    } yield {
-      Ok(Json.toJson(layer))
     }
   }
 }

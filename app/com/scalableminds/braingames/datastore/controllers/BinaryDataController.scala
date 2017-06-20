@@ -11,7 +11,7 @@ import com.scalableminds.braingames.binary.api.BinaryDataService
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSource, DataSourceId}
 import com.scalableminds.braingames.binary.models.requests.{DataServiceRequest, DataServiceRequestSettings}
-import com.scalableminds.braingames.binary.services.DataSourceRepository
+import com.scalableminds.braingames.binary.helpers.{DataSourceRepository, ThumbnailHelpers}
 import com.scalableminds.braingames.datastore.models.DataRequestCollection._
 import com.scalableminds.braingames.datastore.models.{DataRequest, WebKnossosDataRequest}
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
@@ -256,25 +256,9 @@ class BinaryDataController @Inject()(
                                      width: Int,
                                      height: Int
                                    ): Fox[(OutputStream) => Unit] = {
-
-    def goodThumbnailParameters(dataLayer: DataLayer) = {
-      // We want to make sure that the thumbnail only contains data, as much as possible but no black border
-      // To make sure there is no black border we are going to go with the second best resolution (hence the `- 1`)
-      val wr = math.floor(math.log(dataLayer.boundingBox.width.toDouble / width) / math.log(2)).toInt - 1
-      val hr = math.floor(math.log(dataLayer.boundingBox.height.toDouble / height) / math.log(2)).toInt - 1
-      val resolution = math.max(1, List(wr, hr, (dataLayer.resolutions.size - 1)).min)
-
-      // Parameters that seem to be working good enough
-      val center = dataLayer.boundingBox.center
-      val x = center.x - width * math.pow(2, resolution) / 2
-      val y = center.y - height * math.pow(2, resolution) / 2
-      val z = center.z
-      new VoxelPosition(x.toInt, y.toInt, z.toInt, resolution)
-    }
-
     for {
       (_, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-      position = goodThumbnailParameters(dataLayer)
+      position = ThumbnailHelpers.goodThumbnailParameters(dataLayer, width, height)
       request = DataRequest(position, width, height, 1)
       image <- respondWithSpriteSheet(dataSetName, dataLayerName, request, 1, blackAndWhite = false)
     } yield {

@@ -3,7 +3,7 @@ package models.annotation
 import java.util.Date
 import javax.xml.stream.XMLStreamWriter
 
-import com.scalableminds.braingames.binary.models.datasource.{Category, DataLayer, ElementClass}
+import com.scalableminds.braingames.binary.models.datasource.{Category, ElementClass, DataLayerLike => DataLayer}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -14,6 +14,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 
 trait AnnotationContent {
+
   type Self <: AnnotationContent
 
   def service: AnnotationContentService

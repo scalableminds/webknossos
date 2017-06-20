@@ -3,7 +3,8 @@
  */
 package models.binary
 
-import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSource, InboxDataSource}
+import com.scalableminds.braingames.binary.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
+import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

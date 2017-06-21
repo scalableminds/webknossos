@@ -46,25 +46,13 @@ class WkLayer extends Layer {
 
   async requestFromStoreImpl(batch: Array<BucketInfo>, token: string): Promise<Uint8Array> {
     const wasFourBit = this.fourBit;
-    const requestData = new MultipartData();
-
-    for (const bucket of batch) {
-      requestData.addPart({
-        "X-Bucket": JSON.stringify(bucket),
-      });
-    }
 
     const datasetName = this.getDatasetName();
-    const data = await requestData.dataPromise();
-    const responseBuffer = await Request.sendArraybufferReceiveArraybuffer(
+    const responseBuffer = await Request.sendJSONReceiveArraybuffer(
       `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`,
       {
-        data,
-        headers: {
-          "Content-Type": `multipart/mixed; boundary=${requestData.boundary}`,
-        },
+        data: batch,
         timeout: REQUEST_TIMEOUT,
-        compress: true,
         doNotCatch: true,
       });
 

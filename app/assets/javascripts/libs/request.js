@@ -30,35 +30,35 @@ class Request {
       url,
       _.defaultsDeep(options, { headers: { Accept: "application/json" } }),
       this.handleEmptyJsonResponse,
-    )
+    );
 
-  // IN:  json
-  // OUT: json
-  sendJSONReceiveJSON = (url: string, options: RequestOptionsWithData<any>): Promise<any> => {
+  prepareJSON = (url: string, options: RequestOptionsWithData<any>): RequestOptions => {
     // Sanity check
     // Requests without body should not send 'json' header and use 'receiveJSON' instead
     if (!options.data) {
       if (options.method === "POST" || options.method === "PUT") {
         console.warn("Sending POST/PUT request without body", url);
       }
-      return this.receiveJSON(url, options);
+      return options;
     }
 
     const body = _.isString(options.data) ?
         options.data :
         JSON.stringify(options.data);
 
-    return this.receiveJSON(
-      url,
-      _.defaultsDeep(options, {
-        method: "POST",
-        body,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }),
-    );
+    return _.defaultsDeep(options, {
+      method: "POST",
+      body,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
   }
+
+  // IN:  json
+  // OUT: json
+  sendJSONReceiveJSON = (url: string, options: RequestOptionsWithData<any>): Promise<any> =>
+    this.receiveJSON(url, this.prepareJSON(url, options));
 
   // IN:  multipart formdata
   // OUT: json
@@ -158,6 +158,11 @@ class Request {
       }),
     );
   }
+
+  // IN:  JSON
+  // OUT: arraybuffer
+  sendJSONReceiveArraybuffer = (url: string, options: RequestOptionsWithData<any>): Promise<ArrayBuffer> =>
+    this.receiveArraybuffer(url, this.prepareJSON(url, options));
 
   // TODO: babel doesn't support generic arrow-functions yet
   triggerRequest<T>(url: string, options: RequestOptions | RequestOptionsWithData<T> = {}, responseDataHandler: ?Function = null): Promise<*> {

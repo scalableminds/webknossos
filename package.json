@@ -47,7 +47,7 @@
     "url-loader": "^0.5.8",
     "wdio-jasmine-framework": "^0.3.1",
     "wdio-selenium-standalone-service": "0.0.9",
-    "wdio-spec-reporter": "0.0.3",
+    "wdio-spec-reporter": "0.1.0",
     "webdriverio": "^4.8.0",
     "webpack": "^2.5.1"
   },

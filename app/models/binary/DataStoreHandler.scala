@@ -19,12 +19,12 @@ import play.api.mvc.Codec
 
 trait DataStoreHandlingStrategy {
 
-  def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer]
+  def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[String]
 
   def uploadUserDataLayer(
     dataStoreInfo: DataStoreInfo,
     base: DataSource,
-    file: TemporaryFile): Fox[UserDataLayer]
+    file: TemporaryFile): Fox[String]
 
   def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]]
 
@@ -34,18 +34,19 @@ trait DataStoreHandlingStrategy {
 }
 
 object DataStoreHandler extends DataStoreHandlingStrategy {
+
   def strategyForType(typ: DataStoreType): DataStoreHandlingStrategy = typ match {
     case NDStore         => NDStoreHandlingStrategy
     case WebKnossosStore => WKStoreHandlingStrategy
   }
 
-  override def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] =
+  override def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[String] =
     strategyForType(dataStoreInfo.typ).createUserDataLayer(dataStoreInfo, base)
 
   override def uploadUserDataLayer(
     dataStoreInfo: DataStoreInfo,
     base: DataSource,
-    file: TemporaryFile): Fox[UserDataLayer] =
+    file: TemporaryFile): Fox[String] =
     strategyForType(dataStoreInfo.typ).uploadUserDataLayer(dataStoreInfo, base, file)
 
   override def importDataSource(dataSet: DataSet): Fox[WSResponse] =
@@ -59,14 +60,15 @@ object DataStoreHandler extends DataStoreHandlingStrategy {
 }
 
 object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplicits with LazyLogging {
+
   override def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] =
-    Fox.failure("NDStore doesn't support creation of user datalayers yet.")
+    Fox.failure("NDStore doesn't support creation of UserDataLayers.")
 
   override def uploadUserDataLayer(
     dataStoreInfo: DataStoreInfo,
     base: DataSource,
     file: TemporaryFile): Fox[UserDataLayer] =
-    Fox.failure("NDStore doesn't support creation of user datalayers yet.")
+    Fox.failure("NDStore doesn't support creation of UserDataLayers.")
 
   override def importDataSource(dataSet: DataSet): Fox[WSResponse] =
     Fox.failure("NDStore doesn't support import yet.")
@@ -109,8 +111,8 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
 
   private def dataStoreWS(dataStore: DataStoreInfo, path: String): WSRequest = {
     WS
-    .url(dataStore.url + path)
-    .withQueryString("token" -> DataTokenService.oxalisToken)
+      .url(dataStore.url + path)
+      .withQueryString("token" -> DataTokenService.webKnossosToken)
   }
 
   def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] = {

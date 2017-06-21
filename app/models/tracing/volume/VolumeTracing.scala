@@ -93,7 +93,7 @@ case class VolumeTracing(
     def createStream(url: String): Fox[Enumerator[Array[Byte]]] = {
       val futureResponse = WS
         .url(url)
-        .withQueryString("token" -> DataTokenService.oxalisToken)
+        .withQueryString("token" -> DataTokenService.webKnossosToken)
         .getStream()
 
       futureResponse.map {

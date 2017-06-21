@@ -17,19 +17,10 @@ import scala.async.Async._
 import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, DBAccessContext}
 import scala.concurrent.Future
 
-case class TraceLimit(min: Int, max: Int, maxHard: Int) {
-
-  override def toString = s"$min - $max, Limit: $maxHard"
-}
-
-object TraceLimit {
-  implicit val timeSpanFormat = Json.format[TraceLimit]
-}
 
 case class TaskType(
   summary: String,
   description: String,
-  expectedTime: TraceLimit,
   team: String,
   settings: AnnotationSettings = AnnotationSettings.default,
   fileName: Option[String] = None,
@@ -47,13 +38,11 @@ object TaskType {
     summary: String,
     description: String,
     team: String,
-    settings: AnnotationSettings,
-    expectedTime: TraceLimit) = {
+    settings: AnnotationSettings) = {
 
     TaskType(
       summary,
       description,
-      expectedTime,
       team,
       settings)
   }
@@ -67,8 +56,7 @@ object TaskType {
       tt.settings.preferredMode,
       tt.settings.branchPointsAllowed,
       tt.settings.advancedOptionsAllowed,
-      tt.settings.somaClickingAllowed,
-      tt.expectedTime))
+      tt.settings.somaClickingAllowed))
 
   def transformToJson(tt: TaskType)(implicit ctx: DBAccessContext) = {
     Json.obj(
@@ -77,8 +65,7 @@ object TaskType {
       "description" -> tt.description,
       "team" -> tt.team,
       "settings" -> Json.toJson(tt.settings),
-      "fileName" -> tt.fileName,
-      "expectedTime" -> tt.expectedTime
+      "fileName" -> tt.fileName
     )
   }
 }

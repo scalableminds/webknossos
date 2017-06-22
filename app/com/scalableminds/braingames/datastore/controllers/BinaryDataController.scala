@@ -200,10 +200,8 @@ class BinaryDataController @Inject()(
   }
 
   private def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String): Fox[(DataSource, DataLayer)] = {
-    // TODO
-    val id = DataSourceId(dataSetName, "Connectomics department")
     for {
-      dataSource <- dataSourceRepository.findUsableById(id).toFox ?~> Messages("dataSource.notFound") ~> 404
+      dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound") ~> 404
       dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> Messages("dataLayer.notFound") ~> 404
     } yield {
       (dataSource, dataLayer)

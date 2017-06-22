@@ -7,14 +7,14 @@ import java.io.File
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.api.DataSourceService
-import com.scalableminds.braingames.binary.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
+import com.scalableminds.braingames.binary.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import play.api.data.Form
 import play.api.data.Forms.{nonEmptyText, tuple}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.Action
+import play.api.libs.json.Json
+import play.api.mvc._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -43,7 +43,6 @@ class DataSourceController @Inject()(
     implicit request =>
 
     val uploadForm = Form(
-      // TODO use team from request / name from filename?
       tuple(
         "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
         "team" -> nonEmptyText
@@ -56,9 +55,7 @@ class DataSourceController @Inject()(
         case (name, team) =>
           val id = DataSourceId(name, team)
           for {
-            // TODO
-            // oxalisServer <- DataStorePlugin.current.map(_.oxalisServer).toFox ?~> Messages("oxalis.server.unreachable")
-            // _ <- oxalisServer.validateDSUpload(token, name, team) ?~> Messages("dataSet.name.alreadyTaken")
+            _ <- webKnossosServer.validateDataSourceUpload(token, id) ?~> Messages("dataSet.name.alreadyTaken")
             zipFile <- request.body.file("zipFile") ?~> Messages("zip.file.notFound")
             _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
           } yield {
@@ -69,11 +66,9 @@ class DataSourceController @Inject()(
 
   def explore(dataSetName: String) = Action {
     implicit request =>
-      // TODO check if allowed and get team / modify action to get dataSourceId??
-      val id = DataSourceId(dataSetName, "Connectomics department")
       for {
-        dataSource <- dataSourceRepository.findById(id) ?~ Messages("dataSource.notFound") ~> 404
-        (dataSource, messages) <- dataSourceService.exploreDataSource(id, dataSource.toUsable)
+        dataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages("dataSource.notFound") ~> 404
+        (dataSource, messages) <- dataSourceService.exploreDataSource(dataSource.id, dataSource.toUsable)
       } yield {
         Ok(Json.obj(
           "dataSource" -> dataSource,
@@ -84,8 +79,11 @@ class DataSourceController @Inject()(
 
   def update(dataSetName: String) = Action(validateJson[DataSource]) {
     implicit request =>
-      val id = DataSourceId(dataSetName, "Connectomics department")
-      val dataSource = request.body.copy(id = id)
-      dataSourceService.updateDataSource(dataSource).map(_ => Ok)
+      for {
+        dataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages("dataSource.notFound") ~> 404
+        _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
+      } yield {
+        Ok
+      }
   }
 }

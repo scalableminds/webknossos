@@ -15,7 +15,7 @@ package object datasource {
     implicit val dataSourceIdForamt = Json.format[DataSourceId]
   }
 
-  case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId, dataLayers: List[T], scale: Scale, sourceType: String = "webKnossos") extends GenericAnonymousDataSource[T](dataLayers, scale) with GenericInboxDataSource[T] {
+  case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId, dataLayers: List[T], scale: Scale, sourceType: String = "webKnossos") extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)
 

@@ -18,7 +18,6 @@ module.exports = function (env = {}) {
   return {
     entry: {
       main: "main.js",
-      vendor: ["c3", "d3", "moment"],
     },
     output: {
       path: `${__dirname}/public/bundle`,
@@ -85,18 +84,10 @@ module.exports = function (env = {}) {
         $: "jquery",
         jQuery: "jquery",
         "window.jQuery": "jquery",
-        _: "lodash"
+        _: "lodash",
       }),
       new BundleAnalyzerPlugin(),
       new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
-      new webpack.optimize.CommonsChunkPlugin({
-        name: "vendor",
-        chunks: ["vendor"],
-        async: 'used-twice',
-        minChunks(module, count) {
-          return count >= 2;
-        },
-      }),
     ],
   };
 }

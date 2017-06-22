@@ -5,7 +5,7 @@ package models.binary
 
 import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
-import com.scalableminds.braingames.datastore.annotations.volume.{VolumeTracingLayer => UserDataLayer}
+import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingLayer => UserDataLayer}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}

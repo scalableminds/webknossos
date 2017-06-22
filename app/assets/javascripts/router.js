@@ -14,6 +14,7 @@ import BaseRouter from "libs/base_router";
 import ReactBackboneWrapper from "libs/react_backbone_wrapper";
 import PaginationCollection from "admin/models/pagination_collection";
 
+import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/views/dashboard_view";
 import UserModel from "dashboard/models/user_model";
 import SpotlightView from "dashboard/views/spotlight/spotlight_view";
@@ -74,35 +75,23 @@ class Router extends BaseRouter {
   }
 
   tracingView(type, id) {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (TracingLayoutView) => {
-      TracingLayoutView = TracingLayoutView.default;
-
-      const view = new ReactBackboneWrapper(TracingLayoutView, {
-        initialTracingType: type,
-        initialTracingId: id,
-        initialControlmode: ControlModeEnum.TRACE,
-      });
-      view.forcePageReload = true;
-      this.changeView(view);
-    };
-    require(["oxalis/view/tracing_layout_view"], callback);
+    const view = new ReactBackboneWrapper(TracingLayoutView, {
+      initialTracingType: type,
+      initialTracingId: id,
+      initialControlmode: ControlModeEnum.TRACE,
+    });
+    view.forcePageReload = true;
+    this.changeView(view);
   }
 
   tracingViewPublic(id) {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (TracingLayoutView) => {
-      TracingLayoutView = TracingLayoutView.default;
-
-      const view = new ReactBackboneWrapper(TracingLayoutView, {
-        initialTracingType: SkeletonTracingTypeTracingEnum.View,
-        initialTracingId: id,
-        initialControlmode: ControlModeEnum.VIEW,
-      });
-      view.forcePageReload = true;
-      this.changeView(view);
-    };
-    require(["oxalis/view/tracing_layout_view"], callback);
+    const view = new ReactBackboneWrapper(TracingLayoutView, {
+      initialTracingType: SkeletonTracingTypeTracingEnum.View,
+      initialTracingId: id,
+      initialControlmode: ControlModeEnum.VIEW,
+    });
+    view.forcePageReload = true;
+    this.changeView(view);
   }
 
 

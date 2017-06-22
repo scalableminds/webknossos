@@ -11,6 +11,7 @@ object ThumbnailHelpers {
     val wr = math.floor(math.log(dataLayer.boundingBox.width.toDouble / width) / math.log(2)).toInt - 1
     val hr = math.floor(math.log(dataLayer.boundingBox.height.toDouble / height) / math.log(2)).toInt - 1
 
+    // TODO what about gaps in resolutions?
     val resolutionExponent = math.max(0, List(wr, hr, dataLayer.resolutions.size - 1).min)
     math.pow(2, resolutionExponent).toInt
   }

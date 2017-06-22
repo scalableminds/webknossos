@@ -15,7 +15,7 @@ package object datasource {
     implicit val dataSourceIdForamt = Json.format[DataSourceId]
   }
 
-  case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId, dataLayers: List[T], scale: Scale) extends GenericInboxDataSource[T] {
+  case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId, dataLayers: List[T], scale: Scale, sourceType: String = "webKnossos") extends GenericAnonymousDataSource[T](dataLayers, scale) with GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)
 
@@ -42,7 +42,7 @@ package object datasource {
       def writes(ds: GenericDataSource[T]) = Json.obj(
         "id" -> DataSourceId.dataSourceIdForamt.writes(ds.id),
         "dataLayers" -> ds.dataLayers.map(Json.toJson(_)),
-        "scale" -> Scale.scaleWrites   . writes(ds.scale)
+        "scale" -> Scale.scaleWrites. writes(ds.scale)
       )
     }
   }

@@ -8,7 +8,10 @@ import play.api.libs.json.{Format, JsResult, JsValue, Json}
 package object inbox {
 
   trait GenericInboxDataSource[+T <: DataLayerLike] {
+
     def id: DataSourceId
+
+    def sourceType: String
 
     def toUsable: Option[GenericDataSource[T]]
 
@@ -32,7 +35,7 @@ package object inbox {
     }
   }
 
-  case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId, status: String) extends GenericInboxDataSource[T] {
+  case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId, status: String, sourceType: String = "webKnossos") extends GenericInboxDataSource[T] {
     val toUsable: Option[GenericDataSource[T]] = None
   }
 

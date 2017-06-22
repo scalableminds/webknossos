@@ -65,7 +65,7 @@ object KnossosDataFormat extends DataSourceImporter {
     def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
 
     PathUtils.listDirectories(baseDir, resolutionDirFilter).map { resolutionDirs =>
-      val resolutions = resolutionDirs.flatMap(_.getFileName.toString.toIntOpt)
+      val resolutions = resolutionDirs.flatMap(_.getFileName.toString.toIntOpt).toSet
       KnossosSection(name, resolutions, BoundingBox(Point3D(0,0,0),0,0,0))
     }
   }

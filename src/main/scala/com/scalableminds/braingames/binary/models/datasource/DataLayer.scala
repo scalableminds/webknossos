@@ -3,7 +3,7 @@
  */
 package com.scalableminds.braingames.binary.models.datasource
 
-import com.scalableminds.braingames.binary.dataformats.CubeLoader
+import com.scalableminds.braingames.binary.dataformats.BucketProvider
 import com.scalableminds.braingames.binary.dataformats.knossos.{KnossosDataLayer, KnossosSegmentationLayer}
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.util.geometry.BoundingBox
@@ -11,7 +11,7 @@ import play.api.libs.json._
 
 object DataFormat extends Enumeration {
 
-  val knossos, wkw = Value
+  val knossos, wkw, tracing = Value
 
   implicit val dataLayerFormatFormat = Format(Reads.enumNameReads(DataFormat), Writes.enumNameWrites)
 }
@@ -56,7 +56,7 @@ trait DataLayerLike {
 
   def boundingBox: BoundingBox
 
-  def resolutions: List[Int]
+  def resolutions: Set[Int]
 
   def elementClass: ElementClass.Value
 }
@@ -69,8 +69,8 @@ object DataLayerLike {
         .orElse(AbstractDataLayer.abstractDataLayerFormat.reads(json))
 
     override def writes(layer: DataLayerLike): JsValue = layer match {
-      case layer: SegmentationLayerLike => Json.toJson(AbstractSegmentationLayer.from(layer))
-      case _ => Json.toJson(AbstractDataLayer.from(layer))
+      case layer: SegmentationLayerLike => AbstractSegmentationLayer.abstractSegmentationLayerFormat.writes(AbstractSegmentationLayer.from(layer))
+      case _ => AbstractDataLayer.abstractDataLayerFormat.writes(AbstractDataLayer.from(layer))
     }
   }
 }
@@ -79,7 +79,7 @@ trait SegmentationLayerLike extends DataLayerLike {
 
   def largestSegmentId: Long
 
-  def mappings: List[String]
+  def mappings: Set[String]
 }
 
 trait DataLayer extends DataLayerLike {
@@ -96,7 +96,7 @@ trait DataLayer extends DataLayerLike {
     */
   def lengthOfUnderlyingCubes: Int
 
-  def cubeLoader: CubeLoader
+  def bucketProvider: BucketProvider
 
   def doesContainBucket(bucket: BucketPosition) =
     boundingBox.contains(bucket.topLeft.toHighestRes)
@@ -150,7 +150,7 @@ case class AbstractDataLayer(
                               name: String,
                               category: Category.Value,
                               boundingBox: BoundingBox,
-                              resolutions: List[Int],
+                              resolutions: Set[Int],
                               elementClass: ElementClass.Value
                             ) extends DataLayerLike
 
@@ -167,10 +167,10 @@ case class AbstractSegmentationLayer(
                                       name: String,
                                       category: Category.Value,
                                       boundingBox: BoundingBox,
-                                      resolutions: List[Int],
+                                      resolutions: Set[Int],
                                       elementClass: ElementClass.Value,
                                       largestSegmentId: Long,
-                                      mappings: List[String]
+                                      mappings: Set[String]
                                     ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
@@ -180,27 +180,4 @@ object AbstractSegmentationLayer {
   }
 
   implicit val abstractSegmentationLayerFormat = Json.format[AbstractSegmentationLayer]
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// TODO remove
-case class UserDataLayer(dataSourceName: String, dataLayer: DataLayer)
-
-object UserDataLayer {
-  implicit val userDataLayerFormat = Json.format[UserDataLayer]
 }

@@ -8,7 +8,7 @@ import com.scalableminds.braingames.binary.models.datasource._
 import com.scalableminds.util.geometry.BoundingBox
 import play.api.libs.json.Json
 
-case class KnossosSection(name: String, resolutions: List[Int], boundingBox: BoundingBox) {
+case class KnossosSection(name: String, resolutions: Set[Int], boundingBox: BoundingBox) {
 
   def doesContainCube(cube: CubePosition): Boolean = {
     boundingBox.contains(cube.topLeft.toHighestRes)
@@ -27,11 +27,11 @@ trait KnossosLayer {
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.boundingBox))
 
-  lazy val resolutions: List[Int] = sections.map(_.resolutions).reduce(_ union _)
+  lazy val resolutions: Set[Int] = sections.map(_.resolutions).reduce(_ union _)
 
   val lengthOfUnderlyingCubes = KnossosDataFormat.cubeLength
 
-  lazy val cubeLoader = new KnossosCubeLoader
+  lazy val bucketProvider = new KnossosBucketProvider(this)
 }
 
 case class KnossosDataLayer(
@@ -49,7 +49,7 @@ case class KnossosSegmentationLayer(
                                      name: String,
                                      sections: List[KnossosSection],
                                      elementClass: ElementClass.Value,
-                                     mappings: List[String],
+                                     mappings: Set[String],
                                      largestSegmentId: Long
                                    ) extends SegmentationLayer with KnossosLayer {
 

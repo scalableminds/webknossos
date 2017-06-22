@@ -6,15 +6,15 @@ package com.scalableminds.braingames.binary.api
 import java.io.File
 import java.nio.file.{Path, Paths}
 
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.`import`.{DataSourceImportReport, DataSourceImporter}
 import com.scalableminds.braingames.binary.dataformats.knossos.KnossosDataFormat
 import com.scalableminds.braingames.binary.dataformats.wkw.WKWDataFormat
+import com.scalableminds.braingames.binary.helpers.{DataSourceRepository, IntervalScheduler}
 import com.scalableminds.braingames.binary.models.datasource._
 import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
-import com.scalableminds.braingames.binary.helpers.{DataSourceRepository, IntervalScheduler}
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
@@ -22,7 +22,6 @@ import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -95,7 +94,6 @@ class DataSourceService @Inject()(
 
   def updateDataSource(dataSource: DataSource): Box[Unit] = {
     val propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
-    print(Json.toJson(dataSource))
     JsonHelper.jsonToFile(propertiesFile, dataSource).map { _ =>
       dataSourceRepository.updateDataSource(dataSource)
     }
@@ -125,7 +123,7 @@ class DataSourceService @Inject()(
     if (new File(propertiesFile.toString).exists()) {
       JsonHelper.validatedJsonFromFile[DataSource](propertiesFile, path) match {
         case Full(dataSource) =>
-          dataSource
+          dataSource.copy(id)
         case e =>
           UnusableDataSource(id, s"Error: Invalid json format in ${propertiesFile}: $e")
       }

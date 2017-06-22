@@ -7,8 +7,6 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.datasource.DataLayer
-import com.scalableminds.braingames.binary.models.requests.CubeLoadInstruction
-import com.scalableminds.util.tools.Fox
 import net.liftweb.common.Box
 
 trait Cube {
@@ -40,8 +38,4 @@ trait Cube {
   }
 
   protected def onFinalize(): Unit = {}
-}
-
-trait CubeLoader {
-  def load(cubeInstruction: CubeLoadInstruction): Fox[Cube]
 }

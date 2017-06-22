@@ -6,19 +6,16 @@ package com.scalableminds.braingames.binary.api
 import java.nio.file.Paths
 
 import com.google.inject.Inject
-import com.scalableminds.braingames.binary.dataformats.Cube
 import com.scalableminds.braingames.binary.models.BucketPosition
-import com.scalableminds.braingames.binary.models.requests.{CubeLoadInstruction, DataServiceRequest, SegmentationMappingRequest}
+import com.scalableminds.braingames.binary.models.requests.{DataServiceRequest, ReadInstruction, SegmentationMappingRequest}
 import com.scalableminds.braingames.binary.storage.DataCubeCache
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Failure, Full}
 import play.api.Configuration
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future, TimeoutException}
 
 class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits with LazyLogging {
 
@@ -31,21 +28,21 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
   lazy val cache = new DataCubeCache(maxCacheSize)
 
   def handleDataRequests(requests: List[DataServiceRequest]): Fox[Array[Byte]] = {
-    Fox.combined(requests.map(handleRequest)).map(_.appendArrays)
+    val requestData = requests.map { request =>
+      getDataForRequest(request).map { data =>
+        if (request.settings.halfByte) {
+          convertToHalfByte(data)
+        } else {
+          data
+        }
+      }
+    }
+
+    Fox.combined(requestData).map(_.appendArrays)
   }
 
   def handleSegmentationMappingRequest(request: SegmentationMappingRequest): Fox[Array[Byte]] = {
     Fox.successful(Array.emptyByteArray)
-  }
-
-  private def handleRequest(request: DataServiceRequest): Fox[Array[Byte]] = {
-    getDataForRequest(request).map { data =>
-      if (request.settings.halfByte) {
-        convertToHalfByte(data)
-      } else {
-        data
-      }
-    }
   }
 
   private def getDataForRequest(request: DataServiceRequest): Fox[Array[Byte]] = {
@@ -73,28 +70,13 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
   }
 
   private def handleBucketRequest(request: DataServiceRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
-    if (request.dataLayer.doesContainBucket(bucket)) {
-      val cubeInstruction = CubeLoadInstruction(
+    request.dataLayer.bucketProvider.load(
+      ReadInstruction(
         dataBaseDir,
         request.dataSource,
         request.dataLayer,
-        bucket.toCube(request.dataLayer.lengthOfUnderlyingCubes))
-      cache.withCache[Array[Byte]](cubeInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(request.dataLayer, bucket)).futureBox.map {
-        case Full(data) =>
-          Full(data)
-        case Empty =>
-          Full(emptyResult(request))
-        case f: Failure =>
-          logger.error(s"DataStore failure: ${f.msg}")
-          f
-      }
-    } else {
-      Fox.successful(emptyResult(request))
-    }
-  }
-
-  private def emptyResult(request: DataServiceRequest) = {
-    new Array[Byte](request.cuboid.volume * request.dataLayer.bytesPerElement)
+        bucket),
+      cache, loadTimeout)
   }
 
   /**
@@ -150,18 +132,5 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
       i += 1
     }
     compressed
-  }
-
-  private def loadFromUnderlyingWithTimeout(cubeInstruction: CubeLoadInstruction): Fox[Cube] = {
-    Future {
-      val cube = cubeInstruction.dataLayer.cubeLoader.load(cubeInstruction)
-      Await.result(cube, loadTimeout)
-    }.recover {
-      case _: TimeoutException | _: InterruptedException =>
-        logger.warn(s"Load from dataStore timed out. " +
-          s"(${cubeInstruction.dataSource.id.team}/${cubeInstruction.dataSource.id.name}/${cubeInstruction.dataLayer.name}, " +
-          s"Block: (${cubeInstruction.position.x}, ${cubeInstruction.position.y}, ${cubeInstruction.position.z})")
-        Failure("dataStore.load.timeout")
-    }
   }
 }

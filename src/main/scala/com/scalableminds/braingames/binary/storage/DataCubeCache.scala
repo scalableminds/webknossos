@@ -5,7 +5,7 @@ package com.scalableminds.braingames.binary.storage
 
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.braingames.binary.dataformats.Cube
-import com.scalableminds.braingames.binary.models.requests.CubeLoadInstruction
+import com.scalableminds.braingames.binary.models.requests.ReadInstruction
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -24,25 +24,31 @@ case class CachedCube(
 
 object CachedCube {
 
-  def from(loadInstruction: CubeLoadInstruction): CachedCube =
+  def from(loadInstruction: ReadInstruction): CachedCube =
     CachedCube(
       loadInstruction.dataSource.id.team,
       loadInstruction.dataSource.id.name,
       loadInstruction.dataLayer.name,
-      loadInstruction.position.resolution,
-      loadInstruction.position.x,
-      loadInstruction.position.y,
-      loadInstruction.position.z)
+      loadInstruction.cube.resolution,
+      loadInstruction.cube.x,
+      loadInstruction.cube.y,
+      loadInstruction.cube.z)
 }
 
-class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, Fox[Cube]] with FoxImplicits {
+class FakeDataCubeCache extends FoxImplicits {
+
+  def withCache[T](cubeReadInstruction: ReadInstruction)(loadF: ReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] =
+    loadF(cubeReadInstruction).flatMap(f(_).toFox)
+}
+
+class DataCubeCache(val maxEntries: Int) extends FakeDataCubeCache with LRUConcurrentCache[CachedCube, Fox[Cube]] {
 
   /**
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  def withCache[T](cubeInstruction: CubeLoadInstruction)(loadF: CubeLoadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] = {
-    val cachedCubeInfo = CachedCube.from(cubeInstruction)
+  override def withCache[T](readInstruction: ReadInstruction)(loadF: ReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] = {
+    val cachedCubeInfo = CachedCube.from(readInstruction)
 
     get(cachedCubeInfo) match {
       case Some(cubeFox) =>
@@ -54,7 +60,7 @@ class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, 
           result.toFox
         }
       case _ =>
-        val cubeFox = loadF(cubeInstruction).futureBox.map {
+        val cubeFox = loadF(readInstruction).futureBox.map {
           case Full(cube) =>
             cube.startAccess()
             Full(cube)

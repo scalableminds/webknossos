@@ -10,9 +10,13 @@ trait DataSourceRepository {
 
   def findAll: List[InboxDataSource]
 
-  def findById(id: DataSourceId): Option[InboxDataSource]
+  // def findById(id: DataSourceId): Option[InboxDataSource]
 
-  def findUsableById(id: DataSourceId): Option[DataSource]
+  def findByName(name: String): Option[InboxDataSource]
+
+  // def findUsableById(id: DataSourceId): Option[DataSource]
+
+  def findUsableByName(name: String): Option[DataSource]
 
   def updateDataSource(dataSource: InboxDataSource): Unit
 

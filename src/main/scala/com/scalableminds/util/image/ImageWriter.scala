@@ -36,7 +36,7 @@ class ImageWriter(imageType: String, imageExt: String) {
 
   def writeToOutputStream(buffered: BufferedImage)(output: OutputStream) = {
     try {
-      writer.setOutput(output)
+      writer.setOutput(ImageIO.createImageOutputStream(output))
       val image = new IIOImage(buffered, null, null)
       writer.write(null, image, iwp)
       writer.reset()

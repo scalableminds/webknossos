@@ -4,7 +4,8 @@
 package models.binary
 
 import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
-import com.scalableminds.braingames.binary.models.datasource.{UserDataLayer, DataSourceLike => DataSource}
+import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
+import com.scalableminds.braingames.datastore.annotations.volume.{VolumeTracingLayer => UserDataLayer}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
@@ -19,12 +20,12 @@ import play.api.mvc.Codec
 
 trait DataStoreHandlingStrategy {
 
-  def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[String]
+  def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer]
 
   def uploadUserDataLayer(
     dataStoreInfo: DataStoreInfo,
     base: DataSource,
-    file: TemporaryFile): Fox[String]
+    file: TemporaryFile): Fox[UserDataLayer]
 
   def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]]
 
@@ -40,13 +41,13 @@ object DataStoreHandler extends DataStoreHandlingStrategy {
     case WebKnossosStore => WKStoreHandlingStrategy
   }
 
-  override def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[String] =
+  override def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] =
     strategyForType(dataStoreInfo.typ).createUserDataLayer(dataStoreInfo, base)
 
   override def uploadUserDataLayer(
     dataStoreInfo: DataStoreInfo,
     base: DataSource,
-    file: TemporaryFile): Fox[String] =
+    file: TemporaryFile): Fox[UserDataLayer] =
     strategyForType(dataStoreInfo.typ).uploadUserDataLayer(dataStoreInfo, base, file)
 
   override def importDataSource(dataSet: DataSet): Fox[WSResponse] =
@@ -120,7 +121,7 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
     dataStoreWS(dataStoreInfo, s"/data/datasets/${base.id}/layers")
     .post(Json.obj())
     .map { response =>
-      response.json.validate(UserDataLayer.userDataLayerFormat) match {
+      response.json.validate[UserDataLayer] match {
         case JsSuccess(userDataLayer, _) =>
           Full(userDataLayer)
         case e: JsError                  =>
@@ -139,7 +140,7 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
     dataStoreWS(dataStoreInfo, s"/data/datasets/${base.id}/layers")
       .post(file.file)
       .map { response =>
-      response.json.validate(UserDataLayer.userDataLayerFormat) match {
+      response.json.validate[UserDataLayer] match {
         case JsSuccess(userDataLayer, _) =>
           Full(userDataLayer)
         case e: JsError                  =>

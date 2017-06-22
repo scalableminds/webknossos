@@ -149,7 +149,7 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
     for {
       baseSource <- baseDataSet.dataSource.toUsable.toFox
       dataLayer <- DataStoreHandler.createUserDataLayer(baseDataSet.dataStoreInfo, baseSource)
-      volumeTracing = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, editPosition = baseDataSet.defaultStart, zoomLevel = VolumeTracing.defaultZoomLevel)
+      volumeTracing = VolumeTracing(baseDataSet.name, dataLayer.name, editPosition = baseDataSet.defaultStart, zoomLevel = VolumeTracing.defaultZoomLevel)
       // TODO jfrohnhofen _ <- UserDataLayerDAO.insert(dataLayer)
       _ <- VolumeTracingDAO.insert(volumeTracing)
     } yield {
@@ -175,7 +175,7 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
         dataLayer <- DataStoreHandler.uploadUserDataLayer(dataSet.dataStoreInfo, baseSource, volume) ?~> "dataStore.dataLayer.uploadFailed"
         volumeTracing = VolumeTracing(
           dataSet.name,
-          dataLayer.dataLayer.name,
+          dataLayer.name,
           editPosition = start,
           editRotation = nml.editRotation.getOrElse(Vector3D(0,0,0)),
           zoomLevel = nml.zoomLevel.getOrElse(VolumeTracing.defaultZoomLevel))

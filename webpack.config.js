@@ -2,6 +2,7 @@ module.exports = function (env = {}) {
   /* eslint no-var:0, import/no-extraneous-dependencies:0 */
   var webpack = require("webpack");
   var ExtractTextPlugin = require("extract-text-webpack-plugin");
+  var BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
   var fs = require("fs");
   var path = require("path");
 
@@ -17,6 +18,7 @@ module.exports = function (env = {}) {
   return {
     entry: {
       main: "main.js",
+      vendor: ["c3", "d3", "moment"],
     },
     output: {
       path: `${__dirname}/public/bundle`,
@@ -83,7 +85,17 @@ module.exports = function (env = {}) {
         $: "jquery",
         jQuery: "jquery",
         "window.jQuery": "jquery",
-        _: "lodash",
+        _: "lodash"
+      }),
+      new BundleAnalyzerPlugin(),
+      new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
+      new webpack.optimize.CommonsChunkPlugin({
+        name: "vendor",
+        chunks: ["vendor"],
+        async: 'used-twice',
+        minChunks(module, count) {
+          return count >= 2;
+        },
       }),
     ],
   };

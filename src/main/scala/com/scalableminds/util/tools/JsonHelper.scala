@@ -17,7 +17,7 @@ object JsonHelper extends LazyLogging {
 
   def jsonToFile[A : Writes](path: Path, value: A) = {
     FileIO.printToFile(path.toFile) { printer =>
-      printer.print(Json.toJson(value).toString)
+      printer.print(Json.prettyPrint(Json.toJson(value)))
     }
   }
 

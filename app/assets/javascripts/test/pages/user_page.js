@@ -30,12 +30,14 @@ export default class UserPage {
 
     browser.pause(1000);
     browser.waitForExist(userRowSelector);
+    browser.pause(1000);
     browser.click(`${userRowSelector} .select-row`);
   }
 
 
   clickConfirmButton() {
     browser.waitForExist(this.confirmButton);
+    browser.pause(1000); // allow modal to fully fade in
     browser.click(this.confirmButton);
     browser.pause(500); // wait for DOM updates
   }
@@ -45,15 +47,14 @@ export default class UserPage {
     browser.waitForExist(this.changeTeamButton);
     browser.pause(3000);
     browser.click(this.changeTeamButton);
-    browser.waitForExist(this.modal);
+    browser.waitForVisible(this.modal);
     browser.waitForExist(".checkbox");
-    return teamNames.map((team) => {
+    for (const team of teamNames) {
       const selector = `select[data-teamname='${team}']`;
 
       browser.waitForExist(selector);
       browser.selectByValue(selector, "user");
-      return browser.getValue(selector);
-    });
+    }
   }
 
 

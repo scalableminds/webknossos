@@ -137,6 +137,7 @@ exports.config = {
   // "selenium-standalone" service above
   seleniumInstallArgs: seleniumConfig,
   seleniumArgs: seleniumConfig,
+  seleniumLogs: "./seleniumLogs",
   // Framework you want to run your specs with.
   // The following are supported: Mocha, Jasmine, and Cucumber
   // see also: http://webdriver.io/guide/testrunner/frameworks.html

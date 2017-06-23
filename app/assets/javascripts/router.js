@@ -101,8 +101,7 @@ class Router extends BaseRouter {
 
 
   projectCreate() {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const ProjectCreateView = admin.ProjectCreateView;
       const ProjectModel = admin.ProjectModel;
 
@@ -111,8 +110,7 @@ class Router extends BaseRouter {
 
       this.changeView(view);
       this.hideLoadingSpinner();
-    };
-    require(["admin/admin"], callback);
+    });
   }
 
 
@@ -130,13 +128,12 @@ class Router extends BaseRouter {
         this.hideLoadingSpinner();
       });
     };
-    require(["admin/admin"], callback);
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(callback);
   }
 
 
   statistics() {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const StatisticView = admin.StatisticView;
       const TimeStatisticModel = admin.TimeStatisticModel;
 
@@ -145,28 +142,24 @@ class Router extends BaseRouter {
 
       this.changeView(view);
       this.listenTo(model, "sync", () => this.hideLoadingSpinner());
-    };
-    require(["admin/admin"], callback);
+    });
   }
 
 
   datasetAdd() {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const DatasetAddView = admin.DatasetAddView;
 
       const view = new DatasetAddView();
 
       this.changeView(view);
       this.hideLoadingSpinner();
-    };
-    require(["admin/admin"], callback);
+    });
   }
 
 
   datasetEdit(datasetID) {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const DatasetEditView = admin.DatasetEditView;
       const DatasetModel = admin.DatasetModel;
 
@@ -177,8 +170,7 @@ class Router extends BaseRouter {
         this.changeView(view);
         this.hideLoadingSpinner();
       });
-    };
-    require(["admin/admin"], callback);
+    });
   }
 
 
@@ -193,14 +185,12 @@ class Router extends BaseRouter {
 
 
   taskQuery() {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const TaskQueryView = admin.TaskQueryView;
 
       const view = new TaskQueryView();
       this.changeView(view);
-    };
-    require(["admin/admin"], callback);
+    });
   }
 
 
@@ -232,8 +222,7 @@ class Router extends BaseRouter {
    * Load layout view that shows task-creation subviews
    */
   taskCreate() {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const TaskCreateView = admin.TaskCreateView;
       const TaskModel = admin.TaskModel;
 
@@ -242,16 +231,14 @@ class Router extends BaseRouter {
 
       this.changeView(view);
       this.hideLoadingSpinner();
-    };
-    require(["admin/admin"], callback);
+    });
   }
 
   /**
    * Load item view which displays an editable task.
    */
   taskEdit(taskID) {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const TaskCreateFromView = admin.TaskCreateFromView;
       const TaskModel = admin.TaskModel;
 
@@ -260,14 +247,12 @@ class Router extends BaseRouter {
 
       this.changeView(view);
       this.hideLoadingSpinner();
-    };
-    require(["admin/admin"], callback);
+    });
   }
 
 
   taskTypesCreate(taskTypeId) {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const TaskTypeCreateView = admin.TaskTypeCreateView;
       const TaskTypeModel = admin.TaskTypeModel;
 
@@ -275,13 +260,11 @@ class Router extends BaseRouter {
       const view = new TaskTypeCreateView({ model });
       this.changeView(view);
       this.hideLoadingSpinner();
-    };
-    require(["admin/admin"], callback);
+    });
   }
 
   scriptsCreate(scriptId) {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const ScriptCreateView = admin.ScriptCreateView;
       const ScriptModel = admin.ScriptModel;
 
@@ -289,8 +272,7 @@ class Router extends BaseRouter {
       const view = new ScriptCreateView({ model });
       this.changeView(view);
       this.hideLoadingSpinner();
-    };
-    require(["admin/admin"], callback);
+    });
   }
 
   dashboard(userID) {
@@ -319,8 +301,7 @@ class Router extends BaseRouter {
 
 
   taskOverview() {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const TaskOverviewView = admin.TaskOverviewView;
       const TaskOverviewCollection = admin.TaskOverviewCollection;
 
@@ -329,16 +310,14 @@ class Router extends BaseRouter {
 
       this.changeView(view);
       this.listenTo(collection, "sync", this.hideLoadingSpinner);
-    };
-    require(["admin/admin"], callback);
+    });
   }
 
 
   showWithPagination(view, collection, options = {}) {
     _.defaults(options, { addButtonText: null });
 
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       collection = new admin[collection](null, options);
       const paginatedCollection = new PaginationCollection([], { fullCollection: collection });
       view = new admin[view]({ collection: paginatedCollection });
@@ -346,8 +325,7 @@ class Router extends BaseRouter {
 
       this.changeView(paginationView, view);
       this.listenTo(collection, "sync", () => this.hideLoadingSpinner());
-    };
-    require(["admin/admin"], callback);
+    });
   }
 
   changeView(...views) {

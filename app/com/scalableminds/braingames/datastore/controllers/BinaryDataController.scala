@@ -13,7 +13,7 @@ import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSou
 import com.scalableminds.braingames.binary.models.requests.{DataServiceRequest, DataServiceRequestSettings}
 import com.scalableminds.braingames.binary.helpers.{DataSourceRepository, ThumbnailHelpers}
 import com.scalableminds.braingames.datastore.models.DataRequestCollection._
-import com.scalableminds.braingames.datastore.models.{DataRequest, WebKnossosDataRequest}
+import com.scalableminds.braingames.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest}
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import play.api.i18n.{Messages, MessagesApi}
@@ -192,9 +192,7 @@ class BinaryDataController @Inject()(
         } yield {
           val os = new ByteArrayOutputStream()
           thumbnailProvider(Base64.getEncoder.wrap(os))
-          Ok(Json.obj(
-            "mimeType" -> contentTypeJpeg,
-            "value" -> os.toString))
+          Ok(Json.toJson(ImageThumbnail(contentTypeJpeg, os.toString)))
         }
       }
   }

@@ -4,7 +4,6 @@
  */
 
 import Backbone from "backbone";
-import $ from "jquery";
 import _ from "lodash";
 import TWEEN from "tween.js";
 import { InputKeyboard, InputMouse, InputKeyboardNoLoop } from "libs/input";
@@ -13,7 +12,6 @@ import { V3 } from "libs/mjs";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import type { ModeType, Vector3, Point2 } from "oxalis/constants";
-import View from "oxalis/view";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
 import { updateUserSettingAction, setFlightmodeRecordingAction, setViewModeAction } from "oxalis/model/actions/settings_actions";
@@ -33,9 +31,7 @@ const CANVAS_SELECTOR = "#render-canvas";
 
 class ArbitraryController {
   arbitraryView: ArbitraryView;
-  view: View;
   isStarted: boolean;
-  canvas: JQuery;
   plane: ArbitraryPlane;
   crosshair: Crosshair;
   WIDTH: number;
@@ -78,16 +74,12 @@ class ArbitraryController {
     };
   }
 
-  constructor(view: View) {
-    let canvas;
-    this.view = view;
+  constructor() {
     _.extend(this, Backbone.Events);
 
     this.isStarted = false;
 
-    this.canvas = canvas = $(CANVAS_SELECTOR);
-
-    this.arbitraryView = new ArbitraryView(canvas, this.view, this.WIDTH);
+    this.arbitraryView = new ArbitraryView(CANVAS_SELECTOR, this.WIDTH);
 
     this.plane = new ArbitraryPlane(this, this.WIDTH);
     this.arbitraryView.addGeometry(this.plane);

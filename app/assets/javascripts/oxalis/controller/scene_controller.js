@@ -24,10 +24,10 @@ import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
+const CUBE_COLOR = 0x999999;
 
 class SceneController {
   skeleton: Skeleton;
-  CUBE_COLOR: number;
   current: number;
   displayPlane: OrthoViewMapType<boolean>;
   planeShift: Vector3;
@@ -41,14 +41,11 @@ class SceneController {
   contour: ContourGeometry;
   planes: OrthoViewMapType<Plane>;
   rootNode: THREE.Object3D;
+  renderer: THREE.WebGLRenderer;
+  scene: THREE.Scene;
 
-  static initClass() {
-    // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
-    // element depending on the provided flycam.
-
-    this.prototype.CUBE_COLOR = 0x999999;
-  }
-
+  // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
+  // element depending on the provided flycam.
   constructor() {
     _.extend(this, Backbone.Events);
     this.current = 0;
@@ -60,9 +57,17 @@ class SceneController {
     this.planeShift = [0, 0, 0];
     this.pingBinary = true;
     this.pingBinarySeg = true;
+  }
 
+  initialize() {
     this.createMeshes();
     this.bindToEvents();
+
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: document.getElementById("render-canvas"),
+      antialias: true,
+    });
+    this.scene = new THREE.Scene();
   }
 
 
@@ -73,7 +78,7 @@ class SceneController {
     this.cube = new Cube({
       min: Model.lowerBoundary,
       max: Model.upperBoundary,
-      color: this.CUBE_COLOR,
+      color: CUBE_COLOR,
       showCrossSections: true });
     this.cube.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
@@ -332,6 +337,5 @@ class SceneController {
     );
   }
 }
-SceneController.initClass();
 
-export default SceneController;
+export default new SceneController();

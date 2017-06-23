@@ -4,11 +4,11 @@
  */
 
 import _ from "lodash";
-import DataCube from "oxalis/model/binary/data_cube";
 import Dimensions from "oxalis/model/dimensions";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
 import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 
 const MAX_ZOOM_STEP_DIFF = 1;

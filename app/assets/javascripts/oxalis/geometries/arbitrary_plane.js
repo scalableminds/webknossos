@@ -9,7 +9,7 @@ import * as THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
-import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
+import type ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";

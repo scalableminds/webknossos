@@ -9,6 +9,7 @@ import app from "app";
 import Utils from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 export type UniformsType = {
   [key: string]: {
@@ -37,11 +38,11 @@ class AbstractPlaneMaterialFactory {
   constructor(tWidth: number) {
     this.setupUniforms();
     this.makeMaterial();
-    this.setupChangeListeners();
     this.tWidth = tWidth;
     this.minFilter = THREE.NearestFilter;
     this.maxFilter = THREE.NearestFilter;
     this.createTextures();
+    this.setupChangeListeners();
   }
 
 
@@ -78,16 +79,19 @@ class AbstractPlaneMaterialFactory {
 
 
   setupChangeListeners(): void {
-    Store.subscribe(() => {
-      const layerSettings = Store.getState().datasetConfiguration.layers;
-      _.forEach(layerSettings, (settings, layerName) => {
-        const name = this.sanitizeName(layerName);
-        this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
-        this.uniforms[`${name}_contrast`].value = settings.contrast;
-      });
+    listenToStoreProperty(
+      (state) => state.datasetConfiguration.layers,
+      (layerSettings) => {
+        _.forEach(layerSettings, (settings, layerName) => {
+          const name = this.sanitizeName(layerName);
+          this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
+          this.uniforms[`${name}_contrast`].value = settings.contrast;
+        });
 
-      app.vent.trigger("rerender");
-    });
+        app.vent.trigger("rerender");
+      },
+      true
+    );
   }
 
   getMaterial(): THREE.ShaderMaterial {

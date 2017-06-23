@@ -31,7 +31,7 @@ class ArbitraryView {
   setClippingDistance: (value: number) => void;
 
 
-  needsRerender: boolean = false;
+  needsRerender: boolean;
   additionalInfo: string = "";
   isRunning: boolean = true;
   animationRequestId: number = 0;
@@ -54,7 +54,7 @@ class ArbitraryView {
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
     _.extend(this, Backbone.Events);
 
-    // camDistance has to be calculates such that with cam
+    // camDistance has to be calculated such that with cam
     // angle 45°, the plane of width 128 fits exactly in the
     // viewport.
     this.camDistance = width / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
@@ -81,6 +81,7 @@ class ArbitraryView {
     SceneController.scene.add(this.group);
     this.group.add(this.camera);
 
+    this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
     Store.subscribe(() => {
       // Render in the next frame after the change propagated everywhere

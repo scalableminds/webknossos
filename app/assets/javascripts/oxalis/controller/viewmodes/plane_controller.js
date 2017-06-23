@@ -27,6 +27,7 @@ import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } 
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
+import TracingView from "oxalis/view/tracing_view";
 
 class PlaneController extends React.PureComponent {
   planeView: PlaneView;

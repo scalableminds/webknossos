@@ -32,7 +32,7 @@ class DatasetInfoTabView extends Component {
       width = constants.PLANE_WIDTH;
     } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
       zoom = this.props.flycam.zoomStep;
-      width = ArbitraryController.prototype.WIDTH;
+      width = constants.ARBITRARY_WIDTH;
     } else {
       throw Error(`Model mode not recognized: ${viewMode}`);
     }

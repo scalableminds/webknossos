@@ -64,9 +64,6 @@ class TracingView extends React.PureComponent {
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeFlightmodeRecording(value) {
     dispatch(setFlightmodeRecordingAction(value));
-    if (app.oxalis) {
-      app.oxalis.arbitraryController.setWaypoint();
-    }
   },
 });
 

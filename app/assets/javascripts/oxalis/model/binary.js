@@ -19,6 +19,7 @@ import Mappings from "oxalis/model/binary/mappings";
 import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { ServerTracing } from "oxalis/model";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -105,8 +106,11 @@ class Binary {
     }
 
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {
-      this.layer.setFourBit(Store.getState().datasetConfiguration.fourBit);
-      Store.subscribe(() => { this.layer.setFourBit(Store.getState().datasetConfiguration.fourBit); });
+      listenToStoreProperty(
+        (state) => state.datasetConfiguration.fourBit,
+        (fourBit) => this.layer.setFourBit(fourBit),
+        true,
+      );
     }
 
     this.cube.on({

@@ -35,19 +35,19 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
       // Rotate in distance
       left: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        Store.dispatch(yawFlycamAction(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
+        Store.dispatch(yawFlycamAction(rotateValue * timeFactor, this.props.viewMode === Constants.MODE_ARBITRARY));
       },
       right: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        Store.dispatch(yawFlycamAction(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
+        Store.dispatch(yawFlycamAction(-rotateValue * timeFactor, this.props.viewMode === Constants.MODE_ARBITRARY));
       },
       up: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        Store.dispatch(pitchFlycamAction(-rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
+        Store.dispatch(pitchFlycamAction(-rotateValue * timeFactor, this.props.viewMode === Constants.MODE_ARBITRARY));
       },
       down: (timeFactor) => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        Store.dispatch(pitchFlycamAction(rotateValue * timeFactor, this.mode === Constants.MODE_ARBITRARY));
+        Store.dispatch(pitchFlycamAction(rotateValue * timeFactor, this.props.viewMode === Constants.MODE_ARBITRARY));
       },
     });
 

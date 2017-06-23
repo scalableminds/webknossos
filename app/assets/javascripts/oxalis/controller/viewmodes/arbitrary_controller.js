@@ -3,6 +3,7 @@
  * @flow
  */
 
+import React from "react";
 import Backbone from "backbone";
 import _ from "lodash";
 import TWEEN from "tween.js";
@@ -26,15 +27,22 @@ import { yawFlycamAction, pitchFlycamAction, setPositionAction, setRotationActio
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
+import TracingView from "oxalis/view/tracing_view";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+
 
 const CANVAS_SELECTOR = "#render-canvas";
 
-class ArbitraryController {
+type Props = {
+  onRender: () => void,
+  viewMode: ModeType,
+};
+
+class ArbitraryController extends React.PureComponent {
   arbitraryView: ArbitraryView;
   isStarted: boolean;
   plane: ArbitraryPlane;
   crosshair: Crosshair;
-  WIDTH: number;
   TIMETOCENTER: number;
   fullscreen: boolean;
   lastNodeMatrix: Matrix4x4;
@@ -45,17 +53,18 @@ class ArbitraryController {
     keyboardOnce: ?InputKeyboard;
     destroy: () => void;
   };
-  mode: ModeType = constants.MODE_PLANE_TRACING;
+  props: Props;
+  storePropertyUnsubscribers: Array<Function> = [];
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
+  stopListening: Function;
 
   static initClass() {
     // See comment in Controller class on general controller architecture.
     //
     // Arbitrary Controller: Responsible for Arbitrary Modes
 
-    this.prototype.WIDTH = 128;
     this.prototype.TIMETOCENTER = 200;
     this.prototype.fullscreen = false;
 
@@ -74,14 +83,14 @@ class ArbitraryController {
     };
   }
 
-  constructor() {
+  componentDidMount() {
     _.extend(this, Backbone.Events);
 
     this.isStarted = false;
 
-    this.arbitraryView = new ArbitraryView(CANVAS_SELECTOR, this.WIDTH);
+    this.arbitraryView = new ArbitraryView(CANVAS_SELECTOR, constants.ARBITRARY_WIDTH);
 
-    this.plane = new ArbitraryPlane(this, this.WIDTH);
+    this.plane = new ArbitraryPlane(constants.ARBITRARY_WIDTH);
     this.arbitraryView.addGeometry(this.plane);
 
     this.input = _.extend({}, this.input);
@@ -89,16 +98,26 @@ class ArbitraryController {
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
     this.arbitraryView.addGeometry(this.crosshair);
 
-    this.bindToEvents();
     this.arbitraryView.draw();
 
     this.stop();
+    this.start(),
 
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
   }
 
+  componentDidUpdate(prevProps: Props) {
+    if (prevProps.viewMode != this.props.viewMode) {
+      this.stop();
+      this.start();
+    }
+  }
 
-  render(): void {
+  componentWillUnmount() {
+    this.stop();
+  }
+
+  oldRender(): void {
     const matrix = Store.getState().flycam.currentMatrix;
     Model.getColorBinaries().forEach(binary =>
       binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality));
@@ -111,7 +130,7 @@ class ArbitraryController {
         leftDownMove: (delta: Point2) => {
           const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
           const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
-          if (this.mode === constants.MODE_ARBITRARY) {
+          if (this.props.viewMode === constants.MODE_ARBITRARY) {
             Store.dispatch(yawFlycamAction(
               -delta.x * mouseInversionX * Store.getState().userConfiguration.mouseRotateValue,
               true,
@@ -120,8 +139,8 @@ class ArbitraryController {
               delta.y * mouseInversionY * Store.getState().userConfiguration.mouseRotateValue,
               true,
             ));
-          } else if (this.mode === constants.MODE_ARBITRARY_PLANE) {
-            const f = Store.getState().flycam.zoomStep / (this.arbitraryView.width / this.WIDTH);
+          } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
+            const f = Store.getState().flycam.zoomStep / (this.arbitraryView.width / constants.ARBITRARY_WIDTH);
             Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
           }
         },
@@ -167,10 +186,10 @@ class ArbitraryController {
       "shift + down": (timeFactor) => { Store.dispatch(pitchFlycamAction(-Store.getState().userConfiguration.rotateValue * timeFactor)); },
 
       // Rotate in distance
-      left: (timeFactor) => { Store.dispatch(yawFlycamAction(Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY)); },
-      right: (timeFactor) => { Store.dispatch(yawFlycamAction(-Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY)); },
-      up: (timeFactor) => { Store.dispatch(pitchFlycamAction(-Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY)); },
-      down: (timeFactor) => { Store.dispatch(pitchFlycamAction(Store.getState().userConfiguration.rotateValue * timeFactor, this.mode === constants.MODE_ARBITRARY)); },
+      left: (timeFactor) => { Store.dispatch(yawFlycamAction(Store.getState().userConfiguration.rotateValue * timeFactor, this.props.viewMode === constants.MODE_ARBITRARY)); },
+      right: (timeFactor) => { Store.dispatch(yawFlycamAction(-Store.getState().userConfiguration.rotateValue * timeFactor, this.props.viewMode === constants.MODE_ARBITRARY)); },
+      up: (timeFactor) => { Store.dispatch(pitchFlycamAction(-Store.getState().userConfiguration.rotateValue * timeFactor, this.props.viewMode === constants.MODE_ARBITRARY)); },
+      down: (timeFactor) => { Store.dispatch(pitchFlycamAction(Store.getState().userConfiguration.rotateValue * timeFactor, this.props.viewMode === constants.MODE_ARBITRARY)); },
 
       // Zoom in/out
       i: () => { Store.dispatch(zoomInAction()); },
@@ -215,7 +234,7 @@ class ArbitraryController {
 
   createBranchMarker(pos: Point2): void {
     Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE));
-    const f = Store.getState().flycam.zoomStep / (this.arbitraryView.width / this.WIDTH);
+    const f = Store.getState().flycam.zoomStep / (this.arbitraryView.width / constants.ARBITRARY_WIDTH);
     Store.dispatch(moveFlycamAction([-(pos.x - (this.arbitraryView.width / 2)) * f, -(pos.y - (this.arbitraryView.width / 2)) * f, 0]));
     Store.dispatch(createTreeAction());
     this.setWaypoint();
@@ -258,28 +277,35 @@ class ArbitraryController {
 
 
   bindToEvents(): void {
-    this.listenTo(this.arbitraryView, "render", this.render);
+    this.listenTo(this.arbitraryView, "render", this.oldRender);
+    this.listenTo(this.arbitraryView, "render", this.props.onRender);
 
     for (const name of Object.keys(Model.binary)) {
       const binary = Model.binary[name];
       this.listenTo(binary.cube, "bucketLoaded", this.arbitraryView.draw);
     }
 
-    Store.subscribe(() => {
-      const { sphericalCapRadius, clippingDistanceArbitrary, displayCrosshair } = Store.getState().userConfiguration;
-      this.crosshair.setScale(sphericalCapRadius);
-      this.plane.setMode(this.mode);
-      this.setClippingDistance(clippingDistanceArbitrary);
-      this.crosshair.setVisibility(displayCrosshair);
-    });
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty((state) => state.userConfiguration, (userConfiguration) => {
+        const { sphericalCapRadius, clippingDistanceArbitrary, displayCrosshair } = userConfiguration;
+        this.crosshair.setScale(sphericalCapRadius);
+        this.setClippingDistance(clippingDistanceArbitrary);
+        this.crosshair.setVisibility(displayCrosshair);
+      }),
+      listenToStoreProperty((state) => state.temporaryConfiguration.flightmodeRecording, (isRecording) => {
+        if (isRecording) {
+          this.setWaypoint();
+        }
+      }),
+    );
   }
 
 
-  start(mode: ModeType): void {
-    this.mode = mode;
+  start(): void {
     this.stop();
+    this.bindToEvents();
 
-    this.plane.setMode(this.mode);
+    this.plane.setMode(this.props.viewMode);
 
     this.initKeyboard();
     this.initMouse();
@@ -290,8 +316,15 @@ class ArbitraryController {
     this.isStarted = true;
   }
 
+  unsubscribeStoreListeners() {
+    this.storePropertyUnsubscribers.forEach(unsubscribe => unsubscribe());
+    this.storePropertyUnsubscribers = [];
+  }
 
   stop(): void {
+    this.stopListening();
+    this.unsubscribeStoreListeners();
+
     if (this.isStarted) {
       this.input.destroy();
     }
@@ -424,6 +457,10 @@ class ArbitraryController {
       this.setWaypoint();
       this.lastNodeMatrix = matrix;
     }
+  }
+
+  render() {
+    return null;
   }
 }
 ArbitraryController.initClass();

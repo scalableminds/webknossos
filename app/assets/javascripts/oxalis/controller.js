@@ -45,7 +45,6 @@ class Controller extends React.PureComponent {
     initialControlmode: ControlModeType,
   }
 
-  arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
@@ -110,25 +109,9 @@ class Controller extends React.PureComponent {
     UrlManager.startUrlUpdater();
     SceneController.initialize();
 
-    switch (state.tracing.type) {
-      case "skeleton": {
-        const ArbitraryControllerClass = state.tracing.restrictions.advancedOptionsAllowed ?
-          ArbitraryController :
-          MinimalSkeletonTracingArbitraryController;
-        this.arbitraryController = new ArbitraryControllerClass();
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-
     // FPS stats
     this.stats = new Stats();
     $("body").append(this.stats.domElement);
-    if (this.arbitraryController) {
-      this.listenTo(this.arbitraryController.arbitraryView, "render", () => this.stats.update());
-    }
 
     this.initKeyboard();
     this.initTaskScript();
@@ -139,19 +122,11 @@ class Controller extends React.PureComponent {
     }
 
     listenToStoreProperty(store => store.temporaryConfiguration.viewMode, (mode) => {
-      this.loadMode(mode);
       this.setState({ viewMode: mode });
     }, true);
 
     // Zoom step warning
-    let lastZoomStep = Store.getState().flycam.zoomStep;
-    Store.subscribe(() => {
-      const { zoomStep } = Store.getState().flycam;
-      if (lastZoomStep !== zoomStep) {
-        this.onZoomStepChange();
-        lastZoomStep = zoomStep;
-      }
-    });
+    listenToStoreProperty(store => store.flycam.zoomStep, () => this.onZoomStepChange());
     this.onZoomStepChange();
 
     window.webknossos = api;
@@ -261,25 +236,6 @@ class Controller extends React.PureComponent {
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
   }
 
-
-  loadMode(newMode: ModeType) {
-    const allowedModes = Store.getState().tracing.restrictions.allowedModes;
-    if (
-      (newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) &&
-      allowedModes.includes(newMode)
-    ) {
-      this.arbitraryController.start(newMode);
-    } else if (
-      (newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) &&
-      allowedModes.includes(newMode)
-    ) {
-      Utils.__guard__(this.arbitraryController, x1 => x1.stop());
-    }
-
-    // Hide/show zoomstep warning if appropriate
-    this.onZoomStepChange();
-  }
-
   onZoomStepChange() {
     const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
     if (shouldWarn && (this.zoomStepWarningToast == null)) {
@@ -292,45 +248,46 @@ class Controller extends React.PureComponent {
     }
   }
 
+  updateStats = () => this.stats.update();
+
   render() {
     if (!this.state.ready) {
       return null;
     }
-    let activeController;
-
+    const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;
-    const newMode = this.state.viewMode;
-    if (
-      (newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) &&
-      allowedModes.includes(newMode)
-    ) {
-      // TODO: use arbitraryController here once it is a react component
-      activeController = null;
-    } else if (
-      (newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) &&
-      allowedModes.includes(newMode)
-    ) {
-      switch (Store.getState().tracing.type) {
-        case "volume": {
-          activeController = <VolumeTracingPlaneController onRender={() => this.stats.update()} />;
-          break;
-        }
-        case "skeleton": {
-          activeController = <SkeletonTracingPlaneController onRender={() => this.stats.update()} />;
-          break;
-        }
-        default: {
-          activeController = <PlaneController onRender={() => this.stats.update()} />;
-          break;
-        }
-      }
+    const mode = this.state.viewMode;
+
+    if (!allowedModes.includes(mode)) {
+      throw new Error(`${mode} is not an allowed mode`);
     }
 
-    return (
-      <div>
-        {activeController}
-      </div>
-    );
+    const isArbitrary = constants.MODES_ARBITRARY.includes(mode);
+    const isPlane = constants.MODES_PLANE.includes(mode);
+
+    if (isArbitrary) {
+      if (state.tracing.restrictions.advancedOptionsAllowed) {
+        return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
+      } else {
+        return <MinimalSkeletonTracingArbitraryController onRender={this.updateStats} viewMode={mode} />;
+      }
+    } else if (isPlane) {
+      switch (state.tracing.type) {
+        case "volume": {
+          return <VolumeTracingPlaneController onRender={this.updateStats} />;
+        }
+        case "skeleton": {
+          return <SkeletonTracingPlaneController onRender={this.updateStats} />;
+        }
+        default: {
+          return <PlaneController onRender={this.updateStats} />;
+        }
+      }
+    } else {
+      // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
+      // In case we add new viewmodes, the following error will be thrown.
+      throw new Error("The current mode is none of the four known mode types");
+    }
   }
 }
 

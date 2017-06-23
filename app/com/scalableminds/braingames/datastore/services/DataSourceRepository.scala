@@ -28,12 +28,12 @@ class DataSourceRepository @Inject()(
 
   def updateDataSource(dataSource: InboxDataSource): Unit = {
     insert(dataSource.id.name, dataSource)
-    webKnossosServer.reportDataSouce(dataSource)
+    webKnossosServer.reportDataSources(findAll)
   }
 
   def updateDataSources(dataSources: List[InboxDataSource]): Unit = {
     removeAll
     dataSources.foreach(dataSource => insert(dataSource.id.name, dataSource))
-    webKnossosServer.reportDataSources(dataSources)
+    webKnossosServer.reportDataSources(findAll)
   }
 }

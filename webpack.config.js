@@ -2,7 +2,6 @@ module.exports = function (env = {}) {
   /* eslint no-var:0, import/no-extraneous-dependencies:0 */
   var webpack = require("webpack");
   var ExtractTextPlugin = require("extract-text-webpack-plugin");
-  var BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
   var fs = require("fs");
   var path = require("path");
 
@@ -91,7 +90,6 @@ module.exports = function (env = {}) {
         "window.jQuery": "jquery",
         _: "lodash",
       }),
-      new BundleAnalyzerPlugin(),
       new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
       new webpack.optimize.CommonsChunkPlugin({
           name: "vendor",

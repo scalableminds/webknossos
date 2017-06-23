@@ -3,19 +3,19 @@
  */
 package models.binary
 
-import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
+import com.scalableminds.braingames.binary.helpers.{RPC, ThumbnailHelpers}
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
+import com.scalableminds.braingames.datastore.models.ImageThumbnail
 import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingLayer => UserDataLayer}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsError, JsSuccess, Json}
-import play.api.libs.ws.{WS, WSRequest, WSResponse}
+import play.api.libs.json.JsObject
+import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Codec
 
 trait DataStoreHandlingStrategy {
@@ -108,66 +108,44 @@ object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplici
   }
 }
 
-object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLogging with FoxImplicits {
-
-  private def dataStoreWS(dataStore: DataStoreInfo, path: String): WSRequest = {
-    WS
-      .url(dataStore.url + path)
-      .withQueryString("token" -> DataTokenService.webKnossosToken)
-  }
+object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLogging {
 
   def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] = {
     logger.debug("Called to create user data source. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    dataStoreWS(dataStoreInfo, s"/data/datasets/${base.id}/layers")
-    .post(Json.obj())
-    .map { response =>
-      response.json.validate[UserDataLayer] match {
-        case JsSuccess(userDataLayer, _) =>
-          Full(userDataLayer)
-        case e: JsError                  =>
-          Failure("REST user data layer create returned malformed json: " + e.toString)
-      }
-    }
+    RPC(s"${dataStoreInfo.url}/data/datasets/${base.id}/layers")
+      .withQueryString("token" -> DataTokenService.webKnossosToken)
+      .postWithJsonResponse[JsObject, UserDataLayer]()
   }
 
   def uploadUserDataLayer(
     dataStoreInfo: DataStoreInfo,
     base: DataSource,
     file: TemporaryFile): Fox[UserDataLayer] = {
-
     logger.debug("Called to upload user data layer. Base: " + base.id + " Datastore: " + dataStoreInfo)
-
-    dataStoreWS(dataStoreInfo, s"/data/datasets/${base.id}/layers")
-      .post(file.file)
-      .map { response =>
-      response.json.validate[UserDataLayer] match {
-        case JsSuccess(userDataLayer, _) =>
-          Full(userDataLayer)
-        case e: JsError                  =>
-          Failure("REST user data layer upload returned malformed json: " + e.toString)
-      }
-    }
+    RPC(s"${dataStoreInfo.url}/data/datasets/${base.id}/layers")
+      .withQueryString("token" -> DataTokenService.webKnossosToken)
+      .postWithJsonResponse[UserDataLayer](file.file)
   }
 
   def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] = {
     logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
-    dataStoreWS(dataSet.dataStoreInfo, s"/data/datasets/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json")
+    RPC(s"${dataSet.dataStoreInfo.url}/data/datasets/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json")
+      .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString( "width" -> width.toString, "height" -> height.toString)
-      .get()
-      .map { response =>
-      (response.json \ "value").asOpt[String].map(s => Base64.decodeBase64(s))
-    }
+      .getWithJsonResponse[ImageThumbnail].map(thumbnail => Base64.decodeBase64(thumbnail.value))
   }
 
   def progressForImport(dataSet: DataSet): Fox[WSResponse] = {
-    logger.debug("Import rogress called for: " + dataSet.name)
-    dataStoreWS(dataSet.dataStoreInfo, s"/data/datasets/${dataSet.urlEncodedName}/import")
-      .get()
+    logger.debug("Import progress called for: " + dataSet.name)
+    RPC(s"${dataSet.dataStoreInfo.url}/data/datasets/${dataSet.urlEncodedName}/import")
+      .withQueryString("token" -> DataTokenService.webKnossosToken)
+      .get
   }
 
   def importDataSource(dataSet: DataSet): Fox[WSResponse] = {
     logger.debug("Import called for: " + dataSet.name)
-    dataStoreWS(dataSet.dataStoreInfo, s"/data/datasets/${dataSet.urlEncodedName}/import")
-      .post("")
+    RPC(s"${dataSet.dataStoreInfo.url}/data/datasets/${dataSet.urlEncodedName}/import")
+      .withQueryString("token" -> DataTokenService.webKnossosToken)
+      .post()
   }
 }

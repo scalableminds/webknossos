@@ -33,7 +33,7 @@ object JsonHelper extends LazyLogging {
       case JsSuccess(value, _) =>
         Full(value)
       case JsError(e) =>
-        Failure(s"Invalid json format: $e")
+        Failure(s"Invalid json: $e")
     })
   }
 

@@ -45,6 +45,17 @@ class ProjectCreateView extends Marionette.View {
         </div>
 
         <div class="form-group">
+          <label class="col-sm-2 control-label" for="expectedTime">Time Limit</label>
+          <div class="col-sm-9">
+            <div class="input-group">
+            <input type="number" id="expectedTime" name="expectedTime"
+              value="90" min="1" input-append="minutes" class="form-control" required>
+              <span class="input-group-addon">minutes</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
           <label class="col-sm-2 control-label">Project Type</label>
           <div class="col-sm-9">
             <label class="radio-inline">
@@ -208,6 +219,10 @@ class ProjectCreateView extends Marionette.View {
 
     if (this.ui.form[0].checkValidity()) {
       const formValues = FormSyphon.serialize(this.ui.form);
+
+    // convert expectedTime from minutes to milliseconds
+    formValues.expectedTime *= 60000;
+
       this.model.save(formValues).then(
         () => app.router.navigate("/projects", { trigger: true }));
     } else {

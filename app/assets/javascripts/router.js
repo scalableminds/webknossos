@@ -115,8 +115,7 @@ class Router extends BaseRouter {
 
 
   projectEdit(projectName) {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const ProjectEditView = admin.ProjectEditView;
       const ProjectModel = admin.ProjectModel;
 
@@ -127,8 +126,7 @@ class Router extends BaseRouter {
         this.changeView(view);
         this.hideLoadingSpinner();
       });
-    };
-    import(/* webpackChunkName: "admin" */ "admin/admin").then(callback);
+    });
   }
 
 

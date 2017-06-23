@@ -21,7 +21,6 @@ import WorkloadListView from "admin/views/workload/workload_list_view";
 import WorkloadCollection from "admin/models/workload/workload_collection";
 import ScriptListView from "admin/views/scripts/script_list_view";
 import ScriptCollection from "admin/models/scripts/script_collection";
-
 import ProjectCreateView from "admin/views/project/project_create_view";
 import ProjectModel from "admin/models/project/project_model";
 import ProjectEditView from "admin/views/project/project_edit_view";
@@ -64,7 +63,6 @@ export {
   DatasetListView,
   ScriptListView,
   ScriptCollection,
-
   ProjectCreateView,
   ProjectModel,
   ProjectEditView,

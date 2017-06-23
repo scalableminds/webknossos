@@ -11,6 +11,7 @@ import Store from "oxalis/store";
 import Model from "oxalis/model";
 import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type { Vector3 } from "oxalis/constants";
+import type { DatasetLayerConfigurationType } from "oxalis/store";
 import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
@@ -105,24 +106,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
 
-  setupChangeListeners(): void {
-    super.setupChangeListeners();
+  updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {
+    super.updateUniformsForLayer(settings, name);
 
-    listenToStoreProperty(
-      (state) => state.datasetConfiguration.layers,
-      (layerSettings) => {
-        _.forEach(layerSettings, (settings, layerName) => {
-          const name = this.sanitizeName(layerName);
-          if (settings.color != null) {
-            const color = this.convertColor(settings.color);
-            this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
-          }
-        });
-
-        app.vent.trigger("rerender");
-      },
-      true
-    );
+    if (settings.color != null) {
+      const color = this.convertColor(settings.color);
+      this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
+    }
   }
 
 

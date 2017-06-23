@@ -9,6 +9,7 @@ import app from "app";
 import Utils from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
+import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 export type UniformsType = {
@@ -84,14 +85,18 @@ class AbstractPlaneMaterialFactory {
       (layerSettings) => {
         _.forEach(layerSettings, (settings, layerName) => {
           const name = this.sanitizeName(layerName);
-          this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
-          this.uniforms[`${name}_contrast`].value = settings.contrast;
+          this.updateUniformsForLayer(settings, name);
         });
 
         app.vent.trigger("rerender");
       },
       true
     );
+  }
+
+  updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string) {
+    this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
+    this.uniforms[`${name}_contrast`].value = settings.contrast;
   }
 
   getMaterial(): THREE.ShaderMaterial {

@@ -35,7 +35,7 @@ ansiColor('xterm') {
         sh "docker-compose run frontend-linting"
         sh "docker-compose run frontend-flow"
         sh "docker-compose run frontend-tests"
-        for (i = 0; i < 50; i++) {
+        for (i = 0; i < 45; i++) {
           (sh "docker-compose run e2e-tests") || (echo "Tests failed!")
         }
         sh """

@@ -30,19 +30,21 @@ import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
+import { connect } from "react-redux";
 import messages from "messages";
+import type { OxalisState } from "oxalis/store";
 
 import type { ToastType } from "libs/toast";
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { SkeletonTracingTypeTracingType } from "oxalis/store";
 
 class Controller extends React.PureComponent {
-  // TODO: the initial loading should probably be done in a saga and for the other
-  // state we should use connect()
   props: {
     initialTracingType: SkeletonTracingTypeTracingType,
     initialTracingId: string,
     initialControlmode: ControlModeType,
+    // Delivered by connect()
+    viewMode: ModeType,
   }
 
   zoomStepWarningToast: ToastType;
@@ -55,10 +57,8 @@ class Controller extends React.PureComponent {
 
   state: {
     ready: boolean,
-    viewMode: ModeType,
   } = {
     ready: false,
-    viewMode: constants.MODE_PLANE_TRACING,
   }
 
   // Main controller, responsible for setting modes and everything
@@ -119,10 +119,6 @@ class Controller extends React.PureComponent {
     for (const binaryName of Object.keys(Model.binary)) {
       this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
     }
-
-    listenToStoreProperty(store => store.temporaryConfiguration.viewMode, (mode) => {
-      this.setState({ viewMode: mode });
-    }, true);
 
     listenToStoreProperty(store => store.flycam.zoomStep, () => this.maybeWarnAboutZoomStep(), true);
 
@@ -253,7 +249,7 @@ class Controller extends React.PureComponent {
     }
     const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;
-    const mode = this.state.viewMode;
+    const mode = this.props.viewMode;
 
     if (!allowedModes.includes(mode)) {
       throw new Error(`${mode} is not an allowed mode`);
@@ -288,4 +284,10 @@ class Controller extends React.PureComponent {
   }
 }
 
-export default Controller;
+function mapStateToProps(state: OxalisState) {
+  return {
+    viewMode: state.temporaryConfiguration.viewMode,
+  };
+}
+
+export default connect(mapStateToProps)(Controller);

@@ -8,7 +8,6 @@ import classnames from "classnames";
 import { connect } from "react-redux";
 import { Switch } from "antd";
 import Constants from "oxalis/constants";
-import app from "app";
 import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
 import InputCatchers from "oxalis/view/input_catchers";
 import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";

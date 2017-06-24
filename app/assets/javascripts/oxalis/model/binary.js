@@ -107,8 +107,8 @@ class Binary {
 
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {
       listenToStoreProperty(
-        (state) => state.datasetConfiguration.fourBit,
-        (fourBit) => this.layer.setFourBit(fourBit),
+        state => state.datasetConfiguration.fourBit,
+        fourBit => this.layer.setFourBit(fourBit),
         true,
       );
     }

@@ -5,15 +5,12 @@
 
 import _ from "lodash";
 import * as THREE from "three";
-import app from "app";
 import Utils from "libs/utils";
-import Store from "oxalis/store";
 import Model from "oxalis/model";
 import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type { Vector3 } from "oxalis/constants";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 

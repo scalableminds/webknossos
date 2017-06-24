@@ -8,7 +8,6 @@ import * as THREE from "three";
 import app from "app";
 import Utils from "libs/utils";
 import Model from "oxalis/model";
-import Store from "oxalis/store";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
@@ -74,14 +73,14 @@ class AbstractPlaneMaterialFactory {
     this.material.setData = (name, data) => {
       const textureName = this.sanitizeName(name);
       Utils.__guard__(this.textures[textureName], x => x.image.data.set(data));
-      Utils.__guard__(this.textures[textureName], (x1) => { x1.needsUpdate = true; });
+      Utils.__guard__(this.textures[textureName], (x) => { x.needsUpdate = true; });
     };
   }
 
 
   setupChangeListeners(): void {
     listenToStoreProperty(
-      (state) => state.datasetConfiguration.layers,
+      state => state.datasetConfiguration.layers,
       (layerSettings) => {
         _.forEach(layerSettings, (settings, layerName) => {
           const name = this.sanitizeName(layerName);
@@ -90,7 +89,7 @@ class AbstractPlaneMaterialFactory {
 
         app.vent.trigger("rerender");
       },
-      true
+      true,
     );
   }
 

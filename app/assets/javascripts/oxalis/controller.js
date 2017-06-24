@@ -96,7 +96,6 @@ class Controller extends React.PureComponent {
   }
 
   modelFetchDone() {
-    const state = Store.getState();
     app.router.on("beforeunload", () => {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {

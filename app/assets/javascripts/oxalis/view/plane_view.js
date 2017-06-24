@@ -46,7 +46,6 @@ class PlaneView {
       scene.add(this.cameras[plane]);
     }
 
-
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.cameras[OrthoViews.PLANE_XZ].position.y = 1;
@@ -196,6 +195,10 @@ class PlaneView {
 
   stop(): void {
     this.running = false;
+
+    for (const plane of OrthoViewValues) {
+      SceneController.scene.remove(this.cameras[plane]);
+    }
   }
 
 

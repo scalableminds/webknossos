@@ -27,7 +27,6 @@ import { yawFlycamAction, pitchFlycamAction, setPositionAction, setRotationActio
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
-import TracingView from "oxalis/view/tracing_view";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import SceneController from "oxalis/controller/scene_controller";
 
@@ -45,7 +44,7 @@ class ArbitraryController extends React.PureComponent {
   //
   // Arbitrary Controller: Responsible for Arbitrary Modes
   arbitraryView: ArbitraryView;
-  isStarted: boolean = false;
+  isStarted: boolean;
   plane: ArbitraryPlane;
   crosshair: Crosshair;
   lastNodeMatrix: Matrix4x4;
@@ -54,9 +53,9 @@ class ArbitraryController extends React.PureComponent {
     keyboard?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
     keyboardOnce?: InputKeyboard,
-  } = {};
+  };
   props: Props;
-  storePropertyUnsubscribers: Array<Function> = [];
+  storePropertyUnsubscribers: Array<Function>;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -64,6 +63,8 @@ class ArbitraryController extends React.PureComponent {
 
   componentDidMount() {
     _.extend(this, Backbone.Events);
+    this.input = {};
+    this.storePropertyUnsubscribers = [];
     this.start();
   }
 
@@ -249,13 +250,13 @@ class ArbitraryController extends React.PureComponent {
     }
 
     this.storePropertyUnsubscribers.push(
-      listenToStoreProperty((state) => state.userConfiguration, (userConfiguration) => {
+      listenToStoreProperty(state => state.userConfiguration, (userConfiguration) => {
         const { sphericalCapRadius, clippingDistanceArbitrary, displayCrosshair } = userConfiguration;
         this.crosshair.setScale(sphericalCapRadius);
         this.setClippingDistance(clippingDistanceArbitrary);
         this.crosshair.setVisibility(displayCrosshair);
       }),
-      listenToStoreProperty((state) => state.temporaryConfiguration.flightmodeRecording, (isRecording) => {
+      listenToStoreProperty(state => state.temporaryConfiguration.flightmodeRecording, (isRecording) => {
         if (isRecording) {
           this.setWaypoint();
         }

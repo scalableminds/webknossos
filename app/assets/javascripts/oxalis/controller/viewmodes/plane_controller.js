@@ -27,19 +27,20 @@ import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } 
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
-import TracingView from "oxalis/view/tracing_view";
 
 class PlaneController extends React.PureComponent {
+  // See comment in Controller class on general controller architecture.
+  //
+  // Plane Controller: Responsible for Plane Modes
   planeView: PlaneView;
   props: {
     onRender: () => void,
   }
   input: {
     mouseControllers: OrthoViewMapType<InputMouse>;
-    keyboard: ?InputKeyboard;
-    keyboardNoLoop: ?InputKeyboardNoLoop;
-    keyboardLoopDelayed: ?InputKeyboard;
-    destroy(): void;
+    keyboard?: InputKeyboard;
+    keyboardNoLoop?: InputKeyboardNoLoop;
+    keyboardLoopDelayed?: InputKeyboard;
   };
   isStarted: boolean;
   oldNmPos: Vector3;
@@ -51,32 +52,11 @@ class PlaneController extends React.PureComponent {
   listenTo: Function;
   stopListening: Function;
 
-  static initClass() {
-    // See comment in Controller class on general controller architecture.
-    //
-    // Plane Controller: Responsible for Plane Modes
-
-    this.prototype.input = {
-      mouseControllers: {},
-      keyboard: null,
-      keyboardNoLoop: null,
-      keyboardLoopDelayed: null,
-
-      destroy() {
-        for (const mouse of _.values(this.mouseControllers)) {
-          mouse.destroy();
-        }
-        this.mouseControllers = {};
-        Utils.__guard__(this.keyboard, x => x.destroy());
-        Utils.__guard__(this.keyboardNoLoop, x1 => x1.destroy());
-        Utils.__guard__(this.keyboardLoopDelayed, x2 => x2.destroy());
-      },
-    };
-  }
-
-
   componentDidMount() {
     _.extend(this, Backbone.Events);
+    this.input = {
+      mouseControllers: {},
+    };
     this.isStarted = false;
 
     const state = Store.getState();
@@ -270,10 +250,9 @@ class PlaneController extends React.PureComponent {
   }
 
   start(): void {
-    this.stop();
     this.bindToEvents();
 
-    SceneController.start();
+    SceneController.startPlaneMode();
     this.planeView.start();
 
     this.initKeyboard();
@@ -296,13 +275,13 @@ class PlaneController extends React.PureComponent {
 
   stop(): void {
     if (this.isStarted) {
-      this.input.destroy();
+      this.destroyInput();
       this.controls.destroy();
 
       $("#TDViewControls button").off();
     }
 
-    SceneController.stop();
+    SceneController.stopPlaneMode();
     this.planeView.stop();
     this.stopListening();
 
@@ -462,6 +441,15 @@ class PlaneController extends React.PureComponent {
     }
   }
 
+  destroyInput() {
+    for (const mouse of _.values(this.input.mouseControllers)) {
+      mouse.destroy();
+    }
+    this.input.mouseControllers = {};
+    Utils.__guard__(this.input.keyboard, x => x.destroy());
+    Utils.__guard__(this.input.keyboardNoLoop, x1 => x1.destroy());
+    Utils.__guard__(this.input.keyboardLoopDelayed, x2 => x2.destroy());
+  }
 
   calculateGlobalPos = (clickPos: Point2): Vector3 => calculateGlobalPos(clickPos)
 
@@ -469,7 +457,6 @@ class PlaneController extends React.PureComponent {
     return null;
   }
 }
-PlaneController.initClass();
 
 
 function calculateGlobalPos(clickPos: Point2) {

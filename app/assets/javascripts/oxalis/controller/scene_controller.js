@@ -311,7 +311,7 @@ class SceneController {
   }
 
 
-  stop(): void {
+  stopPlaneMode(): void {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(false);
     }
@@ -321,7 +321,7 @@ class SceneController {
   }
 
 
-  start(): void {
+  startPlaneMode(): void {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(true);
     }

@@ -64,7 +64,7 @@ object AnnotationContent extends FoxImplicits {
     ((__ \ 'name).write[String] and
       (__ \ 'category).write[Category.Value] and
       (__ \ 'maxCoordinates).write[BoundingBox] and
-      (__ \ 'resolutions).write[List[Int]] and
+      (__ \ 'resolutions).write[Set[Int]] and
       (__ \ 'elementClass).write[ElementClass.Value] and
       (__ \ 'mappings).write[List[String]]) (l =>
       (l.name, l.category, l.boundingBox, l.resolutions, l.elementClass, Nil))

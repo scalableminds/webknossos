@@ -73,7 +73,6 @@ GET           /spotlight                                                        
 # DataSets
 GET           /datasets                                                         controllers.DataSetController.empty
 GET           /datasets/:id/edit                                                controllers.DataSetController.emptyWithWildcard(id)
-# GET           /datasets/import                                              controllers.DataSetController.importAll
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
 
 GET           /api/datasets                                                     controllers.DataSetController.list
@@ -81,13 +80,12 @@ GET           /api/datasets/:dataSetName                                        
 PUT           /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
 GET           /api/datasets/:dataSetName/accessList                             controllers.DataSetController.accessList(dataSetName: String)
 POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
-POST          /api/datasets/:dataSetName/import                                 controllers.DataSetController.importDataSet(dataSetName: String)
-GET           /api/datasets/:dataSetName/import                                 controllers.DataSetController.importProgress(dataSetName: String)
+#POST          /api/datasets/:dataSetName/import                                 controllers.DataSetController.importDataSet(dataSetName: String)
+#GET           /api/datasets/:dataSetName/import                                 controllers.DataSetController.importProgress(dataSetName: String)
 GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String)
 
 GET           /api/datastores                                                   controllers.DataStoreController.list
 POST          /api/datastores/:name/datasources                                 controllers.WKDataStoreController.updateAll(name: String)
-POST          /api/datastores/:name/datasource                                  controllers.WKDataStoreController.updateOne(name: String)
 POST          /api/datastores/:name/status                                      controllers.WKDataStoreController.statusUpdate(name: String)
 POST          /api/datastores/:name/verifyUpload                                controllers.WKDataStoreController.validateDataSetUpload(name: String, token: String)
 

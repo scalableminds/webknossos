@@ -10,6 +10,7 @@ import java.util.zip.ZipInputStream
 import javax.xml.stream.XMLStreamWriter
 
 import scala.concurrent.Future
+import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracing => VolumeTracingContent}
 import models.tracing.CommonTracingService
 import net.liftweb.common.{Failure, Full}
 import com.typesafe.scalalogging.LazyLogging
@@ -39,7 +40,7 @@ import play.api.libs.concurrent.Execution.Implicits._
  */
 case class VolumeTracing(
                           dataSetName: String,
-                          userDataLayerName: String,
+                          dataStoreContent: VolumeTracingContent,
                           activeCellId: Option[Int] = None,
                           timestamp: Long = System.currentTimeMillis(),
                           editPosition: Point3D = Point3D(0, 0, 0),
@@ -88,12 +89,12 @@ case class VolumeTracing(
 
   def contentType: String = VolumeTracing.contentType
 
-  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
-    import play.api.Play.current
+  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = ???
+    /*import play.api.Play.current
     def createStream(url: String): Fox[Enumerator[Array[Byte]]] = {
       val futureResponse = WS
         .url(url)
-        .withQueryString("token" -> DataTokenService.oxalisToken)
+        .withQueryString("token" -> DataTokenService.webKnossosToken)
         .getStream()
 
       futureResponse.map {
@@ -108,7 +109,7 @@ case class VolumeTracing(
 
     for{
       dataSource <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
-      urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/datasets/$dataSetName/layers/$userDataLayerName/download"
+      urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/volumes/ /layers/$userDataLayerName/download"
       inputStream <- createStream(urlToVolumeData)
     } yield {
       Enumerator.outputStream{ outputStream =>
@@ -119,7 +120,7 @@ case class VolumeTracing(
           ), outputStream)
       }
     }
-  }
+  }*/
 
   def downloadFileExtension: String = ".zip"
 
@@ -148,9 +149,8 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
     for {
       baseSource <- baseDataSet.dataSource.toUsable.toFox
-      dataLayer <- DataStoreHandler.createUserDataLayer(baseDataSet.dataStoreInfo, baseSource)
-      volumeTracing = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, editPosition = baseDataSet.defaultStart, zoomLevel = VolumeTracing.defaultZoomLevel)
-      // TODO jfrohnhofen _ <- UserDataLayerDAO.insert(dataLayer)
+      tracingContent <- DataStoreHandler.createVolumeTracing(baseDataSet.dataStoreInfo, baseSource)
+      volumeTracing = VolumeTracing(baseDataSet.name, tracingContent, editPosition = baseDataSet.defaultStart, zoomLevel = VolumeTracing.defaultZoomLevel)
       _ <- VolumeTracingDAO.insert(volumeTracing)
     } yield {
       volumeTracing
@@ -172,14 +172,13 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
         start <- nml.editPosition.toFox.orElse(DataSetService.defaultDataSetPosition(nml.dataSetName))
         nmlVolume <- nml.volumes.headOption.toFox ?~> "nml.volume.notFound"
         volume <- additionalFiles.get(nmlVolume.location).toFox ?~> "nml.volume.volumeFileNotFound"
-        dataLayer <- DataStoreHandler.uploadUserDataLayer(dataSet.dataStoreInfo, baseSource, volume) ?~> "dataStore.dataLayer.uploadFailed"
+        tracingContent <- DataStoreHandler.uploadVolumeTracing(dataSet.dataStoreInfo, baseSource, volume) ?~> "dataStore.dataLayer.uploadFailed"
         volumeTracing = VolumeTracing(
           dataSet.name,
-          dataLayer.dataLayer.name,
+          tracingContent,
           editPosition = start,
           editRotation = nml.editRotation.getOrElse(Vector3D(0,0,0)),
           zoomLevel = nml.zoomLevel.getOrElse(VolumeTracing.defaultZoomLevel))
-        // TODO jfrohnhofen _ <- UserDataLayerDAO.insert(dataLayer) ?~> "dataLayer.creation.failed"
         _ <- VolumeTracingDAO.insert(volumeTracing) ?~> "segmentation.creation.failed"
       } yield {
         volumeTracing

@@ -190,7 +190,7 @@ class TracingApi {
    * Don't assume that code after the finishAndGetNextTask call will be executed.
    * It can happen that there is no further task, in which case the user will be redirected to the dashboard.
    * Or the the page can be reloaded (e.g., if the dataset changed), which also means that no further JS code will
-   // be executed in this site context.
+   * be executed in this site context.
    *
    * @example
    * api.tracing.save().then(() => ... );
@@ -212,11 +212,16 @@ class TracingApi {
 
       const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
       const isDifferentTaskType = annotation.task.type.id !== Utils.__guard__(task, x => x.type.id);
+
+      const currentScript = (task != null && task.script != null) ? task.script.gist : null;
+      const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
+      const isDifferentScript = currentScript !== nextScript;
+
       const differentTaskTypeParam = isDifferentTaskType ? "?differentTaskType" : "";
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
-      if (isDifferentDataset || isDifferentTaskType) {
+      if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
         app.router.loadURL(newTaskUrl);
       } else {
         // $FlowFixMe

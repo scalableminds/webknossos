@@ -58,7 +58,6 @@
       "one-var": ["error", "never"],
       "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
       "import/no-unresolved": "off",
-      "import/prefer-default-export": "off",
       "quote-props": ["error", "as-needed", {"numbers": true}],
       "react/sort-comp": ["error", {"order": ["type-annotations", "static-methods", "lifecycle", "everything-else", "render"]}]
     }

@@ -78,7 +78,7 @@ class ArbitraryController extends React.PureComponent {
     this.stop();
   }
 
-  oldRender(): void {
+  pingBinaries(): void {
     const matrix = Store.getState().flycam.currentMatrix;
     Model.getColorBinaries().forEach(binary =>
       binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality));
@@ -241,7 +241,7 @@ class ArbitraryController extends React.PureComponent {
 
 
   bindToEvents(): void {
-    this.listenTo(this.arbitraryView, "render", this.oldRender);
+    this.listenTo(this.arbitraryView, "render", this.pingBinaries);
     this.listenTo(this.arbitraryView, "render", this.props.onRender);
 
     for (const name of Object.keys(Model.binary)) {

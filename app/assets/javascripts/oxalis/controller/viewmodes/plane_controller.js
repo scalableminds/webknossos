@@ -289,13 +289,12 @@ class PlaneController extends React.PureComponent {
   }
 
   bindToEvents(): void {
-    this.listenTo(this.planeView, "render", this.oldRender);
+    this.listenTo(this.planeView, "render", this.onPlaneViewRender);
     this.listenTo(this.planeView, "renderCam", SceneController.updateSceneForCam);
-    this.listenTo(this.planeView, "render", this.props.onRender);
   }
 
 
-  oldRender(): void {
+  onPlaneViewRender(): void {
     const state = Store.getState();
     const activeViewport = state.viewModeData.plane.activeViewport;
     for (const dataLayerName of Object.keys(Model.binary)) {
@@ -310,6 +309,7 @@ class PlaneController extends React.PureComponent {
 
     this.cameraController.update();
     SceneController.update();
+    this.props.onRender();
   }
 
 

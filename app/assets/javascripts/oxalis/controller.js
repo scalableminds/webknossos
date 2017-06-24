@@ -124,9 +124,7 @@ class Controller extends React.PureComponent {
       this.setState({ viewMode: mode });
     }, true);
 
-    // Zoom step warning
-    listenToStoreProperty(store => store.flycam.zoomStep, () => this.onZoomStepChange());
-    this.onZoomStepChange();
+    listenToStoreProperty(store => store.flycam.zoomStep, () => this.maybeWarnAboutZoomStep(), true);
 
     window.webknossos = api;
 
@@ -235,7 +233,7 @@ class Controller extends React.PureComponent {
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
   }
 
-  onZoomStepChange() {
+  maybeWarnAboutZoomStep() {
     const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
     if (shouldWarn && (this.zoomStepWarningToast == null)) {
       const toastType = Store.getState().tracing.type === "volume" ? "danger" : "info";

@@ -95,7 +95,7 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
 
   def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracing] = {
     logger.debug("Called to create VolumeTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/volumes")
+    RPC(s"${dataStoreInfo.url}/data/tracings/volumes")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("dataSetName" -> base.id.name)
       .postWithJsonResponse[JsObject, VolumeTracing]()
@@ -106,7 +106,7 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
     base: DataSource,
     file: TemporaryFile): Fox[VolumeTracing] = {
     logger.debug("Called to upload VolumeTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/volumes")
+    RPC(s"${dataStoreInfo.url}/data/tracings/volumes")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("dataSetName" -> base.id.name)
       .postWithJsonResponse[VolumeTracing](file.file)

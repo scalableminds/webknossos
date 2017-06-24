@@ -125,16 +125,12 @@ case class VolumeTracing(
   def downloadFileExtension: String = ".zip"
 
   override def contentData = {
-    Fox.successful(Json.obj())
-    // TODO jfrohnhofen
-    /*UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map { userDataLayer =>
-      Json.obj(
-        "activeCell" -> activeCellId,
-        "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
-        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId.getOrElse[Long](1),
-        "zoomLevel" -> zoomLevel
-      )
-    }*/
+    Fox.successful(Json.obj(
+      "activeCell" -> dataStoreContent.activeSegmentId,
+      "customLayers" -> List(dataStoreContent.dataLayer),
+      "nextCell" -> (dataStoreContent.dataLayer.largestSegmentId + 1L),
+      "zoomLevel" -> dataStoreContent.zoomLevel
+    ))
   }
 }
 

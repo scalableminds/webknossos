@@ -6,7 +6,7 @@ package models.binary
 import com.scalableminds.braingames.binary.helpers.{RPC, ThumbnailHelpers}
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
 import com.scalableminds.braingames.datastore.models.ImageThumbnail
-import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingLayer => UserDataLayer}
+import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracing
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.codec.binary.Base64
@@ -20,16 +20,11 @@ import play.api.mvc.Codec
 
 trait DataStoreHandlingStrategy {
 
-  def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer]
+  def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracing]
 
-  def uploadUserDataLayer(
-    dataStoreInfo: DataStoreInfo,
-    base: DataSource,
-    file: TemporaryFile): Fox[UserDataLayer]
+  def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[VolumeTracing]
 
   def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]]
-
-  def progressForImport(dataSet: DataSet): Fox[WSResponse]
 
   def importDataSource(dataSet: DataSet): Fox[WSResponse]
 }
@@ -41,20 +36,14 @@ object DataStoreHandler extends DataStoreHandlingStrategy {
     case WebKnossosStore => WKStoreHandlingStrategy
   }
 
-  override def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] =
-    strategyForType(dataStoreInfo.typ).createUserDataLayer(dataStoreInfo, base)
+  override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracing] =
+    strategyForType(dataStoreInfo.typ).createVolumeTracing(dataStoreInfo, base)
 
-  override def uploadUserDataLayer(
-    dataStoreInfo: DataStoreInfo,
-    base: DataSource,
-    file: TemporaryFile): Fox[UserDataLayer] =
-    strategyForType(dataStoreInfo.typ).uploadUserDataLayer(dataStoreInfo, base, file)
+  override def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[VolumeTracing] =
+    strategyForType(dataStoreInfo.typ).uploadVolumeTracing(dataStoreInfo, base, file)
 
   override def importDataSource(dataSet: DataSet): Fox[WSResponse] =
     strategyForType(dataSet.dataStoreInfo.typ).importDataSource(dataSet)
-
-  override def progressForImport(dataSet: DataSet): Fox[WSResponse] =
-    strategyForType(dataSet.dataStoreInfo.typ).progressForImport(dataSet)
 
   override def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] =
     strategyForType(dataSet.dataStoreInfo.typ).requestDataLayerThumbnail(dataSet, dataLayerName, width, height)
@@ -62,20 +51,14 @@ object DataStoreHandler extends DataStoreHandlingStrategy {
 
 object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplicits with LazyLogging {
 
-  override def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] =
-    Fox.failure("NDStore doesn't support creation of UserDataLayers.")
+  override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracing] =
+    Fox.failure("NDStore doesn't support creation of VolumeTracings.")
 
-  override def uploadUserDataLayer(
-    dataStoreInfo: DataStoreInfo,
-    base: DataSource,
-    file: TemporaryFile): Fox[UserDataLayer] =
-    Fox.failure("NDStore doesn't support creation of UserDataLayers.")
+  override def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[VolumeTracing] =
+    Fox.failure("NDStore doesn't support creation of VolumeTracings.")
 
   override def importDataSource(dataSet: DataSet): Fox[WSResponse] =
     Fox.failure("NDStore doesn't support import yet.")
-
-  override def progressForImport(dataSet: DataSet): Fox[WSResponse] =
-    Fox.failure("NDStore doesn't support import progress yet.")
 
   override def requestDataLayerThumbnail(
     dataSet: DataSet,
@@ -110,21 +93,23 @@ object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplici
 
 object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLogging {
 
-  def createUserDataLayer(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[UserDataLayer] = {
-    logger.debug("Called to create user data source. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/datasets/${base.id}/layers")
+  def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracing] = {
+    logger.debug("Called to create VolumeTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
+    RPC(s"${dataStoreInfo.url}/data/volumes")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
-      .postWithJsonResponse[JsObject, UserDataLayer]()
+      .withQueryString("dataSetName" -> base.id.name)
+      .postWithJsonResponse[JsObject, VolumeTracing]()
   }
 
-  def uploadUserDataLayer(
+  def uploadVolumeTracing(
     dataStoreInfo: DataStoreInfo,
     base: DataSource,
-    file: TemporaryFile): Fox[UserDataLayer] = {
-    logger.debug("Called to upload user data layer. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/datasets/${base.id}/layers")
+    file: TemporaryFile): Fox[VolumeTracing] = {
+    logger.debug("Called to upload VolumeTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
+    RPC(s"${dataStoreInfo.url}/data/volumes")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
-      .postWithJsonResponse[UserDataLayer](file.file)
+      .withQueryString("dataSetName" -> base.id.name)
+      .postWithJsonResponse[VolumeTracing](file.file)
   }
 
   def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] = {
@@ -133,13 +118,6 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString( "width" -> width.toString, "height" -> height.toString)
       .getWithJsonResponse[ImageThumbnail].map(thumbnail => Base64.decodeBase64(thumbnail.value))
-  }
-
-  def progressForImport(dataSet: DataSet): Fox[WSResponse] = {
-    logger.debug("Import progress called for: " + dataSet.name)
-    RPC(s"${dataSet.dataStoreInfo.url}/data/datasets/${dataSet.urlEncodedName}/import")
-      .withQueryString("token" -> DataTokenService.webKnossosToken)
-      .get
   }
 
   def importDataSource(dataSet: DataSet): Fox[WSResponse] = {

@@ -29,9 +29,11 @@ import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontrac
 import messages from "messages";
 import TracingView from "oxalis/view/tracing_view";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import SceneController from "oxalis/controller/scene_controller";
 
 
 const CANVAS_SELECTOR = "#render-canvas";
+const TIMETOCENTER = 200;
 
 type Props = {
   onRender: () => void,
@@ -39,20 +41,20 @@ type Props = {
 };
 
 class ArbitraryController extends React.PureComponent {
+  // See comment in Controller class on general controller architecture.
+  //
+  // Arbitrary Controller: Responsible for Arbitrary Modes
   arbitraryView: ArbitraryView;
-  isStarted: boolean;
+  isStarted: boolean = false;
   plane: ArbitraryPlane;
   crosshair: Crosshair;
-  TIMETOCENTER: number;
-  fullscreen: boolean;
   lastNodeMatrix: Matrix4x4;
   input: {
-    mouse: ?InputMouse;
-    keyboard: ?InputKeyboard;
-    keyboardNoLoop: ?InputKeyboardNoLoop;
-    keyboardOnce: ?InputKeyboard;
-    destroy: () => void;
-  };
+    mouse?: InputMouse,
+    keyboard?: InputKeyboard,
+    keyboardNoLoop?: InputKeyboardNoLoop,
+    keyboardOnce?: InputKeyboard,
+  } = {};
   props: Props;
   storePropertyUnsubscribers: Array<Function> = [];
 
@@ -60,56 +62,14 @@ class ArbitraryController extends React.PureComponent {
   listenTo: Function;
   stopListening: Function;
 
-  static initClass() {
-    // See comment in Controller class on general controller architecture.
-    //
-    // Arbitrary Controller: Responsible for Arbitrary Modes
-
-    this.prototype.TIMETOCENTER = 200;
-    this.prototype.fullscreen = false;
-
-    this.prototype.input = {
-      mouse: null,
-      keyboard: null,
-      keyboardNoLoop: null,
-      keyboardOnce: null,
-
-      destroy() {
-        Utils.__guard__(this.mouse, x => x.destroy());
-        Utils.__guard__(this.keyboard, x1 => x1.destroy());
-        Utils.__guard__(this.keyboardNoLoop, x2 => x2.destroy());
-        Utils.__guard__(this.keyboardOnce, x3 => x3.destroy());
-      },
-    };
-  }
-
   componentDidMount() {
     _.extend(this, Backbone.Events);
-
-    this.isStarted = false;
-
-    this.arbitraryView = new ArbitraryView(CANVAS_SELECTOR, constants.ARBITRARY_WIDTH);
-
-    this.plane = new ArbitraryPlane(constants.ARBITRARY_WIDTH);
-    this.arbitraryView.addGeometry(this.plane);
-
-    this.input = _.extend({}, this.input);
-
-    this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
-    this.arbitraryView.addGeometry(this.crosshair);
-
-    this.arbitraryView.draw();
-
-    this.stop();
-    this.start(),
-
-    this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
+    this.start();
   }
 
   componentDidUpdate(prevProps: Props) {
-    if (prevProps.viewMode != this.props.viewMode) {
-      this.stop();
-      this.start();
+    if (prevProps.viewMode !== this.props.viewMode) {
+      this.plane.setMode(this.props.viewMode);
     }
   }
 
@@ -152,6 +112,9 @@ class ArbitraryController extends React.PureComponent {
 
 
   initKeyboard(): void {
+    const getRotateValue = () => Store.getState().userConfiguration.rotateValue;
+    const isArbitrary = () => this.props.viewMode === constants.MODE_ARBITRARY;
+
     this.input.keyboard = new InputKeyboard({
 
       // KeyboardJS is sensitive to ordering (complex combos first)
@@ -180,16 +143,16 @@ class ArbitraryController extends React.PureComponent {
       },
 
       // Rotate at centre
-      "shift + left": (timeFactor) => { Store.dispatch(yawFlycamAction(Store.getState().userConfiguration.rotateValue * timeFactor)); },
-      "shift + right": (timeFactor) => { Store.dispatch(yawFlycamAction(-Store.getState().userConfiguration.rotateValue * timeFactor)); },
-      "shift + up": (timeFactor) => { Store.dispatch(pitchFlycamAction(Store.getState().userConfiguration.rotateValue * timeFactor)); },
-      "shift + down": (timeFactor) => { Store.dispatch(pitchFlycamAction(-Store.getState().userConfiguration.rotateValue * timeFactor)); },
+      "shift + left": (timeFactor) => { Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor)); },
+      "shift + right": (timeFactor) => { Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor)); },
+      "shift + up": (timeFactor) => { Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor)); },
+      "shift + down": (timeFactor) => { Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor)); },
 
       // Rotate in distance
-      left: (timeFactor) => { Store.dispatch(yawFlycamAction(Store.getState().userConfiguration.rotateValue * timeFactor, this.props.viewMode === constants.MODE_ARBITRARY)); },
-      right: (timeFactor) => { Store.dispatch(yawFlycamAction(-Store.getState().userConfiguration.rotateValue * timeFactor, this.props.viewMode === constants.MODE_ARBITRARY)); },
-      up: (timeFactor) => { Store.dispatch(pitchFlycamAction(-Store.getState().userConfiguration.rotateValue * timeFactor, this.props.viewMode === constants.MODE_ARBITRARY)); },
-      down: (timeFactor) => { Store.dispatch(pitchFlycamAction(Store.getState().userConfiguration.rotateValue * timeFactor, this.props.viewMode === constants.MODE_ARBITRARY)); },
+      left: (timeFactor) => { Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor, isArbitrary())); },
+      right: (timeFactor) => { Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor, isArbitrary())); },
+      up: (timeFactor) => { Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor, isArbitrary())); },
+      down: (timeFactor) => { Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, isArbitrary())); },
 
       // Zoom in/out
       i: () => { Store.dispatch(zoomInAction()); },
@@ -302,15 +265,26 @@ class ArbitraryController extends React.PureComponent {
 
 
   start(): void {
-    this.stop();
-    this.bindToEvents();
+    this.arbitraryView = new ArbitraryView(CANVAS_SELECTOR, constants.ARBITRARY_WIDTH);
+    this.arbitraryView.start();
 
+    this.plane = new ArbitraryPlane(constants.ARBITRARY_WIDTH);
     this.plane.setMode(this.props.viewMode);
+    this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
+    this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
+
+    this.arbitraryView.addGeometry(this.plane);
+    this.arbitraryView.addGeometry(this.crosshair);
+
+    this.bindToEvents();
 
     this.initKeyboard();
     this.initMouse();
-    this.arbitraryView.start();
     this.init();
+
+    const clippingDistance = Store.getState().userConfiguration.clippingDistance;
+    SceneController.setClippingDistance(clippingDistance);
+
     this.arbitraryView.draw();
 
     this.isStarted = true;
@@ -326,7 +300,7 @@ class ArbitraryController extends React.PureComponent {
     this.unsubscribeStoreListeners();
 
     if (this.isStarted) {
-      this.input.destroy();
+      this.destroyInput();
     }
 
     this.arbitraryView.stop();
@@ -338,6 +312,13 @@ class ArbitraryController extends React.PureComponent {
     if (type === "shift") {
       this.setParticleSize(Utils.clamp(-1, delta, 1));
     }
+  }
+
+  destroyInput() {
+    Utils.__guard__(this.input.mouse, x => x.destroy());
+    Utils.__guard__(this.input.keyboard, x => x.destroy());
+    Utils.__guard__(this.input.keyboardNoLoop, x => x.destroy());
+    Utils.__guard__(this.input.keyboardOnce, x => x.destroy());
   }
 
   setWaypoint(): void {
@@ -405,7 +386,7 @@ class ArbitraryController extends React.PureComponent {
         rx: newRotation[0],
         ry: newRotation[1],
         rz: newRotation[2],
-      }, this.TIMETOCENTER);
+      }, TIMETOCENTER);
       waypointAnimation.onUpdate(function () {
         Store.dispatch(setPositionAction([this.x, this.y, this.z]));
         Store.dispatch(setRotationAction([this.rx, this.ry, this.rz]));
@@ -463,7 +444,5 @@ class ArbitraryController extends React.PureComponent {
     return null;
   }
 }
-ArbitraryController.initClass();
-
 
 export default ArbitraryController;

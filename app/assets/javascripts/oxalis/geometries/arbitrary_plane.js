@@ -80,7 +80,7 @@ class ArbitraryPlane {
   }
 
 
-  attachScene(scene: THREE.Scene) {
+  addToScene(scene: THREE.Scene) {
     scene.add(this.mesh);
   }
 

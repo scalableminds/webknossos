@@ -33,8 +33,8 @@ class ArbitraryView {
 
   needsRerender: boolean;
   additionalInfo: string = "";
-  isRunning: boolean = true;
-  animationRequestId: number = 0;
+  isRunning: boolean = false;
+  animationRequestId: ?number = null;
 
   width: number;
   height: number;
@@ -73,14 +73,6 @@ class ArbitraryView {
 
     this.cameraPosition = [0, 0, this.camDistance];
 
-    this.group = new THREE.Object3D();
-    const nmPerVoxel = new THREE.Vector3(...Store.getState().dataset.scale);
-    // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale.copy(nmPerVoxel);
-    // Add scene to the group, all Geometries are then added to group
-    SceneController.scene.add(this.group);
-    this.group.add(this.camera);
-
     this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
     Store.subscribe(() => {
@@ -96,11 +88,9 @@ class ArbitraryView {
     if (!this.isRunning) {
       this.isRunning = true;
 
-      for (const element of this.group.children) {
-        element.setVisibility = element.setVisibility || function (v) { this.visible = v; };
-        element.setVisibility(true);
-      }
-
+      this.group = new THREE.Object3D();
+      this.group.add(this.camera);
+      SceneController.rootGroup.add(this.group);
 
       this.resize();
       // start the rendering loop
@@ -114,15 +104,12 @@ class ArbitraryView {
   stop(): void {
     if (this.isRunning) {
       this.isRunning = false;
-      if (this.animationRequestId !== 0) {
+      if (this.animationRequestId != null) {
         window.cancelAnimationFrame(this.animationRequestId);
-        this.animationRequestId = 0;
+        this.animationRequestId = null;
       }
 
-      for (const element of this.group.children) {
-        element.setVisibility = element.setVisibility || function (v) { this.visible = v; };
-        element.setVisibility(false);
-      }
+      SceneController.rootGroup.remove(this.group);
 
       $(window).off("resize", this.resize);
     }
@@ -130,7 +117,7 @@ class ArbitraryView {
 
 
   animateImpl(): void {
-    this.animationRequestId = 0;
+    this.animationRequestId = null;
     if (!this.isRunning) { return; }
 
     TWEEN.update();
@@ -182,7 +169,7 @@ class ArbitraryView {
     // This provides the public interface to the GeometryFactory.
 
     this.geometries.push(geometry);
-    geometry.attachScene(this.group);
+    geometry.addToScene(this.group);
   }
 
   // throttle resize to avoid annoying flickering

@@ -62,17 +62,6 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
           JsonBadRequest(JsError.toFlatJson(e))
       }
   }
-
-  def updateOne(name: String) = DataStoreAction(name)(parse.json) { implicit request =>
-    request.body.validate[InboxDataSource] match {
-      case JsSuccess(dataSource, _) =>
-        DataSetService.updateDataSources(request.dataStore, List(dataSource))(GlobalAccessContext)
-        JsonOk
-      case e: JsError               =>
-        logger.warn("Data store reported invalid json for data source.")
-        JsonBadRequest(JsError.toFlatJson(e))
-    }
-  }
 }
 
 trait WKDataStoreActionHelper extends FoxImplicits with Results with I18nSupport {

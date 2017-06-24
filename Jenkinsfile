@@ -35,8 +35,8 @@ ansiColor('xterm') {
         sh "docker-compose run frontend-linting"
         sh "docker-compose run frontend-flow"
         sh "docker-compose run frontend-tests"
-        for (i = 0; i < 45; i++) {
-          (sh "docker-compose run e2e-tests") || (echo "Tests failed!")
+        for (i = 0; i < 50; i++) {
+          sh "docker-compose run e2e-tests || echo 'Tests failed!'"
         }
         sh """
           DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up webknossos &

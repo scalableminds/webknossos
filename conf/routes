@@ -85,6 +85,7 @@ POST          /api/datasets/:dataSetName/teams                                  
 GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String)
 
 GET           /api/datastores                                                   controllers.DataStoreController.list
+POST          /api/datastores/:name/datasource                                  controllers.WKDataStoreController.updateOne(name: String)
 POST          /api/datastores/:name/datasources                                 controllers.WKDataStoreController.updateAll(name: String)
 POST          /api/datastores/:name/status                                      controllers.WKDataStoreController.statusUpdate(name: String)
 POST          /api/datastores/:name/verifyUpload                                controllers.WKDataStoreController.validateDataSetUpload(name: String, token: String)

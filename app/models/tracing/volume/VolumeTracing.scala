@@ -1,43 +1,24 @@
 package models.tracing.volume
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
-import models.annotation.{AnnotationContent, AnnotationContentService, AnnotationLike, AnnotationSettings}
-import models.basics.SecuredBaseDAO
-import models.binary._
-import java.io.{FileInputStream, InputStream, PipedInputStream, PipedOutputStream}
-import java.nio.file.Paths
-import java.util.zip.ZipInputStream
 import javax.xml.stream.XMLStreamWriter
 
-import scala.concurrent.Future
 import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracing => VolumeTracingContent}
-import models.tracing.CommonTracingService
-import net.liftweb.common.{Failure, Full}
-import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.iteratee.{Enumerator, Iteratee}
-import play.api.libs.json.{JsValue, Json}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, GlobalDBAccess}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import play.api.libs.ws.WS
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
-import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFileStream, NamedFunctionStream, ZipIO}
-import com.scalableminds.util.xml.{XMLWrites, Xml}
-import models.tracing.skeleton.SkeletonTracing
-import models.tracing.volume.VolumeTracing.VolumeTracingXMLWrites
-import org.apache.commons.io.IOUtils
-import oxalis.nml.{NML, NMLService, TreeLike}
-import play.api.i18n.Messages
+import com.scalableminds.util.xml.XMLWrites
+import models.annotation.{AnnotationContent, AnnotationContentService, AnnotationSettings}
+import models.basics.SecuredBaseDAO
+import models.binary._
+import models.tracing.CommonTracingService
+import oxalis.nml.NML
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.{JsObject, JsValue, Json, _}
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 02.06.13
- * Time: 11:23
- */
 case class VolumeTracing(
                           dataSetName: String,
                           dataStoreContent: VolumeTracingContent,
@@ -125,9 +106,11 @@ case class VolumeTracing(
   def downloadFileExtension: String = ".zip"
 
   override def contentData = {
+    val layer = AnnotationContent.dataLayerWrites.writes(dataStoreContent.dataLayer.copy(name = id)).as[JsObject] ++
+      Json.obj("fallback" -> Json.obj("layerName" -> dataStoreContent.fallbackLayerName))
     Fox.successful(Json.obj(
       "activeCell" -> dataStoreContent.activeSegmentId,
-      "customLayers" -> List(dataStoreContent.dataLayer),
+      "customLayers" -> List(layer),
       "nextCell" -> (dataStoreContent.dataLayer.largestSegmentId + 1L),
       "zoomLevel" -> dataStoreContent.zoomLevel
     ))

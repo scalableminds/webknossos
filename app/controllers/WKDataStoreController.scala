@@ -13,6 +13,7 @@ import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
+import models.tracing.volume.VolumeTracingDAO
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsSuccess, Json}
@@ -71,6 +72,10 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
         logger.warn("Data store reported invalid json for data source.")
         JsonBadRequest(JsError.toFlatJson(e))
     }
+  }
+
+  def volumeTracing(name: String, id: String) = DataStoreAction(name).async { implicit request =>
+    VolumeTracingDAO.findOneById(id)(GlobalAccessContext).map(volume => Ok(Json.toJson(volume.dataStoreContent)))
   }
 }
 

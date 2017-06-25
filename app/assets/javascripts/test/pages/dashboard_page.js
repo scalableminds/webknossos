@@ -15,6 +15,8 @@ export default class DashboardPage {
   timeTableEntries = ".time-table tbody tr"
   timeGraphEntries = "circle"
 
+  spinner = "#loader"
+
   get() {
     // Waiting for all JS event handlers to be attached
     browser.url("/dashboard");
@@ -31,6 +33,8 @@ export default class DashboardPage {
   openTasksTab() {
     browser.click(this.tasksTab);
     browser.waitForExist(this.finishedTasksButton);
+    // Wait until the spinner was hidden
+    browser.waitForVisible(this.spinner, 5000, true);
   }
 
   openTrackedTimeTab() {
@@ -49,6 +53,8 @@ export default class DashboardPage {
     browser.click(this.newTaskButton);
     browser.alertAccept();
     browser.pause(500); // Wait for DOM to refresh
+    // Wait until the spinner was hidden
+    browser.waitForVisible(this.spinner, 5000, true);
   }
 
   getFirstDownloadLink() {

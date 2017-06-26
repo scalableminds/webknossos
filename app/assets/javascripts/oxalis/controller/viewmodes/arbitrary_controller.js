@@ -258,6 +258,8 @@ class ArbitraryController extends React.PureComponent {
       }),
       listenToStoreProperty(state => state.temporaryConfiguration.flightmodeRecording, (isRecording) => {
         if (isRecording) {
+          // This listener is responsible for setting a new waypoint, when the user enables
+          // the "flightmode recording" toggle in the top-left corner of the flight canvas.
           this.setWaypoint();
         }
       }),

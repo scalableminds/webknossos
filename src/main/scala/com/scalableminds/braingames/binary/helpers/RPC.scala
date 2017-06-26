@@ -83,7 +83,7 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
         logger.debug(s"Successful request (ID: $id). " +
           s"Body: '${response.body.take(100)}'")
       } else {
-        logger.warn(s"Failed to send WS request to $url (ID: id). " +
+        logger.warn(s"Failed to send WS request to $url (ID: $id). " +
           s"RequestBody: '${requestBodyPreview}'. Status ${response.status}. " +
           s"ResponseBody: '${response.body.take(100)}'")
       }

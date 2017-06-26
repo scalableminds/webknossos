@@ -15,6 +15,7 @@ target/
 binarydata/
 userBinaryData/
 binaryData
+tracingData/
 data/
 boot/
 .idea/

@@ -82,23 +82,15 @@ class WkLayer extends Layer {
 
 
   async sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<void> {
-    const transmitData = new MultipartData();
+    let data = batch.map(bucket => {
+      bucket.data = Array.from(new Int8Array(getBucketData(BucketBuilder.bucketToZoomedAddress(bucket))));
+      return { action: "labelVolume", value: bucket };
+    });
 
-    for (const bucket of batch) {
-      transmitData.addPart(
-        { "X-Bucket": JSON.stringify(bucket) },
-        getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)));
-    }
-
-    const datasetName = this.getDatasetName();
-    const data = await transmitData.dataPromise();
-    await Request.sendArraybufferReceiveArraybuffer(
-      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`, {
-        method: "PUT",
+    await Request.sendJSONReceiveJSON(
+      `${this.dataStoreInfo.url}/data/tracings/volumes/${this.name}?token=${token}`, {
+        method: "POST",
         data,
-        headers: {
-          "Content-Type": `multipart/mixed; boundary=${transmitData.boundary}`,
-        },
         timeout: REQUEST_TIMEOUT,
         compress: true,
         doNotCatch: true,

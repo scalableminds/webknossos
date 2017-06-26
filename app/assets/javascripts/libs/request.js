@@ -42,9 +42,20 @@ class Request {
       return options;
     }
 
-    const body = _.isString(options.data) ?
+    var body = _.isString(options.data) ?
         options.data :
         JSON.stringify(options.data);
+
+    if (options.compress) {
+      body = pako.gzip(body);
+      if (options.headers == null) {
+        options.headers = {
+          "Content-Encoding": "gzip",
+        };
+      } else {
+        options.headers["Content-Encoding"] = "gzip";
+      }
+    }
 
     return _.defaultsDeep(options, {
       method: "POST",

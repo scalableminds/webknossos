@@ -47,6 +47,9 @@ object BoundingBox {
 
   val formRx = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
 
+  def empty =
+    BoundingBox(Point3D(0, 0, 0), 0, 0, 0)
+
   def toForm(b: BoundingBox): Some[String] =
     Some("%d, %d, %d, %d, %d, %d".format(
                                           b.topLeft.x,

@@ -9,15 +9,20 @@ import com.google.inject.Inject
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.requests.{DataServiceRequest, ReadInstruction, SegmentationMappingRequest}
 import com.scalableminds.braingames.binary.storage.DataCubeCache
+import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.Configuration
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits with LazyLogging {
+class BinaryDataService @Inject()(
+                                   tracingDataStore: VersionedKeyValueStore,
+                                   config: Configuration
+                                 ) extends FoxImplicits with LazyLogging {
 
   val dataBaseDir = Paths.get(config.getString("braingames.binary.baseFolder").getOrElse("binaryData"))
 
@@ -70,13 +75,33 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
   }
 
   private def handleBucketRequest(request: DataServiceRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
-    request.dataLayer.bucketProvider.load(
-      ReadInstruction(
+
+    def emptyBucket: Array[Byte] = {
+      new Array[Byte](request.dataLayer.lengthOfProvidedBuckets *
+                      request.dataLayer.lengthOfProvidedBuckets *
+                      request.dataLayer.lengthOfProvidedBuckets *
+                      request.dataLayer.bytesPerElement)
+    }
+
+    if (request.dataLayer.doesContainBucket(bucket)) {
+      val readInstruction = ReadInstruction(
         dataBaseDir,
         request.dataSource,
         request.dataLayer,
-        bucket),
-      cache, loadTimeout)
+        bucket)
+
+      request.dataLayer.bucketProvider.load(readInstruction, cache, tracingDataStore, loadTimeout).futureBox.map {
+        case Full(data) =>
+          Full(data)
+        case Empty =>
+          Full(emptyBucket)
+        case f: Failure =>
+          logger.error(s"BinaryDataService failure: ${f.msg}")
+          f
+        }
+    } else {
+      Fox.successful(emptyBucket)
+    }
   }
 
   /**

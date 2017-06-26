@@ -7,6 +7,7 @@ import java.util.concurrent.TimeoutException
 
 import com.scalableminds.braingames.binary.models.requests.ReadInstruction
 import com.scalableminds.braingames.binary.storage.DataCubeCache
+import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Failure
@@ -17,9 +18,9 @@ import scala.concurrent.{Await, Future}
 
 trait BucketProvider extends FoxImplicits with LazyLogging {
 
-  def loadFromUnderlying(readInstruction: ReadInstruction): Fox[Cube]
+  def loadFromUnderlying(readInstruction: ReadInstruction): Fox[Cube] = Fox.empty
 
-  def load(readInstruction: ReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
+  def load(readInstruction: ReadInstruction, cache: DataCubeCache, tracingDataStore: VersionedKeyValueStore, timeout: FiniteDuration): Fox[Array[Byte]] = {
 
     def loadFromUnderlyingWithTimeout(readInstruction: ReadInstruction): Fox[Cube] = {
       Future {

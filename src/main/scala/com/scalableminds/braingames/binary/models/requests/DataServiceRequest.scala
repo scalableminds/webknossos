@@ -7,10 +7,6 @@ import java.nio.file.Path
 
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSource}
-import com.scalableminds.braingames.binary.storage.DataCubeCache
-import com.scalableminds.util.geometry.GenericPosition
-
-import scala.concurrent.duration.FiniteDuration
 
 case class DataServiceRequestSettings(halfByte: Boolean)
 

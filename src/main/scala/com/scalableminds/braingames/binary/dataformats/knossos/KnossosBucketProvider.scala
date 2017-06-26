@@ -122,7 +122,7 @@ object KnossosCube {
 
 class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with FoxImplicits with LazyLogging {
 
-  def loadFromUnderlying(readInstruction: ReadInstruction): Fox[KnossosCube] = {
+  override def loadFromUnderlying(readInstruction: ReadInstruction): Fox[KnossosCube] = {
     for {
       section <- layer.sections.find(_.doesContainCube(readInstruction.cube))
       knossosFile <- loadKnossosFile(readInstruction, section)

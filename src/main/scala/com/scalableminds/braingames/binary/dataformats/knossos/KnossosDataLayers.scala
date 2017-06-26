@@ -19,7 +19,7 @@ object KnossosSection {
   implicit val knossosSectionFormat = Json.format[KnossosSection]
 }
 
-trait KnossosLayer {
+trait KnossosLayer extends DataLayer {
 
   val dataFormat = DataFormat.knossos
 
@@ -39,7 +39,7 @@ case class KnossosDataLayer(
                               category: Category.Value,
                               sections: List[KnossosSection],
                               elementClass: ElementClass.Value
-                            ) extends DataLayer with KnossosLayer
+                            ) extends KnossosLayer
 
 object KnossosDataLayer {
   implicit val knossosDataLayerFormat = Json.format[KnossosDataLayer]

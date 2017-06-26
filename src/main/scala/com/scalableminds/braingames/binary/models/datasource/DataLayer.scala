@@ -101,7 +101,7 @@ trait DataLayer extends DataLayerLike {
   def doesContainBucket(bucket: BucketPosition) =
     boundingBox.contains(bucket.topLeft.toHighestRes)
 
-  val bytesPerElement =
+  lazy val bytesPerElement =
     ElementClass.bytesPerElement(elementClass)
 }
 

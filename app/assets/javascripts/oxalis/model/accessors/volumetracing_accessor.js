@@ -14,6 +14,10 @@ export function getVolumeTracing(tracing: TracingType): Maybe<VolumeTracingType>
   return Maybe.Nothing();
 }
 
+export function enforceVolumeTracing(tracing: TracingType): VolumeTracingType {
+  return getVolumeTracing(tracing).get();
+}
+
 export function getActiveCellId(tracing: TracingType): Maybe<number> {
   return getVolumeTracing(tracing).map((volumeTracing) => {
     const { activeCellId } = volumeTracing;

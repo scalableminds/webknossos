@@ -15,7 +15,7 @@ class DataStoreModule extends AbstractModule {
 
   val system = ActorSystem("braingames-binary")
 
-  val tracingDataStore = new VersionedKeyValueStore(new RocksDBStore("tracing-data"))
+  val tracingDataStore = new VersionedKeyValueStore(new RocksDBStore("tracingData"))
 
   def configure() = {
     bind(classOf[ActorSystem]).annotatedWith(Names.named("braingames-binary")).toInstance(system)

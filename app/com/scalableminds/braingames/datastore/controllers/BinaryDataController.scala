@@ -14,6 +14,7 @@ import com.scalableminds.braingames.binary.models.requests.{DataServiceRequest, 
 import com.scalableminds.braingames.binary.helpers.{DataSourceRepository, ThumbnailHelpers}
 import com.scalableminds.braingames.datastore.models.DataRequestCollection._
 import com.scalableminds.braingames.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest}
+import com.scalableminds.braingames.datastore.services.TracingContentService
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
 import play.api.i18n.{Messages, MessagesApi}
@@ -24,6 +25,7 @@ import play.api.libs.json.Json
 class BinaryDataController @Inject()(
                                       binaryDataService: BinaryDataService,
                                       dataSourceRepository: DataSourceRepository,
+                                      tracingContentService: TracingContentService,
                                       val messagesApi: MessagesApi
                                     ) extends Controller {
 
@@ -197,10 +199,15 @@ class BinaryDataController @Inject()(
       }
   }
 
+  private def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
+    dataSource.getDataLayer(dataLayerName).toFox.orElse(
+      tracingContentService.findVolumeTracing(dataLayerName).map(_.dataLayerWithFallback(dataSource)))
+  }
+
   private def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String): Fox[(DataSource, DataLayer)] = {
     for {
       dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound") ~> 404
-      dataLayer <- dataSource.getDataLayer(dataLayerName).toFox ?~> Messages("dataLayer.notFound") ~> 404
+      dataLayer <- getDataLayer(dataSource, dataLayerName) ?~> Messages("dataLayer.notFound", dataLayerName) ~> 404
     } yield {
       (dataSource, dataLayer)
     }

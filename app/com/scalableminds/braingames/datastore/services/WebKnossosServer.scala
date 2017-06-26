@@ -9,6 +9,8 @@ import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.helpers.{IntervalScheduler, RPC}
 import com.scalableminds.braingames.binary.models.datasource.DataSourceId
 import com.scalableminds.braingames.binary.models.datasource.inbox.InboxDataSourceLike
+import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
+import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracing
 import com.scalableminds.util.tools.Fox
 import play.api.Configuration
 import play.api.i18n.MessagesApi
@@ -25,6 +27,7 @@ object DataStoreStatus {
 
 class WebKnossosServer @Inject()(
                                   config: Configuration,
+                                  implicit val tracingDataStore: VersionedKeyValueStore,
                                   val lifecycle: ApplicationLifecycle,
                                   @Named("braingames-binary") val system: ActorSystem,
                                   val messagesApi: MessagesApi
@@ -52,6 +55,12 @@ class WebKnossosServer @Inject()(
       .post(DataStoreStatus(ok, dataStoreUrl))
   }
 
+  def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] = {
+    RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/datasource")
+      .withQueryString("key" -> dataStoreKey)
+      .post(dataSource)
+  }
+
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] = {
     RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/datasources")
       .withQueryString("key" -> dataStoreKey)
@@ -62,5 +71,11 @@ class WebKnossosServer @Inject()(
     RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/datasource")
       .withQueryString("key" -> dataStoreKey)
       .get
+  }
+
+  def getVolumeTracing(id: String): Fox[VolumeTracing] = {
+    RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/volumes/$id")
+      .withQueryString("key" -> dataStoreKey)
+      .getWithJsonResponse[VolumeTracing]
   }
 }

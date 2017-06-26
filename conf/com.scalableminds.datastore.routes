@@ -26,8 +26,11 @@ POST        /datasets/:dataSetName                                              
 GET         /datasets/:dataSetName                                                             @com.scalableminds.braingames.datastore.controllers.DataSourceController.explore(dataSetName: String)
 
 # Volume tracings
-#PUT         /datasets/:dataSetName/layers/:dataLayerName/data                                  @com.scalableminds.datastore.controllers.BinaryDataController.writeViaAjax(dataSetName: String, dataLayerName: String)
-#GET         /datasets/:dataSetName/layers/:dataLayerName/download                              @com.scalableminds.datastore.controllers.BinaryDataController.downloadDataLayer(dataSetName: String, dataLayerName: String)
+POST        /tracings/volumes                                                                  @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.create(dataSetName: String)
+GET         /tracings/volumes/:annotationId                                                    @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.info(annotationId: String)
+POST        /tracings/volumes/:annotationId                                                    @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.update(annotationId: String)
+GET         /tracings/volumes/:annotationId/download                                           @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(annotationId: String, version: Long)
+GET         /tracings/volumes/:annotationId/duplicate                                          @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.duplicate(annotationId: String, version: Long)
 
 # Actions
 GET         /triggers/checkInbox                                                               @com.scalableminds.braingames.datastore.controllers.DataSourceController.triggerInboxCheck()

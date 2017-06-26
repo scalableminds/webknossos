@@ -8,12 +8,14 @@ import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.braingames.binary.api.{BinaryDataService, DataSourceService}
 import com.scalableminds.braingames.binary.helpers.{DataSourceRepository => AbstractDataSourceRepository}
-import com.scalableminds.braingames.datastore.services.DataSourceRepository
-import com.scalableminds.braingames.datastore.services.WebKnossosServer
+import com.scalableminds.braingames.binary.store.kvstore.{RocksDBStore, VersionedKeyValueStore}
+import com.scalableminds.braingames.datastore.services.{DataSourceRepository, TracingContentService, WebKnossosServer}
 
 class DataStoreModule extends AbstractModule {
 
   val system = ActorSystem("braingames-binary")
+
+  val tracingDataStore = new VersionedKeyValueStore(new RocksDBStore("tracing-data"))
 
   def configure() = {
     bind(classOf[ActorSystem]).annotatedWith(Names.named("braingames-binary")).toInstance(system)
@@ -22,5 +24,7 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[BinaryDataService]).asEagerSingleton()
     bind(classOf[DataSourceService]).asEagerSingleton()
     bind(classOf[WebKnossosServer]).asEagerSingleton()
+    bind(classOf[TracingContentService]).asEagerSingleton()
+    bind(classOf[VersionedKeyValueStore]).toInstance(tracingDataStore)
   }
 }

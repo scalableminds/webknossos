@@ -10,7 +10,7 @@ import { Collapse } from "antd";
 import type { ControlModeType, Vector6, ModeType } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import { updateUserSettingAction, updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, setActiveTreeAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, setActiveTreeAction, setNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { NumberInputSetting, SwitchSetting, NumberSliderSetting, Vector6InputSetting, LogSliderSetting } from "oxalis/view/settings/setting_input_views";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -161,7 +161,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeZoomStep(zoomStep: number) { dispatch(setZoomStepAction(zoomStep)); },
   onChangeRadius(radius: any) {
     dispatch(updateUserSettingAction("radius", radius));
-    dispatch(setActiveNodeRadiusAction(radius));
+    dispatch(setNodeRadiusAction(radius));
   },
 });
 

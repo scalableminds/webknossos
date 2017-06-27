@@ -1,12 +1,13 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
-
-import { initializeSettingsAsync } from "oxalis/model/sagas/settings_saga";
+import mock from "mock-require";
 import { initializeSettingsAction } from "oxalis/model/actions/settings_actions";
 import { take, put } from "redux-saga/effects";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
-// import Request from "libs/request";
+
+mock("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
+const initializeSettingsAsync = mock.reRequire("oxalis/model/sagas/settings_saga").initializeSettingsAsync;
 
 test("settings_sagas should load initial settings into the store", (t) => {
   const datasetName = "foo";

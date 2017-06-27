@@ -68,7 +68,7 @@ class DatasetInfoTabView extends Component {
     const isPublicViewMode = Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     return (
-      <div>
+      <div className="flex-overflow">
         <p>{annotationType}</p>
         <p>DataSet: {dataSetName}</p>
         <p>Viewport width: {this.chooseUnit(zoomLevel)}</p>

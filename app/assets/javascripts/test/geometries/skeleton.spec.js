@@ -7,7 +7,7 @@ import test from "ava";
 import mockRequire from "mock-require";
 import _ from "lodash";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { createNodeAction, createTreeAction, deleteNodeAction, createBranchPointAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
+import { createNodeAction, createTreeAction, deleteNodeAction, createBranchPointAction, setNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
 
 mockRequire.stopAll();
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -157,7 +157,7 @@ test.serial("Skeleton should update node radius", (t) => {
   getSkeletonTracing(Store.getState().tracing).map(async (skeletonTracing) => {
     const { activeNodeId, activeTreeId } = skeletonTracing;
 
-    Store.dispatch(setActiveNodeRadiusAction(2));
+    Store.dispatch(setNodeRadiusAction(2));
 
     await Utils.sleep(50);
     const id = skeleton.combineIds(activeNodeId, activeTreeId);

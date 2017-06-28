@@ -6,7 +6,8 @@ package com.scalableminds.braingames.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.{TracingContentService, WebKnossosServer}
-import com.scalableminds.braingames.datastore.tracings.skeleton.SkeletonTracingService
+import com.scalableminds.braingames.datastore.tracings.skeleton.{SkeletonTracingService, SkeletonUpdateAction, SkeletonUpdateActionsParser}
+import com.scalableminds.braingames.datastore.tracings.volume.VolumeUpdateAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -29,6 +30,35 @@ class SkeletonTracingController @Inject()(
         val tracing = skeletonTracingService.create(dataSource)
         Ok(Json.toJson(tracing))
       }
+    }
+  }
+
+  def info(annotationId: String) = Action {
+    implicit request => {
+      val tracing = skeletonTracingService.findSkeletonTracing(annotationId)
+      val tracingInfo = skeletonTracingService.info(tracing)
+      Ok(tracingInfo)
+    }
+  }
+
+  def update(annotationId: String) = Action {
+    implicit request => {
+      val tracing = skeletonTracingService.findSkeletonTracing(annotationId)
+      val updateActions = SkeletonUpdateActionsParser.parseList(request.body.asJson)
+      skeletonTracingService.update(tracing, updateActions)
+      Ok
+    }
+  }
+
+  def download(annotationId: String, version: Long) = Action {
+    implicit request => {
+      Ok
+    }
+  }
+
+  def duplicate(annotationId: String, version: Long) = Action {
+    implicit request => {
+      Ok
     }
   }
 

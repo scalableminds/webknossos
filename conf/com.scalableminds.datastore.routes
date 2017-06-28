@@ -34,6 +34,10 @@ GET         /tracings/volumes/:annotationId/duplicate                           
 
 # Skeleton tracings
 POST        /tracings/skeletons                                                                @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.create(dataSetName: String)
+GET         /tracings/skeletons/:annotationId                                                  @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.info(annotationId: String)
+POST        /tracings/skeletons/:annotationId                                                  @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.update(annotationId: String)
+GET         /tracings/skeletons/:annotationId/download                                         @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.download(annotationId: String, version: Long)
+GET         /tracings/skeletons/:annotationId/duplicate                                        @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.duplicate(annotationId: String, version: Long)
 
 # Actions
 GET         /triggers/checkInbox                                                               @com.scalableminds.braingames.datastore.controllers.DataSourceController.triggerInboxCheck()

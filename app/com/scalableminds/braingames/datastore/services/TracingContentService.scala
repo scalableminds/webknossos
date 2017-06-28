@@ -20,4 +20,5 @@ class TracingContentService @Inject()(webKnossosServer: WebKnossosServer) extend
       webKnossosServer.getVolumeTracing(id)
     }
   }
+
 }

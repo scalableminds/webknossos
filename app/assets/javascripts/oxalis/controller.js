@@ -15,7 +15,6 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
@@ -24,34 +23,42 @@ import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
-import OxalisApi from "oxalis/api/api_loader";
+import api from "oxalis/api/internal_api";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
+import { connect } from "react-redux";
 import messages from "messages";
 
 import type { ToastType } from "libs/toast";
 import type { ModeType, ControlModeType } from "oxalis/constants";
-import type { SkeletonTracingTypeTracingType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
 
 class Controller extends React.PureComponent {
   props: {
     initialTracingType: SkeletonTracingTypeTracingType,
     initialTracingId: string,
     initialControlmode: ControlModeType,
+    // Delivered by connect()
+    viewMode: ModeType,
   }
 
-  planeController: PlaneController;
-  arbitraryController: ArbitraryController;
   zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
+  stats: Stats;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
+
+  state: {
+    ready: boolean,
+  } = {
+    ready: false,
+  }
 
   // Main controller, responsible for setting modes and everything
   // that has to be controlled in any mode.
@@ -88,7 +95,6 @@ class Controller extends React.PureComponent {
   }
 
   modelFetchDone() {
-    const state = Store.getState();
     app.router.on("beforeunload", () => {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
@@ -101,31 +107,9 @@ class Controller extends React.PureComponent {
     UrlManager.startUrlUpdater();
     SceneController.initialize();
 
-    switch (state.tracing.type) {
-      case "volume": {
-        const volumeTracingController = new VolumeTracingController();
-        this.planeController = new VolumeTracingPlaneController(volumeTracingController);
-        break;
-      }
-      case "skeleton": {
-        this.planeController = new SkeletonTracingPlaneController();
-        const ArbitraryControllerClass = state.tracing.restrictions.advancedOptionsAllowed ?
-          ArbitraryController :
-          MinimalSkeletonTracingArbitraryController;
-        this.arbitraryController = new ArbitraryControllerClass();
-        break;
-      }
-      default: {
-        this.planeController = new PlaneController();
-        break;
-      }
-    }
-
     // FPS stats
-    const stats = new Stats();
-    $("body").append(stats.domElement);
-    if (this.arbitraryController) { this.listenTo(this.arbitraryController.arbitraryView, "render", () => stats.update()); }
-    this.listenTo(this.planeController.planeView, "render", () => stats.update());
+    this.stats = new Stats();
+    $("body").append(this.stats.domElement);
 
     this.initKeyboard();
     this.initTaskScript();
@@ -135,24 +119,14 @@ class Controller extends React.PureComponent {
       this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
     }
 
-    listenToStoreProperty(store => store.temporaryConfiguration.viewMode, mode => this.loadMode(mode), true);
+    listenToStoreProperty(store => store.flycam.zoomStep, () => this.maybeWarnAboutZoomStep(), true);
 
-    // Zoom step warning
-    let lastZoomStep = Store.getState().flycam.zoomStep;
-    Store.subscribe(() => {
-      const { zoomStep } = Store.getState().flycam;
-      if (lastZoomStep !== zoomStep) {
-        this.onZoomStepChange();
-        lastZoomStep = zoomStep;
-      }
-    });
-    this.onZoomStepChange();
-
-    window.webknossos = new OxalisApi(Model);
+    window.webknossos = api;
 
     app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
+    this.setState({ ready: true });
   }
 
   // For tracing swap testing, call
@@ -254,28 +228,7 @@ class Controller extends React.PureComponent {
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
   }
 
-
-  loadMode(newMode: ModeType) {
-    const allowedModes = Store.getState().tracing.restrictions.allowedModes;
-    if (
-      (newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) &&
-      allowedModes.includes(newMode)
-    ) {
-      Utils.__guard__(this.planeController, x => x.stop());
-      this.arbitraryController.start(newMode);
-    } else if (
-      (newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) &&
-      allowedModes.includes(newMode)
-    ) {
-      Utils.__guard__(this.arbitraryController, x1 => x1.stop());
-      this.planeController.start();
-    }
-
-    // Hide/show zoomstep warning if appropriate
-    this.onZoomStepChange();
-  }
-
-  onZoomStepChange() {
+  maybeWarnAboutZoomStep() {
     const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
     if (shouldWarn && (this.zoomStepWarningToast == null)) {
       const toastType = Store.getState().tracing.type === "volume" ? "danger" : "info";
@@ -287,11 +240,56 @@ class Controller extends React.PureComponent {
     }
   }
 
-  render() {
-    return null;
-  }
+  updateStats = () => this.stats.update();
 
+  render() {
+    if (!this.state.ready) {
+      return null;
+    }
+    const state = Store.getState();
+    const allowedModes = Store.getState().tracing.restrictions.allowedModes;
+    const mode = this.props.viewMode;
+
+    if (!allowedModes.includes(mode)) {
+      // Since this mode is not allowed, render nothing. A warning about this will be
+      // triggered in the model. Don't throw an error since the store might change so that
+      // the render function can succeed.
+      return null;
+    }
+
+    const isArbitrary = constants.MODES_ARBITRARY.includes(mode);
+    const isPlane = constants.MODES_PLANE.includes(mode);
+
+    if (isArbitrary) {
+      if (state.tracing.restrictions.advancedOptionsAllowed) {
+        return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
+      } else {
+        return <MinimalSkeletonTracingArbitraryController onRender={this.updateStats} viewMode={mode} />;
+      }
+    } else if (isPlane) {
+      switch (state.tracing.type) {
+        case "volume": {
+          return <VolumeTracingPlaneController onRender={this.updateStats} />;
+        }
+        case "skeleton": {
+          return <SkeletonTracingPlaneController onRender={this.updateStats} />;
+        }
+        default: {
+          return <PlaneController onRender={this.updateStats} />;
+        }
+      }
+    } else {
+      // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
+      // In case we add new viewmodes, the following error will be thrown.
+      throw new Error("The current mode is none of the four known mode types");
+    }
+  }
 }
 
+function mapStateToProps(state: OxalisState) {
+  return {
+    viewMode: state.temporaryConfiguration.viewMode,
+  };
+}
 
-export default Controller;
+export default connect(mapStateToProps)(Controller);

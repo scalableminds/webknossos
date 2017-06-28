@@ -19,11 +19,9 @@ class PlaneView {
 
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
-  on: Function;
   listenTo: Function;
 
   cameras: OrthoViewMapType<THREE.OrthographicCamera>;
-  group: THREE.Object3D;
 
   running: boolean;
   needsRerender: boolean;
@@ -48,7 +46,6 @@ class PlaneView {
       scene.add(this.cameras[plane]);
     }
 
-
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.cameras[OrthoViews.PLANE_XZ].position.y = 1;
@@ -60,27 +57,6 @@ class PlaneView {
     for (const plane of OrthoViewValues) {
       this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
     }
-
-    // Because the voxel coordinates do not have a cube shape but are distorted,
-    // we need to distort the entire scene to provide an illustration that is
-    // proportional to the actual size in nm.
-    // For some reason, all objects have to be put into a group object. Changing
-    // scene.scale does not have an effect.
-    this.group = new THREE.Object3D();
-    this.group.add(SceneController.getRootNode());
-
-    // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
-    // Add scene to the group, all Geometries are than added to group
-    scene.add(this.group);
-
-    scene.add(new THREE.AmbientLight(0x333333));
-    let directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    directionalLight.position.set(1, 1, -1).normalize();
-    scene.add(directionalLight);
-    directionalLight = new THREE.DirectionalLight(0xffffff, 0.3);
-    directionalLight.position.set(-1, -1, -1).normalize();
-    scene.add(directionalLight);
 
     // Attach the canvas to the container
     renderer.setSize((2 * this.curWidth) + 20, (2 * this.curWidth) + 20);
@@ -219,6 +195,10 @@ class PlaneView {
 
   stop(): void {
     this.running = false;
+
+    for (const plane of OrthoViewValues) {
+      SceneController.scene.remove(this.cameras[plane]);
+    }
   }
 
 

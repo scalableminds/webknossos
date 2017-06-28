@@ -17,7 +17,7 @@ import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { createCellAction, setModeAction, startEditingAction, addToLayerAction, finishEditingAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OrthoViewType, Point2 } from "oxalis/constants";
-import type VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
+import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 
 class VolumeTracingPlaneController extends PlaneController {
 
@@ -29,9 +29,9 @@ class VolumeTracingPlaneController extends PlaneController {
 
   volumeTracingController: VolumeTracingController;
 
-  constructor(volumeTracingController: VolumeTracingController) {
-    super();
-    this.volumeTracingController = volumeTracingController;
+  componentDidMount() {
+    super.componentDidMount();
+    this.volumeTracingController = new VolumeTracingController();
 
     let lastActiveCellId = getActiveCellId(Store.getState().tracing).get();
     Store.subscribe(() => {

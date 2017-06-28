@@ -43,6 +43,7 @@ class SceneController {
   rootNode: THREE.Object3D;
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
+  rootGroup: THREE.Object3D;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -68,6 +69,19 @@ class SceneController {
       antialias: true,
     });
     this.scene = new THREE.Scene();
+
+    // Because the voxel coordinates do not have a cube shape but are distorted,
+    // we need to distort the entire scene to provide an illustration that is
+    // proportional to the actual size in nm.
+    // For some reason, all objects have to be put into a group object. Changing
+    // scene.scale does not have an effect.
+    this.rootGroup = new THREE.Object3D();
+    this.rootGroup.add(this.getRootNode());
+
+    // The dimension(s) with the highest resolution will not be distorted
+    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
+    // Add scene to the group, all Geometries are then added to group
+    this.scene.add(this.rootGroup);
   }
 
 
@@ -297,7 +311,7 @@ class SceneController {
   }
 
 
-  stop(): void {
+  stopPlaneMode(): void {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(false);
     }
@@ -307,7 +321,7 @@ class SceneController {
   }
 
 
-  start(): void {
+  startPlaneMode(): void {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(true);
     }

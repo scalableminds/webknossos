@@ -5,7 +5,7 @@
 
 import Marionette from "backbone.marionette";
 import type Router from "router";
-import type OxalisController from "oxalis/controller";
+import typeof OxalisController from "oxalis/controller";
 import window from "libs/window";
 
 type UserType = {

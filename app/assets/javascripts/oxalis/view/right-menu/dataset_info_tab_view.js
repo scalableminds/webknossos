@@ -7,7 +7,6 @@ import { connect } from "react-redux";
 import _ from "lodash";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
-import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
@@ -32,7 +31,7 @@ class DatasetInfoTabView extends Component {
       width = constants.PLANE_WIDTH;
     } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
       zoom = this.props.flycam.zoomStep;
-      width = ArbitraryController.prototype.WIDTH;
+      width = constants.ARBITRARY_WIDTH;
     } else {
       throw Error(`Model mode not recognized: ${viewMode}`);
     }

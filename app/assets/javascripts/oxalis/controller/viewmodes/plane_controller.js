@@ -5,6 +5,7 @@
  /* globals JQueryInputEventObject:false */
 
 import app from "app";
+import React from "react";
 import Backbone from "backbone";
 import $ from "jquery";
 import _ from "lodash";
@@ -25,55 +26,37 @@ import PlaneView from "oxalis/view/plane_view";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
+import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 
-class PlaneController {
+class PlaneController extends React.PureComponent {
+  // See comment in Controller class on general controller architecture.
+  //
+  // Plane Controller: Responsible for Plane Modes
   planeView: PlaneView;
+  props: {
+    onRender: () => void,
+  }
   input: {
     mouseControllers: OrthoViewMapType<InputMouse>;
-    keyboard: ?InputKeyboard;
-    keyboardNoLoop: ?InputKeyboardNoLoop;
-    keyboardLoopDelayed: ?InputKeyboard;
-    destroy(): void;
+    keyboard?: InputKeyboard;
+    keyboardNoLoop?: InputKeyboardNoLoop;
+    keyboardLoopDelayed?: InputKeyboard;
   };
   isStarted: boolean;
   oldNmPos: Vector3;
-  activeViewport: OrthoViewType;
   cameraController: CameraController;
   zoomPos: Vector3;
   controls: TrackballControls;
   canvasesAndNav: any;
-  bindings: Array<any>;
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
+  stopListening: Function;
 
-  static initClass() {
-    // See comment in Controller class on general controller architecture.
-    //
-    // Plane Controller: Responsible for Plane Modes
-
-    this.prototype.bindings = [];
-
-    this.prototype.input = {
-      mouseControllers: {},
-      keyboard: null,
-      keyboardNoLoop: null,
-      keyboardLoopDelayed: null,
-
-      destroy() {
-        for (const mouse of _.values(this.mouseControllers)) {
-          mouse.destroy();
-        }
-        this.mouseControllers = {};
-        Utils.__guard__(this.keyboard, x => x.destroy());
-        Utils.__guard__(this.keyboardNoLoop, x1 => x1.destroy());
-        Utils.__guard__(this.keyboardLoopDelayed, x2 => x2.destroy());
-      },
-    };
-  }
-
-
-  constructor() {
+  componentDidMount() {
     _.extend(this, Backbone.Events);
+    this.input = {
+      mouseControllers: {},
+    };
     this.isStarted = false;
 
     const state = Store.getState();
@@ -81,17 +64,19 @@ class PlaneController {
 
     this.planeView = new PlaneView();
 
-    this.activeViewport = OrthoViews.PLANE_XY;
+    Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
 
     // initialize Camera Controller
     this.cameraController = new CameraController(this.planeView.getCameras());
 
     this.canvasesAndNav = $("#main")[0];
 
-    this.bindToEvents();
-    this.stop();
+    this.start();
   }
 
+  componentWillUnmount() {
+    this.stop();
+  }
 
   initMouse(): void {
     for (const id of OrthoViewValues) {
@@ -111,7 +96,7 @@ class PlaneController {
     return {
       leftDownMove: (delta: Point2) => this.moveTDView(delta),
       scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
-      over: () => { this.activeViewport = OrthoViews.TDView; },
+      over: () => { Store.dispatch(setViewportAction(OrthoViews.TDView)); },
     };
   }
 
@@ -130,7 +115,7 @@ class PlaneController {
       },
 
       scroll: this.scrollPlanes.bind(this),
-      over: () => { this.activeViewport = planeId; },
+      over: () => { Store.dispatch(setViewportAction(planeId)); },
     };
   }
 
@@ -265,9 +250,9 @@ class PlaneController {
   }
 
   start(): void {
-    this.stop();
+    this.bindToEvents();
 
-    SceneController.start();
+    SceneController.startPlaneMode();
     this.planeView.start();
 
     this.initKeyboard();
@@ -290,42 +275,46 @@ class PlaneController {
 
   stop(): void {
     if (this.isStarted) {
-      this.input.destroy();
+      this.destroyInput();
       this.controls.destroy();
 
       $("#TDViewControls button").off();
     }
 
-    SceneController.stop();
+    SceneController.stopPlaneMode();
     this.planeView.stop();
+    this.stopListening();
 
     this.isStarted = false;
   }
 
   bindToEvents(): void {
-    this.listenTo(this.planeView, "render", this.render);
+    this.listenTo(this.planeView, "render", this.onPlaneViewRender);
     this.listenTo(this.planeView, "renderCam", SceneController.updateSceneForCam);
   }
 
 
-  render(): void {
+  onPlaneViewRender(): void {
+    const state = Store.getState();
+    const activeViewport = state.viewModeData.plane.activeViewport;
     for (const dataLayerName of Object.keys(Model.binary)) {
       if (SceneController.pingDataLayer(dataLayerName)) {
-        Model.binary[dataLayerName].ping(getPosition(Store.getState().flycam), {
-          zoomStep: getRequestLogZoomStep(Store.getState()),
-          areas: getAreas(Store.getState()),
-          activePlane: this.activeViewport,
+        Model.binary[dataLayerName].ping(getPosition(state.flycam), {
+          zoomStep: getRequestLogZoomStep(state),
+          areas: getAreas(state),
+          activePlane: activeViewport,
         });
       }
     }
 
     this.cameraController.update();
     SceneController.update();
+    this.props.onRender();
   }
 
 
   move = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
-    const { activeViewport } = this;
+    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
     if (activeViewport !== OrthoViews.TDView) {
       Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
     } else {
@@ -339,7 +328,7 @@ class PlaneController {
   moveY = (y: number): void => { this.move([0, y, 0]); };
 
   moveZ = (z: number, oneSlide: boolean): void => {
-    const { activeViewport } = this;
+    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
     if (activeViewport === OrthoViews.TDView) {
       return;
     }
@@ -357,7 +346,8 @@ class PlaneController {
 
 
   zoom(value: number, zoomToMouse: boolean): void {
-    if ((OrthoViewValuesWithoutTDView).includes(this.activeViewport)) {
+    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    if ((OrthoViewValuesWithoutTDView).includes(activeViewport)) {
       this.zoomPlanes(value, zoomToMouse);
     } else {
       this.zoomTDView(value, zoomToMouse);
@@ -397,7 +387,7 @@ class PlaneController {
   finishZoom = (): void => {
     // Move the plane so that the mouse is at the same position as
     // before the zoom
-    const { activeViewport } = this;
+    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
     if (this.isMouseOver() && activeViewport !== OrthoViews.TDView) {
       const mousePos = this.getMousePosition();
       const moveVector = [this.zoomPos[0] - mousePos[0],
@@ -408,7 +398,8 @@ class PlaneController {
   }
 
   getMousePosition(): Vector3 {
-    const pos = this.input.mouseControllers[this.activeViewport].position;
+    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const pos = this.input.mouseControllers[activeViewport].position;
     if (pos != null) {
       return this.calculateGlobalPos(pos);
     }
@@ -417,7 +408,7 @@ class PlaneController {
 
 
   isMouseOver(): boolean {
-    return this.input.mouseControllers[this.activeViewport].isMouseOver;
+    return this.input.mouseControllers[Store.getState().viewModeData.plane.activeViewport].isMouseOver;
   }
 
 
@@ -450,36 +441,52 @@ class PlaneController {
     }
   }
 
-
-  calculateGlobalPos = (clickPos: Point2): Vector3 => {
-    let position;
-    const state = Store.getState();
-    const curGlobalPos = getPosition(state.flycam);
-    const zoomFactor = getPlaneScalingFactor(state.flycam);
-    const viewportScale = state.userConfiguration.scale;
-    const planeRatio = getBaseVoxelFactors(state.dataset.scale);
-    switch (this.activeViewport) {
-      case OrthoViews.PLANE_XY:
-        position = [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.x) / viewportScale) * planeRatio[0] * zoomFactor),
-          curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.y) / viewportScale) * planeRatio[1] * zoomFactor),
-          curGlobalPos[2]];
-        break;
-      case OrthoViews.PLANE_YZ:
-        position = [curGlobalPos[0],
-          curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.y) / viewportScale) * planeRatio[1] * zoomFactor),
-          curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.x) / viewportScale) * planeRatio[2] * zoomFactor)];
-        break;
-      case OrthoViews.PLANE_XZ:
-        position = [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.x) / viewportScale) * planeRatio[0] * zoomFactor),
-          curGlobalPos[1],
-          curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.y) / viewportScale) * planeRatio[2] * zoomFactor)];
-        break;
-      default: throw new Error(`Trying to calculate the global position, but no viewport is active: ${this.activeViewport}`);
+  destroyInput() {
+    for (const mouse of _.values(this.input.mouseControllers)) {
+      mouse.destroy();
     }
+    this.input.mouseControllers = {};
+    Utils.__guard__(this.input.keyboard, x => x.destroy());
+    Utils.__guard__(this.input.keyboardNoLoop, x1 => x1.destroy());
+    Utils.__guard__(this.input.keyboardLoopDelayed, x2 => x2.destroy());
+  }
 
-    return position;
+  calculateGlobalPos = (clickPos: Point2): Vector3 => calculateGlobalPos(clickPos)
+
+  render() {
+    return null;
   }
 }
-PlaneController.initClass();
+
+
+function calculateGlobalPos(clickPos: Point2) {
+  let position;
+  const state = Store.getState();
+  const activeViewport = state.viewModeData.plane.activeViewport;
+  const curGlobalPos = getPosition(state.flycam);
+  const zoomFactor = getPlaneScalingFactor(state.flycam);
+  const viewportScale = state.userConfiguration.scale;
+  const planeRatio = getBaseVoxelFactors(state.dataset.scale);
+  switch (activeViewport) {
+    case OrthoViews.PLANE_XY:
+      position = [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.x) / viewportScale) * planeRatio[0] * zoomFactor),
+        curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.y) / viewportScale) * planeRatio[1] * zoomFactor),
+        curGlobalPos[2]];
+      break;
+    case OrthoViews.PLANE_YZ:
+      position = [curGlobalPos[0],
+        curGlobalPos[1] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.y) / viewportScale) * planeRatio[1] * zoomFactor),
+        curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.x) / viewportScale) * planeRatio[2] * zoomFactor)];
+      break;
+    case OrthoViews.PLANE_XZ:
+      position = [curGlobalPos[0] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.x) / viewportScale) * planeRatio[0] * zoomFactor),
+        curGlobalPos[1],
+        curGlobalPos[2] - (((((constants.VIEWPORT_WIDTH * viewportScale) / 2) - clickPos.y) / viewportScale) * planeRatio[2] * zoomFactor)];
+      break;
+    default: throw new Error(`Trying to calculate the global position, but no viewport is active: ${activeViewport}`);
+  }
+
+  return position;
+}
 
 export default PlaneController;

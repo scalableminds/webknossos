@@ -9,7 +9,6 @@ import * as THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
-import type ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
@@ -31,7 +30,6 @@ import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary
 
 class ArbitraryPlane {
 
-  controller: ArbitraryController;
   mesh: THREE.Mesh;
   isDirty: boolean;
   queryVertices: ?Float32Array;
@@ -44,9 +42,8 @@ class ArbitraryPlane {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(controller: ArbitraryController, width: number = 128) {
+  constructor(width: number = 128) {
     this.isDirty = true;
-    this.controller = controller;
     this.height = 0;
     this.width = width;
     _.extend(this, Backbone.Events);
@@ -83,7 +80,7 @@ class ArbitraryPlane {
   }
 
 
-  attachScene(scene: THREE.Scene) {
+  addToScene(scene: THREE.Scene) {
     scene.add(this.mesh);
   }
 

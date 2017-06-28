@@ -31,10 +31,10 @@ class ArbitraryView {
   setClippingDistance: (value: number) => void;
 
 
-  needsRerender: boolean = false;
+  needsRerender: boolean;
   additionalInfo: string = "";
-  isRunning: boolean = true;
-  animationRequestId: number = 0;
+  isRunning: boolean = false;
+  animationRequestId: ?number = null;
 
   width: number;
   height: number;
@@ -54,7 +54,7 @@ class ArbitraryView {
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
     _.extend(this, Backbone.Events);
 
-    // camDistance has to be calculates such that with cam
+    // camDistance has to be calculated such that with cam
     // angle 45°, the plane of width 128 fits exactly in the
     // viewport.
     this.camDistance = width / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
@@ -73,14 +73,7 @@ class ArbitraryView {
 
     this.cameraPosition = [0, 0, this.camDistance];
 
-    this.group = new THREE.Object3D();
-    const nmPerVoxel = new THREE.Vector3(...Store.getState().dataset.scale);
-    // The dimension(s) with the highest resolution will not be distorted
-    this.group.scale.copy(nmPerVoxel);
-    // Add scene to the group, all Geometries are then added to group
-    SceneController.scene.add(this.group);
-    this.group.add(this.camera);
-
+    this.needsRerender = true;
     app.vent.on("rerender", () => { this.needsRerender = true; });
     Store.subscribe(() => {
       // Render in the next frame after the change propagated everywhere
@@ -95,11 +88,9 @@ class ArbitraryView {
     if (!this.isRunning) {
       this.isRunning = true;
 
-      for (const element of this.group.children) {
-        element.setVisibility = element.setVisibility || function (v) { this.visible = v; };
-        element.setVisibility(true);
-      }
-
+      this.group = new THREE.Object3D();
+      this.group.add(this.camera);
+      SceneController.rootGroup.add(this.group);
 
       this.resize();
       // start the rendering loop
@@ -113,15 +104,12 @@ class ArbitraryView {
   stop(): void {
     if (this.isRunning) {
       this.isRunning = false;
-      if (this.animationRequestId !== 0) {
+      if (this.animationRequestId != null) {
         window.cancelAnimationFrame(this.animationRequestId);
-        this.animationRequestId = 0;
+        this.animationRequestId = null;
       }
 
-      for (const element of this.group.children) {
-        element.setVisibility = element.setVisibility || function (v) { this.visible = v; };
-        element.setVisibility(false);
-      }
+      SceneController.rootGroup.remove(this.group);
 
       $(window).off("resize", this.resize);
     }
@@ -129,7 +117,7 @@ class ArbitraryView {
 
 
   animateImpl(): void {
-    this.animationRequestId = 0;
+    this.animationRequestId = null;
     if (!this.isRunning) { return; }
 
     TWEEN.update();
@@ -181,7 +169,7 @@ class ArbitraryView {
     // This provides the public interface to the GeometryFactory.
 
     this.geometries.push(geometry);
-    geometry.attachScene(this.group);
+    geometry.addToScene(this.group);
   }
 
   // throttle resize to avoid annoying flickering

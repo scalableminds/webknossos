@@ -5,12 +5,11 @@
 
 import _ from "lodash";
 import * as THREE from "three";
-import app from "app";
 import Utils from "libs/utils";
-import Store from "oxalis/store";
 import Model from "oxalis/model";
 import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type { Vector3 } from "oxalis/constants";
+import type { DatasetLayerConfigurationType } from "oxalis/store";
 import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
@@ -104,21 +103,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
 
-  setupChangeListeners(): void {
-    super.setupChangeListeners();
+  updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {
+    super.updateUniformsForLayer(settings, name);
 
-    Store.subscribe(() => {
-      const layerSettings = Store.getState().datasetConfiguration.layers;
-      _.forEach(layerSettings, (settings, layerName) => {
-        const name = this.sanitizeName(layerName);
-        if (settings.color != null) {
-          const color = this.convertColor(settings.color);
-          this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
-        }
-      });
-
-      app.vent.trigger("rerender");
-    });
+    if (settings.color != null) {
+      const color = this.convertColor(settings.color);
+      this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
+    }
   }
 
 

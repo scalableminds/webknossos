@@ -2,7 +2,6 @@
  * skeletontracing_sagas.js
  * @flow
  */
-import app from "app";
 import _ from "lodash";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
@@ -20,12 +19,12 @@ import { V3 } from "libs/mjs";
 import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, FlycamType } from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import api from "oxalis/api/internal_api";
 
 function* centerActiveNode() {
   getActiveNode(yield select(state => state.tracing))
     .map((activeNode) => {
-      // $FlowFixMe
-      app.oxalis.planeController.centerPositionAnimated(activeNode.position, false);
+      api.tracing.centerPositionAnimated(activeNode.position, false);
     });
 }
 

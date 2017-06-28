@@ -22,8 +22,11 @@ import Toast from "libs/toast";
 import Request from "libs/request";
 import app from "app";
 import Utils from "libs/utils";
-import { ControlModeEnum } from "oxalis/constants";
+import { ControlModeEnum, OrthoViews } from "oxalis/constants";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import dimensions from "oxalis/model/dimensions";
+import TWEEN from "tween.js";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -265,6 +268,44 @@ class TracingApi {
   centerNode = (nodeId?: number): void => {
     getNodeAndTree(Store.getState().tracing, nodeId)
       .map(([, node]) => Store.dispatch(setPositionAction(node.position)));
+  }
+
+  /**
+   * Starts an animation to center the given position.
+   *
+   * @param position - Vector3
+   * @param skipDimensions - Boolean which decides whether the third dimension shall also be animated (defaults to true)
+   * @example
+   * api.tracing.centerPositionAnimated([0, 0, 0])
+   */
+  centerPositionAnimated(position: Vector3, skipDimensions: boolean = true): void {
+    // Let the user still manipulate the "third dimension" during animation
+    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const dimensionToSkip = skipDimensions && activeViewport !== OrthoViews.TDView ?
+      dimensions.thirdDimensionForPlane(activeViewport) :
+      null;
+
+    const curGlobalPos = getPosition(Store.getState().flycam);
+
+    const tween = new TWEEN.Tween({
+      globalPosX: curGlobalPos[0],
+      globalPosY: curGlobalPos[1],
+      globalPosZ: curGlobalPos[2],
+    });
+    tween.to({
+      globalPosX: position[0],
+      globalPosY: position[1],
+      globalPosZ: position[2],
+    }, 200)
+    .onUpdate(function () { // needs to be a normal (non-bound) function
+      const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
+      if (dimensionToSkip != null) {
+        Store.dispatch(setPositionAction(curPos, dimensionToSkip));
+      } else {
+        Store.dispatch(setPositionAction(curPos));
+      }
+    })
+    .start();
   }
 
   //  VOLUMETRACING API

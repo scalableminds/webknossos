@@ -2,21 +2,14 @@
 import test from "ava";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
-import _ from "lodash";
 import ChainReducer from "test/helpers/chainReducer";
 
 const TIMESTAMP = 1494347146379;
-
-const KeyboardJS = {
-  bind: _.noop,
-  unbind: _.noop,
-};
 
 const DateMock = {
   now: () => TIMESTAMP,
 };
 
-mockRequire("keyboardjs", KeyboardJS);
 mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("bootstrap-toggle", {});
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });

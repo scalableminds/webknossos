@@ -135,16 +135,14 @@ class DatasetListItemView extends Marionette.CompositeView {
       form: "form",
       contentTypeInput: "#contentTypeInput",
     };
-  }
-  // Cannot be ES6 style function, as these are covariant by default
-  attributes = function attributes() {
-    return { "data-dataset-name": this.model.get("name") };
+
+    this.prototype.attributes = function attributes() {
+      return { "data-dataset-name": this.model.get("name") };
+    };
   }
 
 
   initialize() {
-    // by default there is no import error
-
     this.listenTo(this.model, "change", this.render);
     this.listenTo(app.vent, "datasetListView:toggleDetails", this.toggleDetails);
 

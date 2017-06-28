@@ -27,6 +27,7 @@ case class VolumeTracing(
                           editPosition: Point3D = Point3D(0, 0, 0),
                           editRotation: Vector3D = Vector3D(0, 0, 0),
                           zoomLevel: Double,
+                          nextCellId: Long = 1,
                           boundingBox: Option[BoundingBox] = None,
                           settings: AnnotationSettings = AnnotationSettings.volumeDefault,
                           _id: BSONObjectID = BSONObjectID.generate)
@@ -109,10 +110,10 @@ case class VolumeTracing(
     val layer = AnnotationContent.dataLayerWrites.writes(dataStoreContent.dataLayer.copy(name = id)).as[JsObject] ++
       Json.obj("fallback" -> Json.obj("layerName" -> dataStoreContent.fallbackLayerName))
     Fox.successful(Json.obj(
-      "activeCell" -> dataStoreContent.activeSegmentId,
+      "activeCell" -> activeCellId,
       "customLayers" -> List(layer),
-      "nextCell" -> (dataStoreContent.dataLayer.largestSegmentId + 1L),
-      "zoomLevel" -> dataStoreContent.zoomLevel
+      "nextCell" -> nextCellId,
+      "zoomLevel" -> zoomLevel
     ))
   }
 }

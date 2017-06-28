@@ -668,7 +668,7 @@ test("compactUpdateActions should detect a tree split (3/3)", (t) => {
   t.is(simplifiedUpdateActions.length, 12);
 });
 
-test("compactUpdateActions should do nothing if it cannot compact ", (t) => {
+test("compactUpdateActions should do nothing if it cannot compact", (t) => {
   // The moveTreeComponent update action moves a list of nodeIds from and oldTreeId to a newTreeId
   // If the tree with the oldTreeId is deleted and the tree with the newTreeId is created
   // in the same diff, compactUpdateActions cannot insert the moveTreeComponent update action at

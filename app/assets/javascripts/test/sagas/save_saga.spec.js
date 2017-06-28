@@ -35,8 +35,8 @@ const initialState = {
   tracing: {
     type: "skeleton",
     trees: {
-      "0": {
-        treeId: 0,
+      "1": {
+        treeId: 1,
         name: "TestTree",
         nodes: {},
         timestamp: 12345678,
@@ -48,7 +48,7 @@ const initialState = {
     },
     tracingType: "Explorational",
     name: "",
-    activeTreeId: 0,
+    activeTreeId: 1,
     activeNodeId: null,
     restrictions: {
       branchPointsAllowed: true,
@@ -73,8 +73,8 @@ test("SaveSaga should compact multiple updateTracing update actions", (t) => {
 
 test("SaveSaga should send update actions", (t) => {
   const updateActions = [
-    UpdateActions.createEdge(0, 0, 1),
-    UpdateActions.createEdge(0, 1, 2),
+    UpdateActions.createEdge(1, 0, 1),
+    UpdateActions.createEdge(1, 1, 2),
   ];
 
   const saga = pushAnnotationAsync();
@@ -92,8 +92,8 @@ test("SaveSaga should send update actions", (t) => {
 
 test("SaveSaga should send request to server", (t) => {
   const updateActions = [
-    UpdateActions.createEdge(0, 0, 1),
-    UpdateActions.createEdge(0, 1, 2),
+    UpdateActions.createEdge(1, 0, 1),
+    UpdateActions.createEdge(1, 1, 2),
   ];
 
   const saga = sendRequestToServer(TIMESTAMP);
@@ -112,8 +112,8 @@ test("SaveSaga should send request to server", (t) => {
 
 test("SaveSaga should retry update actions", (t) => {
   const updateActions = [
-    UpdateActions.createEdge(0, 0, 1),
-    UpdateActions.createEdge(0, 1, 2),
+    UpdateActions.createEdge(1, 0, 1),
+    UpdateActions.createEdge(1, 1, 2),
   ];
 
   const saga = sendRequestToServer(TIMESTAMP);
@@ -138,8 +138,8 @@ test("SaveSaga should retry update actions", (t) => {
 
 test("SaveSaga should escalate on permanent client error update actions", (t) => {
   const updateActions = [
-    UpdateActions.createEdge(0, 0, 1),
-    UpdateActions.createEdge(0, 1, 2),
+    UpdateActions.createEdge(1, 0, 1),
+    UpdateActions.createEdge(1, 1, 2),
   ];
 
   const saga = sendRequestToServer(TIMESTAMP);
@@ -163,8 +163,8 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
 
 test("SaveSaga should send update actions right away", (t) => {
   const updateActions = [
-    UpdateActions.createEdge(0, 0, 1),
-    UpdateActions.createEdge(0, 1, 2),
+    UpdateActions.createEdge(1, 0, 1),
+    UpdateActions.createEdge(1, 1, 2),
   ];
   const saga = pushAnnotationAsync();
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));

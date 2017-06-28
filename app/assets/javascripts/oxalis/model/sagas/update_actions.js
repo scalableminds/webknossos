@@ -184,14 +184,14 @@ export function createNode(treeId: number, node: NodeType): CreateNodeUpdateActi
   return {
     action: "createNode",
     timestamp: Date.now(),
-    value: Object.assign({}, node, { treeId, position: node.position }),
+    value: Object.assign({}, node, { treeId }),
   };
 }
 export function updateNode(treeId: number, node: NodeType): UpdateNodeUpdateAction {
   return {
     action: "updateNode",
     timestamp: Date.now(),
-    value: Object.assign({}, node, { treeId, position: node.position }),
+    value: Object.assign({}, node, { treeId }),
   };
 }
 export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateAction {

@@ -97,7 +97,7 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
   // in another tree again afterwards.
   // It replaces the original deleteNode/createNode and deleteEdge/createEdge update actions
   // with a moveTreeComponent update action.
-  // As in theory multiple tree merges/splits could be part of one updateActionBatch, the moved nodes
+  // As one tree split can produce multiple new trees (if a branchpoint is deleted), the moved nodes
   // and edges have to be grouped by their old and new treeId. Then one moveTreeComponent update action
   // is inserted for each group, containing the respective moved node ids.
   // The exact spot where the moveTreeComponent update action is inserted is important. This is

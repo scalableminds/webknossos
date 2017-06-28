@@ -220,8 +220,8 @@ class ProjectCreateView extends Marionette.View {
     if (this.ui.form[0].checkValidity()) {
       const formValues = FormSyphon.serialize(this.ui.form);
 
-    // convert expectedTime from minutes to milliseconds
-    formValues.expectedTime *= 60000;
+      // convert expectedTime from minutes to milliseconds
+      formValues.expectedTime *= 60000;
 
       this.model.save(formValues).then(
         () => app.router.navigate("/projects", { trigger: true }));

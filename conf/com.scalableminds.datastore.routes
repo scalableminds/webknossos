@@ -32,5 +32,8 @@ POST        /tracings/volumes/:annotationId                                     
 GET         /tracings/volumes/:annotationId/download                                           @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(annotationId: String, version: Long)
 GET         /tracings/volumes/:annotationId/duplicate                                          @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.duplicate(annotationId: String, version: Long)
 
+# Skeleton tracings
+POST        /tracings/skeletons                                                                @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.create(dataSetName: String)
+
 # Actions
 GET         /triggers/checkInbox                                                               @com.scalableminds.braingames.datastore.controllers.DataSourceController.triggerInboxCheck()

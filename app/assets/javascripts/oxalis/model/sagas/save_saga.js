@@ -184,10 +184,7 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
     // Once we're certain that no errors happen, this code can be removed.
     const newTreesFromNormalBatch = updateActionReducer(trees, batch);
     const newTreesFromCompactBatch = updateActionReducer(trees, compactedBatch);
-    if (!(_.isMatch(newTreesFromNormalBatch, newTreesFromCompactBatch) && _.isMatch(newTreesFromCompactBatch, newTreesFromNormalBatch))) {
-      console.log(`Original actions result in this tracing: ${JSON.stringify(newTreesFromNormalBatch)}`);
-      console.log(`Compacted actions result in this tracing: ${JSON.stringify(newTreesFromCompactBatch)}`);
-      Toast.error("Compacted update actions result in different tracing, please open the developer console!");
+    if (!_.isEqual(newTreesFromNormalBatch, newTreesFromCompactBatch)) {
       ErrorHandling.airbrake.notify({
         error: new Error("compactUpdateActions encountered a mismatch between the original and compacted batch."),
         context: { tracingVersion: version },

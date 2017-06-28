@@ -32,11 +32,10 @@ import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
 import { connect } from "react-redux";
 import messages from "messages";
-import type { OxalisState } from "oxalis/store";
 
 import type { ToastType } from "libs/toast";
 import type { ModeType, ControlModeType } from "oxalis/constants";
-import type { SkeletonTracingTypeTracingType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
 
 class Controller extends React.PureComponent {
   props: {

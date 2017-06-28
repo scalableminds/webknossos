@@ -14,3 +14,5 @@ export const setViewportAction = (viewport: OrthoViewType): SetViewportActionTyp
 });
 
 export type ViewModeActionType = SetViewportActionType;
+
+export default {};

@@ -87,6 +87,7 @@ export function toggleErrorHighlighting(state: boolean) {
   }
 }
 
+// The Cantor pairing function assigns one natural number to each pair of natural numbers
 function cantor(a, b) {
   return 0.5 * (a + b) * (a + b + 1) + b;
 }
@@ -106,28 +107,21 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
     let compactedBatch = [...batch];
     // Detect moved nodes and edges
     const movedNodesAndEdges = [];
-    const deleteNodeActions = batch.filter(ua => ua.action === "deleteNode");
-    const deleteEdgeActions = batch.filter(ua => ua.action === "deleteEdge");
+
+    // Performance improvement: create a map of the deletedNode update actions, key is the nodeId
+    const deleteNodeActionsMap = _.keyBy(batch, ua => ua.action === "deleteNode" ? ua.value.id : -1);
+    // Performance improvement: create a map of the deletedEdge update actions, key is the cantor pairing
+    // of sourceId and targetId
+    const deleteEdgeActionsMap = _.keyBy(batch, ua => ua.action === "deleteEdge" ? cantor(ua.value.source, ua.value.target) : -1);
     for (const createUA of batch) {
       if (createUA.action === "createNode") {
-        const deleteUA = deleteNodeActions.find(ua =>
-          // The first predicate will always be true, since we already filtered
-          // for that, but we still need it here to satisfy flow :(
-          ua.action === "deleteNode" &&
-          ua.value.id === createUA.value.id &&
-          ua.value.treeId !== createUA.value.treeId);
-        if (deleteUA != null && deleteUA.action === "deleteNode") {
+        const deleteUA = deleteNodeActionsMap[createUA.value.id];
+        if (deleteUA != null && deleteUA.action === "deleteNode" && deleteUA.value.treeId !== createUA.value.treeId) {
           movedNodesAndEdges.push([createUA, deleteUA]);
         }
       } else if (createUA.action === "createEdge") {
-        const deleteUA = deleteEdgeActions.find(ua =>
-          // The first predicate will always be true, since we already filtered
-          // for that, but we still need it here to satisfy flow :(
-          ua.action === "deleteEdge" &&
-          ua.value.source === createUA.value.source &&
-          ua.value.target === createUA.value.target &&
-          ua.value.treeId !== createUA.value.treeId);
-        if (deleteUA != null && deleteUA.action === "deleteEdge") {
+        const deleteUA = deleteEdgeActionsMap[cantor(createUA.value.source, createUA.value.target)];
+        if (deleteUA != null && deleteUA.action === "deleteEdge" && deleteUA.value.treeId !== createUA.value.treeId) {
           movedNodesAndEdges.push([createUA, deleteUA]);
         }
       }

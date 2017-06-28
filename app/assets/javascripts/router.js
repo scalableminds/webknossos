@@ -50,6 +50,7 @@ class Router extends BaseRouter {
       "/admin/taskTypes": "hideLoadingSpinner",
       "/workload": "workload",
       "/tasks": "taskQuery",
+      "/import/:name": "importDataset",
     };
   }
 
@@ -351,6 +352,20 @@ class Router extends BaseRouter {
       this.listenTo(collection, "sync", this.hideLoadingSpinner);
     };
     require(["admin/views/task/task_overview_view", "admin/models/task/task_overview_collection"], callback);
+  }
+
+  importDataset(name) {
+    // Webpack `require` doesn't work with inline arrow functions
+    const callback = (DatasetImportView) => {
+      DatasetImportView = DatasetImportView.default;
+
+      const view = new ReactBackboneWrapper(DatasetImportView, {
+        datasetName: name,
+      });
+      view.forcePageReload = true;
+      this.changeView(view);
+    };
+    require(["dashboard/views/dataset/dataset_import_view"], callback);
   }
 
 

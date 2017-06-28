@@ -10,6 +10,7 @@ module.exports = function (env = {}) {
   var scriptPaths = {
     "jasny-bootstrap": `${nodePath}jasny-bootstrap/dist/js/jasny-bootstrap`,
     "bootstrap-multiselect": `${nodePath}bootstrap-multiselect/dist/js/bootstrap-multiselect`,
+    "react-jsoneditor": `${nodePath}/react-jsoneditor/build/app.js`,
   };
 
   fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), process.pid, "utf8");
@@ -39,6 +40,15 @@ module.exports = function (env = {}) {
         },
         {
           test: /\.less$/,
+          // This needs to be `loader` until `extract-text-webpack-plugin` is fixed
+          // Ref: https://github.com/webpack/extract-text-webpack-plugin/issues/250
+          use: ExtractTextPlugin.extract({
+            fallback: "style-loader",
+            use: "css-loader!less-loader",
+          }),
+        },
+        {
+          test: /\.css$/,
           // This needs to be `loader` until `extract-text-webpack-plugin` is fixed
           // Ref: https://github.com/webpack/extract-text-webpack-plugin/issues/250
           use: ExtractTextPlugin.extract({

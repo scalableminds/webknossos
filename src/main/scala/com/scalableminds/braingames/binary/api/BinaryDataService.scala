@@ -9,7 +9,6 @@ import com.google.inject.Inject
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.requests.{DataServiceRequest, ReadInstruction, SegmentationMappingRequest}
 import com.scalableminds.braingames.binary.storage.DataCubeCache
-import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -19,10 +18,7 @@ import play.api.Configuration
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-class BinaryDataService @Inject()(
-                                   tracingDataStore: VersionedKeyValueStore,
-                                   config: Configuration
-                                 ) extends FoxImplicits with LazyLogging {
+class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits with LazyLogging {
 
   val dataBaseDir = Paths.get(config.getString("braingames.binary.baseFolder").getOrElse("binaryData"))
 
@@ -90,7 +86,7 @@ class BinaryDataService @Inject()(
         request.dataLayer,
         bucket)
 
-      request.dataLayer.bucketProvider.load(readInstruction, cache, tracingDataStore, loadTimeout).futureBox.map {
+      request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout).futureBox.map {
         case Full(data) =>
           Full(data)
         case Empty =>

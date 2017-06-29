@@ -75,7 +75,7 @@ class TreesTabView extends React.Component {
       .map(activeTree => activeTree.name).getOrElse("");
 
     return (
-      <div id="tree-list">
+      <div id="tree-list" className="flex-column">
         <ButtonGroup>
           <Button onClick={this.props.onCreateTree}><i className="fa fa-plus" /> Create tree</Button>
           <Button onClick={this.deleteTree}><i className="fa fa-trash-o" /> Delete tree</Button>
@@ -95,7 +95,7 @@ class TreesTabView extends React.Component {
           </Dropdown>
         </InputGroup>
 
-        <ul>
+        <ul className="flex-overflow">
           { this.getTreesComponents() }
         </ul>
       </div>

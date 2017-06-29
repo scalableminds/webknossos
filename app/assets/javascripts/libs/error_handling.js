@@ -59,6 +59,7 @@ class ErrorHandling {
     window.onerror = (message, file, line, colno, error) => {
       if (error == null) {
         // older browsers don't deliver the error parameter
+        // $FlowFixMe
         error = new Error(message, file, line);
       }
       console.error(error);

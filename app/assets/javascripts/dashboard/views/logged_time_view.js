@@ -85,7 +85,7 @@ class LoggedTimeView extends Marionette.View {
 
 
   serializeData() {
-    return { items: this.serializeCollection(this.collection) };
+    return { items: this.serializeCollection() };
   }
 }
 LoggedTimeView.initClass();

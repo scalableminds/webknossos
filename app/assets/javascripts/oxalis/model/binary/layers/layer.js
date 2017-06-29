@@ -73,7 +73,7 @@ class Layer {
   }
 
 
-  doWithToken<T, U>(fn: (token: string) => T): Promise<U> {
+  doWithToken<T>(fn: (token: string) => T): Promise<*> {
     return this.tokenPromise
         .then(fn)
         .catch((error) => {

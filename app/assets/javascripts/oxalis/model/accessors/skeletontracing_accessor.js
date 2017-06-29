@@ -10,6 +10,10 @@ export function getSkeletonTracing(tracing: TracingType): Maybe<SkeletonTracingT
   return Maybe.Nothing();
 }
 
+export function enforceSkeletonTracing(tracing: TracingType): SkeletonTracingType {
+  return getSkeletonTracing(tracing).get();
+}
+
 export function getActiveNode(tracing: TracingType) {
   return getSkeletonTracing(tracing).chain((skeletonTracing) => {
     const { activeTreeId, activeNodeId } = skeletonTracing;

@@ -34,6 +34,7 @@ body {
   font-weight: 400;
   font-size: 16px;
   -webkit-font-smoothing: antialised;
+  height: ~"calc(100vh - 41px)";
 }
 body:-webkit-full-screen {
   width: 100%;
@@ -205,36 +206,6 @@ td.nowrap * {
   bottom: 0;
   right: 0;
 }
-.bright {
-  background : #fff;
-  p {
-    color : #000;
-  }
-  .inactive {
-    border-color: #fff;
-  }
-}
-
-.dark {
-  color: #fff;
-  background : #000;
-
-  #dataset .well,
-  .panel-body {
-    background: #000;
-  }
-
-  p {
-    color : #fff;
-  }
-
-  .modal, .modal p{
-    color : #000;
-  }
-  .inactive {
-    border-color: #000;
-  }
-}
 
 #loader-icon {
   position: absolute;
@@ -362,6 +333,16 @@ i {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+}
+
+.flex-column-for-ant-tabs-container > div.ant-tabs-content {
+  flex-grow: 1;
+}
+
+.flex-overflow {
+  overflow-y: auto;
+  flex-grow: 1;
+  height: 0;
 }
 
 #add-script-input {

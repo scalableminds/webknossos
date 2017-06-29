@@ -9,7 +9,7 @@ import play.api.http.Status._
 import play.api.http.{HeaderNames, Status, Writeable}
 import play.api.i18n.{I18nSupport, Messages}
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json._
 import play.api.mvc.{Request, ResponseHeader, Result}
 import play.twirl.api._
 
@@ -59,7 +59,13 @@ trait ResultImplicits extends ResultBox with I18nSupport{
 }
 
 trait BoxImplicits {
+
   implicit def option2Box[T](in: Option[T]): Box[T] = Box(in)
+
+  implicit def jsResult2Box[T](result: JsResult[T]): Box[T] = result match {
+    case JsSuccess(value, _) => Full(value)
+    case JsError(e) => Failure(s"Invalid json: $e")
+  }
 }
 
 object BoxImplicits extends BoxImplicits

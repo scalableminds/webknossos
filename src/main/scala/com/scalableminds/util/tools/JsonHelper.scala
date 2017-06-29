@@ -7,13 +7,14 @@ import java.io.FileNotFoundException
 import java.nio.file._
 
 import com.scalableminds.util.io.FileIO
+import com.scalableminds.util.mvc.BoxImplicits
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.libs.json._
 
 import scala.io.{BufferedSource, Source}
 
-object JsonHelper extends LazyLogging {
+object JsonHelper extends BoxImplicits with LazyLogging {
 
   def jsonToFile[A : Writes](path: Path, value: A) = {
     FileIO.printToFile(path.toFile) { printer =>
@@ -29,12 +30,7 @@ object JsonHelper extends LazyLogging {
   }
 
   def validatedJsonFromFile[T : Reads](path: Path, rootPath: Path): Box[T] = {
-    jsonFromFile(path, rootPath).flatMap(_.validate[T] match {
-      case JsSuccess(value, _) =>
-        Full(value)
-      case JsError(e) =>
-        Failure(s"Invalid json: $e")
-    })
+    jsonFromFile(path, rootPath).flatMap(_.validate[T])
   }
 
   private def parseJsonFromFile(path: Path, rootPath: Path): Box[JsValue] = {

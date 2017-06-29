@@ -5,8 +5,6 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.braingames.datastore.services.DataStoreStatus
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
@@ -18,6 +16,8 @@ import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc._
+
+import scala.concurrent.Future
 
 class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   extends Controller
@@ -72,10 +72,6 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
         logger.warn("Data store reported invalid json for data source.")
         JsonBadRequest(JsError.toFlatJson(e))
     }
-  }
-
-  def volumeTracing(name: String, id: String) = DataStoreAction(name).async { implicit request =>
-    VolumeTracingDAO.findOneById(id)(GlobalAccessContext).map(volume => Ok(Json.toJson(volume.dataStoreContent)))
   }
 }
 

@@ -17,7 +17,7 @@ GET         /datasets/:dataSetName/layers/:dataLayerName/thumbnail.jpg          
 GET         /datasets/:dataSetName/layers/:dataLayerName/mag:resolution/x:x/y:y/z:z/bucket.raw @com.scalableminds.braingames.datastore.controllers.BinaryDataController.requestViaKnossos(dataSetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int)
 
 # Segmentation mappings
-#GET         /datasets/:dataSetName/layers/:dataLayerName/mappings/:dataLayerMappingName        @com.scalableminds.braingames.datastore.controllers.BinaryDataController.requestSegmentationMapping(dataSetName: String, dataLayerName: String, dataLayerMappingName: String)
+GET         /datasets/:dataSetName/layers/:dataLayerName/mappings/:mappingName                 @com.scalableminds.braingames.datastore.controllers.BinaryDataController.requestMapping(dataSetName: String, dataLayerName: String, mappingName: String)
 
 # DataSource management
 GET         /datasets                                                                          @com.scalableminds.braingames.datastore.controllers.DataSourceController.list

@@ -28,7 +28,7 @@ class VolumeTracingService @Inject()(
       fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingLayer.defaultLargestSegmentId)
     )
 
-    val tracing = VolumeTracing(tracingLayer, fallbackLayer.map(_.name))
+    val tracing = VolumeTracing(tracingLayer, fallbackLayer.map(_.name), fallbackLayer.map(_.largestSegmentId).getOrElse(0L) + 1)
     tracingDataStore.putJson(buildTracingKey(tracing.id), 1, tracing)
     tracing
   }

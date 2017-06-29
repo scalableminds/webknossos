@@ -6,7 +6,7 @@ import com.scalableminds.braingames.datastore.tracings.Tracing
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json
 
-case class VolumeTracing(dataLayer: VolumeTracingLayer, fallbackLayerName: Option[String]) extends Tracing with LazyLogging {
+case class VolumeTracing(dataLayer: VolumeTracingLayer, fallbackLayerName: Option[String], firstCellId: Long) extends Tracing with LazyLogging {
 
   def id: String = dataLayer.name
 

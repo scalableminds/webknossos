@@ -20,40 +20,36 @@ class SkeletonTracingController @Inject()(
                                          val messagesApi: MessagesApi
                                        ) extends Controller {
 
-  def create(dataSetName: String) = Action.async {
+  def create(dataSetName: String) = Action {
+    implicit request => {
+      val tracing = skeletonTracingService.create()
+      Ok(Json.toJson(tracing))
+    }
+  }
+
+  def update(tracingId: String) = Action.async(validateJson[List[SkeletonUpdateAction]]) {
     implicit request => {
       for {
-        dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound")
+        tracing <- skeletonTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+        _ <- skeletonTracingService.update(tracing, request.body)
       } yield {
-        val tracing = skeletonTracingService.create(dataSource)
-        Ok(Json.toJson(tracing))
+        Ok
       }
     }
   }
 
-  def info(annotationId: String) = Action {
+  def download(tracingId: String, version: Long) = Action.async {
     implicit request => {
-      val tracing = skeletonTracingService.findSkeletonTracing(annotationId)
-      val tracingInfo = skeletonTracingService.info(tracing)
-      Ok(tracingInfo)
+      for {
+        tracing <- skeletonTracingService.find(tracingId, Some(version)) ?~> Messages("tracing.notFound")
+        serialized <- skeletonTracingService.download(tracing)
+      } yield {
+        Ok(serialized)
+      }
     }
   }
 
-  def update(annotationId: String) = Action(validateJson[List[SkeletonUpdateAction]]) {
-    implicit request => {
-      val tracing = skeletonTracingService.findSkeletonTracing(annotationId)
-      skeletonTracingService.update(tracing, request.body)
-      Ok
-    }
-  }
-
-  def download(annotationId: String, version: Long) = Action {
-    implicit request => {
-      Ok
-    }
-  }
-
-  def duplicate(annotationId: String, version: Long) = Action {
+  def duplicate(tracingId: String, version: Long) = Action {
     implicit request => {
       Ok
     }

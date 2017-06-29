@@ -1,5 +1,6 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
+import com.scalableminds.braingames.datastore.tracings.Tracing
 import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
 import com.scalableminds.util.image.Color
 import play.api.libs.json.Json
@@ -7,7 +8,8 @@ import play.api.libs.json.Json
 /**
   * Created by f on 15.06.17.
   */
-case class SkeletonTracing(name: String,
+case class SkeletonTracing(id: String,
+                           name: String,
                            dataSetName: String,
                            trees: List[Tree],
                            timestamp: Long,
@@ -15,7 +17,7 @@ case class SkeletonTracing(name: String,
                            scale: Scale,
                            editPosition: Option[Point3D],
                            editRotation: Option[Vector3D],
-                           zoomLevel: Option[Double]) {
+                           zoomLevel: Option[Double]) extends Tracing {
 
   def addTree(newTree: Tree): SkeletonTracing =
     this.copy(trees = newTree :: this.trees)

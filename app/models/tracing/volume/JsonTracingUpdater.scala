@@ -53,7 +53,7 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
         editPosition = editPosition getOrElse t.editPosition,
         editRotation = editRotation getOrElse t.editRotation,
         zoomLevel = zoomLevel getOrElse t.zoomLevel,
-        nextCellId = nextCellId getOrElse t.nextCellId)
+        nextCellId = nextCellId)
       VolumeTracingDAO.update(t._id, updated).map(_ => updated)
     }
   }

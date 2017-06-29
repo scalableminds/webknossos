@@ -305,7 +305,7 @@ export class OxalisModel {
       const existingLayer = layers[existingLayerIndex];
 
       if (existingLayer != null) {
-        layers[existingLayerIndex] = update(existingLayer, { $merge: userLayer });
+        layers[existingLayerIndex] = update(userLayer, { $merge: { mappings: existingLayer.mappings } });
       } else {
         layers.push(userLayer);
       }

@@ -60,15 +60,7 @@ object AnnotationContent extends FoxImplicits {
 
   import AnnotationSettings._
 
-  implicit val dataLayerWrites: Writes[DataLayer] =
-    ((__ \ 'name).write[String] and
-      (__ \ 'category).write[Category.Value] and
-      (__ \ 'maxCoordinates).write[BoundingBox] and
-      (__ \ 'resolutions).write[Set[Int]] and
-      (__ \ 'elementClass).write[ElementClass.Value] and
-      (__ \ 'mappings).write[List[String]]) (l =>
-      (l.name, l.category, l.boundingBox, l.resolutions, l.elementClass, Nil))
-  // TODO jfrohnhofen
+  import DataLayer.dataLayerLikeFormat
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and

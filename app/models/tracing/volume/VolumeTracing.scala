@@ -33,7 +33,7 @@ object VolumeTracingLayer {
   implicit val volumeTracingLayerFormat = Json.format[VolumeTracingLayer]
 }
 
-case class VolumeTracingContent(dataLayer: VolumeTracingLayer, fallbackLayerName: Option[String])
+case class VolumeTracingContent(dataLayer: VolumeTracingLayer, fallbackLayerName: Option[String], firstCellId: Long)
 
 object VolumeTracingContent {
   implicit val volumeTracingContentFormat = Json.format[VolumeTracingContent]
@@ -47,7 +47,7 @@ case class VolumeTracing(
                           editPosition: Point3D = Point3D(0, 0, 0),
                           editRotation: Vector3D = Vector3D(0, 0, 0),
                           zoomLevel: Double,
-                          nextCellId: Long = 1,
+                          nextCellId: Option[Long] = None,
                           boundingBox: Option[BoundingBox] = None,
                           settings: AnnotationSettings = AnnotationSettings.volumeDefault,
                           _id: BSONObjectID = BSONObjectID.generate)
@@ -127,12 +127,13 @@ case class VolumeTracing(
   def downloadFileExtension: String = ".zip"
 
   override def contentData = {
-    val layer = AnnotationContent.dataLayerWrites.writes(dataStoreContent.dataLayer).as[JsObject] ++
+    val layer = Json.toJson(dataStoreContent.dataLayer).as[JsObject] ++
       Json.obj("fallback" -> Json.obj("layerName" -> dataStoreContent.fallbackLayerName))
+    val nextCell: Long = nextCellId.getOrElse(dataStoreContent.firstCellId)
     Fox.successful(Json.obj(
       "activeCell" -> activeCellId,
       "customLayers" -> List(layer),
-      "nextCell" -> nextCellId,
+      "nextCell" -> nextCell,
       "zoomLevel" -> zoomLevel
     ))
   }

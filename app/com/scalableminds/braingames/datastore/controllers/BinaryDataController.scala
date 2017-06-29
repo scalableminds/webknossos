@@ -8,15 +8,16 @@ import java.util.Base64
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.api.BinaryDataService
-import com.scalableminds.braingames.binary.models._
-import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSource, DataSourceId}
-import com.scalableminds.braingames.binary.models.requests.{DataServiceRequest, DataServiceRequestSettings}
 import com.scalableminds.braingames.binary.helpers.{DataSourceRepository, ThumbnailHelpers}
+import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSource, SegmentationLayer}
+import com.scalableminds.braingames.binary.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.braingames.datastore.models.DataRequestCollection._
 import com.scalableminds.braingames.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest}
-import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracing, VolumeTracingService}
+import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
+import net.liftweb.util.Helpers.tryo
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
@@ -199,6 +200,27 @@ class BinaryDataController @Inject()(
       }
   }
 
+  /**
+    * Handles mapping requests.
+    */
+  def requestMapping(
+                      dataSetName: String,
+                      dataLayerName: String,
+                      mappingName: String
+                    ) = TokenSecuredAction(dataSetName, dataLayerName).async {
+    implicit request =>
+      AllowRemoteOrigin {
+        for {
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
+          mappingRequest = DataServiceMappingRequest(dataSource, segmentationLayer, mappingName)
+          result <- binaryDataService.handleMappingRequest(mappingRequest)
+        } yield {
+          Ok(result)
+        }
+      }
+  }
+
   private def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
     dataSource.getDataLayer(dataLayerName).toFox.orElse(
       volumeTracingService.find(dataLayerName).map(_.dataLayerWithFallback(dataSource)))
@@ -220,7 +242,7 @@ class BinaryDataController @Inject()(
                          ): Fox[Array[Byte]] = {
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-      requests = dataRequests.map(r => DataServiceRequest(dataSource, dataLayer, r.cuboid, r.settings))
+      requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid, r.settings))
       data <- binaryDataService.handleDataRequests(requests)
     } yield {
       data

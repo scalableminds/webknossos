@@ -5,7 +5,7 @@ package com.scalableminds.braingames.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
-import com.scalableminds.braingames.datastore.services.{TracingContentService, WebKnossosServer}
+import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings.skeleton.{SkeletonTracingService, SkeletonUpdateAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
@@ -17,8 +17,7 @@ class SkeletonTracingController @Inject()(
                                          webKnossosServer: WebKnossosServer,
                                          skeletonTracingService: SkeletonTracingService,
                                          dataSourceRepository: DataSourceRepository,
-                                         val messagesApi: MessagesApi,
-                                         tracingRepository: TracingContentService
+                                         val messagesApi: MessagesApi
                                        ) extends Controller {
 
   def create(dataSetName: String) = Action.async {

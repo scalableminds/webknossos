@@ -3,7 +3,10 @@
  */
 package com.scalableminds.braingames.binary.store.kvstore
 
+import java.nio.file.Path
+
 import net.liftweb.common.Box
+import play.api.libs.json.{Reads, Writes}
 
 import scala.util.Try
 
@@ -12,6 +15,7 @@ case class VersionedKey(key: String, version: Long) {
 }
 
 object VersionedKey {
+
   def apply(key: String): Option[VersionedKey] = {
     val parts = key.split('@')
     for {
@@ -24,12 +28,13 @@ object VersionedKey {
   }
 }
 
-case class VersionedKeyValuePair(versionedKey: VersionedKey, value: Array[Byte]) {
+case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
   def key = versionedKey.key
   def version = versionedKey.version
 }
 
-class VersionFilterIterator(it: Iterator[KeyValuePair], version: Option[Long]) extends Iterator[VersionedKeyValuePair] {
+class VersionFilterIterator[T](it: Iterator[KeyValuePair[T]], version: Option[Long]) extends Iterator[VersionedKeyValuePair[T]] {
+
   private var currentKey: Option[String] = None
 
   private var versionedIterator = it.flatMap(kv => VersionedKey(kv.key).map(VersionedKeyValuePair(_, kv.value)))
@@ -41,7 +46,7 @@ class VersionFilterIterator(it: Iterator[KeyValuePair], version: Option[Long]) e
     versionedIterator.hasNext
   }
 
-  override def next(): VersionedKeyValuePair = {
+  override def next(): VersionedKeyValuePair[T] = {
     val value = versionedIterator.next()
     currentKey = Some(value.key)
     value
@@ -49,14 +54,24 @@ class VersionFilterIterator(it: Iterator[KeyValuePair], version: Option[Long]) e
 }
 
 class VersionedKeyValueStore(underlying: KeyValueStore) {
-  def get(key: String, version: Option[Long] = None): Box[VersionedKeyValuePair] =
+
+  def get(key: String, version: Option[Long] = None): Box[VersionedKeyValuePair[Array[Byte]]] =
     scan(key, Some(key), version).toStream.headOption
 
-  def scan(key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair] =
+  def scan(key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] =
     new VersionFilterIterator(underlying.scan(key, prefix), version)
 
   def put(key: String, version: Long, value: Array[Byte]): Box[Unit] =
     underlying.put(VersionedKey(key, version).toString, value)
 
-  def backup = underlying.backup
+  def backup(backupDir: Path): Box[BackupInfo] = underlying.backup(backupDir)
+
+  def getJson[T : Reads](key: String, version: Option[Long] = None): Box[VersionedKeyValuePair[T]] =
+    scanJson(key, Some(key), version).toStream.headOption
+
+  def scanJson[T : Reads](key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] =
+    new VersionFilterIterator(underlying.scanJson(key, prefix), version)
+
+  def putJson[T : Writes](key: String, version: Long, value: T): Box[Unit] =
+    underlying.putJson(VersionedKey(key, version).toString, value)
 }

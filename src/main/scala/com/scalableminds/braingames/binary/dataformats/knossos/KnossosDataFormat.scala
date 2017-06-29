@@ -8,7 +8,7 @@ import java.nio.file.Path
 
 import com.scalableminds.braingames.binary.`import`.{DataSourceImportReport, DataSourceImporter}
 import com.scalableminds.braingames.binary.models.datasource.{Category, DataLayer, ElementClass, SegmentationLayer}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ExtendedTypes._
 import net.liftweb.common.{Box, Empty, Full}
@@ -52,7 +52,7 @@ object KnossosDataFormat extends DataSourceImporter {
       PathUtils.listDirectories(path).map(_.exists(p => p.getFileName.toString.toIntOpt.isDefined)).getOrElse(false)
 
     PathUtils.listDirectoriesRecursive(baseDir, 2, sectionDirFilter).map { sectionDirs =>
-      sectionDirs.flatMap { sectionDir =>
+      sectionDirs.map { sectionDir =>
         val sectionName = baseDir.relativize(sectionDir).toString
         val previousSection = previous.flatMap(_.find(_.name == sectionName))
         exploreSection(sectionName, sectionDir, previousSection)
@@ -60,14 +60,9 @@ object KnossosDataFormat extends DataSourceImporter {
     }
   }
 
-  private def exploreSection(name: String, baseDir: Path, previous: Option[KnossosSection]): Box[KnossosSection] = {
-
-    def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
-
-    PathUtils.listDirectories(baseDir, resolutionDirFilter).map { resolutionDirs =>
-      val resolutions = resolutionDirs.flatMap(_.getFileName.toString.toIntOpt).toSet
-      KnossosSection(name, resolutions, BoundingBox(Point3D(0,0,0),0,0,0))
-    }
+  private def exploreSection(name: String, baseDir: Path, previous: Option[KnossosSection]): KnossosSection = {
+    val resolutions = exploreResolutions(baseDir)
+    KnossosSection(name, resolutions, BoundingBox.empty)
   }
 
   private def guessElementClass(baseDir: Path)(implicit report: DataSourceImportReport[Path]): Box[ElementClass.Value] = {

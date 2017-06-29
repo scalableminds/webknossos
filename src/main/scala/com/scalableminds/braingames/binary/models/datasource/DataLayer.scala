@@ -3,8 +3,9 @@
  */
 package com.scalableminds.braingames.binary.models.datasource
 
-import com.scalableminds.braingames.binary.dataformats.BucketProvider
+import com.scalableminds.braingames.binary.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.braingames.binary.dataformats.knossos.{KnossosDataLayer, KnossosSegmentationLayer}
+import com.scalableminds.braingames.binary.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.util.geometry.BoundingBox
 import play.api.libs.json._
@@ -115,8 +116,8 @@ object DataLayer {
         layer <- (dataFormat, category) match {
           case (DataFormat.knossos, Category.segmentation) => json.validate[KnossosSegmentationLayer]
           case (DataFormat.knossos, _) => json.validate[KnossosDataLayer]
-          // case (DataFormat.wkw, Category.segmentation) => json.validate[WKWSegmentationLayer]
-          // case (DataFormat.wkw, _) => json.validate[WkwDataLayer]
+          case (DataFormat.wkw, Category.segmentation) => json.validate[WKWSegmentationLayer]
+          case (DataFormat.wkw, _) => json.validate[WKWDataLayer]
         }
       } yield {
         layer
@@ -126,7 +127,9 @@ object DataLayer {
     override def writes(layer: DataLayer): JsValue = {
       (layer match {
         case l: KnossosDataLayer => KnossosDataLayer.knossosDataLayerFormat.writes(l)
-        case l: KnossosSegmentationLayer => KnossosSegmentationLayer.knossosSegmentationDataLayerFormat.writes(l)
+        case l: KnossosSegmentationLayer => KnossosSegmentationLayer.knossosSegmentationLayerFormat.writes(l)
+        case l: WKWDataLayer => WKWDataLayer.wkwDataLayerFormat.writes(l)
+        case l: WKWSegmentationLayer => WKWSegmentationLayer.wkwSegmentationLayerFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
         "dataFormat" -> layer.dataFormat
@@ -137,9 +140,9 @@ object DataLayer {
 
 trait SegmentationLayer extends DataLayer with SegmentationLayerLike {
 
-  final val category = Category.segmentation
+  val category = Category.segmentation
 
-  def mappingLoader: Int
+  lazy val mappingProvider: MappingProvider = new MappingProvider(this)
 }
 
 object SegmentationLayer {

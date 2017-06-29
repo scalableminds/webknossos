@@ -12,7 +12,7 @@ import com.newrelic.api.agent.NewRelic
 import com.scalableminds.braingames.binary.dataformats.{BucketProvider, Cube}
 import com.scalableminds.braingames.binary.models._
 import com.scalableminds.braingames.binary.models.datasource.DataLayer
-import com.scalableminds.braingames.binary.models.requests.ReadInstruction
+import com.scalableminds.braingames.binary.models.requests.DataReadInstruction
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedRandomAccessFile
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -122,7 +122,7 @@ object KnossosCube {
 
 class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with FoxImplicits with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: ReadInstruction): Fox[KnossosCube] = {
+  override def loadFromUnderlying(readInstruction: DataReadInstruction): Fox[KnossosCube] = {
     for {
       section <- layer.sections.find(_.doesContainCube(readInstruction.cube))
       knossosFile <- loadKnossosFile(readInstruction, section)
@@ -131,7 +131,7 @@ class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with Fox
     }
   }
 
-  private def knossosFilePath(readInstruction: ReadInstruction, section: KnossosSection): Path = {
+  private def knossosFilePath(readInstruction: DataReadInstruction, section: KnossosSection): Path = {
     readInstruction.baseDir
       .resolve(readInstruction.dataSource.id.team)
       .resolve(readInstruction.dataSource.id.name)
@@ -143,7 +143,7 @@ class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with Fox
       .resolve("z%04d".format(readInstruction.cube.z))
   }
 
-  private def loadKnossosFile(readInstruction: ReadInstruction, section: KnossosSection): Box[RandomAccessFile] = {
+  private def loadKnossosFile(readInstruction: DataReadInstruction, section: KnossosSection): Box[RandomAccessFile] = {
     val dataDirectory = knossosFilePath(readInstruction, section)
     val knossosFileFilter = PathUtils.fileExtensionFilter(KnossosDataFormat.dataFileExtension) _
     PathUtils.listFiles(dataDirectory, knossosFileFilter).flatMap(_.headOption).flatMap { file =>

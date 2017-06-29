@@ -21,13 +21,7 @@ case class DataServiceDataRequest(
                                    settings: DataServiceRequestSettings
                                  )
 
-case class DataServiceMappingRequest(
-                                      dataSource: DataSource,
-                                      dataLayer: SegmentationLayer,
-                                      mapping: String
-                                    )
-
-case class ReadInstruction(
+case class DataReadInstruction(
                             baseDir: Path,
                             dataSource: DataSource,
                             dataLayer: DataLayer,
@@ -35,3 +29,15 @@ case class ReadInstruction(
                           ) {
   val cube = bucket.toCube(dataLayer.lengthOfUnderlyingCubes)
 }
+
+case class DataServiceMappingRequest(
+                                      dataSource: DataSource,
+                                      dataLayer: SegmentationLayer,
+                                      mapping: String
+                                    )
+
+case class MappingReadInstruction(
+                                   baseDir: Path,
+                                   dataSource: DataSource,
+                                   mapping: String
+                                 )

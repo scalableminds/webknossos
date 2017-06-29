@@ -5,7 +5,7 @@ package com.scalableminds.braingames.binary.storage
 
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.braingames.binary.dataformats.Cube
-import com.scalableminds.braingames.binary.models.requests.ReadInstruction
+import com.scalableminds.braingames.binary.models.requests.DataReadInstruction
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -24,7 +24,7 @@ case class CachedCube(
 
 object CachedCube {
 
-  def from(loadInstruction: ReadInstruction): CachedCube =
+  def from(loadInstruction: DataReadInstruction): CachedCube =
     CachedCube(
       loadInstruction.dataSource.id.team,
       loadInstruction.dataSource.id.name,
@@ -37,7 +37,7 @@ object CachedCube {
 
 class FakeDataCubeCache extends FoxImplicits {
 
-  def withCache[T](cubeReadInstruction: ReadInstruction)(loadF: ReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] =
+  def withCache[T](cubeReadInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] =
     loadF(cubeReadInstruction).flatMap(f(_).toFox)
 }
 
@@ -47,7 +47,7 @@ class DataCubeCache(val maxEntries: Int) extends FakeDataCubeCache with LRUConcu
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  override def withCache[T](readInstruction: ReadInstruction)(loadF: ReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] = {
+  override def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] = {
     val cachedCubeInfo = CachedCube.from(readInstruction)
 
     get(cachedCubeInfo) match {

@@ -16,6 +16,7 @@ binarydata/
 userBinaryData/
 binaryData
 tracingData/
+backup/
 data/
 boot/
 .idea/

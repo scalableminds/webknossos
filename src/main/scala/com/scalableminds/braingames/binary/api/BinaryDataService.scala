@@ -7,7 +7,7 @@ import java.nio.file.Paths
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.models.BucketPosition
-import com.scalableminds.braingames.binary.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, ReadInstruction}
+import com.scalableminds.braingames.binary.models.requests.{DataReadInstruction, DataServiceDataRequest, DataServiceMappingRequest, MappingReadInstruction}
 import com.scalableminds.braingames.binary.storage.DataCubeCache
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -43,7 +43,8 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
   }
 
   def handleMappingRequest(request: DataServiceMappingRequest): Fox[Array[Byte]] = {
-    Fox.successful(Array.emptyByteArray)
+    val readInstruction = MappingReadInstruction(dataBaseDir, request.dataSource, request.mapping)
+    request.dataLayer.mappingProvider.load(readInstruction)
   }
 
   private def getDataForRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
@@ -80,7 +81,7 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
     }
 
     if (request.dataLayer.doesContainBucket(bucket)) {
-      val readInstruction = ReadInstruction(
+      val readInstruction = DataReadInstruction(
         dataBaseDir,
         request.dataSource,
         request.dataLayer,

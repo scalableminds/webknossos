@@ -5,11 +5,14 @@ package com.scalableminds.braingames.binary.`import`
 
 import java.nio.file.Path
 
+import com.scalableminds.braingames.binary.dataformats.MappingProvider
+import com.scalableminds.braingames.binary.dataformats.knossos.KnossosSection
 import com.scalableminds.braingames.binary.models.datasource._
-import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.io.PathUtils
 import net.liftweb.common.Box
 import org.apache.commons.io.FilenameUtils
+import com.scalableminds.util.tools.ExtendedTypes._
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -49,8 +52,9 @@ trait DataSourceImporter {
     layerName match {
       case ColorRx() =>
         Category.color
-      case MaskRx() =>
-        Category.mask
+      // TODO enable as soon as client has mask support
+      //case MaskRx() =>
+      //  Category.mask
       case SegmentationRx() =>
         Category.segmentation
       case _ =>
@@ -60,8 +64,17 @@ trait DataSourceImporter {
   }
 
   protected def exploreMappings(baseDir: Path): Set[String] = {
-    PathUtils.listFiles(baseDir.resolve("mappings"), PathUtils.fileExtensionFilter("json")).map {
+    PathUtils.listFiles(
+      baseDir.resolve(MappingProvider.mappingsDir),
+      PathUtils.fileExtensionFilter(MappingProvider.mappingFileExtension)).map {
       paths => paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
+    }.getOrElse(Nil).toSet
+  }
+
+  protected def exploreResolutions(baseDir: Path): Set[Int] = {
+    def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
+    PathUtils.listDirectories(baseDir, resolutionDirFilter).map{
+      _.flatMap(_.getFileName.toString.toIntOpt)
     }.getOrElse(Nil).toSet
   }
 }

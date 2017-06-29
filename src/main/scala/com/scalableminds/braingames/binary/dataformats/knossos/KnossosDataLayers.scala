@@ -51,11 +51,8 @@ case class KnossosSegmentationLayer(
                                      elementClass: ElementClass.Value,
                                      mappings: Set[String],
                                      largestSegmentId: Long
-                                   ) extends SegmentationLayer with KnossosLayer {
-
-  lazy val mappingLoader = 123
-}
+                                   ) extends SegmentationLayer with KnossosLayer
 
 object KnossosSegmentationLayer {
-  implicit val knossosSegmentationDataLayerFormat = Json.format[KnossosSegmentationLayer]
+  implicit val knossosSegmentationLayerFormat = Json.format[KnossosSegmentationLayer]
 }

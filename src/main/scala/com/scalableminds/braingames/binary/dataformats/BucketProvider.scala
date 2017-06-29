@@ -5,7 +5,7 @@ package com.scalableminds.braingames.binary.dataformats
 
 import java.util.concurrent.TimeoutException
 
-import com.scalableminds.braingames.binary.models.requests.ReadInstruction
+import com.scalableminds.braingames.binary.models.requests.DataReadInstruction
 import com.scalableminds.braingames.binary.storage.DataCubeCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -17,11 +17,11 @@ import scala.concurrent.{Await, Future}
 
 trait BucketProvider extends FoxImplicits with LazyLogging {
 
-  def loadFromUnderlying(readInstruction: ReadInstruction): Fox[Cube] = Fox.empty
+  def loadFromUnderlying(readInstruction: DataReadInstruction): Fox[Cube] = Fox.empty
 
-  def load(readInstruction: ReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
+  def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
 
-    def loadFromUnderlyingWithTimeout(readInstruction: ReadInstruction): Fox[Cube] = {
+    def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction): Fox[Cube] = {
       Future {
         Await.result(loadFromUnderlying(readInstruction).futureBox, timeout)
       }.recover {

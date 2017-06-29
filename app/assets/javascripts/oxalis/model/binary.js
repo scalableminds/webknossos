@@ -70,7 +70,7 @@ class Binary {
 
     this.targetBitDepth = this.category === "color" ? this.layer.bitDepth : 8;
 
-    const { topLeft, width, height, depth } = this.layer.maxCoordinates;
+    const { topLeft, width, height, depth } = this.layer.boundingBox;
     this.lowerBoundary = this.layer.lowerBoundary = topLeft;
     this.upperBoundary = this.layer.upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
 

@@ -96,7 +96,7 @@ export type ElementClassType = "uint8" | "uint16" | "uint32";
 export type DataLayerType = {
   +name: string,
   +category: CategoryType,
-  +maxCoordinates: BoundingBoxObjectType,
+  +boundingBox: BoundingBoxObjectType,
   +resolutions: Array<number>,
   // +fallback: any,
   +elementClass: ElementClassType,

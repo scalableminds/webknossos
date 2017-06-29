@@ -64,7 +64,7 @@ export type VolumeContentDataType = {
   activeCell: null | number;
   nextCell: ?number,
   customLayers: Array<Object>;
-  maxCoordinates: BoundingBoxObjectType;
+  boundingBox: BoundingBoxObjectType;
   name: string;
   zoomLevel: number;
 };

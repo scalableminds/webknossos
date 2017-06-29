@@ -3,7 +3,7 @@ package com.scalableminds.braingames.datastore.tracings.skeleton
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.util.image.Color
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements._
-import play.api.libs.json.Json
+import play.api.libs.json._
 
 
 trait SkeletonUpdateAction {
@@ -79,6 +79,8 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: Op
 
 
 
+
+
 object CreateTreeSkeletonAction {implicit val jsonFormat = Json.format[CreateTreeSkeletonAction]}
 object DeleteTreeSkeletonAction {implicit val jsonFormat = Json.format[DeleteTreeSkeletonAction]}
 object UpdateTreeSkeletonAction {implicit val jsonFormat = Json.format[UpdateTreeSkeletonAction]}
@@ -90,3 +92,37 @@ object CreateNodeSkeletonAction {implicit val jsonFormat = Json.format[CreateNod
 object DeleteNodeSkeletonAction {implicit val jsonFormat = Json.format[DeleteNodeSkeletonAction]}
 object UpdateNodeSkeletonAction {implicit val jsonFormat = Json.format[UpdateNodeSkeletonAction]}
 object UpdateTracingSkeletonAction {implicit val jsonFormat = Json.format[UpdateTracingSkeletonAction]}
+
+
+
+object SkeletonUpdateAction {
+
+  implicit object SkeletonUpdateActionReads extends Reads[SkeletonUpdateAction] {
+    override def reads(json: JsValue): JsResult[SkeletonUpdateAction] = {
+      val jsonValue = (json \ "value").as[JsObject]
+      (json \ "action").as[String] match {
+        case "createTree" => deserialize[CreateTreeSkeletonAction](jsonValue)
+        case "deleteTree" => deserialize[DeleteTreeSkeletonAction](jsonValue)
+        case "updateTree" => deserialize[UpdateTreeSkeletonAction](jsonValue)
+        case "mergeTree" => deserialize[MergeTreeSkeletonAction](jsonValue)
+        case "moveTreeComponent" => deserialize[MoveTreeComponentSkeletonAction](jsonValue)
+        case "createNode" => deserialize[CreateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
+        case "deleteNode" => deserialize[DeleteNodeSkeletonAction](jsonValue)
+        case "updateNode" => deserialize[UpdateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
+        case "createEdge" => deserialize[CreateEdgeSkeletonAction](jsonValue)
+        case "deleteEdge" => deserialize[DeleteEdgeSkeletonAction](jsonValue)
+        case "updateTracing" => deserialize[UpdateTracingSkeletonAction](jsonValue)
+      }
+    }
+
+    def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(implicit tjs: Reads[T]) = {
+      if (shouldTransformPositions)
+        json.transform(positionTransform).get.validate[T]
+      else
+        json.validate[T]
+    }
+
+    private val positionTransform = (JsPath \ 'position).json.update(
+      JsPath.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
+  }
+}

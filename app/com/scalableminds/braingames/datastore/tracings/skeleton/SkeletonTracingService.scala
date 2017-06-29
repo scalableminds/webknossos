@@ -1,11 +1,9 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
 import com.google.inject.Inject
-import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.datasource.DataSource
 import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
-import com.scalableminds.braingames.datastore.tracings.volume.{LabelVolumeAction, VolumeTracing, VolumeUpdateAction}
 import com.scalableminds.util.geometry.Scale
 import net.liftweb.common.{Box, Full}
 import play.api.libs.json.JsValue
@@ -16,20 +14,20 @@ import play.api.libs.json.JsValue
 class SkeletonTracingService @Inject()(
                                         implicit val tracingDataStore: VersionedKeyValueStore
                                       ) {
-  var dummyTracing: SkeletonTracing = null
+
+  var dummyTracing: SkeletonTracing = SkeletonTracing(name = "DummyTracing",
+    dataSetName = "DummyDatasetName",
+    trees = List(),
+    timestamp = System.currentTimeMillis(),
+    activeNodeId = None,
+    scale = new Scale(1,1,1),
+    editPosition = None,
+    editRotation = None,
+    zoomLevel = None)
 
   def findSkeletonTracing(annotationId: String): SkeletonTracing = dummyTracing
 
   def create(dataSource: DataSource): SkeletonTracing = {
-    dummyTracing = SkeletonTracing(name = "DummyTracing",
-      dataSetName = "DummyDatasetName",
-      trees = List(),
-      timestamp = System.currentTimeMillis(),
-      activeNodeId = None,
-      scale = new Scale(1,1,1),
-      editPosition = None,
-      editRotation = None,
-      zoomLevel = None)
     dummyTracing
   }
 

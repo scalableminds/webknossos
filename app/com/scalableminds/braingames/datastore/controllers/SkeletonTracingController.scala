@@ -6,8 +6,7 @@ package com.scalableminds.braingames.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.{TracingContentService, WebKnossosServer}
-import com.scalableminds.braingames.datastore.tracings.skeleton.{SkeletonTracingService, SkeletonUpdateAction, SkeletonUpdateActionsParser}
-import com.scalableminds.braingames.datastore.tracings.volume.VolumeUpdateAction
+import com.scalableminds.braingames.datastore.tracings.skeleton.{SkeletonTracingService, SkeletonUpdateAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -41,11 +40,10 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def update(annotationId: String) = Action {
+  def update(annotationId: String) = Action(validateJson[List[SkeletonUpdateAction]]) {
     implicit request => {
       val tracing = skeletonTracingService.findSkeletonTracing(annotationId)
-      val updateActions = SkeletonUpdateActionsParser.parseList(request.body.asJson)
-      skeletonTracingService.update(tracing, updateActions)
+      skeletonTracingService.update(tracing, request.body)
       Ok
     }
   }

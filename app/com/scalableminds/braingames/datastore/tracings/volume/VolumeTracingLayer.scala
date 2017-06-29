@@ -20,8 +20,10 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
     with VolumeTracingBucketHelper
     with FoxImplicits {
 
-  override def load(readInstruction: ReadInstruction, cache: DataCubeCache, tracingDataStore: VersionedKeyValueStore, timeout: FiniteDuration): Fox[Array[Byte]] = {
-    loadBucket(readInstruction.dataLayer.name, readInstruction.bucket)(tracingDataStore)
+  val tracingDataStore: VersionedKeyValueStore = layer.tracingDataStore
+
+  override def load(readInstruction: ReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
+    loadBucket(readInstruction.dataLayer.name, readInstruction.bucket)
   }
 }
 
@@ -32,7 +34,7 @@ case class VolumeTracingLayer(
                                largestSegmentId: Long,
                                resolutions: Set[Int] = Set(1),
                                mappings: Set[String] = Set.empty
-                             ) extends SegmentationLayer {
+                             )(implicit val tracingDataStore: VersionedKeyValueStore) extends SegmentationLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
@@ -51,5 +53,5 @@ object VolumeTracingLayer {
 
   val defaultLargestSegmentId = 1
 
-  implicit val volumeTracingLayerFormat = Json.format[VolumeTracingLayer]
+  implicit def volumeTracingLayerFormat(implicit tracingDataStore: VersionedKeyValueStore) = Json.format[VolumeTracingLayer]
 }

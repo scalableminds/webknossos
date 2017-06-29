@@ -4,20 +4,21 @@
 package com.scalableminds.braingames.datastore.controllers
 
 import com.google.inject.Inject
+import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
-import com.scalableminds.braingames.datastore.services.{TracingContentService, WebKnossosServer}
+import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
 import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class VolumeTracingController @Inject()(
-                                         webKnossosServer: WebKnossosServer,
                                          volumeTracingService: VolumeTracingService,
                                          dataSourceRepository: DataSourceRepository,
-                                         tracingRepository: TracingContentService,
+                                         @Named("tracing-data-store") implicit val tracingDataStore: VersionedKeyValueStore, // TODO remove eventually
                                          val messagesApi: MessagesApi
                                        ) extends Controller {
 
@@ -32,21 +33,10 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def info(annotationId: String) = Action.async {
+  def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateAction]]) {
     implicit request => {
       for {
-        tracing <- tracingRepository.findVolumeTracing(annotationId) ?~> Messages("tracing.notFound")
-        tracingInfo <- volumeTracingService.info(tracing)
-      } yield {
-        Ok(tracingInfo)
-      }
-    }
-  }
-
-  def update(annotationId: String) = Action.async(validateJson[List[VolumeUpdateAction]]) {
-    implicit request => {
-      for {
-        tracing <- tracingRepository.findVolumeTracing(annotationId) ?~> Messages("tracing.notFound")
+        tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
         _ <- volumeTracingService.update(tracing, request.body)
       } yield {
         Ok
@@ -54,15 +44,11 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def download(annotationId: String, version: Long) = Action {
+  def download(tracingId: String) = Action.async {
     implicit request => {
-      Ok
-    }
-  }
-
-  def duplicate(annotationId: String, version: Long) = Action {
-    implicit request => {
-      Ok
+      //tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+      //volumeTracingService.download(tracing)
+      Future.successful(Ok)
     }
   }
 }

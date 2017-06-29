@@ -1,8 +1,8 @@
 package com.scalableminds.braingames.datastore.tracings.volume
 
-import com.scalableminds.braingames.binary.dataformats.BucketProvider
+import com.scalableminds.braingames.binary.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.braingames.binary.models.datasource._
-import com.scalableminds.braingames.binary.models.requests.ReadInstruction
+import com.scalableminds.braingames.binary.models.requests.DataReadInstruction
 import com.scalableminds.braingames.binary.storage.DataCubeCache
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
@@ -14,7 +14,7 @@ import scala.concurrent.duration.FiniteDuration
 
 class FallbackBucketProvider(primary: DataLayer, fallback: DataLayer) extends BucketProvider {
 
-  override def load(readInstruction: ReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
+  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
     val primaryReadInstruction = readInstruction.copy(dataLayer = primary)
     primary.bucketProvider.load(primaryReadInstruction, cache, timeout).futureBox.flatMap {
       case Full(data) =>
@@ -40,7 +40,7 @@ class FallbackLayerAdapter(primary: SegmentationLayer, fallback: SegmentationLay
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
-  val lengthOfUnderlyingCubes: Int = lengthOfProvidedBuckets
+  val lengthOfUnderlyingCubes: Int = fallback.lengthOfUnderlyingCubes
 
   val largestSegmentId: Long = math.max(primary.largestSegmentId, fallback.largestSegmentId)
 
@@ -48,5 +48,5 @@ class FallbackLayerAdapter(primary: SegmentationLayer, fallback: SegmentationLay
 
   lazy val bucketProvider: BucketProvider = new FallbackBucketProvider(primary, fallback)
 
-  lazy val mappingLoader: Int = primary.mappingLoader
+  override lazy val mappingProvider: MappingProvider = fallback.mappingProvider
 }

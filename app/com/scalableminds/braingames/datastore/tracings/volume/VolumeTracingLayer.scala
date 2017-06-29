@@ -4,8 +4,8 @@
 package com.scalableminds.braingames.datastore.tracings.volume
 
 import com.scalableminds.braingames.binary.dataformats.BucketProvider
-import com.scalableminds.braingames.binary.models.datasource.{DataFormat, ElementClass, SegmentationLayer}
-import com.scalableminds.braingames.binary.models.requests.ReadInstruction
+import com.scalableminds.braingames.binary.models.datasource.{Category, DataFormat, ElementClass, SegmentationLayer}
+import com.scalableminds.braingames.binary.models.requests.DataReadInstruction
 import com.scalableminds.braingames.binary.storage.DataCubeCache
 import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
 import com.scalableminds.util.geometry.BoundingBox
@@ -22,7 +22,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
 
   val tracingDataStore: VersionedKeyValueStore = layer.tracingDataStore
 
-  override def load(readInstruction: ReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
+  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
     loadBucket(readInstruction.dataLayer.name, readInstruction.bucket)
   }
 }
@@ -33,7 +33,8 @@ case class VolumeTracingLayer(
                                elementClass: ElementClass.Value,
                                largestSegmentId: Long,
                                resolutions: Set[Int] = Set(1),
-                               mappings: Set[String] = Set.empty
+                               mappings: Set[String] = Set.empty,
+                               override val category: Category.Value = Category.segmentation
                              )(implicit val tracingDataStore: VersionedKeyValueStore) extends SegmentationLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
@@ -43,8 +44,6 @@ case class VolumeTracingLayer(
   val nextSegmentationId: Long = largestSegmentId + 1
 
   val bucketProvider: BucketProvider = new VolumeTracingBucketProvider(this)
-
-  val mappingLoader = 0
 }
 
 object VolumeTracingLayer {

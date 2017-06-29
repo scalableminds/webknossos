@@ -2,7 +2,7 @@ package models.tracing.volume
 
 import javax.xml.stream.XMLStreamWriter
 
-import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracing => VolumeTracingContent}
+import com.scalableminds.braingames.binary.models.datasource.{Category, DataLayerLike, ElementClass}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, GlobalDBAccess}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -18,6 +18,26 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsValue, Json, _}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+
+case class VolumeTracingLayer(
+                               name: String,
+                               boundingBox: BoundingBox,
+                               elementClass: ElementClass.Value,
+                               largestSegmentId: Long,
+                               resolutions: Set[Int] = Set(1),
+                               mappings: Set[String] = Set.empty) extends DataLayerLike {
+  val category: Category.Value = Category.segmentation
+}
+
+object VolumeTracingLayer {
+  implicit val volumeTracingLayerFormat = Json.format[VolumeTracingLayer]
+}
+
+case class VolumeTracingContent(dataLayer: VolumeTracingLayer, fallbackLayerName: Option[String])
+
+object VolumeTracingContent {
+  implicit val volumeTracingContentFormat = Json.format[VolumeTracingContent]
+}
 
 case class VolumeTracing(
                           dataSetName: String,
@@ -107,7 +127,7 @@ case class VolumeTracing(
   def downloadFileExtension: String = ".zip"
 
   override def contentData = {
-    val layer = AnnotationContent.dataLayerWrites.writes(dataStoreContent.dataLayer.copy(name = id)).as[JsObject] ++
+    val layer = AnnotationContent.dataLayerWrites.writes(dataStoreContent.dataLayer).as[JsObject] ++
       Json.obj("fallback" -> Json.obj("layerName" -> dataStoreContent.fallbackLayerName))
     Fox.successful(Json.obj(
       "activeCell" -> activeCellId,

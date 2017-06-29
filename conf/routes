@@ -71,6 +71,7 @@ DELETE        /api/teams/:id                                                    
 GET           /spotlight                                                        controllers.DataSetController.userAwareEmpty
 
 # DataSets
+GET           /import/:name                                                     controllers.DataSetController.emptyWithWildcard(name)
 GET           /datasets                                                         controllers.DataSetController.empty
 GET           /datasets/:id/edit                                                controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)

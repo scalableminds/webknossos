@@ -9,6 +9,7 @@ import com.scalableminds.braingames.binary.models.datasource._
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.io.PathUtils
 import net.liftweb.common.Box
+import org.apache.commons.io.FilenameUtils
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -60,7 +61,7 @@ trait DataSourceImporter {
 
   protected def exploreMappings(baseDir: Path): Set[String] = {
     PathUtils.listFiles(baseDir.resolve("mappings"), PathUtils.fileExtensionFilter("json")).map {
-      paths => paths.map(_.getFileName.toString)
+      paths => paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
     }.getOrElse(Nil).toSet
   }
 }

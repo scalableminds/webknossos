@@ -10,7 +10,6 @@ import com.scalableminds.braingames.binary.api.{BinaryDataService, DataSourceSer
 import com.scalableminds.braingames.binary.helpers.{DataSourceRepository => AbstractDataSourceRepository}
 import com.scalableminds.braingames.binary.store.kvstore.{RocksDBStore, VersionedKeyValueStore}
 import com.scalableminds.braingames.datastore.services.{DataSourceRepository, WebKnossosServer}
-import com.scalableminds.braingames.datastore.tracings.TracingRepository
 import play.api.{Configuration, Environment}
 import play.api.Play.current
 
@@ -27,7 +26,6 @@ class DataStoreModule(environment: Environment, configuration: Configuration) ex
     bind(classOf[BinaryDataService]).asEagerSingleton()
     bind(classOf[DataSourceRepository]).asEagerSingleton()
     bind(classOf[DataSourceService]).asEagerSingleton()
-    bind(classOf[TracingRepository]).asEagerSingleton()
     bind(classOf[VersionedKeyValueStore]).annotatedWith(Names.named("tracing-data-store")).toInstance(tracingDataStore)
     bind(classOf[WebKnossosServer]).asEagerSingleton()
   }

@@ -4,6 +4,7 @@
 package com.scalableminds.braingames.datastore.controllers
 
 import com.scalableminds.util.mvc.ExtendedController
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, Reads}
 import play.api.mvc.Results.{BadRequest, Forbidden}
@@ -17,6 +18,7 @@ trait Controller
     with ExtendedController
     with RemoteOriginHelpers
     with JsonValidationHelpers
+    with LazyLogging
 
 trait RemoteOriginHelpers {
 

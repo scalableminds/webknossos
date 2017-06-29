@@ -2,7 +2,7 @@ package models.tracing.volume
 
 import javax.xml.stream.XMLStreamWriter
 
-import com.scalableminds.braingames.binary.models.datasource.{Category, DataLayerLike, ElementClass}
+import com.scalableminds.braingames.binary.models.datasource.{AbstractSegmentationLayer, Category, DataLayerLike, ElementClass}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, GlobalDBAccess}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -19,21 +19,7 @@ import play.api.libs.json.{JsObject, JsValue, Json, _}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
-case class VolumeTracingLayer(
-                               name: String,
-                               boundingBox: BoundingBox,
-                               elementClass: ElementClass.Value,
-                               largestSegmentId: Long,
-                               resolutions: Set[Int] = Set(1),
-                               mappings: Set[String] = Set.empty) extends DataLayerLike {
-  val category: Category.Value = Category.segmentation
-}
-
-object VolumeTracingLayer {
-  implicit val volumeTracingLayerFormat = Json.format[VolumeTracingLayer]
-}
-
-case class VolumeTracingContent(dataLayer: VolumeTracingLayer, fallbackLayerName: Option[String], firstCellId: Long)
+case class VolumeTracingContent(dataLayer: AbstractSegmentationLayer, fallbackLayerName: Option[String], firstCellId: Long)
 
 object VolumeTracingContent {
   implicit val volumeTracingContentFormat = Json.format[VolumeTracingContent]
@@ -47,7 +33,7 @@ case class VolumeTracing(
                           editPosition: Point3D = Point3D(0, 0, 0),
                           editRotation: Vector3D = Vector3D(0, 0, 0),
                           zoomLevel: Double,
-                          nextCellId: Option[Long] = None,
+                          nextCellId: Long,
                           boundingBox: Option[BoundingBox] = None,
                           settings: AnnotationSettings = AnnotationSettings.volumeDefault,
                           _id: BSONObjectID = BSONObjectID.generate)
@@ -129,11 +115,10 @@ case class VolumeTracing(
   override def contentData = {
     val layer = Json.toJson(dataStoreContent.dataLayer).as[JsObject] ++
       Json.obj("fallback" -> Json.obj("layerName" -> dataStoreContent.fallbackLayerName))
-    val nextCell: Long = nextCellId.getOrElse(dataStoreContent.firstCellId)
     Fox.successful(Json.obj(
       "activeCell" -> activeCellId,
       "customLayers" -> List(layer),
-      "nextCell" -> nextCell,
+      "nextCell" -> nextCellId,
       "zoomLevel" -> zoomLevel
     ))
   }
@@ -151,7 +136,12 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
     for {
       baseSource <- baseDataSet.dataSource.toUsable.toFox
       tracingContent <- DataStoreHandler.createVolumeTracing(baseDataSet.dataStoreInfo, baseSource)
-      volumeTracing = VolumeTracing(baseDataSet.name, tracingContent, editPosition = baseDataSet.defaultStart, zoomLevel = VolumeTracing.defaultZoomLevel)
+      volumeTracing = VolumeTracing(
+        baseDataSet.name,
+        tracingContent,
+        nextCellId = tracingContent.firstCellId,
+        editPosition = baseDataSet.defaultStart,
+        zoomLevel = VolumeTracing.defaultZoomLevel)
       _ <- VolumeTracingDAO.insert(volumeTracing)
     } yield {
       volumeTracing
@@ -177,6 +167,7 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
         volumeTracing = VolumeTracing(
           dataSet.name,
           tracingContent,
+          nextCellId = tracingContent.firstCellId,
           editPosition = start,
           editRotation = nml.editRotation.getOrElse(Vector3D(0,0,0)),
           zoomLevel = nml.zoomLevel.getOrElse(VolumeTracing.defaultZoomLevel))

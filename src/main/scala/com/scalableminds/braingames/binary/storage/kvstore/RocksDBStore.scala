@@ -1,26 +1,31 @@
 package com.scalableminds.braingames.binary.store.kvstore
 
-import net.liftweb.common.{Box, Empty, Full}
-import org.rocksdb.{Options, RocksDB, RocksIterator}
-import net.liftweb.util.Helpers.tryo
+import java.nio.file.Path
 
-class RocksDBIterator(it: RocksIterator, prefix: Option[String]) extends Iterator[KeyValuePair] {
+import com.scalableminds.util.io.PathUtils
+import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.util.Helpers.tryo
+import org.rocksdb._
+
+import scala.collection.JavaConverters._
+
+class RocksDBIterator(it: RocksIterator, prefix: Option[String]) extends Iterator[KeyValuePair[Array[Byte]]] {
   override def hasNext: Boolean = it.isValid && prefix.forall(it.key().startsWith(_))
 
-  override def next: KeyValuePair = {
+  override def next: KeyValuePair[Array[Byte]] = {
     val value = KeyValuePair(new String(it.key().map(_.toChar)) , it.value())
     it.next()
     value
   }
 }
 
-class RocksDBStore(path: String) extends KeyValueStore {
+class RocksDBStore(path: String) extends KeyValueStore with LazyLogging {
+
   private lazy val db = {
     RocksDB.loadLibrary()
     RocksDB.open(new Options().setCreateIfMissing(true), path)
   }
-
-  implicit private def stringToByteArray(s: String): Array[Byte] = s.toCharArray.map(_.toByte)
 
   def get(key: String): Box[Array[Byte]] = {
     tryo { db.get(key) }.flatMap {
@@ -31,13 +36,26 @@ class RocksDBStore(path: String) extends KeyValueStore {
     }
   }
 
-  def scan(key: String, prefix: Option[String]): Iterator[KeyValuePair] = {
+  def scan(key: String, prefix: Option[String]): Iterator[KeyValuePair[Array[Byte]]] = {
     val it = db.newIterator()
     it.seek(key)
     new RocksDBIterator(it, prefix)
   }
 
-  def put(key: String, value: Array[Byte]): Box[Unit] = tryo { db.put(key, value) }
+  def put(key: String, value: Array[Byte]): Box[Unit] = {
+    tryo(db.put(key, value))
+  }
 
-  def backup = throw new Exception("not implemented")
+  def backup(backupDir: Path): Box[BackupInfo] = {
+    try {
+      PathUtils.ensureDirectory(backupDir)
+      RocksDB.loadLibrary()
+      val backupEngine = BackupEngine.open(Env.getDefault, new BackupableDBOptions(backupDir.toString))
+      backupEngine.createNewBackup(db)
+      backupEngine.getBackupInfo.asScala.headOption.map(info => BackupInfo(info.backupId.toString, info.timestamp, info.size))
+    } catch {
+      case e: Exception =>
+        Failure(s"Error creating backup: ${e.getMessage}")
+    }
+  }
 }

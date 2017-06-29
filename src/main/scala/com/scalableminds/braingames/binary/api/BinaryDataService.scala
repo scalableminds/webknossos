@@ -7,7 +7,7 @@ import java.nio.file.Paths
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.models.BucketPosition
-import com.scalableminds.braingames.binary.models.requests.{DataServiceRequest, ReadInstruction, SegmentationMappingRequest}
+import com.scalableminds.braingames.binary.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, ReadInstruction}
 import com.scalableminds.braingames.binary.storage.DataCubeCache
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -28,7 +28,7 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
 
   lazy val cache = new DataCubeCache(maxCacheSize)
 
-  def handleDataRequests(requests: List[DataServiceRequest]): Fox[Array[Byte]] = {
+  def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[Array[Byte]] = {
     val requestData = requests.map { request =>
       getDataForRequest(request).map { data =>
         if (request.settings.halfByte) {
@@ -42,11 +42,11 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
     Fox.combined(requestData).map(_.appendArrays)
   }
 
-  def handleSegmentationMappingRequest(request: SegmentationMappingRequest): Fox[Array[Byte]] = {
+  def handleMappingRequest(request: DataServiceMappingRequest): Fox[Array[Byte]] = {
     Fox.successful(Array.emptyByteArray)
   }
 
-  private def getDataForRequest(request: DataServiceRequest): Fox[Array[Byte]] = {
+  private def getDataForRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
 
     def isSingleBucketRequest = {
       request.cuboid.width == request.dataLayer.lengthOfProvidedBuckets &&
@@ -70,7 +70,7 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
     }
   }
 
-  private def handleBucketRequest(request: DataServiceRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
+  private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
 
     def emptyBucket: Array[Byte] = {
       new Array[Byte](request.dataLayer.lengthOfProvidedBuckets *
@@ -103,7 +103,7 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
   /**
     * Given a list of loaded buckets, cutout the data of the cuboid
     */
-  private def cutOutCuboid(request: DataServiceRequest, rs: List[(BucketPosition, Array[Byte])]): Array[Byte] = {
+  private def cutOutCuboid(request: DataServiceDataRequest, rs: List[(BucketPosition, Array[Byte])]): Array[Byte] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val cuboid = request.cuboid
     val result = new Array[Byte](cuboid.volume * bytesPerElement)

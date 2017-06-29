@@ -8,6 +8,8 @@ import _ from "lodash";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
 import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
@@ -16,7 +18,7 @@ type DatasetInfoTabProps = {
   skeletonTracing: SkeletonTracingType,
   dataset: DatasetType,
   flycam: FlycamType,
-  task: TaskType,
+  task: ?TaskType,
 };
 
 class DatasetInfoTabView extends Component {
@@ -103,9 +105,9 @@ class DatasetInfoTabView extends Component {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): DatasetInfoTabProps {
   return {
-    skeletonTracing: state.tracing,
+    skeletonTracing: enforceSkeletonTracing(state.tracing),
     dataset: state.dataset,
     flycam: state.flycam,
     task: state.task,

@@ -27,10 +27,9 @@ GET         /datasets/:dataSetName                                              
 
 # Volume tracings
 POST        /tracings/volumes                                                                  @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.create(dataSetName: String)
-GET         /tracings/volumes/:annotationId                                                    @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.info(annotationId: String)
-POST        /tracings/volumes/:annotationId                                                    @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.update(annotationId: String)
-GET         /tracings/volumes/:annotationId/download                                           @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(annotationId: String, version: Long)
-GET         /tracings/volumes/:annotationId/duplicate                                          @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.duplicate(annotationId: String, version: Long)
+POST        /tracings/volumes/:tracingId                                                       @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.update(tracingId: String)
+GET         /tracings/volumes/:tracingId/download                                              @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(tracingId: String)
 
 # Actions
 GET         /triggers/checkInbox                                                               @com.scalableminds.braingames.datastore.controllers.DataSourceController.triggerInboxCheck()
+GET         /triggers/backup                                                                   @com.scalableminds.braingames.datastore.controllers.Application.backup

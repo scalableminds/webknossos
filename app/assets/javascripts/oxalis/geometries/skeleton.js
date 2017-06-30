@@ -198,7 +198,7 @@ class Skeleton {
    * @param updateBoundingSphere - toggle to update ThreeJS's internals
    * @param createFunc - callback(buffer, index) that actually creates a node / edge
    */
-  create(id: number, collection: BufferCollection, updateBoundingSphere: boolean, createFunc: BufferOperation) {
+  create(id: number, collection: BufferCollection, createFunc: BufferOperation) {
     let currentBuffer = collection.buffers[0];
     if (collection.freeList.length === 0 && currentBuffer.nextIndex >= currentBuffer.capacity) {
       currentBuffer = this.initializeBuffer(MAX_CAPACITY, collection.material, collection.helper);
@@ -210,12 +210,6 @@ class Skeleton {
     const changedAttributes = createFunc(bufferPosition);
     for (const attribute of changedAttributes) {
       attribute.needsUpdate = true;
-    }
-
-    if (updateBoundingSphere) {
-      // Needs to be done to make ThreeJS happy
-      // Option is disable for the very first buffers created on skeleton initialization for performance
-      bufferPosition.buffer.geometry.computeBoundingSphere();
     }
   }
 
@@ -326,6 +320,14 @@ class Skeleton {
       }
     }
 
+    // compute bounding sphere to make ThreeJS happy
+    for (const nodes of this.nodes.buffers) {
+      nodes.geometry.computeBoundingSphere();
+    }
+    for (const edges of this.edges.buffers) {
+      edges.geometry.computeBoundingSphere();
+    }
+
     if (skeletonTracing.activeNodeId !== this.prevTracing.activeNodeId) {
       this.startNodeHighlightAnimation();
     }
@@ -390,7 +392,7 @@ class Skeleton {
    */
   createTree(tree: TreeType) {
     for (const node of _.values(tree.nodes)) {
-      this.createNode(tree.treeId, node, false);
+      this.createNode(tree.treeId, node);
     }
     for (const branchpoint of tree.branchPoints) {
       this.updateNodeType(tree.treeId, branchpoint.id, NodeTypes.BRANCH_POINT);
@@ -398,7 +400,7 @@ class Skeleton {
     for (const edge of tree.edges) {
       const source = tree.nodes[edge.source];
       const target = tree.nodes[edge.target];
-      this.createEdge(tree.treeId, source, target, false);
+      this.createEdge(tree.treeId, source, target);
     }
 
     this.updateTreeColor(tree.treeId, tree.color);
@@ -407,9 +409,9 @@ class Skeleton {
   /**
    * Creates a new node in a WebGL buffer.
    */
-  createNode(treeId: number, node: NodeType, updateBoundingSphere: boolean = true) {
+  createNode(treeId: number, node: NodeType) {
     const id = this.combineIds(node.id, treeId);
-    this.create(id, this.nodes, updateBoundingSphere, ({ buffer, index }) => {
+    this.create(id, this.nodes, ({ buffer, index }) => {
       const attributes = buffer.geometry.attributes;
       attributes.position.set(node.position, index * 3);
       attributes.radius.array[index] = node.radius;
@@ -460,9 +462,9 @@ class Skeleton {
   /**
    * Creates a new edge in a WebGL buffer.
    */
-  createEdge(treeId: number, source: NodeType, target: NodeType, updateBoundingSphere: boolean = true) {
+  createEdge(treeId: number, source: NodeType, target: NodeType) {
     const id = this.combineIds(treeId, source.id, target.id);
-    this.create(id, this.edges, updateBoundingSphere, ({ buffer, index }) => {
+    this.create(id, this.edges, ({ buffer, index }) => {
       const positionAttribute = buffer.geometry.attributes.position;
       const treeIdAttribute = buffer.geometry.attributes.treeId;
 

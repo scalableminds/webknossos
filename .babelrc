@@ -16,7 +16,8 @@
         "transform-async-to-generator",
         "transform-class-properties",
         "transform-flow-strip-types",
-        ["import", { libraryName: "antd" }]
+        ["import", { libraryName: "antd" }],
+        "syntax-dynamic-import"
       ],
     }
   },
@@ -43,6 +44,7 @@
     "transform-async-to-generator",
     "transform-class-properties",
     "transform-flow-strip-types",
-    ["import", { libraryName: "antd" }]
+    ["import", { libraryName: "antd" }],
+    "syntax-dynamic-import"
   ],
 }

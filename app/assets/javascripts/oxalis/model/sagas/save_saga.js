@@ -12,6 +12,7 @@ import { call, put, take, select, race } from "redux-saga/effects";
 import { delay } from "redux-saga";
 import { shiftSaveQueueAction, setSaveBusyAction, setLastSaveTimestampAction, pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { createTreeAction, SkeletonTracingActions } from "oxalis/model/actions/skeletontracing_actions";
+import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { alert } from "libs/window";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
@@ -148,7 +149,7 @@ export function* saveTracingAsync(): Generator<*, *, *> {
     if (initSkeleton) {
       yield take([...SkeletonTracingActions, ...FlycamActions]);
     } else {
-      yield take(FlycamActions);
+      yield take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
     }
     const tracing = yield select(state => state.tracing);
     const flycam = yield select(state => state.flycam);

@@ -68,7 +68,6 @@ class ErrorHandling {
   }
 
   assertExtendContext(additionalContext) {
-    // since the context isn't displayed on Airbrake.io, we use the params-attribute
     this.airbrake.addFilter((notice) => {
       Object.assign(notice.context, additionalContext);
       return notice;

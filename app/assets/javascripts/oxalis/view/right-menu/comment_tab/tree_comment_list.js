@@ -9,12 +9,16 @@ import { connect } from "react-redux";
 import classNames from "classnames";
 import Comment from "oxalis/view/right-menu/comment_tab/comment";
 import type { OxalisState, TreeType, SkeletonTracingType } from "oxalis/store";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+
+type OwnProps = {
+  tree: TreeType,
+  sortOrder: "asc" | "desc",
+}
 
 type TreeCommentListProps = {
-  tree: TreeType,
   skeletonTracing: SkeletonTracingType,
-  sortOrder: "asc" | "desc";
-}
+} & OwnProps;
 
 class TreeCommentList extends React.PureComponent {
 
@@ -63,9 +67,11 @@ class TreeCommentList extends React.PureComponent {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState, ownProps: OwnProps): TreeCommentListProps {
   return {
-    skeletonTracing: state.tracing,
+    skeletonTracing: enforceSkeletonTracing(state.tracing),
+    tree: ownProps.tree,
+    sortOrder: ownProps.sortOrder,
   };
 }
 

@@ -27,7 +27,7 @@ class StatisticListView extends Marionette.CompositeView {
 
   initialize() {
     // set first day of the week to monday globally
-    moment.locale("en", { week: { dow: 1 } });
+    moment.updateLocale("en", { week: { dow: 1 } });
 
     this.model = new Backbone.Model({
       startDate: moment().startOf("week"),

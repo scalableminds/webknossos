@@ -28,6 +28,11 @@ export type VolumeTracingActionType =
   | UpdateDirectionActionType
   | ResetContourActionType;
 
+export const VolumeTracingSaveRelevantActions = [
+  "CREATE_CELL",
+  "SET_ACTIVE_CELL",
+];
+
 export const initializeVolumeTracingAction = (tracing: ServerTracing<VolumeContentDataType>): InitializeVolumeTracingActionType => ({
   type: "INITIALIZE_VOLUMETRACING",
   tracing,

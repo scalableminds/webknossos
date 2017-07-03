@@ -46,9 +46,12 @@ class VolumeTracingController @Inject()(
 
   def download(tracingId: String) = Action.async {
     implicit request => {
-      //tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-      //volumeTracingService.download(tracing)
-      Future.successful(Ok)
+      for {
+        tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+        content <- volumeTracingService.download(tracing)
+      } yield {
+        Ok(content)
+      }
     }
   }
 }

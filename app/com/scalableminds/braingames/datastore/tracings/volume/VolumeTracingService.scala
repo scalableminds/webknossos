@@ -43,7 +43,9 @@ class VolumeTracingService @Inject()(
     Full(())
   }
 
-  def download(tracing: VolumeTracing): Box[Array[Byte]] = ???
+  def download(tracing: VolumeTracing): Box[Array[Byte]] = {
+    Full(Array.empty)
+  }
 
   def find(id: String): Box[VolumeTracing] = {
     tracingDataStore.getJson[VolumeTracing](buildTracingKey(id)).map(_.value)

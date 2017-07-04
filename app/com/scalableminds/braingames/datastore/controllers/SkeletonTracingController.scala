@@ -27,6 +27,16 @@ class SkeletonTracingController @Inject()(
     }
   }
 
+  def createFromNML(name: String) = Action {
+    implicit request => {
+      for {
+        tracing <- skeletonTracingService.createFromNML(name, request.body.toString)
+      } yield {
+        Ok(Json.toJson(tracing))
+      }
+    }
+  }
+
   def update(tracingId: String) = Action.async(validateJson[List[SkeletonUpdateAction]]) {
     implicit request => {
       for {
@@ -38,13 +48,28 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def download(tracingId: String, version: Long) = Action.async {
+  def downloadJson(tracingId: String, version: Long) = Action.async {
     implicit request => {
       for {
         tracing <- skeletonTracingService.find(tracingId, Some(version)) ?~> Messages("tracing.notFound")
-        serialized <- skeletonTracingService.download(tracing)
+        serialized <- skeletonTracingService.downloadJson(tracing)
       } yield {
         Ok(serialized)
+      }
+    }
+  }
+
+  def downloadNML(tracingId: String, version: Long) = Action.async {
+    implicit request => {
+      for {
+        tracing <- skeletonTracingService.find(tracingId, Some(version)) ?~> Messages("tracing.notFound")
+        downloadStream <- skeletonTracingService.downloadNML(tracing)
+      } yield {
+        Ok.chunked(downloadStream).withHeaders(
+          CONTENT_TYPE ->
+            "application/octet-stream",
+          CONTENT_DISPOSITION ->
+            s"filename=${'"'}${tracing.name}${'"'}.nml")
       }
     }
   }

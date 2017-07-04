@@ -1,8 +1,12 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
+import javax.xml.stream.XMLStreamWriter
+
 import com.scalableminds.braingames.datastore.tracings.Tracing
 import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
 import com.scalableminds.util.image.Color
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.xml.{SynchronousXMLWrites, XMLWrites, Xml}
 import play.api.libs.json.Json
 
 /**
@@ -121,5 +125,18 @@ case class SkeletonTracing(id: String,
 }
 
 object SkeletonTracing {
-  implicit val rocksSkeletonTracingFormat = Json.format[SkeletonTracing]
+  implicit val jsonFormat = Json.format[SkeletonTracing]
+
+  implicit object SkeletonTracingXMLWrites extends XMLWrites[SkeletonTracing] {
+    def writes(e: SkeletonTracing)(implicit writer: XMLStreamWriter): Fox[Boolean] = {
+      Xml.withinElement("things") {
+        for {
+          //TODO: _ <- Xml.withinElement("parameters")(AnnotationContent.writeParametersAsXML(e, writer))
+          _ <- Xml.toXML(e.trees.filterNot(_.nodes.isEmpty))
+          _ <- Xml.withinElement("branchpoints")(Xml.toXML(e.trees.flatMap(_.branchPoints).sortBy(-_.timestamp)))
+          _ <- Xml.withinElement("comments")(Xml.toXML(e.trees.flatMap(_.comments)))
+        } yield true
+      }
+    }
+  }
 }

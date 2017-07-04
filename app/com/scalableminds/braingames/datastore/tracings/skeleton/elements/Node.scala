@@ -1,6 +1,9 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
+import javax.xml.stream.XMLStreamWriter
+
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
+import com.scalableminds.util.xml.SynchronousXMLWrites
 import play.api.libs.json.Json
 
 /**
@@ -43,5 +46,26 @@ object Node {
   }
 
   implicit val jsonFormat = Json.format[Node]
+
+  implicit object NodeXMLWrites extends SynchronousXMLWrites[Node] {
+    def synchronousWrites(n: Node)(implicit writer: XMLStreamWriter): Boolean = {
+      writer.writeStartElement("node")
+      writer.writeAttribute("id", n.id.toString)
+      writer.writeAttribute("radius", n.radius.toString)
+      writer.writeAttribute("x", n.position.x.toString)
+      writer.writeAttribute("y", n.position.y.toString)
+      writer.writeAttribute("z", n.position.z.toString)
+      writer.writeAttribute("rotX", n.rotation.x.toString)
+      writer.writeAttribute("rotY", n.rotation.y.toString)
+      writer.writeAttribute("rotZ", n.rotation.z.toString)
+      writer.writeAttribute("inVp", n.viewport.toString)
+      writer.writeAttribute("inMag", n.resolution.toString)
+      writer.writeAttribute("bitDepth", n.bitDepth.toString)
+      writer.writeAttribute("interpolation", n.interpolation.toString)
+      writer.writeAttribute("time", n.timestamp.toString)
+      writer.writeEndElement()
+      true
+    }
+  }
 }
 

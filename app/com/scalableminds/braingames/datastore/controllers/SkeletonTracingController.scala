@@ -27,10 +27,10 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def createFromNML(name: String) = Action {
+  def createFromNML(name: String) = Action(parse.tolerantText) {
     implicit request => {
       for {
-        tracing <- skeletonTracingService.createFromNML(name, request.body.toString)
+        tracing <- skeletonTracingService.createFromNML(name, request.body)
       } yield {
         Ok(Json.toJson(tracing))
       }

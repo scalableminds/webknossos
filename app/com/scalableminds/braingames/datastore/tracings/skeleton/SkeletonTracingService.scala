@@ -47,7 +47,7 @@ class SkeletonTracingService @Inject()(
 
   def createFromNML(name: String, nml: String): Box[SkeletonTracing] = {
     for {
-      tracing <- NMLParser.parse(createNewId(), name, nml)
+      tracing <- NMLParser.parse(createNewId(), name, nml.trim())
     } yield {
       tracingDataStore.putJson(buildTracingKey(tracing.id), 1, tracing)
       tracing

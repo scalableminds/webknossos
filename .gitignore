@@ -39,6 +39,7 @@ src/main/scala/rebel.xml
 public/bower_components
 public/bundle
 public/test-bundle
+public/docs
 public/commit.txt
 /knowledge
 conf/github.conf

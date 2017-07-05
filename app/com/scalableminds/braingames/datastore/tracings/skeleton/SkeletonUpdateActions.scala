@@ -125,4 +125,20 @@ object SkeletonUpdateAction {
     private val positionTransform = (JsPath \ 'position).json.update(
       JsPath.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
   }
+
+  implicit object SkeletonUpdateActionWrites extends Writes[SkeletonUpdateAction] {
+    override def writes(a: SkeletonUpdateAction) = a match{
+      case s: CreateTreeSkeletonAction => Json.toJson(s)
+      case s: DeleteTreeSkeletonAction => Json.toJson(s)
+      case s: UpdateTreeSkeletonAction => Json.toJson(s)
+      case s: MergeTreeSkeletonAction => Json.toJson(s)
+      case s: MoveTreeComponentSkeletonAction => Json.toJson(s)
+      case s: CreateNodeSkeletonAction => Json.toJson(s)
+      case s: DeleteNodeSkeletonAction => Json.toJson(s)
+      case s: UpdateNodeSkeletonAction => Json.toJson(s)
+      case s: CreateEdgeSkeletonAction => Json.toJson(s)
+      case s: DeleteEdgeSkeletonAction => Json.toJson(s)
+      case s: UpdateTracingSkeletonAction => Json.toJson(s)
+    }
+  }
 }

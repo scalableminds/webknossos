@@ -126,17 +126,4 @@ case class SkeletonTracing(id: String,
 
 object SkeletonTracing {
   implicit val jsonFormat = Json.format[SkeletonTracing]
-
-  implicit object SkeletonTracingXMLWrites extends XMLWrites[SkeletonTracing] {
-    def writes(e: SkeletonTracing)(implicit writer: XMLStreamWriter): Fox[Boolean] = {
-      Xml.withinElement("things") {
-        for {
-          //TODO: _ <- Xml.withinElement("parameters")(AnnotationContent.writeParametersAsXML(e, writer))
-          _ <- Xml.toXML(e.trees.filterNot(_.nodes.isEmpty))
-          _ <- Xml.withinElement("branchpoints")(Xml.toXML(e.trees.flatMap(_.branchPoints).sortBy(-_.timestamp)))
-          _ <- Xml.withinElement("comments")(Xml.toXML(e.trees.flatMap(_.comments)))
-        } yield true
-      }
-    }
-  }
 }

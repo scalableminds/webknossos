@@ -22,7 +22,7 @@ class SkeletonTracingController @Inject()(
 
   def create(dataSetName: String) = Action {
     implicit request => {
-      val tracing = skeletonTracingService.create()
+      val tracing = skeletonTracingService.create(dataSetName)
       Ok(Json.toJson(tracing))
     }
   }
@@ -37,11 +37,11 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def update(tracingId: String) = Action.async(validateJson[List[SkeletonUpdateAction]]) {
+  def update(tracingId: String, newVersion: Long) = Action.async(validateJson[List[SkeletonUpdateAction]]) {
     implicit request => {
       for {
-        tracing <- skeletonTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-        _ <- skeletonTracingService.update(tracing, request.body)
+        tracing <- skeletonTracingService.find(tracingId, Some(newVersion)) ?~> Messages("tracing.notFound")
+        _ <- skeletonTracingService.update(tracing, request.body, newVersion)
       } yield {
         Ok
       }
@@ -63,7 +63,7 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       for {
         tracing <- skeletonTracingService.find(tracingId, Some(version)) ?~> Messages("tracing.notFound")
-        downloadStream <- skeletonTracingService.downloadNML(tracing)
+        downloadStream <- skeletonTracingService.downloadNML(tracing, dataSourceRepository)
       } yield {
         Ok.chunked(downloadStream).withHeaders(
           CONTENT_TYPE ->

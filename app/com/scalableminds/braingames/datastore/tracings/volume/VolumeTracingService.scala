@@ -4,11 +4,10 @@ import java.io.File
 import java.util.UUID
 
 import com.google.inject.Inject
-import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.datasource.{DataSource, SegmentationLayer}
-import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
+import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.webknossos.wrap.WKWFile
 import net.liftweb.common.{Box, Failure, Full}
@@ -17,7 +16,7 @@ import play.api.libs.iteratee.Enumerator
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class VolumeTracingService @Inject()(
-                                      @Named("tracing-data-store") implicit val tracingDataStore: VersionedKeyValueStore
+                                      implicit val tracingDataStore: TracingDataStore
                                     ) extends VolumeTracingBucketHelper with WKWDataFormatHelper {
 
   private def buildTracingKey(id: String): String = s"/tracings/volumes/$id"

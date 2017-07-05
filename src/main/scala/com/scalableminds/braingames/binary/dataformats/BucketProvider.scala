@@ -5,6 +5,7 @@ package com.scalableminds.braingames.binary.dataformats
 
 import java.util.concurrent.TimeoutException
 
+import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.requests.DataReadInstruction
 import com.scalableminds.braingames.binary.storage.DataCubeCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -35,4 +36,6 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
 
     cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(readInstruction.dataLayer, readInstruction.bucket))
   }
+
+  def bucketStream(resolution: Int): Iterator[(BucketPosition, Array[Byte])] = Iterator.empty
 }

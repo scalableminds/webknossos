@@ -8,6 +8,7 @@ import java.nio.file.Path
 import net.liftweb.common.Box
 import play.api.libs.json.{Reads, Writes}
 
+import scala.concurrent.Future
 import scala.util.Try
 
 case class VersionedKey(key: String, version: Long) {
@@ -64,8 +65,6 @@ class VersionedKeyValueStore(underlying: KeyValueStore) {
   def put(key: String, version: Long, value: Array[Byte]): Box[Unit] =
     underlying.put(VersionedKey(key, version).toString, value)
 
-  def backup(backupDir: Path): Box[BackupInfo] = underlying.backup(backupDir)
-
   def getJson[T : Reads](key: String, version: Option[Long] = None): Box[VersionedKeyValuePair[T]] =
     scanJson(key, Some(key), version).toStream.headOption
 
@@ -74,4 +73,8 @@ class VersionedKeyValueStore(underlying: KeyValueStore) {
 
   def putJson[T : Writes](key: String, version: Long, value: T): Box[Unit] =
     underlying.putJson(VersionedKey(key, version).toString, value)
+
+  def backup(backupDir: Path): Box[BackupInfo] = underlying.backup(backupDir)
+
+  def close(): Future[Unit] = underlying.close()
 }

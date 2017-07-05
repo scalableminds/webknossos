@@ -14,9 +14,7 @@ import com.scalableminds.util.tools.ExtendedTypes._
 import com.scalableminds.webknossos.wrap.{VoxelType, WKWHeader}
 import net.liftweb.common.{Box, Failure, Full}
 
-object WKWDataFormat extends DataSourceImporter {
-
-  val dataFileExtension = "wkw"
+object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
 
   def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(implicit report: DataSourceImportReport[Path]): Box[DataLayer] = {
     (for {
@@ -50,16 +48,6 @@ object WKWDataFormat extends DataSourceImporter {
       } yield {
         wkwHeader
       }
-    }
-  }
-
-  private def voxelTypeToElementClass(voxelType: VoxelType.Value): Box[ElementClass.Value] = {
-    voxelType match {
-      case VoxelType.UInt8 => Full(ElementClass.uint8)
-      case VoxelType.UInt16 => Full(ElementClass.uint16)
-      case VoxelType.UInt32 => Full(ElementClass.uint32)
-      case VoxelType.UInt64 => Full(ElementClass.uint64)
-      case _ => Failure("VoxelType is not supported.")
     }
   }
 }

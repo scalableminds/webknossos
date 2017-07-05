@@ -9,6 +9,7 @@ import net.liftweb.common.{Failure, Full}
 import play.api.Play.current
 import play.api.http.HeaderNames
 import play.api.http.Status._
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.libs.ws._
 
@@ -63,6 +64,18 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
       .withBody(Json.toJson(body))
       .withMethod("POST")
     parseJsonResponse(performRequest)
+  }
+
+  def getStream: Fox[(WSResponseHeaders, Enumerator[Array[Byte]])] = {
+    logger.debug(s"Sending WS request to $url (ID: $id). " +
+      s"RequestBody: '${requestBodyPreview}'")
+    request.withMethod("GET").stream().map(Full(_)).recover {
+      case e =>
+        val errorMsg = s"Error sending WS request to webknossos (ID: $id): " +
+          s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
+        logger.error(errorMsg)
+        Failure(errorMsg)
+    }
   }
 
   private def performRequest: Fox[WSResponse] = {

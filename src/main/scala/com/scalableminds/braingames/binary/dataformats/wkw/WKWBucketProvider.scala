@@ -28,19 +28,21 @@ class WKWCube(wkwFile: WKWFile) extends Cube {
     wkwFile.close()
 }
 
-class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with FoxImplicits with LazyLogging {
+class WKWBucketProvider(layer: WKWLayer)
+  extends BucketProvider
+    with WKWDataFormatHelper
+    with FoxImplicits
+    with LazyLogging {
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Fox[WKWCube] = {
-    val wkwFile = readInstruction.baseDir
-      .resolve(readInstruction.dataSource.id.team)
-      .resolve(readInstruction.dataSource.id.name)
-      .resolve(readInstruction.dataLayer.name)
-      .resolve(readInstruction.cube.resolution.toString)
-      .resolve(s"z${readInstruction.cube.z}")
-      .resolve(s"y${readInstruction.cube.y}")
-      .resolve(s"x${readInstruction.cube.x}.${WKWDataFormat.dataFileExtension}")
-      .toFile
 
+    val wkwFile = wkwFilePath(
+      readInstruction.cube,
+      Some(readInstruction.dataSource.id),
+      Some(readInstruction.dataLayer.name),
+      readInstruction.baseDir).toFile
+
+    // TODO: this should probably be handled in a different place
     if (wkwFile.exists()) {
       WKWFile(wkwFile).map(new WKWCube(_))
     } else {

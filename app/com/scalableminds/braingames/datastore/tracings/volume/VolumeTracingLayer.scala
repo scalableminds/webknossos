@@ -4,6 +4,7 @@
 package com.scalableminds.braingames.datastore.tracings.volume
 
 import com.scalableminds.braingames.binary.dataformats.BucketProvider
+import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.datasource.{Category, DataFormat, ElementClass, SegmentationLayer}
 import com.scalableminds.braingames.binary.models.requests.DataReadInstruction
 import com.scalableminds.braingames.binary.storage.DataCubeCache
@@ -23,7 +24,11 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
   val tracingDataStore: VersionedKeyValueStore = layer.tracingDataStore
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
-    loadBucket(readInstruction.dataLayer.name, readInstruction.bucket)
+    loadBucket(layer, readInstruction.bucket)
+  }
+
+  override def bucketStream(resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
+    bucketStream(layer, resolution)
   }
 }
 

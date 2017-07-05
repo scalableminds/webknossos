@@ -6,15 +6,14 @@ package com.scalableminds.braingames.datastore.controllers
 import java.nio.file.Paths
 import javax.inject.Inject
 
-import com.google.inject.name.Named
-import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
+import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import play.api.Configuration
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
 class Application @Inject()(
-                             @Named("tracing-data-store") tracingDataStore: VersionedKeyValueStore,
+                             tracingDataStore: TracingDataStore,
                              config: Configuration,
                              val messagesApi: MessagesApi
                            ) extends Controller {

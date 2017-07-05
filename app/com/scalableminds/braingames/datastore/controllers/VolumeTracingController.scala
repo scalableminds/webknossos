@@ -4,21 +4,18 @@
 package com.scalableminds.braingames.datastore.controllers
 
 import com.google.inject.Inject
-import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
-import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
+import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class VolumeTracingController @Inject()(
                                          volumeTracingService: VolumeTracingService,
                                          dataSourceRepository: DataSourceRepository,
-                                         @Named("tracing-data-store") implicit val tracingDataStore: VersionedKeyValueStore, // TODO remove eventually
                                          val messagesApi: MessagesApi
                                        ) extends Controller {
 
@@ -27,7 +24,8 @@ class VolumeTracingController @Inject()(
       for {
         dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound")
       } yield {
-        val tracing = volumeTracingService.create(dataSource)
+        val initialContent = request.body.asRaw.map(_.asFile)
+        val tracing = volumeTracingService.create(dataSource, initialContent)
         Ok(Json.toJson(tracing))
       }
     }
@@ -46,9 +44,11 @@ class VolumeTracingController @Inject()(
 
   def download(tracingId: String) = Action.async {
     implicit request => {
-      //tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-      //volumeTracingService.download(tracing)
-      Future.successful(Ok)
+      for {
+        tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+      } yield {
+        Ok.chunked(volumeTracingService.download(tracing))
+      }
     }
   }
 }

@@ -3,17 +3,14 @@ package com.scalableminds.braingames.datastore.tracings.skeleton
 import java.util.UUID
 
 import com.google.inject.Inject
-import com.google.inject.name.Named
-import com.scalableminds.braingames.binary.models.datasource.DataSource
-import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
+import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing.SkeletonTracingXMLWrites
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Box, Full}
-import play.api.libs.iteratee.Enumerator
-import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsValue, Json}
 
 /**

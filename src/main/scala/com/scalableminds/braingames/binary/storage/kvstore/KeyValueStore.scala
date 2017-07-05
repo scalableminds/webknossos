@@ -9,6 +9,8 @@ import com.scalableminds.util.mvc.BoxImplicits
 import net.liftweb.common.Box
 import play.api.libs.json._
 
+import scala.concurrent.Future
+
 case class KeyValuePair[T](key: String, value: T)
 
 case class BackupInfo(id: String, timestamp: Long, size: Long)
@@ -40,4 +42,6 @@ trait KeyValueStore extends BoxImplicits {
     put(key, Json.toJson(value).toString)
 
   def backup(backupDir: Path): Box[BackupInfo]
+
+  def close(): Future[Unit]
 }

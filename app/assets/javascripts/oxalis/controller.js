@@ -24,7 +24,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
 import api from "oxalis/api/internal_api";
-import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
+import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -127,16 +127,6 @@ class Controller extends React.PureComponent {
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
     this.setState({ ready: true });
-  }
-
-  // For tracing swap testing, call
-  // app.oxalis.restart("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
-  // with a tracing id of your choice from the dev console
-  async restart(newTracingType: SkeletonTracingTypeTracingType, newTracingId: string, newControlMode: ControlModeType) {
-    Store.dispatch(restartSagaAction());
-    UrlManager.reset();
-    await Model.fetch(newTracingType, newTracingId, newControlMode, false);
-    Store.dispatch(wkReadyAction());
   }
 
   initTaskScript() {

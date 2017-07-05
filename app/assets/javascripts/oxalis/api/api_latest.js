@@ -14,9 +14,9 @@ import { setActiveNodeAction, createCommentAction, deleteNodeAction, setNodeRadi
 import { findTreeByNodeId, getNodeAndTree, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
-import type { Vector3, VolumeTraceOrMoveModeType } from "oxalis/constants";
+import type { Vector3, VolumeTraceOrMoveModeType, ControlModeType } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
-import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType, TracingType } from "oxalis/store";
+import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType, TracingType, SkeletonTracingTypeTracingType } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
 import Request from "libs/request";
@@ -27,6 +27,8 @@ import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import dimensions from "oxalis/model/dimensions";
 import TWEEN from "tween.js";
+import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
+import UrlManager from "oxalis/controller/url_manager";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -197,10 +199,10 @@ class TracingApi {
    * be executed in this site context.
    *
    * @example
-   * api.tracing.save().then(() => ... );
+   * api.tracing.finishAndGetNextTask().then(() => ... );
    *
    * @example
-   * await api.tracing.save();
+   * await api.tracing.finishAndGetNextTask();
    */
   async finishAndGetNextTask() {
     const state = Store.getState();
@@ -228,14 +230,29 @@ class TracingApi {
       if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
         app.router.loadURL(newTaskUrl);
       } else {
-        // $FlowFixMe
-        app.oxalis.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
+        await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);
       await Utils.sleep(2000);
       app.router.loadURL("/dashboard");
     }
+  }
+
+  /**
+   * Restart webKnossos without refreshing the page. Please prefer finishAndGetNextTask for user scripts
+   * since it does extra validation of the requested change and makes sure everything is saved etc.
+   *
+   * @example
+   * api.tracing.restart("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
+   *
+   */
+  async restart(newTracingType: SkeletonTracingTypeTracingType, newTracingId: string, newControlMode: ControlModeType) {
+    Store.dispatch(restartSagaAction());
+    UrlManager.reset();
+    await Model.fetch(newTracingType, newTracingId, newControlMode, false);
+    Store.dispatch(wkReadyAction());
+    UrlManager.update();
   }
 
   //  SKELETONTRACING API

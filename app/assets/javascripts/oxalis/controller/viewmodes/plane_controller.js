@@ -245,7 +245,6 @@ class PlaneController extends React.PureComponent {
 
   init(): void {
     const clippingDistance = Store.getState().userConfiguration.clippingDistance;
-    this.cameraController.setClippingDistance(clippingDistance);
     SceneController.setClippingDistance(clippingDistance);
   }
 
@@ -307,7 +306,6 @@ class PlaneController extends React.PureComponent {
       }
     }
 
-    this.cameraController.update();
     SceneController.update();
     this.props.onRender();
   }

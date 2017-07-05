@@ -15,6 +15,7 @@ import Dimensions from "oxalis/model/dimensions";
 import constants, { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import Model from "oxalis/model";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 type TweenState = {
   notify: () => void,
@@ -33,27 +34,15 @@ type TweenState = {
 };
 
 class CameraController {
-  // The Skeleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
-  // View. It provides methods to set a certain View (animated).
-
   cameras: OrthoViewMapType<THREE.OrthographicCamera>;
-  camera: THREE.OrthographicCamera;
-  tween: TWEEN.Tween;
-  camDistance: number;
 
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
-  listenTo: Function;
 
   constructor(cameras: OrthoViewMapType<THREE.OrthographicCamera>) {
     _.extend(this, Backbone.Events);
     this.cameras = cameras;
 
-    app.vent.on({
-      centerTDView: () => this.centerTDView(),
-    });
-
-    this.updateCamViewport();
     for (const cam of _.values(this.cameras)) {
       cam.near = -1000000;
       cam.far = 1000000;
@@ -64,7 +53,24 @@ class CameraController {
     this.bindToEvents();
   }
 
-  update = (): void => {
+  // Non-TD-View methods
+
+  updateCamViewport(): void {
+    const state = Store.getState();
+    const clippingDistance = state.userConfiguration.clippingDistance;
+    const scaleFactor = getBaseVoxel(state.dataset.scale);
+    const zoom = state.flycam.zoomStep;
+    const boundary = (constants.VIEWPORT_WIDTH / 2) * zoom;
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      this.cameras[planeId].near = -clippingDistance;
+      this.cameras[planeId].left = this.cameras[planeId].bottom = -boundary * scaleFactor;
+      this.cameras[planeId].right = this.cameras[planeId].top = boundary * scaleFactor;
+      this.cameras[planeId].updateProjectionMatrix();
+    }
+    app.vent.trigger("rerender");
+  }
+
+  update(): void {
     const state = Store.getState();
     const gPos = getPosition(state.flycam);
     // camera position's unit is nm, so convert it.
@@ -74,6 +80,25 @@ class CameraController {
     this.cameras[OrthoViews.PLANE_XZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
   };
 
+
+  bindToEvents() {
+    // Use connect() once this is a react controller
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.clippingDistance,
+      () => this.updateCamViewport(),
+      true,
+    );
+    listenToStoreProperty(
+      storeState => storeState.flycam.zoomStep,
+      () => this.updateCamViewport(),
+    );
+    listenToStoreProperty(
+      storeState => storeState.flycam.currentMatrix,
+      () => this.update(),
+    );
+  }
+
+  // TD-View methods
 
   changeTDView(id: OrthoViewType, animate: boolean = true): void {
     const positionOffset: OrthoViewMapType<Vector3> = {
@@ -112,7 +137,7 @@ class CameraController {
       t: camera.top,
       b: camera.bottom,
     };
-    this.tween = new TWEEN.Tween(from);
+    const tween = new TWEEN.Tween(from);
 
     let to: TweenState;
     if (id === OrthoViews.TDView) {
@@ -180,7 +205,7 @@ class CameraController {
 
     if (animate) {
       const _this = this;
-      return this.tween.to(to, time)
+      return tween.to(to, time)
         .onUpdate(function updater() {
           // TweenJS passes the current state via the `this` object.
           // However, for easier type checking, we pass it as an explicit
@@ -191,10 +216,6 @@ class CameraController {
     } else {
       return this.updateCameraTDView(to);
     }
-  }
-
-  degToRad(deg: number): number {
-    return (deg / 180) * Math.PI;
   }
 
   changeTDViewXY = (): void => this.changeTDView(OrthoViews.PLANE_XY);
@@ -300,41 +321,6 @@ class CameraController {
         -(camera.left + camera.right) / 2,
         -(camera.top + camera.bottom) / 2),
     );
-  }
-
-
-  setClippingDistance(value: number): void {
-    this.camDistance = value; // Plane is shifted so it's <value> to the back and the front
-    this.updateCamViewport();
-  }
-
-
-  getClippingDistance(dim: number): number {
-    const voxelPerNMVector = Store.getState().dataset.scale;
-    return this.camDistance * voxelPerNMVector[dim];
-  }
-
-
-  updateCamViewport(): void {
-    const state = Store.getState();
-    const scaleFactor = getBaseVoxel(state.dataset.scale);
-    const zoom = Store.getState().flycam.zoomStep;
-    const boundary = (constants.VIEWPORT_WIDTH / 2) * zoom;
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.cameras[planeId].near = -this.camDistance;
-      this.cameras[planeId].left = this.cameras[planeId].bottom = -boundary * scaleFactor;
-      this.cameras[planeId].right = this.cameras[planeId].top = boundary * scaleFactor;
-      this.cameras[planeId].updateProjectionMatrix();
-    }
-    app.vent.trigger("rerender");
-  }
-
-
-  bindToEvents() {
-    Store.subscribe(() => {
-      this.setClippingDistance(Store.getState().userConfiguration.clippingDistance);
-      this.updateCamViewport();
-    });
   }
 }
 

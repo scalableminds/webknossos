@@ -9,6 +9,7 @@ import net.liftweb.util.Helpers.tryo
 import org.rocksdb._
 
 import scala.collection.JavaConverters._
+import scala.concurrent.Future
 
 class RocksDBIterator(it: RocksIterator, prefix: Option[String]) extends Iterator[KeyValuePair[Array[Byte]]] {
   override def hasNext: Boolean = it.isValid && prefix.forall(it.key().startsWith(_))
@@ -57,5 +58,9 @@ class RocksDBStore(path: String) extends KeyValueStore with LazyLogging {
       case e: Exception =>
         Failure(s"Error creating backup: ${e.getMessage}")
     }
+  }
+
+  def close(): Future[Unit] = {
+    Future.successful(db.close())
   }
 }

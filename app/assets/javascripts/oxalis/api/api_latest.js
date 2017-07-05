@@ -252,7 +252,7 @@ class TracingApi {
     UrlManager.reset();
     await Model.fetch(newTracingType, newTracingId, newControlMode, false);
     Store.dispatch(wkReadyAction());
-    UrlManager.update();
+    UrlManager.updateUnthrottled(true);
   }
 
   //  SKELETONTRACING API

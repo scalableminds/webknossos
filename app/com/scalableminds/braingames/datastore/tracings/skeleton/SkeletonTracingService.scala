@@ -7,8 +7,13 @@ import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.models.datasource.DataSource
 import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing.SkeletonTracingXMLWrites
 import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Box, Full}
+import play.api.libs.iteratee.Enumerator
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsValue, Json}
 
 /**
@@ -19,13 +24,14 @@ class SkeletonTracingService @Inject()(
                                       ) {
 
   private def buildTracingKey(id: String): String = s"/tracings/skeletons/$id"
+  private def createNewId(): String = UUID.randomUUID.toString
 
   def find(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
     tracingDataStore.getJson[SkeletonTracing](buildTracingKey(tracingId), version).map(_.value)
 
   def create(): SkeletonTracing = {
     val tracing = SkeletonTracing(
-      id = UUID.randomUUID.toString,
+      id = createNewId(),
       name = "DummyTracing",
       dataSetName = "DummyDatasetName",
       trees = List(),
@@ -39,6 +45,15 @@ class SkeletonTracingService @Inject()(
     tracing
   }
 
+  def createFromNML(name: String, nml: String): Box[SkeletonTracing] = {
+    for {
+      tracing <- NMLParser.parse(createNewId(), name, nml.trim())
+    } yield {
+      tracingDataStore.putJson(buildTracingKey(tracing.id), 1, tracing)
+      tracing
+    }
+  }
+
   def update(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction]): Box[Unit] = {
     def updateIter(tracing: SkeletonTracing, remainingUpdates: List[SkeletonUpdateAction]): SkeletonTracing = remainingUpdates match {
       case List() => tracing
@@ -49,8 +64,14 @@ class SkeletonTracingService @Inject()(
     Full(())
   }
 
-  def download(tracing: SkeletonTracing): Box[JsValue] = {
+  def downloadJson(tracing: SkeletonTracing): Box[JsValue] = {
     Some(Json.toJson(tracing))
+  }
+
+  def downloadNML(tracing: SkeletonTracing): Fox[Enumerator[Array[Byte]]] = {
+    Fox.successful(Enumerator.outputStream { os =>
+      NMLWriter.toNML(tracing, os)(SkeletonTracingXMLWrites).map(_ => os.close())
+    })
   }
 
   def duplicate(tracing: SkeletonTracing): Box[SkeletonTracing] = ???

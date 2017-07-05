@@ -1,6 +1,11 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
+import javax.xml.stream.XMLStreamWriter
+
 import com.scalableminds.util.image.Color
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.xml.{XMLWrites, Xml}
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json
 
 /**
@@ -55,4 +60,23 @@ case class Tree(
   }
 }
 
-object Tree {implicit val jsonFormat = Json.format[Tree]}
+object Tree {
+  implicit val jsonFormat = Json.format[Tree]
+
+  implicit object TreeLikeXMLWrites extends XMLWrites[Tree] with LazyLogging {
+    def writes(t: Tree)(implicit writer: XMLStreamWriter): Fox[Boolean] = {
+      Xml.withinElement("thing") {
+        writer.writeAttribute("id", t.treeId.toString)
+        writer.writeAttribute("color.r", t.color.map(_.r.toString).getOrElse(""))
+        writer.writeAttribute("color.g", t.color.map(_.g.toString).getOrElse(""))
+        writer.writeAttribute("color.b", t.color.map(_.b.toString).getOrElse(""))
+        writer.writeAttribute("color.a", t.color.map(_.a.toString).getOrElse(""))
+        writer.writeAttribute("name", t.name)
+        for {
+          _ <- Xml.withinElement("nodes")(Xml.toXML(t.nodes.toList.sortBy(_.id)))
+          _ <- Xml.withinElement("edges")(Xml.toXML(t.edges.toList))
+        } yield true
+      }
+    }
+  }
+}

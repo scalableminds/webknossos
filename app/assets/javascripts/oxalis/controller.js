@@ -23,7 +23,7 @@ import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
-import api from "oxalis/api/internal_api";
+import ApiLoader from "oxalis/api/api_loader";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
@@ -121,7 +121,7 @@ class Controller extends React.PureComponent {
 
     listenToStoreProperty(store => store.flycam.zoomStep, () => this.maybeWarnAboutZoomStep(), true);
 
-    window.webknossos = api;
+    window.webknossos = new ApiLoader(Model);
 
     app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");

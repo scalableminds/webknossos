@@ -95,7 +95,7 @@ trait NMLParsingService extends LazyLogging {
     var otherFiles = Map.empty[String, TemporaryFile]
     var parseResults = List.empty[NMLParseResult]
     ZipIO.withUnziped(file, includeHiddenFiles = false) { (filename, file) =>
-      if (filename.endsWith(".nml")) {
+      if (filename.toString.endsWith(".nml")) {
         val result = extractFromNML(file, filename.toString)
         parseResults ::= result
       } else {

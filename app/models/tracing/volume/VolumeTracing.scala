@@ -2,8 +2,10 @@ package models.tracing.volume
 
 import javax.xml.stream.XMLStreamWriter
 
+import com.scalableminds.braingames.binary.helpers.RPC
 import com.scalableminds.braingames.binary.models.datasource.{AbstractSegmentationLayer, Category, DataLayerLike, ElementClass}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFunctionStream, ZipIO}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, GlobalDBAccess}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.XMLWrites
@@ -11,7 +13,9 @@ import models.annotation.{AnnotationContent, AnnotationContentService, Annotatio
 import models.basics.SecuredBaseDAO
 import models.binary._
 import models.tracing.CommonTracingService
-import oxalis.nml.NML
+import models.tracing.volume.VolumeTracing.VolumeTracingXMLWrites
+import net.liftweb.common.{Failure, Full}
+import oxalis.nml.{NML, NMLService}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
@@ -77,15 +81,14 @@ case class VolumeTracing(
 
   def contentType: String = VolumeTracing.contentType
 
-  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = ???
-    /*import play.api.Play.current
-    def createStream(url: String): Fox[Enumerator[Array[Byte]]] = {
-      val futureResponse = WS
-        .url(url)
-        .withQueryString("token" -> DataTokenService.webKnossosToken)
-        .getStream()
+  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
 
-      futureResponse.map {
+    def createStream(url: String): Fox[Enumerator[Array[Byte]]] = {
+      val futureResponse = RPC(url)
+        .withQueryString("token" -> DataTokenService.webKnossosToken)
+        .getStream
+
+      futureResponse.flatMap {
         case (headers, body) =>
           if(headers.status == 200) {
             Full(body)
@@ -95,9 +98,9 @@ case class VolumeTracing(
       }
     }
 
-    for{
+    for {
       dataSource <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
-      urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/volumes/ /layers/$userDataLayerName/download"
+      urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/tracings/volumes/${dataStoreContent.dataLayer.name}/download"
       inputStream <- createStream(urlToVolumeData)
     } yield {
       Enumerator.outputStream{ outputStream =>
@@ -108,7 +111,7 @@ case class VolumeTracing(
           ), outputStream)
       }
     }
-  }*/
+  }
 
   def downloadFileExtension: String = ".zip"
 

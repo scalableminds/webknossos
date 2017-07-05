@@ -2,36 +2,55 @@ package com.scalableminds.braingames.datastore.tracings.volume
 
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
+import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import net.liftweb.common.Box
 
-trait VolumeTracingBucketHelper {
+trait VolumeTracingBucketHelper extends WKWMortonHelper {
 
   implicit def tracingDataStore: VersionedKeyValueStore
 
-  private def mortonEncode(x: Long, y: Long, z: Long): Long = {
-    var morton = 0L
-    val bitLength = math.ceil(math.log(List(x, y, z).max + 1) / math.log(2)).toInt
-
-    (0 until bitLength).foreach { i =>
-      morton |= ((x & (1L << i)) << (2 * i)) |
-        ((y & (1L << i)) << (2 * i + 1)) |
-        ((z & (1L << i)) << (2 * i + 2))
-    }
-    morton
+  private def buildKeyPrefix(dataLayerName: String, resolution: Int): String = {
+    s"/tracings/volume-data/$dataLayerName/${resolution}/"
   }
 
   private def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
     val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
-    s"/tracings/volume-data/$dataLayerName-${bucket.resolution}-$mortonIndex-${bucket.x}_${bucket.y}_${bucket.z}"
+    s"/tracings/volume-data/$dataLayerName/${bucket.resolution}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
   }
 
-  def loadBucket(dataLayerName: String, bucket: BucketPosition): Box[Array[Byte]] = {
-    val key = buildBucketKey(dataLayerName, bucket)
+  private def parseBucketKey(key: String, bucketLength: Int): Option[(String, BucketPosition)] = {
+    val keyRx = "/tracings/volume-data/([0-9a-z-]+)/(\\d+)/(\\d+)-\\[\\d+,\\d+,\\d+\\]".r
+
+    key match {
+      case keyRx(name, res, morton) =>
+        val resolution = res.toInt
+        val (x, y, z) = mortonDecode(morton.toLong)
+        val bucket = new BucketPosition(
+          x * resolution * bucketLength,
+          y * resolution * bucketLength,
+          z * resolution * bucketLength,
+          resolution,
+          bucketLength)
+        Some((name, bucket))
+      case _ =>
+        None
+    }
+  }
+
+  def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Box[Array[Byte]] = {
+    val key = buildBucketKey(dataLayer.name, bucket)
     tracingDataStore.get(key).map(_.value)
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte]): Box[Unit] = {
     val key = buildBucketKey(dataLayer.name, bucket)
     tracingDataStore.put(key, 1, data)
+  }
+
+  def bucketStream(dataLayer: VolumeTracingLayer, resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
+    val key = buildKeyPrefix(dataLayer.name, resolution)
+    tracingDataStore.scan(key, Some(key)).flatMap { pair =>
+      parseBucketKey(pair.key, dataLayer.lengthOfProvidedBuckets).map(key => (key._2 , pair.value))
+    }
   }
 }

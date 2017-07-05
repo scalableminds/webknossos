@@ -1,21 +1,28 @@
 package com.scalableminds.braingames.datastore.tracings.volume
 
+import java.io.File
 import java.util.UUID
 
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.scalableminds.braingames.binary.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.datasource.{DataSource, SegmentationLayer}
 import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
-import net.liftweb.common.{Box, Full}
+import com.scalableminds.util.io.ZipIO
+import com.scalableminds.webknossos.wrap.WKWFile
+import net.liftweb.common.{Box, Failure, Full}
+import play.api.libs.iteratee.Enumerator
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class VolumeTracingService @Inject()(
                                       @Named("tracing-data-store") implicit val tracingDataStore: VersionedKeyValueStore
-                                    ) extends VolumeTracingBucketHelper {
+                                    ) extends VolumeTracingBucketHelper with WKWDataFormatHelper {
 
   private def buildTracingKey(id: String): String = s"/tracings/volumes/$id"
 
-  def create(dataSource: DataSource): VolumeTracing = {
+  def create(dataSource: DataSource, initialContent: Option[File]): VolumeTracing = {
     val fallbackLayer = dataSource.dataLayers.flatMap {
       case layer: SegmentationLayer => Some(layer)
       case _ => None
@@ -30,21 +37,44 @@ class VolumeTracingService @Inject()(
 
     val tracing = VolumeTracing(tracingLayer, fallbackLayer.map(_.name), fallbackLayer.map(_.largestSegmentId).getOrElse(0L) + 1)
     tracingDataStore.putJson(buildTracingKey(tracing.id), 1, tracing)
+
+    initialContent.map { file =>
+      ZipIO.withUnziped(file) {
+        case (fileName, is) =>
+          WKWFile.read(is) {
+            case (header, buckets) =>
+              if (header.numBlocksPerCube == 1) {
+                parseWKWFilePath(fileName.toString, header.numBlocksPerCubeDimension).map { bucket =>
+                  saveBucket(tracingLayer, bucket, buckets.next())
+                }
+              }
+          }
+      }
+    }
+
     tracing
   }
 
   def update(tracing: VolumeTracing, updates: List[VolumeUpdateAction]): Box[Unit] = {
-    updates.foreach {
-      case action: LabelVolumeAction =>
+    updates.foldLeft[Box[Unit]](Full(())) {
+      case (_: Full[Unit], action: LabelVolumeAction) =>
         val resolution = math.pow(2, action.zoomStep).toInt
         val bucket = new BucketPosition(action.position.x, action.position.y, action.position.z, resolution, tracing.dataLayer.lengthOfProvidedBuckets)
         saveBucket(tracing.dataLayer, bucket, action.data)
+      case (_: Full[Unit], _) =>
+        Failure("Unknown action.")
+      case (f, _) =>
+        f
     }
-    Full(())
   }
 
-  def download(tracing: VolumeTracing): Box[Array[Byte]] = {
-    Full(Array.empty)
+  def download(tracing: VolumeTracing): Enumerator[Array[Byte]] = {
+    val layer = tracing.dataLayer
+    val buckets = new WKWBucketStreamSink(layer)(layer.bucketProvider.bucketStream(1))
+
+    Enumerator.outputStream { os =>
+      ZipIO.zip(buckets.toList, os)
+    }
   }
 
   def find(id: String): Box[VolumeTracing] = {

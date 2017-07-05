@@ -27,7 +27,8 @@ class VolumeTracingController @Inject()(
       for {
         dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound")
       } yield {
-        val tracing = volumeTracingService.create(dataSource)
+        val initialContent = request.body.asRaw.map(_.asFile)
+        val tracing = volumeTracingService.create(dataSource, initialContent)
         Ok(Json.toJson(tracing))
       }
     }
@@ -48,9 +49,8 @@ class VolumeTracingController @Inject()(
     implicit request => {
       for {
         tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-        content <- volumeTracingService.download(tracing)
       } yield {
-        Ok(content)
+        Ok.chunked(volumeTracingService.download(tracing))
       }
     }
   }

@@ -15,7 +15,7 @@ import play.api.libs.json.{JsValue, Json}
   * Created by f on 28.06.17.
   */
 class SkeletonTracingService @Inject()(
-                                        @Named("tracing-data-store") implicit val tracingDataStore: VersionedKeyValueStore
+                                        val tracingDataStore: TracingDataStore
                                       ) {
 
   private def buildTracingKey(id: String): String = s"/tracings/skeletons/$id"

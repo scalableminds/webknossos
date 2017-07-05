@@ -50,10 +50,11 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
   private def getDataForRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
 
     def isSingleBucketRequest = {
-      request.cuboid.width == request.dataLayer.lengthOfProvidedBuckets &&
-        request.cuboid.height == request.dataLayer.lengthOfProvidedBuckets &&
-        request.cuboid.depth == request.dataLayer.lengthOfProvidedBuckets &&
-        request.cuboid.topLeft == request.cuboid.topLeft.toBucket(request.dataLayer.lengthOfProvidedBuckets).topLeft
+      val bucketLength = request.dataLayer.lengthOfProvidedBuckets
+      request.cuboid.width == bucketLength &&
+        request.cuboid.height == bucketLength &&
+        request.cuboid.depth == bucketLength &&
+        request.cuboid.topLeft == request.cuboid.topLeft.toBucket(bucketLength).topLeft
     }
 
     val bucketQueue = request.cuboid.allBucketsInCuboid(request.dataLayer.lengthOfProvidedBuckets)

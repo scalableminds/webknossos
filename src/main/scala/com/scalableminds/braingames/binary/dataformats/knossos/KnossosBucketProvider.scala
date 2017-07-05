@@ -119,7 +119,6 @@ object KnossosCube {
   }
 }
 
-
 class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with FoxImplicits with LazyLogging {
 
   override def loadFromUnderlying(readInstruction: DataReadInstruction): Fox[KnossosCube] = {

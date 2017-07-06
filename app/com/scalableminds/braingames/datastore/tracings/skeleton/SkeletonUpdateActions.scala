@@ -128,17 +128,17 @@ object SkeletonUpdateAction {
 
   implicit object SkeletonUpdateActionWrites extends Writes[SkeletonUpdateAction] {
     override def writes(a: SkeletonUpdateAction) = a match{
-      case s: CreateTreeSkeletonAction => Json.toJson(s)
-      case s: DeleteTreeSkeletonAction => Json.toJson(s)
-      case s: UpdateTreeSkeletonAction => Json.toJson(s)
-      case s: MergeTreeSkeletonAction => Json.toJson(s)
-      case s: MoveTreeComponentSkeletonAction => Json.toJson(s)
-      case s: CreateNodeSkeletonAction => Json.toJson(s)
-      case s: DeleteNodeSkeletonAction => Json.toJson(s)
-      case s: UpdateNodeSkeletonAction => Json.toJson(s)
-      case s: CreateEdgeSkeletonAction => Json.toJson(s)
-      case s: DeleteEdgeSkeletonAction => Json.toJson(s)
-      case s: UpdateTracingSkeletonAction => Json.toJson(s)
+      case s: CreateTreeSkeletonAction => Json.obj("action" -> "createTree", "value" -> Json.toJson(s)(CreateTreeSkeletonAction.jsonFormat))
+      case s: DeleteTreeSkeletonAction => Json.obj("action" -> "deleteTree", "value" -> Json.toJson(s)(DeleteTreeSkeletonAction.jsonFormat))
+      case s: UpdateTreeSkeletonAction => Json.obj("action" -> "updateTree", "value" -> Json.toJson(s)(UpdateTreeSkeletonAction.jsonFormat))
+      case s: MergeTreeSkeletonAction => Json.obj("action" -> "mergeTree", "value" -> Json.toJson(s)(MergeTreeSkeletonAction.jsonFormat))
+      case s: MoveTreeComponentSkeletonAction => Json.obj("action" -> "moveTreeComponent", "value" -> Json.toJson(s)(MoveTreeComponentSkeletonAction.jsonFormat))
+      case s: CreateNodeSkeletonAction => Json.obj("action" -> "createNode", "value" -> Json.toJson(s)(CreateNodeSkeletonAction.jsonFormat))
+      case s: DeleteNodeSkeletonAction => Json.obj("action" -> "deleteNode", "value" -> Json.toJson(s)(DeleteNodeSkeletonAction.jsonFormat))
+      case s: UpdateNodeSkeletonAction => Json.obj("action" -> "updateNode", "value" -> Json.toJson(s)(UpdateNodeSkeletonAction.jsonFormat))
+      case s: CreateEdgeSkeletonAction => Json.obj("action" -> "createEdge", "value" -> Json.toJson(s)(CreateEdgeSkeletonAction.jsonFormat))
+      case s: DeleteEdgeSkeletonAction => Json.obj("action" -> "deleteEdge", "value" -> Json.toJson(s)(DeleteEdgeSkeletonAction.jsonFormat))
+      case s: UpdateTracingSkeletonAction => Json.obj("action" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
     }
   }
 }

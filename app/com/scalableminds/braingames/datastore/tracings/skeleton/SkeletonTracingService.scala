@@ -4,6 +4,7 @@ import java.util.UUID
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
+import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValuePair
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.util.geometry.Scale
@@ -20,11 +21,14 @@ class SkeletonTracingService @Inject()(
                                       ) {
 
   private def buildTracingKey(id: String) = s"/tracings/skeletons/$id"
-  private def buildUpdateKey(id: String) = s"/updateActions/skeletons/$id"
+  private def buildUpdatesKey(id: String) = s"/updateActions/skeletons/$id"
   private def createNewId(): String = UUID.randomUUID.toString
 
   def find(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
     tracingDataStore.getJson[SkeletonTracing](buildTracingKey(tracingId), version).map(_.value)
+
+  def findVersioned(tracingId: String, version: Option[Long] = None): Box[VersionedKeyValuePair[SkeletonTracing]] =
+    tracingDataStore.getJson[SkeletonTracing](buildTracingKey(tracingId), version)
 
   def create(datSetName: String): SkeletonTracing = {
     val id = createNewId()
@@ -53,21 +57,37 @@ class SkeletonTracingService @Inject()(
   }
 
   def saveUpdates(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction], newVersion: Long): Box[Unit] = {
-    tracingDataStore.putJson(buildUpdateKey(tracing.id), newVersion, updates)
+    tracingDataStore.putJson(buildUpdatesKey(tracing.id), newVersion, updates)
   }
 
-  def update(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction], newVersion: Long): Box[Unit] = {
+  def update(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction], newVersion: Long): SkeletonTracing  = {
     def updateIter(tracing: SkeletonTracing, remainingUpdates: List[SkeletonUpdateAction]): SkeletonTracing = remainingUpdates match {
       case List() => tracing
       case update :: tail => updateIter(update.applyOn(tracing), tail)
     }
     val updated = updateIter(tracing, updates)
     tracingDataStore.putJson(buildTracingKey(updated.id), newVersion, updated)
-    Full(())
+    updated
   }
 
   def downloadJson(tracing: SkeletonTracing): Box[JsValue] = {
     Some(Json.toJson(tracing))
+  }
+
+  private def findUpdates(tracingId: String, version: Long): Box[List[SkeletonUpdateAction]] = {
+    tracingDataStore.getJson[List[SkeletonUpdateAction]](buildUpdatesKey(tracingId), Some(version)).map(_.value)
+  }
+
+  private def findPendingUpdates(tracingId: String, existingVersion: Long, desiredVersion: Long): List[SkeletonUpdateAction] = {
+    (existingVersion+1 to desiredVersion).flatMap(findUpdates(tracingId, _)).toList.flatten
+  }
+
+  def applyPendingUpdates(tracingVersioned: VersionedKeyValuePair[SkeletonTracing], desiredVersion: Long): Box[SkeletonTracing] = {
+    val tracing = tracingVersioned.value
+    val existingVersion = tracingVersioned.version
+    val pendingUpdates = findPendingUpdates(tracing.id, existingVersion, desiredVersion)
+    val updatedTracing = update(tracing, pendingUpdates, desiredVersion)
+    Some(updatedTracing)
   }
 
   def downloadNML(tracing: SkeletonTracing, dataSourceRepository: DataSourceRepository): Option[Enumerator[Array[Byte]]] = {

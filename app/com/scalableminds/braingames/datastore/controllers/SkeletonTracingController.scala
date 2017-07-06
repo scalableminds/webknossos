@@ -41,7 +41,7 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       for {
         tracing <- skeletonTracingService.find(tracingId, Some(newVersion)) ?~> Messages("tracing.notFound")
-        _ <- skeletonTracingService.update(tracing, request.body, newVersion)
+        _ <- skeletonTracingService.saveUpdates(tracing, request.body, newVersion)
       } yield {
         Ok
       }
@@ -51,8 +51,9 @@ class SkeletonTracingController @Inject()(
   def downloadJson(tracingId: String, version: Long) = Action.async {
     implicit request => {
       for {
-        tracing <- skeletonTracingService.find(tracingId, Some(version)) ?~> Messages("tracing.notFound")
-        serialized <- skeletonTracingService.downloadJson(tracing)
+        tracingVersioned <- skeletonTracingService.findVersioned(tracingId, Some(version)) ?~> Messages("tracing.notFound")
+        updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
+        serialized <- skeletonTracingService.downloadJson(updatedTracing)
       } yield {
         Ok(serialized)
       }
@@ -62,14 +63,15 @@ class SkeletonTracingController @Inject()(
   def downloadNML(tracingId: String, version: Long) = Action.async {
     implicit request => {
       for {
-        tracing <- skeletonTracingService.find(tracingId, Some(version)) ?~> Messages("tracing.notFound")
-        downloadStream <- skeletonTracingService.downloadNML(tracing, dataSourceRepository)
+        tracingVersioned <- skeletonTracingService.findVersioned(tracingId, Some(version)) ?~> Messages("tracing.notFound")
+        updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
+        downloadStream <- skeletonTracingService.downloadNML(updatedTracing, dataSourceRepository)
       } yield {
         Ok.chunked(downloadStream).withHeaders(
           CONTENT_TYPE ->
             "application/octet-stream",
           CONTENT_DISPOSITION ->
-            s"filename=${'"'}${tracing.name}${'"'}.nml")
+            s"filename=${'"'}${updatedTracing.name}${'"'}.nml")
       }
     }
   }

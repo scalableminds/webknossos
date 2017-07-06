@@ -25,6 +25,5 @@ case class VolumeTracing(dataLayer: VolumeTracingLayer, fallbackLayerName: Optio
 }
 
 object VolumeTracing {
-  implicit def volumeTracingReads(implicit tracingDataStore: TracingDataStore) = Json.reads[VolumeTracing]
-  implicit def volumeTracingWrites = Json.writes[VolumeTracing]
+  implicit def volumeTracingFormat(implicit tracingDataStore: TracingDataStore) = Json.format[VolumeTracing]
 }

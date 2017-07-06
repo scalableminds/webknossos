@@ -16,6 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class VolumeTracingController @Inject()(
                                          volumeTracingService: VolumeTracingService,
                                          dataSourceRepository: DataSourceRepository,
+                                         implicit val tracingDataStore: TracingDataStore,
                                          val messagesApi: MessagesApi
                                        ) extends Controller {
 

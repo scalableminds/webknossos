@@ -60,7 +60,7 @@ class RocksDBStore(path: String) extends KeyValueStore with LazyLogging {
       backupEngine.getBackupInfo.asScala.headOption.map(info => BackupInfo(info.backupId.toString, info.timestamp, info.size))
     } catch {
       case e: Exception =>
-        Failure(s"Error creating backup: ${e.getMessage}")
+        Failure(s"Error creating RocksDB backup: ${e.getMessage}")
     }
   }
 

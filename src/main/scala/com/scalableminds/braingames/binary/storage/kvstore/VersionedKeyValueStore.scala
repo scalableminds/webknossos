@@ -60,24 +60,30 @@ class VersionFilterIterator[T](it: Iterator[KeyValuePair[T]], version: Option[Lo
 
 class VersionedKeyValueStore(underlying: KeyValueStore) {
 
-  def get(key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] = {
+  def get(key: String, version: Option[Long] = None): Option[VersionedKeyValuePair[Array[Byte]]] =
+    scanVersions(key, version).toStream.headOption
+
+  def getJson[T : Reads](key: String, version: Option[Long] = None): Option[VersionedKeyValuePair[T]] =
+    scanVersionsJson(key, version).toStream.headOption
+
+  def scanVersions(key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] = {
     val prefix = s"$key@"
     underlying.scan(version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>
       VersionedKey(pair.key).map(VersionedKeyValuePair(_, pair.value))
     }
   }
 
-  def getJson[T : Reads](key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] = {
+  def scanVersionsJson[T : Reads](key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] = {
     val prefix = s"$key@"
     underlying.scanJson(version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>
       VersionedKey(pair.key).map(VersionedKeyValuePair(_, pair.value))
     }
   }
 
-  def scan(key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] =
+  def scanKeys(key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] =
     new VersionFilterIterator(underlying.scan(key, prefix), version)
 
-  def scanJson[T : Reads](key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] =
+  def scanKeysJson[T : Reads](key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] =
     new VersionFilterIterator(underlying.scanJson(key, prefix), version)
 
   def put(key: String, version: Long, value: Array[Byte]): Box[Unit] =

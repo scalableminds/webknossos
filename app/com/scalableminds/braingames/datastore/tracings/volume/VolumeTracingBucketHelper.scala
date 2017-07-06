@@ -37,9 +37,9 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper {
     }
   }
 
-  def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Box[Array[Byte]] = {
+  def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Option[Array[Byte]] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    tracingDataStore.get(key).map(_.value)
+    tracingDataStore.get(key).toStream.headOption.map(_.value)
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte]): Box[Unit] = {
@@ -49,7 +49,7 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper {
 
   def bucketStream(dataLayer: VolumeTracingLayer, resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
     val key = buildKeyPrefix(dataLayer.name, resolution)
-    tracingDataStore.scan(key, Some(key)).flatMap { pair =>
+    tracingDataStore.scanKeys(key, Some(key)).flatMap { pair =>
       parseBucketKey(pair.key, dataLayer.lengthOfProvidedBuckets).map(key => (key._2 , pair.value))
     }
   }

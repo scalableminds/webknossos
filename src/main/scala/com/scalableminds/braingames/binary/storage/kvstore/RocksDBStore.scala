@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.binary.store.kvstore
 
 import java.nio.file.Path
@@ -12,6 +15,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
 class RocksDBIterator(it: RocksIterator, prefix: Option[String]) extends Iterator[KeyValuePair[Array[Byte]]] {
+
   override def hasNext: Boolean = it.isValid && prefix.forall(it.key().startsWith(_))
 
   override def next: KeyValuePair[Array[Byte]] = {
@@ -56,7 +60,7 @@ class RocksDBStore(path: String) extends KeyValueStore with LazyLogging {
       backupEngine.getBackupInfo.asScala.headOption.map(info => BackupInfo(info.backupId.toString, info.timestamp, info.size))
     } catch {
       case e: Exception =>
-        Failure(s"Error creating backup: ${e.getMessage}")
+        Failure(s"Error creating RocksDB backup: ${e.getMessage}")
     }
   }
 

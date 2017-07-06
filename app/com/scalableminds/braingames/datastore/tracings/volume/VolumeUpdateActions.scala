@@ -1,11 +1,15 @@
 package com.scalableminds.braingames.datastore.tracings.volume
 
+import java.util.Base64
+
 import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.util.tools.Fox
 import play.api.libs.json._
 
-case class LabelVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, data: Array[Byte]) extends VolumeUpdateAction {
+case class LabelVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String) extends VolumeUpdateAction {
+
   val name: String = "labelVolume"
+
+  def data: Array[Byte] = Base64.getDecoder().decode(base64Data)
 }
 
 object LabelVolumeAction {

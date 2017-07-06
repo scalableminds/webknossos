@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings.volume
 
 import com.scalableminds.braingames.binary.models.datasource.{DataSource, SegmentationLayer}
@@ -22,6 +25,5 @@ case class VolumeTracing(dataLayer: VolumeTracingLayer, fallbackLayerName: Optio
 }
 
 object VolumeTracing {
-  implicit def volumeTracingReads(implicit tracingDataStore: TracingDataStore) = Json.reads[VolumeTracing]
-  implicit def volumeTracingWrites = Json.writes[VolumeTracing]
+  implicit def volumeTracingFormat(implicit tracingDataStore: TracingDataStore) = Json.format[VolumeTracing]
 }

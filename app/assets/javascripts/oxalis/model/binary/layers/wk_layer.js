@@ -3,6 +3,8 @@
  * @flow
  */
 
+import Base64 from "base64-js";
+
 import Layer, { REQUEST_TIMEOUT } from "oxalis/model/binary/layers/layer";
 import type { BucketRequestOptions } from "oxalis/model/binary/layers/layer";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
@@ -83,7 +85,8 @@ class WkLayer extends Layer {
 
   async sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<void> {
     let data = batch.map(bucket => {
-      bucket.data = Array.from(new Int8Array(getBucketData(BucketBuilder.bucketToZoomedAddress(bucket))));
+      let data = getBucketData(BucketBuilder.bucketToZoomedAddress(bucket));
+      bucket.base64Data = Base64.fromByteArray(data);
       return { action: "labelVolume", value: bucket };
     });
 

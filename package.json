@@ -71,6 +71,7 @@
     "backbone-subviews": "^0.7.4",
     "backbone.marionette": "^3.0.0",
     "backbone.radio": "^2.0.0",
+    "base64-js": "^1.2.1",
     "bootstrap": "^3.3.6",
     "bootstrap-daterangepicker": "^2.1.17",
     "bootstrap-multiselect": "^0.9.13",

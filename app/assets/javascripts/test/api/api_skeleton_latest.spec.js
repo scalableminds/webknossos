@@ -94,17 +94,24 @@ test("Data Api: getDataValue should throw an error if the layer name is not vali
 });
 
 test("Data Api: getDataValue should get the data value for a layer, position and zoomstep", (t) => {
-  // Currently, this test only makes sure pullQueue.pull is being called.
+  // Currently, this test only makes sure pullQueue.pull is being called and the bucketLoaded
+  // event is being triggered.
   // There is another spec for pullqueue.js
   const { api, model } = t.context;
   const cube = model.getBinaryByName("segmentation").cube;
+  const position = [3840, 4220, 2304];
+  const zoomStep = 0;
+  const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
+  const bucket = cube.getOrCreateBucket(bucketAddress);
 
   sinon.stub(cube.pullQueue, "pull").returns([Promise.resolve(true)]);
   sinon.stub(cube, "getDataValue").returns(1337);
 
-  return api.data.getDataValue("segmentation", [3840, 4220, 2304], 0).then((dataValue) => {
+  const promise = api.data.getDataValue("segmentation", position, zoomStep).then((dataValue) => {
     t.is(dataValue, 1337);
   });
+  bucket.trigger("bucketLoaded");
+  return promise;
 });
 
 test("User Api: setConfiguration should set and get a user configuration value", (t) => {

@@ -43,7 +43,7 @@ class SkeletonTracingService @Inject()(
       editPosition = None,
       editRotation = None,
       zoomLevel = None)
-    tracingDataStore.putJson(buildTracingKey(tracing.id), 1, tracing)
+    tracingDataStore.putJson(buildTracingKey(tracing.id), 0, tracing)
     tracing
   }
 
@@ -51,7 +51,7 @@ class SkeletonTracingService @Inject()(
     for {
       tracing <- NMLParser.parse(createNewId(), name, nml.trim())
     } yield {
-      tracingDataStore.putJson(buildTracingKey(tracing.id), 1, tracing)
+      tracingDataStore.putJson(buildTracingKey(tracing.id), 0, tracing)
       tracing
     }
   }
@@ -60,34 +60,8 @@ class SkeletonTracingService @Inject()(
     tracingDataStore.putJson(buildUpdatesKey(tracing.id), newVersion, updates)
   }
 
-  def update(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction], newVersion: Long): SkeletonTracing  = {
-    def updateIter(tracing: SkeletonTracing, remainingUpdates: List[SkeletonUpdateAction]): SkeletonTracing = remainingUpdates match {
-      case List() => tracing
-      case update :: tail => updateIter(update.applyOn(tracing), tail)
-    }
-    val updated = updateIter(tracing, updates)
-    tracingDataStore.putJson(buildTracingKey(updated.id), newVersion, updated)
-    updated
-  }
-
   def downloadJson(tracing: SkeletonTracing): Box[JsValue] = {
     Some(Json.toJson(tracing))
-  }
-
-  private def findUpdates(tracingId: String, version: Long): Box[List[SkeletonUpdateAction]] = {
-    tracingDataStore.getJson[List[SkeletonUpdateAction]](buildUpdatesKey(tracingId), Some(version)).map(_.value)
-  }
-
-  private def findPendingUpdates(tracingId: String, existingVersion: Long, desiredVersion: Long): List[SkeletonUpdateAction] = {
-    (existingVersion+1 to desiredVersion).flatMap(findUpdates(tracingId, _)).toList.flatten
-  }
-
-  def applyPendingUpdates(tracingVersioned: VersionedKeyValuePair[SkeletonTracing], desiredVersion: Long): Box[SkeletonTracing] = {
-    val tracing = tracingVersioned.value
-    val existingVersion = tracingVersioned.version
-    val pendingUpdates = findPendingUpdates(tracing.id, existingVersion, desiredVersion)
-    val updatedTracing = update(tracing, pendingUpdates, desiredVersion)
-    Some(updatedTracing)
   }
 
   def downloadNML(tracing: SkeletonTracing, dataSourceRepository: DataSourceRepository): Option[Enumerator[Array[Byte]]] = {
@@ -100,6 +74,44 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  def duplicate(tracing: SkeletonTracing): Box[SkeletonTracing] = ???
+  def applyPendingUpdates(tracingVersioned: VersionedKeyValuePair[SkeletonTracing], desiredVersion: Long): Box[SkeletonTracing] = {
+    val tracing = tracingVersioned.value
+    val existingVersion = tracingVersioned.version
+    val pendingUpdates = findPendingUpdates(tracing.id, existingVersion, desiredVersion)
+    val updatedTracing = update(tracing, pendingUpdates, desiredVersion)
+    Some(updatedTracing)
+  }
+
+  private def findPendingUpdates(tracingId: String, existingVersion: Long, desiredVersion: Long): List[SkeletonUpdateAction] = {
+    def toListIter(versionIterator: Iterator[VersionedKeyValuePair[List[SkeletonUpdateAction]]],
+                   acc: List[List[SkeletonUpdateAction]]): List[List[SkeletonUpdateAction]] = {
+      if (!versionIterator.hasNext) acc
+      else {
+        val item = versionIterator.next()
+        if (item.version <= existingVersion) acc
+        else toListIter(versionIterator, item.value :: acc)
+      }
+    }
+
+    val versionIterator = tracingDataStore.scanVersionsJson[List[SkeletonUpdateAction]](buildUpdatesKey(tracingId), Some(desiredVersion))
+    toListIter(versionIterator, List()).flatten
+  }
+
+  private def update(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction], newVersion: Long): SkeletonTracing  = {
+    def updateIter(tracing: SkeletonTracing, remainingUpdates: List[SkeletonUpdateAction]): SkeletonTracing = remainingUpdates match {
+      case List() => tracing
+      case update :: tail => updateIter(update.applyOn(tracing), tail)
+    }
+    val updated = updateIter(tracing, updates)
+    tracingDataStore.putJson(buildTracingKey(updated.id), newVersion, updated)
+    updated
+  }
+
+  def duplicate(tracing: SkeletonTracing): Box[SkeletonTracing] = {
+    val id = createNewId()
+    val newTracing = tracing.copy(id = id, name = s"tracing_$id", timestamp = System.currentTimeMillis())
+    tracingDataStore.putJson(buildTracingKey(newTracing.id), 0, newTracing)
+    Some(newTracing)
+  }
 
 }

@@ -76,9 +76,14 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def duplicate(tracingId: String, version: Long) = Action {
+  def duplicate(tracingId: String, version: Long) = Action.async {
     implicit request => {
-      Ok
+      for {
+        tracing <- skeletonTracingService.find(tracingId, Some(version)) ?~> Messages("tracing.notFound")
+        newTracing <- skeletonTracingService.duplicate(tracing)
+      } yield {
+        Ok(Json.toJson(newTracing))
+      }
     }
   }
 

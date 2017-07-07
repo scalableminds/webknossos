@@ -352,10 +352,17 @@ class DataApi {
   */
   getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
     const layer = this.__getLayer(layerName);
-    const bucket = layer.cube.positionToZoomedAddress(position, zoomStep);
+    const bucketAddress = layer.cube.positionToZoomedAddress(position, zoomStep);
+    const bucket = layer.cube.getOrCreateBucket(bucketAddress);
 
-    layer.pullQueue.add({ bucket, priority: -1 });
-    return Promise.all(layer.pullQueue.pull()).then(() => layer.cube.getDataValue(position));
+    if (bucket.type === "data" && bucket.isRequested()) {
+      return new Promise((resolve) => {
+        bucket.on("bucketLoaded", () => resolve(layer.cube.getDataValue(position)));
+      });
+    } else {
+      layer.pullQueue.add({ bucket: bucketAddress, priority: -1 });
+      return Promise.all(layer.pullQueue.pull()).then(() => layer.cube.getDataValue(position));
+    }
   }
 
   /**

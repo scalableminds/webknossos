@@ -355,15 +355,22 @@ class DataApi {
     const bucketAddress = layer.cube.positionToZoomedAddress(position, zoomStep);
     const bucket = layer.cube.getOrCreateBucket(bucketAddress);
 
-    if (bucket.type === "data" && bucket.isRequested()) {
+    if (bucket.type === "null") return 0;
+
+    let needsToAwaitBucket = false;
+    if (bucket.isRequested()) {
+      needsToAwaitBucket = true;
+    } else if (bucket.needsRequest()) {
+      layer.pullQueue.add({ bucket: bucketAddress, priority: -1 });
+      layer.pullQueue.pull();
+      needsToAwaitBucket = true;
+    }
+    if (needsToAwaitBucket) {
       await new Promise((resolve) => {
         bucket.on("bucketLoaded", resolve);
       });
-    } else if (bucket.type === "data" && bucket.needsRequest()) {
-      layer.pullQueue.add({ bucket: bucketAddress, priority: -1 });
-      await Promise.all(layer.pullQueue.pull());
     }
-    // Bucket has been loaded by now, was loaded already or is a NullBucket
+    // Bucket has been loaded by now or was loaded already
     return layer.cube.getDataValue(position);
   }
 

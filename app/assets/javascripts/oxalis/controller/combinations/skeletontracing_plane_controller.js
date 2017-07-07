@@ -8,7 +8,7 @@ import $ from "jquery";
 import * as THREE from "three";
 import _ from "lodash";
 import Store from "oxalis/store";
-import PlaneController from "oxalis/controller/viewmodes/plane_controller";
+import { PlaneController, mapStateToProps } from "oxalis/controller/viewmodes/plane_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import { OrthoViews } from "oxalis/constants";
 import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -19,6 +19,7 @@ import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_acti
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 import api from "oxalis/api/internal_api";
+import { connect } from "react-redux";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -199,4 +200,4 @@ class SkeletonTracingPlaneController extends PlaneController {
   };
 }
 
-export default SkeletonTracingPlaneController;
+export default connect(mapStateToProps)(SkeletonTracingPlaneController);

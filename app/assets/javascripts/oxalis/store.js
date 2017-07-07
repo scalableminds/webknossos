@@ -282,9 +282,34 @@ export type FlycamType = {
   +spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
 };
 
+export type CameraData = {
+  +near: number,
+  +far: number,
+  +left: number,
+  +right: number,
+  +top: number,
+  +bottom: number,
+  +up: Vector3,
+  +lookAt: Vector3,
+  +position: Vector3,
+};
+
+export type PartialCameraData = {
+  +near?: number,
+  +far?: number,
+  +left?: number,
+  +right?: number,
+  +top?: number,
+  +bottom?: number,
+  +up?: Vector3,
+  +lookAt?: Vector3,
+  +position?: Vector3,
+};
+
 export type PlaneModeData = {
   +activeViewport: OrthoViewType,
-}
+  +tdCamera: CameraData,
+};
 
 type ArbitraryModeData = null;
 type FlightModeData = null;
@@ -403,6 +428,17 @@ export const defaultState: OxalisState = {
   viewModeData: {
     plane: {
       activeViewport: OrthoViews.PLANE_XY,
+      tdCamera: {
+        near: 0,
+        far: 0,
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        up: [0, 0, 0],
+        lookAt: [0, 0, 0],
+        position: [0, 0, 0],
+      }
     },
     arbitrary: null,
     flight: null,

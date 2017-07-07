@@ -15,7 +15,15 @@ function ViewModeReducer(state: OxalisState, action: ActionType): OxalisState {
         },
       });
     }
-
+    case "SET_TD_CAMERA": {
+      return update(state, {
+        viewModeData: {
+          plane: {
+            tdCamera: { $merge: action.cameraData },
+          },
+        },
+      });
+    }
     default:
       return state;
   }

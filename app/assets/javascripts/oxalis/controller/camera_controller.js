@@ -16,14 +16,13 @@ import constants, { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/cons
 import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import Model from "oxalis/model";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import type { CameraData } from "oxalis/store";
+import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
 
 type TweenState = {
-  notify: () => void,
-  getConvertedPosition: () => Vector3,
   upX: number,
   upY: number,
   upZ: number,
-  camera: THREE.OrthographicCamera,
   dx: number,
   dy: number,
   dz: number,
@@ -48,8 +47,12 @@ class CameraController {
       cam.far = 1000000;
     }
 
-    this.changeTDViewDiagonal(false);
+    Store.dispatch(setTDCameraAction({
+      near: -1000000,
+      far: 1000000,
+    }));
 
+    this.changeTDViewDiagonal(false);
     this.bindToEvents();
   }
 
@@ -96,6 +99,10 @@ class CameraController {
       storeState => storeState.flycam.currentMatrix,
       () => this.update(),
     );
+    listenToStoreProperty(
+      storeState => storeState.viewModeData.plane.tdCamera,
+      (cameraData) => this.updateTDCamera(cameraData),
+    )
   }
 
   // TD-View methods
@@ -119,16 +126,10 @@ class CameraController {
     const pos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
     const time = 800;
 
-    const notify = () => this.trigger("cameraPositionChanged");
-    const getConvertedPosition = () => voxelToNm(Store.getState().dataset.scale, getPosition(Store.getState().flycam));
-
     const from = {
-      notify,
-      getConvertedPosition,
       upX: camera.up.x,
       upY: camera.up.y,
       upZ: camera.up.z,
-      camera,
       dx: camera.position.x - pos[0],
       dy: camera.position.y - pos[1],
       dz: camera.position.z - pos[2],
@@ -162,9 +163,6 @@ class CameraController {
       // perpendicular to the vector going from (0, b[1], 0) to (b[0], 0, 0).
 
       to = {
-        camera,
-        notify,
-        getConvertedPosition,
         dx: b[1] / diagonal,
         dy: b[0] / diagonal,
         dz: -1 / 2,
@@ -187,9 +185,6 @@ class CameraController {
       const l = -offsetX;
       const t = offsetY;
       to = {
-        camera,
-        notify,
-        getConvertedPosition,
         dx: positionOffset[id][0],
         dy: positionOffset[id][1],
         dz: positionOffset[id][2],
@@ -226,19 +221,39 @@ class CameraController {
     this.changeTDView(OrthoViews.TDView, animate);
   };
 
-  updateCameraTDView(tweenState: TweenState): void {
-    const p = tweenState.getConvertedPosition();
-    tweenState.camera.position.set(tweenState.dx + p[0], tweenState.dy + p[1], tweenState.dz + p[2]);
-    tweenState.camera.left = tweenState.l;
-    tweenState.camera.right = tweenState.r;
-    tweenState.camera.top = tweenState.t;
-    tweenState.camera.bottom = tweenState.b;
-    tweenState.camera.up = new THREE.Vector3(tweenState.upX, tweenState.upY, tweenState.upZ);
-    tweenState.camera.lookAt(new THREE.Vector3(p[0], p[1], p[2]));
 
-    tweenState.camera.updateProjectionMatrix();
-    tweenState.notify();
-    app.vent.trigger("rerender");
+  updateTDCamera(cameraData: CameraData): void {
+    const tdCamera = this.cameras[OrthoViews.TDView];
+
+    tdCamera.position.set(...cameraData.position);
+    tdCamera.left = cameraData.left;
+    tdCamera.right = cameraData.right;
+    tdCamera.top = cameraData.top;
+    tdCamera.bottom = cameraData.bottom;
+    tdCamera.up = new THREE.Vector3(...cameraData.up);
+    tdCamera.lookAt(new THREE.Vector3(...cameraData.lookAt));
+
+    tdCamera.updateProjectionMatrix();
+    
+    this.trigger("cameraPositionChanged")
+    // app.vent.trigger("rerender");
+  }
+
+  updateCameraTDView(tweenState: TweenState): void {
+    const p = voxelToNm(Store.getState().dataset.scale, getPosition(Store.getState().flycam));
+    const { near, far } = Store.getState().viewModeData.plane.tdCamera;;
+
+    Store.dispatch(setTDCameraAction({
+      position: [tweenState.dx + p[0], tweenState.dy + p[1], tweenState.dz + p[2]],
+      left: tweenState.l,
+      right: tweenState.r,
+      top: tweenState.t,
+      bottom: tweenState.b,
+      up: [tweenState.upX, tweenState.upY, tweenState.upZ],
+      lookAt: p,
+      near,
+      far,
+    }));
   }
 
   TDViewportSize(): number {
@@ -247,7 +262,7 @@ class CameraController {
   }
 
 
-  zoomTDView = (value: number, position: THREE.Vector3, curWidth: number): void => {
+  zoomTDView = (value: number, targetPosition: THREE.Vector3, curWidth: number): void => {
     let offsetX;
     let offsetY;
     const camera = this.cameras[OrthoViews.TDView];
@@ -259,20 +274,25 @@ class CameraController {
     const baseOffset = (factor * size) / 2;
     const baseDiff = baseOffset - (size / 2);
 
-    if (position != null) {
-      offsetX = (((position.x / curWidth) * 2) - 1) * (-baseDiff);
-      offsetY = (((position.y / curWidth) * 2) - 1) * (+baseDiff);
+    if (targetPosition != null) {
+      offsetX = (((targetPosition.x / curWidth) * 2) - 1) * (-baseDiff);
+      offsetY = (((targetPosition.y / curWidth) * 2) - 1) * (+baseDiff);
     } else {
       offsetX = offsetY = 0;
     }
 
-    camera.left = (middleX - baseOffset) + offsetX;
-    camera.right = middleX + baseOffset + offsetX;
-    camera.top = middleY + baseOffset + offsetY;
-    camera.bottom = (middleY - baseOffset) + offsetY;
-    camera.updateProjectionMatrix();
-
-    app.vent.trigger("rerender");
+    const { position, up, near, far, lookAt } = Store.getState().viewModeData.plane.tdCamera;
+    Store.dispatch(setTDCameraAction({
+      left: (middleX - baseOffset) + offsetX,
+      right: middleX + baseOffset + offsetX,
+      top: middleY + baseOffset + offsetY,
+      bottom: (middleY - baseOffset) + offsetY,
+      position,
+      up,
+      lookAt,
+      near,
+      far,
+    }));
   };
 
 
@@ -305,12 +325,19 @@ class CameraController {
 
   moveTDViewRaw(moveVector: THREE.Vector3): void {
     const camera = this.cameras[OrthoViews.TDView];
-    camera.left += moveVector.x;
-    camera.right += moveVector.x;
-    camera.top += moveVector.y;
-    camera.bottom += moveVector.y;
-    camera.updateProjectionMatrix();
-    app.vent.trigger("rerender");
+
+    const { position, up, near, far, lookAt } = Store.getState().viewModeData.plane.tdCamera;
+    Store.dispatch(setTDCameraAction({
+      left: camera.left + moveVector.x,
+      right: camera.right + moveVector.x,
+      top: camera.top + moveVector.y,
+      bottom: camera.bottom + moveVector.y,
+      position,
+      up,
+      lookAt,
+      near,
+      far,
+    }));
   }
 
 

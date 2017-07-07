@@ -4,7 +4,7 @@
 package com.scalableminds.braingames.binary.store.kvstore
 
 import java.nio.file.Path
-
+import java.util.ArrayList
 import com.scalableminds.util.io.PathUtils
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -25,30 +25,48 @@ class RocksDBIterator(it: RocksIterator, prefix: Option[String]) extends Iterato
   }
 }
 
-class RocksDBStore(path: String) extends KeyValueStore with LazyLogging {
+class RocksDBStore(path: String, columnFamilies: List[String]) extends KeyValueStore {
 
-  private lazy val db = {
+  val (db, columnFamilyHandles) = {
     RocksDB.loadLibrary()
-    RocksDB.open(new Options().setCreateIfMissing(true), path)
+    val columnFamilyDescriptors = (columnFamilies.map(_.getBytes) :+ RocksDB.DEFAULT_COLUMN_FAMILY).map { columnFamily =>
+      new ColumnFamilyDescriptor(columnFamily, new ColumnFamilyOptions())
+    }
+    val columnFamilyHandles = new ArrayList[ColumnFamilyHandle]
+    val db = RocksDB.open(
+      new DBOptions().setCreateIfMissing(true).setCreateMissingColumnFamilies(true),
+      path,
+      columnFamilyDescriptors.asJava,
+      columnFamilyHandles)
+    (db, columnFamilies.zip(columnFamilyHandles.asScala).toMap)
   }
 
-  def get(key: String): Box[Array[Byte]] = {
-    tryo { db.get(key) }.flatMap {
-      case null =>
-        Empty
-      case r =>
-        Full(r)
+  def get(columnFamily: String, key: String): Box[Array[Byte]] = {
+    columnFamilyHandles.get(columnFamily).flatMap { handle =>
+      tryo { db.get(handle, key) }.flatMap {
+        case null =>
+          Empty
+        case r =>
+          Full(r)
+      }
     }
   }
 
-  def scan(key: String, prefix: Option[String]): Iterator[KeyValuePair[Array[Byte]]] = {
-    val it = db.newIterator()
-    it.seek(key)
-    new RocksDBIterator(it, prefix)
+  def scan(columnFamily: String, key: String, prefix: Option[String]): Iterator[KeyValuePair[Array[Byte]]] = {
+    columnFamilyHandles.get(columnFamily) match {
+      case Some(handle) =>
+        val it = db.newIterator(handle)
+        it.seek(key)
+        new RocksDBIterator(it, prefix)
+      case _ =>
+        Iterator.empty
+    }
   }
 
-  def put(key: String, value: Array[Byte]): Box[Unit] = {
-    tryo(db.put(key, value))
+  def put(columnFamily: String, key: String, value: Array[Byte]): Box[Unit] = {
+    columnFamilyHandles.get(columnFamily).flatMap { handle =>
+      tryo(db.put(handle, key, value))
+    }
   }
 
   def backup(backupDir: Path): Box[BackupInfo] = {

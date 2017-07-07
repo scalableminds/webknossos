@@ -60,37 +60,37 @@ class VersionFilterIterator[T](it: Iterator[KeyValuePair[T]], version: Option[Lo
 
 class VersionedKeyValueStore(underlying: KeyValueStore) {
 
-  def get(key: String, version: Option[Long] = None): Option[VersionedKeyValuePair[Array[Byte]]] =
-    scanVersions(key, version).toStream.headOption
+  def get(columnFamily: String, key: String, version: Option[Long] = None): Option[VersionedKeyValuePair[Array[Byte]]] =
+    scanVersions(columnFamily, key, version).toStream.headOption
 
-  def getJson[T : Reads](key: String, version: Option[Long] = None): Option[VersionedKeyValuePair[T]] =
-    scanVersionsJson(key, version).toStream.headOption
+  def getJson[T : Reads](columnFamily: String, key: String, version: Option[Long] = None): Option[VersionedKeyValuePair[T]] =
+    scanVersionsJson(columnFamily, key, version).toStream.headOption
 
-  def scanVersions(key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] = {
+  def scanVersions(columnFamily: String, key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] = {
     val prefix = s"$key@"
-    underlying.scan(version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>
+    underlying.scan(columnFamily, version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>
       VersionedKey(pair.key).map(VersionedKeyValuePair(_, pair.value))
     }
   }
 
-  def scanVersionsJson[T : Reads](key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] = {
+  def scanVersionsJson[T : Reads](columnFamily: String, key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] = {
     val prefix = s"$key@"
-    underlying.scanJson(version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>
+    underlying.scanJson(columnFamily, version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>
       VersionedKey(pair.key).map(VersionedKeyValuePair(_, pair.value))
     }
   }
 
-  def scanKeys(key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] =
-    new VersionFilterIterator(underlying.scan(key, prefix), version)
+  def scanKeys(columnFamily: String, key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] =
+    new VersionFilterIterator(underlying.scan(columnFamily, key, prefix), version)
 
-  def scanKeysJson[T : Reads](key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] =
-    new VersionFilterIterator(underlying.scanJson(key, prefix), version)
+  def scanKeysJson[T : Reads](columnFamily: String, key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] =
+    new VersionFilterIterator(underlying.scanJson(columnFamily, key, prefix), version)
 
-  def put(key: String, version: Long, value: Array[Byte]): Box[Unit] =
-    underlying.put(VersionedKey(key, version).toString, value)
+  def put(columnFamily: String, key: String, version: Long, value: Array[Byte]): Box[Unit] =
+    underlying.put(columnFamily, VersionedKey(key, version).toString, value)
 
-  def putJson[T : Writes](key: String, version: Long, value: T): Box[Unit] =
-    underlying.putJson(VersionedKey(key, version).toString, value)
+  def putJson[T : Writes](columnFamily: String, key: String, version: Long, value: T): Box[Unit] =
+    underlying.putJson(columnFamily, VersionedKey(key, version).toString, value)
 
   def backup(backupDir: Path): Box[BackupInfo] = underlying.backup(backupDir)
 

@@ -88,9 +88,9 @@ test("Data Api: getBoundingBox should get the bounding box of a layer", (t) => {
   t.deepEqual(boundingBox, correctBoundingBox);
 });
 
-test("Data Api: getDataValue should throw an error if the layer name is not valid", (t) => {
+test("Data Api: getDataValue should throw an error if the layer name is not valid", async (t) => {
   const api = t.context.api;
-  t.throws(() => api.data.getDataValue("nonExistingLayer", [1, 2, 3]));
+  await t.throws(api.data.getDataValue("nonExistingLayer", [1, 2, 3]));
 });
 
 test("Data Api: getDataValue should get the data value for a layer, position and zoomstep", (t) => {

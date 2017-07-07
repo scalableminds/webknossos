@@ -22,8 +22,6 @@ class VolumeTracingService @Inject()(
                                       implicit val tracingDataStore: TracingDataStore
                                     ) extends VolumeTracingBucketHelper with WKWDataFormatHelper {
 
-  private def buildTracingKey(id: String): String = s"/tracings/volumes/$id"
-
   def create(dataSource: DataSource, initialContent: Option[File]): VolumeTracing = {
     val fallbackLayer = dataSource.dataLayers.flatMap {
       case layer: SegmentationLayer => Some(layer)
@@ -38,7 +36,7 @@ class VolumeTracingService @Inject()(
     )
 
     val tracing = VolumeTracing(tracingLayer, fallbackLayer.map(_.name), fallbackLayer.map(_.largestSegmentId).getOrElse(0L) + 1)
-    tracingDataStore.putJson(buildTracingKey(tracing.id), 1, tracing)
+    tracingDataStore.putJson("volumes", tracing.id, 0, tracing)
 
     initialContent.map { file =>
       ZipIO.withUnziped(file) {
@@ -80,6 +78,6 @@ class VolumeTracingService @Inject()(
   }
 
   def find(id: String): Box[VolumeTracing] = {
-    tracingDataStore.getJson[VolumeTracing](buildTracingKey(id)).map(_.value)
+    tracingDataStore.getJson[VolumeTracing]("volumes", id).map(_.value)
   }
 }

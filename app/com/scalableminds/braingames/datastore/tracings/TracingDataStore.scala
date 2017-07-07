@@ -13,7 +13,8 @@ class TracingDataStore @Inject()(
                                   lifecycle:  ApplicationLifecycle
                                 )
   extends VersionedKeyValueStore(
-    new RocksDBStore(config.getString("braingames.binary.tracingDataFolder").getOrElse("tracingData"))) {
+    new RocksDBStore(config.getString("braingames.binary.tracingDataFolder").getOrElse("tracingData"),
+    List("volumes", "volume-data"))) {
 
   lifecycle.addStopHook(close _)
 }

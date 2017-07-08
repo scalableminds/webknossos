@@ -4,6 +4,7 @@
 package com.scalableminds.braingames.datastore.tracings.volume
 
 import com.scalableminds.braingames.binary.models.datasource.{DataSource, SegmentationLayer}
+import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValueStore
 import com.scalableminds.braingames.datastore.tracings.{Tracing, TracingDataStore}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json
@@ -25,5 +26,5 @@ case class VolumeTracing(dataLayer: VolumeTracingLayer, fallbackLayerName: Optio
 }
 
 object VolumeTracing {
-  implicit def volumeTracingFormat(implicit tracingDataStore: TracingDataStore) = Json.format[VolumeTracing]
+  implicit def volumeTracingFormat(implicit bucketStore: VersionedKeyValueStore) = Json.format[VolumeTracing]
 }

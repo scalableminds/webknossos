@@ -8,11 +8,9 @@ import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.braingames.binary.api.{BinaryDataService, DataSourceService}
 import com.scalableminds.braingames.binary.helpers.{DataSourceRepository => AbstractDataSourceRepository}
-import com.scalableminds.braingames.binary.store.kvstore.{RocksDBStore, VersionedKeyValueStore}
 import com.scalableminds.braingames.datastore.services.{DataSourceRepository, WebKnossosServer}
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import play.api.{Configuration, Environment}
-import play.api.Play.current
 
 class DataStoreModule(environment: Environment, configuration: Configuration) extends AbstractModule {
 

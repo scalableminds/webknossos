@@ -8,7 +8,7 @@ import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.datasource.{Category, DataFormat, ElementClass, SegmentationLayer}
 import com.scalableminds.braingames.binary.models.requests.DataReadInstruction
 import com.scalableminds.braingames.binary.storage.DataCubeCache
-import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValueStore
+import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValueStore
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.json.Json
@@ -21,7 +21,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
     with VolumeTracingBucketHelper
     with FoxImplicits {
 
-  val tracingDataStore: VersionedKeyValueStore = layer.tracingDataStore
+  val volumeDataStore: VersionedKeyValueStore = layer.volumeDataStore
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration): Fox[Array[Byte]] = {
     loadBucket(layer, readInstruction.bucket)
@@ -40,7 +40,7 @@ case class VolumeTracingLayer(
                                resolutions: Set[Int] = Set(1),
                                mappings: Set[String] = Set.empty,
                                override val category: Category.Value = Category.segmentation
-                             )(implicit val tracingDataStore: VersionedKeyValueStore) extends SegmentationLayer {
+                             )(implicit val volumeDataStore: VersionedKeyValueStore) extends SegmentationLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
@@ -57,5 +57,5 @@ object VolumeTracingLayer {
 
   val defaultLargestSegmentId = 1
 
-  implicit def volumeTracingLayerFormat(implicit tracingDataStore: VersionedKeyValueStore) = Json.format[VolumeTracingLayer]
+  implicit def volumeTracingLayerFormat(implicit volumeDataStore: VersionedKeyValueStore) = Json.format[VolumeTracingLayer]
 }

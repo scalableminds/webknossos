@@ -19,8 +19,10 @@ import play.api.libs.iteratee.Enumerator
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class VolumeTracingService @Inject()(
-                                      implicit val tracingDataStore: TracingDataStore
+                                      tracingDataStore: TracingDataStore
                                     ) extends VolumeTracingBucketHelper with WKWDataFormatHelper {
+
+  implicit val volumeDataStore = tracingDataStore.volumeData
 
   def create(dataSource: DataSource, initialContent: Option[File]): VolumeTracing = {
     val fallbackLayer = dataSource.dataLayers.flatMap {
@@ -36,7 +38,7 @@ class VolumeTracingService @Inject()(
     )
 
     val tracing = VolumeTracing(tracingLayer, fallbackLayer.map(_.name), fallbackLayer.map(_.largestSegmentId).getOrElse(0L) + 1)
-    tracingDataStore.putJson("volumes", tracing.id, 0, tracing)
+    tracingDataStore.volumes.putJson(tracing.id, 0, tracing)
 
     initialContent.map { file =>
       ZipIO.withUnziped(file) {
@@ -78,6 +80,6 @@ class VolumeTracingService @Inject()(
   }
 
   def find(id: String): Box[VolumeTracing] = {
-    tracingDataStore.getJson[VolumeTracing]("volumes", id).map(_.value)
+    tracingDataStore.volumes.getJson[VolumeTracing](id).map(_.value)
   }
 }

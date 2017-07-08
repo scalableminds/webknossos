@@ -3,18 +3,34 @@
  */
 package com.scalableminds.braingames.datastore.tracings
 
+import java.nio.file.Paths
+
 import com.google.inject.Inject
-import com.scalableminds.braingames.binary.store.kvstore.{RocksDBStore, VersionedKeyValueStore}
+import com.scalableminds.braingames.binary.storage.kvstore.{BackupInfo, RocksDBManager, RocksDBStore, VersionedKeyValueStore}
+import net.liftweb.common.Box
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 
 class TracingDataStore @Inject()(
                                   config: Configuration,
                                   lifecycle:  ApplicationLifecycle
-                                )
-  extends VersionedKeyValueStore(
-    new RocksDBStore(config.getString("braingames.binary.tracingDataFolder").getOrElse("tracingData"),
-    List("volumes", "volume-data"))) {
+                                ) {
 
-  lifecycle.addStopHook(close _)
+  private val tracingDataDir = Paths.get(config.getString("braingames.binary.tracingDataFolder").getOrElse("tracingData"))
+
+  private val backupDir = Paths.get(config.getString("braingames.binary.backupFolder").getOrElse("backup"))
+
+  private val rocksDB = new RocksDBManager(tracingDataDir, List("skeletons", "skeletonUpdates", "volumes", "volumeData"))
+
+  lazy val skeletons = new VersionedKeyValueStore(rocksDB.getStoreForColumnFamily("skeletons").get)
+
+  lazy val skeletonUpdates = new VersionedKeyValueStore(rocksDB.getStoreForColumnFamily("skeletonUpdates").get)
+
+  lazy val volumes = new VersionedKeyValueStore(rocksDB.getStoreForColumnFamily("volumes").get)
+
+  lazy val volumeData = new VersionedKeyValueStore(rocksDB.getStoreForColumnFamily("volumeData").get)
+
+  def backup: Box[BackupInfo] = rocksDB.backup(backupDir)
+
+  lifecycle.addStopHook(rocksDB.close _)
 }

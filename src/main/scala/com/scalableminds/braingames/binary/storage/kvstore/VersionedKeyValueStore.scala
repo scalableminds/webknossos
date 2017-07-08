@@ -1,14 +1,11 @@
 /*
  * Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.store.kvstore
-
-import java.nio.file.Path
+package com.scalableminds.braingames.binary.storage.kvstore
 
 import net.liftweb.common.Box
 import play.api.libs.json.{Reads, Writes}
 
-import scala.concurrent.Future
 import scala.util.Try
 
 case class VersionedKey(key: String, version: Long) {
@@ -91,8 +88,4 @@ class VersionedKeyValueStore(underlying: KeyValueStore) {
 
   def putJson[T : Writes](key: String, version: Long, value: T): Box[Unit] =
     underlying.putJson(VersionedKey(key, version).toString, value)
-
-  def backup(backupDir: Path): Box[BackupInfo] = underlying.backup(backupDir)
-
-  def close(): Future[Unit] = underlying.close()
 }

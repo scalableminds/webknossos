@@ -1,15 +1,11 @@
 /*
  * Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.binary.store.kvstore
-
-import java.nio.file.Path
+package com.scalableminds.braingames.binary.storage.kvstore
 
 import com.scalableminds.util.mvc.BoxImplicits
 import net.liftweb.common.Box
 import play.api.libs.json._
-
-import scala.concurrent.Future
 
 case class KeyValuePair[T](key: String, value: T)
 
@@ -29,8 +25,9 @@ trait KeyValueStore extends BoxImplicits {
 
   def put(key: String, value: Array[Byte]): Box[Unit]
 
-  def getJson[T : Reads](key: String): Box[T] =
+  def getJson[T : Reads](key: String): Box[T] = {
     get(key).flatMap(value => Json.parse(value).validate[T])
+  }
 
   def scanJson[T : Reads](key: String, prefix: Option[String] = None): Iterator[KeyValuePair[T]] = {
     scan(key, prefix).flatMap { pair =>
@@ -38,10 +35,7 @@ trait KeyValueStore extends BoxImplicits {
     }
   }
 
-  def putJson[T : Writes](key: String, value: T): Box[Unit] =
+  def putJson[T : Writes](key: String, value: T): Box[Unit] = {
     put(key, Json.toJson(value).toString)
-
-  def backup(backupDir: Path): Box[BackupInfo]
-
-  def close(): Future[Unit]
+  }
 }

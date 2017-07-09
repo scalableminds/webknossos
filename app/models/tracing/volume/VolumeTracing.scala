@@ -226,7 +226,12 @@ object VolumeTracing extends FoxImplicits{
 }
 
 object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {
+
   val collectionName = "volumes"
 
   val formatter = VolumeTracing.volumeTracingFormat
+
+  def findOneByVolumeTracingLayerName(layerName: String)(implicit ctx: DBAccessContext): Fox[VolumeTracing] = {
+    find(Json.obj("dataStoreContent.dataLayer.name" -> layerName)).one[VolumeTracing]
+  }
 }

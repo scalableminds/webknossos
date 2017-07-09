@@ -223,6 +223,7 @@ object VolumeTracing extends FoxImplicits{
 }
 
 object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {
+
   val collectionName = "volumes"
 
   val formatter = VolumeTracing.volumeTracingFormat

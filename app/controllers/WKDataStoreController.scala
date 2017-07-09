@@ -5,6 +5,7 @@ package controllers
 
 import javax.inject.Inject
 
+import com.scalableminds.braingames.binary.models.datasource.DataSourceId
 import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.braingames.datastore.services.DataStoreStatus
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
@@ -24,13 +25,9 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     with WKDataStoreActionHelper
     with LazyLogging {
 
-  case class DSUploadInfo(name: String, team: String)
-
-  implicit val dsUploadInfoFormat = Json.format[DSUploadInfo]
-
   def validateDataSetUpload(name: String, token: String) = DataStoreAction(name).async(parse.json){ implicit request =>
     for {
-      uploadInfo <- request.body.validate[DSUploadInfo].asOpt.toFox ?~> Messages("dataStore.upload.invalid")
+      uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> Messages("dataStore.upload.invalid")
       user <- DataTokenService.userFromToken(token) ?~> Messages("dataToken.user.invalid")
       _ <- DataSetService.isProperDataSetName(uploadInfo.name) ?~> Messages("dataSet.name.invalid")
       _ <- DataSetService.checkIfNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")

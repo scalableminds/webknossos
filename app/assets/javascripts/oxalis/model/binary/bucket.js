@@ -66,6 +66,11 @@ export class DataBucket {
   }
 
 
+  isRequested(): boolean {
+    return this.state === BucketStateEnum.REQUESTED;
+  }
+
+
   isLoaded(): boolean {
     return this.state === BucketStateEnum.LOADED;
   }

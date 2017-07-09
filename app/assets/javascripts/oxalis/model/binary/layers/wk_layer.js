@@ -90,8 +90,9 @@ class WkLayer extends Layer {
       return { action: "labelVolume", value: bucket };
     });
 
+    const datasetName = this.getDatasetName();
     await Request.sendJSONReceiveJSON(
-      `${this.dataStoreInfo.url}/data/tracings/volumes/${this.name}?token=${token}`, {
+      `${this.dataStoreInfo.url}/data/tracings/volumes/${this.name}?dataSetName=${datasetName}&token=${token}`, {
         method: "POST",
         data,
         timeout: REQUEST_TIMEOUT,

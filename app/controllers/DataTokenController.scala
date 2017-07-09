@@ -9,6 +9,7 @@ import com.scalableminds.braingames.binary.models.datasource.{DataLayerLike => D
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.binary._
+import models.tracing.volume.VolumeTracingDAO
 import models.user.User
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
@@ -21,9 +22,10 @@ class DataTokenController @Inject()(val messagesApi: MessagesApi) extends Contro
   private def ensureAccessToLayer(
     dataSet: DataSet,
     dataLayerName: String)(implicit ctx: DBAccessContext): Fox[Boolean] = {
-    Fox.successful(true)
-    // TODO jfrohnhofen
-    //dataSet.dataSource.toUsable.flatMap(_.getDataLayer(dataLayerName)).toFox.orElse(true)
+
+    dataSet.dataSource.toUsable.flatMap(_.getDataLayer(dataLayerName)).toFox
+      .orElse(VolumeTracingDAO.findOneByVolumeTracingLayerName(dataLayerName))
+      .map(_ => true).orElse(false)
   }
 
   def generateToken(dataSetNameOpt: Option[String], dataLayerName: Option[String]) = UserAwareAction.async {

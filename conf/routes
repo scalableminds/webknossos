@@ -80,8 +80,6 @@ GET           /api/datasets/:dataSetName                                        
 PUT           /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
 GET           /api/datasets/:dataSetName/accessList                             controllers.DataSetController.accessList(dataSetName: String)
 POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
-#POST          /api/datasets/:dataSetName/import                                 controllers.DataSetController.importDataSet(dataSetName: String)
-#GET           /api/datasets/:dataSetName/import                                 controllers.DataSetController.importProgress(dataSetName: String)
 GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String)
 
 GET           /api/datastores                                                   controllers.DataStoreController.list

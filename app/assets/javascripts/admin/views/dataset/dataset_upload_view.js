@@ -28,13 +28,6 @@ class DatasetUploadView extends Marionette.View {
         </div>
       </div>
       <div class="form-group">
-        <label class="col-sm-3 control-label" for="scale_scale">Scale</label>
-        <div class="col-sm-9">
-          <input type="text" required name="scale.scale" value="12.0, 12.0, 24.0" class="form-control" pattern="\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?)\\s*" title="Specify dataset scale like &quot;XX, YY, ZZ&quot;">
-          <span class="help-block errors"></span>
-        </div>
-      </div>
-      <div class="form-group">
         <label class="col-sm-3 control-label" for="datastore">Datastore</label>
         <div class="col-sm-9 datastore">
           <span class="help-block errors"></span>

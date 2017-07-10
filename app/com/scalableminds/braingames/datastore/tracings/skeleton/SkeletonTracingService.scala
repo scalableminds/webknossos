@@ -4,11 +4,11 @@ import java.util.UUID
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
-import com.scalableminds.braingames.binary.store.kvstore.VersionedKeyValuePair
+import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValuePair
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.util.geometry.Scale
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.Box
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsValue, Json}
@@ -17,18 +17,16 @@ import play.api.libs.json.{JsValue, Json}
   * Created by f on 28.06.17.
   */
 class SkeletonTracingService @Inject()(
-                                        val tracingDataStore: TracingDataStore
+                                        tracingDataStore: TracingDataStore
                                       ) {
 
-  private def buildTracingKey(id: String) = s"/tracings/skeletons/$id"
-  private def buildUpdatesKey(id: String) = s"/updateActions/skeletons/$id"
   private def createNewId(): String = UUID.randomUUID.toString
 
   def find(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
-    tracingDataStore.getJson[SkeletonTracing](buildTracingKey(tracingId), version).map(_.value)
+    tracingDataStore.skeletons.getJson[SkeletonTracing](tracingId, version).map(_.value)
 
   def findVersioned(tracingId: String, version: Option[Long] = None): Box[VersionedKeyValuePair[SkeletonTracing]] =
-    tracingDataStore.getJson[SkeletonTracing](buildTracingKey(tracingId), version)
+    tracingDataStore.skeletons.getJson[SkeletonTracing](tracingId, version)
 
   def create(datSetName: String): SkeletonTracing = {
     val id = createNewId()
@@ -43,7 +41,7 @@ class SkeletonTracingService @Inject()(
       editPosition = None,
       editRotation = None,
       zoomLevel = None)
-    tracingDataStore.putJson(buildTracingKey(tracing.id), 0, tracing)
+    tracingDataStore.skeletons.putJson(tracing.id, 0, tracing)
     tracing
   }
 
@@ -51,13 +49,13 @@ class SkeletonTracingService @Inject()(
     for {
       tracing <- NMLParser.parse(createNewId(), name, nml.trim())
     } yield {
-      tracingDataStore.putJson(buildTracingKey(tracing.id), 0, tracing)
+      tracingDataStore.skeletons.putJson(tracing.id, 0, tracing)
       tracing
     }
   }
 
   def saveUpdates(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction], newVersion: Long): Box[Unit] = {
-    tracingDataStore.putJson(buildUpdatesKey(tracing.id), newVersion, updates)
+    tracingDataStore.skeletons.putJson(tracing.id, newVersion, updates)
   }
 
   def downloadJson(tracing: SkeletonTracing): Box[JsValue] = {
@@ -89,7 +87,7 @@ class SkeletonTracingService @Inject()(
   private def findDesiredOrNewestPossibleVersion(desiredVersion: Option[Long], tracingId: String): Option[Long] = desiredVersion match {
     case None => {
       for {
-        newestUpdate <- tracingDataStore.get(buildUpdatesKey(tracingId))
+        newestUpdate <- tracingDataStore.skeletonUpdates.get(tracingId)
       } yield {
         newestUpdate.version
       }
@@ -110,7 +108,7 @@ class SkeletonTracingService @Inject()(
 
     if (desiredVersion == existingVersion) List()
     else {
-      val versionIterator = tracingDataStore.scanVersionsJson[List[SkeletonUpdateAction]](buildUpdatesKey(tracingId), Some(desiredVersion))
+      val versionIterator = tracingDataStore.skeletonUpdates.scanVersionsJson[List[SkeletonUpdateAction]](tracingId, Some(desiredVersion))
       toListIter(versionIterator, List()).flatten
     }
   }
@@ -123,7 +121,7 @@ class SkeletonTracingService @Inject()(
         case update :: tail => updateIter(update.applyOn(tracing), tail)
       }
       val updated = updateIter(tracing, updates)
-      tracingDataStore.putJson(buildTracingKey(updated.id), newVersion, updated)
+      tracingDataStore.skeletons.putJson(updated.id, newVersion, updated)
       updated
     }
   }
@@ -131,8 +129,7 @@ class SkeletonTracingService @Inject()(
   def duplicate(tracing: SkeletonTracing): Box[SkeletonTracing] = {
     val id = createNewId()
     val newTracing = tracing.copy(id = id, name = "", timestamp = System.currentTimeMillis())
-    tracingDataStore.putJson(buildTracingKey(newTracing.id), 0, newTracing)
+    tracingDataStore.skeletons.putJson(newTracing.id, 0, newTracing)
     Some(newTracing)
   }
-
 }

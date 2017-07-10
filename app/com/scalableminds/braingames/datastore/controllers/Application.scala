@@ -3,7 +3,6 @@
 */
 package com.scalableminds.braingames.datastore.controllers
 
-import java.nio.file.Paths
 import javax.inject.Inject
 
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
@@ -13,12 +12,10 @@ import play.api.libs.json.Json
 import play.api.mvc.Action
 
 class Application @Inject()(
-                             tracingDataStore: TracingDataStore,
+                             store: TracingDataStore,
                              config: Configuration,
                              val messagesApi: MessagesApi
                            ) extends Controller {
-
-  val backupFolder = Paths.get(config.getString("braingames.binary.backupFolder").getOrElse("backup"))
 
   def health = Action {
     implicit request =>
@@ -30,8 +27,8 @@ class Application @Inject()(
   def backup = Action {
     implicit request =>
       val start = System.currentTimeMillis()
-      logger.info(s"Starting tracing data backup to '${backupFolder.toAbsolutePath}'")
-      tracingDataStore.backup(backupFolder).map { backupInfo =>
+      logger.info(s"Starting tracing data backup")
+      store.backup.map { backupInfo =>
         val duration = System.currentTimeMillis() - start
         logger.info(s"Finished tracing data backup after $duration ms")
         Ok(Json.toJson(backupInfo))

@@ -27,8 +27,8 @@ GET         /datasets/:dataSetName                                              
 
 # Volume tracings
 POST        /tracings/volumes                                                                  @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.create(dataSetName: String)
-POST        /tracings/volumes/:tracingId                                                       @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.update(tracingId: String)
-GET         /tracings/volumes/:tracingId/download                                              @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(tracingId: String)
+POST        /tracings/volumes/:tracingId                                                       @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.update(dataSetName: String, tracingId: String)
+GET         /tracings/volumes/:tracingId/download                                              @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(dataSetName: String, tracingId: String)
 
 # Skeleton tracings
 POST        /tracings/skeletons                                                                @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.create(dataSetName: String)

@@ -5,6 +5,7 @@ package com.scalableminds.braingames.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
+import com.scalableminds.braingames.datastore.services.AccessTokenService
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateAction}
 import play.api.i18n.{Messages, MessagesApi}
@@ -16,9 +17,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class VolumeTracingController @Inject()(
                                          volumeTracingService: VolumeTracingService,
                                          dataSourceRepository: DataSourceRepository,
-                                         implicit val tracingDataStore: TracingDataStore,
+                                         tracingDataStore: TracingDataStore,
+                                         val accessTokenService: AccessTokenService,
                                          val messagesApi: MessagesApi
-                                       ) extends Controller {
+                                       ) extends TokenSecuredController {
+
+  implicit val volumeDataStore = tracingDataStore.volumeData
 
   def create(dataSetName: String) = Action.async {
     implicit request => {
@@ -32,7 +36,7 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateAction]]) {
+  def update(dataSetName: String, tracingId: String) = TokenSecuredAction(dataSetName, tracingId).async(validateJson[List[VolumeUpdateAction]]) {
     implicit request => {
       for {
         tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
@@ -43,7 +47,7 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def download(tracingId: String) = Action.async {
+  def download(dataSetName: String, tracingId: String) = TokenSecuredAction(dataSetName, tracingId).async {
     implicit request => {
       for {
         tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")

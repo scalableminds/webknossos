@@ -23,7 +23,7 @@ class SkeletonTracingController @Inject()(
   def create(dataSetName: String) = Action {
     implicit request => {
       val tracing = skeletonTracingService.create(dataSetName)
-      Ok(Json.toJson(tracing))
+      Ok(tracing.id)
     }
   }
 
@@ -32,7 +32,7 @@ class SkeletonTracingController @Inject()(
       for {
         tracing <- skeletonTracingService.createFromNML(name, request.body)
       } yield {
-        Ok(Json.toJson(tracing))
+        Ok(tracing.id)
       }
     }
   }
@@ -48,10 +48,10 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def downloadJson(tracingId: String, version: Long) = Action.async {
+  def downloadJson(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       for {
-        tracingVersioned <- skeletonTracingService.findVersioned(tracingId, Some(version)) ?~> Messages("tracing.notFound")
+        tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
         updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
         serialized <- skeletonTracingService.downloadJson(updatedTracing)
       } yield {
@@ -60,10 +60,10 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def downloadNML(tracingId: String, version: Long) = Action.async {
+  def downloadNML(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       for {
-        tracingVersioned <- skeletonTracingService.findVersioned(tracingId, Some(version)) ?~> Messages("tracing.notFound")
+        tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
         updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
         downloadStream <- skeletonTracingService.downloadNML(updatedTracing, dataSourceRepository)
       } yield {
@@ -76,13 +76,14 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def duplicate(tracingId: String, version: Long) = Action.async {
+  def duplicate(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       for {
-        tracing <- skeletonTracingService.find(tracingId, Some(version)) ?~> Messages("tracing.notFound")
-        newTracing <- skeletonTracingService.duplicate(tracing)
+        tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
+        updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
+        newTracing <- skeletonTracingService.duplicate(updatedTracing)
       } yield {
-        Ok(Json.toJson(newTracing))
+        Ok(newTracing.id)
       }
     }
   }

@@ -34,9 +34,9 @@ GET         /tracings/volumes/:tracingId/download                               
 POST        /tracings/skeletons                                                                @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.create(dataSetName: String)
 POST        /tracings/skeletons/createFromNML                                                  @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.createFromNML(name: String)
 POST        /tracings/skeletons/:annotationId                                                  @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.update(annotationId: String, newVersion: Long)
-GET         /tracings/skeletons/:annotationId/downloadJson                                     @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.downloadJson(annotationId: String, version: Long)
-GET         /tracings/skeletons/:annotationId/downloadNML                                      @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.downloadNML(annotationId: String, version: Long)
-GET         /tracings/skeletons/:annotationId/duplicate                                        @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.duplicate(annotationId: String, version: Long)
+GET         /tracings/skeletons/:annotationId/downloadJson                                     @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.downloadJson(annotationId: String, version: Option[Long])
+GET         /tracings/skeletons/:annotationId/downloadNML                                      @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.downloadNML(annotationId: String, version: Option[Long])
+GET         /tracings/skeletons/:annotationId/duplicate                                        @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.duplicate(annotationId: String, version: Option[Long])
 
 # Actions
 GET         /triggers/checkInbox                                                               @com.scalableminds.braingames.datastore.controllers.DataSourceController.triggerInboxCheck()

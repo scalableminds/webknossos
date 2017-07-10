@@ -271,7 +271,7 @@ export type TaskType = {
 
 export type SaveStateType = {
   +isBusy: boolean,
-  +queue: Array<UpdateAction>,
+  +queue: Array<Array<UpdateAction>>,
   +lastSaveTimestamp: number,
 };
 

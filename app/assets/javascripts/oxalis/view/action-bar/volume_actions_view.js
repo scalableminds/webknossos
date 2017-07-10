@@ -7,16 +7,19 @@ import Constants from "oxalis/constants";
 import Store from "oxalis/store";
 import { setModeAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { Button, Radio } from "antd";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 
 // Workaround until github.com/facebook/flow/issues/1113 is fixed
 const RadioGroup = Radio.Group;
 const RadioButton = Radio.Button;
 const ButtonGroup = Button.Group;
 
+type Props = {
+  volumeTracing: VolumeTracingType,
+};
+
 class VolumeActionsView extends PureComponent {
-  props: {
-    volumeTracing: VolumeTracingType,
-  };
+  props: Props;
 
   handleSetMode = (event: { target: { value: VolumeTraceOrMoveModeType } }) => {
     Store.dispatch(setModeAction(
@@ -50,9 +53,9 @@ class VolumeActionsView extends PureComponent {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): Props {
   return {
-    volumeTracing: state.tracing,
+    volumeTracing: enforceVolumeTracing(state.tracing),
   };
 }
 

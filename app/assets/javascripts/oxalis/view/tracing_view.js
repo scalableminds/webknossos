@@ -19,7 +19,7 @@ import type { Dispatch } from "redux";
 class TracingView extends React.PureComponent {
   props: {
     flightmodeRecording: boolean,
-    onChangeFlightmodeRecording: (boolean) => {},
+    onChangeFlightmodeRecording: ?Function,
     viewMode: ModeType,
     scale: number,
     isVolumeTracingDisallowed: boolean,

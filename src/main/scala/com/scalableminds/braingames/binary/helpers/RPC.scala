@@ -81,7 +81,16 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
   private def performRequest: Fox[WSResponse] = {
     logger.debug(s"Sending WS request to $url (ID: $id). " +
       s"RequestBody: '${requestBodyPreview}'")
-    request.execute().map(Full(_)).recover {
+    request.execute().map { result =>
+      if (result.status == OK) {
+        Full(result)
+      } else {
+        val errorMsg = s"Unsuccessful WS request to webknossos (ID: $id)." +
+          s"Status: ${result.status}. Response: ${result.bodyAsBytes.map(_.toChar).mkString.take(100)}"
+        logger.error(errorMsg)
+        Failure(errorMsg)
+      }
+    }.recover {
       case e =>
         val errorMsg = s"Error sending WS request to webknossos (ID: $id): " +
           s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"

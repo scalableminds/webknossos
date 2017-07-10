@@ -9,7 +9,7 @@ import com.google.inject.Inject
 import com.scalableminds.braingames.binary.api.DataSourceService
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.binary.models.datasource.{DataSource, DataSourceId}
-import com.scalableminds.braingames.datastore.services.WebKnossosServer
+import com.scalableminds.braingames.datastore.services.{AccessTokenService, WebKnossosServer}
 import play.api.data.Form
 import play.api.data.Forms.{nonEmptyText, tuple}
 import play.api.i18n.{Messages, MessagesApi}
@@ -20,11 +20,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class DataSourceController @Inject()(
-                                      dataSourceService: DataSourceService,
                                       dataSourceRepository: DataSourceRepository,
+                                      dataSourceService: DataSourceService,
                                       webKnossosServer: WebKnossosServer,
+                                      val accessTokenService: AccessTokenService,
                                       val messagesApi: MessagesApi
-                                    ) extends Controller {
+                                    ) extends TokenSecuredController {
 
   def list() = Action {
     implicit request => {

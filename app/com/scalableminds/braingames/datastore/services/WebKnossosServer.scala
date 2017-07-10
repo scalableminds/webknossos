@@ -9,12 +9,13 @@ import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.helpers.{IntervalScheduler, RPC}
 import com.scalableminds.braingames.binary.models.datasource.DataSourceId
 import com.scalableminds.braingames.binary.models.datasource.inbox.InboxDataSourceLike
-import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracing
 import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 import play.api.i18n.MessagesApi
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
+import play.api.test.Helpers._
 
 import scala.concurrent.duration._
 
@@ -29,7 +30,7 @@ class WebKnossosServer @Inject()(
                                   val lifecycle: ApplicationLifecycle,
                                   @Named("braingames-binary") val system: ActorSystem,
                                   val messagesApi: MessagesApi
-                                ) extends IntervalScheduler {
+                                ) extends IntervalScheduler with LazyLogging {
 
   private val dataStoreKey: String = config.getString("datastore.key").getOrElse("something-secure")
   private val dataStoreName: String = config.getString("datastore.name").getOrElse("local-datastore")
@@ -66,8 +67,26 @@ class WebKnossosServer @Inject()(
   }
 
   def validateDataSourceUpload(token: String, id: DataSourceId): Fox[_] = {
-    RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/datasource")
+    RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/verifyUpload")
       .withQueryString("key" -> dataStoreKey)
+      .withQueryString("token" -> token)
+      .post(id)
+  }
+
+  def requestUserAccess(token: String, dataSetName: String, dataLayerName: String): Fox[_] = {
+    RPC(s"$webKnossosUrl/api/dataToken/validate")
+      .withQueryString(
+        "token" -> token,
+        "dataSetName" -> dataSetName,
+        "dataLayerName" -> dataLayerName)
+      .get
+  }
+
+  def requestDataSetAccess(token: String, dataSetName: String): Fox[_] = {
+    RPC(s"$webKnossosUrl/api/datasetToken/validate")
+      .withQueryString(
+        "token" -> token,
+        "dataSetName" -> dataSetName)
       .get
   }
 }

@@ -100,7 +100,7 @@ object SkeletonUpdateAction {
   implicit object SkeletonUpdateActionReads extends Reads[SkeletonUpdateAction] {
     override def reads(json: JsValue): JsResult[SkeletonUpdateAction] = {
       val jsonValue = (json \ "value").as[JsObject]
-      (json \ "action").as[String] match {
+      (json \ "name").as[String] match {
         case "createTree" => deserialize[CreateTreeSkeletonAction](jsonValue)
         case "deleteTree" => deserialize[DeleteTreeSkeletonAction](jsonValue)
         case "updateTree" => deserialize[UpdateTreeSkeletonAction](jsonValue)
@@ -128,17 +128,20 @@ object SkeletonUpdateAction {
 
   implicit object SkeletonUpdateActionWrites extends Writes[SkeletonUpdateAction] {
     override def writes(a: SkeletonUpdateAction) = a match{
-      case s: CreateTreeSkeletonAction => Json.obj("action" -> "createTree", "value" -> Json.toJson(s)(CreateTreeSkeletonAction.jsonFormat))
-      case s: DeleteTreeSkeletonAction => Json.obj("action" -> "deleteTree", "value" -> Json.toJson(s)(DeleteTreeSkeletonAction.jsonFormat))
-      case s: UpdateTreeSkeletonAction => Json.obj("action" -> "updateTree", "value" -> Json.toJson(s)(UpdateTreeSkeletonAction.jsonFormat))
-      case s: MergeTreeSkeletonAction => Json.obj("action" -> "mergeTree", "value" -> Json.toJson(s)(MergeTreeSkeletonAction.jsonFormat))
-      case s: MoveTreeComponentSkeletonAction => Json.obj("action" -> "moveTreeComponent", "value" -> Json.toJson(s)(MoveTreeComponentSkeletonAction.jsonFormat))
-      case s: CreateNodeSkeletonAction => Json.obj("action" -> "createNode", "value" -> Json.toJson(s)(CreateNodeSkeletonAction.jsonFormat))
-      case s: DeleteNodeSkeletonAction => Json.obj("action" -> "deleteNode", "value" -> Json.toJson(s)(DeleteNodeSkeletonAction.jsonFormat))
-      case s: UpdateNodeSkeletonAction => Json.obj("action" -> "updateNode", "value" -> Json.toJson(s)(UpdateNodeSkeletonAction.jsonFormat))
-      case s: CreateEdgeSkeletonAction => Json.obj("action" -> "createEdge", "value" -> Json.toJson(s)(CreateEdgeSkeletonAction.jsonFormat))
-      case s: DeleteEdgeSkeletonAction => Json.obj("action" -> "deleteEdge", "value" -> Json.toJson(s)(DeleteEdgeSkeletonAction.jsonFormat))
-      case s: UpdateTracingSkeletonAction => Json.obj("action" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
+      case s: CreateTreeSkeletonAction => Json.obj("name" -> "createTree", "value" -> Json.toJson(s)(CreateTreeSkeletonAction.jsonFormat))
+      case s: DeleteTreeSkeletonAction => Json.obj("name" -> "deleteTree", "value" -> Json.toJson(s)(DeleteTreeSkeletonAction.jsonFormat))
+      case s: UpdateTreeSkeletonAction => Json.obj("name" -> "updateTree", "value" -> Json.toJson(s)(UpdateTreeSkeletonAction.jsonFormat))
+      case s: MergeTreeSkeletonAction => Json.obj("name" -> "mergeTree", "value" -> Json.toJson(s)(MergeTreeSkeletonAction.jsonFormat))
+      case s: MoveTreeComponentSkeletonAction => Json.obj("name" -> "moveTreeComponent", "value" -> Json.toJson(s)(MoveTreeComponentSkeletonAction.jsonFormat))
+      case s: CreateNodeSkeletonAction => Json.obj("name" -> "createNode", "value" -> Json.toJson(s)(CreateNodeSkeletonAction.jsonFormat))
+      case s: DeleteNodeSkeletonAction => Json.obj("name" -> "deleteNode", "value" -> Json.toJson(s)(DeleteNodeSkeletonAction.jsonFormat))
+      case s: UpdateNodeSkeletonAction => Json.obj("name" -> "updateNode", "value" -> Json.toJson(s)(UpdateNodeSkeletonAction.jsonFormat))
+      case s: CreateEdgeSkeletonAction => Json.obj("name" -> "createEdge", "value" -> Json.toJson(s)(CreateEdgeSkeletonAction.jsonFormat))
+      case s: DeleteEdgeSkeletonAction => Json.obj("name" -> "deleteEdge", "value" -> Json.toJson(s)(DeleteEdgeSkeletonAction.jsonFormat))
+      case s: UpdateTracingSkeletonAction => Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
     }
   }
 }
+
+case class SkeletonUpdateActionGroup(version: Long, timestamp: Long, actions: List[SkeletonUpdateAction])
+object SkeletonUpdateActionGroup {implicit val jsonFormat = Json.format[SkeletonUpdateActionGroup]}

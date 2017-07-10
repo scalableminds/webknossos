@@ -54,8 +54,8 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  def saveUpdates(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction], newVersion: Long): Box[Unit] = {
-    tracingDataStore.skeletons.putJson(tracing.id, newVersion, updates)
+  def saveUpdates(tracingId: String, updateActionGroup: SkeletonUpdateActionGroup): Box[Unit] = {
+    tracingDataStore.skeletonUpdates.putJson(tracingId, updateActionGroup.version, updateActionGroup.actions)
   }
 
   def downloadJson(tracing: SkeletonTracing): Box[JsValue] = {

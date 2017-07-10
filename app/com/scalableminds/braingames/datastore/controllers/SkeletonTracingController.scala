@@ -6,7 +6,7 @@ package com.scalableminds.braingames.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
-import com.scalableminds.braingames.datastore.tracings.skeleton.{SkeletonTracingService, SkeletonUpdateAction}
+import com.scalableminds.braingames.datastore.tracings.skeleton.{SkeletonTracingService, SkeletonUpdateAction, SkeletonUpdateActionGroup}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -37,11 +37,11 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def update(tracingId: String, newVersion: Long) = Action.async(validateJson[List[SkeletonUpdateAction]]) {
+  def update(tracingId: String) = Action.async(validateJson[SkeletonUpdateActionGroup]) {
     implicit request => {
       for {
-        tracing <- skeletonTracingService.find(tracingId, Some(newVersion)) ?~> Messages("tracing.notFound")
-        _ <- skeletonTracingService.saveUpdates(tracing, request.body, newVersion)
+        tracing <- skeletonTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+        _ <- skeletonTracingService.saveUpdates(tracingId, request.body)
       } yield {
         Ok
       }

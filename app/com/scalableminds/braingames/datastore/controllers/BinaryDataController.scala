@@ -14,6 +14,7 @@ import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSou
 import com.scalableminds.braingames.binary.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.braingames.datastore.models.DataRequestCollection._
 import com.scalableminds.braingames.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest}
+import com.scalableminds.braingames.datastore.services.AccessTokenService
 import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
@@ -27,8 +28,9 @@ class BinaryDataController @Inject()(
                                       binaryDataService: BinaryDataService,
                                       dataSourceRepository: DataSourceRepository,
                                       volumeTracingService: VolumeTracingService,
+                                      val accessTokenService: AccessTokenService,
                                       val messagesApi: MessagesApi
-                                    ) extends Controller {
+                                    ) extends TokenSecuredController {
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.

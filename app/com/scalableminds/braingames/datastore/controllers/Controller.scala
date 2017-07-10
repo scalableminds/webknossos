@@ -3,6 +3,7 @@
 */
 package com.scalableminds.braingames.datastore.controllers
 
+import com.scalableminds.braingames.datastore.services.AccessTokenService
 import com.scalableminds.util.mvc.ExtendedController
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
@@ -19,6 +20,45 @@ trait Controller
     with RemoteOriginHelpers
     with JsonValidationHelpers
     with LazyLogging
+
+trait TokenSecuredController extends Controller {
+
+  def accessTokenService: AccessTokenService
+
+  case class TokenSecuredAction(dataSetName: String, dataLayerName: String) extends ActionBuilder[Request] {
+
+    val debugModeEnabled = Play.current.configuration.getBoolean("datastore.debugMode").getOrElse(false)
+
+    def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
+      hasUserAccess(request).flatMap {
+        case true =>
+          block(request)
+        case _ if debugModeEnabled && Play.mode(Play.current) != Mode.Prod =>
+          // If we are in development mode, lets skip tokens
+          block(request)
+        case false =>
+          hasDataSetTokenAccess(request).flatMap {
+            case true =>
+              block(request)
+            case false =>
+              Future.successful(Forbidden("Invalid access token."))
+          }
+      }
+    }
+
+    private def hasUserAccess[A](request: Request[A]): Future[Boolean] = {
+      request.getQueryString("token").map { token =>
+        accessTokenService.hasUserAccess(token, dataSetName, dataLayerName)
+      } getOrElse Future.successful(false)
+    }
+
+    private def hasDataSetTokenAccess[A](request: Request[A]): Future[Boolean] = {
+      request.getQueryString("datasetToken").map { token =>
+        accessTokenService.hasDataSetAccess(token, dataSetName)
+      } getOrElse Future.successful(false)
+    }
+  }
+}
 
 trait RemoteOriginHelpers {
 
@@ -45,25 +85,4 @@ trait JsonValidationHelpers {
   def validateJson[A : Reads] = BodyParsers.parse.json.validate(
     _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
   )
-}
-
-case class TokenSecuredAction(dataSetName: String, dataLayerName: String) extends ActionBuilder[Request] {
-
-  val debugModeEnabled = Play.current.configuration.getBoolean("datastore.debugMode").getOrElse(false)
-
-  def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
-    hasUserAccess(request).flatMap {
-      case true =>
-        block(request)
-      case _ if debugModeEnabled && Play.mode(Play.current) != Mode.Prod =>
-        // If we are in development mode, lets skip tokens
-        block(request)
-      case false =>
-        Future.successful(Forbidden("Invalid access token."))
-    }
-  }
-
-  private def hasUserAccess[A](request: Request[A]): Future[Boolean] = {
-    Future.successful(true)
-  }
 }

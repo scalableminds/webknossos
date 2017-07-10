@@ -3,7 +3,6 @@
 */
 package com.scalableminds.braingames.datastore.controllers
 
-import java.nio.file.Paths
 import javax.inject.Inject
 
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore

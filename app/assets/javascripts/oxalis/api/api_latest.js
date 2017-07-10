@@ -441,12 +441,28 @@ class DataApi {
   * @example // Get the segmentation id for a segementation layer
   * const segmentId = await api.data.getDataValue("segmentation", position);
   */
-  getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
+  async getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
     const layer = this.__getLayer(layerName);
-    const bucket = layer.cube.positionToZoomedAddress(position, zoomStep);
+    const bucketAddress = layer.cube.positionToZoomedAddress(position, zoomStep);
+    const bucket = layer.cube.getOrCreateBucket(bucketAddress);
 
-    layer.pullQueue.add({ bucket, priority: -1 });
-    return Promise.all(layer.pullQueue.pull()).then(() => layer.cube.getDataValue(position));
+    if (bucket.type === "null") return 0;
+
+    let needsToAwaitBucket = false;
+    if (bucket.isRequested()) {
+      needsToAwaitBucket = true;
+    } else if (bucket.needsRequest()) {
+      layer.pullQueue.add({ bucket: bucketAddress, priority: -1 });
+      layer.pullQueue.pull();
+      needsToAwaitBucket = true;
+    }
+    if (needsToAwaitBucket) {
+      await new Promise((resolve) => {
+        bucket.on("bucketLoaded", resolve);
+      });
+    }
+    // Bucket has been loaded by now or was loaded already
+    return layer.cube.getDataValue(position);
   }
 
   /**

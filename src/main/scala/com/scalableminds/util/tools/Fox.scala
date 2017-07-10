@@ -126,7 +126,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   val self = this
 
   def ?~>(s: String): Fox[A] =
-    new Fox(futureBox.map(_ ?~ s))
+    new Fox(futureBox.map(_ ?~! s))
 
   def ~>[T](errorCode: => T): Fox[A] =
     new Fox(futureBox.map(_ ~> errorCode))

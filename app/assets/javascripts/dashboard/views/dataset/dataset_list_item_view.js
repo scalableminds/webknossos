@@ -128,10 +128,10 @@ class DatasetListItemView extends Marionette.CompositeView {
       form: "form",
       contentTypeInput: "#contentTypeInput",
     };
-  }
-  // Cannot be ES6 style function, as these are covariant by default
-  attributes = function attributes() {
-    return { "data-dataset-name": this.model.get("name") };
+
+    this.prototype.attributes = function attributes() {
+      return { "data-dataset-name": this.model.get("name") };
+    };
   }
 
 

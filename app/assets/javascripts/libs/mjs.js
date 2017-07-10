@@ -30,7 +30,8 @@ M4x4.transformPointsAffine = function transformPointsAffine(m: Matrix4x4, points
   const m31 = m[13];
   const m32 = m[14];
 
-  for (let i = 0; i < points.length; i += 3) {
+  // DO NOT CHANGE to let compound assignment (+=) as V8 cannot optimize this
+  for (let i = 0; i < points.length; i = i + 3) {
     const v0 = points[i];
     const v1 = points[i + 1];
     const v2 = points[i + 2];

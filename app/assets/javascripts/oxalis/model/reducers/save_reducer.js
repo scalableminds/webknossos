@@ -11,7 +11,7 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "PUSH_SAVE_QUEUE": {
       return update(state, {
-        save: { queue: { $push: action.items } },
+        save: { queue: { $push: action.items.length ? [action.items] : [] } },
       });
     }
 

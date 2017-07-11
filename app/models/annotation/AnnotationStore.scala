@@ -81,7 +81,8 @@ object AnnotationStore extends LazyLogging {
     annotation: Fox[Annotation],
     annotationSec: Fox[Annotation],
     readOnly: Boolean,
-    user: User)(implicit ctx: DBAccessContext) = {
+    user: User)(implicit ctx: DBAccessContext) = Fox.empty //Todo: rocksDB
+   /*{
 
     try {
       for {
@@ -101,5 +102,5 @@ object AnnotationStore extends LazyLogging {
         logger.error("Request Annotation in AnnotationStore failed: " + e)
         throw e
     }
-  }
+  }*/
 }

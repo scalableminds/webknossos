@@ -24,11 +24,9 @@ object AnnotationInformationHandler {
 
 trait AnnotationInformationHandler {
 
-  type AType <: Annotation
-
   def cache: Boolean = true
 
-  def provideAnnotation(identifier: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[AType]
+  def provideAnnotation(identifier: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation]
 
   /*def nameForAnnotation(identifier: String)(implicit request: AuthenticatedRequest[_]): Box[String] = {
     withAnnotation(identifier)(nameForAnnotation)
@@ -38,7 +36,7 @@ trait AnnotationInformationHandler {
     Future.successful(t.id)
   }
 
-  def withAnnotation[A](identifier: String)(f: AType => A)(implicit request: AuthenticatedRequest[_]): Fox[A] = {
+  def withAnnotation[A](identifier: String)(f: Annotation => A)(implicit request: AuthenticatedRequest[_]): Fox[A] = {
     provideAnnotation(identifier, Some(request.user)).map(f)
   }
 

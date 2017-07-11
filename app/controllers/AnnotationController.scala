@@ -35,9 +35,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   implicit val timeout = Timeout(5 seconds)
 
-  def annotationJson(user: User, annotation: Annotation, exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] =
-    annotation.toJson(Some(user), exclude)
-
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
     val annotationId = AnnotationIdentifier(typ, id)
 
@@ -61,7 +58,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       for {
         _ <- annotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
         savedAnnotation <- annotation.copy(typ = AnnotationType.Explorational, _id = BSONObjectID.generate).saveToDB
-        json <- annotationJson(request.user, savedAnnotation, exclude = Nil)
+        json <- savedAnnotation.toJson(Some(request.user))
       } yield {
         JsonOk(json, Messages("annotation.merge.success"))
       }
@@ -114,7 +111,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       for {
         _ <- ensureTeamAdministration(request.user, annotation.team)
         reset <- annotation.muta.resetToBase() ?~> Messages("annotation.reset.failed")
-        json <- annotationJson(request.user, reset,  List("content"))
+        json <- reset.toJson(Some(request.user))
       } yield {
         JsonOk(json, Messages("annotation.reset.success"))
       }
@@ -132,7 +129,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       for {
         _ <- isReopenAllowed(request.user, annotation) ?~> "reopen.notAllowed"
         reopenedAnnotation <- annotation.muta.reopen() ?~> "annotation.invalid"
-        json <- annotationJson(request.user, reopenedAnnotation,  List("content"))
+        json <- reopenedAnnotation.toJson(Some(request.user))
       } yield {
         JsonOk(json, Messages("annotation.reopened"))
       }
@@ -150,22 +147,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def handleUpdates(annotation: Annotation, js: JsValue, version: Int, clientTimestamp: Long)(implicit request: AuthenticatedRequest[_]): Fox[JsObject] = {
-    js match {
-      case JsArray(jsUpdates) if jsUpdates.length >= 1 =>
-        for {
-          updated <- annotation.muta.updateFromJson(jsUpdates) //?~> Messages("format.json.invalid")
-        } yield {
-          val timestamps = jsUpdates.map(update => (update \ "timestamp").as[Long]).sorted
-          TimeSpanService.logUserInteraction(timestamps, request.user, Some(updated))
-          Json.obj("version" -> version)
-        }
-      case t =>
-        logger.info("Failed to handle json update. Tried: " + t)
-        Failure(Messages("format.json.invalid"))
-    }
-  }
-
   def isUpdateable(Annotation: Annotation) = {
     Annotation match {
       case a: Annotation => Some(a)
@@ -180,22 +161,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 //      Full(version == annotation.version + 1)
 //    else
 //      Failure(Messages("notAllowed")) ~> FORBIDDEN
-  }
-
-  def executeUpdateIfAllowed(oldAnnotation: Annotation, isAllowed: Boolean, updates: JsValue, version: Int, user: User, clientTimestamp: Long)(implicit request: AuthenticatedRequest[_]) = {
-    if (isAllowed)
-      for {
-        result <- handleUpdates(oldAnnotation, updates, version, clientTimestamp)
-      } yield {
-        JsonOk(result, "annotation.saved")
-      }
-    else {
-      for {
-        oldJs <- oldAnnotation.annotationInfo(Some(user))
-      } yield {
-        new JsonResult(CONFLICT)(oldJs, Messages("annotation.dirtyState"))
-      }
-    }
   }
 
   def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 8388608)) { implicit request =>
@@ -227,7 +192,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def finish(typ: String, id: String) = Authenticated.async { implicit request =>
     for {
       (updated, message) <- finishAnnotation(typ, id, request.user)(GlobalAccessContext)
-      json <- annotationJson(request.user, updated,  List("content"))
+      json <- updated.toJson(Some(request.user))
     } yield {
       JsonOk(json, Messages(message))
     }
@@ -284,7 +249,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- ensureTeamAdministration(request.user, task.team)
       annotations <- task.annotations
-      jsons <- Fox.serialSequence(annotations)(annotationJson(request.user, _, exclude = List("content")))
+      jsons <- Fox.serialSequence(annotations)(_.toJson(Some(request.user)))
     } yield {
       Ok(JsArray(jsons.flatten))
     }

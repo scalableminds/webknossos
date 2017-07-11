@@ -118,6 +118,7 @@ object TaskService
     .map(_.toMap[User, (Int, List[Project])])
   }
 
-  def dataSetNamesForTasks(tasks: List[Task])(implicit ctx: DBAccessContext) =
-    Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
+  //TODO: RocksDB
+/*  def dataSetNamesForTasks(tasks: List[Task])(implicit ctx: DBAccessContext) =
+    Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))*/
 }

@@ -45,7 +45,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     Ok(views.html.main()(Html("")))
   }
 
-  def oxalis(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async { implicit request =>
+  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async { implicit request =>
     intervalHandler.get(interval) match {
       case Some(handler) =>
         for {
@@ -53,7 +53,6 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
           numberOfUsers <- UserService.countNonAnonymousUsers
           numberOfDatasets <- DataSetDAO.count(Json.obj())
           numberOfAnnotations <- AnnotationDAO.countAll
-          numberOfTrees <- DBTreeDAO.count(Json.obj())
           numberOfAssignments <- OpenAssignmentService.countOpenAssignments
         } yield {
           Ok(Json.obj(
@@ -62,7 +61,6 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
             "numberOfUsers" -> numberOfUsers,
             "numberOfDatasets" -> numberOfDatasets,
             "numberOfAnnotations" -> numberOfAnnotations,
-            "numberOfTrees" -> numberOfTrees,
             "numberOfOpenAssignments" -> numberOfAssignments
           ))
         }

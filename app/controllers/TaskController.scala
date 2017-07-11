@@ -61,7 +61,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   }
 
   def createFromNML(implicit request: AuthenticatedRequest[AnyContent]) = {
-    def parseJson(s: String) = {
+    /*def parseJson(s: String) = {
       Json.parse(s).validate(taskNMLJsonReads) match {
         case JsSuccess(parsed, _) =>
           Full(parsed)
@@ -107,7 +107,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           JsonOk(js, Messages("task.bulk.processed"))
         }
       }
-    } yield result
+    } yield result*/
+    Fox.empty
   }
 
 
@@ -198,7 +199,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def list = Authenticated.async{ implicit request =>
     for {
       tasks <- TaskService.findAllAdministratable(request.user, limit = 10000)
-      js <- Future.traverse(tasks)(t => Task.transformToJson(t, request.userOpt))
+      js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t, request.userOpt))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -207,7 +208,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def listTasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       tasks <- TaskService.findAllByTaskType(taskTypeId)
-      js <- Future.traverse(tasks)(t => Task.transformToJson(t, request.userOpt))
+      js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t, request.userOpt))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -286,7 +287,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       assignment <- tryToGetNextAssignmentFor(user)
       task <- assignment.task
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-      annotationJSON <- Annotation.AnnotationInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
+      annotationJSON <- annotation.toJson(Some(user))
     } yield {
       JsonOk(annotationJSON, Messages("task.assigned"))
     }

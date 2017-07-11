@@ -8,7 +8,7 @@ import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => 
 import com.scalableminds.braingames.datastore.models.ImageThumbnail
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.tracing.volume.VolumeTracingContent
+import models.annotation.ContentReference
 import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import play.api.http.Status
@@ -20,9 +20,9 @@ import play.api.mvc.Codec
 
 trait DataStoreHandlingStrategy {
 
-  def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracingContent]
+  def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[ContentReference]
 
-  def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[VolumeTracingContent]
+  def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[ContentReference]
 
   def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]]
 
@@ -36,10 +36,10 @@ object DataStoreHandler extends DataStoreHandlingStrategy {
     case WebKnossosStore => WKStoreHandlingStrategy
   }
 
-  override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracingContent] =
+  override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[ContentReference] =
     strategyForType(dataStoreInfo.typ).createVolumeTracing(dataStoreInfo, base)
 
-  override def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[VolumeTracingContent] =
+  override def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[ContentReference] =
     strategyForType(dataStoreInfo.typ).uploadVolumeTracing(dataStoreInfo, base, file)
 
   override def importDataSource(dataSet: DataSet): Fox[WSResponse] =
@@ -51,10 +51,10 @@ object DataStoreHandler extends DataStoreHandlingStrategy {
 
 object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplicits with LazyLogging {
 
-  override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracingContent] =
+  override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[ContentReference] =
     Fox.failure("NDStore doesn't support creation of VolumeTracings.")
 
-  override def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[VolumeTracingContent] =
+  override def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[ContentReference] =
     Fox.failure("NDStore doesn't support creation of VolumeTracings.")
 
   override def importDataSource(dataSet: DataSet): Fox[WSResponse] =
@@ -93,23 +93,23 @@ object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplici
 
 object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLogging {
 
-  def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracingContent] = {
+  def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[ContentReference] = {
     logger.debug("Called to create VolumeTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/volumes")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("dataSetName" -> base.id.name)
-      .postWithJsonResponse[JsObject, VolumeTracingContent]()
+      .postWithJsonResponse[JsObject, ContentReference]()
   }
 
   def uploadVolumeTracing(
     dataStoreInfo: DataStoreInfo,
     base: DataSource,
-    file: TemporaryFile): Fox[VolumeTracingContent] = {
+    file: TemporaryFile): Fox[ContentReference] = {
     logger.debug("Called to upload VolumeTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/volumes")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("dataSetName" -> base.id.name)
-      .postWithJsonResponse[VolumeTracingContent](file.file)
+      .postWithJsonResponse[ContentReference](file.file)
   }
 
   def requestDataLayerThumbnail(dataSet: DataSet, dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] = {

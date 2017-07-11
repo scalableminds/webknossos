@@ -34,8 +34,7 @@ case class Annotation(
                        _task: Option[BSONObjectID] = None,
                        _id: BSONObjectID = BSONObjectID.generate
                      )
-
-  extends FoxImplicits with FilterableJson {
+  extends FoxImplicits {
 
   lazy val id = _id.stringify
 
@@ -77,7 +76,7 @@ case class Annotation(
       ResourceAction(traceOrView, AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
       ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), isAjax = true, clazz = "trace-finish"),
       ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), isAjax = true),
-      ResourceAction(ResourceAction.Download, AnnotationIOController.download(typ, id), icon = Some("fa fa-download")),
+      // TODO rocksdb ResourceAction(ResourceAction.Download, AnnotationIOController.download(typ, id), icon = Some("fa fa-download")),
       ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), isAjax = true)
     )
 
@@ -85,7 +84,7 @@ case class Annotation(
   }
 
   def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] =
-    toJson(user, Nil)
+    toJson(user)
 
   def isRevertPossible: Boolean = {
     // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
@@ -94,25 +93,29 @@ case class Annotation(
     created > 1470002400000L  // 1.8.2016, 00:00:00
   }
 
-  def toJson(user: Option[User], exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] = {
-    JsonObjectWithFilter(exclude)(
-      "user" +> user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull),
-      "created" +> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),
-      "stateLabel" +> stateLabel,
-      "state" +> state,
-      "id" +> id,
-      "name" +> name,
-      "typ" +> typ,
-      "task" +> task.flatMap(t => Task.transformToJson(t, user)).getOrElse(JsNull),
-      "stats" +> statistics,
-      "restrictions" +> AnnotationRestrictions.writeAsJson(restrictions, user),
-      "actions" +> actions(user),
-      "formattedHash" +> Formatter.formatHash(id),
-      "downloadUrl" +> relativeDownloadUrl.map(toAbsoluteUrl),
-      "content" +> contentReference,
-      "dataSetName" +> dataSetName,
-      "tracingTime" +> tracingTime
-    )
+  def toJson(user: Option[User] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    for {
+      taskJson <- task.flatMap(t => Task.transformToJson(t, user)).getOrElse(JsNull)
+      userJson = user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull)
+    } yield {
+      Json.obj(
+        "user" -> userJson,
+        "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),
+        "stateLabel" -> stateLabel,
+        "state" -> state,
+        "id" -> id,
+        "name" -> name,
+        "typ" -> typ,
+        "task" -> taskJson,
+        "stats" -> statistics,
+        "restrictions" -> AnnotationRestrictions.writeAsJson(restrictions, user),
+        "actions" -> actions(user),
+        "formattedHash" -> Formatter.formatHash(id),
+        "content" -> contentReference,
+        "dataSetName" -> dataSetName,
+        "tracingTime" -> tracingTime
+      )
+    }
   }
 }
 

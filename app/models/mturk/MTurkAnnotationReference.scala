@@ -2,6 +2,7 @@ package models.mturk
 
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
 /**
   * Mapping between a user (created for each mturk worker), an assignment (HIT assignment id) and the created

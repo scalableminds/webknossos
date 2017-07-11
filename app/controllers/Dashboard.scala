@@ -29,7 +29,7 @@ trait Dashboard extends FoxImplicits {
 
   private def annotationsAsJson(annotations: Fox[List[Annotation]], user: User)(implicit ctx: DBAccessContext) = {
     annotations.flatMap { taskAnnotations =>
-      Fox.serialSequence(taskAnnotations)(Annotation.AnnotationInfoWrites(_, Some(user), exclude = List("content", "actions")))
+      Fox.serialSequence(taskAnnotations)(_.toJson(Some(user)))
     }
   }
 

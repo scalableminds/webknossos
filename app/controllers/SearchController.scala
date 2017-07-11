@@ -31,13 +31,11 @@ class SearchController @Inject()(val messagesApi: MessagesApi) extends Controlle
     BSONObjectID.parse(id) match {
       case Success(oid) =>
 
-        val task = TaskDAO.findOneById(oid).flatMap(t => future2Fox(Task.transformToJson(t, request.userOpt)))
+        val task = TaskDAO.findOneById(oid).toFox.flatMap(Task.transformToJson(_, request.userOpt))
 
-        val foundAnnotation = () => AnnotationDAO.findOneById(oid).flatMap(a => future2Fox(Annotation.transformToJson(a)))
+        val foundAnnotation = () => AnnotationDAO.findOneById(oid).toFox.flatMap(_.toJson())
 
-        val noResult = NotFound(Json.obj())
-
-        task.orElse(foundAnnotation()).map(js => Ok(js)).getOrElse(noResult)
+        task.orElse(foundAnnotation()).map(Ok(_)).getOrElse(NotFound(Json.obj()))
       case _            =>
         Future.successful(JsonBadRequest(Messages("bsonid.invalid")))
     }

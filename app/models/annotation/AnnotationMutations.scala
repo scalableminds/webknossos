@@ -17,25 +17,8 @@ import reactivemongo.bson.BSONObjectID
  * Date: 21.01.14
  * Time: 14:06
  */
-trait AnnotationMutationsLike {
 
-  type AType <: Annotation
-
-  def resetToBase()(implicit ctx: DBAccessContext): Fox[AType]
-
-  def reopen()(implicit ctx: DBAccessContext): Fox[AType]
-
-  def updateFromJson(js: Seq[JsValue])(implicit ctx: DBAccessContext): Fox[AType]
-
-  def cancelTask()(implicit ctx: DBAccessContext): Fox[AType]
-
-  def loadAnnotationContent()(implicit ctx: DBAccessContext): Fox[NamedStream]
-}
-
-class AnnotationMutations(val annotation: Annotation)
-  extends AnnotationMutationsLike
-  with BoxImplicits
-  with FoxImplicits {
+class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with FoxImplicits {
 
   type AType = Annotation
 

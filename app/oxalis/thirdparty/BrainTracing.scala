@@ -1,19 +1,22 @@
 package oxalis.thirdparty
 
-import com.newrelic.api.agent.NewRelic
-import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.typesafe.scalalogging.LazyLogging
-import models.annotation.Annotation
 import models.user.User
-import play.api.Play
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.{WS, WSAuthScheme}
+import com.ning.http.client.Realm.AuthScheme
+import play.api.libs.concurrent.Execution.Implicits._
+import com.typesafe.scalalogging.LazyLogging
+import play.api.Play.current
+import play.api.Play
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.Promise
+import scala.concurrent.Future
 import scala.util._
+import models.annotation.Annotation
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.newrelic.api.agent.NewRelic
+import com.scalableminds.util.tools.FoxImplicits
 
-object BrainTracing extends LazyLogging {
+object BrainTracing extends LazyLogging with FoxImplicits {
   val URL = "http://braintracing.org/"
   val CREATE_URL = URL + "oxalis_create_user.php"
   val LOGTIME_URL = URL + "oxalis_add_hours.php"
@@ -29,28 +32,28 @@ object BrainTracing extends LazyLogging {
     if (isActive && user.teamNames.contains("Connectomics department")) {
       val result = Promise[String]()
       val brainTracingRequest = WS
-      .url(CREATE_URL)
-      .withAuth(USER, PW, WSAuthScheme.BASIC)
-      .withQueryString(
-        "license" -> LICENSE,
-        "firstname" -> user.firstName,
-        "lastname" -> user.lastName,
-        "email" -> user.email,
-        "pword" -> user.md5hash)
-      .get()
-      .map { response =>
-        result complete (response.status match {
-          case 200 if isSilentFailure(response.body) =>
-            Success("braintracing.error")
-          case 200 =>
-            Success("braintracing.new")
-          case 304 =>
-            Success("braintracing.exists")
-          case _ =>
-            Success("braintracing.error")
-        })
-        logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
-      }
+        .url(CREATE_URL)
+        .withAuth(USER, PW, WSAuthScheme.BASIC)
+        .withQueryString(
+          "license" -> LICENSE,
+          "firstname" -> user.firstName,
+          "lastname" -> user.lastName,
+          "email" -> user.email,
+          "pword" -> user.md5hash)
+        .get()
+        .map { response =>
+          result complete (response.status match {
+            case 200 if isSilentFailure(response.body) =>
+              Success("braintracing.error")
+            case 200 =>
+              Success("braintracing.new")
+            case 304 =>
+              Success("braintracing.exists")
+            case _ =>
+              Success("braintracing.error")
+          })
+          logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
+        }
       brainTracingRequest.onFailure{
         case e: Exception =>
           logger.error(s"Failed to register user '${user.email}' in brain tracing db. Exception: ${e.getMessage}")
@@ -82,31 +85,31 @@ object BrainTracing extends LazyLogging {
           val projectName = await(project.map(_.name).getOrElse(""))
           val taskType = await(taskTypeFox.futureBox)
           val brainTracingRequest = WS
-          .url(LOGTIME_URL)
-          .withAuth(USER, PW, WSAuthScheme.BASIC)
-          .withQueryString(
-            "license" -> LICENSE,
-            "email" -> user.email,
-            "hours" -> hours.toString,
-            "tasktype_id" -> taskType.map(_.id).getOrElse(""),
-            "tasktype_summary" -> taskType.map(_.summary).getOrElse(""),
-            "task_id" -> task.map(_.id).getOrElse(""),
-            "project_name" -> projectName
-          )
-          .get()
-          .map { response =>
-            response.status match {
-              case 200 if !isSilentFailure(response.body) =>
-                logger.trace(s"Logged time! User: ${user.email} Time: $hours")
-                true
-              case 200 =>
-                logger.error(s"Time logging failed. SILENT FAILURE! Code 200 User: ${user.email} Time: $hours")
-                false
-              case code =>
-                logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
-                false
+            .url(LOGTIME_URL)
+            .withAuth(USER, PW, WSAuthScheme.BASIC)
+            .withQueryString(
+              "license" -> LICENSE,
+              "email" -> user.email,
+              "hours" -> hours.toString,
+              "tasktype_id" -> await(taskType.map(_.id).getOrElse("")),
+              "tasktype_summary" -> await(taskType.map(_.summary).getOrElse("")),
+              "task_id" -> await(task.map(_.id).getOrElse("")),
+              "project_name" -> projectName
+            )
+            .get()
+            .map { response =>
+              response.status match {
+                case 200 if !isSilentFailure(response.body) =>
+                  logger.trace(s"Logged time! User: ${user.email} Time: $hours")
+                  true
+                case 200 =>
+                  logger.error(s"Time logging failed. SILENT FAILURE! Code 200 User: ${user.email} Time: $hours")
+                  false
+                case code =>
+                  logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
+                  false
+              }
             }
-          }
           brainTracingRequest.onFailure{
             case e: Exception =>
               logger.error(s"Time logging failed! Exception ${e.getMessage}. User: ${user.email} Time: $hours")

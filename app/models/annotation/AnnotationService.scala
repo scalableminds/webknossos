@@ -30,8 +30,8 @@ import scala.concurrent.Future
   * Time: 12:39
   */
 
-object AnnotationService extends AnnotationContentProviders
-  with BoxImplicits
+object AnnotationService
+  extends BoxImplicits
   with FoxImplicits
   with TextUtils
   with LazyLogging{
@@ -45,22 +45,18 @@ object AnnotationService extends AnnotationContentProviders
     user: User,
     dataSet: DataSet,
     contentType: String,
-    id: String = "")(implicit ctx: DBAccessContext) =
+    id: String = "")(implicit ctx: DBAccessContext) = {
 
-    withProviderForContentType(contentType) { provider =>
-      for {
-        content <- provider.createFrom(dataSet)
-        contentReference = ContentReference.createFor(content)
-        annotation = Annotation(
-          Some(user._id),
-          contentReference,
-          team = selectSuitableTeam(user, dataSet),
-          typ = AnnotationType.Explorational,
-          state = AnnotationState.InProgress,
-          _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate)
-        )
-        _ <- AnnotationDAO.insert(annotation)
-      } yield annotation
+    //TODO: rocksDB
+    val annotation = Annotation(
+      Some(user._id),
+      ContentReference("skeletonTracing", "dummyId"),
+      dataSet.name,
+      selectSuitableTeam(user, dataSet),
+      AnnotationSettings.default,
+      _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate))
+
+      AnnotationDAO.insert(annotation).map(_ => annotation)
     }
 
   def updateAllOfTask(

@@ -20,19 +20,19 @@ import reactivemongo.play.json.BSONFormats._
 case class Annotation(
                        _user: Option[BSONObjectID],
                        contentReference: ContentReference,
-                       _task: Option[BSONObjectID] = None,
-                       team: String,
-                       state: AnnotationState = AnnotationState.InProgress,
-                       typ: String = AnnotationType.Explorational,
-                       _name: Option[String] = None,
-                       tracingTime: Option[Long] = None,
-                       created : Long = System.currentTimeMillis,
-                       _id: BSONObjectID = BSONObjectID.generate,
-                       isActive: Boolean = true,
-                       readOnly: Option[Boolean] = None,
-                       statistics: JsObject,
                        dataSetName: String,
-                       settings: AnnotationSettings
+                       team: String,
+                       settings: AnnotationSettings,
+                       statistics: JsObject = Json.obj(),
+                       typ: String = AnnotationType.Explorational,
+                       isActive: Boolean = true,
+                       state: AnnotationState = AnnotationState.InProgress,
+                       created : Long = System.currentTimeMillis,
+                       tracingTime: Option[Long] = None,
+                       readOnly: Option[Boolean] = None,
+                       _name: Option[String] = None,
+                       _task: Option[BSONObjectID] = None,
+                       _id: BSONObjectID = BSONObjectID.generate
                      )
 
   extends FoxImplicits with FilterableJson {

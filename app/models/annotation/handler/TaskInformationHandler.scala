@@ -3,7 +3,7 @@ package models.annotation.handler
 import net.liftweb.common.Box
 import models.task.{TaskDAO, Task}
 import models.user.User
-import models.annotation.{CompoundAnnotation, AnnotationRestrictions, TemporaryAnnotation}
+import models.annotation.{AnnotationRestrictions, TemporaryAnnotation}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._

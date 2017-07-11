@@ -34,8 +34,6 @@ trait AnnotationMutationsLike {
 
 class AnnotationMutations(val annotation: Annotation)
   extends AnnotationMutationsLike
-  with AnnotationFileService
-  with AnnotationContentProviders
   with BoxImplicits
   with FoxImplicits {
 
@@ -93,32 +91,29 @@ class AnnotationMutations(val annotation: Annotation)
     AnnotationDAO.incrementVersion(annotation._id)
 
   def resetToBase()(implicit ctx: DBAccessContext) = {
-    def resetContent(): Fox[AnnotationContent] ={
-      annotation.typ match {
-        case AnnotationType.Explorational =>
-          Fox.failure("annotation.revert.skeletonOnly")
-        case AnnotationType.Task if annotation.contentType == SkeletonTracing.contentType =>
-          for {
-            task <- annotation.task.toFox
-            tracingBase <- task.annotationBase.flatMap(_.contentReference)
-            reset <- tracingBase.temporaryDuplicate(id = BSONObjectID.generate.stringify).flatMap(_.saveToDB)
-          } yield reset
-        case _ if annotation.contentType != SkeletonTracing.contentType =>
-          Fox.failure("annotation.revert.skeletonOnly")
-      }
-    }
+    //TODO: RocksDB
+//    def resetContent(): Fox[AnnotationContent] ={
+//      annotation.typ match {
+//        case AnnotationType.Explorational =>
+//          Fox.failure("annotation.revert.skeletonOnly")
+//        case AnnotationType.Task if annotation.contentType == SkeletonTracing.contentType =>
+//          for {
+//            task <- annotation.task.toFox
+//            tracingBase <- task.annotationBase.flatMap(_.contentReference)
+//            reset <- tracingBase.temporaryDuplicate(id = BSONObjectID.generate.stringify).flatMap(_.saveToDB)
+//          } yield reset
+//        case _ if annotation.contentType != SkeletonTracing.contentType =>
+//          Fox.failure("annotation.revert.skeletonOnly")
+//      }
+//    }
 
-    for {
-      oldAnnotationContent <- annotation.contentReference
-      reset <- resetContent()
-      _ <- oldAnnotationContent.service.clearAndRemove(oldAnnotationContent.id)
-      updatedAnnotation <- AnnotationDAO.updateContent(annotation._id, ContentReference.createFor(reset))
-    } yield updatedAnnotation
-  }
-
-  def updateFromJson(js: Seq[JsValue])(implicit ctx: DBAccessContext) = {
-    annotation.contentReference.flatMap(_.updateFromJson(js)).flatMap(_ =>
-      AnnotationDAO.incrementVersion(annotation._id))
+//    for {
+//      oldAnnotationContent <- annotation.contentReference
+//      reset <- resetContent()
+//      _ <- oldAnnotationContent.service.clearAndRemove(oldAnnotationContent.id)
+//      updatedAnnotation <- AnnotationDAO.updateContent(annotation._id, ContentReference.createFor(reset))
+//    } yield updatedAnnotation
+    Fox.successful(annotation)
   }
 
   def transferToUser(user: User)(implicit ctx: DBAccessContext) = {

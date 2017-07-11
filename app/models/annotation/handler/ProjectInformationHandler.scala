@@ -2,7 +2,7 @@ package models.annotation.handler
 
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationRestrictions, CompoundAnnotation, TemporaryAnnotation}
+import models.annotation.{AnnotationRestrictions, TemporaryAnnotation}
 import models.project.{Project, ProjectDAO}
 import models.team.Role
 import models.user.User

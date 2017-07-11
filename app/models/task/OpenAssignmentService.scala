@@ -7,10 +7,9 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.project.Project
 import models.user.User
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.Json
-import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
+import reactivemongo.bson.BSONObjectID
 
 object OpenAssignmentService extends FoxImplicits{
   def findNextOpenAssignments(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {

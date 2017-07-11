@@ -1,5 +1,3 @@
-import scala.concurrent.duration._
-
 import akka.actor.Props
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.mail.Mailer
@@ -20,6 +18,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
 import play.api.libs.json.Json
 import play.api.mvc._
+
+import scala.concurrent.duration._
 
 object Global extends GlobalSettings with LazyLogging{
 

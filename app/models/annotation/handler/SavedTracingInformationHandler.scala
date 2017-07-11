@@ -2,7 +2,7 @@ package models.annotation.handler
 
 import net.liftweb.common.Box
 import com.scalableminds.util.tools.TextUtils._
-import models.annotation.{AnnotationDAO, AnnotationLike, Annotation}
+import models.annotation.{AnnotationDAO, Annotation, Annotation}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
@@ -17,7 +17,7 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
 
   override val cache = false
 
-  override def nameForAnnotation(a: AnnotationLike)(implicit ctx: DBAccessContext): Future[String] = a match {
+  override def nameForAnnotation(a: Annotation)(implicit ctx: DBAccessContext): Future[String] = a match {
     case annotation: Annotation =>
       for {
         userName <- annotation.user.toFox.map(_.abreviatedName).getOrElse("")

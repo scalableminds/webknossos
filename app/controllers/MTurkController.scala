@@ -3,7 +3,6 @@ package controllers
 import javax.inject.Inject
 
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationDAO, AnnotationService}
 import models.mturk.{MTurkAnnotationReference, MTurkAssignment, MTurkAssignmentDAO}
 import models.task.Task

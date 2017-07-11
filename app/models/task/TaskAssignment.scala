@@ -1,17 +1,17 @@
 package models.task
 
 
-import scala.concurrent.{ExecutionContext, Future}
-
-import models.annotation.AnnotationService
-import play.api.Play._
-import models.user.{User, UserService}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.iteratee._
+import models.annotation.AnnotationService
+import models.user.User
+import play.api.Play._
 import play.api.libs.concurrent.Execution.Implicits.{defaultContext => dec}
 import play.api.libs.iteratee.Enumeratee.CheckDone
+import play.api.libs.iteratee._
+
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * Company: scalableminds

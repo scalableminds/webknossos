@@ -2,7 +2,7 @@ package models.annotation.handler
 
 import net.liftweb.common.Box
 import oxalis.security.AuthenticatedRequest
-import models.annotation.{AnnotationType, AnnotationLike}
+import models.annotation.{AnnotationType, Annotation}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.basics.Implicits._
 import scala.concurrent.Future
@@ -24,7 +24,7 @@ object AnnotationInformationHandler {
 
 trait AnnotationInformationHandler {
 
-  type AType <: AnnotationLike
+  type AType <: Annotation
 
   def cache: Boolean = true
 
@@ -34,7 +34,7 @@ trait AnnotationInformationHandler {
     withAnnotation(identifier)(nameForAnnotation)
   } */
 
-  def nameForAnnotation(t: AnnotationLike)(implicit ctx: DBAccessContext): Future[String] = {
+  def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Future[String] = {
     Future.successful(t.id)
   }
 

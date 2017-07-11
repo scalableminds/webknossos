@@ -1,9 +1,9 @@
 package models.binary
 
+import com.scalableminds.braingames.binary.models.UserDataLayer
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.basics._
 import play.api.libs.json.Json
-import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.braingames.binary.models.UserDataLayer
 
 object UserDataLayerDAO extends SecuredBaseDAO[UserDataLayer] {
 

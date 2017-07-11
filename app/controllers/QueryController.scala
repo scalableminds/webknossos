@@ -5,18 +5,15 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, SecuredMongoDAO}
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{Annotation, AnnotationDAO}
-import models.basics.{QuerySupportedDAO, SecuredBaseDAO}
 import models.task.{Task, TaskDAO, info}
-import models.user.{User, UserDAO}
-import net.liftweb.common.Failure
+import models.user.User
 import oxalis.security.Secured
-import play.api.{Configuration, Logger}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
+import play.api.{Configuration, Logger}
 
 class QueryController  @Inject() (val messagesApi: MessagesApi,  val configuration: Configuration) extends Controller with Secured with FoxImplicits{
 

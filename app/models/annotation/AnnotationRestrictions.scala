@@ -1,8 +1,8 @@
 package models.annotation
 
+import models.team.Role
 import models.user.User
 import play.api.libs.json._
-import models.team.Role
 
 /**
  * Company: scalableminds
@@ -41,7 +41,7 @@ object AnnotationRestrictions {
   def restrictEverything =
     new AnnotationRestrictions()
 
-  def defaultAnnotationRestrictions(annotation: AnnotationLike) =
+  def defaultAnnotationRestrictions(annotation: Annotation) =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
         user.exists {

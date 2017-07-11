@@ -64,7 +64,7 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
         _ <- ensureTeamAdministration(request.user, updatedTaskType.team)
         _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
         tasks <- TaskDAO.findAllByTaskType(taskType._id)
-        _ <- Fox.serialSequence(tasks)(task => AnnotationDAO.updateAllOfTask(task, updatedTaskType.settings))
+        _ <- Fox.serialSequence(tasks)(task => AnnotationDAO.updateSettingsForAllOfTask(task, updatedTaskType.settings))
       } yield {
         JsonOk(TaskType.transformToJson(updatedTaskType), Messages("taskType.editSuccess"))
       }

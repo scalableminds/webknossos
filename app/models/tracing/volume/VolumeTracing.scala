@@ -1,7 +1,7 @@
 package models.tracing.volume
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
-import models.annotation.{AnnotationContent, AnnotationContentService, AnnotationLike, AnnotationSettings}
+import models.annotation.{AnnotationContent, AnnotationContentService, Annotation, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary._
 import java.io.{FileInputStream, InputStream, PipedInputStream, PipedOutputStream}

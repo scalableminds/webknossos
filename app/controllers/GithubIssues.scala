@@ -2,20 +2,18 @@ package controllers
 
 import javax.inject.Inject
 
-import com.ning.http.client.Realm
-import com.scalableminds.util.mail.Send
 import models.user.User
-import oxalis.mail.DefaultMails
 import oxalis.security.Secured
 import play.api.Play.current
-import play.api.i18n.{MessagesApi, Messages}
+import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Akka
-import play.api.libs.ws.{WSAuthScheme, WS}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json._
 import play.api.libs.json._
+import play.api.libs.ws.{WS, WSAuthScheme}
 import play.api.{Logger, Play}
 import views.html
+
 import scala.concurrent.Future
 
 case class GithubAuth(user: String, key: String)

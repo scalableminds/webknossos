@@ -2,12 +2,10 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.duration._
 import akka.util.Timeout
 import com.scalableminds.util.mvc.JsonResult
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
-import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
 import models.task.TaskDAO
@@ -21,6 +19,7 @@ import play.api.libs.json.{JsArray, JsObject, _}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 
+import scala.concurrent.duration._
 import scala.util.Try
 
 /**
@@ -36,8 +35,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   implicit val timeout = Timeout(5 seconds)
 
-  def annotationJson(user: User, annotation: AnnotationLike, exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] =
-    AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude)
+  def annotationJson(user: User, annotation: Annotation, exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] =
+    annotation.toJson(Some(user), exclude)
 
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
     val annotationId = AnnotationIdentifier(typ, id)
@@ -115,7 +114,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   // }
 
   // def transferUpdates(typ: String, id: String, fromId: String, fromTyp: String, maxVersion: Int) = Authenticated.async { implicit request =>
-  //   def applyUpdates(updates: List[AnnotationUpdate], targetAnnotation: AnnotationLike): Fox[AnnotationLike] = {
+  //   def applyUpdates(updates: List[AnnotationUpdate], targetAnnotation: Annotation): Fox[Annotation] = {
   //     updates.splitAt(100) match {
   //       case (Nil, _) =>
   //         Fox.successful(targetAnnotation)
@@ -168,7 +167,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def reopen(typ: String, id: String) = Authenticated.async { implicit request =>
     // Reopening an annotation is allowed if either the user owns the annotation or the user is allowed to administrate
     // the team the annotation belongs to
-    def isReopenAllowed(user: User, annotation: AnnotationLike) = {
+    def isReopenAllowed(user: User, annotation: Annotation) = {
        annotation._user.contains(user._id) || user.adminTeams.exists(_.team == annotation.team)
     }
 
@@ -210,14 +209,14 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def isUpdateable(annotationLike: AnnotationLike) = {
-    annotationLike match {
+  def isUpdateable(Annotation: Annotation) = {
+    Annotation match {
       case a: Annotation => Some(a)
       case _             => None
     }
   }
 
-  def isUpdateAllowed(annotation: AnnotationLike, version: Int)(implicit request: AuthenticatedRequest[_]) = {
+  def isUpdateAllowed(annotation: Annotation, version: Int)(implicit request: AuthenticatedRequest[_]) = {
     if (annotation.restrictions.allowUpdate(request.user))
       Full(version == annotation.version + 1)
     else
@@ -333,7 +332,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   }
 
   def cancel(typ: String, id: String) = Authenticated.async { implicit request =>
-    def tryToCancel(annotation: AnnotationLike) = {
+    def tryToCancel(annotation: Annotation) = {
       annotation match {
         case t if t.typ == AnnotationType.Task =>
           annotation.muta.cancelTask().map { _ =>
@@ -369,7 +368,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def duplicate(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
-        content <- annotation.content
+        content <- annotation.contentReference
         temp <- content.temporaryDuplicate(BSONObjectID.generate().stringify)
         clonedContent <- temp.saveToDB
         dataSet <- DataSetDAO.findOneBySourceName(

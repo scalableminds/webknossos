@@ -1,14 +1,14 @@
 package oxalis.user
 
 import akka.actor._
-import scala.concurrent.duration._
-
-import models.user.{User, UserService}
 import akka.agent.Agent
 import com.newrelic.api.agent.NewRelic
 import com.typesafe.scalalogging.LazyLogging
+import models.user.{User, UserService}
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
+
+import scala.concurrent.duration._
 
 case object FlushActivities
 

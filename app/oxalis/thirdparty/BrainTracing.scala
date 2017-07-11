@@ -1,18 +1,17 @@
 package oxalis.thirdparty
 
-import models.user.User
-import play.api.libs.ws.{WSAuthScheme, WS}
-import com.ning.http.client.Realm.AuthScheme
-import play.api.libs.concurrent.Execution.Implicits._
-import com.typesafe.scalalogging.LazyLogging
-import play.api.Play.current
-import play.api.Play
-import scala.concurrent.Promise
-import scala.concurrent.Future
-import scala.util._
-import models.annotation.AnnotationLike
-import com.scalableminds.util.reactivemongo.{DBAccessContext}
 import com.newrelic.api.agent.NewRelic
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.typesafe.scalalogging.LazyLogging
+import models.annotation.Annotation
+import models.user.User
+import play.api.Play
+import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.ws.{WS, WSAuthScheme}
+
+import scala.concurrent.{Future, Promise}
+import scala.util._
 
 object BrainTracing extends LazyLogging {
   val URL = "http://braintracing.org/"
@@ -68,7 +67,7 @@ object BrainTracing extends LazyLogging {
   private def isSilentFailure(result: String) =
     result.contains("ist derzeit nicht verf&uuml;gbar.")
 
-  def logTime(user: User, time: Long, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Future[Boolean] = {
+  def logTime(user: User, time: Long, annotation: Option[Annotation])(implicit ctx: DBAccessContext): Future[Boolean] = {
     import scala.async.Async._
     // TODO: fix, make team dynamic
     if (isActive && !user.isAnonymous && user.teamNames.contains("Connectomics department")) {

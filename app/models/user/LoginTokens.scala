@@ -8,7 +8,6 @@ import com.scalableminds.util.tools.Fox
 import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 
 case class LoginToken(_user: BSONObjectID, token: String, expirationTime: Long, _id: BSONObjectID = BSONObjectID.generate)
 

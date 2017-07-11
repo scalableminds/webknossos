@@ -1,13 +1,12 @@
 package models.annotation
 
-import com.scalableminds.util.io.{NamedFileStream, NamedStream}
+import com.scalableminds.util.io.NamedStream
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.project.{Project, WebknossosAssignmentConfig}
-import models.user.{UsedAnnotationDAO, User}
 import models.task.{OpenAssignmentService, Task}
-import models.tracing.skeleton.SkeletonTracing
+import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.JsValue
 import reactivemongo.bson.BSONObjectID
@@ -20,7 +19,7 @@ import reactivemongo.bson.BSONObjectID
  */
 trait AnnotationMutationsLike {
 
-  type AType <: AnnotationLike
+  type AType <: Annotation
 
   def resetToBase()(implicit ctx: DBAccessContext): Fox[AType]
 
@@ -101,7 +100,7 @@ class AnnotationMutations(val annotation: Annotation)
         case AnnotationType.Task if annotation.contentType == SkeletonTracing.contentType =>
           for {
             task <- annotation.task.toFox
-            tracingBase <- task.annotationBase.flatMap(_.content)
+            tracingBase <- task.annotationBase.flatMap(_.contentReference)
             reset <- tracingBase.temporaryDuplicate(id = BSONObjectID.generate.stringify).flatMap(_.saveToDB)
           } yield reset
         case _ if annotation.contentType != SkeletonTracing.contentType =>
@@ -110,7 +109,7 @@ class AnnotationMutations(val annotation: Annotation)
     }
 
     for {
-      oldAnnotationContent <- annotation.content
+      oldAnnotationContent <- annotation.contentReference
       reset <- resetContent()
       _ <- oldAnnotationContent.service.clearAndRemove(oldAnnotationContent.id)
       updatedAnnotation <- AnnotationDAO.updateContent(annotation._id, ContentReference.createFor(reset))
@@ -118,7 +117,7 @@ class AnnotationMutations(val annotation: Annotation)
   }
 
   def updateFromJson(js: Seq[JsValue])(implicit ctx: DBAccessContext) = {
-    annotation.content.flatMap(_.updateFromJson(js)).flatMap(_ =>
+    annotation.contentReference.flatMap(_.updateFromJson(js)).flatMap(_ =>
       AnnotationDAO.incrementVersion(annotation._id))
   }
 

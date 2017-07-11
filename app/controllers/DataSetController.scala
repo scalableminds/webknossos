@@ -2,9 +2,6 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-import scala.concurrent.duration._
-
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.Fox
@@ -20,6 +17,9 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.twirl.api.Html
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 

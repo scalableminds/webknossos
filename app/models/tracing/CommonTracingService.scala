@@ -1,12 +1,12 @@
 package models.tracing
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
-import models.annotation.{AnnotationContent, AnnotationSettings}
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.AnnotationSettings
 import models.basics.SecuredBaseDAO
 import play.api.libs.json.Json
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import reactivemongo.play.json.BSONFormats._
-import com.scalableminds.util.reactivemongo.DBAccessContext
 
 
 trait CommonTracingService extends FoxImplicits {

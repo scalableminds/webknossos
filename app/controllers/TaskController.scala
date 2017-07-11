@@ -1,45 +1,30 @@
 package controllers
 
 import java.util.UUID
-
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
-import models.binary.DataSetDAO
 import javax.inject.Inject
 
-import net.liftweb.common.{Box, Failure, Full}
-import oxalis.nml.NMLService
-import play.api.libs.iteratee.Cont
-import play.api.libs.iteratee.{Done, Input, Iteratee}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
+import models.annotation.{AnnotationService, _}
+import models.binary.DataSetDAO
+import models.project.{Project, ProjectDAO}
+import models.task._
+import models.user._
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import oxalis.security.{AuthenticatedRequest, Secured}
+import play.api.Play.current
+import play.api.i18n.{Messages, MessagesApi}
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
+import play.api.libs.iteratee.{Cont, Done, Input, Iteratee}
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import oxalis.security.Secured
-import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.Json._
-import oxalis.security.{AuthenticatedRequest, Secured}
-import models.user._
-import models.task._
-import models.annotation._
-import reactivemongo.core.commands.LastError
-import views._
-import play.api.libs.concurrent._
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.i18n.{Messages, MessagesApi}
-import models.annotation.AnnotationService
-import play.api.Play.current
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.mvc.{AnyContent, Result}
 import play.twirl.api.Html
-import scala.concurrent.Future
-
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
-import scala.concurrent.duration._
-import scala.async.Async.{async, await}
 
-import models.project.{Project, ProjectDAO}
+import scala.concurrent.Future
 
 class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
 
@@ -188,9 +173,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             instances = task.instances + status.open - openInstanceCount,
             team = team,
             _script = scriptId,
-            _project = Some(project.name))
-          _ <- AnnotationService.updateAllOfTask(updatedTask, team, dataSetName, boundingBox, taskType.settings)
-          _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
+            _project = Some(project.name),
+            boundingBox = boundingBox)
+          _ <- AnnotationService.updateAllOfTask(updatedTask, dataSetName, taskType.settings)
+          //TODO: rocksdb skeletons api. _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
           json <- Task.transformToJson(updatedTask, request.userOpt)
           _ <- OpenAssignmentService.updateAllOf(updatedTask, project, status.open)
         } yield {
@@ -300,7 +286,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       assignment <- tryToGetNextAssignmentFor(user)
       task <- assignment.task
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
+      annotationJSON <- Annotation.AnnotationInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
     } yield {
       JsonOk(annotationJSON, Messages("task.assigned"))
     }

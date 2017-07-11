@@ -1,79 +1,68 @@
 package models.annotation
 
-import scala.concurrent.Future
-
-import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, MongoHelpers}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType._
 import models.basics._
-import models.task.Task
-import models.user.User
+import models.task.{Task, TaskDAO}
+import models.user.{User, UserService}
 import org.joda.time.format.DateTimeFormat
+import oxalis.mvc.FilterableJson
 import oxalis.view.{ResourceAction, ResourceActionCollection}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import reactivemongo.play.json.BSONFormats._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
 case class Annotation(
                        _user: Option[BSONObjectID],
-                       _content: ContentReference,
+                       contentReference: ContentReference,
                        _task: Option[BSONObjectID] = None,
                        team: String,
                        state: AnnotationState = AnnotationState.InProgress,
                        typ: String = AnnotationType.Explorational,
-                       version: Int = 0,
                        _name: Option[String] = None,
                        tracingTime: Option[Long] = None,
                        created : Long = System.currentTimeMillis,
                        _id: BSONObjectID = BSONObjectID.generate,
                        isActive: Boolean = true,
-                       readOnly: Option[Boolean] = None
+                       readOnly: Option[Boolean] = None,
+                       statistics: JsObject,
+                       dataSetName: String,
+                       settings: AnnotationSettings
                      )
 
-  extends AnnotationLike with FoxImplicits {
+  extends FoxImplicits with FilterableJson {
 
   lazy val id = _id.stringify
 
   lazy val muta = new AnnotationMutations(this)
 
-  /**
-   * Easy access methods
-   */
+  def user: Fox[User] =
+    _user.toFox.flatMap(u => UserService.findOneById(u.stringify, useCache = true)(GlobalAccessContext))
 
-  val name = _name getOrElse ""
+  def task: Fox[Task] =
+    _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
 
-  def content = _content.resolveAs[AnnotationContent](GlobalAccessContext).toFox
+  val name = _name.getOrElse("")
 
-  val contentType = _content.contentType
+  val stateLabel = if (state.isFinished) "Finished" else "In Progress"
+
+  val contentType = contentReference.contentType
 
   val restrictions = if(readOnly.getOrElse(false))
       AnnotationRestrictions.readonlyAnnotation()
     else
       AnnotationRestrictions.defaultAnnotationRestrictions(this)
 
-  def relativeDownloadUrl = Some(Annotation.relativeDownloadUrlOf(typ, id))
-
   def removeTask() = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }
 
-  def temporaryDuplicate(keepId: Boolean)(implicit ctx: DBAccessContext) = {
-    for{
-      contentDuplicate <- content.flatMap(c => c.temporaryDuplicate(if(keepId) c.id else BSONObjectID.generate.stringify))
-    } yield {
-      TemporaryAnnotationService.createFrom(
-        this,
-        if(keepId) this.id else BSONObjectID.generate.stringify,
-        contentDuplicate)
-    }
-  }
-
-  def makeReadOnly: AnnotationLike = {
+  def makeReadOnly: Annotation = {
     this.copy(readOnly = Some(true))
   }
 
@@ -94,38 +83,45 @@ case class Annotation(
 
     ResourceActionCollection(basicActions)
   }
-}
 
-object Annotation {
-  implicit val annotationFormat = Json.format[Annotation]
+  def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] =
+    toJson(user, Nil)
 
-  def relativeDownloadUrlOf(typ: String, id: String): String =
-    controllers.routes.AnnotationIOController.download(typ, id).url
+  def isRevertPossible: Boolean = {
+    // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
+    // hence we need a way to decide if a tracing can safely be revert. We will use the created date of the
+    // annotation to do so
+    created > 1470002400000L  // 1.8.2016, 00:00:00
+  }
 
-  def transformToJson(annotation: Annotation)(implicit ctx: DBAccessContext): Future[JsObject] = {
-    for {
-      dataSetName <- annotation.dataSetName
-      task <- annotation.task.futureBox
-      user <- annotation.user.futureBox
-      content <- annotation.content.futureBox
-      contentType = content.map(_.contentType).getOrElse("")
-      stats <- annotation.statisticsForAnnotation().futureBox
-    } yield {
-      Json.obj(
-        "created" -> content.map(annotationContent => DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(annotationContent.timestamp)).toOption,
-        "contentType" -> contentType,
-        "dataSetName" -> dataSetName,
-        "state" -> annotation.state,
-        "typ" -> annotation.typ,
-        "name" -> annotation.name,
-        "id" -> annotation.id,
-        "formattedHash" -> Formatter.formatHash(annotation.id),
-        "stats" -> stats.map(_.writeAsJson).toOption,
-        "tracingTime" -> annotation.tracingTime
-      )
-    }
+  def toJson(user: Option[User], exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    JsonObjectWithFilter(exclude)(
+      "user" +> user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull),
+      "created" +> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),
+      "stateLabel" +> stateLabel,
+      "state" +> state,
+      "id" +> id,
+      "name" +> name,
+      "typ" +> typ,
+      "task" +> task.flatMap(t => Task.transformToJson(t, user)).getOrElse(JsNull),
+      "stats" +> statistics,
+      "restrictions" +> AnnotationRestrictions.writeAsJson(restrictions, user),
+      "actions" +> actions(user),
+      "formattedHash" +> Formatter.formatHash(id),
+      "downloadUrl" +> relativeDownloadUrl.map(toAbsoluteUrl),
+      "content" +> contentReference,
+      "dataSetName" +> dataSetName,
+      "tracingTime" +> tracingTime
+    )
   }
 }
+
+
+object Annotation  {implicit val annotationFormat = Json.format[Annotation]}
+
+
+
+
 
 
 object AnnotationDAO
@@ -266,30 +262,18 @@ object AnnotationDAO
       Json.obj("_id" -> annotation._id),
       Json.obj("$set" -> Json.obj("state" -> state)))
 
-  def updateTeamForAllOfTask(task: Task, team: String)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_id" -> task._id), Json.obj("$set" -> Json.obj("team" -> team)))
-
-  def updateAllOfTask(
-    task: Task,
-    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
-
-    find(
-      Json.obj(
-        "_task" -> task._id)).cursor[Annotation]().collect[List]().map(_.map { annotation =>
-      annotation._content.service.updateSettings(settings, annotation._content._id)
-    })
+  def updateSettingsForAllOfTask(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
+    update(
+      Json.obj("_task" -> task._id),
+      Json.obj("$set" -> Json.obj("settings" -> settings))
+    )
   }
-  def updateAllOfTask(
-    task: Task,
-    dataSetName: String,
-    boundingBox: Option[BoundingBox],
-    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
 
-    find(
-      Json.obj(
-        "_task" -> task._id)).cursor[Annotation]().collect[List]().map(_.map{ annotation =>
-          annotation._content.service.updateSettings(dataSetName, boundingBox, settings, annotation._content._id)
-    })
+  def updateDataSetNameForAllOfTask(task: Task, dataSetName: String)(implicit ctx: DBAccessContext) = {
+    update(
+      Json.obj("_task" -> task.id),
+      Json.obj("$set" -> dataSetName)
+    )
   }
 
   def countAll(implicit ctx: DBAccessContext) =

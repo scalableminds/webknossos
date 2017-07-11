@@ -1,12 +1,12 @@
 package oxalis.mturk
 
-import scala.collection.JavaConversions._
-
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.sqs.AmazonSQSClient
 import com.amazonaws.services.sqs.model._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
+
+import scala.collection.JavaConversions._
 
 object SQSHelper{
   def mturkAWSPolicy(region: String, userId: String, queueName: String) = {

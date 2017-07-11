@@ -1,8 +1,6 @@
 package models.annotation
 
-import java.io.{BufferedOutputStream, File, FileOutputStream}
-
-import scala.concurrent.Future
+import java.io.{BufferedOutputStream, FileOutputStream}
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.io.ZipIO
@@ -13,17 +11,17 @@ import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationType._
 import models.binary.{DataSet, DataSetDAO}
 import models.task.Task
-import models.tracing.skeleton.SkeletonTracingService
 import models.tracing.volume.VolumeTracingService
 import models.user.{UsedAnnotationDAO, User}
 import net.liftweb.common.Full
-import oxalis.nml.NML
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+
+import scala.concurrent.Future
 
 /**
   * Company: scalableminds
@@ -67,13 +65,11 @@ object AnnotationService extends AnnotationContentProviders
 
   def updateAllOfTask(
     task: Task,
-    team: String,
     dataSetName: String,
-    boundingBox: Option[BoundingBox],
     settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
     for {
-      _ <- AnnotationDAO.updateTeamForAllOfTask(task, team)
-      _ <- AnnotationDAO.updateAllOfTask(task, dataSetName, boundingBox, settings)
+      _ <- AnnotationDAO.updateDataSetNameForAllOfTask(task, dataSetName)
+      _ <- AnnotationDAO.updateSettingsForAllOfTask(task, settings)
     } yield true
   }
 
@@ -159,14 +155,14 @@ object AnnotationService extends AnnotationContentProviders
     } yield tracing
   }
 
-  def updateAnnotationBase(task: Task, start: Point3D, rotation: Vector3D)(implicit ctx: DBAccessContext) = {
-    for {
-      base <- task.annotationBase
-      content <- base.content
-    } yield {
-      content.service.updateEditPosRot(start, rotation, content.id)
-    }
-  }
+//  def updateAnnotationBase(task: Task, start: Point3D, rotation: Vector3D)(implicit ctx: DBAccessContext) = {
+//    for {
+//      base <- task.annotationBase
+//      content <- base.contentReference
+//    } yield {
+//      content.service.updateEditPosRot(start, rotation, content.id)
+//    }
+//  }
 
   def createAnnotationBase(
     task: Task,
@@ -230,7 +226,7 @@ object AnnotationService extends AnnotationContentProviders
     _user: BSONObjectID,
     team: String,
     typ: AnnotationType,
-    annotationsLike: AnnotationLike*)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
+    annotationsLike: Annotation*)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
 
     val restrictions =
       if (readOnly)

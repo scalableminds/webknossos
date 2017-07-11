@@ -1,17 +1,14 @@
 package models.task
 
-import scala.concurrent.Future
-
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import models.basics.SecuredBaseDAO
-import models.team.Team
 import models.user.{User, UserDAO}
-import play.api.libs.functional.syntax._
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
-import play.api.libs.concurrent.Execution.Implicits._
+
+import scala.concurrent.Future
 
 case class Script(
   name: String,

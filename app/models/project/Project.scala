@@ -1,7 +1,5 @@
 package models.project
 
-import scala.concurrent.Future
-
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -19,6 +17,8 @@ import play.api.libs.json.{Json, _}
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+
+import scala.concurrent.Future
 
 case class Project(
   name: String,

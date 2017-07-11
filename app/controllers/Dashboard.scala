@@ -3,17 +3,17 @@
  */
 package controllers
 
-import scala.concurrent.duration.Duration
-
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{Annotation, AnnotationLike, AnnotationService}
+import models.annotation.{Annotation, AnnotationService}
 import models.binary.DataSet
 import models.task.Task
 import models.user.User
 import models.user.time._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
+
+import scala.concurrent.duration.Duration
 
 case class DashboardInfo(
   user: User,
@@ -27,9 +27,9 @@ case class DashboardInfo(
 
 trait Dashboard extends FoxImplicits {
 
-  private def annotationsAsJson(annotations: Fox[List[AnnotationLike]], user: User)(implicit ctx: DBAccessContext) = {
+  private def annotationsAsJson(annotations: Fox[List[Annotation]], user: User)(implicit ctx: DBAccessContext) = {
     annotations.flatMap { taskAnnotations =>
-      Fox.serialSequence(taskAnnotations)(AnnotationLike.annotationLikeInfoWrites(_, Some(user), exclude = List("content", "actions")))
+      Fox.serialSequence(taskAnnotations)(Annotation.AnnotationInfoWrites(_, Some(user), exclude = List("content", "actions")))
     }
   }
 

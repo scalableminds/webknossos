@@ -5,17 +5,17 @@ package controllers
 
 import javax.inject.Inject
 
-import play.api.libs.concurrent.Execution.Implicits._
-import scala.concurrent.Future
-import scala.util.Success
-
 import com.scalableminds.util.tools.FoxImplicits
 import models.annotation.{Annotation, AnnotationDAO}
 import models.task.{Task, TaskDAO}
 import oxalis.security.{Secured, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
+
+import scala.concurrent.Future
+import scala.util.Success
 
 class SearchController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
 

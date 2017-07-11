@@ -4,18 +4,14 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.TimeLogger._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationType._
-import models.task.{Task, TaskDAO, TaskType}
-import models.tracing.skeleton.temporary.{TemporarySkeletonTracing, TemporarySkeletonTracingService}
-import models.tracing.skeleton.{SkeletonTracing, SkeletonTracingLike, SkeletonTracingService}
-import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.typesafe.scalalogging.LazyLogging
-import play.api.i18n.Messages
+import models.annotation.AnnotationType._
+import models.project.Project
+import models.task.{Task, TaskDAO, TaskType}
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-import scala.concurrent.Future
 
-import models.project.Project
+import scala.concurrent.Future
 
 object CompoundAnnotation extends Formatter with FoxImplicits with LazyLogging {
 
@@ -91,7 +87,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits with LazyLogging {
     _user: Option[BSONObjectID],
     team: String,
     downloadUrl: Option[String],
-    annotations: List[AnnotationLike],
+    annotations: List[Annotation],
     typ: AnnotationType,
     state: AnnotationState,
     restrictions: AnnotationRestrictions,
@@ -102,7 +98,7 @@ object CompoundAnnotation extends Formatter with FoxImplicits with LazyLogging {
       Fox.successful(TemporaryAnnotation(
         id,
         _user,
-        () => Fox.serialCombined(annotations)(_.content).flatMap(cs => mergeAnnotationContent(cs, id, settings)),
+        () => Fox.serialCombined(annotations)(_.contentReference).flatMap(cs => mergeAnnotationContent(cs, id, settings)),
         None,
         team,
         downloadUrl,

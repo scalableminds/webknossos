@@ -2,26 +2,21 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-
-import models.annotation.{AnnotationType, _}
-import models.task.{Task, _}
-import models.user._
-import oxalis.nml._
-import oxalis.security.Secured
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json._
-import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
-
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.{AnnotationType, _}
 import models.project.{Project, ProjectDAO}
-import org.apache.commons.io.{FileUtils, FilenameUtils}
+import models.task.{Task, _}
+import models.user._
+import org.apache.commons.io.FilenameUtils
+import oxalis.security.Secured
+import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.iteratee.Enumerator
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
 import play.api.mvc.MultipartFormData
+
+import scala.concurrent.Future
 
 class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   extends Controller
@@ -90,7 +85,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
           name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
           _ <- annotation.restrictions.allowDownload(request.user) ?~> Messages("annotation.download.notAllowed")
           annotationDAO <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-          content <- annotation.content ?~> Messages("annotation.content.empty")
+          content <- annotation.contentReference ?~> Messages("annotation.content.empty")
           stream <- content.toDownloadStream(name)
         } yield {
           Ok.chunked(stream).withHeaders(
@@ -146,7 +141,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
   }
-  
+
   def userDownload(userId: String) = Authenticated.async { implicit request =>
     for {
       user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")

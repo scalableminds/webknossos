@@ -64,7 +64,7 @@ export type VolumeContentDataType = {
   activeCell: null | number;
   nextCell: ?number,
   customLayers: Array<Object>;
-  maxCoordinates: BoundingBoxObjectType;
+  boundingBox: BoundingBoxObjectType;
   name: string;
   zoomLevel: number;
 };
@@ -305,7 +305,7 @@ export class OxalisModel {
       const existingLayer = layers[existingLayerIndex];
 
       if (existingLayer != null) {
-        layers[existingLayerIndex] = update(existingLayer, { $merge: userLayer });
+        layers[existingLayerIndex] = update(userLayer, { $merge: { mappings: existingLayer.mappings } });
       } else {
         layers.push(userLayer);
       }

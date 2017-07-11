@@ -66,7 +66,7 @@ export default {
         {
           name: "color",
           category: "color",
-          maxCoordinates: {
+          boundingBox: {
             topLeft: [
               3840,
               4220,
@@ -89,7 +89,7 @@ export default {
         {
           name: "segmentation",
           category: "segmentation",
-          maxCoordinates: {
+          boundingBox: {
             topLeft: [
               3840,
               4220,

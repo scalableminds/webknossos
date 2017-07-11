@@ -190,7 +190,7 @@ class TracingApi {
    * Don't assume that code after the finishAndGetNextTask call will be executed.
    * It can happen that there is no further task, in which case the user will be redirected to the dashboard.
    * Or the the page can be reloaded (e.g., if the dataset changed), which also means that no further JS code will
-   // be executed in this site context.
+   * be executed in this site context.
    *
    * @example
    * api.tracing.save().then(() => ... );
@@ -212,11 +212,16 @@ class TracingApi {
 
       const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
       const isDifferentTaskType = annotation.task.type.id !== Utils.__guard__(task, x => x.type.id);
+
+      const currentScript = (task != null && task.script != null) ? task.script.gist : null;
+      const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
+      const isDifferentScript = currentScript !== nextScript;
+
       const differentTaskTypeParam = isDifferentTaskType ? "?differentTaskType" : "";
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}${differentTaskTypeParam}`;
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
-      if (isDifferentDataset || isDifferentTaskType) {
+      if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
         app.router.loadURL(newTaskUrl);
       } else {
         // $FlowFixMe
@@ -345,12 +350,28 @@ class DataApi {
   * @example // Get the segmentation id for a segementation layer
   * const segmentId = await api.data.getDataValue("segmentation", position);
   */
-  getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
+  async getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
     const layer = this.__getLayer(layerName);
-    const bucket = layer.cube.positionToZoomedAddress(position, zoomStep);
+    const bucketAddress = layer.cube.positionToZoomedAddress(position, zoomStep);
+    const bucket = layer.cube.getOrCreateBucket(bucketAddress);
 
-    layer.pullQueue.add({ bucket, priority: -1 });
-    return Promise.all(layer.pullQueue.pull()).then(() => layer.cube.getDataValue(position));
+    if (bucket.type === "null") return 0;
+
+    let needsToAwaitBucket = false;
+    if (bucket.isRequested()) {
+      needsToAwaitBucket = true;
+    } else if (bucket.needsRequest()) {
+      layer.pullQueue.add({ bucket: bucketAddress, priority: -1 });
+      layer.pullQueue.pull();
+      needsToAwaitBucket = true;
+    }
+    if (needsToAwaitBucket) {
+      await new Promise((resolve) => {
+        bucket.on("bucketLoaded", resolve);
+      });
+    }
+    // Bucket has been loaded by now or was loaded already
+    return layer.cube.getDataValue(position);
   }
 
   /**

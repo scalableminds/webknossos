@@ -13,12 +13,12 @@ class TaskModel extends NestedObjModel {
       editRotation: [0, 0, 0],
       boundingBox: null,
       neededExperience: {
-        value: 0,
+        value: 1,
         domain: "",
       },
       created: FormatUtils.formatDate(),
       status: {
-        open: 10,
+        open: 1,
         inProgress: 0,
         completed: 0,
       },

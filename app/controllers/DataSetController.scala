@@ -138,15 +138,6 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
-  def importProgress(dataSetName: String) = Authenticated.async { implicit request =>
-    for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
-      result <- DataStoreHandler.progressForImport(dataSet)
-    } yield {
-      Status(result.status)(result.body)
-    }
-  }
-
   def updateTeams(dataSetName: String) = Authenticated.async(parse.json) { implicit request =>
     withJsonBodyAs[List[String]] { teams =>
       for {

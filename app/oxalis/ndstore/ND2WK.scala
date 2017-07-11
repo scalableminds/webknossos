@@ -3,7 +3,7 @@
  */
 package oxalis.ndstore
 
-import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerSection, DataSource}
+import com.scalableminds.braingames.binary.models.datasource.{Category, DataSourceId, DataLayerLike => DataLayer, AbstractDataLayer => NDDataLayer, DataSourceLike => DataSource, GenericDataSource => NDDataSource}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataSet, DataStoreInfo, NDStore}
@@ -13,8 +13,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 object ND2WK extends FoxImplicits {
 
   val channelTypeMapping = Map(
-    "annotation" -> "segmentation",
-    "image" -> "color"
+    "annotation" -> Category.segmentation,
+    "image" -> Category.color
   )
 
   def dataSetFromNDProject(ndp: NDProject, team: String)(implicit messages: Messages) = {
@@ -23,16 +23,17 @@ object ND2WK extends FoxImplicits {
     for {
       dataLayers <- dataLayersFromNDChannels(ndp.dataset, ndp.channels)
       dataSource <- dataSourceFromNDDataSet(ndp.name, ndp.dataset, dataLayers)
-    } yield DataSet(
-      ndp.name,
-      dataStoreInfo,
-      Some(dataSource),
-      sourceType = "external",
-      team,
-      List(team),
-      isActive = true,
-      isPublic = false,
-      accessToken = None)
+    } yield {
+      DataSet(
+        ndp.name,
+        dataStoreInfo,
+        dataSource,
+        team,
+        List(team),
+        isActive = true,
+        isPublic = false,
+        accessToken = None)
+    }
   }
 
   private def dataSourceFromNDDataSet(
@@ -44,7 +45,9 @@ object ND2WK extends FoxImplicits {
       vr <- nd.voxelRes.get("0").filter(_.length >= 3) ?~> Messages("ndstore.invalid.voxelres.zero")
       scale = Scale(vr(0), vr(1), vr(2))
     } yield {
-      DataSource(name, baseDir = "", scale = scale, dataLayers = dataLayers)
+      val id = DataSourceId(name, "Connectomics department")
+      // TODO jfrohnhofen
+      NDDataSource(id, dataLayers, scale)
     }
   }
 
@@ -65,17 +68,13 @@ object ND2WK extends FoxImplicits {
       for {
         bbox <- boundingBoxFromNDChannelSize(nd)
         _ <- nd.resolutions.nonEmpty ?~> Messages("ndstore.invalid.resolutions")
-        sections = List(DataLayerSection("", channel.name, resolutions = nd.resolutions.map(r => math.pow(2, r).toInt), bboxBig = bbox, bboxSmall = bbox))
       } yield {
-        DataLayer(
-          name = channel.name,
-          category = channelTypeMapping.get(channel.channelType).get,
-          baseDir = "",
-          flags = None,
-          elementClass = channel.dataType,
-          isWritable = false,
-          fallback = None,
-          sections = sections
+        NDDataLayer(
+          channel.name,
+          channel.channelType,
+          bbox,
+          nd.resolutions.map(r => math.pow(2, r).toInt).toSet,
+          channel.dataType
         )
       }
     }

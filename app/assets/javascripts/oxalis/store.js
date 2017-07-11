@@ -96,7 +96,7 @@ export type ElementClassType = "uint8" | "uint16" | "uint32";
 export type DataLayerType = {
   +name: string,
   +category: CategoryType,
-  +maxCoordinates: BoundingBoxObjectType,
+  +boundingBox: BoundingBoxObjectType,
   +resolutions: Array<number>,
   // +fallback: any,
   +elementClass: ElementClassType,
@@ -271,7 +271,7 @@ export type TaskType = {
 
 export type SaveStateType = {
   +isBusy: boolean,
-  +queue: Array<UpdateAction>,
+  +queue: Array<Array<UpdateAction>>,
   +lastSaveTimestamp: number,
 };
 
@@ -336,7 +336,7 @@ export const defaultState: OxalisState = {
     shouldHideAllSkeletons: false,
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
-    controlMode: ControlModeEnum.TRACE,
+    controlMode: ControlModeEnum.VIEW,
   },
   task: null,
   dataset: {

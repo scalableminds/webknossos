@@ -45,7 +45,7 @@ object DataToken {
 
 object DataTokenService extends FoxImplicits {
 
-  val oxalisToken = DataToken.generateRandomToken
+  val webKnossosToken = DataToken.generateRandomToken
 
   def generate(
     user: Option[User],
@@ -60,7 +60,7 @@ object DataTokenService extends FoxImplicits {
     DataTokenDAO.findByToken(token)(GlobalAccessContext).futureBox.map {
       case Full(dataToken) if dataToken.isValidFor(dataSetName, dataLayerName) =>
         true
-      case _ if token == oxalisToken =>
+      case _ if token == webKnossosToken =>
         true
       case _ =>
         false

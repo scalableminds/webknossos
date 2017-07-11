@@ -19,7 +19,7 @@ class SpotlightDatasetView extends Marionette.View {
       <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
         <img src="/assets/images/skeleton.svg">
       </a>
-      <% if(dataStore.typ != "ndstore" && sourceType != "webKnossosWrap"){ %>
+      <% if(dataStore.typ != "ndstore"){ %>
         <a href="#" title="Create volume tracing" id="volumeTraceLink">
           <img src="/assets/images/volume.svg">
         </a>

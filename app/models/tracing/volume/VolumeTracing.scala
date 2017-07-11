@@ -9,43 +9,42 @@ import java.nio.file.Paths
 import java.util.zip.ZipInputStream
 import javax.xml.stream.XMLStreamWriter
 
-import scala.concurrent.Future
-import models.tracing.CommonTracingService
-import net.liftweb.common.{Failure, Full}
-import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.iteratee.{Enumerator, Iteratee}
-import play.api.libs.json.{JsValue, Json}
+import com.scalableminds.braingames.binary.helpers.RPC
+import com.scalableminds.braingames.binary.models.datasource.{AbstractSegmentationLayer, Category, DataLayerLike, ElementClass}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFunctionStream, ZipIO}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, GlobalDBAccess}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import play.api.libs.ws.WS
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
-import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.braingames.binary.repository.WebKnossosWrapDataSourceType
-import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFileStream, NamedFunctionStream, ZipIO}
-import com.scalableminds.util.xml.{XMLWrites, Xml}
-import models.tracing.skeleton.SkeletonTracing
+import com.scalableminds.util.xml.XMLWrites
+import models.annotation.{AnnotationContent, AnnotationContentService, AnnotationSettings}
+import models.basics.SecuredBaseDAO
+import models.binary._
+import models.tracing.CommonTracingService
 import models.tracing.volume.VolumeTracing.VolumeTracingXMLWrites
-import org.apache.commons.io.IOUtils
-import oxalis.nml.{NML, NMLService, TreeLike}
-import play.api.i18n.Messages
+import net.liftweb.common.{Failure, Full}
+import oxalis.nml.{NML, NMLService}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.{JsObject, JsValue, Json, _}
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 02.06.13
- * Time: 11:23
- */
+case class VolumeTracingContent(dataLayer: AbstractSegmentationLayer, fallbackLayerName: Option[String], firstCellId: Long)
+
+object VolumeTracingContent {
+  implicit val volumeTracingContentFormat = Json.format[VolumeTracingContent]
+}
+
 case class VolumeTracing(
                           dataSetName: String,
-                          userDataLayerName: String,
+                          dataStoreContent: VolumeTracingContent,
                           activeCellId: Option[Int] = None,
                           timestamp: Long = System.currentTimeMillis(),
                           editPosition: Point3D = Point3D(0, 0, 0),
                           editRotation: Vector3D = Vector3D(0, 0, 0),
                           zoomLevel: Double,
+                          nextCellId: Long,
                           boundingBox: Option[BoundingBox] = None,
                           settings: AnnotationSettings = AnnotationSettings.volumeDefault,
                           _id: BSONObjectID = BSONObjectID.generate)
@@ -90,14 +89,13 @@ case class VolumeTracing(
   def contentType: String = VolumeTracing.contentType
 
   def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
-    import play.api.Play.current
-    def createStream(url: String): Fox[Enumerator[Array[Byte]]] = {
-      val futureResponse = WS
-        .url(url)
-        .withQueryString("token" -> DataTokenService.oxalisToken)
-        .getStream()
 
-      futureResponse.map {
+    def createStream(url: String): Fox[Enumerator[Array[Byte]]] = {
+      val futureResponse = RPC(url)
+        .withQueryString("token" -> DataTokenService.webKnossosToken)
+        .getStream
+
+      futureResponse.flatMap {
         case (headers, body) =>
           if(headers.status == 200) {
             Full(body)
@@ -107,9 +105,9 @@ case class VolumeTracing(
       }
     }
 
-    for{
+    for {
       dataSource <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
-      urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/datasets/$dataSetName/layers/$userDataLayerName/download"
+      urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/tracings/volumes/${dataStoreContent.dataLayer.name}/download"
       inputStream <- createStream(urlToVolumeData)
     } yield {
       Enumerator.outputStream{ outputStream =>
@@ -125,14 +123,14 @@ case class VolumeTracing(
   def downloadFileExtension: String = ".zip"
 
   override def contentData = {
-    UserDataLayerDAO.findOneByName(userDataLayerName)(GlobalAccessContext).map { userDataLayer =>
-      Json.obj(
-        "activeCell" -> activeCellId,
-        "customLayers" -> List(AnnotationContent.dataLayerWrites.writes(userDataLayer.dataLayer)),
-        "nextCell" -> userDataLayer.dataLayer.nextSegmentationId.getOrElse[Long](1),
-        "zoomLevel" -> zoomLevel
-      )
-    }
+    val layer = Json.toJson(dataStoreContent.dataLayer).as[JsObject] ++
+      Json.obj("fallback" -> Json.obj("layerName" -> dataStoreContent.fallbackLayerName))
+    Fox.successful(Json.obj(
+      "activeCell" -> activeCellId,
+      "customLayers" -> List(layer),
+      "nextCell" -> nextCellId,
+      "zoomLevel" -> zoomLevel
+    ))
   }
 }
 
@@ -146,11 +144,14 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
 
   def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
     for {
-      baseSource <- baseDataSet.dataSource.toFox
-      if baseSource.sourceType != Some(WebKnossosWrapDataSourceType.name)
-      dataLayer <- DataStoreHandler.createUserDataLayer(baseDataSet.dataStoreInfo, baseSource)
-      volumeTracing = VolumeTracing(baseDataSet.name, dataLayer.dataLayer.name, editPosition = baseDataSet.defaultStart, zoomLevel = VolumeTracing.defaultZoomLevel)
-      _ <- UserDataLayerDAO.insert(dataLayer)
+      baseSource <- baseDataSet.dataSource.toUsable.toFox
+      tracingContent <- DataStoreHandler.createVolumeTracing(baseDataSet.dataStoreInfo, baseSource)
+      volumeTracing = VolumeTracing(
+        baseDataSet.name,
+        tracingContent,
+        nextCellId = tracingContent.firstCellId,
+        editPosition = baseDataSet.defaultStart,
+        zoomLevel = VolumeTracing.defaultZoomLevel)
       _ <- VolumeTracingDAO.insert(volumeTracing)
     } yield {
       volumeTracing
@@ -163,23 +164,23 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
     boundingBox: Option[BoundingBox],
     settings: AnnotationSettings)(implicit ctx: DBAccessContext): Fox[VolumeTracing] = {
 
-    nmls.headOption.toFox.flatMap{ nml =>
+    nmls.headOption.toFox.flatMap { nml =>
       val box = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) }
 
       for {
         dataSet <- DataSetDAO.findOneBySourceName(nml.dataSetName) ?~> "dataSet.notFound"
-        baseSource <- dataSet.dataSource.toFox ?~> "dataSource.notFound"
+        baseSource <- dataSet.dataSource.toUsable ?~> "dataSource.notFound"
         start <- nml.editPosition.toFox.orElse(DataSetService.defaultDataSetPosition(nml.dataSetName))
         nmlVolume <- nml.volumes.headOption.toFox ?~> "nml.volume.notFound"
         volume <- additionalFiles.get(nmlVolume.location).toFox ?~> "nml.volume.volumeFileNotFound"
-        dataLayer <- DataStoreHandler.uploadUserDataLayer(dataSet.dataStoreInfo, baseSource, volume) ?~> "dataStore.dataLayer.uploadFailed"
+        tracingContent <- DataStoreHandler.uploadVolumeTracing(dataSet.dataStoreInfo, baseSource, volume) ?~> "dataStore.dataLayer.uploadFailed"
         volumeTracing = VolumeTracing(
           dataSet.name,
-          dataLayer.dataLayer.name,
+          tracingContent,
+          nextCellId = tracingContent.firstCellId,
           editPosition = start,
           editRotation = nml.editRotation.getOrElse(Vector3D(0,0,0)),
           zoomLevel = nml.zoomLevel.getOrElse(VolumeTracing.defaultZoomLevel))
-        _ <- UserDataLayerDAO.insert(dataLayer) ?~> "dataLayer.creation.failed"
         _ <- VolumeTracingDAO.insert(volumeTracing) ?~> "segmentation.creation.failed"
       } yield {
         volumeTracing
@@ -232,7 +233,12 @@ object VolumeTracing extends FoxImplicits{
 }
 
 object VolumeTracingDAO extends SecuredBaseDAO[VolumeTracing] {
+
   val collectionName = "volumes"
 
   val formatter = VolumeTracing.volumeTracingFormat
+
+  def findOneByVolumeTracingLayerName(layerName: String)(implicit ctx: DBAccessContext): Fox[VolumeTracing] = {
+    find(Json.obj("dataStoreContent.dataLayer.name" -> layerName)).one[VolumeTracing]
+  }
 }

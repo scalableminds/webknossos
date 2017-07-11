@@ -7,7 +7,6 @@ import scala.concurrent.Future
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import models.binary.UserDataLayerDAO
 
 object TracingUpdater extends LazyLogging {
 
@@ -44,7 +43,7 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
 
   def createUpdate()(implicit ctx: DBAccessContext) = {
     val activeCellId = (value \ "activeCell").asOpt[Int]
-    val nextSegmentationId = (value \ "nextCell").asOpt[Int]
+    val nextCellId = (value \ "nextCell").asOpt[Long]
     val editPosition = (value \ "editPosition").asOpt[Point3D]
     val editRotation = (value \ "editRotation").asOpt[Vector3D]
     val zoomLevel = (value \ "zoomLevel").asOpt[Double]
@@ -53,8 +52,8 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
         activeCellId = activeCellId,
         editPosition = editPosition getOrElse t.editPosition,
         editRotation = editRotation getOrElse t.editRotation,
-        zoomLevel = zoomLevel getOrElse t.zoomLevel)
-      UserDataLayerDAO.updateNextSegmentationId(t.userDataLayerName, nextSegmentationId)
+        zoomLevel = zoomLevel getOrElse t.zoomLevel,
+        nextCellId = nextCellId getOrElse t.nextCellId)
       VolumeTracingDAO.update(t._id, updated).map(_ => updated)
     }
   }

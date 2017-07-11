@@ -37,7 +37,7 @@ test("Save should add update actions to the queue", (t) => {
   const pushAction = SaveActions.pushSaveQueueAction(items);
   const newState = SaveReducer(initialState, pushAction);
 
-  t.deepEqual(newState.save.queue, items);
+  t.deepEqual(newState.save.queue, [items]);
 });
 
 test("Save should add more update actions to the queue", (t) => {
@@ -49,7 +49,7 @@ test("Save should add more update actions to the queue", (t) => {
   const testState = SaveReducer(initialState, pushAction);
   const newState = SaveReducer(testState, pushAction);
 
-  t.deepEqual(newState.save.queue, items.concat(items));
+  t.deepEqual(newState.save.queue, [items, items]);
 });
 
 test("Save should add zero update actions to the queue", (t) => {
@@ -61,16 +61,16 @@ test("Save should add zero update actions to the queue", (t) => {
 });
 
 test("Save should remove one update actions from the queue", (t) => {
-  const items = [
-    createEdge(0, 1, 2),
-    createEdge(1, 2, 3),
-  ];
-  const pushAction = SaveActions.pushSaveQueueAction(items);
+  const firstItem = [createEdge(0, 1, 2)];
+  const secondItem = [createEdge(1, 2, 3)];
+  const firstPushAction = SaveActions.pushSaveQueueAction(firstItem);
+  const secondPushAction = SaveActions.pushSaveQueueAction(secondItem);
   const popAction = SaveActions.shiftSaveQueueAction(1);
-  let newState = SaveReducer(initialState, pushAction);
+  let newState = SaveReducer(initialState, firstPushAction);
+  newState = SaveReducer(newState, secondPushAction);
   newState = SaveReducer(newState, popAction);
 
-  t.deepEqual(newState.save.queue, [createEdge(1, 2, 3)]);
+  t.deepEqual(newState.save.queue, [secondItem]);
 });
 
 test("Save should remove zero update actions from the queue", (t) => {
@@ -83,7 +83,7 @@ test("Save should remove zero update actions from the queue", (t) => {
   let newState = SaveReducer(initialState, pushAction);
   newState = SaveReducer(newState, popAction);
 
-  t.deepEqual(newState.save.queue, items);
+  t.deepEqual(newState.save.queue, [items]);
 });
 
 test("Save should remove all update actions from the queue (1/2)", (t) => {

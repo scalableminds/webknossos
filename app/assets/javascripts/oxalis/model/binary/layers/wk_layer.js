@@ -3,6 +3,8 @@
  * @flow
  */
 
+import Base64 from "base64-js";
+
 import Layer, { REQUEST_TIMEOUT } from "oxalis/model/binary/layers/layer";
 import type { BucketRequestOptions } from "oxalis/model/binary/layers/layer";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
@@ -46,25 +48,13 @@ class WkLayer extends Layer {
 
   async requestFromStoreImpl(batch: Array<BucketInfo>, token: string): Promise<Uint8Array> {
     const wasFourBit = this.fourBit;
-    const requestData = new MultipartData();
-
-    for (const bucket of batch) {
-      requestData.addPart({
-        "X-Bucket": JSON.stringify(bucket),
-      });
-    }
 
     const datasetName = this.getDatasetName();
-    const data = await requestData.dataPromise();
-    const responseBuffer = await Request.sendArraybufferReceiveArraybuffer(
+    const responseBuffer = await Request.sendJSONReceiveArraybuffer(
       `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`,
       {
-        data,
-        headers: {
-          "Content-Type": `multipart/mixed; boundary=${requestData.boundary}`,
-        },
+        data: batch,
         timeout: REQUEST_TIMEOUT,
-        compress: true,
         doNotCatch: true,
       });
 
@@ -94,23 +84,17 @@ class WkLayer extends Layer {
 
 
   async sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<void> {
-    const transmitData = new MultipartData();
-
-    for (const bucket of batch) {
-      transmitData.addPart(
-        { "X-Bucket": JSON.stringify(bucket) },
-        getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)));
-    }
+    let data = batch.map(bucket => {
+      let data = getBucketData(BucketBuilder.bucketToZoomedAddress(bucket));
+      bucket.base64Data = Base64.fromByteArray(data);
+      return { action: "labelVolume", value: bucket };
+    });
 
     const datasetName = this.getDatasetName();
-    const data = await transmitData.dataPromise();
-    await Request.sendArraybufferReceiveArraybuffer(
-      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`, {
-        method: "PUT",
+    await Request.sendJSONReceiveJSON(
+      `${this.dataStoreInfo.url}/data/tracings/volumes/${this.name}?dataSetName=${datasetName}&token=${token}`, {
+        method: "POST",
         data,
-        headers: {
-          "Content-Type": `multipart/mixed; boundary=${transmitData.boundary}`,
-        },
         timeout: REQUEST_TIMEOUT,
         compress: true,
         doNotCatch: true,

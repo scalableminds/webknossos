@@ -5,18 +5,14 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.braingames.binary.models._
-import com.scalableminds.braingames.binary.models.datasource.DataSourceId
 import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.braingames.datastore.services.DataStoreStatus
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
-import models.tracing.volume.VolumeTracingDAO
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsError, JsSuccess, Json}
+import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc._
 
 import scala.concurrent.Future

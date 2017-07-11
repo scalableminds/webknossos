@@ -1,32 +1,22 @@
 package models.tracing.volume
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
-import models.annotation.{AnnotationContent, AnnotationContentService, Annotation, AnnotationSettings}
-import models.basics.SecuredBaseDAO
-import models.binary._
-import java.io.{FileInputStream, InputStream, PipedInputStream, PipedOutputStream}
-import java.nio.file.Paths
-import java.util.zip.ZipInputStream
 import javax.xml.stream.XMLStreamWriter
 
-import com.scalableminds.braingames.binary.helpers.RPC
-import com.scalableminds.braingames.binary.models.datasource.{AbstractSegmentationLayer, Category, DataLayerLike, ElementClass}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFunctionStream, ZipIO}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, GlobalDBAccess}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.XMLWrites
-import models.annotation.{AnnotationContent, AnnotationContentService, AnnotationSettings}
+import models.annotation.AnnotationSettings
 import models.basics.SecuredBaseDAO
 import models.binary._
 import models.tracing.CommonTracingService
 import models.tracing.volume.VolumeTracing.VolumeTracingXMLWrites
 import net.liftweb.common.{Failure, Full}
-import oxalis.nml.{NML, NMLService}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsObject, JsValue, Json, _}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 

@@ -13,9 +13,9 @@ describe("Dashboard", () => {
   }
 
   describe("NML Download", () => {
-    it("should download an NML file", async () => {
-      await page.openExplorativeTab();
-      const url = await page.getFirstDownloadLink();
+    it("should download an NML file", () => {
+      page.openExplorativeTab();
+      const url = page.getFirstDownloadLink();
       return Request.text().from(url).then((nmlContent) => {
         expect(nmlContent.length).toBeGreaterThan(0);
         expect(nmlContent.startsWith("<things>")).toBe(true);
@@ -25,23 +25,23 @@ describe("Dashboard", () => {
   });
 
   describe("Tasks", () => {
-    it("should open tasks", () => page.openTasksTab().then(async () => {
-      expect(await getTabTitle()).toBe("Tasks");
-    }));
-
-
-    it("should have one available task", async () => {
-      await page.openTasksTab();
-      return page.getTasks().then((tasks) => {
-        expect(tasks.length).toBe(1);
-      });
+    it("should open tasks", () => {
+      page.openTasksTab();
+      expect(getTabTitle()).toBe("Tasks");
     });
 
 
-    it("should get a new task", async () => {
-      await page.getNewTask();
-      return page.getTasks()
-        .then(tasks => expect(tasks.length).toBe(2));
+    it("should have one available task", () => {
+      page.openTasksTab();
+      const tasks = page.getTasks();
+      expect(tasks.length).toBe(1);
+    });
+
+
+    it("should get a new task", () => {
+      page.getNewTask();
+      const tasks = page.getTasks();
+      expect(tasks.length).toBe(2);
     });
   });
 
@@ -51,21 +51,21 @@ describe("Dashboard", () => {
       page.openDashboardAsUser();
     });
 
-    it("should display user's tasks", async () => {
-      const hasTaskButtonVisible = await browser.isExisting(page.newTaskButton);
-      const hasDownloadButtonVisible = await browser.isExisting(page.downloadButton);
+    it("should display user's tasks", () => {
+      const hasTaskButtonVisible = browser.isExisting(page.newTaskButton);
+      const hasDownloadButtonVisible = browser.isExisting(page.downloadButton);
 
-      expect(await getTabTitle()).toBe("Tasks");
+      expect(getTabTitle()).toBe("Tasks");
       expect(hasTaskButtonVisible).toEqual(false);
       expect(hasDownloadButtonVisible).toEqual(true);
     });
 
-    it("should display user's tracked time", async () => {
-      await page.openTrackedTimeTab();
-      expect(await getTabTitle()).toBe("Tracked Time");
+    it("should display user's tracked time", () => {
+      page.openTrackedTimeTab();
+      expect(getTabTitle()).toBe("Tracked Time");
 
-      const timeTableEntries = await page.getTimeTableEntries();
-      const timeGraphEntries = await page.getTimeGraphEntries();
+      const timeTableEntries = page.getTimeTableEntries();
+      const timeGraphEntries = page.getTimeGraphEntries();
 
       const url = "/api/users/570b9f4d2a7c0e4d008da6ef/loggedTime";
       return Request.json().from(url).then((response) => {
@@ -76,9 +76,9 @@ describe("Dashboard", () => {
       });
     });
 
-    it("should display user's explorative annotations", async () => {
-      await page.openExplorativeTab();
-      expect(await getTabTitle()).toBe("Explorative Annotations");
+    it("should display user's explorative annotations", () => {
+      page.openExplorativeTab();
+      expect(getTabTitle()).toBe("Explorative Annotations");
     });
   });
 });

@@ -6,20 +6,30 @@ import { getPaginationPagesCount } from "./helpers/pageHelpers";
 describe("User List", () => {
   let page;
 
+  // These async functions are executed synchronous when called via browser, otherwise
+  // the whole test would need to be marked async and would be executed asynchronous
+  browser.addCommand("getUsersFromServer", async url =>
+    Request.json().from(url),
+  );
+
+  browser.addCommand("createTeamOnServer", async payload =>
+    Request.json().upload("/api/teams", { data: payload }),
+  );
+
   beforeEach(() => {
     page = new UserPage();
     page.get();
   });
 
-  it("should show all users", async () => {
+  it("should show all users", () => {
     const maxUsersPerPage = 50;
-    const userListEntries = await page.getUserListEntries();
-    const numPaginationPages = await getPaginationPagesCount();
+    const userListEntries = page.getUserListEntries();
+    const numPaginationPages = getPaginationPagesCount();
 
     const numUserListEntries = Math.min(userListEntries.length, maxUsersPerPage);
 
     const url = "/api/users?isEditable=true";
-    const users = await Request.json().from(url);
+    const users = browser.getUsersFromServer(url);
     expect(users.length).toEqual(numUserListEntries);
     expect(numPaginationPages).toEqual(Math.ceil(users.length / maxUsersPerPage));
   });
@@ -29,20 +39,19 @@ describe("User List", () => {
     // create a new team for assignment
     const newTeamName = "test2";
     const payload = { name: newTeamName, parent: "Connectomics department", owner: "", roles: [{ name: "admin" }, { name: "user" }], isEditable: "true" };
+    browser.createTeamOnServer(payload);
+    // It is not possible to create a team from the users page, therefore refresh the page, so everything is up to date
+    browser.refresh();
 
-    return Request.json().upload("/api/teams", { data: payload }).then(
-      async () => {
-        // select first user 'SCM Boy' and switch the role of the newly created
-        // team to 'user'
-        await page.selectUser("SCM Boy");
-        await page.selectTeams([newTeamName]);
-        await page.clickConfirmButton();
-
-        // confirm that the user table updated
-        const teamsAndRoles = await page.getTeamsAndRolesForUser("SCM Boy");
-        expect(_.keys(teamsAndRoles)).toContain(newTeamName);
-        expect(teamsAndRoles[newTeamName]).toBe("user");
-      });
+    // select first user 'SCM Boy' and switch the role of the newly created
+    // team to 'user'
+    page.selectUser("SCM Boy");
+    page.selectTeams([newTeamName]);
+    page.clickConfirmButton();
+    // confirm that the user table updated
+    const teamsAndRoles = page.getTeamsAndRolesForUser("SCM Boy");
+    expect(_.keys(teamsAndRoles)).toContain(newTeamName);
+    expect(teamsAndRoles[newTeamName]).toBe("user");
   });
 
 
@@ -51,29 +60,29 @@ describe("User List", () => {
      false);
 
 
-  it("should assign new experience", async () => {
+  it("should assign new experience", () => {
     const newExperience = { domain: "Testing", level: 42 };
-    await page.setExperience("SCM Boy", newExperience);
+    page.setExperience("SCM Boy", newExperience);
 
-    const experiences = await page.getExperiencesForUser("SCM Boy");
+    const experiences = page.getExperiencesForUser("SCM Boy");
     expect(experiences).toContain(newExperience);
   });
 
 
-  it("should increase an experience", async () => {
+  it("should increase an experience", () => {
     const newExperience = { domain: "Testing", level: 23 };
-    await page.increaseExperience("SCM Boy", newExperience);
+    page.increaseExperience("SCM Boy", newExperience);
 
-    const experiences = await page.getExperiencesForUser("SCM Boy");
+    const experiences = page.getExperiencesForUser("SCM Boy");
     expect(experiences).toContain(newExperience);
   });
 
 
-  it("should delete an experience", async () => {
+  it("should delete an experience", () => {
     const newExperience = { domain: "Testing", level: 23 };
-    await page.deleteExperience("SCM Boy", newExperience);
+    page.deleteExperience("SCM Boy", newExperience);
 
-    const experiences = await page.getExperiencesForUser("SCM Boy");
+    const experiences = page.getExperiencesForUser("SCM Boy");
     expect(experiences).not.toContain(newExperience);
   });
 });

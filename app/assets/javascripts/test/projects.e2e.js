@@ -6,35 +6,41 @@ describe("Project List", () => {
   let page;
   const maxProjectsPerPage = 10;
 
+  // This async function is executed synchronous when called via browser, otherwise
+  // the whole test would need to be marked async and would be executed asynchronous
+  browser.addCommand("getProjectCountFromServer", async () =>
+    page.getProjectCountFromServer(),
+  );
+
   beforeEach(() => {
     page = new ProjectPage();
     page.get();
   });
 
-  it("should show all projects", async () => {
-    const numProjectListRows = await page.getProjectListEntryCount();
-    const numPaginationPages = await getPaginationPagesCount();
+  it("should show all projects", () => {
+    const numProjectListRows = page.getProjectListEntryCount();
+    const numPaginationPages = getPaginationPagesCount();
 
     const numProjectListEntries = Math.min(numProjectListRows, maxProjectsPerPage);
-    const numProjects = await page.getProjectCountFromServer();
+    const numProjects = browser.getProjectCountFromServer();
 
     expect(numProjects).toEqual(numProjectListEntries);
     expect(numPaginationPages).toEqual(Math.ceil(numProjects / maxProjectsPerPage));
   });
 
 
-  it("should create a new project", async () => {
-    const oldProjectCount = await page.getProjectCountFromServer();
-    const oldRowCount = await page.getProjectListEntryCount();
+  it("should create a new project", () => {
+    const oldProjectCount = browser.getProjectCountFromServer();
+    const oldRowCount = page.getProjectListEntryCount();
 
     const newProject = {
       name: "TestProject",
       priority: 100,
     };
-    await page.createProject(newProject);
+    page.createProject(newProject);
 
-    const newRowCount = await page.getProjectListEntryCount();
-    const newProjectCount = await page.getProjectCountFromServer();
+    const newRowCount = page.getProjectListEntryCount();
+    const newProjectCount = browser.getProjectCountFromServer();
 
     expect(newProjectCount).toEqual(oldProjectCount + 1);
 
@@ -44,29 +50,29 @@ describe("Project List", () => {
   });
 
 
-  it("should download a project", async () => {
-    const url = await page.getFirstDownloadURl();
+  it("should download a project", () => {
+    const url = page.getFirstDownloadURl();
 
     // Should successfully download a blob
     return Request.text().from(url);
   });
 
 
-  it("should edit a project's experience", async () => {
+  it("should edit a project's experience", () => {
     const newPriority = 42;
-    await page.editFirstProject(newPriority);
+    page.editFirstProject(newPriority);
 
-    const allPriorities = await page.getAllPriorities();
+    const allPriorities = page.getAllPriorities();
     expect(allPriorities).toContain(newPriority);
   });
 
 
-  it("should delete a project", async () => {
-    const oldProjectCount = await page.getProjectCountFromServer();
+  it("should delete a project", () => {
+    const oldProjectCount = browser.getProjectCountFromServer();
 
-    await page.deleteFirstProject();
+    page.deleteFirstProject();
 
-    const newProjectCount = await page.getProjectCountFromServer();
+    const newProjectCount = browser.getProjectCountFromServer();
 
     expect(newProjectCount).toEqual(oldProjectCount - 1);
   });

@@ -3,7 +3,6 @@
  * @flow weak
  */
 
-import DatasetListView from "dashboard/views/dataset/dataset_list_view";
 import PaginationView from "admin/views/pagination_view";
 import DatasetAddView from "admin/views/dataset/dataset_add_view";
 import UserListView from "admin/views/user/user_list_view";
@@ -35,7 +34,6 @@ import TaskTypeCreateView from "admin/views/tasktype/task_type_create_view";
 import TaskTypeModel from "admin/models/tasktype/task_type_model";
 import ScriptCreateView from "admin/views/scripts/script_create_view";
 import ScriptModel from "admin/models/scripts/script_model";
-
 import TaskOverviewView from "admin/views/task/task_overview_view";
 import TaskOverviewCollection from "admin/models/task/task_overview_collection";
 
@@ -60,7 +58,6 @@ export {
   WorkloadListView,
   WorkloadCollection,
   DatasetAddView,
-  DatasetListView,
   ScriptListView,
   ScriptCollection,
   ProjectCreateView,

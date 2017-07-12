@@ -18,6 +18,7 @@ import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/views/dashboard_view";
 import UserModel from "dashboard/models/user_model";
 import SpotlightView from "dashboard/views/spotlight/spotlight_view";
+import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
 import DatasetCollection from "admin/models/dataset/dataset_collection";
 
 // #####
@@ -313,19 +314,12 @@ class Router extends BaseRouter {
   }
 
   importDataset(name) {
-    // Webpack `require` doesn't work with inline arrow functions
-    const callback = (DatasetImportView) => {
-      DatasetImportView = DatasetImportView.default;
-
-      const view = new ReactBackboneWrapper(DatasetImportView, {
-        datasetName: name,
-      });
-      view.forcePageReload = true;
-      this.changeView(view);
-    };
-    require(["dashboard/views/dataset/dataset_import_view"], callback);
+    const view = new ReactBackboneWrapper(DatasetImportView, {
+      datasetName: name,
+    });
+    view.forcePageReload = true;
+    this.changeView(view);
   }
-
 
   showWithPagination(view, collection, options = {}) {
     _.defaults(options, { addButtonText: null });

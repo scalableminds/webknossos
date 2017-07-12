@@ -15,19 +15,17 @@ class DatasetImportView extends React.PureComponent {
     isValidJSON: true,
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     const datasetUrl = `/api/datasets/${this.props.datasetName}`;
-    const dataset = Request.receiveJSON(datasetUrl).then((dataset) => {
+    const dataset = await Request.receiveJSON(datasetUrl);
 
+    const datasetJsonUrl = `${dataset.dataStore.url}/data/datasets/${this.props.datasetName}`;
+    const datasetJson = await Request.receiveJSON(datasetJsonUrl);
 
-      const datasetJsonUrl = `${dataset.dataStore.url}/data/datasets/${this.props.datasetName}`;
-      const datasetJson = Request.receiveJSON(datasetJsonUrl).then((datasetJson) => {
-
-        this.setState({
-          dataset,
-          datasetJson: JSON.stringify(datasetJson.dataSource, null, "  "),
-        });
-      });
+    // eslint-disable-next-line react/no-did-mount-set-state
+    this.setState({
+      dataset,
+      datasetJson: JSON.stringify(datasetJson.dataSource, null, "  "),
     });
   }
 

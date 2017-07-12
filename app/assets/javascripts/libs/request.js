@@ -42,7 +42,7 @@ class Request {
       return options;
     }
 
-    var body = _.isString(options.data) ?
+    let body = _.isString(options.data) ?
         options.data :
         JSON.stringify(options.data);
 

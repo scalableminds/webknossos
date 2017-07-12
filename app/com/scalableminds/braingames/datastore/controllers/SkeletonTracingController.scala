@@ -37,7 +37,7 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def update(tracingId: String) = Action.async(validateJson[SkeletonUpdateActionGroup]) {
+  def update(tracingId: String) = Action.async(validateJson[List[SkeletonUpdateActionGroup]]) {
     implicit request => {
       for {
         tracing <- skeletonTracingService.find(tracingId) ?~> Messages("tracing.notFound")

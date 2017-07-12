@@ -8,7 +8,8 @@ import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValuePair
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.util.geometry.Scale
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import net.liftweb.common.{Box, Full}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsValue, Json}
@@ -18,7 +19,7 @@ import play.api.libs.json.{JsValue, Json}
   */
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore
-                                      ) {
+                                      ) extends FoxImplicits {
 
   private def createNewId(): String = UUID.randomUUID.toString
 
@@ -54,8 +55,12 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  def saveUpdates(tracingId: String, updateActionGroup: SkeletonUpdateActionGroup): Box[Unit] = {
-    tracingDataStore.skeletonUpdates.putJson(tracingId, updateActionGroup.version, updateActionGroup.actions)
+  def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[Unit]] = {
+    Fox.combined(for {
+      updateActionGroup <- updateActionGroups
+    } yield {
+      tracingDataStore.skeletonUpdates.putJson(tracingId, updateActionGroup.version, updateActionGroup.actions)
+    }.toFox)
   }
 
   def downloadJson(tracing: SkeletonTracing): Box[JsValue] = {

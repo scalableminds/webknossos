@@ -31,7 +31,7 @@ POST        /tracings/volumes/:tracingId                                        
 GET         /tracings/volumes/:tracingId/download                                              @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(dataSetName: String, tracingId: String)
 
 # Skeleton tracings
-POST        /tracings/skeletons                                                                @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.create(dataSetName: String)
+POST        /tracings/skeletons/createEmpty                                                    @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.create(dataSetName: String)
 POST        /tracings/skeletons/createFromNML                                                  @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.createFromNML(name: String)
 POST        /tracings/skeletons/:annotationId                                                  @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.update(annotationId: String)
 GET         /tracings/skeletons/:annotationId/downloadJson                                     @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.downloadJson(annotationId: String, version: Option[Long])

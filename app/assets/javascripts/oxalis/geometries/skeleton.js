@@ -264,7 +264,7 @@ class Skeleton {
     const diff = cachedDiffTrees(this.prevTracing.trees, skeletonTracing.trees);
 
     for (const update of diff) {
-      switch (update.action) {
+      switch (update.name) {
         case "createNode": {
           this.createNode(update.value.treeId, update.value);
           break;

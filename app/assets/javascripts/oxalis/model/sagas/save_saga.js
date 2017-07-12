@@ -19,7 +19,7 @@ import { alert } from "libs/window";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { TracingType, FlycamType } from "oxalis/store";
+import type { TracingType, FlycamType, SaveQueueEntryType } from "oxalis/store";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
@@ -47,16 +47,17 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
 
 export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
   const batch = yield select(state => state.save.queue);
-  const compactBatch = compactUpdateActions(batch);
+  let compactBatch = compactUpdateActions(batch);
   const { version, tracingType, tracingId } = yield select(state => state.tracing);
+  compactBatch = addVersionNumbers(compactBatch, version);
   try {
     yield call(Request.sendJSONReceiveJSON,
-      `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {
+      `/annotations/${tracingType}/${tracingId}`, {
         method: "PUT",
         headers: { "X-Date": timestamp },
         data: compactBatch,
       });
-    yield put(setVersionNumberAction(version + 1));
+    yield put(setVersionNumberAction(version + compactBatch.length));
     yield put(setLastSaveTimestampAction());
     yield put(shiftSaveQueueAction(batch.length));
     yield call(toggleErrorHighlighting, false);
@@ -89,12 +90,19 @@ export function toggleErrorHighlighting(state: boolean) {
   }
 }
 
+export function addVersionNumbers(updateActionsBatches: Array<SaveQueueEntryType>, lastVersion: number) {
+  updateActionsBatches.forEach((batch) => {
+    batch.version = ++lastVersion;
+  });
+  return updateActionsBatches;
+}
+
 // The Cantor pairing function assigns one natural number to each pair of natural numbers
 function cantor(a, b) {
   return 0.5 * (a + b) * (a + b + 1) + b;
 }
 
-export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAction>>): Array<UpdateAction> {
+export function compactUpdateActions(updateActionsBatches: Array<SaveQueueEntryType>): Array<SaveQueueEntryType> {
   // This part of the code detects tree merges and splits.
   // It does so by identifying nodes and edges that were deleted in one tree only to be created
   // in another tree again afterwards.
@@ -105,25 +113,26 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
   // is inserted for each group, containing the respective moved node ids.
   // The exact spot where the moveTreeComponent update action is inserted is important. This is
   // described later.
-  const result = updateActionsBatches.map((batch) => {
-    let compactedBatch = [...batch];
+  let result = updateActionsBatches.map((batch) => {
+    const { actions } = batch;
+    let compactedActions = [...actions];
     // Detect moved nodes and edges
     const movedNodesAndEdges = [];
 
     // Performance improvement: create a map of the deletedNode update actions, key is the nodeId
-    const deleteNodeActionsMap = _.keyBy(batch, ua => ua.action === "deleteNode" ? ua.value.id : -1);
+    const deleteNodeActionsMap = _.keyBy(actions, ua => ua.name === "deleteNode" ? ua.value.id : -1);
     // Performance improvement: create a map of the deletedEdge update actions, key is the cantor pairing
     // of sourceId and targetId
-    const deleteEdgeActionsMap = _.keyBy(batch, ua => ua.action === "deleteEdge" ? cantor(ua.value.source, ua.value.target) : -1);
-    for (const createUA of batch) {
-      if (createUA.action === "createNode") {
+    const deleteEdgeActionsMap = _.keyBy(actions, ua => ua.name === "deleteEdge" ? cantor(ua.value.source, ua.value.target) : -1);
+    for (const createUA of actions) {
+      if (createUA.name === "createNode") {
         const deleteUA = deleteNodeActionsMap[createUA.value.id];
-        if (deleteUA != null && deleteUA.action === "deleteNode" && deleteUA.value.treeId !== createUA.value.treeId) {
+        if (deleteUA != null && deleteUA.name === "deleteNode" && deleteUA.value.treeId !== createUA.value.treeId) {
           movedNodesAndEdges.push([createUA, deleteUA]);
         }
-      } else if (createUA.action === "createEdge") {
+      } else if (createUA.name === "createEdge") {
         const deleteUA = deleteEdgeActionsMap[cantor(createUA.value.source, createUA.value.target)];
-        if (deleteUA != null && deleteUA.action === "deleteEdge" && deleteUA.value.treeId !== createUA.value.treeId) {
+        if (deleteUA != null && deleteUA.name === "deleteEdge" && deleteUA.value.treeId !== createUA.value.treeId) {
           movedNodesAndEdges.push([createUA, deleteUA]);
         }
       }
@@ -139,16 +148,16 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
       const oldTreeId = movedPairings[0][1].value.treeId;
       const newTreeId = movedPairings[0][0].value.treeId;
       const nodeIds = movedPairings
-        .filter(([createUA]) => createUA.action === "createNode")
+        .filter(([createUA]) => createUA.name === "createNode")
         .map(([createUA]) => createUA.value.id);
       // The moveTreeComponent update action needs to be placed:
       // BEFORE the possible deleteTree update action of the oldTreeId and
       // AFTER the possible createTree update action of the newTreeId
-      const deleteTreeUAIndex = compactedBatch.findIndex(ua =>
-        ua.action === "deleteTree" &&
+      const deleteTreeUAIndex = compactedActions.findIndex(ua =>
+        ua.name === "deleteTree" &&
         ua.value.id === oldTreeId);
-      const createTreeUAIndex = compactedBatch.findIndex(ua =>
-        ua.action === "createTree" &&
+      const createTreeUAIndex = compactedActions.findIndex(ua =>
+        ua.name === "createTree" &&
         ua.value.id === newTreeId);
 
       if (deleteTreeUAIndex > -1 && createTreeUAIndex > -1) {
@@ -158,31 +167,32 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
         continue;
       } else if (createTreeUAIndex > -1) {
         // Insert after the createTreeUA
-        compactedBatch.splice(createTreeUAIndex + 1, 0, moveTreeComponent(oldTreeId, newTreeId, nodeIds));
+        compactedActions.splice(createTreeUAIndex + 1, 0, moveTreeComponent(oldTreeId, newTreeId, nodeIds));
       } else if (deleteTreeUAIndex > -1) {
         // Insert before the deleteTreeUA
-        compactedBatch.splice(deleteTreeUAIndex, 0, moveTreeComponent(oldTreeId, newTreeId, nodeIds));
+        compactedActions.splice(deleteTreeUAIndex, 0, moveTreeComponent(oldTreeId, newTreeId, nodeIds));
       } else {
         // Insert in front
-        compactedBatch.unshift(moveTreeComponent(oldTreeId, newTreeId, nodeIds));
+        compactedActions.unshift(moveTreeComponent(oldTreeId, newTreeId, nodeIds));
       }
 
       // Remove the original create/delete update actions of the moved nodes and edges
-      compactedBatch = _.without(compactedBatch, ..._.flatten(movedPairings));
+      compactedActions = _.without(compactedActions, ..._.flatten(movedPairings));
     }
 
-    return compactedBatch;
+    return Object.assign({}, batch, { actions: compactedActions });
   });
 
 
-  // This part of the code removes all but the last updateTracing update actions
-  let flatResult = _.flatten(result);
-  const updateTracingUpdateActions = flatResult.filter(ua => ua.action === "updateTracing");
-  if (updateTracingUpdateActions.length > 1) {
-    flatResult = _.without(flatResult, ...updateTracingUpdateActions.slice(0, -1));
+  // This part of the code removes all entries from the save queue that consist only of
+  // an updateTracing update action, except for the last one
+  const updateTracingOnlyBatches = result.filter(batch =>
+    batch.actions.length === 1 && batch.actions[0].name === "updateTracing");
+  if (updateTracingOnlyBatches.length > 1) {
+    result = _.without(result, ...updateTracingOnlyBatches.slice(0, -1));
   }
 
-  return flatResult;
+  return result;
 }
 
 export function performDiffTracing(

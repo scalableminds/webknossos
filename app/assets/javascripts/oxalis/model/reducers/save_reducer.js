@@ -4,15 +4,24 @@
  */
 
 import update from "immutability-helper";
+import Date from "libs/date";
 import type { OxalisState } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
 
 function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "PUSH_SAVE_QUEUE": {
-      return update(state, {
-        save: { queue: { $push: action.items.length ? [action.items] : [] } },
-      });
+      if (action.items.length > 0) {
+        return update(state, {
+          save: { queue: { $push: [{
+            // Placeholder, the version number will be updated before sending to the server
+            version: -1,
+            timestamp: Date.now(),
+            actions: action.items,
+          }] } },
+        });
+      }
+      return state;
     }
 
     case "SHIFT_SAVE_QUEUE": {

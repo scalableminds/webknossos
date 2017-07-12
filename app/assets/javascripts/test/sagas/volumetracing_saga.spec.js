@@ -9,12 +9,12 @@ import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
 import _ from "lodash";
 import { OrthoViews } from "oxalis/constants";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import update from "immutability-helper";
 import { take, put, race, call } from "redux-saga/effects";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import { withoutUpdateTracing } from "../helpers/saveHelpers";
 
 const mockedVolumeLayer = {
   isEmpty: () => false,
@@ -30,11 +30,6 @@ const { saveTracingAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 const { defaultState } = require("oxalis/store");
-
-
-function withoutUpdateTracing(items: Array<UpdateAction>): Array<UpdateAction> {
-  return items.filter(item => item.action !== "updateTracing");
-}
 
 const volumeTracing = {
   type: "volume",

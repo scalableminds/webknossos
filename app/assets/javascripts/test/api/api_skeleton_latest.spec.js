@@ -88,23 +88,30 @@ test("Data Api: getBoundingBox should get the bounding box of a layer", (t) => {
   t.deepEqual(boundingBox, correctBoundingBox);
 });
 
-test("Data Api: getDataValue should throw an error if the layer name is not valid", (t) => {
+test("Data Api: getDataValue should throw an error if the layer name is not valid", async (t) => {
   const api = t.context.api;
-  t.throws(() => api.data.getDataValue("nonExistingLayer", [1, 2, 3]));
+  await t.throws(api.data.getDataValue("nonExistingLayer", [1, 2, 3]));
 });
 
 test("Data Api: getDataValue should get the data value for a layer, position and zoomstep", (t) => {
-  // Currently, this test only makes sure pullQueue.pull is being called.
+  // Currently, this test only makes sure pullQueue.pull is being called and the bucketLoaded
+  // event is being triggered.
   // There is another spec for pullqueue.js
   const { api, model } = t.context;
   const cube = model.getBinaryByName("segmentation").cube;
+  const position = [3840, 4220, 2304];
+  const zoomStep = 0;
+  const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
+  const bucket = cube.getOrCreateBucket(bucketAddress);
 
   sinon.stub(cube.pullQueue, "pull").returns([Promise.resolve(true)]);
   sinon.stub(cube, "getDataValue").returns(1337);
 
-  return api.data.getDataValue("segmentation", [3840, 4220, 2304], 0).then((dataValue) => {
+  const promise = api.data.getDataValue("segmentation", position, zoomStep).then((dataValue) => {
     t.is(dataValue, 1337);
   });
+  bucket.trigger("bucketLoaded");
+  return promise;
 });
 
 test("User Api: setConfiguration should set and get a user configuration value", (t) => {

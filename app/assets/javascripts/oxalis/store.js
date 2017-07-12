@@ -15,10 +15,11 @@ import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reduce
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import ReadOnlyTracingReducer from "oxalis/model/reducers/readonlytracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
+import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
-import Constants, { ControlModeEnum } from "oxalis/constants";
-import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType, ControlModeType, BoundingBoxType } from "oxalis/constants";
+import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
+import type { OrthoViewType, Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType, ControlModeType, BoundingBoxType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
@@ -271,7 +272,7 @@ export type TaskType = {
 
 export type SaveStateType = {
   +isBusy: boolean,
-  +queue: Array<UpdateAction>,
+  +queue: Array<Array<UpdateAction>>,
   +lastSaveTimestamp: number,
 };
 
@@ -279,6 +280,19 @@ export type FlycamType = {
   +zoomStep: number,
   +currentMatrix: Matrix4x4,
   +spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
+};
+
+export type PlaneModeData = {
+  +activeViewport: OrthoViewType,
+}
+
+type ArbitraryModeData = null;
+type FlightModeData = null;
+
+export type ViewModeData = {
+  +plane: PlaneModeData,
+  +arbitrary: ?ArbitraryModeData,
+  +flight: ?FlightModeData,
 };
 
 export type OxalisState = {
@@ -290,6 +304,7 @@ export type OxalisState = {
   +task: ?TaskType,
   +save: SaveStateType,
   +flycam: FlycamType,
+  +viewModeData: ViewModeData,
 };
 
 export const defaultState: OxalisState = {
@@ -385,6 +400,13 @@ export const defaultState: OxalisState = {
     ],
     spaceDirectionOrtho: [1, 1, 1],
   },
+  viewModeData: {
+    plane: {
+      activeViewport: OrthoViews.PLANE_XY,
+    },
+    arbitrary: null,
+    flight: null,
+  },
 };
 
 
@@ -400,6 +422,7 @@ const combinedReducers = reduceReducers(
   TaskReducer,
   SaveReducer,
   FlycamReducer,
+  ViewModeReducer,
 );
 
 const store = createStore(combinedReducers, defaultState, applyMiddleware(

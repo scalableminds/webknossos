@@ -126,9 +126,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           .getOrElse(state);
       }
 
-      case "SET_ACTIVE_NODE_RADIUS": {
-        const { radius } = action;
-        return getNodeAndTree(skeletonTracing, null, null)
+      case "SET_NODE_RADIUS": {
+        const { radius, nodeId, treeId } = action;
+        return getNodeAndTree(skeletonTracing, nodeId, treeId)
           .map(([tree, node]) => update(state, { tracing: { trees: {
             [tree.treeId]: { nodes: { [node.id]: { radius: { $set: radius } } } },
           } } }))

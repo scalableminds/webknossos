@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import DataCube from "oxalis/model/binary/data_cube";
+import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector3 } from "oxalis/constants";
 
 const ARBITRARY_MAX_ZOOMSTEP = 2;

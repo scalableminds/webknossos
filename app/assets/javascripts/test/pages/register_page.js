@@ -6,41 +6,25 @@ export default class RegisterPage {
 
 
   get() {
-    return browser.url("/auth/register");
+    browser.url("/auth/register");
   }
 
   signUpWithCompleteForm() {
-    return browser
-      .waitForExist("input#email")
-      .setValue("input#email", "myemail@mail.com")
-      .setValue("input#firstName", "FirstName")
-      .setValue("input#firstName", "FirstName")
-      .setValue("input#lastName", "LastName")
-      .setValue("input#password_main", "password")
-      .setValue("input#password_validation", "password")
-      .click(this.signupButton);
-  }
-
-
-  signUpWithInclompleteForm() {
-    return browser
-      .waitForExist(this.signupButton)
-      .click(this.signupButton);
-  }
-
-
-  getAlerts() {
-    return browser
-      .waitForExist(this.alertDanger)
-      .elements(this.alertDanger).then(elements => elements.value);
+    browser.waitForExist("input#email");
+    browser.setValue("input#email", "myemail@mail.com");
+    browser.setValue("input#firstName", "FirstName");
+    browser.setValue("input#firstName", "FirstName");
+    browser.setValue("input#lastName", "LastName");
+    browser.setValue("input#password_main", "password");
+    browser.setValue("input#password_validation", "password");
+    browser.click(this.signupButton);
   }
 
 
   getModalText() {
-    return browser
-      .waitForExist(this.modalDescription)
-      .waitForVisible(this.modalDescription, 2000)
-      .getText(this.modalDescription);
+    browser.waitForExist(this.modalDescription);
+    browser.waitForVisible(this.modalDescription, 2000);
+    return browser.getText(this.modalDescription);
   }
 
 }

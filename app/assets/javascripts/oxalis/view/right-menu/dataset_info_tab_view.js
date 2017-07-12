@@ -7,17 +7,17 @@ import { connect } from "react-redux";
 import _ from "lodash";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
-import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
-import type { OxalisState, SkeletonTracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
+import type { OxalisState, TracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
 
 type DatasetInfoTabProps = {
-  skeletonTracing: SkeletonTracingType,
+  tracing: TracingType,
   dataset: DatasetType,
   flycam: FlycamType,
-  task: TaskType,
+  task: ?TaskType,
 };
 
 class DatasetInfoTabView extends Component {
@@ -32,7 +32,7 @@ class DatasetInfoTabView extends Component {
       width = constants.PLANE_WIDTH;
     } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
       zoom = this.props.flycam.zoomStep;
-      width = ArbitraryController.prototype.WIDTH;
+      width = constants.ARBITRARY_WIDTH;
     } else {
       throw Error(`Model mode not recognized: ${viewMode}`);
     }
@@ -52,7 +52,7 @@ class DatasetInfoTabView extends Component {
   }
 
   render() {
-    const { tracingType, name } = this.props.skeletonTracing;
+    const { tracingType, name } = this.props.tracing;
     let annotationType = tracingType;
 
     if (this.props.task != null) {
@@ -65,7 +65,6 @@ class DatasetInfoTabView extends Component {
 
     const zoomLevel = this.calculateZoomLevel();
     const dataSetName = this.props.dataset.name;
-    const treeCount = _.size(this.props.skeletonTracing.trees);
     const isPublicViewMode = Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     return (
@@ -75,8 +74,8 @@ class DatasetInfoTabView extends Component {
         <p>Viewport width: {this.chooseUnit(zoomLevel)}</p>
         <p>Dataset resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}</p>
         {
-          (treeCount != null) ?
-            <p>Total number of trees: {treeCount}</p> :
+          (this.props.tracing.type === "skeleton") ?
+            <p>Total number of trees: {_.size(this.props.tracing.trees)}</p> :
             null
         }
         {
@@ -104,9 +103,9 @@ class DatasetInfoTabView extends Component {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): DatasetInfoTabProps {
   return {
-    skeletonTracing: state.tracing,
+    tracing: state.tracing,
     dataset: state.dataset,
     flycam: state.flycam,
     task: state.task,

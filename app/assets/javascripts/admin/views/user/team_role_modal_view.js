@@ -75,7 +75,6 @@ class TeamRoleModalView extends ModalView {
   initialize(options) {
     this.collection = new TeamCollection();
     this.listenTo(this.collection, "sync", this.render);
-    this.listenTo(this, "add:child", this.prefillModal);
 
     this.collection.fetch({
       data: "amIAnAdmin=true",

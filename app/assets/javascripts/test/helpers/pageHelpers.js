@@ -1,9 +1,9 @@
-export async function getPaginationPagesCount() {
+export function getPaginationPagesCount() {
   // Returns the number of pages for a paginated list
 
   const selector = ".pagination .page";
   const activePage = 1;
-  const nextPages = await browser.elements(selector).then(res => res.value.length);
+  const nextPages = browser.elements(selector).value.length;
 
   return activePage + nextPages;
 }

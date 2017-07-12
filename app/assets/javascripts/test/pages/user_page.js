@@ -15,145 +15,115 @@ export default class UserPage {
   deleteExperienceButton = ".delete-experience"
 
   get() {
-    return browser
-      .url("/users");
+    browser.url("/users");
   }
 
 
   getUserListEntries() {
-    return browser
-      .waitForExist(this.userListElements)
-      .elements(this.userListElements).then(response => response.value);
+    browser.waitForExist(this.userListElements);
+    return browser.elements(this.userListElements).value;
   }
 
 
   selectUser(userName) {
     const userRowSelector = `tbody tr[data-name='${userName}']`;
 
-    return browser
-      .pause(1000)
-      .waitForExist(userRowSelector)
-      .click(`${userRowSelector} .select-row`);
+    browser.pause(1000);
+    browser.waitForExist(userRowSelector);
+    browser.pause(1000);
+    browser.click(`${userRowSelector} .select-row`);
   }
 
 
   clickConfirmButton() {
-    return browser
-      .waitForExist(this.confirmButton)
-      .click(this.confirmButton)
-      .pause(500); // wait for DOM updates
+    browser.waitForExist(this.confirmButton);
+    browser.pause(1000); // allow modal to fully fade in
+    browser.click(this.confirmButton);
+    browser.pause(500); // wait for DOM updates
   }
 
 
   selectTeams(teamNames) {
-    return browser
-      .waitForExist(this.changeTeamButton)
-      .pause(3000)
-      .click(this.changeTeamButton)
-      .waitForExist(this.modal)
-      .waitForExist(".checkbox")
-      .then(() => Promise.all(
-          teamNames.map((team) => {
-            const selector = `select[data-teamname='${team}']`;
+    browser.waitForExist(this.changeTeamButton);
+    browser.pause(3000);
+    browser.click(this.changeTeamButton);
+    browser.waitForVisible(this.modal);
+    browser.waitForExist(".checkbox");
+    for (const team of teamNames) {
+      const selector = `select[data-teamname='${team}']`;
 
-            return browser
-              .waitForExist(selector)
-              // This is a hack to select the value from the dropdown as browser.selectByValue doesn't work in Firefox
-              // It executes a javascript function in the browser context which gets the select element as an argument
-              // ATTENTION: .selectorExecute works with an XPath selector
-              .selectorExecute(`//select[@data-teamname='${team}']`, (selectEl) => {
-                for (let i = 0; i < selectEl[0].options.length; i++) {
-                  if (selectEl[0].options[i].value === "user") {
-                    selectEl[0].options[i].selected = true;
-                    return;
-                  }
-                }
-              })
-              .getValue(selector);
-          }),
-        ));
+      browser.waitForExist(selector);
+      browser.selectByValue(selector, "user");
+    }
+  }
+
+
+  openExperienceModal(userName) {
+    this.selectUser(userName);
+    browser.waitForExist(this.changeExperienceButton);
+    browser.pause(1000);
+    browser.click(this.changeExperienceButton);
+    browser.pause(1000);
+    browser.waitForExist(this.modal);
+    browser.waitForExist(this.inputExperienceDomain);
   }
 
 
   setExperience(userName, experience) {
-    return this.selectUser(userName)
-      .waitForExist(this.changeExperienceButton)
-      .pause(1000)
-      .click(this.changeExperienceButton)
-      .pause(1000)
-      .waitForExist(this.modal)
-      .waitForExist(this.inputExperienceDomain)
-      .setValue(this.inputExperienceDomain, experience.domain)
-      .setValue(this.inputExperienceLevel, experience.level)
-      .click(this.setExperienceButton);
+    this.openExperienceModal(userName);
+    browser.setValue(this.inputExperienceDomain, experience.domain);
+    browser.setValue(this.inputExperienceLevel, experience.level);
+    browser.click(this.setExperienceButton);
   }
 
 
   increaseExperience(userName, experience) {
-    return this.selectUser(userName)
-      .waitForExist(this.changeExperienceButton)
-      .pause(1000)
-      .click(this.changeExperienceButton)
-      .pause(1000)
-      .waitForExist(this.modal)
-      .waitForExist(this.inputExperienceDomain)
-      .setValue(this.inputExperienceDomain, experience.domain)
-      .setValue(this.inputExperienceLevel, experience.level)
-      .click(this.increaseExperienceButton);
+    this.openExperienceModal(userName);
+    browser.setValue(this.inputExperienceDomain, experience.domain);
+    browser.setValue(this.inputExperienceLevel, experience.level);
+    browser.click(this.increaseExperienceButton);
   }
 
 
   deleteExperience(userName, experience) {
-    return this.selectUser(userName)
-      .waitForExist(this.changeExperienceButton)
-      .pause(1000)
-      .click(this.changeExperienceButton)
-      .pause(1000)
-      .waitForExist(this.modal)
-      .waitForExist(this.inputExperienceDomain)
-      .setValue(this.inputExperienceDomain, experience.domain)
-      .click(this.deleteExperienceButton)
-      .pause(1000); // wait for DOM updates
+    this.openExperienceModal(userName);
+    browser.setValue(this.inputExperienceDomain, experience.domain);
+    browser.click(this.deleteExperienceButton);
+    browser.pause(1000); // wait for DOM updates
   }
 
 
   getTeamsAndRolesForUser(userName) {
     const userRowSelector = `tbody tr[data-name='${userName}']`;
-    return browser
-      .pause(1000)
-      .getText(`${userRowSelector} td:nth-child(6)`)
-      .then((teamString) => {
-        const teamsAndRoles = teamString
-          .split("\n")
-          .map(teamRoleString => chain(teamRoleString)
-              .replace("admin", ":admin")
-              .replace("user", ":user")
-              .split(":")
-              .map(trim)
-              .value());
+    browser.pause(1000);
+    const teamString = browser.getText(`${userRowSelector} td:nth-child(6)`);
+    const teamsAndRoles = teamString
+      .split("\n")
+      .map(teamRoleString => chain(teamRoleString)
+        .replace("admin", ":admin")
+        .replace("user", ":user")
+        .split(":")
+        .map(trim)
+        .value());
 
-        return fromPairs(teamsAndRoles);
-      });
+    return fromPairs(teamsAndRoles);
   }
 
 
   getExperiencesForUser(userName) {
     const userRowSelector = `tbody tr[data-name='${userName}']`;
-    return browser
-      .pause(500)
-      .getText(`${userRowSelector} td:nth-child(5) .label`)
-      .then((labelStrings) => {
-        if (!isArray(labelStrings)) {
-          labelStrings = [labelStrings];
-        }
+    browser.pause(500);
+    let labelStrings = browser.getText(`${userRowSelector} td:nth-child(5) .label`);
+    if (!isArray(labelStrings)) {
+      labelStrings = [labelStrings];
+    }
 
-        return labelStrings.map((labelString) => {
-          const [domain, level] = labelString.split(":");
-          return {
-            domain: domain.trim(),
-            level: parseInt(level),
-          };
-        });
-      });
+    return labelStrings.map((labelString) => {
+      const [domain, level] = labelString.split(":");
+      return {
+        domain: domain.trim(),
+        level: parseInt(level),
+      };
+    });
   }
 }

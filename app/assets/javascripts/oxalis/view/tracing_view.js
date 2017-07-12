@@ -8,7 +8,6 @@ import classnames from "classnames";
 import { connect } from "react-redux";
 import { Switch } from "antd";
 import Constants from "oxalis/constants";
-import app from "app";
 import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
 import InputCatchers from "oxalis/view/input_catchers";
 import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
@@ -19,7 +18,7 @@ import type { Dispatch } from "redux";
 class TracingView extends React.PureComponent {
   props: {
     flightmodeRecording: boolean,
-    onChangeFlightmodeRecording: (boolean) => {},
+    onChangeFlightmodeRecording: ?Function,
     viewMode: ModeType,
     scale: number,
     isVolumeTracingDisallowed: boolean,
@@ -64,9 +63,6 @@ class TracingView extends React.PureComponent {
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeFlightmodeRecording(value) {
     dispatch(setFlightmodeRecordingAction(value));
-    if (app.oxalis) {
-      app.oxalis.arbitraryController.setWaypoint();
-    }
   },
 });
 

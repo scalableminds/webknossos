@@ -5,11 +5,11 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import DataCube from "oxalis/model/binary/data_cube";
 import Dimensions from "oxalis/model/dimensions";
-import type { DimensionIndicesType } from "oxalis/model/dimensions";
-import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import constants from "oxalis/constants";
+import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
+import type { DimensionIndicesType } from "oxalis/model/dimensions";
+import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector2, Vector3, Vector4, OrthoViewType } from "oxalis/constants";
 
 class DataTexture {

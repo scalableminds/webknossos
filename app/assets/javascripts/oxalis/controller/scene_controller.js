@@ -24,10 +24,10 @@ import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
+const CUBE_COLOR = 0x999999;
 
 class SceneController {
   skeleton: Skeleton;
-  CUBE_COLOR: number;
   current: number;
   displayPlane: OrthoViewMapType<boolean>;
   planeShift: Vector3;
@@ -41,14 +41,12 @@ class SceneController {
   contour: ContourGeometry;
   planes: OrthoViewMapType<Plane>;
   rootNode: THREE.Object3D;
+  renderer: THREE.WebGLRenderer;
+  scene: THREE.Scene;
+  rootGroup: THREE.Object3D;
 
-  static initClass() {
-    // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
-    // element depending on the provided flycam.
-
-    this.prototype.CUBE_COLOR = 0x999999;
-  }
-
+  // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
+  // element depending on the provided flycam.
   constructor() {
     _.extend(this, Backbone.Events);
     this.current = 0;
@@ -60,9 +58,30 @@ class SceneController {
     this.planeShift = [0, 0, 0];
     this.pingBinary = true;
     this.pingBinarySeg = true;
+  }
 
+  initialize() {
     this.createMeshes();
     this.bindToEvents();
+
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: document.getElementById("render-canvas"),
+      antialias: true,
+    });
+    this.scene = new THREE.Scene();
+
+    // Because the voxel coordinates do not have a cube shape but are distorted,
+    // we need to distort the entire scene to provide an illustration that is
+    // proportional to the actual size in nm.
+    // For some reason, all objects have to be put into a group object. Changing
+    // scene.scale does not have an effect.
+    this.rootGroup = new THREE.Object3D();
+    this.rootGroup.add(this.getRootNode());
+
+    // The dimension(s) with the highest resolution will not be distorted
+    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
+    // Add scene to the group, all Geometries are then added to group
+    this.scene.add(this.rootGroup);
   }
 
 
@@ -73,7 +92,7 @@ class SceneController {
     this.cube = new Cube({
       min: Model.lowerBoundary,
       max: Model.upperBoundary,
-      color: this.CUBE_COLOR,
+      color: CUBE_COLOR,
       showCrossSections: true });
     this.cube.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
@@ -292,7 +311,7 @@ class SceneController {
   }
 
 
-  stop(): void {
+  stopPlaneMode(): void {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(false);
     }
@@ -302,7 +321,7 @@ class SceneController {
   }
 
 
-  start(): void {
+  startPlaneMode(): void {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(true);
     }
@@ -332,6 +351,5 @@ class SceneController {
     );
   }
 }
-SceneController.initClass();
 
-export default SceneController;
+export default new SceneController();

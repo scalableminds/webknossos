@@ -11,8 +11,6 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Store from "oxalis/store";
 import { toggleModeAction, setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
-import View from "oxalis/view";
-import SceneController from "oxalis/controller/scene_controller";
 
 class VolumeTracingController {
   // See comment in Controller class on general controller architecture.
@@ -22,8 +20,6 @@ class VolumeTracingController {
   // Also, this would be the place to define general Volume Tracing
   // functions that can be called by the specific view mode controller.
 
-  volumeTracingView: View;
-  sceneController: SceneController;
   inDeleteMode: boolean;
   mergeMode: 0 | 1 | 2;
   prevActiveCellId: number;
@@ -33,9 +29,7 @@ class VolumeTracingController {
   MERGE_MODE_CELL1 = 1;
   MERGE_MODE_CELL2 = 2;
 
-  constructor(volumeTracingView: View, sceneController: SceneController) {
-    this.volumeTracingView = volumeTracingView;
-    this.sceneController = sceneController;
+  constructor() {
     this.inDeleteMode = false;
 
     _.extend(this, Backbone.Events);

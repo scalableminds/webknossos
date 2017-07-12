@@ -6,22 +6,19 @@
 
 import $ from "jquery";
 import * as THREE from "three";
-import TWEEN from "tween.js";
 import _ from "lodash";
 import Store from "oxalis/store";
-import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
+import SceneController from "oxalis/controller/scene_controller";
 import { OrthoViews } from "oxalis/constants";
-import dimensions from "oxalis/model/dimensions";
 import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotationOrtho, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import type View from "oxalis/view";
-import type SceneController from "oxalis/controller/scene_controller";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
+import api from "oxalis/api/internal_api";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -37,18 +34,6 @@ class SkeletonTracingPlaneController extends PlaneController {
   // Skeleton Tracing Plane Controller:
   // Extends Plane controller to add controls that are specific to Skeleton
   // Tracing.
-
-  skeletonTracingController: SkeletonTracingController;
-
-  constructor(
-    view: View,
-    sceneController: SceneController,
-    skeletonTracingController: SkeletonTracingController,
-  ) {
-    super(view, sceneController);
-    this.skeletonTracingController = skeletonTracingController;
-  }
-
 
   simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0): void {
     // For debugging purposes.
@@ -108,7 +93,7 @@ class SkeletonTracingPlaneController extends PlaneController {
       j: () => Store.dispatch(requestDeleteBranchPointAction()),
 
       s: () => {
-        this.skeletonTracingController.centerActiveNode();
+        api.tracing.centerNode();
         this.cameraController.centerTDView();
       },
     });
@@ -118,7 +103,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     super.scrollPlanes(delta, type);
 
     if (type === "shift") {
-      this.skeletonTracingController.setRadius(delta);
+      api.tracing.setNodeRadius(delta);
     }
   }
 
@@ -130,7 +115,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
     // render the clicked viewport with picking enabled
     // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
-    const pickingNode = this.sceneController.skeleton.startPicking();
+    const pickingNode = SceneController.skeleton.startPicking();
     const pickingScene = new THREE.Scene();
     pickingScene.add(pickingNode);
 
@@ -142,7 +127,7 @@ class SkeletonTracingPlaneController extends PlaneController {
     const index = (x + (this.planeView.curWidth - y) * this.planeView.curWidth) * 4;
     // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
     const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
-    this.sceneController.skeleton.stopPicking();
+    SceneController.skeleton.stopPicking();
 
     // prevent flickering sometimes caused by picking
     this.planeView.renderFunction();
@@ -160,7 +145,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
 
   setWaypoint(position: Vector3, ctrlPressed: boolean): void {
-    const { activeViewport } = this;
+    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
     if (activeViewport === OrthoViews.TDView) {
       return;
     }
@@ -202,46 +187,16 @@ class SkeletonTracingPlaneController extends PlaneController {
     Store.dispatch(createNodeAction(
       position,
       rotation,
-      OrthoViewToNumber[this.activeViewport],
+      OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
       getRequestLogZoomStep(state),
     ));
 
     if (centered) {
       // we created a new node, so get a new reference
       getActiveNode(Store.getState().tracing)
-        .map(newActiveNode => this.centerPositionAnimated(newActiveNode.position));
+        .map(newActiveNode => api.tracing.centerPositionAnimated(newActiveNode.position));
     }
   };
-
-
-  centerPositionAnimated(position: Vector3, skipDimensions: boolean = true): void {
-    // Let the user still manipulate the "third dimension" during animation
-    const dimensionToSkip = skipDimensions && this.activeViewport !== OrthoViews.TDView ?
-      dimensions.thirdDimensionForPlane(this.activeViewport) :
-      null;
-
-    const curGlobalPos = getPosition(Store.getState().flycam);
-
-    const tween = new TWEEN.Tween({
-      globalPosX: curGlobalPos[0],
-      globalPosY: curGlobalPos[1],
-      globalPosZ: curGlobalPos[2],
-    });
-    tween.to({
-      globalPosX: position[0],
-      globalPosY: position[1],
-      globalPosZ: position[2],
-    }, 200)
-    .onUpdate(function () { // needs to be a normal (non-bound) function
-      const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
-      if (dimensionToSkip != null) {
-        Store.dispatch(setPositionAction(curPos, dimensionToSkip));
-      } else {
-        Store.dispatch(setPositionAction(curPos));
-      }
-    })
-    .start();
-  }
 }
 
 export default SkeletonTracingPlaneController;

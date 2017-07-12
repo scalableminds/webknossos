@@ -11,7 +11,7 @@ type InitializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", 
 type CreateNodeActionType = {type: "CREATE_NODE", position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number, treeId?: number};
 type DeleteNodeActionType = {type: "DELETE_NODE", nodeId?: number, treeId?: number, timestamp: number};
 type SetActiveNodeActionType = {type: "SET_ACTIVE_NODE", nodeId: number};
-type SetActiveNodeRadiusActionType = {type: "SET_ACTIVE_NODE_RADIUS", radius: number};
+type SetNodeRadiusActionType = {type: "SET_NODE_RADIUS", radius: number, nodeId: ?number, treeId: ?number};
 type CreateBranchPointActionType = {type: "CREATE_BRANCHPOINT", nodeId?: number, treeId?: number, timestamp: number};
 type DeleteBranchPointActionType = {type: "DELETE_BRANCHPOINT"};
 type RequestDeleteBranchPointActionType = {type: "REQUEST_DELETE_BRANCHPOINT"};
@@ -31,7 +31,7 @@ export type SkeletonTracingActionType =
   | CreateNodeActionType
   | DeleteNodeActionType
   | SetActiveNodeActionType
-  | SetActiveNodeRadiusActionType
+  | SetNodeRadiusActionType
   | CreateBranchPointActionType
   | DeleteBranchPointActionType
   | RequestDeleteBranchPointActionType
@@ -52,7 +52,7 @@ export const SkeletonTracingActions = [
   "CREATE_NODE",
   "DELETE_NODE",
   "SET_ACTIVE_NODE",
-  "SET_ACTIVE_NODE_RADIUS",
+  "SET_NODE_RADIUS",
   "CREATE_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
   "REQUEST_DELETE_BRANCHPOINT",
@@ -95,9 +95,11 @@ export const setActiveNodeAction = (nodeId: number): SetActiveNodeActionType => 
   nodeId,
 });
 
-export const setActiveNodeRadiusAction = (radius: number): SetActiveNodeRadiusActionType => ({
-  type: "SET_ACTIVE_NODE_RADIUS",
+export const setNodeRadiusAction = (radius: number, nodeId?: number, treeId?: number): SetNodeRadiusActionType => ({
+  type: "SET_NODE_RADIUS",
   radius,
+  nodeId,
+  treeId,
 });
 
 export const createBranchPointAction = (nodeId?: number, treeId?: number, timestamp: number = Date.now()): CreateBranchPointActionType => ({

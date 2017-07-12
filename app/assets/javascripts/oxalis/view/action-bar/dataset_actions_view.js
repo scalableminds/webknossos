@@ -11,9 +11,8 @@ import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import { Button } from "antd";
 import messages from "messages";
-import createApi from "oxalis/api/api_latest";
+import api from "oxalis/api/internal_api";
 
-const api = createApi(Model);
 const SAVED_POLLING_INTERVAL = 100;
 
 class DatasetActionsView extends PureComponent {

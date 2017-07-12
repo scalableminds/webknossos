@@ -13,15 +13,13 @@ export default class ProjectPage {
   priorityColumn = "tbody td:nth-child(3)"
 
   get() {
-    return browser
-      .url("/projects");
+    browser.url("/projects");
   }
 
 
   getProjectListEntryCount() {
-    return browser
-      .waitForExist(this.projectListRows)
-      .elements(this.projectListRows).then(response => response.value.length);
+    browser.waitForExist(this.projectListRows);
+    return browser.elements(this.projectListRows).value.length;
   }
 
   getProjectCountFromServer() {
@@ -30,41 +28,36 @@ export default class ProjectPage {
   }
 
   createProject(project) {
-    return browser
-      .waitForExist(this.createProjectButton)
-      .click(this.createProjectButton)
-      .waitForExist(this.projectNameInput)
-      .setValue(this.projectNameInput, project.name)
-      .setValue(this.projectPriorityInput, project.priority)
-      .click(this.confirmButton);
+    browser.waitForExist(this.createProjectButton);
+    browser.click(this.createProjectButton);
+    browser.waitForExist(this.projectNameInput);
+    browser.setValue(this.projectNameInput, project.name);
+    browser.setValue(this.projectPriorityInput, project.priority);
+    browser.click(this.confirmButton);
   }
 
   getFirstDownloadURl() {
-    return browser
-      .waitForExist(this.firstDownloadLink)
-      .getAttribute(this.firstDownloadLink, "href");
+    browser.waitForExist(this.firstDownloadLink);
+    return browser.getAttribute(this.firstDownloadLink, "href");
   }
 
   deleteFirstProject() {
-    return browser
-      .waitForExist(this.firstDeleteLink)
-      .click(this.firstDeleteLink)
-      .alertAccept()
-      .pause(1000); // wait for DOM updates
+    browser.waitForExist(this.firstDeleteLink);
+    browser.click(this.firstDeleteLink);
+    browser.alertAccept();
+    browser.pause(1000); // wait for DOM updates
   }
 
   editFirstProject(newPriority) {
-    return browser
-      .waitForExist(this.firstEditLink)
-      .click(this.firstEditLink)
-      .waitForExist(this.projectPriorityInput)
-      .setValue(this.projectPriorityInput, newPriority)
-      .click(this.confirmButton);
+    browser.waitForExist(this.firstEditLink);
+    browser.click(this.firstEditLink);
+    browser.waitForExist(this.projectPriorityInput);
+    browser.setValue(this.projectPriorityInput, newPriority);
+    browser.click(this.confirmButton);
   }
 
   getAllPriorities() {
-    return browser
-      .waitForExist(this.priorityColumn)
-      .getText(this.priorityColumn);
+    browser.waitForExist(this.priorityColumn);
+    return browser.getText(this.priorityColumn);
   }
 }

@@ -2,21 +2,14 @@
 import test from "ava";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
-import _ from "lodash";
 import ChainReducer from "test/helpers/chainReducer";
 
 const TIMESTAMP = 1494347146379;
-
-const KeyboardJS = {
-  bind: _.noop,
-  unbind: _.noop,
-};
 
 const DateMock = {
   now: () => TIMESTAMP,
 };
 
-mockRequire("keyboardjs", KeyboardJS);
 mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("bootstrap-toggle", {});
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -88,7 +81,7 @@ const createNodeAction = SkeletonTracingActions.createNodeAction([1, 2, 3], [0, 
 const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
 const createTreeAction = SkeletonTracingActions.createTreeAction(12345678);
 const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
-const setActiveNodeRadiusAction = SkeletonTracingActions.setActiveNodeRadiusAction(12);
+const setNodeRadiusAction = SkeletonTracingActions.setNodeRadiusAction(12);
 const createCommentAction = SkeletonTracingActions.createCommentAction("Hallo");
 const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(undefined, undefined, 12345678);
 
@@ -246,7 +239,7 @@ test("SkeletonTracingSaga should emit a deleteTree update action", (t) => {
 
 test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
-  const newState = SkeletonTracingReducer(testState, setActiveNodeRadiusAction);
+  const newState = SkeletonTracingReducer(testState, setNodeRadiusAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.is(updateActions[0].action, "updateNode");
@@ -258,9 +251,9 @@ test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
 test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
   const testState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
-    .apply(SkeletonTracingReducer, setActiveNodeRadiusAction)
+    .apply(SkeletonTracingReducer, setNodeRadiusAction)
     .unpack();
-  const newState = SkeletonTracingReducer(testState, setActiveNodeRadiusAction);
+  const newState = SkeletonTracingReducer(testState, setNodeRadiusAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.deepEqual(updateActions, []);

@@ -47,16 +47,16 @@ class Mappings {
 
 
   async fetchMappings(mappingName: string): Promise<*> {
-    let mapping = await this.fetchMapping(mappingName);
+    const mapping = await this.fetchMapping(mappingName);
     if (mapping.parent != null) {
       return await this.fetchMappings(mapping.parent);
     } else {
-      return;
+      return Promise.resolve();
     }
   }
 
 
-  fetchMapping(mappingName: string): Promise<?MappingType> {
+  fetchMapping(mappingName: string): Promise<MappingType> {
     const mappingObject = this.mappings[mappingName];
     if (mappingObject != null && mappingObject.classes != null) {
       return Promise.resolve(mappingObject);

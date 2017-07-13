@@ -10,7 +10,6 @@ import type { BucketRequestOptions } from "oxalis/model/binary/layers/layer";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
 import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
 import Request from "libs/request";
-import MultipartData from "libs/multipart_data";
 import type { Vector4 } from "oxalis/constants";
 import type { DataLayerType, DataStoreInfoType } from "oxalis/store";
 
@@ -84,10 +83,10 @@ class WkLayer extends Layer {
 
 
   async sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<void> {
-    let data = batch.map(bucket => {
-      let data = getBucketData(BucketBuilder.bucketToZoomedAddress(bucket));
-      bucket.base64Data = Base64.fromByteArray(data);
-      return { action: "labelVolume", value: bucket };
+    const data = batch.map((bucket) => {
+      const bucketData = getBucketData(BucketBuilder.bucketToZoomedAddress(bucket));
+      const bucketWithData = { ...bucket, base64Data: Base64.fromByteArray(bucketData) }
+      return { action: "labelVolume", value: bucketWithData };
     });
 
     const datasetName = this.getDatasetName();

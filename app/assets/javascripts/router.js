@@ -158,27 +158,20 @@ class Router extends BaseRouter {
   }
 
 
-  datasetEdit(datasetName) {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
-      const DatasetEditView = admin.DatasetEditView;
-      const DatasetModel = admin.DatasetModel;
-
-      const model = new DatasetModel({ name: datasetName });
-      const view = new DatasetEditView({ model });
-
-      this.listenTo(model, "sync", () => {
-        this.changeView(view);
-        this.hideLoadingSpinner();
-      });
+  datasetEdit(name) {
+    const view = new ReactBackboneWrapper(DatasetImportView, {
+      datasetName: name,
+      isEditingMode: true,
     });
+    this.changeView(view);
   }
 
 
   datasetImport(name) {
     const view = new ReactBackboneWrapper(DatasetImportView, {
       datasetName: name,
+      isEditingMode: false,
     });
-    view.forcePageReload = true;
     this.changeView(view);
   }
 

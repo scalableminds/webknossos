@@ -15,7 +15,6 @@ import play.api.Configuration
 import play.api.i18n.MessagesApi
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
-import play.api.test.Helpers._
 
 import scala.concurrent.duration._
 

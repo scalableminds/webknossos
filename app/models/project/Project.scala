@@ -26,6 +26,7 @@ case class Project(
   _owner: BSONObjectID,
   priority: Int,
   paused: Boolean,
+  expectedTime: Option[Int],
   assignmentConfiguration: AssignmentConfig,
   _id: BSONObjectID = BSONObjectID.generate) {
 
@@ -54,6 +55,7 @@ object Project {
         "owner" -> owner.toOption,
         "priority" -> project.priority,
         "paused" -> project.paused,
+        "expectedTime" -> project.expectedTime,
         "assignmentConfiguration" -> project.assignmentConfiguration,
         "id" -> project.id
       )
@@ -87,10 +89,11 @@ object Project {
       (__ \ 'team).read[String] and
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
+      (__ \ 'expectedTime).readNullable[Int] and
       (__ \ 'assignmentConfiguration).read[AssignmentConfig] and
       (__ \ 'owner).read[String](StringObjectIdReads("owner"))) (
-      (name, team, priority, paused, assignmentLocation, owner) =>
-        Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, assignmentLocation))
+      (name, team, priority, paused, expectedTime, assignmentLocation, owner) =>
+        Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, expectedTime, assignmentLocation))
 }
 
 object ProjectService extends FoxImplicits with LazyLogging {
@@ -200,6 +203,7 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
         "team" -> project.team,
         "_owner" -> project._owner,
         "priority" -> project.priority,
+        "expectedTime" -> project.expectedTime,
         "paused" -> project.paused)), returnNew = true)
 
   }

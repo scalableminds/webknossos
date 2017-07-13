@@ -21,6 +21,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
+import play.api.i18n.{Messages, MessagesApi}
 import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -92,10 +93,19 @@ class DataSourceService @Inject()(
     }
   }
 
+  private def validateDataSource(dataSource: DataSource): Box[Unit] = {
+    if (dataSource.dataLayers.exists(_.boundingBox.isEmpty)) {
+      return Failure("Datasource bounding box must not be empty")
+    }
+    Full(())
+  }
+
   def updateDataSource(dataSource: DataSource): Box[Unit] = {
-    val propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
-    JsonHelper.jsonToFile(propertiesFile, dataSource).map { _ =>
-      dataSourceRepository.updateDataSource(dataSource)
+    validateDataSource(dataSource).flatMap { _ =>
+      val propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
+      JsonHelper.jsonToFile(propertiesFile, dataSource).map { _ =>
+        dataSourceRepository.updateDataSource(dataSource)
+      }
     }
   }
 

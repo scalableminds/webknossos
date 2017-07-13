@@ -71,14 +71,14 @@ DELETE        /api/teams/:id                                                    
 GET           /spotlight                                                        controllers.DataSetController.userAwareEmpty
 
 # DataSets
-GET           /import/:name                                                     controllers.DataSetController.emptyWithWildcard(name)
 GET           /datasets                                                         controllers.DataSetController.empty
 GET           /datasets/:id/edit                                                controllers.DataSetController.emptyWithWildcard(id)
+GET           /datasets/:id/import                                                     controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
 
 GET           /api/datasets                                                     controllers.DataSetController.list
 GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String)
-PUT           /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
+POST          /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
 GET           /api/datasets/:dataSetName/accessList                             controllers.DataSetController.accessList(dataSetName: String)
 POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
 GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String)

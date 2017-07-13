@@ -1,21 +1,34 @@
+// @flow
+
 import React from "react";
-import { Button, Spin, Input } from "antd";
+import { Button, Spin, Input, Checkbox } from "antd";
 import Request from "libs/request";
+import update from "immutability-helper";
 import Toast from "libs/toast";
+import type { APIDatasetType } from "admin/api_flow_types";
 
 class DatasetImportView extends React.PureComponent {
 
   props: {
-    datasetName: string
+    datasetName: string,
+    isEditingMode: false,
   }
 
-  state = {
+  state: {
+    dataset: ?APIDatasetType,
+    datasetJson: string,
+    isValidJSON: boolean,
+  } = {
     dataset: null,
-    datasetJson: null,
+    datasetJson: "",
     isValidJSON: true,
   }
 
-  async componentDidMount() {
+  componentDidMount() {
+    this.fetchData();
+  }
+
+  async fetchData(): Promise<void> {
     const datasetUrl = `/api/datasets/${this.props.datasetName}`;
     const dataset = await Request.receiveJSON(datasetUrl);
 
@@ -30,37 +43,79 @@ class DatasetImportView extends React.PureComponent {
   }
 
   importDataset = () => {
-    if (this.state.isValidJSON) {
+    if (this.props.isEditingMode) {
+      const url = `/api/datasets/${this.props.datasetName}`;
+      Request.sendJSONReceiveJSON(url, {
+        data: this.state.dataset,
+      });
+    }
+
+    if (this.state.isValidJSON && this.state.dataset) {
       const url = `${this.state.dataset.dataStore.url}/data/datasets/${this.props.datasetName}`;
       Request.sendJSONReceiveJSON(url, {
         data: JSON.parse(this.state.datasetJson),
-      }).then(
-        () => {
-          Toast.success(`Successfully imported ${this.props.datasetName}`);
-          window.history.back();
-        },
-        (error) => {
-          Toast.error(error);
-        },
-      );
+      }).then(() => {
+        Toast.success(`Successfully imported ${this.props.datasetName}`);
+        window.history.back();
+      });
     } else {
       Toast.error("Invalid JSON. Please fix the errors.");
     }
   }
 
-  handleChangeJson = (el) => {
+  handleChangeJson = (event: SyntheticInputEvent) => {
     try {
-      JSON.parse(el.target.value);
+      JSON.parse(event.target.value);
       this.setState({
-        datasetJson: el.target.value,
+        datasetJson: event.target.value,
         isValidJSON: true,
       });
     } catch (e) {
       this.setState({
-        datasetJson: el.target.value,
+        datasetJson: event.target.value,
         isValidJSON: false,
       });
     }
+  }
+
+  handleChangeDescription = (event: SyntheticInputEvent) => {
+    this.updateDataset("description", event.target.value);
+  }
+
+  handleChangeCheckbox = (event: SyntheticInputEvent) => {
+    this.updateDataset("isPublic", event.target.checked);
+  }
+
+  updateDataset(propertyName: string, value: (string | boolean)) {
+    const newState = update(this.state, {
+      dataset: { [propertyName]: { $set: value } },
+    });
+    this.setState(newState);
+  }
+
+  getEditModeComponents() {
+    // these components are only available in editing mode
+    if (this.props.isEditingMode && this.state.dataset) {
+      const dataset = this.state.dataset;
+
+      return (
+        <div>
+          <Input.TextArea
+            rows="3"
+            value={dataset.description}
+            placeholder="Dataset Description"
+            onChange={this.handleChangeDescription}
+          />
+          <Checkbox
+            checked={dataset.isPublic}
+            onChange={this.handleChangeCheckbox}
+          >Make dataset publicly accessible
+          </Checkbox>
+        </div>
+      );
+    }
+
+    return <span />;
   }
 
   render() {
@@ -73,6 +128,7 @@ class DatasetImportView extends React.PureComponent {
       boxShadow: "0 0 0 2px rgba(233, 16, 76, 0.28)",
     };
 
+    const titleString = this.props.isEditingMode ? "Update" : "Import";
     const content = datasetJson ? (<Input.TextArea
       value={datasetJson}
       onChange={this.handleChangeJson}
@@ -83,12 +139,14 @@ class DatasetImportView extends React.PureComponent {
 
     return (
       <div className="container" id="dataset-import-view">
-        <h3>Import Dataset {this.props.datasetName}</h3>
+        <h3>{titleString} Dataset {this.props.datasetName}</h3>
+        <p>Please review your dataset&#39;s properties before importing it.</p>
         <div className="content">
           {content}
         </div>
+        {this.getEditModeComponents()}
         <div>
-          <Button onClick={this.importDataset} type="primary">Import</Button>
+          <Button onClick={this.importDataset} type="primary">{titleString}</Button>
           <Button onClick={() => window.history.back()}>Cancel</Button>
         </div>
       </div>

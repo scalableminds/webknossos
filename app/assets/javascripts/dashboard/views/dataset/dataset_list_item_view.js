@@ -58,7 +58,7 @@ class DatasetListItemView extends Marionette.CompositeView {
     </form>
     <% if(dataSource.dataLayers == null){ %>
       <div>
-        <a href="/import/<%- name %>" class=" import-dataset">
+        <a href="/datasets/<%- name %>/import" class=" import-dataset">
           <i class="fa fa-plus-circle"></i>import
         </a>
 

@@ -25,14 +25,11 @@ object ND2WK extends FoxImplicits {
       dataSource <- dataSourceFromNDDataSet(ndp.name, ndp.dataset, dataLayers)
     } yield {
       DataSet(
-        ndp.name,
         dataStoreInfo,
         dataSource,
-        team,
         List(team),
         isActive = true,
-        isPublic = false,
-        accessToken = None)
+        isPublic = false)
     }
   }
 
@@ -46,7 +43,6 @@ object ND2WK extends FoxImplicits {
       scale = Scale(vr(0), vr(1), vr(2))
     } yield {
       val id = DataSourceId(name, "Connectomics department")
-      // TODO jfrohnhofen
       NDDataSource(id, dataLayers, scale)
     }
   }

@@ -85,7 +85,7 @@ class WkLayer extends Layer {
   async sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<void> {
     const data = batch.map((bucket) => {
       const bucketData = getBucketData(BucketBuilder.bucketToZoomedAddress(bucket));
-      const bucketWithData = { ...bucket, base64Data: Base64.fromByteArray(bucketData) }
+      const bucketWithData = Object.assign({}, bucket, { base64Data: Base64.fromByteArray(bucketData) });
       return { action: "labelVolume", value: bucketWithData };
     });
 

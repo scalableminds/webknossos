@@ -43,7 +43,8 @@ class Router extends BaseRouter {
       "/dashboard": "dashboard",
       "/datasets": "dashboard",
       "/datasets/upload": "datasetAdd",
-      "/datasets/:id/edit": "datasetEdit",
+      "/datasets/:name/edit": "datasetEdit",
+      "/datasets/:name/import": "datasetImport",
       "/users/:id/details": "dashboard",
       "/taskTypes": "taskTypes",
       "/taskTypes/create": "taskTypesCreate",
@@ -57,7 +58,6 @@ class Router extends BaseRouter {
       "/admin/taskTypes": "hideLoadingSpinner",
       "/workload": "workload",
       "/tasks": "taskQuery",
-      "/import/:name": "importDataset",
     };
   }
 
@@ -158,12 +158,12 @@ class Router extends BaseRouter {
   }
 
 
-  datasetEdit(datasetID) {
+  datasetEdit(datasetName) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
       const DatasetEditView = admin.DatasetEditView;
       const DatasetModel = admin.DatasetModel;
 
-      const model = new DatasetModel({ name: datasetID });
+      const model = new DatasetModel({ name: datasetName });
       const view = new DatasetEditView({ model });
 
       this.listenTo(model, "sync", () => {
@@ -171,6 +171,15 @@ class Router extends BaseRouter {
         this.hideLoadingSpinner();
       });
     });
+  }
+
+
+  datasetImport(name) {
+    const view = new ReactBackboneWrapper(DatasetImportView, {
+      datasetName: name,
+    });
+    view.forcePageReload = true;
+    this.changeView(view);
   }
 
 
@@ -313,13 +322,6 @@ class Router extends BaseRouter {
     });
   }
 
-  importDataset(name) {
-    const view = new ReactBackboneWrapper(DatasetImportView, {
-      datasetName: name,
-    });
-    view.forcePageReload = true;
-    this.changeView(view);
-  }
 
   showWithPagination(view, collection, options = {}) {
     _.defaults(options, { addButtonText: null });

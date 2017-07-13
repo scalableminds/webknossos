@@ -34,14 +34,10 @@ class DatasetImportView extends React.PureComponent {
       const url = `${this.state.dataset.dataStore.url}/data/datasets/${this.props.datasetName}`;
       Request.sendJSONReceiveJSON(url, {
         data: JSON.parse(this.state.datasetJson),
-      }).then(
-        () => {
+      }).then(() => {
           Toast.success(`Successfully imported ${this.props.datasetName}`);
           window.history.back();
-        },
-        (error) => {
-          Toast.error(error);
-        },
+        }
       );
     } else {
       Toast.error("Invalid JSON. Please fix the errors.");
@@ -84,6 +80,7 @@ class DatasetImportView extends React.PureComponent {
     return (
       <div className="container" id="dataset-import-view">
         <h3>Import Dataset {this.props.datasetName}</h3>
+        <p>Please review your dataset&#39;s properties before importing it.</p>
         <div className="content">
           {content}
         </div>

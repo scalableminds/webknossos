@@ -95,7 +95,7 @@ class SkeletonTracingPlaneController extends PlaneController {
 
       s: () => {
         api.tracing.centerNode();
-        this.cameraController.centerTDView();
+        api.tracing.centerTDView();
       },
     });
   }

@@ -27,10 +27,10 @@ import PlaneView from "oxalis/view/plane_view";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
-import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
+import { setViewportAction, setTDCameraAction, zoomTDViewAction, moveTDViewXAction, moveTDViewYAction, moveTDViewByVectorAction } from "oxalis/model/actions/view_mode_actions";
 import type { FlycamType } from "oxalis/store";
 import { connect } from "react-redux";
-import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
+import api from "oxalis/api/internal_api";
 
 type OwnProps = {
   onRender: () => void,
@@ -130,13 +130,20 @@ class PlaneController extends React.PureComponent {
     };
   }
 
-  componentDidUpdate(prevProps: Props) {
+  componentDidUpdate(prevProps: Props): void {
+    this.setTargetAndFixPosition();
+  }
+
+  setTargetAndFixPosition(): void {
     const position = getPosition(this.props.flycam);
     const nmPosition = voxelToNm(this.props.scale, position);
 
     this.controls.target.set(...nmPosition);
     this.controls.update();
 
+    // The following code is a dirty hack. If someone figures out
+    // how the trackball control's target can be set without affecting
+    // the camera position, go ahead.
     // As the previous step will also move the camera, we need to
     // fix this by offsetting the viewport
 
@@ -145,10 +152,23 @@ class PlaneController extends React.PureComponent {
       invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
     }
     this.oldNmPos = nmPosition;
+ 
+    const nmVector = new THREE.Vector3(...invertedDiff);
+    // moves camera by the nm vector
+    const camera = this.planeView.getCameras()[OrthoViews.TDView];
 
-    this.cameraController.moveTDView(
-      new THREE.Vector3(...invertedDiff),
+    const rotation = THREE.Vector3.prototype.multiplyScalar.call(
+      camera.rotation.clone(), -1,
     );
+    // reverse euler order
+    rotation.order = rotation.order.split("").reverse().join("");
+
+    nmVector.applyEuler(rotation);
+    
+    Store.dispatch(moveTDViewByVectorAction(
+      nmVector.x,
+      nmVector.y,
+    ));
   }
 
   initTrackballControls(): void {
@@ -172,10 +192,10 @@ class PlaneController extends React.PureComponent {
       ...pos);
 
     const callbacks = [
-      this.cameraController.changeTDViewDiagonal,
-      this.cameraController.changeTDViewXY,
-      this.cameraController.changeTDViewYZ,
-      this.cameraController.changeTDViewXZ,
+      api.tracing.changeTDViewDiagonal,
+      api.tracing.changeTDViewXY,
+      api.tracing.changeTDViewYZ,
+      api.tracing.changeTDViewXZ,
     ];
 
     $("#TDViewControls button")
@@ -383,15 +403,15 @@ class PlaneController extends React.PureComponent {
     if (zoomToMouse) {
       zoomToPosition = this.input.mouseControllers[OrthoViews.TDView].position;
     }
-    this.cameraController.zoomTDView(value, zoomToPosition, this.planeView.curWidth);
+    Store.dispatch(zoomTDViewAction(value, zoomToPosition, this.planeView.curWidth));
   }
 
   moveTDView(delta: Point2): void {
     const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
     const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
 
-    this.cameraController.moveTDViewX(delta.x * mouseInversionX);
-    this.cameraController.moveTDViewY(delta.y * mouseInversionY);
+    Store.dispatch(moveTDViewXAction(delta.x * mouseInversionX));
+    Store.dispatch(moveTDViewYAction(delta.y * mouseInversionY));
   }
 
   finishZoom = (): void => {

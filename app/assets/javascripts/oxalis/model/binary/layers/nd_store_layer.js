@@ -45,10 +45,7 @@ class NdStoreLayer extends Layer {
 
     // ndstore cannot deliver data for coordinates that are out of bounds
     const bounds = this.clampBucketToBoundingBox(bucket);
-    const url = `${this.dataStoreInfo.url}/ca/${token}/raw/raw/${bucket.zoomStep}/
-      ${bounds[0]},${bounds[3]}/
-      ${bounds[1]},${bounds[4]}/
-      ${bounds[2]},${bounds[5]}/`;
+    const url = `${this.dataStoreInfo.url}/ca/${token}/raw/raw/${bucket.zoomStep}/${bounds[0]},${bounds[3]}/${bounds[1]},${bounds[4]}/${bounds[2]},${bounds[5]}/`;
 
     // if at least one dimension is completely out of bounds, return an empty array
     if (bounds[0] >= bounds[3] || bounds[1] >= bounds[4] || bounds[2] >= bounds[5]) {

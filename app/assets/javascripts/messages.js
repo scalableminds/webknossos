@@ -19,4 +19,5 @@ In order to restore the current window, a reload is necessary.`,
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
+  "dataset.upload_success": "The dataset was uploaded successfully",
 };

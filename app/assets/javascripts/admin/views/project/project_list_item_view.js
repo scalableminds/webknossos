@@ -21,6 +21,7 @@ class ProjectListItemView extends Marionette.View {
   <td>-</td>
 <% } %>
 <td><%- numberOfOpenAssignments %></td>
+<td><%- parseInt(expectedTime / 60000) %>m</td>
 <td class="nowrap">
   <a href="/annotations/CompoundProject/<%- name %>" title="View all finished tracings">
     <i class="fa fa-random"></i>view

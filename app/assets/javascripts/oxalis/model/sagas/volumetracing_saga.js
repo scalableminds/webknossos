@@ -23,8 +23,10 @@ export function* updateIsosurface(): Generator<*, *, *> {
 
   if (shouldDisplayIsosurface) {
     activeCellIdMaybe.map(activeCellId =>
-      // $FlowFixMe
-      app.oxalis.sceneController.renderVolumeIsosurface(activeCellId),
+      // importing SceneController breaks webpack (circular dependency)
+      // TODO fix later
+      // SceneController.renderVolumeIsosurface(activeCellId),
+      activeCellId,
     );
   }
 }

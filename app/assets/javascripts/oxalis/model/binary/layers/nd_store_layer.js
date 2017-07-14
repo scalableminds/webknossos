@@ -9,7 +9,7 @@ import type { DataLayerType, DataStoreInfoType } from "oxalis/store";
 import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
 import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
-import type { Vector3, Vector4, Vector6 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 
 
 class NdStoreLayer extends Layer {
@@ -22,8 +22,7 @@ class NdStoreLayer extends Layer {
     }
   }
 
-  // eslint-disable-next-line no-unused-vars
-  sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<*> {
+  sendToStoreImpl(): Promise<*> {
     throw new Error("NDstore does not currently support sendToStore");
   }
 

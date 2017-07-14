@@ -8,7 +8,7 @@ import $ from "jquery";
 import type Layer from "oxalis/model/binary/layers/layer";
 import AsyncTaskQueue from "libs/async_task_queue";
 import type { Vector4 } from "oxalis/constants";
-import DataCube from "oxalis/model/binary/data_cube";
+import type DataCube from "oxalis/model/binary/data_cube";
 import Toast from "libs/toast";
 
 const BATCH_SIZE = 32;

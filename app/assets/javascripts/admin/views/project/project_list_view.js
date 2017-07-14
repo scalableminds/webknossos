@@ -17,6 +17,7 @@ class ProjectListView extends Marionette.CompositeView {
       <th data-sort="location">Location</th>
       <th data-sort="owner.lastName">Owner</th>
       <th data-sort="numberOfOpenAssignments">Open Assignments</th>
+      <th data-sort="expectedTime">Expected Time</th>
       <th>Actions</th>
     </tr>
   </thead>

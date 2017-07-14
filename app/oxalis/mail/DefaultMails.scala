@@ -20,6 +20,9 @@ object DefaultMails {
   val defaultFrom = "no-reply@webknossos.org"
 
   val newUserMailingList = conf.getString("braintracing.newuserlist").getOrElse("")
+
+  val overTimeMailingList = conf.getString("braintracing.overTimeList").getOrElse("")
+
   val workloadMail = conf.getString("workload.mail").getOrElse("")
 
   def registerAdminNotifyerMail(user: User, email: String, brainDBResult: String) =
@@ -29,6 +32,13 @@ object DefaultMails {
       subject = s"A new user (${user.name}) registered on $uri",
       bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
       recipients = List(newUserMailingList))
+
+  def overLimitMail(user: User, projectName: String, taskId: Option[String]) =
+    Mail(
+      from = defaultFrom,
+      subject = s"Time limit reached. ${user.abreviatedName} in $projectName",
+      bodyText = html.mail.timeLimit(user.name, projectName, taskId.getOrElse(""), uri).body,
+      recipients = List(overTimeMailingList))
 
   /**
     * Creates a registration mail which should allow the user to verify his

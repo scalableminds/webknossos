@@ -105,20 +105,19 @@ class Layer {
     return this.doWithToken(token => this.sendToStoreImpl(this.buildBuckets(batch), getBucketData, token));
   }
 
-  // eslint-disable-next-line no-unused-vars
+  /* eslint-disable no-unused-vars */
   requestFromStoreImpl(batch: Array<BucketInfo>, token: string): Promise<Uint8Array> {
     throw new Error("Subclass responsibility");
   }
 
-  // eslint-disable-next-line no-unused-vars
   setFourBit(newFourBit: boolean): void {
     throw new Error("Subclass responsibility");
   }
 
-  // eslint-disable-next-line no-unused-vars
   sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<void> {
     throw new Error("Subclass responsibility");
   }
+  /* eslint-enable no-unused-vars */
 }
 
 

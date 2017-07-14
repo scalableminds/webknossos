@@ -67,7 +67,7 @@ class CameraController {
   update = (): void => {
     const state = Store.getState();
     const gPos = getPosition(state.flycam);
-    // camera porition's unit is nm, so convert it.
+    // camera position's unit is nm, so convert it.
     const cPos = voxelToNm(state.dataset.scale, gPos);
     this.cameras[OrthoViews.PLANE_XY].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));
     this.cameras[OrthoViews.PLANE_YZ].position.copy(new THREE.Vector3(cPos[0], cPos[1], cPos[2]));

@@ -48,6 +48,7 @@ class TaskTransferModalView extends ModalView {
       childViewOptions: {
         modelValue() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
       },
+      filter: model => model.get("isActive"),
     });
     this.showChildView("datalist", selectionView);
 

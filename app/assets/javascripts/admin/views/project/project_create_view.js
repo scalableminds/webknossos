@@ -184,6 +184,7 @@ class ProjectCreateView extends Marionette.View {
         modelValue() { return this.model.id; },
         modelLabel() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
       },
+      filter: model => model.get("isActive"),
       name: "owner",
       data: "isAdmin=true",
     });

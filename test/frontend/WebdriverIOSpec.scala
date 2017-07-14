@@ -24,7 +24,7 @@ import com.typesafe.scalalogging.LazyLogging
 class WebdriverIOSpec(arguments: Arguments) extends Specification with LazyLogging {
 
   val argumentMapRead = parseCustomJavaArgs(arguments)
-  val mongoDb   = argumentMapRead.getOrElse("mongodb.db", "oxalis-webknossos")
+  val mongoDb   = argumentMapRead.getOrElse("mongodb.db", "webknossos-testing")
   val mongoHost = argumentMapRead.getOrElse("mongodb.url", "localhost")
   val mongoPort = argumentMapRead.getOrElse("mongodb.port", "27017")
   val testPort = 9000

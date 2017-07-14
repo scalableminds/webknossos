@@ -52,8 +52,8 @@ class CameraController {
       far: 1000000,
     }));
 
-    this.changeTDViewDiagonal(false);
-    this.bindToEvents();
+    this.bindToEvents();  
+    this.changeTDViewDiagonal(false);    
   }
 
   // Non-TD-View methods
@@ -102,43 +102,17 @@ class CameraController {
     listenToStoreProperty(
       storeState => storeState.viewModeData.plane.tdCamera,
       (cameraData) => this.updateTDCamera(cameraData),
-    )
+      true,
+    );
   }
 
   // TD-View methods
 
   changeTDView(id: OrthoViewType, animate: boolean = true): void {
-    const positionOffset: OrthoViewMapType<Vector3> = {
-      [OrthoViews.PLANE_XY]: [0, 0, -1],
-      [OrthoViews.PLANE_YZ]: [1, 0, 0],
-      [OrthoViews.PLANE_XZ]: [0, 1, 0],
-    };
-    const upVector: OrthoViewMapType<Vector3> = {
-      [OrthoViews.PLANE_XY]: [0, -1, 0],
-      [OrthoViews.PLANE_YZ]: [0, -1, 0],
-      [OrthoViews.PLANE_XZ]: [0, 0, -1],
-    };
-
     const camera = this.cameras[OrthoViews.TDView];
     const state = Store.getState();
     const b = voxelToNm(state.dataset.scale, Model.upperBoundary);
-
     const pos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
-    const time = 800;
-
-    const from = {
-      upX: camera.up.x,
-      upY: camera.up.y,
-      upZ: camera.up.z,
-      dx: camera.position.x - pos[0],
-      dy: camera.position.y - pos[1],
-      dz: camera.position.z - pos[2],
-      l: camera.left,
-      r: camera.right,
-      t: camera.top,
-      b: camera.bottom,
-    };
-    const tween = new TWEEN.Tween(from);
 
     let to: TweenState;
     if (id === OrthoViews.TDView) {
@@ -184,6 +158,18 @@ class CameraController {
 
       const l = -offsetX;
       const t = offsetY;
+
+      const positionOffset: OrthoViewMapType<Vector3> = {
+        [OrthoViews.PLANE_XY]: [0, 0, -1],
+        [OrthoViews.PLANE_YZ]: [1, 0, 0],
+        [OrthoViews.PLANE_XZ]: [0, 1, 0],
+      };
+      const upVector: OrthoViewMapType<Vector3> = {
+        [OrthoViews.PLANE_XY]: [0, -1, 0],
+        [OrthoViews.PLANE_YZ]: [0, -1, 0],
+        [OrthoViews.PLANE_XZ]: [0, 0, -1],
+      };
+
       to = {
         dx: positionOffset[id][0],
         dy: positionOffset[id][1],
@@ -199,8 +185,24 @@ class CameraController {
     }
 
     if (animate) {
+      const from = {
+        upX: camera.up.x,
+        upY: camera.up.y,
+        upZ: camera.up.z,
+        dx: camera.position.x - pos[0],
+        dy: camera.position.y - pos[1],
+        dz: camera.position.z - pos[2],
+        l: camera.left,
+        r: camera.right,
+        t: camera.top,
+        b: camera.bottom,
+      };
+      const tween = new TWEEN.Tween(from);
+
       const _this = this;
-      return tween.to(to, time)
+      const time = 800;
+
+      tween.to(to, time)
         .onUpdate(function updater() {
           // TweenJS passes the current state via the `this` object.
           // However, for easier type checking, we pass it as an explicit
@@ -209,7 +211,7 @@ class CameraController {
         })
         .start();
     } else {
-      return this.updateCameraTDView(to);
+      this.updateCameraTDView(to);
     }
   }
 
@@ -326,17 +328,11 @@ class CameraController {
   moveTDViewRaw(moveVector: THREE.Vector3): void {
     const camera = this.cameras[OrthoViews.TDView];
 
-    const { position, up, near, far, lookAt } = Store.getState().viewModeData.plane.tdCamera;
     Store.dispatch(setTDCameraAction({
       left: camera.left + moveVector.x,
       right: camera.right + moveVector.x,
       top: camera.top + moveVector.y,
       bottom: camera.bottom + moveVector.y,
-      position,
-      up,
-      lookAt,
-      near,
-      far,
     }));
   }
 

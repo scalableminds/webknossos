@@ -135,7 +135,7 @@ class PlaneController extends React.PureComponent {
     const nmPosition = voxelToNm(this.props.scale, position);
 
     this.controls.target.set(...nmPosition);
-    this.controls.update(); // true
+    this.controls.update();
 
     // As the previous step will also move the camera, we need to
     // fix this by offsetting the viewport

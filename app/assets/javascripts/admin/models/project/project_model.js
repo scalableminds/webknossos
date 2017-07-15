@@ -11,6 +11,7 @@ class ProjectModel extends Backbone.Model {
         lastName: "",
       },
       priority: 100,
+      expectedTime: 90,
     };
   }
 

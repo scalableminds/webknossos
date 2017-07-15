@@ -110,7 +110,6 @@ object InitialData extends GlobalDBAccess with LazyLogging{
           val taskType = TaskType(
             "ek_0563_BipolarCells",
             "Check those cells out!",
-            TraceLimit(5, 10, 15),
             mpi.name)
           TaskTypeDAO.insert(taskType)
         }

@@ -281,15 +281,14 @@ class Request {
     }
   }
 
-  handleEmptyJsonResponse = (response: Response): Promise<{}> => {
-    return response.text().then(responseText => {
+  handleEmptyJsonResponse = (response: Response): Promise<{}> =>
+    response.text().then(responseText => {
       if (responseText.length === 0) {
         return {};
       } else {
         return JSON.parse(responseText);
       }
     })
-  }
 }
 
 

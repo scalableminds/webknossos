@@ -4,6 +4,7 @@
  */
 
 import * as THREE from "three";
+import React from "react";
 import _ from "lodash";
 import api from "oxalis/api/internal_api";
 import app from "app";
@@ -21,17 +22,14 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraAction, centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 
-class CameraController {
-  cameras: OrthoViewMapType<THREE.OrthographicCamera>;
+class CameraController extends React.PureComponent {
+  props: {
+    cameras: OrthoViewMapType<THREE.OrthographicCamera>,
+    onCameraPositionChanged: () => void,
+  };
 
-  // Copied from backbone events (TODO: handle this better)
-  trigger: Function;
-
-  constructor(cameras: OrthoViewMapType<THREE.OrthographicCamera>) {
-    _.extend(this, Backbone.Events);
-    this.cameras = cameras;
-
-    for (const cam of _.values(this.cameras)) {
+  componentDidMount() {
+    for (const cam of _.values(this.props.cameras)) {
       cam.near = -1000000;
       cam.far = 1000000;
     }
@@ -54,12 +52,11 @@ class CameraController {
     const zoom = state.flycam.zoomStep;
     const boundary = (constants.VIEWPORT_WIDTH / 2) * zoom;
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.cameras[planeId].near = -clippingDistance;
-      this.cameras[planeId].left = this.cameras[planeId].bottom = -boundary * scaleFactor;
-      this.cameras[planeId].right = this.cameras[planeId].top = boundary * scaleFactor;
-      this.cameras[planeId].updateProjectionMatrix();
+      this.props.cameras[planeId].near = -clippingDistance;
+      this.props.cameras[planeId].left = this.props.cameras[planeId].bottom = -boundary * scaleFactor;
+      this.props.cameras[planeId].right = this.props.cameras[planeId].top = boundary * scaleFactor;
+      this.props.cameras[planeId].updateProjectionMatrix();
     }
-    app.vent.trigger("rerender");
   }
 
   update(): void {
@@ -68,14 +65,13 @@ class CameraController {
     // camera position's unit is nm, so convert it.
     const cPos = voxelToNm(state.dataset.scale, gPos);
     const cPosVec = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
-    this.cameras[OrthoViews.PLANE_XY].position.copy(cPosVec);
-    this.cameras[OrthoViews.PLANE_YZ].position.copy(cPosVec);
-    this.cameras[OrthoViews.PLANE_XZ].position.copy(cPosVec);
+    this.props.cameras[OrthoViews.PLANE_XY].position.copy(cPosVec);
+    this.props.cameras[OrthoViews.PLANE_YZ].position.copy(cPosVec);
+    this.props.cameras[OrthoViews.PLANE_XZ].position.copy(cPosVec);
   };
 
 
   bindToEvents() {
-    // Use connect() once this is a react controller
     listenToStoreProperty(
       storeState => storeState.userConfiguration.clippingDistance,
       () => this.updateCamViewport(),
@@ -99,7 +95,7 @@ class CameraController {
   // TD-View methods
 
   updateTDCamera(cameraData: CameraData): void {
-    const tdCamera = this.cameras[OrthoViews.TDView];
+    const tdCamera = this.props.cameras[OrthoViews.TDView];
 
     tdCamera.position.set(...cameraData.position);
     tdCamera.left = cameraData.left;
@@ -111,7 +107,11 @@ class CameraController {
 
     tdCamera.updateProjectionMatrix();
 
-    this.trigger("cameraPositionChanged");
+    this.props.onCameraPositionChanged();
+  }
+
+  render() {
+    return null;
   }
 }
 
@@ -127,20 +127,6 @@ type TweenState = {
   t: number,
   b: number,
 };
-
-function updateCameraTDView(tweenState: TweenState): void {
-  const p = voxelToNm(Store.getState().dataset.scale, getPosition(Store.getState().flycam));
-
-  Store.dispatch(setTDCameraAction({
-    position: [tweenState.dx + p[0], tweenState.dy + p[1], tweenState.dz + p[2]],
-    left: tweenState.l,
-    right: tweenState.r,
-    top: tweenState.t,
-    bottom: tweenState.b,
-    up: [tweenState.upX, tweenState.upY, tweenState.upZ],
-    lookAt: p,
-  }));
-}
 
 export function changeTDView(id: OrthoViewType, animate: boolean = true): void {
   const state = Store.getState();
@@ -215,6 +201,20 @@ export function changeTDView(id: OrthoViewType, animate: boolean = true): void {
       r: l + width,
       b: t - width,
     };
+  }
+
+  const updateCameraTDView = function(tweenState: TweenState): void {
+    const p = voxelToNm(Store.getState().dataset.scale, getPosition(Store.getState().flycam));
+
+    Store.dispatch(setTDCameraAction({
+      position: [tweenState.dx + p[0], tweenState.dy + p[1], tweenState.dz + p[2]],
+      left: tweenState.l,
+      right: tweenState.r,
+      top: tweenState.t,
+      bottom: tweenState.b,
+      up: [tweenState.upX, tweenState.upY, tweenState.upZ],
+      lookAt: p,
+    }));
   }
 
   if (animate) {

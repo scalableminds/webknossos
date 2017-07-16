@@ -55,7 +55,6 @@ class PlaneController extends React.PureComponent {
   };
   isStarted: boolean;
   oldNmPos: Vector3;
-  cameraController: CameraController;
   zoomPos: Vector3;
   controls: TrackballControls;
   canvasesAndNav: any;
@@ -63,7 +62,7 @@ class PlaneController extends React.PureComponent {
   listenTo: Function;
   stopListening: Function;
 
-  componentDidMount() {
+  componentWillMount() {
     _.extend(this, Backbone.Events);
     this.input = {
       mouseControllers: {},
@@ -76,9 +75,6 @@ class PlaneController extends React.PureComponent {
     this.planeView = new PlaneView();
 
     Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
-
-    // initialize Camera Controller
-    this.cameraController = new CameraController(this.planeView.getCameras());
 
     this.canvasesAndNav = $("#main")[0];
 
@@ -200,8 +196,6 @@ class PlaneController extends React.PureComponent {
 
     $("#TDViewControls button")
       .each((i, element) => $(element).on("click", () => { callbacks[i](); }));
-
-    this.listenTo(this.cameraController, "cameraPositionChanged", () => this.controls.update(true));
   }
 
 
@@ -296,7 +290,7 @@ class PlaneController extends React.PureComponent {
     const initInputHandlers = () => {
       if ($("#inputcatcher_TDView").length === 0) {
         window.requestAnimationFrame(initInputHandlers);
-      } else if (this.isStarted === true) {
+      } else if (this.isStarted) {
         this.initTrackballControls();
         this.initMouse();
       }
@@ -483,8 +477,15 @@ class PlaneController extends React.PureComponent {
 
   calculateGlobalPos = (clickPos: Point2): Vector3 => calculateGlobalPos(clickPos)
 
+  updateControls = () => this.controls.update(true);
+
   render() {
-    return null;
+    return (
+      <CameraController
+        cameras={this.planeView.getCameras()}
+        onCameraPositionChanged={this.updateControls}
+      />
+    );
   }
 }
 

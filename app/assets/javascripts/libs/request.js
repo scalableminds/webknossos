@@ -282,12 +282,13 @@ class Request {
   }
 
   handleEmptyJsonResponse = (response: Response): Promise<{}> => {
-    const contentLength = parseInt(response.headers.get("Content-Length"));
-    if (contentLength === 0) {
-      return Promise.resolve({});
-    } else {
-      return response.json();
-    }
+    return response.text().then(responseText => {
+      if (responseText.length === 0) {
+        return {};
+      } else {
+        return JSON.parse(responseText);
+      }
+    })
   }
 }
 

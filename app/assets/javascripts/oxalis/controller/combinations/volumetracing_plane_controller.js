@@ -9,7 +9,7 @@ import Store from "oxalis/store";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import constants, { OrthoViews } from "oxalis/constants";
-import { PlaneController, mapStateToProps } from "oxalis/controller/viewmodes/plane_controller";
+import { PlaneControllerClass, mapStateToProps } from "oxalis/controller/viewmodes/plane_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import Model from "oxalis/model";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -20,7 +20,7 @@ import type { OrthoViewType, Point2 } from "oxalis/constants";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import { connect } from "react-redux";
 
-class VolumeTracingPlaneController extends PlaneController {
+class VolumeTracingPlaneController extends PlaneControllerClass {
 
   // See comment in Controller class on general controller architecture.
   //

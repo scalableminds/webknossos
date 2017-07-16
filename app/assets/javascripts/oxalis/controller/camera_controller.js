@@ -7,8 +7,6 @@ import * as THREE from "three";
 import React from "react";
 import _ from "lodash";
 import api from "oxalis/api/internal_api";
-import app from "app";
-import Backbone from "backbone";
 import constants, { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
@@ -17,16 +15,16 @@ import TWEEN from "tween.js";
 import type { CameraData } from "oxalis/store";
 import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { setTDCameraAction, centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
+import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 
-class CameraController extends React.PureComponent {
+class CameraController extends React.Component {
   props: {
     cameras: OrthoViewMapType<THREE.OrthographicCamera>,
     onCameraPositionChanged: () => void,
   };
+  storePropertyUnsubscribers: Array<Function>;
 
   componentDidMount() {
     for (const cam of _.values(this.props.cameras)) {
@@ -39,8 +37,12 @@ class CameraController extends React.PureComponent {
       far: 1000000,
     }));
 
-    this.bindToEvents();  
+    this.bindToEvents();
     api.tracing.changeTDViewDiagonal(false);
+  }
+
+  componentWillUnmount() {
+    this.storePropertyUnsubscribers.forEach(fn => fn());
   }
 
   // Non-TD-View methods
@@ -72,24 +74,27 @@ class CameraController extends React.PureComponent {
 
 
   bindToEvents() {
-    listenToStoreProperty(
-      storeState => storeState.userConfiguration.clippingDistance,
-      () => this.updateCamViewport(),
-      true,
-    );
-    listenToStoreProperty(
-      storeState => storeState.flycam.zoomStep,
-      () => this.updateCamViewport(),
-    );
-    listenToStoreProperty(
-      storeState => storeState.flycam.currentMatrix,
-      () => this.update(),
-    );
-    listenToStoreProperty(
-      storeState => storeState.viewModeData.plane.tdCamera,
-      (cameraData) => this.updateTDCamera(cameraData),
-      true,
-    );
+    this.storePropertyUnsubscribers = [
+      listenToStoreProperty(
+        storeState => storeState.userConfiguration.clippingDistance,
+        () => this.updateCamViewport(),
+        true,
+      ),
+      listenToStoreProperty(
+        storeState => storeState.flycam.zoomStep,
+        () => this.updateCamViewport(),
+      ),
+      listenToStoreProperty(
+        storeState => storeState.flycam.currentMatrix,
+        () => this.update(),
+        true,
+      ),
+      listenToStoreProperty(
+        storeState => storeState.viewModeData.plane.tdCamera,
+        (cameraData) => this.updateTDCamera(cameraData),
+        true,
+      ),
+    ];
   }
 
   // TD-View methods

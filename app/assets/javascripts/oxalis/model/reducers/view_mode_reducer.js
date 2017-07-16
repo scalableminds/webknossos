@@ -1,7 +1,7 @@
 // @flow
 
 import update from "immutability-helper";
-import type { OxalisState, CameraData, PartialCameraData } from "oxalis/store";
+import type { OxalisState, PartialCameraData } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
 import * as THREE from "three";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";

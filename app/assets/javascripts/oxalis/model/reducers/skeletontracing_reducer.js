@@ -17,7 +17,6 @@ import Maybe from "data.maybe";
 import ErrorHandling from "libs/error_handling";
 
 function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisState {
-  console.log("action", action.type);
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
       const restrictions = Object.assign({}, action.tracing.restrictions, action.tracing.content.settings);

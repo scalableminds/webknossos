@@ -8,7 +8,7 @@ import $ from "jquery";
 import * as THREE from "three";
 import _ from "lodash";
 import Store from "oxalis/store";
-import { PlaneController, mapStateToProps } from "oxalis/controller/viewmodes/plane_controller";
+import { PlaneControllerClass, mapStateToProps } from "oxalis/controller/viewmodes/plane_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import { OrthoViews } from "oxalis/constants";
 import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -28,7 +28,7 @@ const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.TDView]: 3,
 };
 
-class SkeletonTracingPlaneController extends PlaneController {
+class SkeletonTracingPlaneController extends PlaneControllerClass {
 
   // See comment in Controller class on general controller architecture.
   //

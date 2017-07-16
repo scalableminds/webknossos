@@ -4,7 +4,6 @@
  */
  /* globals JQueryInputEventObject:false */
 
-import app from "app";
 import React from "react";
 import Backbone from "backbone";
 import $ from "jquery";
@@ -15,7 +14,7 @@ import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import type { CameraData, OxalisState } from "oxalis/store";
+import type { CameraData, OxalisState, FlycamType } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import { getPosition, getRequestLogZoomStep, getIntegerZoomStep, getAreas, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
@@ -28,7 +27,6 @@ import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } 
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 import { setViewportAction, setTDCameraAction, zoomTDViewAction, moveTDViewXAction, moveTDViewYAction, moveTDViewByVectorAction } from "oxalis/model/actions/view_mode_actions";
-import type { FlycamType } from "oxalis/store";
 import { connect } from "react-redux";
 import api from "oxalis/api/internal_api";
 
@@ -57,12 +55,11 @@ class PlaneController extends React.PureComponent {
   oldNmPos: Vector3;
   zoomPos: Vector3;
   controls: TrackballControls;
-  canvasesAndNav: any;
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
 
-  componentWillMount() {
+  componentDidMount() {
     _.extend(this, Backbone.Events);
     this.input = {
       mouseControllers: {},
@@ -76,9 +73,11 @@ class PlaneController extends React.PureComponent {
 
     Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
 
-    this.canvasesAndNav = $("#main")[0];
-
     this.start();
+  }
+
+  componentDidUpdate(): void {
+    this.setTargetAndFixPosition();
   }
 
   componentWillUnmount() {
@@ -126,10 +125,6 @@ class PlaneController extends React.PureComponent {
     };
   }
 
-  componentDidUpdate(prevProps: Props): void {
-    this.setTargetAndFixPosition();
-  }
-
   setTargetAndFixPosition(): void {
     const position = getPosition(this.props.flycam);
     const nmPosition = voxelToNm(this.props.scale, position);
@@ -148,7 +143,7 @@ class PlaneController extends React.PureComponent {
       invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
     }
     this.oldNmPos = nmPosition;
- 
+
     const nmVector = new THREE.Vector3(...invertedDiff);
     // moves camera by the nm vector
     const camera = this.planeView.getCameras()[OrthoViews.TDView];
@@ -160,7 +155,7 @@ class PlaneController extends React.PureComponent {
     rotation.order = rotation.order.split("").reverse().join("");
 
     nmVector.applyEuler(rotation);
-    
+
     Store.dispatch(moveTDViewByVectorAction(
       nmVector.x,
       nmVector.y,
@@ -186,6 +181,10 @@ class PlaneController extends React.PureComponent {
 
     this.controls.target.set(
       ...pos);
+
+    // This is necessary, since we instantiated this.controls now. This should be removed
+    // when the workaround with requestAnimationFrame(initInputHandlers) is removed.
+    this.forceUpdate();
 
     const callbacks = [
       api.tracing.changeTDViewDiagonal,
@@ -285,7 +284,7 @@ class PlaneController extends React.PureComponent {
     this.isStarted = true;
 
     // Workaround: defer mouse initialization to make sure DOM elements have
-    // acutally been rendered by React (InputCatchers Component)
+    // actually been rendered by React (InputCatchers Component)
     // DOM Elements get deleted when switching between ortho and arbitrary mode
     const initInputHandlers = () => {
       if ($("#inputcatcher_TDView").length === 0) {
@@ -480,6 +479,10 @@ class PlaneController extends React.PureComponent {
   updateControls = () => this.controls.update(true);
 
   render() {
+    if (!this.controls) {
+      return null;
+    }
+
     return (
       <CameraController
         cameras={this.planeView.getCameras()}
@@ -542,5 +545,6 @@ export function mapStateToProps(state: OxalisState, ownProps: OwnProps): Props {
     onRender: ownProps.onRender,
   };
 }
-export {PlaneController};
+
+export { PlaneController as PlaneControllerClass };
 export default connect(mapStateToProps)(PlaneController);

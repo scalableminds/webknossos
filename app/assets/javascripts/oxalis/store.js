@@ -248,12 +248,6 @@ export type TemporaryConfigurationType = {
   +controlMode: ControlModeType
 };
 
-export type TraceLimitType = {
-  +min: number,
-  +max: number,
-  +maxHard: number,
-};
-
 export type TaskType = {
   +id: number,
   +type: "string",
@@ -264,7 +258,6 @@ export type TaskType = {
   +type: {
     +summary: string,
     +description: string,
-    +expectedTime: TraceLimitType,
     +id: string,
     +team: string,
   },

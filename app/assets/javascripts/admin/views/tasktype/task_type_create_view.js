@@ -82,40 +82,6 @@ class TaskTypeCreateView extends Marionette.View {
             </select>
           </div>
         </div>
-
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="expectedTime_minTime">Expected Time (min)</label>
-          <div class="col-sm-9">
-            <div class="input-group">
-            <input type="number" id="expectedTime_minTime" name="expectedTime[min]"
-              value="<%- expectedTime.min %>" min="1" input-append="minutes" class="form-control" required>
-              <span class="input-group-addon">minutes</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="expectedTime_maxTime">Expected Time (max)</label>
-          <div class="col-sm-9">
-            <div class="input-group">
-            <input type="number" id="expectedTime_maxTime" name="expectedTime[max]"
-              value="<%- expectedTime.max %>" min="1" input-append="minutes" class="form-control" required>
-              <span class="input-group-addon">minutes</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="expectedTime_maxHard">Time limit</label>
-          <div class="col-sm-9">
-            <div class="input-group">
-            <input type="number" id="expectedTime_maxHard" name="expectedTime[maxHard]"
-              value="<%- expectedTime.maxHard %>" min="1" input-append="minutes" class="form-control" required>
-              <span class="input-group-addon">minutes</span>
-            </div>
-          </div>
-        </div>
-
         <div class="form-group">
           <div class="col-sm-2 col-sm-offset-9">
           <button type="submit" class="form-control btn btn-primary"><%- getTitle() %></button>
@@ -167,7 +133,6 @@ class TaskTypeCreateView extends Marionette.View {
       return;
     }
 
-
     const formValues = FormSyphon.serialize(this.ui.form);
     if (formValues.settings.preferredMode === "Any") { formValues.settings.preferredMode = null; }
 
@@ -177,7 +142,6 @@ class TaskTypeCreateView extends Marionette.View {
       Toast.error("Please provide at least one allowed mode.");
       return;
     }
-
 
     this.model.save(formValues).then(
       () => app.router.navigate("/taskTypes", { trigger: true }));

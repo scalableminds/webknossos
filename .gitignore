@@ -4,7 +4,6 @@
 # sbt specific
 dist/*
 target/
-binaryData
 lib_managed/
 src_managed/
 project/boot/
@@ -18,3 +17,8 @@ project/plugins/project/
 .project
 .idea/
 .DS_Store
+
+# data
+backup/
+tracingData/
+binaryData/

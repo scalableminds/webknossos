@@ -15,7 +15,7 @@ package object datasource {
     implicit val dataSourceIdForamt = Json.format[DataSourceId]
   }
 
-  case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId, dataLayers: List[T], scale: Scale, sourceType: String = "webKnossos") extends GenericInboxDataSource[T] {
+  case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId, dataLayers: List[T], scale: Scale) extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)
 
@@ -29,6 +29,7 @@ package object datasource {
   object GenericDataSource {
 
     implicit def dataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[GenericDataSource[T]] = new Format[GenericDataSource[T]] {
+
       def reads(json: JsValue): JsResult[GenericDataSource[T]] = {
         for {
           id <- (json \ "id").validate[DataSourceId]

@@ -20,8 +20,8 @@ object ThumbnailHelpers {
     // Parameters that seem to be working good enough
     val center = dataLayer.boundingBox.center
     val resolution = bestResolution(dataLayer, width, height)
-    val x = center.x - width * resolution / 2
-    val y = center.y - height * resolution / 2
+    val x = Math.max(0, center.x - width * resolution / 2)
+    val y = Math.max(0, center.y - height * resolution / 2)
     val z = center.z
     new VoxelPosition(x.toInt, y.toInt, z.toInt, resolution)
   }

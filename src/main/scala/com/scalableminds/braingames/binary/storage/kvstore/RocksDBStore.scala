@@ -18,12 +18,19 @@ class RocksDBManager(path: Path, columnFamilies: List[String]) {
 
   val (db, columnFamilyHandles) = {
     RocksDB.loadLibrary()
+    val columnOptions = new ColumnFamilyOptions()
+      .setArenaBlockSize(4 * 1024 * 1024)               // 4MB
+      .setTargetFileSizeBase(1024 * 1024 * 1024)        // 1GB
+      .setMaxBytesForLevelBase(10 * 1024 * 1024 * 1024) // 10GB
     val columnFamilyDescriptors = (columnFamilies.map(_.getBytes) :+ RocksDB.DEFAULT_COLUMN_FAMILY).map { columnFamily =>
-      new ColumnFamilyDescriptor(columnFamily, new ColumnFamilyOptions())
+      new ColumnFamilyDescriptor(columnFamily, columnOptions)
     }
     val columnFamilyHandles = new util.ArrayList[ColumnFamilyHandle]
+    val options = new DBOptions()
+      .setCreateIfMissing(true)
+      .setCreateMissingColumnFamilies(true)
     val db = RocksDB.open(
-      new DBOptions().setCreateIfMissing(true).setCreateMissingColumnFamilies(true),
+      options,
       path.toAbsolutePath.toString,
       columnFamilyDescriptors.asJava,
       columnFamilyHandles)
@@ -40,6 +47,7 @@ class RocksDBManager(path: Path, columnFamilies: List[String]) {
       RocksDB.loadLibrary()
       val backupEngine = BackupEngine.open(Env.getDefault, new BackupableDBOptions(backupDir.toString))
       backupEngine.createNewBackup(db)
+      backupEngine.purgeOldBackups(1)
       backupEngine.getBackupInfo.asScala.headOption.map(info => BackupInfo(info.backupId.toString, info.timestamp, info.size))
     } catch {
       case e: Exception =>

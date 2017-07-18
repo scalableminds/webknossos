@@ -23,6 +23,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     } yield {
       val category = guessLayerCategory(name, elementClass)
       val lengthOfUnderlyingCubes = header.numBlocksPerCubeDimension * header.numVoxelsPerBlockDimension
+      val boundingBox = previous.map(_.boundingBox).getOrElse(BoundingBox.empty)
       val resolutions = exploreResolutions(baseDir)
       category match {
         case Category.segmentation =>
@@ -31,9 +32,9 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
             case Some(l: KnossosSegmentationLayer) => l.largestSegmentId
             case _ => SegmentationLayer.defaultLargestSegmentId
           }
-          WKWSegmentationLayer(name, BoundingBox.empty, resolutions, elementClass, lengthOfUnderlyingCubes, mappings, largestSegmentId)
+          WKWSegmentationLayer(name, boundingBox, resolutions, elementClass, lengthOfUnderlyingCubes, mappings, largestSegmentId)
         case _ =>
-          WKWDataLayer(name, category, BoundingBox.empty, resolutions, elementClass, lengthOfUnderlyingCubes)
+          WKWDataLayer(name, category, boundingBox, resolutions, elementClass, lengthOfUnderlyingCubes)
       }
     }).passFailure { f =>
       report.error(layer => s"Error processing layer '$layer' - ${f.msg}")

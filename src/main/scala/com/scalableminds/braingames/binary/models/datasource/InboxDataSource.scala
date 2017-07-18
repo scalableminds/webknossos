@@ -11,8 +11,6 @@ package object inbox {
 
     def id: DataSourceId
 
-    def sourceType: String
-
     def toUsable: Option[GenericDataSource[T]]
 
     def isUsable: Boolean = toUsable.isDefined
@@ -35,11 +33,12 @@ package object inbox {
     }
   }
 
-  case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId, status: String, sourceType: String = "webKnossos") extends GenericInboxDataSource[T] {
+  case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId, status: String) extends GenericInboxDataSource[T] {
     val toUsable: Option[GenericDataSource[T]] = None
   }
 
   object UnusableDataSource {
+
     implicit def unusableDataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[UnusableDataSource[T]] = new Format[UnusableDataSource[T]] {
       def reads(json: JsValue): JsResult[UnusableDataSource[T]] = {
         for {

@@ -57,7 +57,7 @@ trait DataLayerLike {
 
   def boundingBox: BoundingBox
 
-  def resolutions: Set[Int]
+  def resolutions: List[Int]
 
   def elementClass: ElementClass.Value
 }
@@ -153,7 +153,7 @@ case class AbstractDataLayer(
                               name: String,
                               category: Category.Value,
                               boundingBox: BoundingBox,
-                              resolutions: Set[Int],
+                              resolutions: List[Int],
                               elementClass: ElementClass.Value
                             ) extends DataLayerLike
 
@@ -170,7 +170,7 @@ case class AbstractSegmentationLayer(
                                       name: String,
                                       category: Category.Value,
                                       boundingBox: BoundingBox,
-                                      resolutions: Set[Int],
+                                      resolutions: List[Int],
                                       elementClass: ElementClass.Value,
                                       largestSegmentId: Long,
                                       mappings: Set[String]

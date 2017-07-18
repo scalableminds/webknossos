@@ -37,7 +37,7 @@ trait DataSourceImporter {
     PathUtils.listDirectories(baseDir).map { layerDirs =>
       val layers = layerDirs.flatMap { layerDir =>
         val layerName = layerDir.getFileName.toString
-        val previousLayer = None// TODO previous.flatMap(_.getDataLayer(layerName))
+        val previousLayer = previous.flatMap(_.getDataLayer(layerName))
         exploreLayer(layerName, layerDir, previousLayer)(report.withContext(_.resolve(layerName)))
       }
       GenericDataSource(id, layers, previous.map(_.scale).getOrElse(Scale.default))
@@ -71,10 +71,10 @@ trait DataSourceImporter {
     }.getOrElse(Nil).toSet
   }
 
-  protected def exploreResolutions(baseDir: Path): Set[Int] = {
+  protected def exploreResolutions(baseDir: Path): List[Int] = {
     def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
     PathUtils.listDirectories(baseDir, resolutionDirFilter).map{
       _.flatMap(_.getFileName.toString.toIntOpt)
-    }.getOrElse(Nil).toSet
+    }.getOrElse(Nil)
   }
 }

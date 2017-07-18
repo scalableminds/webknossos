@@ -18,7 +18,7 @@ case class WKWDataLayer(
                          name: String,
                          category: Category.Value,
                          boundingBox: BoundingBox,
-                         resolutions: Set[Int],
+                         resolutions: List[Int],
                          elementClass: ElementClass.Value,
                          lengthOfUnderlyingCubes: Int
                        ) extends WKWLayer
@@ -30,7 +30,7 @@ object WKWDataLayer {
 case class WKWSegmentationLayer(
                                  name: String,
                                  boundingBox: BoundingBox,
-                                 resolutions: Set[Int],
+                                 resolutions: List[Int],
                                  elementClass: ElementClass.Value,
                                  lengthOfUnderlyingCubes: Int,
                                  mappings: Set[String],

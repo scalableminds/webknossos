@@ -62,7 +62,7 @@ object KnossosDataFormat extends DataSourceImporter {
 
   private def exploreSection(name: String, baseDir: Path, previous: Option[KnossosSection]): KnossosSection = {
     val resolutions = exploreResolutions(baseDir)
-    KnossosSection(name, resolutions, BoundingBox.empty)
+    KnossosSection(name, resolutions, previous.map(_.boundingBox).getOrElse(BoundingBox.empty))
   }
 
   private def guessElementClass(baseDir: Path)(implicit report: DataSourceImportReport[Path]): Box[ElementClass.Value] = {

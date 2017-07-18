@@ -6,6 +6,11 @@ package com.scalableminds.util.geometry
 import play.api.libs.json._
 
 case class Scale(x: Float, y: Float, z: Float){
+
+  def isValid: Boolean = {
+    x > 0 && y > 0 && z > 0
+  }
+
   override def toString() = {
     s"($x, $y, $z)"
   }

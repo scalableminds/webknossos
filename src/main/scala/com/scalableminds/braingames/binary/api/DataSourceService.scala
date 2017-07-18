@@ -97,6 +97,9 @@ class DataSourceService @Inject()(
     if (dataSource.dataLayers.exists(_.boundingBox.isEmpty)) {
       return Failure("Datasource bounding box must not be empty")
     }
+    if (!dataSource.scale.isValid) {
+      return Failure("Scale is invalid")
+    }
     Full(())
   }
 

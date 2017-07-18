@@ -4,10 +4,11 @@
 package com.scalableminds.braingames.datastore.tracings
 
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicBoolean
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.storage.kvstore.{BackupInfo, RocksDBManager, RocksDBStore, VersionedKeyValueStore}
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Failure}
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 
@@ -15,6 +16,8 @@ class TracingDataStore @Inject()(
                                   config: Configuration,
                                   lifecycle:  ApplicationLifecycle
                                 ) {
+
+  val backupInProgress = new AtomicBoolean(false)
 
   private val tracingDataDir = Paths.get(config.getString("braingames.binary.tracingDataFolder").getOrElse("tracingData"))
 
@@ -30,7 +33,17 @@ class TracingDataStore @Inject()(
 
   lazy val volumeData = new VersionedKeyValueStore(rocksDB.getStoreForColumnFamily("volumeData").get)
 
-  def backup: Box[BackupInfo] = rocksDB.backup(backupDir)
+  def backup: Box[BackupInfo] = {
+    if (backupInProgress.compareAndSet(false, true)) {
+      try {
+        rocksDB.backup(backupDir)
+      } finally {
+        backupInProgress.set(false)
+      }
+    } else {
+      Failure("Backup already in progress.")
+    }
+  }
 
   lifecycle.addStopHook(rocksDB.close _)
 }

@@ -28,7 +28,7 @@ class RocksDBManager(path: Path, columnFamilies: List[String]) {
     val columnFamilyHandles = new util.ArrayList[ColumnFamilyHandle]
     val options = new DBOptions()
       .setCreateIfMissing(true)
-      .setCreateMissingColumnFamilies(true).
+      .setCreateMissingColumnFamilies(true)
     val db = RocksDB.open(
       options,
       path.toAbsolutePath.toString,

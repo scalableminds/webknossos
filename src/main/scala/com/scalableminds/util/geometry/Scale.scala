@@ -25,7 +25,7 @@ object Scale{
 
   implicit val scaleFormat = Format(scaleReads, scaleWrites)
 
-  def default = Scale(12, 12, 24)
+  def default = Scale(0, 0, 0)
 
   def toForm(s: Scale) = Some(s"${s.x}, ${s.y}, ${s.z}")
 

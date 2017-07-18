@@ -69,7 +69,7 @@ object ND2WK extends FoxImplicits {
           channel.name,
           channel.channelType,
           bbox,
-          nd.resolutions.map(r => math.pow(2, r).toInt).toSet,
+          nd.resolutions.map(r => math.pow(2, r).toInt),
           channel.dataType
         )
       }

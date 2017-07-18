@@ -37,7 +37,7 @@ case class VolumeTracingLayer(
                                boundingBox: BoundingBox,
                                elementClass: ElementClass.Value,
                                largestSegmentId: Long,
-                               resolutions: Set[Int] = Set(1),
+                               resolutions: List[Int] = List(1),
                                // can be removed, after all tracing stuff has been moved to datastore
                                mappings: Set[String] = Set.empty,
                                override val category: Category.Value = Category.segmentation

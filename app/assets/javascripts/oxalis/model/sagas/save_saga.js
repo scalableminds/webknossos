@@ -105,7 +105,7 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
   // is inserted for each group, containing the respective moved node ids.
   // The exact spot where the moveTreeComponent update action is inserted is important. This is
   // described later.
-  const result = updateActionsBatches.map((batch) => {
+  let result = updateActionsBatches.map((batch) => {
     let compactedBatch = [...batch];
     // Detect moved nodes and edges
     const movedNodesAndEdges = [];
@@ -172,6 +172,20 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
     }
 
     return compactedBatch;
+  });
+
+
+  // This part of the code detects deleted trees.
+  // Instead of sending deleteNode/deleteEdge update actions for all nodes of a deleted tree,
+  // just one deleteTree update action is sufficient for the server to delete the tree.
+  // As the deleteTree update action is already part of the update actions if a tree is deleted,
+  // all corresponding deleteNode/deleteEdge update actions can simply be removed.
+  result = result.map((batch) => {
+    // TODO: Remove the check in map once Flow recognizes that the result of the filter contains only deleteTree update actions
+    const deletedTreeIds = batch.filter(ua => ua.action === "deleteTree").map(ua => ua.action === "deleteTree" && ua.value.id);
+    _.remove(batch, ua =>
+      (ua.action === "deleteNode" || ua.action === "deleteEdge") && deletedTreeIds.includes(ua.value.treeId))
+    return batch;
   });
 
 

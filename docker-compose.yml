@@ -37,7 +37,7 @@ services:
     stdin_open: true
 
   sbt:
-    image: scalableminds/sbt:sbt-0.13.9_mongo-3.2.1_node-7.x_jdk-8
+    image: scalableminds/sbt:sbt-0.13.15_mongo-3.2.1_node-8.x_jdk-8
     ports:
       - "5005:5005"
     volumes:

@@ -4,6 +4,7 @@ import Marionette from "backbone.marionette";
 import AnnotationCollection from "admin/models/task/annotation_collection";
 import TemplateHelpers from "libs/template_helpers";
 import TaskAnnotationView from "admin/views/task/task_annotation_view";
+import TaskTransferModalView from "dashboard/views/task_transfer_modal_view";
 
 
 class TaskListItemView extends Marionette.CompositeView {
@@ -64,6 +65,7 @@ class TaskListItemView extends Marionette.CompositeView {
       <tbody>
       </tbody>
     </table>
+    <div class="modal-container"></div>
   </td>
 </tr>\
 `);
@@ -74,11 +76,13 @@ class TaskListItemView extends Marionette.CompositeView {
     this.prototype.events = {
       "click .delete": "deleteTask",
       "click .details-toggle": "toggleDetails",
+      "click #transfer-task": "transferTask",
     };
 
     this.prototype.ui = {
       detailsRow: ".details-row",
       detailsToggle: ".details-toggle",
+      modalContainer: ".modal-container",
     };
 
     this.prototype.templateContext =
@@ -94,10 +98,11 @@ class TaskListItemView extends Marionette.CompositeView {
     this.collection = new AnnotationCollection(this.model.get("id"));
 
     // minimize the toggle view on item deletion
-    this.listenTo(this.collection, "remove", () => this.toggleDetails(),
-    );
-  }
+    this.listenTo(this.collection, "remove", () => this.toggleDetails());
 
+    // refresh the list after transfering a task
+    this.listenTo(app.vent, "modal:destroy", this.refresh);
+  }
 
   deleteTask() {
     if (window.confirm("Do you really want to delete this task?")) {
@@ -105,6 +110,16 @@ class TaskListItemView extends Marionette.CompositeView {
     }
   }
 
+  transferTask(evt) {
+    evt.preventDefault();
+
+    const modalContainer = new Marionette.Region({
+      el: this.ui.modalContainer,
+    });
+    const url = evt.target.href;
+    this.modal = new TaskTransferModalView({ url });
+    modalContainer.show(this.modal);
+  }
 
   toggleDetails() {
     if (this.ui.detailsRow.hasClass("hide")) {
@@ -120,6 +135,10 @@ class TaskListItemView extends Marionette.CompositeView {
       this.ui.detailsRow.addClass("hide");
       this.ui.detailsToggle.removeClass("open");
     }
+  }
+
+  refresh() {
+    this.collection.fetch().then(() => this.render());
   }
 }
 TaskListItemView.initClass();

@@ -102,6 +102,7 @@ class ScriptCreateView extends Marionette.View {
         modelLabel() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
         defaultItem: { id: defaultUserId },
       },
+      filter: model => model.get("isActive"),
       name: "ownerId",
       data: "isAdmin=true",
     });

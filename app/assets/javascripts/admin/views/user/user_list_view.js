@@ -1,6 +1,6 @@
 import _ from "lodash";
 import React from "react";
-import { Table, Tag, Icon, Spin, Button, Form, Modal, Input } from "antd";
+import { Table, Tag, Icon, Spin, Button } from "antd";
 import Request from "libs/request";
 import app from "app";
 import Utils from "libs/utils";
@@ -10,14 +10,13 @@ import ExperienceModalView from "admin/views/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
 
 const { Column } = Table;
-const { FormItem } = Form.Item;
 
 class UserListView extends React.PureComponent {
 
   state = {
     isLoading: true,
     users: null,
-    selectedUsers: [],
+    selectedUserIds: [],
     isExperienceModalVisible: false,
   }
 
@@ -39,48 +38,20 @@ class UserListView extends React.PureComponent {
 
   deactivateUser = () => {}
 
-
-  increaseExperience = (): void => {
-    this.setExperience(null, true);
+  handleExperienceChange = (updatedUsers) => {
+    this.setState({
+      user: updatedUsers,
+      isExperienceModalVisible: false,
+    });
   }
-
-  setExperience = (event, shouldAddValue: boolean = false): void =>{
-    const { domain, level } = this.state;
-    if (domain && level) {
-
-      this.state.selectedUsers.forEach((user) => {
-        if (shouldAddValue) {
-          user.experiences[domain] += level;
-        } else {
-          user.experiences[domain] = level;
-        }
-
-        const url = `/api/users/${user.id}`;
-        Request.sendJSONReceiveJSON(url, {
-          data: user
-        });
-      });
-
-      this.setState({
-        domain: null,
-        level: null,
-        isExperienceModalVisible: false
-      })
-    }
-  }
-
-  deleteExperience = () => {
-    this.setState({isExperienceModalVisible: false})
-  }
-
 
   render() {
 
-    const hasRowsSelected = this.state.selectedUsers.length > 0;
+    const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
-      onChange: (selectedRowKeys, selectedUsers) => {
-        this.setState({ selectedUsers });
-        console.log(`selectedRowKeys: ${selectedRowKeys}`, 'selectedUsers: ', selectedUsers);
+      onChange: (selectedUserIds, selectedUsers) => {
+        this.setState({ selectedUserIds });
+        console.log(`selectedUserIds: ${selectedUserIds}`, 'selectedUsers: ', selectedUsers);
       }
     };
 
@@ -91,7 +62,7 @@ class UserListView extends React.PureComponent {
     return (<div className="user-administration-table container wide">
       <h3>Users</h3>
 
-      { hasRowsSelected ? <span>{this.state.selectedUsers.length} selected user(s)</span> : null}
+      { hasRowsSelected ? <span>{this.state.selectedUserIds.length} selected user(s)</span> : null}
       <Button
         onClick={() => this.setState({isExperienceModalVisible: true}) }
         icon="trophy"
@@ -173,29 +144,13 @@ class UserListView extends React.PureComponent {
           )}
         />
       </Table>
-      <Modal
-          title="Change Experiences"
-          visible={this.state.isExperienceModalVisible}
-          footer={
-            <div>
-              <Button type="primary" onClick={this.increaseExperience}>Increase Experience</Button>
-              <Button type="primary" onClick={this.setExperience}>Set Experience</Button>
-              <Button type="primary" onClick={this.deleteExperience}>Delete Experience</Button>
-              <Button onClick={() => this.setState({isExperienceModalVisible: false}) }>Cancel</Button>
-            </div>
-          }
-        >
-          <Input
-            value={this.state.domain}
-            onChange={(event) => this.setState({domain: event.target.value}) }
-            prefix={<Icon type="tags" style={{ fontSize: 13 }} />}
-            placeholder="Domain" />
-          <Input
-            value={this.state.level}
-            onChange={(event) => this.setState({level: parseInt(event.target.value)}) }
-            prefix={<Icon type="filter" style={{ fontSize: 13 }} />}
-            placeholder="Level" />
-        </Modal>
+      <ExperienceModalView
+        visible={this.state.isExperienceModalVisible}
+        selectedUserIds={this.state.selectedUserIds}
+        users={_.clone(this.state.users)}
+        onChange={this.handleExperienceChange}
+        onCancel={() => this.setState({isExperienceModalVisible: false}) }
+      />
     </div>)
   }
 }

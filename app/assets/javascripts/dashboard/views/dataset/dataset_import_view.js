@@ -1,7 +1,7 @@
 // @flow
 
 import React from "react";
-import { Button, Spin, Input, Checkbox } from "antd";
+import { Button, Spin, Input, Checkbox, Alert } from "antd";
 import Request from "libs/request";
 import update from "immutability-helper";
 import Toast from "libs/toast";
@@ -13,10 +13,12 @@ class DatasetImportView extends React.PureComponent {
     dataset: ?APIDatasetType,
     datasetJson: string,
     isValidJSON: boolean,
+    errors: ?Array<string>,
   } = {
     dataset: null,
     datasetJson: "",
     isValidJSON: true,
+    errors: null,
   }
 
   componentDidMount() {
@@ -57,9 +59,13 @@ class DatasetImportView extends React.PureComponent {
       const url = `${this.state.dataset.dataStore.url}/data/datasets/${this.props.datasetName}`;
       Request.sendJSONReceiveJSON(url, {
         data: JSON.parse(this.state.datasetJson),
+
       }).then(() => {
         Toast.success(`Successfully imported ${this.props.datasetName}`);
         window.history.back();
+      },
+      (error) => {
+        this.setState({ errors: error.messages.map(message => message.error) });
       });
     } else {
       Toast.error("Invalid JSON. Please fix the errors.");
@@ -96,6 +102,25 @@ class DatasetImportView extends React.PureComponent {
     this.setState(newState);
   }
 
+  getErrorComponents() {
+    if (this.state.errors) {
+
+      const errorElements = this.state.errors.map(
+        (error, i) => <li key={i}>error</li>
+      );
+      const descriptionElement = <ul>{errorElements}</ul>;
+
+      return <Alert
+        message="Error(s) Detected"
+        description={descriptionElement}
+        type="error"
+        showIcon
+      />
+    }
+
+    return <span />;
+  }
+
   getEditModeComponents() {
     // these components are only available in editing mode
     if (this.props.isEditingMode && this.state.dataset) {
@@ -105,7 +130,7 @@ class DatasetImportView extends React.PureComponent {
         <div>
           <Input.TextArea
             rows="3"
-            value={dataset.description}
+            value={dataset.description || ""}
             placeholder="Dataset Description"
             onChange={this.handleChangeDescription}
           />
@@ -144,6 +169,7 @@ class DatasetImportView extends React.PureComponent {
       <div className="container" id="dataset-import-view">
         <h3>{titleString} Dataset {this.props.datasetName}</h3>
         <p>Please review your dataset&#39;s properties before importing it.</p>
+        {this.getErrorComponents()}
         <div className="content">
           {content}
         </div>

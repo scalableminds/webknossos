@@ -18,10 +18,9 @@ import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSou
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
-import play.api.i18n.{Messages, MessagesApi}
 import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -43,11 +42,11 @@ class DataSourceService @Inject()(
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
 
-  def tick(): Unit = checkInbox()
+  def tick: Unit = checkInbox()
 
   def checkInbox(): Fox[Unit] = {
     Future {
-      logger.info(s"Scanning inbox at: ${dataBaseDir}")
+      logger.info(s"Scanning inbox at: $dataBaseDir")
       PathUtils.listDirectories(dataBaseDir) match {
         case Full(dirs) =>
           val foundInboxSources = dirs.flatMap(teamAwareInboxSources)
@@ -94,13 +93,15 @@ class DataSourceService @Inject()(
   }
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
-    if (dataSource.dataLayers.exists(_.boundingBox.isEmpty)) {
-      return Failure("Datasource bounding box must not be empty")
+    def Check(expression: Boolean): Box[Unit] = if (expression) Full(()) else Empty
+
+    for {
+      _ <- Check(dataSource.scale.isValid) ~> "DataSource scale is invalid"
+      _ <- Check(dataSource.dataLayers.nonEmpty) ~> "DataSource must have at least one dataLayer"
+      _ <- Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty)) ~> "DataSource bounding box must not be empty"
+    } yield {
+      ()
     }
-    if (!dataSource.scale.isValid) {
-      return Failure("Scale is invalid")
-    }
-    Full(())
   }
 
   def updateDataSource(dataSource: DataSource): Box[Unit] = {
@@ -138,7 +139,7 @@ class DataSourceService @Inject()(
         case Full(dataSource) =>
           dataSource.copy(id)
         case e =>
-          UnusableDataSource(id, s"Error: Invalid json format in ${propertiesFile}: $e")
+          UnusableDataSource(id, s"Error: Invalid json format in $propertiesFile: $e")
       }
     } else {
       UnusableDataSource(id, "Not imported yet.")

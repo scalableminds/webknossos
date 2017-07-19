@@ -54,6 +54,11 @@ test("setCommentForNode should throw an error if the supplied nodeId doesn't exi
   t.throws(() => api.tracing.setCommentForNode("another comment", 4));
 });
 
+test("getCameraPosition should return the current camera position", (t) => {
+  const api = t.context.api;
+  const cameraPosition = api.tracing.getCameraPosition();
+  t.deepEqual(cameraPosition, [1, 2, 3]);
+});
 
 test("Data Api: getLayerNames should get an array of all layer names", (t) => {
   const api = t.context.api;

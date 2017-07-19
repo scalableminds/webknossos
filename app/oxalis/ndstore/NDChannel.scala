@@ -14,7 +14,6 @@ object NDChannels {
 
   object NDChannelsReads extends Reads[List[NDChannel]] {
     val channelBodyReads =
-      // TODO jfrohnhofen check this verification works and move channelTypeMapping to enum???
       ((__ \ 'datatype).read[ElementClass.Value] and
         (__ \ 'channel_type).read[String]
           .filter(ValidationError("ndstore.invalid.channel.type"))(ND2WK.channelTypeMapping.contains)

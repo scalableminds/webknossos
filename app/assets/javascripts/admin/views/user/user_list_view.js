@@ -1,6 +1,6 @@
 import _ from "lodash";
 import React from "react";
-import { Table, Tag, Icon, Spin } from "antd";
+import { Table, Tag, Icon, Spin, Button, Form, Modal, Input } from "antd";
 import Request from "libs/request";
 import app from "app";
 import Utils from "libs/utils";
@@ -10,12 +10,15 @@ import ExperienceModalView from "admin/views/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
 
 const { Column } = Table;
+const { FormItem } = Form.Item;
 
 class UserListView extends React.PureComponent {
 
   state = {
     isLoading: true,
     users: null,
+    selectedUsers: [],
+    isExperienceModalVisible: false,
   }
 
   componentDidMount() {
@@ -28,25 +31,57 @@ class UserListView extends React.PureComponent {
 
     this.setState({
       isLoading: false,
-      selectedRows: [],
       users,
      });
   }
 
-  onSelectChange = (selectedRowKeys) => {
-    console.log('selectedRowKeys changed: ', selectedRowKeys);
-    this.setState({ selectedRowKeys });
+  activateUser = () => {}
+
+  deactivateUser = () => {}
+
+
+  increaseExperience = (): void => {
+    this.setExperience(null, true);
   }
+
+  setExperience = (event, shouldAddValue: boolean = false): void =>{
+    const { domain, level } = this.state;
+    if (domain && level) {
+
+      this.state.selectedUsers.forEach((user) => {
+        if (shouldAddValue) {
+          user.experiences[domain] += level;
+        } else {
+          user.experiences[domain] = level;
+        }
+
+        const url = `/api/users/${user.id}`;
+        Request.sendJSONReceiveJSON(url, {
+          data: user
+        });
+      });
+
+      this.setState({
+        domain: null,
+        level: null,
+        isExperienceModalVisible: false
+      })
+    }
+  }
+
+  deleteExperience = () => {
+    this.setState({isExperienceModalVisible: false})
+  }
+
 
   render() {
 
+    const hasRowsSelected = this.state.selectedUsers.length > 0;
     const rowSelection = {
-      onChange: (selectedRowKeys, selectedRows) => {
-        console.log(`selectedRowKeys: ${selectedRowKeys}`, 'selectedRows: ', selectedRows);
-      },
-      getCheckboxProps: record => ({
-        disabled: record.name === 'Disabled User',    // Column configuration not to be checked
-      }),
+      onChange: (selectedRowKeys, selectedUsers) => {
+        this.setState({ selectedUsers });
+        console.log(`selectedRowKeys: ${selectedRowKeys}`, 'selectedUsers: ', selectedUsers);
+      }
     };
 
     if (this.state.isLoading) {
@@ -55,6 +90,14 @@ class UserListView extends React.PureComponent {
 
     return (<div className="user-administration-table container wide">
       <h3>Users</h3>
+
+      { hasRowsSelected ? <span>{this.state.selectedUsers.length} selected user(s)</span> : null}
+      <Button
+        onClick={() => this.setState({isExperienceModalVisible: true}) }
+        icon="trophy"
+        disabled={!hasRowsSelected}>
+        Change Experience
+      </Button>
 
       <Table
         dataSource={this.state.users}
@@ -86,9 +129,9 @@ class UserListView extends React.PureComponent {
           title="Experiences"
           dataIndex="experiences"
           key="experiences"
-          render={(experiences) =>
-            _.map(experiences, (value, domain, i) =>
-              <Tag key={`experience_${i}`}>{domain} : {value}</Tag>
+          render={(experiences, user) =>
+            _.map(experiences, (value, domain) =>
+              <Tag key={`experience_${user.id}_${domain}`}>{domain} : {value}</Tag>
             )
           }
         />
@@ -96,8 +139,8 @@ class UserListView extends React.PureComponent {
           title="Teams - Role"
           dataIndex="teams"
           key="teams_"
-          render={(teams) => teams.map((team, i) => (
-            <span className="no-wrap" key={`team_role_${i}`}>
+          render={(teams, user) => teams.map((team) => (
+            <span className="no-wrap" key={`team_role_${user.id}_${team.team}`}>
               {team.team} <Tag color={TemplateHelpers.stringToColor(team.role.name)}>{team.role.name}</Tag>
             </span>
           ))}
@@ -123,13 +166,36 @@ class UserListView extends React.PureComponent {
               <a href={`/users/${record.id}/details`}><Icon type="user" />Show Tracings</a><br />
               <a href={`/api/users/${record.id}/annotations/download`} title="download all finished tracings"><Icon type="download" />Download</a><br />
               { record.isActive ?
-                <a href="#" onClick={this.deactivateUser}><Icon type="lock" />Deactivate User</a> :
-                <a href="#" onClick={this.activateUser}><Icon type="unlock" />Activate User</a>
+                <a href="#" onClick={this.deactivateUser}><Icon type="user-delete" />Deactivate User</a> :
+                <a href="#" onClick={this.activateUser}><Icon type="user-add" />Activate User</a>
               }
             </span>
           )}
         />
       </Table>
+      <Modal
+          title="Change Experiences"
+          visible={this.state.isExperienceModalVisible}
+          footer={
+            <div>
+              <Button type="primary" onClick={this.increaseExperience}>Increase Experience</Button>
+              <Button type="primary" onClick={this.setExperience}>Set Experience</Button>
+              <Button type="primary" onClick={this.deleteExperience}>Delete Experience</Button>
+              <Button onClick={() => this.setState({isExperienceModalVisible: false}) }>Cancel</Button>
+            </div>
+          }
+        >
+          <Input
+            value={this.state.domain}
+            onChange={(event) => this.setState({domain: event.target.value}) }
+            prefix={<Icon type="tags" style={{ fontSize: 13 }} />}
+            placeholder="Domain" />
+          <Input
+            value={this.state.level}
+            onChange={(event) => this.setState({level: parseInt(event.target.value)}) }
+            prefix={<Icon type="filter" style={{ fontSize: 13 }} />}
+            placeholder="Level" />
+        </Modal>
     </div>)
   }
 }

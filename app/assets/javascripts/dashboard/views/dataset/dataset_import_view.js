@@ -9,11 +9,6 @@ import type { APIDatasetType } from "admin/api_flow_types";
 
 class DatasetImportView extends React.PureComponent {
 
-  props: {
-    datasetName: string,
-    isEditingMode: false,
-  }
-
   state: {
     dataset: ?APIDatasetType,
     datasetJson: string,
@@ -26,6 +21,14 @@ class DatasetImportView extends React.PureComponent {
 
   componentDidMount() {
     this.fetchData();
+  }
+
+  props: {
+    datasetName: string,
+    isEditingMode: boolean,
+  } = {
+    datasetName: "",
+    isEditingMode: false,
   }
 
   async fetchData(): Promise<void> {

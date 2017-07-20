@@ -22,11 +22,17 @@ trait ResultBox extends I18nSupport{
       result
     case ParamFailure(msg, _, _, statusCode: Int) =>
       new JsonResult(statusCode)(Messages(msg))
+    case ParamFailure(msg, _, _, messages: Seq[(String, String)]) =>
+      new JsonResult(BAD_REQUEST)(jsonMessages(messages))
     case Failure(msg, _, _) =>
       new JsonResult(BAD_REQUEST)(Messages(msg))
     case Empty =>
       new JsonResult(NOT_FOUND)("Couldn't find the requested resource.")
   }
+
+  def jsonMessages(messages: Seq[(String, String)]): JsObject =
+    Json.obj(
+      "messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
 }
 
 trait ResultImplicits extends ResultBox with I18nSupport{
@@ -115,7 +121,7 @@ class JsonResult(status: Int) extends Result(header = ResponseHeader(status), bo
   def apply(message: String): Result =
     apply(Html(""), message)
 
-  def jsonHTMLResult(html: Html) = {
+  def jsonHTMLResult(html: Html): JsObject = {
     val htmlJson = html.body match {
       case "" =>
         Json.obj()
@@ -126,7 +132,7 @@ class JsonResult(status: Int) extends Result(header = ResponseHeader(status), bo
     htmlJson
   }
 
-  def jsonMessages(messages: Seq[(String, String)]) =
+  def jsonMessages(messages: Seq[(String, String)]): JsObject =
     Json.obj(
       "messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
 }

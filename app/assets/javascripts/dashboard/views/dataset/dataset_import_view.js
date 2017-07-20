@@ -10,11 +10,13 @@ import type { APIDatasetType } from "admin/api_flow_types";
 class DatasetImportView extends React.PureComponent {
 
   state: {
+    dataLoaded: boolean,
     dataset: ?APIDatasetType,
     datasetJson: string,
     isValidJSON: boolean,
     messages: Array<{["info" | "warning" | "error"]: string}>,
   } = {
+    dataLoaded: false,
     dataset: null,
     datasetJson: "",
     isValidJSON: true,
@@ -22,7 +24,10 @@ class DatasetImportView extends React.PureComponent {
   }
 
   componentDidMount() {
-    this.fetchData();
+    this.fetchData().then(
+      _ => this.setState({ dataLoaded: true }),
+      _ => this.setState({ dataLoaded: true })
+    )
   }
 
   props: {
@@ -42,6 +47,7 @@ class DatasetImportView extends React.PureComponent {
 
     // eslint-disable-next-line react/no-did-mount-set-state
     this.setState({
+      dataLoaded: true,
       dataset,
       datasetJson: JSON.stringify(datasetJson.dataSource, null, "  "),
       messages: datasetJson.messages,
@@ -149,7 +155,7 @@ class DatasetImportView extends React.PureComponent {
     };
 
     const titleString = this.props.isEditingMode ? "Update" : "Import";
-    const content = datasetJson ? (<Input.TextArea
+    const content = this.state.dataLoaded ? (<Input.TextArea
       value={datasetJson}
       onChange={this.handleChangeJson}
       rows={20}
@@ -167,7 +173,7 @@ class DatasetImportView extends React.PureComponent {
         </div>
         {this.getEditModeComponents()}
         <div>
-          <Button onClick={this.importDataset} type="primary">{titleString}</Button>
+          <Button onClick={this.importDataset} type="primary" disabled={this.state.datasetJson === ""}>{titleString}</Button>
           <Button onClick={() => window.history.back()}>Cancel</Button>
         </div>
       </div>

@@ -44,6 +44,7 @@ class DatasetImportView extends React.PureComponent {
     this.setState({
       dataset,
       datasetJson: JSON.stringify(datasetJson.dataSource, null, "  "),
+      errors: datasetJson.messages.map(message => message.error),
     });
   }
 
@@ -106,7 +107,7 @@ class DatasetImportView extends React.PureComponent {
     if (this.state.errors) {
 
       const errorElements = this.state.errors.map(
-        (error, i) => <li key={i}>error</li>
+        (error, i) => <li key={i}>{error}</li>
       );
       const descriptionElement = <ul>{errorElements}</ul>;
 

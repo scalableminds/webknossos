@@ -5,7 +5,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.libs.json.JsValue
-import oxalis.view.ResourceActionCollection
 import models.user.User
 
 /**
@@ -45,8 +44,6 @@ case class TemporaryAnnotation(
   def tracingTime = None    // We currently do not tracing time on temporary annotations
 
   def muta = new TemporaryAnnotationMutations(this)
-
-  def actions(user: Option[User]) = ResourceActionCollection()
 
   def temporaryDuplicate(keepId: Boolean)(implicit ctx: DBAccessContext) = {
     val temp = if (keepId) this.copy() else this.copy(id = BSONObjectID.generate.stringify)

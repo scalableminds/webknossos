@@ -13,12 +13,12 @@ class DatasetImportView extends React.PureComponent {
     dataset: ?APIDatasetType,
     datasetJson: string,
     isValidJSON: boolean,
-    errors: ?Array<string>,
+    messages: Array<{["info" | "warning" | "error"]: string}>,
   } = {
     dataset: null,
     datasetJson: "",
     isValidJSON: true,
-    errors: null,
+    messages: [],
   }
 
   componentDidMount() {
@@ -44,7 +44,7 @@ class DatasetImportView extends React.PureComponent {
     this.setState({
       dataset,
       datasetJson: JSON.stringify(datasetJson.dataSource, null, "  "),
-      errors: datasetJson.messages.map(message => message.error),
+      messages: datasetJson.messages,
     });
   }
 
@@ -64,9 +64,6 @@ class DatasetImportView extends React.PureComponent {
       }).then(() => {
         Toast.success(`Successfully imported ${this.props.datasetName}`);
         window.history.back();
-      },
-      (error) => {
-        this.setState({ errors: error.messages.map(message => message.error) });
       });
     } else {
       Toast.error("Invalid JSON. Please fix the errors.");
@@ -103,23 +100,17 @@ class DatasetImportView extends React.PureComponent {
     this.setState(newState);
   }
 
-  getErrorComponents() {
-    if (this.state.errors) {
-
-      const errorElements = this.state.errors.map(
-        (error, i) => <li key={i}>{error}</li>
-      );
-      const descriptionElement = <ul>{errorElements}</ul>;
-
-      return <Alert
-        message="Error(s) Detected"
-        description={descriptionElement}
-        type="error"
+  getMessageComponents() {
+    const messageElements = this.state.messages.map(
+      (message, i) => <Alert
+        key={i}
+        message={Object.values(message)[0]}
+        type={Object.keys(message)[0]}
         showIcon
       />
-    }
-
-    return <span />;
+    );
+    
+    return <div>{messageElements}</div>;
   }
 
   getEditModeComponents() {
@@ -170,7 +161,7 @@ class DatasetImportView extends React.PureComponent {
       <div className="container" id="dataset-import-view">
         <h3>{titleString} Dataset {this.props.datasetName}</h3>
         <p>Please review your dataset&#39;s properties before importing it.</p>
-        {this.getErrorComponents()}
+        {this.getMessageComponents()}
         <div className="content">
           {content}
         </div>

@@ -18,10 +18,11 @@ import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSou
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
+import play.api.libs.json.{JsValue, Json}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -93,14 +94,18 @@ class DataSourceService @Inject()(
   }
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
-    def Check(expression: Boolean): Box[Unit] = if (expression) Full(()) else Empty
+    def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
 
-    for {
-      _ <- Check(dataSource.scale.isValid) ~> "DataSource scale is invalid"
-      _ <- Check(dataSource.dataLayers.nonEmpty) ~> "DataSource must have at least one dataLayer"
-      _ <- Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty)) ~> "DataSource bounding box must not be empty"
-    } yield {
-      ()
+    val errors = List(
+      Check(dataSource.scale.isValid, "DataSource scale is invalid"),
+      Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),
+      Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty")
+    ).flatten
+
+    if (errors.isEmpty) {
+      Full(())
+    } else {
+      ParamFailure("DataSource is invalid", errors.map("error" -> _))
     }
   }
 

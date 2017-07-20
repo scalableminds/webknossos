@@ -42,15 +42,17 @@ const Toast = {
     let messages;
     if (_.isArray(type) && (message == null)) {
       messages = type;
-      for (message of messages) {
-        if (message.success != null) {
-          return this.success(message.success);
+      const toasts = messages.map((singleMessage) => {
+        if (singleMessage.success != null) {
+          this.success(singleMessage.success);
         }
-        if (message.error != null) {
-          return this.error(message.error);
+        if (singleMessage.error != null) {
+          this.error(singleMessage.error);
         }
-      }
-      return {};
+      });
+      return {
+        remove: () => toasts.foreach(toast => toast.remove()),
+      };
     } else if (_.isArray(message)) {
       messages = message;
       return (messages.map(singleMessage => this.message(type, singleMessage, sticky)));

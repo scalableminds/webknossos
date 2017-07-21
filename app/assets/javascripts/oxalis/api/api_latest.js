@@ -30,7 +30,7 @@ import TWEEN from "tween.js";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import UrlManager from "oxalis/controller/url_manager";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { changeTDView } from "oxalis/controller/camera_controller";
+import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -299,12 +299,12 @@ class TracingApi {
     Store.dispatch(centerTDViewAction());
   }
 
-  changeTDViewXY = (): void => changeTDView(OrthoViews.PLANE_XY);
-  changeTDViewYZ = (): void => changeTDView(OrthoViews.PLANE_YZ);
-  changeTDViewXZ = (): void => changeTDView(OrthoViews.PLANE_XZ);
+  rotate3DViewToXY = (): void => rotate3DViewTo(OrthoViews.PLANE_XY);
+  rotate3DViewToYZ = (): void => rotate3DViewTo(OrthoViews.PLANE_YZ);
+  rotate3DViewToXZ = (): void => rotate3DViewTo(OrthoViews.PLANE_XZ);
 
-  changeTDViewDiagonal = (animate: boolean = true): void => {
-    changeTDView(OrthoViews.TDView, animate);
+  rotate3DViewToDiagonal = (animate: boolean = true): void => {
+    rotate3DViewTo(OrthoViews.TDView, animate);
   };
 
   /**

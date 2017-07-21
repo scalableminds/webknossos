@@ -28,7 +28,6 @@ import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/co
 import type { ModifierKeys } from "libs/input";
 import { setViewportAction, setTDCameraAction, zoomTDViewAction, moveTDViewXAction, moveTDViewYAction, moveTDViewByVectorAction } from "oxalis/model/actions/view_mode_actions";
 import { connect } from "react-redux";
-import api from "oxalis/api/internal_api";
 
 type OwnProps = {
   onRender: () => void,
@@ -185,16 +184,6 @@ class PlaneController extends React.PureComponent {
     // This is necessary, since we instantiated this.controls now. This should be removed
     // when the workaround with requestAnimationFrame(initInputHandlers) is removed.
     this.forceUpdate();
-
-    const callbacks = [
-      api.tracing.changeTDViewDiagonal,
-      api.tracing.changeTDViewXY,
-      api.tracing.changeTDViewYZ,
-      api.tracing.changeTDViewXZ,
-    ];
-
-    $("#TDViewControls button")
-      .each((i, element) => $(element).on("click", () => { callbacks[i](); }));
   }
 
 

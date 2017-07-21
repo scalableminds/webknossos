@@ -38,7 +38,7 @@ class CameraController extends React.Component {
     }));
 
     this.bindToEvents();
-    api.tracing.changeTDViewDiagonal(false);
+    api.tracing.rotate3DViewToDiagonal(false);
   }
 
   componentWillUnmount() {
@@ -133,7 +133,7 @@ type TweenState = {
   b: number,
 };
 
-export function changeTDView(id: OrthoViewType, animate: boolean = true): void {
+export function rotate3DViewTo(id: OrthoViewType, animate: boolean = true): void {
   const state = Store.getState();
   const b = voxelToNm(state.dataset.scale, Model.upperBoundary);
   const pos = voxelToNm(state.dataset.scale, getPosition(state.flycam));

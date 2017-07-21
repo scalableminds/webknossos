@@ -12,25 +12,25 @@ type SetViewportActionType = {
 };
 
 type SetTDCameraActionType = {
-	type: "SET_TD_CAMERA",
-	cameraData: PartialCameraData,
+  type: "SET_TD_CAMERA",
+  cameraData: PartialCameraData,
 }
 
 type CenterTDViewActionType = {
-	type: "CENTER_TD_VIEW",
+  type: "CENTER_TD_VIEW",
 };
 
 type ZoomTDViewActionType = {
-	type: "ZOOM_TD_VIEW",
-	value: number,
-	targetPosition: THREE.Vector3,
-	curWidth: number,
+  type: "ZOOM_TD_VIEW",
+  value: number,
+  targetPosition: THREE.Vector3,
+  curWidth: number,
 };
 
 type MoveTDViewByVectorActionType = {
-	type: "MOVE_TD_VIEW_BY_VECTOR",
-	x: number,
-	y: number,
+  type: "MOVE_TD_VIEW_BY_VECTOR",
+  x: number,
+  y: number,
 };
 
 export const setViewportAction = (viewport: OrthoViewType): SetViewportActionType => ({
@@ -39,38 +39,38 @@ export const setViewportAction = (viewport: OrthoViewType): SetViewportActionTyp
 });
 
 export const setTDCameraAction = (cameraData: PartialCameraData): SetTDCameraActionType => ({
-	type: "SET_TD_CAMERA",
-	cameraData,
+  type: "SET_TD_CAMERA",
+  cameraData,
 });
 
 export const centerTDViewAction = (): CenterTDViewActionType => ({
-	type: "CENTER_TD_VIEW",
+  type: "CENTER_TD_VIEW",
 });
 
 export const zoomTDViewAction = (value: number, targetPosition: THREE.Vector3, curWidth: number): ZoomTDViewActionType => ({
-	type: "ZOOM_TD_VIEW",
-	value,
-	targetPosition,
-	curWidth,
+  type: "ZOOM_TD_VIEW",
+  value,
+  targetPosition,
+  curWidth,
 });
 
 export const moveTDViewByVectorAction = (x: number, y: number): MoveTDViewByVectorActionType => ({
-	type: "MOVE_TD_VIEW_BY_VECTOR",
-	x,
-	y,
+  type: "MOVE_TD_VIEW_BY_VECTOR",
+  x,
+  y,
 });
 
 export const moveTDViewXAction = (x: number): MoveTDViewByVectorActionType =>
-	moveTDViewByVectorAction((x * getTDViewportSize()) / constants.VIEWPORT_WIDTH, 0);
+  moveTDViewByVectorAction((x * getTDViewportSize()) / constants.VIEWPORT_WIDTH, 0);
 
 export const moveTDViewYAction = (y: number): MoveTDViewByVectorActionType =>
-	moveTDViewByVectorAction(0, (-y * getTDViewportSize()) / constants.VIEWPORT_WIDTH);
+  moveTDViewByVectorAction(0, (-y * getTDViewportSize()) / constants.VIEWPORT_WIDTH);
 
 export type ViewModeActionType =
-	  SetViewportActionType
-	| SetTDCameraActionType
-	| CenterTDViewActionType
-	| ZoomTDViewActionType
-	| MoveTDViewByVectorActionType;
+    SetViewportActionType
+  | SetTDCameraActionType
+  | CenterTDViewActionType
+  | ZoomTDViewActionType
+  | MoveTDViewByVectorActionType;
 
 export default {};

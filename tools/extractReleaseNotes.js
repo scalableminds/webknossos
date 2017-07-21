@@ -4,10 +4,8 @@ const fs = require("fs");
 
 // Set this path to the cached json file to avoid hitting the github api limit while developing
 const CACHED_RESPONSE_PATH = "";
-// Adjust this variable to the last PR that shouldn't be included in the release notes
-const LAST_PR = 0;
 
-const RELEASE_NOTES_REGEX = /### Mailable description[^:]*:\r\n([^#]*)/;
+const RELEASE_NOTES_REGEX = /Mailable description[^:]*:\r?\n(.*)/;
 
 (async () => {
   let parsedJSON;
@@ -24,13 +22,19 @@ const RELEASE_NOTES_REGEX = /### Mailable description[^:]*:\r\n([^#]*)/;
     }
   }
 
+  // Sort PRs by merge date
+  parsedJSON.sort((a, b) => Date.parse(b.merged_at) - Date.parse(a.merged_at));
+
   const releaseNotes = parsedJSON
-    // Filter PRs that were merged into master, were merged after LAST_PR and have a PR description
-    .filter(pr => pr.base.ref === "master" && pr.number > LAST_PR && pr.body.length > 0)
+    // Filter PRs that were merged into master and have a PR description
+    .filter(pr => pr.merged_at != null && pr.base.ref === "master" && pr.body.length > 0)
     // Extract the Mailable description
     .map(pr => {
-      const possibleMatch = pr.body.match(RELEASE_NOTES_REGEX);
-      const match = (possibleMatch != null) ? possibleMatch[1].trim() : "";
+      const sections = pr.body.split("###");
+      const possibleMatches = sections
+        .map(section => section.trim().match(RELEASE_NOTES_REGEX))
+        .filter(possibleMatch => possibleMatch != null);
+      const match = possibleMatches.length ? possibleMatches[0][1].trim() : "";
       return { description: match, url: pr.html_url };
     })
     // Remove PRs that have no such description

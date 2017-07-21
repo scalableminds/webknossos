@@ -3,15 +3,17 @@ package controllers
 import java.util.{Calendar, Date}
 import javax.inject.Inject
 
-import models.annotation.AnnotationDAO
+import com.scalableminds.util.tools.Fox
+import models.annotation.{Annotation, AnnotationDAO}
 import models.task.{TaskDAO, TaskService}
 import models.user.time.{TimeSpan, TimeSpanDAO, TimeSpanService}
 import models.user.{User, UserDAO, UserService}
-import net.liftweb.common.Full
+import net.liftweb.common.{Box, Full}
 import oxalis.security.Secured
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsValue, Json, Writes}
+import reactivemongo.bson.BSONObjectID
 
 class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
@@ -26,19 +28,63 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
     for {
       user <- UserService.findOneByEmail(email)
-      time <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis)).futureBox
-    //annotation <- AnnotationDAO.
+      timeList <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis)).futureBox
+    } yield for {
+      times <- timeList
     } yield {
-      time match {
-        case Full(timespans) => Ok(
-          Json.obj(
-            "user" -> user._id.toString,
-            "userarr" -> Json.arr(user.abreviatedName),
-            "times" -> Json.arr(timespans)))
-        //Ok(Json.toJson(timespans))
-        //Ok(Json.obj("timespans" => Json.arr(timespans)))
-        case _ => Ok(Json.arr())
+      for {
+        time <- times
+        annot <- time.annotation
+      } yield for {
+        maybeannotation <- AnnotationDAO.findOneById(annot).futureBox
+      } yield for {
+        annotation <- maybeannotation
+        taskId <- annotation._task
+      } yield {
+        Ok(Json.obj("user" -> Json.toJson(user)(User.userCompactWrites),
+          "task" -> taskId.toString(),
+          "times" -> times))
       }
+      Ok(Json.obj("test" -> "test"))
     }
+
+    /*for {
+      user <- UserService.findOneByEmail(email)
+      timeList <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis)).futureBox
+    //annot <- getAnnotationsByTimeSpans(timeList)
+    } yield {
+      timeList match {
+        case Full(timespans) => for {
+          annot <- timespans.map(timespan => timespan.annotation)
+        } yield {
+          annot match {
+            case Some(annotationId) => for {
+              annotations <- AnnotationDAO.findOneById(annotationId).futureBox
+            } yield {
+              annotations match {
+                case Full(annotation) => for {
+                  taskId <- annotation._task
+                } yield {
+                  Ok(Json.obj(
+                    "user" -> Json.toJson(user)(User.userCompactWrites),
+                    "task" -> taskId.toString(),
+                    "times" -> timespans))
+                }
+                case _ => Ok(Json.arr())
+              }
+
+
+          }
+          case None => Ok(Json.arr())
+        }
+      }
+      case _ => Ok(Json.arr())
+
+
+    Ok(
+      Json.obj(
+        "user" -> Json.toJson(user)(User.userCompactWrites),
+        "times" -> timespans))
+  case _ => Ok(Json.arr())*/
   }
 }

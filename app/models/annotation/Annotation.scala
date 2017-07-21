@@ -12,7 +12,6 @@ import models.basics._
 import models.task.Task
 import models.user.User
 import org.joda.time.format.DateTimeFormat
-import oxalis.view.{ResourceAction, ResourceActionCollection}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
@@ -79,20 +78,6 @@ case class Annotation(
 
   def saveToDB(implicit ctx: DBAccessContext): Fox[Annotation] = {
     AnnotationService.saveToDB(this)
-  }
-
-  def actions(userOpt: Option[User]) = {
-    import controllers.routes._
-    val traceOrView = if(restrictions.allowUpdate(userOpt)) "trace" else "view"
-    val basicActions = List(
-      ResourceAction(traceOrView, AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
-      ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), isAjax = true, clazz = "trace-finish"),
-      ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), isAjax = true),
-      ResourceAction(ResourceAction.Download, AnnotationIOController.download(typ, id), icon = Some("fa fa-download")),
-      ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), isAjax = true)
-    )
-
-    ResourceActionCollection(basicActions)
   }
 }
 

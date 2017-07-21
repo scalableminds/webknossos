@@ -14,7 +14,6 @@ import com.scalableminds.util.tools.{FoxImplicits, Fox}
 import reactivemongo.bson.BSONObjectID
 import com.typesafe.scalalogging.LazyLogging
 import models.tracing.AnnotationStatistics
-import oxalis.view.{ResourceActionCollection, ResourceAction}
 import play.api.libs.json.Json.JsValueWrapper
 import oxalis.mvc.{UrlHelper, FilterableJson}
 import com.scalableminds.util.mvc.Formatter
@@ -64,8 +63,6 @@ trait AnnotationLike extends AnnotationStatistics {
   def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(this, user, Nil)
 
-  def actions(user: Option[User]): ResourceActionCollection
-
   def created : Long
 
   def temporaryDuplicate(keepId: Boolean)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation]
@@ -108,7 +105,6 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
       "task" +> a.task.flatMap(t => Task.transformToJson(t, user)).getOrElse(JsNull),
       "stats" +> a.statisticsForAnnotation().map(_.writeAsJson).getOrElse(JsNull),
       "restrictions" +> AnnotationRestrictions.writeAsJson(a.restrictions, user),
-      "actions" +> a.actions(user),
       "formattedHash" +> Formatter.formatHash(a.id),
       "downloadUrl" +> a.relativeDownloadUrl.map(toAbsoluteUrl),
       "content" +> a.content.flatMap(AnnotationContent.writeAsJson(_)).getOrElse(JsNull),

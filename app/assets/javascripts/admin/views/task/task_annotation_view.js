@@ -3,6 +3,7 @@ import $ from "jquery";
 import moment from "moment";
 import Toast from "libs/toast";
 import Request from "libs/request";
+import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
 
 class TaskAnnotationView extends Marionette.View {
@@ -20,14 +21,37 @@ class TaskAnnotationView extends Marionette.View {
       <span class="caret"></span>
     </a>
     <ul class="dropdown-menu">
-    <% _.each(actions, function(action){ %>
-    <li>
-      <a href="<%- action.call.url %>" class="<% if(action.isAjax){ %>isAjax<% } %>"><i class="<%- action.icon %>"></i><%- action.name %></a>
-    </li>
-    <% }) %>
-    <li>
-      <a href="#" class="cancel-annotation"><i class="fa fa-trash-o"></i>cancel</a>
-    </li>
+      <li><a href="/annotations/Task/<%- id %>">
+        <i class="fa fa-random"></i>
+        <%- state.isFinished ? "view" : "trace" %>
+      </a></li>
+      <li><a href="/annotations/Task/<%- id %>/transfer" id="transfer-task">
+        <i class="fa fa-share"></i>
+        transfer
+      </a></li>
+      <li><a href="/annotations/Task/<%- id %>/download">
+        <i class="fa fa-download"></i>
+        download
+      </a></li>
+      <li><a href="/annotations/Task/<%- id %>/reset" class="isAjax">
+        <i class="fa fa-undo"></i>
+        reset
+      </a></li>
+      <li><a href="#" id="cancel-annotation">
+        <i class="fa fa-trash-o"></i>
+        cancel
+      </a></li>
+      <% if (state.isFinished) { %>
+        <li><a href="/annotations/Task/<%- id %>/reopen" class="isAjax">
+          <i class="fa fa-share"></i>
+          reopen
+        </a></li>
+      <% } else { %>
+        <li><a href="/annotations/Task/<%- id %>/finish" class="isAjax">
+          <i class="fa fa-check-circle-o"></i>
+          finish
+        </a></li>
+      <% } %>
     </ul>
   </div>
 </td>\
@@ -38,7 +62,7 @@ class TaskAnnotationView extends Marionette.View {
 
     this.prototype.events = {
       "click .isAjax": "callAjax",
-      "click .cancel-annotation": "cancelAnnotation",
+      "click #cancel-annotation": "cancelAnnotation",
     };
 
     this.prototype.modelEvents =
@@ -47,7 +71,6 @@ class TaskAnnotationView extends Marionette.View {
   attributes() {
     return { id: this.model.get("id") };
   }
-
 
   // some actions are real links and some need to be send as ajax calls to the server
   callAjax(evt) {
@@ -61,11 +84,14 @@ class TaskAnnotationView extends Marionette.View {
     );
   }
 
-
   cancelAnnotation() {
     if (window.confirm("Do you really want to cancel this annotation?")) {
       this.model.destroy();
     }
+  }
+
+  onDestroy() {
+    Utils.__guard__(this.modal, x => x.destroy());
   }
 }
 TaskAnnotationView.initClass();

@@ -40,21 +40,21 @@ class TeamRoleModalView extends React.PureComponent {
 
   componentWillReceiveProps(newProps: TeamRoleModalPropType) {
     // If a single user is selected, pre-select his teams
+    // otherwise unselect all teams
+
     const newSelectedTeams = this.state.selectedTeams.map(selectedTeam => {
-      let role;
+      let newRole = null;
+
       if (newProps.selectedUserIds.length === 1) {
         const user = this.props.users.find((_user) => _user.id === newProps.selectedUserIds[0]);
         const userTeam = user.teams.find(_userTeam => selectedTeam.team === _userTeam.team);
 
         if (userTeam) {
-          role = { name: userTeam.role.name };
+          newRole = { name: userTeam.role.name };
         }
-      } else {
-      // otherwise unselect all teams
-        role = null;
       }
 
-      return Object.assign({}, selectedTeam, { role });
+      return Object.assign({}, selectedTeam, { role: newRole });
     });
 
     this.setState({ selectedTeams: newSelectedTeams });
@@ -80,12 +80,14 @@ class TeamRoleModalView extends React.PureComponent {
 
     const newUsers = this.props.users.map((user) => {
       if (this.props.selectedUserIds.includes(user.id)) {
-        // user.teams = [...newTeams]; // copy the array
-        return Object.assign({}, user, {teams: [...newTeams]});
-        // const url = `/api/users/${user.id}`;
-        // Request.sendJSONReceiveJSON(url, {
-        //   data: user
-        // });
+        const newUser = Object.assign({}, user, { teams: newTeams });
+
+        const url = `/api/users/${user.id}`;
+        Request.sendJSONReceiveJSON(url, {
+          data: newUser
+        });
+
+        return newUser;
       }
       return user;
     })

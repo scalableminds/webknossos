@@ -1,7 +1,11 @@
+// @flow
+
 import _ from "lodash";
 import React from "react";
 import { Modal, Button, Input, Icon } from "antd";
 import Request from "libs/request";
+import type { APIUserType } from "admin/api_flow_types";
+
 
 class ExperienceModalView extends React.PureComponent {
 
@@ -22,7 +26,7 @@ class ExperienceModalView extends React.PureComponent {
     this.setExperience(null, true);
   }
 
-  setExperience = (event, shouldAddValue: boolean = false): void =>{
+  setExperience = (event: ?SyntheticInputEvent, shouldAddValue: boolean = false): void =>{
     const { domain, level } = this.state;
     if (domain && level) {
 
@@ -83,6 +87,7 @@ class ExperienceModalView extends React.PureComponent {
     return <Modal
       title="Change Experiences"
       visible={this.props.visible}
+      onCancel={this.props.onCancel}
       footer={
         <div>
           <Button

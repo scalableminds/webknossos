@@ -1,23 +1,30 @@
+// @flow
+
 import _ from "lodash";
 import React from "react";
 import { Table, Tag, Icon, Spin, Button } from "antd";
 import Request from "libs/request";
-import app from "app";
-import Utils from "libs/utils";
-import Toast from "libs/toast";
 import TeamRoleModalView from "admin/views/user/team_role_modal_view";
 import ExperienceModalView from "admin/views/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
+import type { APIUserType } from "admin/api_flow_types";
 
 const { Column } = Table;
 
 class UserListView extends React.PureComponent {
 
-  state = {
+  state: {
+    isLoading: boolean,
+    users: ?Array<APIUserType>,
+    selectedUserIds: Array<string>,
+    isExperienceModalVisible: boolean,
+    isTeamRoleModalVisible: boolean,
+  } = {
     isLoading: true,
     users: null,
     selectedUserIds: [],
     isExperienceModalVisible: false,
+    isTeamRoleModalVisible: false,
   }
 
   componentDidMount() {
@@ -38,20 +45,23 @@ class UserListView extends React.PureComponent {
 
   deactivateUser = () => {}
 
-  handleExperienceChange = (updatedUsers) => {
+  handleUsersChange = (updatedUsers: Array<APIUserType>) => {
     this.setState({
-      user: updatedUsers,
+      users: updatedUsers,
       isExperienceModalVisible: false,
+      isTeamRoleModalVisible: false,
     });
   }
 
   render() {
+    const compareFunc = (attribute: string) =>
+      (a: Object, b: Object) =>
+        a[attribute].toLowerCase().localeCompare(b[attribute].toLowerCase());
 
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
-      onChange: (selectedUserIds, selectedUsers) => {
+      onChange: (selectedUserIds) => {
         this.setState({ selectedUserIds });
-        console.log(`selectedUserIds: ${selectedUserIds}`, 'selectedUsers: ', selectedUsers);
       }
     };
 
@@ -63,6 +73,12 @@ class UserListView extends React.PureComponent {
       <h3>Users</h3>
 
       { hasRowsSelected ? <span>{this.state.selectedUserIds.length} selected user(s)</span> : null}
+      <Button
+        onClick={() => this.setState({isTeamRoleModalVisible: true}) }
+        icon="team"
+        disabled={!hasRowsSelected}>
+        Edit Teams
+      </Button>
       <Button
         onClick={() => this.setState({isExperienceModalVisible: true}) }
         icon="trophy"
@@ -82,19 +98,19 @@ class UserListView extends React.PureComponent {
           title="Last name"
           dataIndex="lastName"
           key="lastName"
-          sorter={Utils.compareBy("lastName")}
+          sorter={compareFunc("lastName")}
         />
         <Column
           title="First name"
           dataIndex="firstName"
           key="firstName"
-          sorter={Utils.compareBy("firstName")}
+          sorter={compareFunc("firstName")}
         />
         <Column
           title="Email"
           dataIndex="email"
           key="email"
-          sorter={Utils.compareBy("email")}
+          sorter={compareFunc("email")}
         />
         <Column
           title="Experiences"
@@ -110,11 +126,12 @@ class UserListView extends React.PureComponent {
           title="Teams - Role"
           dataIndex="teams"
           key="teams_"
-          render={(teams, user) => teams.map((team) => (
-            <span className="no-wrap" key={`team_role_${user.id}_${team.team}`}>
+          render={(teams, user) => teams.map((team) => {
+            if (team.role === null) {debugger}
+            return <span className="no-wrap" key={`team_role_${user.id}_${team.team}`}>
               {team.team} <Tag color={TemplateHelpers.stringToColor(team.role.name)}>{team.role.name}</Tag>
             </span>
-          ))}
+          })}
         />
         <Column
           title="Status"
@@ -148,8 +165,15 @@ class UserListView extends React.PureComponent {
         visible={this.state.isExperienceModalVisible}
         selectedUserIds={this.state.selectedUserIds}
         users={_.clone(this.state.users)}
-        onChange={this.handleExperienceChange}
+        onChange={this.handleUsersChange}
         onCancel={() => this.setState({isExperienceModalVisible: false}) }
+      />
+      <TeamRoleModalView
+        visible={this.state.isTeamRoleModalVisible}
+        selectedUserIds={this.state.selectedUserIds}
+        users={_.clone(this.state.users)}
+        onChange={this.handleUsersChange}
+        onCancel={() => this.setState({isTeamRoleModalVisible: false}) }
       />
     </div>)
   }

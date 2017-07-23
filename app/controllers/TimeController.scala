@@ -9,11 +9,14 @@ import models.task.{TaskDAO, TaskService}
 import models.user.time.{TimeSpan, TimeSpanDAO, TimeSpanService}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Full}
-import oxalis.security.Secured
+import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsValue, Json, Writes}
+import play.api.mvc.AnyContent
 import reactivemongo.bson.BSONObjectID
+
+import scala.concurrent.Future
 
 class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
@@ -32,21 +35,12 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     } yield for {
       times <- timeList
     } yield {
-      for {
-        time <- times
-        annot <- time.annotation
-      } yield for {
-        maybeannotation <- AnnotationDAO.findOneById(annot).futureBox
-      } yield for {
-        annotation <- maybeannotation
-        taskId <- annotation._task
-      } yield {
-        Ok(Json.obj("user" -> Json.toJson(user)(User.userCompactWrites),
-          "task" -> taskId.toString(),
-          "times" -> times))
-      }
-      Ok(Json.obj("test" -> "test"))
+      Ok(Json.obj("user" -> Json.toJson(user)(User.userCompactWrites),
+        "task" -> "sds",
+        "times" -> getAsFinalList(times)))
+
     }
+
 
     /*for {
       user <- UserService.findOneByEmail(email)
@@ -87,4 +81,38 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
         "times" -> timespans))
   case _ => Ok(Json.arr())*/
   }
+
+  def getAsFinalList(l: List[TimeSpan])(implicit request: AuthenticatedRequest[AnyContent]): List[TimeSpan] = {
+    for{
+      list <- Fox.sequence(l.map(t => getTimeSpanTask(t))) //Compiler complains here?! Just because the call "getTimeSpanTask(t)", which results in an error?
+    }yield{
+      (list.flatten).flatten
+    }
+    //(Fox.sequence(l.map(t: TimeSpan => getTimeSpanTask(t)):List[Fox[Some[TimeSpan]]])).flatten)
+  }
+
+  /*def getTimeSpanTask(t: TimeSpan) = Authenticated.async { implicit request =>
+    for{
+      annotation <- t.annotation
+    }yield for {
+      maybeannotation <- AnnotationDAO.findOneById(annotation).futureBox
+    }yield for {
+      a <- maybeannotation
+    }yield{
+      Ok(Json.arr())
+    }
+    Ok(Json.arr()).
+  }
+*/
+
+  def getTimeSpanTask(t: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]) = {
+    for {
+      annotation <- t.annotation
+      maybeannotation <- AnnotationDAO.findOneById(annotation) // why doesn't this work?
+    } yield {
+      Some(t) // in case there is a task. Otherwise None
+    }
+  }
+
+
 }

@@ -41,8 +41,9 @@ class SkeletonTracingService @Inject()(
       scale = new Scale(1,1,1),
       editPosition = None,
       editRotation = None,
-      zoomLevel = None)
-    tracingDataStore.skeletons.putJson(tracing.id, 0, tracing)
+      zoomLevel = None,
+      version = 0)
+    tracingDataStore.skeletons.putJson(tracing.id, tracing.version, tracing)
     tracing
   }
 
@@ -50,7 +51,7 @@ class SkeletonTracingService @Inject()(
     for {
       tracing <- NMLParser.parse(createNewId(), name, nml.trim())
     } yield {
-      tracingDataStore.skeletons.putJson(tracing.id, 0, tracing)
+      tracingDataStore.skeletons.putJson(tracing.id, tracing.version, tracing)
       tracing
     }
   }
@@ -79,25 +80,27 @@ class SkeletonTracingService @Inject()(
 
   def applyPendingUpdates(tracingVersioned: VersionedKeyValuePair[SkeletonTracing], desiredVersion: Option[Long]): Box[SkeletonTracing] = {
     val tracing = tracingVersioned.value
-    for {
-      desiredOrNewestPossibleVersion <- findDesiredOrNewestPossibleVersion(desiredVersion, tracing.id)
-    } yield {
-      val existingVersion = tracingVersioned.version
-      val pendingUpdates = findPendingUpdates(tracing.id, existingVersion, desiredOrNewestPossibleVersion)
-      val updatedTracing = update(tracing, pendingUpdates, desiredOrNewestPossibleVersion)
-      updatedTracing
+    val existingVersion = tracingVersioned.version
+    val newVersion = findDesiredOrNewestPossibleVersion(desiredVersion, tracingVersioned)
+    if (newVersion > existingVersion) {
+      val pendingUpdates = findPendingUpdates(tracing.id, existingVersion, newVersion)
+      val updatedTracing = update(tracing, pendingUpdates, newVersion)
+      tracingDataStore.skeletons.putJson(updatedTracing.id, newVersion, updatedTracing)
+      Some(updatedTracing)
+    } else {
+      Some(tracing)
     }
   }
 
-  private def findDesiredOrNewestPossibleVersion(desiredVersion: Option[Long], tracingId: String): Option[Long] = desiredVersion match {
-    case None => {
-      for {
-        newestUpdate <- tracingDataStore.skeletonUpdates.get(tracingId)
-      } yield {
-        newestUpdate.version
+  private def findDesiredOrNewestPossibleVersion(desiredVersion: Option[Long], tracingVersioned: VersionedKeyValuePair[SkeletonTracing]): Long = {
+    (for {
+      newestUpdate <- tracingDataStore.skeletonUpdates.get(tracingVersioned.value.id)
+    } yield {
+      desiredVersion match {
+        case None => newestUpdate.version
+        case Some(desiredSome) => math.min(desiredSome, newestUpdate.version)
       }
-    }
-    case Some(desiredVersionSome) => desiredVersion
+    }).getOrElse(tracingVersioned.version) //if there are no updates at all, assume tracing was created from NML
   }
 
   private def findPendingUpdates(tracingId: String, existingVersion: Long, desiredVersion: Long): List[SkeletonUpdateAction] = {
@@ -126,8 +129,7 @@ class SkeletonTracingService @Inject()(
         case update :: tail => updateIter(update.applyOn(tracing), tail)
       }
       val updated = updateIter(tracing, updates)
-      tracingDataStore.skeletons.putJson(updated.id, newVersion, updated)
-      updated
+      updated.copy(version = newVersion)
     }
   }
 

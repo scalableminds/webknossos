@@ -21,7 +21,8 @@ case class SkeletonTracing(id: String,
                            scale: Scale,
                            editPosition: Option[Point3D],
                            editRotation: Option[Vector3D],
-                           zoomLevel: Option[Double]) extends Tracing {
+                           zoomLevel: Option[Double],
+                           version: Long) extends Tracing {
 
   def addTree(newTree: Tree): SkeletonTracing =
     this.copy(trees = newTree :: this.trees)

@@ -49,7 +49,7 @@ object NMLParser extends LazyLogging {
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}")
         SkeletonTracing(id, name, dataSetName, trees.toList, time, activeNodeId,
-          scale, editPosition, editRotation, zoomLevel)
+          scale, editPosition, editRotation, zoomLevel, version=0)
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>

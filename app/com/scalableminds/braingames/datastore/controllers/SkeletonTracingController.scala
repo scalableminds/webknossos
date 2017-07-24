@@ -88,4 +88,16 @@ class SkeletonTracingController @Inject()(
     }
   }
 
+
+  def createMergedFromZip(name: String) = Action {implicit request => {Ok}}
+  def createMergedFromIds(name: String) = Action {implicit request => {Ok}}
+  def createMultipleFromZip() = Action {implicit request => {Ok}}
+  def createMultipleFromCsv() = Action {implicit request => {Ok}}
+
+
+  def get(tracingId: String, version: Option[Long]) = Action {implicit request => {Ok}}
+  def download(tracingId: String, version: Option[Long]) = Action {implicit request => {Ok}} // TODO: return one NML
+  def getMerged = Action {implicit request => {Ok}} //takes json list of ids
+  def downloadMultiple = Action {implicit request => {Ok}} //takes json list of ids
+
 }

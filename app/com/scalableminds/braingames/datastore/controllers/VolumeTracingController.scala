@@ -36,6 +36,9 @@ class VolumeTracingController @Inject()(
     }
   }
 
+  def createFromZip(dataSetName: String) = Action {implicit request => {Ok}}
+  def download(tracingId: String, version: Option[Long]) = Action {implicit request => {Ok}}
+
   def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateAction]]) {
     implicit request => {
       for {

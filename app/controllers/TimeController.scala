@@ -31,13 +31,12 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
     for {
       user <- UserService.findOneByEmail(email)
-      timeList <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis)).futureBox
-    } yield for {
-      times <- timeList
+      timeList <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
+      timeListWithTask <- getAsFinalList(timeList)
     } yield {
       Ok(Json.obj("user" -> Json.toJson(user)(User.userCompactWrites),
         "task" -> "sds",
-        "times" -> getAsFinalList(times)))
+        "times" -> timeListWithTask))
 
     }
 
@@ -82,37 +81,23 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   case _ => Ok(Json.arr())*/
   }
 
-  def getAsFinalList(l: List[TimeSpan])(implicit request: AuthenticatedRequest[AnyContent]): List[TimeSpan] = {
-    for{
-      list <- Fox.sequence(l.map(t => getTimeSpanTask(t))) //Compiler complains here?! Just because the call "getTimeSpanTask(t)", which results in an error?
-    }yield{
-      (list.flatten).flatten
+  def getAsFinalList(l: List[TimeSpan])(implicit request: AuthenticatedRequest[AnyContent]): Future[List[TimeSpan]] = {
+    for {
+      list <- Fox.sequence(l.map(t => getTimeSpanTask(t)))
+    } yield {
+      list.flatten.flatten
     }
-    //(Fox.sequence(l.map(t: TimeSpan => getTimeSpanTask(t)):List[Fox[Some[TimeSpan]]])).flatten)
   }
-
-  /*def getTimeSpanTask(t: TimeSpan) = Authenticated.async { implicit request =>
-    for{
-      annotation <- t.annotation
-    }yield for {
-      maybeannotation <- AnnotationDAO.findOneById(annotation).futureBox
-    }yield for {
-      a <- maybeannotation
-    }yield{
-      Ok(Json.arr())
-    }
-    Ok(Json.arr()).
-  }
-*/
 
   def getTimeSpanTask(t: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]) = {
-    for {
-      annotation <- t.annotation
-      maybeannotation <- AnnotationDAO.findOneById(annotation) // why doesn't this work?
-    } yield {
-      Some(t) // in case there is a task. Otherwise None
+    t.annotation match {
+      case Some(annotationId) => for {
+        annotation <- AnnotationDAO.findOneById(annotationId)
+      } yield {
+        Some(t)
+      }
+      case None => Future(None).flatten
     }
   }
-
 
 }

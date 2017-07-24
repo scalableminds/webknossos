@@ -29,6 +29,8 @@ import dimensions from "oxalis/model/dimensions";
 import TWEEN from "tween.js";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import UrlManager from "oxalis/controller/url_manager";
+import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
+import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -286,6 +288,24 @@ class TracingApi {
     getNodeAndTree(Store.getState().tracing, nodeId)
       .map(([, node]) => Store.dispatch(setPositionAction(node.position)));
   }
+
+  /**
+   * Centers the 3D view.
+   *
+   * @example
+   * api.tracing.centerTDView()
+   */
+  centerTDView = (): void => {
+    Store.dispatch(centerTDViewAction());
+  }
+
+  rotate3DViewToXY = (): void => rotate3DViewTo(OrthoViews.PLANE_XY);
+  rotate3DViewToYZ = (): void => rotate3DViewTo(OrthoViews.PLANE_YZ);
+  rotate3DViewToXZ = (): void => rotate3DViewTo(OrthoViews.PLANE_XZ);
+
+  rotate3DViewToDiagonal = (animate: boolean = true): void => {
+    rotate3DViewTo(OrthoViews.TDView, animate);
+  };
 
   /**
    * Starts an animation to center the given position.

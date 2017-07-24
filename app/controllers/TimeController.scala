@@ -1,18 +1,22 @@
 package controllers
 
+import java.util
 import java.util.{Calendar, Date}
 import javax.inject.Inject
 
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.{Annotation, AnnotationDAO}
-import models.task.{TaskDAO, TaskService}
+import models.project.ProjectDAO
+import models.task.{TaskDAO, TaskService, TaskTypeDAO}
+import models.team.Team
 import models.user.time.{TimeSpan, TimeSpanDAO, TimeSpanService}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsValue, Json, Writes}
+import play.api.libs.json.{JsObject, JsValue, Json, Writes}
 import play.api.mvc.AnyContent
 import reactivemongo.bson.BSONObjectID
 
@@ -32,72 +36,61 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     for {
       user <- UserService.findOneByEmail(email)
       timeList <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
-      timeListWithTask <- getAsFinalList(timeList)
+      timeListWithTask <- getOnlyTimeSpansWithTask(timeList)
+      js <- Future.traverse(timeListWithTask)(timeWrites(_))
     } yield {
-      Ok(Json.obj("user" -> Json.toJson(user)(User.userCompactWrites),
-        "task" -> "sds",
-        "times" -> timeListWithTask))
-
-    }
-
-
-    /*for {
-      user <- UserService.findOneByEmail(email)
-      timeList <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis)).futureBox
-    //annot <- getAnnotationsByTimeSpans(timeList)
-    } yield {
-      timeList match {
-        case Full(timespans) => for {
-          annot <- timespans.map(timespan => timespan.annotation)
-        } yield {
-          annot match {
-            case Some(annotationId) => for {
-              annotations <- AnnotationDAO.findOneById(annotationId).futureBox
-            } yield {
-              annotations match {
-                case Full(annotation) => for {
-                  taskId <- annotation._task
-                } yield {
-                  Ok(Json.obj(
-                    "user" -> Json.toJson(user)(User.userCompactWrites),
-                    "task" -> taskId.toString(),
-                    "times" -> timespans))
-                }
-                case _ => Ok(Json.arr())
-              }
-
-
-          }
-          case None => Ok(Json.arr())
-        }
-      }
-      case _ => Ok(Json.arr())
-
-
-    Ok(
-      Json.obj(
+      Ok(Json.obj(
         "user" -> Json.toJson(user)(User.userCompactWrites),
-        "times" -> timespans))
-  case _ => Ok(Json.arr())*/
+        "timelogs" -> Json.toJson(js)))
+    }
   }
 
-  def getAsFinalList(l: List[TimeSpan])(implicit request: AuthenticatedRequest[AnyContent]): Future[List[TimeSpan]] = {
+  def timeWrites(timeSpan: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]): Future[JsObject] = {
     for {
-      list <- Fox.sequence(l.map(t => getTimeSpanTask(t)))
+      task <- getTaskForTimeSpan(timeSpan).futureBox
+      tasktype <- TaskTypeDAO.findOneById(task.get._taskType).futureBox
+      project <- ProjectDAO.findOneByName(task.get._project).futureBox
+    } yield {
+      Json.obj(
+        "time" -> timeSpan.time,
+        "timestamp" -> timeSpan.timestamp,
+        "annotation" -> timeSpan.annotation,
+        "_id" -> timeSpan._id.stringify,
+        "task_id" -> task.get.id,
+        "project_name" -> project.get.name,
+        "tasktype_id" -> tasktype.get.id,
+        "tasktype_summary" -> tasktype.get.summary)
+    }
+  }
+
+  def getTaskForTimeSpan(timeSpan: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]) = {
+    for {
+      annotation <- AnnotationDAO.findOneById(timeSpan.annotation.get)
+      task <- TaskService.findOneById(annotation._task.get.stringify)
+    } yield {
+      task
+    }
+  }
+
+  def getOnlyTimeSpansWithTask(l: List[TimeSpan])(implicit request: AuthenticatedRequest[AnyContent]): Future[List[TimeSpan]] = {
+    for {
+      list <- Fox.sequence(l.map(t => getTimeSpanOptionTask(t)))
     } yield {
       list.flatten.flatten
     }
   }
 
-  def getTimeSpanTask(t: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]) = {
+  def getTimeSpanOptionTask(t: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]): Fox[Option[TimeSpan]] = {
     t.annotation match {
       case Some(annotationId) => for {
         annotation <- AnnotationDAO.findOneById(annotationId)
       } yield {
-        Some(t)
+        annotation._task match {
+          case Some(_) => Some(t)
+          case None => None
+        }
       }
-      case None => Future(None).flatten
+      case None => Fox(Future(None))
     }
   }
-
 }

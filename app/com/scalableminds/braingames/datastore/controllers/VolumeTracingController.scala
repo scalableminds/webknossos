@@ -24,7 +24,7 @@ class VolumeTracingController @Inject()(
 
   implicit val volumeDataStore = tracingDataStore.volumeData
 
-  def create(dataSetName: String) = Action.async {
+  def createEmpty(dataSetName: String) = Action.async {
     implicit request => {
       for {
         dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound")
@@ -36,7 +36,7 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def update(dataSetName: String, tracingId: String) = TokenSecuredAction(dataSetName, tracingId).async(validateJson[List[VolumeUpdateAction]]) {
+  def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateAction]]) {
     implicit request => {
       for {
         tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
@@ -47,7 +47,7 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def download(dataSetName: String, tracingId: String) = TokenSecuredAction(dataSetName, tracingId).async {
+  def get(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       for {
         tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")

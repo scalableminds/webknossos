@@ -20,14 +20,14 @@ class SkeletonTracingController @Inject()(
                                          val messagesApi: MessagesApi
                                        ) extends Controller {
 
-  def create(dataSetName: String) = Action {
+  def createEmpty(dataSetName: String) = Action {
     implicit request => {
       val tracing = skeletonTracingService.create(dataSetName)
       Ok(tracing.id)
     }
   }
 
-  def createFromNML(name: String) = Action(parse.tolerantText) {
+  def createFromNml(name: String) = Action(parse.tolerantText) {
     implicit request => {
       for {
         tracing <- skeletonTracingService.createFromNML(name, request.body)
@@ -60,7 +60,7 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def downloadNML(tracingId: String, version: Option[Long]) = Action.async {
+  def downloadNml(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       for {
         tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")

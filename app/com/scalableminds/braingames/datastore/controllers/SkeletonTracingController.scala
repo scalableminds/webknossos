@@ -48,19 +48,18 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def downloadJson(tracingId: String, version: Option[Long]) = Action.async {
+  def get(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       for {
         tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
         updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
-        serialized <- skeletonTracingService.downloadJson(updatedTracing)
       } yield {
-        Ok(serialized)
+        Ok(Json.toJson(updatedTracing))
       }
     }
   }
 
-  def downloadNml(tracingId: String, version: Option[Long]) = Action.async {
+  def download(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       for {
         tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
@@ -94,10 +93,24 @@ class SkeletonTracingController @Inject()(
   def createMultipleFromZip() = Action {implicit request => {Ok}}
   def createMultipleFromCsv() = Action {implicit request => {Ok}}
 
+  def getMerged = Action(validateJson[List[String]]) {
+    implicit request => {
+      for {
+        tracingMerged <- skeletonTracingService.merge(request.body, shouldSave=false)
+      } yield {
+        Ok(Json.toJson(tracingMerged))
+      }
+    }
+  }
 
-  def get(tracingId: String, version: Option[Long]) = Action {implicit request => {Ok}}
-  def download(tracingId: String, version: Option[Long]) = Action {implicit request => {Ok}} // TODO: return one NML
-  def getMerged = Action {implicit request => {Ok}} //takes json list of ids
-  def downloadMultiple = Action {implicit request => {Ok}} //takes json list of ids
+  def downloadMultiple = Action.async(validateJson[List[String]]) {
+    implicit request => {
+      for {
+        zip <- skeletonTracingService.downloadMultiple(request.body, dataSourceRepository)
+      } yield {
+        Ok.sendFile(zip.file)
+      }
+    }
+  }
 
 }

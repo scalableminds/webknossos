@@ -55,7 +55,7 @@ class SkeletonTracingService @Inject()(
 
   private def save(tracing: SkeletonTracing) = tracingDataStore.skeletons.putJson(tracing.id, tracing.version, tracing)
 
-  def createFromNML(name: String, nml: String): Box[SkeletonTracing] = {
+  def createFromNml(name: String, nml: String): Box[SkeletonTracing] = {
     for {
       tracing <- NMLParser.parse(createNewId(), name, nml.trim())
     } yield {
@@ -72,7 +72,7 @@ class SkeletonTracingService @Inject()(
     }.toFox)
   }
 
-  def downloadNML(tracing: SkeletonTracing, dataSourceRepository: DataSourceRepository): Option[Enumerator[Array[Byte]]] = {
+  def downloadNml(tracing: SkeletonTracing, dataSourceRepository: DataSourceRepository): Option[Enumerator[Array[Byte]]] = {
     for {
       dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName)
     } yield {
@@ -82,31 +82,31 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  def downloadMultiple(ids: List[String], dataSourceRepository: DataSourceRepository): Fox[TemporaryFile] = {
-    val nmls:List[Enumerator[Array[Byte]]] = for {
-      tracingId <- ids
-      tracing <- find(tracingId)
-      tracingAsNml <- downloadNML(tracing, dataSourceRepository)
+  def downloadMultiple(params: DownloadMultipleParameters, dataSourceRepository: DataSourceRepository): Fox[TemporaryFile] = {
+    val nmls:List[(Enumerator[Array[Byte]],String)] = for {
+      tracingParams <- params.tracings
+      tracingVersioned <- findVersioned(tracingParams.tracingId, tracingParams.version)
+      tracingUpdated <- applyPendingUpdates(tracingVersioned, tracingParams.version)
+      tracingAsNml <- downloadNml(tracingUpdated, dataSourceRepository)
     } yield {
-      tracingAsNml
+      (tracingAsNml, tracingParams.outfileName)
     }
 
     for {
-      zip <- createZip(nmls, "aZipFile") //TODO: pass desired file name
+      zip <- createZip(nmls, params.zipfileName)
     } yield {
       zip
     }
   }
 
-  private def createZip(nmls: List[Enumerator[Array[Byte]]], zipFileName: String): Future[TemporaryFile] = {
-    //TODO: pass individual desired file names
-    val zipped = TemporaryFile("annotationZips", normalize(zipFileName))
+  private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String): Future[TemporaryFile] = {
+    val zipped = TemporaryFile(normalize(zipFileName), ".zip")
     val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(zipped.file)))
 
-    def addToZip(nmls: List[Enumerator[Array[Byte]]]): Future[Boolean] = {
+    def addToZip(nmls: List[(Enumerator[Array[Byte]],String)]): Future[Boolean] = {
       nmls match {
         case head :: tail =>
-          zipper.withFile(createNewId() + ".nml")(NamedEnumeratorStream(head, "").writeTo).flatMap(_ => addToZip(tail))
+          zipper.withFile(head._2 + ".nml")(NamedEnumeratorStream(head._1, "").writeTo).flatMap(_ => addToZip(tail))
         case _            =>
           Future.successful(true)
       }

@@ -1,12 +1,9 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
-import javax.xml.stream.XMLStreamWriter
-
 import com.scalableminds.braingames.datastore.tracings.Tracing
+import com.scalableminds.braingames.datastore.tracings.skeleton.TreeUtils
 import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
 import com.scalableminds.util.image.Color
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.xml.{SynchronousXMLWrites, XMLWrites, Xml}
 import play.api.libs.json.Json
 
 /**
@@ -112,10 +109,6 @@ case class SkeletonTracing(id: String,
     this.copy(trees = mapTrees(treeId, treeTransform))
   }
 
-
-
-
-
   private def mapTrees(treeId: Int, transformTree: Tree => Tree): List[Tree] = {
     this.trees.map((tree: Tree) => if (tree.treeId == treeId) transformTree(tree) else tree)
   }
@@ -123,6 +116,7 @@ case class SkeletonTracing(id: String,
   private def treeById(id: Int) =
     trees.find(_.treeId == id)
       .getOrElse(throw new NoSuchElementException("Tracing does not contain tree with requested id " + id))
+
 }
 
 object SkeletonTracing {

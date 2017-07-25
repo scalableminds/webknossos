@@ -6,7 +6,7 @@ package com.scalableminds.braingames.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
-import com.scalableminds.braingames.datastore.tracings.skeleton.{DownloadMultipleParameters, SkeletonTracingService, SkeletonUpdateAction, SkeletonUpdateActionGroup}
+import com.scalableminds.braingames.datastore.tracings.skeleton._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -93,7 +93,7 @@ class SkeletonTracingController @Inject()(
   def createMultipleFromZip() = Action {implicit request => {Ok}}
   def createMultipleFromCsv() = Action {implicit request => {Ok}}
 
-  def getMerged = Action(validateJson[List[String]]) {
+  def getMerged = Action(validateJson[List[TracingSelector]]) {
     implicit request => {
       for {
         tracingMerged <- skeletonTracingService.merge(request.body, shouldSave=false)

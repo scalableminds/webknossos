@@ -8,6 +8,8 @@ import play.api.libs.json.Json
 
 case class DownloadTracingParameters(tracingId: String, version: Option[Long], outfileName: String)
 case class DownloadMultipleParameters(zipfileName: String, tracings:List[DownloadTracingParameters])
+case class TracingSelector(tracingId: String, version: Option[Long])
 
 object DownloadTracingParameters {implicit val jsonFormat = Json.format[DownloadTracingParameters]}
 object DownloadMultipleParameters {implicit val jsonFormat = Json.format[DownloadMultipleParameters]}
+object TracingSelector {implicit val jsonFormat = Json.format[TracingSelector]}

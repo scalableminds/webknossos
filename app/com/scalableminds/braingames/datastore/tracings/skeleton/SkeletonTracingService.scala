@@ -11,12 +11,10 @@ import com.scalableminds.braingames.datastore.tracings.skeleton.elements.Skeleto
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import net.liftweb.common.{Box, Full}
-import play.api.i18n.Messages
+import net.liftweb.common.Box
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsValue, Json}
 
 import scala.concurrent.Future
 
@@ -29,11 +27,15 @@ class SkeletonTracingService @Inject()(
 
   private def createNewId(): String = UUID.randomUUID.toString
 
+  //TODO: clean up, can probably always be replaced by findUpdated?
   def find(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
     tracingDataStore.skeletons.getJson[SkeletonTracing](tracingId, version).map(_.value)
 
   def findVersioned(tracingId: String, version: Option[Long] = None): Box[VersionedKeyValuePair[SkeletonTracing]] =
     tracingDataStore.skeletons.getJson[SkeletonTracing](tracingId, version)
+
+  def findUpdated(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
+    findVersioned(tracingId, version).flatMap(tracing => applyPendingUpdates(tracing, version))
 
   def create(datSetName: String): SkeletonTracing = {
     val id = createNewId()
@@ -180,22 +182,21 @@ class SkeletonTracingService @Inject()(
     Some(newTracing)
   }
 
-  def merge(tracingIds: List[String], shouldSave: Boolean=false): Box[SkeletonTracing] = {
-    //TODO
-    val tracing = SkeletonTracing(
-      id = createNewId(),
-      name = "",
-      dataSetName = "dummyDataset",
-      trees = List(),
-      timestamp = System.currentTimeMillis(),
-      activeNodeId = None,
-      scale = new Scale(1,1,1),
-      editPosition = None,
-      editRotation = None,
-      zoomLevel = None,
-      version = 0)
+
+
+  private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
+    //TODO: merge bounding boxes, other properties?
+    val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
+    val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping)
+    tracingA.copy(trees = mergedTrees, version = 0)
+  }
+
+  def merge(tracingSelectors: List[TracingSelector], shouldSave: Boolean=false): Box[SkeletonTracing] = {
+    val tracings = tracingSelectors.flatMap(selector => findUpdated(selector.tracingId, selector.version)) //TODO: error handling, what if a tracing is missing?
+    val merged = tracings.reduceLeft(mergeTwo) //does the order matter?
+
     if (shouldSave)
-      save(tracing)
-    Some(tracing)
+      save(merged)
+    Some(merged)
   }
 }

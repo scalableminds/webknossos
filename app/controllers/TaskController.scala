@@ -61,7 +61,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   }
 
   def createFromNML(implicit request: AuthenticatedRequest[AnyContent]) = {
-    /*def parseJson(s: String) = {
+    def parseJson(s: String) = {
       Json.parse(s).validate(taskNMLJsonReads) match {
         case JsSuccess(parsed, _) =>
           Full(parsed)

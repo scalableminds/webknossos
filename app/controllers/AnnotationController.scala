@@ -65,7 +65,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def trace(typ: String, id: String) = Authenticated { implicit request =>
+  def empty(typ: String, id: String) = Authenticated { implicit request =>
     Ok(empty)
   }
 

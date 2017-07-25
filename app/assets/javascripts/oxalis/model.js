@@ -315,7 +315,12 @@ export class OxalisModel {
   }
 
   shouldDisplaySegmentationData(): boolean {
+    const segmentationOpacity = Store.getState().datasetConfiguration.segmentationOpacity;
+    if (segmentationOpacity === 0) {
+      return false;
+    }
     const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
+
     // Currently segmentation data can only be displayed in orthogonal and volume mode
     const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
     return this.getSegmentationBinary() != null && canModeDisplaySegmentationData;

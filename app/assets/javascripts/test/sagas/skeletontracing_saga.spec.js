@@ -686,6 +686,65 @@ test("compactUpdateActions should do nothing if it cannot compact", (t) => {
   const updateActions = [testDiffing(testState.tracing, newState.tracing, newState.flycam)];
   const simplifiedUpdateActions = compactUpdateActions(updateActions);
 
+  // The deleteTree optimization in compactUpdateActions (that is unrelated to this test)
+  // will remove the first deleteNode update action as the first tree is deleted because of the merge,
+  // therefore remove it here as well
+  updateActions[0].shift();
+
   // Nothing should be changed as the moveTreeComponent update action cannot be inserted
   t.deepEqual(simplifiedUpdateActions, updateActions[0]);
+});
+
+test("compactUpdateActions should detect a deleted tree", (t) => {
+  const testState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .unpack();
+
+  // Delete the tree
+  const newState = ChainReducer(testState)
+    .apply(SkeletonTracingReducer, deleteTreeAction)
+    .unpack();
+
+  const updateActions = [testDiffing(testState.tracing, newState.tracing, newState.flycam)];
+  const simplifiedUpdateActions = compactUpdateActions(updateActions);
+
+  t.deepEqual(simplifiedUpdateActions[0], {
+    action: "deleteTree",
+    timestamp: TIMESTAMP,
+    value: { id: 2 } });
+  t.is(simplifiedUpdateActions.length, 1);
+});
+
+test("compactUpdateActions should not detect a deleted tree if there is no deleted tree", (t) => {
+  const testState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .unpack();
+
+  // Delete almost all nodes from the tree
+  const newState = ChainReducer(testState)
+    .apply(SkeletonTracingReducer, deleteNodeAction)
+    .apply(SkeletonTracingReducer, deleteNodeAction)
+    .unpack();
+
+  const updateActions = [testDiffing(testState.tracing, newState.tracing, newState.flycam)];
+  const simplifiedUpdateActions = compactUpdateActions(updateActions);
+
+  t.deepEqual(simplifiedUpdateActions[0], {
+    action: "deleteNode",
+    timestamp: TIMESTAMP,
+    value: { id: 2, treeId: 2 } });
+  t.deepEqual(simplifiedUpdateActions[1], {
+    action: "deleteNode",
+    timestamp: TIMESTAMP,
+    value: { id: 3, treeId: 2 } });
+  t.is(simplifiedUpdateActions[2].action, "deleteEdge");
+  t.is(simplifiedUpdateActions[3].action, "deleteEdge");
+  t.is(simplifiedUpdateActions[4].action, "updateTree");
+  t.is(simplifiedUpdateActions.length, 5);
 });

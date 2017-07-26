@@ -16,8 +16,7 @@ export function getWebGLReport() {
   };
 
 
-  if ((webglVersion === 2 && !window.WebGL2RenderingContext) ||
-      (webglVersion === 1 && !window.WebGLRenderingContext)) {
+  if (!webglVersion) {
       // The browser does not support WebGL
       return report;
   }

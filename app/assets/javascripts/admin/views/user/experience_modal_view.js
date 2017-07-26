@@ -116,6 +116,7 @@ class ExperienceModalView extends React.PureComponent {
         value={this.state.domain}
         onChange={(event) => this.setState({domain: event.target.value}) }
         prefix={<Icon type="tags" style={{ fontSize: 13 }} />}
+        style={{marginBottom: 10 }}
         placeholder="Domain" />
       <Input
         value={this.state.level}

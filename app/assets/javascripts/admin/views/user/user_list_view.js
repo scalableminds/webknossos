@@ -69,14 +69,17 @@ class UserListView extends React.PureComponent {
       return <div className="text-center"><Spin size="large"/></div>;
     }
 
+    const marginRight = { marginRight: 20 };
+
     return (<div className="user-administration-table container wide">
       <h3>Users</h3>
 
-      { hasRowsSelected ? <span>{this.state.selectedUserIds.length} selected user(s)</span> : null}
+      { hasRowsSelected ? <span style={marginRight}>{this.state.selectedUserIds.length} selected user(s)</span> : null}
       <Button
         onClick={() => this.setState({isTeamRoleModalVisible: true}) }
         icon="team"
-        disabled={!hasRowsSelected}>
+        disabled={!hasRowsSelected}
+        style={marginRight}>
         Edit Teams
       </Button>
       <Button
@@ -93,6 +96,7 @@ class UserListView extends React.PureComponent {
         pagination={{
           defaultPageSize: 50,
         }}
+        style={{marginTop: 30, marginBotton: 30}}
       >
         <Column
           title="Last name"
@@ -128,7 +132,7 @@ class UserListView extends React.PureComponent {
           key="teams_"
           render={(teams, user) => teams.map((team) => {
             if (team.role === null) {debugger}
-            return <span className="no-wrap" key={`team_role_${user.id}_${team.team}`}>
+            return <span className="nowrap" key={`team_role_${user.id}_${team.team}`}>
               {team.team} <Tag color={TemplateHelpers.stringToColor(team.role.name)}>{team.role.name}</Tag>
             </span>
           })}

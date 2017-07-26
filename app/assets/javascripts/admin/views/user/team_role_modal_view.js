@@ -1,6 +1,4 @@
 // @flow
-
-import _ from "lodash";
 import React from "react";
 import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
 import Request from "libs/request";
@@ -21,7 +19,12 @@ type TeamRoleModalPropType = {
   selectedUserIds: Array<string>,
   users: Array<APIUserType>,
 }
-
+/**
+ * All team selection in this modal is based on whether their is a role
+ * associated with the respective team. In other words, 'selectedTeams' contains
+ * all globally available teams, but only those with an attached role are
+ * significant. See <APITeamRoleType>
+ */
 class TeamRoleModalView extends React.PureComponent {
 
   props: TeamRoleModalPropType;
@@ -41,7 +44,6 @@ class TeamRoleModalView extends React.PureComponent {
   componentWillReceiveProps(newProps: TeamRoleModalPropType) {
     // If a single user is selected, pre-select his teams
     // otherwise unselect all teams
-
     const newSelectedTeams = this.state.selectedTeams.map(selectedTeam => {
       let newRole = null;
 

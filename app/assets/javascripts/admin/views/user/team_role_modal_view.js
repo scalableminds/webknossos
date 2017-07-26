@@ -80,20 +80,30 @@ class TeamRoleModalView extends React.PureComponent {
   setTeams = () => {
     const newTeams = this.state.selectedTeams.filter(team => team.role !== null);
 
-    const newUsers = this.props.users.map(async (user) => {
+    const newUserPromises = this.props.users.map((user) => {
       if (this.props.selectedUserIds.includes(user.id)) {
         const newUser = Object.assign({}, user, { teams: newTeams });
 
+        // server-side validation can reject a user's new teams
         const url = `/api/users/${user.id}`;
-        await Request.sendJSONReceiveJSON(url, {
+        return Request.sendJSONReceiveJSON(url, {
           data: newUser
-        });
-
-        return newUser;
+        }).then(
+          () => Promise.resolve(newUser),
+          () => Promise.reject(user),
+        );
       }
-      return user;
+      return Promise.resolve(user);
     })
-    this.props.onChange(newUsers);
+
+    Promise.all(newUserPromises).then(
+      (newUsers) => {
+        this.props.onChange(newUsers);
+      },
+      () => {
+        // do nothing and keep modal open
+      }
+    )
   }
 
   handleSelectTeamRole(teamName:string, roleName:$Keys<typeof ROLES>) {

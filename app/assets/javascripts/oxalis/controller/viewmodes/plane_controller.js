@@ -4,7 +4,6 @@
  */
  /* globals JQueryInputEventObject:false */
 
-import app from "app";
 import React from "react";
 import Backbone from "backbone";
 import $ from "jquery";
@@ -15,6 +14,7 @@ import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
+import type { CameraData, OxalisState, FlycamType } from "oxalis/store";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import SceneController from "oxalis/controller/scene_controller";
 import { getPosition, getRequestLogZoomStep, getIntegerZoomStep, getAreas, getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
@@ -26,16 +26,24 @@ import PlaneView from "oxalis/view/plane_view";
 import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
-import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
+import { setViewportAction, setTDCameraAction, zoomTDViewAction, moveTDViewXAction, moveTDViewYAction, moveTDViewByVectorAction } from "oxalis/model/actions/view_mode_actions";
+import { connect } from "react-redux";
+
+type OwnProps = {
+  onRender: () => void,
+};
+
+type Props = OwnProps & {
+  flycam: FlycamType,
+  scale: Vector3,
+};
 
 class PlaneController extends React.PureComponent {
   // See comment in Controller class on general controller architecture.
   //
   // Plane Controller: Responsible for Plane Modes
   planeView: PlaneView;
-  props: {
-    onRender: () => void,
-  }
+  props: Props;
   input: {
     mouseControllers: OrthoViewMapType<InputMouse>;
     keyboard?: InputKeyboard;
@@ -44,10 +52,8 @@ class PlaneController extends React.PureComponent {
   };
   isStarted: boolean;
   oldNmPos: Vector3;
-  cameraController: CameraController;
   zoomPos: Vector3;
   controls: TrackballControls;
-  canvasesAndNav: any;
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
@@ -66,12 +72,11 @@ class PlaneController extends React.PureComponent {
 
     Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
 
-    // initialize Camera Controller
-    this.cameraController = new CameraController(this.planeView.getCameras());
-
-    this.canvasesAndNav = $("#main")[0];
-
     this.start();
+  }
+
+  componentDidUpdate(): void {
+    this.setTargetAndFixPosition();
   }
 
   componentWillUnmount() {
@@ -119,16 +124,55 @@ class PlaneController extends React.PureComponent {
     };
   }
 
+  setTargetAndFixPosition(): void {
+    const position = getPosition(this.props.flycam);
+    const nmPosition = voxelToNm(this.props.scale, position);
+
+    this.controls.target.set(...nmPosition);
+    this.controls.update();
+
+    // The following code is a dirty hack. If someone figures out
+    // how the trackball control's target can be set without affecting
+    // the camera position, go ahead.
+    // As the previous step will also move the camera, we need to
+    // fix this by offsetting the viewport
+
+    const invertedDiff = [];
+    for (let i = 0; i <= 2; i++) {
+      invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
+    }
+    this.oldNmPos = nmPosition;
+
+    const nmVector = new THREE.Vector3(...invertedDiff);
+    // moves camera by the nm vector
+    const camera = this.planeView.getCameras()[OrthoViews.TDView];
+
+    const rotation = THREE.Vector3.prototype.multiplyScalar.call(
+      camera.rotation.clone(), -1,
+    );
+    // reverse euler order
+    rotation.order = rotation.order.split("").reverse().join("");
+
+    nmVector.applyEuler(rotation);
+
+    Store.dispatch(moveTDViewByVectorAction(
+      nmVector.x,
+      nmVector.y,
+    ));
+  }
 
   initTrackballControls(): void {
     const view = $("#inputcatcher_TDView")[0];
-    const state = Store.getState();
-    const pos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
+    const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
+    const tdCamera = this.planeView.getCameras()[OrthoViews.TDView];
     this.controls = new TrackballControls(
-      this.planeView.getCameras()[OrthoViews.TDView],
+      tdCamera,
       view,
       new THREE.Vector3(...pos),
-      () => app.vent.trigger("rerender"));
+      () => {
+        // write threeJS camera into store
+        Store.dispatch(setTDCameraAction(threeCameraToCameraData(tdCamera)));
+      });
 
     this.controls.noZoom = true;
     this.controls.noPan = true;
@@ -137,39 +181,9 @@ class PlaneController extends React.PureComponent {
     this.controls.target.set(
       ...pos);
 
-    Store.subscribe(() => {
-      const newState = Store.getState();
-      const position = getPosition(newState.flycam);
-      const nmPosition = voxelToNm(newState.dataset.scale, position);
-
-      this.controls.target.set(...nmPosition);
-      this.controls.update();
-
-      // As the previous step will also move the camera, we need to
-      // fix this by offsetting the viewport
-
-      const invertedDiff = [];
-      for (let i = 0; i <= 2; i++) {
-        invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
-      }
-      this.oldNmPos = nmPosition;
-
-      return this.cameraController.moveTDView(
-        new THREE.Vector3(...invertedDiff),
-      );
-    });
-
-    const callbacks = [
-      this.cameraController.changeTDViewDiagonal,
-      this.cameraController.changeTDViewXY,
-      this.cameraController.changeTDViewYZ,
-      this.cameraController.changeTDViewXZ,
-    ];
-
-    $("#TDViewControls button")
-      .each((i, element) => $(element).on("click", () => { callbacks[i](); }));
-
-    this.listenTo(this.cameraController, "cameraPositionChanged", this.controls.update);
+    // This is necessary, since we instantiated this.controls now. This should be removed
+    // when the workaround with requestAnimationFrame(initInputHandlers) is removed.
+    this.forceUpdate();
   }
 
 
@@ -245,7 +259,6 @@ class PlaneController extends React.PureComponent {
 
   init(): void {
     const clippingDistance = Store.getState().userConfiguration.clippingDistance;
-    this.cameraController.setClippingDistance(clippingDistance);
     SceneController.setClippingDistance(clippingDistance);
   }
 
@@ -260,12 +273,12 @@ class PlaneController extends React.PureComponent {
     this.isStarted = true;
 
     // Workaround: defer mouse initialization to make sure DOM elements have
-    // acutally been rendered by React (InputCatchers Component)
+    // actually been rendered by React (InputCatchers Component)
     // DOM Elements get deleted when switching between ortho and arbitrary mode
     const initInputHandlers = () => {
       if ($("#inputcatcher_TDView").length === 0) {
         window.requestAnimationFrame(initInputHandlers);
-      } else if (this.isStarted === true) {
+      } else if (this.isStarted) {
         this.initTrackballControls();
         this.initMouse();
       }
@@ -307,7 +320,6 @@ class PlaneController extends React.PureComponent {
       }
     }
 
-    this.cameraController.update();
     SceneController.update();
     this.props.onRender();
   }
@@ -373,15 +385,15 @@ class PlaneController extends React.PureComponent {
     if (zoomToMouse) {
       zoomToPosition = this.input.mouseControllers[OrthoViews.TDView].position;
     }
-    this.cameraController.zoomTDView(value, zoomToPosition, this.planeView.curWidth);
+    Store.dispatch(zoomTDViewAction(value, zoomToPosition, this.planeView.curWidth));
   }
 
   moveTDView(delta: Point2): void {
     const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
     const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
 
-    this.cameraController.moveTDViewX(delta.x * mouseInversionX);
-    this.cameraController.moveTDViewY(delta.y * mouseInversionY);
+    Store.dispatch(moveTDViewXAction(delta.x * mouseInversionX));
+    Store.dispatch(moveTDViewYAction(delta.y * mouseInversionY));
   }
 
   finishZoom = (): void => {
@@ -453,11 +465,37 @@ class PlaneController extends React.PureComponent {
 
   calculateGlobalPos = (clickPos: Point2): Vector3 => calculateGlobalPos(clickPos)
 
+  updateControls = () => this.controls.update(true);
+
   render() {
-    return null;
+    if (!this.controls) {
+      return null;
+    }
+
+    return (
+      <CameraController
+        cameras={this.planeView.getCameras()}
+        onCameraPositionChanged={this.updateControls}
+      />
+    );
   }
 }
 
+function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
+  const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
+  const objToArr = ({x, y, z}) => [x, y, z];
+  return {
+    left,
+    right,
+    top,
+    bottom,
+    near,
+    far,
+    position: objToArr(position),
+    up: objToArr(up),
+    lookAt: objToArr(lookAt),
+  };
+}
 
 function calculateGlobalPos(clickPos: Point2) {
   let position;
@@ -489,4 +527,13 @@ function calculateGlobalPos(clickPos: Point2) {
   return position;
 }
 
-export default PlaneController;
+export function mapStateToProps(state: OxalisState, ownProps: OwnProps): Props {
+  return {
+    flycam: state.flycam,
+    scale: state.dataset.scale,
+    onRender: ownProps.onRender,
+  };
+}
+
+export { PlaneController as PlaneControllerClass };
+export default connect(mapStateToProps)(PlaneController);

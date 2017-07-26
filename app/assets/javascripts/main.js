@@ -8,6 +8,7 @@ import Backbone from "backbone";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import app from "app";
+import { getWebGLReport } from "libs/webgl_stats";
 
 import "bootstrap";
 import "jasny-bootstrap";
@@ -42,6 +43,20 @@ app.on("start", () => {
   app.vent = Backbone.Radio.channel("global");
 });
 
+app.on("start", () => {
+  // send WebGL analytics once per session
+  if (!window.sessionStorage.getItem("hasSentWebGLAnalytics")) {
+    try {
+      const webGLStats = getWebGLReport();
+      Request.sendJSONReceiveJSON("/api/analytics/webgl", {
+        data: webGLStats,
+      });
+      window.sessionStorage.setItem("hasSentWebGLAnalytics", true);
+    } catch (e) {
+      // pass
+    }
+  }
+});
 
 $(() => {
   // show the bootstrap flash modal on load

@@ -100,7 +100,7 @@ case class VolumeTracing(
 
     for {
       dataSource <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
-      urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/tracings/volumes/${dataStoreContent.dataLayer.name}/download"
+      urlToVolumeData = s"${dataSource.dataStoreInfo.url}/data/tracings/volumes/${dataStoreContent.dataLayer.name}/download?dataSetName=${dataSetName}"
       inputStream <- createStream(urlToVolumeData)
     } yield {
       Enumerator.outputStream{ outputStream =>

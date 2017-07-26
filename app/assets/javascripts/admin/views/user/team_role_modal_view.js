@@ -152,7 +152,7 @@ class TeamRoleModalView extends React.PureComponent {
         value={team.role === null? null: team.role.name}
         style={{ width: "100%" }}
         disabled={team.role === null}
-        onChange={(event: SyntheticInputEvent) => this.handleSelectTeamRole(team.team, event.target.value) }
+        onChange={({target: {value}}) => this.handleSelectTeamRole(team.team, value) }
       >
         <RadioButton value={ROLES.admin}>
           Admin

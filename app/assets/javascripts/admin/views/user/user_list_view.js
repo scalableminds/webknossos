@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable jsx-a11y/href-no-hash */
 
 import _ from "lodash";
 import React from "react";
@@ -130,18 +131,17 @@ class UserListView extends React.PureComponent {
           title="Teams - Role"
           dataIndex="teams"
           key="teams_"
-          render={(teams, user) => teams.map((team) => {
-            if (team.role === null) {debugger}
-            return <span className="nowrap" key={`team_role_${user.id}_${team.team}`}>
+          render={(teams, user) => teams.map((team) =>
+            <span className="nowrap" key={`team_role_${user.id}_${team.team}`}>
               {team.team} <Tag color={TemplateHelpers.stringToColor(team.role.name)}>{team.role.name}</Tag>
             </span>
-          })}
+          )}
         />
         <Column
           title="Status"
           dataIndex="isActive"
           key="isActive"
-          filters={[{ text: "Actived", value: "true" }]}
+          filters={[{ text: "Actived", value: "true" }, { text: "Deactived", value: "false" }]}
           filtered
           onFilter={(value, record) => record.isActive.toString() === value}
           render={(isActive) => {

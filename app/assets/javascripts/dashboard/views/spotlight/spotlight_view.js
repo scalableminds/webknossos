@@ -15,6 +15,9 @@ class SpotlightView extends Marionette.View {
   </div>
   <div id="pagination"></div>
   <div id="datasets" class="container wide"></div>
+  <div id="spotlight-footnote">
+    Visit <a href="https://www.webknossos.org/">webknossos.org</a> to learn more about webKnossos.
+  </div>
 </div>
 <div id="credits"></div>\
 `);
@@ -36,15 +39,18 @@ class SpotlightView extends Marionette.View {
     this.collection.fetch({ data: "isActive=true" });
     this.listenTo(this.collection, "sync", function () {
       this.listenTo(this, "render", this.show);
-      return this.show();
+      this.show();
     });
   }
 
 
   show() {
-    this.showChildView("pagination", this.paginationView);
-    this.showChildView("datasets", this.spotlightDatasetListView);
-    return this.showChildView("credits", this.creditsView);
+    // Do not show the pagination and search bar if there are no datasets
+    if (this.collection.length) {
+      this.showChildView("pagination", this.paginationView);
+      this.showChildView("datasets", this.spotlightDatasetListView);
+    }
+    this.showChildView("credits", this.creditsView);
   }
 }
 SpotlightView.initClass();

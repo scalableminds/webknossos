@@ -22,7 +22,6 @@ import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combina
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import constants, { ControlModeEnum } from "oxalis/constants";
-import Request from "libs/request";
 import ApiLoader from "oxalis/api/api_loader";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
@@ -32,6 +31,7 @@ import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
 import { connect } from "react-redux";
 import messages from "messages";
+import { fetchGistContent } from "libs/gist";
 
 import type { ToastType } from "libs/toast";
 import type { ModeType, ControlModeType } from "oxalis/constants";
@@ -135,23 +135,14 @@ class Controller extends React.PureComponent {
     const task = Store.getState().task;
     if (task != null && task.script != null) {
       const script = task.script;
-      const gistId = _.last(script.gist.split("/"));
-
-      Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then((gist) => {
-        const firstFile = gist.files[Object.keys(gist.files)[0]];
-
-        if (firstFile && firstFile.content) {
-          try {
-            // eslint-disable-next-line no-eval
-            eval(firstFile.content);
-          } catch (error) {
-            console.error(error);
-            Toast.error(`Error executing the task script "${script.name}". See console for more information.`);
-          }
-        } else {
-          Toast.error(`${messages["task.user_script_retrieval_error"]} ${script.name}`);
-        }
-      });
+      const content = fetchGistContent(script.gist, script.name);
+      try {
+        // eslint-disable-next-line no-eval
+        eval(content);
+      } catch (error) {
+        console.error(error);
+        Toast.error(`Error executing the task script "${script.name}". See console for more information.`);
+      }
     }
   }
 

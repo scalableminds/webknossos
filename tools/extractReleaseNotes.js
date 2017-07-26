@@ -5,7 +5,9 @@ const fs = require("fs");
 // Set this path to the cached json file to avoid hitting the github api limit while developing
 const CACHED_RESPONSE_PATH = "";
 
-const RELEASE_NOTES_REGEX = /Mailable description[^:]*:\r?\n(.*)/;
+// Search for Mailable description, then any text until the : and a newline
+// Then match any text: [^]* is used in javascript to match any character including newlines
+const RELEASE_NOTES_REGEX = /Mailable description[^:]*:\r?\n([^]*)/;
 
 (async () => {
   let parsedJSON;

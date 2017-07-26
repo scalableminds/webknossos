@@ -3,11 +3,14 @@
 */
 package com.scalableminds.braingames.datastore.controllers
 
+import java.io.File
+
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.AccessTokenService
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateAction}
+import com.scalableminds.util.tools.Fox
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -26,27 +29,22 @@ class VolumeTracingController @Inject()(
 
   def createEmpty(dataSetName: String) = Action.async {
     implicit request => {
-      for {
-        dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound")
-      } yield {
-        val initialContent = request.body.asRaw.map(_.asFile)
-        val tracing = volumeTracingService.create(dataSource, initialContent)
-        Ok(Json.toJson(tracing))
-      }
+      create(dataSetName, None).map(tracing => Ok(Json.toJson(tracing)))
     }
   }
 
-  def createFromZip(dataSetName: String) = Action {implicit request => {Ok}}
-  def download(tracingId: String, version: Option[Long]) = Action {implicit request => {Ok}}
-
-  def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateAction]]) {
+  def createFromZip(dataSetName: String) = Action.async {
     implicit request => {
-      for {
-        tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-        _ <- volumeTracingService.update(tracing, request.body)
-      } yield {
-        Ok
-      }
+      val initialContent = request.body.asRaw.map(_.asFile)
+      create(dataSetName, initialContent).map(tracing => Ok(Json.toJson(tracing)))
+    }
+  }
+
+  private def create(dataSetName: String, initialContent: Option[File]): Fox[String] = {
+    for {
+      dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound")
+    } yield {
+      volumeTracingService.create(dataSource, initialContent).id
     }
   }
 
@@ -59,4 +57,17 @@ class VolumeTracingController @Inject()(
       }
     }
   }
+
+  def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateAction]]) {
+    implicit request => {
+      for {
+        tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+        _ <- volumeTracingService.update(tracing, request.body)
+      } yield {
+        Ok
+      }
+    }
+  }
+
+  def download(tracingId: String, version: Option[Long]) = Action {implicit request => {Ok}}
 }

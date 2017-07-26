@@ -57,7 +57,7 @@ class VolumeTracingService @Inject()(
     tracing
   }
 
-  def update(tracing: VolumeTracing, updates: List[VolumeUpdateAction]): Box[Unit] = {
+  def update(tracing: VolumeTracing, updates: List[VolumeUpdateActionGroups]): Box[Unit] = {
     updates.foldLeft[Box[Unit]](Full(())) {
       case (_: Full[Unit], action: LabelVolumeAction) =>
         val resolution = math.pow(2, action.zoomStep).toInt

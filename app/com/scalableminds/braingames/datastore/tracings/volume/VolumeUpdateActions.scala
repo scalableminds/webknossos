@@ -5,36 +5,42 @@ import java.util.Base64
 import com.scalableminds.util.geometry.Point3D
 import play.api.libs.json._
 
-case class LabelVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String) extends VolumeUpdateAction {
-
-  val name: String = "labelVolume"
-
+case class UpdateBucketVolumeAction(position: Point3D, bucketSize: Int, zoomStep: Int, base64Data: String) extends VolumeUpdateAction {
   def data: Array[Byte] = Base64.getDecoder().decode(base64Data)
+
+  def applyOn(tracing: VolumeTracing): VolumeTracing = {
+    tracing
+  }
 }
 
-object LabelVolumeAction {
-  implicit val labelVolumeActionFormat = Json.format[LabelVolumeAction]
+object UpdateBucketVolumeAction {
+  implicit val updateBucketVolumeActionFormat = Json.format[UpdateBucketVolumeAction]
+}
+
+case class UpdateTracingVolumeAction() extends VolumeUpdateAction {
+
+  def applyOn(tracing: VolumeTracing): VolumeTracing = {
+    tracing
+  }
+}
+
+object UpdateTracingVolumeAction {
+  implicit val updateTracingVolumeActionFormat = Json.format[UpdateTracingVolumeAction]
 }
 
 trait VolumeUpdateAction {
-  def name: String
+  def applyOn(tracing: VolumeTracing): VolumeTracing
 }
 
 object VolumeUpdateAction {
 
-  implicit object volumeTracingUpdateActionFormat extends Format[VolumeUpdateAction] {
+  implicit object volumeUpdateActionReads extends Reads[VolumeUpdateAction] {
     override def reads(json: JsValue): JsResult[VolumeUpdateAction] = {
-      (json \ "action").validate[String].flatMap {
-        case "labelVolume" => (json \ "value").validate[LabelVolumeAction]
+      (json \ "name").validate[String].flatMap {
+        case "updateBucket" => (json \ "value").validate[UpdateBucketVolumeAction]
+        case "updateTracing" => (json \ "value").validate[UpdateTracingVolumeAction]
         case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
       }
-    }
-
-    override def writes(action: VolumeUpdateAction): JsValue = {
-      val value = action match {
-        case a: LabelVolumeAction => LabelVolumeAction.labelVolumeActionFormat.writes(a)
-      }
-      Json.obj("action" -> action.name, "value" -> value)
     }
   }
 }

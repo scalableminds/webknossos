@@ -164,14 +164,14 @@ class UserListView extends React.PureComponent {
       <ExperienceModalView
         visible={this.state.isExperienceModalVisible}
         selectedUserIds={this.state.selectedUserIds}
-        users={_.clone(this.state.users)}
+        users={this.state.users || []}
         onChange={this.handleUsersChange}
         onCancel={() => this.setState({isExperienceModalVisible: false}) }
       />
       <TeamRoleModalView
         visible={this.state.isTeamRoleModalVisible}
         selectedUserIds={this.state.selectedUserIds}
-        users={_.clone(this.state.users)}
+        users={this.state.users || []}
         onChange={this.handleUsersChange}
         onCancel={() => this.setState({isTeamRoleModalVisible: false}) }
       />

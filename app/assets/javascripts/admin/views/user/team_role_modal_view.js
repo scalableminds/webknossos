@@ -47,10 +47,12 @@ class TeamRoleModalView extends React.PureComponent {
 
       if (newProps.selectedUserIds.length === 1) {
         const user = this.props.users.find((_user) => _user.id === newProps.selectedUserIds[0]);
-        const userTeam = user.teams.find(_userTeam => selectedTeam.team === _userTeam.team);
+        if (user) {
+          const userTeam = user.teams.find(_userTeam => selectedTeam.team === _userTeam.team);
 
-        if (userTeam) {
-          newRole = { name: userTeam.role.name };
+          if (userTeam) {
+            newRole = { name: userTeam.role.name };
+          }
         }
       }
 
@@ -78,12 +80,12 @@ class TeamRoleModalView extends React.PureComponent {
   setTeams = () => {
     const newTeams = this.state.selectedTeams.filter(team => team.role !== null);
 
-    const newUsers = this.props.users.map((user) => {
+    const newUsers = this.props.users.map(async (user) => {
       if (this.props.selectedUserIds.includes(user.id)) {
         const newUser = Object.assign({}, user, { teams: newTeams });
 
         const url = `/api/users/${user.id}`;
-        Request.sendJSONReceiveJSON(url, {
+        await Request.sendJSONReceiveJSON(url, {
           data: newUser
         });
 

@@ -45,6 +45,7 @@
     "less": "^2.7.2",
     "less-loader": "^2.2.3",
     "mock-require": "^1.2.1",
+    "node-fetch": "^1.7.1",
     "prettier": "^1.5.2",
     "redux-mock-store": "^1.2.2",
     "sinon": "^1.17.3",

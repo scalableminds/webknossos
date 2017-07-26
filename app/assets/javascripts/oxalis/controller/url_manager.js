@@ -41,21 +41,32 @@ class UrlManager {
   }
 
   update = _.throttle(
-    () => {
-      const url = this.buildUrl();
-      if (!url) {
-        return;
-      }
-      // Don't tamper with URL if changed externally for some time
-      if (!window.isNavigating && this.lastUrl == null || window.location.href === this.lastUrl) {
-        window.history.replaceState({}, null, url);
-        this.lastUrl = window.location.href;
-      } else {
-        setTimeout(() => { this.lastUrl = null; }, NO_MODIFY_TIMEOUT);
-      }
-    },
+    () => this.updateUnthrottled(),
     MAX_UPDATE_INTERVAL,
   );
+
+  updateUnthrottled(force: boolean = false) {
+    if (window.isNavigating) {
+      // The router initiated an URL change
+      return;
+    }
+
+    const url = this.buildUrl();
+    if (!url) {
+      return;
+    }
+
+    // Don't tamper with URL if changed externally for some time
+    const urlDidNotChange = window.location.href === this.lastUrl;
+    const isFreshUrl = this.lastUrl == null;
+
+    if (isFreshUrl || urlDidNotChange || force) {
+      window.history.replaceState({}, null, url);
+      this.lastUrl = window.location.href;
+    } else {
+      setTimeout(() => { this.lastUrl = null; }, NO_MODIFY_TIMEOUT);
+    }
+  }
 
   parseUrl(): UrlManagerState {
     // State string format:

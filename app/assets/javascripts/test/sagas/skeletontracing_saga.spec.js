@@ -2,22 +2,15 @@
 import test from "ava";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
-import _ from "lodash";
 import ChainReducer from "test/helpers/chainReducer";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 
 const TIMESTAMP = 1494347146379;
 
-const KeyboardJS = {
-  bind: _.noop,
-  unbind: _.noop,
-};
-
 const DateMock = {
   now: () => TIMESTAMP,
 };
 
-mockRequire("keyboardjs", KeyboardJS);
 mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("bootstrap-toggle", {});
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -84,7 +77,7 @@ const createNodeAction = SkeletonTracingActions.createNodeAction([1, 2, 3], [0, 
 const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
 const createTreeAction = SkeletonTracingActions.createTreeAction(12345678);
 const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
-const setActiveNodeRadiusAction = SkeletonTracingActions.setActiveNodeRadiusAction(12);
+const setNodeRadiusAction = SkeletonTracingActions.setNodeRadiusAction(12);
 const createCommentAction = SkeletonTracingActions.createCommentAction("Hallo");
 const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(undefined, undefined, 12345678);
 
@@ -242,7 +235,7 @@ test("SkeletonTracingSaga should emit a deleteTree update action", (t) => {
 
 test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
-  const newState = SkeletonTracingReducer(testState, setActiveNodeRadiusAction);
+  const newState = SkeletonTracingReducer(testState, setNodeRadiusAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.is(updateActions[0].name, "updateNode");
@@ -254,9 +247,9 @@ test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
 test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
   const testState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
-    .apply(SkeletonTracingReducer, setActiveNodeRadiusAction)
+    .apply(SkeletonTracingReducer, setNodeRadiusAction)
     .unpack();
-  const newState = SkeletonTracingReducer(testState, setActiveNodeRadiusAction);
+  const newState = SkeletonTracingReducer(testState, setNodeRadiusAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.deepEqual(updateActions, []);
@@ -692,6 +685,66 @@ test("compactUpdateActions should do nothing if it cannot compact", (t) => {
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
   const simplifiedUpdateActions = compactUpdateActions(saveQueue);
 
+  // The deleteTree optimization in compactUpdateActions (that is unrelated to this test)
+  // will remove the first deleteNode update action as the first tree is deleted because of the merge,
+  // therefore remove it here as well
+  saveQueue[0].actions.shift();
+
   // Nothing should be changed as the moveTreeComponent update action cannot be inserted
   t.deepEqual(simplifiedUpdateActions, saveQueue);
+});
+
+test("compactUpdateActions should detect a deleted tree", (t) => {
+  const testState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .unpack();
+
+  // Delete the tree
+  const newState = ChainReducer(testState)
+    .apply(SkeletonTracingReducer, deleteTreeAction)
+    .unpack();
+
+  const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
+  const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
+  const simplifiedUpdateActions = compactUpdateActions(saveQueue);
+
+  const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
+  t.deepEqual(simplifiedFirstBatch[0], {
+    name: "deleteTree",
+    value: { id: 2 } });
+  t.is(simplifiedFirstBatch.length, 1);
+});
+
+test("compactUpdateActions should not detect a deleted tree if there is no deleted tree", (t) => {
+  const testState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .unpack();
+
+  // Delete almost all nodes from the tree
+  const newState = ChainReducer(testState)
+    .apply(SkeletonTracingReducer, deleteNodeAction)
+    .apply(SkeletonTracingReducer, deleteNodeAction)
+    .unpack();
+
+  const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
+  const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
+  const simplifiedUpdateActions = compactUpdateActions(saveQueue);
+
+  const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
+  t.deepEqual(simplifiedFirstBatch[0], {
+    name: "deleteNode",
+    value: { id: 2, treeId: 2 } });
+  t.deepEqual(simplifiedFirstBatch[1], {
+    name: "deleteNode",
+    value: { id: 3, treeId: 2 } });
+  t.is(simplifiedFirstBatch[2].name, "deleteEdge");
+  t.is(simplifiedFirstBatch[3].name, "deleteEdge");
+  t.is(simplifiedFirstBatch[4].name, "updateTree");
+  t.is(simplifiedFirstBatch.length, 5);
 });

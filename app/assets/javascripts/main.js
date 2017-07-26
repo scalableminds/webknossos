@@ -27,14 +27,15 @@ app.on("start", () => {
   return Backbone.history.start({ pushState: true });
 });
 
-app.on("start", () =>
-  Request.receiveJSON("/api/user", { doNotCatch: true })
-    .then((user) => {
-      app.currentUser = user;
-      ErrorHandling.setCurrentUser(user);
-      // eslint-disable-next-line no-unused-vars
-    }).catch((error) => { }),
-);
+app.on("start", async () => {
+  try {
+    const user = await Request.receiveJSON("/api/user", { doNotCatch: true });
+    app.currentUser = user;
+    ErrorHandling.setCurrentUser(user);
+  } catch (e) {
+    // pass
+  }
+});
 
 app.on("start", () => {
   // set app.vent to the global radio channel
@@ -48,4 +49,3 @@ $(() => {
 
   return app.start();
 });
-

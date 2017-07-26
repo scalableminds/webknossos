@@ -15,11 +15,6 @@ class TaskTypeModel extends Backbone.Model {
         somaClickingAllowed: true,
         preferredMode: "",
       },
-      expectedTime: {
-        min: 300,
-        max: 600,
-        maxHard: 900,
-      },
     };
   }
 

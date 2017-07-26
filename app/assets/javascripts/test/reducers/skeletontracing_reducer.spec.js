@@ -295,11 +295,11 @@ test("SkeletonTracing should set a new active node in a different tree", (t) => 
 test("SkeletonTracing should set a new node radius", (t) => {
   const newRadius = 10;
   const createNodeAction = SkeletonTracingActions.createNodeAction(position, rotation, viewport, resolution);
-  const setActiveNodeRadiusAction = SkeletonTracingActions.setActiveNodeRadiusAction(newRadius);
+  const setNodeRadiusAction = SkeletonTracingActions.setNodeRadiusAction(newRadius);
 
   // Create a node and change its readius
   let newState = SkeletonTracingReducer(initialState, createNodeAction);
-  newState = SkeletonTracingReducer(newState, setActiveNodeRadiusAction);
+  newState = SkeletonTracingReducer(newState, setNodeRadiusAction);
 
   t.not(newState, initialState);
   t.deepEqual(newState.tracing.trees[1].nodes[1].radius, newRadius);

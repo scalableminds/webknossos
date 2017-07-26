@@ -249,7 +249,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     }
   };
 
-  this.update = () => {
+  this.update = (externalUpdate = false) => {
     _eye.subVectors(_this.object.position, _this.lastTarget);
 
     if (!_this.noRotate) {
@@ -277,7 +277,9 @@ function TrackballControls(object, domElement, target, updateCallback) {
     }
 
     _this.lastTarget = _this.target.clone();
-    _this.updateCallback();
+    if (!externalUpdate) {
+      _this.updateCallback();
+    }
   };
 
   this.reset = () => {

@@ -7,9 +7,9 @@ import _ from "lodash";
 import $ from "jquery";
 import Backbone from "backbone";
 import constants from "oxalis/constants";
-import KeyboardJS from "keyboardjs";
 import Date from "libs/date";
 import type { Point2 } from "oxalis/constants";
+import KeyboardJS from "./keyboardjs_wrapper";
 
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
@@ -21,7 +21,7 @@ import type { Point2 } from "oxalis/constants";
 
 // Each input method is contained in its own module. We tried to
 // provide similar public interfaces for the input methods.
-// In most cases the heavy lifting is done by librarys in the background.
+// In most cases the heavy lifting is done by libraries in the background.
 const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 30;
 

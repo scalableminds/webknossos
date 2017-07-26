@@ -10,19 +10,27 @@ import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
 import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, createCommentAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { setActiveNodeAction, createCommentAction, deleteNodeAction, setNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
+import { findTreeByNodeId, getNodeAndTree, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
-import type { Vector3, VolumeTraceOrMoveModeType } from "oxalis/constants";
+import type { Vector3, VolumeTraceOrMoveModeType, ControlModeType } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
-import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType, TracingType } from "oxalis/store";
+import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType, TracingType, SkeletonTracingTypeTracingType } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import app from "app";
 import Utils from "libs/utils";
-import { ControlModeEnum } from "oxalis/constants";
+import { ControlModeEnum, OrthoViews } from "oxalis/constants";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import dimensions from "oxalis/model/dimensions";
+import TWEEN from "tween.js";
+import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
+import UrlManager from "oxalis/controller/url_manager";
+import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
+import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -193,10 +201,10 @@ class TracingApi {
    * be executed in this site context.
    *
    * @example
-   * api.tracing.save().then(() => ... );
+   * api.tracing.finishAndGetNextTask().then(() => ... );
    *
    * @example
-   * await api.tracing.save();
+   * await api.tracing.finishAndGetNextTask();
    */
   async finishAndGetNextTask() {
     const state = Store.getState();
@@ -224,14 +232,127 @@ class TracingApi {
       if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
         app.router.loadURL(newTaskUrl);
       } else {
-        // $FlowFixMe
-        app.oxalis.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
+        await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);
       await Utils.sleep(2000);
       app.router.loadURL("/dashboard");
     }
+  }
+
+  /**
+   * Restart webKnossos without refreshing the page. Please prefer finishAndGetNextTask for user scripts
+   * since it does extra validation of the requested change and makes sure everything is saved etc.
+   *
+   * @example
+   * api.tracing.restart("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
+   *
+   */
+  async restart(newTracingType: SkeletonTracingTypeTracingType, newTracingId: string, newControlMode: ControlModeType) {
+    Store.dispatch(restartSagaAction());
+    UrlManager.reset();
+    await Model.fetch(newTracingType, newTracingId, newControlMode, false);
+    Store.dispatch(wkReadyAction());
+    UrlManager.updateUnthrottled(true);
+  }
+
+  //  SKELETONTRACING API
+
+  /**
+   * Increases the node radius of the given node by multiplying it with 1.05^delta.
+   * If no nodeId and/or treeId are provided, it defaults to the current tree and current node.
+   *
+   * @example
+   * api.tracing.setNodeRadius(1)
+   */
+  setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
+    getNodeAndTree(Store.getState().tracing, nodeId, treeId)
+      .map(([, node]) =>
+        Store.dispatch(setNodeRadiusAction(
+          node.radius * Math.pow(1.05, delta),
+          nodeId,
+          treeId,
+        ),
+      ));
+  }
+
+
+  /**
+   * Centers the given node. If no node is provided, the active node is centered.
+   *
+   * @example
+   * api.tracing.centerNode()
+   */
+  centerNode = (nodeId?: number): void => {
+    getNodeAndTree(Store.getState().tracing, nodeId)
+      .map(([, node]) => Store.dispatch(setPositionAction(node.position)));
+  }
+
+  /**
+   * Centers the 3D view.
+   *
+   * @example
+   * api.tracing.centerTDView()
+   */
+  centerTDView = (): void => {
+    Store.dispatch(centerTDViewAction());
+  }
+
+  rotate3DViewToXY = (): void => rotate3DViewTo(OrthoViews.PLANE_XY);
+  rotate3DViewToYZ = (): void => rotate3DViewTo(OrthoViews.PLANE_YZ);
+  rotate3DViewToXZ = (): void => rotate3DViewTo(OrthoViews.PLANE_XZ);
+
+  rotate3DViewToDiagonal = (animate: boolean = true): void => {
+    rotate3DViewTo(OrthoViews.TDView, animate);
+  };
+
+  /**
+   * Starts an animation to center the given position.
+   *
+   * @param position - Vector3
+   * @param skipDimensions - Boolean which decides whether the third dimension shall also be animated (defaults to true)
+   * @example
+   * api.tracing.centerPositionAnimated([0, 0, 0])
+   */
+  centerPositionAnimated(position: Vector3, skipDimensions: boolean = true): void {
+    // Let the user still manipulate the "third dimension" during animation
+    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const dimensionToSkip = skipDimensions && activeViewport !== OrthoViews.TDView ?
+      dimensions.thirdDimensionForPlane(activeViewport) :
+      null;
+
+    const curGlobalPos = getPosition(Store.getState().flycam);
+
+    const tween = new TWEEN.Tween({
+      globalPosX: curGlobalPos[0],
+      globalPosY: curGlobalPos[1],
+      globalPosZ: curGlobalPos[2],
+    });
+    tween.to({
+      globalPosX: position[0],
+      globalPosY: position[1],
+      globalPosZ: position[2],
+    }, 200)
+    .onUpdate(function () { // needs to be a normal (non-bound) function
+      const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
+      if (dimensionToSkip != null) {
+        Store.dispatch(setPositionAction(curPos, dimensionToSkip));
+      } else {
+        Store.dispatch(setPositionAction(curPos));
+      }
+    })
+    .start();
+  }
+
+  /**
+   * Returns the current camera position.
+   *
+   * @example
+   * const currentPosition = api.tracing.getPosition()
+   */
+  getCameraPosition(): Vector3 {
+    return getPosition(Store.getState().flycam);
   }
 
   //  VOLUMETRACING API
@@ -532,7 +653,7 @@ class UtilsApi {
   *   - CREATE_NODE
   *   - DELETE_NODE
   *   - SET_ACTIVE_NODE
-  *   - SET_ACTIVE_NODE_RADIUS
+  *   - SET_NODE_RADIUS
   *   - CREATE_BRANCHPOINT
   *   - DELETE_BRANCHPOINT
   *   - CREATE_TREE

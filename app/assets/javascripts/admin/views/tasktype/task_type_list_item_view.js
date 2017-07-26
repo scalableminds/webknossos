@@ -30,10 +30,6 @@ class TaskTypeItemView extends Marionette.View {
   <span class="label label-default">Advanced Options</span>
   <% } %>
 </td>
-<td>
-  <%- expectedTime.min %> - <%- expectedTime.max %>,<br>
-  Limit: <%- expectedTime.maxHard %>
-</td>
 <td><%- fileName %></td>
 <td class="nowrap">
   <a href="/taskTypes/<%- id %>/edit" >

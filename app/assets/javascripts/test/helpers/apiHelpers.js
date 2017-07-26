@@ -36,14 +36,13 @@ export const KeyboardJS = {
   bind: _.noop,
   unbind: _.noop,
 };
-
+mockRequire("keyboardjs", KeyboardJS);
 mockRequire("libs/toast", { error: _.noop });
 mockRequire("libs/window", window);
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);
 mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
-mockRequire("keyboardjs", KeyboardJS);
 
 // Avoid node caching and make sure all mockRequires are applied
 const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;

@@ -27,7 +27,6 @@ class TaskTypeListView extends Marionette.CompositeView {
       <th> Description </th>
       <th> Add-On Modes </th>
       <th> Settings </th>
-      <th> Expected Time </th>
       <th> Attached File </th>
       <th></th>
     </tr>

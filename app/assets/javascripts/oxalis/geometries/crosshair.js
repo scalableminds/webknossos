@@ -116,8 +116,8 @@ class Crosshair {
   }
 
 
-  attachScene(scene: THREE.Scene) {
-    return scene.add(this.mesh);
+  addToScene(scene: THREE.Scene) {
+    scene.add(this.mesh);
   }
 
 

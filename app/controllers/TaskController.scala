@@ -300,7 +300,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       assignment <- tryToGetNextAssignmentFor(user)
       task <- assignment.task
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content", "actions"))
+      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content"))
     } yield {
       JsonOk(annotationJSON, Messages("task.assigned"))
     }

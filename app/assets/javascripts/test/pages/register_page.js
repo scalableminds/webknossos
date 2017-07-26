@@ -1,6 +1,6 @@
 export default class RegisterPage {
 
-  signupButton = "button[type=submit]"
+  signupButton = "#main-container button[type=submit]"
   alertDanger = ".alert-danger"
   modalDescription = "#modalDescription > p"
 

@@ -17,10 +17,14 @@ class ReactBackboneWrapper<T: Component<*, *, *>> extends Backbone.View {
   }
 
   render() {
-    render(React.createElement(
-      LocaleProvider, { locale: enUS },
-      React.createElement(this.componentClass, this.initialProps)
-    ), this.el);
+    render(
+      React.createElement(
+        LocaleProvider,
+        { locale: enUS },
+        React.createElement(this.componentClass, this.initialProps),
+      ),
+      this.el,
+    );
     return this;
   }
 

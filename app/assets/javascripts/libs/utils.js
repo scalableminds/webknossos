@@ -245,7 +245,6 @@ const Utils = {
     return maybe.isJust ? maybe.get() : null;
   },
 
-
   getRecursiveKeysAndValues(obj: Object): Array<any> {
     return _.flattenDeep(Utils.getRecursiveKeysAndValuesUnflat(obj));
   },
@@ -254,9 +253,7 @@ const Utils = {
     if (_.isArray(obj)) {
       return obj.map(Utils.getRecursiveKeysAndValuesUnflat);
     } else if (_.isObject(obj)) {
-      return Object.keys(obj).map(key =>
-        [key, Utils.getRecursiveKeysAndValuesUnflat(obj[key])]
-      );
+      return Object.keys(obj).map(key => [key, Utils.getRecursiveKeysAndValuesUnflat(obj[key])]);
     } else {
       return [obj];
     }
@@ -264,12 +261,17 @@ const Utils = {
 
   // Filters an array given a search string. Supports regex seach and several words as OR query.
   // Supports nested properties
-  filterWithSearchQuery<T: Object>(collection: Array<T>, properties: Array<string>, searchQuery: string): Array<T> {
+  filterWithSearchQuery<T: Object>(
+    collection: Array<T>,
+    properties: Array<string>,
+    searchQuery: string,
+  ): Array<T> {
     if (searchQuery === "") {
       return collection;
     } else {
-      const words = _.map(searchQuery.split(" "),
-        element => element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"));
+      const words = _.map(searchQuery.split(" "), element =>
+        element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
+      );
       const uniques = _.filter(_.uniq(words), element => element !== "");
       const pattern = `(${uniques.join("|")})`;
       const regexp = new RegExp(pattern, "igm");
@@ -283,10 +285,10 @@ const Utils = {
           } else {
             return false;
           }
-        })
+        }),
       );
     }
-  }
+  },
 };
 
 export default Utils;

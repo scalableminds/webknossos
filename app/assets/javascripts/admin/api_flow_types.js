@@ -9,7 +9,7 @@ type APIDataSourceType = {
   status?: string,
   dataLayers: Array<DataLayerType>,
   scale: Vector3,
-}
+};
 
 export type APIDatasetType = {
   +name: string,
@@ -17,7 +17,7 @@ export type APIDatasetType = {
   +dataStore: {
     +name: string,
     +url: string,
-    +typ: "webknossos-store" | "nd-store"
+    +typ: "webknossos-store" | "nd-store",
   },
   +sourceType: "wkw" | "knossos",
   +owningTeam: "Connectomics department",
@@ -28,16 +28,16 @@ export type APIDatasetType = {
   description: ?string,
   +created: number,
   +isEditable: boolean,
-}
+};
 
 export type APITeamRoleType = {
   team: string,
   role: { name: string },
-}
+};
 
 export type APIUserType = {
   +email: string,
-  +experiences: {[string]: number},
+  +experiences: { [string]: number },
   +firstName: string,
   +lastName: string,
   +id: string,
@@ -46,7 +46,7 @@ export type APIUserType = {
   +isEditable: boolean,
   +lastActivity: number,
   +teams: Array<APITeamRoleType>,
-}
+};
 
 export type APITeamType = {
   amIAnAdmin: boolean,
@@ -57,5 +57,4 @@ export type APITeamType = {
   owner: APIUserType,
   parent: string,
   roles: Array<APIRoleType>,
-}
-
+};

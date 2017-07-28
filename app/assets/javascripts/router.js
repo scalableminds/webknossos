@@ -168,7 +168,7 @@ class Router extends BaseRouter {
   }
 
   users() {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const view = new ReactBackboneWrapper(admin.UserListView);
       this.changeView(view);
     });

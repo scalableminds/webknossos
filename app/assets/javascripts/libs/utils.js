@@ -250,6 +250,31 @@ const Utils = {
   toNullable<T>(maybe: Maybe<T>): ?T {
     return maybe.isJust ? maybe.get() : null;
   },
+
+  // Filters an array given a search string. Supports regex seach and several words as OR query.
+  // Supports nested properties
+  filterWithSearchQuery(collection: Array<T>, properties: Array<string>, searchQuery: string): Array<T> {
+    if (searchQuery === "" || !_.isString(searchQuery)) {
+      return collection;
+    } else {
+      const words = _.map(searchQuery.split(" "),
+        element => element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"));
+      const uniques = _.filter(_.uniq(words), element => element !== "");
+      const pattern = `(${uniques.join("|")})`;
+      const regexp = new RegExp(pattern, "igm");
+
+      return collection.filter((model) =>
+        _.some(properties, (fieldName) => {
+          const value = _.get(model, fieldName);
+          if (value != null) {
+            return !!value.toString().match(regexp);
+          } else {
+            return false;
+          }
+        })
+      );
+    }
+  }
 };
 
 export default Utils;

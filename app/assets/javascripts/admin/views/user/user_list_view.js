@@ -3,14 +3,17 @@
 
 import _ from "lodash";
 import React from "react";
-import { Table, Tag, Icon, Spin, Button } from "antd";
+import { Table, Tag, Icon, Spin, Button, Input } from "antd";
 import Request from "libs/request";
 import TeamRoleModalView from "admin/views/user/team_role_modal_view";
 import ExperienceModalView from "admin/views/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
+import Utils from "libs/utils";
 import type { APIUserType } from "admin/api_flow_types";
 
+
 const { Column } = Table;
+const { Search } = Input;
 
 class UserListView extends React.PureComponent {
 
@@ -20,12 +23,14 @@ class UserListView extends React.PureComponent {
     selectedUserIds: Array<string>,
     isExperienceModalVisible: boolean,
     isTeamRoleModalVisible: boolean,
+    searchQuery: string,
   } = {
     isLoading: true,
     users: null,
     selectedUserIds: [],
     isExperienceModalVisible: false,
     isTeamRoleModalVisible: false,
+    searchQuery: "",
   }
 
   componentDidMount() {
@@ -42,16 +47,20 @@ class UserListView extends React.PureComponent {
      });
   }
 
-  activateUser = () => {}
+  activateUser = (): void => {}
 
-  deactivateUser = () => {}
+  deactivateUser = (): void => {}
 
-  handleUsersChange = (updatedUsers: Array<APIUserType>) => {
+  handleUsersChange = (updatedUsers: Array<APIUserType>): void => {
     this.setState({
       users: updatedUsers,
       isExperienceModalVisible: false,
       isTeamRoleModalVisible: false,
     });
+  }
+
+  handleSearch = (event: SyntheticInputEvent): void => {
+    this.setState({ searchQuery: event.target.value });
   }
 
   render() {
@@ -89,9 +98,14 @@ class UserListView extends React.PureComponent {
         disabled={!hasRowsSelected}>
         Change Experience
       </Button>
+      <Search
+        style={{ width: 200, float: "right" }}
+        onPressEnter={this.handleSearch}
+        onChange={this.handleSearch}
+      />
 
       <Table
-        dataSource={this.state.users}
+        dataSource={Utils.filterWithSearchQuery(this.state.users, ["firstName", "lastName", "email"], this.state.searchQuery)}
         rowKey="id"
         rowSelection={rowSelection}
         pagination={{

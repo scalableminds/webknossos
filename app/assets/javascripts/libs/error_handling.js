@@ -67,6 +67,10 @@ class ErrorHandling {
     };
   }
 
+  notify(error: Error) {
+    this.airbrake.notify(error);
+  }
+
   assertExtendContext(additionalContext) {
     this.airbrake.addFilter((notice) => {
       Object.assign(notice.context, additionalContext);

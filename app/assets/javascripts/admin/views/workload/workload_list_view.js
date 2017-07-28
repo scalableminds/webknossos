@@ -7,20 +7,20 @@ import WorkloadListItemView from "admin/views/workload/workload_list_item_view";
 class WorkloadListView extends Marionette.CompositeView {
   static initClass() {
     // TODO: WORKLOAD CURRENTLY DISABLED DUE TO PERFORMANCE REASONS
-  //  template : _.template("""
-  //    <h3>Workload</h3>
-  //      <table class="table table-striped sortable-table">
-  //        <thead>
-  //          <tr>
-  //            <th data-sort="name">Name</th>
-  //            <th>Teams</th>
-  //            <th data-sort="projects">Projects</th>
-  //            <th data-sort="availableTaskCount">Number of all assignable tasks</th>
-  //          </tr>
-  //        </thead>
-  //        <tbody></tbody>
-  //      </table>
-  //  """)
+    //  template : _.template("""
+    //    <h3>Workload</h3>
+    //      <table class="table table-striped sortable-table">
+    //        <thead>
+    //          <tr>
+    //            <th data-sort="name">Name</th>
+    //            <th>Teams</th>
+    //            <th data-sort="projects">Projects</th>
+    //            <th data-sort="availableTaskCount">Number of all assignable tasks</th>
+    //          </tr>
+    //        </thead>
+    //        <tbody></tbody>
+    //      </table>
+    //  """)
 
     this.prototype.template = _.template(`\
 <h3>Workload</h3>
@@ -38,18 +38,15 @@ class WorkloadListView extends Marionette.CompositeView {
   }
 
   initialize() {
-    this.collection.fetch().then(() => this.collection.setSorting("availableTaskCount", 1),
-    );
+    this.collection.fetch().then(() => this.collection.setSorting("availableTaskCount", 1));
 
     this.listenTo(app.vent, "paginationView:filter", this.filterByQuery);
   }
-
 
   filterByQuery(filterQuery) {
     return this.collection.setFilter(["name", "teams", "projects"], filterQuery);
   }
 }
 WorkloadListView.initClass();
-
 
 export default WorkloadListView;

@@ -7,7 +7,6 @@ import NestedObjModel from "libs/nested_obj_model";
 import Request from "libs/request";
 
 class DashboardTaskModel extends NestedObjModel {
-
   parse(annotation) {
     // transform the annotation object which holds a task to a task object which holds its annotation
 
@@ -15,7 +14,9 @@ class DashboardTaskModel extends NestedObjModel {
 
     if (!task) {
       // This should never be the case unless tasks were deleted in the DB.
-      console.warn(`[Dashboard Tasks] Annotation ${annotation.id} has no task assigned. Please inform your admin.`);
+      console.warn(
+        `[Dashboard Tasks] Annotation ${annotation.id} has no task assigned. Please inform your admin.`,
+      );
       return null;
     }
 
@@ -27,7 +28,6 @@ class DashboardTaskModel extends NestedObjModel {
     return task;
   }
 
-
   defaultTaskType(annotation) {
     return {
       summary: `[deleted] ${annotation.typ}`,
@@ -36,19 +36,15 @@ class DashboardTaskModel extends NestedObjModel {
     };
   }
 
-
   finish() {
     const annotation = this.get("annotation");
     const url = `/annotations/${annotation.typ}/${annotation.id}/finish`;
 
-    return Request.receiveJSON(url).then(
-      (response) => {
-        this.set("annotation.state.isFinished", true);
-        return response;
-      },
-    );
+    return Request.receiveJSON(url).then(response => {
+      this.set("annotation.state.isFinished", true);
+      return response;
+    });
   }
 }
-
 
 export default DashboardTaskModel;

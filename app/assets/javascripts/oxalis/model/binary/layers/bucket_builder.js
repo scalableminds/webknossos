@@ -8,18 +8,17 @@ import type { Vector3, Vector4 } from "oxalis/constants";
 import type { BucketRequestOptions } from "oxalis/model/binary/layers/layer";
 
 export type BucketInfo = {
-  position: Vector3;
-  zoomStep: number;
-  cubeSize: number;
+  position: Vector3,
+  zoomStep: number,
+  cubeSize: number,
 
   // From BucketRequestOptions
-  fourBit: ?boolean;
+  fourBit: ?boolean,
 };
 
 // Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
 // object as expected by the server on bucket request
 class BucketBuilder {
-
   fromZoomedAddress([x, y, z, zoomStep]: Vector4, options: ?BucketRequestOptions): BucketInfo {
     const bucket = {
       position: [
@@ -38,7 +37,6 @@ class BucketBuilder {
     return bucket;
   }
 
-
   bucketToZoomedAddress(bucket: BucketInfo): Vector4 {
     const [x, y, z] = bucket.position;
     const { zoomStep } = bucket;
@@ -49,8 +47,6 @@ class BucketBuilder {
       zoomStep,
     ];
   }
-
 }
-
 
 export default new BucketBuilder();

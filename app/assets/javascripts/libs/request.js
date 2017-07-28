@@ -9,20 +9,19 @@ import pako from "pako";
 import Toast from "libs/toast";
 
 type RequestOptions = {
-  headers?: { [key: string]: string };
-  method?: 'GET' | 'POST' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH';
-  timeout?: number;
+  headers?: { [key: string]: string },
+  method?: "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH",
+  timeout?: number,
 };
 
 type RequestOptionsWithData<T> = {
-  data: T;
-  headers?: { [key: string]: string };
-  method?: 'GET' | 'POST' | 'DELETE' | 'HEAD' | 'OPTIONS' | 'PUT' | 'PATCH';
-  timeout?: number;
+  data: T,
+  headers?: { [key: string]: string },
+  method?: "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH",
+  timeout?: number,
 };
 
 class Request {
-
   // IN:  nothing
   // OUT: json
   receiveJSON = (url: string, options: RequestOptions = {}): Promise<any> =>
@@ -30,7 +29,7 @@ class Request {
       url,
       _.defaultsDeep(options, { headers: { Accept: "application/json" } }),
       this.handleEmptyJsonResponse,
-    )
+    );
 
   // IN:  json
   // OUT: json
@@ -44,9 +43,7 @@ class Request {
       return this.receiveJSON(url, options);
     }
 
-    const body = _.isString(options.data) ?
-        options.data :
-        JSON.stringify(options.data);
+    const body = _.isString(options.data) ? options.data : JSON.stringify(options.data);
 
     return this.receiveJSON(
       url,
@@ -58,13 +55,19 @@ class Request {
         },
       }),
     );
-  }
+  };
 
   // IN:  multipart formdata
   // OUT: json
-  sendMultipartFormReceiveJSON = (url: string, options: RequestOptionsWithData<FormData | Object>): Promise<any> => {
-    function toFormData(input: { [key: string]: Array<string> | File | Object | string },
-      form: ?FormData = null, namespace: ?string = null): FormData {
+  sendMultipartFormReceiveJSON = (
+    url: string,
+    options: RequestOptionsWithData<FormData | Object>,
+  ): Promise<any> => {
+    function toFormData(
+      input: { [key: string]: Array<string> | File | Object | string },
+      form: ?FormData = null,
+      namespace: ?string = null,
+    ): FormData {
       let formData;
       if (form != null) {
         formData = form;
@@ -89,16 +92,15 @@ class Request {
           formData.append(`${formKey}[]`, value, value.name);
         } else if (typeof value === "string") {
           formData.append(formKey, value);
-        } else { // nested object
+        } else {
+          // nested object
           toFormData(value, formData, key);
         }
       }
       return formData;
     }
 
-    const body = options.data instanceof FormData ?
-        options.data :
-        toFormData(options.data);
+    const body = options.data instanceof FormData ? options.data : toFormData(options.data);
 
     return this.receiveJSON(
       url,
@@ -107,11 +109,14 @@ class Request {
         body,
       }),
     );
-  }
+  };
 
   // IN:  url-encoded formdata
   // OUT: json
-  sendUrlEncodedFormReceiveJSON = (url: string, options: RequestOptionsWithData<string>): Promise<any> =>
+  sendUrlEncodedFormReceiveJSON = (
+    url: string,
+    options: RequestOptionsWithData<string>,
+  ): Promise<any> =>
     this.receiveJSON(
       url,
       _.defaultsDeep(options, {
@@ -121,20 +126,25 @@ class Request {
           "Content-Type": "application/x-www-form-urlencoded",
         },
       }),
-    )
+    );
 
   receiveArraybuffer = (url: string, options: RequestOptions = {}): Promise<ArrayBuffer> =>
     this.triggerRequest(
       url,
       _.defaultsDeep(options, { headers: { Accept: "application/octet-stream" } }),
-      response => response.arrayBuffer())
+      response => response.arrayBuffer(),
+    );
 
   // IN:  arraybuffer
   // OUT: arraybuffer
-  sendArraybufferReceiveArraybuffer = (url: string, options: RequestOptionsWithData<ArrayBuffer | $TypedArray>): Promise<ArrayBuffer> => {
-    let body = options.data instanceof ArrayBuffer ?
-        options.data :
-        options.data.buffer.slice(0, options.data.byteLength);
+  sendArraybufferReceiveArraybuffer = (
+    url: string,
+    options: RequestOptionsWithData<ArrayBuffer | $TypedArray>,
+  ): Promise<ArrayBuffer> => {
+    let body =
+      options.data instanceof ArrayBuffer
+        ? options.data
+        : options.data.buffer.slice(0, options.data.byteLength);
 
     if (options.compress) {
       body = pako.gzip(body);
@@ -157,10 +167,14 @@ class Request {
         },
       }),
     );
-  }
+  };
 
   // TODO: babel doesn't support generic arrow-functions yet
-  triggerRequest<T>(url: string, options: RequestOptions | RequestOptionsWithData<T> = {}, responseDataHandler: ?Function = null): Promise<*> {
+  triggerRequest<T>(
+    url: string,
+    options: RequestOptions | RequestOptionsWithData<T> = {},
+    responseDataHandler: ?Function = null,
+  ): Promise<*> {
     const defaultOptions = {
       method: "GET",
       host: "",
@@ -208,25 +222,21 @@ class Request {
     }
 
     if (options.timeout != null) {
-      return Promise.race([fetchPromise, this.timeoutPromise(options.timeout)])
-        .then((result) => {
-          if (result === "timeout") {
-            throw new Error("Timeout");
-          } else {
-            return result;
-          }
-        });
+      return Promise.race([fetchPromise, this.timeoutPromise(options.timeout)]).then(result => {
+        if (result === "timeout") {
+          throw new Error("Timeout");
+        } else {
+          return result;
+        }
+      });
     } else {
       return fetchPromise;
     }
   }
 
   timeoutPromise = (timeout: number): Promise<string> =>
-    new Promise((resolve) => {
-      setTimeout(
-        () => resolve("timeout"),
-        timeout,
-      );
+    new Promise(resolve => {
+      setTimeout(() => resolve("timeout"), timeout);
     });
 
   handleStatus = (response: Response): Promise<Response> => {
@@ -234,12 +244,12 @@ class Request {
       return Promise.resolve(response);
     }
     return Promise.reject(response);
-  }
+  };
 
   handleError = (error: Response | Error): Promise<void> => {
     if (error instanceof Response) {
       return error.text().then(
-        (text) => {
+        text => {
           try {
             const json = JSON.parse(text);
 
@@ -255,15 +265,16 @@ class Request {
             return Promise.reject(text);
           }
         },
-        (textError) => {
+        textError => {
           Toast.error(textError.toString());
           return Promise.reject(textError);
-        });
+        },
+      );
     } else {
       console.error(error);
       return Promise.reject(error);
     }
-  }
+  };
 
   handleEmptyJsonResponse = (response: Response): Promise<{}> => {
     const contentLength = parseInt(response.headers.get("Content-Length"));
@@ -272,8 +283,7 @@ class Request {
     } else {
       return response.json();
     }
-  }
+  };
 }
-
 
 export default new Request();

@@ -7,7 +7,7 @@ import Utils from "libs/utils";
 
 const GROW_MULTIPLIER = 1.3;
 
-class ResizableBuffer<T:$TypedArray> {
+class ResizableBuffer<T: $TypedArray> {
   elementLength: number;
   capacity: number;
   length: number;
@@ -71,7 +71,7 @@ class ResizableBuffer<T:$TypedArray> {
   }
 
   pushMany(elements: Array<Array<number>> | Array<$TypedArray>): void {
-    this.ensureCapacity(this.length + (elements.length * this.elementLength));
+    this.ensureCapacity(this.length + elements.length * this.elementLength);
 
     // eslint-disable-next-line prefer-const
     let { buffer, elementLength, length } = this;
@@ -94,10 +94,13 @@ class ResizableBuffer<T:$TypedArray> {
     this.length += subarray.length;
   }
 
-
   pop(r: ?Array<number>) {
-    if (r == null) { r = new Array(this.elementLength); }
-    if (!this.length) { return null; }
+    if (r == null) {
+      r = new Array(this.elementLength);
+    }
+    if (!this.length) {
+      return null;
+    }
 
     // eslint-disable-next-line prefer-const
     let { buffer, elementLength, length } = this;
@@ -111,10 +114,13 @@ class ResizableBuffer<T:$TypedArray> {
     return r;
   }
 
-
   top(r: ?Array<number>) {
-    if (r == null) { r = new Array(this.elementLength); }
-    if (!this.length) { return null; }
+    if (r == null) {
+      r = new Array(this.elementLength);
+    }
+    if (!this.length) {
+      return null;
+    }
 
     // eslint-disable-next-line no-unused-vars, prefer-const
     let { buffer, elementLength, length } = this;
@@ -125,7 +131,6 @@ class ResizableBuffer<T:$TypedArray> {
 
     return r;
   }
-
 
   ensureCapacity(newCapacity: ?number): void {
     if (newCapacity == null) {
@@ -147,7 +152,6 @@ class ResizableBuffer<T:$TypedArray> {
     }
   }
 
-
   toString(): string {
     const length = this.getLength();
     const result = [];
@@ -155,7 +159,7 @@ class ResizableBuffer<T:$TypedArray> {
     for (const i of Utils.__range__(0, length, false)) {
       const element = [];
       for (const j of Utils.__range__(0, this.elementLength, false)) {
-        element.push(this.buffer[(i * this.elementLength) + j]);
+        element.push(this.buffer[i * this.elementLength + j]);
       }
       result.push(`[ ${element.join(", ")} ]`);
     }
@@ -163,6 +167,5 @@ class ResizableBuffer<T:$TypedArray> {
     return `(${length}) { ${result.join(", ")} }`;
   }
 }
-
 
 export default ResizableBuffer;

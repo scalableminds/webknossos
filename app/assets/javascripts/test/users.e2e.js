@@ -8,9 +8,7 @@ describe("User List", () => {
 
   // These async functions are executed synchronous when called via browser, otherwise
   // the whole test would need to be marked async and would be executed asynchronous
-  browser.addCommand("getUsersFromServer", async url =>
-    Request.json().from(url),
-  );
+  browser.addCommand("getUsersFromServer", async url => Request.json().from(url));
 
   browser.addCommand("createTeamOnServer", async payload =>
     Request.json().upload("/api/teams", { data: payload }),
@@ -34,11 +32,16 @@ describe("User List", () => {
     expect(numPaginationPages).toEqual(Math.ceil(users.length / maxUsersPerPage));
   });
 
-
   it("should assign a new team", () => {
     // create a new team for assignment
     const newTeamName = "test2";
-    const payload = { name: newTeamName, parent: "Connectomics department", owner: "", roles: [{ name: "admin" }, { name: "user" }], isEditable: "true" };
+    const payload = {
+      name: newTeamName,
+      parent: "Connectomics department",
+      owner: "",
+      roles: [{ name: "admin" }, { name: "user" }],
+      isEditable: "true",
+    };
     browser.createTeamOnServer(payload);
     // It is not possible to create a team from the users page, therefore refresh the page, so everything is up to date
     browser.refresh();
@@ -54,11 +57,9 @@ describe("User List", () => {
     expect(teamsAndRoles[newTeamName]).toBe("user");
   });
 
-
   it("should change roles of two teams", () =>
     // TODO
-     false);
-
+    false);
 
   it("should assign new experience", () => {
     const newExperience = { domain: "Testing", level: 42 };
@@ -68,7 +69,6 @@ describe("User List", () => {
     expect(experiences).toContain(newExperience);
   });
 
-
   it("should increase an experience", () => {
     const newExperience = { domain: "Testing", level: 23 };
     page.increaseExperience("SCM Boy", newExperience);
@@ -76,7 +76,6 @@ describe("User List", () => {
     const experiences = page.getExperiencesForUser("SCM Boy");
     expect(experiences).toContain(newExperience);
   });
-
 
   it("should delete an experience", () => {
     const newExperience = { domain: "Testing", level: 23 };
@@ -86,4 +85,3 @@ describe("User List", () => {
     expect(experiences).not.toContain(newExperience);
   });
 });
-

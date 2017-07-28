@@ -41,15 +41,14 @@ class TeamRoleModalView extends ModalView {
 </div>\
 `);
 
-    this.prototype.events =
-      { "click .btn-primary": "changeExperience" };
+    this.prototype.events = { "click .btn-primary": "changeExperience" };
   }
 
   templateContext() {
     // If only one user is selected then prefill the modal with his current values
     let users;
     return {
-      isChecked: (teamName) => {
+      isChecked: teamName => {
         users = this.getSelectedUsers();
         if (users.length === 1) {
           if (_.find(users[0].get("teams"), { team: teamName })) {
@@ -83,25 +82,22 @@ class TeamRoleModalView extends ModalView {
     this.selectedUsers = this.getSelectedUsers();
   }
 
-
   getSelectedUsers() {
     const checkboxes = $("tbody input[type=checkbox]:checked");
-    return checkboxes.map((i, element) => this.userCollection.findWhere({ id: $(element).val() }),
-    );
+    return checkboxes.map((i, element) => this.userCollection.findWhere({ id: $(element).val() }));
   }
-
 
   changeExperience() {
     if (this.isValid()) {
       // Find all selected users that will be affected by the bulk action
-      $("tbody input[type=checkbox]:checked").each(
-        (i, userEl) => {
-          const user = this.userCollection.findWhere({
-            id: $(userEl).val(),
-          });
+      $("tbody input[type=checkbox]:checked").each((i, userEl) => {
+        const user = this.userCollection.findWhere({
+          id: $(userEl).val(),
+        });
 
-          // Find all selected teams
-          let teams = _.map(this.$("input[type=checkbox]:checked"), (selectedTeamEl) => {
+        // Find all selected teams
+        let teams =
+          _.map(this.$("input[type=checkbox]:checked"), selectedTeamEl => {
             const teamName = $(selectedTeamEl).data("teamname");
             return {
               team: $(selectedTeamEl).val(),
@@ -109,29 +105,28 @@ class TeamRoleModalView extends ModalView {
                 name: this.$(`select[data-teamname="${teamName}"] :selected`).val(),
               },
             };
-          },
-          ) || [];
+          }) || [];
 
-          // Find unselected teams
-          const removedTeamsNames = this.$("input[type=checkbox]:not(:checked)").map((index, unselectedTeamEl) => unselectedTeamEl.dataset.teamname);
+        // Find unselected teams
+        const removedTeamsNames = this.$("input[type=checkbox]:not(:checked)").map(
+          (index, unselectedTeamEl) => unselectedTeamEl.dataset.teamname,
+        );
 
-          // Add / remove teams
-          const teamNames = _.map(teams, "team");
-          for (const oldTeam of user.get("teams")) {
-            if (!(teamNames.includes(oldTeam.team))) {
-              teams.push(oldTeam);
-            }
+        // Add / remove teams
+        const teamNames = _.map(teams, "team");
+        for (const oldTeam of user.get("teams")) {
+          if (!teamNames.includes(oldTeam.team)) {
+            teams.push(oldTeam);
           }
-          teams = _.filter(teams,
-            team => !_.includes(removedTeamsNames, team.team));
+        }
+        teams = _.filter(teams, team => !_.includes(removedTeamsNames, team.team));
 
-          // Verify user and update his teams
-          user.save({
-            isActive: true,
-            teams,
-          });
-        },
-      );
+        // Verify user and update his teams
+        user.save({
+          isActive: true,
+          teams,
+        });
+      });
 
       this.hide();
     } else {
@@ -139,18 +134,21 @@ class TeamRoleModalView extends ModalView {
     }
   }
 
-
   isValid() {
     let isValid = true;
 
     // Make sure that all selected checkboxes have a selected role
-    this.$("input[type=checkbox]:checked").parent().parent().find("select :selected")
-      .each((i, element) => { isValid &= $(element).text() !== "Modify roles..."; });
+    this.$("input[type=checkbox]:checked")
+      .parent()
+      .parent()
+      .find("select :selected")
+      .each((i, element) => {
+        isValid &= $(element).text() !== "Modify roles...";
+      });
 
     return isValid;
   }
 }
 TeamRoleModalView.initClass();
-
 
 export default TeamRoleModalView;

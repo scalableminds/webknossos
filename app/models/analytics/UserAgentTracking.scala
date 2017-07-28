@@ -1,10 +1,10 @@
-package models.user
+package models.analytics
 
-import models.basics._
-import reactivemongo.bson.BSONObjectID
-import play.api.libs.json.Json
-import reactivemongo.play.json.BSONFormats._
 import com.scalableminds.util.reactivemongo._
+import models.basics._
+import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
 case class UserAgentTracking(user: Option[BSONObjectID], userAgent: String, timestamp: Long)
 

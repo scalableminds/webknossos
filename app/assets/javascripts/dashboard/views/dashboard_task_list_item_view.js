@@ -66,8 +66,7 @@ class DashboardTaskListItemView extends Marionette.View {
 </td>\
 `);
 
-    this.prototype.templateContext =
-      { moment };
+    this.prototype.templateContext = { moment };
 
     this.prototype.events = {
       "click #finish-task": "finish",
@@ -82,25 +81,21 @@ class DashboardTaskListItemView extends Marionette.View {
       return "finished";
     }
     return "unfinished";
-  }
-
+  };
 
   initialize(options) {
     this.model.set("isAdminView", options.isAdminView);
     this.listenTo(this.model, "change", this.render);
   }
 
-
   // some actions are real links and some need to be send as ajax calls to the server
   callAjax(evt) {
     evt.preventDefault();
 
-    Request.receiveJSON(evt.target.href).then((jsonData) => {
+    Request.receiveJSON(evt.target.href).then(jsonData => {
       Toast.message(jsonData.messages);
-    },
-    );
+    });
   }
-
 
   finish() {
     if (confirm("Are you sure you want to permanently finish this tracing?")) {
@@ -108,16 +103,15 @@ class DashboardTaskListItemView extends Marionette.View {
     }
   }
 
-
   cancelAnnotation() {
     if (confirm("Do you really want to cancel this annotation?")) {
       const annotation = this.model.get("annotation");
       Request.triggerRequest(`/annotations/Task/${annotation.id}`, { method: "DELETE" }).then(() =>
-        this.model.collection.fetch());
+        this.model.collection.fetch(),
+      );
     }
   }
 }
 DashboardTaskListItemView.initClass();
-
 
 export default DashboardTaskListItemView;

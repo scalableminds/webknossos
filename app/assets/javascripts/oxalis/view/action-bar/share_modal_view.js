@@ -5,7 +5,6 @@ import Toast from "libs/toast";
 import { Modal, Input, Button } from "antd";
 import InputComponent from "oxalis/view/components/input_component";
 
-
 class ShareModalView extends PureComponent {
   props: {
     isVisible: boolean,
@@ -37,7 +36,9 @@ class ShareModalView extends PureComponent {
         onCancel={this.props.onOk}
       >
         <Input.Group compact>
-          <Button style={{ width: "15%" }} onClick={this.copyToClipboard}>Copy</Button>
+          <Button style={{ width: "15%" }} onClick={this.copyToClipboard}>
+            Copy
+          </Button>
           <InputComponent style={{ width: "85%" }} value={this.getUrl()} />
         </Input.Group>
       </Modal>

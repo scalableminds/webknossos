@@ -2,7 +2,7 @@
  * controller.js
  * @flow
  */
- /* globals JQueryInputEventObject:false */
+/* globals JQueryInputEventObject:false */
 
 import React from "react";
 import $ from "jquery";
@@ -44,7 +44,7 @@ class Controller extends React.PureComponent {
     initialControlmode: ControlModeType,
     // Delivered by connect()
     viewMode: ModeType,
-  }
+  };
 
   zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
@@ -58,7 +58,7 @@ class Controller extends React.PureComponent {
     ready: boolean,
   } = {
     ready: false,
-  }
+  };
 
   // Main controller, responsible for setting modes and everything
   // that has to be controlled in any mode.
@@ -84,9 +84,14 @@ class Controller extends React.PureComponent {
       Toast.error(messages["webgl.disabled"]);
     }
 
-    Model.fetch(this.props.initialTracingType, this.props.initialTracingId, this.props.initialControlmode, true)
+    Model.fetch(
+      this.props.initialTracingType,
+      this.props.initialTracingId,
+      this.props.initialControlmode,
+      true,
+    )
       .then(() => this.modelFetchDone())
-      .catch((error) => {
+      .catch(error => {
         // Don't throw errors for errors already handled by the model.
         if (error !== Model.HANDLED_ERROR) {
           throw error;
@@ -116,10 +121,16 @@ class Controller extends React.PureComponent {
     this.maybeShowNewTaskTypeModal();
 
     for (const binaryName of Object.keys(Model.binary)) {
-      this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
+      this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () =>
+        app.vent.trigger("rerender"),
+      );
     }
 
-    listenToStoreProperty(store => store.flycam.zoomStep, () => this.maybeWarnAboutZoomStep(), true);
+    listenToStoreProperty(
+      store => store.flycam.zoomStep,
+      () => this.maybeWarnAboutZoomStep(),
+      true,
+    );
 
     window.webknossos = new ApiLoader(Model);
 
@@ -137,7 +148,7 @@ class Controller extends React.PureComponent {
       const script = task.script;
       const gistId = _.last(script.gist.split("/"));
 
-      Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then((gist) => {
+      Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then(gist => {
         const firstFile = gist.files[Object.keys(gist.files)[0]];
 
         if (firstFile && firstFile.content) {
@@ -146,7 +157,9 @@ class Controller extends React.PureComponent {
             eval(firstFile.content);
           } catch (error) {
             console.error(error);
-            Toast.error(`Error executing the task script "${script.name}". See console for more information.`);
+            Toast.error(
+              `Error executing the task script "${script.name}". See console for more information.`,
+            );
           }
         } else {
           Toast.error(`${messages["task.user_script_retrieval_error"]} ${script.name}`);
@@ -161,7 +174,9 @@ class Controller extends React.PureComponent {
     // they start working on a new TaskType and need to be instructed.
     let text;
     const task = Store.getState().task;
-    if (!Utils.getUrlParams("differentTaskType") || (task == null)) { return; }
+    if (!Utils.getUrlParams("differentTaskType") || task == null) {
+      return;
+    }
 
     const taskType = task.type;
     const title = `Attention, new Task Type: ${taskType.summary}`;
@@ -174,13 +189,21 @@ class Controller extends React.PureComponent {
   }
 
   isWebGlSupported() {
-    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
+    return (
+      window.WebGLRenderingContext &&
+      document.createElement("canvas").getContext("experimental-webgl")
+    );
   }
 
   initKeyboard() {
     // avoid scrolling while pressing space
     $(document).keydown((event: JQueryInputEventObject) => {
-      if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) { event.preventDefault(); }
+      if (
+        (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
+        !$(":focus").length
+      ) {
+        event.preventDefault();
+      }
     });
 
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
@@ -200,18 +223,17 @@ class Controller extends React.PureComponent {
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },
 
-        "super + s": (event) => {
+        "super + s": event => {
           event.preventDefault();
           event.stopPropagation();
           Model.save();
         },
 
-        "ctrl + s": (event) => {
+        "ctrl + s": event => {
           event.preventDefault();
           event.stopPropagation();
           Model.save();
         },
-
       });
     }
 
@@ -220,11 +242,14 @@ class Controller extends React.PureComponent {
 
   maybeWarnAboutZoomStep() {
     const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
-    if (shouldWarn && (this.zoomStepWarningToast == null)) {
+    if (shouldWarn && this.zoomStepWarningToast == null) {
       const toastType = Store.getState().tracing.type === "volume" ? "danger" : "info";
-      this.zoomStepWarningToast = Toast.message(toastType,
-        "Segmentation data and volume tracing is only fully supported at a smaller zoom level.", true);
-    } else if (!shouldWarn && (this.zoomStepWarningToast != null)) {
+      this.zoomStepWarningToast = Toast.message(
+        toastType,
+        "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
+        true,
+      );
+    } else if (!shouldWarn && this.zoomStepWarningToast != null) {
       this.zoomStepWarningToast.remove();
       this.zoomStepWarningToast = null;
     }
@@ -254,7 +279,9 @@ class Controller extends React.PureComponent {
       if (state.tracing.restrictions.advancedOptionsAllowed) {
         return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
       } else {
-        return <MinimalSkeletonTracingArbitraryController onRender={this.updateStats} viewMode={mode} />;
+        return (
+          <MinimalSkeletonTracingArbitraryController onRender={this.updateStats} viewMode={mode} />
+        );
       }
     } else if (isPlane) {
       switch (state.tracing.type) {

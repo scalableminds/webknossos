@@ -40,7 +40,6 @@ class StatisticListView extends Marionette.CompositeView {
     this.listenTo(app.vent, "graphView:updatedSelection", this.update);
   }
 
-
   update(data) {
     this.model.set({
       startDate: moment(data.x),
@@ -50,11 +49,9 @@ class StatisticListView extends Marionette.CompositeView {
     return this.render();
   }
 
-
   toTimestamp(date) {
     return date.unix() * 1000;
   }
-
 
   fetchData() {
     return this.collection.fetch({

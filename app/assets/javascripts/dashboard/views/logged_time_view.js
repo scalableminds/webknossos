@@ -9,7 +9,6 @@ import c3 from "c3";
 import LoggedTimeListView from "dashboard/views/logged_time_list_view";
 import LoggedTimeCollection from "dashboard/models/logged_time_collection";
 
-
 class LoggedTimeView extends Marionette.View {
   static initClass() {
     this.prototype.template = _.template(`\
@@ -27,20 +26,19 @@ class LoggedTimeView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.regions =
-      { timeTable: ".time-table" };
+    this.prototype.regions = { timeTable: ".time-table" };
   }
-
 
   initialize(options) {
     this.options = options;
     // If you know how to do this better, do it. Backbones Collection type is not compatible to Marionettes
     // Collection type according to flow - although they actually should be...
-    this.collection = ((new LoggedTimeCollection([], { userID: this.options.userID }): any): Marionette.Collection);
+    this.collection = ((new LoggedTimeCollection([], {
+      userID: this.options.userID,
+    }): any): Marionette.Collection);
     this.listenTo(this.collection, "sync", this.render);
     return this.collection.fetch();
   }
-
 
   onRender() {
     if (this.collection.length > 0) {
@@ -48,7 +46,6 @@ class LoggedTimeView extends Marionette.View {
       _.defer(() => this.addGraph());
     }
   }
-
 
   addGraph() {
     // Only render the chart if we have any data.
@@ -60,10 +57,7 @@ class LoggedTimeView extends Marionette.View {
         bindto: "#time-graph", // doesn't work with classes
         data: {
           x: "date",
-          columns: [
-            ["date"].concat(dates),
-            ["monthlyHours"].concat(monthlyHours),
-          ],
+          columns: [["date"].concat(dates), ["monthlyHours"].concat(monthlyHours)],
         },
         axis: {
           x: {
@@ -82,7 +76,6 @@ class LoggedTimeView extends Marionette.View {
       });
     }
   }
-
 
   serializeData() {
     return { items: this.serializeCollection() };

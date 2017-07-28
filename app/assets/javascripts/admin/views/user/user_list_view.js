@@ -48,8 +48,7 @@ class UserListView extends Marionette.CompositeView {
     this.prototype.childView = UserListItemView;
     this.prototype.childViewContainer = "tbody";
 
-    this.prototype.ui =
-      { modalWrapper: "#modal-wrapper" };
+    this.prototype.ui = { modalWrapper: "#modal-wrapper" };
 
     this.prototype.events = {
       "click #team-role-modal": "showTeamRoleModal",
@@ -72,21 +71,17 @@ class UserListView extends Marionette.CompositeView {
     this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
   }
 
-
   filterBySearch(filterQuery) {
     return this.collection.setFilter(["email", "firstName", "id", "lastName"], filterQuery);
   }
-
 
   showTeamRoleModal() {
     return this.showModal(TeamRoleModalView);
   }
 
-
   showExperienceModal() {
     return this.showModal(ExperienceModalView);
   }
-
 
   showModal(ModalView) {
     if (this.$("tbody input[type=checkbox]:checked").length > 0) {
@@ -100,7 +95,6 @@ class UserListView extends Marionette.CompositeView {
       Toast.error("No user is selected.");
     }
   }
-
 
   onDestroy() {
     Utils.__guard__(this.modalView, x => x.destroy());

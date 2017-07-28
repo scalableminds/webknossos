@@ -12,7 +12,9 @@ describe("Register", () => {
     it("should send complete form", () => {
       page.signUpWithCompleteForm();
       const modalText = page.getModalText();
-      expect(modalText).toEqual("Your account has been created. An administrator is going to unlock you soon.");
+      expect(modalText).toEqual(
+        "Your account has been created. An administrator is going to unlock you soon.",
+      );
     });
   });
 });

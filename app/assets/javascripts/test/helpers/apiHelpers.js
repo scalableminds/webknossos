@@ -56,21 +56,22 @@ const modelData = {
 
 export function setupOxalis(t, mode) {
   UrlManager.initialState = { position: [1, 2, 3] };
-  const model = t.context.model = new Model();
+  const model = (t.context.model = new Model());
 
   const webknossos = new OxalisApi(model);
 
   Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(modelData[mode])));
 
-  return model.fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
+  return model
+    .fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");
-      webknossos.apiReady(2).then((apiObject) => {
+      webknossos.apiReady(2).then(apiObject => {
         t.context.api = apiObject;
       });
     })
-    .catch((error) => {
+    .catch(error => {
       console.error("model.fetch() failed", error);
       t.fail(error.message);
     });

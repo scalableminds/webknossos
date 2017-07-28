@@ -10,21 +10,20 @@ import api from "oxalis/api/internal_api";
 const ButtonGroup = Button.Group;
 
 class InputCatchers extends React.PureComponent {
-
   state = {
     activeInputCatcher: "",
-  }
+  };
 
   handleMouseOver = (event: SyntheticInputEvent) => {
     this.setState({
       activeInputCatcher: event.target.dataset.value,
     });
-  }
+  };
 
   render() {
     const width = Math.round(this.props.scale * Constants.VIEWPORT_WIDTH);
     const TDButtonStyle = {
-      width: (width / 4) - 0.5,
+      width: width / 4 - 0.5,
     };
 
     const activeInputCatcher = this.state.activeInputCatcher;
@@ -76,7 +75,9 @@ class InputCatchers extends React.PureComponent {
           }}
         >
           <ButtonGroup id="TDViewControls">
-            <Button size="small" style={TDButtonStyle} onClick={api.tracing.rotate3DViewToDiagonal}>3D</Button>
+            <Button size="small" style={TDButtonStyle} onClick={api.tracing.rotate3DViewToDiagonal}>
+              3D
+            </Button>
             <Button size="small" style={TDButtonStyle} onClick={api.tracing.rotate3DViewToXY}>
               <span className="colored-dot" />XY
             </Button>

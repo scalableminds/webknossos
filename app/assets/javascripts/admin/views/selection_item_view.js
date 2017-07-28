@@ -35,7 +35,6 @@ class SelectionItemView extends Marionette.View {
     this.listenTo(this, "render", this.afterRender);
   }
 
-
   serializeData() {
     const label = this.modelLabel ? this.modelLabel() : this.modelValue();
 
@@ -47,6 +46,5 @@ class SelectionItemView extends Marionette.View {
   }
 }
 SelectionItemView.initClass();
-
 
 export default SelectionItemView;

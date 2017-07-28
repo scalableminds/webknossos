@@ -7,7 +7,7 @@ class UserStatisticCollection extends Backbone.Collection {
   }
 
   parse(responses) {
-    return responses.map((response) => {
+    return responses.map(response => {
       if (_.isEmpty(response.tracingTimes)) {
         response.tracingTimes.push({ tracingTime: 0 });
       }
@@ -17,6 +17,5 @@ class UserStatisticCollection extends Backbone.Collection {
   }
 }
 UserStatisticCollection.initClass();
-
 
 export default UserStatisticCollection;

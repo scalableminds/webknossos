@@ -13,11 +13,11 @@ class ViewModesView extends PureComponent {
   props: {
     viewMode: ModeType,
     allowedModes: Array<AllowedModeType>,
-  }
+  };
 
   blurElement = (event: SyntheticInputEvent) => {
     event.target.blur();
-  }
+  };
 
   handleChange = (event: { target: { value: ModeType } }) => {
     Store.dispatch(setViewModeAction(event.target.value));
@@ -37,7 +37,9 @@ class ViewModesView extends PureComponent {
             key={mode}
             disabled={this.isDisabled(mode)}
             value={mode}
-          >{Utils.capitalize(mode)}</Radio.Button>,
+          >
+            {Utils.capitalize(mode)}
+          </Radio.Button>,
         )}
       </Radio.Group>
     );

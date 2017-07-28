@@ -19,7 +19,7 @@ type PropertiesType = {
   lineWidth?: number,
   color?: number,
   showCrossSections?: boolean,
-}
+};
 
 class Cube {
   crossSections: OrthoViewMapType<THREE.Line>;
@@ -47,19 +47,17 @@ class Cube {
 
     const lineProperties = { color, linewidth: lineWidth };
 
-    this.cube = new THREE.Line(
-      new THREE.Geometry(),
-      new THREE.LineBasicMaterial(lineProperties));
+    this.cube = new THREE.Line(new THREE.Geometry(), new THREE.LineBasicMaterial(lineProperties));
 
     this.crossSections = {};
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.crossSections[planeId] = new THREE.Line(
         new THREE.Geometry(),
-        new THREE.LineBasicMaterial(lineProperties));
+        new THREE.LineBasicMaterial(lineProperties),
+      );
     }
 
-
-    if ((this.min != null) && (this.max != null)) {
+    if (this.min != null && this.max != null) {
       this.setCorners(this.min, this.max);
     }
 
@@ -76,28 +74,42 @@ class Cube {
     const vec = (x, y, z) => new THREE.Vector3(x, y, z);
 
     let v = (this.cube.geometry.vertices = []);
-    v.push(vec(min[0], min[1], min[2])); v.push(vec(min[0], max[1], min[2]));
-    v.push(vec(max[0], max[1], min[2])); v.push(vec(max[0], min[1], min[2]));
-    v.push(vec(max[0], min[1], max[2])); v.push(vec(max[0], max[1], max[2]));
-    v.push(vec(min[0], max[1], max[2])); v.push(vec(min[0], min[1], max[2]));
-    v.push(vec(min[0], min[1], min[2])); v.push(vec(max[0], min[1], min[2]));
-    v.push(vec(max[0], max[1], min[2])); v.push(vec(max[0], max[1], max[2]));
-    v.push(vec(max[0], min[1], max[2])); v.push(vec(min[0], min[1], max[2]));
-    v.push(vec(min[0], max[1], max[2])); v.push(vec(min[0], max[1], min[2]));
+    v.push(vec(min[0], min[1], min[2]));
+    v.push(vec(min[0], max[1], min[2]));
+    v.push(vec(max[0], max[1], min[2]));
+    v.push(vec(max[0], min[1], min[2]));
+    v.push(vec(max[0], min[1], max[2]));
+    v.push(vec(max[0], max[1], max[2]));
+    v.push(vec(min[0], max[1], max[2]));
+    v.push(vec(min[0], min[1], max[2]));
+    v.push(vec(min[0], min[1], min[2]));
+    v.push(vec(max[0], min[1], min[2]));
+    v.push(vec(max[0], max[1], min[2]));
+    v.push(vec(max[0], max[1], max[2]));
+    v.push(vec(max[0], min[1], max[2]));
+    v.push(vec(min[0], min[1], max[2]));
+    v.push(vec(min[0], max[1], max[2]));
+    v.push(vec(min[0], max[1], min[2]));
 
-    v = (this.crossSections[OrthoViews.PLANE_XY].geometry.vertices = []);
-    v.push(vec(min[0], min[1], 0)); v.push(vec(min[0], max[1], 0));
-    v.push(vec(max[0], max[1], 0)); v.push(vec(max[0], min[1], 0));
+    v = this.crossSections[OrthoViews.PLANE_XY].geometry.vertices = [];
+    v.push(vec(min[0], min[1], 0));
+    v.push(vec(min[0], max[1], 0));
+    v.push(vec(max[0], max[1], 0));
+    v.push(vec(max[0], min[1], 0));
     v.push(vec(min[0], min[1], 0));
 
-    v = (this.crossSections[OrthoViews.PLANE_YZ].geometry.vertices = []);
-    v.push(vec(0, min[1], min[2])); v.push(vec(0, min[1], max[2]));
-    v.push(vec(0, max[1], max[2])); v.push(vec(0, max[1], min[2]));
+    v = this.crossSections[OrthoViews.PLANE_YZ].geometry.vertices = [];
+    v.push(vec(0, min[1], min[2]));
+    v.push(vec(0, min[1], max[2]));
+    v.push(vec(0, max[1], max[2]));
+    v.push(vec(0, max[1], min[2]));
     v.push(vec(0, min[1], min[2]));
 
-    v = (this.crossSections[OrthoViews.PLANE_XZ].geometry.vertices = []);
-    v.push(vec(min[0], 0, min[2])); v.push(vec(min[0], 0, max[2]));
-    v.push(vec(max[0], 0, max[2])); v.push(vec(max[0], 0, min[2]));
+    v = this.crossSections[OrthoViews.PLANE_XZ].geometry.vertices = [];
+    v.push(vec(min[0], 0, min[2]));
+    v.push(vec(min[0], 0, max[2]));
+    v.push(vec(max[0], 0, max[2]));
+    v.push(vec(max[0], 0, min[2]));
     v.push(vec(min[0], 0, min[2]));
 
     for (const mesh of _.values(this.crossSections).concat([this.cube])) {
@@ -142,19 +154,19 @@ class Cube {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
       const position = getPosition(Store.getState().flycam);
       if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] <= this.max[thirdDim]) {
-        this.crossSections[planeId].visible = this.visible && (planeId === id) && this.showCrossSections;
+        this.crossSections[planeId].visible =
+          this.visible && planeId === id && this.showCrossSections;
       } else {
         this.crossSections[planeId].visible = false;
       }
     }
 
-    this.cube.visible = this.visible && (id === OrthoViews.TDView);
+    this.cube.visible = this.visible && id === OrthoViews.TDView;
   }
 
   setVisibility(visible: boolean) {
     this.visible = visible;
   }
 }
-
 
 export default Cube;

@@ -13,14 +13,17 @@ export type DimensionMapType = [DimensionIndicesType, DimensionIndicesType, Dime
 // conversions between them.
 
 const Dimensions = {
-
   getIndices(planeID: OrthoViewType): DimensionMapType {
     // Returns a ordered 3-tuple [x, y, z] which represents the dimensions from the viewpoint
     switch (planeID) {
-      case OrthoViews.PLANE_XY: return [0, 1, 2];  // of each plane. For example, moving along the
-      case OrthoViews.PLANE_YZ: return [2, 1, 0];  // X-Axis of the YZ-Plane is equivalent to moving
-      case OrthoViews.PLANE_XZ: return [0, 2, 1];  // along the Z axis in the cube -> ind[0]=2
-      default: return [0, 0, 0];
+      case OrthoViews.PLANE_XY:
+        return [0, 1, 2]; // of each plane. For example, moving along the
+      case OrthoViews.PLANE_YZ:
+        return [2, 1, 0]; // X-Axis of the YZ-Plane is equivalent to moving
+      case OrthoViews.PLANE_XZ:
+        return [0, 2, 1]; // along the Z axis in the cube -> ind[0]=2
+      default:
+        return [0, 0, 0];
     }
   },
 
@@ -30,34 +33,36 @@ const Dimensions = {
     return [array[ind[0]], array[ind[1]], array[ind[2]]];
   },
 
-
   planeForThirdDimension(dim: DimensionIndicesType): OrthoViewType {
     // Return the plane in which dim is always the same
     switch (dim) {
-      case 2: return OrthoViews.PLANE_XY;
-      case 0: return OrthoViews.PLANE_YZ;
-      case 1: return OrthoViews.PLANE_XZ;
-      default: throw new Error(`Unrecognized dimension: ${dim}`);
+      case 2:
+        return OrthoViews.PLANE_XY;
+      case 0:
+        return OrthoViews.PLANE_YZ;
+      case 1:
+        return OrthoViews.PLANE_XZ;
+      default:
+        throw new Error(`Unrecognized dimension: ${dim}`);
     }
   },
-
 
   thirdDimensionForPlane(planeID: OrthoViewType): DimensionIndicesType {
     // Opposite of planeForThirdDimension
     switch (planeID) {
-      case OrthoViews.PLANE_XY: return 2;
-      case OrthoViews.PLANE_YZ: return 0;
-      case OrthoViews.PLANE_XZ: return 1;
-      default: throw new Error(`Unrecognized plane ID: ${planeID}`);
+      case OrthoViews.PLANE_XY:
+        return 2;
+      case OrthoViews.PLANE_YZ:
+        return 0;
+      case OrthoViews.PLANE_XZ:
+        return 1;
+      default:
+        throw new Error(`Unrecognized plane ID: ${planeID}`);
     }
   },
 
   roundCoordinate(coordinate: Vector3): Vector3 {
-    return [
-      Math.floor(coordinate[0]),
-      Math.floor(coordinate[1]),
-      Math.floor(coordinate[2]),
-    ];
+    return [Math.floor(coordinate[0]), Math.floor(coordinate[1]), Math.floor(coordinate[2])];
   },
 
   distance(pos1: Array<number>, pos2: Array<number>): number {

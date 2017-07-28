@@ -48,5 +48,4 @@ class TaskCreateView extends AbstractTabView {
 }
 TaskCreateView.initClass();
 
-
 export default TaskCreateView;

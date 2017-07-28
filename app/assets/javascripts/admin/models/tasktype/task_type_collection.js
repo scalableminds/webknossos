@@ -13,7 +13,6 @@ class TaskTypeCollection extends SortedCollection {
     return _.map(responses, TaskTypeModel.prototype.parse);
   }
 
-
   addJSON(item) {
     [item] = this.parse([item]);
     return this.add(item);

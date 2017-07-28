@@ -43,11 +43,9 @@ class StatisticView extends Marionette.View {
     this.statisticListView = new StatisticListView();
   }
 
-
   showStatisticsListView() {
     this.showChildView("timings", this.statisticListView);
   }
-
 
   showGraphView() {
     this.showChildView("graph", this.graphView);
@@ -55,6 +53,5 @@ class StatisticView extends Marionette.View {
   }
 }
 StatisticView.initClass();
-
 
 export default StatisticView;

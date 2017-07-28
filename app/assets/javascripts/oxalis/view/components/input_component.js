@@ -29,7 +29,6 @@ type InputComponentStateType = {
  * @class
  */
 class InputComponent extends React.PureComponent {
-
   props: InputComponentPropType;
   static defaultProps: InputComponentPropType = {
     onChange: _.noop,
@@ -48,39 +47,41 @@ class InputComponent extends React.PureComponent {
     if (!this.state.isFocused) {
       this.setState({ currentValue: nextProps.value });
     }
-  }
+  };
 
   handleChange = (e: SyntheticInputEvent) => {
     this.setState({ currentValue: e.target.value });
     if (this.props.onChange) {
       this.props.onChange(e);
     }
-  }
+  };
 
   handleFocus = (e: SyntheticInputEvent) => {
     this.setState({ isFocused: true });
     if (this.props.onFocus) {
       this.props.onFocus(e);
     }
-  }
+  };
 
   handleBlur = (e: SyntheticInputEvent) => {
     this.setState({ isFocused: false });
     if (this.props.onBlur) {
       this.props.onBlur(e);
     }
-  }
+  };
 
   render() {
-    return (<Input
-      {...this.props}
-      onChange={this.handleChange}
-      onFocus={this.handleFocus}
-      onBlur={this.handleBlur}
-      value={this.state.currentValue}
-      style={this.props.style}
-      placeholder={this.props.placeholder}
-    />);
+    return (
+      <Input
+        {...this.props}
+        onChange={this.handleChange}
+        onFocus={this.handleFocus}
+        onBlur={this.handleBlur}
+        value={this.state.currentValue}
+        style={this.props.style}
+        placeholder={this.props.placeholder}
+      />
+    );
   }
 }
 

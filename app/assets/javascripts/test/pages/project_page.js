@@ -1,21 +1,19 @@
 import Request from "../helpers/ajaxDownload";
 
 export default class ProjectPage {
-
-  projectListRows = "tbody tr"
-  createProjectButton = ".add-button"
-  projectNameInput = "input[name='name']"
-  projectPriorityInput = "input[name='priority']"
-  confirmButton = "button.btn-primary"
-  firstDownloadLink = "tbody tr:first-child a[href$='download']"
-  firstDeleteLink = "tbody tr:first-child a.delete"
-  firstEditLink = "tbody tr:first-child a[href$='edit']"
-  priorityColumn = "tbody td:nth-child(3)"
+  projectListRows = "tbody tr";
+  createProjectButton = ".add-button";
+  projectNameInput = "input[name='name']";
+  projectPriorityInput = "input[name='priority']";
+  confirmButton = "button.btn-primary";
+  firstDownloadLink = "tbody tr:first-child a[href$='download']";
+  firstDeleteLink = "tbody tr:first-child a.delete";
+  firstEditLink = "tbody tr:first-child a[href$='edit']";
+  priorityColumn = "tbody td:nth-child(3)";
 
   get() {
     browser.url("/projects");
   }
-
 
   getProjectListEntryCount() {
     browser.waitForExist(this.projectListRows);

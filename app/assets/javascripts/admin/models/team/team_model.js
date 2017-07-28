@@ -7,10 +7,7 @@ class TeamModel extends Backbone.Model {
     this.prototype.defaults = {
       name: "",
       owner: "",
-      roles: [
-            { name: "admin" },
-            { name: "user" },
-      ],
+      roles: [{ name: "admin" }, { name: "user" }],
       isEditable: "true",
     };
   }

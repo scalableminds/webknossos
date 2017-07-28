@@ -11,7 +11,6 @@ import LoggedTimeView from "dashboard/views/logged_time_view";
 import DatasetSwitchView from "dashboard/views/dataset/dataset_switch_view";
 
 class DashboardView extends Marionette.View {
-
   viewCache: Object;
 
   static initClass() {
@@ -47,9 +46,7 @@ class DashboardView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.regions =
-      { tabPane: ".tab-pane" };
-
+    this.prototype.regions = { tabPane: ".tab-pane" };
 
     this.prototype.events = {
       "click #tab-datasets": "showDatasets",
@@ -62,8 +59,7 @@ class DashboardView extends Marionette.View {
   // Cannot be ES6 style function, as these are covariant by default
   templateContext = function templateContext() {
     return { isAdminView: this.options.isAdminView };
-  }
-
+  };
 
   initialize(options) {
     this.options = options;
@@ -81,26 +77,21 @@ class DashboardView extends Marionette.View {
     };
   }
 
-
   showDatasets() {
     return this.showTab("datasetSwitchView", DatasetSwitchView);
   }
-
 
   showTasks() {
     return this.showTab("taskListView", DashboardTaskListView);
   }
 
-
   showExplorative() {
     return this.showTab("explorativeTracingListView", ExplorativeTracingListView);
   }
 
-
   showLoggedTime() {
     return this.showTab("loggedTimeView", LoggedTimeView);
   }
-
 
   showTab(viewName, ViewClass) {
     let view = this.viewCache[viewName];
@@ -111,6 +102,5 @@ class DashboardView extends Marionette.View {
   }
 }
 DashboardView.initClass();
-
 
 export default DashboardView;

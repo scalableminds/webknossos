@@ -45,8 +45,7 @@ class TaskOverviewView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.regions =
-      { team: ".team" };
+    this.prototype.regions = { team: ".team" };
 
     this.prototype.events = {
       "change @ui.taskTypesCheckbox": "selectionChanged",
@@ -83,25 +82,37 @@ class TaskOverviewView extends Marionette.View {
     this.prototype.FUTURE_TASK_EDGE_COLOR = "#3091E6";
     this.prototype.MAX_SCALE = 3.0;
 
-
     // utility functions
     this.prototype.color = (() =>
       // Red -> Yellow -> Green
-      d3.scale.linear()
-      .domain([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
-      .range(["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#006837"])
-    )();
+      d3.scale
+        .linear()
+        .domain([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+        .range([
+          "#a50026",
+          "#d73027",
+          "#f46d43",
+          "#fdae61",
+          "#fee08b",
+          "#ffffbf",
+          "#d9ef8b",
+          "#a6d96a",
+          "#66bd63",
+          "#1a9850",
+          "#006837",
+        ]))();
   }
 
-
   initialize() {
-    const defaultStartDate = moment().startOf("day").subtract(this.DEFAULT_TIME_PERIOD_TIME, this.DEFAULT_TIME_PERIOD_UNIT).valueOf();
+    const defaultStartDate = moment()
+      .startOf("day")
+      .subtract(this.DEFAULT_TIME_PERIOD_TIME, this.DEFAULT_TIME_PERIOD_UNIT)
+      .valueOf();
     const defaultEndDate = moment().endOf("day").valueOf();
     this.fetchData(defaultStartDate, defaultEndDate);
 
     this.listenTo(this.collection, "change", this.renderRangeSlider);
   }
-
 
   fetchData(start, end) {
     this.fetchPromise = this.collection.fetch({
@@ -113,15 +124,17 @@ class TaskOverviewView extends Marionette.View {
     this.updateMinMaxHours();
   }
 
-
   getMinMaxHours() {
     // This function calculates the min/max working hours of the users of the selected team
     if (_.isEmpty(this.minMaxHours)) {
       const selectedUsers = this.collection.filter(userInfo =>
-        _.map(userInfo.get("user").teams, "team").includes(this.team));
+        _.map(userInfo.get("user").teams, "team").includes(this.team),
+      );
       let workingTimes = selectedUsers.map(userModel => userModel.get("workingTime"));
 
-      if (_.isEmpty(workingTimes)) { workingTimes = [0]; }
+      if (_.isEmpty(workingTimes)) {
+        workingTimes = [0];
+      }
       const minTime = Math.min(...workingTimes);
       const maxTime = Math.max(...workingTimes);
 
@@ -138,22 +151,18 @@ class TaskOverviewView extends Marionette.View {
     return this.minMaxHours;
   }
 
-
   updateMinMaxHours() {
     return this.fetchPromise.then(() => {
       this.minMaxHours = {};
       this.getMinMaxHours();
-    },
-    );
+    });
   }
-
 
   updateSelectedTeam() {
     this.team = this.ui.team.find("select")[0].value;
     this.updateMinMaxHours();
     this.renderRangeSlider();
   }
-
 
   onRender() {
     this.ui.taskTypesCheckbox.prop("checked", true);
@@ -164,23 +173,24 @@ class TaskOverviewView extends Marionette.View {
     this.paintGraphDebounced();
   }
 
-
   initializeDateRangePicker() {
-    $(this.ui.dateRangeInput[0]).daterangepicker({
-      locale: {
-        format: "L",
+    $(this.ui.dateRangeInput[0]).daterangepicker(
+      {
+        locale: {
+          format: "L",
+        },
+        startDate: moment()
+          .subtract(this.DEFAULT_TIME_PERIOD_TIME, this.DEFAULT_TIME_PERIOD_UNIT)
+          .format("L"),
+        endDate: moment().format("L"),
+        opens: "left",
       },
-      startDate: moment().subtract(this.DEFAULT_TIME_PERIOD_TIME, this.DEFAULT_TIME_PERIOD_UNIT).format("L"),
-      endDate: moment().format("L"),
-      opens: "left",
-    },
-    (start, end) => {
-      this.fetchData(start.valueOf(), end.valueOf());
-      this.paintGraphDebounced();
-    },
+      (start, end) => {
+        this.fetchData(start.valueOf(), end.valueOf());
+        this.paintGraphDebounced();
+      },
     );
   }
-
 
   renderTeamDropdown() {
     // sort the collection so the default team is the first one
@@ -189,15 +199,20 @@ class TaskOverviewView extends Marionette.View {
     const defaultTeam = this.DEFAULT_TEAM;
     const teamCollection = new TeamCollection(null, {
       comparator(teams) {
-        if (teams.get("name") === defaultTeam) { return 0; } else { return 1; }
+        if (teams.get("name") === defaultTeam) {
+          return 0;
+        } else {
+          return 1;
+        }
       },
-    },
-    );
+    });
 
     const teamSelectionView = new SelectionView({
       collection: teamCollection,
       childViewOptions: {
-        modelValue() { return `${this.model.get("name")}`; },
+        modelValue() {
+          return `${this.model.get("name")}`;
+        },
       },
       name: "team",
       events: {
@@ -211,7 +226,6 @@ class TaskOverviewView extends Marionette.View {
     this.listenTo(teamSelectionView, "render:children", () => this.updateSelectedTeam());
     this.showChildView("team", teamSelectionView);
   }
-
 
   renderRangeSlider() {
     const sliderEl = this.ui.rangeSliderInput[0];
@@ -233,22 +247,18 @@ class TaskOverviewView extends Marionette.View {
         step: 1,
         margin: 1,
         range: minMaxHours,
-      },
-      );
+      });
 
-      sliderEl.noUiSlider.on("update", (values) => {
+      sliderEl.noUiSlider.on("update", values => {
         this.chosenMinHours = Math.round(+values[0]);
         this.chosenMaxHours = Math.round(+values[1]);
         this.ui.rangeSliderLabel1.html(`${this.chosenMinHours}h`);
         this.ui.rangeSliderLabel2.html(`${Utils.roundTo((+values[0] + +values[1]) / 2, 1)}h`);
         this.ui.rangeSliderLabel3.html(`${this.chosenMaxHours}h`);
         this.paintGraphDebounced();
-      },
-      );
-    },
-    );
+      });
+    });
   }
-
 
   paintGraphDebounced() {
     const paintFkt = this.paintGraph.bind(this);
@@ -256,65 +266,65 @@ class TaskOverviewView extends Marionette.View {
     this.paintGraphDebounced();
   }
 
-
   paintGraph() {
     this.renderSVG();
   }
-
 
   selectionChanged() {
     this.paintGraph();
   }
 
-
   doDrawTaskTypes() {
     return $(this.ui.taskTypesCheckbox).prop("checked");
   }
-
 
   doDrawProjects() {
     return $(this.ui.projectsCheckbox).prop("checked");
   }
 
-
   doDrawUser(user) {
-    const isWithinWorkingHours = this.chosenMinHours <= user.workingHours && user.workingHours <= this.chosenMaxHours;
+    const isWithinWorkingHours =
+      this.chosenMinHours <= user.workingHours && user.workingHours <= this.chosenMaxHours;
     const isInTeam = _.map(user.teams, "team").includes(this.team);
 
     return isWithinWorkingHours && isInTeam;
   }
 
-
   renderSVG() {
     return this.fetchPromise.then(() => {
       // { userInfos, taskTypes, projects } = @model.attributes
       // move workingTime to user object and convert to hours
-      this.collection.forEach((userInfoModel) => {
-        userInfoModel.get("user").workingHours = Utils.roundTo(userInfoModel.get("workingTime") / this.MS_PER_HOUR, 2);
+      this.collection.forEach(userInfoModel => {
+        userInfoModel.get("user").workingHours = Utils.roundTo(
+          userInfoModel.get("workingTime") / this.MS_PER_HOUR,
+          2,
+        );
       });
 
       // extract users and add full names
       this.users = this.collection.pluck("user");
-      this.users.forEach((user) => { user.name = `${user.firstName} ${user.lastName}`; });
+      this.users.forEach(user => {
+        user.name = `${user.firstName} ${user.lastName}`;
+      });
 
-      const taskTypes = _.flatten(this.collection.pluck("taskTypes"))
-        .concat(_.compact(this.collection.pluck("futureTaskType")));
+      const taskTypes = _.flatten(this.collection.pluck("taskTypes")).concat(
+        _.compact(this.collection.pluck("futureTaskType")),
+      );
       const projects = _.flatten(this.collection.pluck("projects"));
 
       const nodes = this.buildNodes(taskTypes, projects);
       const edges = this.buildEdges(nodes);
 
       this.updateGraph(nodes, edges);
-    },
-    );
+    });
   }
-
 
   buildGraph() {
     const width = $(".graph").width() - this.OPTIONS_MARGIN - $(".overview-options").width();
     const height = $(window).height() - 50 - $(".graph").offset().top;
 
-    this.svg = d3.select(".graph")
+    this.svg = d3
+      .select(".graph")
       .html("")
       .append("svg")
       .attr("width", width)
@@ -328,21 +338,23 @@ class TaskOverviewView extends Marionette.View {
     this.setupPanAndZoom();
   }
 
-
   updateGraph(nodes, edges) {
     // initialize nodes with random position as this yields faster results
-    nodes.forEach((n) => {
+    nodes.forEach(n => {
       n.x = Math.random() * this.svg.attr("width");
       n.y = Math.random() * this.svg.attr("height");
-    },
-    );
+    });
 
     const { RECT_HEIGHT } = this;
     const { TEXT_PADDING } = this;
 
     // stop existing force layout and cancel its timeout
-    if (this.force) { this.force.stop(); }
-    if (this.forceTimeout) { clearTimeout(this.forceTimeout); }
+    if (this.force) {
+      this.force.stop();
+    }
+    if (this.forceTimeout) {
+      clearTimeout(this.forceTimeout);
+    }
 
     // clear old selection data and svg elements
     this.svgEdges.remove();
@@ -351,22 +363,24 @@ class TaskOverviewView extends Marionette.View {
     this.svgNodes = this.svgNodes.data([]);
 
     // append the svg path elements
-    this.svgEdges = this.svgEdges.data(edges)
-      .enter().append("svg:path")
+    this.svgEdges = this.svgEdges
+      .data(edges)
+      .enter()
+      .append("svg:path")
       .attr("class", "link")
       .attr("stroke", d => d.color)
-      .attr("stroke-dasharray", d => (d.color === this.FUTURE_TASK_EDGE_COLOR) ? "10,10" : "");
+      .attr("stroke-dasharray", d => (d.color === this.FUTURE_TASK_EDGE_COLOR ? "10,10" : ""));
 
     // append the container for the svg node elements
     this.svgNodes = this.svgNodes.data(nodes, d => d.id);
-    const svgNodesContainer = this.svgNodes.enter().append("svg:g")
-      .attr("id", d => d.id);
+    const svgNodesContainer = this.svgNodes.enter().append("svg:g").attr("id", d => d.id);
 
     // add the label to the svg node container
-    svgNodesContainer.append("svg:text")
+    svgNodesContainer
+      .append("svg:text")
       .attr("class", "id")
       .text(d => d.text)
-      .each(function (d) {
+      .each(function(d) {
         d.width = this.getBBox().width + TEXT_PADDING;
         d.height = RECT_HEIGHT;
       })
@@ -374,26 +388,52 @@ class TaskOverviewView extends Marionette.View {
       .attr("y", RECT_HEIGHT / 2);
 
     // add the rectangle to the svg node container
-    svgNodesContainer.insert("svg:rect", ":first-child")
+    svgNodesContainer
+      .insert("svg:rect", ":first-child")
       .attr("class", "node")
       .attr("width", d => d.width)
       .attr("height", RECT_HEIGHT)
-      .attr("rx", (d) => { if (d.type === "user") { return 3; } else { return 10; } })
-      .attr("ry", (d) => { if (d.type === "user") { return 3; } else { return 10; } })
-      .style("fill", (d) => { if (d.color) { return d.color; } else { return "white"; } })
-      .style("stroke", (d) => { if (d.color) { return d3.rgb(d.color).darker().toString(); } else { return "black"; } });
+      .attr("rx", d => {
+        if (d.type === "user") {
+          return 3;
+        } else {
+          return 10;
+        }
+      })
+      .attr("ry", d => {
+        if (d.type === "user") {
+          return 3;
+        } else {
+          return 10;
+        }
+      })
+      .style("fill", d => {
+        if (d.color) {
+          return d.color;
+        } else {
+          return "white";
+        }
+      })
+      .style("stroke", d => {
+        if (d.color) {
+          return d3.rgb(d.color).darker().toString();
+        } else {
+          return "black";
+        }
+      });
 
     this.zoomOnce = _.once(() => this.zoomToFitScreen());
 
     // the force layout needs to be newly created every time
     // using the old one leads to incorrect layouts as colajs seems to mistakenly use old state
-    this.force = cola.d3adaptor()
+    this.force = cola
+      .d3adaptor()
       .size([this.svg.attr("width"), this.svg.attr("height")])
       .nodes(nodes)
       .links(edges)
       .symmetricDiffLinkLengths(200)
       .avoidOverlaps(true)
-      .convergenceThreshold(0.10)
+      .convergenceThreshold(0.1)
       .on("tick", this.tick.bind(this));
 
     // unconstrained, user-constrained, overlap-constrained iterations
@@ -405,137 +445,157 @@ class TaskOverviewView extends Marionette.View {
     this.setupPopovers();
   }
 
-
   tick() {
     // update the position of the edges
     // distribute the start and end point on the x-axis depending on their direction
-    this.svgEdges.attr("d", (d) => {
+    this.svgEdges.attr("d", d => {
       const deltaX = d.target.x - d.source.x;
       const deltaY = d.target.y - d.source.y;
-      const dist = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
+      const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
       const normX = deltaX / dist;
       const sourcePadding = Math.min(25, d.source.width / 2);
       const targetPadding = Math.min(25, d.target.width / 2);
-      const sourceX = d.source.x + (sourcePadding * normX);
+      const sourceX = d.source.x + sourcePadding * normX;
       const sourceY = d.source.y;
-      const targetX = d.target.x - (targetPadding * normX);
+      const targetX = d.target.x - targetPadding * normX;
       const targetY = d.target.y;
       return `M${sourceX},${sourceY}L${targetX},${targetY}`;
     });
 
     // update the position of the nodes
-    this.svgNodes.attr("transform", d => `translate(${d.x - (d.width / 2)},${d.y - (d.height / 2)})`);
+    this.svgNodes.attr("transform", d => `translate(${d.x - d.width / 2},${d.y - d.height / 2})`);
 
     // this will only be called after the first tick
     this.zoomOnce();
   }
 
-
   buildNodes(taskTypes, projects) {
     let nodes = [];
 
-    nodes = nodes.concat(this.users.filter(user => this.doDrawUser(user)).map(user => ({
-      id: user.id,
-      text: `${user.firstName} ${user.lastName}`,
-      color: this.color((user.workingHours - this.chosenMinHours) / (this.chosenMaxHours - this.chosenMinHours)),
-      type: "user",
-    })));
+    nodes = nodes.concat(
+      this.users.filter(user => this.doDrawUser(user)).map(user => ({
+        id: user.id,
+        text: `${user.firstName} ${user.lastName}`,
+        color: this.color(
+          (user.workingHours - this.chosenMinHours) / (this.chosenMaxHours - this.chosenMinHours),
+        ),
+        type: "user",
+      })),
+    );
 
     if (this.doDrawTaskTypes()) {
-      nodes = nodes.concat(taskTypes.map(taskType =>
-        ({
+      nodes = nodes.concat(
+        taskTypes.map(taskType => ({
           id: taskType._id.$oid,
           text: taskType.summary,
           type: "taskType",
-        }),
-      ));
+        })),
+      );
     }
 
     if (this.doDrawProjects()) {
-      nodes = nodes.concat(projects.map(project =>
-        ({
+      nodes = nodes.concat(
+        projects.map(project => ({
           id: project._id.$oid,
           text: project.name,
           type: "project",
-        }),
-      ));
+        })),
+      );
     }
 
     return nodes;
   }
-
 
   buildEdges(nodes) {
     let user;
     let edges = [];
 
     // only draw edges for users that are displayed in the graph
-    const selectedUserInfos = this.collection.filter(userInfo => this.doDrawUser(userInfo.get("user")));
+    const selectedUserInfos = this.collection.filter(userInfo =>
+      this.doDrawUser(userInfo.get("user")),
+    );
 
     if (this.doDrawTaskTypes()) {
       // task type edges
-      edges = edges.concat(_.flatten(selectedUserInfos.map((userInfo) => {
-        user = userInfo.get("user");
-        const taskTypes = userInfo.get("taskTypes");
-        return taskTypes.map(taskType => this.edge(user.id, taskType._id.$oid, nodes));
-      },
-      )));
+      edges = edges.concat(
+        _.flatten(
+          selectedUserInfos.map(userInfo => {
+            user = userInfo.get("user");
+            const taskTypes = userInfo.get("taskTypes");
+            return taskTypes.map(taskType => this.edge(user.id, taskType._id.$oid, nodes));
+          }),
+        ),
+      );
 
       // future task type edges
-      edges = edges.concat(_.flatten(selectedUserInfos.map((userInfo) => {
-        user = userInfo.get("user");
-        const futureTaskType = userInfo.get("futureTaskType");
-        if (futureTaskType) {
-          return this.edge(user.id, futureTaskType._id.$oid, nodes, this.FUTURE_TASK_EDGE_COLOR);
-        }
-        return null;
-      },
-      )));
+      edges = edges.concat(
+        _.flatten(
+          selectedUserInfos.map(userInfo => {
+            user = userInfo.get("user");
+            const futureTaskType = userInfo.get("futureTaskType");
+            if (futureTaskType) {
+              return this.edge(
+                user.id,
+                futureTaskType._id.$oid,
+                nodes,
+                this.FUTURE_TASK_EDGE_COLOR,
+              );
+            }
+            return null;
+          }),
+        ),
+      );
     }
 
     // project edges
     if (this.doDrawProjects()) {
-      edges = edges.concat(_.flatten(selectedUserInfos.map((userInfo) => {
-        user = userInfo.get("user");
-        const projects = userInfo.get("projects");
-        return projects.map(project => this.edge(user.id, project._id.$oid, nodes));
-      },
-      )));
+      edges = edges.concat(
+        _.flatten(
+          selectedUserInfos.map(userInfo => {
+            user = userInfo.get("user");
+            const projects = userInfo.get("projects");
+            return projects.map(project => this.edge(user.id, project._id.$oid, nodes));
+          }),
+        ),
+      );
     }
 
     return _.compact(edges);
   }
 
-
   setupPanAndZoom() {
-    this.zoom = d3.behavior.zoom()
+    this.zoom = d3.behavior
+      .zoom()
       .scaleExtent([0.1, 10])
-      .on("zoom", () => this.container.attr("transform", `translate(${d3.event.translate})scale(${d3.event.scale})`),
+      .on("zoom", () =>
+        this.container.attr(
+          "transform",
+          `translate(${d3.event.translate})scale(${d3.event.scale})`,
+        ),
       );
 
     this.svg.call(this.zoom);
   }
 
-
   setupPopovers() {
-    this.users.forEach(user => $(`#${user.id}`).popover({
-      title: `${user.firstName} ${user.lastName}`,
-      html: false,
-      trigger: "hover",
-      content: this.createUserTooltip(user),
-      container: "body",
-    }),
+    this.users.forEach(user =>
+      $(`#${user.id}`).popover({
+        title: `${user.firstName} ${user.lastName}`,
+        html: false,
+        trigger: "hover",
+        content: this.createUserTooltip(user),
+        container: "body",
+      }),
     );
   }
 
-
   createUserTooltip(user) {
-    return [`Working time: ${user.workingHours}h`,
+    return [
+      `Working time: ${user.workingHours}h`,
       "Experiences:",
       _.map(user.experiences, (domain, value) => `${domain} : ${value}`).join("\n"),
     ].join("\n");
   }
-
 
   zoomToFitScreen() {
     const transitionDuration = 400;
@@ -545,13 +605,15 @@ class TaskOverviewView extends Marionette.View {
     const fullHeight = this.svg.node().clientHeight;
     const { width } = bounds;
     const { height } = bounds;
-    const midX = bounds.x + (width / 2);
-    const midY = bounds.y + (height / 2);
-    if (width === 0 || height === 0) { return; } // nothing to fit
-    let scale = 0.90 / Math.max(width / fullWidth, height / fullHeight);
+    const midX = bounds.x + width / 2;
+    const midY = bounds.y + height / 2;
+    if (width === 0 || height === 0) {
+      return;
+    } // nothing to fit
+    let scale = 0.9 / Math.max(width / fullWidth, height / fullHeight);
     // limit scale to a reasonable magnification
     scale = Math.min(scale, this.MAX_SCALE);
-    const translate = [(fullWidth / 2) - (scale * midX), (fullHeight / 2) - (scale * midY)];
+    const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
 
     this.container
       .transition()

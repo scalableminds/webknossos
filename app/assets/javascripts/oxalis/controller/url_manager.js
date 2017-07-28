@@ -27,7 +27,7 @@ export type UrlManagerState = {
 class UrlManager {
   baseUrl: string;
   initialState: UrlManagerState;
-  lastUrl: ?string
+  lastUrl: ?string;
 
   initialize() {
     this.baseUrl = document.location.pathname + document.location.search;
@@ -40,10 +40,7 @@ class UrlManager {
     this.initialize();
   }
 
-  update = _.throttle(
-    () => this.updateUnthrottled(),
-    MAX_UPDATE_INTERVAL,
-  );
+  update = _.throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);
 
   updateUnthrottled(force: boolean = false) {
     if (window.isNavigating) {
@@ -64,7 +61,9 @@ class UrlManager {
       window.history.replaceState({}, null, url);
       this.lastUrl = window.location.href;
     } else {
-      setTimeout(() => { this.lastUrl = null; }, NO_MODIFY_TIMEOUT);
+      setTimeout(() => {
+        this.lastUrl = null;
+      }, NO_MODIFY_TIMEOUT);
     }
   }
 
@@ -104,11 +103,9 @@ class UrlManager {
     return state;
   }
 
-
   startUrlUpdater(): void {
     Store.subscribe(() => this.update());
   }
-
 
   buildUrl(): ?string {
     const tracing = Store.getState().tracing;
@@ -140,11 +137,13 @@ export function updateTypeAndId(baseUrl: string, tracingType: string, tracingId:
   // both here. Chaining the replace function is possible, since they are mutually
   // exclusive and thus can't apply both simultaneously.
   return baseUrl
-    .replace(/^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/, (all, base, type, id, rest) =>
-      `${base}/${tracingType}/${tracingId}${rest}`,
+    .replace(
+      /^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/,
+      (all, base, type, id, rest) => `${base}/${tracingType}/${tracingId}${rest}`,
     )
-    .replace(/^(.*\/datasets)\/([^/]*)(\/.*)$/, (all, base, id, rest) =>
-      `${base}/${tracingId}${rest}`,
+    .replace(
+      /^(.*\/datasets)\/([^/]*)(\/.*)$/,
+      (all, base, id, rest) => `${base}/${tracingId}${rest}`,
     );
 }
 

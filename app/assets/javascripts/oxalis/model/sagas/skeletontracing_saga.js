@@ -9,23 +9,43 @@ import messages from "messages";
 import Store from "oxalis/store";
 import Modal from "oxalis/view/modal";
 import { put, take, takeEvery, select, race } from "redux-saga/effects";
-import { deleteBranchPointAction, setTreeNameAction } from "oxalis/model/actions/skeletontracing_actions";
-import { createTree, deleteTree, updateTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateSkeletonTracing } from "oxalis/model/sagas/update_actions";
+import {
+  deleteBranchPointAction,
+  setTreeNameAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import {
+  createTree,
+  deleteTree,
+  updateTree,
+  createNode,
+  deleteNode,
+  updateNode,
+  createEdge,
+  deleteEdge,
+  updateSkeletonTracing,
+} from "oxalis/model/sagas/update_actions";
 import type { ToggleTemporarySettingActionType } from "oxalis/model/actions/settings_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";
 import { generateTreeName } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import type { SkeletonTracingType, NodeType, TreeType, TreeMapType, NodeMapType, EdgeType, FlycamType } from "oxalis/store";
+import type {
+  SkeletonTracingType,
+  NodeType,
+  TreeType,
+  TreeMapType,
+  NodeMapType,
+  EdgeType,
+  FlycamType,
+} from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import api from "oxalis/api/internal_api";
 
 function* centerActiveNode() {
-  getActiveNode(yield select(state => state.tracing))
-    .map((activeNode) => {
-      api.tracing.centerPositionAnimated(activeNode.position, false);
-    });
+  getActiveNode(yield select(state => state.tracing)).map(activeNode => {
+    api.tracing.centerPositionAnimated(activeNode.position, false);
+  });
 }
 
 function* watchBranchPointDeletion(): Generator<*, *, *> {
@@ -37,15 +57,23 @@ function* watchBranchPointDeletion(): Generator<*, *, *> {
     });
 
     if (deleteBranchpointAction) {
-      const hasBranchPoints = yield select(state => getBranchPoints(state.tracing).getOrElse([]).length > 0);
+      const hasBranchPoints = yield select(
+        state => getBranchPoints(state.tracing).getOrElse([]).length > 0,
+      );
       if (hasBranchPoints) {
         if (lastActionCreatedNode === true) {
           yield put(deleteBranchPointAction());
         } else {
-          Modal.show(messages["tracing.branchpoint_jump_twice"],
-            "Jump again?",
-            [{ id: "jump-button", label: "Jump again", callback: () => { Store.dispatch(deleteBranchPointAction()); } },
-             { id: "cancel-button", label: "Cancel" }]);
+          Modal.show(messages["tracing.branchpoint_jump_twice"], "Jump again?", [
+            {
+              id: "jump-button",
+              label: "Jump again",
+              callback: () => {
+                Store.dispatch(deleteBranchPointAction());
+              },
+            },
+            { id: "cancel-button", label: "Cancel" },
+          ]);
         }
         lastActionCreatedNode = false;
       } else {
@@ -73,25 +101,22 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
   yield takeEvery(["INITIALIZE_SKELETONTRACING"], watchTreeNames);
   yield take("WK_READY");
   yield takeEvery(
-    [
-      "SET_ACTIVE_TREE",
-      "SET_ACTIVE_NODE",
-      "DELETE_NODE",
-      "DELETE_BRANCHPOINT",
-      "SELECT_NEXT_TREE",
-    ],
+    ["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE", "DELETE_BRANCHPOINT", "SELECT_NEXT_TREE"],
     centerActiveNode,
   );
   yield takeEvery("TOGGLE_TEMPORARY_SETTING", warnAboutSkeletonInvisibility);
   yield watchBranchPointDeletion();
 }
 
-function* warnAboutSkeletonInvisibility(action: ToggleTemporarySettingActionType): Generator<*, *, *> {
+function* warnAboutSkeletonInvisibility(
+  action: ToggleTemporarySettingActionType,
+): Generator<*, *, *> {
   let msg;
   if (action.propertyName === "shouldHideAllSkeletons") {
     msg = "You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.";
   } else if (action.propertyName === "shouldHideInactiveTrees") {
-    msg = "You just toggled the skeleton visibility of inactive trees. To toggle back, just hit the 2-Key.";
+    msg =
+      "You just toggled the skeleton visibility of inactive trees. To toggle back, just hit the 2-Key.";
   } else {
     return;
   }
@@ -102,7 +127,11 @@ function* warnAboutSkeletonInvisibility(action: ToggleTemporarySettingActionType
   }
 }
 
-function* diffNodes(prevNodes: NodeMapType, nodes: NodeMapType, treeId: number): Generator<UpdateAction, void, void> {
+function* diffNodes(
+  prevNodes: NodeMapType,
+  nodes: NodeMapType,
+  treeId: number,
+): Generator<UpdateAction, void, void> {
   if (prevNodes === nodes) return;
   const { onlyA: deletedNodeIds, onlyB: addedNodeIds, both: bothNodeIds } = Utils.diffArrays(
     _.map(prevNodes, node => node.id),
@@ -130,7 +159,11 @@ function updateNodePredicate(prevNode: NodeType, node: NodeType): boolean {
   return !_.isEqual(prevNode, node);
 }
 
-function* diffEdges(prevEdges: Array<EdgeType>, edges: Array<EdgeType>, treeId: number): Generator<UpdateAction, void, void> {
+function* diffEdges(
+  prevEdges: Array<EdgeType>,
+  edges: Array<EdgeType>,
+  treeId: number,
+): Generator<UpdateAction, void, void> {
   if (prevEdges === edges) return;
   const { onlyA: deletedEdges, onlyB: addedEdges } = Utils.diffArrays(prevEdges, edges);
   for (const edge of deletedEdges) {
@@ -142,14 +175,19 @@ function* diffEdges(prevEdges: Array<EdgeType>, edges: Array<EdgeType>, treeId: 
 }
 
 function updateTreePredicate(prevTree: TreeType, tree: TreeType): boolean {
-  return prevTree.branchPoints !== tree.branchPoints ||
+  return (
+    prevTree.branchPoints !== tree.branchPoints ||
     prevTree.color !== tree.color ||
     prevTree.name !== tree.name ||
     !_.isEqual(prevTree.comments, tree.comments) ||
-    !_.isEqual(prevTree.timestamp, tree.timestamp);
+    !_.isEqual(prevTree.timestamp, tree.timestamp)
+  );
 }
 
-export function* diffTrees(prevTrees: TreeMapType, trees: TreeMapType): Generator<UpdateAction, void, void> {
+export function* diffTrees(
+  prevTrees: TreeMapType,
+  trees: TreeMapType,
+): Generator<UpdateAction, void, void> {
   if (prevTrees === trees) return;
   const { onlyA: deletedTreeIds, onlyB: addedTreeIds, both: bothTreeIds } = Utils.diffArrays(
     _.map(prevTrees, tree => tree.treeId),
@@ -179,7 +217,6 @@ export function* diffTrees(prevTrees: TreeMapType, trees: TreeMapType): Generato
     }
   }
 }
-
 
 const diffTreeCache = {};
 

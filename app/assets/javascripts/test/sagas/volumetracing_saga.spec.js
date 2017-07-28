@@ -24,13 +24,14 @@ const mockedVolumeLayer = {
 };
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
-mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
+mockRequire("oxalis/model/sagas/root_saga", function*() {
+  yield;
+});
 
 const { saveTracingAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 const { defaultState } = require("oxalis/store");
-
 
 function withoutUpdateTracing(items: Array<UpdateAction>): Array<UpdateAction> {
   return items.filter(item => item.action !== "updateTracing");
@@ -54,9 +55,11 @@ const volumeTracing = {
   },
 };
 
-const initialState = update(defaultState, { tracing: {
-  $set: volumeTracing,
-} });
+const initialState = update(defaultState, {
+  tracing: {
+    $set: volumeTracing,
+  },
+});
 
 const ACTIVE_CELL_ID = 5;
 
@@ -72,7 +75,7 @@ const INIT_RACE_ACTION_OBJECT = {
   initVolume: take("INITIALIZE_VOLUMETRACING"),
 };
 
-test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => {
+test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   const saga = saveTracingAsync();
   expectValueDeepEqual(t, saga.next(), race(INIT_RACE_ACTION_OBJECT));
   saga.next({ initVolume: true });
@@ -86,7 +89,7 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", (t) => 
   t.is(withoutUpdateTracing(items).length, 0);
 });
 
-test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
+test("VolumeTracingSaga should do something if changed (saga test)", t => {
   const newState = VolumeTracingReducer(initialState, setActiveCellAction);
 
   const saga = saveTracingAsync();
@@ -103,7 +106,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", (t) => {
   expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items)));
 });
 
-test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
+test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   const saga = editVolumeLayerAsync();
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
@@ -114,7 +117,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
   t.is(layer.plane, OrthoViews.PLANE_XY);
 });
 
-test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
+test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   const saga = editVolumeLayerAsync();
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
@@ -129,7 +132,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
   t.deepEqual(volumeLayer.maxCoord, [5, 6, 7]);
 });
 
-test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
+test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   const saga = editVolumeLayerAsync();
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
@@ -142,7 +145,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
   expectValueDeepEqual(t, saga.next({ finishEditingAction }), call(finishLayer, volumeLayer));
 });
 
-test("VolumeTracingSaga should abort editing on cell creation (saga test)", (t) => {
+test("VolumeTracingSaga should abort editing on cell creation (saga test)", t => {
   const saga = editVolumeLayerAsync();
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
@@ -155,7 +158,7 @@ test("VolumeTracingSaga should abort editing on cell creation (saga test)", (t) 
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
 });
 
-test("finishLayer saga should emit resetContourAction and then be done (saga test)", (t) => {
+test("finishLayer saga should emit resetContourAction and then be done (saga test)", t => {
   // $FlowFixMe
   const saga = finishLayer(mockedVolumeLayer);
   saga.next();

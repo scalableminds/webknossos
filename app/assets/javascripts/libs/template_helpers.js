@@ -7,8 +7,16 @@ import Utils from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
 
 class TemplateHelpers {
-
-  COLOR_MAP: Array<string> = ["#6962C5", "#403C78", "#B2B1C4", "#6D6C78", "#C4C4C4", "#FF5000", "#899AC4", "#60e0ac"];
+  COLOR_MAP: Array<string> = [
+    "#6962C5",
+    "#403C78",
+    "#B2B1C4",
+    "#6D6C78",
+    "#C4C4C4",
+    "#FF5000",
+    "#899AC4",
+    "#60e0ac",
+  ];
 
   stringToColor(role: string): string {
     const hash = this.hashString(role);

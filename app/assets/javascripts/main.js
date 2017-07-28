@@ -22,7 +22,6 @@ import Router from "./router";
 
 ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
 
-
 app.on("start", () => {
   app.router = new Router();
   return Backbone.history.start({ pushState: true });

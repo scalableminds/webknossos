@@ -11,9 +11,7 @@ class ErrorWithParams extends Error {
   params: ?mixed;
 }
 
-
 class ErrorHandling {
-
   throwAssertions: boolean;
   sendLocalErrors: boolean;
   commitHash: ?string;
@@ -44,7 +42,7 @@ class ErrorHandling {
       projectKey,
     });
 
-    this.airbrake.addFilter((notice) => {
+    this.airbrake.addFilter(notice => {
       notice.context.environment = envName;
       if (this.commitHash != null) {
         notice.context.version = this.commitHash;
@@ -53,7 +51,9 @@ class ErrorHandling {
     });
 
     if (!this.sendLocalErrors) {
-      this.airbrake.addFilter(() => location.hostname !== "127.0.0.1" && location.hostname !== "localhost");
+      this.airbrake.addFilter(
+        () => location.hostname !== "127.0.0.1" && location.hostname !== "localhost",
+      );
     }
 
     window.onerror = (message, file, line, colno, error) => {
@@ -72,7 +72,7 @@ class ErrorHandling {
   }
 
   assertExtendContext(additionalContext) {
-    this.airbrake.addFilter((notice) => {
+    this.airbrake.addFilter(notice => {
       Object.assign(notice.context, additionalContext);
       return notice;
     });
@@ -97,7 +97,7 @@ class ErrorHandling {
       console.error(error);
       this.airbrake.notify(error);
     }
-  }
+  };
 
   assertExists(variable, message, assertionContext) {
     if (variable != null) {
@@ -114,14 +114,8 @@ class ErrorHandling {
   }
 
   setCurrentUser(user) {
-    this.airbrake.addFilter((notice) => {
-      notice.context.user = _.pick(user, [
-        "id",
-        "email",
-        "firstName",
-        "lastName",
-        "isActive",
-      ]);
+    this.airbrake.addFilter(notice => {
+      notice.context.user = _.pick(user, ["id", "email", "firstName", "lastName", "isActive"]);
       return notice;
     });
   }
@@ -139,6 +133,5 @@ class ErrorHandling {
     return trimmedCallstack.join("\n");
   }
 }
-
 
 export default new ErrorHandling();

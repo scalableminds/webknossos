@@ -6,7 +6,6 @@ import TemplateHelpers from "libs/template_helpers";
 import TaskAnnotationView from "admin/views/task/task_annotation_view";
 import TaskTransferModalView from "dashboard/views/task_transfer_modal_view";
 
-
 class TaskListItemView extends Marionette.CompositeView {
   static initClass() {
     this.prototype.tagName = "tbody";
@@ -85,13 +84,11 @@ class TaskListItemView extends Marionette.CompositeView {
       modalContainer: ".modal-container",
     };
 
-    this.prototype.templateContext =
-      { TemplateHelpers };
+    this.prototype.templateContext = { TemplateHelpers };
   }
   attributes() {
     return { id: this.model.get("id") };
   }
-
 
   initialize() {
     this.listenTo(app.vent, "taskListView:toggleDetails", this.toggleDetails);
@@ -123,14 +120,11 @@ class TaskListItemView extends Marionette.CompositeView {
 
   toggleDetails() {
     if (this.ui.detailsRow.hasClass("hide")) {
-      this.collection
-        .fetch()
-        .then(() => {
-          this.render();
-          this.ui.detailsRow.removeClass("hide");
-          this.ui.detailsToggle.addClass("open");
-        },
-        );
+      this.collection.fetch().then(() => {
+        this.render();
+        this.ui.detailsRow.removeClass("hide");
+        this.ui.detailsToggle.addClass("open");
+      });
     } else {
       this.ui.detailsRow.addClass("hide");
       this.ui.detailsToggle.removeClass("open");

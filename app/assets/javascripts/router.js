@@ -94,14 +94,14 @@ class Router extends BaseRouter {
     this.changeView(view);
   }
 
-
   projects() {
-    this.showWithPagination("ProjectListView", "ProjectCollection", { addButtonText: "Create New Project" });
+    this.showWithPagination("ProjectListView", "ProjectCollection", {
+      addButtonText: "Create New Project",
+    });
   }
 
-
   projectCreate() {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const ProjectCreateView = admin.ProjectCreateView;
       const ProjectModel = admin.ProjectModel;
 
@@ -113,9 +113,8 @@ class Router extends BaseRouter {
     });
   }
 
-
   projectEdit(projectName) {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const ProjectEditView = admin.ProjectEditView;
       const ProjectModel = admin.ProjectModel;
 
@@ -129,9 +128,8 @@ class Router extends BaseRouter {
     });
   }
 
-
   statistics() {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const StatisticView = admin.StatisticView;
       const TimeStatisticModel = admin.TimeStatisticModel;
 
@@ -143,9 +141,8 @@ class Router extends BaseRouter {
     });
   }
 
-
   datasetAdd() {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const DatasetAddView = admin.DatasetAddView;
 
       const view = new DatasetAddView();
@@ -155,9 +152,8 @@ class Router extends BaseRouter {
     });
   }
 
-
   datasetEdit(datasetID) {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const DatasetEditView = admin.DatasetEditView;
       const DatasetModel = admin.DatasetModel;
 
@@ -171,19 +167,16 @@ class Router extends BaseRouter {
     });
   }
 
-
   users() {
     this.showWithPagination("UserListView", "UserCollection", {});
   }
-
 
   teams() {
     this.showWithPagination("TeamListView", "TeamCollection", { addButtonText: "Add New Team" });
   }
 
-
   taskQuery() {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const TaskQueryView = admin.TaskQueryView;
 
       const view = new TaskQueryView();
@@ -191,36 +184,41 @@ class Router extends BaseRouter {
     });
   }
 
-
   projectTasks(projectName) {
-    this.showWithPagination("TaskListView", "TaskCollection", { projectName, addButtonText: "Create New Task" });
+    this.showWithPagination("TaskListView", "TaskCollection", {
+      projectName,
+      addButtonText: "Create New Task",
+    });
   }
-
 
   taskTypesTasks(taskTypeId) {
-    this.showWithPagination("TaskListView", "TaskCollection", { taskTypeId, addButtonText: "Create New Task" });
+    this.showWithPagination("TaskListView", "TaskCollection", {
+      taskTypeId,
+      addButtonText: "Create New Task",
+    });
   }
-
 
   workload() {
     this.showWithPagination("WorkloadListView", "WorkloadCollection");
   }
 
-
   taskTypes() {
-    this.showWithPagination("TaskTypeListView", "TaskTypeCollection", { addButtonText: "Create New TaskType" });
+    this.showWithPagination("TaskTypeListView", "TaskTypeCollection", {
+      addButtonText: "Create New TaskType",
+    });
   }
 
   scripts() {
-    this.showWithPagination("ScriptListView", "ScriptCollection", { addButtonText: "Create New Script" });
+    this.showWithPagination("ScriptListView", "ScriptCollection", {
+      addButtonText: "Create New Script",
+    });
   }
-
 
   /**
    * Load layout view that shows task-creation subviews
    */
   taskCreate() {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const TaskCreateView = admin.TaskCreateView;
       const TaskModel = admin.TaskModel;
 
@@ -236,7 +234,7 @@ class Router extends BaseRouter {
    * Load item view which displays an editable task.
    */
   taskEdit(taskID) {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const TaskCreateFromView = admin.TaskCreateFromView;
       const TaskModel = admin.TaskModel;
 
@@ -248,9 +246,8 @@ class Router extends BaseRouter {
     });
   }
 
-
   taskTypesCreate(taskTypeId) {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const TaskTypeCreateView = admin.TaskTypeCreateView;
       const TaskTypeModel = admin.TaskTypeModel;
 
@@ -262,7 +259,7 @@ class Router extends BaseRouter {
   }
 
   scriptsCreate(scriptId) {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const ScriptCreateView = admin.ScriptCreateView;
       const ScriptModel = admin.ScriptModel;
 
@@ -287,7 +284,6 @@ class Router extends BaseRouter {
     model.fetch();
   }
 
-
   spotlight() {
     const collection = new DatasetCollection();
     const paginatedCollection = new PaginationCollection([], { fullCollection: collection });
@@ -297,9 +293,8 @@ class Router extends BaseRouter {
     this.listenTo(collection, "sync", this.hideLoadingSpinner);
   }
 
-
   taskOverview() {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const TaskOverviewView = admin.TaskOverviewView;
       const TaskOverviewCollection = admin.TaskOverviewCollection;
 
@@ -311,15 +306,17 @@ class Router extends BaseRouter {
     });
   }
 
-
   showWithPagination(view, collection, options = {}) {
     _.defaults(options, { addButtonText: null });
 
-    import(/* webpackChunkName: "admin" */ "admin/admin").then((admin) => {
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       collection = new admin[collection](null, options);
       const paginatedCollection = new PaginationCollection([], { fullCollection: collection });
       view = new admin[view]({ collection: paginatedCollection });
-      const paginationView = new admin.PaginationView({ collection: paginatedCollection, addButtonText: options.addButtonText });
+      const paginationView = new admin.PaginationView({
+        collection: paginatedCollection,
+        addButtonText: options.addButtonText,
+      });
 
       this.changeView(paginationView, view);
       this.listenTo(collection, "sync", () => this.hideLoadingSpinner());
@@ -344,6 +341,5 @@ class Router extends BaseRouter {
   }
 }
 Router.initClass();
-
 
 export default Router;

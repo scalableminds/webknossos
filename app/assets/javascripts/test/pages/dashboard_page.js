@@ -1,21 +1,20 @@
 export default class DashboardPage {
+  explorativeTab = "#tab-explorative";
+  trackedTimeTab = "#tab-logged-time";
+  tasksTab = "#tab-tasks";
 
-  explorativeTab = "#tab-explorative"
-  trackedTimeTab = "#tab-logged-time"
-  tasksTab = "#tab-tasks"
+  explorativeTaskList = "#explorative-tasks";
+  archivedTasksButton = "#toggle-view-archived";
+  downloadButton = "[href$='download']";
 
-  explorativeTaskList = "#explorative-tasks"
-  archivedTasksButton = "#toggle-view-archived"
-  downloadButton = "[href$='download']"
+  taskList = ".tab-content tbody";
+  newTaskButton = "#new-task-button";
+  finishedTasksButton = "#toggle-finished";
 
-  taskList = ".tab-content tbody"
-  newTaskButton = "#new-task-button"
-  finishedTasksButton = "#toggle-finished"
+  timeTableEntries = ".time-table tbody tr";
+  timeGraphEntries = "circle";
 
-  timeTableEntries = ".time-table tbody tr"
-  timeGraphEntries = "circle"
-
-  spinner = "#loader"
+  spinner = "#loader";
 
   get() {
     // Waiting for all JS event handlers to be attached
@@ -47,7 +46,6 @@ export default class DashboardPage {
     return browser.elements("tbody tr").value;
   }
 
-
   getNewTask() {
     this.openTasksTab();
     browser.click(this.newTaskButton);
@@ -76,5 +74,4 @@ export default class DashboardPage {
   getTimeGraphEntries() {
     return browser.elements(this.timeGraphEntries).value;
   }
-
 }

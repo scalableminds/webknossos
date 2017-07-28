@@ -53,15 +53,14 @@ class DatasetSwitchView extends Marionette.View {
   // Cannot be ES6 style function, as these are covariant by default
   templateContext = function templateContext() {
     return { isAdmin: Utils.isUserAdmin(this.model) };
-  }
-
+  };
 
   initialize() {
     const datasetCollection = new DatasetCollection();
     this.collection = new PaginationCollection([], { fullCollection: datasetCollection });
 
     this.listenToOnce(this, "render", () => this.toggleSwitchButtons(true));
-    this.listenToOnce(this.collection, "sync", function () {
+    this.listenToOnce(this.collection, "sync", function() {
       this.listenTo(this, "render", this.showGalleryView);
       return this.showGalleryView();
     });
@@ -69,24 +68,20 @@ class DatasetSwitchView extends Marionette.View {
     return this.collection.fetch();
   }
 
-
   toggleSwitchButtons(state) {
     this.ui.showGalleryButton.toggleClass("hide", state);
     return this.ui.showAdvancedButton.toggleClass("hide", !state);
   }
-
 
   showGalleryView() {
     this.toggleSwitchButtons(true);
     return this.showPaginatedDatasetView(SpotlightDatasetListView);
   }
 
-
   showAdvancedView() {
     this.toggleSwitchButtons(false);
     return this.showPaginatedDatasetView(DatasetListView);
   }
-
 
   showPaginatedDatasetView(DatasetView) {
     const collection = this.collection.clone();
@@ -95,6 +90,5 @@ class DatasetSwitchView extends Marionette.View {
   }
 }
 DatasetSwitchView.initClass();
-
 
 export default DatasetSwitchView;

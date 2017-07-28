@@ -12,9 +12,7 @@ import SortTableBehavior from "libs/behaviors/sort_table_behavior";
 import ExplorativeTracingListItemView from "dashboard/views/explorative_tracing_list_item_view";
 import UserAnnotationsCollection from "dashboard/models/user_annotations_collection";
 
-
 class ExplorativeTracingListView extends Marionette.CompositeView {
-
   showArchivedAnnotations: boolean;
 
   static initClass() {
@@ -112,8 +110,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
       isAdminView: this.options.isAdminView,
       showArchivedAnnotations: this.showArchivedAnnotations,
     };
-  }
-
+  };
 
   initialize(options) {
     this.options = options;
@@ -121,18 +118,21 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
 
     // If you know how to do this better, do it. Backbones Collection type is not compatible to Marionettes
     // Collection type according to flow - although they actually should be...
-    this.collection = ((new UserAnnotationsCollection([], { userID: this.options.userID }): any): Marionette.Collection);
+    this.collection = ((new UserAnnotationsCollection([], {
+      userID: this.options.userID,
+    }): any): Marionette.Collection);
 
     // Show a loading spinner for long running requests
     this.listenTo(this.collection, "request", () => app.router.showLoadingSpinner());
     // Hide the spinner if the collection is empty or after rendering all elements of the (long) table
-    this.listenTo(this.collection, "sync", () => { if (this.collection.length === 0) app.router.hideLoadingSpinner(); });
+    this.listenTo(this.collection, "sync", () => {
+      if (this.collection.length === 0) app.router.hideLoadingSpinner();
+    });
     this.listenTo(this, "add:child", () => app.router.hideLoadingSpinner());
 
     this.showArchivedAnnotations = false;
     this.collection.fetch();
   }
-
 
   selectFiles() {
     if (this.ui.uploadFileInput[0].files.length) {
@@ -140,17 +140,13 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
     }
   }
 
-
   uploadFiles(event) {
     event.preventDefault();
 
     const form = this.ui.uploadAndExploreForm;
 
-    Request.sendMultipartFormReceiveJSON(
-      form.attr("action"),
-      { data: new FormData(form[0]) },
-    ).then(
-      (data) => {
+    Request.sendMultipartFormReceiveJSON(form.attr("action"), { data: new FormData(form[0]) }).then(
+      data => {
         const url = `/annotations/${data.annotation.typ}/${data.annotation.id}`;
         app.router.loadURL(url);
         Toast.message(data.messages);
@@ -158,7 +154,6 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
       () => this.ui.fileinput.fileinput("clear"),
     );
   }
-
 
   archiveAll() {
     if (!confirm("Are you sure you want to archive all explorative annotations?")) {
@@ -174,13 +169,11 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
           annotations: unarchivedAnnoationIds,
         },
       },
-    ).then(
-      (data) => {
-        Toast.message(data.messages);
-        this.collection.reset();
-        this.render();
-      },
-    );
+    ).then(data => {
+      Toast.message(data.messages);
+      this.collection.reset();
+      this.render();
+    });
   }
 
   fetchArchivedAnnotations() {
@@ -211,6 +204,5 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
   }
 }
 ExplorativeTracingListView.initClass();
-
 
 export default ExplorativeTracingListView;

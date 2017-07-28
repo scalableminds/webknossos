@@ -9,7 +9,9 @@ import moment from "moment";
 class LoggedTimeCollection extends Backbone.Collection {
   userID: string;
 
-  comparator = function comparator(model) { return -model.get("interval"); }
+  comparator = function comparator(model) {
+    return -model.get("interval");
+  };
 
   url(): string {
     if (this.userID) {
@@ -22,17 +24,17 @@ class LoggedTimeCollection extends Backbone.Collection {
     this.userID = options.userID;
   }
 
-
   parse(response) {
-    return response.loggedTime.map(
-      (entry) => {
+    return response.loggedTime
+      .map(entry => {
         const interval = entry.paymentInterval;
         return {
           interval: moment(`${interval.year} ${interval.month}`, "YYYY MM"),
           time: moment.duration(entry.durationInSeconds, "seconds"),
-          months: (interval.year * 12) + interval.month,
+          months: interval.year * 12 + interval.month,
         };
-      }).sort((a, b) => b.months - a.months);
+      })
+      .sort((a, b) => b.months - a.months);
   }
 }
 

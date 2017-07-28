@@ -22,7 +22,7 @@ class TracingView extends React.PureComponent {
     viewMode: ModeType,
     scale: number,
     isVolumeTracingDisallowed: boolean,
-  }
+  };
 
   handleContextMenu(event: SyntheticInputEvent) {
     // hide contextmenu, while rightclicking a canvas
@@ -36,7 +36,7 @@ class TracingView extends React.PureComponent {
       unCheckedChildren="Watching"
       checked={this.props.flightmodeRecording}
       onChange={this.props.onChangeFlightmodeRecording}
-    />
+    />;
 
   render() {
     const isArbitraryMode = Constants.MODES_ARBITRARY.includes(this.props.viewMode);
@@ -52,8 +52,8 @@ class TracingView extends React.PureComponent {
 
     return (
       <div id="tracing" className={divClassName} onContextMenu={this.handleContextMenu}>
-        { inputCatchers }
-        { flightModeRecordingSwitch }
+        {inputCatchers}
+        {flightModeRecordingSwitch}
         <canvas id="render-canvas" style={canvasStyle} />
       </div>
     );

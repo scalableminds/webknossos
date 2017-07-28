@@ -16,20 +16,16 @@ class HoverShowHideBehavior extends Marionette.Behavior {
     }
   }
 
-
   mouseEnter() {
     this.$(".hover-show").removeClass("hide");
     this.$(".hover-hide").addClass("hide");
   }
 
-
   blur(evt) {
-    window.setTimeout(
-      () => {
-        this.$(evt.target).parents(".hover-dynamic").find(".hover-show").addClass("hide");
-        this.$(evt.target).parents(".hover-dynamic").find(".hover-hide").removeClass("hide");
-      }
-      , 200);
+    window.setTimeout(() => {
+      this.$(evt.target).parents(".hover-dynamic").find(".hover-show").addClass("hide");
+      this.$(evt.target).parents(".hover-dynamic").find(".hover-hide").removeClass("hide");
+    }, 200);
   }
 }
 HoverShowHideBehavior.initClass();

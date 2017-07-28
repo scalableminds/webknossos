@@ -23,6 +23,7 @@ class UserListView extends React.PureComponent {
     selectedUserIds: Array<string>,
     isExperienceModalVisible: boolean,
     isTeamRoleModalVisible: boolean,
+    isActivationFilterSet: ?boolean,
     searchQuery: string,
   } = {
     isLoading: true,
@@ -30,6 +31,7 @@ class UserListView extends React.PureComponent {
     selectedUserIds: [],
     isExperienceModalVisible: false,
     isTeamRoleModalVisible: false,
+    isActivationFilterSet: true,
     searchQuery: "",
   }
 
@@ -63,6 +65,12 @@ class UserListView extends React.PureComponent {
     this.setState({ searchQuery: event.target.value });
   }
 
+  handleDismissActivationFilter = () => {
+    this.setState({
+      isActivationFilterSet: null
+    });
+  }
+
   render() {
     const compareFunc = (attribute: string) =>
       (a: Object, b: Object) =>
@@ -78,6 +86,11 @@ class UserListView extends React.PureComponent {
     if (this.state.isLoading) {
       return <div className="text-center"><Spin size="large"/></div>;
     }
+
+    const activationFilterWarning = this.state.isActivationFilterSet ? (
+      <Tag closable onClose={this.handleDismissActivationFilter} color="blue">
+        Show Active User Only
+      </Tag>) : null;
 
     const marginRight = { marginRight: 20 };
 
@@ -95,9 +108,11 @@ class UserListView extends React.PureComponent {
       <Button
         onClick={() => this.setState({isExperienceModalVisible: true}) }
         icon="trophy"
-        disabled={!hasRowsSelected}>
+        disabled={!hasRowsSelected}
+        style={marginRight}>
         Change Experience
       </Button>
+      {activationFilterWarning}
       <Search
         style={{ width: 200, float: "right" }}
         onPressEnter={this.handleSearch}
@@ -157,6 +172,7 @@ class UserListView extends React.PureComponent {
           key="isActive"
           filters={[{ text: "Actived", value: "true" }, { text: "Deactived", value: "false" }]}
           filtered
+          filteredValue={this.state.isActivationFilterSet ? [this.state.isActivationFilterSet.toString()] : null}
           onFilter={(value, record) => record.isActive.toString() === value}
           render={(isActive) => {
             const icon = isActive ? "check-circle-o" : "close-circle-o";

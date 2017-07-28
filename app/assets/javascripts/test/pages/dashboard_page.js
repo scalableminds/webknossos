@@ -33,7 +33,7 @@ export default class DashboardPage {
     browser.click(this.tasksTab);
     browser.waitForExist(this.finishedTasksButton);
     // Wait until the spinner was hidden
-    browser.waitForVisible(this.spinner, 5000, true);
+    browser.waitForVisible(this.spinner, 10000, true);
   }
 
   openTrackedTimeTab() {

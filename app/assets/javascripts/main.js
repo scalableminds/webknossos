@@ -52,8 +52,8 @@ app.on("start", () => {
         data: webGLStats,
       });
       window.sessionStorage.setItem("hasSentWebGLAnalytics", true);
-    } catch (e) {
-      // pass
+    } catch (error) {
+      ErrorHandling.notify(error);
     }
   }
 });

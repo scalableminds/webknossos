@@ -7,7 +7,7 @@ ansiColor('xterm') {
 
       stage("Prepare") {
 
-        sh "sudo /var/lib/jenkins/fix_workspace.sh \$(basename \$(pwd))"
+        sh "sudo /var/lib/jenkins/fix_workspace.sh webknossos"
 
         checkout scm
         sh "rm -rf packages"

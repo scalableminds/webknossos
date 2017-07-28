@@ -105,7 +105,7 @@ class UserListView extends React.PureComponent {
       />
 
       <Table
-        dataSource={Utils.filterWithSearchQuery(this.state.users, ["firstName", "lastName", "email"], this.state.searchQuery)}
+        dataSource={this.state.users && Utils.filterWithSearchQuery(this.state.users, ["firstName", "lastName", "email", "teams", "experiences"], this.state.searchQuery)}
         rowKey="id"
         rowSelection={rowSelection}
         pagination={{

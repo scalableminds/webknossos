@@ -16,6 +16,7 @@ ansiColor('xterm') {
         echo "Branch: ${env.BRANCH_NAME}\nCommit: ${commit}\nAuthors: ${formatChangeSets(currentBuild.changeSets)}"
 
         env.DOCKER_CACHE_PREFIX = "~/.webknossos-build-cache"
+        env.COMPOSE_PROJECT_NAME = "webknossos_${env.BRANCH_NAME}_${commit}"
         sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
         sh "docker-compose pull sbt"
       }

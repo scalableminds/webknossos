@@ -20,10 +20,6 @@ server {
   }
 
   location / {
-    {% if project != "director" and not (project == "oxalis" and branch == "dev") %}
-    auth_basic            "Restricted";
-    auth_basic_user_file  /etc/nginx/auth/{{project}}.passwd;
-    {% endif %}
     proxy_pass http://localhost:{{port}};
     proxy_set_header  X-Real-IP  $remote_addr;
     proxy_buffering    off;

@@ -15,7 +15,6 @@ export const NodeTypes = {
 export const COLOR_TEXTURE_WIDTH = 1024.0;
 
 class NodeShader {
-
   material: THREE.RawShaderMaterial;
   uniforms: UniformsType;
 
@@ -191,7 +190,9 @@ void main() {
       return;
     }
 
-    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / ${COLOR_TEXTURE_WIDTH.toFixed(1)}), treeId / (${COLOR_TEXTURE_WIDTH.toFixed(1)} * ${COLOR_TEXTURE_WIDTH.toFixed(1)}));
+    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / ${COLOR_TEXTURE_WIDTH.toFixed(
+      1,
+    )}), treeId / (${COLOR_TEXTURE_WIDTH.toFixed(1)} * ${COLOR_TEXTURE_WIDTH.toFixed(1)}));
     color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
 
     // NODE COLOR FOR ACTIVE NODE

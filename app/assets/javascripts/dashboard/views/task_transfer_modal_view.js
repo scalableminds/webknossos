@@ -27,49 +27,44 @@ class TaskTransferModalView extends ModalView {
 <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>\
 `;
 
+    this.prototype.regions = { datalist: ".datalist" };
 
-    this.prototype.regions =
-      { datalist: ".datalist" };
-
-    this.prototype.events =
-      { "click .transfer": "transferTask" };
+    this.prototype.events = { "click .transfer": "transferTask" };
   }
-
 
   initialize(options) {
     this.url = options.url;
     this.userCollection = new UserCollection();
   }
 
-
   onRender() {
     const selectionView = new SelectionView({
       collection: this.userCollection,
       childViewOptions: {
-        modelValue() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
+        modelValue() {
+          return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get(
+            "email",
+          )})`;
+        },
       },
+      filter: model => model.get("isActive"),
     });
     this.showChildView("datalist", selectionView);
 
     return this.$el.modal("show");
   }
 
-
   transferTask(evt) {
     evt.preventDefault();
 
     const userID = this.$("select :selected").attr("id");
-    return Request.sendJSONReceiveJSON(
-      this.url, {
-        data: {
-          userId: userID,
-        },
+    return Request.sendJSONReceiveJSON(this.url, {
+      data: {
+        userId: userID,
       },
-    ).then(() => this.destroy(),
-    );
+    }).then(() => this.destroy());
   }
 }
 TaskTransferModalView.initClass();
-
 
 export default TaskTransferModalView;

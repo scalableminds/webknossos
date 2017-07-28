@@ -5,7 +5,6 @@
 import moment from "moment";
 
 class FormatUtils {
-
   static formatSeconds(durationSeconds: number): string {
     const t = moment.duration(durationSeconds, "seconds");
     const [days, hours, minutes, seconds] = [t.days(), t.hours(), t.minutes(), t.seconds()];
@@ -23,11 +22,9 @@ class FormatUtils {
     return timeString;
   }
 
-
   static formatHash(id: string): string {
     return id.slice(-6);
   }
-
 
   static formatShortText(text: string, maxLength: number = 100): string {
     if (text.length > maxLength && maxLength > 4) {
@@ -35,7 +32,6 @@ class FormatUtils {
     }
     return text;
   }
-
 
   /**
    * Return current date and time

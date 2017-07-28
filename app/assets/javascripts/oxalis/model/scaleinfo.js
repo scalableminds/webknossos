@@ -16,11 +16,7 @@ export function getBaseVoxelFactors(dataSetScale: Vector3): Vector3 {
 
   // scale factor to calculate the voxels in a certain
   // dimension from baseVoxels
-  return [
-    baseVoxel / dataSetScale[0],
-    baseVoxel / dataSetScale[1],
-    baseVoxel / dataSetScale[2],
-  ];
+  return [baseVoxel / dataSetScale[0], baseVoxel / dataSetScale[1], baseVoxel / dataSetScale[2]];
 }
 
 export function getVoxelPerNM(dataSetScale: Vector3): Vector3 {

@@ -45,23 +45,23 @@ class DatasetEditView extends Marionette.View {
 
     this.prototype.className = "container wide dataset-administration";
 
-    this.prototype.events =
-      { "submit form": "submitForm" };
+    this.prototype.events = { "submit form": "submitForm" };
 
-    this.prototype.ui =
-      { form: "form" };
+    this.prototype.ui = { form: "form" };
   }
 
   templateContext() {
-    return { isChecked(bool) { return bool ? "checked" : ""; } };
+    return {
+      isChecked(bool) {
+        return bool ? "checked" : "";
+      },
+    };
   }
-
 
   initialize() {
     this.listenTo(this.model, "sync", this.render);
     this.model.fetch();
   }
-
 
   submitForm(event) {
     event.preventDefault();
@@ -73,11 +73,9 @@ class DatasetEditView extends Marionette.View {
 
     const formValues = FormSyphon.serialize(this.ui.form);
 
-    this.model.save(formValues).then(
-      () => Toast.success("Saved!"));
+    this.model.save(formValues).then(() => Toast.success("Saved!"));
   }
 }
 DatasetEditView.initClass();
-
 
 export default DatasetEditView;

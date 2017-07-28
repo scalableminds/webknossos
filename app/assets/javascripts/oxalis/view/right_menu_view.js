@@ -29,12 +29,22 @@ class RightMenuView extends React.PureComponent {
     if (this.props.controlMode !== ControlModeEnum.VIEW) {
       if (Constants.MODES_SKELETON.includes(this.props.viewMode)) {
         return [
-          <TabPane tab="Trees" key="3" className="flex-column"><TreesTabView /></TabPane>,
-          <TabPane tab="Comments" key="4" className="flex-column"><CommentTabView /></TabPane>,
-          <TabPane tab="Tree Viewer" key="2" className="flex-column"><AbstractTreeTabView /></TabPane>,
+          <TabPane tab="Trees" key="3" className="flex-column">
+            <TreesTabView />
+          </TabPane>,
+          <TabPane tab="Comments" key="4" className="flex-column">
+            <CommentTabView />
+          </TabPane>,
+          <TabPane tab="Tree Viewer" key="2" className="flex-column">
+            <AbstractTreeTabView />
+          </TabPane>,
         ];
       } else {
-        return <TabPane tab="Mappings" key="5"><MappingInfoView /></TabPane>;
+        return (
+          <TabPane tab="Mappings" key="5">
+            <MappingInfoView />
+          </TabPane>
+        );
       }
     }
 
@@ -43,9 +53,15 @@ class RightMenuView extends React.PureComponent {
 
   render() {
     return (
-      <Tabs destroyInactiveTabPane defaultActiveKey="1" className="tracing-right-menu flex-column flex-column-for-ant-tabs-container">
-        <TabPane tab="Info" key="1" className="flex-column"><DatasetInfoTabView /></TabPane>
-        { this.getTabs() }
+      <Tabs
+        destroyInactiveTabPane
+        defaultActiveKey="1"
+        className="tracing-right-menu flex-column flex-column-for-ant-tabs-container"
+      >
+        <TabPane tab="Info" key="1" className="flex-column">
+          <DatasetInfoTabView />
+        </TabPane>
+        {this.getTabs()}
       </Tabs>
     );
   }

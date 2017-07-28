@@ -3,7 +3,6 @@ import Marionette from "backbone.marionette";
 import DatasetUploadView from "admin/views/dataset/dataset_upload_view";
 import DatasetRemoteView from "admin/views/dataset/dataset_remote_view";
 
-
 class DatasetAddView extends Marionette.View {
   static initClass() {
     this.prototype.className = "container";
@@ -26,9 +25,7 @@ class DatasetAddView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.regions =
-      { tabPane: ".tab-pane" };
-
+    this.prototype.regions = { tabPane: ".tab-pane" };
 
     this.prototype.events = {
       "click #tab-upload-dataset": "showUploadDataset",
@@ -36,23 +33,19 @@ class DatasetAddView extends Marionette.View {
     };
   }
 
-
   initialize(options) {
     this.options = options;
     this.listenTo(this, "render", this.showUploadDataset);
   }
 
-
   showUploadDataset() {
     return this.showChildView("tabPane", new DatasetUploadView(this.options));
   }
-
 
   showRemoteDataset() {
     return this.showChildView("tabPane", new DatasetRemoteView(this.options));
   }
 }
 DatasetAddView.initClass();
-
 
 export default DatasetAddView;

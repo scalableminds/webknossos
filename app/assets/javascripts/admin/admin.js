@@ -79,4 +79,4 @@ export {
   ScriptModel,
   TaskOverviewView,
   TaskOverviewCollection,
-  };
+};

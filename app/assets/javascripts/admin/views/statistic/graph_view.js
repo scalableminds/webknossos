@@ -12,27 +12,28 @@ class GraphView extends Marionette.View {
 `);
   }
 
-
   initialize() {
     this.listenTo(this, "attach", this.addGraph);
   }
 
-
   addGraph() {
-    const previousWeeks = this.model.get("tracingTimes").map(item => parseInt(moment.duration(item.get("tracingTime")).asHours()));
+    const previousWeeks = this.model
+      .get("tracingTimes")
+      .map(item => parseInt(moment.duration(item.get("tracingTime")).asHours()));
     const currentWeek = previousWeeks.length - 1;
 
-    const dates = this.model.get("tracingTimes").map(item => moment(item.get("start")).format("YYYY-MM-DD"));
+    const dates = this.model
+      .get("tracingTimes")
+      .map(item => moment(item.get("start")).format("YYYY-MM-DD"));
 
     c3.generate({
       bindto: "#graph",
       data: {
         x: "date",
-        columns: [
-          ["date"].concat(dates),
-          ["WeeklyHours"].concat(previousWeeks),
-        ],
-        color(color, d) { return d.index === currentWeek ? "#48C561" : color; }, // color current week differently
+        columns: [["date"].concat(dates), ["WeeklyHours"].concat(previousWeeks)],
+        color(color, d) {
+          return d.index === currentWeek ? "#48C561" : color;
+        }, // color current week differently
         selection: {
           enabled: true,
           grouped: false,
@@ -53,7 +54,6 @@ class GraphView extends Marionette.View {
       },
     });
   }
-
 
   selectDataPoint(data) {
     app.vent.trigger("graphView:updatedSelection", data);

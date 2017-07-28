@@ -70,7 +70,10 @@ class TaskQueryView extends Marionette.View {
 
     app.router.hideLoadingSpinner();
 
-    const paginationView = new PaginationView({ collection: paginatedCollection, addButtonText: "Create New Task" });
+    const paginationView = new PaginationView({
+      collection: paginatedCollection,
+      addButtonText: "Create New Task",
+    });
 
     this.showChildView("taskList", this.taskListView);
     this.showChildView("paginator", paginationView);
@@ -82,12 +85,11 @@ class TaskQueryView extends Marionette.View {
     this.editor = ace.edit(this.ui.query[0]);
     this.editor.getSession().setMode("ace/mode/javascript");
     this.editor.setTheme("ace/theme/clouds");
-    const defaultQuery = "{\n\t\"_id\": {\"$oid\": \"56cb594a16000045b4d0f273\"}\n}";
+    const defaultQuery = '{\n\t"_id": {"$oid": "56cb594a16000045b4d0f273"}\n}';
     this.editor.setValue(defaultQuery);
     this.editor.clearSelection();
     return this.editor.resize();
   }
-
 
   search() {
     let queryObject;
@@ -106,22 +108,19 @@ class TaskQueryView extends Marionette.View {
       }
     }
 
-
-    return Request.sendJSONReceiveJSON(
-      "/api/queries",
-      {
-        params: { type: "task" },
-        data: queryObject,
-      },
-    ).then((result) => {
+    return Request.sendJSONReceiveJSON("/api/queries", {
+      params: { type: "task" },
+      data: queryObject,
+    }).then(result => {
       this.collection.reset();
       const defaultQueryLimit = 100;
       if (result.length === defaultQueryLimit) {
-        Toast.warning(`Not all results are shown because there are more than ${defaultQueryLimit}. Try to narrow your query.`);
+        Toast.warning(
+          `Not all results are shown because there are more than ${defaultQueryLimit}. Try to narrow your query.`,
+        );
       }
       return this.collection.addObjects(result);
-    },
-    );
+    });
   }
 
   showDocumentation() {

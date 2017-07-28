@@ -13,7 +13,11 @@ import update from "immutability-helper";
 import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
 import { setRotationReducer } from "oxalis/model/reducers/flycam_reducer";
 
-export function setModeReducer(state: OxalisState, volumeTracing: VolumeTracingType, mode: VolumeTraceOrMoveModeType) {
+export function setModeReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracingType,
+  mode: VolumeTraceOrMoveModeType,
+) {
   if (mode === volumeTracing.volumeTraceOrMoveMode) {
     return state;
   }
@@ -21,24 +25,36 @@ export function setModeReducer(state: OxalisState, volumeTracing: VolumeTracingT
     return state;
   }
 
-  return update(state, { tracing: {
-    volumeTraceOrMoveMode: { $set: mode },
-  } });
+  return update(state, {
+    tracing: {
+      volumeTraceOrMoveMode: { $set: mode },
+    },
+  });
 }
 
-export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTracingType, id: number) {
+export function setActiveCellReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracingType,
+  id: number,
+) {
   const newActiveCell = volumeTracing.cells[id];
 
-  if ((newActiveCell == null) && id > 0) {
+  if (newActiveCell == null && id > 0) {
     return createCellReducer(state, volumeTracing, id);
   }
 
-  return update(state, { tracing: {
-    activeCellId: { $set: id },
-  } });
+  return update(state, {
+    tracing: {
+      activeCellId: { $set: id },
+    },
+  });
 }
 
-export function createCellReducer(state: OxalisState, volumeTracing: VolumeTracingType, id: ?number) {
+export function createCellReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracingType,
+  id: ?number,
+) {
   if (id === 0) {
     // cellId 0 means there is no annotation, so there must not be a cell with id 0
     return state;
@@ -54,14 +70,20 @@ export function createCellReducer(state: OxalisState, volumeTracing: VolumeTraci
   // Create the new VolumeCell
   const cell: VolumeCellType = { id };
 
-  return update(state, { tracing: {
-    activeCellId: { $set: cell.id },
-    cells: { [cell.id]: { $set: cell } },
-    maxCellId: { $set: newMaxCellId },
-  } });
+  return update(state, {
+    tracing: {
+      activeCellId: { $set: cell.id },
+      cells: { [cell.id]: { $set: cell } },
+      maxCellId: { $set: newMaxCellId },
+    },
+  });
 }
 
-export function updateDirectionReducer(state: OxalisState, volumeTracing: VolumeTracingType, centroid: Vector3) {
+export function updateDirectionReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracingType,
+  centroid: Vector3,
+) {
   let newState = state;
   if (volumeTracing.lastCentroid != null) {
     newState = setRotationReducer(state, [
@@ -70,24 +92,34 @@ export function updateDirectionReducer(state: OxalisState, volumeTracing: Volume
       centroid[2] - volumeTracing.lastCentroid[2],
     ]);
   }
-  return update(newState, { tracing: {
-    lastCentroid: { $set: centroid },
-  } });
+  return update(newState, {
+    tracing: {
+      lastCentroid: { $set: centroid },
+    },
+  });
 }
 
-export function addToLayerReducer(state: OxalisState, volumeTracing: VolumeTracingType, position: Vector3) {
+export function addToLayerReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracingType,
+  position: Vector3,
+) {
   const { allowUpdate } = state.tracing.restrictions;
   if (!allowUpdate || isVolumeTracingDisallowed(state)) {
     return state;
   }
 
-  return update(state, { tracing: {
-    contourList: { $push: [position] },
-  } });
+  return update(state, {
+    tracing: {
+      contourList: { $push: [position] },
+    },
+  });
 }
 
 export function resetContourReducer(state: OxalisState) {
-  return update(state, { tracing: {
-    contourList: { $set: [] },
-  } });
+  return update(state, {
+    tracing: {
+      contourList: { $set: [] },
+    },
+  });
 }

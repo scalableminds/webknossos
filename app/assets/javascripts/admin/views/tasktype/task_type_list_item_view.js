@@ -52,20 +52,17 @@ class TaskTypeItemView extends Marionette.View {
 
     this.prototype.tagName = "tr";
 
-    this.prototype.events =
-      { "click .delete": "deleteTaskType" };
+    this.prototype.events = { "click .delete": "deleteTaskType" };
   }
 
   deleteTaskType(evt) {
     evt.preventDefault();
 
     if (window.confirm("Do you really want to delete this task type?")) {
-      this.model.destroy().then(response => Toast.message(response.messages),
-      );
+      this.model.destroy().then(response => Toast.message(response.messages));
     }
   }
 }
 TaskTypeItemView.initClass();
-
 
 export default TaskTypeItemView;

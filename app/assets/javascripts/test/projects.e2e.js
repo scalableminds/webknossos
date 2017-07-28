@@ -8,9 +8,7 @@ describe("Project List", () => {
 
   // This async function is executed synchronous when called via browser, otherwise
   // the whole test would need to be marked async and would be executed asynchronous
-  browser.addCommand("getProjectCountFromServer", async () =>
-    page.getProjectCountFromServer(),
-  );
+  browser.addCommand("getProjectCountFromServer", async () => page.getProjectCountFromServer());
 
   beforeEach(() => {
     page = new ProjectPage();
@@ -27,7 +25,6 @@ describe("Project List", () => {
     expect(numProjects).toEqual(numProjectListEntries);
     expect(numPaginationPages).toEqual(Math.ceil(numProjects / maxProjectsPerPage));
   });
-
 
   it("should create a new project", () => {
     const oldProjectCount = browser.getProjectCountFromServer();
@@ -49,14 +46,12 @@ describe("Project List", () => {
     } // else the project was created on a new page
   });
 
-
   it("should download a project", () => {
     const url = page.getFirstDownloadURl();
 
     // Should successfully download a blob
     return Request.text().from(url);
   });
-
 
   it("should edit a project's experience", () => {
     const newPriority = 42;
@@ -65,7 +60,6 @@ describe("Project List", () => {
     const allPriorities = page.getAllPriorities();
     expect(allPriorities).toContain(newPriority);
   });
-
 
   it("should delete a project", () => {
     const oldProjectCount = browser.getProjectCountFromServer();
@@ -77,4 +71,3 @@ describe("Project List", () => {
     expect(newProjectCount).toEqual(oldProjectCount - 1);
   });
 });
-

@@ -10,7 +10,6 @@ class StatisticListItemView extends Marionette.View {
 `);
   }
 
-
   serializeData() {
     const data = this.model.toJSON();
 
@@ -20,7 +19,6 @@ class StatisticListItemView extends Marionette.View {
 
     return data;
   }
-
 
   zeroPad(number, digits = 2) {
     number = `${number}`;

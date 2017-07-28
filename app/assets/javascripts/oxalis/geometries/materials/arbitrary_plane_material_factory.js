@@ -9,14 +9,9 @@ import Model from "oxalis/model";
 import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
-
-
   getColorName(): string {
-    return this.sanitizeName(
-      Model.getColorBinaries()[0].name,
-    );
+    return this.sanitizeName(Model.getColorBinaries()[0].name);
   }
-
 
   createTextures(): void {
     this.textures = {};
@@ -28,12 +23,10 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     };
   }
 
-
   createDataTexture(width: number, bytes: number): void {
     this.minFilter = THREE.LinearFilter;
     return super.createDataTexture(width, bytes);
   }
-
 
   getFragmentShader(): string {
     return _.template(

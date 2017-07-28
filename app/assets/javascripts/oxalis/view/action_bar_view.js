@@ -17,10 +17,10 @@ class ActionBarView extends React.PureComponent {
 
     return (
       <div className="action-bar">
-        { isTraceMode ? <DatasetActionsView /> : null }
-        { hasAdvancedOptions ? <DatasetPositionView /> : null }
-        { isVolumeMode && hasAdvancedOptions ? <VolumeActionsView /> : null }
-        { !isVolumeMode && isTraceMode && hasAdvancedOptions ? <ViewModesView /> : null }
+        {isTraceMode ? <DatasetActionsView /> : null}
+        {hasAdvancedOptions ? <DatasetPositionView /> : null}
+        {isVolumeMode && hasAdvancedOptions ? <VolumeActionsView /> : null}
+        {!isVolumeMode && isTraceMode && hasAdvancedOptions ? <ViewModesView /> : null}
       </div>
     );
   }

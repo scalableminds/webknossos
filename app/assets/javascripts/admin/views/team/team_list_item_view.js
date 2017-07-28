@@ -22,16 +22,12 @@ class TeamListItemView extends Marionette.View {
 </td>\
 `);
 
-    this.prototype.templateContext =
-      { TemplateHelpers };
+    this.prototype.templateContext = { TemplateHelpers };
 
-    this.prototype.events =
-      { "click .delete": "delete" };
+    this.prototype.events = { "click .delete": "delete" };
 
-    this.prototype.modelEvents =
-      { change: "render" };
+    this.prototype.modelEvents = { change: "render" };
   }
-
 
   delete(evt) {
     evt.preventDefault();
@@ -41,6 +37,5 @@ class TeamListItemView extends Marionette.View {
   }
 }
 TeamListItemView.initClass();
-
 
 export default TeamListItemView;

@@ -55,12 +55,11 @@ export const OrthoViewCrosshairColors: OrthoViewMapType<[number, number]> = {
 
 export const OrthoViewGrayCrosshairColor = 0x222222;
 
-
 export const ControlModeEnum = {
   TRACE: "TRACE",
   VIEW: "VIEW",
 };
-export type ControlModeType = $Keys<typeof ControlModeEnum>
+export type ControlModeType = $Keys<typeof ControlModeEnum>;
 
 const Constants = {
   ARBITRARY_VIEW: 4,

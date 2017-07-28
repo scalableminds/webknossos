@@ -7,9 +7,7 @@ describe("Team List", () => {
 
   // This async function is executed synchronous when called via browser, otherwise
   // the whole test would need to be marked async and would be executed asynchronous
-  browser.addCommand("getTeamCountFromServer", async () =>
-    page.getTeamCountFromServer(),
-  );
+  browser.addCommand("getTeamCountFromServer", async () => page.getTeamCountFromServer());
 
   beforeEach(() => {
     page = new TeamPage();
@@ -26,7 +24,6 @@ describe("Team List", () => {
     expect(numTeams).toEqual(numTeamListEntries);
     expect(numPaginationPages).toEqual(Math.ceil(numTeams / maxTeamsPerPage));
   });
-
 
   it("should create a new team", () => {
     const oldTeamCount = browser.getTeamCountFromServer();
@@ -45,7 +42,6 @@ describe("Team List", () => {
     } // else the team was created on a new page
   });
 
-
   it("should create a new team with invalid name", () => {
     const oldTeamCount = browser.getTeamCountFromServer();
 
@@ -58,7 +54,6 @@ describe("Team List", () => {
     expect(newTeamCount).toEqual(oldTeamCount);
     expect(isWarningVisible).toBe(true);
   });
-
 
   it("should delete an existing team", () => {
     const oldTeamCount = browser.getTeamCountFromServer();
@@ -74,4 +69,3 @@ describe("Team List", () => {
     expect(newRowCount).toEqual(oldRowCount - 1);
   });
 });
-

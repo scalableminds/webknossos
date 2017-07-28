@@ -14,7 +14,6 @@ import type { DataLayerType, DataStoreInfoType } from "oxalis/store";
 
 // TODO: Non-reactive
 class WkLayer extends Layer {
-
   constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
     super(layerInfo, dataStoreInfo);
 
@@ -25,14 +24,12 @@ class WkLayer extends Layer {
     this.fourBit = false;
   }
 
-
   setFourBit(newFourBit: boolean) {
     // No op if this is not a color layer
     if (this.category === "color") {
       this.fourBit = newFourBit;
     }
   }
-
 
   buildBuckets(batch: Array<Vector4>, options: ?BucketRequestOptions) {
     if (options == null) {
@@ -42,7 +39,6 @@ class WkLayer extends Layer {
     }
     return super.buildBuckets(batch, options);
   }
-
 
   async requestFromStoreImpl(batch: Array<BucketInfo>, token: string): Promise<Uint8Array> {
     const wasFourBit = this.fourBit;
@@ -57,7 +53,8 @@ class WkLayer extends Layer {
     const datasetName = this.getDatasetName();
     const data = await requestData.dataPromise();
     const responseBuffer = await Request.sendArraybufferReceiveArraybuffer(
-      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`,
+      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this
+        .name}/data?token=${token}`,
       {
         data,
         headers: {
@@ -66,7 +63,8 @@ class WkLayer extends Layer {
         timeout: REQUEST_TIMEOUT,
         compress: true,
         doNotCatch: true,
-      });
+      },
+    );
 
     let result = new Uint8Array(responseBuffer);
     if (wasFourBit) {
@@ -74,7 +72,6 @@ class WkLayer extends Layer {
     }
     return result;
   }
-
 
   decodeFourBit(bufferArray: Uint8Array): Uint8Array {
     // Expand 4-bit data
@@ -92,20 +89,26 @@ class WkLayer extends Layer {
     return newColors;
   }
 
-
-  async sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<void> {
+  async sendToStoreImpl(
+    batch: Array<BucketInfo>,
+    getBucketData: Vector4 => Uint8Array,
+    token: string,
+  ): Promise<void> {
     const transmitData = new MultipartData();
 
     for (const bucket of batch) {
       transmitData.addPart(
         { "X-Bucket": JSON.stringify(bucket) },
-        getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)));
+        getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)),
+      );
     }
 
     const datasetName = this.getDatasetName();
     const data = await transmitData.dataPromise();
     await Request.sendArraybufferReceiveArraybuffer(
-      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`, {
+      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this
+        .name}/data?token=${token}`,
+      {
         method: "PUT",
         data,
         headers: {
@@ -118,6 +121,5 @@ class WkLayer extends Layer {
     );
   }
 }
-
 
 export default WkLayer;

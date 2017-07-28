@@ -91,21 +91,16 @@ class ExplorativeTracingListItemView extends Marionette.View {
     };
   }
 
-
   submitForm() {
     this.ui.explorativeNameForm.submit();
   }
-
 
   nameExplorativeAnnotation(event) {
     event.preventDefault();
     const target = event.target;
     const url = target.action;
 
-    Request.sendUrlEncodedFormReceiveJSON(
-      url,
-      { data: $(target).serialize() },
-    ).then((response) => {
+    Request.sendUrlEncodedFormReceiveJSON(url, { data: $(target).serialize() }).then(response => {
       Toast.message(response.messages);
       const newName = this.$("input[name='name']").val();
       this.model.set("name", newName);
@@ -117,18 +112,16 @@ class ExplorativeTracingListItemView extends Marionette.View {
     state.isFinished = !state.isFinished;
   }
 
-
   finishOrOpenTracing(event) {
     event.preventDefault();
     const url = $(event.target).attr("href") || $(event.target.parentElement).attr("href");
 
-    Request.receiveJSON(url).then((response) => {
+    Request.receiveJSON(url).then(response => {
       Toast.message(response.messages);
       this.toggleState(this.model.attributes.state);
       this.model.collection.remove(this.model);
       this.options.parent.render();
-    },
-    );
+    });
   }
 }
 ExplorativeTracingListItemView.initClass();

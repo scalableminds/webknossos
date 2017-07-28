@@ -7,11 +7,10 @@ import enUS from "antd/lib/locale-provider/en_US";
 import { render, unmountComponentAtNode } from "react-dom";
 
 class ReactBackboneWrapper<T: Component<*, *, *>> extends Backbone.View {
-
   componentClass: Class<T>;
-  initialProps: ?$PropertyType<T, 'props'>;
+  initialProps: ?$PropertyType<T, "props">;
 
-  constructor(componentClass: Class<T>, initialProps?: $PropertyType<T, 'props'> = null) {
+  constructor(componentClass: Class<T>, initialProps?: $PropertyType<T, "props"> = null) {
     super();
     this.componentClass = componentClass;
     this.initialProps = initialProps;

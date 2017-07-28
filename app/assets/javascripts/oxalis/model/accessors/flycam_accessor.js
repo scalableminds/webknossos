@@ -1,5 +1,12 @@
 // @flow
-import type { Vector2, Vector3, Vector4, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
+import type {
+  Vector2,
+  Vector3,
+  Vector4,
+  OrthoViewType,
+  OrthoViewMapType,
+  BoundingBoxType,
+} from "oxalis/constants";
 import type { FlycamType, OxalisState } from "oxalis/store";
 import constants, { OrthoViews, OrthoViewValues } from "oxalis/constants";
 import Maybe from "data.maybe";
@@ -41,22 +48,18 @@ export function getPosition(flycam: FlycamType): Vector3 {
 
 export function getRotation(flycam: FlycamType): Vector3 {
   const object = new THREE.Object3D();
-  const matrix = (new THREE.Matrix4()).fromArray(flycam.currentMatrix).transpose();
+  const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
   object.applyMatrix(matrix);
 
   // Fix JS modulo bug
   // http://javascript.about.com/od/problemsolving/a/modulobug.htm
-  const mod = (x, n) => ((x % n) + n) % n;
+  const mod = (x, n) => (x % n + n) % n;
 
-  const rotation: Vector3 = [
-    object.rotation.x,
-    object.rotation.y,
-    object.rotation.z - Math.PI,
-  ];
+  const rotation: Vector3 = [object.rotation.x, object.rotation.y, object.rotation.z - Math.PI];
   return [
-    mod((180 / Math.PI) * rotation[0], 360),
-    mod((180 / Math.PI) * rotation[1], 360),
-    mod((180 / Math.PI) * rotation[2], 360),
+    mod(180 / Math.PI * rotation[0], 360),
+    mod(180 / Math.PI * rotation[1], 360),
+    mod(180 / Math.PI * rotation[2], 360),
   ];
 }
 
@@ -65,11 +68,17 @@ export function getZoomedMatrix(flycam: FlycamType): Matrix4x4 {
 }
 
 export function getMaxZoomStep(state: OxalisState): number {
-  return 1 + Maybe.fromNullable(state.dataset)
-    .map(dataset =>
-      dataset.dataLayers.reduce((maxZoomStep, layer) =>
-        Math.max(maxZoomStep, ...layer.resolutions), 0))
-    .getOrElse(1);
+  return (
+    1 +
+    Maybe.fromNullable(state.dataset)
+      .map(dataset =>
+        dataset.dataLayers.reduce(
+          (maxZoomStep, layer) => Math.max(maxZoomStep, ...layer.resolutions),
+          0,
+        ),
+      )
+      .getOrElse(1)
+  );
 }
 
 export function getIntegerZoomStep(state: OxalisState): number {
@@ -80,7 +89,8 @@ export function getRequestLogZoomStep(state: OxalisState): number {
   const maxLogZoomStep = log2(getMaxZoomStep(state));
   return Utils.clamp(
     Math.min(state.datasetConfiguration.quality, maxLogZoomStep),
-    Math.ceil(log2(state.flycam.zoomStep / MAX_ZOOM_STEP_DIFF)) + state.datasetConfiguration.quality,
+    Math.ceil(log2(state.flycam.zoomStep / MAX_ZOOM_STEP_DIFF)) +
+      state.datasetConfiguration.quality,
     maxLogZoomStep,
   );
 }
@@ -94,8 +104,8 @@ export function calculateTextureBuffer(state: OxalisState): OrthoViewMapType<Vec
   for (const planeId of OrthoViewValues) {
     const scaleArray = Dimensions.transDim(baseVoxelFactors, planeId);
     buffer[planeId] = [
-      constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[0]),
-      constants.TEXTURE_WIDTH - (pixelNeeded * scaleArray[1]),
+      constants.TEXTURE_WIDTH - pixelNeeded * scaleArray[0],
+      constants.TEXTURE_WIDTH - pixelNeeded * scaleArray[1],
     ];
   }
   return buffer;
@@ -111,23 +121,26 @@ export function getPlaneScalingFactor(flycam: FlycamType): number {
 
 export function getRotationOrtho(planeId: OrthoViewType): Vector3 {
   switch (planeId) {
-    case OrthoViews.PLANE_YZ: return [0, 270, 0];
-    case OrthoViews.PLANE_XZ: return [90, 0, 0];
+    case OrthoViews.PLANE_YZ:
+      return [0, 270, 0];
+    case OrthoViews.PLANE_XZ:
+      return [90, 0, 0];
     default:
-    case OrthoViews.PLANE_XY: return [0, 0, 0];
+    case OrthoViews.PLANE_XY:
+      return [0, 0, 0];
   }
 }
 
 export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
   const position = getPosition(state.flycam);
-  const offset = (getPlaneScalingFactor(state.flycam) * constants.VIEWPORT_WIDTH) / 2;
+  const offset = getPlaneScalingFactor(state.flycam) * constants.VIEWPORT_WIDTH / 2;
   const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
   const min = [0, 0, 0];
   const max = [0, 0, 0];
 
   for (let i = 0; i <= 2; i++) {
-    min[i] = position[i] - (offset * baseVoxelFactors[i]);
-    max[i] = position[i] + (offset * baseVoxelFactors[i]);
+    min[i] = position[i] - offset * baseVoxelFactors[i];
+    max[i] = position[i] + offset * baseVoxelFactors[i];
   }
 
   return { min, max };
@@ -153,8 +166,8 @@ export function getOffsets(state: OxalisState, planeId: OrthoViewType): Vector2 
   const texturePosition = getTexturePosition(state, planeId);
   const ind = Dimensions.getIndices(planeId);
   return [
-    (buffer[planeId][0] / 2) + ((position[ind[0]] - texturePosition[ind[0]]) / requestZoomStep),
-    (buffer[planeId][1] / 2) + ((position[ind[1]] - texturePosition[ind[1]]) / requestZoomStep),
+    buffer[planeId][0] / 2 + (position[ind[0]] - texturePosition[ind[0]]) / requestZoomStep,
+    buffer[planeId][1] / 2 + (position[ind[1]] - texturePosition[ind[1]]) / requestZoomStep,
   ];
 }
 
@@ -162,7 +175,10 @@ export function getArea(state: OxalisState, planeId: OrthoViewType): Vector4 {
   // returns [left, top, right, bottom] array
 
   // convert scale vector to array in order to be able to use getIndices()
-  const scaleArray = Dimensions.transDim(scaleInfo.getBaseVoxelFactors(state.dataset.scale), planeId);
+  const scaleArray = Dimensions.transDim(
+    scaleInfo.getBaseVoxelFactors(state.dataset.scale),
+    planeId,
+  );
   const offsets = getOffsets(state, planeId);
   const size = getTextureScalingFactor(state) * constants.VIEWPORT_WIDTH;
   // two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
@@ -170,8 +186,8 @@ export function getArea(state: OxalisState, planeId: OrthoViewType): Vector4 {
   return [
     offsets[0],
     offsets[1],
-    offsets[0] + (size * scaleArray[0]),
-    offsets[1] + (size * scaleArray[1]),
+    offsets[0] + size * scaleArray[0],
+    offsets[1] + size * scaleArray[1],
   ];
 }
 

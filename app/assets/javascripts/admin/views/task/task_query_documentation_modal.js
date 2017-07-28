@@ -35,12 +35,11 @@ class TaskQueryDocumentationModal extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.ui =
-      { properties: "#properties" };
+    this.prototype.ui = { properties: "#properties" };
   }
 
   onRender() {
-    return Request.receiveJSON("api/descriptions/task").then((descriptions) => {
+    return Request.receiveJSON("api/descriptions/task").then(descriptions => {
       const tableHtml = _.template(
         `\
 <table style="width: 100%">
@@ -65,11 +64,9 @@ class TaskQueryDocumentationModal extends Marionette.View {
       )({ descriptions });
 
       return this.ui.properties.html(tableHtml);
-    },
-    );
+    });
   }
 }
 TaskQueryDocumentationModal.initClass();
-
 
 export default TaskQueryDocumentationModal;

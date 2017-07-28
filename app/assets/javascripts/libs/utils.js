@@ -251,10 +251,27 @@ const Utils = {
     return maybe.isJust ? maybe.get() : null;
   },
 
+
+  getRecursiveKeysAndValues(obj: Object): Array<any> {
+    return _.flattenDeep(Utils.getRecursiveKeysAndValuesUnflat(obj));
+  },
+
+  getRecursiveKeysAndValuesUnflat(obj: Object): Array<any> {
+    if (_.isArray(obj)) {
+      return obj.map(Utils.getRecursiveKeysAndValuesUnflat);
+    } else if (_.isObject(obj)) {
+      return Object.keys(obj).map(key =>
+        [key, Utils.getRecursiveKeysAndValuesUnflat(obj[key])]
+      );
+    } else {
+      return [obj];
+    }
+  },
+
   // Filters an array given a search string. Supports regex seach and several words as OR query.
   // Supports nested properties
-  filterWithSearchQuery(collection: Array<T>, properties: Array<string>, searchQuery: string): Array<T> {
-    if (searchQuery === "" || !_.isString(searchQuery)) {
+  filterWithSearchQuery<T: Object>(collection: Array<T>, properties: Array<string>, searchQuery: string): Array<T> {
+    if (searchQuery === "") {
       return collection;
     } else {
       const words = _.map(searchQuery.split(" "),
@@ -263,11 +280,12 @@ const Utils = {
       const pattern = `(${uniques.join("|")})`;
       const regexp = new RegExp(pattern, "igm");
 
-      return collection.filter((model) =>
-        _.some(properties, (fieldName) => {
-          const value = _.get(model, fieldName);
-          if (value != null) {
-            return !!value.toString().match(regexp);
+      return collection.filter(model =>
+        _.some(properties, fieldName => {
+          const value = model[fieldName];
+          if (value !== null) {
+            const values = Utils.getRecursiveKeysAndValues(value);
+            return _.some(values, v => v.toString().match(regexp));
           } else {
             return false;
           }

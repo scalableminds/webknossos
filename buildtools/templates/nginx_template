@@ -60,10 +60,6 @@ server {
   ssl_ciphers         HIGH:!aNULL:!MD5;
 
   location / {
-    {% if mode == "dev" %}
-    auth_basic            "Restricted";
-    auth_basic_user_file  /etc/nginx/auth/{{project}}.passwd;
-    {% endif %}
     proxy_pass http://localhost:{{port}};
     proxy_set_header  X-Real-IP  $remote_addr;
     proxy_buffering    off;

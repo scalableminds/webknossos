@@ -74,10 +74,10 @@ export type SkeletonContentDataType = {
 export type VolumeContentDataType = {
   activeCell: null | number,
   nextCell: ?number,
-  customLayers: Array<Object>;
-  boundingBox: BoundingBoxObjectType;
-  name: string;
-  zoomLevel: number;
+  customLayers: Array<Object>,
+  boundingBox: BoundingBoxObjectType,
+  name: string,
+  zoomLevel: number,
 };
 
 export type ServerTracing<T> = {
@@ -345,7 +345,9 @@ export class OxalisModel {
       const existingLayer = layers[existingLayerIndex];
 
       if (existingLayer != null) {
-        layers[existingLayerIndex] = update(userLayer, { $merge: { mappings: existingLayer.mappings } });
+        layers[existingLayerIndex] = update(userLayer, {
+          $merge: { mappings: existingLayer.mappings },
+        });
       } else {
         layers.push(userLayer);
       }

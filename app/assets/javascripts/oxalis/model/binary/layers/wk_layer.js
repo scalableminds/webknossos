@@ -46,7 +46,8 @@ class WkLayer extends Layer {
 
     const datasetName = this.getDatasetName();
     const responseBuffer = await Request.sendJSONReceiveArraybuffer(
-      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`,
+      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this
+        .name}/data?token=${token}`,
       {
         data: batch,
         timeout: REQUEST_TIMEOUT,
@@ -77,17 +78,24 @@ class WkLayer extends Layer {
     return newColors;
   }
 
-
-  async sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<void> {
-    const data = batch.map((bucket) => {
+  async sendToStoreImpl(
+    batch: Array<BucketInfo>,
+    getBucketData: Vector4 => Uint8Array,
+    token: string,
+  ): Promise<void> {
+    const data = batch.map(bucket => {
       const bucketData = getBucketData(BucketBuilder.bucketToZoomedAddress(bucket));
-      const bucketWithData = Object.assign({}, bucket, { base64Data: Base64.fromByteArray(bucketData) });
+      const bucketWithData = Object.assign({}, bucket, {
+        base64Data: Base64.fromByteArray(bucketData),
+      });
       return { action: "labelVolume", value: bucketWithData };
     });
 
     const datasetName = this.getDatasetName();
     await Request.sendJSONReceiveJSON(
-      `${this.dataStoreInfo.url}/data/tracings/volumes/${this.name}?dataSetName=${datasetName}&token=${token}`, {
+      `${this.dataStoreInfo.url}/data/tracings/volumes/${this
+        .name}?dataSetName=${datasetName}&token=${token}`,
+      {
         method: "POST",
         data,
         timeout: REQUEST_TIMEOUT,

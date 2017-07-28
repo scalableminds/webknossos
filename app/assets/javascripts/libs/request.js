@@ -41,9 +41,7 @@ class Request {
       return options;
     }
 
-    let body = _.isString(options.data) ?
-        options.data :
-        JSON.stringify(options.data);
+    let body = _.isString(options.data) ? options.data : JSON.stringify(options.data);
 
     if (options.compress) {
       body = pako.gzip(body);
@@ -63,7 +61,7 @@ class Request {
         "Content-Type": "application/json",
       },
     });
-  }
+  };
 
   // IN:  json
   // OUT: json
@@ -184,8 +182,10 @@ class Request {
 
   // IN:  JSON
   // OUT: arraybuffer
-  sendJSONReceiveArraybuffer = (url: string, options: RequestOptionsWithData<any>): Promise<ArrayBuffer> =>
-    this.receiveArraybuffer(url, this.prepareJSON(url, options));
+  sendJSONReceiveArraybuffer = (
+    url: string,
+    options: RequestOptionsWithData<any>,
+  ): Promise<ArrayBuffer> => this.receiveArraybuffer(url, this.prepareJSON(url, options));
 
   // TODO: babel doesn't support generic arrow-functions yet
   triggerRequest<T>(
@@ -301,7 +301,7 @@ class Request {
       } else {
         return JSON.parse(responseText);
       }
-    })
+    });
 }
 
 export default new Request();

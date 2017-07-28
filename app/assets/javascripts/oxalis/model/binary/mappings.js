@@ -26,9 +26,13 @@ class Mappings {
       throw new Error("Dataset needs to be available.");
     }
     const datasetName = dataset.name;
-    this.mappings = _.transform(layer.mappings, (result, mappingName) => {
-      result[mappingName] = { name: mappingName };
-    }, {});
+    this.mappings = _.transform(
+      layer.mappings,
+      (result, mappingName) => {
+        result[mappingName] = { name: mappingName };
+      },
+      {},
+    );
     this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
     this.doWithToken = layer.doWithToken.bind(layer);
   }
@@ -42,7 +46,6 @@ class Mappings {
     return this.buildMappingArray(mappingName);
   }
 
-
   async fetchMappings(mappingName: string): Promise<*> {
     const mapping = await this.fetchMapping(mappingName);
     if (mapping.parent != null) {
@@ -51,7 +54,6 @@ class Mappings {
       return Promise.resolve();
     }
   }
-
 
   fetchMapping(mappingName: string): Promise<MappingType> {
     const mappingObject = this.mappings[mappingName];

@@ -36,7 +36,7 @@ const Toast = {
     let messages;
     if (_.isArray(type) && message == null) {
       messages = type;
-      const toasts = messages.map((singleMessage) => {
+      const toasts = messages.map(singleMessage => {
         if (singleMessage.success != null) {
           this.success(singleMessage.success);
         }

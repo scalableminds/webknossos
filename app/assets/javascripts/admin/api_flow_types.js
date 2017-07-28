@@ -9,7 +9,7 @@ type APIDataSourceType = {
   status?: string,
   dataLayers: Array<DataLayerType>,
   scale: Vector3,
-}
+};
 
 export type APIDatasetType = {
   +name: string,
@@ -17,7 +17,7 @@ export type APIDatasetType = {
   +dataStore: {
     +name: string,
     +url: string,
-    +typ: "webknossos-store" | "nd-store"
+    +typ: "webknossos-store" | "nd-store",
   },
   +sourceType: "wkw" | "knossos",
   +owningTeam: "Connectomics department",
@@ -28,4 +28,4 @@ export type APIDatasetType = {
   description: ?string,
   +created: number,
   +isEditable: boolean,
-}
+};

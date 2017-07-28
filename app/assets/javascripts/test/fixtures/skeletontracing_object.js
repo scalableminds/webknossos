@@ -59,11 +59,7 @@ export default {
           name: "color",
           category: "color",
           boundingBox: {
-            topLeft: [
-              3840,
-              4220,
-              2304,
-            ],
+            topLeft: [3840, 4220, 2304],
             width: 128,
             height: 131,
             depth: 384,
@@ -77,11 +73,7 @@ export default {
           name: "segmentation",
           category: "segmentation",
           boundingBox: {
-            topLeft: [
-              3840,
-              4220,
-              2304,
-            ],
+            topLeft: [3840, 4220, 2304],
             width: 128,
             height: 131,
             depth: 384,

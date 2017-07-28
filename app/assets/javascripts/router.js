@@ -154,7 +154,6 @@ class Router extends BaseRouter {
     });
   }
 
-
   datasetEdit(name) {
     const view = new ReactBackboneWrapper(DatasetImportView, {
       datasetName: name,
@@ -162,7 +161,6 @@ class Router extends BaseRouter {
     });
     this.changeView(view);
   }
-
 
   datasetImport(name) {
     const view = new ReactBackboneWrapper(DatasetImportView, {

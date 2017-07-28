@@ -55,11 +55,7 @@ export default {
           name: "color",
           category: "color",
           boundingBox: {
-            topLeft: [
-              3840,
-              4220,
-              2304,
-            ],
+            topLeft: [3840, 4220, 2304],
             width: 128,
             height: 131,
             depth: 384,
@@ -73,11 +69,7 @@ export default {
           name: "segmentation",
           category: "segmentation",
           boundingBox: {
-            topLeft: [
-              3840,
-              4220,
-              2304,
-            ],
+            topLeft: [3840, 4220, 2304],
             width: 128,
             height: 131,
             depth: 384,
@@ -96,11 +88,7 @@ export default {
           name: "64007765-cef9-4e31-b206-dba795b5be17",
           category: "segmentation",
           boundingBox: {
-            topLeft: [
-              3840,
-              4220,
-              2304,
-            ],
+            topLeft: [3840, 4220, 2304],
             width: 128,
             height: 131,
             depth: 384,

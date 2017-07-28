@@ -13,7 +13,6 @@ import TaskTransferModalView from "dashboard/views/task_transfer_modal_view";
 import UserTasksCollection from "dashboard/models/user_tasks_collection";
 
 class DashboardTaskListView extends Marionette.CompositeView {
-
   showFinishedTasks: boolean;
   modal: TaskTransferModalView;
 
@@ -57,9 +56,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
     this.prototype.childViewContainer = "tbody";
     this.prototype.childView = DashboardTaskListItemView;
 
-
-    this.prototype.ui =
-      { modalContainer: ".modal-container" };
+    this.prototype.ui = { modalContainer: ".modal-container" };
 
     this.prototype.events = {
       "click #new-task-button": "newTask",
@@ -74,21 +71,18 @@ class DashboardTaskListView extends Marionette.CompositeView {
     };
   }
 
-
   // Cannot be ES6 style function, as these are covariant by default
   childViewOptions = function childViewOptions() {
     return { isAdminView: this.options.isAdminView };
-  }
-
+  };
 
   // Cannot be ES6 style function, as these are covariant by default
   templateContext = function templateContext() {
     return {
       isAdminView: this.options.isAdminView,
-      getFinishVerb: () => this.showFinishedTasks ? "unfinished" : "finished",
+      getFinishVerb: () => (this.showFinishedTasks ? "unfinished" : "finished"),
     };
-  }
-
+  };
 
   initialize(options) {
     this.options = options;
@@ -96,13 +90,17 @@ class DashboardTaskListView extends Marionette.CompositeView {
 
     // If you know how to do this better, do it. Backbones Collection type is not compatible to Marionettes
     // Collection type according to flow - although they actually should be...
-    this.collection = ((new UserTasksCollection([], { userID: this.options.userID }): any): Marionette.Collection);
+    this.collection = ((new UserTasksCollection([], {
+      userID: this.options.userID,
+    }): any): Marionette.Collection);
 
     // Show a loading spinner for long running requests
     this.listenTo(this.collection, "request", () => app.router.showLoadingSpinner());
     this.listenTo(this.collection, "error", () => app.router.hideLoadingSpinner());
     // Hide the spinner if the collection is empty or after rendering all elements of the (long) table
-    this.listenTo(this.collection, "sync", () => { if (this.collection.length === 0) app.router.hideLoadingSpinner(); });
+    this.listenTo(this.collection, "sync", () => {
+      if (this.collection.length === 0) app.router.hideLoadingSpinner();
+    });
     this.listenTo(this, "add:child", () => app.router.hideLoadingSpinner());
 
     this.collection.fetch();
@@ -121,19 +119,20 @@ class DashboardTaskListView extends Marionette.CompositeView {
   newTask(event) {
     event.preventDefault();
 
-    if (this.collection.filter(UserTasksCollection.prototype.unfinishedTasksFilter).length === 0 || confirm("Do you really want another task?")) {
+    if (
+      this.collection.filter(UserTasksCollection.prototype.unfinishedTasksFilter).length === 0 ||
+      confirm("Do you really want another task?")
+    ) {
       // Need to make sure this.collection is a UserTasksCollection with the getNewTask
       // method, otherwise flow complains
       app.router.showLoadingSpinner();
       if (this.collection instanceof UserTasksCollection) {
-        this.collection.getNewTask().then(
-          () => app.router.hideLoadingSpinner(),
-          () => app.router.hideLoadingSpinner(),
-        );
+        this.collection
+          .getNewTask()
+          .then(() => app.router.hideLoadingSpinner(), () => app.router.hideLoadingSpinner());
       }
     }
   }
-
 
   toggleFinished() {
     this.showFinishedTasks = !this.showFinishedTasks;
@@ -144,7 +143,6 @@ class DashboardTaskListView extends Marionette.CompositeView {
     }
     this.refresh();
   }
-
 
   transferTask(evt) {
     evt.preventDefault();
@@ -157,7 +155,6 @@ class DashboardTaskListView extends Marionette.CompositeView {
     modalContainer.show(this.modal);
   }
 
-
   refresh() {
     this.collection.fetch().then(() => this.render());
   }
@@ -167,6 +164,5 @@ class DashboardTaskListView extends Marionette.CompositeView {
   }
 }
 DashboardTaskListView.initClass();
-
 
 export default DashboardTaskListView;

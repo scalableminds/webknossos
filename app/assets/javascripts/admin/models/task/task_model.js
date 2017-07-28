@@ -35,13 +35,11 @@ class TaskModel extends NestedObjModel {
     return `/api/tasks${id}`;
   }
 
-
   destroy() {
     const options = { url: `/api/tasks/${this.get("id")}` };
     super.destroy(options);
   }
 }
 TaskModel.initClass();
-
 
 export default TaskModel;

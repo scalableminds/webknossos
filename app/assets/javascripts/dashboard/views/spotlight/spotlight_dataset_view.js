@@ -49,8 +49,7 @@ class SpotlightDatasetView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.templateContext =
-      { TemplateHelpers };
+    this.prototype.templateContext = { TemplateHelpers };
 
     this.prototype.ui = {
       skeletonTraceLink: "#skeletonTraceLink",
@@ -60,14 +59,12 @@ class SpotlightDatasetView extends Marionette.View {
     };
   }
 
-
   onRender() {
     this.$(".link-row > a").tooltip({ placement: "bottom" });
 
     this.ui.skeletonTraceLink.click(this.submitForm.bind(this, "skeletonTracing"));
     return this.ui.volumeTraceLink.click(this.submitForm.bind(this, "volumeTracing"));
   }
-
 
   submitForm(type, event) {
     event.preventDefault();
@@ -82,6 +79,5 @@ Do you wish to sign up now?`;
   }
 }
 SpotlightDatasetView.initClass();
-
 
 export default SpotlightDatasetView;

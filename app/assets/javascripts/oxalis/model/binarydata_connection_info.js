@@ -7,12 +7,10 @@ const ROUND_TRIP_TIME_SMOOTHER = 0.125;
 const BANDWIDTH_SMOOTHER = 0.125;
 
 class BinaryDataConnectionInfo {
-
   roundTripTime: number;
   bandwidth: number;
   totalBuckets: number;
   totalBytes: number;
-
 
   constructor() {
     // Give some typical initial values here to allow selection of initial loading strategy
@@ -26,13 +24,15 @@ class BinaryDataConnectionInfo {
   log(dataLayerName: string, startTime: number, loadedBuckets: number, loadedBytes: number): void {
     const endTime = new Date().getTime();
     const roundTripTime = endTime - startTime;
-    const bandwidth = (loadedBytes / roundTripTime) * 1000;
+    const bandwidth = loadedBytes / roundTripTime * 1000;
 
     this.totalBuckets += loadedBuckets;
     this.totalBytes += loadedBytes;
 
-    this.roundTripTime = ((1 - ROUND_TRIP_TIME_SMOOTHER) * this.roundTripTime) + (ROUND_TRIP_TIME_SMOOTHER * roundTripTime);
-    this.bandwidth = ((1 - BANDWIDTH_SMOOTHER) * this.bandwidth) + (BANDWIDTH_SMOOTHER * bandwidth);
+    this.roundTripTime =
+      (1 - ROUND_TRIP_TIME_SMOOTHER) * this.roundTripTime +
+      ROUND_TRIP_TIME_SMOOTHER * roundTripTime;
+    this.bandwidth = (1 - BANDWIDTH_SMOOTHER) * this.bandwidth + BANDWIDTH_SMOOTHER * bandwidth;
   }
 }
 

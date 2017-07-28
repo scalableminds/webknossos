@@ -83,5 +83,4 @@ class CreditsView extends Marionette.View {
 }
 CreditsView.initClass();
 
-
 export default CreditsView;

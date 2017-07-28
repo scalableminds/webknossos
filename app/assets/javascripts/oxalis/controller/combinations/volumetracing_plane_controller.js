@@ -9,18 +9,30 @@ import Store from "oxalis/store";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import constants, { OrthoViews } from "oxalis/constants";
-import PlaneController from "oxalis/controller/viewmodes/plane_controller";
+import {
+  PlaneControllerClass,
+  mapStateToProps,
+} from "oxalis/controller/viewmodes/plane_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import Model from "oxalis/model";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import { createCellAction, setModeAction, startEditingAction, addToLayerAction, finishEditingAction } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  createCellAction,
+  setModeAction,
+  startEditingAction,
+  addToLayerAction,
+  finishEditingAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import {
+  getActiveCellId,
+  getVolumeTraceOrMoveMode,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import type { OrthoViewType, Point2 } from "oxalis/constants";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
+import { connect } from "react-redux";
 
-class VolumeTracingPlaneController extends PlaneController {
-
+class VolumeTracingPlaneController extends PlaneControllerClass {
   // See comment in Controller class on general controller architecture.
   //
   // Volume Tracing Plane Controller:
@@ -35,7 +47,7 @@ class VolumeTracingPlaneController extends PlaneController {
 
     let lastActiveCellId = getActiveCellId(Store.getState().tracing).get();
     Store.subscribe(() => {
-      getActiveCellId(Store.getState().tracing).map((cellId) => {
+      getActiveCellId(Store.getState().tracing).map(cellId => {
         if (lastActiveCellId !== cellId) {
           SceneController.renderVolumeIsosurface(cellId);
           lastActiveCellId = cellId;
@@ -51,7 +63,6 @@ class VolumeTracingPlaneController extends PlaneController {
     // TODO: This should be put in a saga with `take('INITIALIZE_SETTINGS')`as pre-condition
     setTimeout(this.adjustSegmentationOpacity, 500);
   }
-
 
   simulateTracing = async (): Promise<void> => {
     Store.dispatch(setModeAction(constants.VOLUME_MODE_TRACE));
@@ -77,10 +88,8 @@ class VolumeTracingPlaneController extends PlaneController {
     await this.simulateTracing();
   };
 
-
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
-
       leftDownMove: (delta: Point2, pos: Point2) => {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
         const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
@@ -89,8 +98,8 @@ class VolumeTracingPlaneController extends PlaneController {
         if (mode === constants.VOLUME_MODE_MOVE) {
           const viewportScale = Store.getState().userConfiguration.scale;
           this.move([
-            (delta.x * mouseInversionX) / viewportScale,
-            (delta.y * mouseInversionY) / viewportScale,
+            delta.x * mouseInversionX / viewportScale,
+            delta.y * mouseInversionY / viewportScale,
             0,
           ]);
         } else {
@@ -128,20 +137,22 @@ class VolumeTracingPlaneController extends PlaneController {
       },
 
       leftClick: (pos: Point2) => {
-        const cellId = Model.getSegmentationBinary().cube.getDataValue(this.calculateGlobalPos(pos));
+        const cellId = Model.getSegmentationBinary().cube.getDataValue(
+          this.calculateGlobalPos(pos),
+        );
 
         this.volumeTracingController.handleCellSelection(cellId);
       },
     });
   }
 
-
   adjustSegmentationOpacity(): void {
     if (Store.getState().datasetConfiguration.segmentationOpacity < 10) {
-      Toast.warning("Your setting for \"segmentation opacity\" is set very low.<br />Increase it for better visibility while volume tracing.");
+      Toast.warning(
+        'Your setting for "segmentation opacity" is set very low.<br />Increase it for better visibility while volume tracing.',
+      );
     }
   }
-
 
   getKeyboardControls(): Object {
     return _.extend(super.getKeyboardControls(), {
@@ -150,4 +161,4 @@ class VolumeTracingPlaneController extends PlaneController {
   }
 }
 
-export default VolumeTracingPlaneController;
+export default connect(mapStateToProps)(VolumeTracingPlaneController);

@@ -14,7 +14,6 @@ export type MappingArray = Array<number>;
 
 // TODO: Non-reactive
 class Mappings {
-
   mappings: {
     [key: string]: MappingType,
   } = {};
@@ -34,11 +33,9 @@ class Mappings {
     this.doWithToken = layer.doWithToken.bind(layer);
   }
 
-
   getMappingNames(): Array<string> {
     return _.keys(this.mappings);
   }
-
 
   async getMappingArrayAsync(mappingName: string): Promise<MappingArray> {
     await this.fetchMappings(mappingName);
@@ -61,24 +58,27 @@ class Mappings {
     if (mappingObject != null && mappingObject.classes != null) {
       return Promise.resolve(mappingObject);
     }
-    return this.doWithToken((token: string) => Request.receiveJSON(
-        `${this.baseUrl + mappingName}?token=${token}`,
-      ).then((mapping: MappingType) => {
-        this.mappings[mappingName] = mapping;
-        console.log("Done downloading:", mappingName);
-        return mapping;
-      }, error => console.error("Error downloading:", mappingName, error)),
+    return this.doWithToken((token: string) =>
+      Request.receiveJSON(`${this.baseUrl + mappingName}?token=${token}`).then(
+        (mapping: MappingType) => {
+          this.mappings[mappingName] = mapping;
+          console.log("Done downloading:", mappingName);
+          return mapping;
+        },
+        error => console.error("Error downloading:", mappingName, error),
+      ),
     );
   }
-
 
   buildMappingArray(mappingName: string): MappingArray {
     const mappingArray: MappingArray = [];
 
     for (const currentMappingName of this.getMappingChain(mappingName)) {
       const mappingObject = this.mappings[currentMappingName];
-      ErrorHandling.assert(mappingObject.classes,
-          "mappingObject classes must have been fetched at this point");
+      ErrorHandling.assert(
+        mappingObject.classes,
+        "mappingObject classes must have been fetched at this point",
+      );
       if (mappingObject.classes) {
         for (const mappingClass of mappingObject.classes) {
           const minId = _.min(mappingClass);
@@ -92,7 +92,6 @@ class Mappings {
 
     return mappingArray;
   }
-
 
   getMappingChain(mappingName: string): Array<string> {
     const chain = [mappingName];

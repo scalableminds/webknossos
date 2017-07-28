@@ -13,13 +13,11 @@ import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 
-
 const DEFAULT_SCALE: number = 1.35;
 const MAX_SCALE: number = 3;
 const MIN_SCALE: number = 1;
 
 class ArbitraryView {
-
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -29,7 +27,6 @@ class ArbitraryView {
   resize: () => void;
   applyScale: (delta: number) => void;
   setClippingDistance: (value: number) => void;
-
 
   needsRerender: boolean;
   additionalInfo: string = "";
@@ -57,7 +54,7 @@ class ArbitraryView {
     // camDistance has to be calculated such that with cam
     // angle 45°, the plane of width 128 fits exactly in the
     // viewport.
-    this.camDistance = width / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
+    this.camDistance = width / 2 / Math.tan(Math.PI / 180 * 45 / 2);
 
     // The "render" div serves as a container for the canvas, that is
     // attached to it once a renderer has been initalized.
@@ -74,7 +71,9 @@ class ArbitraryView {
     this.cameraPosition = [0, 0, this.camDistance];
 
     this.needsRerender = true;
-    app.vent.on("rerender", () => { this.needsRerender = true; });
+    app.vent.on("rerender", () => {
+      this.needsRerender = true;
+    });
     Store.subscribe(() => {
       // Render in the next frame after the change propagated everywhere
       window.requestAnimationFrame(() => {
@@ -82,7 +81,6 @@ class ArbitraryView {
       });
     });
   }
-
 
   start(): void {
     if (!this.isRunning) {
@@ -100,7 +98,6 @@ class ArbitraryView {
     }
   }
 
-
   stop(): void {
     if (this.isRunning) {
       this.isRunning = false;
@@ -115,10 +112,11 @@ class ArbitraryView {
     }
   }
 
-
   animateImpl(): void {
     this.animationRequestId = null;
-    if (!this.isRunning) { return; }
+    if (!this.isRunning) {
+      return;
+    }
 
     TWEEN.update();
 
@@ -136,10 +134,24 @@ class ArbitraryView {
 
       const m = getZoomedMatrix(Store.getState().flycam);
 
-      camera.matrix.set(m[0], m[4], m[8], m[12],
-                        m[1], m[5], m[9], m[13],
-                        m[2], m[6], m[10], m[14],
-                        m[3], m[7], m[11], m[15]);
+      camera.matrix.set(
+        m[0],
+        m[4],
+        m[8],
+        m[12],
+        m[1],
+        m[5],
+        m[9],
+        m[13],
+        m[2],
+        m[6],
+        m[10],
+        m[14],
+        m[3],
+        m[7],
+        m[11],
+        m[15],
+      );
 
       camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
       camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
@@ -148,7 +160,7 @@ class ArbitraryView {
       renderer.setViewport(0, 0, this.width, this.height);
       renderer.setScissor(0, 0, this.width, this.height);
       renderer.setScissorTest(true);
-      renderer.setClearColor(0xFFFFFF, 1);
+      renderer.setClearColor(0xffffff, 1);
 
       renderer.render(scene, camera);
 
@@ -158,11 +170,9 @@ class ArbitraryView {
     this.animationRequestId = window.requestAnimationFrame(this.animate);
   }
 
-
   draw(): void {
     this.needsRerender = true;
   }
-
 
   addGeometry(geometry: THREE.Geometry): void {
     // Adds a new Three.js geometry to the scene.
@@ -173,11 +183,7 @@ class ArbitraryView {
   }
 
   // throttle resize to avoid annoying flickering
-  resizeThrottled = _.throttle(
-    () => this.resize(),
-    Constants.RESIZE_THROTTLE_TIME,
-  );
-
+  resizeThrottled = _.throttle(() => this.resize(), Constants.RESIZE_THROTTLE_TIME);
 
   resizeImpl(): void {
     // Call this after the canvas was resized to fix the viewport
@@ -193,11 +199,12 @@ class ArbitraryView {
     this.draw();
   }
 
-
   applyScaleImpl(delta: number): void {
-    if (!this.scaleFactor) { this.scaleFactor = DEFAULT_SCALE; }
+    if (!this.scaleFactor) {
+      this.scaleFactor = DEFAULT_SCALE;
+    }
 
-    if ((this.scaleFactor + delta > MIN_SCALE) && (this.scaleFactor + delta < MAX_SCALE)) {
+    if (this.scaleFactor + delta > MIN_SCALE && this.scaleFactor + delta < MAX_SCALE) {
       this.scaleFactor += Number(delta);
       this.width = this.height = this.scaleFactor * Constants.VIEWPORT_WIDTH;
       this.container.width(this.width);
@@ -211,7 +218,6 @@ class ArbitraryView {
     this.camera.near = this.camDistance - value;
     this.camera.updateProjectionMatrix();
   }
-
 
   setAdditionalInfo(info: string): void {
     this.additionalInfo = info;

@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import models.user.UserAgentTrackingDAO
+import models.analytics.{AnalyticsDAO, AnalyticsEntry, UserAgentTrackingDAO}
 import oxalis.security.Secured
 import play.api._
 import play.api.i18n.MessagesApi
@@ -66,5 +66,14 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller wit
       "braingames-libs" -> braingameslibs.BuildInfo.toMap.mapValues(_.toString),
       "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
     ))
+  }
+
+  def analytics(namespace: String) = UserAwareAction(parse.json(1024 * 1024)) { implicit request =>
+    AnalyticsDAO.insert(
+      AnalyticsEntry(
+        request.userOpt.map(_._id),
+        namespace,
+        request.body))
+    Ok
   }
 }

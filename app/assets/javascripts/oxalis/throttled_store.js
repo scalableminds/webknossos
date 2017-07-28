@@ -17,7 +17,6 @@ Store.subscribe(() => {
   }
 });
 
-
 async function go() {
   while (true) {
     await waitForUpdate.promise();
@@ -29,7 +28,6 @@ async function go() {
 }
 
 go();
-
 
 export default Object.assign({}, Store, {
   subscribe(listener: () => void): () => void {

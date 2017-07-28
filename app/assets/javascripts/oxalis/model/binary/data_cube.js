@@ -10,7 +10,13 @@ import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
-import { DataBucket, NullBucket, NULL_BUCKET, NULL_BUCKET_OUT_OF_BB, BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
+import {
+  DataBucket,
+  NullBucket,
+  NULL_BUCKET,
+  NULL_BUCKET_OUT_OF_BB,
+  BUCKET_SIZE_P,
+} from "oxalis/model/binary/bucket";
 import type { Bucket } from "oxalis/model/binary/bucket";
 import ArbitraryCubeAdapter from "oxalis/model/binary/arbitrary_cube_adapter";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
@@ -56,7 +62,6 @@ class DataCube {
   on: Function;
   off: Function;
 
-
   // The cube stores the buckets in a seperate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
   // The bucket-arrays are initialized large enough to hold the whole cube. Thus no
@@ -71,7 +76,6 @@ class DataCube {
   // bucket becomes 0, itsis no longer in the access-queue and is least resently used.
   // It is then removed from the cube.
 
-
   constructor(upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
     this.upperBoundary = upperBoundary;
     this.ZOOM_STEP_COUNT = zoomStepCount;
@@ -81,7 +85,7 @@ class DataCube {
     this.LOOKUP_DEPTH_UP = this.ZOOM_STEP_COUNT - 1;
     this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
     this.BUCKET_LENGTH = (1 << (BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
-    this.BYTE_OFFSET = (this.BIT_DEPTH >> 3);
+    this.BYTE_OFFSET = this.BIT_DEPTH >> 3;
 
     this.cubes = [];
     this.buckets = new Array(this.MAXIMUM_BUCKET_COUNT);
@@ -112,13 +116,12 @@ class DataCube {
 
     listenToStoreProperty(
       state => state.tracing.boundingBox,
-      (boundingBox) => {
+      boundingBox => {
         this.boundingBox = new BoundingBox(boundingBox, this);
         this.forgetOutOfBoundaryBuckets();
       },
     );
   }
-
 
   initializeWithQueues(pullQueue: PullQueue, pushQueue: PushQueue): void {
     // Due to cyclic references, this method has to be called before the cube is
@@ -129,7 +132,6 @@ class DataCube {
     this.temporalBucketManager = new TemporalBucketManager(this.pullQueue, this.pushQueue);
   }
 
-
   getNullBucket(address: Vector4): Bucket {
     if (this.boundingBox.containsBucket(address)) {
       return NULL_BUCKET;
@@ -138,17 +140,14 @@ class DataCube {
     }
   }
 
-
   setMappingEnabled(isEnabled: boolean): void {
     this.currentMapping = isEnabled ? this.mapping : null;
     this.trigger("newMapping");
   }
 
-
   hasMapping(): boolean {
     return this.mapping != null;
   }
-
 
   setMapping(newMapping: MappingArray): void {
     // Generate fake mapping
@@ -165,7 +164,6 @@ class DataCube {
     this.trigger("newMapping");
   }
 
-
   mapId(idToMap: number): number {
     let mappedId = null;
     if (this.currentMapping != null) {
@@ -174,17 +172,13 @@ class DataCube {
     return mappedId != null ? mappedId : idToMap;
   }
 
-
   getArbitraryCube(): ArbitraryCubeAdapter {
     return this.arbitraryCube;
   }
 
-
   getVoxelIndexByVoxelOffset([x, y, z]: Vector3): number {
-    return this.BYTE_OFFSET *
-      (x + (y * (1 << BUCKET_SIZE_P)) + (z * (1 << (BUCKET_SIZE_P * 2))));
+    return this.BYTE_OFFSET * (x + y * (1 << BUCKET_SIZE_P) + z * (1 << (BUCKET_SIZE_P * 2)));
   }
-
 
   isWithinBounds([x, y, z, zoomStep]: Vector4): boolean {
     if (zoomStep >= this.ZOOM_STEP_COUNT) {
@@ -194,18 +188,16 @@ class DataCube {
     return this.boundingBox.containsBucket([x, y, z, zoomStep]);
   }
 
-
   getBucketIndex([x, y, z, zoomStep]: Vector4): ?number {
     // Removed for performance reasons
     // ErrorHandling.assert(this.isWithinBounds([x, y, z, zoomStep]));
     const cube = this.cubes[zoomStep];
     if (cube != null) {
       const { boundary } = cube;
-      return (x * boundary[2] * boundary[1]) + (y * boundary[2]) + z;
+      return x * boundary[2] * boundary[1] + y * boundary[2] + z;
     }
     return null;
   }
-
 
   // Either returns the existing bucket or creates a new one. Only returns
   // NULL_BUCKET if the bucket cannot possibly exist, e.g. because it is
@@ -222,7 +214,6 @@ class DataCube {
 
     return bucket;
   }
-
 
   // Returns the Bucket object if it exists, or NULL_BUCKET otherwise.
   getBucket(address: Vector4): Bucket {
@@ -241,7 +232,6 @@ class DataCube {
     return this.getNullBucket(address);
   }
 
-
   createBucket(address: Vector4): Bucket {
     const bucket = new DataBucket(this.BIT_DEPTH, address, this.temporalBucketManager);
     bucket.on({
@@ -257,12 +247,13 @@ class DataCube {
     return bucket;
   }
 
-
   addBucketToGarbageCollection(bucket: DataBucket): void {
     if (this.bucketCount >= this.MAXIMUM_BUCKET_COUNT) {
       for (let i = 0; i < 2 * this.bucketCount; i++) {
         this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
-        if (this.buckets[this.bucketIterator].shouldCollect()) { break; }
+        if (this.buckets[this.bucketIterator].shouldCollect()) {
+          break;
+        }
       }
 
       if (!this.buckets[this.bucketIterator].shouldCollect()) {
@@ -277,7 +268,6 @@ class DataCube {
     this.buckets[this.bucketIterator] = bucket;
     this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
   }
-
 
   collectBucket(bucket: DataBucket): void {
     const address = bucket.zoomedAddress;
@@ -305,7 +295,9 @@ class DataCube {
     for (let x = 80; x <= 120; x++) {
       for (let y = 80; y <= 120; y++) {
         for (let z = 80; z <= 120; z++) {
-          if (Math.sqrt(((x - 100) * (x - 100)) + ((y - 100) * (y - 100)) + ((z - 100) * (z - 100))) <= 20) {
+          if (
+            Math.sqrt((x - 100) * (x - 100) + (y - 100) * (y - 100) + (z - 100) * (z - 100)) <= 20
+          ) {
             this.labelVoxel([x, y, z], 5);
           }
         }
@@ -314,7 +306,6 @@ class DataCube {
 
     this.trigger("volumeLabeled");
   }
-
 
   labelVoxels(iterator: VoxelIterator, label: number): void {
     while (iterator.hasNext) {
@@ -325,7 +316,6 @@ class DataCube {
     this.pushQueue.push();
     this.trigger("volumeLabeled");
   }
-
 
   labelVoxel(voxel: Vector3, label: number): void {
     let voxelInCube = true;
@@ -355,7 +345,6 @@ class DataCube {
     }
   }
 
-
   getDataValue(voxel: Vector3, mapping: ?MappingArray): number {
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel));
     const voxelIndex = this.getVoxelIndex(voxel);
@@ -381,11 +370,9 @@ class DataCube {
     return 0;
   }
 
-
   getMappedDataValue(voxel: Vector3): number {
     return this.getDataValue(voxel, this.currentMapping);
   }
-
 
   getVoxelIndex(voxel: Vector3): number {
     // No `map` for performance reasons
@@ -395,7 +382,6 @@ class DataCube {
     }
     return this.getVoxelIndexByVoxelOffset(voxelOffset);
   }
-
 
   positionToZoomedAddress([x, y, z]: Vector3, zoomStep: number = 0): Vector4 {
     // return the bucket a given voxel lies in

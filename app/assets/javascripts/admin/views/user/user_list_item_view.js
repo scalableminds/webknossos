@@ -41,16 +41,14 @@ class UserListItemView extends Marionette.View {
 </td>\
 `);
 
-    this.prototype.templateContext =
-      { TemplateHelpers };
+    this.prototype.templateContext = { TemplateHelpers };
 
     this.prototype.events = {
       "click .activate-user": "activate",
       "click .deactivate-user": "deactivate",
     };
 
-    this.prototype.modelEvents =
-      { change: "render" };
+    this.prototype.modelEvents = { change: "render" };
   }
   attributes() {
     return {
@@ -67,7 +65,6 @@ class UserListItemView extends Marionette.View {
     // HACKY
     return $("#team-role-modal").click();
   }
-
 
   deactivate() {
     if (window.confirm("Do you really want to deactivate this user?")) {

@@ -9,6 +9,7 @@ GET           /impressum                                                        
 GET           /info                                                             controllers.Application.info
 GET           /thankyou                                                         controllers.Application.thankyou
 GET           /api/buildinfo                                                    controllers.Application.buildInfo
+POST          /api/analytics/:namespace                                         controllers.Application.analytics(namespace)
 
 # Github Issues integration
 GET           /issues                                                           controllers.GithubIssues.index

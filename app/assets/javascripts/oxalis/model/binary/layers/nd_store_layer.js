@@ -11,9 +11,7 @@ import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
 import type { Vector3, Vector6 } from "oxalis/constants";
 
-
 class NdStoreLayer extends Layer {
-
   constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
     super(layerInfo, dataStoreInfo);
 
@@ -26,7 +24,6 @@ class NdStoreLayer extends Layer {
     throw new Error("NDstore does not currently support sendToStore");
   }
 
-
   requestDataToken(): Promise<string> {
     // ndstore uses its own token that is fixed
     if (this.dataStoreInfo.accessToken != null) {
@@ -35,7 +32,6 @@ class NdStoreLayer extends Layer {
       return Promise.reject(new Error("No accessToken available."));
     }
   }
-
 
   async requestFromStoreImpl(batch: Array<BucketInfo>, token: string): Promise<Uint8Array> {
     ErrorHandling.assert(batch.length === 1, "Batch length should be 1 for NDstore Layers");
@@ -65,7 +61,7 @@ class NdStoreLayer extends Layer {
     for (let z = bucketBounds[2]; z < bucketBounds[5]; z++) {
       for (let y = bucketBounds[1]; y < bucketBounds[4]; y++) {
         for (let x = bucketBounds[0]; x < bucketBounds[3]; x++) {
-          buffer[(z * bucketSize * bucketSize) + (y * bucketSize) + x] = dataView.getUint8(index++);
+          buffer[z * bucketSize * bucketSize + y * bucketSize + x] = dataView.getUint8(index++);
         }
       }
     }
@@ -93,7 +89,7 @@ class NdStoreLayer extends Layer {
 
   getBoundingBoxAsBucket(bounds: Vector6, bucket: BucketInfo) {
     // transform bounds in zoom-step-0 voxels to bucket coordinates between 0 and BUCKET_SIZE_P
-    const bucketBounds = bounds.map((coordinate) => {
+    const bucketBounds = bounds.map(coordinate => {
       const cubeSize = 1 << (BUCKET_SIZE_P + bucket.zoomStep);
       return (coordinate % cubeSize) >> bucket.zoomStep;
     });
@@ -101,12 +97,11 @@ class NdStoreLayer extends Layer {
     // as the upper bound for bucket coordinates is exclusive, the % cubeSize of it is 0
     // but we want it to be 1 << BUCKET_SIZE_P
     for (let i = 3; i <= 5; i++) {
-      bucketBounds[i] = bucketBounds[i] || (1 << BUCKET_SIZE_P);
+      bucketBounds[i] = bucketBounds[i] || 1 << BUCKET_SIZE_P;
     }
 
     return bucketBounds;
   }
 }
-
 
 export default NdStoreLayer;

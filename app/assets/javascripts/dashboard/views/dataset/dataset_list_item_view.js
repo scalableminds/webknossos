@@ -10,9 +10,7 @@ import TemplateHelpers from "libs/template_helpers";
 import DatasetAccesslistCollection from "admin/models/dataset/dataset_accesslist_collection";
 import DatasetAccessView from "dashboard/views/dataset/dataset_access_view";
 
-
 class DatasetListItemView extends Marionette.CompositeView {
-
   importUrl: string;
 
   static initClass() {
@@ -107,8 +105,7 @@ class DatasetListItemView extends Marionette.CompositeView {
     this.prototype.childView = DatasetAccessView;
     this.prototype.childViewContainer = "tbody";
 
-    this.prototype.templateContext =
-      { TemplateHelpers };
+    this.prototype.templateContext = { TemplateHelpers };
 
     this.prototype.events = {
       "click .import-dataset": "startImport",
@@ -116,7 +113,6 @@ class DatasetListItemView extends Marionette.CompositeView {
       "click #skeletonTraceLink": "startSkeletonTracing",
       "click #volumeTraceLink": "startVolumeTracing",
     };
-
 
     this.prototype.ui = {
       row: ".dataset-row",
@@ -131,7 +127,6 @@ class DatasetListItemView extends Marionette.CompositeView {
     };
   }
 
-
   initialize() {
     this.listenTo(this.model, "change", this.render);
     this.listenTo(app.vent, "datasetListView:toggleDetails", this.toggleDetails);
@@ -141,30 +136,24 @@ class DatasetListItemView extends Marionette.CompositeView {
 
   toggleDetails() {
     if (this.ui.detailsRow.hasClass("hide")) {
-      return this.collection
-        .fetch()
-        .then(() => {
-          this.render();
-          this.ui.detailsRow.removeClass("hide");
-          return this.ui.detailsToggle.addClass("open");
-        },
-        );
+      return this.collection.fetch().then(() => {
+        this.render();
+        this.ui.detailsRow.removeClass("hide");
+        return this.ui.detailsToggle.addClass("open");
+      });
     } else {
       this.ui.detailsRow.addClass("hide");
       return this.ui.detailsToggle.removeClass("open");
     }
   }
 
-
   startSkeletonTracing(event) {
     return this.submitForm("skeletonTracing", event);
   }
 
-
   startVolumeTracing(event) {
     return this.submitForm("volumeTracing", event);
   }
-
 
   submitForm(type, event) {
     event.preventDefault();
@@ -173,6 +162,5 @@ class DatasetListItemView extends Marionette.CompositeView {
   }
 }
 DatasetListItemView.initClass();
-
 
 export default DatasetListItemView;

@@ -15,7 +15,6 @@ import type { DataLayerType, DataStoreInfoType } from "oxalis/store";
 
 // TODO: Non-reactive
 class WkLayer extends Layer {
-
   constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
     super(layerInfo, dataStoreInfo);
 
@@ -26,14 +25,12 @@ class WkLayer extends Layer {
     this.fourBit = false;
   }
 
-
   setFourBit(newFourBit: boolean) {
     // No op if this is not a color layer
     if (this.category === "color") {
       this.fourBit = newFourBit;
     }
   }
-
 
   buildBuckets(batch: Array<Vector4>, options: ?BucketRequestOptions) {
     if (options == null) {
@@ -43,7 +40,6 @@ class WkLayer extends Layer {
     }
     return super.buildBuckets(batch, options);
   }
-
 
   async requestFromStoreImpl(batch: Array<BucketInfo>, token: string): Promise<Uint8Array> {
     const wasFourBit = this.fourBit;
@@ -55,7 +51,8 @@ class WkLayer extends Layer {
         data: batch,
         timeout: REQUEST_TIMEOUT,
         doNotCatch: true,
-      });
+      },
+    );
 
     let result = new Uint8Array(responseBuffer);
     if (wasFourBit) {
@@ -63,7 +60,6 @@ class WkLayer extends Layer {
     }
     return result;
   }
-
 
   decodeFourBit(bufferArray: Uint8Array): Uint8Array {
     // Expand 4-bit data
@@ -101,6 +97,5 @@ class WkLayer extends Layer {
     );
   }
 }
-
 
 export default WkLayer;

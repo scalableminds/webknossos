@@ -41,11 +41,7 @@ export default {
   downloadUrl: "http://localhost:9000/annotations/Explorational/589b1bda4000009803e96ebc/download",
   content: {
     settings: {
-      allowedModes: [
-        "orthogonal",
-        "oblique",
-        "flight",
-      ],
+      allowedModes: ["orthogonal", "oblique", "flight"],
       branchPointsAllowed: true,
       somaClickingAllowed: true,
       advancedOptionsAllowed: true,
@@ -57,11 +53,7 @@ export default {
         url: "http://localhost:9000",
         typ: "webknossos-store",
       },
-      scale: [
-        16.5,
-        16.5,
-        25,
-      ],
+      scale: [16.5, 16.5, 25],
       dataLayers: [
         {
           name: "color",
@@ -76,12 +68,7 @@ export default {
             height: 131,
             depth: 384,
           },
-          resolutions: [
-            1,
-            2,
-            4,
-            8,
-          ],
+          resolutions: [1, 2, 4, 8],
           fallback: null,
           elementClass: "uint8",
           mappings: [],
@@ -99,9 +86,7 @@ export default {
             height: 131,
             depth: 384,
           },
-          resolutions: [
-            1,
-          ],
+          resolutions: [1],
           fallback: null,
           elementClass: "uint16",
           mappings: [
@@ -122,16 +107,8 @@ export default {
             {
               id: 1,
               radius: 165,
-              position: [
-                3903,
-                4283,
-                2496,
-              ],
-              rotation: [
-                0,
-                0,
-                0,
-              ],
+              position: [3903, 4283, 2496],
+              rotation: [0, 0, 0],
               viewport: 0,
               resolution: 0,
               bitDepth: 8,
@@ -141,16 +118,8 @@ export default {
             {
               id: 2,
               radius: 165,
-              position: [
-                3914,
-                4277,
-                2496,
-              ],
-              rotation: [
-                0,
-                0,
-                0,
-              ],
+              position: [3914, 4277, 2496],
+              rotation: [0, 0, 0],
               viewport: 0,
               resolution: 0,
               bitDepth: 8,
@@ -165,12 +134,7 @@ export default {
             },
           ],
           name: "explorative_2017-02-08_SCM_Boy_001",
-          color: [
-            0,
-            0.2901961,
-            1,
-            1,
-          ],
+          color: [0, 0.2901961, 1, 1],
           timestamp: 1486560222916,
           comments: [],
           branchPoints: [
@@ -186,16 +150,8 @@ export default {
             {
               id: 3,
               radius: 165,
-              position: [
-                3918,
-                4292,
-                2496,
-              ],
-              rotation: [
-                0,
-                0,
-                0,
-              ],
+              position: [3918, 4292, 2496],
+              rotation: [0, 0, 0],
               viewport: 0,
               resolution: 0,
               bitDepth: 8,
@@ -205,12 +161,7 @@ export default {
           ],
           edges: [],
           name: "explorative_2017-02-08_SCM_Boy_002",
-          color: [
-            0.5803922,
-            1,
-            0,
-            1,
-          ],
+          color: [0.5803922, 1, 0, 1],
           timestamp: 1486560227441,
           comments: [
             {
@@ -228,16 +179,8 @@ export default {
       ],
       zoomLevel: -1.4,
     },
-    editPosition: [
-      3918,
-      4292,
-      2496,
-    ],
-    editRotation: [
-      0,
-      0,
-      0,
-    ],
+    editPosition: [3918, 4292, 2496],
+    editRotation: [0, 0, 0],
     boundingBox: null,
     contentType: "skeletonTracing",
   },

@@ -23,14 +23,16 @@ class TaskCollection extends Backbone.Collection {
   }
 
   parse(responses) {
-    return responses.map((response) => {
+    return responses.map(response => {
       // apply some defaults
       response.type = {
         summary: Utils.__guard__(response.type, x => x.summary) || "<deleted>",
         id: Utils.__guard__(response.type, x1 => x1.id) || "",
       };
 
-      if (response.tracingTime == null) { response.tracingTime = 0; }
+      if (response.tracingTime == null) {
+        response.tracingTime = 0;
+      }
       response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime / 1000);
 
       // convert bounding box

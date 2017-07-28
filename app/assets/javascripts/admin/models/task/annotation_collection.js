@@ -13,8 +13,10 @@ class AnnotationCollection extends Backbone.Collection {
   }
 
   parse(responses) {
-    return responses.map((response) => {
-      if (response.tracingTime == null) { response.tracingTime = 0; }
+    return responses.map(response => {
+      if (response.tracingTime == null) {
+        response.tracingTime = 0;
+      }
       response.formattedTracingTime = FormatUtils.formatSeconds(response.tracingTime / 1000);
 
       return response;

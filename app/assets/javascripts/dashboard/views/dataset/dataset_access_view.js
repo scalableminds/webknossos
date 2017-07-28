@@ -20,8 +20,7 @@ class DatasetAccessView extends Marionette.View {
 </td>\
 `);
 
-    this.prototype.templateContext =
-      { TemplateHelpers };
+    this.prototype.templateContext = { TemplateHelpers };
   }
 }
 DatasetAccessView.initClass();

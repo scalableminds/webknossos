@@ -7,13 +7,11 @@ import _ from "lodash";
 import Backbone from "backbone";
 
 class SortedCollection extends Backbone.Collection {
-
   initialize() {
     if (this.sortAttribute) {
       this.setSort(this.sortAttribute, "asc");
     }
   }
-
 
   setSort(field, sortDirection) {
     if (sortDirection === "asc") {
@@ -24,7 +22,7 @@ class SortedCollection extends Backbone.Collection {
     }
 
     // Set your comparator function, pass the field.
-    this.comparator = function (left, right) {
+    this.comparator = function(left, right) {
       const leftValue = left.get(field);
       const rightValue = right.get(field);
       let compValue;
@@ -45,6 +43,5 @@ class SortedCollection extends Backbone.Collection {
     this.sort();
   }
 }
-
 
 export default SortedCollection;

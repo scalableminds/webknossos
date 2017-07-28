@@ -39,7 +39,6 @@ class AsyncTaskQueue {
     this.failureEventThreshold = failureEventThreshold;
   }
 
-
   isBusy(): boolean {
     return this.running || this.tasks.length !== 0;
   }

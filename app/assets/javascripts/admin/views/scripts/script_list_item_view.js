@@ -3,7 +3,6 @@ import Marionette from "backbone.marionette";
 import window from "libs/window";
 
 class ScriptListItemView extends Marionette.View {
-
   static initClass() {
     this.prototype.tagName = "tr";
     this.prototype.template = _.template(`\

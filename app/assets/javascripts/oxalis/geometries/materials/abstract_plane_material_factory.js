@@ -15,21 +15,21 @@ export type UniformsType = {
   [key: string]: {
     type: "f" | "i" | "t" | "v2" | "v3",
     value: any,
-  }
+  },
 };
 
 export type ShaderMaterialOptionsType = {
   polygonOffset?: boolean,
   polygonOffsetFactor?: number,
   polygonOffsetUnits?: number,
-}
+};
 
 class AbstractPlaneMaterialFactory {
   material: THREE.ShaderMaterial;
   uniforms: UniformsType;
   attributes: Object;
   textures: {
-    [key: string]: THREE.DataTexture;
+    [key: string]: THREE.DataTexture,
   };
   minFilter: THREE.NearestFilter;
   maxFilter: THREE.NearestFilter;
@@ -44,7 +44,6 @@ class AbstractPlaneMaterialFactory {
     this.createTextures();
     this.setupChangeListeners();
   }
-
 
   setupUniforms(): void {
     this.uniforms = {};
@@ -62,26 +61,28 @@ class AbstractPlaneMaterialFactory {
     }
   }
 
-
   makeMaterial(options?: ShaderMaterialOptionsType): void {
-    this.material = new THREE.ShaderMaterial(_.extend(options, {
-      uniforms: this.uniforms,
-      vertexShader: this.getVertexShader(),
-      fragmentShader: this.getFragmentShader(),
-    }));
+    this.material = new THREE.ShaderMaterial(
+      _.extend(options, {
+        uniforms: this.uniforms,
+        vertexShader: this.getVertexShader(),
+        fragmentShader: this.getFragmentShader(),
+      }),
+    );
 
     this.material.setData = (name, data) => {
       const textureName = this.sanitizeName(name);
       Utils.__guard__(this.textures[textureName], x => x.image.data.set(data));
-      Utils.__guard__(this.textures[textureName], (x) => { x.needsUpdate = true; });
+      Utils.__guard__(this.textures[textureName], x => {
+        x.needsUpdate = true;
+      });
     };
   }
-
 
   setupChangeListeners(): void {
     listenToStoreProperty(
       state => state.datasetConfiguration.layers,
-      (layerSettings) => {
+      layerSettings => {
         _.forEach(layerSettings, (settings, layerName) => {
           const name = this.sanitizeName(layerName);
           this.updateUniformsForLayer(settings, name);
@@ -106,32 +107,36 @@ class AbstractPlaneMaterialFactory {
     throw new Error("Subclass responsibility");
   }
 
-
   sanitizeName(name: ?string): string {
     // Make sure name starts with a letter and contains
     // no "-" signs
 
-    if (name == null) { return ""; }
+    if (name == null) {
+      return "";
+    }
     return `binary_${name.replace(/-/g, "_")}`;
   }
-
 
   createDataTexture(width: number, bytes: number): void {
     const format = bytes === 1 ? THREE.LuminanceFormat : THREE.RGBFormat;
 
     return new THREE.DataTexture(
-      new Uint8Array(bytes * width * width), width, width,
-      format, THREE.UnsignedByteType,
+      new Uint8Array(bytes * width * width),
+      width,
+      width,
+      format,
+      THREE.UnsignedByteType,
       THREE.UVMapping,
-      THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping,
-      this.minFilter, this.maxFilter,
+      THREE.ClampToEdgeWrapping,
+      THREE.ClampToEdgeWrapping,
+      this.minFilter,
+      this.maxFilter,
     );
   }
 
   getFragmentShader(): string {
     throw new Error("Subclass responsibility");
   }
-
 
   getVertexShader(): string {
     return `\

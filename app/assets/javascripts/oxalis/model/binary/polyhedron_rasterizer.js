@@ -19,38 +19,39 @@ const Int32MAX = 2147483647;
 // crossMacro = (o0, o1, a0, a1, b0, b1) ->
 //   (a0 - o0) * (b1 - o1) - (a1 - o1) * (b0 - o0)
 
-
 function drawFunction(x: number, y: number, z: number, buffer: Int32Array, shiftZ: number): void {
   const __indexY = (z << shiftZ) + (y << 1);
 
-  if (x < buffer[__indexY]) { buffer[__indexY] = x; }
-  if (x > buffer[__indexY + 1]) { buffer[__indexY + 1] = x; }
+  if (x < buffer[__indexY]) {
+    buffer[__indexY] = x;
+  }
+  if (x > buffer[__indexY + 1]) {
+    buffer[__indexY + 1] = x;
+  }
 }
-
 
 // Returns the index of the next free bit.
 // Example: 5 = 0000 0101 => 3
 function nextFreeBit(x: number): number {
   let n = 1;
-  if ((x >> 16) === 0) {
+  if (x >> 16 === 0) {
     n += 16;
     x <<= 16;
   }
-  if ((x >> 24) === 0) {
+  if (x >> 24 === 0) {
     n += 8;
     x <<= 8;
   }
-  if ((x >> 28) === 0) {
+  if (x >> 28 === 0) {
     n += 4;
     x <<= 4;
   }
-  if ((x >> 30) === 0) {
+  if (x >> 30 === 0) {
     n += 2;
     x <<= 2;
   }
   return 32 - n - (x >> 31);
 }
-
 
 // Represents a convex polyhedron, which can be voxelized.
 // Use it like this:
@@ -138,14 +139,13 @@ class PolyhedronRasterizer {
     this.drawPolygons();
   }
 
-
   calcExtent(): void {
     let maxY;
     let maxZ;
     let minY;
     let minZ;
-    let minX = minY = minZ = Int32MAX;
-    let maxX = maxY = maxZ = Int32MIN;
+    let minX = (minY = minZ = Int32MAX);
+    let maxX = (maxY = maxZ = Int32MIN);
 
     const { vertices } = this;
 
@@ -155,12 +155,24 @@ class PolyhedronRasterizer {
       const y = vertices[i++];
       const z = vertices[i++];
 
-      if (x < minX) { minX = x; }
-      if (y < minY) { minY = y; }
-      if (z < minZ) { minZ = z; }
-      if (x > maxX) { maxX = x; }
-      if (y > maxY) { maxY = y; }
-      if (z > maxZ) { maxZ = z; }
+      if (x < minX) {
+        minX = x;
+      }
+      if (y < minY) {
+        minY = y;
+      }
+      if (z < minZ) {
+        minZ = z;
+      }
+      if (x > maxX) {
+        maxX = x;
+      }
+      if (y > maxY) {
+        maxY = y;
+      }
+      if (z > maxZ) {
+        maxZ = z;
+      }
     }
 
     this.minX = minX;
@@ -169,12 +181,11 @@ class PolyhedronRasterizer {
     this.maxX = maxX;
     this.maxY = maxY;
     this.maxZ = maxZ;
-    this.deltaX = (maxX - minX) + 1;
-    this.deltaY = (maxY - minY) + 1;
-    this.deltaZ = (maxZ - minZ) + 1;
+    this.deltaX = maxX - minX + 1;
+    this.deltaY = maxY - minY + 1;
+    this.deltaZ = maxZ - minZ + 1;
     this.shiftZ = nextFreeBit((this.deltaY << 1) - 1);
   }
-
 
   // transformAffine : (matrix) ->
   //
@@ -191,7 +202,6 @@ class PolyhedronRasterizer {
   //    M4x4.transformPointsAffine(matrix, vertices1, vertices1),
   //    @indices
   //  )
-
 
   draw(x: number, y: number, z: number) {
     const { buffer, shiftZ } = this;
@@ -220,7 +230,6 @@ class PolyhedronRasterizer {
     }
   }
 
-
   drawLine3d(x: number, y: number, z: number, x1: number, y1: number, z1: number): void {
     // Source: https://sites.google.com/site/proyectosroboticos/bresenham-3d
 
@@ -245,7 +254,6 @@ class PolyhedronRasterizer {
     let dx2 = dx << 1;
     let dy2 = dy << 1;
     let dz2 = dz << 1;
-
 
     if (dx >= dy && dx >= dz) {
       d = dx;
@@ -414,7 +422,6 @@ class PolyhedronRasterizer {
         }
       }
 
-
       // Generating convex hull by brute force. O(n²)
       let i = 0;
       while (i < pointsPointer) {
@@ -431,7 +438,6 @@ class PolyhedronRasterizer {
       }
     }
   }
-
 
   collectPoints(): Array<number> {
     const { buffer, minX, minY, minZ, shiftZ, deltaY, deltaZ } = this;
@@ -454,7 +460,6 @@ class PolyhedronRasterizer {
     return output;
   }
 
-
   collectPointsOnion(xs: number, ys: number, zs: number): Int32Array {
     const { buffer, minX, maxX, minY, maxY, minZ, maxZ, deltaX, deltaY, deltaZ, shiftZ } = this;
 
@@ -467,7 +472,11 @@ class PolyhedronRasterizer {
       Math.abs(zs - maxZ),
     );
 
-    const outputBuffer = new Int32Array(HEAP, this.bufferLength * Int32Array.BYTES_PER_ELEMENT, deltaX * deltaY * deltaZ * 3);
+    const outputBuffer = new Int32Array(
+      HEAP,
+      this.bufferLength * Int32Array.BYTES_PER_ELEMENT,
+      deltaX * deltaY * deltaZ * 3,
+    );
     let outputLength = 0;
 
     for (let radius = 0; radius <= maxRadius; radius++) {
@@ -494,10 +503,19 @@ class PolyhedronRasterizer {
           if (x0 !== Int32MAX) {
             x0 += minX;
             x1 += minX;
-            for (const x of Utils.__range__(Math.max(xs - radius, x0), Math.min(xs + radius, x1), true)) {
-              if (x === xs - radius || x === xs + radius ||
-              y === ys - radius || y === ys + radius ||
-              z === zs - radius || z === zs + radius) {
+            for (const x of Utils.__range__(
+              Math.max(xs - radius, x0),
+              Math.min(xs + radius, x1),
+              true,
+            )) {
+              if (
+                x === xs - radius ||
+                x === xs + radius ||
+                y === ys - radius ||
+                y === ys + radius ||
+                z === zs - radius ||
+                z === zs + radius
+              ) {
                 outputBuffer[outputLength++] = x;
                 outputBuffer[outputLength++] = y;
                 outputBuffer[outputLength++] = z;
@@ -534,7 +552,6 @@ PolyhedronRasterizer.Master = class Master {
     return transformedPolyhdron;
   }
 
-
   static squareFrustum(
     nearFaceXWidth: number,
     nearFaceYWidth: number,
@@ -544,42 +561,67 @@ PolyhedronRasterizer.Master = class Master {
     farFaceZ: number,
   ): Master {
     const vertices = [
-      -nearFaceXWidth / 2, -nearFaceYWidth / 2, nearFaceZ, // 0
-      -farFaceXWidth / 2, -farFaceYWidth / 2, farFaceZ, // 3
-      -nearFaceXWidth / 2, nearFaceYWidth / 2, nearFaceZ, // 6
-      -farFaceXWidth / 2, farFaceYWidth / 2, farFaceZ, // 9
-      nearFaceXWidth / 2, -nearFaceYWidth / 2, nearFaceZ, // 12
-      farFaceXWidth / 2, -farFaceYWidth / 2, farFaceZ, // 15
-      nearFaceXWidth / 2, nearFaceYWidth / 2, nearFaceZ, // 18
-      farFaceXWidth / 2, farFaceYWidth / 2, farFaceZ, // 21
+      -nearFaceXWidth / 2,
+      -nearFaceYWidth / 2,
+      nearFaceZ, // 0
+      -farFaceXWidth / 2,
+      -farFaceYWidth / 2,
+      farFaceZ, // 3
+      -nearFaceXWidth / 2,
+      nearFaceYWidth / 2,
+      nearFaceZ, // 6
+      -farFaceXWidth / 2,
+      farFaceYWidth / 2,
+      farFaceZ, // 9
+      nearFaceXWidth / 2,
+      -nearFaceYWidth / 2,
+      nearFaceZ, // 12
+      farFaceXWidth / 2,
+      -farFaceYWidth / 2,
+      farFaceZ, // 15
+      nearFaceXWidth / 2,
+      nearFaceYWidth / 2,
+      nearFaceZ, // 18
+      farFaceXWidth / 2,
+      farFaceYWidth / 2,
+      farFaceZ, // 21
     ];
     const indices = [
-      0, 3,
-      0, 6,
-      0, 12,
-      3, 9,
-      3, 15,
-      6, 9,
-      6, 18,
-      9, 21,
-      12, 15,
-      12, 18,
-      15, 21,
-      18, 21,
+      0,
+      3,
+      0,
+      6,
+      0,
+      12,
+      3,
+      9,
+      3,
+      15,
+      6,
+      9,
+      6,
+      18,
+      9,
+      21,
+      12,
+      15,
+      12,
+      18,
+      15,
+      21,
+      18,
+      21,
     ];
     return new PolyhedronRasterizer.Master(vertices, indices);
   }
-
 
   static cuboid(widthX: number, widthY: number, widthZ: number): Master {
     return this.squareFrustum(widthX, widthY, 0, widthX, widthY, widthZ);
   }
 
-
   static cube(width: number): Master {
     return this.cuboid(width, width, width);
   }
 };
-
 
 export default PolyhedronRasterizer;

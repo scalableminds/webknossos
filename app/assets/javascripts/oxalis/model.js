@@ -19,12 +19,23 @@ import type {
   TaskType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
-import { setDatasetAction, setViewModeAction, setControlModeAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, initializeSkeletonTracingAction } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  setDatasetAction,
+  setViewModeAction,
+  setControlModeAction,
+} from "oxalis/model/actions/settings_actions";
+import {
+  setActiveNodeAction,
+  initializeSkeletonTracingAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { initializeReadOnlyTracingAction } from "oxalis/model/actions/readonlytracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
-import { setPositionAction, setZoomStepAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import {
+  setPositionAction,
+  setZoomStepAction,
+  setRotationAction,
+} from "oxalis/model/actions/flycam_actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import window from "libs/window";
 import Utils from "libs/utils";
@@ -53,15 +64,15 @@ type SkeletonContentTreeType = {
 };
 
 export type SkeletonContentDataType = {
-  activeNode: null | number;
-  trees: Array<SkeletonContentTreeType>;
-  zoomLevel: number;
-  customLayers: null;
-  zoomLevel: number;
+  activeNode: null | number,
+  trees: Array<SkeletonContentTreeType>,
+  zoomLevel: number,
+  customLayers: null,
+  zoomLevel: number,
 };
 
 export type VolumeContentDataType = {
-  activeCell: null | number;
+  activeCell: null | number,
   nextCell: ?number,
   customLayers: Array<Object>;
   boundingBox: BoundingBoxObjectType;
@@ -110,7 +121,12 @@ export class OxalisModel {
   upperBoundary: Vector3;
   tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>;
 
-  async fetch(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType, initialFetch: boolean) {
+  async fetch(
+    tracingType: SkeletonTracingTypeTracingType,
+    tracingId: string,
+    controlMode: ControlModeType,
+    initialFetch: boolean,
+  ) {
     Store.dispatch(setControlModeAction(controlMode));
 
     let infoUrl;
@@ -151,8 +167,10 @@ export class OxalisModel {
 
     // Make sure subsequent fetch calls are always for the same dataset
     if (!_.isEmpty(this.binary)) {
-      ErrorHandling.assert(_.isEqual(dataset, Store.getState().dataset),
-        "Model.fetch was called for a task with another dataset, without reloading the page.");
+      ErrorHandling.assert(
+        _.isEqual(dataset, Store.getState().dataset),
+        "Model.fetch was called for a task with another dataset, without reloading the page.",
+      );
     }
 
     ErrorHandling.assertExtendContext({
@@ -193,7 +211,10 @@ export class OxalisModel {
     return { preferredMode, allowedModes };
   }
 
-  initializeTracing(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>, initialFetch: boolean) {
+  initializeTracing(
+    tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>,
+    initialFetch: boolean,
+  ) {
     const { allowedModes, preferredMode } = this.determineAllowedModes(tracing.content.settings);
     _.extend(tracing.content.settings, { allowedModes, preferredMode });
 
@@ -201,12 +222,16 @@ export class OxalisModel {
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
     if (controlMode === ControlModeEnum.TRACE) {
       if (isVolume) {
-        ErrorHandling.assert((this.getSegmentationBinary() != null),
-          "Volume is allowed, but segmentation does not exist");
+        ErrorHandling.assert(
+          this.getSegmentationBinary() != null,
+          "Volume is allowed, but segmentation does not exist",
+        );
         const volumeTracing: ServerTracing<VolumeContentDataType> = (tracing: ServerTracing<any>);
         Store.dispatch(initializeVolumeTracingAction(volumeTracing));
       } else {
-        const skeletonTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<any>);
+        const skeletonTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<
+          any,
+        >);
         Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
       }
     } else {
@@ -235,14 +260,18 @@ export class OxalisModel {
 
     const LayerClass = (() => {
       switch (dataStore.typ) {
-        case "webknossos-store": return WkLayer;
-        case "ndstore": return NdStoreLayer;
-        default: throw new Error(`Unknown datastore type: ${dataStore.typ}`);
+        case "webknossos-store":
+          return WkLayer;
+        case "ndstore":
+          return NdStoreLayer;
+        default:
+          throw new Error(`Unknown datastore type: ${dataStore.typ}`);
       }
     })();
 
-    const layers = this.getLayerInfos(tracing.content.contentData.customLayers)
-      .map(layerInfo => new LayerClass(layerInfo, dataStore));
+    const layers = this.getLayerInfos(tracing.content.contentData.customLayers).map(
+      layerInfo => new LayerClass(layerInfo, dataStore),
+    );
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
@@ -274,9 +303,15 @@ export class OxalisModel {
 
     if (segmentationBinary != null) {
       window.mappings = {
-        getAll() { return segmentationBinary.mappings.getMappingNames(); },
-        getActive() { return segmentationBinary.activeMapping; },
-        activate(mapping) { return segmentationBinary.setActiveMapping(mapping); },
+        getAll() {
+          return segmentationBinary.mappings.getMappingNames();
+        },
+        getActive() {
+          return segmentationBinary.activeMapping;
+        },
+        activate(mapping) {
+          return segmentationBinary.setActiveMapping(mapping);
+        },
       };
     }
   }
@@ -298,10 +333,15 @@ export class OxalisModel {
 
     const dataset = Store.getState().dataset;
     const layers = dataset == null ? [] : _.clone(dataset.dataLayers);
-    if (userLayers == null) { return layers; }
+    if (userLayers == null) {
+      return layers;
+    }
 
     for (const userLayer of userLayers) {
-      const existingLayerIndex = _.findIndex(layers, layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName));
+      const existingLayerIndex = _.findIndex(
+        layers,
+        layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName),
+      );
       const existingLayer = layers[existingLayerIndex];
 
       if (existingLayer != null) {
@@ -315,7 +355,12 @@ export class OxalisModel {
   }
 
   shouldDisplaySegmentationData(): boolean {
+    const segmentationOpacity = Store.getState().datasetConfiguration.segmentationOpacity;
+    if (segmentationOpacity === 0) {
+      return false;
+    }
     const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
+
     // Currently segmentation data can only be displayed in orthogonal and volume mode
     const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
     return this.getSegmentationBinary() != null && canModeDisplaySegmentationData;
@@ -338,7 +383,10 @@ export class OxalisModel {
     }
   }
 
-  applyState(state: UrlManagerState, tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
+  applyState(
+    state: UrlManagerState,
+    tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>,
+  ) {
     Store.dispatch(setPositionAction(state.position || tracing.content.editPosition));
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));
@@ -354,7 +402,6 @@ export class OxalisModel {
     }
   }
 
-
   stateSaved() {
     const state = Store.getState();
     const storeStateSaved = !state.save.isBusy && state.save.queue.length === 0;
@@ -365,7 +412,6 @@ export class OxalisModel {
     );
     return storeStateSaved && pushQueuesSaved;
   }
-
 
   save = async () => {
     Store.dispatch(saveNowAction());

@@ -6,7 +6,6 @@ import SelectionView from "admin/views/selection_view";
 import Utils from "libs/utils";
 import Request from "libs/request";
 
-
 class TaskCreateFromFormView extends Marionette.View {
   static initClass() {
     this.prototype.id = "create-from-form";
@@ -54,8 +53,7 @@ class TaskCreateFromFormView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.regions =
-      { dataSet: ".dataSet" };
+    this.prototype.regions = { dataSet: ".dataSet" };
 
     this.prototype.ui = {
       editPosition: "#editPosition",
@@ -66,7 +64,6 @@ class TaskCreateFromFormView extends Marionette.View {
   initialize(options) {
     this.parent = options.parent;
   }
-
 
   serializeForm() {
     const formValues = this.parent.serializeForm();
@@ -88,13 +85,11 @@ class TaskCreateFromFormView extends Marionette.View {
     // show a status flash message
     try {
       const method = this.parent.isEditingMode ? "PUT" : "POST";
-      const response = await Request.sendJSONReceiveJSON(
-        this.model.url(), {
-          method,
-          data: serializedForm,
-          params: { type: "default" },
-        },
-      );
+      const response = await Request.sendJSONReceiveJSON(this.model.url(), {
+        method,
+        data: serializedForm,
+        params: { type: "default" },
+      });
       if (this.parent.isEditingMode) {
         app.router.loadURL("/tasks");
       } else {
@@ -105,7 +100,6 @@ class TaskCreateFromFormView extends Marionette.View {
     }
   }
 
-
   /**
   * Render a dataset SelectionView.
   */
@@ -113,7 +107,9 @@ class TaskCreateFromFormView extends Marionette.View {
     this.dataSetSelectionView = new SelectionView({
       collection: new DatasetCollection(),
       childViewOptions: {
-        modelValue() { return `${this.model.get("name")}`; },
+        modelValue() {
+          return `${this.model.get("name")}`;
+        },
         defaultItem: { name: this.model.get("dataSet") },
       },
       data: "amIAnAdmin=true&isActive=true",

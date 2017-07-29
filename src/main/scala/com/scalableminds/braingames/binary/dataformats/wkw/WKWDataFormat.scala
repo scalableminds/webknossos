@@ -44,12 +44,19 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
 
     PathUtils.listDirectories(baseDir, resolutionDirFilter).flatMap { resolutions =>
-      Box.ListOfBoxes(resolutions.map { resolution =>
+
+      val resolutionHeaders = resolutions.map { resolution =>
         val resolutionInt = resolution.getFileName.toString.toInt
         WKWHeader(resolution.resolve("header.wkw").toFile).map(header => resolutionInt -> header).passFailure { f =>
           report.error(section => s"Error processing section '$section' - ${f.msg}")
         }
-      }).toSingleBox("Error reading sections")
+      }
+
+      if (resolutionHeaders.exists(_.isInstanceOf[Failure])) {
+        Failure("Error reading resolutions")
+      } else {
+        Full(resolutionHeaders.flatten)
+      }
     }
   }
 

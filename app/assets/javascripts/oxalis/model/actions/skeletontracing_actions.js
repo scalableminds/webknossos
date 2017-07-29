@@ -40,9 +40,9 @@ type CreateBranchPointActionType = {
   timestamp: number,
 };
 type DeleteBranchPointActionType = { type: "DELETE_BRANCHPOINT" };
-type ToggleTreeActionType = {type: "TOGGLE_TREE", treeId?: number, timestamp: number};
-type ToggleAllTreesActionType = {type: "TOGGLE_ALL_TREES", timestamp: number};
-type ToggleInactiveTreesActionType = {type: "TOGGLE_INACTIVE_TREES", timestamp: number};
+type ToggleTreeActionType = { type: "TOGGLE_TREE", treeId?: number, timestamp: number };
+type ToggleAllTreesActionType = { type: "TOGGLE_ALL_TREES", timestamp: number };
+type ToggleInactiveTreesActionType = { type: "TOGGLE_INACTIVE_TREES", timestamp: number };
 type RequestDeleteBranchPointActionType = { type: "REQUEST_DELETE_BRANCHPOINT" };
 type CreateTreeActionType = { type: "CREATE_TREE", timestamp: number };
 type DeleteTreeActionType = { type: "DELETE_TREE", treeId?: number, timestamp: number };
@@ -80,8 +80,7 @@ export type SkeletonTracingActionType =
   | DeleteCommentActionType
   | ToggleTreeActionType
   | ToggleAllTreesActionType
-  | ToggleInactiveTreesActionType
-;
+  | ToggleInactiveTreesActionType;
 
 export const SkeletonTracingActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -188,7 +187,10 @@ export const deleteTreeAction = (
   timestamp,
 });
 
-export const toggleTreeAction = (treeId?: number, timestamp: number = Date.now()): ToggleTreeActionType => ({
+export const toggleTreeAction = (
+  treeId?: number,
+  timestamp: number = Date.now(),
+): ToggleTreeActionType => ({
   type: "TOGGLE_TREE",
   treeId,
   timestamp,
@@ -199,7 +201,9 @@ export const toggleAllTreesAction = (timestamp: number = Date.now()): ToggleAllT
   timestamp,
 });
 
-export const toggleInactiveTreesAction = (timestamp: number = Date.now()): ToggleInactiveTreesActionType => ({
+export const toggleInactiveTreesAction = (
+  timestamp: number = Date.now(),
+): ToggleInactiveTreesActionType => ({
   type: "TOGGLE_INACTIVE_TREES",
   timestamp,
 });

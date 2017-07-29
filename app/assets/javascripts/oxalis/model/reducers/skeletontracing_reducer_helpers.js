@@ -462,7 +462,10 @@ export function deleteComment(
   return Maybe.Nothing();
 }
 
-export function toggleAllTreesReducer(state: OxalisState, skeletonTracing: SkeletonTracingType): OxalisState {
+export function toggleAllTreesReducer(
+  state: OxalisState,
+  skeletonTracing: SkeletonTracingType,
+): OxalisState {
   // Let's make all trees visible if there is one invisible tree
   const shouldBecomeVisible = _.values(skeletonTracing.trees).some(tree => !tree.isVisible);
 
@@ -474,7 +477,9 @@ export function toggleAllTreesReducer(state: OxalisState, skeletonTracing: Skele
     updateTreeObject[treeId] = isVisibleUpdater;
   });
 
-  return update(state, { tracing: {
-    trees: updateTreeObject,
-  } });
+  return update(state, {
+    tracing: {
+      trees: updateTreeObject,
+    },
+  });
 }

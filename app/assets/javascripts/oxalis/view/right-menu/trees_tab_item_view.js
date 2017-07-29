@@ -7,7 +7,10 @@ import _ from "lodash";
 import React from "react";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import Store from "oxalis/store";
-import { toggleTreeAction, setActiveTreeAction } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  toggleTreeAction,
+  setActiveTreeAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import type { TreeType } from "oxalis/store";
 import classNames from "classnames";
 import { Checkbox } from "antd";
@@ -31,7 +34,7 @@ class ListTreeItemView extends React.PureComponent {
 
   handleToggleTree = () => {
     Store.dispatch(toggleTreeAction(this.props.tree.treeId));
-  }
+  };
 
   ensureVisible() {
     // scroll to active tree
@@ -46,7 +49,11 @@ class ListTreeItemView extends React.PureComponent {
     const aClassName = classNames({ bold: containsActiveNode });
 
     return (
-      <li ref={(domElement) => { this.domElement = domElement; }}>
+      <li
+        ref={domElement => {
+          this.domElement = domElement;
+        }}
+      >
         <Checkbox checked={this.props.tree.isVisible} onChange={this.handleToggleTree} />
         <a onClick={this.handleSetActive} className={aClassName}>
           <span title="Node count" className="inline-block tree-node-count" style={{ width: 50 }}>

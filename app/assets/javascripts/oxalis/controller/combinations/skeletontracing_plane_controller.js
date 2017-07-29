@@ -23,7 +23,7 @@ import {
   requestDeleteBranchPointAction,
   mergeTreesAction,
   toggleAllTreesAction,
-  toggleInactiveTreesAction
+  toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setRotationAction } from "oxalis/model/actions/flycam_actions";
 import {

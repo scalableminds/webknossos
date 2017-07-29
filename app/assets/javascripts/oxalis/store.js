@@ -76,7 +76,7 @@ type TreeTypeBase = {
   +branchPoints: Array<BranchPointType>,
   +edges: Array<EdgeType>,
   +isVisible: boolean,
-}
+};
 
 export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,

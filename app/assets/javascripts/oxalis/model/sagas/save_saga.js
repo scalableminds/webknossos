@@ -239,7 +239,7 @@ export function compactUpdateActions(
   return flatResult;
 }
 
-function shouldUpdateActionBeSentToServer(updateAction : UpdateAction): boolean {
+function shouldUpdateActionBeSentToServer(updateAction: UpdateAction): boolean {
   return updateAction.action !== "toggleTree";
 }
 

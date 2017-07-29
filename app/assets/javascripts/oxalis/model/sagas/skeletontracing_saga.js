@@ -9,8 +9,22 @@ import messages from "messages";
 import Store from "oxalis/store";
 import Modal from "oxalis/view/modal";
 import { put, take, takeEvery, select, race } from "redux-saga/effects";
-import { deleteBranchPointAction, setTreeNameAction } from "oxalis/model/actions/skeletontracing_actions";
-import { createTree, deleteTree, updateTree, toggleTree, createNode, deleteNode, updateNode, createEdge, deleteEdge, updateSkeletonTracing } from "oxalis/model/sagas/update_actions";
+import {
+  deleteBranchPointAction,
+  setTreeNameAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import {
+  createTree,
+  deleteTree,
+  updateTree,
+  toggleTree,
+  createNode,
+  deleteNode,
+  updateNode,
+  createEdge,
+  deleteEdge,
+  updateSkeletonTracing,
+} from "oxalis/model/sagas/update_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
 import { V3 } from "libs/mjs";

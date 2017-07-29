@@ -43,12 +43,17 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       );
       const { contentData } = action.tracing.content;
 
-      const trees = _.keyBy(contentData.trees.map(tree => update(tree, {
-        treeId: { $set: tree.id },
-        nodes: { $set: _.keyBy(tree.nodes, "id") },
-        color: { $set: tree.color || ColorGenerator.distinctColorForId(tree.id) },
-        isVisible: {$set: true},
-      })), "id");
+      const trees = _.keyBy(
+        contentData.trees.map(tree =>
+          update(tree, {
+            treeId: { $set: tree.id },
+            nodes: { $set: _.keyBy(tree.nodes, "id") },
+            color: { $set: tree.color || ColorGenerator.distinctColorForId(tree.id) },
+            isVisible: { $set: true },
+          }),
+        ),
+        "id",
+      );
 
       const activeNodeIdMaybe = Maybe.fromNullable(contentData.activeNode);
       let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
@@ -312,228 +317,89 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             tracing: {
               activeTreeId: { $set: newActiveTreeId },
               activeNodeId: { $set: newActiveNodeId },
-              cachedMaxNodeId: { $set: newMaxNodeId },
-            } }))
-          .getOrElse(state);
-      }
-
-      case "TOGGLE_TREE": {
-        const { treeId } = action;
-        return getTree(skeletonTracing, treeId)
-          .map(tree =>
-            update(state, { tracing: {
-              trees: {
-                [tree.treeId]: {
-                  isVisible: {
-                    $apply: bool => !bool,
-                  }
-                },
-              }
-            } }))
-          .getOrElse(state);
-      }
-
-      case "TOGGLE_ALL_TREES": {
-        return toggleAllTreesReducer(state, skeletonTracing);
-      }
-
-      case "TOGGLE_INACTIVE_TREES": {
-        return getTree(skeletonTracing).map(activeTree =>
-          update(toggleAllTreesReducer(state, skeletonTracing), { tracing: {
-            trees: {
-              [activeTree.treeId]: {
-                isVisible: {$set : true},
-              },
             },
-        }})).getOrElse(state);
-      }
+          });
+        }
 
-      case "SET_ACTIVE_TREE": {
-        const { trees } = skeletonTracing;
+        case "SHUFFLE_TREE_COLOR": {
+          return getTree(skeletonTracing, action.treeId)
+            .chain(tree => shuffleTreeColor(skeletonTracing, tree))
+            .map(([tree, treeId]) =>
+              update(state, { tracing: { trees: { [treeId]: { $set: tree } } } }),
+            )
+            .getOrElse(state);
+        }
 
-        return getTree(skeletonTracing, action.treeId)
-          .map((tree) => {
-            const newActiveNodeId = _.max(_.map(trees[tree.treeId].nodes, "id")) || null;
+        case "CREATE_COMMENT": {
+          const { commentText, nodeId, treeId } = action;
+          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+            .chain(([tree, node]) =>
+              createComment(skeletonTracing, tree, node, commentText).map(comments =>
+                update(state, {
+                  tracing: {
+                    trees: { [tree.treeId]: { comments: { $set: comments } } },
+                  },
+                }),
+              ),
+            )
+            .getOrElse(state);
+        }
 
-            return update(state, { tracing: {
-              activeNodeId: { $set: newActiveNodeId },
-              activeTreeId: { $set: tree.treeId },
-            } });
-          })
-          .getOrElse(state);
-      }
+        case "DELETE_COMMENT": {
+          return getNodeAndTree(skeletonTracing, action.nodeId, action.treeId)
+            .chain(([tree, node]) =>
+              deleteComment(skeletonTracing, tree, node).map(comments =>
+                update(state, {
+                  tracing: {
+                    trees: { [tree.treeId]: { comments: { $set: comments } } },
+                  },
+                }),
+              ),
+            )
+            .getOrElse(state);
+        }
 
-      case "MERGE_TREES": {
-        const { sourceNodeId, targetNodeId } = action;
-        return mergeTrees(skeletonTracing, sourceNodeId, targetNodeId)
-          .map(([trees, newActiveTreeId, newActiveNodeId]) =>
-            update(state, { tracing: {
-              trees: { $set: trees },
-              activeNodeId: { $set: newActiveNodeId },
-              activeTreeId: { $set: newActiveTreeId },
-            } }))
-          .getOrElse(state);
-      }
+        case "TOGGLE_TREE": {
+          const { treeId } = action;
+          return getTree(skeletonTracing, treeId)
+            .map(tree =>
+              update(state, {
+                tracing: {
+                  trees: {
+                    [tree.treeId]: {
+                      isVisible: {
+                        $apply: bool => !bool,
+                      },
+                    },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
 
-      case "SET_TREE_NAME": {
-        return getTree(skeletonTracing, action.treeId)
-          .map((tree) => {
-            const defaultName = `Tree${Utils.zeroPad(tree.treeId, 3)}`;
-            const newName = action.name || defaultName;
-            return update(state, { tracing: { trees: { [tree.treeId]: { name: { $set: newName } } } } });
-          })
-          .getOrElse(state);
-      }
+        case "TOGGLE_ALL_TREES": {
+          return toggleAllTreesReducer(state, skeletonTracing);
+        }
 
-      case "SELECT_NEXT_TREE": {
-        const { activeTreeId, trees } = skeletonTracing;
-        if (_.values(trees).length === 0) return state;
+        case "TOGGLE_INACTIVE_TREES": {
+          return getTree(skeletonTracing)
+            .map(activeTree =>
+              update(toggleAllTreesReducer(state, skeletonTracing), {
+                tracing: {
+                  trees: {
+                    [activeTree.treeId]: {
+                      isVisible: { $set: true },
+                    },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
 
-        const increaseDecrease = action.forward ? 1 : -1;
-
-        const orderAttribute = state.userConfiguration.sortTreesByName ? "name" : "timestamp";
-        const treeIds = _.orderBy(_.values(trees), [orderAttribute]).map(t => t.treeId);
-
-        // default to the first tree
-        const activeTreeIdIndex = activeTreeId != null ? treeIds.indexOf(activeTreeId) : 0;
-
-        // treeIds.length is taken into account in this calculation, because -1 % n == -1
-        const newActiveTreeIdIndex = (activeTreeIdIndex + increaseDecrease + treeIds.length) % treeIds.length;
-
-        const newActiveTreeId = treeIds[newActiveTreeIdIndex];
-        const newActiveNodeId = _.max(_.map(trees[newActiveTreeId].nodes, "id")) || null;
-
-        return update(state, { tracing: {
-          activeTreeId: { $set: newActiveTreeId },
-          activeNodeId: { $set: newActiveNodeId },
-        } });
-      }
-
-      case "SHUFFLE_TREE_COLOR": {
-        return getTree(skeletonTracing, action.treeId)
-          .chain(tree => shuffleTreeColor(skeletonTracing, tree))
-          .map(([tree, treeId]) =>
-            update(state, { tracing: { trees: { [treeId]: { $set: tree } } } }))
-          .getOrElse(state);
-      }
-
-      case "CREATE_COMMENT": {
-        const { commentText, nodeId, treeId } = action;
-        return getNodeAndTree(skeletonTracing, nodeId, treeId)
-          .chain(([tree, node]) =>
-            createComment(skeletonTracing, tree, node, commentText)
-              .map(comments =>
-                update(state, { tracing: {
-                  trees: { [tree.treeId]: { comments: { $set: comments } } },
-                } })))
-          .getOrElse(state);
-      }
-
-      case "DELETE_COMMENT": {
-        return getNodeAndTree(skeletonTracing, action.nodeId, action.treeId)
-          .chain(([tree, node]) =>
-            deleteComment(skeletonTracing, tree, node)
-              .map(comments =>
-                update(state, { tracing: {
-                  trees: { [tree.treeId]: { comments: { $set: comments } } },
-                } })))
-          .getOrElse(state);
-||||||| merged common ancestors
-              cachedMaxNodeId: { $set: newMaxNodeId },
-            } }))
-          .getOrElse(state);
-      }
-
-      case "SET_ACTIVE_TREE": {
-        const { trees } = skeletonTracing;
-
-        return getTree(skeletonTracing, action.treeId)
-          .map((tree) => {
-            const newActiveNodeId = _.max(_.map(trees[tree.treeId].nodes, "id")) || null;
-
-            return update(state, { tracing: {
-              activeNodeId: { $set: newActiveNodeId },
-              activeTreeId: { $set: tree.treeId },
-            } });
-          })
-          .getOrElse(state);
-      }
-
-      case "MERGE_TREES": {
-        const { sourceNodeId, targetNodeId } = action;
-        return mergeTrees(skeletonTracing, sourceNodeId, targetNodeId)
-          .map(([trees, newActiveTreeId, newActiveNodeId]) =>
-            update(state, { tracing: {
-              trees: { $set: trees },
-              activeNodeId: { $set: newActiveNodeId },
-              activeTreeId: { $set: newActiveTreeId },
-            } }))
-          .getOrElse(state);
-      }
-
-      case "SET_TREE_NAME": {
-        return getTree(skeletonTracing, action.treeId)
-          .map((tree) => {
-            const defaultName = `Tree${Utils.zeroPad(tree.treeId, 3)}`;
-            const newName = action.name || defaultName;
-            return update(state, { tracing: { trees: { [tree.treeId]: { name: { $set: newName } } } } });
-          })
-          .getOrElse(state);
-      }
-
-      case "SELECT_NEXT_TREE": {
-        const { activeTreeId, trees } = skeletonTracing;
-        if (_.values(trees).length === 0) return state;
-
-        const increaseDecrease = action.forward ? 1 : -1;
-
-        const orderAttribute = state.userConfiguration.sortTreesByName ? "name" : "timestamp";
-        const treeIds = _.orderBy(_.values(trees), [orderAttribute]).map(t => t.treeId);
-
-        // default to the first tree
-        const activeTreeIdIndex = activeTreeId != null ? treeIds.indexOf(activeTreeId) : 0;
-
-        // treeIds.length is taken into account in this calculation, because -1 % n == -1
-        const newActiveTreeIdIndex = (activeTreeIdIndex + increaseDecrease + treeIds.length) % treeIds.length;
-
-        const newActiveTreeId = treeIds[newActiveTreeIdIndex];
-        const newActiveNodeId = _.max(_.map(trees[newActiveTreeId].nodes, "id")) || null;
-
-        return update(state, { tracing: {
-          activeTreeId: { $set: newActiveTreeId },
-          activeNodeId: { $set: newActiveNodeId },
-        } });
-      }
-
-      case "SHUFFLE_TREE_COLOR": {
-        return getTree(skeletonTracing, action.treeId)
-          .chain(tree => shuffleTreeColor(skeletonTracing, tree))
-          .map(([tree, treeId]) =>
-            update(state, { tracing: { trees: { [treeId]: { $set: tree } } } }))
-          .getOrElse(state);
-      }
-
-      case "CREATE_COMMENT": {
-        const { commentText, nodeId, treeId } = action;
-        return getNodeAndTree(skeletonTracing, nodeId, treeId)
-          .chain(([tree, node]) =>
-            createComment(skeletonTracing, tree, node, commentText)
-              .map(comments =>
-                update(state, { tracing: {
-                  trees: { [tree.treeId]: { comments: { $set: comments } } },
-                } })))
-          .getOrElse(state);
-      }
-
-      case "DELETE_COMMENT": {
-        return getNodeAndTree(skeletonTracing, action.nodeId, action.treeId)
-          .chain(([tree, node]) =>
-            deleteComment(skeletonTracing, tree, node)
-              .map(comments =>
-                update(state, { tracing: {
-                  trees: { [tree.treeId]: { comments: { $set: comments } } },
-                } })))
-          .getOrElse(state);
+        default:
+          return state;
       }
     })
     .getOrElse(state);

@@ -7,6 +7,7 @@ import java.nio.file.Paths
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.models.BucketPosition
+import com.scalableminds.braingames.binary.models.datasource.DataLayer
 import com.scalableminds.braingames.binary.models.requests.{DataReadInstruction, DataServiceDataRequest, DataServiceMappingRequest, MappingReadInstruction}
 import com.scalableminds.braingames.binary.storage.DataCubeCache
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
@@ -50,14 +51,14 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
   private def getDataForRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
 
     def isSingleBucketRequest = {
-      val bucketLength = request.dataLayer.lengthOfProvidedBuckets
+      val bucketLength = DataLayer.bucketLength
       request.cuboid.width == bucketLength &&
         request.cuboid.height == bucketLength &&
         request.cuboid.depth == bucketLength &&
-        request.cuboid.topLeft == request.cuboid.topLeft.toBucket(bucketLength).topLeft
+        request.cuboid.topLeft == request.cuboid.topLeft.toBucket.topLeft
     }
 
-    val bucketQueue = request.cuboid.allBucketsInCuboid(request.dataLayer.lengthOfProvidedBuckets)
+    val bucketQueue = request.cuboid.allBucketsInCuboid
 
     if (isSingleBucketRequest) {
       bucketQueue.headOption.toFox.flatMap { bucket =>
@@ -75,9 +76,9 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
 
     def emptyBucket: Array[Byte] = {
-      new Array[Byte](request.dataLayer.lengthOfProvidedBuckets *
-                      request.dataLayer.lengthOfProvidedBuckets *
-                      request.dataLayer.lengthOfProvidedBuckets *
+      new Array[Byte](DataLayer.bucketLength *
+                      DataLayer.bucketLength *
+                      DataLayer.bucketLength *
                       request.dataLayer.bytesPerElement)
     }
 
@@ -109,7 +110,7 @@ class BinaryDataService @Inject()(config: Configuration) extends FoxImplicits wi
     val bytesPerElement = request.dataLayer.bytesPerElement
     val cuboid = request.cuboid
     val result = new Array[Byte](cuboid.volume * bytesPerElement)
-    val bucketLength = request.dataLayer.lengthOfProvidedBuckets
+    val bucketLength = DataLayer.bucketLength
 
     rs.reverse.foreach {
       case (bucket, data) =>

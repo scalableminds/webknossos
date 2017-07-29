@@ -3,6 +3,7 @@
 */
 package com.scalableminds.braingames.binary.models
 
+import com.scalableminds.braingames.binary.models.datasource.DataLayer
 import com.scalableminds.util.geometry.GenericPosition
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
@@ -19,8 +20,8 @@ class VoxelPosition(
 
   val z: Int = globalZ / resolution
 
-  def toBucket(bucketLength: Int): BucketPosition =
-    new BucketPosition(globalX, globalY, globalZ, resolution, bucketLength)
+  def toBucket: BucketPosition =
+    new BucketPosition(globalX, globalY, globalZ, resolution)
 
   def toHighestRes: VoxelPosition =
     new VoxelPosition(globalX, globalY, globalZ, 1)
@@ -54,9 +55,10 @@ class BucketPosition(
                        protected val globalX: Int,
                        protected val globalY: Int,
                        protected val globalZ: Int,
-                       val resolution: Int,
-                       val bucketLength: Int
+                       val resolution: Int
                     ) extends GenericPosition {
+
+  val bucketLength = DataLayer.bucketLength
 
   val x: Int = globalX / bucketLength / resolution
 
@@ -78,15 +80,15 @@ class BucketPosition(
   }
 
   def nextBucketInX: BucketPosition = {
-    new BucketPosition(globalX + (bucketLength * resolution), globalY, globalZ, resolution, bucketLength)
+    new BucketPosition(globalX + (bucketLength * resolution), globalY, globalZ, resolution)
   }
 
   def nextBucketInY: BucketPosition = {
-    new BucketPosition(globalX, globalY + (bucketLength * resolution), globalZ, resolution, bucketLength)
+    new BucketPosition(globalX, globalY + (bucketLength * resolution), globalZ, resolution)
   }
 
   def nextBucketInZ: BucketPosition = {
-    new BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution), resolution, bucketLength)
+    new BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution), resolution)
   }
 }
 

@@ -88,14 +88,9 @@ trait DataLayer extends DataLayerLike {
   def dataFormat: DataFormat.Value
 
   /**
-    * Defines the length of the buckets loaded from files. This is the minimal size that can be loaded from a file.
-    */
-  def lengthOfProvidedBuckets: Int = 32
-
-  /**
     * Defines the length of the underlying cubes making up the layer. This is the maximal size that can be loaded from a single file.
     */
-  def lengthOfUnderlyingCubes: Int
+  def lengthOfUnderlyingCubes(resolution: Int): Int
 
   def bucketProvider: BucketProvider
 
@@ -107,6 +102,11 @@ trait DataLayer extends DataLayerLike {
 }
 
 object DataLayer {
+
+  /**
+    * Defines the length of a buckets. This is the minimal size that can be loaded from a file.
+    */
+  val bucketLength: Int = 32
 
   implicit object dataLayerFormat extends Format[DataLayer] {
     override def reads(json: JsValue): JsResult[DataLayer] = {

@@ -27,6 +27,20 @@ trait WKWDataFormatHelper {
       .resolve(s"x${cube.x}.${dataFileExtension}")
   }
 
+  def wkwHeaderFilePath(
+                         resolution: Int,
+                         dataSourceId: Option[DataSourceId] = None,
+                         dataLayerName: Option[String] = None,
+                         baseDir: Path = Paths.get("")
+                       ): Path = {
+    baseDir
+      .resolve(dataSourceId.map(_.team).getOrElse(""))
+      .resolve(dataSourceId.map(_.name).getOrElse(""))
+      .resolve(dataLayerName.getOrElse(""))
+      .resolve(resolution.toString)
+      .resolve(s"header.${dataFileExtension}")
+  }
+
   def parseWKWFilePath(path: String, bucketLength: Int): Option[BucketPosition] = {
     val CubeRx = s".*(\\d+)/z(\\d+)/y(\\d+)/x(\\d+).${dataFileExtension}".r
     path match {
@@ -35,7 +49,7 @@ trait WKWDataFormatHelper {
           x.toInt * bucketLength,
           y.toInt * bucketLength,
           z.toInt * bucketLength,
-          res.toInt, bucketLength))
+          res.toInt))
       case _ =>
         None
     }

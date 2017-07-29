@@ -27,7 +27,7 @@ case class DataReadInstruction(
                             dataLayer: DataLayer,
                             bucket: BucketPosition
                           ) {
-  val cube = bucket.toCube(dataLayer.lengthOfUnderlyingCubes)
+  val cube = bucket.toCube(dataLayer.lengthOfUnderlyingCubes(bucket.resolution))
 }
 
 case class DataServiceMappingRequest(

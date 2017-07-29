@@ -61,7 +61,7 @@ class VolumeTracingService @Inject()(
     updates.foldLeft[Box[Unit]](Full(())) {
       case (_: Full[Unit], action: LabelVolumeAction) =>
         val resolution = math.pow(2, action.zoomStep).toInt
-        val bucket = new BucketPosition(action.position.x, action.position.y, action.position.z, resolution, tracing.dataLayer.lengthOfProvidedBuckets)
+        val bucket = new BucketPosition(action.position.x, action.position.y, action.position.z, resolution)
         saveBucket(tracing.dataLayer, bucket, action.data)
       case (_: Full[Unit], _) =>
         Failure("Unknown action.")

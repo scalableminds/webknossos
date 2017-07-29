@@ -1,6 +1,7 @@
 package com.scalableminds.braingames.datastore.tracings.volume
 
 import com.scalableminds.braingames.binary.models.BucketPosition
+import com.scalableminds.braingames.binary.models.datasource.DataLayer
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValueStore
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import net.liftweb.common.Box
@@ -18,7 +19,7 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper {
     s"$dataLayerName/${bucket.resolution}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
   }
 
-  private def parseBucketKey(key: String, bucketLength: Int): Option[(String, BucketPosition)] = {
+  private def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
     val keyRx = "([0-9a-z-]+)/(\\d+)/(\\d+)-\\[\\d+,\\d+,\\d+\\]".r
 
     key match {
@@ -26,11 +27,10 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper {
         val resolution = res.toInt
         val (x, y, z) = mortonDecode(morton.toLong)
         val bucket = new BucketPosition(
-          x * resolution * bucketLength,
-          y * resolution * bucketLength,
-          z * resolution * bucketLength,
-          resolution,
-          bucketLength)
+          x * resolution * DataLayer.bucketLength,
+          y * resolution * DataLayer.bucketLength,
+          z * resolution * DataLayer.bucketLength,
+          resolution)
         Some((name, bucket))
       case _ =>
         None
@@ -50,7 +50,7 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper {
   def bucketStream(dataLayer: VolumeTracingLayer, resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
     val key = buildKeyPrefix(dataLayer.name, resolution)
     volumeDataStore.scanKeys(key, Some(key)).flatMap { pair =>
-      parseBucketKey(pair.key, dataLayer.lengthOfProvidedBuckets).map(key => (key._2 , pair.value))
+      parseBucketKey(pair.key).map(key => (key._2 , pair.value))
     }
   }
 }

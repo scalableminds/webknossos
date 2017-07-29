@@ -5,7 +5,7 @@ package com.scalableminds.braingames.datastore.tracings.volume
 
 import com.scalableminds.braingames.binary.dataformats.BucketProvider
 import com.scalableminds.braingames.binary.models.BucketPosition
-import com.scalableminds.braingames.binary.models.datasource.{Category, DataFormat, ElementClass, SegmentationLayer}
+import com.scalableminds.braingames.binary.models.datasource._
 import com.scalableminds.braingames.binary.models.requests.DataReadInstruction
 import com.scalableminds.braingames.binary.storage.DataCubeCache
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValueStore
@@ -45,7 +45,7 @@ case class VolumeTracingLayer(
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
-  val lengthOfUnderlyingCubes: Int = lengthOfProvidedBuckets
+  def lengthOfUnderlyingCubes(resolution: Int): Int = DataLayer.bucketLength
 
   val nextSegmentationId: Long = largestSegmentId + 1
 

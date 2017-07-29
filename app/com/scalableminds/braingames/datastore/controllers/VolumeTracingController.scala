@@ -29,14 +29,55 @@ class VolumeTracingController @Inject()(
 
   def createEmpty(dataSetName: String) = Action.async {
     implicit request => {
-      create(dataSetName, None).map(tracing => Ok(Json.toJson(tracing)))
+      AllowRemoteOrigin {
+        create(dataSetName, None).map(tracing => Ok(Json.toJson(tracing)))
+      }
     }
   }
 
   def createFromZip(dataSetName: String) = Action.async {
     implicit request => {
-      val initialContent = request.body.asRaw.map(_.asFile)
-      create(dataSetName, initialContent).map(tracing => Ok(Json.toJson(tracing)))
+      AllowRemoteOrigin {
+        val initialContent = request.body.asRaw.map(_.asFile)
+        create(dataSetName, initialContent).map(tracing => Ok(Json.toJson(tracing)))
+      }
+    }
+  }
+
+  def get(tracingId: String, version: Option[Long]) = Action.async {
+    implicit request => {
+      AllowRemoteOrigin {
+        for {
+          tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+        } yield {
+          Ok(Json.toJson(tracing))
+        }
+      }
+    }
+  }
+
+  def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateAction]]) {
+    implicit request => {
+      AllowRemoteOrigin {
+        for {
+          tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          _ <- volumeTracingService.update(tracing, request.body)
+        } yield {
+          Ok
+        }
+      }
+    }
+  }
+
+  def download(tracingId: String, version: Option[Long]) = Action.async {
+    implicit request => {
+      AllowRemoteOrigin {
+        for {
+          tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+        } yield {
+          Ok.chunked(volumeTracingService.download(tracing))
+        }
+      }
     }
   }
 
@@ -47,27 +88,4 @@ class VolumeTracingController @Inject()(
       volumeTracingService.create(dataSource, initialContent).id
     }
   }
-
-  def get(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
-      for {
-        tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-      } yield {
-        Ok.chunked(volumeTracingService.download(tracing))
-      }
-    }
-  }
-
-  def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateAction]]) {
-    implicit request => {
-      for {
-        tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-        _ <- volumeTracingService.update(tracing, request.body)
-      } yield {
-        Ok
-      }
-    }
-  }
-
-  def download(tracingId: String, version: Option[Long]) = Action {implicit request => {Ok}}
 }

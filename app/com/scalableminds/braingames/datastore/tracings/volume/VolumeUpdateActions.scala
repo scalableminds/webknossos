@@ -17,7 +17,7 @@ object UpdateBucketVolumeAction {
   implicit val updateBucketVolumeActionFormat = Json.format[UpdateBucketVolumeAction]
 }
 
-case class UpdateTracingVolumeAction() extends VolumeUpdateAction {
+case class UpdateTracingVolumeAction(something: Int) extends VolumeUpdateAction {
 
   def applyOn(tracing: VolumeTracing): VolumeTracing = {
     tracing

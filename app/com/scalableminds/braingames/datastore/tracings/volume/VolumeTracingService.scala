@@ -46,7 +46,7 @@ class VolumeTracingService @Inject()(
           WKWFile.read(is) {
             case (header, buckets) =>
               if (header.numBlocksPerCube == 1) {
-                parseWKWFilePath(fileName.toString, header.numBlocksPerCubeDimension).map { bucket =>
+                parseWKWFilePath(fileName.toString).map { bucket =>
                   saveBucket(tracingLayer, bucket, buckets.next())
                 }
               }
@@ -57,9 +57,9 @@ class VolumeTracingService @Inject()(
     tracing
   }
 
-  def update(tracing: VolumeTracing, updates: List[VolumeUpdateActionGroups]): Box[Unit] = {
+  def update(tracing: VolumeTracing, updates: List[VolumeUpdateAction]): Box[Unit] = {
     updates.foldLeft[Box[Unit]](Full(())) {
-      case (_: Full[Unit], action: LabelVolumeAction) =>
+      case (_: Full[Unit], action: UpdateBucketVolumeAction) =>
         val resolution = math.pow(2, action.zoomStep).toInt
         val bucket = new BucketPosition(action.position.x, action.position.y, action.position.z, resolution)
         saveBucket(tracing.dataLayer, bucket, action.data)

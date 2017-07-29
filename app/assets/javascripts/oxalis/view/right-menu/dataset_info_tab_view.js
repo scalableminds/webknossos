@@ -7,7 +7,6 @@ import { connect } from "react-redux";
 import _ from "lodash";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
-import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 
 import Store from "oxalis/store";
@@ -33,7 +32,7 @@ class DatasetInfoTabView extends Component {
       width = constants.PLANE_WIDTH;
     } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
       zoom = this.props.flycam.zoomStep;
-      width = ArbitraryController.prototype.WIDTH;
+      width = constants.ARBITRARY_WIDTH;
     } else {
       throw Error(`Model mode not recognized: ${viewMode}`);
     }
@@ -66,39 +65,71 @@ class DatasetInfoTabView extends Component {
 
     const zoomLevel = this.calculateZoomLevel();
     const dataSetName = this.props.dataset.name;
-    const isPublicViewMode = Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
+    const isPublicViewMode =
+      Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     return (
       <div className="flex-overflow">
-        <p>{annotationType}</p>
-        <p>DataSet: {dataSetName}</p>
-        <p>Viewport width: {this.chooseUnit(zoomLevel)}</p>
-        <p>Dataset resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}</p>
-        {
-          (this.props.tracing.type === "skeleton") ?
-            <p>Total number of trees: {_.size(this.props.tracing.trees)}</p> :
-            null
-        }
-        {
-          isPublicViewMode ?
-            <div>
+        <p>
+          {annotationType}
+        </p>
+        <p>
+          DataSet: {dataSetName}
+        </p>
+        <p>
+          Viewport width: {this.chooseUnit(zoomLevel)}
+        </p>
+        <p>
+          Dataset resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}
+        </p>
+        {this.props.tracing.type === "skeleton"
+          ? <p>
+              Total number of trees: {_.size(this.props.tracing.trees)}
+            </p>
+          : null}
+        {isPublicViewMode
+          ? <div>
               <table className="table table-condensed table-nohead table-bordered">
                 <tbody>
-                  <tr><th colSpan="2">Controls</th></tr>
-                  <tr><td>I,O or Alt + Mousewheel</td><td>Zoom in/out</td></tr>
-                  <tr><td>Mousewheel or D and F</td><td>Move along 3rd axis</td></tr>
-                  <tr><td>Left Mouse drag or Arrow keys</td><td>Move</td></tr>
-                  <tr><td>Right click drag in 3D View</td><td>Rotate 3D View</td></tr>
-                  <tr><td>K,L</td><td>Scale up/down viewports</td></tr>
+                  <tr>
+                    <th colSpan="2">Controls</th>
+                  </tr>
+                  <tr>
+                    <td>I,O or Alt + Mousewheel</td>
+                    <td>Zoom in/out</td>
+                  </tr>
+                  <tr>
+                    <td>Mousewheel or D and F</td>
+                    <td>Move along 3rd axis</td>
+                  </tr>
+                  <tr>
+                    <td>Left Mouse drag or Arrow keys</td>
+                    <td>Move</td>
+                  </tr>
+                  <tr>
+                    <td>Right click drag in 3D View</td>
+                    <td>Rotate 3D View</td>
+                  </tr>
+                  <tr>
+                    <td>K,L</td>
+                    <td>Scale up/down viewports</td>
+                  </tr>
                 </tbody>
               </table>
               <div>
-                <img className="img-50" src="/assets/images/Max-Planck-Gesellschaft.svg" alt="Max Plank Geselleschaft Logo" />
-                <img className="img-50" src="/assets/images/MPI-brain-research.svg" alt="Max Plank Institute of Brain Research Logo" />
+                <img
+                  className="img-50"
+                  src="/assets/images/Max-Planck-Gesellschaft.svg"
+                  alt="Max Plank Geselleschaft Logo"
+                />
+                <img
+                  className="img-50"
+                  src="/assets/images/MPI-brain-research.svg"
+                  alt="Max Plank Institute of Brain Research Logo"
+                />
               </div>
-            </div> :
-            null
-        }
+            </div>
+          : null}
       </div>
     );
   }

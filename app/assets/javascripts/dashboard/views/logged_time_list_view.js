@@ -38,4 +38,3 @@ class LoggedTimeListView extends Marionette.View {
 LoggedTimeListView.initClass();
 
 export default LoggedTimeListView;
-

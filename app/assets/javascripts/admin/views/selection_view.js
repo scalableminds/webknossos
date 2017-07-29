@@ -26,7 +26,6 @@ class SelectionView extends Marionette.CollectionView {
     });
   }
 
-
   filter(...args) {
     if (this.options.filter) {
       return this.options.filter(...args);
@@ -34,12 +33,10 @@ class SelectionView extends Marionette.CollectionView {
     return true;
   }
 
-
   afterRender() {
     return this.$el.prepend("<option></option>");
   }
 }
 SelectionView.initClass();
-
 
 export default SelectionView;

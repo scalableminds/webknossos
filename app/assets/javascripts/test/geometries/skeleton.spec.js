@@ -7,7 +7,13 @@ import test from "ava";
 import mockRequire from "mock-require";
 import _ from "lodash";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { createNodeAction, createTreeAction, deleteNodeAction, createBranchPointAction, setActiveNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  createNodeAction,
+  createTreeAction,
+  deleteNodeAction,
+  createBranchPointAction,
+  setNodeRadiusAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 
 mockRequire.stopAll();
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -21,7 +27,7 @@ const NodeShader = mockRequire.reRequire("oxalis/geometries/materials/node_shade
 const Store = mockRequire.reRequire("oxalis/store").default;
 const Skeleton = mockRequire.reRequire("oxalis/geometries/skeleton").default;
 
-test.before((t) => {
+test.before(t => {
   const rotation = [0.5, 0.5, 0.5];
   const viewport = 0;
   const resolution = 0;
@@ -34,7 +40,7 @@ test.before((t) => {
     Store.dispatch(createNodeAction([i, i, i], rotation, viewport, resolution));
   }
 
-  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+  getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
     const trees = skeletonTracing.trees;
     t.is(_.size(trees), 20);
     for (const tree of Object.values(trees)) {
@@ -43,8 +49,8 @@ test.before((t) => {
   });
 });
 
-test.serial("Skeleton should initialize correctly using the store's state", (t) => {
-  getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+test.serial("Skeleton should initialize correctly using the store's state", t => {
+  getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
     const trees = skeletonTracing.trees;
     const skeleton = new Skeleton();
 
@@ -100,13 +106,15 @@ test.serial("Skeleton should initialize correctly using the store's state", (t) 
     t.deepEqual(edgeBufferGeometryAttributes.position.array, new Float32Array(edgePositions));
     t.deepEqual(edgeBufferGeometryAttributes.treeId.array, new Float32Array(edgeTreeIds));
 
-    const textureData = new Float32Array(NodeShader.COLOR_TEXTURE_WIDTH * NodeShader.COLOR_TEXTURE_WIDTH * 3);
+    const textureData = new Float32Array(
+      NodeShader.COLOR_TEXTURE_WIDTH * NodeShader.COLOR_TEXTURE_WIDTH * 3,
+    );
     textureData.set(treeColors);
     t.deepEqual(skeleton.treeColorTexture.image.data, textureData);
   });
 });
 
-test.serial("Skeleton should increase its buffers once the max capacity is reached", async (t) => {
+test.serial("Skeleton should increase its buffers once the max capacity is reached", async t => {
   const skeleton = new Skeleton();
 
   Store.dispatch(createNodeAction([2001, 2001, 2001], [0.5, 0.5, 0.5], 0, 0));
@@ -116,7 +124,7 @@ test.serial("Skeleton should increase its buffers once the max capacity is reach
   t.is(skeleton.edges.buffers.length, 2);
 });
 
-test.serial("Skeleton should invalidate a node upon deletion", async (t) => {
+test.serial("Skeleton should invalidate a node upon deletion", async t => {
   const skeleton = new Skeleton();
 
   // do index lookup before "dispatch" because index will be deleted as well
@@ -125,10 +133,13 @@ test.serial("Skeleton should invalidate a node upon deletion", async (t) => {
 
   Store.dispatch(deleteNodeAction(1, 1));
   await Utils.sleep(50);
-  t.is(skeleton.nodes.buffers[0].geometry.attributes.type.array[index], NodeShader.NodeTypes.INVALID);
+  t.is(
+    skeleton.nodes.buffers[0].geometry.attributes.type.array[index],
+    NodeShader.NodeTypes.INVALID,
+  );
 });
 
-test.serial("Skeleton should invalidate an edge upon deletion", async (t) => {
+test.serial("Skeleton should invalidate an edge upon deletion", async t => {
   const skeleton = new Skeleton();
 
   // do index lookup before "dispatch" because index will be deleted as well
@@ -137,10 +148,13 @@ test.serial("Skeleton should invalidate an edge upon deletion", async (t) => {
 
   Store.dispatch(deleteNodeAction(2, 1));
   await Utils.sleep(50);
-  t.deepEqual(skeleton.edges.buffers[0].geometry.attributes.position.array.subarray(index * 6, index * 6 + 6), new Float32Array([0, 0, 0, 0, 0, 0]));
+  t.deepEqual(
+    skeleton.edges.buffers[0].geometry.attributes.position.array.subarray(index * 6, index * 6 + 6),
+    new Float32Array([0, 0, 0, 0, 0, 0]),
+  );
 });
 
-test.serial("Skeleton should update node types for branchpoints", async (t) => {
+test.serial("Skeleton should update node types for branchpoints", async t => {
   const skeleton = new Skeleton();
 
   Store.dispatch(createBranchPointAction(3, 1));
@@ -148,16 +162,19 @@ test.serial("Skeleton should update node types for branchpoints", async (t) => {
   await Utils.sleep(50);
   const id = skeleton.combineIds(3, 1);
   const index = skeleton.nodes.idToBufferPosition.get(id).index;
-  t.is(skeleton.nodes.buffers[0].geometry.attributes.type.array[index], NodeShader.NodeTypes.BRANCH_POINT);
+  t.is(
+    skeleton.nodes.buffers[0].geometry.attributes.type.array[index],
+    NodeShader.NodeTypes.BRANCH_POINT,
+  );
 });
 
-test.serial("Skeleton should update node radius", (t) => {
+test.serial("Skeleton should update node radius", t => {
   const skeleton = new Skeleton();
 
-  getSkeletonTracing(Store.getState().tracing).map(async (skeletonTracing) => {
+  getSkeletonTracing(Store.getState().tracing).map(async skeletonTracing => {
     const { activeNodeId, activeTreeId } = skeletonTracing;
 
-    Store.dispatch(setActiveNodeRadiusAction(2));
+    Store.dispatch(setNodeRadiusAction(2));
 
     await Utils.sleep(50);
     const id = skeleton.combineIds(activeNodeId, activeTreeId);
@@ -166,16 +183,19 @@ test.serial("Skeleton should update node radius", (t) => {
   });
 });
 
-test.serial("Skeleton should update tree colors upon tree creation", (t) => {
+test.serial("Skeleton should update tree colors upon tree creation", t => {
   const skeleton = new Skeleton();
 
   Store.dispatch(createTreeAction());
-  getSkeletonTracing(Store.getState().tracing).map(async (skeletonTracing) => {
+  getSkeletonTracing(Store.getState().tracing).map(async skeletonTracing => {
     const { activeTreeId, trees } = skeletonTracing;
 
     if (activeTreeId != null) {
       await Utils.sleep(50);
-      t.deepEqual(skeleton.treeColorTexture.image.data.subarray(activeTreeId * 3, activeTreeId * 3 + 3), new Float32Array(trees[activeTreeId].color));
+      t.deepEqual(
+        skeleton.treeColorTexture.image.data.subarray(activeTreeId * 3, activeTreeId * 3 + 3),
+        new Float32Array(trees[activeTreeId].color),
+      );
     }
   });
 });

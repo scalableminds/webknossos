@@ -7,7 +7,7 @@ ansiColor('xterm') {
 
       stage("Prepare") {
 
-        sh "sudo /var/lib/jenkins/fix_workspace.sh \$(basename \$(pwd))"
+        sh "sudo /var/lib/jenkins/fix_workspace.sh webknossos"
 
         checkout scm
         sh "rm -rf packages"
@@ -16,6 +16,7 @@ ansiColor('xterm') {
         echo "Branch: ${env.BRANCH_NAME}\nCommit: ${commit}\nAuthors: ${formatChangeSets(currentBuild.changeSets)}"
 
         env.DOCKER_CACHE_PREFIX = "~/.webknossos-build-cache"
+        env.COMPOSE_PROJECT_NAME = "webknossos_${env.BRANCH_NAME}_${commit}"
         sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
         sh "docker-compose pull sbt"
       }
@@ -35,9 +36,7 @@ ansiColor('xterm') {
         sh "docker-compose run frontend-linting"
         sh "docker-compose run frontend-flow"
         sh "docker-compose run frontend-tests"
-        // retry(3) {
-        //  sh "docker-compose run e2e-tests"
-        // }
+        sh "docker-compose run e2e-tests"
         sh """
           DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up webknossos &
           sleep 10

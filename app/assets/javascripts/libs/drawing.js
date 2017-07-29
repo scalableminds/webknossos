@@ -16,7 +16,6 @@ const SMOOTH_LENGTH = 4;
 const SMOOTH_ALPHA = 0.2;
 
 class Drawing {
-
   alpha: number = SMOOTH_ALPHA;
   smoothLength: number = SMOOTH_LENGTH;
 
@@ -79,9 +78,17 @@ class Drawing {
     }
   }
 
-  addNextLine(newY: number, isNext: boolean, downwards: boolean,
-    minX: number, maxX: number, r: RangeItem, ranges: Array<RangeItem>,
-    test: (number, number) => boolean, paint: (number, number) => void) {
+  addNextLine(
+    newY: number,
+    isNext: boolean,
+    downwards: boolean,
+    minX: number,
+    maxX: number,
+    r: RangeItem,
+    ranges: Array<RangeItem>,
+    test: (number, number) => boolean,
+    paint: (number, number) => void,
+  ) {
     let rMinX = minX;
     let inRange = false;
     let x = minX;
@@ -96,19 +103,31 @@ class Drawing {
         ranges.push([rMinX, x - 1, newY, downwards, rMinX === minX, false]);
         inRange = false;
       }
-      if (inRange) { paint(x, newY); }
+      if (inRange) {
+        paint(x, newY);
+      }
 
       // skip
-      if (!isNext && x === r[0]) { x = r[1]; }
+      if (!isNext && x === r[0]) {
+        x = r[1];
+      }
       x++;
     }
-    if (inRange) { ranges.push([rMinX, x - 1, newY, downwards, rMinX === minX, true]); }
+    if (inRange) {
+      ranges.push([rMinX, x - 1, newY, downwards, rMinX === minX, true]);
+    }
   }
 
-
   // Source: http://will.thimbleby.net/scanline-flood-fill/
-  fillArea(x: number, y: number, width: number, height: number, diagonal: boolean,
-    test: (number, number) => boolean, paint: (number, number) => void) {
+  fillArea(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    diagonal: boolean,
+    test: (number, number) => boolean,
+    paint: (number, number) => void,
+  ) {
     // xMin, xMax, y, down[true] / up[false], extendLeft, extendRight
     const ranges: Array<RangeItem> = [[x, x, y, null, true, true]];
     paint(x, y);
@@ -134,19 +153,27 @@ class Drawing {
         }
       }
       if (diagonal) {
-        if (minX > 0) { minX--; }
-        if (maxX < width - 1) { maxX++; }
+        if (minX > 0) {
+          minX--;
+        }
+        if (maxX < width - 1) {
+          maxX++;
+        }
       } else {
         r[0]--;
         r[1]++;
       }
-      if (y < height) { this.addNextLine(y + 1, !up, true, minX, maxX, r, ranges, test, paint); }
-      if (y > 0) { this.addNextLine(y - 1, !down, false, minX, maxX, r, ranges, test, paint); }
+      if (y < height) {
+        this.addNextLine(y + 1, !up, true, minX, maxX, r, ranges, test, paint);
+      }
+      if (y > 0) {
+        this.addNextLine(y - 1, !down, false, minX, maxX, r, ranges, test, paint);
+      }
     }
   }
 
   // Source : http://twistedoakstudios.com/blog/Post3138_mouse-path-smoothing-for-jack-lumber
-  smoothLine(points: Array<Vector3>, callback: (Vector3) => void): Array<Vector3> {
+  smoothLine(points: Array<Vector3>, callback: Vector3 => void): Array<Vector3> {
     const smoothLength = this.smoothLength || SMOOTH_LENGTH;
     const a = this.alpha || SMOOTH_ALPHA;
 
@@ -158,7 +185,7 @@ class Drawing {
 
         const p = [0, 0, 0];
         for (let k = 0; k < 3; k++) {
-          p[k] = (p0[k] * (1 - a)) + (p1[k] * a);
+          p[k] = p0[k] * (1 - a) + p1[k] * a;
         }
 
         callback(p);
@@ -176,7 +203,6 @@ class Drawing {
   setAlpha(v: number): void {
     this.alpha = v;
   }
-
 }
 
 export default new Drawing();

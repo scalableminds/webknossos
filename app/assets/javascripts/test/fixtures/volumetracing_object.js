@@ -37,9 +37,7 @@ export default {
   downloadUrl: "http://localhost:9000/annotations/Explorational/5909d8793e00008c029d4d2a/download",
   content: {
     settings: {
-      allowedModes: [
-        "volume",
-      ],
+      allowedModes: ["volume"],
       branchPointsAllowed: true,
       somaClickingAllowed: true,
       advancedOptionsAllowed: true,
@@ -51,53 +49,32 @@ export default {
         url: "http://localhost:9000",
         typ: "webknossos-store",
       },
-      scale: [
-        16.5,
-        16.5,
-        25,
-      ],
+      scale: [16.5, 16.5, 25],
       dataLayers: [
         {
           name: "color",
           category: "color",
           boundingBox: {
-            topLeft: [
-              3840,
-              4220,
-              2304,
-            ],
+            topLeft: [3840, 4220, 2304],
             width: 128,
             height: 131,
             depth: 384,
           },
-          resolutions: [
-            1,
-            2,
-            4,
-            8,
-          ],
+          resolutions: [1, 2, 4, 8],
           fallback: null,
           elementClass: "uint8",
-          mappings: [
-
-          ],
+          mappings: [],
         },
         {
           name: "segmentation",
           category: "segmentation",
           boundingBox: {
-            topLeft: [
-              3840,
-              4220,
-              2304,
-            ],
+            topLeft: [3840, 4220, 2304],
             width: 128,
             height: 131,
             depth: 384,
           },
-          resolutions: [
-            1,
-          ],
+          resolutions: [1],
           fallback: null,
           elementClass: "uint16",
           mappings: [],
@@ -111,18 +88,12 @@ export default {
           name: "64007765-cef9-4e31-b206-dba795b5be17",
           category: "segmentation",
           boundingBox: {
-            topLeft: [
-              3840,
-              4220,
-              2304,
-            ],
+            topLeft: [3840, 4220, 2304],
             width: 128,
             height: 131,
             depth: 384,
           },
-          resolutions: [
-            1,
-          ],
+          resolutions: [1],
           fallback: {
             dataSourceName: "2012-09-28_ex145_07x2",
             layerName: "segmentation",
@@ -139,16 +110,8 @@ export default {
       nextCell: 21890,
       zoomLevel: 0,
     },
-    editPosition: [
-      3904,
-      4282,
-      2496,
-    ],
-    editRotation: [
-      0,
-      0,
-      0,
-    ],
+    editPosition: [3904, 4282, 2496],
+    editRotation: [0, 0, 0],
     boundingBox: null,
     contentType: "volumeTracing",
   },

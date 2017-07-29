@@ -31,9 +31,11 @@ class ModalView extends Marionette.View {
 
     this.prototype.genericHeaderTemplate = _.template("ModalHeader");
     this.prototype.genericBodyTemplate = _.template("ModalBody");
-    this.prototype.genericFooterTemplate = _.template("\
-<a href=\"#\" class=\"btn btn-default\" data-dismiss=\"modal\">Cancel</a>\
-");
+    this.prototype.genericFooterTemplate = _.template(
+      '\
+<a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>\
+',
+    );
   }
 
   getTemplate() {
@@ -45,7 +47,7 @@ class ModalView extends Marionette.View {
     let data = this.serializeData();
     data = this.mixinTemplateContext(data);
 
-    const executeIfFunction = template => _.isFunction(template) ? template(data) : template;
+    const executeIfFunction = template => (_.isFunction(template) ? template(data) : template);
 
     return this.modalTemplate({
       headerTemplate: executeIfFunction(headerTemplate),
@@ -54,32 +56,29 @@ class ModalView extends Marionette.View {
     });
   }
 
-
   show() {
     return this.$el.modal("show");
   }
-
 
   hide() {
     return this.$el.modal("hide");
   }
 
-
   onRender() {
     // Make sure the first input field always gets autofocused
-    return this.$el.on("shown.bs.modal", () => this.$el.find(".modal-body :input").first().focus(),
-    );
+    return this.$el.on("shown.bs.modal", () => this.$el.find(".modal-body :input").first().focus());
   }
-
 
   destroy() {
     this.$el.off();
 
     // The event is neccesarry due to the 300ms CSS transition
-    this.$el.on("hidden.bs.modal", () => {
-      this.$el.off("hidden.bs.modal");
-      app.vent.trigger("modal:destroyed");
-    }, // update pagination
+    this.$el.on(
+      "hidden.bs.modal",
+      () => {
+        this.$el.off("hidden.bs.modal");
+        app.vent.trigger("modal:destroy");
+      }, // update pagination
     );
     return this.$el.modal("hide");
   }

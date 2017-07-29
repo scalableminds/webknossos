@@ -15,14 +15,8 @@ class TaskTypeModel extends Backbone.Model {
         somaClickingAllowed: true,
         preferredMode: "",
       },
-      expectedTime: {
-        min: 300,
-        max: 600,
-        maxHard: 900,
-      },
     };
   }
-
 
   parse(response) {
     response.formattedHash = FormatUtils.formatHash(response.id);
@@ -30,7 +24,6 @@ class TaskTypeModel extends Backbone.Model {
 
     return response;
   }
-
 
   destroy() {
     const options = { url: `/api/taskTypes/${this.get("id")}` };

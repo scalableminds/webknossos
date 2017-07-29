@@ -10,7 +10,6 @@ module.exports = function (env = {}) {
   var scriptPaths = {
     "jasny-bootstrap": `${nodePath}jasny-bootstrap/dist/js/jasny-bootstrap`,
     "bootstrap-multiselect": `${nodePath}bootstrap-multiselect/dist/js/bootstrap-multiselect`,
-    "react-jsoneditor": `${nodePath}/react-jsoneditor/build/app.js`,
   };
 
   fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), process.pid, "utf8");

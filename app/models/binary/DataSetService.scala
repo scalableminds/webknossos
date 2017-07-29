@@ -48,14 +48,11 @@ object DataSetService extends FoxImplicits with LazyLogging {
     isActive: Boolean = false)(implicit ctx: DBAccessContext) = {
 
     DataSetDAO.insert(DataSet(
-      name,
       dataStore,
       dataSource,
-      owningTeam,
       List(owningTeam),
       isActive = isActive,
-      isPublic = false,
-      accessToken = None))(GlobalAccessContext)
+      isPublic = false))(GlobalAccessContext)
   }
 
   def updateDataSource(

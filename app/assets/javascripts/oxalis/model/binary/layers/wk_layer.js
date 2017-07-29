@@ -10,13 +10,11 @@ import type { BucketRequestOptions } from "oxalis/model/binary/layers/layer";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
 import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
 import Request from "libs/request";
-import MultipartData from "libs/multipart_data";
 import type { Vector4 } from "oxalis/constants";
 import type { DataLayerType, DataStoreInfoType } from "oxalis/store";
 
 // TODO: Non-reactive
 class WkLayer extends Layer {
-
   constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
     super(layerInfo, dataStoreInfo);
 
@@ -27,14 +25,12 @@ class WkLayer extends Layer {
     this.fourBit = false;
   }
 
-
   setFourBit(newFourBit: boolean) {
     // No op if this is not a color layer
     if (this.category === "color") {
       this.fourBit = newFourBit;
     }
   }
-
 
   buildBuckets(batch: Array<Vector4>, options: ?BucketRequestOptions) {
     if (options == null) {
@@ -45,18 +41,19 @@ class WkLayer extends Layer {
     return super.buildBuckets(batch, options);
   }
 
-
   async requestFromStoreImpl(batch: Array<BucketInfo>, token: string): Promise<Uint8Array> {
     const wasFourBit = this.fourBit;
 
     const datasetName = this.getDatasetName();
     const responseBuffer = await Request.sendJSONReceiveArraybuffer(
-      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${token}`,
+      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this
+        .name}/data?token=${token}`,
       {
         data: batch,
         timeout: REQUEST_TIMEOUT,
         doNotCatch: true,
-      });
+      },
+    );
 
     let result = new Uint8Array(responseBuffer);
     if (wasFourBit) {
@@ -64,7 +61,6 @@ class WkLayer extends Layer {
     }
     return result;
   }
-
 
   decodeFourBit(bufferArray: Uint8Array): Uint8Array {
     // Expand 4-bit data
@@ -82,17 +78,24 @@ class WkLayer extends Layer {
     return newColors;
   }
 
-
-  async sendToStoreImpl(batch: Array<BucketInfo>, getBucketData: (Vector4) => Uint8Array, token: string): Promise<void> {
-    let data = batch.map(bucket => {
-      let data = getBucketData(BucketBuilder.bucketToZoomedAddress(bucket));
-      bucket.base64Data = Base64.fromByteArray(data);
-      return { action: "labelVolume", value: bucket };
+  async sendToStoreImpl(
+    batch: Array<BucketInfo>,
+    getBucketData: Vector4 => Uint8Array,
+    token: string,
+  ): Promise<void> {
+    const data = batch.map(bucket => {
+      const bucketData = getBucketData(BucketBuilder.bucketToZoomedAddress(bucket));
+      const bucketWithData = Object.assign({}, bucket, {
+        base64Data: Base64.fromByteArray(bucketData),
+      });
+      return { action: "labelVolume", value: bucketWithData };
     });
 
     const datasetName = this.getDatasetName();
     await Request.sendJSONReceiveJSON(
-      `${this.dataStoreInfo.url}/data/tracings/volumes/${this.name}?dataSetName=${datasetName}&token=${token}`, {
+      `${this.dataStoreInfo.url}/data/tracings/volumes/${this
+        .name}?dataSetName=${datasetName}&token=${token}`,
+      {
         method: "POST",
         data,
         timeout: REQUEST_TIMEOUT,
@@ -102,6 +105,5 @@ class WkLayer extends Layer {
     );
   }
 }
-
 
 export default WkLayer;

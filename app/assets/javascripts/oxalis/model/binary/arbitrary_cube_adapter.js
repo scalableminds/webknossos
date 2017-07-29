@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import DataCube from "oxalis/model/binary/data_cube";
+import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector3 } from "oxalis/constants";
 
 const ARBITRARY_MAX_ZOOMSTEP = 2;
@@ -40,7 +40,6 @@ class ArbitraryBucketData {
 }
 
 class ArbitraryCubeAdapter {
-
   cube: DataCube;
   boundary: Vector3;
   sizeZYX: number;
@@ -66,7 +65,7 @@ class ArbitraryCubeAdapter {
   getBucket = _.memoize((bucketIndex: number): ?ArbitraryBucketData => {
     let bucketAddress = [
       Math.floor(bucketIndex / this.sizeZY),
-      Math.floor((bucketIndex % this.sizeZY) / this.sizeZ),
+      Math.floor(bucketIndex % this.sizeZY / this.sizeZ),
       bucketIndex % this.sizeZ,
       0,
     ];

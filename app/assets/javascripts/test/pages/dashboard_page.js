@@ -1,81 +1,77 @@
 export default class DashboardPage {
+  explorativeTab = "#tab-explorative";
+  trackedTimeTab = "#tab-logged-time";
+  tasksTab = "#tab-tasks";
 
-  explorativeTab = "#tab-explorative"
-  trackedTimeTab = "#tab-logged-time"
-  tasksTab = "#tab-tasks"
+  explorativeTaskList = "#explorative-tasks";
+  archivedTasksButton = "#toggle-view-archived";
+  downloadButton = "[href$='download']";
 
-  explorativeTaskList = "#explorative-tasks"
-  archivedTasksButton = "#toggle-view-archived"
-  downloadButton = "[href$='download']"
+  taskList = ".tab-content tbody";
+  newTaskButton = "#new-task-button";
+  finishedTasksButton = "#toggle-finished";
 
-  taskList = ".tab-content tbody"
-  newTaskButton = "#new-task-button"
-  finishedTasksButton = "#toggle-finished"
+  timeTableEntries = ".time-table tbody tr";
+  timeGraphEntries = "circle";
 
-  timeTableEntries = ".time-table tbody tr"
-  timeGraphEntries = "circle"
+  spinner = "#loader";
 
   get() {
     // Waiting for all JS event handlers to be attached
-    return browser
-      .url("/dashboard")
-      .pause(500);
+    browser.url("/dashboard");
+    browser.pause(500);
   }
 
   openExplorativeTab() {
-    return browser
-      .waitForExist(this.explorativeTab)
-      .click(this.explorativeTab)
-      .click(this.explorativeTab)
-      .waitForExist(this.explorativeTaskList);
+    browser.waitForExist(this.explorativeTab);
+    browser.click(this.explorativeTab);
+    browser.click(this.explorativeTab);
+    browser.waitForExist(this.explorativeTaskList);
   }
 
   openTasksTab() {
-    return browser
-      .click(this.tasksTab)
-      .waitForExist(this.finishedTasksButton);
+    browser.click(this.tasksTab);
+    browser.waitForExist(this.finishedTasksButton);
+    // Wait until the spinner was hidden
+    browser.waitForVisible(this.spinner, 10000, true);
   }
 
   openTrackedTimeTab() {
-    return browser
-      .click(this.trackedTimeTab)
-      .waitForExist("svg");
+    browser.click(this.trackedTimeTab);
+    browser.waitForExist("svg");
   }
 
   getTasks() {
-    return browser
-      .waitForExist(this.taskList)
-      .elements("tbody tr").then(elements => elements.value);
+    browser.waitForExist(this.taskList);
+    return browser.elements("tbody tr").value;
   }
 
-
   getNewTask() {
-    return this.openTasksTab().then(() => browser
-        .click(this.newTaskButton)
-        .alertAccept()
-        .pause(500), // Wait for DOM to refresh
-    );
+    this.openTasksTab();
+    browser.click(this.newTaskButton);
+    browser.alertAccept();
+    browser.pause(500); // Wait for DOM to refresh
+    // Wait until the spinner was hidden
+    browser.waitForVisible(this.spinner, 5000, true);
   }
 
   getFirstDownloadLink() {
-    return browser
-      .waitForExist(this.downloadButton)
-      .getAttribute(this.downloadButton, "href");
+    browser.waitForExist(this.downloadButton);
+    return browser.getAttribute(this.downloadButton, "href");
   }
 
   openDashboardAsUser() {
     // Open as user 'SCM Boy'
-    return browser
-      .url("/users/570b9f4d2a7c0e4d008da6ef/details")
-      .pause(500); // Wait for DOM to refresh
+    browser.url("/users/570b9f4d2a7c0e4d008da6ef/details");
+    browser.pause(500); // Wait for DOM to refresh
+    browser.waitForExist(this.finishedTasksButton);
   }
 
   getTimeTableEntries() {
-    return browser.elements(this.timeTableEntries).then(elements => elements.value);
+    return browser.elements(this.timeTableEntries).value;
   }
 
   getTimeGraphEntries() {
-    return browser.elements(this.timeGraphEntries).then(elements => elements.value);
+    return browser.elements(this.timeGraphEntries).value;
   }
-
 }

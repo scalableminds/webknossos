@@ -27,14 +27,12 @@ class TaskCreateFromNMLView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.ui =
-      { fileUpload: "[type=file]" };
+    this.prototype.ui = { fileUpload: "[type=file]" };
   }
 
   initialize(options) {
     this.parent = options.parent;
   }
-
 
   /**
    * Submit NML Form via AJAX to server.
@@ -56,12 +54,7 @@ class TaskCreateFromNMLView extends Marionette.View {
       Request.sendMultipartFormReceiveJSON("/api/tasks", {
         data: payload,
         params: { type: "nml" },
-      },
-      )
-      .then(
-        task => this.parent.showSaveSuccess(task),
-        () => this.parent.showSaveError(),
-      );
+      }).then(task => this.parent.showSaveSuccess(task), () => this.parent.showSaveError());
     }
 
     // prevent page reload

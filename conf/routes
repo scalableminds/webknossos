@@ -8,8 +8,9 @@ GET           /dashboard                                                        
 GET           /impressum                                                        controllers.Application.impressum
 GET           /info                                                             controllers.Application.info
 GET           /thankyou                                                         controllers.Application.thankyou
-GET           /api/buildinfo                                                    controllers.Application.buildInfo
 GET           /spotlight                                                        controllers.DataSetController.userAwareEmpty
+GET           /api/buildinfo                                                    controllers.Application.buildInfo
+POST          /api/analytics/:namespace                                         controllers.Application.analytics(namespace)
 
 # Help section
 GET           /help/faq                                                         controllers.HelpController.faq
@@ -64,16 +65,16 @@ POST          /api/teams                                                        
 DELETE        /api/teams/:id                                                    controllers.TeamController.delete(id: String)
 
 # DataSets
-GET           /import/:name                                                     controllers.DataSetController.emptyWithWildcard(name)
 GET           /datasets                                                         controllers.DataSetController.empty
 GET           /datasets/:id/edit                                                controllers.DataSetController.emptyWithWildcard(id)
+GET           /datasets/:id/import                                                     controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
 GET           /datasets/upload                                                  controllers.DataSetController.empty
 
 GET           /api/datasets                                                     controllers.DataSetController.list
 POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
 GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String)
-PUT           /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
+POST          /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
 GET           /api/datasets/:dataSetName/accessList                             controllers.DataSetController.accessList(dataSetName: String)
 POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
 GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String)

@@ -2,20 +2,25 @@
 require("babel-register")({ presets: [["env", { targets: { node: "current" } }]] });
 
 const path = require("path");
-const child_process = require("child_process")
+const child_process = require("child_process");
 
 // Workaround until "selenium-standalone" updates to include these versions by default
 const seleniumConfig = {
-  version: "3.0.1",
+  version: "3.4.0",
   drivers: {
+    // chrome: {
+    //   version: "2.30",
+    // },
     firefox: {
-      version: "0.11.1",
-    }
-  }
+      version: "0.17.0",
+    },
+  },
 };
 
 exports.config = {
 
+  // Enable this setting to debug via the Chrome developer console
+  // execArgv: ["--inspect"],
   debug: false,
   //
   // ==================
@@ -55,20 +60,21 @@ exports.config = {
   // Sauce Labs platform configurator - a great tool to configure your capabilities:
   // https://docs.saucelabs.com/reference/platforms-configurator
   //
-  capabilities: [{
-    browserName: "firefox",
-  },
-  // {
-  //   browserName: "chrome",
-  //   chromeOptions: {
-  //     "args": ["--no-sandbox", "--test-type=browser", "--dns-prefetch-disable"],
-  //     "prefs": {
-  //       "download": {
-  //         "prompt_for_download": false,
-  //       }
-  //     }
-  //   }
-  // }
+  capabilities: [
+    {
+      browserName: "firefox",
+    },
+    // {
+    //   browserName: "chrome",
+    //   chromeOptions: {
+    //     args: ["--headless", "--disable-gpu", "--window-size=1080,1920", "--dns-prefetch-disable"],
+    //     prefs: {
+    //       download: {
+    //         prompt_for_download: false,
+    //       },
+    //     },
+    //   },
+    // },
   ],
   //
   // ===================
@@ -79,7 +85,7 @@ exports.config = {
   // By default WebdriverIO commands are executed in a synchronous way using
   // the wdio-sync package. If you still want to run your tests in an async way
   // e.g. using promises you can set the sync option to false.
-  sync: false,
+  sync: true,
   //
   // Level of logging verbosity: silent | verbose | command | data | result | error
   logLevel: "error",
@@ -131,6 +137,7 @@ exports.config = {
   // "selenium-standalone" service above
   seleniumInstallArgs: seleniumConfig,
   seleniumArgs: seleniumConfig,
+  seleniumLogs: "./seleniumLogs",
   // Framework you want to run your specs with.
   // The following are supported: Mocha, Jasmine, and Cucumber
   // see also: http://webdriver.io/guide/testrunner/frameworks.html
@@ -156,7 +163,7 @@ exports.config = {
     // an assertion fails.
     expectationResultHandler: function(passed, assertion) {
       //only take screenshot if assertion failed
-      if(passed) {
+      if (passed) {
        return;
       }
 
@@ -180,19 +187,22 @@ exports.config = {
   //
   // Gets executed before test execution begins. At this point you can access all global
   // variables, such as `browser`. It is the perfect place to define custom commands.
-  before: function (capabilities, specs) {
+  before: function(capabilities, specs) {
 
-    const mongoURL = `${process.env.MONGO_HOST || "localhost"}:${process.env.MONGO_PORT || "27017"}`;
+    const mongoHost = process.env.MONGO_HOST || "localhost";
+    const mongoPort = process.env.MONGO_PORT || "27017";
+    const mongoURL = `${mongoHost}:${mongoPort}`;
     const mongoDB = process.env.MONGO_DB || "webknossos-testing";
 
+    child_process.execFileSync("./tools/dropDB.sh", [mongoDB, mongoHost, mongoPort]);
     child_process.execFileSync("./tools/import_export/import.sh",
                  [mongoDB, "test/db", mongoURL],
-                 {stdio : "ignore"})
+                 {stdio : "ignore"});
 
     browser.setViewportSize({
       width: 1024,
       height: 768
-    })
+    });
   },
   //
   // Hook that gets executed before the suite starts

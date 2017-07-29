@@ -17,6 +17,7 @@ class ProjectListView extends Marionette.CompositeView {
       <th data-sort="location">Location</th>
       <th data-sort="owner.lastName">Owner</th>
       <th data-sort="numberOfOpenAssignments">Open Assignments</th>
+      <th data-sort="expectedTime">Expected Time</th>
       <th>Actions</th>
     </tr>
   </thead>
@@ -35,8 +36,7 @@ class ProjectListView extends Marionette.CompositeView {
       },
     };
 
-    this.prototype.ui =
-      { modalWrapper: "#modal-wrapper" };
+    this.prototype.ui = { modalWrapper: "#modal-wrapper" };
 
     this.prototype.behaviors = {
       SortTableBehavior: {
@@ -44,7 +44,6 @@ class ProjectListView extends Marionette.CompositeView {
       },
     };
   }
-
 
   initialize() {
     this.collection.fetch();
@@ -55,11 +54,9 @@ class ProjectListView extends Marionette.CompositeView {
     this.listenTo(app.vent, "paginationView:addElement", this.createProject);
   }
 
-
   filterBySearch(searchQuery) {
     return this.collection.setFilter(["name", "team", "priority", "location"], searchQuery);
   }
-
 
   createProject() {
     return app.router.navigate("/projects/create", { trigger: true });

@@ -19,14 +19,14 @@ export function enforceVolumeTracing(tracing: TracingType): VolumeTracingType {
 }
 
 export function getActiveCellId(tracing: TracingType): Maybe<number> {
-  return getVolumeTracing(tracing).map((volumeTracing) => {
+  return getVolumeTracing(tracing).map(volumeTracing => {
     const { activeCellId } = volumeTracing;
     return activeCellId;
   });
 }
 
 export function getVolumeTraceOrMoveMode(tracing: TracingType): Maybe<VolumeTraceOrMoveModeType> {
-  return getVolumeTracing(tracing).map((volumeTracing) => {
+  return getVolumeTracing(tracing).map(volumeTracing => {
     const { volumeTraceOrMoveMode } = volumeTracing;
     return volumeTraceOrMoveMode;
   });

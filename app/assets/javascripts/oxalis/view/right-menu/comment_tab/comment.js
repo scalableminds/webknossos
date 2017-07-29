@@ -5,14 +5,13 @@ import Store from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 
 class Comment extends Component {
-
   componentDidUpdate() {
     this.ensureVisible();
   }
 
   handleClick = () => {
     Store.dispatch(setActiveNodeAction(this.props.data.node));
-  }
+  };
 
   ensureVisible() {
     if (this.props.isActive) {
@@ -29,7 +28,13 @@ class Comment extends Component {
 
     const { data } = this.props;
     return (
-      <li className={liClassName} id={`comment-tab-node-${data.node}`} ref={(ref) => { this.comment = ref; }}>
+      <li
+        className={liClassName}
+        id={`comment-tab-node-${data.node}`}
+        ref={ref => {
+          this.comment = ref;
+        }}
+      >
         <i className={iClassName} />
         <a href="#jump-to-comment" onClick={this.handleClick}>
           {`${data.node} - ${data.content}`}

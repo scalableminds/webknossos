@@ -9,7 +9,11 @@ import Utils from "libs/utils";
 import Backbone from "backbone";
 import * as THREE from "three";
 import { V3 } from "libs/mjs";
-import { getPosition, getPlaneScalingFactor, getViewportBoundingBox } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getPlaneScalingFactor,
+  getViewportBoundingBox,
+} from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
@@ -19,15 +23,19 @@ import Cube from "oxalis/geometries/cube";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
 import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
-import constants, { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import constants, {
+  OrthoViews,
+  OrthoViewValues,
+  OrthoViewValuesWithoutTDView,
+} from "oxalis/constants";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
+const CUBE_COLOR = 0x999999;
 
 class SceneController {
   skeleton: Skeleton;
-  CUBE_COLOR: number;
   current: number;
   displayPlane: OrthoViewMapType<boolean>;
   planeShift: Vector3;
@@ -41,14 +49,12 @@ class SceneController {
   contour: ContourGeometry;
   planes: OrthoViewMapType<Plane>;
   rootNode: THREE.Object3D;
+  renderer: THREE.WebGLRenderer;
+  scene: THREE.Scene;
+  rootGroup: THREE.Object3D;
 
-  static initClass() {
-    // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
-    // element depending on the provided flycam.
-
-    this.prototype.CUBE_COLOR = 0x999999;
-  }
-
+  // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
+  // element depending on the provided flycam.
   constructor() {
     _.extend(this, Backbone.Events);
     this.current = 0;
@@ -60,11 +66,31 @@ class SceneController {
     this.planeShift = [0, 0, 0];
     this.pingBinary = true;
     this.pingBinarySeg = true;
-
-    this.createMeshes();
-    this.bindToEvents();
   }
 
+  initialize() {
+    this.createMeshes();
+    this.bindToEvents();
+
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: document.getElementById("render-canvas"),
+      antialias: true,
+    });
+    this.scene = new THREE.Scene();
+
+    // Because the voxel coordinates do not have a cube shape but are distorted,
+    // we need to distort the entire scene to provide an illustration that is
+    // proportional to the actual size in nm.
+    // For some reason, all objects have to be put into a group object. Changing
+    // scene.scale does not have an effect.
+    this.rootGroup = new THREE.Object3D();
+    this.rootGroup.add(this.getRootNode());
+
+    // The dimension(s) with the highest resolution will not be distorted
+    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
+    // Add scene to the group, all Geometries are then added to group
+    this.scene.add(this.rootGroup);
+  }
 
   createMeshes(): void {
     this.rootNode = new THREE.Object3D();
@@ -73,14 +99,16 @@ class SceneController {
     this.cube = new Cube({
       min: Model.lowerBoundary,
       max: Model.upperBoundary,
-      color: this.CUBE_COLOR,
-      showCrossSections: true });
+      color: CUBE_COLOR,
+      showCrossSections: true,
+    });
     this.cube.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
     this.userBoundingBox = new Cube({
       max: [0, 0, 0],
       color: 0xffaa00,
-      showCrossSections: true });
+      showCrossSections: true,
+    });
     this.userBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
     const taskBoundingBox = Store.getState().tracing.boundingBox;
@@ -108,8 +136,8 @@ class SceneController {
     };
 
     this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
-    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, (1 / 2) * Math.PI, 0));
-    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler((-1 / 2) * Math.PI, 0, 0));
+    this.planes[OrthoViews.PLANE_YZ].setRotation(new THREE.Euler(Math.PI, 1 / 2 * Math.PI, 0));
+    this.planes[OrthoViews.PLANE_XZ].setRotation(new THREE.Euler(-1 / 2 * Math.PI, 0, 0));
 
     for (const plane of _.values(this.planes)) {
       plane.getMeshes().forEach(mesh => this.rootNode.add(mesh));
@@ -126,11 +154,11 @@ class SceneController {
         min: taskBoundingBox.min,
         max: taskBoundingBox.max,
         color: 0x00ff00,
-        showCrossSections: true });
+        showCrossSections: true,
+      });
       this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
   }
-
 
   renderVolumeIsosurface(cellId: number): void {
     const state = Store.getState();
@@ -147,18 +175,19 @@ class SceneController {
 
     for (let i = 0; i <= 2; i++) {
       const width = bb.max[i] - bb.min[i];
-      const diff = ((factor - 1) * width) / 2;
+      const diff = (factor - 1) * width / 2;
       bb.min[i] -= diff;
       bb.max[i] += diff;
     }
 
-
     this.polygonFactory = new PolygonFactory(
       Model.getSegmentationBinary().cube,
       state.userConfiguration.isosurfaceResolution,
-      bb.min, bb.max, cellId,
+      bb.min,
+      bb.max,
+      cellId,
     );
-    this.polygonFactory.getTriangles().then((triangles) => {
+    this.polygonFactory.getTriangles().then(triangles => {
       if (triangles == null) {
         return;
       }
@@ -176,7 +205,6 @@ class SceneController {
       this.polygonFactory = null;
     });
   }
-
 
   updateSceneForCam = (id: OrthoViewType): void => {
     // This method is called for each of the four cams. Even
@@ -199,7 +227,8 @@ class SceneController {
           pos = _.clone(getPosition(Store.getState().flycam));
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
-          pos[ind[2]] += planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
+          pos[ind[2]] +=
+            planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
           this.planes[planeId].setPosition(new THREE.Vector3(...pos));
         } else {
           this.planes[planeId].setVisible(false);
@@ -215,8 +244,7 @@ class SceneController {
         this.planes[planeId].plane.visible = this.displayPlane[planeId];
       }
     }
-  }
-
+  };
 
   update = (): void => {
     const gPos = getPosition(Store.getState().flycam);
@@ -229,8 +257,7 @@ class SceneController {
       // Update plane scale
       this.planes[planeId].setScale(planeScale);
     }
-  }
-
+  };
 
   setDisplayCrosshair(value: boolean): void {
     for (const plane of _.values(this.planes)) {
@@ -238,7 +265,6 @@ class SceneController {
     }
     app.vent.trigger("rerender");
   }
-
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
@@ -248,7 +274,6 @@ class SceneController {
     app.vent.trigger("rerender");
   }
 
-
   setInterpolation(value: boolean): void {
     for (const plane of _.values(this.planes)) {
       plane.setLinearInterpolationEnabled(value);
@@ -256,19 +281,16 @@ class SceneController {
     app.vent.trigger("rerender");
   }
 
-
   setDisplayPlanes = (value: boolean): void => {
     for (const planeId of OrthoViewValues) {
       this.displayPlane[planeId] = value;
     }
     app.vent.trigger("rerender");
-  }
-
+  };
 
   getRootNode(): THREE.Object3D {
     return this.rootNode;
   }
-
 
   setUserBoundingBox(bb: BoundingBoxType): void {
     this.userBoundingBox.setCorners(bb.min, bb.max);
@@ -291,8 +313,7 @@ class SceneController {
     return false;
   }
 
-
-  stop(): void {
+  stopPlaneMode(): void {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(false);
     }
@@ -301,8 +322,7 @@ class SceneController {
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(false));
   }
 
-
-  start(): void {
+  startPlaneMode(): void {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(true);
     }
@@ -311,10 +331,13 @@ class SceneController {
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(true));
   }
 
-
   bindToEvents(): void {
     Store.subscribe(() => {
-      const { clippingDistance, displayCrosshair, tdViewDisplayPlanes } = Store.getState().userConfiguration;
+      const {
+        clippingDistance,
+        displayCrosshair,
+        tdViewDisplayPlanes,
+      } = Store.getState().userConfiguration;
       const { segmentationOpacity } = Store.getState().datasetConfiguration;
       this.setSegmentationAlpha(segmentationOpacity);
       this.setClippingDistance(clippingDistance);
@@ -332,6 +355,5 @@ class SceneController {
     );
   }
 }
-SceneController.initClass();
 
-export default SceneController;
+export default new SceneController();

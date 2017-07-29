@@ -69,20 +69,6 @@ case class Annotation(
     AnnotationService.saveToDB(this)
   }
 
-  def actions(userOpt: Option[User]) = {
-    import controllers.routes._
-    val traceOrView = if(restrictions.allowUpdate(userOpt)) "trace" else "view"
-    val basicActions = List(
-      ResourceAction(traceOrView, AnnotationController.trace(typ,id), icon = Some("fa fa-random")),
-      ResourceAction(ResourceAction.Finish, AnnotationController.finish(typ, id), condition = !state.isFinished, icon = Some("fa fa-check-circle-o"), isAjax = true, clazz = "trace-finish"),
-      ResourceAction("reopen", AnnotationController.reopen(typ, id), condition = state.isFinished, icon = Some("fa fa-share"), isAjax = true),
-      // TODO rocksdb ResourceAction(ResourceAction.Download, AnnotationIOController.download(typ, id), icon = Some("fa fa-download")),
-      ResourceAction("reset", AnnotationController.reset(typ, id), icon = Some("fa fa-undo"), isAjax = true)
-    )
-
-    ResourceActionCollection(basicActions)
-  }
-
   def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] =
     toJson(user)
 

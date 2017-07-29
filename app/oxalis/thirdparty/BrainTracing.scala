@@ -16,6 +16,18 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.tools.FoxImplicits
 
+
+import models.annotation.AnnotationLike
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.newrelic.api.agent.NewRelic
+import com.scalableminds.util.mail.Send
+import models.project.Project
+import models.task.Task
+import net.liftweb.common.Box
+import oxalis.mail.DefaultMails
+import play.api.libs.concurrent.Akka
+
+
 object BrainTracing extends LazyLogging with FoxImplicits {
   val URL = "http://braintracing.org/"
   val CREATE_URL = URL + "oxalis_create_user.php"
@@ -26,6 +38,9 @@ object BrainTracing extends LazyLogging with FoxImplicits {
 
   val isActive = Play.configuration.getBoolean("braintracing.active") getOrElse false
   val logTimeForExplorative = Play.configuration.getBoolean("braintracing.logTimeForExplorative") getOrElse false
+
+  lazy val Mailer =
+    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
   def register(user: User): Future[String] = {
     // TODO: fix, make team dynamic
@@ -70,20 +85,43 @@ object BrainTracing extends LazyLogging with FoxImplicits {
   private def isSilentFailure(result: String) =
     result.contains("ist derzeit nicht verf&uuml;gbar.")
 
-  def logTime(user: User, time: Long, annotation: Option[Annotation])(implicit ctx: DBAccessContext): Future[Boolean] = {
+  private def signalOverTime(
+    time: Long,
+    project: Box[Project],
+    task: Box[Task],
+    annotation: Option[AnnotationLike],
+    user: User) = {
+
+    for {
+      p <- project
+      a <- annotation
+      at <- a.tracingTime
+      pt <- p.expectedTime
+      if at >= pt && at - time < pt
+    } {
+      Mailer ! Send(DefaultMails.overLimitMail(
+        user,
+        p.name,
+        task.map(_.id)))
+    }
+  }
+
+  def logTime(user: User, time: Long, annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext): Future[Boolean] = {
+
     import scala.async.Async._
     // TODO: fix, make team dynamic
     if (isActive && !user.isAnonymous && user.teamNames.contains("Connectomics department")) {
       async {
         val task = await(annotation.toFox.flatMap(_.task).futureBox)
         val taskTypeFox = task.toFox.flatMap(_.taskType)
-        val project = task.toFox.flatMap(_.project)
+        val projectFox = task.toFox.flatMap(_.project)
         if (logTimeForExplorative || task.isDefined) {
           NewRelic.recordMetric("Custom/BrainTracingReporter/reported-time-amount", time)
           NewRelic.incrementCounter("Custom/BrainTracingReporter/reported-time-counter")
           val hours = inHours(time)
-          val projectName = await(project.map(_.name).getOrElse(""))
+          val project = await(projectFox.futureBox)
           val taskType = await(taskTypeFox.futureBox)
+          signalOverTime(time, project, task, annotation, user)
           val brainTracingRequest = WS
             .url(LOGTIME_URL)
             .withAuth(USER, PW, WSAuthScheme.BASIC)
@@ -91,10 +129,10 @@ object BrainTracing extends LazyLogging with FoxImplicits {
               "license" -> LICENSE,
               "email" -> user.email,
               "hours" -> hours.toString,
-              "tasktype_id" -> await(taskType.map(_.id).getOrElse("")),
-              "tasktype_summary" -> await(taskType.map(_.summary).getOrElse("")),
-              "task_id" -> await(task.map(_.id).getOrElse("")),
-              "project_name" -> projectName
+              "tasktype_id" -> taskType.map(_.id).getOrElse(""),
+              "tasktype_summary" -> taskType.map(_.summary).getOrElse(""),
+              "task_id" -> task.map(_.id).getOrElse(""),
+              "project_name" -> project.map(_.name).getOrElse("")
             )
             .get()
             .map { response =>
@@ -108,7 +146,6 @@ object BrainTracing extends LazyLogging with FoxImplicits {
                 case code =>
                   logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
                   false
-              }
             }
           brainTracingRequest.onFailure{
             case e: Exception =>

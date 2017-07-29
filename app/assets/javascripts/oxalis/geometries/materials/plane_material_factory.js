@@ -5,18 +5,16 @@
 
 import _ from "lodash";
 import * as THREE from "three";
-import app from "app";
 import Utils from "libs/utils";
-import Store from "oxalis/store";
 import Model from "oxalis/model";
 import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type { Vector3 } from "oxalis/constants";
+import type { DatasetLayerConfigurationType } from "oxalis/store";
 import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
-
   setupUniforms(): void {
     super.setupUniforms();
 
@@ -33,19 +31,12 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: 0,
       },
-    },
-    );
+    });
   }
-
 
   convertColor(color: Vector3): Vector3 {
-    return [
-      color[0] / 255,
-      color[1] / 255,
-      color[2] / 255,
-    ];
+    return [color[0] / 255, color[1] / 255, color[2] / 255];
   }
-
 
   createTextures(): void {
     // create textures
@@ -79,11 +70,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     }
   }
 
-
-  makeMaterial(options?: ShaderMaterialOptionsType):void {
+  makeMaterial(options?: ShaderMaterialOptionsType): void {
     super.makeMaterial(options);
 
-    this.material.setColorInterpolation = (interpolation) => {
+    this.material.setColorInterpolation = interpolation => {
       for (const name of Object.keys(this.textures)) {
         const texture = this.textures[name];
         if (texture.binaryCategory === "color") {
@@ -98,29 +88,21 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.uniforms.repeat.value.set(repeat.x, repeat.y);
     };
 
-    this.material.setSegmentationAlpha = (alpha) => { this.uniforms.alpha.value = alpha / 100; };
+    this.material.setSegmentationAlpha = alpha => {
+      this.uniforms.alpha.value = alpha / 100;
+    };
 
     this.material.side = THREE.DoubleSide;
   }
 
+  updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {
+    super.updateUniformsForLayer(settings, name);
 
-  setupChangeListeners(): void {
-    super.setupChangeListeners();
-
-    Store.subscribe(() => {
-      const layerSettings = Store.getState().datasetConfiguration.layers;
-      _.forEach(layerSettings, (settings, layerName) => {
-        const name = this.sanitizeName(layerName);
-        if (settings.color != null) {
-          const color = this.convertColor(settings.color);
-          this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
-        }
-      });
-
-      app.vent.trigger("rerender");
-    });
+    if (settings.color != null) {
+      const color = this.convertColor(settings.color);
+      this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
+    }
   }
-
 
   getFragmentShader(): string {
     const colorLayerNames = _.map(Model.getColorBinaries(), b => this.sanitizeName(b.name));
@@ -190,11 +172,10 @@ void main() {
 `,
     )({
       layers: colorLayerNames,
-      hasSegmentation: (segmentationBinary != null),
+      hasSegmentation: segmentationBinary != null,
       segmentationName: this.sanitizeName(segmentationBinary ? segmentationBinary.name : ""),
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
-    },
-    );
+    });
   }
 }
 

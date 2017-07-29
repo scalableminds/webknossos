@@ -12,8 +12,12 @@ const TabPane = Tabs.TabPane;
 
 const SettingsView = () =>
   <Tabs destroyInactiveTabPane className="tracing-settings-menu">
-    <TabPane tab="Tracing" key="1"><UserSettingsView /></TabPane>
-    <TabPane tab="Dataset" key="2"><DatasetSettingsView /></TabPane>
+    <TabPane tab="Tracing" key="1">
+      <UserSettingsView />
+    </TabPane>
+    <TabPane tab="Dataset" key="2">
+      <DatasetSettingsView />
+    </TabPane>
   </Tabs>;
 
 export default SettingsView;

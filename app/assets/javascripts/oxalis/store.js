@@ -3,7 +3,7 @@
  * @flow
  */
 
- /* eslint-disable no-useless-computed-key */
+/* eslint-disable no-useless-computed-key */
 
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
@@ -15,10 +15,19 @@ import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reduce
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import ReadOnlyTracingReducer from "oxalis/model/reducers/readonlytracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
+import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
-import Constants, { ControlModeEnum } from "oxalis/constants";
-import type { Vector3, Vector6, ModeType, VolumeTraceOrMoveModeType, ControlModeType, BoundingBoxType } from "oxalis/constants";
+import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
+import type {
+  OrthoViewType,
+  Vector3,
+  Vector6,
+  ModeType,
+  VolumeTraceOrMoveModeType,
+  ControlModeType,
+  BoundingBoxType,
+} from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
@@ -44,13 +53,12 @@ export type NodeType = {
   +timestamp: number,
 };
 
-
 export type BranchPointType = {
   +id: number,
   +timestamp: number,
 };
 
-export type NodeMapType = {+[number]: NodeType};
+export type NodeMapType = { +[number]: NodeType };
 
 export type BoundingBoxObjectType = {
   +topLeft: Vector3,
@@ -67,28 +75,28 @@ type TreeTypeBase = {
   +comments: Array<CommentType>,
   +branchPoints: Array<BranchPointType>,
   +edges: Array<EdgeType>,
-}
+};
 
 export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
 };
 
-type TemporaryMutableNodeMapType = {[number]: NodeType};
+type TemporaryMutableNodeMapType = { [number]: NodeType };
 export type TemporaryMutableTreeType = TreeTypeBase & {
   +nodes: TemporaryMutableNodeMapType,
 };
 
 export type MappingType = {
-  +parent?: string;
-  +name: string;
-  +classes?: Array<Array<number>>;
+  +parent?: string,
+  +name: string,
+  +classes?: Array<Array<number>>,
 };
 
 export type VolumeCellType = {
-  +id: number;
+  +id: number,
 };
 
-export type VolumeCellMapType = {[number]: VolumeCellType};
+export type VolumeCellMapType = { [number]: VolumeCellType };
 
 export type CategoryType = "color" | "segmentation";
 export type ElementClassType = "uint8" | "uint16" | "uint32";
@@ -101,7 +109,7 @@ export type DataLayerType = {
   // +fallback: any,
   +elementClass: ElementClassType,
   +mappings: Array<MappingType>,
-}
+};
 
 export type RestrictionsType = {
   +allowAccess: boolean,
@@ -125,16 +133,16 @@ export type DataStoreInfoType = {
   +url: string,
   +typ: string,
   +accessToken?: string,
-}
-
-export type DatasetType = {
- +name: string,
- +dataStore: DataStoreInfoType,
- +scale: Vector3,
- +dataLayers: Array<DataLayerType>
 };
 
-export type TreeMapType = {+[number]: TreeType};
+export type DatasetType = {
+  +name: string,
+  +dataStore: DataStoreInfoType,
+  +scale: Vector3,
+  +dataLayers: Array<DataLayerType>,
+};
+
+export type TreeMapType = { +[number]: TreeType };
 
 export const SkeletonTracingTypeTracingEnum = {
   Explorational: "Explorational",
@@ -203,7 +211,7 @@ export type DatasetConfigurationType = {
   +interpolation: boolean,
   +keyboardDelay: number,
   +layers: {
-    [name:string]: DatasetLayerConfigurationType,
+    [name: string]: DatasetLayerConfigurationType,
   },
   +quality: number,
   +segmentationOpacity: number,
@@ -244,13 +252,7 @@ export type TemporaryConfigurationType = {
   +shouldHideAllSkeletons: boolean,
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
-  +controlMode: ControlModeType
-};
-
-export type TraceLimitType = {
-  +min: number,
-  +max: number,
-  +maxHard: number,
+  +controlMode: ControlModeType,
 };
 
 export type TaskType = {
@@ -263,7 +265,6 @@ export type TaskType = {
   +type: {
     +summary: string,
     +description: string,
-    +expectedTime: TraceLimitType,
     +id: string,
     +team: string,
   },
@@ -281,6 +282,44 @@ export type FlycamType = {
   +spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
 };
 
+export type CameraData = {
+  +near: number,
+  +far: number,
+  +left: number,
+  +right: number,
+  +top: number,
+  +bottom: number,
+  +up: Vector3,
+  +lookAt: Vector3,
+  +position: Vector3,
+};
+
+export type PartialCameraData = {
+  +near?: number,
+  +far?: number,
+  +left?: number,
+  +right?: number,
+  +top?: number,
+  +bottom?: number,
+  +up?: Vector3,
+  +lookAt?: Vector3,
+  +position?: Vector3,
+};
+
+export type PlaneModeData = {
+  +activeViewport: OrthoViewType,
+  +tdCamera: CameraData,
+};
+
+type ArbitraryModeData = null;
+type FlightModeData = null;
+
+export type ViewModeData = {
+  +plane: PlaneModeData,
+  +arbitrary: ?ArbitraryModeData,
+  +flight: ?FlightModeData,
+};
+
 export type OxalisState = {
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
@@ -290,6 +329,7 @@ export type OxalisState = {
   +task: ?TaskType,
   +save: SaveStateType,
   +flycam: FlycamType,
+  +viewModeData: ViewModeData,
 };
 
 export const defaultState: OxalisState = {
@@ -377,20 +417,32 @@ export const defaultState: OxalisState = {
   },
   flycam: {
     zoomStep: 1.3,
-    currentMatrix: [
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      0, 0, 0, 1,
-    ],
+    currentMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
     spaceDirectionOrtho: [1, 1, 1],
+  },
+  viewModeData: {
+    plane: {
+      activeViewport: OrthoViews.PLANE_XY,
+      tdCamera: {
+        near: 0,
+        far: 0,
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        up: [0, 0, 0],
+        lookAt: [0, 0, 0],
+        position: [0, 0, 0],
+      },
+    },
+    arbitrary: null,
+    flight: null,
   },
 };
 
-
 const sagaMiddleware = createSagaMiddleware();
 
-export type ReducerType = (state: OxalisState, action: ActionType) => OxalisState
+export type ReducerType = (state: OxalisState, action: ActionType) => OxalisState;
 
 const combinedReducers = reduceReducers(
   SettingsReducer,
@@ -400,12 +452,14 @@ const combinedReducers = reduceReducers(
   TaskReducer,
   SaveReducer,
   FlycamReducer,
+  ViewModeReducer,
 );
 
-const store = createStore(combinedReducers, defaultState, applyMiddleware(
-  overwriteActionMiddleware,
-  sagaMiddleware,
-));
+const store = createStore(
+  combinedReducers,
+  defaultState,
+  applyMiddleware(overwriteActionMiddleware, sagaMiddleware),
+);
 sagaMiddleware.run(rootSaga);
 
 export default store;

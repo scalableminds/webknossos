@@ -3,7 +3,6 @@ import Utils from "libs/utils";
 import Backbone from "backbone";
 
 class PaginationCollection {
-
   constructor(models, options) {
     _.extend(this, Backbone.Events);
 
@@ -38,8 +37,7 @@ class PaginationCollection {
       filter: null,
       collectionFilter: null,
       filterQuery: "",
-    },
-    );
+    });
 
     if (this.sortAttribute) {
       this.setSort(this.sortAttribute, "asc");
@@ -55,7 +53,6 @@ class PaginationCollection {
 
     this._reset = _.debounce(this._resetNow, 50);
   }
-
 
   add(...args) {
     return this.fullCollection.add(...args);
@@ -81,17 +78,14 @@ class PaginationCollection {
     return this.fullCollection.reset(...args);
   }
 
-
   setPageSize(pageSize) {
     this.state.pageSize = pageSize;
     this._resetNow();
   }
 
-
   setSorting(field, order) {
     this.setSort(field, order);
   }
-
 
   setSort(field, order) {
     if (order === "asc") {
@@ -101,7 +95,7 @@ class PaginationCollection {
       order = -1;
     }
 
-    this.state.sorting = function (left, right) {
+    this.state.sorting = function(left, right) {
       const leftValue = left.get(field);
       const rightValue = right.get(field);
       let compValue;
@@ -122,39 +116,36 @@ class PaginationCollection {
     this._reset();
   }
 
-
   setCollectionFilter(filter) {
     this.state.collectionFilter = filter;
   }
-
 
   setFilter(fields, query) {
     if (query === "" || !_.isString(query)) {
       this.state.filterQuery = "";
       this.state.filter = null;
     } else {
-      const words = _.map(query.split(" "),
-        element => element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"));
+      const words = _.map(query.split(" "), element =>
+        element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
+      );
       const uniques = _.filter(_.uniq(words), element => element !== "");
       const pattern = `(${uniques.join("|")})`;
       const regexp = new RegExp(pattern, "igm");
 
       this.state.filterQuery = query;
       this.state.filter = model =>
-        _.some(fields, (fieldName) => {
+        _.some(fields, fieldName => {
           const value = model.get(fieldName);
           if (value != null) {
             return !!value.toString().match(regexp);
           } else {
             return false;
           }
-        })
-      ;
+        });
     }
 
     this._reset();
   }
-
 
   at(index) {
     return this.currentModels[index];
@@ -181,7 +172,7 @@ class PaginationCollection {
   }
 
   _passthroughEvent(eventType) {
-    return function (...args) {
+    return function(...args) {
       if (eventType === "sync") {
         this._resetNow();
       } else {
@@ -207,24 +198,19 @@ class PaginationCollection {
     }
 
     this.currentModels = models;
-    this.state.currentPage = Math.max(0, Math.min(
-      this._lastPageIndex(),
-      this.state.currentPage));
+    this.state.currentPage = Math.max(0, Math.min(this._lastPageIndex(), this.state.currentPage));
   }
-
 
   _resetNow() {
     this._resetModels();
     this.models = this.currentModels.slice(
       this.state.currentPage * this.state.pageSize,
-      Math.min(
-        (this.state.currentPage + 1) * this.state.pageSize,
-        this.currentModels.length));
+      Math.min((this.state.currentPage + 1) * this.state.pageSize, this.currentModels.length),
+    );
 
     this.length = this.models.length;
     this.trigger("reset");
   }
-
 
   getPaginationInfo() {
     return {
@@ -235,26 +221,21 @@ class PaginationCollection {
     };
   }
 
-
   getPreviousPage() {
     this.getPage(this.state.currentPage - 1);
   }
-
 
   getNextPage() {
     this.getPage(this.state.currentPage + 1);
   }
 
-
   getFirstPage() {
     this.getPage(0);
   }
 
-
   getLastPage() {
     this.getPage(this._lastPageIndex());
   }
-
 
   getPage(pageIndex) {
     if (pageIndex >= 0 && pageIndex < Math.ceil(this.currentModels.length / this.state.pageSize)) {
@@ -267,11 +248,9 @@ class PaginationCollection {
     return this.models.map(model => model.toJSON());
   }
 
-
   findWhere(...args) {
     return this.fullCollection.findWhere(...args);
   }
 }
-
 
 export default PaginationCollection;

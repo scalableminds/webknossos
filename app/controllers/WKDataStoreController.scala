@@ -32,7 +32,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
       _ <- DataSetService.checkIfNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
       _ <- uploadInfo.team.nonEmpty ?~> Messages("team.invalid")
       _ <- ensureTeamAdministration(user, uploadInfo.team)
-    } yield Forbidden
+    } yield Ok
   }
 
   def statusUpdate(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>

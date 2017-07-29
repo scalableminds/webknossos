@@ -11,8 +11,6 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Store from "oxalis/store";
 import { toggleModeAction, setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
-import View from "oxalis/view";
-import SceneController from "oxalis/controller/scene_controller";
 
 class VolumeTracingController {
   // See comment in Controller class on general controller architecture.
@@ -22,8 +20,6 @@ class VolumeTracingController {
   // Also, this would be the place to define general Volume Tracing
   // functions that can be called by the specific view mode controller.
 
-  volumeTracingView: View;
-  sceneController: SceneController;
   inDeleteMode: boolean;
   mergeMode: 0 | 1 | 2;
   prevActiveCellId: number;
@@ -33,17 +29,19 @@ class VolumeTracingController {
   MERGE_MODE_CELL1 = 1;
   MERGE_MODE_CELL2 = 2;
 
-  constructor(volumeTracingView: View, sceneController: SceneController) {
-    this.volumeTracingView = volumeTracingView;
-    this.sceneController = sceneController;
+  constructor() {
     this.inDeleteMode = false;
 
     _.extend(this, Backbone.Events);
 
     // Keyboard shortcuts
     this.keyboardNoLoop = new InputKeyboardNoLoop({
-      w: () => { Store.dispatch(toggleModeAction()); },
-      "1": () => { Store.dispatch(toggleModeAction()); },
+      w: () => {
+        Store.dispatch(toggleModeAction());
+      },
+      "1": () => {
+        Store.dispatch(toggleModeAction());
+      },
     });
 
     // no merging for now
@@ -54,7 +52,8 @@ class VolumeTracingController {
 
     $("#btn-merge").on("click", () => {
       $("#merge").css({
-        visibility: isMergeVisible() ? "hidden" : "visible" });
+        visibility: isMergeVisible() ? "hidden" : "visible",
+      });
       if (isMergeVisible()) {
         $("#merge-cell1").focus();
       }
@@ -66,7 +65,7 @@ class VolumeTracingController {
     };
 
     for (const input of Object.keys(inputModeMapping)) {
-      ((inputId) => {
+      (inputId => {
         $(inputId).on("focus", () => {
           this.mergeMode = inputModeMapping[inputId];
           console.log(this.mergeMode);
@@ -80,7 +79,6 @@ class VolumeTracingController {
     }
   }
 
-
   merge() {
     const inputs = [$("#merge-cell1"), $("#merge-cell2")];
     $("#merge").css({ visibility: "hidden" });
@@ -91,7 +89,6 @@ class VolumeTracingController {
       input.val("");
     }
   }
-
 
   handleCellSelection(cellId: number) {
     if (cellId > 0) {
@@ -107,18 +104,18 @@ class VolumeTracingController {
     }
   }
 
-
   enterDeleteMode() {
-    if (this.inDeleteMode) { return; }
+    if (this.inDeleteMode) {
+      return;
+    }
 
     this.inDeleteMode = true;
 
-    getActiveCellId(Store.getState().tracing).map((activeCellId) => {
+    getActiveCellId(Store.getState().tracing).map(activeCellId => {
       this.prevActiveCellId = activeCellId;
     });
     Store.dispatch(setActiveCellAction(0));
   }
-
 
   restoreAfterDeleteMode() {
     if (this.inDeleteMode) {

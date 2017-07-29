@@ -27,7 +27,7 @@ export type UrlManagerState = {
 class UrlManager {
   baseUrl: string;
   initialState: UrlManagerState;
-  lastUrl: ?string
+  lastUrl: ?string;
 
   initialize() {
     this.baseUrl = document.location.pathname + document.location.search;
@@ -40,22 +40,32 @@ class UrlManager {
     this.initialize();
   }
 
-  update = _.throttle(
-    () => {
-      const url = this.buildUrl();
-      if (!url) {
-        return;
-      }
-      // Don't tamper with URL if changed externally for some time
-      if (!window.isNavigating && this.lastUrl == null || window.location.href === this.lastUrl) {
-        window.history.replaceState({}, null, url);
-        this.lastUrl = window.location.href;
-      } else {
-        setTimeout(() => { this.lastUrl = null; }, NO_MODIFY_TIMEOUT);
-      }
-    },
-    MAX_UPDATE_INTERVAL,
-  );
+  update = _.throttle(() => this.updateUnthrottled(), MAX_UPDATE_INTERVAL);
+
+  updateUnthrottled(force: boolean = false) {
+    if (window.isNavigating) {
+      // The router initiated an URL change
+      return;
+    }
+
+    const url = this.buildUrl();
+    if (!url) {
+      return;
+    }
+
+    // Don't tamper with URL if changed externally for some time
+    const urlDidNotChange = window.location.href === this.lastUrl;
+    const isFreshUrl = this.lastUrl == null;
+
+    if (isFreshUrl || urlDidNotChange || force) {
+      window.history.replaceState({}, null, url);
+      this.lastUrl = window.location.href;
+    } else {
+      setTimeout(() => {
+        this.lastUrl = null;
+      }, NO_MODIFY_TIMEOUT);
+    }
+  }
 
   parseUrl(): UrlManagerState {
     // State string format:
@@ -93,11 +103,9 @@ class UrlManager {
     return state;
   }
 
-
   startUrlUpdater(): void {
     Store.subscribe(() => this.update());
   }
-
 
   buildUrl(): ?string {
     const tracing = Store.getState().tracing;
@@ -129,11 +137,13 @@ export function updateTypeAndId(baseUrl: string, tracingType: string, tracingId:
   // both here. Chaining the replace function is possible, since they are mutually
   // exclusive and thus can't apply both simultaneously.
   return baseUrl
-    .replace(/^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/, (all, base, type, id, rest) =>
-      `${base}/${tracingType}/${tracingId}${rest}`,
+    .replace(
+      /^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/,
+      (all, base, type, id, rest) => `${base}/${tracingType}/${tracingId}${rest}`,
     )
-    .replace(/^(.*\/datasets)\/([^/]*)(\/.*)$/, (all, base, id, rest) =>
-      `${base}/${tracingId}${rest}`,
+    .replace(
+      /^(.*\/datasets)\/([^/]*)(\/.*)$/,
+      (all, base, id, rest) => `${base}/${tracingId}${rest}`,
     );
 }
 

@@ -2,8 +2,9 @@
  * controller.js
  * @flow
  */
- /* globals JQueryInputEventObject:false */
+/* globals JQueryInputEventObject:false */
 
+import React from "react";
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
@@ -13,11 +14,7 @@ import Stats from "stats.js";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
 import Store from "oxalis/store";
-import View from "oxalis/view";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
-import SkeletonTracingController from "oxalis/controller/annotations/skeletontracing_controller";
-import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
-import SkeletonTracingArbitraryController from "oxalis/controller/combinations/skeletontracing_arbitrary_controller";
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
@@ -26,31 +23,42 @@ import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
-import OxalisApi from "oxalis/api/api_loader";
-import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
+import ApiLoader from "oxalis/api/api_loader";
+import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
+import { connect } from "react-redux";
 import messages from "messages";
 
 import type { ToastType } from "libs/toast";
 import type { ModeType, ControlModeType } from "oxalis/constants";
-import type { SkeletonTracingTypeTracingType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
 
-class Controller {
-  sceneController: SceneController;
-  annotationController: SkeletonTracingController | VolumeTracingController;
-  planeController: PlaneController;
-  arbitraryController: ArbitraryController;
+class Controller extends React.PureComponent {
+  props: {
+    initialTracingType: SkeletonTracingTypeTracingType,
+    initialTracingId: string,
+    initialControlmode: ControlModeType,
+    // Delivered by connect()
+    viewMode: ModeType,
+  };
+
   zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
-  view: View;
+  stats: Stats;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
+
+  state: {
+    ready: boolean,
+  } = {
+    ready: false,
+  };
 
   // Main controller, responsible for setting modes and everything
   // that has to be controlled in any mode.
@@ -65,16 +73,25 @@ class Controller {
   // controller - a controller for each row, each column and each
   // cross in this matrix.
 
-  constructor(tracingType: SkeletonTracingTypeTracingType, tracingId: string, controlMode: ControlModeType) {
+  componentDidMount() {
     app.router.showLoadingSpinner();
 
     _.extend(this, Backbone.Events);
 
     UrlManager.initialize();
 
-    Model.fetch(tracingType, tracingId, controlMode, true)
+    if (!this.isWebGlSupported()) {
+      Toast.error(messages["webgl.disabled"]);
+    }
+
+    Model.fetch(
+      this.props.initialTracingType,
+      this.props.initialTracingId,
+      this.props.initialControlmode,
+      true,
+    )
       .then(() => this.modelFetchDone())
-      .catch((error) => {
+      .catch(error => {
         // Don't throw errors for errors already handled by the model.
         if (error !== Model.HANDLED_ERROR) {
           throw error;
@@ -83,7 +100,6 @@ class Controller {
   }
 
   modelFetchDone() {
-    const state = Store.getState();
     app.router.on("beforeunload", () => {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
@@ -94,78 +110,34 @@ class Controller {
     });
 
     UrlManager.startUrlUpdater();
-
-    this.view = new View();
-    this.sceneController = new SceneController();
-    switch (state.tracing.type) {
-      case "volume": {
-        this.annotationController = new VolumeTracingController(
-          this.view, this.sceneController);
-        this.planeController = new VolumeTracingPlaneController(
-          this.view, this.sceneController, this.annotationController);
-        break;
-      }
-      case "skeleton": {
-        this.annotationController = new SkeletonTracingController(
-          this.view, this.sceneController);
-        this.planeController = new SkeletonTracingPlaneController(
-          this.view, this.sceneController, this.annotationController);
-        const ArbitraryControllerClass = state.tracing.restrictions.advancedOptionsAllowed ?
-          SkeletonTracingArbitraryController :
-          MinimalSkeletonTracingArbitraryController;
-        this.arbitraryController = new ArbitraryControllerClass(
-          this.view, this.sceneController, this.annotationController);
-        break;
-      }
-      default: {
-        this.planeController = new PlaneController(
-          this.view, this.sceneController);
-        break;
-      }
-    }
+    SceneController.initialize();
 
     // FPS stats
-    const stats = new Stats();
-    $("body").append(stats.domElement);
-    if (this.arbitraryController) { this.listenTo(this.arbitraryController.arbitraryView, "render", () => stats.update()); }
-    this.listenTo(this.planeController.planeView, "render", () => stats.update());
+    this.stats = new Stats();
+    $("body").append(this.stats.domElement);
 
     this.initKeyboard();
     this.initTaskScript();
     this.maybeShowNewTaskTypeModal();
 
     for (const binaryName of Object.keys(Model.binary)) {
-      this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
+      this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () =>
+        app.vent.trigger("rerender"),
+      );
     }
 
-    listenToStoreProperty(store => store.temporaryConfiguration.viewMode, mode => this.loadMode(mode), true);
+    listenToStoreProperty(
+      store => store.flycam.zoomStep,
+      () => this.maybeWarnAboutZoomStep(),
+      true,
+    );
 
-    // Zoom step warning
-    let lastZoomStep = Store.getState().flycam.zoomStep;
-    Store.subscribe(() => {
-      const { zoomStep } = Store.getState().flycam;
-      if (lastZoomStep !== zoomStep) {
-        this.onZoomStepChange();
-        lastZoomStep = zoomStep;
-      }
-    });
-    this.onZoomStepChange();
-
-    window.webknossos = new OxalisApi(Model);
+    window.webknossos = new ApiLoader(Model);
 
     app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
-  }
-
-  // For tracing swap testing, call
-  // app.oxalis.restart("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
-  // with a tracing id of your choice from the dev console
-  async restart(newTracingType: SkeletonTracingTypeTracingType, newTracingId: string, newControlMode: ControlModeType) {
-    Store.dispatch(restartSagaAction());
-    UrlManager.reset();
-    await Model.fetch(newTracingType, newTracingId, newControlMode, false);
-    Store.dispatch(wkReadyAction());
+    this.setState({ ready: true });
   }
 
   initTaskScript() {
@@ -176,7 +148,7 @@ class Controller {
       const script = task.script;
       const gistId = _.last(script.gist.split("/"));
 
-      Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then((gist) => {
+      Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then(gist => {
         const firstFile = gist.files[Object.keys(gist.files)[0]];
 
         if (firstFile && firstFile.content) {
@@ -185,7 +157,9 @@ class Controller {
             eval(firstFile.content);
           } catch (error) {
             console.error(error);
-            Toast.error(`Error executing the task script "${script.name}". See console for more information.`);
+            Toast.error(
+              `Error executing the task script "${script.name}". See console for more information.`,
+            );
           }
         } else {
           Toast.error(`${messages["task.user_script_retrieval_error"]} ${script.name}`);
@@ -200,7 +174,9 @@ class Controller {
     // they start working on a new TaskType and need to be instructed.
     let text;
     const task = Store.getState().task;
-    if (!Utils.getUrlParams("differentTaskType") || (task == null)) { return; }
+    if (!Utils.getUrlParams("differentTaskType") || task == null) {
+      return;
+    }
 
     const taskType = task.type;
     const title = `Attention, new Task Type: ${taskType.summary}`;
@@ -212,11 +188,22 @@ class Controller {
     Modal.show(text, title);
   }
 
+  isWebGlSupported() {
+    return (
+      window.WebGLRenderingContext &&
+      document.createElement("canvas").getContext("experimental-webgl")
+    );
+  }
 
   initKeyboard() {
     // avoid scrolling while pressing space
     $(document).keydown((event: JQueryInputEventObject) => {
-      if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) { event.preventDefault(); }
+      if (
+        (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
+        !$(":focus").length
+      ) {
+        event.preventDefault();
+      }
     });
 
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
@@ -236,57 +223,90 @@ class Controller {
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },
 
-        "super + s": (event) => {
+        "super + s": event => {
           event.preventDefault();
           event.stopPropagation();
           Model.save();
         },
 
-        "ctrl + s": (event) => {
+        "ctrl + s": event => {
           event.preventDefault();
           event.stopPropagation();
           Model.save();
         },
-
       });
     }
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
   }
 
-
-  loadMode(newMode: ModeType) {
-    const allowedModes = Store.getState().tracing.restrictions.allowedModes;
-    if (
-      (newMode === constants.MODE_ARBITRARY || newMode === constants.MODE_ARBITRARY_PLANE) &&
-      allowedModes.includes(newMode)
-    ) {
-      Utils.__guard__(this.planeController, x => x.stop());
-      this.arbitraryController.start(newMode);
-    } else if (
-      (newMode === constants.MODE_PLANE_TRACING || newMode === constants.MODE_VOLUME) &&
-      allowedModes.includes(newMode)
-    ) {
-      Utils.__guard__(this.arbitraryController, x1 => x1.stop());
-      this.planeController.start();
-    }
-
-    // Hide/show zoomstep warning if appropriate
-    this.onZoomStepChange();
-  }
-
-  onZoomStepChange() {
+  maybeWarnAboutZoomStep() {
     const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
-    if (shouldWarn && (this.zoomStepWarningToast == null)) {
+    if (shouldWarn && this.zoomStepWarningToast == null) {
       const toastType = Store.getState().tracing.type === "volume" ? "danger" : "info";
-      this.zoomStepWarningToast = Toast.message(toastType,
-        "Segmentation data and volume tracing is only fully supported at a smaller zoom level.", true);
-    } else if (!shouldWarn && (this.zoomStepWarningToast != null)) {
+      this.zoomStepWarningToast = Toast.message(
+        toastType,
+        "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
+        true,
+      );
+    } else if (!shouldWarn && this.zoomStepWarningToast != null) {
       this.zoomStepWarningToast.remove();
       this.zoomStepWarningToast = null;
     }
   }
+
+  updateStats = () => this.stats.update();
+
+  render() {
+    if (!this.state.ready) {
+      return null;
+    }
+    const state = Store.getState();
+    const allowedModes = Store.getState().tracing.restrictions.allowedModes;
+    const mode = this.props.viewMode;
+
+    if (!allowedModes.includes(mode)) {
+      // Since this mode is not allowed, render nothing. A warning about this will be
+      // triggered in the model. Don't throw an error since the store might change so that
+      // the render function can succeed.
+      return null;
+    }
+
+    const isArbitrary = constants.MODES_ARBITRARY.includes(mode);
+    const isPlane = constants.MODES_PLANE.includes(mode);
+
+    if (isArbitrary) {
+      if (state.tracing.restrictions.advancedOptionsAllowed) {
+        return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
+      } else {
+        return (
+          <MinimalSkeletonTracingArbitraryController onRender={this.updateStats} viewMode={mode} />
+        );
+      }
+    } else if (isPlane) {
+      switch (state.tracing.type) {
+        case "volume": {
+          return <VolumeTracingPlaneController onRender={this.updateStats} />;
+        }
+        case "skeleton": {
+          return <SkeletonTracingPlaneController onRender={this.updateStats} />;
+        }
+        default: {
+          return <PlaneController onRender={this.updateStats} />;
+        }
+      }
+    } else {
+      // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
+      // In case we add new viewmodes, the following error will be thrown.
+      throw new Error("The current mode is none of the four known mode types");
+    }
+  }
 }
 
+function mapStateToProps(state: OxalisState) {
+  return {
+    viewMode: state.temporaryConfiguration.viewMode,
+  };
+}
 
-export default Controller;
+export default connect(mapStateToProps)(Controller);

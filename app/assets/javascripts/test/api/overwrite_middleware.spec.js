@@ -2,12 +2,15 @@
 import test from "ava";
 
 import configureMockStore from "redux-mock-store";
-import overwriteActionMiddleware, { overwriteAction, removeOverwrite } from "oxalis/model/helpers/overwrite_action_middleware";
+import overwriteActionMiddleware, {
+  overwriteAction,
+  removeOverwrite,
+} from "oxalis/model/helpers/overwrite_action_middleware";
 
 const middlewares = [overwriteActionMiddleware];
 const mockStore = configureMockStore(middlewares);
 
-test("Tracing Api: registerOverwrite should overwrite an existing function", (t) => {
+test("Tracing Api: registerOverwrite should overwrite an existing function", t => {
   const beforeAction = { type: "before" };
   const overwrittenAction = { type: "overwritten" };
   const afterAction = { type: "after" };
@@ -18,18 +21,14 @@ test("Tracing Api: registerOverwrite should overwrite an existing function", (t)
     store.dispatch(afterAction);
   });
 
-  const expectedActions = [
-    beforeAction,
-    overwrittenAction,
-    afterAction,
-  ];
+  const expectedActions = [beforeAction, overwrittenAction, afterAction];
 
-  const store = mockStore({ });
+  const store = mockStore({});
   store.dispatch(overwrittenAction);
   t.deepEqual(store.getActions(), expectedActions);
 });
 
-test("Tracing Api: registerOverwrite should allow removing overwrites", (t) => {
+test("Tracing Api: registerOverwrite should allow removing overwrites", t => {
   const beforeAction = { type: "before" };
   const overwrittenAction = { type: "overwritten" };
   const afterAction = { type: "after" };
@@ -41,7 +40,7 @@ test("Tracing Api: registerOverwrite should allow removing overwrites", (t) => {
   });
   removeOverwrite("overwritten");
 
-  const store = mockStore({ });
+  const store = mockStore({});
   store.dispatch(overwrittenAction);
   t.deepEqual(store.getActions(), [overwrittenAction]);
 });

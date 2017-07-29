@@ -19,8 +19,7 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
       (__ \ 'team).read[String] and
-      (__ \ 'settings).read[AnnotationSettings] and
-      (__ \ 'expectedTime).read[TraceLimit]) (TaskType.fromForm _)
+      (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
 
   def empty(id: String) = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))

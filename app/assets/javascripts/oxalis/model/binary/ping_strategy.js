@@ -4,11 +4,11 @@
  */
 
 import _ from "lodash";
-import DataCube from "oxalis/model/binary/data_cube";
 import Dimensions from "oxalis/model/dimensions";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
 import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 
 const MAX_ZOOM_STEP_DIFF = 1;
@@ -57,9 +57,7 @@ export class AbstractPingStrategy {
   }
 }
 
-
 export class PingStrategy extends AbstractPingStrategy {
-
   velocityRangeStart = 0;
   velocityRangeEnd = Infinity;
   roundTripTimeRangeStart = 0;
@@ -68,13 +66,20 @@ export class PingStrategy extends AbstractPingStrategy {
   preloadingPriorityOffset = 0;
   w: number;
 
-  ping(position: Vector3, direction: Vector3, requestedZoomStep: number,
-    areas: OrthoViewMapType<Vector4>, activePlane: OrthoViewType): Array<PullQueueItemType> {
+  ping(
+    position: Vector3,
+    direction: Vector3,
+    requestedZoomStep: number,
+    areas: OrthoViewMapType<Vector4>,
+    activePlane: OrthoViewType,
+  ): Array<PullQueueItemType> {
     const zoomStep = Math.min(requestedZoomStep, this.cube.MAX_ZOOM_STEP);
     const zoomStepDiff = requestedZoomStep - zoomStep;
     const pullQueue = [];
 
-    if (zoomStepDiff > MAX_ZOOM_STEP_DIFF) { return pullQueue; }
+    if (zoomStepDiff > MAX_ZOOM_STEP_DIFF) {
+      return pullQueue;
+    }
 
     for (const plane of OrthoViewValuesWithoutTDView) {
       const indices = Dimensions.getIndices(plane);
@@ -93,16 +98,15 @@ export class PingStrategy extends AbstractPingStrategy {
       const height = (bucketArea[3] - bucketArea[1]) << zoomStepDiff;
 
       const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
-      const centerBucket3 = [
-        centerBucket[0],
-        centerBucket[1],
-        centerBucket[2],
-      ];
+      const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
       const buckets = this.getBucketArray(centerBucket3, width, height);
 
       for (const bucket of buckets) {
         if (bucket != null) {
-          const priority = Math.abs(bucket[0] - centerBucket3[0]) + Math.abs(bucket[1] - centerBucket3[1]) + Math.abs(bucket[2] - centerBucket3[2]);
+          const priority =
+            Math.abs(bucket[0] - centerBucket3[0]) +
+            Math.abs(bucket[1] - centerBucket3[1]) +
+            Math.abs(bucket[2] - centerBucket3[2]);
           pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority });
           if (plane === activePlane) {
             // preload only for active plane
@@ -113,7 +117,10 @@ export class PingStrategy extends AbstractPingStrategy {
                 bucket[this.w]--;
               }
               const preloadingPriority = (priority << (slide + 1)) + this.preloadingPriorityOffset;
-              pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority: preloadingPriority });
+              pullQueue.push({
+                bucket: [bucket[0], bucket[1], bucket[2], zoomStep],
+                priority: preloadingPriority,
+              });
             }
           }
         }

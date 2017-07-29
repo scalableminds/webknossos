@@ -28,7 +28,6 @@ class AbstractTabView extends Marionette.View {
     };
   }
 
-
   initialize(options) {
     this.listenTo(this, "render", this.afterRender);
 
@@ -46,33 +45,27 @@ class AbstractTabView extends Marionette.View {
       tab.iconString = tab.iconClass ? `<i class="${tab.iconClass}"></i>` : "";
 
       regions[tab.id] = `#${tab.id}`;
-    },
-    );
+    });
     this.addRegions(regions);
   }
-
 
   // abstract method
   getTabs() {
     return [];
   }
 
-
   afterRender() {
     this.$(this.ui.tabContentContainer.children()[this.activeTabIndex]).addClass("active");
     this.$(this.ui.tabNavbarContainer.children()[this.activeTabIndex]).addClass("active");
 
-    this.tabs.forEach(tab => this.showChildView(tab.id, tab.view),
-    );
+    this.tabs.forEach(tab => this.showChildView(tab.id, tab.view));
 
-    return this.$("a[data-toggle=\"tab\"]").on("shown.bs.tab", (e) => {
+    return this.$('a[data-toggle="tab"]').on("shown.bs.tab", e => {
       const tabId = $(e.target).data("tab-id");
       const tab = _.find(this.tabs, t => t.id === tabId);
       return tab.view.render();
-    },
-    );
+    });
   }
-
 
   serializeData() {
     return { tabs: this.tabs };

@@ -6,6 +6,7 @@ import Request from "libs/request";
 import SelectionView from "admin/views/selection_view";
 import TeamCollection from "admin/models/team/team_collection";
 import DatastoreCollection from "admin/models/datastore/datastore_collection";
+import messages from "messages";
 
 class DatasetUploadView extends Marionette.View {
   static initClass() {
@@ -87,7 +88,9 @@ class DatasetUploadView extends Marionette.View {
       collection: new TeamCollection(),
       name: "team",
       childViewOptions: {
-        modelValue() { return `${this.model.get("name")}`; },
+        modelValue() {
+          return `${this.model.get("name")}`;
+        },
       },
       data: "amIAnAdmin=true",
     });
@@ -95,20 +98,24 @@ class DatasetUploadView extends Marionette.View {
     this.datastoreSelectionView = new SelectionView({
       collection: new DatastoreCollection(),
       name: "datastore",
-      filter(item) { return item.get("url") !== null; },
+      filter(item) {
+        return item.get("url") !== null;
+      },
       childViewOptions: {
-        modelValue() { return `${this.model.get("url")}`; },
-        modelLabel() { return `${this.model.get("name")}`; },
+        modelValue() {
+          return `${this.model.get("url")}`;
+        },
+        modelLabel() {
+          return `${this.model.get("name")}`;
+        },
       },
     });
   }
-
 
   onRender() {
     this.showChildView("team", this.teamSelectionView);
     this.showChildView("datastore", this.datastoreSelectionView);
   }
-
 
   uploadDataset(evt) {
     evt.preventDefault();
@@ -119,27 +126,25 @@ class DatasetUploadView extends Marionette.View {
       this.ui.spinner.removeClass("hidden");
 
       Request.receiveJSON("/api/dataToken/generate")
-      .then(({ token }) =>
-        Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
-          data: new FormData(form),
-          host: form.datastore.value,
-        }),
-      )
-      .then(
-        ({ messages }) => {
-          Toast.message(messages);
-          app.router.navigate("/dashboard", { trigger: true });
-        },
-        () => {}, // NOOP
-      )
-      .then(
-        () =>  // always do
-           this.ui.spinner.addClass("hidden"),
-      );
+        .then(({ token }) =>
+          Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
+            data: new FormData(form),
+            host: form.datastore.value,
+          }),
+        )
+        .then(
+          () => {
+            Toast.success(messages["dataset.upload_success"]);
+            const url = `/datasets/${form.name.value}/import`;
+            app.router.navigate(url, { trigger: true });
+          },
+          () => {
+            this.ui.spinner.addClass("hidden");
+          },
+        );
     }
   }
 }
 DatasetUploadView.initClass();
-
 
 export default DatasetUploadView;

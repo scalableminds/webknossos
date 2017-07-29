@@ -30,7 +30,7 @@ object Global extends GlobalSettings with LazyLogging{
     startActors(conf.underlying, app)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insert()
+      InitialData.insert(conf)
     }
 
     CleanUpService.register("deletion of expired dataTokens", DataToken.expirationTime){
@@ -67,15 +67,15 @@ object Global extends GlobalSettings with LazyLogging{
  * Initial set of data to be imported
  * in the sample application.
  */
-object InitialData extends GlobalDBAccess with LazyLogging{
+object InitialData extends GlobalDBAccess with LazyLogging {
 
   val mpi = Team("Connectomics department", None, RoleService.roles)
 
-  def insert() = {
+  def insert(conf: Configuration) = {
     insertUsers()
     insertTeams()
     insertTasks()
-    insertLocalDataStore()
+    insertLocalDataStore(conf)
   }
 
   def insertUsers() = {
@@ -110,17 +110,17 @@ object InitialData extends GlobalDBAccess with LazyLogging{
           val taskType = TaskType(
             "ek_0563_BipolarCells",
             "Check those cells out!",
-            TraceLimit(5, 10, 15),
             mpi.name)
           TaskTypeDAO.insert(taskType)
         }
     }
   }
 
-  def insertLocalDataStore() = {
+  def insertLocalDataStore(conf: Configuration) = {
     DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
-        DataStoreDAO.insert(DataStore("localhost", "http://localhost:9000", WebKnossosStore, "something-secure"))
+        val url = conf.getString("http.uri").getOrElse("http://localhost:9000")
+        DataStoreDAO.insert(DataStore("localhost", url, WebKnossosStore, "something-secure"))
       }
     }
   }

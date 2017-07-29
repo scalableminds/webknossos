@@ -75,13 +75,14 @@ object DataTokenService extends FoxImplicits {
   }
 
   def validateDataSetToken(token: String, dataSetName: String): Future[Boolean] = {
-    DataSetDAO.findOneBySourceName(dataSetName)(GlobalAccessContext).map{ dataSource =>
-      dataSource.accessToken.contains(token)
+    DataSetDAO.findOneBySourceName(dataSetName)(GlobalAccessContext).map{ dataSet =>
+      dataSet.dataStoreInfo.accessToken.contains(token)
     } getOrElse false
   }
 }
 
 object DataTokenDAO extends SecuredBaseDAO[DataToken] {
+
   val collectionName = "dataTokens"
 
   val formatter = DataToken.dataTokenFormat

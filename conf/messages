@@ -91,8 +91,6 @@ dataSet.import.directoryEmpty=Import failed because the dataset directory is emp
 dataSet.import.noLayers=Import failed because no data layers could be found
 
 dataSource.notFound=Datasource not found on datastore server
-dataSource.import.alreadyFinished=Import of the dataset already finished
-dataSource.import.alreadyInProgress=Import of the dataset already in progress
 
 dataStore.notAvailable=Datastore not available. Please try again in a few minutes.
 dataStore.list.failed=Failed to retrieve list of data stores.

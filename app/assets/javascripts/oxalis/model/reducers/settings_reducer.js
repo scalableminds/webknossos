@@ -33,7 +33,9 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
 
     case "UPDATE_LAYER_SETTING": {
       const { layerName, propertyName, value } = action;
-      return update(state, { datasetConfiguration: { layers: { [layerName]: { [propertyName]: { $set: value } } } } });
+      return update(state, {
+        datasetConfiguration: { layers: { [layerName]: { [propertyName]: { $set: value } } } },
+      });
     }
 
     case "INITIALIZE_SETTINGS": {
@@ -46,14 +48,21 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
     case "SET_DATASET": {
       // set defaults for every data layer if not yet present
       if (_.isEmpty(state.datasetConfiguration.layers)) {
-        const colorLayers = _.filter(action.dataset.dataLayers, layer => layer.category === "color");
-        const layerSettingsDefaults = _.transform(colorLayers, (result, layer) => {
-          result[layer.name] = ({
-            brightness: 0,
-            contrast: 1,
-            color: [255, 255, 255],
-          });
-        }, {});
+        const colorLayers = _.filter(
+          action.dataset.dataLayers,
+          layer => layer.category === "color",
+        );
+        const layerSettingsDefaults = _.transform(
+          colorLayers,
+          (result, layer) => {
+            result[layer.name] = {
+              brightness: 0,
+              contrast: 1,
+              color: [255, 255, 255],
+            };
+          },
+          {},
+        );
 
         return update(state, {
           datasetConfiguration: { layers: { $set: layerSettingsDefaults } },
@@ -87,7 +96,7 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
       });
     }
     default:
-      // pass;
+    // pass;
   }
 
   return state;

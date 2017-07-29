@@ -45,6 +45,17 @@ class ProjectCreateView extends Marionette.View {
         </div>
 
         <div class="form-group">
+          <label class="col-sm-2 control-label" for="expectedTime">Time Limit</label>
+          <div class="col-sm-9">
+            <div class="input-group">
+            <input type="number" id="expectedTime" name="expectedTime"
+              value="90" min="1" input-append="minutes" class="form-control" required>
+              <span class="input-group-addon">minutes</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
           <label class="col-sm-2 control-label">Project Type</label>
           <div class="col-sm-9">
             <label class="radio-inline">
@@ -143,7 +154,6 @@ class ProjectCreateView extends Marionette.View {
 <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>\
 `;
 
-
     this.prototype.regions = {
       team: ".team",
       owner: ".owner",
@@ -158,10 +168,10 @@ class ProjectCreateView extends Marionette.View {
       name: ".project-name",
       form: "form",
       projectTypeInput: "[name='assignmentConfiguration[location]']",
-      mturkSettingsInputs: ".mturk-settings input, .mturk-settings textarea, .mturk-settings select",
+      mturkSettingsInputs:
+        ".mturk-settings input, .mturk-settings textarea, .mturk-settings select",
     };
   }
-
 
   initialize() {
     this.model.isReallyNew = true;
@@ -170,22 +180,30 @@ class ProjectCreateView extends Marionette.View {
       collection: new UserCollection(),
       childViewOptions: {
         defaultItem: { email: app.currentUser.email },
-        modelValue() { return this.model.id; },
-        modelLabel() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
+        modelValue() {
+          return this.model.id;
+        },
+        modelLabel() {
+          return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get(
+            "email",
+          )})`;
+        },
       },
+      filter: model => model.get("isActive"),
       name: "owner",
       data: "isAdmin=true",
     });
     this.teamSelectionView = new SelectionView({
       collection: new TeamCollection(),
       childViewOptions: {
-        modelValue() { return `${this.model.get("name")}`; },
+        modelValue() {
+          return `${this.model.get("name")}`;
+        },
       },
       data: "amIAnAdmin=true",
       name: "team",
     });
   }
-
 
   changeProjectType() {
     const projectType = this.ui.projectTypeInput.filter(":checked").val();
@@ -196,26 +214,26 @@ class ProjectCreateView extends Marionette.View {
     }
   }
 
-
   onRender() {
     this.showChildView("owner", this.userSelectionView);
     this.showChildView("team", this.teamSelectionView);
   }
-
 
   createProject(evt) {
     evt.preventDefault();
 
     if (this.ui.form[0].checkValidity()) {
       const formValues = FormSyphon.serialize(this.ui.form);
-      this.model.save(formValues).then(
-        () => app.router.navigate("/projects", { trigger: true }));
+
+      // convert expectedTime from minutes to milliseconds
+      formValues.expectedTime *= 60000;
+
+      this.model.save(formValues).then(() => app.router.navigate("/projects", { trigger: true }));
     } else {
       this.ui.name.focus();
     }
   }
 }
 ProjectCreateView.initClass();
-
 
 export default ProjectCreateView;

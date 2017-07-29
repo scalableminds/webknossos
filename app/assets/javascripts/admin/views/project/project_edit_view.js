@@ -23,21 +23,31 @@ class ProjectEditView extends Marionette.View {
           </div>
         </div>
         <div class="form-group">
-          <label class="col-sm-2 for="name">Project Name</label>
+          <label class="col-sm-2" for="name">Project Name</label>
           <div class="col-sm-10">
             <input type="text" class="form-control" name="name" value="<%- name %>" required autofocus disabled>
           </div>
         </div>
         <div class="form-group">
-          <label class="col-sm-2 for="owner">Owner</label>
+          <label class="col-sm-2" for="owner">Owner</label>
           <div class="col-sm-10 owner">
             <input type="text" class="form-control" name="owner" value="<%- owner.firstName %> <%- owner.lastName %>" required autofocus disabled>
           </div>
         </div>
         <div class="form-group">
-          <label class="col-sm-2 for="priority">Priority</label>
+          <label class="col-sm-2" for="priority">Priority</label>
           <div class="col-sm-10">
             <input type="number" class="form-control" name="priority" value="<%- priority %>" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="col-sm-2" for="expectedTime">Time Limit</label>
+          <div class="col-sm-10">
+            <div class="input-group">
+            <input type="number" id="expectedTime" name="expectedTime"
+              value="<%- parseInt(expectedTime / 60000) %>" min="1" input-append="minutes" class="form-control" required>
+              <span class="input-group-addon">minutes</span>
+            </div>
           </div>
         </div>
         <div class="form-group">
@@ -65,10 +75,8 @@ class ProjectEditView extends Marionette.View {
       "click .resume-button": "handleResumeClick",
     };
 
-    this.prototype.ui =
-      { form: "form" };
+    this.prototype.ui = { form: "form" };
   }
-
 
   initialize() {
     this.listenTo(this.model, "sync", this.render);
@@ -86,11 +94,16 @@ class ProjectEditView extends Marionette.View {
     const formValues = FormSyphon.serialize(this.ui.form);
     formValues.owner = this.model.get("owner").id;
 
-    this.model.save(formValues).then(
-      () => {},
-      Toast.success("Saved!"),
-      app.router.loadURL(`/projects#${this.model.get("name")}`),
-    );
+    // convert expectedTime from minutes to milliseconds
+    formValues.expectedTime *= 60000;
+
+    this.model
+      .save(formValues)
+      .then(
+        () => {},
+        Toast.success("Saved!"),
+        app.router.loadURL(`/projects#${this.model.get("name")}`),
+      );
   }
 
   async handlePauseClick(event) {
@@ -108,6 +121,5 @@ class ProjectEditView extends Marionette.View {
   }
 }
 ProjectEditView.initClass();
-
 
 export default ProjectEditView;

@@ -11,9 +11,9 @@ class ProjectModel extends Backbone.Model {
         lastName: "",
       },
       priority: 100,
+      expectedTime: 90,
     };
   }
-
 
   isNew() {
     // Workaround. Since we use 'name' as the id attribute, there is no way to
@@ -22,14 +22,14 @@ class ProjectModel extends Backbone.Model {
     return this.isReallyNew || false;
   }
 
-
   parse(response) {
     // set some sensible defaults
-    if (!response.owner) { response.owner = this.default.owner; }
+    if (!response.owner) {
+      response.owner = this.default.owner;
+    }
     return response;
   }
 }
 ProjectModel.initClass();
-
 
 export default ProjectModel;

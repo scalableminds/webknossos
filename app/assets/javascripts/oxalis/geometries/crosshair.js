@@ -8,7 +8,6 @@ import Store from "oxalis/store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 
 class Crosshair {
-
   mesh: THREE.Mesh;
   WIDTH: number;
   COLOR: string;
@@ -34,17 +33,17 @@ class Crosshair {
 
     this.mesh = this.createMesh(canvas);
 
-    this.mesh.setVisibility = function (v) {
+    this.mesh.setVisibility = function(v) {
       this.arbitraryVisible = v;
       this.updateVisibility();
     };
 
-    this.mesh.setVisibilityEnabled = function (v) {
+    this.mesh.setVisibilityEnabled = function(v) {
       this.visibilityEnabled = v;
       this.updateVisibility();
     };
 
-    this.mesh.updateVisibility = function () {
+    this.mesh.updateVisibility = function() {
       this.visible = this.arbitraryVisible && this.visibilityEnabled;
     };
 
@@ -63,7 +62,6 @@ class Crosshair {
     this.mesh.setVisibilityEnabled(v);
   }
 
-
   update() {
     const { context, WIDTH, COLOR, mesh } = this;
 
@@ -76,11 +74,11 @@ class Crosshair {
       context.lineWidth = 3;
       context.moveTo(WIDTH / 2, 3);
       context.beginPath();
-      context.arc(WIDTH / 2, WIDTH / 2, (WIDTH / 2) - 3, 0, 2 * Math.PI);
+      context.arc(WIDTH / 2, WIDTH / 2, WIDTH / 2 - 3, 0, 2 * Math.PI);
       context.stroke();
 
       context.beginPath();
-      context.moveTo(WIDTH / 2, (WIDTH / 2) - 1);
+      context.moveTo(WIDTH / 2, WIDTH / 2 - 1);
       context.arc(WIDTH / 2, WIDTH / 2, 4, 0, 2 * Math.PI, true);
       context.fill();
 
@@ -89,10 +87,24 @@ class Crosshair {
 
     const m = getZoomedMatrix(Store.getState().flycam);
 
-    mesh.matrix.set(m[0], m[4], m[8], m[12],
-                    m[1], m[5], m[9], m[13],
-                    m[2], m[6], m[10], m[14],
-                    m[3], m[7], m[11], m[15]);
+    mesh.matrix.set(
+      m[0],
+      m[4],
+      m[8],
+      m[12],
+      m[1],
+      m[5],
+      m[9],
+      m[13],
+      m[2],
+      m[6],
+      m[10],
+      m[14],
+      m[3],
+      m[7],
+      m[11],
+      m[15],
+    );
 
     mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
     mesh.matrix.multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.5));
@@ -102,7 +114,6 @@ class Crosshair {
 
     this.isDirty = false;
   }
-
 
   setScale(value: number) {
     // eslint-disable-next-line no-unused-vars
@@ -115,11 +126,9 @@ class Crosshair {
     this.isDirty = true;
   }
 
-
-  attachScene(scene: THREE.Scene) {
-    return scene.add(this.mesh);
+  addToScene(scene: THREE.Scene) {
+    scene.add(this.mesh);
   }
-
 
   createMesh(canvas: HTMLCanvasElement) {
     const { WIDTH } = this;
@@ -129,10 +138,7 @@ class Crosshair {
     const material = new THREE.MeshBasicMaterial({ map: texture });
     material.transparent = true;
 
-    const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(WIDTH, WIDTH),
-      material,
-    );
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(WIDTH, WIDTH), material);
 
     mesh.rotation.x = Math.PI;
 

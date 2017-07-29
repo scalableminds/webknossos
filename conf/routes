@@ -95,7 +95,6 @@ GET           /api/datasetToken/validate                                        
 ->            /data/                                                            com.scalableminds.datastore.Routes
 
 # Annotations
-
 POST          /annotations/createExplorational                                  controllers.AnnotationController.createExplorational
 POST          /admin/nml/upload                                                 controllers.AnnotationIOController.upload
 GET           /annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)
@@ -125,7 +124,7 @@ GET           /tasks/create                                                     
 GET           /api/queries                                                      controllers.QueryController.empty
 POST          /api/queries                                                      controllers.QueryController.query(type: String, limit: Int ?= 1000)
 GET           /api/descriptions/:element                                        controllers.QueryController.descriptions(element)
- # TODO: change frontend to use api/queries instead of api/find (they do about the same). Then remove this
+# TODO: change frontend to use api/queries instead of api/find (they do about the same). Then remove this
 GET           /api/find                                                         controllers.SearchController.find(q: String, type: String)
 
 GET           /api/tasks                                                        controllers.TaskController.list

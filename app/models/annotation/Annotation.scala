@@ -9,8 +9,6 @@ import models.basics._
 import models.task.{Task, TaskDAO}
 import models.user.{User, UserService}
 import org.joda.time.format.DateTimeFormat
-import oxalis.mvc.FilterableJson
-import oxalis.view.{ResourceAction, ResourceActionCollection}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import reactivemongo.api.indexes.{Index, IndexType}
@@ -95,7 +93,6 @@ case class Annotation(
         "task" -> taskJson,
         "stats" -> statistics,
         "restrictions" -> AnnotationRestrictions.writeAsJson(restrictions, user),
-        "actions" -> actions(user),
         "formattedHash" -> Formatter.formatHash(id),
         "content" -> contentReference,
         "dataSetName" -> dataSetName,

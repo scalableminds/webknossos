@@ -66,7 +66,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   }
 
   def empty(typ: String, id: String) = Authenticated { implicit request =>
-    Ok(empty)
+    Ok(views.html.main()(Html("")))
   }
 
   def loggedTime(typ: String, id: String) = Authenticated.async { implicit request =>
@@ -143,7 +143,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       contentType <- postParameter("contentType") ?~> Messages("annotation.contentType.notSupplied")
       annotation <- AnnotationService.createExplorationalFor(request.user, dataSet, contentType) ?~> Messages("annotation.create.failed")
     } yield {
-      Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
+      Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))
     }
   }
 
@@ -238,10 +238,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
         Json.obj(),
         Messages("annotation.setName"))
     }
-  }
-
-  def empty(implicit request: AuthenticatedRequest[_]) = {
-    views.html.main()(Html(""))
   }
 
   def annotationsForTask(taskId: String) = Authenticated.async { implicit request =>

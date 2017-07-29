@@ -51,7 +51,7 @@ class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller
         user <- UserService.prepareMTurkUser(workerId, task.team, task.neededExperience)(GlobalAccessContext) ?~> Messages("mturk.user.notFound")
         annotation <- annotationForAssignment(mturkAssignment, user, task) ?~> Messages("annotation.creationFailed")
       } yield {
-        Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
+        Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))
         .withSession(Secured.createSession(user))
       }
   }

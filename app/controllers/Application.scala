@@ -18,7 +18,7 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller wit
       JavaScriptReverseRouter("jsRoutes")(//fill in stuff which should be able to be called from js
         controllers.routes.javascript.TaskController.request,
         controllers.routes.javascript.AnnotationController.annotationsForTask,
-        controllers.routes.javascript.AnnotationController.trace,
+        controllers.routes.javascript.AnnotationController.empty,
         controllers.routes.javascript.AnnotationController.finish,
         controllers.routes.javascript.AnnotationController.finishAll,
         controllers.routes.javascript.AnnotationController.reopen,

@@ -26,33 +26,39 @@ class VolumeTracingController @Inject()(
 
   def create(dataSetName: String) = Action.async {
     implicit request => {
-      for {
-        dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound")
-      } yield {
-        val initialContent = request.body.asRaw.map(_.asFile)
-        val tracing = volumeTracingService.create(dataSource, initialContent)
-        Ok(Json.toJson(tracing))
+      AllowRemoteOrigin {
+        for {
+          dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound")
+        } yield {
+          val initialContent = request.body.asRaw.map(_.asFile)
+          val tracing = volumeTracingService.create(dataSource, initialContent)
+          Ok(Json.toJson(tracing))
+        }
       }
     }
   }
 
   def update(dataSetName: String, tracingId: String) = TokenSecuredAction(dataSetName, tracingId).async(validateJson[List[VolumeUpdateAction]]) {
     implicit request => {
-      for {
-        tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-        _ <- volumeTracingService.update(tracing, request.body)
-      } yield {
-        Ok
+      AllowRemoteOrigin {
+        for {
+          tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          _ <- volumeTracingService.update(tracing, request.body)
+        } yield {
+          Ok
+        }
       }
     }
   }
 
   def download(dataSetName: String, tracingId: String) = TokenSecuredAction(dataSetName, tracingId).async {
     implicit request => {
-      for {
-        tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-      } yield {
-        Ok.chunked(volumeTracingService.download(tracing))
+      AllowRemoteOrigin {
+        for {
+          tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+        } yield {
+          Ok.chunked(volumeTracingService.download(tracing))
+        }
       }
     }
   }

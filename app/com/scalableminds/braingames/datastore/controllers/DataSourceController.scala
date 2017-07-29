@@ -29,15 +29,19 @@ class DataSourceController @Inject()(
 
   def list() = Action {
     implicit request => {
-      val ds = dataSourceRepository.findAll
-      Ok(Json.toJson(ds))
+      AllowRemoteOrigin {
+        val ds = dataSourceRepository.findAll
+        Ok(Json.toJson(ds))
+      }
     }
   }
 
   def triggerInboxCheck() = Action {
     implicit request =>
-      dataSourceService.checkInbox()
-      Ok
+      AllowRemoteOrigin {
+        dataSourceService.checkInbox()
+        Ok
+      }
   }
 
   def upload(token: String) = Action.async(parse.multipartFormData) {
@@ -49,42 +53,48 @@ class DataSourceController @Inject()(
         "team" -> nonEmptyText
       )).fill(("", ""))
 
-    uploadForm.bindFromRequest(request.body.dataParts).fold(
-      hasErrors =
-        formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-      success = {
-        case (name, team) =>
-          val id = DataSourceId(name, team)
-          for {
-            _ <- webKnossosServer.validateDataSourceUpload(token, id) ?~> Messages("dataSet.name.alreadyTaken")
-            zipFile <- request.body.file("zipFile") ?~> Messages("zip.file.notFound")
-            _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
-          } yield {
-            Ok
-          }
-      })
+    AllowRemoteOrigin {
+      uploadForm.bindFromRequest(request.body.dataParts).fold(
+        hasErrors =
+          formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+        success = {
+          case (name, team) =>
+            val id = DataSourceId(name, team)
+            for {
+              _ <- webKnossosServer.validateDataSourceUpload(token, id) ?~> Messages("dataSet.name.alreadyTaken")
+              zipFile <- request.body.file("zipFile") ?~> Messages("zip.file.notFound")
+              _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
+            } yield {
+              Ok
+            }
+        })
+    }
   }
 
   def explore(dataSetName: String) = Action {
     implicit request =>
-      for {
-        dataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages("dataSource.notFound") ~> 404
-        (dataSource, messages) <- dataSourceService.exploreDataSource(dataSource.id, dataSource.toUsable)
-      } yield {
-        Ok(Json.obj(
-          "dataSource" -> dataSource,
-          "messages" -> messages.map(m => Json.obj(m._1 -> m._2))
-        ))
+      AllowRemoteOrigin {
+        for {
+          dataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages("dataSource.notFound") ~> 404
+          (dataSource, messages) <- dataSourceService.exploreDataSource(dataSource.id, dataSource.toUsable)
+        } yield {
+          Ok(Json.obj(
+            "dataSource" -> dataSource,
+            "messages" -> messages.map(m => Json.obj(m._1 -> m._2))
+          ))
+        }
       }
   }
 
   def update(dataSetName: String) = Action(validateJson[DataSource]) {
     implicit request =>
-      for {
-        dataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages("dataSource.notFound") ~> 404
-        _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
-      } yield {
-        Ok
+      AllowRemoteOrigin {
+        for {
+          dataSource <- dataSourceRepository.findByName (dataSetName) ?~ Messages ("dataSource.notFound") ~> 404
+          _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
+        } yield {
+          Ok
+        }
       }
   }
 }

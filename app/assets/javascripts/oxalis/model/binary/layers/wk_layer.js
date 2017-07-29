@@ -3,12 +3,13 @@
  * @flow
  */
 
+import Base64 from "base64-js";
+
 import Layer, { REQUEST_TIMEOUT } from "oxalis/model/binary/layers/layer";
 import type { BucketRequestOptions } from "oxalis/model/binary/layers/layer";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
 import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
 import Request from "libs/request";
-import MultipartData from "libs/multipart_data";
 import type { Vector4 } from "oxalis/constants";
 import type { DataLayerType, DataStoreInfoType } from "oxalis/store";
 
@@ -42,26 +43,14 @@ class WkLayer extends Layer {
 
   async requestFromStoreImpl(batch: Array<BucketInfo>, token: string): Promise<Uint8Array> {
     const wasFourBit = this.fourBit;
-    const requestData = new MultipartData();
-
-    for (const bucket of batch) {
-      requestData.addPart({
-        "X-Bucket": JSON.stringify(bucket),
-      });
-    }
 
     const datasetName = this.getDatasetName();
-    const data = await requestData.dataPromise();
-    const responseBuffer = await Request.sendArraybufferReceiveArraybuffer(
+    const responseBuffer = await Request.sendJSONReceiveArraybuffer(
       `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this
         .name}/data?token=${token}`,
       {
-        data,
-        headers: {
-          "Content-Type": `multipart/mixed; boundary=${requestData.boundary}`,
-        },
+        data: batch,
         timeout: REQUEST_TIMEOUT,
-        compress: true,
         doNotCatch: true,
       },
     );
@@ -94,26 +83,21 @@ class WkLayer extends Layer {
     getBucketData: Vector4 => Uint8Array,
     token: string,
   ): Promise<void> {
-    const transmitData = new MultipartData();
-
-    for (const bucket of batch) {
-      transmitData.addPart(
-        { "X-Bucket": JSON.stringify(bucket) },
-        getBucketData(BucketBuilder.bucketToZoomedAddress(bucket)),
-      );
-    }
+    const data = batch.map(bucket => {
+      const bucketData = getBucketData(BucketBuilder.bucketToZoomedAddress(bucket));
+      const bucketWithData = Object.assign({}, bucket, {
+        base64Data: Base64.fromByteArray(bucketData),
+      });
+      return { action: "labelVolume", value: bucketWithData };
+    });
 
     const datasetName = this.getDatasetName();
-    const data = await transmitData.dataPromise();
-    await Request.sendArraybufferReceiveArraybuffer(
-      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this
-        .name}/data?token=${token}`,
+    await Request.sendJSONReceiveJSON(
+      `${this.dataStoreInfo.url}/data/tracings/volumes/${this
+        .name}?dataSetName=${datasetName}&token=${token}`,
       {
-        method: "PUT",
+        method: "POST",
         data,
-        headers: {
-          "Content-Type": `multipart/mixed; boundary=${transmitData.boundary}`,
-        },
         timeout: REQUEST_TIMEOUT,
         compress: true,
         doNotCatch: true,

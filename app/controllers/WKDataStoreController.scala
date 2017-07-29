@@ -5,30 +5,29 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-
-import com.scalableminds.braingames.binary.models._
+import com.scalableminds.braingames.binary.models.datasource.DataSourceId
+import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.braingames.datastore.services.DataStoreStatus
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
+import models.tracing.volume.VolumeTracingDAO
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc._
+
+import scala.concurrent.Future
 
 class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   extends Controller
     with WKDataStoreActionHelper
     with LazyLogging {
 
-  case class DSUploadInfo(name: String, team: String)
-
-  implicit val dsUploadInfoFormat = Json.format[DSUploadInfo]
-
   def validateDataSetUpload(name: String, token: String) = DataStoreAction(name).async(parse.json){ implicit request =>
     for {
-      uploadInfo <- request.body.validate[DSUploadInfo].asOpt.toFox ?~> Messages("dataStore.upload.invalid")
+      uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> Messages("dataStore.upload.invalid")
       user <- DataTokenService.userFromToken(token) ?~> Messages("dataToken.user.invalid")
       _ <- DataSetService.isProperDataSetName(uploadInfo.name) ?~> Messages("dataSet.name.invalid")
       _ <- DataSetService.checkIfNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
@@ -48,36 +47,27 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def updateAll(name: String) = DataStoreAction(name)(parse.json) {
-    implicit request =>
-      request.body.validate[List[DataSourceLike]] match {
-        case JsSuccess(dataSources, _) =>
-          DataSetService.updateDataSources(request.dataStore, dataSources)(GlobalAccessContext)
-          JsonOk
-        case e: JsError                =>
-          logger.warn("Data store reported invalid json for data sources.")
-          JsonBadRequest(JsError.toFlatJson(e))
-      }
+  def updateAll(name: String) = DataStoreAction(name)(parse.json) { implicit request =>
+    request.body.validate[List[InboxDataSource]] match {
+      case JsSuccess(dataSources, _) =>
+        // TODO jfrohnhofen what should happen to DataSources, that are no longer reported by the DataStore?
+        // Should they be assumed to be no longer available and be deleted / deactivated?
+        DataSetService.updateDataSources(request.dataStore, dataSources)(GlobalAccessContext)
+        JsonOk
+      case e: JsError                =>
+        logger.warn("Data store reported invalid json for data sources.")
+        JsonBadRequest(JsError.toFlatJson(e))
+    }
   }
 
-  def updateOne(name: String, dataSourceId: String) = DataStoreAction(name)(parse.json) { implicit request =>
-    request.body.validate[DataSourceLike] match {
+  def updateOne(name: String) = DataStoreAction(name)(parse.json) { implicit request =>
+    request.body.validate[InboxDataSource] match {
       case JsSuccess(dataSource, _) =>
         DataSetService.updateDataSources(request.dataStore, List(dataSource))(GlobalAccessContext)
         JsonOk
       case e: JsError               =>
         logger.warn("Data store reported invalid json for data source.")
         JsonBadRequest(JsError.toFlatJson(e))
-    }
-  }
-
-  def layerRead(name: String, dsName: String, layerName: String) = DataStoreAction(name).async { implicit request =>
-    for {
-      ds <- DataSetDAO.findOneBySourceName(dsName)(GlobalAccessContext) ?~> Messages("dataSet.notFound", dsName)
-      _ <- (ds.dataStoreInfo.name == request.dataStore.name) ?~> Messages("dataStore.notAllowed")
-      layer <- DataSetService.getDataLayer(ds, layerName)(GlobalAccessContext) ?~> Messages("dataLayer.notFound", layerName)
-    } yield {
-      Ok(Json.toJson(layer))
     }
   }
 }

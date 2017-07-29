@@ -38,7 +38,7 @@ class Layer {
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
   mappings: Array<MappingType>;
-  maxCoordinates: BoundingBoxObjectType;
+  boundingBox: BoundingBoxObjectType;
   resolutions: Array<number>;
 
   constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
@@ -48,7 +48,7 @@ class Layer {
     this.category = layerInfo.category;
     this.elementClass = layerInfo.elementClass;
     this.mappings = layerInfo.mappings;
-    this.maxCoordinates = layerInfo.maxCoordinates;
+    this.boundingBox = layerInfo.boundingBox;
     this.resolutions = layerInfo.resolutions;
 
     this.bitDepth = parseInt(this.elementClass.substring(4));

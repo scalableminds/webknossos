@@ -5,11 +5,8 @@
 
 import _ from "lodash";
 import app from "app";
-import Utils from "libs/utils";
 import Marionette from "backbone.marionette";
-import Toast from "libs/toast";
 import TemplateHelpers from "libs/template_helpers";
-import Request from "libs/request";
 import DatasetAccesslistCollection from "admin/models/dataset/dataset_accesslist_collection";
 import DatasetAccessView from "dashboard/views/dataset/dataset_access_view";
 
@@ -57,16 +54,14 @@ class DatasetListItemView extends Marionette.CompositeView {
       <input type="hidden" name="dataSetName" value="<%- name %>" />
       <input type="hidden" name="contentType" id="contentTypeInput" />
     </form>
-    <% if(dataSource.needsImport){ %>
+    <% if(dataSource.dataLayers == null){ %>
       <div>
-        <a href="/api/datasets/<%- name %>/import" class=" import-dataset">
+        <a href="/datasets/<%- name %>/import" class=" import-dataset">
           <i class="fa fa-plus-circle"></i>import
         </a>
-        <div class="progress progress-striped hide">
-          <div class="progress-bar" style="width: 0%;"></div>
-        </div>
+
         <div class="import-error">
-          <span class="text-danger"></span>
+          <span class="text-danger"><%- dataSource.status %></span>
         </div>
       </div>
     <% } %>
@@ -83,7 +78,7 @@ class DatasetListItemView extends Marionette.CompositeView {
         <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
           <img src="/assets/images/skeleton.svg"> start Skeleton Tracing
         </a>
-        <% if(dataStore.typ != "ndstore" && sourceType != "webKnossosWrap"){ %>
+        <% if(dataStore.typ != "ndstore"){ %>
           <a href="#" title="Create volume tracing" id="volumeTraceLink">
             <img src="/assets/images/volume.svg"> start Volume Tracing
           </a>
@@ -121,11 +116,6 @@ class DatasetListItemView extends Marionette.CompositeView {
 
     this.prototype.ui = {
       row: ".dataset-row",
-      importError: ".import-error",
-      errorText: ".import-error .text-danger",
-      importLink: ".import-dataset",
-      progressbarContainer: ".progress",
-      progressBar: ".progress-bar",
       detailsToggle: ".details-toggle",
       detailsRow: ".details-row",
       form: "form",
@@ -141,81 +131,7 @@ class DatasetListItemView extends Marionette.CompositeView {
     this.listenTo(this.model, "change", this.render);
     this.listenTo(app.vent, "datasetListView:toggleDetails", this.toggleDetails);
 
-    this.importUrl = `/api/datasets/${this.model.get("name")}/import`;
     this.collection = new DatasetAccesslistCollection(this.model.get("name"));
-
-    // In case the user reloads during an import, continue the progress bar
-    this.listenToOnce(this, "render", function() {
-      if (this.model.get("dataSource").needsImport) {
-        this.startImport(null, "GET");
-      }
-    });
-  }
-
-  startImport(evt, method = "POST") {
-    if (evt) {
-      evt.preventDefault();
-    }
-
-    return Request.receiveJSON(this.importUrl, {
-      method,
-      doNotCatch: true,
-    })
-      .then(responseJSON => {
-        if (responseJSON.status === "inProgress") {
-          this.ui.row.removeClass("import-failed");
-          this.ui.importLink.hide();
-          this.ui.progressbarContainer.removeClass("hide");
-          this.ui.importError.addClass("hide");
-          this.updateProgress();
-        }
-        if (responseJSON.status === "failed") {
-          this.importFailed(responseJSON);
-        }
-      })
-      .catch(response => response.json().then(json => this.importFailed(json)));
-  }
-
-  importFailed(response) {
-    if (this.isRendered() && !this.isDestroyed()) {
-      this.ui.importLink.show();
-      this.ui.progressbarContainer.addClass("hide");
-      this.ui.row.addClass("import-failed");
-      this.ui.importError.removeClass("hide");
-
-      // apply single error
-      if (Utils.__guard__(Utils.__guard__(response.messages, x1 => x1[0]), x => x.error)) {
-        this.ui.errorText.text(response.messages[0].error);
-      }
-    }
-  }
-
-  updateProgress() {
-    return Request.receiveJSON(this.importUrl).then(responseJSON => {
-      const value = responseJSON.progress * 100;
-      if (value) {
-        this.ui.progressBar.width(`${value}%`);
-      }
-
-      switch (responseJSON.status) {
-        case "finished":
-          this.model.fetch().then(this.render.bind(this));
-          Toast.message(responseJSON.messages);
-          break;
-        case "notStarted":
-        case "inProgress":
-          window.setTimeout(() => this.updateProgress(), 1000);
-          break;
-        case "failed":
-          this.importFailed(responseJSON);
-          break;
-        default:
-          console.error(
-            "Response JSON status of progress request not recognized:",
-            responseJSON.status,
-          );
-      }
-    });
   }
 
   toggleDetails() {

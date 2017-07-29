@@ -6,6 +6,7 @@ import Request from "libs/request";
 import SelectionView from "admin/views/selection_view";
 import TeamCollection from "admin/models/team/team_collection";
 import DatastoreCollection from "admin/models/datastore/datastore_collection";
+import messages from "messages";
 
 class DatasetUploadView extends Marionette.View {
   static initClass() {
@@ -24,13 +25,6 @@ class DatasetUploadView extends Marionette.View {
       <div class="form-group">
         <label class="col-sm-3 control-label" for="team">Team</label>
         <div class="col-sm-9 team">
-          <span class="help-block errors"></span>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="col-sm-3 control-label" for="scale_scale">Scale</label>
-        <div class="col-sm-9">
-          <input type="text" required name="scale.scale" value="12.0, 12.0, 24.0" class="form-control" pattern="\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?),\\s*([0-9]+(?:\\.[0-9]+)?)\\s*" title="Specify dataset scale like &quot;XX, YY, ZZ&quot;">
           <span class="help-block errors"></span>
         </div>
       </div>
@@ -139,15 +133,14 @@ class DatasetUploadView extends Marionette.View {
           }),
         )
         .then(
-          ({ messages }) => {
-            Toast.message(messages);
-            app.router.navigate("/dashboard", { trigger: true });
+          () => {
+            Toast.success(messages["dataset.upload_success"]);
+            const url = `/datasets/${form.name.value}/import`;
+            app.router.navigate(url, { trigger: true });
           },
-          () => {}, // NOOP
-        )
-        .then(() =>
-          // always do
-          this.ui.spinner.addClass("hidden"),
+          () => {
+            this.ui.spinner.addClass("hidden");
+          },
         );
     }
   }

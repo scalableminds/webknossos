@@ -40,11 +40,9 @@ class NdStoreLayer extends Layer {
     const bucketSize = bucket.cubeSize;
 
     // ndstore cannot deliver data for coordinates that are out of bounds
-    const bounds = this.clampBucketToMaxCoordinates(bucket);
-    const url = `${this.dataStoreInfo.url}/ca/${token}/raw/raw/${bucket.zoomStep}/
-      ${bounds[0]},${bounds[3]}/
-      ${bounds[1]},${bounds[4]}/
-      ${bounds[2]},${bounds[5]}/`;
+    const bounds = this.clampBucketToBoundingBox(bucket);
+    const url = `${this.dataStoreInfo
+      .url}/ca/${token}/raw/raw/${bucket.zoomStep}/${bounds[0]},${bounds[3]}/${bounds[1]},${bounds[4]}/${bounds[2]},${bounds[5]}/`;
 
     // if at least one dimension is completely out of bounds, return an empty array
     if (bounds[0] >= bounds[3] || bounds[1] >= bounds[4] || bounds[2] >= bounds[5]) {
@@ -57,7 +55,7 @@ class NdStoreLayer extends Layer {
 
     // create a typed uint8 array that is initialized with zeros
     const buffer = new Uint8Array(bucketSize * bucketSize * bucketSize);
-    const bucketBounds = this.getMaxCoordinatesAsBucket(bounds, bucket);
+    const bucketBounds = this.getBoundingBoxAsBucket(bounds, bucket);
 
     // copy the ndstore response into the new array, respecting the bounds of the dataset
     let index = 0;
@@ -71,7 +69,7 @@ class NdStoreLayer extends Layer {
     return buffer;
   }
 
-  clampBucketToMaxCoordinates({
+  clampBucketToBoundingBox({
     position,
     zoomStep,
   }: {
@@ -94,7 +92,7 @@ class NdStoreLayer extends Layer {
     ];
   }
 
-  getMaxCoordinatesAsBucket(bounds: Vector6, bucket: BucketInfo) {
+  getBoundingBoxAsBucket(bounds: Vector6, bucket: BucketInfo) {
     // transform bounds in zoom-step-0 voxels to bucket coordinates between 0 and BUCKET_SIZE_P
     const bucketBounds = bounds.map(coordinate => {
       const cubeSize = 1 << (BUCKET_SIZE_P + bucket.zoomStep);

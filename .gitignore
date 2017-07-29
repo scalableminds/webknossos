@@ -1,3 +1,4 @@
+seleniumLogs/
 npm-debug.log
 yarn-error.log
 velocity.log
@@ -15,6 +16,8 @@ target/
 binarydata/
 userBinaryData/
 binaryData
+tracingData/
+backup/
 data/
 boot/
 .idea/

@@ -46,7 +46,7 @@ class VolumeTracingService @Inject()(
           WKWFile.read(is) {
             case (header, buckets) =>
               if (header.numBlocksPerCube == 1) {
-                parseWKWFilePath(fileName.toString, header.numBlocksPerCubeDimension).map { bucket =>
+                parseWKWFilePath(fileName.toString).map { bucket =>
                   saveBucket(tracingLayer, bucket, buckets.next())
                 }
               }

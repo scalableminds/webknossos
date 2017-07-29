@@ -11,11 +11,10 @@ import Store from "oxalis/store";
 import { PlaneControllerClass, mapStateToProps } from "oxalis/controller/viewmodes/plane_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import { OrthoViews } from "oxalis/constants";
-import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction, toggleAllTreesAction, toggleInactiveTreesAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotationOrtho, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 import api from "oxalis/api/internal_api";
@@ -82,8 +81,8 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
   getKeyboardControls(): Object {
     return _.extend(super.getKeyboardControls(), {
 
-      "1": () => Store.dispatch(toggleTemporarySettingAction("shouldHideAllSkeletons")),
-      "2": () => Store.dispatch(toggleTemporarySettingAction("shouldHideInactiveTrees")),
+      "1": () => Store.dispatch(toggleAllTreesAction()),
+      "2": () => Store.dispatch(toggleInactiveTreesAction()),
 
       // Delete active node
       delete: () => Store.dispatch(deleteNodeAction()),

@@ -68,6 +68,7 @@ type TreeTypeBase = {
   +comments: Array<CommentType>,
   +branchPoints: Array<BranchPointType>,
   +edges: Array<EdgeType>,
+  +isVisible: boolean,
 }
 
 export type TreeType = TreeTypeBase & {
@@ -241,8 +242,6 @@ export type UserConfigurationType = {
 
 export type TemporaryConfigurationType = {
   +userBoundingBox: Vector6,
-  +shouldHideInactiveTrees: boolean,
-  +shouldHideAllSkeletons: boolean,
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
   +controlMode: ControlModeType
@@ -365,8 +364,6 @@ export const defaultState: OxalisState = {
   },
   temporaryConfiguration: {
     userBoundingBox: [0, 0, 0, 0, 0, 0],
-    shouldHideInactiveTrees: false,
-    shouldHideAllSkeletons: false,
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,

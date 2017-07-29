@@ -69,14 +69,6 @@ class NodeShader {
         type: "t",
         value: treeColorTexture,
       },
-      shouldHideInactiveTrees: {
-        type: "i",
-        value: state.temporaryConfiguration.shouldHideInactiveTrees,
-      },
-      shouldHideAllSkeletons: {
-        type: "i",
-        value: state.temporaryConfiguration.shouldHideAllSkeletons,
-      },
       is3DView: {
         type: "i",
         value: 0,
@@ -109,8 +101,6 @@ uniform float activeTreeId;
 uniform float activeNodeScaleFactor; // used for the "new node" animation
 uniform float overrideParticleSize; // node radius for equally size nodes
 uniform int overrideNodeRadius; // bool activates equaly node radius for all nodes
-uniform int shouldHideInactiveTrees; // bool show only the active tree hide everything else, triggered by shortcut "2"
-uniform int shouldHideAllSkeletons;  // bool hide all skeletons in the orthogonal planes (not 3DView), triggered by shortcut "1"
 uniform int is3DView; // bool indicates whether we are currently rendering the 3D viewport
 uniform int isPicking; // bool indicates whether we are currently rendering for node picking
 
@@ -146,23 +136,14 @@ vec3 shiftColor(vec3 color, float shiftValue) {
     return hsv2rgb(hsvColor);
 }
 
-bool isVisible() {
-  bool b_shouldHideInactiveTrees = shouldHideInactiveTrees == 1;
-  bool b_shouldHideAllSkeletons = shouldHideAllSkeletons == 1;
-  bool b_is3DView = is3DView == 1;
-
-  return (b_is3DView || !b_shouldHideAllSkeletons) && (!b_shouldHideInactiveTrees || activeTreeId == treeId);
-}
-
 void main() {
-    // VISIBILITY CAN BE TOGGLED THROUGH KEYBOARD SHORTCUTS
-    if (!isVisible()) {
-      gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
-      return;
-    }
+    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / ${COLOR_TEXTURE_WIDTH.toFixed(1)}), treeId / (${COLOR_TEXTURE_WIDTH.toFixed(1)} * ${COLOR_TEXTURE_WIDTH.toFixed(1)}));
+    color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
+    bool isVisible = texture2D(treeColors, treeIdToTextureCoordinate).a == 1.0 || is3DView == 1;
 
-    // DELETED NODE
-    if (type == ${NodeTypes.INVALID.toFixed(1)}) {
+    // VISIBILITY CAN BE TOGGLED THROUGH KEYBOARD SHORTCUTS
+    // DELETED OR INVISIBLE NODE
+    if (type == ${NodeTypes.INVALID.toFixed(1)} || !isVisible) {
       gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);
       return;
     }
@@ -190,9 +171,6 @@ void main() {
       gl_PointSize *= 1.5;
       return;
     }
-
-    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / ${COLOR_TEXTURE_WIDTH.toFixed(1)}), treeId / (${COLOR_TEXTURE_WIDTH.toFixed(1)} * ${COLOR_TEXTURE_WIDTH.toFixed(1)}));
-    color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
 
     // NODE COLOR FOR ACTIVE NODE
     if (activeNodeId == nodeId) {

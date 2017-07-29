@@ -16,7 +16,7 @@ import type { ModeType, Vector3, Point2 } from "oxalis/constants";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
 import { updateUserSettingAction, setFlightmodeRecordingAction, setViewModeAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, toggleAllTreesAction, toggleInactiveTreesAction } from "oxalis/model/actions/skeletontracing_actions";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
@@ -165,6 +165,8 @@ class ArbitraryController extends React.PureComponent {
     });
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
+      "1": () => { Store.dispatch(toggleAllTreesAction()); },
+      "2": () => { Store.dispatch(toggleInactiveTreesAction()); },
 
       // Branches
       b: () => this.pushBranch(),

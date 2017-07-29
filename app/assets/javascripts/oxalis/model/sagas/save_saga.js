@@ -47,7 +47,7 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
 
 export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
   const batch = yield select(state => state.save.queue);
-  const compactBatch = compactUpdateActions(batch);
+  const compactBatch = compactUpdateActions(batch).filter(shouldUpdateActionBeSentToServer);
   const { version, tracingType, tracingId } = yield select(state => state.tracing);
   try {
     yield call(Request.sendJSONReceiveJSON,
@@ -201,6 +201,10 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
   }
 
   return flatResult;
+}
+
+function shouldUpdateActionBeSentToServer(updateAction : UpdateAction): boolean {
+  return updateAction.action !== "toggleTree";
 }
 
 export function performDiffTracing(

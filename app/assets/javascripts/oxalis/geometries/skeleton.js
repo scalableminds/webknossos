@@ -120,10 +120,10 @@ class Skeleton {
     const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
 
     this.treeColorTexture = new THREE.DataTexture(
-      new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 3),
+      new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4),
       COLOR_TEXTURE_WIDTH,
       COLOR_TEXTURE_WIDTH,
-      THREE.RGBFormat,
+      THREE.RGBAFormat,
       THREE.FloatType,
     );
 
@@ -288,6 +288,12 @@ class Skeleton {
         case "createTree":
           this.updateTreeColor(update.value.id, update.value.color);
           break;
+        case "toggleTree": {
+          const treeId = update.value.id;
+          const tree = skeletonTracing.trees[treeId];
+          this.updateTreeColor(treeId, tree.color, tree.isVisible);
+          break;
+        }
         case "updateTree": {
           // diff branchpoints
           const treeId = update.value.id;
@@ -305,8 +311,8 @@ class Skeleton {
             this.updateNodeType(treeId, nodeId, NodeTypes.BRANCH_POINT);
           }
 
-          if (tree.color !== prevTree.color) {
-            this.updateTreeColor(treeId, update.value.color);
+          if (tree.color !== prevTree.color || tree.isVisible !== prevTree.isVisible) {
+            this.updateTreeColor(treeId, update.value.color, tree.isVisible);
           }
           break;
         }
@@ -346,13 +352,14 @@ class Skeleton {
     nodeUniforms.viewportScale.value = scale;
     nodeUniforms.activeTreeId.value = activeTreeId;
     nodeUniforms.activeNodeId.value = activeNodeId;
-    nodeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
-    nodeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
 
     const edgeUniforms = this.edges.material.uniforms;
     edgeUniforms.activeTreeId.value = activeTreeId;
-    edgeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
-    edgeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
+
+    // will be updated by updateForCam but needs to default to false for non-plane-modes
+    nodeUniforms.is3DView.value = false;
+    edgeUniforms.is3DView.value = false;
+
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
     this.prevTracing = skeletonTracing;
   }
@@ -492,8 +499,8 @@ class Skeleton {
    * Updates a node/edges's color based on the tree color. Colors are stored in
    * a texture shared between the node and edge shader.
    */
-  updateTreeColor(treeId: number, color: Vector3) {
-    this.treeColorTexture.image.data.set(color, treeId * 3);
+  updateTreeColor(treeId: number, color: Vector3, isVisible: boolean = true) {
+    this.treeColorTexture.image.data.set(color.concat(isVisible ? 1 : 0), treeId * 4);
     this.treeColorTexture.needsUpdate = true;
   }
 

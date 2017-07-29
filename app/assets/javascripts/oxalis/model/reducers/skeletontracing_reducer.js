@@ -7,7 +7,7 @@ import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
 import ColorGenerator from "libs/color_generator";
-import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, mergeTrees } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { createBranchPoint, deleteBranchPoint, createNode, createTree, deleteTree, deleteNode, shuffleTreeColor, createComment, deleteComment, mergeTrees, toggleAllTreesReducer } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import { getSkeletonTracing, findTreeByNodeId, getTree, getNodeAndTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
@@ -26,6 +26,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         treeId: { $set: tree.id },
         nodes: { $set: _.keyBy(tree.nodes, "id") },
         color: { $set: tree.color || ColorGenerator.distinctColorForId(tree.id) },
+        isVisible: {$set: true},
       })), "id");
 
       const activeNodeIdMaybe = Maybe.fromNullable(contentData.activeNode);
@@ -182,6 +183,37 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               cachedMaxNodeId: { $set: newMaxNodeId },
             } }))
           .getOrElse(state);
+      }
+
+      case "TOGGLE_TREE": {
+        const { treeId } = action;
+        return getTree(skeletonTracing, treeId)
+          .map(tree =>
+            update(state, { tracing: {
+              trees: {
+                [tree.treeId]: {
+                  isVisible: {
+                    $apply: bool => !bool,
+                  }
+                },
+              }
+            } }))
+          .getOrElse(state);
+      }
+
+      case "TOGGLE_ALL_TREES": {
+        return toggleAllTreesReducer(state, skeletonTracing);
+      }
+
+      case "TOGGLE_INACTIVE_TREES": {
+        return getTree(skeletonTracing).map(activeTree =>
+          update(toggleAllTreesReducer(state, skeletonTracing), { tracing: {
+            trees: {
+              [activeTree.treeId]: {
+                isVisible: {$set : true},
+              },
+            },
+        }})).getOrElse(state);
       }
 
       case "SET_ACTIVE_TREE": {

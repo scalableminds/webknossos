@@ -166,6 +166,7 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
               nodes: {},
               timestamp: activeTree.timestamp,
               treeId: activeTree.treeId,
+              isVisible: true,
             };
           } else {
             const immutableNewTree = createTree(intermediateState, timestamp).get();
@@ -286,6 +287,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
         branchPoints: [],
         edges: [],
         comments: [],
+        isVisible: true,
       };
       return Maybe.Just(tree);
     }
@@ -386,4 +388,21 @@ export function deleteComment(skeletonTracing: SkeletonTracingType, tree: TreeTy
     return Maybe.Just(commentsWithoutActiveNodeComment);
   }
   return Maybe.Nothing();
+}
+
+export function toggleAllTreesReducer(state: OxalisState, skeletonTracing: SkeletonTracingType): OxalisState {
+  // Let's make all trees visible if there is one invisible tree
+  const shouldBecomeVisible = _.values(skeletonTracing.trees).some(tree => !tree.isVisible);
+
+  const updateTreeObject = {};
+  const isVisibleUpdater = {
+    isVisible: { $set: shouldBecomeVisible },
+  };
+  Object.keys(skeletonTracing.trees).forEach(treeId => {
+    updateTreeObject[treeId] = isVisibleUpdater;
+  });
+
+  return update(state, { tracing: {
+    trees: updateTreeObject,
+  } });
 }

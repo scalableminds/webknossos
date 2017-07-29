@@ -29,7 +29,6 @@ class SpotlightView extends Marionette.View {
     };
   }
 
-
   initialize() {
     this.paginationView = new PaginationView({ collection: this.collection });
     this.spotlightDatasetListView = new SpotlightDatasetListView({ collection: this.collection });
@@ -37,12 +36,11 @@ class SpotlightView extends Marionette.View {
     this.creditsView = new CreditsView();
 
     this.collection.fetch({ data: "isActive=true" });
-    this.listenTo(this.collection, "sync", function () {
+    this.listenTo(this.collection, "sync", function() {
       this.listenTo(this, "render", this.show);
       this.show();
     });
   }
-
 
   show() {
     // Do not show the pagination and search bar if there are no datasets
@@ -54,6 +52,5 @@ class SpotlightView extends Marionette.View {
   }
 }
 SpotlightView.initClass();
-
 
 export default SpotlightView;

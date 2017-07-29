@@ -36,7 +36,6 @@ class TaskTypeListView extends Marionette.CompositeView {
 `);
   }
 
-
   initialize() {
     this.collection.fetch();
 
@@ -44,17 +43,14 @@ class TaskTypeListView extends Marionette.CompositeView {
     this.listenTo(app.vent, "paginationView:addElement", this.createNewTaskType);
   }
 
-
   createNewTaskType() {
     return app.router.navigate("/taskTypes/create", { trigger: true });
   }
-
 
   filterBySearch(searchQuery) {
     return this.collection.setFilter(["summary", "team", "description", "id"], searchQuery);
   }
 }
 TaskTypeListView.initClass();
-
 
 export default TaskTypeListView;

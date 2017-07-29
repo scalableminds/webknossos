@@ -18,7 +18,6 @@ type ListTreeItemViewProps = {
 };
 
 class ListTreeItemView extends React.PureComponent {
-
   props: ListTreeItemViewProps;
   domElement: HTMLElement;
 
@@ -28,7 +27,7 @@ class ListTreeItemView extends React.PureComponent {
 
   handleSetActive = () => {
     Store.dispatch(setActiveTreeAction(this.props.tree.treeId));
-  }
+  };
 
   handleToggleTree = () => {
     Store.dispatch(toggleTreeAction(this.props.tree.treeId));
@@ -50,18 +49,13 @@ class ListTreeItemView extends React.PureComponent {
       <li ref={(domElement) => { this.domElement = domElement; }}>
         <Checkbox checked={this.props.tree.isVisible} onChange={this.handleToggleTree} />
         <a onClick={this.handleSetActive} className={aClassName}>
-          <span
-            title="Node count"
-            className="inline-block tree-node-count"
-            style={{ width: 50 }}
-          >
-            { _.size(this.props.tree.nodes) }
+          <span title="Node count" className="inline-block tree-node-count" style={{ width: 50 }}>
+            {_.size(this.props.tree.nodes)}
           </span>
-          <i
-            style={{ color: `rgb(${rgbColorString})` }}
-            className="fa fa-circle tree-icon"
-          />
-          <span title="Tree Name" className="tree-name">{ this.props.tree.name }</span>
+          <i style={{ color: `rgb(${rgbColorString})` }} className="fa fa-circle tree-icon" />
+          <span title="Tree Name" className="tree-name">
+            {this.props.tree.name}
+          </span>
         </a>
       </li>
     );

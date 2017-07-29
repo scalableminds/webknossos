@@ -14,13 +14,27 @@ import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
 import Utils from "libs/utils";
 import Constants from "oxalis/constants";
-import { getSkeletonTracing, getActiveNodeFromTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getSkeletonTracing,
+  getActiveNodeFromTree,
+  findTreeByNodeId,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
-import type { OxalisState, SkeletonTracingType, EdgeType, NodeType, TreeType, TemporaryMutableTreeType, BranchPointType, TreeMapType, CommentType } from "oxalis/store";
+import type {
+  OxalisState,
+  SkeletonTracingType,
+  EdgeType,
+  NodeType,
+  TreeType,
+  TemporaryMutableTreeType,
+  BranchPointType,
+  TreeMapType,
+  CommentType,
+} from "oxalis/store";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
-  user = user.replace(/ /g, "_");   // Replace spaces in user names
+  user = user.replace(/ /g, "_"); // Replace spaces in user names
 
   let prefix = "Tree";
   if (state.tracing.tracingType === "Explorational") {
@@ -43,7 +57,16 @@ function getMaximumTreeId(trees: TreeMapType): number {
   return _.max(_.map(trees, "treeId"));
 }
 
-export function createNode(state: OxalisState, skeletonTracing: SkeletonTracingType, tree: TreeType, position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number): Maybe<[NodeType, Array<EdgeType>]> {
+export function createNode(
+  state: OxalisState,
+  skeletonTracing: SkeletonTracingType,
+  tree: TreeType,
+  position: Vector3,
+  rotation: Vector3,
+  viewport: number,
+  resolution: number,
+  timestamp: number,
+): Maybe<[NodeType, Array<EdgeType>]> {
   const { allowUpdate } = skeletonTracing.restrictions;
   const activeNodeMaybe = getActiveNodeFromTree(skeletonTracing, tree);
 
@@ -69,10 +92,14 @@ export function createNode(state: OxalisState, skeletonTracing: SkeletonTracingT
     };
 
     // Create a new edge
-    const newEdges = activeNodeMaybe.map(activeNode => [{
-      source: activeNode.id,
-      target: nextNewId,
-    }]).getOrElse([]);
+    const newEdges = activeNodeMaybe
+      .map(activeNode => [
+        {
+          source: activeNode.id,
+          target: nextNewId,
+        },
+      ])
+      .getOrElse([]);
     const edges = tree.edges.concat(newEdges);
 
     return Maybe.Just([node, edges]);
@@ -80,8 +107,13 @@ export function createNode(state: OxalisState, skeletonTracing: SkeletonTracingT
   return Maybe.Nothing();
 }
 
-export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, timestamp: number): Maybe<[TreeMapType, number, ?number, number]> {
-  return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
+export function deleteNode(
+  state: OxalisState,
+  tree: TreeType,
+  node: NodeType,
+  timestamp: number,
+): Maybe<[TreeMapType, number, ?number, number]> {
+  return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = skeletonTracing.restrictions;
 
     if (allowUpdate) {
@@ -91,11 +123,17 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
       let newTrees = skeletonTracing.trees;
 
       // Delete Node
-      const activeTree = update(tree, { nodes: { $set: _.omit(tree.nodes, [node.id.toString()]) } });
+      const activeTree = update(tree, {
+        nodes: { $set: _.omit(tree.nodes, [node.id.toString()]) },
+      });
 
       // Do we need to split trees? Are there edges leading to/from it?
-      const sourceNodeIds = activeTree.edges.filter(edge => edge.target === node.id).map(edge => edge.source);
-      const targetNodeIds = activeTree.edges.filter(edge => edge.source === node.id).map(edge => edge.target);
+      const sourceNodeIds = activeTree.edges
+        .filter(edge => edge.target === node.id)
+        .map(edge => edge.source);
+      const targetNodeIds = activeTree.edges
+        .filter(edge => edge.source === node.id)
+        .map(edge => edge.target);
       const neighborIds = sourceNodeIds.concat(targetNodeIds);
 
       if (neighborIds.length === 0) {
@@ -105,8 +143,8 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
         // this algorithmus will only produce one tree (which reuses the old oen)
 
         // Build a hashmap which contains for each node all edges leading/leaving into/from the node
-        const nodeToEdgesMap: {[number]: Array<EdgeType>} = {};
-        activeTree.edges.forEach((edge) => {
+        const nodeToEdgesMap: { [number]: Array<EdgeType> } = {};
+        activeTree.edges.forEach(edge => {
           if (nodeToEdgesMap[edge.source]) {
             nodeToEdgesMap[edge.source].push(edge);
           } else {
@@ -126,7 +164,7 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
         const getEdgeHash = edge => `${edge.source}-${edge.target}`;
 
         // Mark edges of deleted node as visited
-        deletedEdges.forEach((deletedEdge) => {
+        deletedEdges.forEach(deletedEdge => {
           visitedEdges[getEdgeHash(deletedEdge)] = true;
         });
 
@@ -173,12 +211,13 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
             // Cast to mutable tree type since we want to mutably do the split
             // in this reducer for performance reasons.
             newTree = ((immutableNewTree: any): TemporaryMutableTreeType);
-            intermediateState = update(intermediateState, { tracing: { trees: { [newTree.treeId]: { $set: newTree } } } });
+            intermediateState = update(intermediateState, {
+              tracing: { trees: { [newTree.treeId]: { $set: newTree } } },
+            });
           }
 
-          const neighborId = node.id !== edgeOfActiveNode.source
-            ? edgeOfActiveNode.source
-            : edgeOfActiveNode.target;
+          const neighborId =
+            node.id !== edgeOfActiveNode.source ? edgeOfActiveNode.source : edgeOfActiveNode.target;
 
           if (newActiveNodeId != null) {
             // Use a neighbor of the deleted node as the new active node
@@ -189,8 +228,8 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
         });
 
         // Write branchpoints into correct trees
-        activeTree.branchPoints.forEach((branchpoint) => {
-          cutTrees.forEach((newTree) => {
+        activeTree.branchPoints.forEach(branchpoint => {
+          cutTrees.forEach(newTree => {
             if (newTree.nodes[branchpoint.id]) {
               newTree.branchPoints.push(branchpoint);
             }
@@ -198,8 +237,8 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
         });
 
         // Write comments into correct trees
-        activeTree.comments.forEach((comment) => {
-          cutTrees.forEach((newTree) => {
+        activeTree.comments.forEach(comment => {
+          cutTrees.forEach(newTree => {
             if (newTree.nodes[comment.node]) {
               newTree.comments.push(comment);
             }
@@ -207,7 +246,7 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
         });
 
         newTrees = skeletonTracing.trees;
-        cutTrees.forEach((cutTree) => {
+        cutTrees.forEach(cutTree => {
           newTrees = update(newTrees, { [cutTree.treeId]: { $set: cutTree } });
         });
         // newActiveNodeId was already written to when traversing the tree. Find the
@@ -228,11 +267,19 @@ export function deleteNode(state: OxalisState, tree: TreeType, node: NodeType, t
   });
 }
 
-export function createBranchPoint(skeletonTracing: SkeletonTracingType, tree: TreeType, node: NodeType, timestamp: number): Maybe<BranchPointType> {
+export function createBranchPoint(
+  skeletonTracing: SkeletonTracingType,
+  tree: TreeType,
+  node: NodeType,
+  timestamp: number,
+): Maybe<BranchPointType> {
   const { branchPointsAllowed, allowUpdate } = skeletonTracing.restrictions;
 
   if (branchPointsAllowed && allowUpdate) {
-    const doesBranchPointExistAlready = _.some(tree.branchPoints, branchPoint => branchPoint.id === node.id);
+    const doesBranchPointExistAlready = _.some(
+      tree.branchPoints,
+      branchPoint => branchPoint.id === node.id,
+    );
 
     if (!doesBranchPointExistAlready) {
       // create new branchpoint
@@ -245,7 +292,9 @@ export function createBranchPoint(skeletonTracing: SkeletonTracingType, tree: Tr
   return Maybe.Nothing();
 }
 
-export function deleteBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<[Array<BranchPointType>, number, number]> {
+export function deleteBranchPoint(
+  skeletonTracing: SkeletonTracingType,
+): Maybe<[Array<BranchPointType>, number, number]> {
   const { branchPointsAllowed, allowUpdate } = skeletonTracing.restrictions;
   const { trees } = skeletonTracing;
   const hasBranchPoints = _.some(_.map(trees, __ => !_.isEmpty(__.branchPoints)));
@@ -253,7 +302,8 @@ export function deleteBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<[
   if (branchPointsAllowed && allowUpdate && hasBranchPoints) {
     // Find most recent branchpoint across all trees
     const treesWithBranchPoints = _.values(trees).filter(tree => !_.isEmpty(tree.branchPoints));
-    const treeId = _.maxBy(treesWithBranchPoints, tree => _.last(tree.branchPoints).timestamp).treeId;
+    const treeId = _.maxBy(treesWithBranchPoints, tree => _.last(tree.branchPoints).timestamp)
+      .treeId;
     const branchPoint = _.last(trees[treeId].branchPoints);
 
     if (branchPoint) {
@@ -266,7 +316,7 @@ export function deleteBranchPoint(skeletonTracing: SkeletonTracingType): Maybe<[
 }
 
 export function createTree(state: OxalisState, timestamp: number): Maybe<TreeType> {
-  return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
+  return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = state.tracing.restrictions;
 
     if (allowUpdate) {
@@ -295,8 +345,12 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
   });
 }
 
-export function deleteTree(state: OxalisState, tree: TreeType, timestamp: number): Maybe<[TreeMapType, number, ?number, number]> {
-  return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
+export function deleteTree(
+  state: OxalisState,
+  tree: TreeType,
+  timestamp: number,
+): Maybe<[TreeMapType, number, ?number, number]> {
+  return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = skeletonTracing.restrictions;
 
     if (allowUpdate) {
@@ -327,7 +381,11 @@ export function deleteTree(state: OxalisState, tree: TreeType, timestamp: number
   });
 }
 
-export function mergeTrees(skeletonTracing: SkeletonTracingType, sourceNodeId: number, targetNodeId: number): Maybe<[TreeType, number, number]> {
+export function mergeTrees(
+  skeletonTracing: SkeletonTracingType,
+  sourceNodeId: number,
+  targetNodeId: number,
+): Maybe<[TreeType, number, number]> {
   const { allowUpdate } = skeletonTracing.restrictions;
   const { trees } = skeletonTracing;
   const sourceTree = findTreeByNodeId(trees, sourceNodeId).get();
@@ -340,25 +398,35 @@ export function mergeTrees(skeletonTracing: SkeletonTracingType, sourceNodeId: n
     };
 
     let newTrees = _.omit(trees, sourceTree.treeId.toString());
-    newTrees = update(newTrees, { [targetTree.treeId]: {
-      nodes: { $set: Object.assign({}, targetTree.nodes, sourceTree.nodes) },
-      edges: { $set: targetTree.edges.concat(sourceTree.edges).concat([newEdge]) },
-      comments: { $set: targetTree.comments.concat(sourceTree.comments) },
-      branchPoints: { $set: targetTree.branchPoints.concat(sourceTree.branchPoints) },
-    } });
+    newTrees = update(newTrees, {
+      [targetTree.treeId]: {
+        nodes: { $set: Object.assign({}, targetTree.nodes, sourceTree.nodes) },
+        edges: { $set: targetTree.edges.concat(sourceTree.edges).concat([newEdge]) },
+        comments: { $set: targetTree.comments.concat(sourceTree.comments) },
+        branchPoints: { $set: targetTree.branchPoints.concat(sourceTree.branchPoints) },
+      },
+    });
     return Maybe.Just([newTrees, targetTree.treeId, targetNodeId]);
   }
   return Maybe.Nothing();
 }
 
-export function shuffleTreeColor(skeletonTracing: SkeletonTracingType, tree: TreeType): Maybe<[TreeType, number]> {
+export function shuffleTreeColor(
+  skeletonTracing: SkeletonTracingType,
+  tree: TreeType,
+): Maybe<[TreeType, number]> {
   const randomId = _.random(0, 10000, false);
   // ColorGenerator fails to produce distinct color for huge ids (Infinity)
   const newTree = update(tree, { color: { $set: ColorGenerator.distinctColorForId(randomId) } });
   return Maybe.Just([newTree, tree.treeId]);
 }
 
-export function createComment(skeletonTracing: SkeletonTracingType, tree: TreeType, node: NodeType, commentText: string): Maybe<Array<CommentType>> {
+export function createComment(
+  skeletonTracing: SkeletonTracingType,
+  tree: TreeType,
+  node: NodeType,
+  commentText: string,
+): Maybe<Array<CommentType>> {
   const { allowUpdate } = skeletonTracing.restrictions;
 
   if (allowUpdate) {
@@ -378,7 +446,11 @@ export function createComment(skeletonTracing: SkeletonTracingType, tree: TreeTy
   return Maybe.Nothing();
 }
 
-export function deleteComment(skeletonTracing: SkeletonTracingType, tree: TreeType, node: NodeType): Maybe<Array<CommentType>> {
+export function deleteComment(
+  skeletonTracing: SkeletonTracingType,
+  tree: TreeType,
+  node: NodeType,
+): Maybe<Array<CommentType>> {
   const { allowUpdate } = skeletonTracing.restrictions;
 
   if (allowUpdate) {

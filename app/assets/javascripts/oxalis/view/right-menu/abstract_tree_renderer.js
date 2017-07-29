@@ -13,8 +13,8 @@ import type { TreeType } from "oxalis/store";
 const NODE_RADIUS = 2;
 const MAX_NODE_DISTANCE = 100;
 const CLICK_TRESHOLD = 6;
-const MODE_NORMAL = 0;     // draw every node and the complete tree
-const MODE_NOCHAIN = 1;     // draw only decision points
+const MODE_NORMAL = 0; // draw every node and the complete tree
+const MODE_NOCHAIN = 1; // draw only decision points
 const VG_COLOR = "black";
 const COMMENT_COLOR = "red";
 
@@ -22,11 +22,11 @@ type DecisionType = {
   node: Object,
   chainCount: number,
   isBranch: boolean,
-  isLeaf: boolean;
+  isLeaf: boolean,
   hasActiveNode: boolean,
 };
 
-type AbstractTreeModeType = typeof(MODE_NORMAL) | typeof(MODE_NOCHAIN);
+type AbstractTreeModeType = typeof MODE_NORMAL | typeof MODE_NOCHAIN;
 type AbstractNodeType = {
   id: number,
   children: Array<AbstractNodeType>,
@@ -39,7 +39,6 @@ export type NodeListItemType = {
 };
 
 class AbstractTreeRenderer {
-
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   nodeList: Array<NodeListItemType>;
@@ -48,7 +47,12 @@ class AbstractTreeRenderer {
   tree: TreeType;
   nodeDistance: number;
 
-  static drawTree(canvas: HTMLCanvasElement, tree: ?TreeType, activeNodeId: ?number, size?: Vector2 = [450, 600]) {
+  static drawTree(
+    canvas: HTMLCanvasElement,
+    tree: ?TreeType,
+    activeNodeId: ?number,
+    size?: Vector2 = [450, 600],
+  ) {
     const renderer = new AbstractTreeRenderer(canvas);
     if (tree != null && activeNodeId != null) {
       renderer.setDimensions(size[0], size[1]);
@@ -63,8 +67,7 @@ class AbstractTreeRenderer {
   static getIdFromPos(x: number, y: number, nodeList: Array<NodeListItemType>): ?number {
     let id = null;
     for (const entry of nodeList) {
-      if (Math.abs(x - entry.x) <= CLICK_TRESHOLD &&
-          Math.abs(y - entry.y) <= CLICK_TRESHOLD) {
+      if (Math.abs(x - entry.x) <= CLICK_TRESHOLD && Math.abs(y - entry.y) <= CLICK_TRESHOLD) {
         id = entry.id;
         break;
       }
@@ -129,7 +132,9 @@ class AbstractTreeRenderer {
       console.log("Error:", e);
       if (e === "CyclicTree") {
         if (!this.cyclicTreeWarningIssued) {
-          Toast.error(`Cyclic trees (Tree-ID: ${tree.treeId}) are not supported by webKnossos. Please check the .nml file.`);
+          Toast.error(
+            `Cyclic trees (Tree-ID: ${tree.treeId}) are not supported by webKnossos. Please check the .nml file.`,
+          );
           this.cyclicTreeWarningIssued = true;
         }
         return;
@@ -140,7 +145,10 @@ class AbstractTreeRenderer {
       return;
     }
 
-    this.nodeDistance = Math.min(this.canvas.height / (this.getMaxTreeDepth(root, mode) + 1), MAX_NODE_DISTANCE);
+    this.nodeDistance = Math.min(
+      this.canvas.height / (this.getMaxTreeDepth(root, mode) + 1),
+      MAX_NODE_DISTANCE,
+    );
 
     // The algorithm works as follows:
     // A tree is given a left and right border that it can use. If
@@ -155,12 +163,17 @@ class AbstractTreeRenderer {
     // by recordWidths(), the second by drawTreeWithWidths().
 
     this.recordWidths(root);
-    this.drawTreeWithWidths(root, NODE_RADIUS, this.canvas.width - NODE_RADIUS, this.nodeDistance / 2, mode);
+    this.drawTreeWithWidths(
+      root,
+      NODE_RADIUS,
+      this.canvas.width - NODE_RADIUS,
+      this.nodeDistance / 2,
+      mode,
+    );
 
     // because of z layering all nodes have to be drawn last
     this.drawAllNodes();
   }
-
 
   /**
    * Draws a whole tree inside the given borders.
@@ -172,7 +185,13 @@ class AbstractTreeRenderer {
    * @param  {Number} mode  MODE_NORMAL or MODE_NOCHAIN
    * @return {Object}       new middle and top coordinates in pixels
   */
-  drawTreeWithWidths(tree: AbstractNodeType, left: number, right: number, top: number, mode: AbstractTreeModeType) {
+  drawTreeWithWidths(
+    tree: AbstractNodeType,
+    left: number,
+    right: number,
+    top: number,
+    mode: AbstractTreeModeType,
+  ) {
     const decision = this.getNextDecision(tree);
     let middle = this.calculateMiddle(left, right);
 
@@ -190,7 +209,6 @@ class AbstractTreeRenderer {
 
     return { middle, top };
   }
-
 
   /**
    * Find the next node which have to be considered in an extra way.
@@ -228,7 +246,6 @@ class AbstractTreeRenderer {
     };
   }
 
-
   /**
    * Draw a branch point as well as the left and right subtree.
    * @param  {Decision} decision
@@ -238,11 +255,29 @@ class AbstractTreeRenderer {
    * @param  {Number} mode     MODE_NORMAL or MODE_NOCHAIN
    * @return {Number}          new middle coordinate in pixels
   */
-  drawBranch(decision: DecisionType, left: number, right: number, top: number, mode: AbstractTreeModeType): number {
+  drawBranch(
+    decision: DecisionType,
+    left: number,
+    right: number,
+    top: number,
+    mode: AbstractTreeModeType,
+  ): number {
     const branchMiddle = this.calculateBranchMiddle(decision, left, right);
     const topChildren = this.calculateChildTop(decision.chainCount, top, mode);
-    const leftTree = this.drawTreeWithWidths(decision.node.children[0], left, branchMiddle, topChildren, mode);
-    const rightTree = this.drawTreeWithWidths(decision.node.children[1], branchMiddle, right, topChildren, mode);
+    const leftTree = this.drawTreeWithWidths(
+      decision.node.children[0],
+      left,
+      branchMiddle,
+      topChildren,
+      mode,
+    );
+    const rightTree = this.drawTreeWithWidths(
+      decision.node.children[1],
+      branchMiddle,
+      right,
+      topChildren,
+      mode,
+    );
 
     // set the root's x coordinate to be in between the decisionPoint's children
     const middle = this.calculateMiddle(leftTree.middle, rightTree.middle);
@@ -255,7 +290,6 @@ class AbstractTreeRenderer {
     return middle;
   }
 
-
   /**
    * Draw a sequence of nodes which begins with a comment.
    * @param  {Decision}        decision
@@ -265,12 +299,17 @@ class AbstractTreeRenderer {
    * @param  {Number} mode     MODE_NORMAL or MODE_NOCHAIN
    * @return {Number}          new middle coordinate in pixels
   */
-  drawCommentChain(decision: DecisionType, left: number, right: number, top: number, mode: AbstractTreeModeType): number {
+  drawCommentChain(
+    decision: DecisionType,
+    left: number,
+    right: number,
+    top: number,
+    mode: AbstractTreeModeType,
+  ): number {
     const topChild = this.calculateTop(decision.chainCount, top, mode);
     const extent = this.drawTreeWithWidths(decision.node, left, right, topChild, mode);
     return extent.middle;
   }
-
 
   /**
    * Draws a sequence of nodes and the edges in between.
@@ -283,14 +322,13 @@ class AbstractTreeRenderer {
     // Draw the chain and the tree, connect them.
     let node = tree;
     for (const i of Utils.__range__(0, decision.chainCount, true)) {
-      this.addNode(left, top + (i * this.nodeDistance), node.id);
+      this.addNode(left, top + i * this.nodeDistance, node.id);
       node = node.children[0];
       if (i !== 0) {
-        this.drawEdge(left, top + ((i - 1) * this.nodeDistance), left, top + (i * this.nodeDistance));
+        this.drawEdge(left, top + (i - 1) * this.nodeDistance, left, top + i * this.nodeDistance);
       }
     }
   }
-
 
   /**
    * Draws the dashed chain indicator and the start and end nodes.
@@ -299,14 +337,23 @@ class AbstractTreeRenderer {
    * @param  {AbstractNodeType} node
    * @param  {Decision} decision
   */
-  drawChainWithChainIndicatorFromTo(top: number, middle: number, node: AbstractNodeType, decision: DecisionType): void {
+  drawChainWithChainIndicatorFromTo(
+    top: number,
+    middle: number,
+    node: AbstractNodeType,
+    decision: DecisionType,
+  ): void {
     this.addNode(middle, top, node.id);
-    this.drawEdge(middle, top, middle, top + (0.5 * this.nodeDistance));
-    this.drawChainIndicator(middle, top + (0.5 * this.nodeDistance), top + (1.5 * this.nodeDistance), decision.hasActiveNode);
-    this.drawEdge(middle, top + (1.5 * this.nodeDistance), middle, top + (2 * this.nodeDistance));
-    this.addNode(middle, top + (2 * this.nodeDistance), decision.node.id);
+    this.drawEdge(middle, top, middle, top + 0.5 * this.nodeDistance);
+    this.drawChainIndicator(
+      middle,
+      top + 0.5 * this.nodeDistance,
+      top + 1.5 * this.nodeDistance,
+      decision.hasActiveNode,
+    );
+    this.drawEdge(middle, top + 1.5 * this.nodeDistance, middle, top + 2 * this.nodeDistance);
+    this.addNode(middle, top + 2 * this.nodeDistance, decision.node.id);
   }
-
 
   /**
    * Calculate middle that divides the left and right tree, if any.
@@ -319,9 +366,8 @@ class AbstractTreeRenderer {
   calculateBranchMiddle(decision: DecisionType, left: number, right: number): number {
     const leftChild = decision.node.children[0];
     const rightChild = decision.node.children[1];
-    return (((right - left) * leftChild.width) / (leftChild.width + rightChild.width)) + left;
+    return (right - left) * leftChild.width / (leftChild.width + rightChild.width) + left;
   }
-
 
   /**
    * Calculate middle of a left and right border.
@@ -333,7 +379,6 @@ class AbstractTreeRenderer {
     return (left + right) / 2;
   }
 
-
   /**
    * Calculate the y coordinate of a node.
    * @param  {Number} chainCount amount of chained nodes since the parent node
@@ -343,13 +388,12 @@ class AbstractTreeRenderer {
   */
   calculateTop(chainCount: number, top: number, mode: AbstractTreeModeType): number {
     if (mode === MODE_NORMAL || chainCount < 3) {
-      return top + (chainCount * this.nodeDistance);
+      return top + chainCount * this.nodeDistance;
     } else if (mode === MODE_NOCHAIN) {
-      return top + (2 * this.nodeDistance);
+      return top + 2 * this.nodeDistance;
     }
     return 0;
   }
-
 
   /**
    * Calculate the y coordinate of the first child of a node.
@@ -362,7 +406,6 @@ class AbstractTreeRenderer {
     return this.calculateTop(chainCount, top, mode) + this.nodeDistance;
   }
 
-
   /**
    * Add a node to the node list, so it can be drawn later.
    * @param {Number} x
@@ -373,15 +416,12 @@ class AbstractTreeRenderer {
     this.nodeList.push({ x, y, id });
   }
 
-
   /**
    * Iterate the node list and draw all nodes onto the canvas.
   */
   drawAllNodes(): void {
-    this.nodeList.map(({ x, y, id }) =>
-      this.drawNode(x, y, id));
+    this.nodeList.map(({ x, y, id }) => this.drawNode(x, y, id));
   }
-
 
   /**
    * Draw a single node onto the canvas.
@@ -407,7 +447,6 @@ class AbstractTreeRenderer {
     this.ctx.fill();
   }
 
-
   /**
    * Draw an edge of the tree (a connector line) onto the canvas.
    * @param  {Number} x1 start coordinate
@@ -422,7 +461,6 @@ class AbstractTreeRenderer {
     this.ctx.lineTo(x2, y2);
     this.ctx.stroke();
   }
-
 
   /**
    * Draw a dashed edge, which indicates a straight chain of nodes.
@@ -440,13 +478,12 @@ class AbstractTreeRenderer {
     this.ctx.beginPath();
     this.ctx.strokeStyle = VG_COLOR;
     for (const i of [0, 1, 2]) {
-      this.ctx.moveTo(x, top + (((2 * i) + 1) * dashLength));
-      this.ctx.lineTo(x, top + (((2 * i) + 2) * dashLength));
+      this.ctx.moveTo(x, top + (2 * i + 1) * dashLength);
+      this.ctx.lineTo(x, top + (2 * i + 2) * dashLength);
     }
     this.ctx.stroke();
     this.ctx.lineWidth = 1;
   }
-
 
   /**
    * Checks if a node is commented.
@@ -456,7 +493,6 @@ class AbstractTreeRenderer {
   nodeIdHasComment(id: number): boolean {
     return _.find(this.tree.comments, { node: id }) != null;
   }
-
 
   /**
    * Traverse the tree and add a width property for each node
@@ -488,7 +524,6 @@ class AbstractTreeRenderer {
     return width;
   }
 
-
   /**
    * Recursively calculate the maximum depth of a AbstractNodeType tree.
    * @param  {AbstractNodeType} tree
@@ -497,7 +532,9 @@ class AbstractTreeRenderer {
    * @return {Number}           depth of the tree
   */
   getMaxTreeDepth(tree: AbstractNodeType, mode: AbstractTreeModeType, count: number = 0): number {
-    if (mode == null) { mode = MODE_NORMAL; }
+    if (mode == null) {
+      mode = MODE_NORMAL;
+    }
 
     if (tree == null) {
       return count;
@@ -521,15 +558,14 @@ class AbstractTreeRenderer {
     // traverse further and compare left & right subtree
     if (decision.isBranch) {
       return Math.max(
-              this.getMaxTreeDepth(decision.node.children[0], mode, count),
-              this.getMaxTreeDepth(decision.node.children[1], mode, count),
-             );
+        this.getMaxTreeDepth(decision.node.children[0], mode, count),
+        this.getMaxTreeDepth(decision.node.children[1], mode, count),
+      );
     }
 
     // current decision point is a comment, follow the current chain
     return this.getMaxTreeDepth(decision.node.children[0], mode, count);
   }
-
 
   /**
    * Clear the background of the canvas.

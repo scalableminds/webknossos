@@ -4,13 +4,13 @@
  */
 
 class MultipartData {
-
   boundary: string;
   data: Array<any>;
 
   randomBoundary() {
-    return "--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--".replace(/[x]/g,
-      () => ((Math.random() * 16) | 0).toString(16));
+    return "--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--".replace(/[x]/g, () =>
+      ((Math.random() * 16) | 0).toString(16),
+    );
   }
 
   constructor(boundary: ?string = null) {
@@ -29,18 +29,19 @@ class MultipartData {
     }
 
     this.data.push("\r\n");
-    if (body != null) { this.data.push(body); }
+    if (body != null) {
+      this.data.push(body);
+    }
     this.data.push(`\r\n--${this.boundary}\r\n`);
   }
 
   dataPromise(): Promise<ArrayBuffer> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const reader = new FileReader();
       reader.onload = e => resolve(e.target.result);
       return reader.readAsArrayBuffer(new Blob(this.data));
     });
   }
 }
-
 
 export default MultipartData;

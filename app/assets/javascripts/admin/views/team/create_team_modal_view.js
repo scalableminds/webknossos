@@ -4,7 +4,6 @@ import TeamCollection from "admin/models/team/team_collection";
 import SelectionView from "admin/views/selection_view";
 import ModalView from "admin/views/modal_view";
 
-
 class CreateTeamModalView extends ModalView {
   static initClass() {
     this.prototype.headerTemplate = "<h3>Add a New Team</h3>";
@@ -29,18 +28,15 @@ class CreateTeamModalView extends ModalView {
 <a href="#" class="btn btn-default" data-dismiss="modal">Close</a>\
 `;
 
-    this.prototype.ui =
-      { inputName: "#inputName" };
+    this.prototype.ui = { inputName: "#inputName" };
 
     this.prototype.events = {
       "submit form": "addNewTeam",
       "click .btn-primary": "addNewTeam",
     };
 
-    this.prototype.regions =
-      { parentTeams: ".parent-teams" };
+    this.prototype.regions = { parentTeams: ".parent-teams" };
   }
-
 
   initialize(options) {
     this.teamCollection = options.teamCollection;
@@ -48,12 +44,13 @@ class CreateTeamModalView extends ModalView {
     this.teamSelectionView = new SelectionView({
       collection: new TeamCollection(),
       childViewOptions: {
-        modelValue() { return `${this.model.get("name")}`; },
+        modelValue() {
+          return `${this.model.get("name")}`;
+        },
       },
       data: "isRoot=true",
     });
   }
-
 
   addNewTeam(evt) {
     evt.preventDefault();
@@ -65,16 +62,13 @@ class CreateTeamModalView extends ModalView {
     return this.teamCollection.create(team, {
       wait: true,
       success: _.bind(this.destroy, this),
-    },
-    );
+    });
   }
-
 
   onRender() {
     return this.showChildView("parentTeams", this.teamSelectionView);
   }
 }
 CreateTeamModalView.initClass();
-
 
 export default CreateTeamModalView;

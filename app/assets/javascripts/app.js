@@ -14,7 +14,7 @@ type UserType = {
   email: string,
   isAnonymous: boolean,
   id: string,
-}
+};
 
 class OxalisApplication extends Marionette.Application {
   router: Router;

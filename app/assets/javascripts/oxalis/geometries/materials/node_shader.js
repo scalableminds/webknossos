@@ -15,7 +15,6 @@ export const NodeTypes = {
 export const COLOR_TEXTURE_WIDTH = 1024.0;
 
 class NodeShader {
-
   material: THREE.RawShaderMaterial;
   uniforms: UniformsType;
 

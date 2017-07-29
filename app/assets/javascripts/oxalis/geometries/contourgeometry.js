@@ -13,7 +13,6 @@ import type { Vector3 } from "oxalis/constants";
 const COLOR_NORMAL = new THREE.Color(0x0000ff);
 const COLOR_DELETE = new THREE.Color(0xff0000);
 
-
 class ContourGeometry {
   color: THREE.Color;
   edge: THREE.Line;
@@ -21,18 +20,17 @@ class ContourGeometry {
   constructor() {
     this.color = COLOR_NORMAL;
 
-    getVolumeTracing(Store.getState().tracing).map((initialTracing) => {
+    getVolumeTracing(Store.getState().tracing).map(initialTracing => {
       let lastContourList = initialTracing.contourList;
 
       Store.subscribe(() => {
-        getVolumeTracing(Store.getState().tracing).map((tracing) => {
+        getVolumeTracing(Store.getState().tracing).map(tracing => {
           const contourList = tracing.contourList;
           if (contourList && lastContourList.length !== contourList.length) {
             // Update meshes according to the new contourList
             this.reset();
             this.color = tracing.activeCellId === 0 ? COLOR_DELETE : COLOR_NORMAL;
-            contourList.forEach(p =>
-              this.addEdgePoint(p));
+            contourList.forEach(p => this.addEdgePoint(p));
           }
           lastContourList = contourList;
         });
@@ -41,7 +39,6 @@ class ContourGeometry {
 
     this.createMeshes();
   }
-
 
   createMeshes() {
     const edgeGeometry = new THREE.BufferGeometry();
@@ -55,18 +52,15 @@ class ContourGeometry {
     this.reset();
   }
 
-
   reset() {
     this.edge.material.color = this.color;
     this.edge.vertexBuffer.clear();
     this.finalizeMesh(this.edge);
   }
 
-
   getMeshes() {
     return [this.edge];
   }
-
 
   addEdgePoint(pos: Vector3) {
     this.edge.vertexBuffer.push(pos);
@@ -74,7 +68,6 @@ class ContourGeometry {
 
     app.vent.trigger("rerender");
   }
-
 
   finalizeMesh(mesh: THREE.Line) {
     if (mesh.geometry.attributes.position.array !== mesh.vertexBuffer.getBuffer()) {

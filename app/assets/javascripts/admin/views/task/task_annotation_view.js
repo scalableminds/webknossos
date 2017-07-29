@@ -57,16 +57,14 @@ class TaskAnnotationView extends Marionette.View {
 </td>\
 `);
 
-    this.prototype.templateContext =
-      { moment };
+    this.prototype.templateContext = { moment };
 
     this.prototype.events = {
       "click .isAjax": "callAjax",
       "click #cancel-annotation": "cancelAnnotation",
     };
 
-    this.prototype.modelEvents =
-      { change: "render" };
+    this.prototype.modelEvents = { change: "render" };
   }
   attributes() {
     return { id: this.model.get("id") };
@@ -76,12 +74,11 @@ class TaskAnnotationView extends Marionette.View {
   callAjax(evt) {
     evt.preventDefault();
 
-    Request.receiveJSON($(evt.target).prop("href")).then((jsonData) => {
+    Request.receiveJSON($(evt.target).prop("href")).then(jsonData => {
       this.model.set(jsonData);
       const message = jsonData.messages;
       Toast.message(message);
-    },
-    );
+    });
   }
 
   cancelAnnotation() {

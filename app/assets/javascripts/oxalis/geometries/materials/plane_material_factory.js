@@ -15,7 +15,6 @@ import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abst
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
-
   setupUniforms(): void {
     super.setupUniforms();
 
@@ -32,19 +31,12 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: 0,
       },
-    },
-    );
+    });
   }
-
 
   convertColor(color: Vector3): Vector3 {
-    return [
-      color[0] / 255,
-      color[1] / 255,
-      color[2] / 255,
-    ];
+    return [color[0] / 255, color[1] / 255, color[2] / 255];
   }
-
 
   createTextures(): void {
     // create textures
@@ -78,11 +70,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     }
   }
 
-
-  makeMaterial(options?: ShaderMaterialOptionsType):void {
+  makeMaterial(options?: ShaderMaterialOptionsType): void {
     super.makeMaterial(options);
 
-    this.material.setColorInterpolation = (interpolation) => {
+    this.material.setColorInterpolation = interpolation => {
       for (const name of Object.keys(this.textures)) {
         const texture = this.textures[name];
         if (texture.binaryCategory === "color") {
@@ -97,11 +88,12 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.uniforms.repeat.value.set(repeat.x, repeat.y);
     };
 
-    this.material.setSegmentationAlpha = (alpha) => { this.uniforms.alpha.value = alpha / 100; };
+    this.material.setSegmentationAlpha = alpha => {
+      this.uniforms.alpha.value = alpha / 100;
+    };
 
     this.material.side = THREE.DoubleSide;
   }
-
 
   updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {
     super.updateUniformsForLayer(settings, name);
@@ -111,7 +103,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
     }
   }
-
 
   getFragmentShader(): string {
     const colorLayerNames = _.map(Model.getColorBinaries(), b => this.sanitizeName(b.name));
@@ -181,11 +172,10 @@ void main() {
 `,
     )({
       layers: colorLayerNames,
-      hasSegmentation: (segmentationBinary != null),
+      hasSegmentation: segmentationBinary != null,
       segmentationName: this.sanitizeName(segmentationBinary ? segmentationBinary.name : ""),
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
-    },
-    );
+    });
   }
 }
 

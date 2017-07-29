@@ -19,8 +19,10 @@ class DatasetModel extends NestedObjModel {
       };
     }
 
-    response.hasSegmentation = _.some(response.dataSource.dataLayers,
-      layer => layer.category === "segmentation");
+    response.hasSegmentation = _.some(
+      response.dataSource.dataLayers,
+      layer => layer.category === "segmentation",
+    );
 
     response.thumbnailURL = this.createThumbnailURL(response.name, response.dataSource.dataLayers);
 
@@ -28,7 +30,6 @@ class DatasetModel extends NestedObjModel {
 
     return response;
   }
-
 
   createThumbnailURL(datasetName, layers) {
     const colorLayer = _.find(layers, { category: "color" });

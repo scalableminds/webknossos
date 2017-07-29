@@ -41,11 +41,9 @@ class ProjectListItemView extends Marionette.View {
 </td>\
 `);
 
-    this.prototype.events =
-      { "click .delete": "deleteProject" };
+    this.prototype.events = { "click .delete": "deleteProject" };
 
-    this.prototype.templateContext =
-      { TemplateHelpers };
+    this.prototype.templateContext = { TemplateHelpers };
   }
 
   deleteProject() {

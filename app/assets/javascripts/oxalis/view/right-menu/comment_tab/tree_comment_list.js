@@ -14,14 +14,13 @@ import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_a
 type OwnProps = {
   tree: TreeType,
   sortOrder: "asc" | "desc",
-}
+};
 
 type TreeCommentListProps = {
   skeletonTracing: SkeletonTracingType,
 } & OwnProps;
 
 class TreeCommentList extends React.PureComponent {
-
   props: TreeCommentListProps;
   state = {
     collapsed: false,
@@ -29,22 +28,22 @@ class TreeCommentList extends React.PureComponent {
 
   handleToggleComment = () => {
     this.setState({ collapsed: !this.state.collapsed });
-  }
+  };
 
   render() {
     const containsActiveNode = this.props.tree.treeId === this.props.skeletonTracing.activeTreeId;
 
     // don't render the comment nodes if the tree is collapsed
-    const commentNodes = !this.state.collapsed ?
-      _.orderBy(this.props.tree.comments, "node", [this.props.sortOrder]).map(comment =>
-        <Comment
-          key={comment.node}
-          data={comment}
-          treeId={this.props.tree.treeId}
-          isActive={comment.node === this.props.skeletonTracing.activeNodeId}
-        />,
-      ) :
-      null;
+    const commentNodes = !this.state.collapsed
+      ? _.orderBy(this.props.tree.comments, "node", [this.props.sortOrder]).map(comment =>
+          <Comment
+            key={comment.node}
+            data={comment}
+            treeId={this.props.tree.treeId}
+            isActive={comment.node === this.props.skeletonTracing.activeNodeId}
+          />,
+        )
+      : null;
 
     const liClassName = classNames({ bold: containsActiveNode });
     const iClassName = classNames("fa", "fa-fw", {

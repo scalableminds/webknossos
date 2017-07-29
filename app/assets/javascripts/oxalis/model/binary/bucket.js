@@ -35,12 +35,15 @@ export class DataBucket {
   trigger: Function;
   on: Function;
 
-
-  constructor(BIT_DEPTH: number, zoomedAddress: Vector4, temporalBucketManager: TemporalBucketManager) {
+  constructor(
+    BIT_DEPTH: number,
+    zoomedAddress: Vector4,
+    temporalBucketManager: TemporalBucketManager,
+  ) {
     _.extend(this, Backbone.Events);
     this.BIT_DEPTH = BIT_DEPTH;
     this.BUCKET_LENGTH = (1 << (BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
-    this.BYTE_OFFSET = (this.BIT_DEPTH >> 3);
+    this.BYTE_OFFSET = this.BIT_DEPTH >> 3;
 
     this.zoomedAddress = zoomedAddress;
     this.temporalBucketManager = temporalBucketManager;
@@ -53,39 +56,32 @@ export class DataBucket {
     this.data = null;
   }
 
-
   shouldCollect(): boolean {
     const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
     this.accessed = false;
     return collect;
   }
 
-
   needsRequest(): boolean {
     return this.state === BucketStateEnum.UNREQUESTED;
   }
-
 
   isRequested(): boolean {
     return this.state === BucketStateEnum.REQUESTED;
   }
 
-
   isLoaded(): boolean {
     return this.state === BucketStateEnum.LOADED;
   }
 
-
-  label(labelFunc: (Uint8Array) => void) {
+  label(labelFunc: Uint8Array => void) {
     labelFunc(this.getOrCreateData());
     this.dirty = true;
   }
 
-
   hasData(): boolean {
-    return (this.data != null);
+    return this.data != null;
   }
-
 
   getData(): Uint8Array {
     if (this.data == null) {
@@ -96,7 +92,6 @@ export class DataBucket {
     return this.data;
   }
 
-
   getOrCreateData(): Uint8Array {
     if (this.data == null) {
       this.data = new Uint8Array(this.BUCKET_LENGTH);
@@ -105,7 +100,6 @@ export class DataBucket {
 
     return this.getData();
   }
-
 
   pull(): void {
     switch (this.state) {
@@ -117,7 +111,6 @@ export class DataBucket {
     }
   }
 
-
   pullFailed(): void {
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
@@ -127,7 +120,6 @@ export class DataBucket {
         this.unexpectedState();
     }
   }
-
 
   receiveData(data: Uint8Array): void {
     switch (this.state) {
@@ -145,7 +137,6 @@ export class DataBucket {
     }
   }
 
-
   push(): void {
     switch (this.state) {
       case BucketStateEnum.LOADED:
@@ -156,11 +147,9 @@ export class DataBucket {
     }
   }
 
-
   unexpectedState(): void {
     throw new Error(`Unexpected state: ${this.state}`);
   }
-
 
   merge(newData: Uint8Array): void {
     if (this.data == null) {
@@ -170,18 +159,19 @@ export class DataBucket {
 
     const voxelPerBucket = 1 << (BUCKET_SIZE_P * 3);
     for (let i = 0; i < voxelPerBucket; i++) {
-      const oldVoxel = (Utils.__range__(0, this.BYTE_OFFSET, false).map(j => data[(i * this.BYTE_OFFSET) + j]));
-      const oldVoxelEmpty = _.reduce(oldVoxel, ((memo, v) => memo && v === 0), true);
+      const oldVoxel = Utils.__range__(0, this.BYTE_OFFSET, false).map(
+        j => data[i * this.BYTE_OFFSET + j],
+      );
+      const oldVoxelEmpty = _.reduce(oldVoxel, (memo, v) => memo && v === 0, true);
 
       if (oldVoxelEmpty) {
         for (let j = 0; j < this.BYTE_OFFSET; j++) {
-          data[(i * this.BYTE_OFFSET) + j] = newData[(i * this.BYTE_OFFSET) + j];
+          data[i * this.BYTE_OFFSET + j] = newData[i * this.BYTE_OFFSET + j];
         }
       }
     }
   }
 }
-
 
 export class NullBucket {
   type: "null" = "null";
@@ -191,9 +181,15 @@ export class NullBucket {
     this.isOutOfBoundingBox = isOutOfBoundingBox;
   }
 
-  hasData(): boolean { return false; }
-  needsRequest(): boolean { return false; }
-  getData(): Uint8Array { throw new Error("NullBucket has no data."); }
+  hasData(): boolean {
+    return false;
+  }
+  needsRequest(): boolean {
+    return false;
+  }
+  getData(): Uint8Array {
+    throw new Error("NullBucket has no data.");
+  }
 }
 
 export const NULL_BUCKET = new NullBucket(false);

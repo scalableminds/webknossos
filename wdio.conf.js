@@ -163,7 +163,7 @@ exports.config = {
     // an assertion fails.
     expectationResultHandler: function(passed, assertion) {
       //only take screenshot if assertion failed
-      if(passed) {
+      if (passed) {
        return;
       }
 
@@ -187,19 +187,22 @@ exports.config = {
   //
   // Gets executed before test execution begins. At this point you can access all global
   // variables, such as `browser`. It is the perfect place to define custom commands.
-  before: function (capabilities, specs) {
+  before: function(capabilities, specs) {
 
-    const mongoURL = `${process.env.MONGO_HOST || "localhost"}:${process.env.MONGO_PORT || "27017"}`;
+    const mongoHost = process.env.MONGO_HOST || "localhost";
+    const mongoPort = process.env.MONGO_PORT || "27017";
+    const mongoURL = `${mongoHost}:${mongoPort}`;
     const mongoDB = process.env.MONGO_DB || "webknossos-testing";
 
+    child_process.execFileSync("./tools/dropDB.sh", [mongoDB, mongoHost, mongoPort]);
     child_process.execFileSync("./tools/import_export/import.sh",
                  [mongoDB, "test/db", mongoURL],
-                 {stdio : "ignore"})
+                 {stdio : "ignore"});
 
     browser.setViewportSize({
       width: 1024,
       height: 768
-    })
+    });
   },
   //
   // Hook that gets executed before the suite starts

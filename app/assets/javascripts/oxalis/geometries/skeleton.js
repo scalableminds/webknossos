@@ -9,14 +9,16 @@ import TWEEN from "tween.js";
 import Utils from "libs/utils";
 import Store from "oxalis/throttled_store";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import NodeShader, { NodeTypes, COLOR_TEXTURE_WIDTH } from "oxalis/geometries/materials/node_shader";
+import NodeShader, {
+  NodeTypes,
+  COLOR_TEXTURE_WIDTH,
+} from "oxalis/geometries/materials/node_shader";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import { OrthoViews } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
 import type { Vector3, OrthoViewType } from "oxalis/constants";
-
 
 const MAX_CAPACITY = 1000;
 
@@ -28,12 +30,12 @@ type Buffer = {
   nextIndex: number,
   geometry: THREE.BufferGeometry,
   mesh: THREE.Mesh,
-}
+};
 
 type BufferPosition = {
   buffer: Buffer,
   index: number,
-}
+};
 
 type BufferCollection = {
   buffers: Array<Buffer>,
@@ -41,7 +43,7 @@ type BufferCollection = {
   freeList: Array<BufferPosition>,
   helper: BufferHelperType,
   material: THREE.Material,
-}
+};
 
 type BufferOperation = (position: BufferPosition) => Array<THREE.BufferAttribute>;
 
@@ -95,12 +97,12 @@ class Skeleton {
     this.rootNode = new THREE.Object3D();
     this.pickingNode = new THREE.Object3D();
 
-    getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
       this.reset(skeletonTracing);
     });
 
     Store.subscribe(() => {
-      getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+      getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
         if (skeletonTracing.tracingId !== this.prevTracing.tracingId) {
           this.reset(skeletonTracing);
         } else {
@@ -161,8 +163,16 @@ class Skeleton {
     this.prevTracing = skeletonTracing;
   }
 
-  initializeBufferCollection(initialCapacity: number, material: THREE.Material, helper: BufferHelperType): BufferCollection {
-    const initialBuffer = this.initializeBuffer(Math.max(initialCapacity, MAX_CAPACITY), material, helper);
+  initializeBufferCollection(
+    initialCapacity: number,
+    material: THREE.Material,
+    helper: BufferHelperType,
+  ): BufferCollection {
+    const initialBuffer = this.initializeBuffer(
+      Math.max(initialCapacity, MAX_CAPACITY),
+      material,
+      helper,
+    );
 
     return {
       buffers: [initialBuffer],
@@ -204,7 +214,10 @@ class Skeleton {
       currentBuffer = this.initializeBuffer(MAX_CAPACITY, collection.material, collection.helper);
       collection.buffers.unshift(currentBuffer);
     }
-    const bufferPosition = collection.freeList.pop() || { buffer: currentBuffer, index: currentBuffer.nextIndex++ };
+    const bufferPosition = collection.freeList.pop() || {
+      buffer: currentBuffer,
+      index: currentBuffer.nextIndex++,
+    };
     collection.idToBufferPosition.set(id, bufferPosition);
 
     const changedAttributes = createFunc(bufferPosition);
@@ -301,7 +314,10 @@ class Skeleton {
           const prevTree = this.prevTracing.trees[treeId];
           const oldBranchPoints = prevTree.branchPoints.map(branchPoint => branchPoint.id);
           const newBranchPoints = tree.branchPoints.map(branchPoint => branchPoint.id);
-          const { onlyA: deletedBranchPoints, onlyB: createdBranchPoints } = Utils.diffArrays(oldBranchPoints, newBranchPoints);
+          const { onlyA: deletedBranchPoints, onlyB: createdBranchPoints } = Utils.diffArrays(
+            oldBranchPoints,
+            newBranchPoints,
+          );
 
           for (const nodeId of deletedBranchPoints) {
             this.updateNodeType(treeId, nodeId, NodeTypes.NORMAL);
@@ -532,19 +548,19 @@ class Skeleton {
    */
   animateNodeScale(from: number, to: number) {
     return new Promise((resolve, reject) => {
-      const setScaleFactor = (scale) => {
+      const setScaleFactor = scale => {
         this.nodes.material.uniforms.activeNodeScaleFactor.value = scale;
       };
 
       const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });
       tweenAnimation
-      .to({ scaleFactor: to }, 100)
-      .onUpdate(function onUpdate() {
-        setScaleFactor(this.scaleFactor);
-      })
-      .onComplete(resolve)
-      .onStop(reject)
-      .start();
+        .to({ scaleFactor: to }, 100)
+        .onUpdate(function onUpdate() {
+          setScaleFactor(this.scaleFactor);
+        })
+        .onComplete(resolve)
+        .onStop(reject)
+        .start();
     });
   }
 }

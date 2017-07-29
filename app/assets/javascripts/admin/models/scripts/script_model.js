@@ -12,13 +12,11 @@ class ScriptModel extends Backbone.Model {
     };
   }
 
-
   parse(response) {
     response.formattedHash = FormatUtils.formatHash(response.id);
 
     return response;
   }
-
 
   destroy() {
     const options = { url: `/api/scripts/${this.get("id")}` };

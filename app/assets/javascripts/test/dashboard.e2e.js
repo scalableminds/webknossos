@@ -16,7 +16,7 @@ describe("Dashboard", () => {
     it("should download an NML file", () => {
       page.openExplorativeTab();
       const url = page.getFirstDownloadLink();
-      return Request.text().from(url).then((nmlContent) => {
+      return Request.text().from(url).then(nmlContent => {
         expect(nmlContent.length).toBeGreaterThan(0);
         expect(nmlContent.startsWith("<things>")).toBe(true);
         expect(nmlContent.endsWith("</things>")).toBe(true);
@@ -30,13 +30,11 @@ describe("Dashboard", () => {
       expect(getTabTitle()).toBe("Tasks");
     });
 
-
     it("should have one available task", () => {
       page.openTasksTab();
       const tasks = page.getTasks();
       expect(tasks.length).toBe(1);
     });
-
 
     it("should get a new task", () => {
       page.getNewTask();
@@ -44,7 +42,6 @@ describe("Dashboard", () => {
       expect(tasks.length).toBe(2);
     });
   });
-
 
   describe("As another user", () => {
     beforeEach(() => {
@@ -68,7 +65,7 @@ describe("Dashboard", () => {
       const timeGraphEntries = page.getTimeGraphEntries();
 
       const url = "/api/users/570b9f4d2a7c0e4d008da6ef/loggedTime";
-      return Request.json().from(url).then((response) => {
+      return Request.json().from(url).then(response => {
         const numTimeEntries = response.loggedTime.length;
 
         expect(timeTableEntries.length).toEqual(numTimeEntries);

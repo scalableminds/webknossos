@@ -16,7 +16,7 @@ import Vector3Input from "libs/vector3_input";
 class DatasetPositionView extends PureComponent {
   props: {
     flycam: FlycamType,
-    viewMode: ModeType
+    viewMode: ModeType,
   };
 
   copyPositionToClipboard = async () => {
@@ -31,11 +31,11 @@ class DatasetPositionView extends PureComponent {
     Toast.success("Rotation copied to clipboard");
   };
 
-  handleChangePosition = (position) => {
+  handleChangePosition = position => {
     Store.dispatch(setPositionAction(position));
   };
 
-  handleChangeRotation = (rotation) => {
+  handleChangeRotation = rotation => {
     Store.dispatch(setRotationAction(rotation));
   };
 
@@ -48,10 +48,9 @@ class DatasetPositionView extends PureComponent {
       <div>
         <div>
           <Input.Group compact size="large">
-            <Button
-              onClick={this.copyPositionToClipboard}
-              size="large"
-            >Position</Button>
+            <Button onClick={this.copyPositionToClipboard} size="large">
+              Position
+            </Button>
             <Vector3Input
               value={position}
               onChange={this.handleChangePosition}
@@ -59,22 +58,20 @@ class DatasetPositionView extends PureComponent {
             />
           </Input.Group>
         </div>
-        {
-          isArbitraryMode ?
-            <div style={{ marginLeft: 10 }}>
+        {isArbitraryMode
+          ? <div style={{ marginLeft: 10 }}>
               <Input.Group compact size="large">
-                <Button
-                  onClick={this.copyRotationToClipboard}
-                  size="large"
-                >Rotation</Button>
+                <Button onClick={this.copyRotationToClipboard} size="large">
+                  Rotation
+                </Button>
                 <Vector3Input
                   value={rotation}
                   onChange={this.handleChangeRotation}
                   style={{ width: "120px" }}
                 />
               </Input.Group>
-            </div> : null
-        }
+            </div>
+          : null}
       </div>
     );
   }

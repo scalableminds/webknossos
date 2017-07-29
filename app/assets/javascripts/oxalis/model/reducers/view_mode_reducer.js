@@ -45,10 +45,10 @@ function moveTDViewByVectorReducer(state: OxalisState, x: number, y: number): Ox
             right: camera.right + x,
             top: camera.top + y,
             bottom: camera.bottom + y,
-          }
-        }
-      }
-    }
+          },
+        },
+      },
+    },
   });
 }
 
@@ -62,7 +62,7 @@ function setTDCameraReducer(state: OxalisState, cameraData: PartialCameraData): 
   });
 }
 
-function centerTDViewReducer(state: OxalisState) : OxalisState {
+function centerTDViewReducer(state: OxalisState): OxalisState {
   const camera = state.viewModeData.plane.tdCamera;
   return moveTDViewByVectorReducer(
     state,
@@ -71,7 +71,12 @@ function centerTDViewReducer(state: OxalisState) : OxalisState {
   );
 }
 
-function zoomTDView(state: OxalisState, value: number, targetPosition: THREE.Vector3, curWidth: number): OxalisState {
+function zoomTDView(
+  state: OxalisState,
+  value: number,
+  targetPosition: THREE.Vector3,
+  curWidth: number,
+): OxalisState {
   const camera = state.viewModeData.plane.tdCamera;
 
   const factor = Math.pow(0.9, value);
@@ -79,22 +84,22 @@ function zoomTDView(state: OxalisState, value: number, targetPosition: THREE.Vec
   const middleY = (camera.bottom + camera.top) / 2;
   const size = getTDViewportSize();
 
-  const baseOffset = (factor * size) / 2;
-  const baseDiff = baseOffset - (size / 2);
+  const baseOffset = factor * size / 2;
+  const baseDiff = baseOffset - size / 2;
 
   let offsetX = 0;
   let offsetY = 0;
   if (targetPosition != null) {
-    offsetX = (((targetPosition.x / curWidth) * 2) - 1) * (-baseDiff);
-    offsetY = (((targetPosition.y / curWidth) * 2) - 1) * (+baseDiff);
+    offsetX = (targetPosition.x / curWidth * 2 - 1) * -baseDiff;
+    offsetY = (targetPosition.y / curWidth * 2 - 1) * +baseDiff;
   }
 
   return setTDCameraReducer(state, {
-    left: (middleX - baseOffset) + offsetX,
+    left: middleX - baseOffset + offsetX,
     right: middleX + baseOffset + offsetX,
     top: middleY + baseOffset + offsetY,
-    bottom: (middleY - baseOffset) + offsetY,
+    bottom: middleY - baseOffset + offsetY,
   });
-};
+}
 
 export default ViewModeReducer;

@@ -6,7 +6,6 @@
 import Backbone from "backbone";
 
 class UserModel extends Backbone.Model {
-
   defaults: {
     firstName: string,
     lastName: string,
@@ -25,8 +24,7 @@ class UserModel extends Backbone.Model {
       return `/api/users/${userID}`;
     }
     return "/api/user";
-  }
-
+  };
 
   initialize(options) {
     this.set("id", options.id);

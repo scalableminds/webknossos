@@ -327,7 +327,7 @@ class Skeleton {
             this.updateNodeType(treeId, nodeId, NodeTypes.BRANCH_POINT);
           }
 
-          if (tree.color !== prevTree.color || tree.isVisible !== prevTree.isVisible) {
+          if (tree.color !== prevTree.color) {
             this.updateTreeColor(treeId, update.value.color, tree.isVisible);
           }
           break;

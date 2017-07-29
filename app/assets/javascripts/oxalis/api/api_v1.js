@@ -279,7 +279,6 @@ class UserApi_DEPRECATED {
     - inverseX
     - inverseY
     - keyboardDelay
-    - firstVisToggle
     - particleSize
     - overrideNodeRadius
     - sortTreesByName

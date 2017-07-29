@@ -142,7 +142,6 @@ void main() {
     color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
     bool isVisible = texture2D(treeColors, treeIdToTextureCoordinate).a == 1.0 || is3DView == 1;
 
-    // VISIBILITY CAN BE TOGGLED THROUGH KEYBOARD SHORTCUTS
     // DELETED OR INVISIBLE NODE
     if (type == ${NodeTypes.INVALID.toFixed(1)} || !isVisible) {
       gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);

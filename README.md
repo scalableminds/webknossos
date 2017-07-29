@@ -157,6 +157,8 @@ server {
 
   location / {
     proxy_pass http://webknossos-datastore-0;
+    add_header 'Access-Control-Allow-Origin' '*';
+    add_header 'Access-Control-Max-Age' 600;
   }
 }
 ```

@@ -6,7 +6,7 @@ package com.scalableminds.braingames.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
-import com.scalableminds.braingames.datastore.tracings.skeleton.{SkeletonTracingService, SkeletonUpdateAction, SkeletonUpdateActionGroup}
+import com.scalableminds.braingames.datastore.tracings.skeleton._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -30,7 +30,7 @@ class SkeletonTracingController @Inject()(
   def createFromNml(name: String) = Action(parse.tolerantText) {
     implicit request => {
       for {
-        tracing <- skeletonTracingService.createFromNML(name, request.body)
+        tracing <- skeletonTracingService.createFromNml(name, request.body)
       } yield {
         Ok(tracing.id)
       }
@@ -48,24 +48,23 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def downloadJson(tracingId: String, version: Option[Long]) = Action.async {
+  def get(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       for {
         tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
         updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
-        serialized <- skeletonTracingService.downloadJson(updatedTracing)
       } yield {
-        Ok(serialized)
+        Ok(Json.toJson(updatedTracing))
       }
     }
   }
 
-  def downloadNml(tracingId: String, version: Option[Long]) = Action.async {
+  def download(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       for {
         tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
         updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
-        downloadStream <- skeletonTracingService.downloadNML(updatedTracing, dataSourceRepository)
+        downloadStream <- skeletonTracingService.downloadNml(updatedTracing, dataSourceRepository)
       } yield {
         Ok.chunked(downloadStream).withHeaders(
           CONTENT_TYPE ->
@@ -94,10 +93,24 @@ class SkeletonTracingController @Inject()(
   def createMultipleFromZip() = Action {implicit request => {Ok}}
   def createMultipleFromCsv() = Action {implicit request => {Ok}}
 
+  def getMerged = Action(validateJson[List[TracingSelector]]) {
+    implicit request => {
+      for {
+        tracingMerged <- skeletonTracingService.merge(request.body, shouldSave=false)
+      } yield {
+        Ok(Json.toJson(tracingMerged))
+      }
+    }
+  }
 
-  def get(tracingId: String, version: Option[Long]) = Action {implicit request => {Ok}}
-  def download(tracingId: String, version: Option[Long]) = Action {implicit request => {Ok}} // TODO: return one NML
-  def getMerged = Action {implicit request => {Ok}} //takes json list of ids
-  def downloadMultiple = Action {implicit request => {Ok}} //takes json list of ids
+  def downloadMultiple = Action.async(validateJson[DownloadMultipleParameters]) {
+    implicit request => {
+      for {
+        zip <- skeletonTracingService.downloadMultiple(request.body, dataSourceRepository)
+      } yield {
+        Ok.sendFile(zip.file)
+      }
+    }
+  }
 
 }

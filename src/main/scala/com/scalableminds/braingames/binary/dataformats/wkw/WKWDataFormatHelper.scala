@@ -2,7 +2,7 @@ package com.scalableminds.braingames.binary.dataformats.wkw
 
 import java.nio.file.{Path, Paths}
 
-import com.scalableminds.braingames.binary.models.datasource.{DataSourceId, ElementClass}
+import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.braingames.binary.models.{BucketPosition, CubePosition}
 import com.scalableminds.webknossos.wrap.VoxelType
 import net.liftweb.common.{Box, Failure, Full}
@@ -41,14 +41,14 @@ trait WKWDataFormatHelper {
       .resolve(s"header.${dataFileExtension}")
   }
 
-  def parseWKWFilePath(path: String, bucketLength: Int): Option[BucketPosition] = {
+  def parseWKWFilePath(path: String): Option[BucketPosition] = {
     val CubeRx = s".*(\\d+)/z(\\d+)/y(\\d+)/x(\\d+).${dataFileExtension}".r
     path match {
       case CubeRx(res, z, y, x) =>
         Some(new BucketPosition(
-          x.toInt * bucketLength,
-          y.toInt * bucketLength,
-          z.toInt * bucketLength,
+          x.toInt * DataLayer.bucketLength,
+          y.toInt * DataLayer.bucketLength,
+          z.toInt * DataLayer.bucketLength,
           res.toInt))
       case _ =>
         None

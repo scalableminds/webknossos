@@ -49,8 +49,8 @@ class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: Rando
     try {
       val offset: VoxelPosition = bucket.topLeft
       val bytesPerElement = dataLayer.bytesPerElement
-      val bucketLength = dataLayer.lengthOfProvidedBuckets
-      val cubeLength = dataLayer.lengthOfUnderlyingCubes
+      val bucketLength = DataLayer.bucketLength
+      val cubeLength = dataLayer.lengthOfUnderlyingCubes(bucket.resolution)
       val bucketSize = bytesPerElement * bucketLength * bucketLength * bucketLength
       val result = new Array[Byte](bucketSize)
 

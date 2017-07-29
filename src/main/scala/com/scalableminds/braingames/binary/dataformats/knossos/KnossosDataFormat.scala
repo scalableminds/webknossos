@@ -65,6 +65,13 @@ object KnossosDataFormat extends DataSourceImporter {
     KnossosSection(name, resolutions, previous.map(_.boundingBox).getOrElse(BoundingBox.empty))
   }
 
+  private def exploreResolutions(baseDir: Path): List[Int] = {
+    def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
+    PathUtils.listDirectories(baseDir, resolutionDirFilter).map{
+      _.map(_.getFileName.toString.toInt)
+    }.getOrElse(Nil)
+  }
+
   private def guessElementClass(baseDir: Path)(implicit report: DataSourceImportReport[Path]): Box[ElementClass.Value] = {
 
     def toInt(d: Double) = if (d.isWhole) Full(d.toInt) else Empty

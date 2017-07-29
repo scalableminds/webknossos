@@ -29,7 +29,7 @@ trait KnossosLayer extends DataLayer {
 
   lazy val resolutions: List[Int] = sections.map(_.resolutions).reduce(_ union _)
 
-  val lengthOfUnderlyingCubes = KnossosDataFormat.cubeLength
+  def lengthOfUnderlyingCubes(resolution: Int) = KnossosDataFormat.cubeLength
 
   lazy val bucketProvider = new KnossosBucketProvider(this)
 }

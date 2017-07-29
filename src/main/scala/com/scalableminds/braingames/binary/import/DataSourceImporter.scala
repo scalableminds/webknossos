@@ -70,11 +70,4 @@ trait DataSourceImporter {
       paths => paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
     }.getOrElse(Nil).toSet
   }
-
-  protected def exploreResolutions(baseDir: Path): List[Int] = {
-    def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
-    PathUtils.listDirectories(baseDir, resolutionDirFilter).map{
-      _.flatMap(_.getFileName.toString.toIntOpt)
-    }.getOrElse(Nil)
-  }
 }

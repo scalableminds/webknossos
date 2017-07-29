@@ -18,8 +18,8 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
   /**
     * Returns all buckets that are withing the cuboid spanned by top-left and bottom-right
     */
-  def allBucketsInCuboid(bucketLength: Int): Seq[BucketPosition] = {
-    val minBucket = topLeft.toBucket(bucketLength)
+  def allBucketsInCuboid: Seq[BucketPosition] = {
+    val minBucket = topLeft.toBucket
     var bucketList: List[BucketPosition] = Nil
     var bucket = minBucket
     while(bucket.topLeft.x < bottomRight.x){

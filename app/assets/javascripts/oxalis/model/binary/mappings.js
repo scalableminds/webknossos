@@ -28,8 +28,8 @@ class Mappings {
     const datasetName = dataset.name;
     this.mappings = _.transform(
       layer.mappings,
-      (result, mappingObject) => {
-        result[mappingObject.name] = mappingObject;
+      (result, mappingName) => {
+        result[mappingName] = { name: mappingName };
       },
       {},
     );
@@ -46,12 +46,16 @@ class Mappings {
     return this.buildMappingArray(mappingName);
   }
 
-  fetchMappings(mappingName: string): Promise<*> {
-    const mappingChain = this.getMappingChain(mappingName);
-    return Promise.all(mappingChain.map(curMappingName => this.fetchMapping(curMappingName)));
+  async fetchMappings(mappingName: string): Promise<*> {
+    const mapping = await this.fetchMapping(mappingName);
+    if (mapping.parent != null) {
+      return await this.fetchMappings(mapping.parent);
+    } else {
+      return Promise.resolve();
+    }
   }
 
-  fetchMapping(mappingName: string): Promise<?MappingType> {
+  fetchMapping(mappingName: string): Promise<MappingType> {
     const mappingObject = this.mappings[mappingName];
     if (mappingObject != null && mappingObject.classes != null) {
       return Promise.resolve(mappingObject);

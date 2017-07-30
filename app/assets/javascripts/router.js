@@ -18,6 +18,7 @@ import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/views/dashboard_view";
 import UserModel from "dashboard/models/user_model";
 import SpotlightView from "dashboard/views/spotlight/spotlight_view";
+import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
 import DatasetCollection from "admin/models/dataset/dataset_collection";
 
 // #####
@@ -42,7 +43,8 @@ class Router extends BaseRouter {
       "/dashboard": "dashboard",
       "/datasets": "dashboard",
       "/datasets/upload": "datasetAdd",
-      "/datasets/:id/edit": "datasetEdit",
+      "/datasets/:name/edit": "datasetEdit",
+      "/datasets/:name/import": "datasetImport",
       "/users/:id/details": "dashboard",
       "/taskTypes": "taskTypes",
       "/taskTypes/create": "taskTypesCreate",
@@ -152,19 +154,20 @@ class Router extends BaseRouter {
     });
   }
 
-  datasetEdit(datasetID) {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const DatasetEditView = admin.DatasetEditView;
-      const DatasetModel = admin.DatasetModel;
-
-      const model = new DatasetModel({ name: datasetID });
-      const view = new DatasetEditView({ model });
-
-      this.listenTo(model, "sync", () => {
-        this.changeView(view);
-        this.hideLoadingSpinner();
-      });
+  datasetEdit(name) {
+    const view = new ReactBackboneWrapper(DatasetImportView, {
+      datasetName: name,
+      isEditingMode: true,
     });
+    this.changeView(view);
+  }
+
+  datasetImport(name) {
+    const view = new ReactBackboneWrapper(DatasetImportView, {
+      datasetName: name,
+      isEditingMode: false,
+    });
+    this.changeView(view);
   }
 
   users() {

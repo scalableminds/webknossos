@@ -54,7 +54,7 @@ export default {
         {
           name: "color",
           category: "color",
-          maxCoordinates: {
+          boundingBox: {
             topLeft: [3840, 4220, 2304],
             width: 128,
             height: 131,
@@ -68,7 +68,7 @@ export default {
         {
           name: "segmentation",
           category: "segmentation",
-          maxCoordinates: {
+          boundingBox: {
             topLeft: [3840, 4220, 2304],
             width: 128,
             height: 131,
@@ -87,7 +87,7 @@ export default {
         {
           name: "64007765-cef9-4e31-b206-dba795b5be17",
           category: "segmentation",
-          maxCoordinates: {
+          boundingBox: {
             topLeft: [3840, 4220, 2304],
             width: 128,
             height: 131,

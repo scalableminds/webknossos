@@ -1,5 +1,4 @@
 // @flow
-/* globals SyntheticEvent: 0 */
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import type { OxalisState } from "oxalis/store";
@@ -107,7 +106,7 @@ class MergeModalView extends PureComponent {
     }
   };
 
-  handleMergeTaskType = (event: SyntheticEvent) => {
+  handleMergeTaskType = (event: SyntheticInputEvent) => {
     event.preventDefault();
     const { selectedTaskType } = this.state;
     if (selectedTaskType != null) {
@@ -118,7 +117,7 @@ class MergeModalView extends PureComponent {
     }
   };
 
-  handleMergeProject = (event: SyntheticEvent) => {
+  handleMergeProject = (event: SyntheticInputEvent) => {
     event.preventDefault();
     const { selectedProject } = this.state;
     if (selectedProject != null) {
@@ -129,7 +128,7 @@ class MergeModalView extends PureComponent {
     }
   };
 
-  handleMergeExplorativeAnnotation = async (event: SyntheticEvent) => {
+  handleMergeExplorativeAnnotation = async (event: SyntheticInputEvent) => {
     event.preventDefault();
     const { selectedExplorativeAnnotation } = this.state;
 

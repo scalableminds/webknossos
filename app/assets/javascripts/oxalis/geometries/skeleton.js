@@ -516,8 +516,13 @@ class Skeleton {
    * a texture shared between the node and edge shader.
    */
   updateTreeColor(treeId: number, color: Vector3, isVisible: boolean = true) {
-    this.treeColorTexture.image.data.set(color.concat(isVisible ? 1 : 0), treeId * 4);
+    const rgba = this.getTreeRGBA(color, isVisible);
+    this.treeColorTexture.image.data.set(rgba, treeId * 4);
     this.treeColorTexture.needsUpdate = true;
+  }
+
+  getTreeRGBA(color: Vector3, isVisible: boolean) {
+    return color.concat(isVisible ? 1 : 0);
   }
 
   /**

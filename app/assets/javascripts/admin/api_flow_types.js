@@ -2,13 +2,13 @@ import type { Vector3 } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
 
 type APIDataSourceType = {
-  id: {
-    name: string,
-    team: string,
+  +id: {
+    +name: string,
+    +team: string,
   },
-  status?: string,
-  dataLayers: Array<DataLayerType>,
-  scale: Vector3,
+  +status?: string,
+  +dataLayers: Array<DataLayerType>,
+  +scale: Vector3,
 };
 
 export type APIDatasetType = {
@@ -24,20 +24,20 @@ export type APIDatasetType = {
   +allowedTeams: Array<string>,
   +isActive: boolean,
   +accessToken: null,
-  isPublic: boolean,
-  description: ?string,
+  +isPublic: boolean,
+  +description: ?string,
   +created: number,
   +isEditable: boolean,
 };
 
 export type APITeamRoleType = {
-  team: string,
-  role: { name: string },
+  +team: string,
+  +role: { +name: string },
 };
 
 export type APIUserType = {
   +email: string,
-  +experiences: { [string]: number },
+  +experiences: { [+string]: number },
   +firstName: string,
   +lastName: string,
   +id: string,
@@ -49,12 +49,12 @@ export type APIUserType = {
 };
 
 export type APITeamType = {
-  amIAnAdmin: boolean,
-  amIOwner: boolean,
-  id: string,
-  isEditable: boolean,
-  name: string,
-  owner: APIUserType,
-  parent: string,
-  roles: Array<APIRoleType>,
+  +amIAnAdmin: boolean,
+  +amIOwner: boolean,
+  +id: string,
+  +isEditable: boolean,
+  +name: string,
+  +owner: APIUserType,
+  +parent: string,
+  +roles: Array<APIRoleType>,
 };

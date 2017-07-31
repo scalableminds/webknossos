@@ -10,7 +10,6 @@ import play.api.libs.json.Json
   * Created by f on 15.06.17.
   */
 case class SkeletonTracing(id: String,
-                           name: String, //todo: move name to annotation in webknossos
                            dataSetName: String,
                            trees: List[Tree],
                            timestamp: Long,

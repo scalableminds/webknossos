@@ -7,6 +7,7 @@ import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings.skeleton._
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -33,8 +34,9 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracing <- skeletonTracingService.createFromNml(name, request.body)
+          tracing <- NmlParser.parse(skeletonTracingService.createNewId(), name, request.body.trim())
         } yield {
+          skeletonTracingService.save(tracing)
           Ok(tracing.id)
         }
       }
@@ -67,7 +69,7 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def download(tracingId: String, version: Option[Long]) = Action.async {
+  def download(tracingId: String, version: Option[Long], outfileName: String) = Action.async {
     implicit request => {
       AllowRemoteOrigin {
         for {
@@ -79,7 +81,7 @@ class SkeletonTracingController @Inject()(
             CONTENT_TYPE ->
               "application/octet-stream",
             CONTENT_DISPOSITION ->
-              s"filename=${'"'}${updatedTracing.name}${'"'}.nml")
+              s"filename=${'"'}${outfileName}${'"'}.nml")
         }
       }
     }
@@ -99,18 +101,32 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def createMergedFromZip(name: String) = Action {implicit request => {Ok}}
+  def createMergedFromZip() = Action {
+    implicit request => {
+      AllowRemoteOrigin {
+        val zipfile = request.body.asRaw.map(_.asFile)
+        val tracings = skeletonTracingService.extractAllFromZip(zipfile)
+        val merged = skeletonTracingService.merge(tracings)
+        skeletonTracingService.save(merged)
+        Ok(merged.id)
+      }
+    }
+  }
+
+
   def createMultipleFromZip() = Action {implicit request => {Ok}}
   def createMultipleFromCsv() = Action {implicit request => {Ok}}
 
 
-  def createMergedFromIds(name: String) = Action.async(validateJson[List[TracingSelector]]) {
+  def createMergedFromIds = Action.async(validateJson[List[TracingSelector]]) {
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracingMerged <- skeletonTracingService.createMerged(request.body, name)
+          tracings <- skeletonTracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
         } yield {
-          Ok(tracingMerged.id)
+          val merged = skeletonTracingService.merge(tracings)
+          skeletonTracingService.save(merged)
+          Ok(merged.id)
         }
       }
     }
@@ -120,9 +136,10 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracingMerged <- skeletonTracingService.merge(request.body)
+          tracings <- skeletonTracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
         } yield {
-          Ok(Json.toJson(tracingMerged))
+          val merged = skeletonTracingService.merge(tracings)
+          Ok(Json.toJson(merged))
         }
       }
     }

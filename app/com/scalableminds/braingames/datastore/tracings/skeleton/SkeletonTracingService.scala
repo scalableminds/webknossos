@@ -1,6 +1,6 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
-import java.io.{BufferedOutputStream, FileOutputStream}
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util.UUID
 
 import com.google.inject.Inject
@@ -11,7 +11,9 @@ import com.scalableminds.braingames.datastore.tracings.skeleton.elements.Skeleto
 import com.scalableminds.util.geometry.{BoundingBox, Scale}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.wrap.WKWFile
 import net.liftweb.common.Box
+import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
@@ -25,9 +27,8 @@ class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore
                                       ) extends FoxImplicits with TextUtils {
 
-  private def createNewId(): String = UUID.randomUUID.toString
+  def createNewId(): String = UUID.randomUUID.toString
 
-  //TODO: clean up, can probably always be replaced by findUpdated?
   def find(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
     tracingDataStore.skeletons.getJson[SkeletonTracing](tracingId, version).map(_.value)
 
@@ -37,11 +38,20 @@ class SkeletonTracingService @Inject()(
   def findUpdated(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
     findVersioned(tracingId, version).flatMap(tracing => applyPendingUpdates(tracing, version))
 
+  def save(tracing: SkeletonTracing) = tracingDataStore.skeletons.putJson(tracing.id, tracing.version, tracing)
+
+  def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[Unit]] = {
+    Fox.combined(for {
+      updateActionGroup <- updateActionGroups
+    } yield {
+      tracingDataStore.skeletonUpdates.putJson(tracingId, updateActionGroup.version, updateActionGroup.actions)
+    }.toFox)
+  }
+
   def create(datSetName: String, parameters: CreateEmptyParameters): SkeletonTracing = {
     val id = createNewId()
     val tracing = SkeletonTracing(
       id = id,
-      name = "",
       dataSetName = datSetName,
       trees = List(),
       timestamp = System.currentTimeMillis(),
@@ -56,31 +66,12 @@ class SkeletonTracingService @Inject()(
     tracing
   }
 
-  private def save(tracing: SkeletonTracing) = tracingDataStore.skeletons.putJson(tracing.id, tracing.version, tracing)
-
-  def createFromNml(name: String, nml: String): Box[SkeletonTracing] = {
-    for {
-      tracing <- NMLParser.parse(createNewId(), name, nml.trim())
-    } yield {
-      save(tracing)
-      tracing
-    }
-  }
-
-  def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[Unit]] = {
-    Fox.combined(for {
-      updateActionGroup <- updateActionGroups
-    } yield {
-      tracingDataStore.skeletonUpdates.putJson(tracingId, updateActionGroup.version, updateActionGroup.actions)
-    }.toFox)
-  }
-
   def downloadNml(tracing: SkeletonTracing, dataSourceRepository: DataSourceRepository): Option[Enumerator[Array[Byte]]] = {
     for {
       dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName)
     } yield {
       Enumerator.outputStream { os =>
-        NMLWriter.toNML(tracing, os, dataSource.scale).map(_ => os.close())
+        NmlWriter.toNml(tracing, os, dataSource.scale).map(_ => os.close())
       }
     }
   }
@@ -178,7 +169,7 @@ class SkeletonTracingService @Inject()(
 
   def duplicate(tracing: SkeletonTracing): Box[SkeletonTracing] = {
     val id = createNewId()
-    val newTracing = tracing.copy(id = id, name = "", timestamp = System.currentTimeMillis(), version = 0)
+    val newTracing = tracing.copy(id = id, timestamp = System.currentTimeMillis(), version = 0)
     save(newTracing)
     Some(newTracing)
   }
@@ -196,21 +187,22 @@ class SkeletonTracingService @Inject()(
     tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBoxes, version = 0)
   }
 
-  def merge(tracingSelectors: List[TracingSelector]): Fox[SkeletonTracing] = {
-    val tracingBoxes: List[Box[SkeletonTracing]] = tracingSelectors.map(selector => findUpdated(selector.tracingId, selector.version))
-    for {
-      tracings <- Fox.combined(tracingBoxes.map(_.toFox))
-    } yield {
-      tracings.reduceLeft(mergeTwo)
-    }
+  def findMultipleUpdated(tracingSelectors: List[TracingSelector]): Fox[List[SkeletonTracing]] = {
+    val boxes = tracingSelectors.map(selector => findUpdated(selector.tracingId, selector.version))
+    Fox.combined(boxes.map(_.toFox))
   }
 
-  def createMerged(tracingSelectors: List[TracingSelector], name: String): Fox[SkeletonTracing] = {
-    for {
-      merged <- merge(tracingSelectors)
-    } yield {
-      save(merged)
-      merged
-    }
+  def merge(tracings: List[SkeletonTracing]): SkeletonTracing = {
+    tracings.reduceLeft(mergeTwo)
+  }
+
+
+  def extractAllFromZip(zipfile: Option[File]): Box[List[SkeletonTracing]] = {
+//    zipfile.map { file =>
+//      ZipIO.withUnziped(file) {
+//        case (fileName, is) =>
+//
+//      }
+//    }
   }
 }

@@ -11,7 +11,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
-object NMLParser extends LazyLogging {
+object NmlParser extends LazyLogging {
 
   val DEFAULT_TIME = 0L
 
@@ -48,7 +48,7 @@ object NMLParser extends LazyLogging {
         val zoomLevel = parseZoomLevel(parameters \ "zoomLevel")
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}")
-        SkeletonTracing(id, name, dataSetName, trees.toList, time, None, activeNodeId,
+        SkeletonTracing(id, dataSetName, trees.toList, time, None, activeNodeId,
           scale, editPosition, editRotation, zoomLevel, version=0)
       }
     } catch {

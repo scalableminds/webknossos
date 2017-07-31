@@ -14,15 +14,15 @@ import scala.concurrent.Future
 /**
   * Created by f on 04.07.17.
   */
-object NMLWriter {
+object NmlWriter {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNML(t: SkeletonTracing, outputStream: OutputStream, scale: Scale): Future[Box[Boolean]] = {
+  def toNml(t: SkeletonTracing, outputStream: OutputStream, scale: Scale): Future[Box[Boolean]] = {
     implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(outputStream))
 
     Xml.withinElement("things") {
       for {
-        _ <- Xml.withinElement("parameters")(writeParametersAsXML(t, scale, writer))
+        _ <- Xml.withinElement("parameters")(writeParametersAsXml(t, scale, writer))
         _ <- Xml.toXML(t.trees.filterNot(_.nodes.isEmpty))
         _ <- Xml.withinElement("branchpoints")(Xml.toXML(t.trees.flatMap(_.branchPoints).sortBy(-_.timestamp)))
         _ <- Xml.withinElement("comments")(Xml.toXML(t.trees.flatMap(_.comments)))
@@ -34,7 +34,7 @@ object NMLWriter {
     }
   }
 
-  def writeParametersAsXML(tracing: SkeletonTracing, scale: Scale, writer: XMLStreamWriter): Fox[Boolean] = {
+  def writeParametersAsXml(tracing: SkeletonTracing, scale: Scale, writer: XMLStreamWriter): Fox[Boolean] = {
     writer.writeStartElement("experiment")
     writer.writeAttribute("name", tracing.dataSetName)
     writer.writeEndElement()

@@ -101,21 +101,42 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def createMergedFromZip() = Action {
+  def createMergedFromZip() = Action.async {
     implicit request => {
       AllowRemoteOrigin {
         val zipfile = request.body.asRaw.map(_.asFile)
-        val tracings = skeletonTracingService.extractAllFromZip(zipfile)
-        val merged = skeletonTracingService.merge(tracings)
-        skeletonTracingService.save(merged)
-        Ok(merged.id)
+        for {
+          tracings <- skeletonTracingService.extractAllFromZip(zipfile)
+        } yield {
+          val merged = skeletonTracingService.merge(tracings)
+          skeletonTracingService.save(merged)
+          Ok(merged.id)
+        }
       }
     }
   }
 
 
-  def createMultipleFromZip() = Action {implicit request => {Ok}}
-  def createMultipleFromCsv() = Action {implicit request => {Ok}}
+  def createMultipleFromZip() = Action.async {
+    implicit request => {
+      AllowRemoteOrigin {
+        val zipfile = request.body.asRaw.map(_.asFile)
+        val idsFox = for {
+          tracings: List[SkeletonTracing] <- skeletonTracingService.extractAllFromZip(zipfile)
+        } yield {
+          tracings.map(skeletonTracingService.save(_))
+          tracings.map(_.id)
+        }
+        for {
+          ids <- idsFox
+        } yield {
+          Ok(Json.toJson(ids))
+        }
+      }
+    }
+  }
+
+  def createMultipleFromCsv() = Action {Ok}
 
 
   def createMergedFromIds = Action.async(validateJson[List[TracingSelector]]) {

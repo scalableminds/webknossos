@@ -11,14 +11,14 @@ import com.scalableminds.braingames.datastore.tracings.skeleton.elements.Skeleto
 import com.scalableminds.util.geometry.{BoundingBox, Scale}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.wrap.WKWFile
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.Future
+import scala.io.Source
 
 /**
   * Created by f on 28.06.17.
@@ -196,13 +196,23 @@ class SkeletonTracingService @Inject()(
     tracings.reduceLeft(mergeTwo)
   }
 
-
-  def extractAllFromZip(zipfile: Option[File]): Box[List[SkeletonTracing]] = {
-//    zipfile.map { file =>
-//      ZipIO.withUnziped(file) {
-//        case (fileName, is) =>
-//
-//      }
-//    }
+  def extractAllFromZip(zipfile: Option[File]): Fox[List[SkeletonTracing]] = {
+    zipfile match {
+      case None => Fox.failure("Empty or No zipfile")
+      case Some(file) => {
+        val boxOfBoxes: Box[List[Box[SkeletonTracing]]] = ZipIO.withUnziped(file) {
+          case (filePath, is) => {
+            val nml = Source.fromInputStream(is).mkString
+            NmlParser.parse(createNewId(), filePath.getFileName.toString, nml)
+          }
+        }
+        boxOfBoxes match {
+          case Full(tracings: List[Box[SkeletonTracing]]) =>
+            Fox.combined(tracings.map(_.toFox))
+          case _ => Fox.failure("Could not unpack zipfile")
+        }
+      }
+    }
   }
+
 }

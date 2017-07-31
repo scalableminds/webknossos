@@ -124,8 +124,6 @@ GET           /tasks/create                                                     
 GET           /api/queries                                                      controllers.QueryController.empty
 POST          /api/queries                                                      controllers.QueryController.query(type: String, limit: Int ?= 1000)
 GET           /api/descriptions/:element                                        controllers.QueryController.descriptions(element)
-# TODO: change frontend to use api/queries instead of api/find (they do about the same). Then remove this
-GET           /api/find                                                         controllers.SearchController.find(q: String, type: String)
 
 GET           /api/tasks                                                        controllers.TaskController.list
 POST          /api/tasks                                                        controllers.TaskController.create(type: String)

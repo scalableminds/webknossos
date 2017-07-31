@@ -8,7 +8,7 @@ import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValuePair
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
-import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.geometry.{BoundingBox, Scale}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import net.liftweb.common.Box
@@ -37,7 +37,7 @@ class SkeletonTracingService @Inject()(
   def findUpdated(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
     findVersioned(tracingId, version).flatMap(tracing => applyPendingUpdates(tracing, version))
 
-  def create(datSetName: String): SkeletonTracing = {
+  def create(datSetName: String, parameters: CreateEmptyParameters): SkeletonTracing = {
     val id = createNewId()
     val tracing = SkeletonTracing(
       id = id,
@@ -45,6 +45,7 @@ class SkeletonTracingService @Inject()(
       dataSetName = datSetName,
       trees = List(),
       timestamp = System.currentTimeMillis(),
+      boundingBox = parameters.boundingBox,
       activeNodeId = None,
       scale = new Scale(1,1,1),
       editPosition = None,
@@ -183,10 +184,16 @@ class SkeletonTracingService @Inject()(
   }
 
   private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
-    //TODO: merge bounding boxes, other properties?
+    def mergeBoundingBoxes(aOpt: Option[BoundingBox], bOpt: Option[BoundingBox]) =
+      for {
+        a <- aOpt
+        b <- bOpt
+      } yield a.combineWith(b)
+
     val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
     val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping)
-    tracingA.copy(trees = mergedTrees, version = 0)
+    val mergedBoundingBoxes = mergeBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
+    tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBoxes, version = 0)
   }
 
   def merge(tracingSelectors: List[TracingSelector]): Fox[SkeletonTracing] = {

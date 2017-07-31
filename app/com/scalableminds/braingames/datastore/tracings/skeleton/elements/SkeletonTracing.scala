@@ -2,7 +2,7 @@ package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
 import com.scalableminds.braingames.datastore.tracings.Tracing
 import com.scalableminds.braingames.datastore.tracings.skeleton.TreeUtils
-import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.image.Color
 import play.api.libs.json.Json
 
@@ -14,6 +14,7 @@ case class SkeletonTracing(id: String,
                            dataSetName: String,
                            trees: List[Tree],
                            timestamp: Long,
+                           boundingBox: Option[BoundingBox],
                            activeNodeId: Option[Int],
                            scale: Scale,
                            editPosition: Option[Point3D],

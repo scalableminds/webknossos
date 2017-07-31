@@ -20,10 +20,10 @@ class SkeletonTracingController @Inject()(
                                          val messagesApi: MessagesApi
                                        ) extends Controller {
 
-  def createEmpty(dataSetName: String) = Action {
+  def createEmpty(dataSetName: String) = Action(validateJson[CreateEmptyParameters]) {
     implicit request => {
       AllowRemoteOrigin {
-        val tracing = skeletonTracingService.create(dataSetName)
+        val tracing = skeletonTracingService.create(dataSetName, request.body)
         Ok(tracing.id)
       }
     }

@@ -22,67 +22,79 @@ class SkeletonTracingController @Inject()(
 
   def createEmpty(dataSetName: String) = Action {
     implicit request => {
-      val tracing = skeletonTracingService.create(dataSetName)
-      Ok(tracing.id)
+      AllowRemoteOrigin {
+        val tracing = skeletonTracingService.create(dataSetName)
+        Ok(tracing.id)
+      }
     }
   }
 
   def createFromNml(name: String) = Action(parse.tolerantText) {
     implicit request => {
-      for {
-        tracing <- skeletonTracingService.createFromNml(name, request.body)
-      } yield {
-        Ok(tracing.id)
+      AllowRemoteOrigin {
+        for {
+          tracing <- skeletonTracingService.createFromNml(name, request.body)
+        } yield {
+          Ok(tracing.id)
+        }
       }
     }
   }
 
   def update(tracingId: String) = Action.async(validateJson[List[SkeletonUpdateActionGroup]]) {
     implicit request => {
-      for {
-        tracing <- skeletonTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-        _ <- skeletonTracingService.saveUpdates(tracingId, request.body)
-      } yield {
-        Ok
+      AllowRemoteOrigin {
+        for {
+          tracing <- skeletonTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          _ <- skeletonTracingService.saveUpdates(tracingId, request.body)
+        } yield {
+          Ok
+        }
       }
     }
   }
 
   def get(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
-      for {
-        tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
-        updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
-      } yield {
-        Ok(Json.toJson(updatedTracing))
+      AllowRemoteOrigin {
+        for {
+          tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
+          updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
+        } yield {
+          Ok(Json.toJson(updatedTracing))
+        }
       }
     }
   }
 
   def download(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
-      for {
-        tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
-        updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
-        downloadStream <- skeletonTracingService.downloadNml(updatedTracing, dataSourceRepository)
-      } yield {
-        Ok.chunked(downloadStream).withHeaders(
-          CONTENT_TYPE ->
-            "application/octet-stream",
-          CONTENT_DISPOSITION ->
-            s"filename=${'"'}${updatedTracing.name}${'"'}.nml")
+      AllowRemoteOrigin {
+        for {
+          tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
+          updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
+          downloadStream <- skeletonTracingService.downloadNml(updatedTracing, dataSourceRepository)
+        } yield {
+          Ok.chunked(downloadStream).withHeaders(
+            CONTENT_TYPE ->
+              "application/octet-stream",
+            CONTENT_DISPOSITION ->
+              s"filename=${'"'}${updatedTracing.name}${'"'}.nml")
+        }
       }
     }
   }
 
   def duplicate(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
-      for {
-        tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
-        updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
-        newTracing <- skeletonTracingService.duplicate(updatedTracing)
-      } yield {
-        Ok(newTracing.id)
+      AllowRemoteOrigin {
+        for {
+          tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
+          updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
+          newTracing <- skeletonTracingService.duplicate(updatedTracing)
+        } yield {
+          Ok(newTracing.id)
+        }
       }
     }
   }
@@ -94,30 +106,36 @@ class SkeletonTracingController @Inject()(
 
   def createMergedFromIds(name: String) = Action.async(validateJson[List[TracingSelector]]) {
     implicit request => {
-      for {
-        tracingMerged <- skeletonTracingService.createMerged(request.body, name)
-      } yield {
-        Ok(tracingMerged.id)
+      AllowRemoteOrigin {
+        for {
+          tracingMerged <- skeletonTracingService.createMerged(request.body, name)
+        } yield {
+          Ok(tracingMerged.id)
+        }
       }
     }
   }
 
   def getMerged = Action.async(validateJson[List[TracingSelector]]) {
     implicit request => {
-      for {
-        tracingMerged <- skeletonTracingService.merge(request.body)
-      } yield {
-        Ok(Json.toJson(tracingMerged))
+      AllowRemoteOrigin {
+        for {
+          tracingMerged <- skeletonTracingService.merge(request.body)
+        } yield {
+          Ok(Json.toJson(tracingMerged))
+        }
       }
     }
   }
 
   def downloadMultiple = Action.async(validateJson[DownloadMultipleParameters]) {
     implicit request => {
-      for {
-        zip <- skeletonTracingService.downloadMultiple(request.body, dataSourceRepository)
-      } yield {
-        Ok.sendFile(zip.file)
+      AllowRemoteOrigin {
+        for {
+          zip <- skeletonTracingService.downloadMultiple(request.body, dataSourceRepository)
+        } yield {
+          Ok.sendFile(zip.file)
+        }
       }
     }
   }

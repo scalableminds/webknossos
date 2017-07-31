@@ -192,7 +192,7 @@ class SkeletonTracingService @Inject()(
   def merge(tracingSelectors: List[TracingSelector]): Fox[SkeletonTracing] = {
     val tracingBoxes: List[Box[SkeletonTracing]] = tracingSelectors.map(selector => findUpdated(selector.tracingId, selector.version))
     for {
-      tracings <- Fox.combined(tracingBoxes.map(tracingBox => Fox(Future.successful(tracingBox))))
+      tracings <- Fox.combined(tracingBoxes.map(_.toFox))
     } yield {
       tracings.reduceLeft(mergeTwo)
     }

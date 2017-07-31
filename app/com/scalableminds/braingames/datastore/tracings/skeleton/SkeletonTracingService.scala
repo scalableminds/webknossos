@@ -182,8 +182,6 @@ class SkeletonTracingService @Inject()(
     Some(newTracing)
   }
 
-
-
   private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
     //TODO: merge bounding boxes, other properties?
     val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
@@ -191,12 +189,21 @@ class SkeletonTracingService @Inject()(
     tracingA.copy(trees = mergedTrees, version = 0)
   }
 
-  def merge(tracingSelectors: List[TracingSelector], shouldSave: Boolean=false): Box[SkeletonTracing] = {
-    val tracings = tracingSelectors.flatMap(selector => findUpdated(selector.tracingId, selector.version)) //TODO: error handling, what if a tracing is missing?
-    val merged = tracings.reduceLeft(mergeTwo) //does the order matter?
+  def merge(tracingSelectors: List[TracingSelector]): Fox[SkeletonTracing] = {
+    val tracingBoxes: List[Box[SkeletonTracing]] = tracingSelectors.map(selector => findUpdated(selector.tracingId, selector.version))
+    for {
+      tracings <- Fox.combined(tracingBoxes.map(tracingBox => Fox(Future.successful(tracingBox))))
+    } yield {
+      tracings.reduceLeft(mergeTwo)
+    }
+  }
 
-    if (shouldSave)
+  def createMerged(tracingSelectors: List[TracingSelector], name: String): Fox[SkeletonTracing] = {
+    for {
+      merged <- merge(tracingSelectors)
+    } yield {
       save(merged)
-    Some(merged)
+      merged
+    }
   }
 }

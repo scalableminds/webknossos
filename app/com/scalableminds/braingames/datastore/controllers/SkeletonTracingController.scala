@@ -87,16 +87,25 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-
   def createMergedFromZip(name: String) = Action {implicit request => {Ok}}
-  def createMergedFromIds(name: String) = Action {implicit request => {Ok}}
   def createMultipleFromZip() = Action {implicit request => {Ok}}
   def createMultipleFromCsv() = Action {implicit request => {Ok}}
 
-  def getMerged = Action(validateJson[List[TracingSelector]]) {
+
+  def createMergedFromIds(name: String) = Action.async(validateJson[List[TracingSelector]]) {
     implicit request => {
       for {
-        tracingMerged <- skeletonTracingService.merge(request.body, shouldSave=false)
+        tracingMerged <- skeletonTracingService.createMerged(request.body, name)
+      } yield {
+        Ok(tracingMerged.id)
+      }
+    }
+  }
+
+  def getMerged = Action.async(validateJson[List[TracingSelector]]) {
+    implicit request => {
+      for {
+        tracingMerged <- skeletonTracingService.merge(request.body)
       } yield {
         Ok(Json.toJson(tracingMerged))
       }

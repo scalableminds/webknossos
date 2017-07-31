@@ -12,6 +12,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.Json
 import play.api.libs.ws.WSResponse
 import reactivemongo.api.commands.WriteResult
 
@@ -80,6 +81,20 @@ object DataSetService extends FoxImplicits with LazyLogging {
           dataSource,
           isActive = dataSource.isUsable).futureBox
     }
+  }
+
+  def deactivateDataSources(dataStoreName: String)(implicit ctx: DBAccessContext) = {
+    DataSetDAO.update(
+      Json.obj("dataStoreInfo.name" -> dataStoreName),
+      Json.obj(
+        "$set" -> Json.obj(
+          "isActive" -> false,
+          "dataSource.status" -> "No longer available on datastore."),
+        "$unset" -> Json.obj(
+          "dataSource.dataLayers" -> "",
+          "dataSource.scale" -> "")
+      ),
+      multi = true)
   }
 
   def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] = {

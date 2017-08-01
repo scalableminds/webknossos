@@ -4,6 +4,7 @@ import _ from "lodash";
 import React from "react";
 import { Modal, Button, Input, Icon } from "antd";
 import Request from "libs/request";
+import update from "immutability-helper";
 import type { APIUserType } from "admin/api_flow_types";
 
 class ExperienceModalView extends React.PureComponent {
@@ -12,73 +13,107 @@ class ExperienceModalView extends React.PureComponent {
     onCancel: Function,
     visible: boolean,
     selectedUserIds: Array<string>,
-    users: Array<APIUserType>,
+    users: Array<APIUserType>
   };
 
   state = {
     domain: null,
-    level: null,
+    level: null
   };
 
   increaseExperience = (): void => {
     this.setExperience(null, true);
   };
 
-  setExperience = (event: ?SyntheticInputEvent, shouldAddValue: boolean = false): void => {
+  setExperience = (
+    event: ?SyntheticInputEvent,
+    shouldAddValue: boolean = false
+  ): void => {
     const { domain, level } = this.state;
-    if (domain && level) {
-      const newUsers = this.props.users.map(user => {
+    if (domain && level !== null) {
+      const newUserPromises = this.props.users.map(user => {
         if (this.props.selectedUserIds.includes(user.id)) {
-          if (shouldAddValue) {
-            if (user.experiences[domain]) {
-              user.experiences[domain] += parseInt(level);
-            } else {
-              user.experiences[domain] = parseInt(level);
-            }
-          } else {
-            user.experiences[domain] = parseInt(level);
+          let newExperienceLevel = parseInt(level);
+
+          if (shouldAddValue && user.experiences[domain]) {
+            newExperienceLevel = user.experiences[domain] + parseInt(level);
           }
+
+          const newUser = update(user, {
+            experiences: { [domain]: { $set: newExperienceLevel } }
+          });
 
           const url = `/api/users/${user.id}`;
           Request.sendJSONReceiveJSON(url, {
-            data: user,
+            data: newUser
           });
+
+          return this.sendUserToServer(newUser, user);
         }
-
-        return user;
+        return Promise.resolve(user);
       });
 
-      this.setState({
-        domain: null,
-        level: null,
-      });
-
-      this.props.onChange(newUsers);
+      this.closeModal(newUserPromises);
     }
   };
 
   deleteExperience = () => {
     if (this.state.domain) {
-      const newUsers = this.props.users.map(user => {
+      const newUserPromises = this.props.users.map(user => {
         if (this.props.selectedUserIds.includes(user.id)) {
-          delete user.experiences[this.state.domain];
+          const newExperiences = _.omit(user.experiences, this.state.domain);
+          const newUser = update(user, {
+            experiences: { $set: newExperiences }
+          });
+
+          return this.sendUserToServer(newUser, user);
         }
-        return user;
+        return Promise.resolve(user);
       });
 
-      this.setState({
-        domain: null,
-        level: null,
-      });
-
-      this.props.onChange(newUsers);
+      this.closeModal(newUserPromises);
     }
   };
 
+  /**
+  * Save a user object to the server using an API call.
+  * @param newUser - A modified user object intended to be saved.
+  * @param oldUser - The original user object of `newUser`. Returned in case API call fails
+  *
+  */
+  sendUserToServer(
+    newUser: APIUserType,
+    oldUser: APIUserType
+  ): Promise<APIUserType> {
+    const url = `/api/users/${newUser.id}`;
+    return Request.sendJSONReceiveJSON(url, {
+      data: newUser
+    }).then(() => Promise.resolve(newUser), () => Promise.reject(oldUser));
+  }
+
+  closeModal(usersPromises: Array<Promise<APIUserType>>): void {
+    Promise.all(usersPromises).then(
+      newUsers => {
+        this.setState({
+          domain: null,
+          level: null
+        });
+        this.props.onChange(newUsers);
+      },
+      () => {
+        // do nothing and keep modal open
+      }
+    );
+  }
+
   render() {
+    if (!this.props.visible) {
+      return null;
+    }
+
     const { domain, level } = this.state;
     const isDomainValid = _.isString(domain) && domain !== "";
-    const isLevelValid = _.isNumber(parseInt(level)) && !isNaN(parseInt(level));
+    const isLevelValid = !isNaN(parseInt(level));
 
     return (
       <Modal
@@ -101,7 +136,11 @@ class ExperienceModalView extends React.PureComponent {
             >
               Set Experience
             </Button>
-            <Button type="primary" onClick={this.deleteExperience} disabled={!isDomainValid}>
+            <Button
+              type="primary"
+              onClick={this.deleteExperience}
+              disabled={!isDomainValid}
+            >
               Delete Experience
             </Button>
             <Button onClick={() => this.props.onCancel()}>Cancel</Button>

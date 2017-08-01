@@ -21,7 +21,7 @@ object KnossosDataFormat extends DataSourceImporter {
 
   def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(implicit report: DataSourceImportReport[Path]): Box[DataLayer] = {
     val previousSections = previous match {
-      case Some(l: KnossosDataLayer) => Some(l.sections)
+      case Some(l: KnossosLayer) => Some(l.sections)
       case _ => None
     }
 
@@ -81,7 +81,7 @@ object KnossosDataFormat extends DataSourceImporter {
         dataFile <- Box(path.toStream.headOption) ?~ "Could not determine elementClass - No data file found"
         fileSize = new File(dataFile.toString).length()
         bytesPerElementDouble = fileSize.toDouble / math.pow(cubeLength, 3)
-        elementClass <- toInt(bytesPerElementDouble).flatMap(ElementClass.fromBytesPerElement(_)) ?~ s"Could not determine elementClass - Invalid data file size ($fileSize)"
+        elementClass <- toInt(bytesPerElementDouble).flatMap(ElementClass.fromBytesPerElement) ?~ s"Could not determine elementClass - Invalid data file size ($fileSize)"
       } yield {
         elementClass
       }

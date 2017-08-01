@@ -37,7 +37,7 @@ export type APITeamRoleType = {
 
 export type APIUserType = {
   +email: string,
-  +experiences: { [+string]: number },
+  +experiences: { +[string]: number },
   +firstName: string,
   +lastName: string,
   +id: string,

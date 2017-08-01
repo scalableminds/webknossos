@@ -17,19 +17,19 @@ const { Search } = Input;
 class UserListView extends React.PureComponent {
   state: {
     isLoading: boolean,
-    users: ?Array<APIUserType>,
+    users: Array<APIUserType>,
     selectedUserIds: Array<string>,
     isExperienceModalVisible: boolean,
     isTeamRoleModalVisible: boolean,
-    isActivationFilterSet: ?boolean,
+    activationFilter: Array<"true" | "false">,
     searchQuery: string
   } = {
     isLoading: true,
-    users: null,
+    users: [],
     selectedUserIds: [],
     isExperienceModalVisible: false,
     isTeamRoleModalVisible: false,
-    isActivationFilterSet: true,
+    activationFilter: ["true"],
     searchQuery: ""
   };
 
@@ -51,8 +51,6 @@ class UserListView extends React.PureComponent {
     selectedUser: APIUserType,
     isActive: boolean = true
   ): void => {
-    if (!this.state.users) return;
-
     const newUsers = this.state.users.map(user => {
       if (selectedUser.id === user.id) {
         const newUser = Object.assign({}, user, { isActive });
@@ -93,7 +91,7 @@ class UserListView extends React.PureComponent {
 
   handleDismissActivationFilter = () => {
     this.setState({
-      isActivationFilterSet: null
+      activationFilter: []
     });
   };
 
@@ -119,7 +117,7 @@ class UserListView extends React.PureComponent {
       );
     }
 
-    const activationFilterWarning = this.state.isActivationFilterSet
+    const activationFilterWarning = this.state.activationFilter.includes("true")
       ? <Tag closable onClose={this.handleDismissActivationFilter} color="blue">
           Show Active User Only
         </Tag>
@@ -160,20 +158,21 @@ class UserListView extends React.PureComponent {
         />
 
         <Table
-          dataSource={
-            this.state.users &&
-            Utils.filterWithSearchQuery(
-              this.state.users,
-              ["firstName", "lastName", "email", "teams", "experiences"],
-              this.state.searchQuery
-            )
-          }
+          dataSource={Utils.filterWithSearchQuery(
+            this.state.users,
+            ["firstName", "lastName", "email", "teams", "experiences"],
+            this.state.searchQuery
+          )}
           rowKey="id"
           rowSelection={rowSelection}
           pagination={{
             defaultPageSize: 50
           }}
           style={{ marginTop: 30, marginBotton: 30 }}
+          onChange={(pagination, filters) =>
+            this.setState({
+              activationFilter: filters.isActive
+            })}
         >
           <Column
             title="Last name"
@@ -226,15 +225,11 @@ class UserListView extends React.PureComponent {
             dataIndex="isActive"
             key="isActive"
             filters={[
-              { text: "Actived", value: "true" },
-              { text: "Deactived", value: "false" }
+              { text: "Activated", value: "true" },
+              { text: "Deactivated", value: "false" }
             ]}
             filtered
-            filteredValue={
-              this.state.isActivationFilterSet
-                ? [this.state.isActivationFilterSet.toString()]
-                : null
-            }
+            filteredValue={this.state.activationFilter}
             onFilter={(value: boolean, user: APIUserType) =>
               user.isActive.toString() === value}
             render={isActive => {
@@ -271,14 +266,14 @@ class UserListView extends React.PureComponent {
         <ExperienceModalView
           visible={this.state.isExperienceModalVisible}
           selectedUserIds={this.state.selectedUserIds}
-          users={this.state.users || []}
+          users={this.state.users}
           onChange={this.handleUsersChange}
           onCancel={() => this.setState({ isExperienceModalVisible: false })}
         />
         <TeamRoleModalView
           visible={this.state.isTeamRoleModalVisible}
           selectedUserIds={this.state.selectedUserIds}
-          users={this.state.users || []}
+          users={this.state.users}
           onChange={this.handleUsersChange}
           onCancel={() => this.setState({ isTeamRoleModalVisible: false })}
         />

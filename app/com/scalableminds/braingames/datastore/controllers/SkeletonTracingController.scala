@@ -93,8 +93,8 @@ class SkeletonTracingController @Inject()(
         for {
           tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
           updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
-          newTracing <- skeletonTracingService.duplicate(updatedTracing)
         } yield {
+          val newTracing = skeletonTracingService.duplicate(updatedTracing)
           Ok(newTracing.id)
         }
       }

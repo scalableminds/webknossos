@@ -80,6 +80,11 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: Op
 
 
 
+case class RevertToVersionAction(sourceVersion: Long) extends SkeletonUpdateAction {
+  override def applyOn(tracing: SkeletonTracing) = throw new Exception("RevertToVersionAction applied on unversioned tracing")
+}
+
+
 
 
 object CreateTreeSkeletonAction {implicit val jsonFormat = Json.format[CreateTreeSkeletonAction]}
@@ -93,6 +98,7 @@ object CreateNodeSkeletonAction {implicit val jsonFormat = Json.format[CreateNod
 object DeleteNodeSkeletonAction {implicit val jsonFormat = Json.format[DeleteNodeSkeletonAction]}
 object UpdateNodeSkeletonAction {implicit val jsonFormat = Json.format[UpdateNodeSkeletonAction]}
 object UpdateTracingSkeletonAction {implicit val jsonFormat = Json.format[UpdateTracingSkeletonAction]}
+object RevertToVersionAction {implicit val jsonFormat = Json.format[RevertToVersionAction]}
 
 
 
@@ -113,6 +119,7 @@ object SkeletonUpdateAction {
         case "createEdge" => deserialize[CreateEdgeSkeletonAction](jsonValue)
         case "deleteEdge" => deserialize[DeleteEdgeSkeletonAction](jsonValue)
         case "updateTracing" => deserialize[UpdateTracingSkeletonAction](jsonValue)
+        case "revertToVersion" => deserialize[RevertToVersionAction](jsonValue)
       }
     }
 
@@ -140,6 +147,7 @@ object SkeletonUpdateAction {
       case s: CreateEdgeSkeletonAction => Json.obj("name" -> "createEdge", "value" -> Json.toJson(s)(CreateEdgeSkeletonAction.jsonFormat))
       case s: DeleteEdgeSkeletonAction => Json.obj("name" -> "deleteEdge", "value" -> Json.toJson(s)(DeleteEdgeSkeletonAction.jsonFormat))
       case s: UpdateTracingSkeletonAction => Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
+      case s: RevertToVersionAction => Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionAction.jsonFormat))
     }
   }
 }

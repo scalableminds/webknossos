@@ -11,7 +11,7 @@ import com.scalableminds.braingames.datastore.tracings.skeleton.elements.Skeleto
 import com.scalableminds.util.geometry.{BoundingBox, Scale}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, Empty, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
@@ -88,9 +88,7 @@ class SkeletonTracingService @Inject()(
 
     for {
       zip <- createZip(nmls, params.zipfileName)
-    } yield {
-      zip
-    }
+    } yield zip
   }
 
   private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String): Future[TemporaryFile] = {
@@ -118,9 +116,12 @@ class SkeletonTracingService @Inject()(
     val newVersion = findDesiredOrNewestPossibleVersion(desiredVersion, tracingVersioned)
     if (newVersion > existingVersion) {
       val pendingUpdates = findPendingUpdates(tracing.id, existingVersion, newVersion)
-      val updatedTracing = update(tracing, pendingUpdates, newVersion)
-      save(updatedTracing)
-      Some(updatedTracing)
+      for {
+        updatedTracing <- update(tracing, pendingUpdates, newVersion)
+      } yield {
+        save(updatedTracing)
+        updatedTracing
+      }
     } else {
       Some(tracing)
     }
@@ -155,23 +156,38 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  private def update(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction], newVersion: Long): SkeletonTracing  = updates match {
-    case List() => tracing
-    case head :: tail => {
-      def updateIter(tracing: SkeletonTracing, remainingUpdates: List[SkeletonUpdateAction]): SkeletonTracing = remainingUpdates match {
-        case List() => tracing
-        case update :: tail => updateIter(update.applyOn(tracing), tail)
+  private def update(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction], newVersion: Long): Box[SkeletonTracing] = {
+    def updateIter(tracingBox: Box[SkeletonTracing], remainingUpdates: List[SkeletonUpdateAction]): Box[SkeletonTracing] = {
+      tracingBox match {
+        case Empty => Empty
+        case Full(tracing) => {
+          remainingUpdates match {
+            case List() => Full(tracing)
+            case RevertToVersionAction(sourceVersion) :: tail => {
+              val sourceTracing = findUpdated(tracing.id, Some(sourceVersion))
+              updateIter(sourceTracing, tail)
+            }
+            case update :: tail => updateIter(Full(update.applyOn(tracing)), tail)
+          }
+        }
       }
-      val updated = updateIter(tracing, updates)
-      updated.copy(version = newVersion)
+    }
+
+    updates match {
+      case List() => Full(tracing)
+      case head :: tail => {
+        for {
+          updated <- updateIter(Some(tracing), updates)
+        } yield updated.copy(version = newVersion)
+      }
     }
   }
 
-  def duplicate(tracing: SkeletonTracing): Box[SkeletonTracing] = {
+  def duplicate(tracing: SkeletonTracing): SkeletonTracing = {
     val id = createNewId()
     val newTracing = tracing.copy(id = id, timestamp = System.currentTimeMillis(), version = 0)
     save(newTracing)
-    Some(newTracing)
+    newTracing
   }
 
   private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {

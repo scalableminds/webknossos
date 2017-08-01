@@ -199,7 +199,7 @@ class TaskCreateBulkImportView extends Marionette.View {
     const height = parseInt(words[16]);
     const depth = parseInt(words[17]);
     const projectName = words[18];
-    const scriptId = words[19] || null;
+    const scriptId = words[19] || undefined;
 
     return {
       dataSet,

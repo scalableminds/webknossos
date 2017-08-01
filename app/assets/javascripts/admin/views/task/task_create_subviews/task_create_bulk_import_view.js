@@ -18,7 +18,7 @@ class TaskCreateBulkImportView extends Marionette.View {
   <div class="col-sm-12">
     <div class="well">
       One line for each task. The values are seperated by ','. Format: <br>
-      dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project<br><br>
+      dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, <a href="/scripts">scriptId</a>]<br><br>
       <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
         <div class="form-group">
           <div class="col-sm-12">
@@ -199,11 +199,13 @@ class TaskCreateBulkImportView extends Marionette.View {
     const height = parseInt(words[16]);
     const depth = parseInt(words[17]);
     const projectName = words[18];
+    const scriptId = words[19] || null;
 
     return {
       dataSet,
       team,
       taskTypeId,
+      scriptId,
       neededExperience: {
         value: minExperience,
         domain: experienceDomain,

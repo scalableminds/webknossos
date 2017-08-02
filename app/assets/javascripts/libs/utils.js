@@ -102,9 +102,10 @@ const Utils = {
     };
   },
 
-  localeCompareBy(key: string, isSortedAscending: boolean = true) {
+  localeCompareBy<T: Object>(key: string, isSortedAscending: boolean = true) {
     const sortingOrder = isSortedAscending ? 1 : -1;
-    return (a: Object, b: Object) =>
+
+    return (a: T, b: T) =>
       a[key].localeCompare(b[key], "en", {
         numeric: true,
         usage: "search"

@@ -32,6 +32,7 @@ import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
 import { connect } from "react-redux";
 import messages from "messages";
+import { undoAction } from "oxalis/model/actions/save_actions";
 
 import type { ToastType } from "libs/toast";
 import type { ModeType, ControlModeType } from "oxalis/constants";
@@ -211,6 +212,9 @@ class Controller extends React.PureComponent {
           event.stopPropagation();
           Model.save();
         },
+
+        // Undo
+        "ctrl + z": () => Store.dispatch(undoAction()),
 
       });
     }

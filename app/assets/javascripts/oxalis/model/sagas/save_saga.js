@@ -12,7 +12,7 @@ import Toast from "libs/toast";
 import { call, put, take, select, race } from "redux-saga/effects";
 import { delay } from "redux-saga";
 import { shiftSaveQueueAction, setSaveBusyAction, setLastSaveTimestampAction, pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
-import { createTreeAction, SkeletonTracingActions } from "oxalis/model/actions/skeletontracing_actions";
+import { createTreeAction, SkeletonTracingActions, setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { alert } from "libs/window";
@@ -24,6 +24,32 @@ import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
+const UNDO_HISTORY_SIZE = 100;
+
+export function* collectUndoStates(): Generator<*, *, *> {
+  const versions = [];
+  yield race({
+    initSkeleton: take("INITIALIZE_SKELETONTRACING"),
+    initVolume: take("INITIALIZE_VOLUMETRACING"),
+  });
+  let prevTracing = yield select(state => state.tracing);
+  while (true) {
+    const { userAction } = yield race({
+      userAction: take([...SkeletonTracingActions]),
+      undo: take("UNDO"),
+    });
+    if (userAction) {
+      console.log("[Undo] Saved tracing version!");
+      versions.push(prevTracing);
+      if (versions.length > UNDO_HISTORY_SIZE) versions.shift();
+    } else if (versions.length) {
+      console.log("[Undo] Restored tracing version!");
+      const lastTracing = versions.pop();
+      yield put(setTracingAction(lastTracing));
+    }
+    prevTracing = yield select(state => state.tracing);
+  }
+}
 
 export function* pushAnnotationAsync(): Generator<*, *, *> {
   yield take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
@@ -234,7 +260,7 @@ export function* saveTracingAsync(): Generator<*, *, *> {
 
   while (true) {
     if (initSkeleton) {
-      yield take([...SkeletonTracingActions, ...FlycamActions]);
+      yield take([...SkeletonTracingActions, ...FlycamActions, "UNDO"]);
     } else {
       yield take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
     }

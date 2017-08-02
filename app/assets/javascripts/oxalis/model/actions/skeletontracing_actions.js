@@ -6,6 +6,7 @@
  */
 import type { Vector3 } from "oxalis/constants";
 import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
+import type { SkeletonTracingType } from "oxalis/store";
 
 type InitializeSkeletonTracingActionType = {type: "INITIALIZE_SKELETONTRACING", tracing: ServerTracing<SkeletonContentDataType> };
 type CreateNodeActionType = {type: "CREATE_NODE", position: Vector3, rotation: Vector3, viewport: number, resolution: number, timestamp: number, treeId?: number};
@@ -24,6 +25,7 @@ type SelectNextTreeActionType = {type: "SELECT_NEXT_TREE", forward: ?boolean};
 type ShuffleTreeColorActionType = {type: "SHUFFLE_TREE_COLOR", treeId?: number};
 type CreateCommentActionType = {type: "CREATE_COMMENT", commentText: string, nodeId: ?number, treeId: ?number};
 type DeleteCommentActionType = {type: "DELETE_COMMENT", nodeId: ?number, treeId?: number};
+type SetTracingActionType = {type: "SET_TRACING", tracing: SkeletonTracingType};
 
 
 export type SkeletonTracingActionType =
@@ -166,4 +168,9 @@ export const deleteCommentAction = (nodeId?: number, treeId?: number): DeleteCom
   type: "DELETE_COMMENT",
   nodeId,
   treeId,
+});
+
+export const setTracingAction = (tracing: SkeletonTracingType): SetTracingActionType => ({
+  type: "SET_TRACING",
+  tracing,
 });

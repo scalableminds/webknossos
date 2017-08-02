@@ -276,6 +276,15 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           .getOrElse(state);
       }
 
+      case "SET_TRACING": {
+        return update(
+          update(state, { tracing: {
+            $set: action.tracing,
+          }}), { tracing: {
+            version: { $set: skeletonTracing.version },
+        }});
+      }
+
       default:
         return state;
     }

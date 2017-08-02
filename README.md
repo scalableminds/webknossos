@@ -24,7 +24,7 @@ binaryData/ # Needs to be writable by docker user (uid=1000 gid=1000)
                 ...
             settings.json
         ...
-userBinaryData/ # Needs to be writable by docker user (uid=1000 gid=1000)
+tracingData/ # Needs to be writable by docker user (uid=1000 gid=1000)
 ```
 
 ### Configure datastore
@@ -50,7 +50,7 @@ braingames.binary.cacheMaxSize = 1000 # in entries (each cache entry is 2 MB)
 docker create \
   --name webknossos-datastore \
   -v /path/to/binaryData:/srv/webknossos-datastore/binaryData \
-  -v /path/to/userBinaryData:/srv/webknossos-datastore/userBinaryData \
+  -v /path/to/tracingData:/srv/webknossos-datastore/tracingData \
   -v /path/to/docker.conf:/srv/webknossos-datastore/conf/docker.conf \
   -p 9090:9090 \
   scalableminds/webknossos-datastore:master \

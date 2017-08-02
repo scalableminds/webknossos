@@ -34,25 +34,21 @@ class ExperienceModalView extends ModalView {
       "click .increase-experience": "changeExperience",
     };
 
-
     this.prototype.ui = {
       experienceValue: "input[type=number]",
       experienceDomain: "input[type=text]",
     };
   }
 
-
   initialize(options) {
     this.userCollection = options.userCollection;
   }
-
 
   setExperience() {
     if (this.isValid()) {
       this.changeExperience(true);
     }
   }
-
 
   deleteExperience() {
     if (this.isValid()) {
@@ -71,7 +67,6 @@ class ExperienceModalView extends ModalView {
       }
     }
   }
-
 
   changeExperience(setOnly) {
     if (this.isValid()) {
@@ -93,15 +88,14 @@ class ExperienceModalView extends ModalView {
     }
   }
 
-
   findUsers() {
-    const users = $("tbody input[type=checkbox]:checked").map((i, element) => this.userCollection.findWhere({
-      id: $(element).val(),
-    }),
+    const users = $("tbody input[type=checkbox]:checked").map((i, element) =>
+      this.userCollection.findWhere({
+        id: $(element).val(),
+      }),
     );
     return users;
   }
-
 
   isValid() {
     const isValid = this.ui.experienceDomain.val().trim() !== "";
@@ -115,6 +109,5 @@ class ExperienceModalView extends ModalView {
   }
 }
 ExperienceModalView.initClass();
-
 
 export default ExperienceModalView;

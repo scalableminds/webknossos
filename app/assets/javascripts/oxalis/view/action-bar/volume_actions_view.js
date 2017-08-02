@@ -23,14 +23,12 @@ class VolumeActionsView extends PureComponent {
   props: Props;
 
   handleSetMode = (event: { target: { value: VolumeTraceOrMoveModeType } }) => {
-    Store.dispatch(setModeAction(
-      event.target.value,
-    ));
-  }
+    Store.dispatch(setModeAction(event.target.value));
+  };
 
   handleCreateCell = () => {
     Store.dispatch(createCellAction());
-  }
+  };
 
   render() {
     return (
@@ -45,9 +43,7 @@ class VolumeActionsView extends PureComponent {
           <RadioButton value={Constants.VOLUME_MODE_TRACE}>Trace</RadioButton>
         </RadioGroup>
         <ButtonGroup size="large">
-          <ButtonComponent
-            onClick={this.handleCreateCell}
-          >Create new cell (C)</ButtonComponent>
+          <ButtonComponent onClick={this.handleCreateCell}>Create new cell (C)</ButtonComponent>
         </ButtonGroup>
       </div>
     );

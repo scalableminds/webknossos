@@ -17,7 +17,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 class DatasetPositionView extends PureComponent {
   props: {
     flycam: FlycamType,
-    viewMode: ModeType
+    viewMode: ModeType,
   };
 
   copyPositionToClipboard = async () => {
@@ -32,11 +32,11 @@ class DatasetPositionView extends PureComponent {
     Toast.success("Rotation copied to clipboard");
   };
 
-  handleChangePosition = (position) => {
+  handleChangePosition = position => {
     Store.dispatch(setPositionAction(position));
   };
 
-  handleChangeRotation = (rotation) => {
+  handleChangeRotation = rotation => {
     Store.dispatch(setRotationAction(rotation));
   };
 
@@ -49,10 +49,9 @@ class DatasetPositionView extends PureComponent {
       <div>
         <div>
           <Input.Group compact size="large">
-            <ButtonComponent
-              onClick={this.copyPositionToClipboard}
-              size="large"
-            >Position</ButtonComponent>
+            <ButtonComponent onClick={this.copyPositionToClipboard} size="large">
+              Position
+            </ButtonComponent>
             <Vector3Input
               value={position}
               onChange={this.handleChangePosition}
@@ -60,22 +59,20 @@ class DatasetPositionView extends PureComponent {
             />
           </Input.Group>
         </div>
-        {
-          isArbitraryMode ?
-            <div style={{ marginLeft: 10 }}>
+        {isArbitraryMode
+          ? <div style={{ marginLeft: 10 }}>
               <Input.Group compact size="large">
-                <ButtonComponent
-                  onClick={this.copyRotationToClipboard}
-                  size="large"
-                >Rotation</ButtonComponent>
+                <ButtonComponent onClick={this.copyRotationToClipboard} size="large">
+                  Rotation
+                </ButtonComponent>
                 <Vector3Input
                   value={rotation}
                   onChange={this.handleChangeRotation}
                   style={{ width: "120px" }}
                 />
               </Input.Group>
-            </div> : null
-        }
+            </div>
+          : null}
       </div>
     );
   }

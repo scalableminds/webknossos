@@ -16,8 +16,7 @@ class WorkloadListItemView extends Marionette.View {
 <td><%- availableTaskCount %></td>\
 `);
 
-    this.prototype.templateContext =
-      { TemplateHelpers };
+    this.prototype.templateContext = { TemplateHelpers };
   }
 }
 WorkloadListItemView.initClass();

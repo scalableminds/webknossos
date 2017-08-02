@@ -6,7 +6,6 @@ import { COLOR_TEXTURE_WIDTH } from "oxalis/geometries/materials/node_shader";
 import type { UniformsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 class EdgeShader {
-
   material: THREE.RawShaderMaterial;
   uniforms: UniformsType;
 
@@ -86,7 +85,9 @@ void main() {
     }
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / ${COLOR_TEXTURE_WIDTH.toFixed(1)}), treeId / (${COLOR_TEXTURE_WIDTH.toFixed(1)} * ${COLOR_TEXTURE_WIDTH.toFixed(1)}));
+    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / ${COLOR_TEXTURE_WIDTH.toFixed(
+      1,
+    )}), treeId / (${COLOR_TEXTURE_WIDTH.toFixed(1)} * ${COLOR_TEXTURE_WIDTH.toFixed(1)}));
     color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
 }\
 `;

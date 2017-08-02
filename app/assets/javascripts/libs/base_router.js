@@ -20,8 +20,7 @@ class BaseRouter {
     this.routes = _.map(this.routes, (handler, route) => ({
       route: Backbone.Router.prototype._routeToRegExp(route),
       handler: _.isString(handler) ? this[handler].bind(this) : handler,
-    }),
-    );
+    }));
     window.addEventListener("popstate", this.handlePopstate);
     window.addEventListener("beforeunload", this.handleBeforeunload);
 
@@ -31,10 +30,9 @@ class BaseRouter {
     _.defer(() => this.handleRoute());
   }
 
-
   setupClickHandler() {
     // handle all links and manage page changes (rather the reloading the whole site)
-    return $(document).on("click", "a", (evt) => {
+    return $(document).on("click", "a", evt => {
       const url = $(evt.currentTarget).attr("href") || "";
       const newWindow = $(evt.target).data("newwindow");
       if (newWindow) {
@@ -67,10 +65,8 @@ class BaseRouter {
           return;
         }
       }
-    },
-    );
+    });
   }
-
 
   handlePopstate() {
     // Remember: URL is already changed
@@ -82,7 +78,10 @@ class BaseRouter {
 
     // Check for beforeunload
     const beforeunloadValue = this.triggerBeforeunload();
-    if ((beforeunloadValue != null) && !confirm(`${beforeunloadValue}\nDo you wish to navigate away?`)) {
+    if (
+      beforeunloadValue != null &&
+      !confirm(`${beforeunloadValue}\nDo you wish to navigate away?`)
+    ) {
       // Rollback to previous URL
       window.history.pushState({}, document.title, this.currentURL);
       return;
@@ -90,7 +89,6 @@ class BaseRouter {
 
     this.navigate(window.location.pathname, { trigger: false });
   }
-
 
   handleRoute() {
     const baseUrl = this.getBaseUrl();
@@ -105,18 +103,15 @@ class BaseRouter {
     }
   }
 
-
   getBaseUrl() {
     // Return the baseUrl without urlParams or anchors/hashes
     const baseUrl = this.currentURL.replace(/\?.*$/, "").replace(/#.*$/, "");
     return baseUrl;
   }
 
-
   shouldNavigate(path) {
     return this.getBaseUrl() !== path;
   }
-
 
   navigate(path, param = {}) {
     const { trigger = true } = param;
@@ -127,7 +122,10 @@ class BaseRouter {
 
     if (trigger) {
       const beforeunloadValue = this.triggerBeforeunload();
-      if ((beforeunloadValue != null) && !confirm(`${beforeunloadValue}\nDo you wish to navigate away?`)) {
+      if (
+        beforeunloadValue != null &&
+        !confirm(`${beforeunloadValue}\nDo you wish to navigate away?`)
+      ) {
         return;
       }
       window.history.pushState({}, document.title, path);
@@ -139,7 +137,6 @@ class BaseRouter {
     }
   }
 
-
   handleBeforeunload(e) {
     const beforeunloadValue = this.triggerBeforeunload();
     if (beforeunloadValue != null) {
@@ -147,18 +144,18 @@ class BaseRouter {
     }
   }
 
-
   triggerBeforeunload() {
     // Triggers the registered `beforeunload` handlers and returns the first return value
     // Doesn't use Backbone's trigger because we need return values
 
-    const handlers = Utils.__guard__(this._events, x => x.beforeunload) != null ? this._events.beforeunload : [];
+    const handlers =
+      Utils.__guard__(this._events, x => x.beforeunload) != null ? this._events.beforeunload : [];
     const beforeunloadValue = _.find(
       handlers.map(handler => handler.callback.call(handler.ctx)),
-      value => (value != null));
+      value => value != null,
+    );
     return beforeunloadValue;
   }
-
 
   cleanupViews() {
     // Remove current views
@@ -186,12 +183,10 @@ class BaseRouter {
     return true;
   }
 
-
   loadURL(url) {
     window.isNavigating = true;
     window.location.href = url;
   }
-
 
   reload() {
     window.isNavigating = true;

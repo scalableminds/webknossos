@@ -21,10 +21,10 @@ import sys.process._
 
 import com.typesafe.scalalogging.LazyLogging
 
-class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll with LazyLogging {
+class WebdriverIOSpec(arguments: Arguments) extends Specification with LazyLogging {
 
   val argumentMapRead = parseCustomJavaArgs(arguments)
-  val mongoDb   = argumentMapRead.getOrElse("mongodb.db", "oxalis-testing")
+  val mongoDb   = argumentMapRead.getOrElse("mongodb.db", "webknossos-testing")
   val mongoHost = argumentMapRead.getOrElse("mongodb.url", "localhost")
   val mongoPort = argumentMapRead.getOrElse("mongodb.port", "27017")
   val testPort = 9000
@@ -34,18 +34,6 @@ class WebdriverIOSpec(arguments: Arguments) extends Specification with BeforeAll
                   "mongodb.port" -> mongoPort,
                   "http.port"    -> testPort,
                   "mongodb.evolution.mongoCmd" -> s"mongo $mongoHost:$mongoPort/$mongoDb")
-
-  def beforeAll = {
-    try {
-      logger.warn(s"About to drop database: $mongoDb")
-      s"./tools/dropDB.sh $mongoDb $mongoHost $mongoPort".run(getProcessIO).exitValue()
-      s"./tools/import_export/import.sh $mongoDb test/db $mongoHost $mongoPort".run(getProcessIO).exitValue()
-      logger.info("Successfully dropped the database and imported test/db")
-    } catch {
-      case e: Exception =>
-        throw new Error(s"An exception occured while dropping the database: ${e.toString}")
-    }
-  }
 
   "my application" should {
 

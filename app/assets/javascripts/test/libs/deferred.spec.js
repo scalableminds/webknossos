@@ -9,19 +9,21 @@ function makeGetState(promise) {
   let result = null;
 
   promise.then(
-    (res) => {
+    res => {
       resolved = true;
       result = res;
     },
-    (res) => {
+    res => {
       rejected = true;
       result = res;
     },
   );
-  return function () { return { resolved, rejected, result }; };
+  return function() {
+    return { resolved, rejected, result };
+  };
 }
 
-test.cb("Deferred should initialize an unresolved Promise", (t) => {
+test.cb("Deferred should initialize an unresolved Promise", t => {
   t.plan(2);
   const deferred = new Deferred();
   const getState = makeGetState(deferred.promise());
@@ -36,7 +38,7 @@ test.cb("Deferred should initialize an unresolved Promise", (t) => {
   ]);
 });
 
-test.cb("Deferred should resolve the Promise", (t) => {
+test.cb("Deferred should resolve the Promise", t => {
   t.plan(3);
   const deferred = new Deferred();
   const getState = makeGetState(deferred.promise());
@@ -54,7 +56,7 @@ test.cb("Deferred should resolve the Promise", (t) => {
   ]);
 });
 
-test.cb("Deferred should reject the Promise", (t) => {
+test.cb("Deferred should reject the Promise", t => {
   t.plan(3);
   const deferred = new Deferred();
   const getState = makeGetState(deferred.promise());

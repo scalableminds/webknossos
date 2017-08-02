@@ -31,7 +31,7 @@ class DatasetActionsView extends PureComponent {
   } = {
     shareModalOpen: false,
     mergeModalOpen: false,
-  }
+  };
 
   componentDidMount() {
     this.savedPollingInterval = window.setInterval(this._forceUpdate, SAVED_POLLING_INTERVAL);
@@ -43,7 +43,9 @@ class DatasetActionsView extends PureComponent {
 
   modalWrapper: ?HTMLDivElement = null;
   savedPollingInterval: number = 0;
-  _forceUpdate = () => { this.forceUpdate(); };
+  _forceUpdate = () => {
+    this.forceUpdate();
+  };
 
   handleSave = async (event?: SyntheticInputEvent) => {
     if (event != null) {
@@ -54,13 +56,15 @@ class DatasetActionsView extends PureComponent {
 
   handleCopyToAccount = async (event: SyntheticInputEvent) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/duplicate`;
+    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
+      .tracingId}/duplicate`;
     app.router.loadURL(url);
   };
 
   handleFinish = async (event: SyntheticInputEvent) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing.tracingId}/finishAndRedirect`;
+    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
+      .tracingId}/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
       app.router.loadURL(url);
@@ -113,7 +117,6 @@ class DatasetActionsView extends PureComponent {
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
     const restrictions = this.props.tracing.restrictions;
 
-
     const elements = [];
     if (restrictions.allowUpdate) {
       elements.push(
@@ -122,71 +125,83 @@ class DatasetActionsView extends PureComponent {
           type="primary"
           onClick={this.handleSave}
           icon={this.getSaveButtonIcon()}
-        >Save</ButtonComponent>);
+        >
+          Save
+        </ButtonComponent>,
+      );
     } else {
-      elements.push(<ButtonComponent
-        key="read-only-button"
-        type="primary"
-        disabled
-      >Read only</ButtonComponent>);
-      elements.push(<ButtonComponent
-        key="copy-button"
-        icon="file-add"
-        onClick={this.handleCopyToAccount}
-      >Copy To My Account</ButtonComponent>);
+      elements.push(
+        <ButtonComponent key="read-only-button" type="primary" disabled>
+          Read only
+        </ButtonComponent>,
+      );
+      elements.push(
+        <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+          Copy To My Account
+        </ButtonComponent>,
+      );
     }
 
     if (hasAdvancedOptions) {
       if (restrictions.allowFinish) {
-        elements.push(<ButtonComponent
-          key="finish-button"
-          icon="check-circle-o"
-          onClick={this.handleFinish}
-        >{archiveButtonText}</ButtonComponent>);
+        elements.push(
+          <ButtonComponent key="finish-button" icon="check-circle-o" onClick={this.handleFinish}>
+            {archiveButtonText}
+          </ButtonComponent>,
+        );
       }
       if (restrictions.allowDownload || !this.props.tracing.downloadUrl) {
-        elements.push(<ButtonComponent
-          key="download-button"
-          icon="download"
-          onClick={this.handleDownload}
-        >Download</ButtonComponent>);
+        elements.push(
+          <ButtonComponent key="download-button" icon="download" onClick={this.handleDownload}>
+            Download
+          </ButtonComponent>,
+        );
       }
-      elements.push(<ButtonComponent
-        key="share-button"
-        icon="share-alt"
-        onClick={this.handleShareOpen}
-      >Share</ButtonComponent>);
-      elements.push(<ShareModalView
-        key="share-modal"
-        isVisible={this.state.shareModalOpen}
-        onOk={this.handleShareClose}
-      />);
+      elements.push(
+        <ButtonComponent key="share-button" icon="share-alt" onClick={this.handleShareOpen}>
+          Share
+        </ButtonComponent>,
+      );
+      elements.push(
+        <ShareModalView
+          key="share-modal"
+          isVisible={this.state.shareModalOpen}
+          onOk={this.handleShareClose}
+        />,
+      );
     }
     if (restrictions.allowFinish && this.props.task) {
-      elements.push(<ButtonComponent
-        key="next-button"
-        icon="verticle-left"
-        onClick={this.handleFinishAndGetNextTask}
-      >
-        Finish and Get Next Task
-      </ButtonComponent>);
+      elements.push(
+        <ButtonComponent
+          key="next-button"
+          icon="verticle-left"
+          onClick={this.handleFinishAndGetNextTask}
+        >
+          Finish and Get Next Task
+        </ButtonComponent>,
+      );
     }
     if (isSkeletonMode) {
       elements.push(
-        <ButtonComponent
-          key="merge-button"
-          icon="folder-open"
-          onClick={this.handleMergeOpen}
-        >Merge Tracing</ButtonComponent>);
-      elements.push(<MergeModalView
-        key="merge-modal"
-        isVisible={this.state.mergeModalOpen}
-        onOk={this.handleMergeClose}
-      />);
+        <ButtonComponent key="merge-button" icon="folder-open" onClick={this.handleMergeOpen}>
+          Merge Tracing
+        </ButtonComponent>,
+      );
+      elements.push(
+        <MergeModalView
+          key="merge-modal"
+          isVisible={this.state.mergeModalOpen}
+          onOk={this.handleMergeClose}
+        />,
+      );
     }
 
     return (
-      <div><Button.Group size="large">{elements}</Button.Group></div>
+      <div>
+        <Button.Group size="large">
+          {elements}
+        </Button.Group>
+      </div>
     );
   }
 }

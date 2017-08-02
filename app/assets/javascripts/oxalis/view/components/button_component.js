@@ -13,13 +13,12 @@ type ButtonComponentPropType = {
  * after it was clicked.
  */
 class ButtonComponent extends React.PureComponent {
-
   props: ButtonComponentPropType;
   static defaultProps: ButtonComponentPropType = {
     onClick: _.noop,
   };
 
-  handleClick = (e: SyntheticInputEvent) => {
+  handleClick = (e: Event & { currentTarget: HTMLButtonElement }) => {
     // For antd buttons e.target seems to be the span with the button description, whereas
     // e.currentTarget is the actual button
     if (e != null && e.currentTarget != null) {
@@ -28,15 +27,11 @@ class ButtonComponent extends React.PureComponent {
     if (this.props.onClick) {
       this.props.onClick(e);
     }
-  }
+  };
 
   render() {
-    return (<Button
-      {...this.props}
-      onClick={this.handleClick}
-    />);
+    return <Button {...this.props} onClick={this.handleClick} />;
   }
 }
 
 export default ButtonComponent;
-

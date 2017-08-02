@@ -10,9 +10,21 @@ import { InputKeyboardNoLoop } from "libs/input";
 import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
-import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, createCommentAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import { findTreeByNodeId, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  updateUserSettingAction,
+  updateDatasetSettingAction,
+} from "oxalis/model/actions/settings_actions";
+import {
+  setActiveNodeAction,
+  createCommentAction,
+  deleteNodeAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import {
+  findTreeByNodeId,
+  getActiveNode,
+  getActiveTree,
+  getSkeletonTracing,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { NodeType, UserConfigurationType, DatasetConfigurationType } from "oxalis/store";
@@ -30,30 +42,29 @@ function assertExists(value: any, message: string) {
  * @class
  */
 class TracingApi_DEPRECATED {
-
   model: OxalisModel;
- /**
+  /**
   * @private
   */
   constructor(model: OxalisModel) {
     this.model = model;
   }
 
- /**
+  /**
   * Returns the id of the current active node.
   */
   getActiveNodeId(): ?number {
     return getActiveNode(Store.getState().tracing).map(node => node.id).getOrElse(null);
   }
 
- /**
+  /**
   * Returns the id of the current active tree.
   */
   getActiveTreeId(): ?number {
     return getActiveTree(Store.getState().tracing).map(tree => tree.treeId).getOrElse(null);
   }
 
- /**
+  /**
   * Sets the active node given a node id.
   */
   setActiveNode(id: number) {
@@ -61,14 +72,16 @@ class TracingApi_DEPRECATED {
     Store.dispatch(setActiveNodeAction(id));
   }
 
- /**
+  /**
   * Returns all nodes belonging to a tracing.
   */
   getAllNodes(): Array<NodeType> {
-    return getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
-      const { trees } = skeletonTracing;
-      return _.flatMap(trees, tree => _.values(tree.nodes));
-    }).getOrElse([]);
+    return getSkeletonTracing(Store.getState().tracing)
+      .map(skeletonTracing => {
+        const { trees } = skeletonTracing;
+        return _.flatMap(trees, tree => _.values(tree.nodes));
+      })
+      .getOrElse([]);
   }
 
   /**
@@ -78,7 +91,7 @@ class TracingApi_DEPRECATED {
     Store.dispatch(deleteNodeAction(nodeId, treeId));
   }
 
- /**
+  /**
   * Sets the comment for a node.
   *
   * @example
@@ -87,12 +100,13 @@ class TracingApi_DEPRECATED {
   */
   setCommentForNode(commentText: string, nodeId: number, treeId?: number): void {
     assertExists(commentText, "Comment text is missing.");
-    getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
       // Convert nodeId to node
       if (_.isNumber(nodeId)) {
-        const tree = treeId != null ?
-          skeletonTracing.trees[treeId] :
-          findTreeByNodeId(skeletonTracing.trees, nodeId).get();
+        const tree =
+          treeId != null
+            ? skeletonTracing.trees[treeId]
+            : findTreeByNodeId(skeletonTracing.trees, nodeId).get();
         assertExists(tree, `Couldn't find node ${nodeId}.`);
         Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
       } else {
@@ -101,7 +115,7 @@ class TracingApi_DEPRECATED {
     });
   }
 
- /**
+  /**
   * Returns the comment for a given node and tree (optional).
   * @param tree - Supplying the tree will provide a performance boost for looking up a comment.
   *
@@ -113,36 +127,35 @@ class TracingApi_DEPRECATED {
   */
   getCommentForNode(nodeId: number, treeId?: number): ?string {
     assertExists(nodeId, "Node id is missing.");
-    return getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
-      // Convert treeId to tree
-      let tree = null;
-      if (treeId != null) {
-        tree = skeletonTracing.trees[treeId];
-        assertExists(tree, `Couldn't find tree ${treeId}.`);
-        assertExists(tree.nodes[nodeId], `Couldn't find node ${nodeId} in tree ${treeId}.`);
-      } else {
-        tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
-        assertExists(tree, `Couldn't find node ${nodeId}.`);
-      }
-      // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
-      const comment = tree.comments.find(__ => __.node === nodeId);
-      return comment != null ? comment.content : null;
-    }).getOrElse(null);
+    return getSkeletonTracing(Store.getState().tracing)
+      .map(skeletonTracing => {
+        // Convert treeId to tree
+        let tree = null;
+        if (treeId != null) {
+          tree = skeletonTracing.trees[treeId];
+          assertExists(tree, `Couldn't find tree ${treeId}.`);
+          assertExists(tree.nodes[nodeId], `Couldn't find node ${nodeId} in tree ${treeId}.`);
+        } else {
+          tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
+          assertExists(tree, `Couldn't find node ${nodeId}.`);
+        }
+        // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
+        const comment = tree.comments.find(__ => __.node === nodeId);
+        return comment != null ? comment.content : null;
+      })
+      .getOrElse(null);
   }
-
 }
 
 /**
  * All binary data / layer related API methods.
  */
 class DataApi_DEPRECATED {
-
   model: OxalisModel;
 
   constructor(model: OxalisModel) {
     this.model = model;
   }
-
 
   __getLayer(layerName: string): Binary {
     const layer = this.model.getBinaryByName(layerName);
@@ -150,14 +163,14 @@ class DataApi_DEPRECATED {
     return layer;
   }
 
- /**
+  /**
   * Returns the names of all available layers of the current tracing.
   */
   getLayerNames(): Array<string> {
     return _.map(this.model.binary, "name");
   }
 
- /**
+  /**
   * Sets a mapping for a given layer.
   *
   * @example
@@ -174,7 +187,7 @@ class DataApi_DEPRECATED {
     layer.cube.setMapping(mapping);
   }
 
- /**
+  /**
   * Returns the bounding box for a given layer name.
   */
   getBoundingBox(layerName: string): [Vector3, Vector3] {
@@ -183,7 +196,7 @@ class DataApi_DEPRECATED {
     return [layer.lowerBoundary, layer.upperBoundary];
   }
 
- /**
+  /**
   * Returns raw binary data for a given layer, position and zoom level.
   *
   * @example // Return the greyscale value for a bucket
@@ -238,14 +251,13 @@ class DataApi_DEPRECATED {
  * All user configuration related API methods.
  */
 class UserApi_DEPRECATED {
-
   model: OxalisModel;
 
   constructor(model: OxalisModel) {
     this.model = model;
   }
 
- /**
+  /**
   * Returns the user's setting for the tracing view.
   * @param key - One of the following keys:
     - moveValue
@@ -281,7 +293,7 @@ class UserApi_DEPRECATED {
     return Store.getState().userConfiguration[key];
   }
 
- /**
+  /**
   * Set the user's setting for the tracing view.
   * @param key - Same keys as for getConfiguration()
   *
@@ -293,23 +305,21 @@ class UserApi_DEPRECATED {
   }
 }
 
-
 type Handler = {
-    unregister(): void,
+  unregister(): void,
 };
 
 /**
  * Utility API methods to control wK.
  */
 class UtilsApi_DEPRECATED {
-
   model: OxalisModel;
 
   constructor(model: OxalisModel) {
     this.model = model;
   }
 
- /**
+  /**
   * Wait for some milliseconds before continuing the control flow.
   *
   * @example // Wait for 5 seconds
@@ -319,7 +329,7 @@ class UtilsApi_DEPRECATED {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
   }
 
- /**
+  /**
   * Overwrite existing wK methods.
   * @param {string}  funcName - The method name you wish to override. Must be a skeletonTracing method.
   * @param {function} newFunc - Your new implementation for the method in question. Receives the original function as the first argument
@@ -335,14 +345,18 @@ class UtilsApi_DEPRECATED {
   // TEST: b = function overwrite(oldFunc, args) {console.log(...args); oldFunc(...args)}
   // webknossos.registerOverwrite("addNode", b)
   // TODO: this should only work for specific methods, that also could not reside in skeletontracing.js
-  registerOverwrite(
-    functionName: string,
-    newFunction: Function,
-  ) {
+  registerOverwrite(functionName: string, newFunction: Function) {
     if (functionName === "addNode") {
       overwriteAction("CREATE_NODE", (store, call, action) => {
         // unpack the arguments for the old style overwrite
-        const args = [action.position, action.rotation, null, action.viewport, action.resolution, null];
+        const args = [
+          action.position,
+          action.rotation,
+          null,
+          action.viewport,
+          action.resolution,
+          null,
+        ];
 
         newFunction(() => {
           // just dispatch the normal action and ignore the arguments
@@ -356,11 +370,13 @@ class UtilsApi_DEPRECATED {
         }, []);
       });
     } else {
-      throw new Error("You used registerOverwrite in version 1 which is deprecated. This version only supports overwrites for addNode and deleteActiveNode.");
+      throw new Error(
+        "You used registerOverwrite in version 1 which is deprecated. This version only supports overwrites for addNode and deleteActiveNode.",
+      );
     }
   }
 
- /**
+  /**
   * Sets a custom handler function for a keyboard shortcut.
   */
   registerKeyHandler(key: string, handler: () => void): Handler {
@@ -368,7 +384,6 @@ class UtilsApi_DEPRECATED {
     return { unregister: keyboard.destroy.bind(keyboard) };
   }
 }
-
 
 type ApiInterface = {
   tracing: TracingApi_DEPRECATED,

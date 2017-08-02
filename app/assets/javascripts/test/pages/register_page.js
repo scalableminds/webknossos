@@ -1,9 +1,7 @@
 export default class RegisterPage {
-
-  signupButton = "#main-container button[type=submit]"
-  alertDanger = ".alert-danger"
-  modalDescription = "#modalDescription > p"
-
+  signupButton = "#main-container button[type=submit]";
+  alertDanger = ".alert-danger";
+  modalDescription = "#modalDescription > p";
 
   get() {
     browser.url("/auth/register");
@@ -20,12 +18,9 @@ export default class RegisterPage {
     browser.click(this.signupButton);
   }
 
-
   getModalText() {
     browser.waitForExist(this.modalDescription);
     browser.waitForVisible(this.modalDescription, 2000);
     return browser.getText(this.modalDescription);
   }
-
 }
-

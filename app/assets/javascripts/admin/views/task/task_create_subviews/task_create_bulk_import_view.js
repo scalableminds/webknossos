@@ -18,7 +18,7 @@ class TaskCreateBulkImportView extends Marionette.View {
   <div class="col-sm-12">
     <div class="well">
       One line for each task. The values are seperated by ','. Format: <br>
-      dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project<br><br>
+      dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, <a href="/scripts">scriptId</a>]<br><br>
       <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
         <div class="form-group">
           <div class="col-sm-12">
@@ -38,8 +38,7 @@ class TaskCreateBulkImportView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.events =
-      { submit: "submit" };
+    this.prototype.events = { submit: "submit" };
 
     this.prototype.ui = {
       bulkText: "textarea[name=data]",
@@ -60,22 +59,16 @@ class TaskCreateBulkImportView extends Marionette.View {
     }
 
     const tasks = this.parseText(bulkText);
-    Request.sendJSONReceiveJSON(
-      "/api/tasks", {
-        params: { type: "bulk" },
-        data: tasks,
-      },
-    ).then(
-      this.showSaveSuccess,
-      this.showSaveError,
-    );
+    Request.sendJSONReceiveJSON("/api/tasks", {
+      params: { type: "bulk" },
+      data: tasks,
+    }).then(this.showSaveSuccess, this.showSaveError);
 
     this.toggleSubmitButton(false);
 
     // prevent page reload
     return false;
   }
-
 
   showSaveSuccess(response) {
     // A succesful request indicates that the bulk syntax was correct. However,
@@ -88,14 +81,16 @@ class TaskCreateBulkImportView extends Marionette.View {
     const successItems = response.items.filter(item => item.status === 200);
     if (successItems.length > 0) {
       Toast.success(`${successItems.length} tasks were successfully created.`);
-      const csvContent = successItems.map(({ success: task }) =>
-      `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`).join("\n");
+      const csvContent = successItems
+        .map(
+          ({ success: task }) => `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`,
+        )
+        .join("\n");
       Modal.show(`<pre>taskId,filename,position\n${csvContent}</pre>`, "Task IDs");
     }
 
     this.toggleSubmitButton(true);
   }
-
 
   showSaveError() {
     Toast.error("The tasks could not be created due to server errors.");
@@ -103,11 +98,9 @@ class TaskCreateBulkImportView extends Marionette.View {
     this.toggleSubmitButton(true);
   }
 
-
   showInvalidData() {
     Toast.error("The form data is not correct.");
   }
-
 
   handleSuccessfulRequest(items) {
     // Remove all successful tasks from the text area and show an error toast for
@@ -132,32 +125,26 @@ class TaskCreateBulkImportView extends Marionette.View {
     Toast.error(errorMessages.join("\n"), true);
   }
 
-
   toggleSubmitButton(enabled) {
     this.ui.submitButton.prop("disabled", !enabled);
     this.ui.submitSpinner.toggleClass("hide", enabled);
   }
 
-
   splitToLines(string) {
     return string.trim().split("\n");
   }
-
 
   splitToWords(string) {
     return string.split(",").map(_.trim);
   }
 
-
   isValidData(bulkText) {
     return _.every(this.splitToLines(bulkText), this.isValidLine.bind(this));
   }
 
-
   isNull(value) {
     return value === null;
   }
-
 
   isValidLine(bulkLine) {
     const bulkData = this.formatLine(bulkLine);
@@ -169,23 +156,23 @@ class TaskCreateBulkImportView extends Marionette.View {
       return false;
     }
 
-    if (_.some(bulkData.experienceDomain, isNaN) ||
+    if (
+      _.some(bulkData.experienceDomain, isNaN) ||
       _.some(bulkData.editPosition, isNaN) ||
       isNaN(bulkData.boundingBox.width) ||
       isNaN(bulkData.boundingBox.height) ||
       isNaN(bulkData.boundingBox.depth) ||
-      _.some(bulkData.boundingBox.topLeft, isNaN)) {
+      _.some(bulkData.boundingBox.topLeft, isNaN)
+    ) {
       return false;
     }
 
     return true;
   }
 
-
   parseText(bulkText) {
     return _.map(this.splitToLines(bulkText), this.formatLine.bind(this));
   }
-
 
   formatLine(bulkLine) {
     const words = this.splitToWords(bulkLine);
@@ -212,11 +199,13 @@ class TaskCreateBulkImportView extends Marionette.View {
     const height = parseInt(words[16]);
     const depth = parseInt(words[17]);
     const projectName = words[18];
+    const scriptId = words[19] || undefined;
 
     return {
       dataSet,
       team,
       taskTypeId,
+      scriptId,
       neededExperience: {
         value: minExperience,
         domain: experienceDomain,

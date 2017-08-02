@@ -5,14 +5,19 @@ cd public
 
 testBundlePath="./test-bundle"
 jsPath="../app/assets/javascripts"
+FIND=find
+
+if [ -x "$(command -v gfind)" ]; then
+    FIND=gfind
+fi
 
 cmd=$1
 shift;
 
 if [ $cmd == "test" ]
 then
-	lastChangedSource=$(find $jsPath -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
-	lastChangedTests=$(find $testBundlePath -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
+	lastChangedSource=$($FIND $jsPath -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
+	lastChangedTests=$($FIND $testBundlePath -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
 
 	if [ $lastChangedSource -gt $lastChangedTests ]
 	then

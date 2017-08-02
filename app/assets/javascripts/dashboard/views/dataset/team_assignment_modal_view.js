@@ -31,16 +31,14 @@ class TeamAssignmentModalView extends ModalView {
 <a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>\
 `;
 
-    this.prototype.ui =
-      { teamList: ".team-list" };
+    this.prototype.ui = { teamList: ".team-list" };
 
-    this.prototype.events =
-      { "click .btn-primary": "submitTeams" };
+    this.prototype.events = { "click .btn-primary": "submitTeams" };
   }
 
   templateContext() {
     return {
-      isChecked: (teamName) => {
+      isChecked: teamName => {
         if (_.includes(this.dataset.get("allowedTeams"), teamName)) {
           return "checked";
         }
@@ -48,7 +46,6 @@ class TeamAssignmentModalView extends ModalView {
       },
     };
   }
-
 
   initialize(args) {
     this.collection = new TeamCollection();
@@ -60,23 +57,22 @@ class TeamAssignmentModalView extends ModalView {
     this.dataset = args.dataset;
   }
 
-
   submitTeams() {
     const $checkboxes = this.$("input:checked");
     // eslint-disable-next-line newline-per-chained-call
-    const allowedTeams = _.map($checkboxes, checkbox => $(checkbox).parent().parent().text().trim());
+    const allowedTeams = _.map($checkboxes, checkbox =>
+      $(checkbox).parent().parent().text().trim(),
+    );
 
     this.dataset.set("allowedTeams", allowedTeams);
 
-    Request.sendJSONReceiveJSON(
-      `/api/datasets/${this.dataset.get("name")}/teams`,
-      { data: allowedTeams },
-    );
+    Request.sendJSONReceiveJSON(`/api/datasets/${this.dataset.get("name")}/teams`, {
+      data: allowedTeams,
+    });
 
     this.destroy();
   }
 }
 TeamAssignmentModalView.initClass();
-
 
 export default TeamAssignmentModalView;

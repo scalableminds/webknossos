@@ -6,23 +6,30 @@
  */
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
-type PushSaveQueueActionType = { type: "PUSH_SAVE_QUEUE", items: Array<UpdateAction>, pushNow: boolean };
+type PushSaveQueueActionType = {
+  type: "PUSH_SAVE_QUEUE",
+  items: Array<UpdateAction>,
+  pushNow: boolean,
+};
 type SaveNowActionType = { type: "SAVE_NOW" };
 type ShiftSaveQueueActionType = { type: "SHIFT_SAVE_QUEUE", count: number };
 type SetSaveBusyActionType = { type: "SET_SAVE_BUSY", isBusy: boolean };
 type SetLastSaveTimestampActionType = { type: "SET_LAST_SAVE_TIMESTAMP", timestamp: number };
-type SetVersionNumberActionType = {type: "SET_VERSION_NUMBER", version: number};
-type UndoActionType = {type: "UNDO"};
+type SetVersionNumberActionType = { type: "SET_VERSION_NUMBER", version: number };
+type UndoActionType = { type: "UNDO" };
 export type SaveActionType =
-  PushSaveQueueActionType |
-  SaveNowActionType |
-  ShiftSaveQueueActionType |
-  SetSaveBusyActionType |
-  SetLastSaveTimestampActionType |
-  SetVersionNumberActionType |
-  UndoActionType;
+  | PushSaveQueueActionType
+  | SaveNowActionType
+  | ShiftSaveQueueActionType
+  | SetSaveBusyActionType
+  | SetLastSaveTimestampActionType
+  | SetVersionNumberActionType
+  | UndoActionType;
 
-export const pushSaveQueueAction = (items: Array<UpdateAction>, pushNow?: boolean = false): PushSaveQueueActionType => ({
+export const pushSaveQueueAction = (
+  items: Array<UpdateAction>,
+  pushNow?: boolean = false,
+): PushSaveQueueActionType => ({
   type: "PUSH_SAVE_QUEUE",
   items,
   pushNow,
@@ -42,7 +49,9 @@ export const setSaveBusyAction = (isBusy: boolean): SetSaveBusyActionType => ({
   isBusy,
 });
 
-export const setLastSaveTimestampAction = (timestamp: number = Date.now()): SetLastSaveTimestampActionType => ({
+export const setLastSaveTimestampAction = (
+  timestamp: number = Date.now(),
+): SetLastSaveTimestampActionType => ({
   type: "SET_LAST_SAVE_TIMESTAMP",
   timestamp,
 });

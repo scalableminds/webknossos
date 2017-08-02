@@ -50,8 +50,7 @@ class ScriptCreateView extends Marionette.View {
 `);
     this.prototype.className = "container wide";
 
-    this.prototype.events =
-      { "submit form": "submitForm" };
+    this.prototype.events = { "submit form": "submitForm" };
 
     this.prototype.regions = {
       ownerId: ".ownerId",
@@ -64,10 +63,9 @@ class ScriptCreateView extends Marionette.View {
 
   templateContext() {
     return {
-      getTitle: () => this.isEditingMode ? "Update" : "Create",
+      getTitle: () => (this.isEditingMode ? "Update" : "Create"),
     };
   }
-
 
   initialize() {
     this.isEditingMode = _.isString(this.model.id);
@@ -88,8 +86,7 @@ class ScriptCreateView extends Marionette.View {
 
     const formValues = FormSyphon.serialize(this.ui.form);
 
-    this.model.save(formValues).then(
-      () => app.router.navigate("/scripts", { trigger: true }));
+    this.model.save(formValues).then(() => app.router.navigate("/scripts", { trigger: true }));
   }
 
   onRender() {
@@ -98,8 +95,14 @@ class ScriptCreateView extends Marionette.View {
     const userSelectionView = new SelectionView({
       collection: new UserCollection(),
       childViewOptions: {
-        modelValue() { return this.model.id; },
-        modelLabel() { return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get("email")})`; },
+        modelValue() {
+          return this.model.id;
+        },
+        modelLabel() {
+          return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get(
+            "email",
+          )})`;
+        },
         defaultItem: { id: defaultUserId },
       },
       filter: model => model.get("isActive"),
@@ -108,9 +111,7 @@ class ScriptCreateView extends Marionette.View {
     });
     this.showChildView("ownerId", userSelectionView);
   }
-
 }
 ScriptCreateView.initClass();
-
 
 export default ScriptCreateView;

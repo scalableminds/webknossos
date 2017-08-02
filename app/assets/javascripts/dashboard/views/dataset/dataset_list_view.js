@@ -10,7 +10,6 @@ import TeamAssignmentModalView from "dashboard/views/dataset/team_assignment_mod
 const DATASETS_PER_PAGE = 30;
 
 class DatasetListView extends Marionette.CompositeView {
-
   static initClass() {
     this.prototype.className = "datasets";
     this.prototype.template = _.template(`\
@@ -35,12 +34,10 @@ class DatasetListView extends Marionette.CompositeView {
 <div id="modal-wrapper"></div>\
 `);
 
-
     this.prototype.events = {
       "click .team-label": "showModal",
       "click .details-toggle-all": "toggleAllDetails",
     };
-
 
     this.prototype.ui = {
       modalWrapper: "#modal-wrapper",
@@ -66,12 +63,10 @@ class DatasetListView extends Marionette.CompositeView {
     this.listenTo(app.vent, "modal:destroy", this.render);
   }
 
-
   toggleAllDetails() {
     this.ui.detailsToggle.toggleClass("open");
     app.vent.trigger("datasetListView:toggleDetails");
   }
-
 
   showModal(evt) {
     const dataset = this.collection.findWhere({
@@ -85,11 +80,9 @@ class DatasetListView extends Marionette.CompositeView {
     this.modalView = modalView;
   }
 
-
   filterBySearch(searchQuery) {
     return this.collection.setFilter(["name", "owningTeam"], searchQuery);
   }
-
 
   onDestroy() {
     Utils.__guard__(this.modalView, x => x.destroy());

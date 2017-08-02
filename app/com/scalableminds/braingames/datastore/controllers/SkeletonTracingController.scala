@@ -6,8 +6,10 @@ package com.scalableminds.braingames.datastore.controllers
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
+import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.braingames.datastore.tracings.skeleton._
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
+import com.scalableminds.util.tools.Fox
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -25,7 +27,7 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         val tracing = skeletonTracingService.create(dataSetName, request.body)
-        Ok(tracing.id)
+        Ok(Json.toJson(TracingReference(tracing.id, TracingType.skeletonTracing)))
       }
     }
   }
@@ -37,7 +39,7 @@ class SkeletonTracingController @Inject()(
           tracing <- NmlParser.parse(skeletonTracingService.createNewId(), name, request.body.trim())
         } yield {
           skeletonTracingService.save(tracing)
-          Ok(tracing.id)
+          Ok(Json.toJson(TracingReference(tracing.id, TracingType.skeletonTracing)))
         }
       }
     }
@@ -95,7 +97,7 @@ class SkeletonTracingController @Inject()(
           updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
         } yield {
           val newTracing = skeletonTracingService.duplicate(updatedTracing)
-          Ok(newTracing.id)
+          Ok(Json.toJson(TracingReference(newTracing.id, TracingType.skeletonTracing)))
         }
       }
     }
@@ -110,7 +112,7 @@ class SkeletonTracingController @Inject()(
         } yield {
           val merged = skeletonTracingService.merge(tracings)
           skeletonTracingService.save(merged)
-          Ok(merged.id)
+          Ok(Json.toJson(TracingReference(merged.id, TracingType.skeletonTracing)))
         }
       }
     }
@@ -121,16 +123,12 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         val zipfile = request.body.asRaw.map(_.asFile)
-        val idsFox = for {
+        for {
           tracings: List[SkeletonTracing] <- skeletonTracingService.extractAllFromZip(zipfile)
         } yield {
-          tracings.map(skeletonTracingService.save(_))
-          tracings.map(_.id)
-        }
-        for {
-          ids <- idsFox
-        } yield {
-          Ok(Json.toJson(ids))
+          tracings.foreach(skeletonTracingService.save)
+          val references = tracings.map(tracing => TracingReference(tracing.id, TracingType.skeletonTracing))
+          Ok(Json.toJson(references))
         }
       }
     }
@@ -147,7 +145,7 @@ class SkeletonTracingController @Inject()(
         } yield {
           val merged = skeletonTracingService.merge(tracings)
           skeletonTracingService.save(merged)
-          Ok(merged.id)
+          Ok(Json.toJson(TracingReference(merged.id, TracingType.skeletonTracing)))
         }
       }
     }

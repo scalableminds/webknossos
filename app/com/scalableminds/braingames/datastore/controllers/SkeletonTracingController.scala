@@ -103,7 +103,7 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def createMergedFromZip() = Action.async {
+  def createMergedFromZip() = Action {
     implicit request => {
       AllowRemoteOrigin {
         val zipfile = request.body.asRaw.map(_.asFile)
@@ -119,7 +119,7 @@ class SkeletonTracingController @Inject()(
   }
 
 
-  def createMultipleFromZip() = Action.async {
+  def createMultipleFromZip() = Action {
     implicit request => {
       AllowRemoteOrigin {
         val zipfile = request.body.asRaw.map(_.asFile)
@@ -157,7 +157,7 @@ class SkeletonTracingController @Inject()(
         for {
           tracings <- skeletonTracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
         } yield {
-          val merged = skeletonTracingService.merge(tracings)
+          val merged = skeletonTracingService.merge(tracings, newId="<temporary>")
           Ok(Json.toJson(merged))
         }
       }

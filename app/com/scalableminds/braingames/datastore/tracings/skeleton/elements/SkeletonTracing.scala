@@ -1,8 +1,7 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
 import com.scalableminds.braingames.datastore.tracings.Tracing
-import com.scalableminds.braingames.datastore.tracings.skeleton.TreeUtils
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.image.Color
 import play.api.libs.json.Json
 
@@ -15,7 +14,6 @@ case class SkeletonTracing(id: String,
                            timestamp: Long,
                            boundingBox: Option[BoundingBox],
                            activeNodeId: Option[Int],
-                           scale: Scale,
                            editPosition: Option[Point3D],
                            editRotation: Option[Vector3D],
                            zoomLevel: Option[Double],
@@ -117,6 +115,7 @@ case class SkeletonTracing(id: String,
     trees.find(_.treeId == id)
       .getOrElse(throw new NoSuchElementException("Tracing does not contain tree with requested id " + id))
 
+  def hasStrayEdges = ???
 }
 
 object SkeletonTracing {

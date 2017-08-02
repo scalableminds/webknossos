@@ -63,7 +63,7 @@ fi
   if [ $MODE = "prod" ]; then
     DOMAIN_AND_TLD='webknossos.brain.mpg.de'
   else
-    DOMAIN_AND_TLD='oxalis.at'
+    DOMAIN_AND_TLD='webknossos.xyz'
   fi
 
 

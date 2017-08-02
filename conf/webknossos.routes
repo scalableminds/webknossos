@@ -67,7 +67,7 @@ DELETE        /api/teams/:id                                                    
 # DataSets
 GET           /datasets                                                         controllers.DataSetController.empty
 GET           /datasets/:id/edit                                                controllers.DataSetController.emptyWithWildcard(id)
-GET           /datasets/:id/import                                                     controllers.DataSetController.emptyWithWildcard(id)
+GET           /datasets/:id/import                                              controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
 GET           /datasets/upload                                                  controllers.DataSetController.empty
 
@@ -191,4 +191,4 @@ GET           /api/statistics/assignments                                       
 GET           /assets/javascripts/routes.js                                     controllers.Application.javascriptRoutes
 
 # Map static resources from the /public folder to the /public path
-GET           /assets/*file
+GET           /assets/*file                                                     controllers.Assets.at(path="/public", file)

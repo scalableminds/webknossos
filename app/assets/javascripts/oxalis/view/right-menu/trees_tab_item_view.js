@@ -13,7 +13,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import type { TreeType } from "oxalis/store";
 import classNames from "classnames";
-import { Checkbox } from "antd";
+import Checkbox from "oxalis/view/components/checkbox_component";
 
 type ListTreeItemViewProps = {
   activeTreeId: number,

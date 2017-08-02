@@ -8,11 +8,10 @@ import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValuePair
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
-import com.scalableminds.util.geometry.{BoundingBox, Scale}
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import net.liftweb.common.{Box, Empty, Full}
-import play.api.i18n.Messages
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
@@ -57,7 +56,6 @@ class SkeletonTracingService @Inject()(
       timestamp = System.currentTimeMillis(),
       boundingBox = parameters.boundingBox,
       activeNodeId = None,
-      scale = new Scale(1,1,1),
       editPosition = None,
       editRotation = None,
       zoomLevel = None,
@@ -184,8 +182,7 @@ class SkeletonTracingService @Inject()(
   }
 
   def duplicate(tracing: SkeletonTracing): SkeletonTracing = {
-    val id = createNewId()
-    val newTracing = tracing.copy(id = id, timestamp = System.currentTimeMillis(), version = 0)
+    val newTracing = tracing.copy(id = createNewId(), timestamp = System.currentTimeMillis(), version = 0)
     save(newTracing)
     newTracing
   }
@@ -208,26 +205,46 @@ class SkeletonTracingService @Inject()(
     Fox.combined(boxes.map(_.toFox))
   }
 
-  def merge(tracings: List[SkeletonTracing]): SkeletonTracing = {
-    tracings.reduceLeft(mergeTwo)
+  def merge(tracings: List[SkeletonTracing], newId: String = createNewId()): SkeletonTracing = {
+    val merged: SkeletonTracing = tracings.reduceLeft(mergeTwo)
+    merged.copy(id=newId)
   }
 
-  def extractAllFromZip(zipfile: Option[File]): Fox[List[SkeletonTracing]] = {
-    zipfile match {
-      case None => Fox.failure("Empty or No zipfile")
-      case Some(file) => {
-        val boxOfBoxes: Box[List[Box[SkeletonTracing]]] = ZipIO.withUnziped(file) {
-          case (filePath, is) => {
+  def extractAllFromZip(zipfile: Option[File]): Box[List[SkeletonTracing]] = {
+    def isFailure[T](box: Box[T]) = {
+      box match {
+        case Failure(msg, _, _) => true
+        case _ => false
+      }
+    }
+    def findFailure[T](boxList: List[Box[T]]) = boxList.find(box => isFailure(box))
+
+    def unzip(file: File) = {
+      val boxOfBoxes: Box[List[Box[SkeletonTracing]]] = ZipIO.withUnziped(file) {
+        case (filePath, is) => {
+          val isNml = filePath.toString.toLowerCase.endsWith(".nml")
+          if (!isNml) Empty
+          else {
             val nml = Source.fromInputStream(is).mkString
             NmlParser.parse(createNewId(), filePath.getFileName.toString, nml)
           }
         }
-        boxOfBoxes match {
-          case Full(tracings: List[Box[SkeletonTracing]]) =>
-            Fox.combined(tracings.map(_.toFox))
-          case _ => Fox.failure("Could not unpack zipfile")
-        }
       }
+      boxOfBoxes match {
+        case Full(tracings: List[Box[SkeletonTracing]]) => {
+          val firstFailure = findFailure(tracings)
+          firstFailure match {
+            case Some(Failure(msg, _, _)) => Failure("Failed to parse an NML in zipfile: " + msg)
+            case _ => Full(tracings.flatten)
+          }
+        }
+        case _ => Failure("Could not unpack zipfile")
+      }
+    }
+
+    zipfile match {
+      case None => Failure("Empty or No zipfile")
+      case Some(file) => unzip(file)
     }
   }
 

@@ -11,11 +11,14 @@ import { connect } from "react-redux";
 import { Button, Input } from "antd";
 import InputComponent from "oxalis/view/components/input_component";
 import { InputKeyboardNoLoop } from "libs/input";
-import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getActiveTree,
+  getActiveNode
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setActiveNodeAction,
   createCommentAction,
-  deleteCommentAction,
+  deleteCommentAction
 } from "oxalis/model/actions/skeletontracing_actions";
 import TreeCommentList from "oxalis/view/right-menu/comment_tab/tree_comment_list";
 import type { Dispatch } from "redux";
@@ -25,7 +28,7 @@ import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 const InputGroup = Input.Group;
 
 type CommentTabStateType = {
-  isSortedAscending: boolean,
+  isSortedAscending: boolean
 };
 
 class CommentTabView extends React.Component {
@@ -33,11 +36,11 @@ class CommentTabView extends React.Component {
     skeletonTracing: SkeletonTracingType,
     setActiveNode: (nodeId: number) => void,
     deleteComment: () => void,
-    createComment: (text: string) => void,
+    createComment: (text: string) => void
   };
 
   state: CommentTabStateType = {
-    isSortedAscending: true,
+    isSortedAscending: true
   };
 
   componentWillUnmount() {
@@ -46,15 +49,17 @@ class CommentTabView extends React.Component {
 
   keyboard = new InputKeyboardNoLoop({
     n: () => this.nextComment(),
-    p: () => this.previousComment(),
+    p: () => this.previousComment()
   });
 
   nextComment = (forward = true) => {
     Utils.zipMaybe(
       getActiveTree(this.props.skeletonTracing),
-      getActiveNode(this.props.skeletonTracing),
+      getActiveNode(this.props.skeletonTracing)
     ).map(([activeTree, activeNode]) => {
-      const sortAscending = forward ? this.state.isSortedAscending : !this.state.isSortedAscending;
+      const sortAscending = forward
+        ? this.state.isSortedAscending
+        : !this.state.isSortedAscending;
       const sortOrder = sortAscending ? "asc" : "desc";
       const { trees } = this.props.skeletonTracing;
 
@@ -62,17 +67,21 @@ class CommentTabView extends React.Component {
       let nextComment = null;
       // $FlowFixMe
       let nextTree = _.find(trees, tree =>
-        _.some(tree.comments, comment => comment.node === activeNode.id),
+        _.some(tree.comments, comment => comment.node === activeNode.id)
       );
       if (nextTree != null) {
-        const sortedComments = _.orderBy(nextTree.comments, comment => comment.node, [sortOrder]);
+        const sortedComments = _.orderBy(
+          nextTree.comments,
+          comment => comment.node,
+          [sortOrder]
+        );
 
         // try to find next comment for this tree
         nextComment = _.find(
           sortedComments,
           comment =>
             this.comparator(comment.node, sortAscending) >
-            this.comparator(activeNode.id, sortAscending),
+            this.comparator(activeNode.id, sortAscending)
         );
 
         // try to find next tree with at least one comment
@@ -82,7 +91,8 @@ class CommentTabView extends React.Component {
             trees,
             tree =>
               this.comparator(tree.treeId, sortAscending) >
-                this.comparator(activeTree.treeId, sortAscending) && tree.comments.length,
+                this.comparator(activeTree.treeId, sortAscending) &&
+              tree.comments.length
           );
         }
       }
@@ -94,7 +104,11 @@ class CommentTabView extends React.Component {
       }
 
       if (nextComment == null && nextTree != null) {
-        const sortedComments = _.orderBy(nextTree.comments, ["node"], [sortOrder]);
+        const sortedComments = _.orderBy(
+          nextTree.comments,
+          ["node"],
+          [sortOrder]
+        );
         nextComment = sortedComments[0];
       }
 
@@ -126,7 +140,7 @@ class CommentTabView extends React.Component {
 
   handleChangeSorting = () => {
     this.setState({
-      isSortedAscending: !this.state.isSortedAscending,
+      isSortedAscending: !this.state.isSortedAscending
     });
   };
 
@@ -137,17 +151,23 @@ class CommentTabView extends React.Component {
       .filter(tree => tree.comments.length > 0)
       .map(tree =>
         // one tree and its comments
-        <TreeCommentList key={tree.treeId} tree={tree} sortOrder={sortOrder} />,
+        <TreeCommentList
+          key={tree.treeId}
+          tree={tree}
+          isSortedAscending={this.state.isSortedAscending}
+        />
       );
   }
 
   render() {
     const activeComment = Utils.zipMaybe(
       getActiveTree(this.props.skeletonTracing),
-      getActiveNode(this.props.skeletonTracing),
+      getActiveNode(this.props.skeletonTracing)
     )
       .chain(([tree, activeNode]) =>
-        Maybe.fromNullable(tree.comments.find(comment => comment.node === activeNode.id)),
+        Maybe.fromNullable(
+          tree.comments.find(comment => comment.node === activeNode.id)
+        )
       )
       .map(comment => comment.content)
       .getOrElse("");
@@ -185,7 +205,7 @@ class CommentTabView extends React.Component {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  skeletonTracing: state.tracing,
+  skeletonTracing: state.tracing
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -197,9 +217,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   createComment(text) {
     dispatch(createCommentAction(text));
-  },
+  }
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(
-  makeSkeletonTracingGuard(CommentTabView),
+  makeSkeletonTracingGuard(CommentTabView)
 );

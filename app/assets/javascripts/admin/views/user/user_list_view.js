@@ -96,9 +96,6 @@ class UserListView extends React.PureComponent {
   };
 
   render() {
-    const compareFunc = (attribute: string) => (a: Object, b: Object) =>
-      a[attribute].toLowerCase().localeCompare(b[attribute].toLowerCase());
-
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
       onChange: selectedUserIds => {
@@ -178,19 +175,19 @@ class UserListView extends React.PureComponent {
             title="Last name"
             dataIndex="lastName"
             key="lastName"
-            sorter={compareFunc("lastName")}
+            sorter={Utils.localeCompareBy("lastName")}
           />
           <Column
             title="First name"
             dataIndex="firstName"
             key="firstName"
-            sorter={compareFunc("firstName")}
+            sorter={Utils.localeCompareBy("firstName")}
           />
           <Column
             title="Email"
             dataIndex="email"
             key="email"
-            sorter={compareFunc("email")}
+            sorter={Utils.localeCompareBy("email")}
           />
           <Column
             title="Experiences"

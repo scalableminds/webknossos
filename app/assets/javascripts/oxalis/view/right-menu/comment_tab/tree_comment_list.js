@@ -13,17 +13,17 @@ import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_a
 
 type OwnProps = {
   tree: TreeType,
-  isSortedAscending: boolean
+  isSortedAscending: boolean,
 };
 
 type TreeCommentListProps = {
-  skeletonTracing: SkeletonTracingType
+  skeletonTracing: SkeletonTracingType,
 } & OwnProps;
 
 class TreeCommentList extends React.PureComponent {
   props: TreeCommentListProps;
   state = {
-    collapsed: false
+    collapsed: false,
   };
 
   handleToggleComment = () => {
@@ -31,8 +31,7 @@ class TreeCommentList extends React.PureComponent {
   };
 
   render() {
-    const containsActiveNode =
-      this.props.tree.treeId === this.props.skeletonTracing.activeTreeId;
+    const containsActiveNode = this.props.tree.treeId === this.props.skeletonTracing.activeTreeId;
 
     // don't render the comment nodes if the tree is collapsed
     const commentNodes = !this.state.collapsed
@@ -44,17 +43,15 @@ class TreeCommentList extends React.PureComponent {
               key={comment.node}
               data={comment}
               treeId={this.props.tree.treeId}
-              isActive={
-                comment.node === this.props.skeletonTracing.activeNodeId
-              }
-            />
+              isActive={comment.node === this.props.skeletonTracing.activeNodeId}
+            />,
           )
       : null;
 
     const liClassName = classNames({ bold: containsActiveNode });
     const iClassName = classNames("fa", "fa-fw", {
       "fa-chevron-right": this.state.collapsed,
-      "fa-chevron-down": !this.state.collapsed
+      "fa-chevron-down": !this.state.collapsed,
     });
 
     // one tree and its comments
@@ -72,14 +69,11 @@ class TreeCommentList extends React.PureComponent {
   }
 }
 
-function mapStateToProps(
-  state: OxalisState,
-  ownProps: OwnProps
-): TreeCommentListProps {
+function mapStateToProps(state: OxalisState, ownProps: OwnProps): TreeCommentListProps {
   return {
     skeletonTracing: enforceSkeletonTracing(state.tracing),
     tree: ownProps.tree,
-    isSortedAscending: ownProps.isSortedAscending
+    isSortedAscending: ownProps.isSortedAscending,
   };
 }
 

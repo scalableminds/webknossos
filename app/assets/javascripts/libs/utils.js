@@ -4,12 +4,7 @@
  */
 
 import _ from "lodash";
-import type {
-  Vector3,
-  Vector4,
-  Vector6,
-  BoundingBoxType
-} from "oxalis/constants";
+import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
 import window from "libs/window";
 
@@ -79,14 +74,11 @@ const Utils = {
 
     return {
       min: [x, y, z],
-      max: [x + width, y + height, z + depth]
+      max: [x + width, y + height, z + depth],
     };
   },
 
-  compareBy<T: Object>(
-    key: string,
-    isSortedAscending: boolean = true
-  ): Comparator<T> {
+  compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {
     // generic key comparator for array.prototype.sort
     return function(a: T, b: T) {
       if (!isSortedAscending) {
@@ -102,14 +94,23 @@ const Utils = {
     };
   },
 
-  localeCompareBy<T: Object>(key: string, isSortedAscending: boolean = true) {
+  localeCompareBy<T: Object>(
+    selector: string | (T => string),
+    isSortedAscending: boolean = true,
+  ): (T, T) => number {
     const sortingOrder = isSortedAscending ? 1 : -1;
 
-    return (a: T, b: T) =>
-      a[key].localeCompare(b[key], "en", {
-        numeric: true,
-        usage: "search"
-      }) * sortingOrder;
+    return (a: T, b: T): number => {
+      const valueA: string = typeof selector === "function" ? selector(a) : a[selector];
+      const valueB: string = typeof selector === "function" ? selector(b) : b[selector];
+      return (
+        // $FlowFixMe
+        valueA.localeCompare(valueB, "en", {
+          numeric: true,
+          usage: "search",
+        }) * sortingOrder
+      );
+    };
   },
 
   stringToNumberArray(s: string): Array<number> {
@@ -164,8 +165,7 @@ const Utils = {
       document.documentElement != null &&
       rect.top >= 0 &&
       rect.left >= 0 &&
-      rect.bottom <=
-        (window.innerHeight || document.documentElement.clientHeight) &&
+      rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
       rect.right <= (window.innerWidth || document.documentElement.clientWidth)
     );
   },
@@ -175,29 +175,24 @@ const Utils = {
     if (user == null) {
       return false;
     } else {
-      return (
-        _.findIndex(user.get("teams"), team => team.role.name === "admin") >= 0
-      );
+      return _.findIndex(user.get("teams"), team => team.role.name === "admin") >= 0;
     }
   },
 
   getUrlParams(paramName: string): { [key: string]: string | boolean } {
     // Parse the URL parameters as objects and return it or just a single param
-    const params = window.location.search
-      .substring(1)
-      .split("&")
-      .reduce((result, value): void => {
-        const parts = value.split("=");
-        if (parts[0]) {
-          const key = decodeURIComponent(parts[0]);
-          if (parts[1]) {
-            result[key] = decodeURIComponent(parts[1]);
-          } else {
-            result[key] = true;
-          }
+    const params = window.location.search.substring(1).split("&").reduce((result, value): void => {
+      const parts = value.split("=");
+      if (parts[0]) {
+        const key = decodeURIComponent(parts[0]);
+        if (parts[1]) {
+          result[key] = decodeURIComponent(parts[1]);
+        } else {
+          result[key] = true;
         }
-        return result;
-      }, {});
+      }
+      return result;
+    }, {});
 
     if (paramName) {
       return params[paramName];
@@ -218,9 +213,7 @@ const Utils = {
   },
 
   __guard__<T, U>(value: ?T, transform: T => U) {
-    return typeof value !== "undefined" && value !== null
-      ? transform(value)
-      : undefined;
+    return typeof value !== "undefined" && value !== null ? transform(value) : undefined;
   },
 
   sleep(timeout: number): Promise<void> {
@@ -251,7 +244,7 @@ const Utils = {
 
   diffArrays<T>(
     stateA: Array<T>,
-    stateB: Array<T>
+    stateB: Array<T>,
   ): { both: Array<T>, onlyA: Array<T>, onlyB: Array<T> } {
     const setA = new Set(stateA);
     const both = stateB.filter(x => setA.has(x));
@@ -279,10 +272,7 @@ const Utils = {
     if (_.isArray(obj)) {
       return obj.map(Utils.getRecursiveKeysAndValuesUnflat);
     } else if (_.isObject(obj)) {
-      return Object.keys(obj).map(key => [
-        key,
-        Utils.getRecursiveKeysAndValuesUnflat(obj[key])
-      ]);
+      return Object.keys(obj).map(key => [key, Utils.getRecursiveKeysAndValuesUnflat(obj[key])]);
     } else {
       return [obj];
     }
@@ -293,13 +283,13 @@ const Utils = {
   filterWithSearchQuery<T: Object>(
     collection: Array<T>,
     properties: Array<string>,
-    searchQuery: string
+    searchQuery: string,
   ): Array<T> {
     if (searchQuery === "") {
       return collection;
     } else {
       const words = _.map(searchQuery.split(" "), element =>
-        element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")
+        element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
       );
       const uniques = _.filter(_.uniq(words), element => element !== "");
       const pattern = `(${uniques.join("|")})`;
@@ -314,10 +304,10 @@ const Utils = {
           } else {
             return false;
           }
-        })
+        }),
       );
     }
-  }
+  },
 };
 
 export default Utils;

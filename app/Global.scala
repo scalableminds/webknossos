@@ -75,7 +75,9 @@ object InitialData extends GlobalDBAccess with LazyLogging {
     insertUsers()
     insertTeams()
     insertTasks()
-    insertLocalDataStore(conf)
+    if (conf.getBoolean("datastore.enabled").getOrElse(true)) {
+      insertLocalDataStore(conf)
+    }
   }
 
   def insertUsers() = {

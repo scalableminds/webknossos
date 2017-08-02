@@ -10,6 +10,7 @@ import { Button, Dropdown, Input, Menu } from "antd";
 import Window from "libs/window";
 import TreesTabItemView from "oxalis/view/right-menu/trees_tab_item_view";
 import InputComponent from "oxalis/view/components/input_component";
+import ButtonComponent from "oxalis/view/components/button_component";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setTreeNameAction, createTreeAction, deleteTreeAction, shuffleTreeColorAction, selectNextTreeAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -77,21 +78,21 @@ class TreesTabView extends React.Component {
     return (
       <div id="tree-list" className="flex-column">
         <ButtonGroup>
-          <Button onClick={this.props.onCreateTree}><i className="fa fa-plus" /> Create tree</Button>
-          <Button onClick={this.deleteTree}><i className="fa fa-trash-o" /> Delete tree</Button>
-          <Button onClick={this.shuffleTreeColor} title="Change color"><i className="fa fa-adjust" /> Change Color</Button>
-          <Button onClick={this.shuffleAllTreeColors} title="Shuffle all Colors"><i className="fa fa-random" /> Shuffle All Colors</Button>
+          <ButtonComponent onClick={this.props.onCreateTree}><i className="fa fa-plus" /> Create tree</ButtonComponent>
+          <ButtonComponent onClick={this.deleteTree}><i className="fa fa-trash-o" /> Delete tree</ButtonComponent>
+          <ButtonComponent onClick={this.shuffleTreeColor} title="Change color"><i className="fa fa-adjust" /> Change Color</ButtonComponent>
+          <ButtonComponent onClick={this.shuffleAllTreeColors} title="Shuffle all Colors"><i className="fa fa-random" /> Shuffle All Colors</ButtonComponent>
         </ButtonGroup>
         <InputGroup compact>
-          <Button onClick={this.props.onSelectNextTreeBackward}><i className="fa fa-arrow-left" /></Button>
+          <ButtonComponent onClick={this.props.onSelectNextTreeBackward}><i className="fa fa-arrow-left" /></ButtonComponent>
           <InputComponent
             onChange={this.handleChangeTreeName}
             value={activeTreeName}
             style={{ width: "60%" }}
           />
-          <Button onClick={this.props.onSelectNextTreeForward}><i className="fa fa-arrow-right" /></Button>
+          <ButtonComponent onClick={this.props.onSelectNextTreeForward}><i className="fa fa-arrow-right" /></ButtonComponent>
           <Dropdown overlay={this.getSettingsDropdown()}>
-            <Button title="Sort"><i className="fa fa-sort-alpha-asc" /></Button>
+            <ButtonComponent title="Sort"><i className="fa fa-sort-alpha-asc" /></ButtonComponent>
           </Dropdown>
         </InputGroup>
 

@@ -10,6 +10,7 @@ import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import { Button } from "antd";
+import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 
@@ -116,45 +117,45 @@ class DatasetActionsView extends PureComponent {
     const elements = [];
     if (restrictions.allowUpdate) {
       elements.push(
-        <Button
+        <ButtonComponent
           key="save-button"
           type="primary"
           onClick={this.handleSave}
           icon={this.getSaveButtonIcon()}
-        >Save</Button>);
+        >Save</ButtonComponent>);
     } else {
-      elements.push(<Button
+      elements.push(<ButtonComponent
         key="read-only-button"
         type="primary"
         disabled
-      >Read only</Button>);
-      elements.push(<Button
+      >Read only</ButtonComponent>);
+      elements.push(<ButtonComponent
         key="copy-button"
         icon="file-add"
         onClick={this.handleCopyToAccount}
-      >Copy To My Account</Button>);
+      >Copy To My Account</ButtonComponent>);
     }
 
     if (hasAdvancedOptions) {
       if (restrictions.allowFinish) {
-        elements.push(<Button
+        elements.push(<ButtonComponent
           key="finish-button"
           icon="check-circle-o"
           onClick={this.handleFinish}
-        >{archiveButtonText}</Button>);
+        >{archiveButtonText}</ButtonComponent>);
       }
       if (restrictions.allowDownload || !this.props.tracing.downloadUrl) {
-        elements.push(<Button
+        elements.push(<ButtonComponent
           key="download-button"
           icon="download"
           onClick={this.handleDownload}
-        >Download</Button>);
+        >Download</ButtonComponent>);
       }
-      elements.push(<Button
+      elements.push(<ButtonComponent
         key="share-button"
         icon="share-alt"
         onClick={this.handleShareOpen}
-      >Share</Button>);
+      >Share</ButtonComponent>);
       elements.push(<ShareModalView
         key="share-modal"
         isVisible={this.state.shareModalOpen}
@@ -162,21 +163,21 @@ class DatasetActionsView extends PureComponent {
       />);
     }
     if (restrictions.allowFinish && this.props.task) {
-      elements.push(<Button
+      elements.push(<ButtonComponent
         key="next-button"
         icon="verticle-left"
         onClick={this.handleFinishAndGetNextTask}
       >
         Finish and Get Next Task
-      </Button>);
+      </ButtonComponent>);
     }
     if (isSkeletonMode) {
       elements.push(
-        <Button
+        <ButtonComponent
           key="merge-button"
           icon="folder-open"
           onClick={this.handleMergeOpen}
-        >Merge Tracing</Button>);
+        >Merge Tracing</ButtonComponent>);
       elements.push(<MergeModalView
         key="merge-modal"
         isVisible={this.state.mergeModalOpen}

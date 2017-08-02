@@ -8,6 +8,7 @@ import Store from "oxalis/store";
 import { setModeAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { Button, Radio } from "antd";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import ButtonComponent from "oxalis/view/components/button_component";
 
 // Workaround until github.com/facebook/flow/issues/1113 is fixed
 const RadioGroup = Radio.Group;
@@ -44,9 +45,9 @@ class VolumeActionsView extends PureComponent {
           <RadioButton value={Constants.VOLUME_MODE_TRACE}>Trace</RadioButton>
         </RadioGroup>
         <ButtonGroup size="large">
-          <Button
+          <ButtonComponent
             onClick={this.handleCreateCell}
-          >Create new cell (C)</Button>
+          >Create new cell (C)</ButtonComponent>
         </ButtonGroup>
       </div>
     );

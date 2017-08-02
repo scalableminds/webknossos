@@ -8,8 +8,9 @@ import React from "react";
 import Maybe from "data.maybe";
 import Utils from "libs/utils";
 import { connect } from "react-redux";
-import { Button, Input } from "antd";
+import { Input } from "antd";
 import InputComponent from "oxalis/view/components/input_component";
+import ButtonComponent from "oxalis/view/components/button_component";
 import { InputKeyboardNoLoop } from "libs/input";
 import { getActiveTree, getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveNodeAction, createCommentAction, deleteCommentAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -143,17 +144,17 @@ class CommentTabView extends React.Component {
     return (
       <div className="flex-column">
         <InputGroup compact>
-          <Button onClick={this.previousComment}><i className="fa fa-arrow-left" /></Button>
+          <ButtonComponent onClick={this.previousComment}><i className="fa fa-arrow-left" /></ButtonComponent>
           <InputComponent
             value={activeComment}
             onChange={this.handleChangeInput}
             placeholder="Add comment"
             style={{ width: "60%" }}
           />
-          <Button onClick={this.nextComment}><i className="fa fa-arrow-right" /></Button>
-          <Button onClick={this.handleChangeSorting} title="sort">
+          <ButtonComponent onClick={this.nextComment}><i className="fa fa-arrow-right" /></ButtonComponent>
+          <ButtonComponent onClick={this.handleChangeSorting} title="sort">
             <i className={sortingIconClass} />
-          </Button>
+          </ButtonComponent>
         </InputGroup>
         <ul id="comment-list" className="flex-overflow">
           {treesAndComments}

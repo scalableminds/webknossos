@@ -25,7 +25,7 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
 import ApiLoader from "oxalis/api/api_loader";
 import { wkReadyAction } from "oxalis/model/actions/actions";
-import { saveNowAction, undoAction } from "oxalis/model/actions/save_actions";
+import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
@@ -237,6 +237,8 @@ class Controller extends React.PureComponent {
 
         // Undo
         "ctrl + z": () => Store.dispatch(undoAction()),
+        // Redo
+        "ctrl + y": () => Store.dispatch(redoAction()),
       });
     }
 

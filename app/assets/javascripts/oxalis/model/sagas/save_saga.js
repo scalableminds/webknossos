@@ -20,7 +20,7 @@ import {
 } from "oxalis/model/actions/save_actions";
 import {
   createTreeAction,
-  SkeletonTracingActions,
+  SkeletonTracingSaveRelevantActions,
   setTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
@@ -37,25 +37,33 @@ const SAVE_RETRY_WAITING_TIME = 5000;
 const UNDO_HISTORY_SIZE = 100;
 
 export function* collectUndoStates(): Generator<*, *, *> {
-  const versions = [];
+  const undoStack = [];
+  const redoStack = [];
+
   yield race({
     initSkeleton: take("INITIALIZE_SKELETONTRACING"),
     initVolume: take("INITIALIZE_VOLUMETRACING"),
   });
   let prevTracing = yield select(state => state.tracing);
   while (true) {
-    const { userAction } = yield race({
-      userAction: take([...SkeletonTracingActions]),
+    const { userAction, undo } = yield race({
+      userAction: take([...SkeletonTracingSaveRelevantActions]),
       undo: take("UNDO"),
+      redo: take("REDO"),
     });
     if (userAction) {
-      console.log("[Undo] Saved tracing version!");
-      versions.push(prevTracing);
-      if (versions.length > UNDO_HISTORY_SIZE) versions.shift();
-    } else if (versions.length) {
-      console.log("[Undo] Restored tracing version!");
-      const lastTracing = versions.pop();
-      yield put(setTracingAction(lastTracing));
+      // Clear the redo stack when a new action is executed
+      redoStack.splice(0);
+      undoStack.push(prevTracing);
+      if (undoStack.length > UNDO_HISTORY_SIZE) undoStack.shift();
+    } else if (undo && undoStack.length) {
+      redoStack.push(prevTracing);
+      const newTracing = undoStack.pop();
+      yield put(setTracingAction(newTracing));
+    } else if (redoStack.length) {
+      undoStack.push(prevTracing);
+      const newTracing = redoStack.pop();
+      yield put(setTracingAction(newTracing));
     }
     prevTracing = yield select(state => state.tracing);
   }
@@ -297,13 +305,15 @@ export function* saveTracingAsync(): Generator<*, *, *> {
 
   while (true) {
     if (initSkeleton) {
-      yield take([...SkeletonTracingActions, ...FlycamActions, "UNDO"]);
+      yield take([...SkeletonTracingSaveRelevantActions, ...FlycamActions, "UNDO", "REDO"]);
     } else {
       yield take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
     }
     const tracing = yield select(state => state.tracing);
     const flycam = yield select(state => state.flycam);
+    // console.log("Tracing different?", prevTracing === tracing);
     const items = Array.from(yield call(performDiffTracing, prevTracing, tracing, flycam));
+    // console.log("Diff", items.length, items);
     if (items.length > 0) {
       yield put(pushSaveQueueAction(items));
     }

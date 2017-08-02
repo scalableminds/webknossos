@@ -108,6 +108,7 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
       "DELETE_BRANCHPOINT",
       "SELECT_NEXT_TREE",
       "UNDO",
+      "REDO",
     ],
     centerActiveNode,
   );

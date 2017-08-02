@@ -78,7 +78,7 @@ export type SkeletonTracingActionType =
   | CreateCommentActionType
   | DeleteCommentActionType;
 
-export const SkeletonTracingActions = [
+export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
   "CREATE_NODE",
   "DELETE_NODE",
@@ -86,7 +86,6 @@ export const SkeletonTracingActions = [
   "SET_NODE_RADIUS",
   "CREATE_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
-  "REQUEST_DELETE_BRANCHPOINT",
   "CREATE_TREE",
   "DELETE_TREE",
   "SET_ACTIVE_TREE",
@@ -96,7 +95,6 @@ export const SkeletonTracingActions = [
   "SHUFFLE_TREE_COLOR",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
-  "SET_VIEW_MODE",
 ];
 
 export const initializeSkeletonTracingAction = (

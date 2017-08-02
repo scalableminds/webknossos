@@ -17,6 +17,7 @@ type SetSaveBusyActionType = { type: "SET_SAVE_BUSY", isBusy: boolean };
 type SetLastSaveTimestampActionType = { type: "SET_LAST_SAVE_TIMESTAMP", timestamp: number };
 type SetVersionNumberActionType = { type: "SET_VERSION_NUMBER", version: number };
 type UndoActionType = { type: "UNDO" };
+type RedoActionType = { type: "REDO" };
 export type SaveActionType =
   | PushSaveQueueActionType
   | SaveNowActionType
@@ -24,7 +25,8 @@ export type SaveActionType =
   | SetSaveBusyActionType
   | SetLastSaveTimestampActionType
   | SetVersionNumberActionType
-  | UndoActionType;
+  | UndoActionType
+  | RedoActionType;
 
 export const pushSaveQueueAction = (
   items: Array<UpdateAction>,
@@ -63,4 +65,8 @@ export const setVersionNumberAction = (version: number): SetVersionNumberActionT
 
 export const undoAction = (): UndoActionType => ({
   type: "UNDO",
+});
+
+export const redoAction = (): RedoActionType => ({
+  type: "REDO",
 });

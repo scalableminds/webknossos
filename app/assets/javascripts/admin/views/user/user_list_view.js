@@ -22,7 +22,7 @@ class UserListView extends React.PureComponent {
     isExperienceModalVisible: boolean,
     isTeamRoleModalVisible: boolean,
     activationFilter: Array<"true" | "false">,
-    searchQuery: string
+    searchQuery: string,
   } = {
     isLoading: true,
     users: [],
@@ -30,7 +30,7 @@ class UserListView extends React.PureComponent {
     isExperienceModalVisible: false,
     isTeamRoleModalVisible: false,
     activationFilter: ["true"],
-    searchQuery: ""
+    searchQuery: "",
   };
 
   componentDidMount() {
@@ -43,21 +43,18 @@ class UserListView extends React.PureComponent {
 
     this.setState({
       isLoading: false,
-      users
+      users,
     });
   }
 
-  activateUser = (
-    selectedUser: APIUserType,
-    isActive: boolean = true
-  ): void => {
+  activateUser = (selectedUser: APIUserType, isActive: boolean = true): void => {
     const newUsers = this.state.users.map(user => {
       if (selectedUser.id === user.id) {
         const newUser = Object.assign({}, user, { isActive });
 
         const url = `/api/users/${user.id}`;
         Request.sendJSONReceiveJSON(url, {
-          data: newUser
+          data: newUser,
         });
 
         return newUser;
@@ -69,7 +66,7 @@ class UserListView extends React.PureComponent {
     this.setState({
       users: newUsers,
       selectedUserIds: [selectedUser.id],
-      isTeamRoleModalVisible: isActive
+      isTeamRoleModalVisible: isActive,
     });
   };
 
@@ -81,7 +78,7 @@ class UserListView extends React.PureComponent {
     this.setState({
       users: updatedUsers,
       isExperienceModalVisible: false,
-      isTeamRoleModalVisible: false
+      isTeamRoleModalVisible: false,
     });
   };
 
@@ -91,7 +88,7 @@ class UserListView extends React.PureComponent {
 
   handleDismissActivationFilter = () => {
     this.setState({
-      activationFilter: []
+      activationFilter: [],
     });
   };
 
@@ -105,8 +102,8 @@ class UserListView extends React.PureComponent {
         this.setState({ selectedUserIds });
       },
       getCheckboxProps: user => ({
-        disabled: !user.isActive
-      })
+        disabled: !user.isActive,
+      }),
     };
 
     if (this.state.isLoading) {
@@ -161,17 +158,17 @@ class UserListView extends React.PureComponent {
           dataSource={Utils.filterWithSearchQuery(
             this.state.users,
             ["firstName", "lastName", "email", "teams", "experiences"],
-            this.state.searchQuery
+            this.state.searchQuery,
           )}
           rowKey="id"
           rowSelection={rowSelection}
           pagination={{
-            defaultPageSize: 50
+            defaultPageSize: 50,
           }}
           style={{ marginTop: 30, marginBotton: 30 }}
           onChange={(pagination, filters) =>
             this.setState({
-              activationFilter: filters.isActive
+              activationFilter: filters.isActive,
             })}
         >
           <Column
@@ -186,12 +183,7 @@ class UserListView extends React.PureComponent {
             key="firstName"
             sorter={compareFunc("firstName")}
           />
-          <Column
-            title="Email"
-            dataIndex="email"
-            key="email"
-            sorter={compareFunc("email")}
-          />
+          <Column title="Email" dataIndex="email" key="email" sorter={compareFunc("email")} />
           <Column
             title="Experiences"
             dataIndex="experiences"
@@ -200,7 +192,7 @@ class UserListView extends React.PureComponent {
               _.map(experiences, (value, domain) =>
                 <Tag key={`experience_${user.id}_${domain}`}>
                   {domain} : {value}
-                </Tag>
+                </Tag>,
               )}
           />
           <Column
@@ -209,15 +201,10 @@ class UserListView extends React.PureComponent {
             key="teams_"
             render={(teams: Array<APITeamRole>, user: APIUserType) =>
               teams.map(team =>
-                <span
-                  className="nowrap"
-                  key={`team_role_${user.id}_${team.team}`}
-                >
+                <span className="nowrap" key={`team_role_${user.id}_${team.team}`}>
                   {team.team}{" "}
-                  <Tag color={TemplateHelpers.stringToColor(team.role.name)}>
-                    {team.role.name}
-                  </Tag>
-                </span>
+                  <Tag color={TemplateHelpers.stringToColor(team.role.name)}>{team.role.name}</Tag>
+                </span>,
               )}
           />
           <Column
@@ -226,12 +213,11 @@ class UserListView extends React.PureComponent {
             key="isActive"
             filters={[
               { text: "Activated", value: "true" },
-              { text: "Deactivated", value: "false" }
+              { text: "Deactivated", value: "false" },
             ]}
             filtered
             filteredValue={this.state.activationFilter}
-            onFilter={(value: boolean, user: APIUserType) =>
-              user.isActive.toString() === value}
+            onFilter={(value: boolean, user: APIUserType) => user.isActive.toString() === value}
             render={isActive => {
               const icon = isActive ? "check-circle-o" : "close-circle-o";
               return <Icon type={icon} style={{ fontSize: 20 }} />;

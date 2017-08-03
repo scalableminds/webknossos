@@ -13,22 +13,19 @@ class ExperienceModalView extends React.PureComponent {
     onCancel: Function,
     visible: boolean,
     selectedUserIds: Array<string>,
-    users: Array<APIUserType>
+    users: Array<APIUserType>,
   };
 
   state = {
     domain: null,
-    level: null
+    level: null,
   };
 
   increaseExperience = (): void => {
     this.setExperience(null, true);
   };
 
-  setExperience = (
-    event: ?SyntheticInputEvent,
-    shouldAddValue: boolean = false
-  ): void => {
+  setExperience = (event: ?SyntheticInputEvent, shouldAddValue: boolean = false): void => {
     const { domain, level } = this.state;
     if (domain && level !== null) {
       const newUserPromises = this.props.users.map(user => {
@@ -40,12 +37,12 @@ class ExperienceModalView extends React.PureComponent {
           }
 
           const newUser = update(user, {
-            experiences: { [domain]: { $set: newExperienceLevel } }
+            experiences: { [domain]: { $set: newExperienceLevel } },
           });
 
           const url = `/api/users/${user.id}`;
           Request.sendJSONReceiveJSON(url, {
-            data: newUser
+            data: newUser,
           });
 
           return this.sendUserToServer(newUser, user);
@@ -64,7 +61,7 @@ class ExperienceModalView extends React.PureComponent {
         if (this.props.selectedUserIds.includes(user.id)) {
           const newExperiences = _.omit(user.experiences, domain);
           const newUser = update(user, {
-            experiences: { $set: newExperiences }
+            experiences: { $set: newExperiences },
           });
 
           return this.sendUserToServer(newUser, user);
@@ -82,13 +79,10 @@ class ExperienceModalView extends React.PureComponent {
   * @param oldUser - The original user object of `newUser`. Returned in case API call fails
   *
   */
-  sendUserToServer(
-    newUser: APIUserType,
-    oldUser: APIUserType
-  ): Promise<APIUserType> {
+  sendUserToServer(newUser: APIUserType, oldUser: APIUserType): Promise<APIUserType> {
     const url = `/api/users/${newUser.id}`;
     return Request.sendJSONReceiveJSON(url, {
-      data: newUser
+      data: newUser,
     }).then(() => Promise.resolve(newUser), () => Promise.reject(oldUser));
   }
 
@@ -97,13 +91,13 @@ class ExperienceModalView extends React.PureComponent {
       newUsers => {
         this.setState({
           domain: null,
-          level: null
+          level: null,
         });
         this.props.onChange(newUsers);
       },
       () => {
         // do nothing and keep modal open
-      }
+      },
     );
   }
 
@@ -137,11 +131,7 @@ class ExperienceModalView extends React.PureComponent {
             >
               Set Experience
             </Button>
-            <Button
-              type="primary"
-              onClick={this.deleteExperience}
-              disabled={!isDomainValid}
-            >
+            <Button type="primary" onClick={this.deleteExperience} disabled={!isDomainValid}>
               Delete Experience
             </Button>
             <Button onClick={() => this.props.onCancel()}>Cancel</Button>

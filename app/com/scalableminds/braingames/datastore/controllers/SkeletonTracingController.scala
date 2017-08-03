@@ -12,6 +12,7 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class SkeletonTracingController @Inject()(
@@ -21,10 +22,10 @@ class SkeletonTracingController @Inject()(
                                          val messagesApi: MessagesApi
                                        ) extends Controller {
 
-  def createEmpty(dataSetName: String) = Action(validateJson[CreateEmptyParameters]) {
+  def createEmpty = Action(validateJson[CreateEmptyParameters]) {
     implicit request => {
       AllowRemoteOrigin {
-        val tracing = skeletonTracingService.create(dataSetName, request.body)
+        val tracing = skeletonTracingService.create(request.body)
         Ok(tracing.id)
       }
     }
@@ -136,8 +137,14 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def createMultipleFromCsv() = Action {Ok}
-
+  def createMultipleFromParams() = Action(validateJson[List[CreateEmptyParameters]]) {
+    implicit request => {
+      AllowRemoteOrigin {
+        val tracingIds = request.body.map(skeletonTracingService.create(_).id)
+        Ok(Json.toJson(tracingIds))
+      }
+    }
+  }
 
   def createMergedFromIds = Action.async(validateJson[List[TracingSelector]]) {
     implicit request => {

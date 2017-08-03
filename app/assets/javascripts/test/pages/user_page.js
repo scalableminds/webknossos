@@ -1,17 +1,19 @@
-import { isArray, fromPairs, chain, trim } from "lodash";
-
 export default class UserPage {
-  userListElements = "tbody tr";
-  changeExperienceButton = "#experience-modal";
-  changeTeamButton = "#team-role-modal";
-  modal = ".modal-content";
-  confirmButton = ".btn-primary";
+  userListElements = ".ant-table-row";
+  changeExperienceButton = "#main-container > div > div > button:nth-child(4)";
+  changeTeamButton = "#main-container > div > div > button:nth-child(3)";
+  modal = ".ant-modal-content";
+  confirmButton = ".ant-btn-primary";
 
-  inputExperienceDomain = "input[name='experience-domain']";
-  inputExperienceLevel = "input[name='experience-value']";
-  setExperienceButton = ".set-experience";
-  increaseExperienceButton = ".increase-experience";
-  deleteExperienceButton = ".delete-experience";
+  inputExperienceDomain = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-body > span:nth-child(1) > input";
+  inputExperienceLevel = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-body > span:nth-child(2) > input";
+  setExperienceButton = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-footer > div > button:nth-child(2)";
+  increaseExperienceButton = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-footer > div > button:nth-child(1)";
+  deleteExperienceButton = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-footer > div > button:nth-child(3)";
+
+  selectFirstUserCheckbox = "#main-container > div > div > div.ant-table-wrapper > div > div > div > div > div > table > tbody > tr:nth-child(1) > td.ant-table-selection-column > span > label > span > input";
+  selectSecondTeamCheckbox = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-body > div:nth-child(3) > div:nth-child(1) > label > span.ant-checkbox.ant-checkbox-checked > input";
+  selectSecondTeamUserRole = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-body > div:nth-child(3) > div:nth-child(2) > div > label.ant-radio-button-wrapper.ant-radio-button-wrapper-checked > span:nth-child(2)";
 
   get() {
     browser.url("/users");
@@ -22,13 +24,9 @@ export default class UserPage {
     return browser.elements(this.userListElements).value;
   }
 
-  selectUser(userName) {
-    const userRowSelector = `tbody tr[data-name='${userName}']`;
-
-    browser.pause(1000);
-    browser.waitForExist(userRowSelector);
-    browser.pause(1000);
-    browser.click(`${userRowSelector} .select-row`);
+  selectSingleUser() {
+    browser.waitForExist(this.selectFirstUserCheckbox);
+    browser.click(this.selectFirstUserCheckbox);
   }
 
   clickConfirmButton() {
@@ -38,83 +36,53 @@ export default class UserPage {
     browser.pause(500); // wait for DOM updates
   }
 
-  selectTeams(teamNames) {
+  selectSecondTeamRole() {
     browser.waitForExist(this.changeTeamButton);
     browser.pause(3000);
     browser.click(this.changeTeamButton);
     browser.waitForVisible(this.modal);
-    browser.waitForExist(".checkbox");
-    for (const team of teamNames) {
-      const selector = `select[data-teamname='${team}']`;
 
-      browser.waitForExist(selector);
-      browser.selectByValue(selector, "user");
-    }
+    browser.waitForExist(this.selectSecondTeamUserRole);
+    browser.click(this.selectSecondTeamUserRole);
   }
 
-  openExperienceModal(userName) {
-    this.selectUser(userName);
+  unSelectSecondTeam() {
+    browser.waitForExist(this.changeTeamButton);
+    browser.pause(3000);
+    browser.click(this.changeTeamButton);
+    browser.waitForVisible(this.modal);
+
+    browser.waitForExist(this.selectSecondTeamCheckbox);
+    browser.click(this.selectSecondTeamCheckbox);
+  }
+
+  openExperienceModal() {
+    this.selectSingleUser();
     browser.waitForExist(this.changeExperienceButton);
-    browser.pause(1000);
     browser.click(this.changeExperienceButton);
     browser.pause(1000);
     browser.waitForExist(this.modal);
     browser.waitForExist(this.inputExperienceDomain);
   }
 
-  setExperience(userName, experience) {
-    this.openExperienceModal(userName);
+  setExperience(experience) {
+    this.openExperienceModal();
     browser.setValue(this.inputExperienceDomain, experience.domain);
     browser.setValue(this.inputExperienceLevel, experience.level);
     browser.click(this.setExperienceButton);
   }
 
-  increaseExperience(userName, experience) {
-    this.openExperienceModal(userName);
+  increaseExperience(experience) {
+    this.openExperienceModal();
     browser.setValue(this.inputExperienceDomain, experience.domain);
     browser.setValue(this.inputExperienceLevel, experience.level);
     browser.click(this.increaseExperienceButton);
   }
 
-  deleteExperience(userName, experience) {
-    this.openExperienceModal(userName);
+  deleteExperience(experience) {
+    this.openExperienceModal();
     browser.setValue(this.inputExperienceDomain, experience.domain);
     browser.click(this.deleteExperienceButton);
     browser.pause(1000); // wait for DOM updates
-  }
-
-  getTeamsAndRolesForUser(userName) {
-    const userRowSelector = `tbody tr[data-name='${userName}']`;
-    browser.pause(1000);
-    const teamString = browser.getText(`${userRowSelector} td:nth-child(6)`);
-    const teamsAndRoles = teamString
-      .split("\n")
-      .map(teamRoleString =>
-        chain(teamRoleString)
-          .replace("admin", ":admin")
-          .replace("user", ":user")
-          .split(":")
-          .map(trim)
-          .value(),
-      );
-
-    return fromPairs(teamsAndRoles);
-  }
-
-  getExperiencesForUser(userName) {
-    const userRowSelector = `tbody tr[data-name='${userName}']`;
-    browser.pause(500);
-    let labelStrings = browser.getText(`${userRowSelector} td:nth-child(5) .label`);
-    if (!isArray(labelStrings)) {
-      labelStrings = [labelStrings];
-    }
-
-    return labelStrings.map(labelString => {
-      const [domain, level] = labelString.split(":");
-      return {
-        domain: domain.trim(),
-        level: parseInt(level),
-      };
-    });
   }
 }

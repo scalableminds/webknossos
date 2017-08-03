@@ -2,6 +2,9 @@ package models.annotation
 
 import java.io.{BufferedOutputStream, FileOutputStream}
 
+import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
+import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
+import com.scalableminds.braingames.datastore.tracings.skeleton.CreateEmptyParameters
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.BoxImplicits
@@ -9,10 +12,9 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationType._
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.DataSet
 import models.task.Task
 import models.user.{UsedAnnotationDAO, User}
-import net.liftweb.common.Full
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
@@ -43,20 +45,31 @@ object AnnotationService
   def createExplorationalFor(
     user: User,
     dataSet: DataSet,
-    contentType: String,
-    id: String = "")(implicit ctx: DBAccessContext) = {
+    tracingType: TracingType.Value,
+    id: String = "")(implicit ctx: DBAccessContext): Fox[Annotation] = {
 
-    //TODO: rocksDB
-    val annotation = Annotation(
-      Some(user._id),
-      ContentReference("skeletonTracing", "dummyId"),
-      dataSet.name,
-      selectSuitableTeam(user, dataSet),
-      AnnotationSettings.default,
-      _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate))
-
-      AnnotationDAO.insert(annotation).map(_ => annotation)
+    def createTracing(dataSource: DataSource) = tracingType match {
+      case TracingType.skeletonTracing =>
+        dataSet.dataStoreInfo.typ.strategy.createEmptySkeletonTracing(dataSet.dataStoreInfo, dataSource, CreateEmptyParameters())
+      case TracingType.volumeTracing =>
+        dataSet.dataStoreInfo.typ.strategy.createVolumeTracing(dataSet.dataStoreInfo, dataSource)
     }
+
+    for {
+      dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
+      tracing <- createTracing(dataSource)
+      annotation = Annotation(
+        Some(user._id),
+        tracing,
+        dataSet.name,
+        selectSuitableTeam(user, dataSet),
+        AnnotationSettings.default,
+        _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate))
+      _ <- AnnotationDAO.insert(annotation)
+    } yield {
+      annotation
+    }
+  }
 
   def updateAllOfTask(
     task: Task,
@@ -178,10 +191,10 @@ object AnnotationService
   }
 
   def createFrom(
-    user: User,
-    contentReference: ContentReference,
-    annotationType: AnnotationType,
-    name: Option[String])(implicit messages: Messages, ctx: DBAccessContext) = Fox.empty //TODO: RocksDB
+                  user: User,
+                  tracingReference: TracingReference,
+                  annotationType: AnnotationType,
+                  name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Nothing] = Fox.empty //TODO: RocksDB
   /* {
 
     for {
@@ -240,7 +253,7 @@ object AnnotationService
     // annotation --> hence, this hacky way of making a decision
     def createContent() = {
       //TODO: rocksDB - call datastore create (with nml if applicable - readd nml to this functions parameters?)
-      Fox.successful(ContentReference("skeletonTracing", "dummyId"))
+      Fox.successful(TracingReference("dummyId", TracingType.skeletonTracing))
     }
     for {
       content <- createContent()

@@ -3,9 +3,10 @@ package controllers
 import javax.inject.Inject
 
 import akka.util.Timeout
+import com.scalableminds.braingames.datastore.tracings.TracingType
 import com.scalableminds.util.mvc.JsonResult
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
 import models.task.TaskDAO
@@ -19,6 +20,7 @@ import play.api.libs.json.{JsArray, JsObject, _}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.util.Try
 
@@ -31,6 +33,7 @@ import scala.util.Try
 class AnnotationController @Inject()(val messagesApi: MessagesApi)
   extends Controller
     with Secured
+    with FoxImplicits
     with TracingInformationProvider {
 
   implicit val timeout = Timeout(5 seconds)
@@ -138,9 +141,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def createExplorational = Authenticated.async(parse.urlFormEncoded) { implicit request =>
     for {
-      dataSetName <- postParameter("dataSetName") ?~> Messages("dataSet.notSupplied")
+      dataSetName <- postParameter("dataSetName").toFox ?~> Messages("dataSet.notSupplied")
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      contentType <- postParameter("contentType") ?~> Messages("annotation.contentType.notSupplied")
+      contentTypeString <- postParameter("contentType").toFox
+      contentType <- TracingType.values.find(_.toString == contentTypeString).toFox
       annotation <- AnnotationService.createExplorationalFor(request.user, dataSet, contentType) ?~> Messages("annotation.create.failed")
     } yield {
       Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))

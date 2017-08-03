@@ -49,7 +49,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         case Some(a: Array[Byte]) =>
           Fox.successful(a)
         case _ =>
-          DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight).map{
+          dataSet.dataStoreInfo.typ.strategy.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight).map{
             result =>
               Cache.set(s"thumbnail-$dataSetName*$dataLayerName",
                 result,

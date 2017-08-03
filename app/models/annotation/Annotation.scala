@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.braingames.datastore.tracings.TracingReference
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, MongoHelpers}
@@ -17,7 +18,7 @@ import reactivemongo.play.json.BSONFormats._
 
 case class Annotation(
                        _user: Option[BSONObjectID],
-                       contentReference: ContentReference,
+                       contentReference: TracingReference,
                        dataSetName: String,
                        team: String,
                        settings: AnnotationSettings,
@@ -286,7 +287,7 @@ object AnnotationDAO
       Json.obj("$set" -> Json.obj("state" -> state)),
       returnNew = true)
 
-  def updateContent(_annotation: BSONObjectID, content: ContentReference)(implicit ctx: DBAccessContext) =
+  def updateContent(_annotation: BSONObjectID, content: TracingReference)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(

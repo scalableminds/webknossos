@@ -43,7 +43,6 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
     logger.debug("Called to create empty SkeletonTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/skeletons/createEmpty")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
-      .withQueryString("dataSetName" -> base.id.name)
       .postWithJsonResponse[CreateEmptyParameters, TracingReference](parameters)
   }
 

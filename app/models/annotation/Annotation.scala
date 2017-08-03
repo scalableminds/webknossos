@@ -18,7 +18,7 @@ import reactivemongo.play.json.BSONFormats._
 
 case class Annotation(
                        _user: Option[BSONObjectID],
-                       contentReference: TracingReference,
+                       tracingReference: TracingReference,
                        dataSetName: String,
                        team: String,
                        settings: AnnotationSettings,
@@ -49,7 +49,7 @@ case class Annotation(
 
   val stateLabel = if (state.isFinished) "Finished" else "In Progress"
 
-  val contentType = contentReference.contentType
+  val contentType = tracingReference.contentType
 
   val restrictions = if(readOnly.getOrElse(false))
       AnnotationRestrictions.readonlyAnnotation()
@@ -95,7 +95,7 @@ case class Annotation(
         "stats" -> statistics,
         "restrictions" -> AnnotationRestrictions.writeAsJson(restrictions, user),
         "formattedHash" -> Formatter.formatHash(id),
-        "content" -> contentReference,
+        "content" -> tracingReference,
         "dataSetName" -> dataSetName,
         "tracingTime" -> tracingTime
       )

@@ -50,7 +50,7 @@ object AnnotationService
 
     def createTracing(dataSource: DataSource) = tracingType match {
       case TracingType.skeletonTracing =>
-        dataSet.dataStoreInfo.typ.strategy.createEmptySkeletonTracing(dataSet.dataStoreInfo, dataSource, CreateEmptyParameters())
+        dataSet.dataStoreInfo.typ.strategy.createEmptySkeletonTracing(dataSet.dataStoreInfo, dataSource, CreateEmptyParameters(dataSource.id.name))
       case TracingType.volumeTracing =>
         dataSet.dataStoreInfo.typ.strategy.createVolumeTracing(dataSet.dataStoreInfo, dataSource)
     }
@@ -146,23 +146,17 @@ object AnnotationService
   def createAnnotationBase(
     task: Task,
     userId: BSONObjectID,
+    tracingReference: TracingReference,
     boundingBox: Option[BoundingBox],
     settings: AnnotationSettings,
     dataSetName: String,
     start: Point3D,
     rotation: Vector3D)(implicit ctx: DBAccessContext) = {
-    Fox.empty
-    //todo: rocksDB
-/*
     for {
-      tracing <- SkeletonTracingService.createFrom(
-        dataSetName, start, rotation, boundingBox,
-        insertStartAsNode = true, isFirstBranchPoint = true, settings) ?~> "Failed to create skeleton tracing."
-      content = ContentReference.createFor(tracing)
       _ <- AnnotationDAO.insert(
-        Annotation(Some(userId), content, team = task.team,
+        Annotation(Some(userId), tracingReference, dataSetName, task.team, settings,
           typ = AnnotationType.TracingBase, _task = Some(task._id))) ?~> "Failed to insert annotation."
-    } yield tracing*/
+    } yield true
   }
 
 //  def updateAnnotationBase(task: Task, start: Point3D, rotation: Vector3D)(implicit ctx: DBAccessContext) = {

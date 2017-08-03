@@ -3,6 +3,7 @@ package controllers
 import java.util.UUID
 import javax.inject.Inject
 
+import com.scalableminds.braingames.datastore.tracings.skeleton.CreateEmptyParameters
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
@@ -112,28 +113,55 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   }
 
 
-  def createSingleTask(input: (String, Experience, CompletionStatus, String, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]) =
+  def createTaskWithoutAnnotationBase(input: (String, Experience, CompletionStatus, String, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]): Fox[Task] =
     input match {
       case (taskTypeId, experience, status, team, projectName, scriptId, boundingBox, dataSetName, start, rotation) =>
         for {
-          _ <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
           _ <- ensureTeamAdministration(request.user, team)
           task = Task(taskType._id, team, experience, status.open, _project = project.name, _script = scriptId)
-          _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start, rotation)
           _ <- TaskService.insert(task, project)
+        } yield task
+    }
+
+  def createSingleTask(input: (String, Experience, CompletionStatus, String, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]): Fox[JsObject] =
+    input match {
+      case (taskTypeId, experience, status, team, projectName, scriptId, boundingBox, dataSetName, start, rotation) =>
+        for {
+          dataSet <- DataSetDAO.findOneBySourceName(dataSetName).toFox ?~> Messages("dataSet.notFound", dataSetName)
+          dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
+          task <- createTaskWithoutAnnotationBase(input)
+          tracingParameters = CreateEmptyParameters(dataSource.id.name, boundingBox, Some(start), Some(rotation), Some(true), Some(true))
+          tracingReference <- dataSet.dataStoreInfo.typ.strategy.createEmptySkeletonTracing(dataSet.dataStoreInfo, dataSource, tracingParameters) ?~> "Failed to create skeleton tracing."
+          taskType <- task.taskType
+          _ <- AnnotationService.createAnnotationBase(task, request.user._id, tracingReference, boundingBox, taskType.settings, dataSetName, start, rotation)
           taskjs <- Task.transformToJson(task, request.userOpt)
         } yield taskjs
     }
 
+  val fox = Fox
+
   def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
+    fox.failure("")
+    //TODO: RocksDB
+/*
     withJsonUsing(json, Reads.list(taskCompleteReads)) { parsed =>
-      Fox.serialSequence(parsed){p => createSingleTask(p)}.map { results =>
-        val js = bulk2StatusJson(results)
-        JsonOk(js, Messages("task.bulk.processed"))
+
+      {
+        for {
+          tasks: List[Box[Task]] <- Fox.serialSequence(parsed) { p => createTaskWithoutAnnotationBase(p) }
+        } yield {
+          val jsResults = tasks.map(task => Task.transformToJson(task, request.userOpt))
+          tasks.map { results =>
+            val js = bulk2StatusJson(results)
+            JsonOk(js, Messages("task.bulk.processed"))
+          }
+        }
+
+
       }
-    }
+    }*/
   }
 
   def create(`type`: String = "default") = Authenticated.async { implicit request =>

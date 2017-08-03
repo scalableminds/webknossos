@@ -18,6 +18,7 @@ import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsArray, JsObject, _}
+import play.api.mvc.Action
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 
@@ -73,6 +74,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   }
 
   def trace(typ: String, id: String) = Authenticated { implicit request =>
+    Ok(empty)
+  }
+
+  def traceReadOnly(typ: String, id: String) = UserAwareAction { implicit request =>
     Ok(empty)
   }
 
@@ -317,7 +322,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def empty(implicit request: AuthenticatedRequest[_]) = {
+  def empty(implicit sessionData: oxalis.view.SessionData) = {
     views.html.main()(Html(""))
   }
 

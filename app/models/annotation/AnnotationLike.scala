@@ -79,6 +79,8 @@ trait AnnotationLike extends AnnotationStatistics {
     // annotation to do so
     created > 1470002400000L  // 1.8.2016, 00:00:00
   }
+
+  def isPublic: Boolean
 }
 
 object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{

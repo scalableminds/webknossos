@@ -11,7 +11,7 @@ case class DownloadTracingParameters(tracingId: String, version: Option[Long], o
 case class DownloadMultipleParameters(zipfileName: String, tracings:List[DownloadTracingParameters])
 case class TracingSelector(tracingId: String, version: Option[Long])
 case class CreateEmptyParameters(dataSetName: String, boundingBox: Option[BoundingBox] = None, startPosition: Option[Point3D] = None,
-                                 editRotation: Option[Vector3D] = None, insertStartAsNode: Option[Boolean] = None,
+                                 startRotation: Option[Vector3D] = None, insertStartAsNode: Option[Boolean] = None,
                                  isFirstBranchPoint: Option[Boolean] = None)
 
 object DownloadTracingParameters {implicit val jsonFormat = Json.format[DownloadTracingParameters]}

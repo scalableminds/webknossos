@@ -7,8 +7,9 @@ import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValuePair
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{BranchPoint, Node, SkeletonTracing, Tree}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.image.Color
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -52,16 +53,31 @@ class SkeletonTracingService @Inject()(
     val tracing = SkeletonTracing(
       id = id,
       dataSetName = parameters.dataSetName,
-      trees = List(),
+      trees = createInitialTreeIfNeeded(parameters.startPosition, parameters.startRotation, parameters.insertStartAsNode, parameters.isFirstBranchPoint),
       timestamp = System.currentTimeMillis(),
       boundingBox = parameters.boundingBox,
-      activeNodeId = None,
-      editPosition = None,
-      editRotation = None,
+      activeNodeId = if (parameters.insertStartAsNode.getOrElse(false)) Some(1) else None,
+      editPosition = parameters.startPosition,
+      editRotation = parameters.startRotation,
       zoomLevel = None,
       version = 0)
     save(tracing)
     tracing
+  }
+
+  private def createInitialTreeIfNeeded(startPosition: Option[Point3D], startRotation: Option[Vector3D], insertStartAsNode: Option[Boolean],
+                                        isFirstBranchPoint: Option[Boolean] = None): List[Tree] = startPosition match {
+    case None => List()
+    case Some(startPositionSome) => startRotation match {
+      case None => List()
+      case Some(startRotationSome) => {
+        if (insertStartAsNode.getOrElse(false)) {
+          val node = Node(1, startPositionSome, startRotationSome)
+          val branchPoints = if (isFirstBranchPoint.getOrElse(false)) List(BranchPoint(node.id, System.currentTimeMillis)) else List()
+          List(Tree(1, Set(node), Set.empty, Some(Color.RED), Nil, Nil))
+        } else List()
+      }
+    }
   }
 
   def downloadNml(tracing: SkeletonTracing, dataSourceRepository: DataSourceRepository): Option[Enumerator[Array[Byte]]] = {
@@ -168,6 +184,7 @@ class SkeletonTracingService @Inject()(
             case update :: tail => updateIter(Full(update.applyOn(tracing)), tail)
           }
         }
+        case _ => tracingBox
       }
     }
 

@@ -66,6 +66,7 @@ class DashboardView extends Marionette.View {
       this.listenTo(this, "render", this.showTasks);
     } else {
       const tabMethod = localStorage.getItem("lastUsedDashboardTab");
+      // $FlowFixMe
       if (tabMethod && typeof this[tabMethod] === "function") {
         this.listenTo(this, "render", this[tabMethod]);
 

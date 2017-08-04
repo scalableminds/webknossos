@@ -72,6 +72,7 @@ function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
       "ZOOM_IN",
       "ZOOM_OUT",
       "ZOOM_BY_DELTA",
+      "SET_ZOOM_STEP",
       action =>
         action.type === "UPDATE_DATASET_SETTING" && action.propertyName === "segmentationOpacity",
     ]);

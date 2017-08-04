@@ -5,7 +5,6 @@ import Request from "libs/request";
 export function* pushTracingNameAsync(): Generator<*, *, *> {
   const tracing = yield select(state => state.tracing);
   const url = `/annotations/${tracing.tracingType}/${tracing.tracingId}/name`;
-  debugger;
   yield [
     call(Request.sendJSONReceiveJSON, url, {
       data: { name: tracing.name },

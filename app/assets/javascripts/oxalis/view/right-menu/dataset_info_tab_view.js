@@ -14,13 +14,14 @@ import TemplateHelpers from "libs/template_helpers";
 import { setTracingNameAction } from "oxalis/model/actions/annotation_actions";
 import type { OxalisState, TracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
 
-type DatasetInfoTabProps = {
+type DatasetInfoTabStateProps = {
   tracing: TracingType,
   dataset: DatasetType,
   flycam: FlycamType,
   task: ?TaskType,
-  setTracingName: string => void,
 };
+
+type DatasetInfoTabProps = DatasetInfoTabStateProps & { setTracingName: string => void };
 
 class DatasetInfoTabView extends Component {
   props: DatasetInfoTabProps;
@@ -33,7 +34,7 @@ class DatasetInfoTabView extends Component {
     tracingName: "",
   };
 
-  propsWillChange(newProps) {
+  componentWillReceiveProps(newProps: DatasetInfoTabProps) {
     this.setState({ tracingName: newProps.tracing.name });
   }
 
@@ -70,6 +71,7 @@ class DatasetInfoTabView extends Component {
   };
 
   setTracingName = () => {
+    this.setState({ isEditingName: false });
     this.props.setTracingName(this.state.tracingName);
   };
 
@@ -88,12 +90,12 @@ class DatasetInfoTabView extends Component {
       // Or display an explorative tracings name
       annotationTypeLabel = (
         <span>
-          {tracingType} :
+          Explorational Tracing :
           <Input
             value={this.state.tracingName}
             onChange={this.handleTracingNameChange}
             onPressEnter={this.setTracingName}
-            style={{ width: "70%", margin: "0 10px" }}
+            style={{ width: "60%", margin: "0 10px" }}
             size="small"
           />{" "}
           <Icon type="check" onClick={this.setTracingName} />
@@ -102,7 +104,7 @@ class DatasetInfoTabView extends Component {
     } else {
       annotationTypeLabel = (
         <span>
-          {tracingType} : {this.state.tracingName}
+          Explorational Tracing : {this.state.tracingName}
           <Icon type="edit" onClick={() => this.setState({ isEditingName: true })} />
         </span>
       );
@@ -180,7 +182,7 @@ class DatasetInfoTabView extends Component {
   }
 }
 
-const mapStateToProps = (state: OxalisState): DatasetInfoTabProps => ({
+const mapStateToProps = (state: OxalisState): DatasetInfoTabStateProps => ({
   tracing: state.tracing,
   dataset: state.dataset,
   flycam: state.flycam,

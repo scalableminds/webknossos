@@ -18,6 +18,7 @@ import {
   createComment,
   deleteComment,
   mergeTrees,
+  toggleAllTreesReducer,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import {
@@ -48,6 +49,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             treeId: { $set: tree.id },
             nodes: { $set: _.keyBy(tree.nodes, "id") },
             color: { $set: tree.color || ColorGenerator.distinctColorForId(tree.id) },
+            isVisible: { $set: true },
           }),
         ),
         "id",
@@ -353,6 +355,45 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
                   },
                 }),
               ),
+            )
+            .getOrElse(state);
+        }
+
+        case "TOGGLE_TREE": {
+          const { treeId } = action;
+          return getTree(skeletonTracing, treeId)
+            .map(tree =>
+              update(state, {
+                tracing: {
+                  trees: {
+                    [tree.treeId]: {
+                      isVisible: {
+                        $apply: bool => !bool,
+                      },
+                    },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "TOGGLE_ALL_TREES": {
+          return toggleAllTreesReducer(state, skeletonTracing);
+        }
+
+        case "TOGGLE_INACTIVE_TREES": {
+          return getTree(skeletonTracing)
+            .map(activeTree =>
+              update(toggleAllTreesReducer(state, skeletonTracing), {
+                tracing: {
+                  trees: {
+                    [activeTree.treeId]: {
+                      isVisible: { $set: true },
+                    },
+                  },
+                },
+              }),
             )
             .getOrElse(state);
         }

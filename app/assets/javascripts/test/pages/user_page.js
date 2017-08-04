@@ -5,15 +5,15 @@ export default class UserPage {
   modal = ".ant-modal-content";
   confirmButton = ".ant-btn-primary";
 
-  inputExperienceDomain = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-body > span:nth-child(1) > input";
-  inputExperienceLevel = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-body > span:nth-child(2) > input";
-  setExperienceButton = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-footer > div > button:nth-child(2)";
-  increaseExperienceButton = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-footer > div > button:nth-child(1)";
-  deleteExperienceButton = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-footer > div > button:nth-child(3)";
+  inputExperienceDomain = "div.ant-modal-body > span:nth-child(1) > input";
+  inputExperienceLevel = "div.ant-modal-body > span:nth-child(2) > input";
+  setExperienceButton = "div.ant-modal-footer > div > button:nth-child(2)";
+  increaseExperienceButton = "div.ant-modal-footer > div > button:nth-child(1)";
+  deleteExperienceButton = "div.ant-modal-footer > div > button:nth-child(3)";
 
-  selectFirstUserCheckbox = "#main-container > div > div > div.ant-table-wrapper > div > div > div > div > div > table > tbody > tr:nth-child(1) > td.ant-table-selection-column > span > label > span > input";
-  selectSecondTeamCheckbox = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-body > div:nth-child(3) > div:nth-child(1) > label > span.ant-checkbox.ant-checkbox-checked > input";
-  selectSecondTeamUserRole = "body > div:nth-child(5) > div > div.ant-modal-wrap > div > div.ant-modal-content > div.ant-modal-body > div:nth-child(3) > div:nth-child(2) > div > label.ant-radio-button-wrapper.ant-radio-button-wrapper-checked > span:nth-child(2)";
+  selectFirstUserCheckbox = "table > tbody > tr:nth-child(1) > td.ant-table-selection-column > span > label > span > input";
+  selectSecondTeamCheckbox = "div.ant-modal-body > div:nth-child(3) > div:nth-child(1) > label > span.ant-checkbox.ant-checkbox-checked > input";
+  selectSecondTeamUserRole = "div.ant-modal-body > div:nth-child(3) > div:nth-child(2) > div > label.ant-radio-button-wrapper:nth-child(2) > span:nth-child(2)";
 
   get() {
     browser.url("/users");
@@ -41,9 +41,9 @@ export default class UserPage {
     browser.pause(3000);
     browser.click(this.changeTeamButton);
     browser.waitForVisible(this.modal);
-
     browser.waitForExist(this.selectSecondTeamUserRole);
     browser.click(this.selectSecondTeamUserRole);
+    browser.pause(3000);
   }
 
   unSelectSecondTeam() {
@@ -51,8 +51,8 @@ export default class UserPage {
     browser.pause(3000);
     browser.click(this.changeTeamButton);
     browser.waitForVisible(this.modal);
-
     browser.waitForExist(this.selectSecondTeamCheckbox);
+    browser.pause(3000);
     browser.click(this.selectSecondTeamCheckbox);
   }
 
@@ -83,6 +83,5 @@ export default class UserPage {
     this.openExperienceModal();
     browser.setValue(this.inputExperienceDomain, experience.domain);
     browser.click(this.deleteExperienceButton);
-    browser.pause(1000); // wait for DOM updates
   }
 }

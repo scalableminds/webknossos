@@ -3,7 +3,7 @@
  * @flow
  */
 import app from "app";
-import { call, select, put, take, race, takeEvery } from "redux-saga/effects";
+import { call, select, put, take, race, takeEvery, fork } from "redux-saga/effects";
 import {
   updateDirectionAction,
   resetContourAction,
@@ -41,6 +41,20 @@ export function* updateIsosurface(): Generator<*, *, *> {
 export function* watchVolumeTracingAsync(): Generator<*, *, *> {
   yield take("WK_READY");
   yield takeEvery(["FINISH_EDITING"], updateIsosurface);
+  yield fork(warnOfTooLowOpacity);
+}
+
+function* warnOfTooLowOpacity(): Generator<*, *, *> {
+  yield take("INITIALIZE_SETTINGS");
+
+  const isOpacityTooLow = yield select(
+    state => state.datasetConfiguration.segmentationOpacity < 10,
+  );
+  if (isOpacityTooLow) {
+    Toast.warning(
+      'Your setting for "segmentation opacity" is set very low.<br />Increase it for better visibility while volume tracing.',
+    );
+  }
 }
 
 export function* editVolumeLayerAsync(): Generator<*, *, *> {

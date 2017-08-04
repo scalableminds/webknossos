@@ -27,13 +27,11 @@ import ApiLoader from "oxalis/api/api_loader";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
 import { connect } from "react-redux";
 import messages from "messages";
 
-import type { ToastType } from "libs/toast";
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
 
@@ -46,7 +44,6 @@ class Controller extends React.PureComponent {
     viewMode: ModeType,
   };
 
-  zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
 
@@ -125,12 +122,6 @@ class Controller extends React.PureComponent {
         app.vent.trigger("rerender"),
       );
     }
-
-    listenToStoreProperty(
-      store => store.flycam.zoomStep,
-      () => this.maybeWarnAboutZoomStep(),
-      true,
-    );
 
     window.webknossos = new ApiLoader(Model);
 
@@ -246,21 +237,6 @@ class Controller extends React.PureComponent {
     }
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
-  }
-
-  maybeWarnAboutZoomStep() {
-    const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
-    if (shouldWarn && this.zoomStepWarningToast == null) {
-      const toastType = Store.getState().tracing.type === "volume" ? "danger" : "info";
-      this.zoomStepWarningToast = Toast.message(
-        toastType,
-        "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
-        true,
-      );
-    } else if (!shouldWarn && this.zoomStepWarningToast != null) {
-      this.zoomStepWarningToast.remove();
-      this.zoomStepWarningToast = null;
-    }
   }
 
   updateStats = () => this.stats.update();

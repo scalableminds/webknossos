@@ -360,18 +360,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         }
 
         case "SET_TRACING": {
-          return update(
-            update(state, {
-              tracing: {
-                $set: action.tracing,
-              },
-            }),
-            {
-              tracing: {
-                version: { $set: skeletonTracing.version },
-              },
+          return update(state, {
+            tracing: {
+              $set: update(action.tracing, { version: { $set: skeletonTracing.version } }),
             },
-          );
+          });
         }
 
         case "TOGGLE_TREE": {

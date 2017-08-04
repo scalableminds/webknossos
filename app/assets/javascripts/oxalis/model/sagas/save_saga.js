@@ -40,31 +40,32 @@ export function* collectUndoStates(): Generator<*, *, *> {
   const undoStack = [];
   const redoStack = [];
 
-  yield race({
-    initSkeleton: take("INITIALIZE_SKELETONTRACING"),
-    initVolume: take("INITIALIZE_VOLUMETRACING"),
-  });
+  yield take("INITIALIZE_SKELETONTRACING");
   let prevTracing = yield select(state => state.tracing);
   while (true) {
-    const { userAction, undo } = yield race({
-      userAction: take([...SkeletonTracingSaveRelevantActions]),
+    const { userAction, undo, redo } = yield race({
+      userAction: take(SkeletonTracingSaveRelevantActions),
       undo: take("UNDO"),
       redo: take("REDO"),
     });
+    const curTracing = yield select(state => state.tracing);
     if (userAction) {
-      // Clear the redo stack when a new action is executed
-      redoStack.splice(0);
-      undoStack.push(prevTracing);
-      if (undoStack.length > UNDO_HISTORY_SIZE) undoStack.shift();
+      if (curTracing !== prevTracing) {
+        // Clear the redo stack when a new action is executed
+        redoStack.splice(0);
+        undoStack.push(prevTracing);
+        if (undoStack.length > UNDO_HISTORY_SIZE) undoStack.shift();
+      }
     } else if (undo && undoStack.length) {
       redoStack.push(prevTracing);
       const newTracing = undoStack.pop();
       yield put(setTracingAction(newTracing));
-    } else if (redoStack.length) {
+    } else if (redo && redoStack.length) {
       undoStack.push(prevTracing);
       const newTracing = redoStack.pop();
       yield put(setTracingAction(newTracing));
     }
+    // We need the updated tracing here
     prevTracing = yield select(state => state.tracing);
   }
 }
@@ -315,9 +316,7 @@ export function* saveTracingAsync(): Generator<*, *, *> {
     }
     const tracing = yield select(state => state.tracing);
     const flycam = yield select(state => state.flycam);
-    // console.log("Tracing different?", prevTracing === tracing);
     const items = Array.from(yield call(performDiffTracing, prevTracing, tracing, flycam));
-    // console.log("Diff", items.length, items);
     if (items.length > 0) {
       yield put(pushSaveQueueAction(items));
     }

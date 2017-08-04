@@ -12,7 +12,7 @@ object TracingType extends Enumeration {
   implicit val tracingTypeFormat = Format(Reads.enumNameReads(TracingType), Writes.enumNameWrites)
 }
 
-case class TracingReference(id: String, contentType: TracingType.Value)
+case class TracingReference(id: String, typ: TracingType.Value)
 
 object TracingReference {
   implicit val jsonFormat = Json.format[TracingReference]

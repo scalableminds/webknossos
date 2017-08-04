@@ -159,14 +159,17 @@ object AnnotationService
     } yield true
   }
 
-//  def updateAnnotationBase(task: Task, start: Point3D, rotation: Vector3D)(implicit ctx: DBAccessContext) = {
-//    for {
-//      base <- task.annotationBase
-//      content <- base.contentReference
-//    } yield {
-//      content.service.updateEditPosRot(start, rotation, content.id)
-//    }
-//  }
+  //TODO: RocksDB
+/*
+  def updateAnnotationBase(task: Task, start: Point3D, rotation: Vector3D)(implicit ctx: DBAccessContext) = {
+
+    for {
+      base <- task.annotationBase
+      content <- base.contentReference
+    } yield {
+      content.service.updateEditPosRot(start, rotation, content.id)
+    }
+  }*/
 
   def createAnnotationBase(
     task: Task,

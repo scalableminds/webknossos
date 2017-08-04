@@ -49,7 +49,7 @@ case class Annotation(
 
   val stateLabel = if (state.isFinished) "Finished" else "In Progress"
 
-  val contentType = tracingReference.contentType
+  val contentType = tracingReference.typ
 
   val restrictions = if(readOnly.getOrElse(false))
       AnnotationRestrictions.readonlyAnnotation()

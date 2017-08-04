@@ -1,24 +1,20 @@
 package controllers
 
-import java.util
-import java.util.{Calendar, Date}
+import java.util.Calendar
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
-import models.annotation.{Annotation, AnnotationDAO}
+import models.annotation.AnnotationDAO
 import models.project.ProjectDAO
-import models.task.{TaskDAO, TaskService, TaskTypeDAO}
-import models.team.Team
-import models.user.time.{TimeSpan, TimeSpanDAO, TimeSpanService}
+import models.task.{TaskService, TaskTypeDAO}
+import models.user.time.{TimeSpan, TimeSpanDAO}
 import models.user.{User, UserDAO, UserService}
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.Box
 import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsObject, JsValue, Json, Writes}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.AnyContent
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
 
@@ -93,4 +89,94 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
       case None => Fox(Future(None))
     }
   }
+
+  //all users working hours > 0
+
+  def getWorkingHoursOfAllUsers(year: Int, month: Int) = Authenticated.async { implicit request =>
+    lazy val startDate = Calendar.getInstance()
+    startDate.set(year, month - 1, startDate.getActualMinimum(Calendar.DAY_OF_MONTH), 0, 0, 0)
+    startDate.set(Calendar.MILLISECOND, 0)
+    lazy val endDate = Calendar.getInstance()
+    endDate.set(year, month - 1, endDate.getActualMaximum(Calendar.DAY_OF_MONTH), 23, 59, 59)
+    endDate.set(Calendar.MILLISECOND, 999)
+
+    for {
+      users <- UserDAO.findAll
+      filtered = getUserWithWorkingHours(users, startDate, endDate)
+      list <- getJsObjects(filtered)
+    } yield {
+      Ok(Json.toJson(list))
+    }
+  }
+
+  def getJsObjects(list: List[Fox[JsObject]]): Future[List[JsObject]] = {
+    for {
+      li <- Fox.sequence(list)
+    } yield {
+      li.flatten
+    }
+  }
+
+  def getUserWithWorkingHours(users: List[User], startDate: Calendar, endDate: Calendar)(implicit request: AuthenticatedRequest[AnyContent]) = {
+    for {
+      user <- users
+    } yield {
+      getUserHours(user, startDate, endDate)
+    }
+  }
+
+  def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit request: AuthenticatedRequest[AnyContent]) = {
+    for {
+      timeList <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
+      timeListWithTask <- getOnlyTimeSpansWithTask(timeList)
+      js <- if (!timeListWithTask.isEmpty && timeOf(timeListWithTask) > 0) Future.traverse(timeListWithTask)(timeWrites(_))
+      else Future.successful(List(Json.obj("time" -> 0)))
+    } yield {
+      js.head.value.get("time") match {
+        case Some(x) => if (x.toString().toInt == 0) None
+        else Some(Json.obj(
+          "user" -> Json.toJson(user)(User.userCompactWrites),
+          "timelogs" -> Json.toJson(js)))
+        case _ => None
+      }
+
+    }
+  }
+
+  def timeOf(spans: List[TimeSpan]) = {
+    spans.foldLeft(0l)((i, span) => span.time)
+  }
+
+  //list user time logging
+
+  def loggedTimeForUserList(userString: String, year: Int, month: Int) = Authenticated.async { implicit request =>
+    lazy val startDate = Calendar.getInstance()
+    startDate.set(year, month - 1, startDate.getActualMinimum(Calendar.DAY_OF_MONTH), 0, 0, 0)
+    startDate.set(Calendar.MILLISECOND, 0)
+    lazy val endDate = Calendar.getInstance()
+    endDate.set(year, month - 1, endDate.getActualMaximum(Calendar.DAY_OF_MONTH), 23, 59, 59)
+    endDate.set(Calendar.MILLISECOND, 999)
+
+    for {
+      usersList <- Fox.sequence(getUsersForEmail(userString.split(",").toList))
+      users = getUsers(usersList)
+      filtered = getUserWithWorkingHours(users, startDate, endDate)
+      list <- getJsObjects(filtered)
+    } yield {
+      Ok(Json.toJson(list))
+    }
+  }
+
+  def getUsers(users: List[Box[User]]) = {
+    users.flatten
+  }
+
+  def getUsersForEmail(emails: List[String]) = {
+    for {
+      email <- emails
+    } yield {
+      UserService.findOneByEmail(email)
+    }
+  }
+
 }

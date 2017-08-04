@@ -223,7 +223,9 @@ GET           /api/statistics/users                                             
 GET           /api/statistics/assignments                                       controllers.StatisticsController.assignmentStatistics(start: Option[Long], end: Option[Long])
 
 #Timelogging
-GET           /api/time/:year/:month                                            controllers.TimeController.loggedTimeByInterval(email: String, year: Int, month: Int)
+GET           /api/time/singleuser/:year/:month                                 controllers.TimeController.loggedTimeByInterval(email: String, year: Int, month: Int)
+GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int)
+GET           /api/time/userlist/:year/:month                                   controllers.TimeController.loggedTimeForUserList(email: String, year: Int, month: Int)
 
 # Javascript routing
 GET           /assets/javascripts/routes.js                                     controllers.Application.javascriptRoutes

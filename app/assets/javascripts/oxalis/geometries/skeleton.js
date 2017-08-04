@@ -14,11 +14,10 @@ import NodeShader, {
   COLOR_TEXTURE_WIDTH,
 } from "oxalis/geometries/materials/node_shader";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
-import { OrthoViews } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
-import type { Vector3, OrthoViewType } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 
 const MAX_CAPACITY = 1000;
 
@@ -372,10 +371,6 @@ class Skeleton {
     const edgeUniforms = this.edges.material.uniforms;
     edgeUniforms.activeTreeId.value = activeTreeId;
 
-    // will be updated by updateForCam but needs to default to false for non-plane-modes
-    nodeUniforms.is3DView.value = false;
-    edgeUniforms.is3DView.value = false;
-
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
     this.prevTracing = skeletonTracing;
   }
@@ -523,16 +518,6 @@ class Skeleton {
 
   getTreeRGBA(color: Vector3, isVisible: boolean) {
     return color.concat(isVisible ? 1 : 0);
-  }
-
-  /**
-   * Updates shader uniforms depending on which of the four tracing viewports is rendered.
-   */
-  updateForCam(camera: OrthoViewType) {
-    const is3DView = camera === OrthoViews.TDView;
-
-    this.nodes.material.uniforms.is3DView.value = is3DView;
-    this.edges.material.uniforms.is3DView.value = is3DView;
   }
 
   /**

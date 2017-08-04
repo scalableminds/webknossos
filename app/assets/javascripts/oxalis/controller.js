@@ -27,13 +27,11 @@ import ApiLoader from "oxalis/api/api_loader";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
 import { connect } from "react-redux";
 import messages from "messages";
 
-import type { ToastType } from "libs/toast";
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
 

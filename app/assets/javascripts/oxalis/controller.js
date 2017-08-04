@@ -46,7 +46,6 @@ class Controller extends React.PureComponent {
     viewMode: ModeType,
   };
 
-  zoomStepWarningToast: ToastType;
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
 
@@ -125,12 +124,6 @@ class Controller extends React.PureComponent {
         app.vent.trigger("rerender"),
       );
     }
-
-    listenToStoreProperty(
-      store => store.flycam.zoomStep,
-      () => this.maybeWarnAboutZoomStep(),
-      true,
-    );
 
     window.webknossos = new ApiLoader(Model);
 
@@ -238,21 +231,6 @@ class Controller extends React.PureComponent {
     }
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
-  }
-
-  maybeWarnAboutZoomStep() {
-    const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
-    if (shouldWarn && this.zoomStepWarningToast == null) {
-      const toastType = Store.getState().tracing.type === "volume" ? "danger" : "info";
-      this.zoomStepWarningToast = Toast.message(
-        toastType,
-        "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
-        true,
-      );
-    } else if (!shouldWarn && this.zoomStepWarningToast != null) {
-      this.zoomStepWarningToast.remove();
-      this.zoomStepWarningToast = null;
-    }
   }
 
   updateStats = () => this.stats.update();

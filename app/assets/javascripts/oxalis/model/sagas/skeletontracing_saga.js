@@ -41,6 +41,7 @@ import type {
 } from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import api from "oxalis/api/internal_api";
+import Model from "oxalis/model";
 
 function* centerActiveNode() {
   getActiveNode(yield select(state => state.tracing)).map(activeNode => {
@@ -105,7 +106,39 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
     centerActiveNode,
   );
   yield takeEvery("TOGGLE_TEMPORARY_SETTING", warnAboutSkeletonInvisibility);
-  yield watchBranchPointDeletion();
+  yield [watchBranchPointDeletion(), warnAboutSegmentationOpacity()];
+}
+
+function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
+  let zoomStepWarningToast;
+  const warnMaybe = function() {
+    const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
+    if (shouldWarn && zoomStepWarningToast == null) {
+      const toastType = Store.getState().tracing.type === "volume" ? "danger" : "info";
+      zoomStepWarningToast = Toast.message(
+        toastType,
+        "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
+        true,
+      );
+    } else if (!shouldWarn && zoomStepWarningToast != null) {
+      zoomStepWarningToast.remove();
+      zoomStepWarningToast = null;
+    }
+  };
+
+  yield take("INITIALIZE_SETTINGS");
+  warnMaybe();
+
+  while (true) {
+    yield take([
+      "ZOOM_IN",
+      "ZOOM_OUT",
+      "ZOOM_BY_DELTA",
+      action =>
+        action.type === "UPDATE_DATASET_SETTING" && action.propertyName === "segmentationOpacity",
+    ]);
+    warnMaybe();
+  }
 }
 
 function* warnAboutSkeletonInvisibility(

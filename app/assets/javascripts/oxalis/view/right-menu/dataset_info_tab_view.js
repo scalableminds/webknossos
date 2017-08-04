@@ -5,12 +5,13 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
+import { Input, Icon } from "antd";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
+import { setTracingNameAction } from "oxalis/model/actions/annotation_actions";
 import type { OxalisState, TracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
 
 type DatasetInfoTabProps = {
@@ -18,10 +19,23 @@ type DatasetInfoTabProps = {
   dataset: DatasetType,
   flycam: FlycamType,
   task: ?TaskType,
+  setTracingName: string => void,
 };
 
 class DatasetInfoTabView extends Component {
   props: DatasetInfoTabProps;
+
+  state: {
+    isEditingName: boolean,
+    tracingName: string,
+  } = {
+    isEditingName: false,
+    tracingName: "",
+  };
+
+  propsWillChange(newProps) {
+    this.setState({ tracingName: newProps.tracing.name });
+  }
 
   calculateZoomLevel(): number {
     let width;
@@ -51,16 +65,47 @@ class DatasetInfoTabView extends Component {
     }
   }
 
+  handleTracingNameChange = (event: SyntheticInputEvent) => {
+    this.setState({ tracingName: event.target.value });
+  };
+
+  setTracingName = () => {
+    this.props.setTracingName(this.state.tracingName);
+  };
+
   render() {
-    const { tracingType, name } = this.props.tracing;
-    let annotationType = tracingType;
+    const { tracingType } = this.props.tracing;
+    let annotationTypeLabel;
 
     if (this.props.task != null) {
       // In case we have a task display its id as well
-      annotationType += `: ${this.props.task.id}`;
-    } else if (name) {
-      // Or display an explorative tracings name if there is one
-      annotationType += `: ${name}`;
+      annotationTypeLabel = (
+        <span>
+          {tracingType} : {this.props.task.id}
+        </span>
+      );
+    } else if (this.state.isEditingName) {
+      // Or display an explorative tracings name
+      annotationTypeLabel = (
+        <span>
+          {tracingType} :
+          <Input
+            value={this.state.tracingName}
+            onChange={this.handleTracingNameChange}
+            onPressEnter={this.setTracingName}
+            style={{ width: "70%", margin: "0 10px" }}
+            size="small"
+          />{" "}
+          <Icon type="check" onClick={this.setTracingName} />
+        </span>
+      );
+    } else {
+      annotationTypeLabel = (
+        <span>
+          {tracingType} : {this.state.tracingName}
+          <Icon type="edit" onClick={() => this.setState({ isEditingName: true })} />
+        </span>
+      );
     }
 
     const zoomLevel = this.calculateZoomLevel();
@@ -71,7 +116,7 @@ class DatasetInfoTabView extends Component {
     return (
       <div className="flex-overflow">
         <p>
-          {annotationType}
+          {annotationTypeLabel}
         </p>
         <p>
           DataSet: {dataSetName}
@@ -135,13 +180,17 @@ class DatasetInfoTabView extends Component {
   }
 }
 
-function mapStateToProps(state: OxalisState): DatasetInfoTabProps {
-  return {
-    tracing: state.tracing,
-    dataset: state.dataset,
-    flycam: state.flycam,
-    task: state.task,
-  };
-}
+const mapStateToProps = (state: OxalisState): DatasetInfoTabProps => ({
+  tracing: state.tracing,
+  dataset: state.dataset,
+  flycam: state.flycam,
+  task: state.task,
+});
 
-export default connect(mapStateToProps)(DatasetInfoTabView);
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  setTracingName(tracingName: string) {
+    dispatch(setTracingNameAction(tracingName));
+  },
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(DatasetInfoTabView);

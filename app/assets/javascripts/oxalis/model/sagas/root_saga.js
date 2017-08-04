@@ -8,6 +8,7 @@ import {
   disallowVolumeTracingWarning,
   watchVolumeTracingAsync,
 } from "oxalis/model/sagas/volumetracing_saga";
+import { watchAnnotationAsync } from "oxalis/model/sagas/annotation_saga";
 import { alert } from "libs/window";
 import { fork, take, cancel } from "redux-saga/effects";
 
@@ -30,6 +31,7 @@ function* restartableSaga(): Generator<*, *, *> {
       editVolumeLayerAsync(),
       disallowVolumeTracingWarning(),
       watchVolumeTracingAsync(),
+      watchAnnotationAsync(),
     ];
   } catch (err) {
     alert(`\

@@ -103,7 +103,7 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
     ["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE", "DELETE_BRANCHPOINT", "SELECT_NEXT_TREE"],
     centerActiveNode,
   );
-  yield watchBranchPointDeletion();
+  yield [watchBranchPointDeletion()];
 }
 
 function* diffNodes(

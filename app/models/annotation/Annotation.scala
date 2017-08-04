@@ -7,6 +7,7 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefin
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType._
 import models.basics._
+import models.binary.DataSetDAO
 import models.task.{Task, TaskDAO}
 import models.user.{User, UserService}
 import org.joda.time.format.DateTimeFormat
@@ -35,6 +36,8 @@ case class Annotation(
                      )
   extends FoxImplicits {
 
+  val name = _name getOrElse ""
+
   lazy val id = _id.stringify
 
   lazy val muta = new AnnotationMutations(this)
@@ -44,10 +47,6 @@ case class Annotation(
 
   def task: Fox[Task] =
     _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
-
-  val name = _name.getOrElse("")
-
-  val stateLabel = if (state.isFinished) "Finished" else "In Progress"
 
   val contentType = tracingReference.typ
 
@@ -81,12 +80,10 @@ case class Annotation(
   def toJson(user: Option[User] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       taskJson <- task.flatMap(t => Task.transformToJson(t, user)).getOrElse(JsNull)
-      userJson = user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull)
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
     } yield {
       Json.obj(
-        "user" -> userJson,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),
-        "stateLabel" -> stateLabel,
         "state" -> state,
         "id" -> id,
         "name" -> name,
@@ -97,6 +94,8 @@ case class Annotation(
         "formattedHash" -> Formatter.formatHash(id),
         "content" -> tracingReference,
         "dataSetName" -> dataSetName,
+        "dataStoreInfo" -> dataSet.dataStoreInfo,
+        "settings" -> settings,
         "tracingTime" -> tracingTime
       )
     }

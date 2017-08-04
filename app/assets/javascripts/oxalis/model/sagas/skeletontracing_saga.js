@@ -103,26 +103,8 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
     ["SET_ACTIVE_TREE", "SET_ACTIVE_NODE", "DELETE_NODE", "DELETE_BRANCHPOINT", "SELECT_NEXT_TREE"],
     centerActiveNode,
   );
-  // yield takeEvery("TOGGLE_TEMPORARY_SETTING", warnAboutSkeletonInvisibility);
   yield watchBranchPointDeletion();
 }
-
-// TODO: remove
-// function* warnAboutSkeletonInvisibility(action: ToggleTemporarySettingActionType): Generator<*, *, *> {
-//   let msg;
-//   if (action.propertyName === "shouldHideAllSkeletons") {
-//     msg = "You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.";
-//   } else if (action.propertyName === "shouldHideInactiveTrees") {
-//     msg = "You just toggled the skeleton visibility of inactive trees. To toggle back, just hit the 2-Key.";
-//   } else {
-//     return;
-//   }
-
-//   if (Store.getState().userConfiguration.firstVisToggle) {
-//     Toast.warning(msg);
-//     yield put(updateUserSettingAction("firstVisToggle", false));
-//   }
-// }
 
 function* diffNodes(
   prevNodes: NodeMapType,

@@ -1,7 +1,7 @@
 // @flow
 
 import * as THREE from "three";
-import { COLOR_TEXTURE_WIDTH } from "oxalis/geometries/materials/node_shader";
+import { COLOR_TEXTURE_WIDTH_FIXED } from "oxalis/geometries/materials/node_shader";
 import type { UniformsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 class EdgeShader {
@@ -57,9 +57,10 @@ attribute vec3 position;
 attribute float treeId;
 
 void main() {
-    vec2 treeIdToTextureCoordinate = vec2(fract(treeId / ${COLOR_TEXTURE_WIDTH.toFixed(
-      1,
-    )}), treeId / (${COLOR_TEXTURE_WIDTH.toFixed(1)} * ${COLOR_TEXTURE_WIDTH.toFixed(1)}));
+    vec2 treeIdToTextureCoordinate = vec2(fract(
+      treeId / ${COLOR_TEXTURE_WIDTH_FIXED}),
+      treeId / (${COLOR_TEXTURE_WIDTH_FIXED} * ${COLOR_TEXTURE_WIDTH_FIXED}
+    ));
     bool isVisible = texture2D(treeColors, treeIdToTextureCoordinate).a == 1.0 || is3DView == 1;
 
     if (!isVisible) {

@@ -50,7 +50,7 @@ object AnnotationService
 
     def createTracing(dataSource: DataSource) = tracingType match {
       case TracingType.skeletonTracing =>
-        dataSet.dataStoreInfo.typ.strategy.createEmptySkeletonTracing(dataSet.dataStoreInfo, dataSource, CreateEmptyParameters(dataSource.id.name))
+        dataSet.dataStoreInfo.typ.strategy.createSkeletonTracing(dataSet.dataStoreInfo, dataSource, CreateEmptyParameters())
       case TracingType.volumeTracing =>
         dataSet.dataStoreInfo.typ.strategy.createVolumeTracing(dataSet.dataStoreInfo, dataSource)
     }

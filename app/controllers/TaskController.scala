@@ -132,8 +132,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName).toFox ?~> Messages("dataSet.notFound", dataSetName)
           dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
           task <- createTaskWithoutAnnotationBase(input)
-          tracingParameters = CreateEmptyParameters(dataSource.id.name, boundingBox, Some(start), Some(rotation), Some(true), Some(true))
-          tracingReference <- dataSet.dataStoreInfo.typ.strategy.createEmptySkeletonTracing(dataSet.dataStoreInfo, dataSource, tracingParameters) ?~> "Failed to create skeleton tracing."
+          tracingParameters = CreateEmptyParameters(boundingBox, Some(start), Some(rotation), Some(true), Some(true))
+          tracingReference <- dataSet.dataStoreInfo.typ.strategy.createSkeletonTracing(dataSet.dataStoreInfo, dataSource, tracingParameters) ?~> "Failed to create skeleton tracing."
           taskType <- task.taskType
           _ <- AnnotationService.createAnnotationBase(task, request.user._id, tracingReference, boundingBox, taskType.settings, dataSetName, start, rotation)
           taskjs <- Task.transformToJson(task, request.userOpt)

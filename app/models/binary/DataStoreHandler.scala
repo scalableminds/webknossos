@@ -21,7 +21,7 @@ import play.api.mvc.Codec
 
 trait DataStoreHandlingStrategy {
 
-  def createEmptySkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, parameters: CreateEmptyParameters): Fox[TracingReference] =
+  def createSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, parameters: CreateEmptyParameters): Fox[TracingReference] =
     Fox.failure("DataStore doesn't support creation of SkeletonTracings.")
 
   def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[TracingReference] =
@@ -39,10 +39,11 @@ trait DataStoreHandlingStrategy {
 
 object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLogging {
 
-  override def createEmptySkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, parameters: CreateEmptyParameters): Fox[TracingReference] = {
+  override def createSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, parameters: CreateEmptyParameters): Fox[TracingReference] = {
     logger.debug("Called to create empty SkeletonTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/tracings/skeletons/createEmpty")
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeletons/createFromParams")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
+      .withQueryString("dataSetName" -> base.id.name)
       .postWithJsonResponse[CreateEmptyParameters, TracingReference](parameters)
   }
 

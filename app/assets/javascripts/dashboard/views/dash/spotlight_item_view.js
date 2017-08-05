@@ -1,0 +1,101 @@
+// @flow
+/* eslint-disable jsx-a11y/href-no-hash */
+
+import React from "react";
+import TemplateHelpers from "libs/template_helpers";
+import type { APIDatasetType } from "admin/api_flow_types";
+import app from "app";
+
+class SpotlightItemView extends React.PureComponent {
+  form: any;
+  props: {
+    dataset: APIDatasetType,
+  };
+
+  state: {
+    contentType: string,
+  } = {
+    contentType: "",
+  };
+
+  handleSkeletonTraceClick = (event: Event) => {
+    this.submitForm("skeletonTracing", event);
+  };
+
+  handleVolumeTraceClick = (event: Event) => {
+    this.submitForm("volumeTracing", event);
+  };
+
+  submitForm(type: string, event: Event) {
+    event.preventDefault();
+    const loginNotice = `For dataset annotation, please log in or create an account. For dataset viewing, no account is required.
+Do you wish to sign up now?`;
+    if (app.currentUser != null) {
+      this.setState({ contentType: type }, () => {
+        this.form.submit();
+      });
+    } else if (confirm(loginNotice)) {
+      window.location.href = "/auth/register";
+    }
+  }
+
+  render() {
+    const dataset = this.props.dataset;
+    let stuff;
+    if (dataset.description) {
+      stuff = (
+        <p style={{whiteSpace: "pre-wrap"}}>
+          {dataset.description}
+        </p>
+      );
+    } else {
+      stuff = dataset.hasSegmentation
+        ? <p>Original data and segmentation</p>
+        : <p>Original data</p>;
+    }
+
+    return (
+      <div className="panel-body row">
+        <div className="dataset-thumbnail col-sm-4">
+          <img className="img-rounded" src={dataset.thumbnailURL} alt="Thumbnail" />
+
+          <div className="dataset-thumbnail-buttons">
+            <a href={`/datasets/${dataset.name}/view`} title="View dataset">
+              <img src="/assets/images/eye.svg" alt="Eye" />
+            </a>
+            <a href="#" title="Create skeleton tracing" onClick={this.handleSkeletonTraceClick}>
+              <img src="/assets/images/skeleton.svg" alt="Skeleton" />
+            </a>
+            {dataset.dataStore.typ !== "ndstore"
+              ? <a href="#" title="Create volume tracing" onClick={this.handleVolumeTraceClick}>
+                  <img src="/assets/images/volume.svg" alt="Volume" />
+                </a>
+              : null}
+          </div>
+        </div>
+
+        <form
+          action={jsRoutes.controllers.AnnotationController.createExplorational().url}
+          method="POST"
+          ref={form => (this.form = form)}
+        >
+          <input type="hidden" name="dataSetName" value={dataset.name} />
+          <input type="hidden" name="contentType" value={this.state.contentType} />
+        </form>
+
+        <div className="dataset-description col-sm-8">
+          <h3>
+            {dataset.name}
+          </h3>
+
+          <p>
+            Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}
+          </p>
+          {stuff}
+        </div>
+      </div>
+    );
+  }
+}
+
+export default SpotlightItemView;

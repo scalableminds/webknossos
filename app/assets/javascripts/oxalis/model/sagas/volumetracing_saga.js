@@ -46,6 +46,9 @@ export function* watchVolumeTracingAsync(): Generator<*, *, *> {
 
 function* warnOfTooLowOpacity(): Generator<*, *, *> {
   yield take("INITIALIZE_SETTINGS");
+  if (yield select(state => state.tracing.type !== "volume")) {
+    return;
+  }
 
   const isOpacityTooLow = yield select(
     state => state.datasetConfiguration.segmentationOpacity < 10,

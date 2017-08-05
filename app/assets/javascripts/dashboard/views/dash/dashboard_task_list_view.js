@@ -1,14 +1,12 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import _ from "lodash";
 import React from "react";
 import Request from "libs/request";
 import { Table } from "antd";
 import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import moment from "moment";
-import update from "immutability-helper";
 import Toast from "libs/toast";
 import app from "app";
 
@@ -18,8 +16,6 @@ type Props = {
   userID: ?string,
   isAdminView: boolean,
 };
-
-const cachedReceiveJSON = _.memoize(Request.receiveJSON);
 
 const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnotationType => {
   const { task } = annotation;
@@ -48,10 +44,12 @@ export default class DashboardTaskListView extends React.PureComponent {
   props: Props;
   state: {
     showFinishedTasks: boolean,
-    tasks: Array<APITaskWithAnnotationType>,
+    finishedTasks: Array<APITaskWithAnnotationType>,
+    unfinishedTasks: Array<APITaskWithAnnotationType>,
   } = {
     showFinishedTasks: false,
-    tasks: [],
+    finishedTasks: [],
+    unfinishedTasks: [],
   };
 
   componentDidMount() {
@@ -67,25 +65,17 @@ export default class DashboardTaskListView extends React.PureComponent {
     const annotation = task.annotation;
     const url = `/annotations/${annotation.typ}/${annotation.id}/finish`;
 
-    Request.receiveJSON(url).then(__ => {
-      // Only clear cache, but don't refetch
-      cachedReceiveJSON.cache.clear();
+    Request.receiveJSON(url).then(changedAnnotationWithTask => {
+      const changedTask = convertAnnotationToTaskWithAnnotationType(changedAnnotationWithTask);
 
-      const newTasks = this.state.tasks.map(currentTask => {
-        if (currentTask.id !== task.id) {
-          return currentTask;
-        } else {
-          return update(task, { annotation: { state: { isFinished: { $set: true } } } });
-        }
+      const newUnfinishedTasks = this.state.unfinishedTasks.filter(t => t.id !== task.id);
+      const newFinishedTasks = [changedTask].concat(this.state.finishedTasks);
+
+      this.setState({
+        unfinishedTasks: newUnfinishedTasks,
+        finishedTasks: newFinishedTasks,
       });
-
-      this.setState({ tasks: newTasks });
     });
-  }
-
-  fetchFresh(): Promise<void> {
-    cachedReceiveJSON.cache.clear();
-    return this.fetchData();
   }
 
   async fetchData(): Promise<void> {
@@ -93,13 +83,19 @@ export default class DashboardTaskListView extends React.PureComponent {
     const url = this.props.userID
       ? `/api/users/${this.props.userID}/tasks?isFinished=${isFinished.toString()}`
       : `/api/user/tasks?isFinished=${isFinished.toString()}`;
-    const annotationsWithTasks = await cachedReceiveJSON(url);
+    const annotationsWithTasks = await Request.receiveJSON(url);
 
     const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
 
-    this.setState({
-      tasks,
-    });
+    if (isFinished) {
+      this.setState({
+        finishedTasks: tasks,
+      });
+    } else {
+      this.setState({
+        unfinishedTasks: tasks,
+      });
+    }
   }
 
   toggleShowFinished = () => {
@@ -166,30 +162,43 @@ export default class DashboardTaskListView extends React.PureComponent {
   }
 
   cancelAnnotation(annotationId: string) {
+    const wasFinished = this.state.showFinishedTasks;
     if (confirm("Do you really want to cancel this annotation?")) {
-      Request.triggerRequest(`/annotations/Task/${annotationId}`, { method: "DELETE" }).then(() =>
-        this.fetchFresh(),
-      );
+      Request.triggerRequest(`/annotations/Task/${annotationId}`, { method: "DELETE" }).then(() => {
+        if (wasFinished) {
+          this.setState({
+            finishedTasks: this.state.finishedTasks.filter(t => t.annotation.id !== annotationId),
+          });
+        } else {
+          this.setState({
+            unfinishedTasks: this.state.unfinishedTasks.filter(
+              t => t.annotation.id !== annotationId,
+            ),
+          });
+        }
+      });
     }
   }
 
   async getNewTask() {
-    const unfinishedTasks = this.state.tasks.filter(t => !t.isFinished);
-    if (unfinishedTasks.length === 0 || confirm("Do you really want another task?")) {
+    if (this.state.unfinishedTasks.length === 0 || confirm("Do you really want another task?")) {
       app.router.showLoadingSpinner();
       try {
         const newTaskAnnotation = await Request.receiveJSON("/user/tasks/request");
 
         this.setState({
-          tasks: this.state.tasks.concat([
+          unfinishedTasks: this.state.unfinishedTasks.concat([
             convertAnnotationToTaskWithAnnotationType(newTaskAnnotation),
           ]),
         });
-        cachedReceiveJSON.cache.clear();
       } finally {
         app.router.hideLoadingSpinner();
       }
     }
+  }
+
+  getCurrentTasks() {
+    return this.state.showFinishedTasks ? this.state.finishedTasks : this.state.unfinishedTasks;
   }
 
   render() {
@@ -213,7 +222,7 @@ export default class DashboardTaskListView extends React.PureComponent {
         </a>
 
         <Table
-          dataSource={this.state.tasks.filter(
+          dataSource={this.getCurrentTasks().filter(
             task => task.annotation.state.isFinished === this.state.showFinishedTasks,
           )}
           rowKey="name"

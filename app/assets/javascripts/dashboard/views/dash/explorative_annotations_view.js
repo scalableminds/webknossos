@@ -1,13 +1,13 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import _ from "lodash";
 import React from "react";
 import Request from "libs/request";
 import { Table } from "antd";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
+import update from "immutability-helper";
 
 const { Column } = Table;
 
@@ -16,43 +16,70 @@ type Props = {
   isAdminView: boolean,
 };
 
-const cachedReceiveJSON = _.memoize(Request.receiveJSON);
-
 export default class ExplorativeAnnotationsView extends React.PureComponent {
   props: Props;
   state: {
     showArchivedTracings: boolean,
-    tracings: Array<APIAnnotationType>,
+    archivedTracings: Array<APIAnnotationType>,
+    unarchivedTracings: Array<APIAnnotationType>,
+    alreadyFetchedMetaInfo: {
+      archived: boolean,
+      unarchived: boolean,
+    },
   } = {
     showArchivedTracings: false,
-    tracings: [],
+    archivedTracings: [],
+    unarchivedTracings: [],
+    alreadyFetchedMetaInfo: {
+      archived: false,
+      unarchived: false,
+    },
   };
 
   componentDidMount() {
-    this.fetchData();
+    this.fetchDataMaybe();
   }
 
-  fetchFresh(): Promise<void> {
-    cachedReceiveJSON.cache.clear();
-    return this.fetchData();
+  isFetchNecessary(): boolean {
+    const accessor = this.state.showArchivedTracings ? "archived" : "unarchived";
+    return !this.state.alreadyFetchedMetaInfo[accessor];
   }
 
-  async fetchData(): Promise<void> {
+  async fetchDataMaybe(): Promise<void> {
     const isFinished = this.state.showArchivedTracings.toString();
+    if (!this.isFetchNecessary()) {
+      return;
+    }
+
     const url = this.props.userID
       ? `/api/users/${this.props.userID}/annotations?isFinished=${isFinished}`
       : `/api/user/annotations?isFinished=${isFinished}`;
 
-    const tracings = await cachedReceiveJSON(url);
-
-    this.setState({
-      tracings,
-    });
+    const tracings = await Request.receiveJSON(url);
+    if (isFinished) {
+      this.setState(
+        update(this.state, {
+          archivedTracings: { $set: tracings },
+          alreadyFetchedMetaInfo: {
+            archived: { $set: true },
+          },
+        }),
+      );
+    } else {
+      this.setState(
+        update(this.state, {
+          unarchivedTracings: { $set: tracings },
+          alreadyFetchedMetaInfo: {
+            unarchived: { $set: true },
+          },
+        }),
+      );
+    }
   }
 
   toggleShowArchived = () => {
     this.setState({ showArchivedTracings: !this.state.showArchivedTracings }, () =>
-      this.fetchData(),
+      this.fetchDataMaybe(),
     );
   };
 
@@ -63,11 +90,22 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
         ? controller.finish(tracing.typ, tracing.id).url
         : controller.reopen(tracing.typ, tracing.id).url;
 
-    Request.receiveJSON(url).then(response => {
-      Toast.message(response.messages);
+    Request.receiveJSON(url).then(newTracing => {
+      Toast.message(newTracing.messages);
 
-      const tracings = this.state.tracings.filter(t => t.id !== tracing.id);
-      this.setState({ tracings });
+      const newTracings = this.getCurrentTracings().filter(t => t.id !== tracing.id);
+
+      if (type === "finish") {
+        this.setState({
+          unarchivedTracings: newTracings,
+          archivedTracings: [newTracing].concat(this.state.archivedTracings),
+        });
+      } else {
+        this.setState({
+          archivedTracings: newTracings,
+          unarchivedTracings: [newTracing].concat(this.state.unarchivedTracings),
+        });
+      }
     });
   };
 
@@ -110,6 +148,12 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       );
     }
   };
+
+  getCurrentTracings(): Array<APIAnnotationType> {
+    return this.state.showArchivedTracings
+      ? this.state.archivedTracings
+      : this.state.unarchivedTracings;
+  }
 
   render() {
     return (
@@ -158,9 +202,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
           : null}
 
         <Table
-          dataSource={this.state.tracings.filter(
-            tracing => tracing.state.isFinished === this.state.showArchivedTracings,
-          )}
+          dataSource={this.getCurrentTracings()}
           rowKey="id"
           pagination={{
             defaultPageSize: 50,

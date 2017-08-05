@@ -6,10 +6,11 @@ import Request from "libs/request";
 import { Tabs } from "antd";
 import type { APIUserType } from "admin/api_flow_types";
 import DatasetView from "./dataset_view";
+import DashboardTaskListView from "./dashboard_task_list_view";
 
 const TabPane = Tabs.TabPane;
 
-const validTabKeys = ["datasets", "tasks", "explorativeAnnotations", "trackedTime"];
+const validTabKeys = ["datasets", "tasks", "explorativeAnnotations"];
 
 type Props = {
   userID: ?string,
@@ -57,7 +58,7 @@ class DashboardView extends React.PureComponent {
           </TabPane>
         : null,
       <TabPane tab="Tasks" key="tasks">
-        Tasks
+        <DashboardTaskListView isAdminView={this.props.isAdminView} userID={this.props.userID} />
       </TabPane>,
       <TabPane tab="Explorative Annotations" key="explorativeAnnotations">
         Explorative Annotations
@@ -72,9 +73,15 @@ class DashboardView extends React.PureComponent {
 
   render() {
     const user = this.state.user;
-    if (!user) return null;
+    if (!user) {
+      return null;
+    }
 
     const onTabChange = activeTabKey => {
+      const isValid = validTabKeys.indexOf(activeTabKey) > -1;
+      if (isValid) {
+        localStorage.setItem("lastUsedDashboardTab", activeTabKey);
+      }
       this.setState({ activeTabKey });
     };
     const userHeader = this.props.isAdminView

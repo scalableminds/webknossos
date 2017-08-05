@@ -7,6 +7,7 @@ import { Tabs } from "antd";
 import type { APIUserType } from "admin/api_flow_types";
 import DatasetView from "./dataset_view";
 import DashboardTaskListView from "./dashboard_task_list_view";
+import ExplorativeAnnotationsView from "./explorative_annotations_view";
 
 const TabPane = Tabs.TabPane;
 
@@ -61,11 +62,14 @@ class DashboardView extends React.PureComponent {
         <DashboardTaskListView isAdminView={this.props.isAdminView} userID={this.props.userID} />
       </TabPane>,
       <TabPane tab="Explorative Annotations" key="explorativeAnnotations">
-        Explorative Annotations
+        <ExplorativeAnnotationsView
+          isAdminView={this.props.isAdminView}
+          userID={this.props.userID}
+        />
       </TabPane>,
       isAdmin
         ? <TabPane tab="Tracked Time" key="trackedTime">
-            Content of Tab Pane 3
+            todo!
           </TabPane>
         : null,
     ];

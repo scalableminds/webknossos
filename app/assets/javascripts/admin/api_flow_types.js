@@ -61,6 +61,36 @@ export type APITeamType = {
   +roles: Array<APIRoleType>,
 };
 
+export type APIAnnotationType = {
+  version: number,
+  user: {
+    id: string,
+    email: string,
+    firstName: string,
+    lastName: string,
+    isAnonymous: boolean,
+    teams: Array<APITeamRoleType>,
+  },
+  created: string,
+  stateLabel: string,
+  state: { isAssigned: boolean, isFinished: boolean, isInProgress: boolean },
+  id: string,
+  name: string,
+  typ: string,
+  stats: { numberOfNodes: number, numberOfEdges: number, numberOfTrees: number },
+  restrictions: {
+    allowAccess: boolean,
+    allowUpdate: boolean,
+    allowFinish: boolean,
+    allowDownload: boolean,
+  },
+  formattedHash: string,
+  downloadUrl: string,
+  contentType: string,
+  dataSetName: string,
+  tracingTime: null,
+};
+
 export type APITaskWithAnnotationType = {
   id: string,
   team: string,
@@ -89,33 +119,5 @@ export type APITaskWithAnnotationType = {
   script: null,
   tracingTime: null,
   creationInfo: null,
-  annotation: {
-    version: number,
-    user: {
-      id: string,
-      email: string,
-      firstName: string,
-      lastName: string,
-      isAnonymous: boolean,
-      teams: Array<APITeamRoleType>,
-    },
-    created: string,
-    stateLabel: string,
-    state: { isAssigned: boolean, isFinished: boolean, isInProgress: boolean },
-    id: string,
-    name: string,
-    typ: string,
-    stats: { numberOfNodes: number, numberOfEdges: number, numberOfTrees: number },
-    restrictions: {
-      allowAccess: boolean,
-      allowUpdate: boolean,
-      allowFinish: boolean,
-      allowDownload: boolean,
-    },
-    formattedHash: string,
-    downloadUrl: string,
-    contentType: string,
-    dataSetName: string,
-    tracingTime: null,
-  },
+  annotation: APIAnnotationType,
 };

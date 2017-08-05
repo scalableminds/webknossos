@@ -10,7 +10,7 @@ import play.api.libs.json.Json
 case class DownloadTracingParameters(tracingId: String, version: Option[Long], outfileName: String)
 case class DownloadMultipleParameters(zipfileName: String, tracings:List[DownloadTracingParameters])
 case class TracingSelector(tracingId: String, version: Option[Long])
-case class CreateEmptyParameters(dataSetName: String, boundingBox: Option[BoundingBox] = None, startPosition: Option[Point3D] = None,
+case class CreateEmptyParameters(boundingBox: Option[BoundingBox] = None, startPosition: Option[Point3D] = None,
                                  startRotation: Option[Vector3D] = None, insertStartAsNode: Option[Boolean] = None,
                                  isFirstBranchPoint: Option[Boolean] = None)
 

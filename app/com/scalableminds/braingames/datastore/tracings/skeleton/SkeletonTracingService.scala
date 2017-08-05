@@ -48,11 +48,11 @@ class SkeletonTracingService @Inject()(
     }.toFox)
   }
 
-  def create(parameters: CreateEmptyParameters): SkeletonTracing = {
+  def create(dataSetName: String, parameters: CreateEmptyParameters): SkeletonTracing = {
     val id = createNewId()
     val tracing = SkeletonTracing(
       id = id,
-      dataSetName = parameters.dataSetName,
+      dataSetName = dataSetName,
       trees = createInitialTreeIfNeeded(parameters.startPosition, parameters.startRotation, parameters.insertStartAsNode, parameters.isFirstBranchPoint),
       timestamp = System.currentTimeMillis(),
       boundingBox = parameters.boundingBox,

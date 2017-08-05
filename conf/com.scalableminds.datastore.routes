@@ -33,12 +33,12 @@ GET         /tracings/volumes/:tracingId                                        
 GET         /tracings/volumes/:tracingId/download                                              @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(tracingId: String, version: Option[Long])
 
 # Skeleton tracings
-POST        /tracings/skeletons/createEmpty                                                    @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.createEmpty
+POST        /tracings/skeletons/createFromParams                                               @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.createFromParams(dataSetName: String)
 POST        /tracings/skeletons/createFromNml                                                  @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.createFromNml(name: String)
 POST        /tracings/skeletons/createMergedFromZip                                            @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.createMergedFromZip
 POST        /tracings/skeletons/createMergedFromIds                                            @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.createMergedFromIds
-POST        /tracings/skeletons/createMultipleFromZip                                          @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.createMultipleFromZip()
-POST        /tracings/skeletons/createMultipleFromParams                                       @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.createMultipleFromParams()
+POST        /tracings/skeletons/createMultipleFromZip                                          @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.createMultipleFromZip
+POST        /tracings/skeletons/createMultipleFromParams                                       @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.createMultipleFromParams(dataSetName: String)
 
 POST        /tracings/skeletons/:tracingId/update                                              @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.update(tracingId: String)
 GET         /tracings/skeletons/:tracingId                                                     @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.get(tracingId: String, version: Option[Long])

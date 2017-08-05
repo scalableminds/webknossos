@@ -24,10 +24,10 @@ class SkeletonTracingController @Inject()(
                                          val messagesApi: MessagesApi
                                        ) extends Controller {
 
-  def createEmpty = Action(validateJson[CreateEmptyParameters]) {
+  def createFromParams(dataSetName: String) = Action(validateJson[CreateEmptyParameters]) {
     implicit request => {
       AllowRemoteOrigin {
-        val tracing = skeletonTracingService.create(request.body)
+        val tracing = skeletonTracingService.create(dataSetName, request.body)
         Ok(Json.toJson(TracingReference(tracing.id, TracingType.skeletonTracing)))
       }
     }
@@ -135,10 +135,10 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def createMultipleFromParams() = Action(validateJson[List[CreateEmptyParameters]]) {
+  def createMultipleFromParams(dataSetName: String) = Action(validateJson[List[CreateEmptyParameters]]) {
     implicit request => {
       AllowRemoteOrigin {
-        val tracings = request.body.map(skeletonTracingService.create)
+        val tracings = request.body.map(params => skeletonTracingService.create(dataSetName, params))
         val references = tracings.map(tracing => TracingReference(tracing.id, TracingType.skeletonTracing))
         Ok(Json.toJson(references))
       }

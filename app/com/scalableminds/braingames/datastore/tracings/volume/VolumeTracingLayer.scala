@@ -56,6 +56,7 @@ object VolumeTracingLayer {
 
   val defaultElementClass = ElementClass.uint32
 
+  // TODO: set to 0 eventually
   val defaultLargestSegmentId = 1
 
   implicit def volumeTracingLayerFormat(implicit volumeDataStore: VersionedKeyValueStore) = Json.format[VolumeTracingLayer]

@@ -70,7 +70,7 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
       s"RequestBody: '${requestBodyPreview}'")
     request.withMethod("GET").stream().map(Full(_)).recover {
       case e =>
-        val errorMsg = s"Error sending WS request to webknossos (ID: $id): " +
+        val errorMsg = s"Error sending WS request to $url (ID: $id): " +
           s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
         logger.error(errorMsg)
         Failure(errorMsg)
@@ -84,14 +84,14 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
       if (result.status == OK) {
         Full(result)
       } else {
-        val errorMsg = s"Unsuccessful WS request to webknossos (ID: $id)." +
+        val errorMsg = s"Unsuccessful WS request to $url (ID: $id)." +
           s"Status: ${result.status}. Response: ${result.bodyAsBytes.map(_.toChar).mkString.take(100)}"
         logger.error(errorMsg)
         Failure(errorMsg)
       }
     }.recover {
       case e =>
-        val errorMsg = s"Error sending WS request to webknossos (ID: $id): " +
+        val errorMsg = s"Error sending WS request to $url (ID: $id): " +
           s"${e.getMessage}\n${e.getStackTrace.mkString("\n    ")}"
         logger.error(errorMsg)
         Failure(errorMsg)
@@ -104,7 +104,7 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
         logger.debug(s"Successful request (ID: $id). " +
           s"Body: '${response.body.take(100)}'")
       } else {
-        logger.warn(s"Failed to send WS request to $url (ID: $id). " +
+        logger.error(s"Failed to send WS request to $url (ID: $id). " +
           s"RequestBody: '${requestBodyPreview}'. Status ${response.status}. " +
           s"ResponseBody: '${response.body.take(100)}'")
       }
@@ -112,7 +112,9 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
         case JsSuccess(value, _) =>
           Full(value)
         case JsError(e) =>
-          Failure(s"Request returned invalid JSON (ID: $id): $e")
+          val errorMsg = s"Request returned invalid JSON (ID: $id): $e"
+          logger.error(errorMsg)
+          Failure(errorMsg)
       }
     }
   }

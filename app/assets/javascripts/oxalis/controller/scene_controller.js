@@ -215,7 +215,6 @@ class SceneController {
     this.cube.updateForCam(id);
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
-    Utils.__guard__(this.skeleton, x1 => x1.updateForCam(id));
 
     if (id !== OrthoViews.TDView) {
       let ind;

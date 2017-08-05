@@ -11,7 +11,7 @@ import play.api.libs.json.Json
 case class KnossosSection(name: String, resolutions: List[Int], boundingBox: BoundingBox) {
 
   def doesContainCube(cube: CubePosition): Boolean = {
-    boundingBox.contains(cube.topLeft.toHighestRes)
+    boundingBox.intersects(cube.toHighestResBoundingBox)
   }
 }
 

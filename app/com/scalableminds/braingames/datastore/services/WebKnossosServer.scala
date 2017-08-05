@@ -6,9 +6,10 @@ package com.scalableminds.braingames.datastore.services
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.scalableminds.braingames.binary.helpers.{IntervalScheduler, RPC}
+import com.scalableminds.braingames.binary.helpers.IntervalScheduler
 import com.scalableminds.braingames.binary.models.datasource.DataSourceId
 import com.scalableminds.braingames.binary.models.datasource.inbox.InboxDataSourceLike
+import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration

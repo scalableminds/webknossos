@@ -182,7 +182,7 @@ def notifyBuild(String buildStatus = 'STARTED') {
     colorCode = '#CF0001'
   }
 
-  def message = "${env.JOB_NAME} #${env.BUILD_NUMBER} - ${subject} (<${env.BUILD_URL}|Open>)"
+  def message = "${env.JOB_NAME} #${env.BUILD_NUMBER} - ${subject} (<${env.RUN_DISPLAY_URL}|Open>)"
   // Send notifications
   slackSend(channel: '#webknossos-bots', color: colorCode, message: message)
 }

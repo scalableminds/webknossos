@@ -3,13 +3,15 @@
 
 import React from "react";
 import Request from "libs/request";
-import { Table } from "antd";
+import { Input, Table } from "antd";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
+import Utils from "libs/utils";
 import update from "immutability-helper";
 
 const { Column } = Table;
+const { Search } = Input;
 
 type Props = {
   userID: ?string,
@@ -26,6 +28,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       archived: boolean,
       unarchived: boolean,
     },
+    searchQuery: string,
   } = {
     showArchivedTracings: false,
     archivedTracings: [],
@@ -34,6 +37,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       archived: false,
       unarchived: false,
     },
+    searchQuery: "",
   };
 
   componentDidMount() {
@@ -46,17 +50,17 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   }
 
   async fetchDataMaybe(): Promise<void> {
-    const isFinished = this.state.showArchivedTracings.toString();
     if (!this.isFetchNecessary()) {
       return;
     }
 
+    const isFinishedString = this.state.showArchivedTracings.toString();
     const url = this.props.userID
-      ? `/api/users/${this.props.userID}/annotations?isFinished=${isFinished}`
-      : `/api/user/annotations?isFinished=${isFinished}`;
+      ? `/api/users/${this.props.userID}/annotations?isFinished=${isFinishedString}`
+      : `/api/user/annotations?isFinished=${isFinishedString}`;
 
     const tracings = await Request.receiveJSON(url);
-    if (isFinished) {
+    if (this.state.showArchivedTracings) {
       this.setState(
         update(this.state, {
           archivedTracings: { $set: tracings },
@@ -155,12 +159,22 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       : this.state.unarchivedTracings;
   }
 
+  handleSearch = (event: SyntheticInputEvent): void => {
+    this.setState({ searchQuery: event.target.value });
+  };
+
   render() {
     return (
       <div>
+        <Search
+          style={{ width: 200, float: "right" }}
+          onPressEnter={this.handleSearch}
+          onChange={this.handleSearch}
+        />
         <h3>Explorative Annotations</h3>
-        {!this.props.isAdminView
-          ? <div>
+        {this.props.isAdminView
+          ? null
+          : <div>
               <form
                 action={jsRoutes.controllers.AnnotationIOController.upload().url}
                 method="POST"
@@ -198,15 +212,19 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
                     </a>
                   : null}
               </span>
-            </div>
-          : null}
+            </div>}
 
         <Table
-          dataSource={this.getCurrentTracings()}
+          dataSource={Utils.filterWithSearchQuery(
+            this.getCurrentTracings(),
+            ["id", "name", "dataSetName", "contentType"],
+            this.state.searchQuery,
+          )}
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
           }}
+          className="clearfix"
         >
           <Column
             title="#"

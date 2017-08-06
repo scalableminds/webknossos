@@ -57,6 +57,13 @@ type UpdateNodeUpdateAction = {
   timestamp: number,
   value: NodeWithTreeIdType,
 };
+type ToggleTreeUpdateAction = {
+  action: "toggleTree",
+  timestamp: number,
+  value: {
+    id: number,
+  },
+};
 type DeleteNodeUpdateAction = {
   action: "deleteNode",
   timestamp: number,
@@ -115,7 +122,8 @@ export type UpdateAction =
   | DeleteNodeUpdateAction
   | CreateEdgeUpdateAction
   | DeleteEdgeUpdateAction
-  | UpdateTracingUpdateAction;
+  | UpdateTracingUpdateAction
+  | ToggleTreeUpdateAction;
 
 export function createTree(tree: TreeType): UpdateTreeUpdateAction {
   return {
@@ -153,6 +161,15 @@ export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
       timestamp: tree.timestamp,
       comments: tree.comments,
       branchPoints: tree.branchPoints,
+    },
+  };
+}
+export function toggleTree(tree: TreeType): ToggleTreeUpdateAction {
+  return {
+    action: "toggleTree",
+    timestamp: Date.now(),
+    value: {
+      id: tree.treeId,
     },
   };
 }

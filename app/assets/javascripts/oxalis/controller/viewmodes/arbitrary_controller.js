@@ -27,6 +27,8 @@ import {
   createNodeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
+  toggleAllTreesAction,
+  toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
@@ -207,6 +209,13 @@ class ArbitraryController extends React.PureComponent {
     });
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
+      "1": () => {
+        Store.dispatch(toggleAllTreesAction());
+      },
+      "2": () => {
+        Store.dispatch(toggleInactiveTreesAction());
+      },
+
       // Branches
       b: () => this.pushBranch(),
       j: () => {

@@ -42,7 +42,6 @@ object UserConfiguration extends BasicSettings {
       "inverseX" -> JsBoolean(false),
       "inverseY" -> JsBoolean(false),
       "keyboardDelay" -> JsNumber(200),
-      "firstVisToggle" -> JsBoolean(true),
       "particleSize" -> JsNumber(5),
       "overrideNodeRadius" -> JsBoolean(true),
       "sortTreesByName" -> JsBoolean(false),

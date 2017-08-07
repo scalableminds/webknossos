@@ -10,7 +10,9 @@ import {
 } from "oxalis/model/sagas/volumetracing_saga";
 import { watchAnnotationAsync } from "oxalis/model/sagas/annotation_saga";
 import { alert } from "libs/window";
-import { fork, take, cancel } from "redux-saga/effects";
+import { select, fork, take, cancel } from "redux-saga/effects";
+import Model from "oxalis/model";
+import Toast from "libs/toast";
 
 export default function* rootSaga(): Generator<*, *, *> {
   while (true) {
@@ -23,6 +25,7 @@ export default function* rootSaga(): Generator<*, *, *> {
 function* restartableSaga(): Generator<*, *, *> {
   try {
     yield [
+      warnAboutSegmentationOpacity(),
       initializeSettingsAsync(),
       watchPushSettingsAsync(),
       watchSkeletonTracingAsync(),
@@ -39,5 +42,42 @@ Internal error.
 Please reload the page to avoid losing data.
 
 ${err} ${err.stack}`);
+  }
+}
+
+// TODO: move this saga functionality as soon as annotation_saga.js was merged
+
+function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
+  let zoomStepWarningToast;
+  const warnMaybe = function*() {
+    const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
+    if (shouldWarn && zoomStepWarningToast == null) {
+      const toastType = yield select(
+        state => (state.tracing.type === "volume" ? "danger" : "info"),
+      );
+      zoomStepWarningToast = Toast.message(
+        toastType,
+        "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
+        true,
+      );
+    } else if (!shouldWarn && zoomStepWarningToast != null) {
+      zoomStepWarningToast.remove();
+      zoomStepWarningToast = null;
+    }
+  };
+
+  yield take("INITIALIZE_SETTINGS");
+  yield* warnMaybe();
+
+  while (true) {
+    yield take([
+      "ZOOM_IN",
+      "ZOOM_OUT",
+      "ZOOM_BY_DELTA",
+      "SET_ZOOM_STEP",
+      action =>
+        action.type === "UPDATE_DATASET_SETTING" && action.propertyName === "segmentationOpacity",
+    ]);
+    yield* warnMaybe();
   }
 }

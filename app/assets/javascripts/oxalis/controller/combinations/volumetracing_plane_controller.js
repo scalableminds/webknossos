@@ -7,7 +7,6 @@
 import _ from "lodash";
 import Store from "oxalis/store";
 import Utils from "libs/utils";
-import Toast from "libs/toast";
 import constants, { OrthoViews } from "oxalis/constants";
 import {
   PlaneControllerClass,
@@ -59,9 +58,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
     this.listenTo(Model.getSegmentationBinary().cube, "newMapping", () =>
       SceneController.renderVolumeIsosurface(lastActiveCellId),
     );
-
-    // TODO: This should be put in a saga with `take('INITIALIZE_SETTINGS')`as pre-condition
-    setTimeout(this.adjustSegmentationOpacity, 500);
   }
 
   simulateTracing = async (): Promise<void> => {
@@ -144,14 +140,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         this.volumeTracingController.handleCellSelection(cellId);
       },
     });
-  }
-
-  adjustSegmentationOpacity(): void {
-    if (Store.getState().datasetConfiguration.segmentationOpacity < 10) {
-      Toast.warning(
-        'Your setting for "segmentation opacity" is set very low.<br />Increase it for better visibility while volume tracing.',
-      );
-    }
   }
 
   getKeyboardControls(): Object {

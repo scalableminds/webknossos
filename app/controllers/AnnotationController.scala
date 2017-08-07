@@ -309,10 +309,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def nameExplorativeAnnotation(typ: String, id: String) = Authenticated.async(parse.urlFormEncoded) { implicit request =>
+  def nameExplorativeAnnotation(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-      name <- postParameter("name") ?~> Messages("annotation.invalidName")
+      name <- (request.body \ "name").asOpt[String].toFox ?~> Messages("annotation.invalidName")
       updated <- annotation.muta.rename(name)
       renamedJSON <- Annotation.transformToJson(updated)
     } yield {

@@ -52,6 +52,7 @@ const initialState = {
         edges: [],
         comments: [],
         color: [23, 23, 23],
+        isVisible: true,
       },
     },
     tracingType: "Explorational",

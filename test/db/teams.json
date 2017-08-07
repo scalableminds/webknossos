@@ -1,1 +1,3 @@
 {"_id":{"$oid":"570b9f4b2a7c0e3b008da6ec"},"name":"Connectomics department","roles":[{"name":"user"},{"name":"admin"}]}
+{"_id":{"$oid":"59882b370d889b84020efd3f"},"name":"test1","roles":[{"name":"user"},{"name":"admin"}], "parent" : "Connectomics department", "owner" : ObjectId("570b9f4d2a7c0e4d008da6ef")}
+{"_id":{"$oid":"59882b370d889b84020efd6f"},"name":"test2","roles":[{"name":"user"},{"name":"admin"}], "parent" : "Connectomics department", "owner" : ObjectId("570b9f4d2a7c0e4d008da6ef")}

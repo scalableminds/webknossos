@@ -272,7 +272,7 @@ object ApplicationBuild extends Build {
       }.toString()
     ),
     buildInfoPackage := "webknossos",
-    buildInfoOptions := Seq(BuildInfoOption.ToJson, BuildInfoOption.BuildTime)
+    buildInfoOptions := Seq(BuildInfoOption.ToJson)
   )
 
   lazy val oxalis: Project = Project(appName, file("."))

@@ -94,6 +94,25 @@ const Utils = {
     };
   },
 
+  localeCompareBy<T: Object>(
+    selector: string | (T => string),
+    isSortedAscending: boolean = true,
+  ): (T, T) => number {
+    const sortingOrder = isSortedAscending ? 1 : -1;
+
+    return (a: T, b: T): number => {
+      const valueA: string = typeof selector === "function" ? selector(a) : a[selector];
+      const valueB: string = typeof selector === "function" ? selector(b) : b[selector];
+      return (
+        // $FlowFixMe
+        valueA.localeCompare(valueB, "en", {
+          numeric: true,
+          usage: "search",
+        }) * sortingOrder
+      );
+    };
+  },
+
   stringToNumberArray(s: string): Array<number> {
     // remove leading/trailing whitespaces
     s = s.trim();
@@ -243,6 +262,51 @@ const Utils = {
   // you can't do getOrElse(null) without flow complaining
   toNullable<T>(maybe: Maybe<T>): ?T {
     return maybe.isJust ? maybe.get() : null;
+  },
+
+  getRecursiveKeysAndValues(obj: Object): Array<any> {
+    return _.flattenDeep(Utils.getRecursiveKeysAndValuesUnflat(obj));
+  },
+
+  getRecursiveKeysAndValuesUnflat(obj: Object): Array<any> {
+    if (_.isArray(obj)) {
+      return obj.map(Utils.getRecursiveKeysAndValuesUnflat);
+    } else if (_.isObject(obj)) {
+      return Object.keys(obj).map(key => [key, Utils.getRecursiveKeysAndValuesUnflat(obj[key])]);
+    } else {
+      return [obj];
+    }
+  },
+
+  // Filters an array given a search string. Supports searching for several words as OR query.
+  // Supports nested properties
+  filterWithSearchQuery<T: Object>(
+    collection: Array<T>,
+    properties: Array<string>,
+    searchQuery: string,
+  ): Array<T> {
+    if (searchQuery === "") {
+      return collection;
+    } else {
+      const words = _.map(searchQuery.split(" "), element =>
+        element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
+      );
+      const uniques = _.filter(_.uniq(words), element => element !== "");
+      const pattern = `(${uniques.join("|")})`;
+      const regexp = new RegExp(pattern, "igm");
+
+      return collection.filter(model =>
+        _.some(properties, fieldName => {
+          const value = model[fieldName];
+          if (value !== null) {
+            const values = Utils.getRecursiveKeysAndValues(value);
+            return _.some(values, v => v.toString().match(regexp));
+          } else {
+            return false;
+          }
+        }),
+      );
+    }
   },
 };
 

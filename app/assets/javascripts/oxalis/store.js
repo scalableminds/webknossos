@@ -16,6 +16,7 @@ import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import ReadOnlyTracingReducer from "oxalis/model/reducers/readonlytracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
+import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
@@ -75,6 +76,7 @@ type TreeTypeBase = {
   +comments: Array<CommentType>,
   +branchPoints: Array<BranchPointType>,
   +edges: Array<EdgeType>,
+  +isVisible: boolean,
 };
 
 export type TreeType = TreeTypeBase & {
@@ -223,7 +225,6 @@ export type UserConfigurationType = {
   +crosshairSize: number,
   +displayCrosshair: boolean,
   +dynamicSpaceDirection: boolean,
-  +firstVisToggle: boolean,
   +inverseX: boolean,
   +inverseY: boolean,
   +isosurfaceBBsize: number,
@@ -248,8 +249,6 @@ export type UserConfigurationType = {
 
 export type TemporaryConfigurationType = {
   +userBoundingBox: Vector6,
-  +shouldHideInactiveTrees: boolean,
-  +shouldHideAllSkeletons: boolean,
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
   +controlMode: ControlModeType,
@@ -348,7 +347,6 @@ export const defaultState: OxalisState = {
     crosshairSize: 0.1,
     displayCrosshair: true,
     dynamicSpaceDirection: true,
-    firstVisToggle: false,
     inverseX: false,
     inverseY: false,
     isosurfaceBBsize: 1,
@@ -372,8 +370,6 @@ export const defaultState: OxalisState = {
   },
   temporaryConfiguration: {
     userBoundingBox: [0, 0, 0, 0, 0, 0],
-    shouldHideInactiveTrees: false,
-    shouldHideAllSkeletons: false,
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
@@ -453,6 +449,7 @@ const combinedReducers = reduceReducers(
   SaveReducer,
   FlycamReducer,
   ViewModeReducer,
+  AnnotationReducer,
 );
 
 const store = createStore(

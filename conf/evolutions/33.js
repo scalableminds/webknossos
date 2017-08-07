@@ -1,7 +1,13 @@
-// Update to support public annotations
-
 // --- !Ups
-db.annotations.update({}, { $set: {"isPublic": false} }, {multi: true})
+db.users.update(
+  {},
+  { $unset: { "userConfiguration.configuration.firstVisToggle": 1 } },
+  { multi: true },
+);
 
 // --- !Downs
-db.annotations.update({}, { $unset: {"isPublic": 1} }, {multi: true})
+db.users.update(
+  {},
+  { $set: { "userConfiguration.configuration.firstVisToggle": true } },
+  { multi: true },
+);

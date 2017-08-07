@@ -314,10 +314,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
       muta = annotation.muta
-      _ <- (request.body \ "name").asOpt[String].map(muta.rename).getOrElse(Fox.successful(())) ?~> Messages("annotation.rename.failed")
-      _ <- (request.body \ "isPublic").asOpt[Boolean].map(muta.setIsPublic).getOrElse(Fox.successful(())) ?~> Messages("annotation.setPublie.failed")
+      _ <- (request.body \ "name").asOpt[String].map(muta.rename).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
+      _ <- (request.body \ "isPublic").asOpt[Boolean].map(muta.setIsPublic).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
     } yield {
-      JsonOk(Messages("annotation.edited"))
+      JsonOk(Messages("annotation.edit.success"))
     }
   }
 

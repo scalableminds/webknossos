@@ -44,9 +44,16 @@ type MouseHandlerType =
 function shouldIgnore(event: JQueryInputEventObject, key: KeyboardKey) {
   const bindingHasCtrl = key.toLowerCase().indexOf("ctrl") !== -1;
   const bindingHasShift = key.toLowerCase().indexOf("shift") !== -1;
-  const eventHasCtrl = event.ctrlKey || event.metaKey;
+  const bindingHasSuper = key.toLowerCase().indexOf("super") !== -1;
+  const bindingHasCommand = key.toLowerCase().indexOf("command") !== -1;
+  const eventHasCtrl = event.ctrlKey;
   const eventHasShift = event.shiftKey;
-  return (eventHasCtrl && !bindingHasCtrl) || (eventHasShift && !bindingHasShift);
+  const eventHasSuper = event.metaKey;
+  return (
+    (eventHasCtrl && !bindingHasCtrl) ||
+    (eventHasShift && !bindingHasShift) ||
+    (eventHasSuper && !(bindingHasSuper || bindingHasCommand))
+  );
 }
 
 // This keyboard hook directly passes a keycombo and callback

@@ -1,15 +1,13 @@
 package models.annotation.handler
 
-import scala.concurrent.Future
-
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationRestrictions, AnnotationType, TemporaryAnnotation}
+import models.annotation.{Annotation, AnnotationRestrictions, AnnotationType}
 import models.binary.DataSetDAO
-import models.tracing.skeleton.SkeletonTracing
-import models.tracing.skeleton.temporary.TemporarySkeletonTracing
 import models.user.User
-import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import scala.concurrent.Future
 
 /**
   * Company: scalableminds
@@ -19,8 +17,6 @@ import play.api.libs.concurrent.Execution.Implicits._
   */
 object DataSetInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  type AType = TemporaryAnnotation
-
   def dataSetRestrictions() =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = true
@@ -28,7 +24,8 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
       override def allowDownload(user: Option[User]) = false
     }
 
-  def provideAnnotation(dataSetName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
+  def provideAnnotation(dataSetName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] = Fox.empty //TODO: rocksDB
+  /*{
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
       team = user.flatMap(_.teamNames.intersect(dataSet.allowedTeams).headOption).getOrElse("")
@@ -55,5 +52,5 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
         typ = AnnotationType.View,
         restrictions = dataSetRestrictions())
     }
-  }
+  }*/
 }

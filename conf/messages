@@ -73,6 +73,7 @@ braintracing.exists=Great, you already have an account on braintracing.org. Plea
 dataSet=Dataset
 dataSet.file=Dataset ZIP File
 dataSet.notFound=Dataset {0} doesn''t exist
+dataSet.notImported=Dataset {0} is not imported
 dataSet.notSupplied=No dataset supplied
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
 dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".

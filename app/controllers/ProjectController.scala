@@ -5,19 +5,18 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.project.{Project, ProjectDAO, ProjectService}
 import models.task._
-import models.user.User
-import net.liftweb.common.{Empty, Full}
+import net.liftweb.common.Empty
 import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.Json
 import play.twirl.api.Html
+
+import scala.concurrent.Future
 
 class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
   def empty(name: String) = Authenticated {
@@ -110,7 +109,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         _ <- request.user.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
         tasks <- project.tasks
-        js <- Fox.serialSequence(tasks)(t => Task.transformToJson(t, request.userOpt))
+        js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t, request.userOpt))
       } yield {
         Ok(Json.toJson(js))
       }

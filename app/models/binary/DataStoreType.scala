@@ -5,18 +5,24 @@ package models.binary
 
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
-import reactivemongo.bson.{BSONString, BSONHandler}
+import reactivemongo.bson.{BSONHandler, BSONString}
 
 sealed trait DataStoreType {
   val name: String
+
+  val strategy: DataStoreHandlingStrategy
 }
 
 case object WebKnossosStore extends DataStoreType {
   val name = "webknossos-store"
+
+  val strategy = WKStoreHandlingStrategy
 }
 
 case object NDStore extends DataStoreType {
   val name = "ndstore"
+
+  val strategy = NDStoreHandlingStrategy
 }
 
 object DataStoreType {

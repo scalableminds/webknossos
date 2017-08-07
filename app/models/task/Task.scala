@@ -1,9 +1,6 @@
 package models.task
 
-import scala.async.Async._
-import scala.concurrent.Future
-
-import com.scalableminds.util.geometry.{Point3D, Vector3D}
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
@@ -15,12 +12,11 @@ import models.project.{Project, ProjectDAO, WebknossosAssignmentConfig}
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import oxalis.mturk.MTurkService
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsNull, JsObject, Json}
-import reactivemongo.play.json.BSONFormats._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
 class info(message: String) extends scala.annotation.StaticAnnotation
 
@@ -29,6 +25,7 @@ case class Task(
   @info("Assigned name") team: String,
   @info("Required experience") neededExperience: Experience = Experience.empty,
   @info("Number of required instances") instances: Int = 1,
+  @info("Bounding Box") boundingBox: Option[BoundingBox] = None,
   @info("Current tracing time") tracingTime: Option[Long] = None,
   @info("Date of creation") created: DateTime = DateTime.now(),
   @info("Flag indicating deletion") isActive: Boolean = true,
@@ -104,13 +101,9 @@ case class Task(
 object Task extends FoxImplicits {
   implicit val taskFormat = Json.format[Task]
 
-  def transformToJson(task: Task, forUser: Option[User])(implicit ctx: DBAccessContext): Future[JsObject] = {
+  def transformToJson(task: Task, forUser: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
-      annotationContent <- task.annotationBase.flatMap(_.content).futureBox
-      dataSetName = annotationContent.map(_.dataSetName).openOr("")
-      editPosition = annotationContent.map(_.editPosition).openOr(Point3D(0, 0, 0))
-      editRotation = annotationContent.map(_.editRotation).openOr(Vector3D(0, 0, 0))
-      boundingBox = annotationContent.flatMap(_.boundingBox).toOption
+      dataSetName <- task.annotationBase.map(_.dataSetName)
       status <- task.status.getOrElse(CompletionStatus(-1, -1, -1))
       scriptInfo <- task._script.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
@@ -123,15 +116,13 @@ object Task extends FoxImplicits {
         "projectName" -> task._project,
         "type" -> tt,
         "dataSet" -> dataSetName,
-        "editPosition" -> editPosition,
-        "editRotation" -> editRotation,
-        "boundingBox" -> boundingBox,
         "neededExperience" -> task.neededExperience,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(task.created),
         "status" -> status,
         "script" -> scriptJs.toOption,
         "tracingTime" -> task.tracingTime,
-        "creationInfo" -> task.creationInfo
+        "creationInfo" -> task.creationInfo,
+        "boundingBox" -> task.boundingBox
       )
     }
   }
@@ -209,7 +200,8 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     instances: Int,
     team: String,
     _script: Option[String],
-    _project: Option[String]
+    _project: Option[String],
+    boundingBox: Option[BoundingBox]
   )(implicit ctx: DBAccessContext): Fox[Task] =
     findAndModify(
       Json.obj("_id" -> _task),
@@ -220,7 +212,8 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
           "team" -> team,
           "_taskType" -> _taskType,
           "_script" -> _script,
-          "_project" -> _project)),
+          "_project" -> _project,
+          "boundingBox" -> boundingBox)),
       returnNew = true)
 
   def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Task]] = withExceptionCatcher {

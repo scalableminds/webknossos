@@ -5,7 +5,7 @@ import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType._
 import models.annotation.handler.AnnotationInformationHandler
-import models.annotation.{AnnotationIdentifier, AnnotationLike, AnnotationStore}
+import models.annotation.{Annotation, AnnotationIdentifier, AnnotationStore}
 import oxalis.security.{AuthenticatedRequest, Secured, UserAwareRequest}
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -31,25 +31,25 @@ trait TracingInformationProvider
 
   def withAnnotation[T](
     typ: AnnotationType,
-    id: String)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+    id: String)(f: Annotation => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
 
     withAnnotation(AnnotationIdentifier(typ, id))(a => f(a))
   }
 
   def withAnnotation[T](
-    annotationId: AnnotationIdentifier)(f: AnnotationLike => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
+    annotationId: AnnotationIdentifier)(f: Annotation => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
 
     findAnnotation(annotationId).flatMap(f)
   }
 
   def findAnnotation(
     typ: AnnotationType,
-    id: String)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
+    id: String)(implicit request: UserAwareRequest[_]): Fox[Annotation] = {
 
     findAnnotation(AnnotationIdentifier(typ, id))
   }
 
-  def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
+  def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[Annotation] = {
     AnnotationStore.requestAnnotation(annotationId, request.userOpt)
   }
 
@@ -58,7 +58,7 @@ trait TracingInformationProvider
     id: String,
     mergedId: String,
     mergedTyp: String,
-    readOnly: Boolean)(f: AnnotationLike => Fox[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
+    readOnly: Boolean)(f: Annotation => Fox[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
 
     mergeAnnotation(AnnotationIdentifier(typ, id), AnnotationIdentifier(mergedTyp, mergedId), readOnly).flatMap(f)
   }
@@ -66,7 +66,7 @@ trait TracingInformationProvider
   def mergeAnnotation(
     annotationId: AnnotationIdentifier,
     mergedAnnotationId: AnnotationIdentifier,
-    readOnly: Boolean)(implicit request: AuthenticatedRequest[_]): Fox[AnnotationLike] = {
+    readOnly: Boolean)(implicit request: AuthenticatedRequest[_]): Fox[Annotation] = {
 
     val annotation = AnnotationStore.requestAnnotation(annotationId, request.userOpt)
     val annotationSec = AnnotationStore.requestAnnotation(mergedAnnotationId, request.userOpt)
@@ -74,7 +74,7 @@ trait TracingInformationProvider
     AnnotationStore.mergeAnnotation(annotation, annotationSec, readOnly, request.user)
   }
 
-  def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]): Fox[String] = {
+  def nameAnnotation(annotation: Annotation)(implicit request: AuthenticatedRequest[_]): Fox[String] = {
     withInformationHandler(annotation.typ) {
       handler =>
         annotation._name.toFox.orElse(handler.nameForAnnotation(annotation).toFox)
@@ -82,7 +82,7 @@ trait TracingInformationProvider
   }
 
   def tracingInformation(
-    annotation: AnnotationLike,
+    annotation: Annotation,
     readOnly: Boolean)(implicit request: UserAwareRequest[_]): Fox[JsValue] = {
     for {
       _ <- annotation.restrictions.allowAccess(request.userOpt) ?~> Messages("notAllowed") ~> BAD_REQUEST

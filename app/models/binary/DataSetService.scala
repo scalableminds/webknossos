@@ -3,13 +3,13 @@
  */
 package models.binary
 
-import com.scalableminds.braingames.binary.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
 import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.braingames.binary.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Full}
+import net.liftweb.common.Full
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
@@ -83,12 +83,11 @@ object DataSetService extends FoxImplicits with LazyLogging {
   }
 
   def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] = {
-    DataStoreHandler.importDataSource(dataSet)
+    dataSet.dataStoreInfo.typ.strategy.importDataSource(dataSet)
   }
 
   def getDataLayer(dataSet: DataSet, dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] = {
     dataSet.dataSource.toUsable.flatMap(_.getDataLayer(dataLayerName)).toFox
-    // TODO jfrohnhofen .orElse(UserDataLayerDAO.findOneByName(dataLayerName).filter(_.dataSourceName == dataSet.name).map(_.dataLayer))
   }
 
   def findDataSource(name: String)(implicit ctx: DBAccessContext): Fox[InboxDataSource] =

@@ -68,10 +68,6 @@ class MergeModalView extends PureComponent {
     })();
   }
 
-  validateId(id: string) {
-    return Request.receiveJSON(`/api/find?q=${id}&type=id`);
-  }
-
   async merge(url: string) {
     const annotation = await Request.receiveJSON(
       `${url}/${this.state.readOnly ? "true" : "false"}`,
@@ -133,7 +129,6 @@ class MergeModalView extends PureComponent {
     const { selectedExplorativeAnnotation } = this.state;
 
     if (selectedExplorativeAnnotation != null) {
-      await this.validateId(selectedExplorativeAnnotation);
       const url =
         `/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
         `${this.props.tracingType}/${this.props.tracingId}`;

@@ -1,9 +1,9 @@
 package models.user
 
-import scala.language.implicitConversions
+import play.api.libs.json.Json
 
 import scala.collection.breakOut
-import play.api.libs.json.Json
+import scala.language.implicitConversions
 
 /**
  * Experience a user needs to hold to acquire a task. The task itself defines the minimum experience needed.

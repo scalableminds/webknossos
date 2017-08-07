@@ -1,23 +1,23 @@
 package models.annotation
 
-import scala.concurrent.duration._
-
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
+import com.typesafe.scalalogging.LazyLogging
+import models.annotation.handler.AnnotationInformationHandler
 import models.user.User
 import net.liftweb.common.Failure
-import models.annotation.handler.AnnotationInformationHandler
-import com.typesafe.scalalogging.LazyLogging
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 
+import scala.concurrent.duration._
+
 object AnnotationStore extends LazyLogging {
 
   private val maxCacheTime = 5 minutes
 
-  case class StoredResult(result: Fox[AnnotationLike], timestamp: Long = System.currentTimeMillis)
+  case class StoredResult(result: Fox[Annotation], timestamp: Long = System.currentTimeMillis)
 
   def cachedAnnotation(annotationId: AnnotationIdentifier): Option[StoredResult] = {
     Cache.getAs[StoredResult](annotationId.toUniqueString)
@@ -36,8 +36,8 @@ object AnnotationStore extends LazyLogging {
   }
 
   def mergeAnnotation(
-    annotation: Fox[AnnotationLike],
-    annotationSec: Fox[AnnotationLike],
+    annotation: Fox[Annotation],
+    annotationSec: Fox[Annotation],
     readOnly: Boolean,
     user: User)(implicit ctx: DBAccessContext) = {
 
@@ -52,7 +52,7 @@ object AnnotationStore extends LazyLogging {
     }
   }
 
-  private def requestFromCache(id: AnnotationIdentifier): Option[Fox[AnnotationLike]] = {
+  private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
     val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
     if (handler.cache) {
       cachedAnnotation(id).map(_.result)
@@ -63,7 +63,7 @@ object AnnotationStore extends LazyLogging {
   private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     try {
       val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
-      val f: Fox[AnnotationLike] =
+      val f: Fox[Annotation] =
         handler.provideAnnotation(id.identifier, user)
       if (handler.cache) {
         val stored = StoredResult(f)
@@ -78,10 +78,11 @@ object AnnotationStore extends LazyLogging {
   }
 
   private def executeAnnotationMerge(
-    annotation: Fox[AnnotationLike],
-    annotationSec: Fox[AnnotationLike],
+    annotation: Fox[Annotation],
+    annotationSec: Fox[Annotation],
     readOnly: Boolean,
-    user: User)(implicit ctx: DBAccessContext) = {
+    user: User)(implicit ctx: DBAccessContext) = Fox.empty //Todo: rocksDB
+   /*{
 
     try {
       for {
@@ -101,5 +102,5 @@ object AnnotationStore extends LazyLogging {
         logger.error("Request Annotation in AnnotationStore failed: " + e)
         throw e
     }
-  }
+  }*/
 }

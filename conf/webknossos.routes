@@ -8,12 +8,9 @@ GET           /dashboard                                                        
 GET           /impressum                                                        controllers.Application.impressum
 GET           /info                                                             controllers.Application.info
 GET           /thankyou                                                         controllers.Application.thankyou
+GET           /spotlight                                                        controllers.DataSetController.userAwareEmpty
 GET           /api/buildinfo                                                    controllers.Application.buildInfo
 POST          /api/analytics/:namespace                                         controllers.Application.analytics(namespace)
-
-# Github Issues integration
-GET           /issues                                                           controllers.GithubIssues.index
-POST          /issues                                                           controllers.GithubIssues.submit
 
 # Help section
 GET           /help/faq                                                         controllers.HelpController.faq
@@ -62,84 +59,64 @@ GET           /hits/:id                                                         
 
 # Team
 GET           /teams                                                            controllers.TeamController.empty
+
 GET           /api/teams                                                        controllers.TeamController.list
 POST          /api/teams                                                        controllers.TeamController.create
 DELETE        /api/teams/:id                                                    controllers.TeamController.delete(id: String)
 
-# Binary Data
-
-# Spotlight
-GET           /spotlight                                                        controllers.DataSetController.userAwareEmpty
-
 # DataSets
 GET           /datasets                                                         controllers.DataSetController.empty
 GET           /datasets/:id/edit                                                controllers.DataSetController.emptyWithWildcard(id)
-GET           /datasets/:id/import                                                     controllers.DataSetController.emptyWithWildcard(id)
+GET           /datasets/:id/import                                              controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
+GET           /datasets/upload                                                  controllers.DataSetController.empty
 
 GET           /api/datasets                                                     controllers.DataSetController.list
+POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
 GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String)
 POST          /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
 GET           /api/datasets/:dataSetName/accessList                             controllers.DataSetController.accessList(dataSetName: String)
 POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
 GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String)
 
+# Datastores
 GET           /api/datastores                                                   controllers.DataStoreController.list
 POST          /api/datastores/:name/datasource                                  controllers.WKDataStoreController.updateOne(name: String)
 POST          /api/datastores/:name/datasources                                 controllers.WKDataStoreController.updateAll(name: String)
 POST          /api/datastores/:name/status                                      controllers.WKDataStoreController.statusUpdate(name: String)
 POST          /api/datastores/:name/verifyUpload                                controllers.WKDataStoreController.validateDataSetUpload(name: String, token: String)
 
-# Those routes are DEPRECATED and should NOT be used further
-GET           /dataToken/validate                                               controllers.DataTokenController.validateUserAndDataSetToken(token: String, dataSetName: String, dataLayerName: String)
-GET           /dataToken/generate                                               controllers.DataTokenController.generateToken(dataSetName: Option[String], dataLayerName: Option[String])
-# ------ instead use
+# Data Tokens
 GET           /api/dataToken/validate                                           controllers.DataTokenController.validateUserAndDataSetToken(token: String, dataSetName: String, dataLayerName: String)
 GET           /api/dataToken/generate                                           controllers.DataTokenController.generateToken(dataSetName: Option[String], dataLayerName: Option[String])
 GET           /api/datasetToken/validate                                        controllers.DataTokenController.validateDataSetToken(token: String, dataSetName: String)
 
-# ->            /data/                                                            com.scalableminds.datastore.Routes
+# Datstore Route Forwarding
+->            /data/                                                            com.scalableminds.datastore.Routes
 
-# SkeletonTracing Stuff
+# Annotations
 POST          /annotations/createExplorational                                  controllers.AnnotationController.createExplorational
 POST          /admin/nml/upload                                                 controllers.AnnotationIOController.upload
-PUT           /annotations/:typ/:id                                             controllers.AnnotationController.updateWithJson(typ: String, id: String, version: Int)
+GET           /annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)
 POST          /annotations/:typ/:id/name                                        controllers.AnnotationController.nameExplorativeAnnotation(typ: String, id: String)
 GET           /annotations/:typ/:id/finishAndRedirect                           controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
 GET           /annotations/:typ/:id/finish                                      controllers.AnnotationController.finish(typ: String, id: String)
-GET           /annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)
 POST          /annotations/:typ/finish                                          controllers.AnnotationController.finishAll(typ: String)
 GET           /annotations/:typ/:id/reopen                                      controllers.AnnotationController.reopen(typ: String, id: String)
 GET           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
-
 GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
-
-# Deactivated due to changes in the format of updates in the saved annotation updates
-# GET           /annotations/:typ/:id/updates                                     controllers.AnnotationController.listUpdates(typ: String, id: String)
-# POST          /annotations/:typ/:id/updates/transfer                            controllers.AnnotationController.transferUpdates(typ: String, id: String, fromId: String, fromTyp: String, maxVersion: Int)
-
 POST          /annotations/:typ/:id/transfer                                    controllers.AnnotationController.transfer(typ: String, id: String)
 
-GET           /annotations/:typ/:id                                             controllers.AnnotationController.trace(typ: String, id: String)
-GET           /annotations/:typ/:id/readOnly                                    controllers.AnnotationController.trace(typ: String, id: String)
+GET           /annotations/:typ/:id                                             controllers.AnnotationController.empty(typ: String, id: String)
+GET           /annotations/:typ/:id/readOnly                                    controllers.AnnotationController.empty(typ: String, id: String)
 GET           /annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/readOnly/info                               controllers.AnnotationController.infoReadOnly(typ: String, id: String)
-GET           /annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
 GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId/:readOnly        controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean)
 
 GET           /api/annotations/:typ/:id/loggedTime                              controllers.AnnotationController.loggedTime(typ: String, id: String)
-# GET           /annotations/:typ/:id/saveMerged                                  controllers.AnnotationController.saveMerged(typ: String, id: String)
 
-# Admin datasets
-GET           /datasets/upload                                                  controllers.DataSetController.empty
-POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
-
-# Admin Tasks
-GET           /api/tasks                                                        controllers.TaskController.list
-
-# DELETE        /api/tasks/:id                                                    controllers.admin.TaskAdministration.delete(id: String)
-
+# Tasks
 GET           /tasks                                                            controllers.TaskController.empty
 GET           /tasks/overview                                                   controllers.TaskController.empty
 GET           /tasks/create                                                     controllers.TaskController.empty
@@ -148,6 +125,7 @@ GET           /api/queries                                                      
 POST          /api/queries                                                      controllers.QueryController.query(type: String, limit: Int ?= 1000)
 GET           /api/descriptions/:element                                        controllers.QueryController.descriptions(element)
 
+GET           /api/tasks                                                        controllers.TaskController.list
 POST          /api/tasks                                                        controllers.TaskController.create(type: String)
 GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
@@ -155,22 +133,12 @@ DELETE        /api/tasks/:id                                                    
 PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)
 
 GET           /tasks/:id/edit                                                   controllers.UserController.emptyWithWildcard(id: String)
-# show backbone views for task creation
-
-#POST          /admin/tasks/createBulk                                           controllers.admin.TaskAdministration.createBulk
-#POST          /admin/tasks/createFromNML                                        controllers.admin.TaskAdministration.createFromNML
-#POST          /admin/tasks/createFromForm                                       controllers.admin.TaskAdministration.createFromForm
-
-# TODO: remove
-#GET           /admin/tasks/:id/edit                                          controllers.admin.TaskAdministration.edit(id: String)
-#GET           /admin/tasks/:id/edit                                             controllers.UserController.emptyWithWildcard(id: String)
-#POST          /admin/tasks/:id                                                  controllers.admin.TaskAdministration.editTaskForm(id: String)
-#GET           /api/tasks/overview                                               controllers.admin.TaskAdministration.overviewData
 GET           /workload                                                         controllers.TaskController.empty
 
 GET           /api/tasks/:id/download                                           controllers.AnnotationIOController.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
 
+# Task Types
 GET           /taskTypes                                                        controllers.TaskTypeController.empty(id: String = "")
 GET           /taskTypes/create                                                 controllers.TaskTypeController.empty(id: String = "")
 GET           /taskTypes/:id/tasks                                              controllers.TaskTypeController.empty(id: String)
@@ -185,26 +153,23 @@ GET           /api/taskTypes/:id/download                                       
 GET           /api/taskTypes/:id                                                controllers.TaskTypeController.get(id: String)
 PUT           /api/taskTypes/:id                                                controllers.TaskTypeController.update(id: String)
 
-GET           /scripts                                                        controllers.ScriptsController.empty(id: String = "")
-GET           /scripts/create                                                 controllers.ScriptsController.empty(id: String = "")
-GET           /scripts/:id/edit                                               controllers.UserController.emptyWithWildcard(id: String)
+# Scripts
+GET           /scripts                                                          controllers.ScriptsController.empty(id: String = "")
+GET           /scripts/create                                                   controllers.ScriptsController.empty(id: String = "")
+GET           /scripts/:id/edit                                                 controllers.UserController.emptyWithWildcard(id: String)
 
-GET           /api/scripts                                                    controllers.ScriptsController.list
-POST          /api/scripts                                                    controllers.ScriptsController.create
-GET           /api/scripts/:id                                                controllers.ScriptsController.get(id: String)
-PUT           /api/scripts/:id                                                controllers.ScriptsController.update(id: String)
-DELETE        /api/scripts/:id                                                controllers.ScriptsController.delete(id: String)
-
-
-# ID Validation
-GET           /api/find                                                         controllers.SearchController.find(q: String, type: String)
-
+GET           /api/scripts                                                      controllers.ScriptsController.list
+POST          /api/scripts                                                      controllers.ScriptsController.create
+GET           /api/scripts/:id                                                  controllers.ScriptsController.get(id: String)
+PUT           /api/scripts/:id                                                  controllers.ScriptsController.update(id: String)
+DELETE        /api/scripts/:id                                                  controllers.ScriptsController.delete(id: String)
 
 # Projects
 GET           /projects                                                         controllers.ProjectController.empty(name: String = "")
 GET           /projects/create                                                  controllers.ProjectController.empty(name: String = "")
 GET           /projects/:name/tasks                                             controllers.ProjectController.empty(name: String)
 GET           /projects/:name/edit                                              controllers.ProjectController.empty(name: String)
+
 GET           /api/projects                                                     controllers.ProjectController.list
 POST          /api/projects                                                     controllers.ProjectController.create
 GET           /api/projects/:name                                               controllers.ProjectController.read(name: String)
@@ -215,8 +180,10 @@ GET           /api/projects/:name/tasks                                         
 GET           /api/projects/:name/pause                                         controllers.ProjectController.pause(name: String)
 GET           /api/projects/:name/resume                                        controllers.ProjectController.resume(name: String)
 
+# Statistics
 GET           /statistics                                                       controllers.StatisticsController.empty
-GET           /api/statistics/webknossos                                        controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
+
+GET           /api/statistics/webknossos                                        controllers.StatisticsController.webKnossos(interval: String, start: Option[Long], end: Option[Long])
 GET           /api/statistics/users                                             controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 GET           /api/statistics/assignments                                       controllers.StatisticsController.assignmentStatistics(start: Option[Long], end: Option[Long])
 

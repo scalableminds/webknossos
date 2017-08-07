@@ -2,8 +2,6 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-
 import com.scalableminds.util.tools.FoxImplicits
 import models.task.{Script, _}
 import oxalis.security.Secured
@@ -13,6 +11,8 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.twirl.api.Html
+
+import scala.concurrent.Future
 
 
 class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {

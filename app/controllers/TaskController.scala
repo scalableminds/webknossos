@@ -1,45 +1,31 @@
 package controllers
 
 import java.util.UUID
-
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
-import models.binary.DataSetDAO
 import javax.inject.Inject
 
-import net.liftweb.common.{Box, Failure, Full}
-import oxalis.nml.NMLService
-import play.api.libs.iteratee.Cont
-import play.api.libs.iteratee.{Done, Input, Iteratee}
+import com.scalableminds.braingames.datastore.tracings.skeleton.CreateEmptyParameters
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
+import models.annotation.{AnnotationService, _}
+import models.binary.DataSetDAO
+import models.project.{Project, ProjectDAO}
+import models.task._
+import models.user._
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import oxalis.security.{AuthenticatedRequest, Secured}
+import play.api.Play.current
+import play.api.i18n.{Messages, MessagesApi}
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
+import play.api.libs.iteratee.{Cont, Done, Input, Iteratee}
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import oxalis.security.Secured
-import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.Json._
-import oxalis.security.{AuthenticatedRequest, Secured}
-import models.user._
-import models.task._
-import models.annotation._
-import reactivemongo.core.commands.LastError
-import views._
-import play.api.libs.concurrent._
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.i18n.{Messages, MessagesApi}
-import models.annotation.AnnotationService
-import play.api.Play.current
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.mvc.{AnyContent, Result}
 import play.twirl.api.Html
-import scala.concurrent.Future
-
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
-import scala.concurrent.duration._
-import scala.async.Async.{async, await}
 
-import models.project.{Project, ProjectDAO}
+import scala.concurrent.Future
 
 class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
 
@@ -76,7 +62,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   }
 
   def createFromNML(implicit request: AuthenticatedRequest[AnyContent]) = {
-    def parseJson(s: String) = {
+    /*def parseJson(s: String) = {
       Json.parse(s).validate(taskNMLJsonReads) match {
         case JsSuccess(parsed, _) =>
           Full(parsed)
@@ -122,32 +108,60 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           JsonOk(js, Messages("task.bulk.processed"))
         }
       }
-    } yield result
+    } yield result*/
+    Fox.empty
   }
 
 
-  def createSingleTask(input: (String, Experience, CompletionStatus, String, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]) =
+  def createTaskWithoutAnnotationBase(input: (String, Experience, CompletionStatus, String, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]): Fox[Task] =
     input match {
       case (taskTypeId, experience, status, team, projectName, scriptId, boundingBox, dataSetName, start, rotation) =>
         for {
-          _ <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
           _ <- ensureTeamAdministration(request.user, team)
           task = Task(taskType._id, team, experience, status.open, _project = project.name, _script = scriptId)
-          _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, dataSetName, start, rotation)
           _ <- TaskService.insert(task, project)
+        } yield task
+    }
+
+  def createSingleTask(input: (String, Experience, CompletionStatus, String, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]): Fox[JsObject] =
+    input match {
+      case (taskTypeId, experience, status, team, projectName, scriptId, boundingBox, dataSetName, start, rotation) =>
+        for {
+          dataSet <- DataSetDAO.findOneBySourceName(dataSetName).toFox ?~> Messages("dataSet.notFound", dataSetName)
+          dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
+          task <- createTaskWithoutAnnotationBase(input)
+          tracingParameters = CreateEmptyParameters(dataSource.id.name, boundingBox, Some(start), Some(rotation), Some(true), Some(true))
+          tracingReference <- dataSet.dataStoreInfo.typ.strategy.createEmptySkeletonTracing(dataSet.dataStoreInfo, dataSource, tracingParameters) ?~> "Failed to create skeleton tracing."
+          taskType <- task.taskType
+          _ <- AnnotationService.createAnnotationBase(task, request.user._id, tracingReference, boundingBox, taskType.settings, dataSetName, start, rotation)
           taskjs <- Task.transformToJson(task, request.userOpt)
         } yield taskjs
     }
 
+  val fox = Fox
+
   def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
+    fox.failure("")
+    //TODO: RocksDB
+/*
     withJsonUsing(json, Reads.list(taskCompleteReads)) { parsed =>
-      Fox.serialSequence(parsed){p => createSingleTask(p)}.map { results =>
-        val js = bulk2StatusJson(results)
-        JsonOk(js, Messages("task.bulk.processed"))
+
+      {
+        for {
+          tasks: List[Box[Task]] <- Fox.serialSequence(parsed) { p => createTaskWithoutAnnotationBase(p) }
+        } yield {
+          val jsResults = tasks.map(task => Task.transformToJson(task, request.userOpt))
+          tasks.map { results =>
+            val js = bulk2StatusJson(results)
+            JsonOk(js, Messages("task.bulk.processed"))
+          }
+        }
+
+
       }
-    }
+    }*/
   }
 
   def create(`type`: String = "default") = Authenticated.async { implicit request =>
@@ -188,9 +202,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             instances = task.instances + status.open - openInstanceCount,
             team = team,
             _script = scriptId,
-            _project = Some(project.name))
-          _ <- AnnotationService.updateAllOfTask(updatedTask, team, dataSetName, boundingBox, taskType.settings)
-          _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
+            _project = Some(project.name),
+            boundingBox = boundingBox)
+          _ <- AnnotationService.updateAllOfTask(updatedTask, dataSetName, taskType.settings)
+          //TODO: rocksdb skeletons api. _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
           json <- Task.transformToJson(updatedTask, request.userOpt)
           _ <- OpenAssignmentService.updateAllOf(updatedTask, project, status.open)
         } yield {
@@ -212,7 +227,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def list = Authenticated.async{ implicit request =>
     for {
       tasks <- TaskService.findAllAdministratable(request.user, limit = 10000)
-      js <- Future.traverse(tasks)(t => Task.transformToJson(t, request.userOpt))
+      js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t, request.userOpt))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -221,7 +236,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def listTasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       tasks <- TaskService.findAllByTaskType(taskTypeId)
-      js <- Future.traverse(tasks)(t => Task.transformToJson(t, request.userOpt))
+      js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t, request.userOpt))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -300,7 +315,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       assignment <- tryToGetNextAssignmentFor(user)
       task <- assignment.task
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-      annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content"))
+      annotationJSON <- annotation.toJson(Some(user))
     } yield {
       JsonOk(annotationJSON, Messages("task.assigned"))
     }

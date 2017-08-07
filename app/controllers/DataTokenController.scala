@@ -9,7 +9,6 @@ import com.scalableminds.braingames.binary.models.datasource.{DataLayerLike => D
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.binary._
-import models.tracing.volume.VolumeTracingDAO
 import models.user.User
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
@@ -24,7 +23,7 @@ class DataTokenController @Inject()(val messagesApi: MessagesApi) extends Contro
     dataLayerName: String)(implicit ctx: DBAccessContext): Fox[Boolean] = {
 
     dataSet.dataSource.toUsable.flatMap(_.getDataLayer(dataLayerName)).toFox
-      .orElse(VolumeTracingDAO.findOneByVolumeTracingLayerName(dataLayerName))
+      //TODO: rocksDB .orElse(VolumeTracingDAO.findOneByVolumeTracingLayerName(dataLayerName))
       .map(_ => true).orElse(false)
   }
 

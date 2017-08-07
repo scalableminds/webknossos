@@ -5,13 +5,13 @@
 import React, { Component } from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
-import { Input, Icon } from "antd";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
 import { setTracingNameAction } from "oxalis/model/actions/annotation_actions";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import type { OxalisState, TracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
@@ -25,18 +25,6 @@ type DatasetInfoTabProps = DatasetInfoTabStateProps & { setTracingName: string =
 
 class DatasetInfoTabView extends Component {
   props: DatasetInfoTabProps;
-
-  state: {
-    isEditingName: boolean,
-    tracingName: string,
-  } = {
-    isEditingName: false,
-    tracingName: "",
-  };
-
-  componentWillReceiveProps(newProps: DatasetInfoTabProps) {
-    this.setState({ tracingName: newProps.tracing.name });
-  }
 
   calculateZoomLevel(): number {
     let width;
@@ -66,17 +54,13 @@ class DatasetInfoTabView extends Component {
     }
   }
 
-  handleTracingNameChange = (event: SyntheticInputEvent) => {
-    this.setState({ tracingName: event.target.value });
-  };
-
-  setTracingName = () => {
-    this.setState({ isEditingName: false });
-    this.props.setTracingName(this.state.tracingName);
+  setTracingName = (newName: string) => {
+    this.props.setTracingName(newName);
   };
 
   render() {
-    const { tracingType } = this.props.tracing;
+    const { tracingType, name } = this.props.tracing;
+    const tracingName = name || "<untitled>";
     let annotationTypeLabel;
 
     if (this.props.task != null) {
@@ -86,26 +70,12 @@ class DatasetInfoTabView extends Component {
           {tracingType} : {this.props.task.id}
         </span>
       );
-    } else if (this.state.isEditingName) {
+    } else {
       // Or display an explorative tracings name
       annotationTypeLabel = (
         <span>
           Explorational Tracing :
-          <Input
-            value={this.state.tracingName}
-            onChange={this.handleTracingNameChange}
-            onPressEnter={this.setTracingName}
-            style={{ width: "60%", margin: "0 10px" }}
-            size="small"
-          />{" "}
-          <Icon type="check" onClick={this.setTracingName} />
-        </span>
-      );
-    } else {
-      annotationTypeLabel = (
-        <span>
-          Explorational Tracing : {this.state.tracingName}
-          <Icon type="edit" onClick={() => this.setState({ isEditingName: true })} />
+          <EditableTextLabel value={tracingName} onChange={this.setTracingName} />
         </span>
       );
     }

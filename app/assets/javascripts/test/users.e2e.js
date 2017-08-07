@@ -10,10 +10,6 @@ describe("User List", () => {
     Request.json().from("/api/users?isEditable=true"),
   );
 
-  browser.addCommand("createTeamOnServer", async payload =>
-    Request.json().upload("/api/teams", { data: payload }),
-  );
-
   beforeEach(() => {
     page = new UserPage();
     page.get();
@@ -29,25 +25,10 @@ describe("User List", () => {
     expect(users.length).toEqual(numUserListEntries);
   });
 
-  it("should assign a new team", () => {
-    // create a new team for assignment
-    const newTeam = { team: "test2", role: { name: "user" } };
+  it("should assign a new role", () => {
+    // select first user 'SCM Boy' and switch the role of one team to 'user'
+    const newTeam = { team: "test1", role: { name: "user" } };
 
-    const payload = {
-      name: newTeam.team,
-      parent: "Connectomics department",
-      owner: "",
-      roles: [{ name: "admin" }, { name: "user" }],
-      isEditable: "true",
-    };
-    browser.createTeamOnServer(payload);
-    // It is not possible to create a team from the users page, therefore refresh the page, so everything is up to date
-    browser.pause(2000);
-    browser.refresh();
-    browser.pause(2000);
-
-    // select first user 'SCM Boy' and switch the role of the newly created
-    // team to 'user'
     page.selectSingleUser();
     page.selectSecondTeamRole();
     page.clickConfirmButton();
@@ -58,7 +39,7 @@ describe("User List", () => {
   });
 
   it("should unselect a team of a user", () => {
-    const newTeam = { team: "test2", role: "user" };
+    const newTeam = { team: "test2", role: { name: "admin" } };
     page.selectSingleUser();
     page.unSelectSecondTeam();
     page.clickConfirmButton();

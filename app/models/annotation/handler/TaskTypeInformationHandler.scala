@@ -17,12 +17,12 @@ object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxI
     }
 
   def provideAnnotation(taskTypeId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] = Fox.empty // TODO: rocksDB
-  /*{
-    for {
-      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> "taskType.notFound"
-      annotation <- CompoundAnnotation.createFromTaskType(taskType, user.map(_._id)) ?~> "taskType.noAnnotation"
-    } yield {
-      annotation.copy(restrictions = taskTypeAnnotationRestrictions(taskType))
-    }
-  }*/
+//  {
+//    for {
+//      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> "taskType.notFound"
+//      annotation <- CompoundAnnotation.createFromTaskType(taskType, user.map(_._id)) ?~> "taskType.noAnnotation"
+//    } yield {
+//      annotation.copy(restrictions = taskTypeAnnotationRestrictions(taskType))
+//    }
+//  }
 }

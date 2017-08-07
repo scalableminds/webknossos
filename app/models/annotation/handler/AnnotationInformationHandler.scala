@@ -28,10 +28,6 @@ trait AnnotationInformationHandler {
 
   def provideAnnotation(identifier: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation]
 
-  /*def nameForAnnotation(identifier: String)(implicit request: AuthenticatedRequest[_]): Box[String] = {
-    withAnnotation(identifier)(nameForAnnotation)
-  } */
-
   def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Future[String] = {
     Future.successful(t.id)
   }

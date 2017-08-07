@@ -42,22 +42,22 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     val annotationId = AnnotationIdentifier(typ, id)
 
     withAnnotation(annotationId) { annotation =>
-        for {
-          js <- tracingInformation(annotation, readOnly)
-        } yield {
-          request.userOpt.foreach { user =>
-            UsedAnnotationDAO.use(user, annotationId)
-            TimeSpanService.logUserInteraction(user, Some(annotation))            // log time when a user starts working
-          }
-          Ok(js)
+      for {
+        js <- tracingInformation(annotation, readOnly)
+      } yield {
+        request.userOpt.foreach { user =>
+          UsedAnnotationDAO.use(user, annotationId)
+          TimeSpanService.logUserInteraction(user, Some(annotation))            // log time when a user starts working
         }
+        Ok(js)
+      }
     }
   }
 
   def infoReadOnly(typ: String, id: String) = info(typ, id, readOnly = true)
 
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean) = Authenticated.async { implicit request =>
-    withMergedAnnotation(typ, id, mergedId, mergedTyp, readOnly) { annotation =>
+    AnnotationMerger.withMergedAnnotation(typ, id, mergedId, mergedTyp, readOnly) { annotation =>
       for {
         _ <- annotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
         savedAnnotation <- annotation.copy(typ = AnnotationType.Explorational, _id = BSONObjectID.generate).saveToDB
@@ -184,7 +184,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     Fox.successful(JsonOk)
   }
 
-  def finishAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
+  private def finishAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
       (updated, message) <- annotation.muta.finishAnnotation(user)

@@ -35,23 +35,6 @@ object AnnotationStore extends LazyLogging {
     }
   }
 
-  def mergeAnnotation(
-    annotation: Fox[Annotation],
-    annotationSec: Fox[Annotation],
-    readOnly: Boolean,
-    user: User)(implicit ctx: DBAccessContext) = {
-
-    executeAnnotationMerge(annotation, annotationSec, readOnly, user)(ctx)
-    .flatten
-    .futureBox
-    .recover {
-      case e =>
-        logger.error("AnnotationStore ERROR: " + e)
-        e.printStackTrace()
-        Failure("AnnotationStore ERROR: " + e)
-    }
-  }
-
   private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
     val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
     if (handler.cache) {
@@ -77,30 +60,9 @@ object AnnotationStore extends LazyLogging {
     }
   }
 
-  private def executeAnnotationMerge(
-    annotation: Fox[Annotation],
-    annotationSec: Fox[Annotation],
-    readOnly: Boolean,
-    user: User)(implicit ctx: DBAccessContext) = Fox.empty //Todo: rocksDB
-   /*{
-
-    try {
-      for {
-        ann <- annotation
-        annSec <- annotationSec
-        newId = BSONObjectID.generate()
-        mergedAnnotation = AnnotationService.merge(newId, readOnly, user._id, annSec.team, AnnotationType.Explorational, ann, annSec)
-      } yield {
-        // Caching of merged annotation
-        val storedMerge = StoredResult(mergedAnnotation)
-        val mID = AnnotationIdentifier(AnnotationType.Explorational, newId.stringify)
-        Cache.set(mID.toUniqueString, storedMerge, maxCacheTime)
-        mergedAnnotation
-      }
-    } catch {
-      case e: Exception =>
-        logger.error("Request Annotation in AnnotationStore failed: " + e)
-        throw e
-    }
-  }*/
+  def storeMerged(annotation: Fox[Annotation], id: BSONObjectID) = {
+    val storedMerge = StoredResult(annotation)
+    val mID = AnnotationIdentifier(AnnotationType.Explorational, id.stringify)
+    Cache.set(mID.toUniqueString, storedMerge, maxCacheTime)
+  }
 }

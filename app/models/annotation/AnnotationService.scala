@@ -126,13 +126,19 @@ object AnnotationService
   def countTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countByTaskIdAndUser(user._id, _task, AnnotationType.Task)
 
+  def tracingFromBase(annotationBase: Annotation)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
+    for {
+      dataSet: DataSet <- DataSetDAO.findOneBySourceName(annotationBase.dataSetName)
+      dataSource <- dataSet.dataSource.toUsable.toFox
+      newTracingReference <- dataSet.dataStoreInfo.typ.strategy.duplicateSkeletonTracing(dataSet.dataStoreInfo, dataSource, annotationBase.tracingReference)
+    } yield newTracingReference
+  }
+
   def createAnnotationFor(user: User, task: Task)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     //TODO: rocksDB: test this
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
-        dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> Messages("dataSet.notFound", annotation.dataSetName)
-        dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
-        newTracingReference <- dataSet.dataStoreInfo.typ.strategy.duplicateSkeletonTracing(dataSet.dataStoreInfo, dataSource, annotation.tracingReference) ?~> "Failed to create skeleton tracing."
+        newTracing <- tracingFromBase(annotation) ?~> "Failed to create tracing from base"
         newAnnotation = annotation.copy(
           _user = Some(user._id),
           state = AnnotationState.InProgress,
@@ -219,25 +225,6 @@ object AnnotationService
   }
 
 
-  //TODO: RocksDB
-/*  def merge(
-    newId: BSONObjectID,
-    readOnly: Boolean,
-    _user: BSONObjectID,
-    team: String,
-    typ: AnnotationType,
-    annotationsLike: Annotation*)(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
-
-    val restrictions =
-      if (readOnly)
-        AnnotationRestrictions.readonlyAnnotation()
-      else
-        AnnotationRestrictions.updateableAnnotation()
-
-    CompoundAnnotation.createFromAnnotations(
-      newId.stringify, Some(_user), team, None,
-      annotationsLike.toList, typ, AnnotationState.InProgress, restrictions, None)
-  }*/
 
   def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     AnnotationDAO.update(

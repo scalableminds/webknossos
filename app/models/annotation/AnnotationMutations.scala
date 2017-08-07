@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.braingames.datastore.tracings.TracingType
 import com.scalableminds.util.io.NamedStream
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -73,30 +74,21 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
   def incrementVersion()(implicit ctx: DBAccessContext) =
     AnnotationDAO.incrementVersion(annotation._id)
 
-  def resetToBase()(implicit ctx: DBAccessContext) = {
-    //TODO: RocksDB
-//    def resetContent(): Fox[AnnotationContent] ={
-//      annotation.typ match {
-//        case AnnotationType.Explorational =>
-//          Fox.failure("annotation.revert.skeletonOnly")
-//        case AnnotationType.Task if annotation.contentType == SkeletonTracing.contentType =>
-//          for {
-//            task <- annotation.task.toFox
-//            tracingBase <- task.annotationBase.flatMap(_.contentReference)
-//            reset <- tracingBase.temporaryDuplicate(id = BSONObjectID.generate.stringify).flatMap(_.saveToDB)
-//          } yield reset
-//        case _ if annotation.contentType != SkeletonTracing.contentType =>
-//          Fox.failure("annotation.revert.skeletonOnly")
-//      }
-//    }
-
-//    for {
-//      oldAnnotationContent <- annotation.contentReference
-//      reset <- resetContent()
-//      _ <- oldAnnotationContent.service.clearAndRemove(oldAnnotationContent.id)
-//      updatedAnnotation <- AnnotationDAO.updateContent(annotation._id, ContentReference.createFor(reset))
-//    } yield updatedAnnotation
-    Fox.successful(annotation)
+  def resetToBase()(implicit ctx: DBAccessContext): Fox[Annotation] = annotation.typ match {
+    //TODO: RocksDB: test this
+    case AnnotationType.Explorational =>
+      Fox.failure("annotation.revert.skeletonOnly")
+    case AnnotationType.Task if annotation.tracingType == TracingType.skeletonTracing =>
+      for {
+        task <- annotation.task.toFox
+        annotationBase <- task.annotationBase
+        newTracingReference <- AnnotationService.tracingFromBase(annotationBase)
+        updatedAnnotation <- AnnotationDAO.updateTracingRefernce(annotation._id, newTracingReference)
+      } yield {
+        updatedAnnotation
+      }
+    case _ if annotation.tracingType != TracingType.skeletonTracing =>
+      Fox.failure("annotation.revert.skeletonOnly")
   }
 
   def transferToUser(user: User)(implicit ctx: DBAccessContext) = {

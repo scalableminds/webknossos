@@ -53,27 +53,6 @@ trait TracingInformationProvider
     AnnotationStore.requestAnnotation(annotationId, request.userOpt)
   }
 
-  def withMergedAnnotation[T](
-    typ: AnnotationType,
-    id: String,
-    mergedId: String,
-    mergedTyp: String,
-    readOnly: Boolean)(f: Annotation => Fox[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
-
-    mergeAnnotation(AnnotationIdentifier(typ, id), AnnotationIdentifier(mergedTyp, mergedId), readOnly).flatMap(f)
-  }
-
-  def mergeAnnotation(
-    annotationId: AnnotationIdentifier,
-    mergedAnnotationId: AnnotationIdentifier,
-    readOnly: Boolean)(implicit request: AuthenticatedRequest[_]): Fox[Annotation] = {
-
-    val annotation = AnnotationStore.requestAnnotation(annotationId, request.userOpt)
-    val annotationSec = AnnotationStore.requestAnnotation(mergedAnnotationId, request.userOpt)
-
-    AnnotationStore.mergeAnnotation(annotation, annotationSec, readOnly, request.user)
-  }
-
   def nameAnnotation(annotation: Annotation)(implicit request: AuthenticatedRequest[_]): Fox[String] = {
     withInformationHandler(annotation.typ) {
       handler =>

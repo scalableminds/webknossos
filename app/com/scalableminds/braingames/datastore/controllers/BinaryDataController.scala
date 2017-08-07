@@ -46,6 +46,34 @@ class BinaryDataController @Inject()(
   }
 
   /**
+    * Handles requests for raw binary data via HTTP GET.
+    */
+  def requestRawCuboid(
+                           dataSetName: String,
+                           dataLayerName: String,
+                           x: Int,
+                           y: Int,
+                           z: Int,
+                           width: Int,
+                           height: Int,
+                           depth: Int,
+                           resolution: Int,
+                           halfByte: Boolean
+                         ) = TokenSecuredAction(dataSetName, dataLayerName).async {
+    implicit request =>
+      AllowRemoteOrigin {
+        val request = DataRequest(
+          new VoxelPosition(x, y, z, math.pow(2, resolution).toInt),
+          width,
+          height,
+          depth,
+          DataServiceRequestSettings(halfByte = halfByte)
+        )
+        requestData(dataSetName, dataLayerName, request).map(Ok(_))
+      }
+  }
+
+  /**
     * Handles requests for raw binary data via HTTP GET for debugging.
     */
   def requestViaAjaxDebug(
@@ -57,19 +85,8 @@ class BinaryDataController @Inject()(
                            z: Int,
                            resolution: Int,
                            halfByte: Boolean
-                         ) = TokenSecuredAction(dataSetName, dataLayerName).async {
-    implicit request =>
-      AllowRemoteOrigin {
-        val request = DataRequest(
-          new VoxelPosition(x, y, z, math.pow(2, resolution).toInt),
-          cubeSize,
-          cubeSize,
-          cubeSize,
-          DataServiceRequestSettings(halfByte = halfByte)
-        )
-        requestData(dataSetName, dataLayerName, request).map(Ok(_))
-      }
-  }
+                         ) =
+    requestRawCuboid(dataSetName, dataLayerName, x, y, z, cubeSize, cubeSize, cubeSize, resolution, halfByte)
 
   /**
     * Handles a request for raw binary data via a HTTP GET. Used by knossos.

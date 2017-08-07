@@ -4,7 +4,7 @@ import java.io.{BufferedOutputStream, FileOutputStream}
 
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
-import com.scalableminds.braingames.datastore.tracings.skeleton.CreateEmptyParameters
+import com.scalableminds.braingames.datastore.tracings.skeleton.{CreateEmptyParameters, DownloadMultipleParameters, DownloadTracingParameters}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.BoxImplicits
@@ -126,14 +126,24 @@ object AnnotationService
   def countTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countByTaskIdAndUser(user._id, _task, AnnotationType.Task)
 
-  def createAnnotationFor(user: User, task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] = Fox.empty //TODO: rocksDB
-   /*{
-    def useAsTemplateAndInsert(annotation: Annotation) =
-      annotation.copy(
-        _user = Some(user._id),
-        state = AnnotationState.InProgress,
-        typ = AnnotationType.Task,
-        created = System.currentTimeMillis).temporaryDuplicate(keepId = false).flatMap(_.saveToDB)
+  def createAnnotationFor(user: User, task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    //TODO: rocksDB: test this
+    def useAsTemplateAndInsert(annotation: Annotation) = {
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> Messages("dataSet.notFound", annotation.dataSetName)
+        dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
+        newTracingReference <- dataSet.dataStoreInfo.typ.strategy.duplicateSkeletonTracing(dataSet.dataStoreInfo, dataSource, annotation.tracingReference) ?~> "Failed to create skeleton tracing."
+        newAnnotation = annotation.copy(
+          _user = Some(user._id),
+          state = AnnotationState.InProgress,
+          typ = AnnotationType.Task,
+          _id = BSONObjectID.generate,
+          created = System.currentTimeMillis)
+        _ <- newAnnotation.saveToDB
+      } yield {
+        newAnnotation
+      }
+    }
 
     for {
       annotationBase <- task.annotationBase ?~> "Failed to retrieve annotation base."
@@ -141,7 +151,7 @@ object AnnotationService
     } yield {
       result
     }
-  }*/
+  }
 
   def createAnnotationBase(
     task: Task,
@@ -246,24 +256,37 @@ object AnnotationService
     additionalFiles: Map[String, TemporaryFile],
     typ: AnnotationType,
     name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
+    Fox.successful(TracingReference("dummyId", TracingType.skeletonTracing))
 
-    // TODO: until we implemented workspaces, we need to decide if this annotation is going to be a skeleton or a volume
-    // annotation --> hence, this hacky way of making a decision
-    def createContent() = {
+    //TODO: rocksDB
+
+    /* TODO: until we implemented workspaces, we need to decide if this annotation is going to be a skeleton or a volume
+       annotation --> hence, this hacky way of making a decision */
+
+    /*def createContent() = {
       //TODO: rocksDB - call datastore create (with nml if applicable - readd nml to this functions parameters?)
       Fox.successful(TracingReference("dummyId", TracingType.skeletonTracing))
     }
     for {
       content <- createContent()
       annotation <- AnnotationService.createFrom(user, content, typ, name) ?~> Messages("annotation.create.fromFailed")
-    } yield annotation
+    } yield annotation*/
   }
 
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.logTime(time, _annotation)
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit ctx: DBAccessContext): Future[TemporaryFile] = {
-    //TODO RocksDB: create request for datastore
+    val downloadParams = annotations.map(annotation => DownloadTracingParameters(annotation.tracingReference.id, None, annotation.name))
+    val dataSetName = annotations(0).dataSetName //TODO RocksDB are all always on same dataset? Also: Handle empty list
+
+    for {
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
+    } yield {
+      //TODO RocksDB: redirect(DownloadMultipleParameters(zipFileName, downloadParams))
+    }
+
     Future.successful(TemporaryFile("dummy", "justToKeepTheReturnType"))
 
     /*

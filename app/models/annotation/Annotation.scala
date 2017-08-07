@@ -48,7 +48,7 @@ case class Annotation(
   def task: Fox[Task] =
     _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
 
-  val contentType = tracingReference.typ
+  val tracingType = tracingReference.typ
 
   val restrictions = if(readOnly.getOrElse(false))
       AnnotationRestrictions.readonlyAnnotation()
@@ -286,11 +286,11 @@ object AnnotationDAO
       Json.obj("$set" -> Json.obj("state" -> state)),
       returnNew = true)
 
-  def updateContent(_annotation: BSONObjectID, content: TracingReference)(implicit ctx: DBAccessContext) =
+  def updateTracingRefernce(_annotation: BSONObjectID, tracingReference: TracingReference)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
-        "_content" -> content)),
+        "_content" -> tracingReference)),
       returnNew = true)
 
   def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) =

@@ -67,10 +67,10 @@ test.serial("Skeleton should initialize correctly using the store's state", t =>
     const nodeTreeIds = [];
     let edgePositions = [];
     const edgeTreeIds = [];
-    let treeColors = [0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
+    let treeColors = [0, 0, 0, 0]; // tree ids start at index 1 so add one bogus RGB value
 
     for (const tree of Object.values(trees)) {
-      treeColors = treeColors.concat(tree.color);
+      treeColors = treeColors.concat(skeleton.getTreeRGBA(tree.color, tree.isVisible));
       for (const node of Object.values(tree.nodes)) {
         nodePositions = nodePositions.concat(node.position);
         nodeTreeIds.push(tree.treeId);
@@ -107,7 +107,7 @@ test.serial("Skeleton should initialize correctly using the store's state", t =>
     t.deepEqual(edgeBufferGeometryAttributes.treeId.array, new Float32Array(edgeTreeIds));
 
     const textureData = new Float32Array(
-      NodeShader.COLOR_TEXTURE_WIDTH * NodeShader.COLOR_TEXTURE_WIDTH * 3,
+      NodeShader.COLOR_TEXTURE_WIDTH * NodeShader.COLOR_TEXTURE_WIDTH * 4,
     );
     textureData.set(treeColors);
     t.deepEqual(skeleton.treeColorTexture.image.data, textureData);
@@ -189,12 +189,12 @@ test.serial("Skeleton should update tree colors upon tree creation", t => {
   Store.dispatch(createTreeAction());
   getSkeletonTracing(Store.getState().tracing).map(async skeletonTracing => {
     const { activeTreeId, trees } = skeletonTracing;
-
+    const activeTree = trees[activeTreeId];
     if (activeTreeId != null) {
       await Utils.sleep(50);
       t.deepEqual(
-        skeleton.treeColorTexture.image.data.subarray(activeTreeId * 3, activeTreeId * 3 + 3),
-        new Float32Array(trees[activeTreeId].color),
+        skeleton.treeColorTexture.image.data.subarray(activeTreeId * 4, (activeTreeId + 1) * 4),
+        new Float32Array(skeleton.getTreeRGBA(activeTree.color, activeTree.isVisible)),
       );
     }
   });

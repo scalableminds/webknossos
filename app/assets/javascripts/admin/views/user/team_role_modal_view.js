@@ -3,18 +3,14 @@ import React from "react";
 import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
 import Request from "libs/request";
 import update from "immutability-helper";
-import type {
-  APITeamType,
-  APIUserType,
-  APITeamRoleType
-} from "admin/api_flow_types";
+import type { APITeamType, APIUserType, APITeamRoleType } from "admin/api_flow_types";
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 
 const ROLES = {
   admin: "admin",
-  user: "user"
+  user: "user",
 };
 
 type TeamRoleModalPropType = {
@@ -22,7 +18,7 @@ type TeamRoleModalPropType = {
   onCancel: Function,
   visible: boolean,
   selectedUserIds: Array<string>,
-  users: Array<APIUserType>
+  users: Array<APIUserType>,
 };
 /**
  * All team selection in this modal is based on whether their is a role
@@ -35,10 +31,10 @@ class TeamRoleModalView extends React.PureComponent {
 
   state: {
     teams: Array<APITeamType>,
-    selectedTeams: Array<APITeamRoleType>
+    selectedTeams: Array<APITeamRoleType>,
   } = {
     teams: [],
-    selectedTeams: []
+    selectedTeams: [],
   };
 
   componentDidMount() {
@@ -52,13 +48,9 @@ class TeamRoleModalView extends React.PureComponent {
       let newRole = null;
 
       if (newProps.selectedUserIds.length === 1) {
-        const user = this.props.users.find(
-          _user => _user.id === newProps.selectedUserIds[0]
-        );
+        const user = this.props.users.find(_user => _user.id === newProps.selectedUserIds[0]);
         if (user) {
-          const userTeam = user.teams.find(
-            _userTeam => selectedTeam.team === _userTeam.team
-          );
+          const userTeam = user.teams.find(_userTeam => selectedTeam.team === _userTeam.team);
 
           if (userTeam) {
             newRole = { name: userTeam.role.name };
@@ -78,19 +70,17 @@ class TeamRoleModalView extends React.PureComponent {
 
     const selectedTeams = teams.map(team => ({
       team: team.name,
-      role: null
+      role: null,
     }));
 
     this.setState({
       teams,
-      selectedTeams
+      selectedTeams,
     });
   }
 
   setTeams = () => {
-    const newTeams = this.state.selectedTeams.filter(
-      team => team.role !== null
-    );
+    const newTeams = this.state.selectedTeams.filter(team => team.role !== null);
 
     const newUserPromises = this.props.users.map(user => {
       if (this.props.selectedUserIds.includes(user.id)) {
@@ -99,7 +89,7 @@ class TeamRoleModalView extends React.PureComponent {
         // server-side validation can reject a user's new teams
         const url = `/api/users/${user.id}`;
         return Request.sendJSONReceiveJSON(url, {
-          data: newUser
+          data: newUser,
         }).then(() => Promise.resolve(newUser), () => Promise.reject(user));
       }
       return Promise.resolve(user);
@@ -111,7 +101,7 @@ class TeamRoleModalView extends React.PureComponent {
       },
       () => {
         // do nothing and keep modal open
-      }
+      },
     );
   };
 
@@ -162,8 +152,7 @@ class TeamRoleModalView extends React.PureComponent {
         value={team.role === null ? null : team.role.name}
         style={{ width: "100%" }}
         disabled={team.role === null}
-        onChange={({ target: { value } }) =>
-          this.handleSelectTeamRole(team.team, value)}
+        onChange={({ target: { value } }) => this.handleSelectTeamRole(team.team, value)}
       >
         <RadioButton value={ROLES.admin}>Admin</RadioButton>
         <RadioButton value={ROLES.user}>User</RadioButton>
@@ -180,7 +169,7 @@ class TeamRoleModalView extends React.PureComponent {
         <Col span={12}>
           {this.getRoleComponent(team)}
         </Col>
-      </Row>
+      </Row>,
     );
 
     return (

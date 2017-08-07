@@ -309,16 +309,15 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def nameExplorativeAnnotation(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
+  def editAnnotation(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
+
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-      name <- (request.body \ "name").asOpt[String].toFox ?~> Messages("annotation.invalidName")
-      updated <- annotation.muta.rename(name)
-      renamedJSON <- Annotation.transformToJson(updated)
+      muta = annotation.muta
+      _ <- (request.body \ "name").asOpt[String].map(muta.rename).getOrElse(Fox.successful(())) ?~> Messages("annotation.rename.failed")
+      _ <- (request.body \ "isPublic").asOpt[Boolean].map(muta.setIsPublic).getOrElse(Fox.successful(())) ?~> Messages("annotation.setPublie.failed")
     } yield {
-      JsonOk(
-        Json.obj("annotations" -> renamedJSON),
-        Messages("annotation.setName"))
+      JsonOk(Messages("annotation.edited"))
     }
   }
 

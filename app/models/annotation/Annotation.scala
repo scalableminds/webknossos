@@ -293,6 +293,12 @@ object AnnotationDAO
       Json.obj("$set" -> Json.obj("_name" -> name)),
       returnNew = true)
 
+  def setIsPublic(_annotation: BSONObjectID, isPublic: Boolean)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj("isPublic" -> isPublic)),
+      returnNew = true)
+
   def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     updateState(_annotation, AnnotationState.InProgress)
 

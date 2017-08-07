@@ -112,7 +112,8 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
       "content" +> a.content.flatMap(AnnotationContent.writeAsJson(_)).getOrElse(JsNull),
       "contentType" +> a.content.map(_.contentType).getOrElse(""),
       "dataSetName" +> a.dataSetName,
-      "tracingTime" +> a.tracingTime
+      "tracingTime" +> a.tracingTime,
+      "isPublis" +> a.isPublic
     )
   }
 }

@@ -78,7 +78,7 @@ class TracingLayoutView extends React.PureComponent {
             />
 
             <Layout className="tracing-layout">
-              <Header>
+              <Header style={{ position: "fixed", width: "100%", zIndex: 210, minHeight: 48 }}>
                 <ButtonComponent
                   size="large"
                   onClick={this.handleSettingsCollapse}
@@ -89,7 +89,7 @@ class TracingLayoutView extends React.PureComponent {
                 </ButtonComponent>
                 <ActionBarView />
               </Header>
-              <Layout>
+              <Layout style={{ marginTop: 64 }}>
                 <Sider
                   collapsible
                   trigger={null}

@@ -126,7 +126,7 @@ object AnnotationService
   def countTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countByTaskIdAndUser(user._id, _task, AnnotationType.Task)
 
-  def createAnnotationFor(user: User, task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  def createAnnotationFor(user: User, task: Task)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     //TODO: rocksDB: test this
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
@@ -256,7 +256,7 @@ object AnnotationService
     additionalFiles: Map[String, TemporaryFile],
     typ: AnnotationType,
     name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
-    Fox.successful(TracingReference("dummyId", TracingType.skeletonTracing))
+    Fox.failure("")
 
     //TODO: rocksDB
 
@@ -276,7 +276,7 @@ object AnnotationService
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.logTime(time, _annotation)
 
-  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit ctx: DBAccessContext): Future[TemporaryFile] = {
+  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Future[TemporaryFile] = {
     val downloadParams = annotations.map(annotation => DownloadTracingParameters(annotation.tracingReference.id, None, annotation.name))
     val dataSetName = annotations(0).dataSetName //TODO RocksDB are all always on same dataset? Also: Handle empty list
 

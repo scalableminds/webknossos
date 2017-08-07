@@ -303,12 +303,12 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  private def duplicateAnnotation(annotation: Annotation, user: User): Fox[Annotation] = {
+  private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     //TODO: RocksDB: why cannot I inline this (type inference, fox implicits?)
     for {
       dataSet <- DataSetDAO.findOneBySourceName(
         annotation.dataSetName).toFox ?~> Messages("dataSet.notFound", annotation.dataSetName)
-      oldTracingReference <- annotation.tracingReference
+      oldTracingReference = annotation.tracingReference
       dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
       newTracingReference <- dataSet.dataStoreInfo.typ.strategy.duplicateSkeletonTracing(dataSet.dataStoreInfo, dataSource, oldTracingReference) ?~> "Failed to create skeleton tracing."
       clonedAnnotation <- AnnotationService.createFrom(

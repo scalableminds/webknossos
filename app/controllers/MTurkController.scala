@@ -37,7 +37,7 @@ class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller
             AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
           case None            =>
             for {
-              annotation <- AnnotationService.createAnnotationFor(user, task)(GlobalAccessContext)
+              annotation <- AnnotationService.createAnnotationFor(user, task)(implicitly[Messages], GlobalAccessContext)
               _ <- MTurkAssignmentDAO.appendReference(
                 mturkAssignment._id,
                 MTurkAnnotationReference(annotation._id, user._id, assignmentId))(GlobalAccessContext)

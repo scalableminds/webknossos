@@ -107,6 +107,7 @@ export type ServerTracing<T> = {
   typ: SkeletonTracingTypeTracingType | VolumeTracingTypeTracingType,
   user: any,
   version: number,
+  isPublic: boolean,
 };
 
 // TODO: Non-reactive

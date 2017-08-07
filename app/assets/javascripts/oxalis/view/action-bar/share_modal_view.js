@@ -13,6 +13,7 @@ class ShareModalView extends PureComponent {
     isPublic: boolean,
     isVisible: boolean,
     onOk: () => void,
+    setAnnotationPublic: Function,
   };
 
   getUrl() {

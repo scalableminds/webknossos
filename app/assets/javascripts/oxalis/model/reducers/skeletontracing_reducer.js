@@ -99,6 +99,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+        isPublic: action.tracing.isPublic,
       };
 
       return update(state, { tracing: { $set: skeletonTracing } });

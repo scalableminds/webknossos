@@ -12,7 +12,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationType._
-import models.binary.DataSet
+import models.binary.{DataSet, DataSetDAO}
 import models.task.Task
 import models.user.{UsedAnnotationDAO, User}
 import play.api.i18n.Messages
@@ -188,25 +188,26 @@ object AnnotationService
   }
 
   def createFrom(
-                  user: User,
-                  tracingReference: TracingReference,
-                  annotationType: AnnotationType,
-                  name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Nothing] = Fox.empty //TODO: RocksDB
-  /* {
-
+                user: User,
+                dataSet: DataSet,
+                tracingReference: TracingReference,
+                annotationType: AnnotationType,
+                settings: AnnotationSettings,
+                name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
+    //TODO: RocksDB: test this
+    val annotation = Annotation(
+      Some(user._id),
+      tracingReference,
+      dataSet.name,
+      team = selectSuitableTeam(user, dataSet),
+      settings = settings,
+      _name = name,
+      typ = annotationType)
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(contentReference.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
-      annotation = Annotation(
-        Some(user._id),
-        ContentReference.createFor(content),
-        team = selectSuitableTeam(user, dataSet),
-        _name = name,
-        typ = annotationType)
       _ <- AnnotationDAO.insert(annotation)
-    } yield {
-      annotation
-    }
-  }*/
+    } yield annotation
+  }
+
 
   //TODO: RocksDB
 /*  def merge(
@@ -261,13 +262,16 @@ object AnnotationService
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.logTime(time, _annotation)
 
-  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit ctx: DBAccessContext) = {
+  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit ctx: DBAccessContext): Future[TemporaryFile] = {
+    //TODO RocksDB: create request for datastore
+    Future.successful(TemporaryFile("dummy", "justToKeepTheReturnType"))
+
+    /*
     val zipped = TemporaryFile("annotationZips", normalize(zipFileName))
     val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(zipped.file)))
 
     def annotationContent(annotations: List[Annotation]): Future[Boolean] = {
-      // TODO rocksdb
-      /*annotations match {
+      annotations match {
         case head :: tail =>
           head.muta.loadAnnotationContent().futureBox.flatMap {
             case Full(fs) =>
@@ -278,13 +282,13 @@ object AnnotationService
           }
         case _            =>
           Future.successful(true)
-      }*/
+      }
       Future.successful(true)
     }
 
     annotationContent(annotations).map { _ =>
       zipper.close()
       zipped
-    }
+    }*/
   }
 }

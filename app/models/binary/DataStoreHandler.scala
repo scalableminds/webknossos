@@ -24,6 +24,9 @@ trait DataStoreHandlingStrategy {
   def createSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, parameters: CreateEmptyParameters): Fox[TracingReference] =
     Fox.failure("DataStore doesn't support creation of SkeletonTracings.")
 
+  def duplicateSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, tracingReference: TracingReference): Fox[TracingReference] =
+    Fox.failure("DatStore doesn't support duplication of SkeletonTracings.")
+
   def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[TracingReference] =
     Fox.failure("DataStore doesn't support creation of VolumeTracings.")
 
@@ -45,6 +48,13 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("dataSetName" -> base.id.name)
       .postWithJsonResponse[CreateEmptyParameters, TracingReference](parameters)
+  }
+
+  override def duplicateSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, tracingReference: TracingReference): Fox[TracingReference] = {
+    logger.debug("Called to duplicate SkeletonTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeletons/${tracingReference.id}/duplicate")
+      .withQueryString("token" -> DataTokenService.webKnossosToken)
+      .getWithJsonResponse[TracingReference]
   }
 
   override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[TracingReference] = {

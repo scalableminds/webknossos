@@ -168,6 +168,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   }
 
   def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 8388608)) { implicit request =>
+    //TODO: rocksDB
     // Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
 //    AnnotationUpdateService.store(typ, id, version, request.body)
 //    val clientTimestamp = request.headers.get("x-date").flatMap(s => Try(s.toLong).toOption).getOrElse(System.currentTimeMillis)
@@ -289,22 +290,29 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
+
+
   def duplicate(typ: String, id: String) = Authenticated.async { implicit request =>
-    //TODO: RocksDB
-    Fox.successful(JsonOk)
-//
-//    withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
-//      for {
-//        content <- annotation.contentReference
-//        temp <- content.temporaryDuplicate(BSONObjectID.generate().stringify)
-//        clonedContent <- temp.saveToDB
-//        dataSet <- DataSetDAO.findOneBySourceName(
-//          content.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
-//        clonedAnnotation <- AnnotationService.createFrom(
-//          request.user, clonedContent, AnnotationType.Explorational, None) ?~> Messages("annotation.create.failed")
-//      } yield {
-//        Redirect(routes.AnnotationController.trace(clonedAnnotation.typ, clonedAnnotation.id))
-//      }
-//    }
+    //TODO: RocksDB: test this
+    withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
+      for {
+        newAnnotation <- duplicateAnnotation(annotation, request.user)
+      } yield {
+        Redirect(routes.AnnotationController.empty(newAnnotation.typ, newAnnotation.id))
+      }
+    }
+  }
+
+  private def duplicateAnnotation(annotation: Annotation, user: User): Fox[Annotation] = {
+    //TODO: RocksDB: why cannot I inline this (type inference, fox implicits?)
+    for {
+      dataSet <- DataSetDAO.findOneBySourceName(
+        annotation.dataSetName).toFox ?~> Messages("dataSet.notFound", annotation.dataSetName)
+      oldTracingReference <- annotation.tracingReference
+      dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
+      newTracingReference <- dataSet.dataStoreInfo.typ.strategy.duplicateSkeletonTracing(dataSet.dataStoreInfo, dataSource, oldTracingReference) ?~> "Failed to create skeleton tracing."
+      clonedAnnotation <- AnnotationService.createFrom(
+        user, dataSet, newTracingReference, AnnotationType.Explorational, annotation.settings, None) ?~> Messages("annotation.create.failed")
+    } yield clonedAnnotation
   }
 }

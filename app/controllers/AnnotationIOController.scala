@@ -79,8 +79,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   }
 
   def projectDownload(projectName: String) = Authenticated.async { implicit request =>
-    Fox.successful(Ok)
-/*    def createProjectZip(project: Project) =
+    def createProjectZip(project: Project) =
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
         annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
@@ -93,12 +92,10 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       zip <- createProjectZip(project)
     } yield {
       Ok.sendFile(zip.file)
-    }*/
+    }
   }
 
   def taskDownload(taskId: String) = Authenticated.async { implicit request =>
-    Fox.successful(Ok)
-    /*
     def createTaskZip(task: Task) = task.annotations.flatMap { annotations =>
       val finished = annotations.filter(_.state.isFinished)
       AnnotationService.zipAnnotations(finished, task.id + "_nmls.zip")
@@ -108,12 +105,10 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- ensureTeamAdministration(request.user, task.team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
-    } yield Ok.sendFile(zip.file)*/
+    } yield Ok.sendFile(zip.file)
   }
 
   def taskTypeDownload(taskTypeId: String) = Authenticated.async { implicit request =>
-    Fox.successful(Ok)
-    /*
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- TaskDAO.findAllByTaskType(taskType._id)
@@ -125,12 +120,10 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       tasktype <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(request.user, tasktype.team) ?~> Messages("notAllowed")
       zip <- createTaskTypeZip(tasktype)
-    } yield Ok.sendFile(zip.file)*/
+    } yield Ok.sendFile(zip.file)
   }
 
   def userDownload(userId: String) = Authenticated.async { implicit request =>
-    Fox.successful(Ok)
-    /*
     for {
       user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
       _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
@@ -138,6 +131,6 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       zipped <- AnnotationService.zipAnnotations(annotations, user.abreviatedName + "_nmls.zip")
     } yield {
       Ok.sendFile(zipped.file)
-    }*/
+    }
   }
 }

@@ -16,6 +16,7 @@ import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import ReadOnlyTracingReducer from "oxalis/model/reducers/readonlytracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
+import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
@@ -448,6 +449,7 @@ const combinedReducers = reduceReducers(
   SaveReducer,
   FlycamReducer,
   ViewModeReducer,
+  AnnotationReducer,
 );
 
 const store = createStore(

@@ -8,17 +8,20 @@ import _ from "lodash";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
+import { setTracingNameAction } from "oxalis/model/actions/annotation_actions";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import type { OxalisState, TracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
 
-type DatasetInfoTabProps = {
+type DatasetInfoTabStateProps = {
   tracing: TracingType,
   dataset: DatasetType,
   flycam: FlycamType,
   task: ?TaskType,
 };
+
+type DatasetInfoTabProps = DatasetInfoTabStateProps & { setTracingName: string => void };
 
 class DatasetInfoTabView extends Component {
   props: DatasetInfoTabProps;
@@ -51,16 +54,30 @@ class DatasetInfoTabView extends Component {
     }
   }
 
+  setTracingName = (newName: string) => {
+    this.props.setTracingName(newName);
+  };
+
   render() {
     const { tracingType, name } = this.props.tracing;
-    let annotationType = tracingType;
+    const tracingName = name || "<untitled>";
+    let annotationTypeLabel;
 
     if (this.props.task != null) {
       // In case we have a task display its id as well
-      annotationType += `: ${this.props.task.id}`;
-    } else if (name) {
-      // Or display an explorative tracings name if there is one
-      annotationType += `: ${name}`;
+      annotationTypeLabel = (
+        <span>
+          {tracingType} : {this.props.task.id}
+        </span>
+      );
+    } else {
+      // Or display an explorative tracings name
+      annotationTypeLabel = (
+        <span>
+          Explorational Tracing :
+          <EditableTextLabel value={tracingName} onChange={this.setTracingName} />
+        </span>
+      );
     }
 
     const zoomLevel = this.calculateZoomLevel();
@@ -71,7 +88,7 @@ class DatasetInfoTabView extends Component {
     return (
       <div className="flex-overflow">
         <p>
-          {annotationType}
+          {annotationTypeLabel}
         </p>
         <p>
           DataSet: {dataSetName}
@@ -135,13 +152,17 @@ class DatasetInfoTabView extends Component {
   }
 }
 
-function mapStateToProps(state: OxalisState): DatasetInfoTabProps {
-  return {
-    tracing: state.tracing,
-    dataset: state.dataset,
-    flycam: state.flycam,
-    task: state.task,
-  };
-}
+const mapStateToProps = (state: OxalisState): DatasetInfoTabStateProps => ({
+  tracing: state.tracing,
+  dataset: state.dataset,
+  flycam: state.flycam,
+  task: state.task,
+});
 
-export default connect(mapStateToProps)(DatasetInfoTabView);
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  setTracingName(tracingName: string) {
+    dispatch(setTracingNameAction(tracingName));
+  },
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(DatasetInfoTabView);

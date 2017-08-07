@@ -1,12 +1,16 @@
 // @flow
 import React, { PureComponent } from "react";
 import Clipboard from "clipboard-js";
+import { Modal, Input, Button, Checkbox } from "antd";
+import { connect } from "react-redux";
 import Toast from "libs/toast";
-import { Modal, Input, Button } from "antd";
 import InputComponent from "oxalis/view/components/input_component";
+import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
+import type { OxalisState } from "oxalis/store";
 
 class ShareModalView extends PureComponent {
   props: {
+    isPublic: boolean,
     isVisible: boolean,
     onOk: () => void,
   };
@@ -27,6 +31,10 @@ class ShareModalView extends PureComponent {
     Toast.success("Position copied to clipboard");
   };
 
+  handleCheckboxChange = (event: SyntheticInputEvent) => {
+    this.props.setAnnotationPublic(event.target.checked);
+  };
+
   render() {
     return (
       <Modal
@@ -41,9 +49,26 @@ class ShareModalView extends PureComponent {
           </Button>
           <InputComponent style={{ width: "85%" }} value={this.getUrl()} />
         </Input.Group>
+        <Checkbox
+          onChange={this.handleCheckboxChange}
+          checked={this.props.isPublic}
+          style={{ marginTop: 10, marginLeft: 1 }}
+        >
+          Is Publicly Accessibly without a Login
+        </Checkbox>
       </Modal>
     );
   }
 }
 
-export default ShareModalView;
+const mapStateToProps = (state: OxalisState) => ({
+  isPublic: state.tracing.isPublic,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  setAnnotationPublic(isPublic: boolean) {
+    dispatch(setAnnotationPublicAction(isPublic));
+  },
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(ShareModalView);

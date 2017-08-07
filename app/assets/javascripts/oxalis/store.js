@@ -171,6 +171,7 @@ export type SkeletonTracingType = {
   +cachedMaxNodeId: number,
   +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
+  +isPublic: boolean,
 };
 
 export type VolumeTracingType = {
@@ -187,6 +188,7 @@ export type VolumeTracingType = {
   +tracingType: VolumeTracingTypeTracingType,
   +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
+  +isPublic: boolean,
 };
 
 export type ReadOnlyTracingType = {
@@ -197,6 +199,7 @@ export type ReadOnlyTracingType = {
   +tracingType: "View",
   +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
+  +isPublic: boolean,
 };
 
 export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;

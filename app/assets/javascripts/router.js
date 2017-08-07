@@ -171,7 +171,10 @@ class Router extends BaseRouter {
   }
 
   users() {
-    this.showWithPagination("UserListView", "UserCollection", {});
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.UserListView);
+      this.changeView(view);
+    });
   }
 
   teams() {

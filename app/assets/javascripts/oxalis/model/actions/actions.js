@@ -8,6 +8,7 @@ import type { SettingActionType } from "oxalis/model/actions/settings_actions";
 import type { TaskActionType } from "oxalis/model/actions/task_actions";
 import type { SaveActionType } from "oxalis/model/actions/save_actions";
 import type { ViewModeActionType } from "oxalis/model/actions/view_mode_actions";
+import type { AnnotationActionTypes } from "oxalis/model/actions/annotation_actions";
 
 export type ActionType =
   | SkeletonTracingActionType
@@ -16,7 +17,8 @@ export type ActionType =
   | SettingActionType
   | TaskActionType
   | SaveActionType
-  | ViewModeActionType;
+  | ViewModeActionType
+  | AnnotationActionTypes;
 
 export const wkReadyAction = () => ({
   type: "WK_READY",

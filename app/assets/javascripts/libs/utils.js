@@ -259,7 +259,7 @@ const Utils = {
     }
   },
 
-  // Filters an array given a search string. Supports regex seach and several words as OR query.
+  // Filters an array given a search string. Supports searching for several words as OR query.
   // Supports nested properties
   filterWithSearchQuery<T: Object>(
     collection: Array<T>,

@@ -69,10 +69,6 @@ class NodeShader {
         type: "t",
         value: treeColorTexture,
       },
-      is3DView: {
-        type: "i",
-        value: 0,
-      },
       isPicking: {
         type: "i",
         value: 0,
@@ -101,7 +97,6 @@ uniform float activeTreeId;
 uniform float activeNodeScaleFactor; // used for the "new node" animation
 uniform float overrideParticleSize; // node radius for equally size nodes
 uniform int overrideNodeRadius; // bool activates equaly node radius for all nodes
-uniform int is3DView; // bool indicates whether we are currently rendering the 3D viewport
 uniform int isPicking; // bool indicates whether we are currently rendering for node picking
 
 uniform sampler2D treeColors;
@@ -143,7 +138,7 @@ void main() {
     ));
 
     color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
-    bool isVisible = texture2D(treeColors, treeIdToTextureCoordinate).a == 1.0 || is3DView == 1;
+    bool isVisible = texture2D(treeColors, treeIdToTextureCoordinate).a == 1.0;
 
     // DELETED OR INVISIBLE NODE
     if (type == ${NodeTypes.INVALID.toFixed(1)} || !isVisible) {
@@ -154,7 +149,7 @@ void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
     // NODE RADIUS
-    if (overrideNodeRadius == 1 || is3DView == 1) {
+    if (overrideNodeRadius == 1) {
       gl_PointSize = overrideParticleSize;
     } else {
       gl_PointSize = max(

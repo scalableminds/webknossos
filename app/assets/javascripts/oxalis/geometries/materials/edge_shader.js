@@ -28,10 +28,6 @@ class EdgeShader {
         type: "t",
         value: treeColorTexture,
       },
-      is3DView: {
-        type: "i",
-        value: false,
-      },
     };
   }
 
@@ -49,7 +45,6 @@ varying vec3 color;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float activeTreeId;
-uniform int is3DView; // indicates whether we are currently rendering the 3D viewport
 
 uniform sampler2D treeColors;
 
@@ -61,7 +56,7 @@ void main() {
       treeId / ${COLOR_TEXTURE_WIDTH_FIXED}),
       treeId / (${COLOR_TEXTURE_WIDTH_FIXED} * ${COLOR_TEXTURE_WIDTH_FIXED}
     ));
-    bool isVisible = texture2D(treeColors, treeIdToTextureCoordinate).a == 1.0 || is3DView == 1;
+    bool isVisible = texture2D(treeColors, treeIdToTextureCoordinate).a == 1.0;
 
     if (!isVisible) {
       gl_Position = vec4(-1.0, -1.0, -1.0, -1.0);

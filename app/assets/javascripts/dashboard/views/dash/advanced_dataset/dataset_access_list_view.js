@@ -5,6 +5,7 @@ import React from "react";
 import Request from "libs/request";
 import TemplateHelpers from "libs/template_helpers";
 import type { APIDatasetType } from "admin/api_flow_types";
+import { Spin } from "antd";
 
 export default class DatasetAccessListView extends React.PureComponent {
   props: {
@@ -13,8 +14,10 @@ export default class DatasetAccessListView extends React.PureComponent {
 
   state: {
     datasetUsers: any,
+    isLoading: boolean,
   } = {
     datasetUsers: [],
+    isLoading: false,
   };
 
   componentDidMount() {
@@ -22,16 +25,18 @@ export default class DatasetAccessListView extends React.PureComponent {
   }
 
   async fetchData(): Promise<void> {
+    this.setState({ isLoading: true });
     const datasetUsers = await Request.receiveJSON(
       `/api/datasets/${this.props.dataset.name}/accessList`,
     );
 
     this.setState({
       datasetUsers,
+      isLoading: false,
     });
   }
 
-  render() {
+  renderTable() {
     return (
       <table className="table table-condensed table-nohead table-hover">
         <thead>
@@ -61,5 +66,13 @@ export default class DatasetAccessListView extends React.PureComponent {
         </tbody>
       </table>
     );
+  }
+
+  render() {
+    return this.state.isLoading
+      ? <div className="text-center">
+          <Spin size="large" />
+        </div>
+      : this.renderTable();
   }
 }

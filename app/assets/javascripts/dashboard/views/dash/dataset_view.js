@@ -7,7 +7,7 @@ import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import moment from "moment";
-import { Input } from "antd";
+import { Spin, Input } from "antd";
 import SpotlightItemView from "./spotlight_item_view";
 import AdvancedDatasetView from "./advanced_dataset/advanced_dataset_view";
 
@@ -31,10 +31,12 @@ class DatasetView extends React.PureComponent {
     currentDataViewType: "gallery" | "advanced",
     datasets: Array<APIDatasetType>,
     searchQuery: string,
+    isLoading: boolean,
   } = {
     currentDataViewType: "gallery",
     datasets: [],
     searchQuery: "",
+    isLoading: false,
   };
 
   componentDidMount() {
@@ -43,6 +45,7 @@ class DatasetView extends React.PureComponent {
 
   async fetchData(): Promise<void> {
     const url = "/api/datasets";
+    this.setState({ isLoading: true });
     const datasets = await Request.receiveJSON(url);
 
     const transformedDatasets = _.sortBy(
@@ -72,6 +75,7 @@ class DatasetView extends React.PureComponent {
 
     this.setState({
       datasets: transformedDatasets,
+      isLoading: false,
     });
   }
 
@@ -117,6 +121,22 @@ class DatasetView extends React.PureComponent {
         </div>
       : null;
 
+    const content = (() => {
+      if (this.state.isLoading) {
+        return (
+          <div className="text-center">
+            <Spin size="large" />
+          </div>
+        );
+      }
+
+      if (isGallery) {
+        return this.renderGallery();
+      }
+
+      return this.renderAdvanced();
+    })();
+
     return (
       <div>
         {adminHeader}
@@ -129,7 +149,7 @@ class DatasetView extends React.PureComponent {
           />
         </div>
         <div>
-          {isGallery ? this.renderGallery() : this.renderAdvanced()}
+          {content}
         </div>
       </div>
     );

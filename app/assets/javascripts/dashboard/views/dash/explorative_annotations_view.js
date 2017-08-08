@@ -3,7 +3,7 @@
 
 import React from "react";
 import Request from "libs/request";
-import { Input, Table } from "antd";
+import { Spin, Input, Table } from "antd";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
@@ -30,6 +30,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       unarchived: boolean,
     },
     searchQuery: string,
+    requestCount: number,
   } = {
     showArchivedTracings: false,
     archivedTracings: [],
@@ -39,6 +40,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       unarchived: false,
     },
     searchQuery: "",
+    requestCount: 0,
   };
 
   componentDidMount() {
@@ -48,6 +50,14 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   isFetchNecessary(): boolean {
     const accessor = this.state.showArchivedTracings ? "archived" : "unarchived";
     return !this.state.alreadyFetchedMetaInfo[accessor];
+  }
+
+  enterRequest() {
+    this.setState({ requestCount: this.state.requestCount + 1 });
+  }
+
+  leaveRequest() {
+    this.setState({ requestCount: this.state.requestCount - 1 });
   }
 
   async fetchDataMaybe(): Promise<void> {
@@ -60,7 +70,9 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       ? `/api/users/${this.props.userID}/annotations?isFinished=${isFinishedString}`
       : `/api/user/annotations?isFinished=${isFinishedString}`;
 
+    this.enterRequest();
     const tracings = await Request.receiveJSON(url);
+    this.leaveRequest();
     if (this.state.showArchivedTracings) {
       this.setState(
         update(this.state, {
@@ -211,6 +223,76 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     });
   };
 
+  renderTable() {
+    return (
+      <Table
+        dataSource={Utils.filterWithSearchQuery(
+          this.getCurrentTracings(),
+          ["id", "name", "dataSetName", "contentType"],
+          this.state.searchQuery,
+        )}
+        rowKey="id"
+        pagination={{
+          defaultPageSize: 50,
+        }}
+        className="clearfix"
+      >
+        <Column
+          title="#"
+          dataIndex="id"
+          render={(__, tracing) => FormatUtils.formatHash(tracing.id)}
+          sorter
+          className="monospace-id"
+        />
+        <Column
+          title="Name"
+          dataIndex="name"
+          sorter
+          render={(name, tracing) =>
+            <EditableTextLabel
+              value={name}
+              onChange={newName => this.renameTracing(tracing, newName)}
+            />}
+        />
+        <Column title="Data Set" dataIndex="dataSetName" sorter />
+        <Column
+          title="Stats"
+          render={(__, tracing) =>
+            tracing.stats && tracing.contentType === "skeletonTracing"
+              ? <div>
+                  <span title="Trees">
+                    <i className="fa fa-sitemap" />
+                    {tracing.stats.numberOfTrees}&nbsp;
+                  </span>
+                  <br />
+                  <span title="Nodes">
+                    <i className="fa fa-bull" />
+                    {tracing.stats.numberOfNodes}&nbsp;
+                  </span>
+                  <br />
+                  <span title="Edges">
+                    <i className="fa fa-arrows-h" />
+                    {tracing.stats.numberOfEdges}
+                  </span>
+                </div>
+              : null}
+        />
+        <Column
+          title="Type"
+          dataIndex="contentType"
+          render={(type, tracing) => `${type} - ${tracing.typ}`}
+        />
+        <Column title="Created" dataIndex="created" sorter />
+        <Column
+          title="Actions"
+          className="nowrap"
+          key="action"
+          render={(__, tracing) => this.renderActions(tracing)}
+        />
+      </Table>
+    );
+  }
+
   render() {
     return (
       <div>
@@ -261,71 +343,11 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
               </span>
             </div>}
 
-        <Table
-          dataSource={Utils.filterWithSearchQuery(
-            this.getCurrentTracings(),
-            ["id", "name", "dataSetName", "contentType"],
-            this.state.searchQuery,
-          )}
-          rowKey="id"
-          pagination={{
-            defaultPageSize: 50,
-          }}
-          className="clearfix"
-        >
-          <Column
-            title="#"
-            dataIndex="id"
-            render={(__, tracing) => FormatUtils.formatHash(tracing.id)}
-            sorter
-            className="monospace-id"
-          />
-          <Column
-            title="Name"
-            dataIndex="name"
-            sorter
-            render={(name, tracing) =>
-              <EditableTextLabel
-                value={name}
-                onChange={newName => this.renameTracing(tracing, newName)}
-              />}
-          />
-          <Column title="Data Set" dataIndex="dataSetName" sorter />
-          <Column
-            title="Stats"
-            render={(__, tracing) =>
-              tracing.stats && tracing.contentType === "skeletonTracing"
-                ? <div>
-                    <span title="Trees">
-                      <i className="fa fa-sitemap" />
-                      {tracing.stats.numberOfTrees}&nbsp;
-                    </span>
-                    <br />
-                    <span title="Nodes">
-                      <i className="fa fa-bull" />
-                      {tracing.stats.numberOfNodes}&nbsp;
-                    </span>
-                    <br />
-                    <span title="Edges">
-                      <i className="fa fa-arrows-h" />
-                      {tracing.stats.numberOfEdges}
-                    </span>
-                  </div>
-                : null}
-          />
-          <Column
-            title="Type"
-            dataIndex="contentType"
-            render={(type, tracing) => `${type} - ${tracing.typ}`}
-          />
-          <Column title="Created" dataIndex="created" sorter />
-          <Column
-            title="Actions"
-            className="nowrap"
-            key="action"
-            render={(__, tracing) => this.renderActions(tracing)}
-          />
-        </Table>
+        {this.state.requestCount === 0
+          ? this.renderTable()
+          : <div className="text-center">
+              <Spin size="large" />
+            </div>}
 
         <div className="modal-container" />
       </div>

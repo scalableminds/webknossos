@@ -3,7 +3,7 @@
 
 import React from "react";
 import Request from "libs/request";
-import { Tabs } from "antd";
+import { Spin, Tabs } from "antd";
 import type { APIUserType } from "admin/api_flow_types";
 import DatasetView from "./dataset_view";
 import DashboardTaskListView from "./dashboard_task_list_view";
@@ -79,7 +79,11 @@ class DashboardView extends React.PureComponent {
   render() {
     const user = this.state.user;
     if (!user) {
-      return null;
+      return (
+        <div className="text-center" style={{ marginTop: 50 }}>
+          <Spin size="large" />
+        </div>
+      );
     }
 
     const onTabChange = activeTabKey => {

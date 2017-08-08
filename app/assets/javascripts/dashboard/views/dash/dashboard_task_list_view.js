@@ -3,12 +3,11 @@
 
 import React from "react";
 import Request from "libs/request";
-import { Table } from "antd";
+import { Spin, Table } from "antd";
 import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import moment from "moment";
 import Toast from "libs/toast";
-import app from "app";
 
 const { Column } = Table;
 
@@ -46,10 +45,12 @@ export default class DashboardTaskListView extends React.PureComponent {
     showFinishedTasks: boolean,
     finishedTasks: Array<APITaskWithAnnotationType>,
     unfinishedTasks: Array<APITaskWithAnnotationType>,
+    isLoading: boolean,
   } = {
     showFinishedTasks: false,
     finishedTasks: [],
     unfinishedTasks: [],
+    isLoading: false,
   };
 
   componentDidMount() {
@@ -79,6 +80,7 @@ export default class DashboardTaskListView extends React.PureComponent {
   }
 
   async fetchData(): Promise<void> {
+    this.setState({ isLoading: true });
     const isFinished = this.state.showFinishedTasks;
     const url = this.props.userID
       ? `/api/users/${this.props.userID}/tasks?isFinished=${isFinished.toString()}`
@@ -87,15 +89,10 @@ export default class DashboardTaskListView extends React.PureComponent {
 
     const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
 
-    if (isFinished) {
-      this.setState({
-        finishedTasks: tasks,
-      });
-    } else {
-      this.setState({
-        unfinishedTasks: tasks,
-      });
-    }
+    this.setState({
+      [isFinished ? "finishedTasks" : "unfinishedTasks"]: tasks,
+      isLoading: false,
+    });
   }
 
   toggleShowFinished = () => {
@@ -182,7 +179,7 @@ export default class DashboardTaskListView extends React.PureComponent {
 
   async getNewTask() {
     if (this.state.unfinishedTasks.length === 0 || confirm("Do you really want another task?")) {
-      app.router.showLoadingSpinner();
+      this.setState({ isLoading: true });
       try {
         const newTaskAnnotation = await Request.receiveJSON("/user/tasks/request");
 
@@ -192,7 +189,7 @@ export default class DashboardTaskListView extends React.PureComponent {
           ]),
         });
       } finally {
-        app.router.hideLoadingSpinner();
+        this.setState({ isLoading: false });
       }
     }
   }
@@ -201,68 +198,82 @@ export default class DashboardTaskListView extends React.PureComponent {
     return this.state.showFinishedTasks ? this.state.finishedTasks : this.state.unfinishedTasks;
   }
 
+  renderTable() {
+    return (
+      <Table
+        dataSource={this.getCurrentTasks().filter(
+          task => task.annotation.state.isFinished === this.state.showFinishedTasks,
+        )}
+        rowKey="name"
+        pagination={{
+          defaultPageSize: 50,
+        }}
+      >
+        <Column
+          title="#"
+          dataIndex="id"
+          render={(__, task) => FormatUtils.formatHash(task.id)}
+          sorter
+          className="monospace-id"
+        />
+        <Column title="Type" dataIndex="type.summary" sorter />
+        <Column title="Project" dataIndex="projectName" sorter />
+        <Column title="Description" dataIndex="type.description" sorter />
+        <Column
+          title="Modes"
+          dataIndex="type.settings.allowedModes"
+          sorter
+          render={modes =>
+            modes.map(mode =>
+              <span className="label-default label" key={mode}>
+                {mode}
+              </span>,
+            )}
+        />
+        <Column
+          title="Created"
+          dataIndex="created"
+          sorter
+          render={created => moment(created).format("YYYY-MM-DD HH:SS")}
+        />
+        <Column
+          title="Actions"
+          className="nowrap"
+          render={(__, task) => this.renderActions(task)}
+        />
+      </Table>
+    );
+  }
+
   render() {
     return (
       <div>
         <h3>Tasks</h3>
-        {this.props.isAdminView
-          ? <a
-              href={jsRoutes.controllers.AnnotationIOController.userDownload(this.props.userID).url}
-              className="btn btn-primary"
-              title="download all finished tracings"
-            >
-              <i className="fa fa-download" />download
-            </a>
-          : <a href="#" className="btn btn-success" onClick={() => this.getNewTask()}>
-              Get a new task
-            </a>}
-        <div className="divider-vertical" />
-        <a href="#" className="btn btn-default" onClick={this.toggleShowFinished}>
-          Show {this.getFinishVerb()} tasks only
-        </a>
+        <div style={{ marginBottom: 20 }}>
+          {this.props.isAdminView
+            ? <a
+                href={
+                  jsRoutes.controllers.AnnotationIOController.userDownload(this.props.userID).url
+                }
+                className="btn btn-primary"
+                title="download all finished tracings"
+              >
+                <i className="fa fa-download" />download
+              </a>
+            : <a href="#" className="btn btn-success" onClick={() => this.getNewTask()}>
+                Get a new task
+              </a>}
+          <div className="divider-vertical" />
+          <a href="#" className="btn btn-default" onClick={this.toggleShowFinished}>
+            Show {this.getFinishVerb()} tasks only
+          </a>
+        </div>
 
-        <Table
-          dataSource={this.getCurrentTasks().filter(
-            task => task.annotation.state.isFinished === this.state.showFinishedTasks,
-          )}
-          rowKey="name"
-          pagination={{
-            defaultPageSize: 50,
-          }}
-        >
-          <Column
-            title="#"
-            dataIndex="id"
-            render={(__, task) => FormatUtils.formatHash(task.id)}
-            sorter
-            className="monospace-id"
-          />
-          <Column title="Type" dataIndex="type.summary" sorter />
-          <Column title="Project" dataIndex="projectName" sorter />
-          <Column title="Description" dataIndex="type.description" sorter />
-          <Column
-            title="Modes"
-            dataIndex="type.settings.allowedModes"
-            sorter
-            render={modes =>
-              modes.map(mode =>
-                <span className="label-default label" key={mode}>
-                  {mode}
-                </span>,
-              )}
-          />
-          <Column
-            title="Created"
-            dataIndex="created"
-            sorter
-            render={created => moment(created).format("YYYY-MM-DD HH:SS")}
-          />
-          <Column
-            title="Actions"
-            className="nowrap"
-            render={(__, task) => this.renderActions(task)}
-          />
-        </Table>
+        {this.state.isLoading
+          ? <div className="text-center">
+              <Spin size="large" />
+            </div>
+          : this.renderTable()}
 
         <div className="modal-container" />
       </div>

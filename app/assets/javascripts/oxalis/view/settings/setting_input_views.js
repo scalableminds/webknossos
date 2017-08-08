@@ -66,7 +66,7 @@ type LogSliderSettingProps = {
   label: string,
   max: number,
   min: number,
-  roundTo?: number,
+  roundTo: number,
   disabled?: boolean,
 };
 

@@ -200,7 +200,7 @@ class Controller extends React.PureComponent {
 
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
     const keyboardControls = {};
-    let prevSegAlpha;
+    let prevSegAlpha = 20;
     if (controlMode === ControlModeEnum.TRACE) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release

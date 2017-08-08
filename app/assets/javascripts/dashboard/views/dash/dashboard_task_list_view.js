@@ -8,6 +8,7 @@ import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import moment from "moment";
 import Toast from "libs/toast";
+import TransferTaskModal from "./transfer_task_modal";
 
 const { Column } = Table;
 
@@ -46,11 +47,15 @@ export default class DashboardTaskListView extends React.PureComponent {
     finishedTasks: Array<APITaskWithAnnotationType>,
     unfinishedTasks: Array<APITaskWithAnnotationType>,
     isLoading: boolean,
+    isTransferModalVisible: boolean,
+    currentAnnotationId: ?string,
   } = {
     showFinishedTasks: false,
     finishedTasks: [],
     unfinishedTasks: [],
     isLoading: false,
+    isTransferModalVisible: false,
+    currentAnnotationId: null,
   };
 
   componentDidMount() {
@@ -99,6 +104,13 @@ export default class DashboardTaskListView extends React.PureComponent {
     this.setState({ showFinishedTasks: !this.state.showFinishedTasks }, () => this.fetchData());
   };
 
+  openTransferModal(annotationId: string) {
+    this.setState({
+      isTransferModalVisible: true,
+      currentAnnotationId: annotationId,
+    });
+  }
+
   renderActions = (task: APITaskWithAnnotationType) => {
     const annotation = task.annotation;
     return task.annotation.state.isFinished
@@ -117,7 +129,7 @@ export default class DashboardTaskListView extends React.PureComponent {
           {this.props.isAdminView
             ? <div>
                 <li>
-                  <a href={`/annotations/Task/${annotation.id}/transfer`}>
+                  <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
                     <i className="fa fa-share" />
                     transfer
                   </a>
@@ -191,6 +203,23 @@ export default class DashboardTaskListView extends React.PureComponent {
       } finally {
         this.setState({ isLoading: false });
       }
+    }
+  }
+
+  handleTransferredTask() {
+    this.setState({ isTransferModalVisible: false });
+
+    const removeTransferredTask = tasks =>
+      tasks.filter(t => t.annotation.id !== this.state.currentAnnotationId);
+
+    if (this.state.showFinishedTasks) {
+      this.setState({
+        finishedTasks: removeTransferredTask(this.state.finishedTasks),
+      });
+    } else {
+      this.setState({
+        unfinishedTasks: removeTransferredTask(this.state.unfinishedTasks),
+      });
     }
   }
 
@@ -275,7 +304,13 @@ export default class DashboardTaskListView extends React.PureComponent {
             </div>
           : this.renderTable()}
 
-        <div className="modal-container" />
+        <TransferTaskModal
+          visible={this.state.isTransferModalVisible}
+          annotationId={this.state.currentAnnotationId}
+          onCancel={() => this.setState({ isTransferModalVisible: false })}
+          onChange={() => this.handleTransferredTask()}
+          userID={this.props.userID}
+        />
       </div>
     );
   }

@@ -348,8 +348,6 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
           : <div className="text-center">
               <Spin size="large" />
             </div>}
-
-        <div className="modal-container" />
       </div>
     );
   }

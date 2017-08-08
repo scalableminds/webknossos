@@ -12,8 +12,8 @@ export default class UserPage {
   deleteExperienceButton = "div.ant-modal-footer > div > button:nth-child(3)";
 
   selectFirstUserCheckbox = "table > tbody > tr:nth-child(1) > td.ant-table-selection-column > span > label > span > input";
+  selectSecondTeamUserRole = "div.ant-modal-body div.ant-row:nth-child(3) > div:nth-child(2) > div:nth-child(1) > label:nth-child(2) > span:nth-child(2)";
   selectSecondTeamCheckbox = "div.ant-modal-body > div:nth-child(3) > div:nth-child(1) > label > span.ant-checkbox.ant-checkbox-checked > input";
-  selectSecondTeamUserRole = "div.ant-modal-body > div:nth-child(3) > div:nth-child(2) > div > label.ant-radio-button-wrapper:nth-child(2) > span:nth-child(2)";
 
   get() {
     browser.url("/users");
@@ -42,8 +42,9 @@ export default class UserPage {
     browser.click(this.changeTeamButton);
     browser.waitForVisible(this.modal);
     browser.waitForExist(this.selectSecondTeamUserRole);
-    browser.click(this.selectSecondTeamUserRole);
     browser.pause(3000);
+    browser.click(this.selectSecondTeamUserRole);
+    browser.pause(6000);
   }
 
   unSelectSecondTeam() {

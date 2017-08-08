@@ -93,9 +93,6 @@ class UserListView extends React.PureComponent {
   };
 
   render() {
-    const compareFunc = (attribute: string) => (a: Object, b: Object) =>
-      a[attribute].toLowerCase().localeCompare(b[attribute].toLowerCase());
-
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
       onChange: selectedUserIds => {
@@ -175,36 +172,52 @@ class UserListView extends React.PureComponent {
             title="Last name"
             dataIndex="lastName"
             key="lastName"
-            sorter={compareFunc("lastName")}
+            sorter={Utils.localeCompareBy("lastName")}
           />
           <Column
             title="First name"
             dataIndex="firstName"
             key="firstName"
-            sorter={compareFunc("firstName")}
+            sorter={Utils.localeCompareBy("firstName")}
           />
-          <Column title="Email" dataIndex="email" key="email" sorter={compareFunc("email")} />
+          <Column
+            title="Email"
+            dataIndex="email"
+            key="email"
+            sorter={Utils.localeCompareBy("email")}
+          />
           <Column
             title="Experiences"
             dataIndex="experiences"
             key="experiences"
+            width={300}
             render={(experiences, user: APIUserType) =>
               _.map(experiences, (value, domain) =>
-                <Tag key={`experience_${user.id}_${domain}`}>
-                  {domain} : {value}
-                </Tag>,
+                <div
+                  style={{ marginBottom: 8, display: "inline-block" }}
+                  key={`experience_${user.id}_${domain}`}
+                >
+                  <Tag>
+                    {domain} : {value}
+                  </Tag>
+                </div>,
               )}
           />
           <Column
             title="Teams - Role"
             dataIndex="teams"
             key="teams_"
+            width={300}
             render={(teams: Array<APITeamRole>, user: APIUserType) =>
               teams.map(team =>
-                <span className="nowrap" key={`team_role_${user.id}_${team.team}`}>
-                  {team.team}{" "}
-                  <Tag color={TemplateHelpers.stringToColor(team.role.name)}>{team.role.name}</Tag>
-                </span>,
+                <div
+                  style={{ marginBottom: 8, display: "inline-block" }}
+                  key={`team_role_${user.id}_${team.team}`}
+                >
+                  <Tag color={TemplateHelpers.stringToColor(team.role.name)}>
+                    {team.team}: {team.role.name}
+                  </Tag>
+                </div>,
               )}
           />
           <Column

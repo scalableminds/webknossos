@@ -95,6 +95,24 @@ const Utils = {
     };
   },
 
+  localeCompareBy<T: Object>(
+    selector: string | (T => string),
+    isSortedAscending: boolean = true,
+  ): (T, T) => number {
+    const sortingOrder = isSortedAscending ? 1 : -1;
+
+    return (a: T, b: T): number => {
+      const valueA: string = typeof selector === "function" ? selector(a) : a[selector];
+      const valueB: string = typeof selector === "function" ? selector(b) : b[selector];
+      return (
+        valueA.localeCompare(valueB, "en", {
+          numeric: true,
+          usage: "search",
+        }) * sortingOrder
+      );
+    };
+  },
+
   stringToNumberArray(s: string): Array<number> {
     // remove leading/trailing whitespaces
     s = s.trim();
@@ -264,7 +282,7 @@ const Utils = {
     }
   },
 
-  // Filters an array given a search string. Supports regex seach and several words as OR query.
+  // Filters an array given a search string. Supports searching for several words as OR query.
   // Supports nested properties
   filterWithSearchQuery<T: Object>(
     collection: Array<T>,

@@ -56,7 +56,7 @@ class ExperienceModalView extends React.PureComponent {
 
   deleteExperience = () => {
     if (this.state.domain) {
-      const { domain } = this.state.domain;
+      const { domain } = this.state;
       const newUserPromises = this.props.users.map(user => {
         if (this.props.selectedUserIds.includes(user.id)) {
           const newExperiences = _.omit(user.experiences, domain);

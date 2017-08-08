@@ -50,10 +50,14 @@ case class Annotation(
 
   val tracingType = tracingReference.typ
 
-  val restrictions = if(readOnly.getOrElse(false))
+  val restrictions = buildRestrictions()
+
+  def buildRestrictions(overridingReadOnly: Option[Boolean] = None): AnnotationRestrictions = {
+    if(overridingReadOnly.getOrElse(readOnly.getOrElse(false)))
       AnnotationRestrictions.readonlyAnnotation()
     else
       AnnotationRestrictions.defaultAnnotationRestrictions(this)
+  }
 
   def removeTask() = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
@@ -67,9 +71,6 @@ case class Annotation(
     AnnotationService.saveToDB(this)
   }
 
-  def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] =
-    toJson(user)
-
   def isRevertPossible: Boolean = {
     // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
     // hence we need a way to decide if a tracing can safely be revert. We will use the created date of the
@@ -77,7 +78,7 @@ case class Annotation(
     created > 1470002400000L  // 1.8.2016, 00:00:00
   }
 
-  def toJson(user: Option[User] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def toJson(user: Option[User] = None, overridingReadOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       taskJson <- task.flatMap(t => Task.transformToJson(t, user)).getOrElse(JsNull)
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
@@ -90,7 +91,7 @@ case class Annotation(
         "typ" -> typ,
         "task" -> taskJson,
         "stats" -> statistics,
-        "restrictions" -> AnnotationRestrictions.writeAsJson(restrictions, user),
+        "restrictions" -> AnnotationRestrictions.writeAsJson(buildRestrictions(overridingReadOnly), user),
         "formattedHash" -> Formatter.formatHash(id),
         "content" -> tracingReference,
         "dataSetName" -> dataSetName,

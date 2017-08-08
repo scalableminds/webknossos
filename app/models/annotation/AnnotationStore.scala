@@ -60,7 +60,7 @@ object AnnotationStore extends LazyLogging {
     }
   }
 
-  def storeMerged(annotation: Fox[Annotation], id: BSONObjectID) = {
+  def storeMergedInCache(annotation: Fox[Annotation], id: BSONObjectID) = {
     val storedMerge = StoredResult(annotation)
     val mID = AnnotationIdentifier(AnnotationType.Explorational, id.stringify)
     Cache.set(mID.toUniqueString, storedMerge, maxCacheTime)

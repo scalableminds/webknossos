@@ -21,7 +21,7 @@ import scala.concurrent.Future
 class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   extends Controller
     with Secured
-    with TracingInformationProvider
+    with AnnotationInformationProvider
     with LazyLogging {
 
   private def nameForNMLs(fileNames: Seq[String]) =

@@ -13,6 +13,7 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
 
   override val cache = false
 
+  //TODO: RocksDB use this again?
   override def nameForAnnotation(a: Annotation)(implicit ctx: DBAccessContext): Future[String] = a match {
     case annotation: Annotation =>
       for {

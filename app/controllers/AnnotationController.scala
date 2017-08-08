@@ -34,7 +34,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   extends Controller
     with Secured
     with FoxImplicits
-    with TracingInformationProvider {
+    with AnnotationInformationProvider {
 
   implicit val timeout = Timeout(5 seconds)
 
@@ -43,7 +43,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
     withAnnotation(annotationId) { annotation =>
       for {
-        js <- tracingInformation(annotation, readOnly)
+        _ <- annotation.restrictions.allowAccess(request.userOpt) ?~> "notAllowed" ~> BAD_REQUEST
+        js <- annotation.toJson(request.userOpt, Some(readOnly))
       } yield {
         request.userOpt.foreach { user =>
           UsedAnnotationDAO.use(user, annotationId)

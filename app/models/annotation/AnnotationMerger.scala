@@ -74,7 +74,7 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
           AnnotationState.InProgress,
           _id = newId) //TODO: rocksDB set readOnly from restrictions.. createRestrictions(readOnly)
       }
-      AnnotationStore.storeMerged(mergedAnnotationFox, newId)
+      AnnotationStore.storeMergedInCache(mergedAnnotationFox, newId)
       mergedAnnotationFox
     }
   }

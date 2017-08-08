@@ -1,25 +1,16 @@
-package controllers
-
-import javax.inject.Inject
+package models.annotation
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType._
 import models.annotation.handler.AnnotationInformationHandler
-import models.annotation.{Annotation, AnnotationIdentifier, AnnotationStore}
-import oxalis.security.{AuthenticatedRequest, Secured, UserAwareRequest}
-import play.api.i18n.{I18nSupport, Messages, MessagesApi}
+import oxalis.security.{AuthenticatedRequest, UserAwareRequest}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 
-class TracingController @Inject() (val messagesApi: MessagesApi)
-  extends Controller
-    with Secured
-    with TracingInformationProvider
-
-trait TracingInformationProvider
+trait AnnotationInformationProvider
   extends play.api.http.Status
     with FoxImplicits
-    with models.basics.Implicits with I18nSupport {
+    with models.basics.Implicits {
 
   import AnnotationInformationHandler._
 
@@ -60,15 +51,4 @@ trait TracingInformationProvider
     }
   }
 
-  def tracingInformation(
-    annotation: Annotation,
-    readOnly: Boolean)(implicit request: UserAwareRequest[_]): Fox[JsValue] = {
-    for {
-      _ <- annotation.restrictions.allowAccess(request.userOpt) ?~> Messages("notAllowed") ~> BAD_REQUEST
-      json <- if(readOnly)
-                annotation.makeReadOnly.annotationInfo(request.userOpt)
-              else
-                annotation.annotationInfo(request.userOpt)
-    } yield json
-  }
 }

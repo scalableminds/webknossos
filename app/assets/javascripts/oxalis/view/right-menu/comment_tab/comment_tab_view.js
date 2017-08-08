@@ -19,7 +19,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import TreeCommentList from "oxalis/view/right-menu/comment_tab/tree_comment_list";
 import type { Dispatch } from "redux";
-import type { OxalisState, SkeletonTracingType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType, TreeType, CommentType } from "oxalis/store";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 
 const InputGroup = Input.Group;
@@ -50,58 +50,32 @@ class CommentTabView extends React.Component {
   });
 
   nextComment = (forward = true) => {
-    Utils.zipMaybe(
-      getActiveTree(this.props.skeletonTracing),
-      getActiveNode(this.props.skeletonTracing),
-    ).map(([activeTree, activeNode]) => {
+    getActiveNode(this.props.skeletonTracing).map(activeNode => {
       const sortAscending = forward ? this.state.isSortedAscending : !this.state.isSortedAscending;
-      const sortOrder = sortAscending ? "asc" : "desc";
       const { trees } = this.props.skeletonTracing;
 
-      // get tree of active comment or activeTree if there is no active comment
-      let nextComment = null;
-      // $FlowFixMe
-      let nextTree = _.find(trees, tree =>
-        _.some(tree.comments, comment => comment.node === activeNode.id),
-      );
-      if (nextTree != null) {
-        const sortedComments = _.orderBy(nextTree.comments, comment => comment.node, [sortOrder]);
+      // Create a sorted, flat array of all comments across all trees
+      const sortedTrees = _.values(trees)
+        .slice(0)
+        .sort(Utils.localeCompareBy("name", sortAscending));
 
-        // try to find next comment for this tree
-        nextComment = _.find(
-          sortedComments,
-          comment =>
-            this.comparator(comment.node, sortAscending) >
-            this.comparator(activeNode.id, sortAscending),
-        );
-
-        // try to find next tree with at least one comment
-        if (nextComment == null) {
-          // $FlowFixMe
-          nextTree = _.find(
-            trees,
-            tree =>
-              this.comparator(tree.treeId, sortAscending) >
-                this.comparator(activeTree.treeId, sortAscending) && tree.comments.length,
+      // eslint-disable-next-line prefer-arrow-callback
+      const sortedComments = _.flatMap(sortedTrees, function(tree: TreeType): Array<CommentType> {
+        return tree.comments
+          .slice(0)
+          .sort(
+            Utils.localeCompareBy(comment => `${comment.content}_${comment.node}`, sortAscending),
           );
-        }
+      });
+
+      const currentCommentIndex = _.findIndex(sortedComments, { node: activeNode.id });
+      const nextCommentIndex = (currentCommentIndex + 1) % sortedComments.length;
+
+      if (nextCommentIndex >= 0 && nextCommentIndex < sortedComments.length) {
+        this.props.setActiveNode(sortedComments[nextCommentIndex].node);
       }
 
-      // try to find any tree with at least one comment, starting from the beginning
-      if (nextTree == null) {
-        // $FlowFixMe
-        nextTree = _.find(trees, tree => tree.comments.length);
-      }
-
-      if (nextComment == null && nextTree != null) {
-        const sortedComments = _.orderBy(nextTree.comments, ["node"], [sortOrder]);
-        nextComment = sortedComments[0];
-      }
-
-      // if a comment was found set the corresponding node active, causing the list to update
-      if (nextComment) {
-        this.props.setActiveNode(nextComment.node);
-      }
+      return null; // satisfy linter
     });
   };
 
@@ -131,13 +105,16 @@ class CommentTabView extends React.Component {
   };
 
   getTreeComponents() {
-    const sortOrder = this.state.isSortedAscending ? "asc" : "desc";
-
-    return _.orderBy(this.props.skeletonTracing.trees, ["treeId"], [sortOrder])
+    return _.values(this.props.skeletonTracing.trees)
+      .sort(Utils.localeCompareBy("name", this.state.isSortedAscending))
       .filter(tree => tree.comments.length > 0)
       .map(tree =>
         // one tree and its comments
-        <TreeCommentList key={tree.treeId} tree={tree} sortOrder={sortOrder} />,
+        <TreeCommentList
+          key={tree.treeId}
+          tree={tree}
+          isSortedAscending={this.state.isSortedAscending}
+        />,
       );
   }
 

@@ -24,6 +24,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import Request from "libs/request";
 import ApiLoader from "oxalis/api/api_loader";
+import api from "oxalis/api/internal_api";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
@@ -199,6 +200,7 @@ class Controller extends React.PureComponent {
 
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
     const keyboardControls = {};
+    let prevSegAlpha;
     if (controlMode === ControlModeEnum.TRACE) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
@@ -224,6 +226,22 @@ class Controller extends React.PureComponent {
           event.preventDefault();
           event.stopPropagation();
           Model.save();
+        },
+
+        // In the long run this should probably live in a user script
+        "9": function toggleSegmentationOpacity() {
+          // Flow cannot infer the return type of getConfiguration :(
+          // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
+          const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
+          let newSegAlpha = 0;
+
+          if (curSegAlpha > 0) {
+            prevSegAlpha = curSegAlpha;
+          } else {
+            newSegAlpha = prevSegAlpha;
+          }
+
+          api.data.setConfiguration("segmentationOpacity", newSegAlpha);
         },
       });
     }

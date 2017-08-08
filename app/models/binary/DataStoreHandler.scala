@@ -3,11 +3,12 @@
  */
 package models.binary
 
-import com.scalableminds.braingames.binary.helpers.{RPC, ThumbnailHelpers}
+import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
 import com.scalableminds.braingames.datastore.models.ImageThumbnail
 import com.scalableminds.braingames.datastore.tracings.TracingReference
 import com.scalableminds.braingames.datastore.tracings.skeleton.CreateEmptyParameters
+import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.codec.binary.Base64

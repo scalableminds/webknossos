@@ -77,6 +77,7 @@ export class LogSliderSetting extends React.PureComponent {
   props: LogSliderSettingProps;
   static defaultProps = {
     disabled: false,
+    roundTo: 3,
   };
 
   onChangeInput = (value: number) => {
@@ -101,8 +102,7 @@ export class LogSliderSetting extends React.PureComponent {
     return Math.exp((value - b) / a);
   }
 
-  formatTooltip = (value: number) =>
-    Utils.roundTo(this.calculateValue(value), this.props.roundTo != null ? this.props.roundTo : 3);
+  formatTooltip = (value: number) => Utils.roundTo(this.calculateValue(value), this.props.roundTo);
 
   getSliderValue = () => {
     const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
@@ -185,9 +185,14 @@ type NumberInputSettingProps = {
 
 export class NumberInputSetting extends React.PureComponent {
   props: NumberInputSettingProps;
+  static defaultProps = {
+    max: 100,
+    min: 1,
+    step: 1,
+  };
 
   render() {
-    const { onChange, value, label, max, min = 1, step = 1 } = this.props;
+    const { onChange, value, label, max, min, step } = this.props;
 
     return (
       <Row className="settings-row">
@@ -352,6 +357,9 @@ type DropdownSettingProps = {
 
 export class DropdownSetting extends React.PureComponent {
   props: DropdownSettingProps;
+  static defaultProps = {
+    children: undefined,
+  };
 
   render() {
     const { onChange, label, value, children } = this.props;

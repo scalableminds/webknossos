@@ -106,6 +106,7 @@ class DatasetImportView extends React.PureComponent {
 
   getMessageComponents() {
     const messageElements = this.state.messages.map((message, i) =>
+      // eslint-disable-next-line react/no-array-index-key
       <Alert key={i} message={Object.values(message)[0]} type={Object.keys(message)[0]} showIcon />,
     );
 

@@ -205,11 +205,11 @@ class UserListView extends React.PureComponent {
             width={300}
             render={(teams: Array<APITeamRole>, user: APIUserType) =>
               teams.map(team =>
-                <div style={{ marginBottom: 8, display: "inline-block" }}>
-                  <Tag
-                    color={TemplateHelpers.stringToColor(team.role.name)}
-                    key={`team_role_${user.id}_${team.team}`}
-                  >
+                <div
+                  style={{ marginBottom: 8, display: "inline-block" }}
+                  key={`team_role_${user.id}_${team.team}`}
+                >
+                  <Tag color={TemplateHelpers.stringToColor(team.role.name)}>
                     {team.team}: {team.role.name}
                   </Tag>
                 </div>,

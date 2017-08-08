@@ -206,7 +206,8 @@ class ArbitraryView {
 
     if (this.scaleFactor + delta > MIN_SCALE && this.scaleFactor + delta < MAX_SCALE) {
       this.scaleFactor += Number(delta);
-      this.width = this.height = this.scaleFactor * Constants.VIEWPORT_WIDTH;
+      this.width = this.scaleFactor * Constants.VIEWPORT_WIDTH;
+      this.height = this.scaleFactor * Constants.VIEWPORT_WIDTH;
       this.container.width(this.width);
       this.container.height(this.height);
 

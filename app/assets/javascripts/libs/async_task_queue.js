@@ -1,7 +1,10 @@
 /*
  * task_serializer.js
  * @flow
+ *
  */
+
+/* eslint-disable no-await-in-loop */
 
 import Utils from "libs/utils";
 import Deferred from "libs/deferred";

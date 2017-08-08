@@ -193,9 +193,14 @@ class UserListView extends React.PureComponent {
             width={300}
             render={(experiences, user: APIUserType) =>
               _.map(experiences, (value, domain) =>
-                <Tag key={`experience_${user.id}_${domain}`}>
-                  {domain} : {value}
-                </Tag>,
+                <div
+                  style={{ marginBottom: 8, display: "inline-block" }}
+                  key={`experience_${user.id}_${domain}`}
+                >
+                  <Tag>
+                    {domain} : {value}
+                  </Tag>
+                </div>,
               )}
           />
           <Column

@@ -10,7 +10,7 @@
     "url": "git://github.com/scalableminds/webknossos.git"
   },
   "devDependencies": {
-    "ava": "^0.19.1",
+    "ava": "^0.21.0",
     "babel-cli": "^6.24.1",
     "babel-core": "^6.24.1",
     "babel-eslint": "^7.2.3",

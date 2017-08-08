@@ -190,6 +190,7 @@ class UserListView extends React.PureComponent {
             title="Experiences"
             dataIndex="experiences"
             key="experiences"
+            width={300}
             render={(experiences, user: APIUserType) =>
               _.map(experiences, (value, domain) =>
                 <Tag key={`experience_${user.id}_${domain}`}>

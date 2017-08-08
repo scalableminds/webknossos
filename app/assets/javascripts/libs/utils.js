@@ -104,7 +104,6 @@ const Utils = {
       const valueA: string = typeof selector === "function" ? selector(a) : a[selector];
       const valueB: string = typeof selector === "function" ? selector(b) : b[selector];
       return (
-        // $FlowFixMe
         valueA.localeCompare(valueB, "en", {
           numeric: true,
           usage: "search",

@@ -38,16 +38,16 @@ describe("User List", () => {
   //   expect(users[0].teams).toContain(newTeam);
   // });
 
-  it("should unselect a team of a user", () => {
-    const newTeam = { team: "test1", role: { name: "admin" } };
-    page.selectSingleUser();
-    page.unSelectSecondTeam();
-    page.clickConfirmButton();
+  // it("should unselect a team of a user", () => {
+  //   const newTeam = { team: "test1", role: { name: "admin" } };
+  //   page.selectSingleUser();
+  //   page.unSelectSecondTeam();
+  //   page.clickConfirmButton();
 
-    // confirm that the user updated
-    const users = browser.getUsersFromServer();
-    expect(users[0].teams).not.toContain(newTeam);
-  });
+  //   // confirm that the user updated
+  //   const users = browser.getUsersFromServer();
+  //   expect(users[0].teams).not.toContain(newTeam);
+  // });
 
   it("should assign new experience", () => {
     const newExperience = { domain: "Testing", level: 42 };

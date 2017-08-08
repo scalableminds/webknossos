@@ -57,14 +57,13 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def infoReadOnly(typ: String, id: String) = info(typ, id, readOnly = true)
 
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean) = Authenticated.async { implicit request =>
-    AnnotationMerger.withMergedAnnotation(typ, id, mergedId, mergedTyp, readOnly) { annotation =>
-      for {
-        _ <- annotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
-        savedAnnotation <- annotation.copy(typ = AnnotationType.Explorational, _id = BSONObjectID.generate).saveToDB
-        json <- savedAnnotation.toJson(Some(request.user))
-      } yield {
-        JsonOk(json, Messages("annotation.merge.success"))
-      }
+    for {
+      mergedAnnotation <- AnnotationMerger.mergeTwoByIds(id, typ, mergedId, mergedTyp, readOnly)
+      _ <- mergedAnnotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
+      savedAnnotation <- mergedAnnotation.saveToDB
+      json <- savedAnnotation.toJson(Some(request.user))
+    } yield {
+      JsonOk(json, Messages("annotation.merge.success"))
     }
   }
 

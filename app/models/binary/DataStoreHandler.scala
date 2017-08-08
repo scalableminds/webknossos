@@ -7,7 +7,7 @@ import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
 import com.scalableminds.braingames.datastore.models.ImageThumbnail
 import com.scalableminds.braingames.datastore.tracings.TracingReference
-import com.scalableminds.braingames.datastore.tracings.skeleton.CreateEmptyParameters
+import com.scalableminds.braingames.datastore.tracings.skeleton.{CreateEmptyParameters, TracingSelector}
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -27,6 +27,9 @@ trait DataStoreHandlingStrategy {
 
   def duplicateSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, tracingReference: TracingReference): Fox[TracingReference] =
     Fox.failure("DatStore doesn't support duplication of SkeletonTracings.")
+
+  def mergeSkeletonTracings(dataStoreInfo: DataStoreInfo, base: DataSource, tracingSelectors: List[TracingSelector]): Fox[TracingReference] =
+    Fox.failure("DataStore does't support merging of SkeletonTracings.")
 
   def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[TracingReference] =
     Fox.failure("DataStore doesn't support creation of VolumeTracings.")
@@ -56,6 +59,13 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
     RPC(s"${dataStoreInfo.url}/data/tracings/skeletons/${tracingReference.id}/duplicate")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .getWithJsonResponse[TracingReference]
+  }
+
+  override def mergeSkeletonTracings(dataStoreInfo: DataStoreInfo, base: DataSource, tracingSelectors: List[TracingSelector]): Fox[TracingReference] = {
+    logger.debug("Called to merge SkeletonTracings. Base: " + base.id + " Datastore: " + dataStoreInfo)
+    RPC(s"${dataStoreInfo.url}/dat/tracings/skeletons/createMergedFromIds")
+      .withQueryString("token" -> DataTokenService.webKnossosToken)
+      .postWithJsonResponse[List[TracingSelector], TracingReference](tracingSelectors)
   }
 
   override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[TracingReference] = {

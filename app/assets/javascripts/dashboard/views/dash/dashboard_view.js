@@ -8,6 +8,7 @@ import type { APIUserType } from "admin/api_flow_types";
 import DatasetView from "./dataset_view";
 import DashboardTaskListView from "./dashboard_task_list_view";
 import ExplorativeAnnotationsView from "./explorative_annotations_view";
+import LoggedTimeView from "./logged_time_view";
 
 const TabPane = Tabs.TabPane;
 
@@ -69,7 +70,7 @@ class DashboardView extends React.PureComponent {
       </TabPane>,
       isAdmin
         ? <TabPane tab="Tracked Time" key="trackedTime">
-            todo!
+            <LoggedTimeView userID={this.props.userID} />
           </TabPane>
         : null,
     ];
@@ -90,7 +91,7 @@ class DashboardView extends React.PureComponent {
     };
     const userHeader = this.props.isAdminView
       ? <h3>
-          User: ${user.firstName} ${user.lastName}
+          User: {user.firstName} {user.lastName}
         </h3>
       : null;
 

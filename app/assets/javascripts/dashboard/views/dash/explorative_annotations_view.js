@@ -187,6 +187,30 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     });
   }
 
+  archiveAll = () => {
+    if (!confirm("Are you sure you want to archive all explorative annotations?")) {
+      return;
+    }
+
+    const unarchivedAnnoationIds = this.state.unarchivedTracings.map(t => t.id);
+    Request.sendJSONReceiveJSON(
+      jsRoutes.controllers.AnnotationController.finishAll("Explorational").url,
+      {
+        method: "POST",
+        data: {
+          annotations: unarchivedAnnoationIds,
+        },
+      },
+    ).then(data => {
+      Toast.message(data.messages);
+
+      this.setState({
+        archivedTracings: this.state.unarchivedTracings.concat(this.state.archivedTracings),
+        unarchivedTracings: [],
+      });
+    });
+  };
+
   render() {
     return (
       <div>
@@ -230,7 +254,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
 
               <span style={{ marginLeft: 5 }}>
                 {!this.state.showArchivedTracings
-                  ? <a href="#" className="btn btn-default">
+                  ? <a href="#" className="btn btn-default" onClick={this.archiveAll}>
                       Archive all
                     </a>
                   : null}
@@ -261,7 +285,10 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
             dataIndex="name"
             sorter
             render={(name, tracing) =>
-              <EditableTextLabel value={name} onChange={this.renameTracing.bind(this, tracing)} />}
+              <EditableTextLabel
+                value={name}
+                onChange={newName => this.renameTracing(tracing, newName)}
+              />}
           />
           <Column title="Data Set" dataIndex="dataSetName" sorter />
           <Column

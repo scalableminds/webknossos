@@ -9,6 +9,7 @@ import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
 import update from "immutability-helper";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -163,6 +164,29 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     this.setState({ searchQuery: event.target.value });
   };
 
+  renameTracing(tracing: APIAnnotationType, name: string) {
+    const tracings = this.getCurrentTracings();
+
+    const newTracings = tracings.map(currentTracing => {
+      if (currentTracing.id !== tracing.id) {
+        return currentTracing;
+      } else {
+        return update(currentTracing, { name: { $set: name } });
+      }
+    });
+
+    this.setState({
+      [this.state.showArchivedTracings ? "archivedTracings" : "unarchivedTracings"]: newTracings,
+    });
+
+    const url = `/annotations/${tracing.typ}/${tracing.id}/name`;
+    const payload = { data: { name } };
+
+    Request.sendJSONReceiveJSON(url, payload).then(response => {
+      Toast.message(response.messages);
+    });
+  }
+
   render() {
     return (
       <div>
@@ -199,15 +223,14 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
 
               <div className="divider-vertical" />
 
-              <span>
-                <a href="#" className="btn btn-default" onClick={this.toggleShowArchived}>
-                  <i className="fa fa-spinner fa-spin hide" />
-                  {this.state.showArchivedAnnotations
-                    ? "Show open tracings"
-                    : "Show archived tracings"}
-                </a>
-                {this.state.showArchivedAnnotations
-                  ? <a href="#" id="archive-all" className="btn btn-default">
+              <a href="#" className="btn btn-default" onClick={this.toggleShowArchived}>
+                <i className="fa fa-spinner fa-spin hide" />
+                Show {this.state.showArchivedTracings ? "open" : "archived"} tracings
+              </a>
+
+              <span style={{ marginLeft: 5 }}>
+                {!this.state.showArchivedTracings
+                  ? <a href="#" className="btn btn-default">
                       Archive all
                     </a>
                   : null}
@@ -229,11 +252,17 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
           <Column
             title="#"
             dataIndex="id"
-            render={(__, task) => FormatUtils.formatHash(task.id)}
+            render={(__, tracing) => FormatUtils.formatHash(tracing.id)}
             sorter
             className="monospace-id"
           />
-          <Column title="Name" dataIndex="name" sorter />
+          <Column
+            title="Name"
+            dataIndex="name"
+            sorter
+            render={(name, tracing) =>
+              <EditableTextLabel value={name} onChange={this.renameTracing.bind(this, tracing)} />}
+          />
           <Column title="Data Set" dataIndex="dataSetName" sorter />
           <Column
             title="Stats"

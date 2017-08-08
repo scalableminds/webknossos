@@ -10,7 +10,7 @@
     "url": "git://github.com/scalableminds/webknossos.git"
   },
   "devDependencies": {
-    "ava": "^0.19.1",
+    "ava": "^0.21.0",
     "babel-cli": "^6.24.1",
     "babel-core": "^6.24.1",
     "babel-eslint": "^7.2.3",
@@ -37,7 +37,7 @@
     "eslint-plugin-jsx-a11y": "2.2.3",
     "eslint-plugin-react": "^6.8.0",
     "exports-loader": "^0.6.4",
-    "extract-text-webpack-plugin": "^2.1.0",
+    "extract-text-webpack-plugin": "^3.0.0",
     "file-loader": "^0.11.1",
     "flow-bin": "^0.47.0",
     "imports-loader": "^0.7.1",
@@ -55,7 +55,7 @@
     "wdio-selenium-standalone-service": "0.0.9",
     "wdio-spec-reporter": "0.1.0",
     "webdriverio": "^4.8.0",
-    "webpack": "^3.0.0"
+    "webpack": "^3.5.0"
   },
   "scripts": {
     "test": "buildtools/test.sh prepare -q && buildtools/test.sh test --timeout=30s",

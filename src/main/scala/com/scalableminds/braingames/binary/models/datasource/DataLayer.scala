@@ -47,6 +47,8 @@ object ElementClass extends Enumeration {
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass.id
 
   def fromBytesPerElement(bytesPerElement: Int): Option[ElementClass.Value] = values.find(_.id == bytesPerElement)
+
+  def maxValue(elementClass: ElementClass.Value): Long = 1L << (elementClass.id * 8L)
 }
 
 trait DataLayerLike {
@@ -95,7 +97,7 @@ trait DataLayer extends DataLayerLike {
   def bucketProvider: BucketProvider
 
   def doesContainBucket(bucket: BucketPosition) =
-    boundingBox.contains(bucket.topLeft.toHighestRes)
+    boundingBox.intersects(bucket.toHighestResBoundingBox)
 
   lazy val bytesPerElement =
     ElementClass.bytesPerElement(elementClass)
@@ -146,7 +148,7 @@ trait SegmentationLayer extends DataLayer with SegmentationLayerLike {
 }
 
 object SegmentationLayer {
-  val defaultLargestSegmentId = 1000000000
+  val defaultLargestSegmentId = 0
 }
 
 case class AbstractDataLayer(

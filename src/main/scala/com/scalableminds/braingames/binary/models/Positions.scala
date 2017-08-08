@@ -4,7 +4,7 @@
 package com.scalableminds.braingames.binary.models
 
 import com.scalableminds.braingames.binary.models.datasource.DataLayer
-import com.scalableminds.util.geometry.GenericPosition
+import com.scalableminds.util.geometry.{BoundingBox, GenericPosition, Point3D}
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 class VoxelPosition(
@@ -90,6 +90,9 @@ class BucketPosition(
   def nextBucketInZ: BucketPosition = {
     new BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution), resolution)
   }
+
+  def toHighestResBoundingBox: BoundingBox =
+    new BoundingBox(Point3D(globalX, globalY, globalZ), bucketLength * resolution, bucketLength * resolution, bucketLength * resolution)
 }
 
 class CubePosition(
@@ -113,6 +116,9 @@ class CubePosition(
 
     new VoxelPosition(tlx, tly, tlz, resolution)
   }
+
+  def toHighestResBoundingBox: BoundingBox =
+    new BoundingBox(Point3D(globalX, globalY, globalZ), cubeLength * resolution, cubeLength * resolution, cubeLength * resolution)
 
   override def toString: String = {
     s"CPos($x,$y,$z,res=$resolution)"

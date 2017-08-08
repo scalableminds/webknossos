@@ -99,7 +99,13 @@ class DataSourceService @Inject()(
     val errors = List(
       Check(dataSource.scale.isValid, "DataSource scale is invalid"),
       Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),
-      Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty")
+      Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
+      Check(dataSource.dataLayers.forall {
+        case layer: SegmentationLayer =>
+          layer.largestSegmentId > 0 && layer.largestSegmentId < ElementClass.maxValue(layer.elementClass)
+        case _ =>
+          true
+      }, "Largest segment ID invalid")
     ).flatten
 
     if (errors.isEmpty) {

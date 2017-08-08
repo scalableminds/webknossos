@@ -18,8 +18,11 @@ import {
   deleteTreeAction,
   shuffleTreeColorAction,
   selectNextTreeAction,
+  toggleAllTreesAction,
+  toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import type { Dispatch } from "redux";
+import Store from "oxalis/store";
 import type { OxalisState } from "oxalis/store";
 
 const ButtonGroup = Button.Group;
@@ -47,6 +50,14 @@ class TreesTabView extends React.Component {
       this.props.onShuffleTreeColor(tree.treeId);
     }
   };
+
+  toggleAllTrees() {
+    Store.dispatch(toggleAllTreesAction());
+  }
+
+  toggleInactiveTrees() {
+    Store.dispatch(toggleInactiveTreesAction());
+  }
 
   getTreesComponents() {
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
@@ -97,6 +108,12 @@ class TreesTabView extends React.Component {
           </Button>
           <Button onClick={this.shuffleAllTreeColors} title="Shuffle all Colors">
             <i className="fa fa-random" /> Shuffle All Colors
+          </Button>
+          <Button onClick={this.toggleAllTrees} title="Toggle visibility of all trees">
+            <i className="fa fa-toggle-on" /> Toggle trees
+          </Button>
+          <Button onClick={this.toggleInactiveTrees} title="Toggle visibility of inactive trees">
+            <i className="fa fa-toggle-off" /> Toggle inactive trees
           </Button>
         </ButtonGroup>
         <InputGroup compact>

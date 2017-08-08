@@ -606,7 +606,6 @@ class UserApi {
     - inverseX
     - inverseY
     - keyboardDelay
-    - firstVisToggle
     - particleSize
     - overrideNodeRadius
     - sortTreesByName

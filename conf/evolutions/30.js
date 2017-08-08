@@ -2,7 +2,7 @@
 db.userDataLayers.update({}, {$set: {"dataLayer._isCompressed": false}}, {"multi": true});
 
 db.dataSets.find().forEach(function (elem) {
-  if(elem.dataSource) {
+  if(elem.dataSource && elem.dataSource.dataLayers) {
     var dataLayers = elem.dataSource.dataLayers;
     for (var i = 0; i < dataLayers.length; i++) {
       dataLayers[i]["_isCompressed"] = false;

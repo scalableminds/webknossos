@@ -14,7 +14,7 @@ object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
-  val braingamesVersion = "11.1.0"
+  val braingamesVersion = "11.1.2"
 
   val twelvemonkeysVersion = "3.1.2"
 
@@ -272,7 +272,7 @@ object ApplicationBuild extends Build {
       }.toString()
     ),
     buildInfoPackage := "webknossos",
-    buildInfoOptions := Seq(BuildInfoOption.ToJson, BuildInfoOption.BuildTime)
+    buildInfoOptions := Seq(BuildInfoOption.ToJson)
   )
 
   lazy val oxalis: Project = Project(appName, file("."))

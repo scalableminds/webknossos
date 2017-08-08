@@ -1,154 +1,203 @@
-import _ from "lodash";
-import $ from "jquery";
-import Toast from "libs/toast";
-import TeamCollection from "admin/models/team/team_collection";
-import ModalView from "admin/views/modal_view";
+// @flow
+import React from "react";
+import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
+import Request from "libs/request";
+import update from "immutability-helper";
+import type { APITeamType, APIUserType, APITeamRoleType } from "admin/api_flow_types";
 
-class TeamRoleModalView extends ModalView {
-  static initClass() {
-    this.prototype.headerTemplate = "<h3>Assign teams</h3>";
-    this.prototype.footerTemplate = `\
-<a href="#" class="btn btn-primary">Set Teams</a>
-<a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>\
-`;
-    this.prototype.bodyTemplate = _.template(`\
-<header>
-  <h4 class="col-sm-8" for="teams">Teams</h4>
-  <h4 class="col-sm-4" for="role">Role</h4>
-</header>
-<div class="row-fluid">
-  <% items.forEach(function(team) { %>
-    <div class="col-sm-8">
-      <div class="checkbox">
-        <label>
-          <input data-teamname="<%- team.name %>" type="checkbox" value="<%- team.name %>" <%- isChecked(team.name) %>>
-            <%- team.name %>
-          </option>
-        </label>
-      </div>
-    </div>
-    <div class="col-sm-4">
-      <div>
-        <select data-teamname="<%- team.name %>" name="role" class="form-control">
-          <option value="">Modify roles...</option>
-            <% _.each(team.roles, function(role) { %>
-              <option value="<%- role.name %>" <%- isSelected(team.name, role.name) %>><%- role.name %></option>
-            <% }) %>
-        </select>
-      </div>
-    </div>
-  <% }) %>
-</div>\
-`);
+const RadioButton = Radio.Button;
+const RadioGroup = Radio.Group;
 
-    this.prototype.events = { "click .btn-primary": "changeExperience" };
+const ROLES = {
+  admin: "admin",
+  user: "user",
+};
+
+type TeamRoleModalPropType = {
+  onChange: Function,
+  onCancel: Function,
+  visible: boolean,
+  selectedUserIds: Array<string>,
+  users: Array<APIUserType>,
+};
+/**
+ * All team selection in this modal is based on whether their is a role
+ * associated with the respective team. In other words, 'selectedTeams' contains
+ * all globally available teams, but only those with an attached role are
+ * significant. See <APITeamRoleType>
+ */
+class TeamRoleModalView extends React.PureComponent {
+  props: TeamRoleModalPropType;
+
+  state: {
+    teams: Array<APITeamType>,
+    selectedTeams: Array<APITeamRoleType>,
+  } = {
+    teams: [],
+    selectedTeams: [],
+  };
+
+  componentDidMount() {
+    this.fetchData();
   }
 
-  templateContext() {
-    // If only one user is selected then prefill the modal with his current values
-    let users;
-    return {
-      isChecked: teamName => {
-        users = this.getSelectedUsers();
-        if (users.length === 1) {
-          if (_.find(users[0].get("teams"), { team: teamName })) {
-            return "checked";
+  componentWillReceiveProps(newProps: TeamRoleModalPropType) {
+    // If a single user is selected, pre-select his teams
+    // otherwise unselect all teams
+    const newSelectedTeams = this.state.selectedTeams.map(selectedTeam => {
+      let newRole = null;
+
+      if (newProps.selectedUserIds.length === 1) {
+        const user = this.props.users.find(_user => _user.id === newProps.selectedUserIds[0]);
+        if (user) {
+          const userTeam = user.teams.find(_userTeam => selectedTeam.team === _userTeam.team);
+
+          if (userTeam) {
+            newRole = { name: userTeam.role.name };
           }
         }
-        return "";
-      },
+      }
 
-      isSelected: (teamName, roleName) => {
-        users = this.getSelectedUsers();
-        if (users.length === 1) {
-          const team = _.find(users[0].get("teams"), { team: teamName });
-          if (team && team.role.name === roleName) {
-            return "selected";
-          }
-        }
-        return "";
-      },
-    };
-  }
-
-  initialize(options) {
-    this.collection = new TeamCollection();
-    this.listenTo(this.collection, "sync", this.render);
-
-    this.collection.fetch({
-      data: "amIAnAdmin=true",
+      return Object.assign({}, selectedTeam, { role: newRole });
     });
-    this.userCollection = options.userCollection;
-    this.selectedUsers = this.getSelectedUsers();
+
+    this.setState({ selectedTeams: newSelectedTeams });
   }
 
-  getSelectedUsers() {
-    const checkboxes = $("tbody input[type=checkbox]:checked");
-    return checkboxes.map((i, element) => this.userCollection.findWhere({ id: $(element).val() }));
+  async fetchData() {
+    const url = "/api/teams?amIAnAdmin=true";
+    const teams = await Request.receiveJSON(url);
+
+    const selectedTeams = teams.map(team => ({
+      team: team.name,
+      role: null,
+    }));
+
+    this.setState({
+      teams,
+      selectedTeams,
+    });
   }
 
-  changeExperience() {
-    if (this.isValid()) {
-      // Find all selected users that will be affected by the bulk action
-      $("tbody input[type=checkbox]:checked").each((i, userEl) => {
-        const user = this.userCollection.findWhere({
-          id: $(userEl).val(),
-        });
+  setTeams = () => {
+    const newTeams = this.state.selectedTeams.filter(team => team.role !== null);
 
-        // Find all selected teams
-        let teams =
-          _.map(this.$("input[type=checkbox]:checked"), selectedTeamEl => {
-            const teamName = $(selectedTeamEl).data("teamname");
-            return {
-              team: $(selectedTeamEl).val(),
-              role: {
-                name: this.$(`select[data-teamname="${teamName}"] :selected`).val(),
-              },
-            };
-          }) || [];
+    const newUserPromises = this.props.users.map(user => {
+      if (this.props.selectedUserIds.includes(user.id)) {
+        const newUser = Object.assign({}, user, { teams: newTeams });
 
-        // Find unselected teams
-        const removedTeamsNames = this.$("input[type=checkbox]:not(:checked)").map(
-          (index, unselectedTeamEl) => unselectedTeamEl.dataset.teamname,
-        );
+        // server-side validation can reject a user's new teams
+        const url = `/api/users/${user.id}`;
+        return Request.sendJSONReceiveJSON(url, {
+          data: newUser,
+        }).then(() => Promise.resolve(newUser), () => Promise.reject(user));
+      }
+      return Promise.resolve(user);
+    });
 
-        // Add / remove teams
-        const teamNames = _.map(teams, "team");
-        for (const oldTeam of user.get("teams")) {
-          if (!teamNames.includes(oldTeam.team)) {
-            teams.push(oldTeam);
+    Promise.all(newUserPromises).then(
+      newUsers => {
+        this.props.onChange(newUsers);
+      },
+      () => {
+        // do nothing and keep modal open
+      },
+    );
+  };
+
+  handleSelectTeamRole(teamName: string, roleName: $Keys<typeof ROLES>) {
+    const newSelectedTeams = this.state.selectedTeams.map(selectedTeam => {
+      if (selectedTeam.team === teamName) {
+        return update(selectedTeam, { role: { $set: { name: roleName } } });
+      }
+      return selectedTeam;
+    });
+
+    this.setState({ selectedTeams: newSelectedTeams });
+  }
+
+  handleUnselectTeam(teamName: string) {
+    const newSelectedTeams = this.state.selectedTeams.map(selectedTeam => {
+      if (selectedTeam.team === teamName) {
+        return update(selectedTeam, { role: { $set: null } });
+      }
+      return selectedTeam;
+    });
+
+    this.setState({ selectedTeams: newSelectedTeams });
+  }
+
+  getTeamComponent(team: APITeamRoleType) {
+    return (
+      <Checkbox
+        value={team.team}
+        checked={team.role !== null}
+        onChange={(event: SyntheticInputEvent) => {
+          if (event.target.checked) {
+            this.handleSelectTeamRole(team.team, ROLES.user);
+          } else {
+            this.handleUnselectTeam(team.team);
           }
-        }
-        teams = _.filter(teams, team => !_.includes(removedTeamsNames, team.team));
-
-        // Verify user and update his teams
-        user.save({
-          isActive: true,
-          teams,
-        });
-      });
-
-      this.hide();
-    } else {
-      Toast.error("No role is selected!");
-    }
+        }}
+      >
+        {team.team}
+      </Checkbox>
+    );
   }
 
-  isValid() {
-    let isValid = true;
+  getRoleComponent(team: APITeamRoleType) {
+    return (
+      <RadioGroup
+        size="small"
+        value={team.role === null ? null : team.role.name}
+        style={{ width: "100%" }}
+        disabled={team.role === null}
+        onChange={({ target: { value } }) => this.handleSelectTeamRole(team.team, value)}
+      >
+        <RadioButton value={ROLES.admin}>Admin</RadioButton>
+        <RadioButton value={ROLES.user}>User</RadioButton>
+      </RadioGroup>
+    );
+  }
 
-    // Make sure that all selected checkboxes have a selected role
-    this.$("input[type=checkbox]:checked")
-      .parent()
-      .parent()
-      .find("select :selected")
-      .each((i, element) => {
-        isValid &= $(element).text() !== "Modify roles...";
-      });
+  render() {
+    const teamsRoleComponents = this.state.selectedTeams.map(team =>
+      <Row key={team.team}>
+        <Col span={12}>
+          {this.getTeamComponent(team)}
+        </Col>
+        <Col span={12}>
+          {this.getRoleComponent(team)}
+        </Col>
+      </Row>,
+    );
 
-    return isValid;
+    return (
+      <Modal
+        title="Assign teams"
+        visible={this.props.visible}
+        onCancel={this.props.onCancel}
+        footer={
+          <div>
+            <Button onClick={this.setTeams} type="primary">
+              Set Teams
+            </Button>
+            <Button onClick={() => this.props.onCancel()}>Cancel</Button>
+          </div>
+        }
+      >
+        <Row>
+          <Col span={12}>
+            <h4>Teams</h4>
+          </Col>
+          <Col span={12}>
+            <h4>Role</h4>
+          </Col>
+        </Row>
+        {teamsRoleComponents}
+      </Modal>
+    );
   }
 }
-TeamRoleModalView.initClass();
 
 export default TeamRoleModalView;

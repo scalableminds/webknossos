@@ -3,17 +3,17 @@
  * @flow
  */
 
-import _ from "lodash";
 import React from "react";
 import { connect } from "react-redux";
 import classNames from "classnames";
 import Comment from "oxalis/view/right-menu/comment_tab/comment";
+import Utils from "libs/utils";
 import type { OxalisState, TreeType, SkeletonTracingType } from "oxalis/store";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 
 type OwnProps = {
   tree: TreeType,
-  sortOrder: "asc" | "desc",
+  isSortedAscending: boolean,
 };
 
 type TreeCommentListProps = {
@@ -35,14 +35,17 @@ class TreeCommentList extends React.PureComponent {
 
     // don't render the comment nodes if the tree is collapsed
     const commentNodes = !this.state.collapsed
-      ? _.orderBy(this.props.tree.comments, "node", [this.props.sortOrder]).map(comment =>
-          <Comment
-            key={comment.node}
-            data={comment}
-            treeId={this.props.tree.treeId}
-            isActive={comment.node === this.props.skeletonTracing.activeNodeId}
-          />,
-        )
+      ? this.props.tree.comments
+          .slice(0)
+          .sort(Utils.localeCompareBy("content", this.props.isSortedAscending))
+          .map(comment =>
+            <Comment
+              key={comment.node}
+              data={comment}
+              treeId={this.props.tree.treeId}
+              isActive={comment.node === this.props.skeletonTracing.activeNodeId}
+            />,
+          )
       : null;
 
     const liClassName = classNames({ bold: containsActiveNode });
@@ -70,7 +73,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps): TreeCommentLis
   return {
     skeletonTracing: enforceSkeletonTracing(state.tracing),
     tree: ownProps.tree,
-    sortOrder: ownProps.sortOrder,
+    isSortedAscending: ownProps.isSortedAscending,
   };
 }
 

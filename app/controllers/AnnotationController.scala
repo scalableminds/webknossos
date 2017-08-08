@@ -61,7 +61,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     for {
       mergedAnnotation <- AnnotationMerger.mergeTwoByIds(id, typ, mergedId, mergedTyp, readOnly)
       _ <- mergedAnnotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
-      savedAnnotation <- mergedAnnotation.saveToDB
+      savedAnnotation <- mergedAnnotation.saveToDB //TODO: RocksDB  should we save it if readOnly?
       json <- savedAnnotation.toJson(Some(request.user))
     } yield {
       JsonOk(json, Messages("annotation.merge.success"))

@@ -28,7 +28,7 @@ trait DataStoreHandlingStrategy {
   def duplicateSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, tracingReference: TracingReference): Fox[TracingReference] =
     Fox.failure("DatStore doesn't support duplication of SkeletonTracings.")
 
-  def mergeSkeletonTracings(dataStoreInfo: DataStoreInfo, base: DataSource, tracingSelectors: List[TracingSelector]): Fox[TracingReference] =
+  def mergeSkeletonTracings(dataStoreInfo: DataStoreInfo, base: DataSource, tracingSelectors: List[TracingSelector], readOnly: Boolean): Fox[TracingReference] =
     Fox.failure("DataStore does't support merging of SkeletonTracings.")
 
   def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[TracingReference] =
@@ -61,9 +61,10 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
       .getWithJsonResponse[TracingReference]
   }
 
-  override def mergeSkeletonTracings(dataStoreInfo: DataStoreInfo, base: DataSource, tracingSelectors: List[TracingSelector]): Fox[TracingReference] = {
+  override def mergeSkeletonTracings(dataStoreInfo: DataStoreInfo, base: DataSource, tracingSelectors: List[TracingSelector], readOnly: Boolean): Fox[TracingReference] = {
     logger.debug("Called to merge SkeletonTracings. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/dat/tracings/skeletons/createMergedFromIds")
+    val route = if (readOnly) "getMerged" else "createMergedFromIds"
+    RPC(s"${dataStoreInfo.url}/dat/tracings/skeletons/${route}")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .postWithJsonResponse[List[TracingSelector], TracingReference](tracingSelectors)
   }

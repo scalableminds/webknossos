@@ -43,27 +43,26 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
     annotationB: Annotation,
     readOnly: Boolean
     )(implicit request: AuthenticatedRequest[_], ctx: DBAccessContext): Fox[Annotation] = {
-
-    mergeN(readOnly, request.user._id, annotationB.dataSetName, annotationB.team, AnnotationType.Explorational, annotationA, annotationB)
+    val newId = BSONObjectID.generate()
+    mergeN(newId, readOnly, Some(request.user._id), annotationB.dataSetName, annotationB.team, AnnotationType.Explorational, List(annotationA, annotationB))
   }
 
   def mergeN(
+    newId: BSONObjectID,
     readOnly: Boolean,
-    _user: BSONObjectID,
+    _user: Option[BSONObjectID],
     dataSetName: String,
     team: String,
     typ: AnnotationType,
-    annotations: Annotation*)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[Annotation] = {
     if (annotations.isEmpty)
       Fox.empty
     else {
-      val newId = BSONObjectID.generate()
-
       val mergedAnnotationFox = for {
-        mergedTracingReference <- mergeTracingsOfAnnotations(annotations.toList, dataSetName)
+        mergedTracingReference <- mergeTracingsOfAnnotations(annotations, dataSetName, readOnly)
       } yield {
         Annotation(
-          Some(_user),
+          _user,
           mergedTracingReference,
           dataSetName,
           team,
@@ -74,17 +73,17 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
           AnnotationState.InProgress,
           _id = newId) //TODO: rocksDB set readOnly from restrictions.. createRestrictions(readOnly)
       }
-      AnnotationStore.storeMergedInCache(mergedAnnotationFox, newId)
+      AnnotationStore.storeAnnotationInCache(mergedAnnotationFox, newId)
       mergedAnnotationFox
     }
   }
 
-  private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetName: String)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
+  private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetName: String, readOnly: Boolean)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
     val originalTracingSelectors = annotations.map(a => TracingSelector(a.tracingReference.id, None))
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
       dataSource <- dataSet.dataSource.toUsable.toFox
-      tracingReference <- dataSet.dataStoreInfo.typ.strategy.mergeSkeletonTracings(dataSet.dataStoreInfo, dataSource, originalTracingSelectors) ?~> "Failed to merge skeleton tracings."
+      tracingReference <- dataSet.dataStoreInfo.typ.strategy.mergeSkeletonTracings(dataSet.dataStoreInfo, dataSource, originalTracingSelectors, readOnly) ?~> "Failed to merge skeleton tracings."
     } yield {
       tracingReference
     }

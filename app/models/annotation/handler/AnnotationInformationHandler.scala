@@ -12,14 +12,11 @@ import models.user.User
 
 object AnnotationInformationHandler {
   val informationHandlers: Map[String, AnnotationInformationHandler] = Map(
-    AnnotationType.View.toString ->
-      DataSetInformationHandler,
-    AnnotationType.CompoundProject.toString ->
-      ProjectInformationHandler,
-    AnnotationType.CompoundTask.toString ->
-      TaskInformationHandler,
-    AnnotationType.CompoundTaskType.toString ->
-      TaskTypeInformationHandler).withDefaultValue(SavedTracingInformationHandler)
+    AnnotationType.View.toString             -> DataSetInformationHandler,
+    AnnotationType.CompoundProject.toString  -> ProjectInformationHandler,
+    AnnotationType.CompoundTask.toString     -> TaskInformationHandler,
+    AnnotationType.CompoundTaskType.toString -> TaskTypeInformationHandler)
+      .withDefaultValue(SavedTracingInformationHandler)
 }
 
 trait AnnotationInformationHandler {

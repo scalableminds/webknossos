@@ -19,10 +19,6 @@ object AnnotationStore extends LazyLogging {
 
   case class StoredResult(result: Fox[Annotation], timestamp: Long = System.currentTimeMillis)
 
-  def cachedAnnotation(annotationId: AnnotationIdentifier): Option[StoredResult] = {
-    Cache.getAs[StoredResult](annotationId.toUniqueString)
-  }
-
   def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     requestFromCache(id)
     .getOrElse(requestFromHandler(id, user)(ctx))
@@ -43,6 +39,10 @@ object AnnotationStore extends LazyLogging {
         None
   }
 
+  private def cachedAnnotation(annotationId: AnnotationIdentifier): Option[StoredResult] = {
+    Cache.getAs[StoredResult](annotationId.toUniqueString)
+  }
+
   private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     try {
       val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
@@ -60,7 +60,7 @@ object AnnotationStore extends LazyLogging {
     }
   }
 
-  def storeMergedInCache(annotation: Fox[Annotation], id: BSONObjectID) = {
+  def storeAnnotationInCache(annotation: Fox[Annotation], id: BSONObjectID) = {
     val storedMerge = StoredResult(annotation)
     val mID = AnnotationIdentifier(AnnotationType.Explorational, id.stringify)
     Cache.set(mID.toUniqueString, storedMerge, maxCacheTime)

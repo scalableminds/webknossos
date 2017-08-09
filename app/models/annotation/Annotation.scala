@@ -29,7 +29,6 @@ case class Annotation(
                        state: AnnotationState = AnnotationState.InProgress,
                        created : Long = System.currentTimeMillis,
                        tracingTime: Option[Long] = None,
-                       readOnly: Option[Boolean] = None,
                        _name: Option[String] = None,
                        _task: Option[BSONObjectID] = None,
                        _id: BSONObjectID = BSONObjectID.generate
@@ -52,8 +51,8 @@ case class Annotation(
 
   val restrictions = buildRestrictions()
 
-  def buildRestrictions(overridingReadOnly: Option[Boolean] = None): AnnotationRestrictions = {
-    if(overridingReadOnly.getOrElse(readOnly.getOrElse(false)))
+  def buildRestrictions(readOnly: Option[Boolean] = None): AnnotationRestrictions = {
+    if(readOnly.getOrElse(false))
       AnnotationRestrictions.readonlyAnnotation()
     else
       AnnotationRestrictions.defaultAnnotationRestrictions(this)
@@ -63,12 +62,8 @@ case class Annotation(
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }
 
-  def makeReadOnly: Annotation = {
-    this.copy(readOnly = Some(true))
-  }
-
   def saveToDB(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    AnnotationService.saveToDB(this)
+    AnnotationDAO.saveToDB(this)
   }
 
   def isRevertPossible: Boolean = {
@@ -78,7 +73,7 @@ case class Annotation(
     created > 1470002400000L  // 1.8.2016, 00:00:00
   }
 
-  def toJson(user: Option[User] = None, overridingReadOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def toJson(user: Option[User] = None, ReadOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       taskJson <- task.flatMap(t => Task.transformToJson(t, user)).getOrElse(JsNull)
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
@@ -91,7 +86,7 @@ case class Annotation(
         "typ" -> typ,
         "task" -> taskJson,
         "stats" -> statistics,
-        "restrictions" -> AnnotationRestrictions.writeAsJson(buildRestrictions(overridingReadOnly), user),
+        "restrictions" -> AnnotationRestrictions.writeAsJson(buildRestrictions(ReadOnly), user),
         "formattedHash" -> Formatter.formatHash(id),
         "content" -> tracingReference,
         "dataSetName" -> dataSetName,
@@ -160,6 +155,18 @@ object AnnotationDAO
         case _ =>
           DenyEveryone()
       }
+    }
+  }
+
+  def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    update(
+      Json.obj("_id" -> annotation._id),
+      Json.obj(
+        "$set" -> formatWithoutId(annotation),
+        "$setOnInsert" -> Json.obj("_id" -> annotation._id)
+      ),
+      upsert = true).map { _ =>
+      annotation
     }
   }
 

@@ -12,14 +12,6 @@ trait AnnotationInformationProvider
     with FoxImplicits
     with models.basics.Implicits {
 
-  import AnnotationInformationHandler._
-
-  def withInformationHandler[A, T](
-    tracingType: String)(f: AnnotationInformationHandler => T)(implicit request: UserAwareRequest[_]): T = {
-
-    f(informationHandlers(tracingType))
-  }
-
   def withAnnotation[T](
     typ: AnnotationType,
     id: String)(f: Annotation => Fox[T])(implicit request: UserAwareRequest[_]): Fox[T] = {
@@ -44,11 +36,14 @@ trait AnnotationInformationProvider
     AnnotationStore.requestAnnotation(annotationId, request.userOpt)
   }
 
+  //TODO: RocksDB: use this for download filenames?
   def nameAnnotation(annotation: Annotation)(implicit request: AuthenticatedRequest[_]): Fox[String] = {
-    withInformationHandler(annotation.typ) {
-      handler =>
-        annotation._name.toFox.orElse(handler.nameForAnnotation(annotation).toFox)
-    }
+    val handler = AnnotationInformationHandler.informationHandlers(annotation.typ)
+    annotation._name.toFox.orElse(handler.nameForAnnotation(annotation).toFox)
+  }
+
+  def restrictionsFor(annotation: Annotation) = {
+    AnnotationInformationHandler.informationHandlers(annotation.typ).restrictionsFor(annotation)
   }
 
 }

@@ -27,12 +27,12 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
         dataSetName,
         team,
         AnnotationSettings.default,
-        typ = AnnotationType.View //TODO: rocksDB: restrictions
+        typ = AnnotationType.View
       )
     }
   }
 
-  private def dataSetRestrictions() =
+  override def restrictionsFor(annotation: Annotation) =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = true
       override def allowDownload(user: Option[User]) = false

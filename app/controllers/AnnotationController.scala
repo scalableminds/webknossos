@@ -43,7 +43,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
     withAnnotation(annotationId) { annotation =>
       for {
-        _ <- annotation.restrictions.allowAccess(request.userOpt) ?~> "notAllowed" ~> BAD_REQUEST
+        _ <- restrictionsFor(annotation).allowAccess(request.userOpt) ?~> "notAllowed" ~> BAD_REQUEST
         js <- annotation.toJson(request.userOpt, Some(readOnly))
       } yield {
         request.userOpt.foreach { user =>

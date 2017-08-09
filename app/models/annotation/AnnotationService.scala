@@ -224,20 +224,6 @@ object AnnotationService
     } yield annotation
   }
 
-
-
-  def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    AnnotationDAO.update(
-      Json.obj("_id" -> annotation._id),
-      Json.obj(
-        "$set" -> AnnotationDAO.formatWithoutId(annotation),
-        "$setOnInsert" -> Json.obj("_id" -> annotation._id)
-      ),
-      upsert = true).map { _ =>
-      annotation
-    }
-  }
-
   def createAnnotationFrom(
     user: User,
     additionalFiles: Map[String, TemporaryFile],

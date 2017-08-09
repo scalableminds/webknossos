@@ -2,9 +2,10 @@ package models.annotation.handler
 
 import net.liftweb.common.Box
 import oxalis.security.AuthenticatedRequest
-import models.annotation.{AnnotationType, Annotation}
+import models.annotation.{Annotation, AnnotationRestrictions, AnnotationType}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.basics.Implicits._
+
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.Fox
@@ -32,5 +33,8 @@ trait AnnotationInformationHandler {
   def withAnnotation[A](identifier: String)(f: Annotation => A)(implicit request: AuthenticatedRequest[_]): Fox[A] = {
     provideAnnotation(identifier, Some(request.user)).map(f)
   }
+
+  def restrictionsFor(annotation: Annotation) =
+    AnnotationRestrictions.defaultAnnotationRestrictions(annotation)
 
 }

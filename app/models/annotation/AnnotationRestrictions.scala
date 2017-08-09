@@ -27,7 +27,6 @@ class AnnotationRestrictions {
   def allowFinish(user: User): Boolean = allowFinish(Some(user))
 
   def allowDownload(user: User): Boolean = allowDownload(Some(user))
-
 }
 
 object AnnotationRestrictions {

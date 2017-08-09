@@ -28,7 +28,8 @@ class Crosshair {
     this.isDirty = true;
 
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = this.WIDTH;
+    canvas.width = this.WIDTH;
+    canvas.height = this.WIDTH;
     this.context = this.getContext(canvas);
 
     this.mesh = this.createMesh(canvas);

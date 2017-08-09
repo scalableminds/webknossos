@@ -56,7 +56,8 @@ const modelData = {
 
 export function setupOxalis(t, mode) {
   UrlManager.initialState = { position: [1, 2, 3] };
-  const model = (t.context.model = new Model());
+  const model = new Model();
+  t.context.model = model;
 
   const webknossos = new OxalisApi(model);
 

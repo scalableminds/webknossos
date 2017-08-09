@@ -429,7 +429,9 @@ function TrackballControls(object, domElement, target, updateCallback) {
         _state = STATE.TOUCH_ZOOM;
         const dx = event.touches[0].pageX - event.touches[1].pageX;
         const dy = event.touches[0].pageY - event.touches[1].pageY;
-        _touchZoomDistanceEnd = _touchZoomDistanceStart = Math.sqrt(dx * dx + dy * dy);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        _touchZoomDistanceEnd = distance;
+        _touchZoomDistanceStart = distance;
         break;
       }
 
@@ -487,7 +489,8 @@ function TrackballControls(object, domElement, target, updateCallback) {
         break;
 
       case 2:
-        _touchZoomDistanceStart = _touchZoomDistanceEnd = 0;
+        _touchZoomDistanceStart = 0;
+        _touchZoomDistanceEnd = 0;
         break;
 
       case 3:

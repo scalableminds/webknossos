@@ -28,7 +28,7 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         val tracing = skeletonTracingService.create(dataSetName, request.body)
-        Ok(Json.toJson(TracingReference(tracing.id, TracingType.skeletonTracing)))
+        Ok(Json.toJson(TracingReference(tracing.id, TracingType.skeleton)))
       }
     }
   }
@@ -40,7 +40,7 @@ class SkeletonTracingController @Inject()(
           tracing <- NmlParser.parse(skeletonTracingService.createNewId(), name, request.body.trim())
         } yield {
           skeletonTracingService.save(tracing)
-          Ok(Json.toJson(TracingReference(tracing.id, TracingType.skeletonTracing)))
+          Ok(Json.toJson(TracingReference(tracing.id, TracingType.skeleton)))
         }
       }
     }
@@ -98,7 +98,7 @@ class SkeletonTracingController @Inject()(
           updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
         } yield {
           val newTracing = skeletonTracingService.duplicate(updatedTracing)
-          Ok(Json.toJson(TracingReference(newTracing.id, TracingType.skeletonTracing)))
+          Ok(Json.toJson(TracingReference(newTracing.id, TracingType.skeleton)))
         }
       }
     }
@@ -113,7 +113,7 @@ class SkeletonTracingController @Inject()(
         } yield {
           val merged = skeletonTracingService.merge(tracings)
           skeletonTracingService.save(merged)
-          Ok(Json.toJson(TracingReference(merged.id, TracingType.skeletonTracing)))
+          Ok(Json.toJson(TracingReference(merged.id, TracingType.skeleton)))
         }
       }
     }
@@ -128,7 +128,7 @@ class SkeletonTracingController @Inject()(
           tracings: List[SkeletonTracing] <- skeletonTracingService.extractAllFromZip(zipfile)
         } yield {
           tracings.foreach(skeletonTracingService.save)
-          val references = tracings.map(tracing => TracingReference(tracing.id, TracingType.skeletonTracing))
+          val references = tracings.map(tracing => TracingReference(tracing.id, TracingType.skeleton))
           Ok(Json.toJson(references))
         }
       }
@@ -139,7 +139,7 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         val tracings = request.body.map(params => skeletonTracingService.create(dataSetName, params))
-        val references = tracings.map(tracing => TracingReference(tracing.id, TracingType.skeletonTracing))
+        val references = tracings.map(tracing => TracingReference(tracing.id, TracingType.skeleton))
         Ok(Json.toJson(references))
       }
     }
@@ -153,7 +153,7 @@ class SkeletonTracingController @Inject()(
         } yield {
           val merged = skeletonTracingService.merge(tracings)
           skeletonTracingService.save(merged)
-          Ok(Json.toJson(TracingReference(merged.id, TracingType.skeletonTracing)))
+          Ok(Json.toJson(TracingReference(merged.id, TracingType.skeleton)))
         }
       }
     }

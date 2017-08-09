@@ -7,7 +7,7 @@ import play.api.libs.json.{Format, Json, Reads, Writes}
   */
 
 object TracingType extends Enumeration {
-  val skeletonTracing, volumeTracing = Value
+  val skeleton, volume = Value
 
   implicit val tracingTypeFormat = Format(Reads.enumNameReads(TracingType), Writes.enumNameWrites)
 }

@@ -6,6 +6,7 @@ import { connect } from "react-redux";
 import Toast from "libs/toast";
 import InputComponent from "oxalis/view/components/input_component";
 import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
+import messages from "messages";
 import type { OxalisState } from "oxalis/store";
 
 class ShareModalView extends PureComponent {
@@ -33,7 +34,13 @@ class ShareModalView extends PureComponent {
   };
 
   handleCheckboxChange = (event: SyntheticInputEvent) => {
-    this.props.setAnnotationPublic(event.target.checked);
+    const isPublic = event.target.checked;
+
+    // public tracings only work if the dataset is public too
+    if (!this.props.isDatasetPublic && isPublic) {
+      Toast.warning(messages["annotation.dataset_no_public"], true);
+    }
+    this.props.setAnnotationPublic(isPublic);
   };
 
   render() {
@@ -55,7 +62,7 @@ class ShareModalView extends PureComponent {
           checked={this.props.isPublic}
           style={{ marginTop: 10, marginLeft: 1 }}
         >
-          Is Publicly Accessibly without a Login
+          Make tracing publicly viewable without a login.
         </Checkbox>
       </Modal>
     );
@@ -64,6 +71,7 @@ class ShareModalView extends PureComponent {
 
 const mapStateToProps = (state: OxalisState) => ({
   isPublic: state.tracing.isPublic,
+  isDatasetPublic: state.dataset.isPublic,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

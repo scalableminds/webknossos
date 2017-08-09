@@ -142,6 +142,7 @@ export type DatasetType = {
   +dataStore: DataStoreInfoType,
   +scale: Vector3,
   +dataLayers: Array<DataLayerType>,
+  +isPublic: boolean,
 };
 
 export type TreeMapType = { +[number]: TreeType };
@@ -325,7 +326,7 @@ export type ViewModeData = {
 export type OxalisState = {
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
-  +temporaryConfiguration: TemporaryConfigurationType,
+  +tempodatasetraryConfiguration: TemporaryConfigurationType,
   +dataset: DatasetType,
   +tracing: TracingType,
   +task: ?TaskType,

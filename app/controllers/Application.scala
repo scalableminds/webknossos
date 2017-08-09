@@ -13,24 +13,6 @@ import play.twirl.api.Html
 
 class Application @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
-  def javascriptRoutes = Action { implicit request =>
-    Ok(
-      JavaScriptReverseRouter("jsRoutes")(//fill in stuff which should be able to be called from js
-        controllers.routes.javascript.TaskController.request,
-        controllers.routes.javascript.AnnotationController.annotationsForTask,
-        controllers.routes.javascript.AnnotationController.empty,
-        controllers.routes.javascript.AnnotationController.finish,
-        controllers.routes.javascript.AnnotationController.finishAll,
-        controllers.routes.javascript.AnnotationController.reopen,
-        controllers.routes.javascript.AnnotationController.nameExplorativeAnnotation,
-        controllers.routes.javascript.AnnotationController.createExplorational,
-        controllers.routes.javascript.AnnotationIOController.taskDownload,
-        controllers.routes.javascript.AnnotationIOController.projectDownload,
-        controllers.routes.javascript.AnnotationIOController.userDownload,
-        controllers.routes.javascript.AnnotationIOController.upload
-      )).as("text/javascript")
-  }
-
   def index() = UserAwareAction { implicit request =>
     UserAgentTrackingDAO.trackUserAgent(request.userOpt.map(_._id), request.headers.get("user-agent").getOrElse("<none>"))
     request.userOpt match {

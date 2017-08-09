@@ -44,6 +44,7 @@ trait DataStoreHandlingStrategy {
     Fox.failure("DataStore doesn't support dataSource import.")
 }
 
+//TODO: RocksDB: make this a class, create object with FromDataSetName method (maybe the apply method), returning a new instance (maybe cache the instances)
 object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLogging {
 
   override def createSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, parameters: CreateEmptyParameters): Fox[TracingReference] = {

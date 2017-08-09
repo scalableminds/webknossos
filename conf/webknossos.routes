@@ -187,8 +187,5 @@ GET           /api/statistics/webknossos                                        
 GET           /api/statistics/users                                             controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 GET           /api/statistics/assignments                                       controllers.StatisticsController.assignmentStatistics(start: Option[Long], end: Option[Long])
 
-# Javascript routing
-GET           /assets/javascripts/routes.js                                     controllers.Application.javascriptRoutes
-
 # Map static resources from the /public folder to the /public path
 GET           /assets/*file                                                     controllers.Assets.at(path="/public", file)

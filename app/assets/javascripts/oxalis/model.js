@@ -139,15 +139,15 @@ export class OxalisModel {
       infoUrl = `/annotations/${tracingType}/${tracingId}/info`;
     }
 
-    const tracing: ServerTracing<*> = await Request.receiveJSON(infoUrl);
+    const annotation: ServerTracing<*> = await Request.receiveJSON(infoUrl);
+    const dataset = await Request.receiveJSON(`/api/datasets/${annotation.dataSetName}`);
 
     let error;
-    const dataset = tracing.content.dataSet;
-    if (tracing.error) {
-      ({ error } = tracing);
+    if (annotation.error) {
+      ({ error } = annotation);
     } else if (!dataset) {
       error = "Selected dataset doesn't exist";
-    } else if (!dataset.dataLayers) {
+    } else if (!dataset.dataSource.dataLayers) {
       if (dataset.name) {
         error = `Please, double check if you have the dataset '${dataset.name}' imported.`;
       } else {
@@ -160,7 +160,7 @@ export class OxalisModel {
       throw this.HANDLED_ERROR;
     }
 
-    if (!tracing.restrictions.allowAccess) {
+    if (!annotation.restrictions.allowAccess) {
       error = "You are not allowed to access this tracing";
       throw this.HANDLED_ERROR;
     }
@@ -174,12 +174,12 @@ export class OxalisModel {
     }
 
     ErrorHandling.assertExtendContext({
-      task: tracing.id,
+      task: annotation.id,
       dataSet: dataset.name,
     });
 
     Store.dispatch(setDatasetAction(dataset));
-    Store.dispatch(setTaskAction(tracing.task));
+    Store.dispatch(setTaskAction(annotation.task));
 
     // Only initialize the model once.
     // There is no need to reinstantiate the binaries if the dataset didn't change.

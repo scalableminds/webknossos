@@ -191,7 +191,7 @@ class MergeModalView extends PureComponent {
           <Form.Item label="NML">
             <Upload
               name="nmlFile"
-              action={jsRoutes.controllers.AnnotationIOController.upload().url}
+              action={"/admin/nml/upload"}
               headers={{ authorization: "authorization-text" }}
               onChange={this.handleChangeNML}
               value={this.state.selectedNML}

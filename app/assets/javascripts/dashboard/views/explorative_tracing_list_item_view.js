@@ -34,33 +34,33 @@ class ExplorativeTracingListItemView extends Marionette.View {
 <td><%- dataSetName %></td>
 
 <td class="nowrap">
-  <% if (stats && (contentType == "skeletonTracing")) { %>
+  <% if (stats && (content.typ == "skeletonTracing")) { %>
     <span title="Trees"><i class="fa fa-sitemap"></i><%- stats.numberOfTrees %>&nbsp;</span><br />
     <span title="Nodes"><i class="fa fa-bull"></i><%- stats.numberOfNodes %>&nbsp;</span><br />
     <span title="Edges"><i class="fa fa-arrows-h"></i><%- stats.numberOfEdges %></span>
   <% } %>
 </td>
 
-<td><%- contentType + " - " + typ %></td>
+<td><%- content.typ + " - " + typ %></td>
 <td><%- created %></td>
 <td class="nowrap">
   <% if (typ == "Explorational"){ %>
     <% if (!state.isFinished) {%>
-      <a href="<%- jsRoutes.controllers.AnnotationController.trace(typ, id).url %>">
+      <a href="/annotations/<%- typ %>/<%- id %>">
         <i class="fa fa-random"></i>
         <strong>trace</strong>
       </a><br />
-      <a href="<%- jsRoutes.controllers.AnnotationIOController.download(typ, id).url %>">
+      <a href="/download">
         <i class="fa fa-download"></i>
         download
       </a><br />
-      <a href="<%- jsRoutes.controllers.AnnotationController.finish(typ, id).url %>"
+      <a href="/annotations/<%- typ %>/<%- id %>/finish"
          id="finish-tracing">
         <i class="fa fa-archive"></i>
         archive
       </a><br />
     <% } else {%>
-      <a href="<%- jsRoutes.controllers.AnnotationController.reopen(typ, id).url %>"
+      <a href="/annotations/<%- typ %>/<%- id %>/reopen"
          id="reopen-tracing">
         <i class="fa fa-folder-open"></i>
         reopen

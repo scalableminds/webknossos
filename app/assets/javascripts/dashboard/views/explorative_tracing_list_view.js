@@ -20,7 +20,7 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
 <h3>Explorative Annotations</h3>
 <% if (!isAdminView) {%>
   <div>
-    <form action="<%- jsRoutes.controllers.AnnotationIOController.upload().url %>"
+    <form action="/admin/nml/upload"
       method="POST"
       enctype="multipart/form-data"
       id="upload-and-explore-form"
@@ -161,15 +161,12 @@ class ExplorativeTracingListView extends Marionette.CompositeView {
     }
 
     const unarchivedAnnoationIds = this.collection.pluck("id");
-    Request.sendJSONReceiveJSON(
-      jsRoutes.controllers.AnnotationController.finishAll("Explorational").url,
-      {
-        method: "POST",
-        data: {
-          annotations: unarchivedAnnoationIds,
-        },
+    Request.sendJSONReceiveJSON("/annotations/Explorational/finish", {
+      method: "POST",
+      data: {
+        annotations: unarchivedAnnoationIds,
       },
-    ).then(data => {
+    }).then(data => {
       Toast.message(data.messages);
       this.collection.reset();
       this.render();

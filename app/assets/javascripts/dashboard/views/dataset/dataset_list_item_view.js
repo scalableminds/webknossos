@@ -50,7 +50,7 @@ class DatasetListItemView extends Marionette.CompositeView {
       <span class="label label-default"><%- layer.category %> - <%- layer.elementClass %></span>
   <% }) %>
   <td class="nowrap">
-    <form action="<%- jsRoutes.controllers.AnnotationController.createExplorational().url %>" method="POST">
+    <form action="/annotations/createExplorational" method="POST">
       <input type="hidden" name="dataSetName" value="<%- name %>" />
       <input type="hidden" name="contentType" id="contentTypeInput" />
     </form>

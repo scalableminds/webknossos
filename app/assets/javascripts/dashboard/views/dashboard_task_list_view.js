@@ -20,7 +20,7 @@ class DashboardTaskListView extends Marionette.CompositeView {
     this.prototype.template = _.template(`\
 <h3>Tasks</h3>
 <% if (isAdminView) { %>
-  <a href="<%- jsRoutes.controllers.AnnotationIOController.userDownload(id).url %>"
+  <a href="/api/users/<%- id %>/annotations/download"
      class="btn btn-primary"
      title="download all finished tracings">
       <i class="fa fa-download"></i>download

@@ -326,7 +326,7 @@ export type ViewModeData = {
 export type OxalisState = {
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
-  +tempodatasetraryConfiguration: TemporaryConfigurationType,
+  +temporaryConfiguration: TemporaryConfigurationType,
   +dataset: DatasetType,
   +tracing: TracingType,
   +task: ?TaskType,
@@ -382,6 +382,7 @@ export const defaultState: OxalisState = {
   dataset: {
     name: "Test Dataset",
     scale: [5, 5, 5],
+    isPublic: false,
     dataStore: {
       name: "localhost",
       url: "http://localhost:9000",

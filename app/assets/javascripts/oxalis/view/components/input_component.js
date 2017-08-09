@@ -36,6 +36,7 @@ class InputComponent extends React.PureComponent {
     onBlur: _.noop,
     placeholder: "",
     value: "",
+    style: {},
   };
 
   state: InputComponentStateType = {

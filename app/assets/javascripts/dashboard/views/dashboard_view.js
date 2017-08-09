@@ -123,7 +123,8 @@ class DashboardView extends Marionette.View {
   showTab(viewName, ViewClass) {
     let view = this.viewCache[viewName];
     if (!view) {
-      view = this.viewCache[viewName] = new ViewClass(this.options);
+      view = new ViewClass(this.options);
+      this.viewCache[viewName] = view;
     }
     return this.showChildView("tabPane", view, { preventDestroy: true });
   }

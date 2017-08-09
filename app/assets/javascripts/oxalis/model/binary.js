@@ -81,12 +81,10 @@ class Binary {
     this.targetBitDepth = this.category === "color" ? this.layer.bitDepth : 8;
 
     const { topLeft, width, height, depth } = this.layer.boundingBox;
-    this.lowerBoundary = this.layer.lowerBoundary = topLeft;
-    this.upperBoundary = this.layer.upperBoundary = [
-      topLeft[0] + width,
-      topLeft[1] + height,
-      topLeft[2] + depth,
-    ];
+    this.lowerBoundary = topLeft;
+    this.layer.lowerBoundary = topLeft;
+    this.upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
+    this.layer.upperBoundary = this.upperBoundary;
 
     this.cube = new DataCube(this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
 

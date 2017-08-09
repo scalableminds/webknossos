@@ -103,15 +103,15 @@ class PolyhedronRasterizer {
   vertices: Array<number>;
 
   constructor(vertices1: Array<number>, indices: Array<number>) {
-    let buffer;
-    let bufferLength;
     this.vertices = vertices1;
     this.indices = indices;
     this.calcExtent();
     const { minX, minY, minZ, deltaZ, deltaY, shiftZ, vertices } = this;
 
-    this.bufferLength = bufferLength = deltaZ << shiftZ;
-    this.buffer = buffer = new Int32Array(HEAP, 0, bufferLength);
+    const bufferLength = deltaZ << shiftZ;
+    this.bufferLength = bufferLength;
+    const buffer = new Int32Array(HEAP, 0, bufferLength);
+    this.buffer = buffer;
 
     // initialize buffer values
     for (let z = 0; z < deltaZ; z++) {
@@ -140,12 +140,12 @@ class PolyhedronRasterizer {
   }
 
   calcExtent(): void {
-    let maxY;
-    let maxZ;
-    let minY;
-    let minZ;
-    let minX = (minY = minZ = Int32MAX);
-    let maxX = (maxY = maxZ = Int32MIN);
+    let minX = Int32MAX;
+    let minY = Int32MAX;
+    let minZ = Int32MAX;
+    let maxX = Int32MIN;
+    let maxY = Int32MIN;
+    let maxZ = Int32MIN;
 
     const { vertices } = this;
 

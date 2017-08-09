@@ -6,9 +6,6 @@ package models.binary
 import java.math.BigInteger
 import java.security.SecureRandom
 
-import scala.concurrent.Future
-import scala.concurrent.duration._
-
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.basics.SecuredBaseDAO
@@ -18,7 +15,10 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+import reactivemongo.play.json.BSONFormats._
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 case class DataToken(
                       _user: Option[BSONObjectID],

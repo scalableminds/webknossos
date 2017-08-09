@@ -1,10 +1,9 @@
 package oxalis.mail
 
-import views._
-import models.user.User
-import play.api.Play
-import play.api.i18n.Messages
 import com.scalableminds.util.mail.Mail
+import models.user.User
+import play.api.i18n.Messages
+import views._
 
 object DefaultMails {
   /**

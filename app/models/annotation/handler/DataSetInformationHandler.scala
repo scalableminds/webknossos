@@ -1,15 +1,11 @@
 package models.annotation.handler
 
-import scala.concurrent.Future
-
+import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationRestrictions, AnnotationType, TemporaryAnnotation}
+import models.annotation.{Annotation, AnnotationRestrictions, AnnotationSettings, AnnotationType}
 import models.binary.DataSetDAO
-import models.tracing.skeleton.SkeletonTracing
-import models.tracing.skeleton.temporary.TemporarySkeletonTracing
 import models.user.User
-import play.api.libs.concurrent.Execution.Implicits._
 
 /**
   * Company: scalableminds
@@ -19,41 +15,26 @@ import play.api.libs.concurrent.Execution.Implicits._
   */
 object DataSetInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  type AType = TemporaryAnnotation
-
-  def dataSetRestrictions() =
-    new AnnotationRestrictions {
-      override def allowAccess(user: Option[User]) = true
-
-      override def allowDownload(user: Option[User]) = false
-    }
-
-  def provideAnnotation(dataSetName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
+  def provideAnnotation(dataSetName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] = //TODO: rocksDB
+  {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "dataSet.notFound"
       team = user.flatMap(_.teamNames.intersect(dataSet.allowedTeams).headOption).getOrElse("")
     } yield {
-      val content = TemporarySkeletonTracing(
-        dataSetName,
-        dataSetName,
-        Nil,
-        System.currentTimeMillis(),
-        Some(0),
-        dataSet.defaultStart,
-        dataSet.defaultRotation,
-        SkeletonTracing.defaultZoomLevel,
-        None
-      )
-
-      TemporaryAnnotation(
-        dataSetName,
+      Annotation(
         user.map(_._id),
-        () => Future.successful(Some(content)),
-        None,
+        TracingReference("none", TracingType.skeletonTracing), //TODO: rocksDB: construct empty tracing with dataSet.defaultStart etc.?
+        dataSetName,
         team,
-        None,
-        typ = AnnotationType.View,
-        restrictions = dataSetRestrictions())
+        AnnotationSettings.default,
+        typ = AnnotationType.View
+      )
     }
   }
+
+  override def restrictionsFor(annotation: Annotation) =
+    new AnnotationRestrictions {
+      override def allowAccess(user: Option[User]) = true
+      override def allowDownload(user: Option[User]) = false
+    }
 }

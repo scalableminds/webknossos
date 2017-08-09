@@ -1,7 +1,7 @@
 package models.user.time
 
 import java.util.{Calendar, Date}
-import models.annotation.AnnotationLike
+import models.annotation.Annotation
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.duration.Duration
@@ -46,7 +46,7 @@ object TimeSpan {
 
   val hoursRx = "[0-9]+".r
 
-  def create(start: Long, end: Long, _user: BSONObjectID, annotation: Option[AnnotationLike]) =
+  def create(start: Long, end: Long, _user: BSONObjectID, annotation: Option[Annotation]) =
     TimeSpan(end - start, start, end, _user = _user, annotation = annotation.map(_.id))
 
   def inMillis(days: Int, hours: Int, minutes: Int) =

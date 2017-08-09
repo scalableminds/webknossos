@@ -90,7 +90,7 @@ case class Annotation(
         "formattedHash" -> Formatter.formatHash(id),
         "content" -> tracingReference,
         "dataSetName" -> dataSetName,
-        "dataStoreInfo" -> dataSet.dataStoreInfo,
+        "dataStore" -> dataSet.dataStoreInfo,
         "settings" -> settings,
         "tracingTime" -> tracingTime
       )

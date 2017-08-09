@@ -3,11 +3,12 @@
  * @flow
  */
 import type { Vector3, OrthoViewType, VolumeTraceOrMoveModeType } from "oxalis/constants";
-import type { ServerTracing, VolumeContentDataType } from "oxalis/model";
+import type { ServerVolumeTracingType, ServerAnnotationType } from "oxalis/model";
 
 type InitializeVolumeTracingActionType = {
   type: "INITIALIZE_VOLUMETRACING",
-  tracing: ServerTracing<VolumeContentDataType>,
+  annotation: ServerAnnotationType,
+  tracing: ServerVolumeTracingType,
 };
 type CreateCellActionType = { type: "CREATE_CELL", cellId: ?number };
 type StartEditingActionType = { type: "START_EDITING", planeId: OrthoViewType };
@@ -34,9 +35,11 @@ export type VolumeTracingActionType =
 export const VolumeTracingSaveRelevantActions = ["CREATE_CELL", "SET_ACTIVE_CELL"];
 
 export const initializeVolumeTracingAction = (
-  tracing: ServerTracing<VolumeContentDataType>,
+  annotation: ServerAnnotationType,
+  tracing: ServerVolumeTracingType,
 ): InitializeVolumeTracingActionType => ({
   type: "INITIALIZE_VOLUMETRACING",
+  annotation,
   tracing,
 });
 

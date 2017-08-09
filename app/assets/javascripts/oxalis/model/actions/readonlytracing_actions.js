@@ -1,17 +1,20 @@
 // @flow
 /* eslint-disable import/prefer-default-export */
-import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
+import type { ServerSkeletonTracingType, ServerAnnotationType } from "oxalis/model";
 
 type InitializeReadOnlyTracingActionType = {
   type: "INITIALIZE_READONLYTRACING",
-  tracing: ServerTracing<SkeletonContentDataType>,
+  annotation: ServerAnnotationType,
+  tracing: ServerSkeletonTracingType,
 };
 
 export type ReadOnlyTracingActionType = InitializeReadOnlyTracingActionType;
 
 export const initializeReadOnlyTracingAction = (
-  tracing: ServerTracing<SkeletonContentDataType>,
+  annotation: ServerAnnotationType,
+  tracing: ServerSkeletonTracingType,
 ): InitializeReadOnlyTracingActionType => ({
   type: "INITIALIZE_READONLYTRACING",
+  annotation,
   tracing,
 });

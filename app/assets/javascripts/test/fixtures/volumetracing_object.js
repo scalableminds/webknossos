@@ -113,9 +113,9 @@ export default {
     editPosition: [3904, 4282, 2496],
     editRotation: [0, 0, 0],
     boundingBox: null,
-    contentType: "volumeTracing",
+    contentType: "volume",
   },
-  contentType: "volumeTracing",
+  contentType: "volume",
   dataSetName: "2012-09-28_ex145_07x2",
   tracingTime: 76252,
 };

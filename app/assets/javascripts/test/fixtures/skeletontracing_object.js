@@ -174,9 +174,9 @@ export default {
     editPosition: [3918, 4292, 2496],
     editRotation: [0, 0, 0],
     boundingBox: null,
-    contentType: "skeletonTracing",
+    contentType: "skeleton",
   },
-  contentType: "skeletonTracing",
+  contentType: "skeleton",
   dataSetName: "2012-09-28_ex145_07x2",
   tracingTime: 9702,
 };

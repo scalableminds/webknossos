@@ -62,8 +62,8 @@ class SpotlightDatasetView extends Marionette.View {
   onRender() {
     this.$(".link-row > a").tooltip({ placement: "bottom" });
 
-    this.ui.skeletonTraceLink.click(this.submitForm.bind(this, "skeletonTracing"));
-    return this.ui.volumeTraceLink.click(this.submitForm.bind(this, "volumeTracing"));
+    this.ui.skeletonTraceLink.click(this.submitForm.bind(this, "skeleton"));
+    return this.ui.volumeTraceLink.click(this.submitForm.bind(this, "volume"));
   }
 
   submitForm(type, event) {

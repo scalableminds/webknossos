@@ -148,11 +148,11 @@ class DatasetListItemView extends Marionette.CompositeView {
   }
 
   startSkeletonTracing(event) {
-    return this.submitForm("skeletonTracing", event);
+    return this.submitForm("skeleton", event);
   }
 
   startVolumeTracing(event) {
-    return this.submitForm("volumeTracing", event);
+    return this.submitForm("volume", event);
   }
 
   submitForm(type, event) {

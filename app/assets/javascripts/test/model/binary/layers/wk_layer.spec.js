@@ -79,7 +79,7 @@ test.serial("requestFromStore: Token Handling should request a token first", t =
     t.is(RequestMock.receiveJSON.callCount, 1);
 
     const [url] = RequestMock.receiveJSON.getCall(0).args;
-    t.is(url, "/dataToken/generate?dataSetName=dataSet&dataLayerName=layername");
+    t.is(url, "/api/dataToken/generate?dataSetName=dataSet&dataLayerName=layername");
 
     t.is(token, "token");
   });

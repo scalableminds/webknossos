@@ -21,7 +21,6 @@ import {
 import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
 import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import type { ServerTracing } from "oxalis/model";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
@@ -41,7 +40,7 @@ type PingOptions = {
 // TODO: Non-reactive
 class Binary {
   cube: DataCube;
-  tracing: ServerTracing<*>;
+  tracingType: string;
   layer: Layer;
   category: CategoryType;
   name: string;
@@ -65,12 +64,12 @@ class Binary {
   listenTo: Function;
 
   constructor(
-    tracing: ServerTracing<*>,
+    tracingType: string,
     layer: Layer,
     maxZoomStep: number,
     connectionInfo: ConnectionInfo,
   ) {
-    this.tracing = tracing;
+    this.tracingType = tracingType;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
     _.extend(this, Backbone.Events);
@@ -96,7 +95,7 @@ class Binary {
     }
     const datastoreInfo = dataset.dataStore;
     this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
-    this.pushQueue = new PushQueue(this.cube, this.layer, this.tracing.id, taskQueue);
+    this.pushQueue = new PushQueue(this.cube, this.layer, taskQueue);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
     this.mappings = new Mappings(datastoreInfo, this.layer);
     this.activeMapping = null;
@@ -179,7 +178,7 @@ class Binary {
 
       for (const strategy of this.pingStrategies) {
         if (
-          strategy.forContentType(this.tracing.contentType) &&
+          strategy.forContentType(this.tracingType) &&
           strategy.inVelocityRange(this.connectionInfo.bandwidth) &&
           strategy.inRoundTripTimeRange(this.connectionInfo.roundTripTime)
         ) {
@@ -200,7 +199,7 @@ class Binary {
   arbitraryPingImpl(matrix: Matrix4x4, zoomStep: number): void {
     for (const strategy of this.pingStrategies3d) {
       if (
-        strategy.forContentType(this.tracing.contentType) &&
+        strategy.forContentType(this.tracingType) &&
         strategy.inVelocityRange(1) &&
         strategy.inRoundTripTimeRange(this.pullQueue.roundTripTime)
       ) {

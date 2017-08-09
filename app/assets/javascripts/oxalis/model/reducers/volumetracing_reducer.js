@@ -22,16 +22,15 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
     case "INITIALIZE_VOLUMETRACING": {
       const restrictions = Object.assign(
         {},
-        action.tracing.restrictions,
-        action.tracing.content.settings,
+        action.annotation.restrictions,
+        action.annotation.settings,
       );
-      const { contentData } = action.tracing.content;
 
       // As the frontend doesn't know all cells, we have to keep track of the highest id
       // and cannot compute it
       let maxCellId = 1;
-      if (contentData.nextCell != null) {
-        maxCellId = contentData.nextCell - 1;
+      if (action.tracing.nextCell != null) {
+        maxCellId = action.tracing.nextCell - 1;
       }
 
       const volumeTracing: VolumeTracingType = {
@@ -43,15 +42,15 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         cells: {},
         restrictions,
         volumeTraceOrMoveMode: Constants.VOLUME_MODE_MOVE,
-        name: action.tracing.dataSetName,
-        tracingType: action.tracing.typ,
-        tracingId: action.tracing.id,
+        name: action.annotation.name,
+        tracingType: action.annotation.typ,
+        tracingId: action.annotation.id,
         version: action.tracing.version,
-        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+        boundingBox: convertBoundingBox(action.tracing.boundingBox),
       };
 
       const newState = update(state, { tracing: { $set: volumeTracing } });
-      return createCellReducer(newState, volumeTracing, contentData.activeCell);
+      return createCellReducer(newState, volumeTracing, action.tracing.activeCell);
     }
     default:
     // pass

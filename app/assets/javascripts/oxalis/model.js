@@ -6,7 +6,6 @@
 import _ from "lodash";
 import Store from "oxalis/store";
 import type {
-  DatasetType,
   BoundingBoxObjectType,
   RestrictionsType,
   SettingsType,
@@ -17,6 +16,8 @@ import type {
   SkeletonTracingTypeTracingType,
   VolumeTracingTypeTracingType,
   TaskType,
+  DataStoreInfoType,
+  DataLayerType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
@@ -52,7 +53,7 @@ import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import update from "immutability-helper";
 import UrlManager from "oxalis/controller/url_manager";
 
-type SkeletonContentTreeType = {
+type ServerSkeletonTracingTreeType = {
   id: number,
   color: ?Vector3,
   name: string,
@@ -63,50 +64,60 @@ type SkeletonContentTreeType = {
   nodes: Array<NodeType>,
 };
 
-export type SkeletonContentDataType = {
-  activeNode: null | number,
-  trees: Array<SkeletonContentTreeType>,
-  zoomLevel: number,
-  customLayers: null,
-  zoomLevel: number,
-};
-
-export type VolumeContentDataType = {
-  activeCell: null | number,
-  nextCell: ?number,
+export type ServerSkeletonTracingType = {
+  activeNode?: number,
+  boundingBox?: BoundingBoxObjectType,
   customLayers: Array<Object>,
-  boundingBox: BoundingBoxObjectType,
-  name: string,
+  editPosition: Vector3,
+  editRotation: Vector3,
+  trees: Array<ServerSkeletonTracingTreeType>,
+  version: number,
   zoomLevel: number,
 };
 
-export type ServerTracing<T> = {
-  actions: Array<any>,
-  content: {
-    boundingBox: BoundingBoxObjectType,
-    contentData: T,
-    contentType: string,
-    dataSet: DatasetType,
-    editPosition: Vector3,
-    editRotation: Vector3,
-    settings: SettingsType,
+export type ServerVolumeTracingType = {
+  activeCell?: number,
+  boundingBox?: BoundingBoxObjectType,
+  customLayers: Array<Object>,
+  editPosition: Vector3,
+  editRotation: Vector3,
+  nextCell: ?number,
+  version: number,
+  zoomLevel: number,
+};
+
+type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
+
+export type ServerDatasetType = {
+  dataStore: DataStoreInfoType,
+  dataSource: {
+    id: {
+      name: string,
+      team: string,
+    },
+    dataLayers: Array<DataLayerType>,
+    scale: Vector3,
   },
-  contentType: string,
+};
+
+export type ServerAnnotationType = {
+  content: {
+    id: string,
+    typ: string,
+  },
   created: string,
   dataSetName: string,
-  downloadUrl: string,
+  dataStore: DataStoreInfoType,
+  error?: string,
   formattedHash: string,
   id: string,
   name: string,
   restrictions: RestrictionsType,
-  state: UrlManagerState,
-  stateLabel: string,
+  settings: SettingsType,
   stats: any,
   task: TaskType,
   tracingTime: number,
   typ: SkeletonTracingTypeTracingType | VolumeTracingTypeTracingType,
-  user: any,
-  version: number,
 };
 
 // TODO: Non-reactive
@@ -119,7 +130,6 @@ export class OxalisModel {
   };
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>;
 
   async fetch(
     tracingType: SkeletonTracingTypeTracingType,
@@ -139,8 +149,10 @@ export class OxalisModel {
       infoUrl = `/annotations/${tracingType}/${tracingId}/info`;
     }
 
-    const annotation: ServerTracing<*> = await Request.receiveJSON(infoUrl);
-    const dataset = await Request.receiveJSON(`/api/datasets/${annotation.dataSetName}`);
+    const annotation: ServerAnnotationType = await Request.receiveJSON(infoUrl);
+    const dataset: ServerDatasetType = await Request.receiveJSON(
+      `/api/datasets/${annotation.dataSetName}`,
+    );
 
     let error;
     if (annotation.error) {
@@ -148,8 +160,9 @@ export class OxalisModel {
     } else if (!dataset) {
       error = "Selected dataset doesn't exist";
     } else if (!dataset.dataSource.dataLayers) {
-      if (dataset.name) {
-        error = `Please, double check if you have the dataset '${dataset.name}' imported.`;
+      const datasetName = dataset.dataSource.id.name;
+      if (datasetName) {
+        error = `Please, double check if you have the dataset '${datasetName}' imported.`;
       } else {
         error = "Please, make sure you have a dataset imported.";
       }
@@ -175,18 +188,24 @@ export class OxalisModel {
 
     ErrorHandling.assertExtendContext({
       task: annotation.id,
-      dataSet: dataset.name,
+      dataSet: dataset.dataSource.id.name,
     });
 
     Store.dispatch(setDatasetAction(dataset));
     Store.dispatch(setTaskAction(annotation.task));
 
+    // Fetch the actual tracing from the datastore
+    const tracing = await Request.receiveJSON(
+      `${annotation.dataStore.url}/data/tracings/${annotation.content.typ}/${annotation.content
+        .id}`,
+    );
+
     // Only initialize the model once.
     // There is no need to reinstantiate the binaries if the dataset didn't change.
     if (initialFetch) {
-      this.initializeModel(tracing);
+      this.initializeModel(annotation, tracing, dataset);
     }
-    this.initializeTracing(tracing, initialFetch);
+    this.initializeTracing(annotation, tracing, initialFetch);
 
     return tracing;
   }
@@ -212,13 +231,14 @@ export class OxalisModel {
   }
 
   initializeTracing(
-    tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>,
+    annotation: ServerAnnotationType,
+    tracing: ServerTracingType,
     initialFetch: boolean,
   ) {
-    const { allowedModes, preferredMode } = this.determineAllowedModes(tracing.content.settings);
-    _.extend(tracing.content.settings, { allowedModes, preferredMode });
+    const { allowedModes, preferredMode } = this.determineAllowedModes(annotation.settings);
+    _.extend(annotation.settings, { allowedModes, preferredMode });
 
-    const isVolume = tracing.content.settings.allowedModes.includes("volume");
+    const isVolume = annotation.settings.allowedModes.includes("volume");
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
     if (controlMode === ControlModeEnum.TRACE) {
       if (isVolume) {
@@ -226,21 +246,20 @@ export class OxalisModel {
           this.getSegmentationBinary() != null,
           "Volume is allowed, but segmentation does not exist",
         );
-        const volumeTracing: ServerTracing<VolumeContentDataType> = (tracing: ServerTracing<any>);
-        Store.dispatch(initializeVolumeTracingAction(volumeTracing));
+        const volumeTracing: ServerVolumeTracingType = (tracing: any);
+        Store.dispatch(initializeVolumeTracingAction(annotation, volumeTracing));
       } else {
-        const skeletonTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<
-          any,
-        >);
-        Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
+        const skeletonTracing: ServerSkeletonTracingType = (tracing: any);
+        Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
       }
     } else {
-      const readOnlyTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<any>);
-      Store.dispatch(initializeReadOnlyTracingAction(readOnlyTracing));
+      const readOnlyTracing: ServerSkeletonTracingType = (tracing: any);
+      Store.dispatch(initializeReadOnlyTracingAction(annotation, readOnlyTracing));
     }
 
     if (initialFetch) {
-      Store.dispatch(setZoomStepAction(tracing.content.contentData.zoomLevel));
+      // TODO remove default value
+      Store.dispatch(setZoomStepAction(tracing.zoomLevel || 2));
     }
 
     // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
@@ -254,8 +273,11 @@ export class OxalisModel {
     this.applyState(UrlManager.initialState, tracing);
   }
 
-  initializeModel(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
-    const dataset = tracing.content.dataSet;
+  initializeModel(
+    annotation: ServerAnnotationType,
+    tracing: ServerTracingType,
+    dataset: ServerDatasetType,
+  ) {
     const { dataStore } = dataset;
 
     const LayerClass = (() => {
@@ -269,7 +291,7 @@ export class OxalisModel {
       }
     })();
 
-    const layers = this.getLayerInfos(tracing.content.contentData.customLayers).map(
+    const layers = this.getLayerInfos(tracing.customLayers).map(
       layerInfo => new LayerClass(layerInfo, dataStore),
     );
 
@@ -280,7 +302,12 @@ export class OxalisModel {
 
     for (const layer of layers) {
       const maxLayerZoomStep = Math.log(Math.max(...layer.resolutions)) / Math.LN2;
-      this.binary[layer.name] = new Binary(tracing, layer, maxLayerZoomStep, this.connectionInfo);
+      this.binary[layer.name] = new Binary(
+        annotation.content.typ,
+        layer,
+        maxLayerZoomStep,
+        this.connectionInfo,
+      );
       maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep);
     }
 
@@ -292,9 +319,6 @@ export class OxalisModel {
     }
 
     this.computeBoundaries();
-
-    // TODO: remove
-    this.tracing = tracing;
   }
 
   // For now, since we have no UI for this
@@ -385,16 +409,14 @@ export class OxalisModel {
     }
   }
 
-  applyState(
-    state: UrlManagerState,
-    tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>,
-  ) {
-    Store.dispatch(setPositionAction(state.position || tracing.content.editPosition));
+  applyState(state: UrlManagerState, tracing: ServerTracingType) {
+    // TODO remove default value
+    Store.dispatch(setPositionAction(state.position || tracing.editPosition || [0, 0, 0]));
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));
     }
-
-    const rotation = state.rotation || tracing.content.editRotation;
+    // TODO remove default value
+    const rotation = state.rotation || tracing.editRotation || [0, 0, 0];
     if (rotation != null) {
       Store.dispatch(setRotationAction(rotation));
     }

@@ -18,21 +18,13 @@ class PushQueue {
   dataSetName: string;
   cube: DataCube;
   layer: Layer;
-  tracingId: string;
   taskQueue: AsyncTaskQueue;
   sendData: boolean;
   queue: Array<Vector4>;
 
-  constructor(
-    cube: DataCube,
-    layer: Layer,
-    tracingId: string,
-    taskQueue: AsyncTaskQueue,
-    sendData: boolean = true,
-  ) {
+  constructor(cube: DataCube, layer: Layer, taskQueue: AsyncTaskQueue, sendData: boolean = true) {
     this.cube = cube;
     this.layer = layer;
-    this.tracingId = tracingId;
     this.taskQueue = taskQueue;
     this.sendData = sendData;
     this.queue = [];

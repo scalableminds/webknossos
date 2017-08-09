@@ -5,11 +5,12 @@
  * @flow
  */
 import type { Vector3 } from "oxalis/constants";
-import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
+import type { ServerSkeletonTracingType, ServerAnnotationType } from "oxalis/model";
 
 type InitializeSkeletonTracingActionType = {
   type: "INITIALIZE_SKELETONTRACING",
-  tracing: ServerTracing<SkeletonContentDataType>,
+  annotation: ServerAnnotationType,
+  tracing: ServerSkeletonTracingType,
 };
 type CreateNodeActionType = {
   type: "CREATE_NODE",
@@ -104,9 +105,11 @@ export const SkeletonTracingActions = [
 ];
 
 export const initializeSkeletonTracingAction = (
-  tracing: ServerTracing<SkeletonContentDataType>,
+  annotation: ServerAnnotationType,
+  tracing: ServerSkeletonTracingType,
 ): InitializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",
+  annotation,
   tracing,
 });
 

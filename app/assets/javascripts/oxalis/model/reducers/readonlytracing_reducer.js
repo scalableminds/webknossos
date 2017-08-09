@@ -10,18 +10,18 @@ function ReadOnlyTracingReducer(state: OxalisState, action: ActionType): OxalisS
     case "INITIALIZE_READONLYTRACING": {
       const restrictions = Object.assign(
         {},
-        action.tracing.restrictions,
-        action.tracing.content.settings,
+        action.annotation.restrictions,
+        action.annotation.settings,
       );
 
       const readonlyTracing: ReadOnlyTracingType = {
         type: "readonly",
         restrictions,
-        name: action.tracing.dataSetName,
+        name: action.annotation.name,
         tracingType: "View",
-        tracingId: action.tracing.id,
+        tracingId: action.annotation.id,
         version: action.tracing.version,
-        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+        boundingBox: convertBoundingBox(action.tracing.boundingBox),
       };
 
       return update(state, { tracing: { $set: readonlyTracing } });

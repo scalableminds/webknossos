@@ -38,13 +38,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
     case "INITIALIZE_SKELETONTRACING": {
       const restrictions = Object.assign(
         {},
-        action.tracing.restrictions,
-        action.tracing.content.settings,
+        action.annotation.restrictions,
+        action.annotation.settings,
       );
-      const { contentData } = action.tracing.content;
 
       const trees = _.keyBy(
-        contentData.trees.map(tree =>
+        action.tracing.trees.map(tree =>
           update(tree, {
             treeId: { $set: tree.id },
             nodes: { $set: _.keyBy(tree.nodes, "id") },
@@ -55,7 +54,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         "id",
       );
 
-      const activeNodeIdMaybe = Maybe.fromNullable(contentData.activeNode);
+      const activeNodeIdMaybe = Maybe.fromNullable(action.tracing.activeNode);
       let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
       cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
@@ -94,11 +93,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         activeTreeId,
         restrictions,
         trees,
-        name: action.tracing.name,
-        tracingType: action.tracing.typ,
-        tracingId: action.tracing.id,
+        name: action.annotation.name,
+        tracingType: action.annotation.typ,
+        tracingId: action.annotation.id,
         version: action.tracing.version,
-        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+        boundingBox: convertBoundingBox(action.tracing.boundingBox),
       };
 
       return update(state, { tracing: { $set: skeletonTracing } });

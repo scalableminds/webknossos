@@ -419,6 +419,7 @@ export class OxalisModel {
   save = async () => {
     Store.dispatch(saveNowAction());
     while (!this.stateSaved()) {
+      // eslint-disable-next-line no-await-in-loop
       await Utils.sleep(500);
     }
   };

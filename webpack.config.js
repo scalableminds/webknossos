@@ -1,4 +1,4 @@
-module.exports = function (env = {}) {
+module.exports = function(env = {}) {
   /* eslint no-var:0, import/no-extraneous-dependencies:0 */
   var webpack = require("webpack");
   var ExtractTextPlugin = require("extract-text-webpack-plugin");
@@ -28,9 +28,7 @@ module.exports = function (env = {}) {
     module: {
       // Reduce compilation time by telling webpack to not parse these libraries.
       // Only add libraries that have no dependencies eg. no require, define or similar calls.
-      noParse: [
-        /\/jquery\//,
-      ],
+      noParse: [/\/jquery\//],
       rules: [
         {
           test: /\.js$/,
@@ -64,7 +62,8 @@ module.exports = function (env = {}) {
               mimetype: "application/font-woff",
             },
           },
-        }, {
+        },
+        {
           test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
           use: "file-loader",
         },
@@ -73,19 +72,14 @@ module.exports = function (env = {}) {
       ],
     },
     resolve: {
-      modules: [
-        srcPath,
-        nodePath,
-      ],
+      modules: [srcPath, nodePath],
       alias: scriptPaths,
     },
-    externals: [
-      { routes: "var jsRoutes" },
-    ],
+    externals: [{ routes: "var jsRoutes" }],
     devtool: "cheap-module-source-map",
     plugins: [
       new webpack.DefinePlugin({
-        'process.env.NODE_ENV': env.production ? '"production"' : '"development"',
+        "process.env.NODE_ENV": env.production ? '"production"' : '"development"',
       }),
       new ExtractTextPlugin("main.css"),
       new webpack.ProvidePlugin({
@@ -96,16 +90,16 @@ module.exports = function (env = {}) {
       }),
       new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
       new webpack.optimize.CommonsChunkPlugin({
-          name: "vendor",
-          minChunks: function (module) {
-             // this assumes your vendor imports exist in the node_modules directory
-             return module.context && module.context.indexOf("node_modules") !== -1;
-          }
+        name: "vendor",
+        minChunks: function(module) {
+          // this assumes your vendor imports exist in the node_modules directory
+          return module.context && module.context.indexOf("node_modules") !== -1;
+        },
       }),
       //CommonChunksPlugin will now extract all the common modules from vendor and main bundles
       new webpack.optimize.CommonsChunkPlugin({
-          name: "manifest" //But since there are no more common modules between them we end up with just the runtime code included in the manifest file
+        name: "manifest", //But since there are no more common modules between them we end up with just the runtime code included in the manifest file
       }),
     ],
   };
-}
+};

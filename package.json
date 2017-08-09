@@ -10,7 +10,7 @@
     "url": "git://github.com/scalableminds/webknossos.git"
   },
   "devDependencies": {
-    "ava": "^0.19.1",
+    "ava": "^0.21.0",
     "babel-cli": "^6.24.1",
     "babel-core": "^6.24.1",
     "babel-eslint": "^7.2.3",
@@ -26,36 +26,36 @@
     "babel-preset-react-optimize": "^1.0.1",
     "babel-register": "^6.9.0",
     "css-loader": "^0.28.1",
-    "documentation": "4.0.0-rc.1",
-    "eslint": "^3.12.2",
-    "eslint-config-airbnb": "^13.0.0",
+    "documentation": "^5.1.1",
+    "eslint": "^4.4.1",
+    "eslint-config-airbnb": "^15.1.0",
     "eslint-config-prettier": "^2.1.1",
     "eslint-import-resolver-webpack": "^0.8.0",
     "eslint-plugin-flowtype": "^2.34.0",
     "eslint-plugin-import": "^2.2.0",
     "eslint-plugin-jasmine": "^2.2.0",
-    "eslint-plugin-jsx-a11y": "2.2.3",
-    "eslint-plugin-react": "^6.8.0",
+    "eslint-plugin-jsx-a11y": "^5.1.1",
+    "eslint-plugin-react": "^7.1.0",
     "exports-loader": "^0.6.4",
-    "extract-text-webpack-plugin": "^2.1.0",
+    "extract-text-webpack-plugin": "^3.0.0",
     "file-loader": "^0.11.1",
-    "flow-bin": "^0.47.0",
+    "flow-bin": "^0.52.0",
     "imports-loader": "^0.7.1",
     "isomorphic-fetch": "^2.2.0",
     "less": "^2.7.2",
-    "less-loader": "^2.2.3",
+    "less-loader": "^4.0.5",
     "mock-require": "^1.2.1",
     "node-fetch": "^1.7.1",
     "prettier": "^1.5.3",
     "redux-mock-store": "^1.2.2",
     "sinon": "^1.17.3",
-    "style-loader": "^0.17.0",
+    "style-loader": "^0.18.2",
     "url-loader": "^0.5.8",
     "wdio-jasmine-framework": "^0.3.1",
     "wdio-selenium-standalone-service": "0.0.9",
     "wdio-spec-reporter": "0.1.0",
     "webdriverio": "^4.8.0",
-    "webpack": "^3.0.0"
+    "webpack": "^3.5.1"
   },
   "scripts": {
     "test": "buildtools/test.sh prepare -q && buildtools/test.sh test --timeout=30s",
@@ -121,12 +121,8 @@
     "whatwg-fetch": "^1.1.0"
   },
   "ava": {
-    "files": [
-      "./public/test-bundle/test/**/*.spec.js"
-    ],
-    "source": [
-      "./public/test-bundle/**/*.{js,jsx}"
-    ],
+    "files": ["./public/test-bundle/test/**/*.spec.js"],
+    "source": ["./public/test-bundle/**/*.{js,jsx}"],
     "modules": true,
     "failFast": true,
     "failWithoutAssertions": false,

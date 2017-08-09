@@ -15,13 +15,21 @@ mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("bootstrap-toggle", {});
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 mockRequire("libs/date", DateMock);
-mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
+mockRequire("oxalis/model/sagas/root_saga", function*() {
+  yield;
+});
 
 const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
-const { saveTracingAsync, compactUpdateActions } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
-const SkeletonTracingActions = mockRequire.reRequire("oxalis/model/actions/skeletontracing_actions");
+const { saveTracingAsync, compactUpdateActions } = mockRequire.reRequire(
+  "oxalis/model/sagas/save_saga",
+);
+const SkeletonTracingActions = mockRequire.reRequire(
+  "oxalis/model/actions/skeletontracing_actions",
+);
 const { pushSaveQueueAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
-const SkeletonTracingReducer = mockRequire.reRequire("oxalis/model/reducers/skeletontracing_reducer").default;
+const SkeletonTracingReducer = mockRequire.reRequire(
+  "oxalis/model/reducers/skeletontracing_reducer",
+).default;
 const { take, put, race } = mockRequire.reRequire("redux-saga/effects");
 const { M4x4 } = mockRequire.reRequire("libs/mjs");
 
@@ -79,14 +87,18 @@ const createTreeAction = SkeletonTracingActions.createTreeAction(12345678);
 const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
 const setNodeRadiusAction = SkeletonTracingActions.setNodeRadiusAction(12);
 const createCommentAction = SkeletonTracingActions.createCommentAction("Hallo");
-const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(undefined, undefined, 12345678);
+const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(
+  undefined,
+  undefined,
+  12345678,
+);
 
 const INIT_RACE_ACTION_OBJECT = {
   initSkeleton: take("INITIALIZE_SKELETONTRACING"),
   initVolume: take("INITIALIZE_VOLUMETRACING"),
 };
 
-test("SkeletonTracingSaga should create a tree if there is none (saga test)", (t) => {
+test("SkeletonTracingSaga should create a tree if there is none (saga test)", t => {
   const saga = saveTracingAsync();
   expectValueDeepEqual(t, saga.next(), race(INIT_RACE_ACTION_OBJECT));
   saga.next({ initSkeleton: true });
@@ -94,7 +106,7 @@ test("SkeletonTracingSaga should create a tree if there is none (saga test)", (t
   t.is(saga.next(true).value.PUT.action.type, "CREATE_TREE");
 });
 
-test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) => {
+test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   const saga = saveTracingAsync();
   expectValueDeepEqual(t, saga.next(), race(INIT_RACE_ACTION_OBJECT));
   saga.next({ initSkeleton: true });
@@ -109,7 +121,7 @@ test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", (t) =
   t.is(withoutUpdateTracing(items).length, 0);
 });
 
-test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
+test("SkeletonTracingSaga should do something if changed (saga test)", t => {
   const newState = SkeletonTracingReducer(initialState, createNodeAction);
 
   const saga = saveTracingAsync();
@@ -126,7 +138,7 @@ test("SkeletonTracingSaga should do something if changed (saga test)", (t) => {
   expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items)));
 });
 
-test("SkeletonTracingSaga should emit createNode update actions", (t) => {
+test("SkeletonTracingSaga should emit createNode update actions", t => {
   const newState = SkeletonTracingReducer(initialState, createNodeAction);
 
   const updateActions = testDiffing(initialState.tracing, newState.tracing, newState.flycam);
@@ -135,7 +147,7 @@ test("SkeletonTracingSaga should emit createNode update actions", (t) => {
   t.is(updateActions[0].value.treeId, 1);
 });
 
-test("SkeletonTracingSaga should emit createNode and createEdge update actions", (t) => {
+test("SkeletonTracingSaga should emit createNode and createEdge update actions", t => {
   const newState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -154,7 +166,7 @@ test("SkeletonTracingSaga should emit createNode and createEdge update actions",
   t.is(updateActions[2].value.target, 2);
 });
 
-test("SkeletonTracingSaga should emit createNode and createTree update actions", (t) => {
+test("SkeletonTracingSaga should emit createNode and createTree update actions", t => {
   const newState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createTreeAction)
@@ -172,7 +184,7 @@ test("SkeletonTracingSaga should emit createNode and createTree update actions",
   t.is(updateActions[2].value.treeId, 1);
 });
 
-test("SkeletonTracingSaga should emit first deleteNode and then createNode update actions", (t) => {
+test("SkeletonTracingSaga should emit first deleteNode and then createNode update actions", t => {
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(2, 1);
 
   const testState = ChainReducer(initialState)
@@ -197,7 +209,7 @@ test("SkeletonTracingSaga should emit first deleteNode and then createNode updat
   t.is(updateActions[3].value.target, 1);
 });
 
-test("SkeletonTracingSaga should emit a deleteNode update action", (t) => {
+test("SkeletonTracingSaga should emit a deleteNode update action", t => {
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
   const newState = SkeletonTracingReducer(testState, deleteNodeAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
@@ -207,7 +219,7 @@ test("SkeletonTracingSaga should emit a deleteNode update action", (t) => {
   t.is(updateActions[0].value.treeId, 1);
 });
 
-test("SkeletonTracingSaga should emit a deleteEdge update action", (t) => {
+test("SkeletonTracingSaga should emit a deleteEdge update action", t => {
   const testState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -224,7 +236,7 @@ test("SkeletonTracingSaga should emit a deleteEdge update action", (t) => {
   t.is(updateActions[1].value.target, 2);
 });
 
-test("SkeletonTracingSaga should emit a deleteTree update action", (t) => {
+test("SkeletonTracingSaga should emit a deleteTree update action", t => {
   const testState = SkeletonTracingReducer(initialState, createTreeAction);
   const newState = SkeletonTracingReducer(testState, deleteTreeAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
@@ -233,7 +245,7 @@ test("SkeletonTracingSaga should emit a deleteTree update action", (t) => {
   t.is(updateActions[0].value.id, 2);
 });
 
-test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
+test("SkeletonTracingSaga should emit an updateNode update action", t => {
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
   const newState = SkeletonTracingReducer(testState, setNodeRadiusAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
@@ -244,7 +256,7 @@ test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
   t.is(updateActions[0].value.treeId, 1);
 });
 
-test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
+test("SkeletonTracingSaga should emit an updateNode update action", t => {
   const testState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, setNodeRadiusAction)
@@ -255,7 +267,7 @@ test("SkeletonTracingSaga should emit an updateNode update action", (t) => {
   t.deepEqual(updateActions, []);
 });
 
-test("SkeletonTracingSaga should emit an updateTree update actions (comments)", (t) => {
+test("SkeletonTracingSaga should emit an updateTree update actions (comments)", t => {
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
   const newState = SkeletonTracingReducer(testState, createCommentAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
@@ -265,7 +277,7 @@ test("SkeletonTracingSaga should emit an updateTree update actions (comments)", 
   t.deepEqual(updateActions[0].value.comments, [{ node: 1, content: "Hallo" }]);
 });
 
-test("SkeletonTracingSaga shouldn't emit an updateTree update actions (comments)", (t) => {
+test("SkeletonTracingSaga shouldn't emit an updateTree update actions (comments)", t => {
   const testState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createCommentAction)
@@ -276,7 +288,7 @@ test("SkeletonTracingSaga shouldn't emit an updateTree update actions (comments)
   t.deepEqual(updateActions, []);
 });
 
-test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints)", (t) => {
+test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints)", t => {
   const testState = SkeletonTracingReducer(initialState, createNodeAction);
   const newState = SkeletonTracingReducer(testState, createBranchPointAction);
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
@@ -286,7 +298,7 @@ test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints
   t.deepEqual(updateActions[0].value.branchPoints, [{ id: 1, timestamp: 12345678 }]);
 });
 
-test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
+test("SkeletonTracingSaga should emit update actions on merge tree", t => {
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
 
   // create a node in first tree, then create a second tree with three nodes and merge them
@@ -311,7 +323,7 @@ test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
   });
 });
 
-test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
+test("SkeletonTracingSaga should emit update actions on split tree", t => {
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
 
   // create a node in first tree, then create a second tree with three nodes and merge them
@@ -346,7 +358,7 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
   t.is(updateActions[10].value.id, 2);
 });
 
-test("compactUpdateActions should detect a tree merge (1/3)", (t) => {
+test("compactUpdateActions should detect a tree merge (1/3)", t => {
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 4);
 
   // Create three nodes in the first tree, then create a second tree with one node and merge them
@@ -367,20 +379,23 @@ test("compactUpdateActions should detect a tree merge (1/3)", (t) => {
   // This should result in a moved treeComponent of size three
   t.deepEqual(simplifiedFirstBatch[0], {
     name: "moveTreeComponent",
-    value: { sourceId: 1, targetId: 2, nodeIds: [1, 2, 3] } });
+    value: { sourceId: 1, targetId: 2, nodeIds: [1, 2, 3] },
+  });
   // the deletion of the merged tree
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "deleteTree",
-    value: { id: 1 } });
+    value: { id: 1 },
+  });
   // and a new edge to connect the two trees
   t.deepEqual(simplifiedFirstBatch[2], {
     name: "createEdge",
-    value: { treeId: 2, source: 1, target: 4 } });
+    value: { treeId: 2, source: 1, target: 4 },
+  });
   t.is(simplifiedFirstBatch[3].name, "updateTree");
   t.is(simplifiedFirstBatch.length, 4);
 });
 
-test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
+test("compactUpdateActions should detect a tree merge (2/3)", t => {
   // In this test multiple diffs are performed and concatenated before compactUpdateActions is invoked
   const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 5);
 
@@ -425,23 +440,26 @@ test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
   // a moved tree component of size three (b)
   t.deepEqual(simplifiedSecondBatch[0], {
     name: "moveTreeComponent",
-    value: { sourceId: 1, targetId: 2, nodeIds: [1, 2, 3] } });
+    value: { sourceId: 1, targetId: 2, nodeIds: [1, 2, 3] },
+  });
   // the deletion of the merged tree (b)
   t.deepEqual(simplifiedSecondBatch[1], {
     name: "deleteTree",
-    value: { id: 1 } });
+    value: { id: 1 },
+  });
   // the creation of a new tree and node (c)
   t.is(simplifiedSecondBatch[2].name, "createTree");
   t.is(simplifiedSecondBatch[3].name, "createNode");
   // a new edge to connect the two trees (b)
   t.deepEqual(simplifiedSecondBatch[4], {
     name: "createEdge",
-    value: { treeId: 2, source: 1, target: 5 } });
+    value: { treeId: 2, source: 1, target: 5 },
+  });
   t.is(simplifiedSecondBatch[5].name, "updateTree");
   t.is(simplifiedSecondBatch.length, 6);
 });
 
-test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
+test("compactUpdateActions should detect a tree merge (3/3)", t => {
   // In this test multiple merges and diffs are performed and concatenated before compactUpdateActions is invoked
   const firstMergeTreesAction = SkeletonTracingActions.mergeTreesAction(4, 1);
   const secondMergeTreesAction = SkeletonTracingActions.mergeTreesAction(6, 1);
@@ -458,7 +476,9 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
   // Merge the second tree into the first tree (a)
   const stateAfterFirstMerge = SkeletonTracingReducer(testState, firstMergeTreesAction);
   const updateActions = [];
-  updateActions.push(testDiffing(testState.tracing, stateAfterFirstMerge.tracing, stateAfterFirstMerge.flycam));
+  updateActions.push(
+    testDiffing(testState.tracing, stateAfterFirstMerge.tracing, stateAfterFirstMerge.flycam),
+  );
 
   // Create another tree and two nodes (b)
   const newState = ChainReducer(stateAfterFirstMerge)
@@ -470,7 +490,9 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
 
   // Merge the second tree into the first tree again (c)
   const stateAfterSecondMerge = SkeletonTracingReducer(newState, secondMergeTreesAction);
-  updateActions.push(testDiffing(newState.tracing, stateAfterSecondMerge.tracing, stateAfterSecondMerge.flycam));
+  updateActions.push(
+    testDiffing(newState.tracing, stateAfterSecondMerge.tracing, stateAfterSecondMerge.flycam),
+  );
 
   // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
@@ -480,15 +502,18 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
   t.deepEqual(simplifiedFirstBatch[0], {
     name: "moveTreeComponent",
-    value: { sourceId: 2, targetId: 1, nodeIds: [4] } });
+    value: { sourceId: 2, targetId: 1, nodeIds: [4] },
+  });
   // the deletion of the first merged tree (a)
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "deleteTree",
-    value: { id: 2 } });
+    value: { id: 2 },
+  });
   // the creation of an edge two connect the first two trees (a)
   t.deepEqual(simplifiedFirstBatch[2], {
     name: "createEdge",
-    value: { treeId: 1, source: 4, target: 1 } });
+    value: { treeId: 1, source: 4, target: 1 },
+  });
   t.is(simplifiedFirstBatch[3].name, "updateTree");
   t.is(simplifiedFirstBatch.length, 4);
 
@@ -504,18 +529,21 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
   const simplifiedThirdBatch = simplifiedUpdateActions[2].actions;
   t.deepEqual(simplifiedThirdBatch[0], {
     name: "moveTreeComponent",
-    value: { sourceId: 2, targetId: 1, nodeIds: [5, 6] } });
+    value: { sourceId: 2, targetId: 1, nodeIds: [5, 6] },
+  });
   t.deepEqual(simplifiedThirdBatch[1], {
     name: "deleteTree",
-    value: { id: 2 } });
+    value: { id: 2 },
+  });
   t.deepEqual(simplifiedThirdBatch[2], {
     name: "createEdge",
-    value: { treeId: 1, source: 6, target: 1 } });
+    value: { treeId: 1, source: 6, target: 1 },
+  });
   t.is(simplifiedThirdBatch[3].name, "updateTree");
   t.is(simplifiedThirdBatch.length, 4);
 });
 
-test("compactUpdateActions should detect a tree split (1/3)", (t) => {
+test("compactUpdateActions should detect a tree split (1/3)", t => {
   const deleteMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(2);
 
   // Create four nodes
@@ -539,18 +567,20 @@ test("compactUpdateActions should detect a tree split (1/3)", (t) => {
   // a treeComponent of size two that is moved to the new tree
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "moveTreeComponent",
-    value: { sourceId: 1, targetId: 2, nodeIds: [3, 4] } });
+    value: { sourceId: 1, targetId: 2, nodeIds: [3, 4] },
+  });
   // the deletion of the node and its two edges
   t.deepEqual(simplifiedFirstBatch[2], {
     name: "deleteNode",
-    value: { id: 2, treeId: 1 } });
+    value: { id: 2, treeId: 1 },
+  });
   t.is(simplifiedFirstBatch[3].name, "deleteEdge");
   t.is(simplifiedFirstBatch[4].name, "deleteEdge");
   t.is(simplifiedFirstBatch[5].name, "updateTree");
   t.is(simplifiedFirstBatch.length, 6);
 });
 
-test("compactUpdateActions should detect a tree split (2/3)", (t) => {
+test("compactUpdateActions should detect a tree split (2/3)", t => {
   // Branchpoint tree split
   const deleteMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(2);
   const setActiveNodeAction = SkeletonTracingActions.setActiveNodeAction(2);
@@ -580,16 +610,19 @@ test("compactUpdateActions should detect a tree split (2/3)", (t) => {
   t.is(simplifiedFirstBatch[0].value.id, 2);
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "moveTreeComponent",
-    value: { sourceId: 1, targetId: 2, nodeIds: [3, 4] } });
+    value: { sourceId: 1, targetId: 2, nodeIds: [3, 4] },
+  });
   t.is(simplifiedFirstBatch[2].name, "createTree");
   t.is(simplifiedFirstBatch[2].value.id, 3);
   t.deepEqual(simplifiedFirstBatch[3], {
     name: "moveTreeComponent",
-    value: { sourceId: 1, targetId: 3, nodeIds: [5, 6, 7] } });
+    value: { sourceId: 1, targetId: 3, nodeIds: [5, 6, 7] },
+  });
   // the deletion of the node and its three edges
   t.deepEqual(simplifiedFirstBatch[4], {
     name: "deleteNode",
-    value: { id: 2, treeId: 1 } });
+    value: { id: 2, treeId: 1 },
+  });
   t.is(simplifiedFirstBatch[5].name, "deleteEdge");
   t.is(simplifiedFirstBatch[6].name, "deleteEdge");
   t.is(simplifiedFirstBatch[7].name, "deleteEdge");
@@ -597,7 +630,7 @@ test("compactUpdateActions should detect a tree split (2/3)", (t) => {
   t.is(simplifiedFirstBatch.length, 9);
 });
 
-test("compactUpdateActions should detect a tree split (3/3)", (t) => {
+test("compactUpdateActions should detect a tree split (3/3)", t => {
   // Detect multiple tree splits
   const deleteMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(2);
   const deleteOtherMiddleNodeAction = SkeletonTracingActions.deleteNodeAction(4);
@@ -631,11 +664,13 @@ test("compactUpdateActions should detect a tree split (3/3)", (t) => {
   // a treeComponent of size four that is moved to the new tree (a)
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "moveTreeComponent",
-    value: { sourceId: 1, targetId: 2, nodeIds: [3, 4, 5, 6] } });
+    value: { sourceId: 1, targetId: 2, nodeIds: [3, 4, 5, 6] },
+  });
   // and the deletion of the node and its two edges (a)
   t.deepEqual(simplifiedFirstBatch[2], {
     name: "deleteNode",
-    value: { id: 2, treeId: 1 } });
+    value: { id: 2, treeId: 1 },
+  });
   t.is(simplifiedFirstBatch[3].name, "deleteEdge");
   t.is(simplifiedFirstBatch[4].name, "deleteEdge");
   t.is(simplifiedFirstBatch[5].name, "updateTree");
@@ -648,18 +683,20 @@ test("compactUpdateActions should detect a tree split (3/3)", (t) => {
   // a treeComponent of size two that is moved to the new tree (b)
   t.deepEqual(simplifiedSecondBatch[1], {
     name: "moveTreeComponent",
-    value: { sourceId: 2, targetId: 3, nodeIds: [5, 6] } });
+    value: { sourceId: 2, targetId: 3, nodeIds: [5, 6] },
+  });
   // and the deletion of the node and its two edges (b)
   t.deepEqual(simplifiedSecondBatch[2], {
     name: "deleteNode",
-    value: { id: 4, treeId: 2 } });
+    value: { id: 4, treeId: 2 },
+  });
   t.is(simplifiedSecondBatch[3].name, "deleteEdge");
   t.is(simplifiedSecondBatch[4].name, "deleteEdge");
   t.is(simplifiedSecondBatch[5].name, "updateTree");
   t.is(simplifiedSecondBatch.length, 6);
 });
 
-test("compactUpdateActions should do nothing if it cannot compact", (t) => {
+test("compactUpdateActions should do nothing if it cannot compact", t => {
   // The moveTreeComponent update action moves a list of nodeIds from and oldTreeId to a newTreeId
   // If the tree with the oldTreeId is deleted and the tree with the newTreeId is created
   // in the same diff, compactUpdateActions cannot insert the moveTreeComponent update action at
@@ -694,7 +731,7 @@ test("compactUpdateActions should do nothing if it cannot compact", (t) => {
   t.deepEqual(simplifiedUpdateActions, saveQueue);
 });
 
-test("compactUpdateActions should detect a deleted tree", (t) => {
+test("compactUpdateActions should detect a deleted tree", t => {
   const testState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -703,9 +740,7 @@ test("compactUpdateActions should detect a deleted tree", (t) => {
     .unpack();
 
   // Delete the tree
-  const newState = ChainReducer(testState)
-    .apply(SkeletonTracingReducer, deleteTreeAction)
-    .unpack();
+  const newState = ChainReducer(testState).apply(SkeletonTracingReducer, deleteTreeAction).unpack();
 
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
@@ -714,11 +749,12 @@ test("compactUpdateActions should detect a deleted tree", (t) => {
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
   t.deepEqual(simplifiedFirstBatch[0], {
     name: "deleteTree",
-    value: { id: 2 } });
+    value: { id: 2 },
+  });
   t.is(simplifiedFirstBatch.length, 1);
 });
 
-test("compactUpdateActions should not detect a deleted tree if there is no deleted tree", (t) => {
+test("compactUpdateActions should not detect a deleted tree if there is no deleted tree", t => {
   const testState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -739,10 +775,12 @@ test("compactUpdateActions should not detect a deleted tree if there is no delet
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
   t.deepEqual(simplifiedFirstBatch[0], {
     name: "deleteNode",
-    value: { id: 2, treeId: 2 } });
+    value: { id: 2, treeId: 2 },
+  });
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "deleteNode",
-    value: { id: 3, treeId: 2 } });
+    value: { id: 3, treeId: 2 },
+  });
   t.is(simplifiedFirstBatch[2].name, "deleteEdge");
   t.is(simplifiedFirstBatch[3].name, "deleteEdge");
   t.is(simplifiedFirstBatch[4].name, "updateTree");

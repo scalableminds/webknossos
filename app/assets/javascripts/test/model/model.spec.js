@@ -21,9 +21,9 @@ const ErrorHandling = {
 };
 
 class Binary {
-  category = "color"
-  lowerBoundary = [1, 2, 3]
-  upperBoundary = [4, 5, 6]
+  category = "color";
+  lowerBoundary = [1, 2, 3];
+  upperBoundary = [4, 5, 6];
 }
 
 class Layer {
@@ -51,12 +51,14 @@ const TRACING_OBJECT = {
         url: "dataStoreUrl",
         typ: "webknossos-store",
       },
-      dataLayers: [{
-        name: "layer1",
-        category: "color",
-        elementClass: "Uint32",
-        resolutions: [1],
-      }],
+      dataLayers: [
+        {
+          name: "layer1",
+          category: "color",
+          elementClass: "Uint32",
+          resolutions: [1],
+        },
+      ],
     },
     settings: {
       allowedModes: [],
@@ -70,17 +72,17 @@ const TRACING_OBJECT = {
 // Avoid node caching and make sure all mockRequires are applied
 const Model = mockRequire.reRequire("../../oxalis/model").OxalisModel;
 
-test.beforeEach((t) => {
-  const model = t.context.model = new Model({
+test.beforeEach(t => {
+  const model = new Model({
     tracingType: "tracingTypeValue",
     tracingId: "tracingIdValue",
   });
+  t.context.model = model;
   model.state = { position: [1, 2, 3] };
 
   Request.receiveJSON.returns(Promise.resolve(TRACING_OBJECT));
   User.prototype.fetch.returns(Promise.resolve());
 });
-
 
 // TODO: fix for Store-based model
 // describe("Successful initialization", () => {
@@ -94,30 +96,34 @@ test.beforeEach((t) => {
 //   });
 // });
 
-test("Model Initialization: should throw a model.HANDLED_ERROR for missing dataset", (t) => {
+test("Model Initialization: should throw a model.HANDLED_ERROR for missing dataset", t => {
   t.plan(1);
   const { model } = t.context;
   const tracingObject = _.clone(TRACING_OBJECT);
   delete tracingObject.content.dataSet;
   Request.receiveJSON.returns(Promise.resolve(tracingObject));
 
-  return model.fetch()
+  return model
+    .fetch()
     .then(() => {
       t.fail("Promise should not have been resolved.");
-    }).catch((error) => {
+    })
+    .catch(error => {
       t.is(error, model.HANDLED_ERROR);
     });
 });
 
-test("Model Initialization: should throw an Error on unexpected failure", (t) => {
+test("Model Initialization: should throw an Error on unexpected failure", t => {
   t.plan(1);
   const { model } = t.context;
   Request.receiveJSON.returns(Promise.reject(new Error("errorMessage")));
 
-  return model.fetch()
+  return model
+    .fetch()
     .then(() => {
       t.fail("Promise should not have been resolved.");
-    }).catch((error) => {
+    })
+    .catch(error => {
       t.is(error.message, "errorMessage");
     });
 });

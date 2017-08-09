@@ -9,14 +9,38 @@ import Model from "oxalis/model";
 import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import Binary from "oxalis/model/binary";
-import { updateUserSettingAction, updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
-import { setActiveNodeAction, createCommentAction, deleteNodeAction, setNodeRadiusAction } from "oxalis/model/actions/skeletontracing_actions";
-import { findTreeByNodeId, getNodeAndTree, getActiveNode, getActiveTree, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  updateUserSettingAction,
+  updateDatasetSettingAction,
+} from "oxalis/model/actions/settings_actions";
+import {
+  setActiveNodeAction,
+  createCommentAction,
+  deleteNodeAction,
+  setNodeRadiusAction,
+} from "oxalis/model/actions/skeletontracing_actions";
+import {
+  findTreeByNodeId,
+  getNodeAndTree,
+  getActiveNode,
+  getActiveTree,
+  getSkeletonTracing,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId, getVolumeTraceOrMoveMode } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveCellId,
+  getVolumeTraceOrMoveMode,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, VolumeTraceOrMoveModeType, ControlModeType } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
-import type { NodeType, UserConfigurationType, DatasetConfigurationType, TreeMapType, TracingType, SkeletonTracingTypeTracingType } from "oxalis/store";
+import type {
+  NodeType,
+  UserConfigurationType,
+  DatasetConfigurationType,
+  TreeMapType,
+  TracingType,
+  SkeletonTracingTypeTracingType,
+} from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
 import Request from "libs/request";
@@ -55,9 +79,8 @@ function assertVolume(tracing: TracingType) {
  * @class
  */
 class TracingApi {
-
   model: OxalisModel;
- /**
+  /**
   * @private
   */
   constructor(model: OxalisModel) {
@@ -66,7 +89,7 @@ class TracingApi {
 
   //  SKELETONTRACING API
 
- /**
+  /**
   * Returns the id of the current active node.
   */
   getActiveNodeId(): ?number {
@@ -75,7 +98,7 @@ class TracingApi {
     return getActiveNode(tracing).map(node => node.id).getOrElse(null);
   }
 
- /**
+  /**
   * Returns the id of the current active tree.
   */
   getActiveTreeId(): ?number {
@@ -84,7 +107,7 @@ class TracingApi {
     return getActiveTree(tracing).map(tree => tree.treeId).getOrElse(null);
   }
 
- /**
+  /**
   * Sets the active node given a node id.
   */
   setActiveNode(id: number) {
@@ -93,27 +116,27 @@ class TracingApi {
     Store.dispatch(setActiveNodeAction(id));
   }
 
- /**
+  /**
   * Returns all nodes belonging to a tracing.
   */
   getAllNodes(): Array<NodeType> {
     const tracing = Store.getState().tracing;
     assertSkeleton(tracing);
-    return getSkeletonTracing(tracing).map((skeletonTracing) => {
-      const { trees } = skeletonTracing;
-      return _.flatMap(trees, tree => _.values(tree.nodes));
-    }).getOrElse([]);
+    return getSkeletonTracing(tracing)
+      .map(skeletonTracing => {
+        const { trees } = skeletonTracing;
+        return _.flatMap(trees, tree => _.values(tree.nodes));
+      })
+      .getOrElse([]);
   }
 
-/**
+  /**
   * Returns all trees belonging to a tracing.
   */
   getAllTrees(): TreeMapType {
     const tracing = Store.getState().tracing;
     assertSkeleton(tracing);
-    return getSkeletonTracing(tracing).map(skeletonTracing =>
-      skeletonTracing.trees,
-    ).getOrElse({});
+    return getSkeletonTracing(tracing).map(skeletonTracing => skeletonTracing.trees).getOrElse({});
   }
 
   /**
@@ -124,7 +147,7 @@ class TracingApi {
     Store.dispatch(deleteNodeAction(nodeId, treeId));
   }
 
- /**
+  /**
   * Sets the comment for a node.
   *
   * @example
@@ -135,12 +158,13 @@ class TracingApi {
     const tracing = Store.getState().tracing;
     assertSkeleton(tracing);
     assertExists(commentText, "Comment text is missing.");
-    getSkeletonTracing(tracing).map((skeletonTracing) => {
+    getSkeletonTracing(tracing).map(skeletonTracing => {
       // Convert nodeId to node
       if (_.isNumber(nodeId)) {
-        const tree = treeId != null ?
-          skeletonTracing.trees[treeId] :
-          findTreeByNodeId(skeletonTracing.trees, nodeId).get();
+        const tree =
+          treeId != null
+            ? skeletonTracing.trees[treeId]
+            : findTreeByNodeId(skeletonTracing.trees, nodeId).get();
         assertExists(tree, `Couldn't find node ${nodeId}.`);
         Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
       } else {
@@ -149,7 +173,7 @@ class TracingApi {
     });
   }
 
- /**
+  /**
   * Returns the comment for a given node and tree (optional).
   * @param tree - Supplying the tree will provide a performance boost for looking up a comment.
   *
@@ -163,21 +187,23 @@ class TracingApi {
     const tracing = Store.getState().tracing;
     assertSkeleton(tracing);
     assertExists(nodeId, "Node id is missing.");
-    return getSkeletonTracing(tracing).map((skeletonTracing) => {
-      // Convert treeId to tree
-      let tree = null;
-      if (treeId != null) {
-        tree = skeletonTracing.trees[treeId];
-        assertExists(tree, `Couldn't find tree ${treeId}.`);
-        assertExists(tree.nodes[nodeId], `Couldn't find node ${nodeId} in tree ${treeId}.`);
-      } else {
-        tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
-        assertExists(tree, `Couldn't find node ${nodeId}.`);
-      }
-      // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
-      const comment = tree.comments.find(__ => __.node === nodeId);
-      return comment != null ? comment.content : null;
-    }).getOrElse(null);
+    return getSkeletonTracing(tracing)
+      .map(skeletonTracing => {
+        // Convert treeId to tree
+        let tree = null;
+        if (treeId != null) {
+          tree = skeletonTracing.trees[treeId];
+          assertExists(tree, `Couldn't find tree ${treeId}.`);
+          assertExists(tree.nodes[nodeId], `Couldn't find node ${nodeId} in tree ${treeId}.`);
+        } else {
+          tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
+          assertExists(tree, `Couldn't find node ${nodeId}.`);
+        }
+        // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
+        const comment = tree.comments.find(__ => __.node === nodeId);
+        return comment != null ? comment.content : null;
+      })
+      .getOrElse(null);
   }
 
   /**
@@ -221,7 +247,7 @@ class TracingApi {
       const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
       const isDifferentTaskType = annotation.task.type.id !== Utils.__guard__(task, x => x.type.id);
 
-      const currentScript = (task != null && task.script != null) ? task.script.gist : null;
+      const currentScript = task != null && task.script != null ? task.script.gist : null;
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
       const isDifferentScript = currentScript !== nextScript;
 
@@ -249,7 +275,11 @@ class TracingApi {
    * api.tracing.restart("Explorational", "5909b5aa3e0000d4009d4d15", "TRACE")
    *
    */
-  async restart(newTracingType: SkeletonTracingTypeTracingType, newTracingId: string, newControlMode: ControlModeType) {
+  async restart(
+    newTracingType: SkeletonTracingTypeTracingType,
+    newTracingId: string,
+    newControlMode: ControlModeType,
+  ) {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
     await Model.fetch(newTracingType, newTracingId, newControlMode, false);
@@ -267,16 +297,10 @@ class TracingApi {
    * api.tracing.setNodeRadius(1)
    */
   setNodeRadius(delta: number, nodeId?: number, treeId?: number): void {
-    getNodeAndTree(Store.getState().tracing, nodeId, treeId)
-      .map(([, node]) =>
-        Store.dispatch(setNodeRadiusAction(
-          node.radius * Math.pow(1.05, delta),
-          nodeId,
-          treeId,
-        ),
-      ));
+    getNodeAndTree(Store.getState().tracing, nodeId, treeId).map(([, node]) =>
+      Store.dispatch(setNodeRadiusAction(node.radius * Math.pow(1.05, delta), nodeId, treeId)),
+    );
   }
-
 
   /**
    * Centers the given node. If no node is provided, the active node is centered.
@@ -285,9 +309,10 @@ class TracingApi {
    * api.tracing.centerNode()
    */
   centerNode = (nodeId?: number): void => {
-    getNodeAndTree(Store.getState().tracing, nodeId)
-      .map(([, node]) => Store.dispatch(setPositionAction(node.position)));
-  }
+    getNodeAndTree(Store.getState().tracing, nodeId).map(([, node]) =>
+      Store.dispatch(setPositionAction(node.position)),
+    );
+  };
 
   /**
    * Centers the 3D view.
@@ -297,7 +322,7 @@ class TracingApi {
    */
   centerTDView = (): void => {
     Store.dispatch(centerTDViewAction());
-  }
+  };
 
   rotate3DViewToXY = (): void => rotate3DViewTo(OrthoViews.PLANE_XY);
   rotate3DViewToYZ = (): void => rotate3DViewTo(OrthoViews.PLANE_YZ);
@@ -318,9 +343,10 @@ class TracingApi {
   centerPositionAnimated(position: Vector3, skipDimensions: boolean = true): void {
     // Let the user still manipulate the "third dimension" during animation
     const activeViewport = Store.getState().viewModeData.plane.activeViewport;
-    const dimensionToSkip = skipDimensions && activeViewport !== OrthoViews.TDView ?
-      dimensions.thirdDimensionForPlane(activeViewport) :
-      null;
+    const dimensionToSkip =
+      skipDimensions && activeViewport !== OrthoViews.TDView
+        ? dimensions.thirdDimensionForPlane(activeViewport)
+        : null;
 
     const curGlobalPos = getPosition(Store.getState().flycam);
 
@@ -329,20 +355,25 @@ class TracingApi {
       globalPosY: curGlobalPos[1],
       globalPosZ: curGlobalPos[2],
     });
-    tween.to({
-      globalPosX: position[0],
-      globalPosY: position[1],
-      globalPosZ: position[2],
-    }, 200)
-    .onUpdate(function () { // needs to be a normal (non-bound) function
-      const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
-      if (dimensionToSkip != null) {
-        Store.dispatch(setPositionAction(curPos, dimensionToSkip));
-      } else {
-        Store.dispatch(setPositionAction(curPos));
-      }
-    })
-    .start();
+    tween
+      .to(
+        {
+          globalPosX: position[0],
+          globalPosY: position[1],
+          globalPosZ: position[2],
+        },
+        200,
+      )
+      .onUpdate(function() {
+        // needs to be a normal (non-bound) function
+        const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
+        if (dimensionToSkip != null) {
+          Store.dispatch(setPositionAction(curPos, dimensionToSkip));
+        } else {
+          Store.dispatch(setPositionAction(curPos));
+        }
+      })
+      .start();
   }
 
   /**
@@ -357,7 +388,7 @@ class TracingApi {
 
   //  VOLUMETRACING API
 
- /**
+  /**
   * Returns the id of the current active cell.
   * _Volume tracing only!_
   */
@@ -367,7 +398,7 @@ class TracingApi {
     return Utils.toNullable(getActiveCellId(tracing));
   }
 
- /**
+  /**
   * Sets the active cell given a cell id.
   * If a cell with the given id doesn't exist, it is created.
   * _Volume tracing only!_
@@ -378,7 +409,7 @@ class TracingApi {
     Store.dispatch(setActiveCellAction(id));
   }
 
- /**
+  /**
   * Returns the current volume mode which is either
   * 0 for "Move" or
   * 1 for "Trace".
@@ -390,7 +421,7 @@ class TracingApi {
     return Utils.toNullable(getVolumeTraceOrMoveMode(tracing));
   }
 
- /**
+  /**
   * Sets the current volume mode which is either
   * 0 for "Move" or
   * 1 for "Trace".
@@ -411,13 +442,11 @@ class TracingApi {
  * All binary data / layer related API methods.
  */
 class DataApi {
-
   model: OxalisModel;
 
   constructor(model: OxalisModel) {
     this.model = model;
   }
-
 
   __getLayer(layerName: string): Binary {
     const layer = this.model.getBinaryByName(layerName);
@@ -425,14 +454,14 @@ class DataApi {
     return layer;
   }
 
- /**
+  /**
   * Returns the names of all available layers of the current tracing.
   */
   getLayerNames(): Array<string> {
     return _.map(this.model.binary, "name");
   }
 
- /**
+  /**
   * Sets a mapping for a given layer.
   *
   * @example
@@ -449,7 +478,7 @@ class DataApi {
     layer.cube.setMapping(mapping);
   }
 
- /**
+  /**
   * Returns the bounding box for a given layer name.
   */
   getBoundingBox(layerName: string): [Vector3, Vector3] {
@@ -458,7 +487,7 @@ class DataApi {
     return [layer.lowerBoundary, layer.upperBoundary];
   }
 
- /**
+  /**
   * Returns raw binary data for a given layer, position and zoom level.
   *
   * @example // Return the greyscale value for a bucket
@@ -487,7 +516,7 @@ class DataApi {
       needsToAwaitBucket = true;
     }
     if (needsToAwaitBucket) {
-      await new Promise((resolve) => {
+      await new Promise(resolve => {
         bucket.on("bucketLoaded", resolve);
       });
     }
@@ -549,14 +578,13 @@ class DataApi {
  * All user configuration related API methods.
  */
 class UserApi {
-
   model: OxalisModel;
 
   constructor(model: OxalisModel) {
     this.model = model;
   }
 
- /**
+  /**
   * Returns the user's setting for the tracing view.
   * @param key - One of the following keys:
     - moveValue
@@ -578,7 +606,6 @@ class UserApi {
     - inverseX
     - inverseY
     - keyboardDelay
-    - firstVisToggle
     - particleSize
     - overrideNodeRadius
     - sortTreesByName
@@ -592,7 +619,7 @@ class UserApi {
     return Store.getState().userConfiguration[key];
   }
 
- /**
+  /**
   * Set the user's setting for the tracing view.
   * @param key - Same keys as for getConfiguration()
   *
@@ -604,23 +631,21 @@ class UserApi {
   }
 }
 
-
 type Handler = {
-    unregister(): void,
+  unregister(): void,
 };
 
 /**
  * Utility API methods to control wK.
  */
 class UtilsApi {
-
   model: OxalisModel;
 
   constructor(model: OxalisModel) {
     this.model = model;
   }
 
- /**
+  /**
   * Wait for some milliseconds before continuing the control flow.
   *
   * @example // Wait for 5 seconds
@@ -646,7 +671,7 @@ class UtilsApi {
     return Toast.message(type, message, timeout === 0, timeout).remove || noop;
   }
 
- /**
+  /**
   * Overwrite existing wK actions. wK uses [Redux](http://redux.js.org/) actions to trigger any changes to the application state.
   * @param {function(store, next, originalAction)} overwriteFunction - Your new implementation for the method in question. Receives the central wK store, a callback to fire the next/original action and the original action.
   * @param {string} actionName - The name of the action you wish to override:
@@ -676,12 +701,12 @@ class UtilsApi {
   */
   registerOverwrite<S, A>(
     actionName: string,
-    overwriteFunction: (store: S, next: ((action: A) => void), originalAction: A) => void,
+    overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => void,
   ) {
     overwriteAction(actionName, overwriteFunction);
   }
 
- /**
+  /**
   * Sets a custom handler function for a keyboard shortcut.
   */
   registerKeyHandler(key: string, handler: () => void): Handler {

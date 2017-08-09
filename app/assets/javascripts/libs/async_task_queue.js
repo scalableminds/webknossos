@@ -1,7 +1,10 @@
 /*
  * task_serializer.js
  * @flow
+ *
  */
+
+/* eslint-disable no-await-in-loop */
 
 import Utils from "libs/utils";
 import Deferred from "libs/deferred";
@@ -38,7 +41,6 @@ class AsyncTaskQueue {
     this.retryTimeMs = retryTimeMs;
     this.failureEventThreshold = failureEventThreshold;
   }
-
 
   isBusy(): boolean {
     return this.running || this.tasks.length !== 0;

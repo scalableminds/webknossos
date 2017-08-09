@@ -10,18 +10,17 @@ type UserScriptsModalViewPropsType = {
 };
 
 class UserScriptsModalView extends React.PureComponent {
-
-  props: UserScriptsModalViewPropsType
+  props: UserScriptsModalViewPropsType;
 
   state = {
     code: "",
-  }
+  };
 
   handleCodeChange = (event: SyntheticInputEvent) => {
     this.setState({
       code: event.target.value,
     });
-  }
+  };
 
   handleClick = () => {
     try {
@@ -32,7 +31,7 @@ class UserScriptsModalView extends React.PureComponent {
       console.error(error);
       return alert(error);
     }
-  }
+  };
 
   render() {
     return (
@@ -44,16 +43,10 @@ class UserScriptsModalView extends React.PureComponent {
         onOk={this.handleClick}
         onCancel={this.props.onClose}
       >
-        <Input
-          type="textarea"
-          rows={4}
-          onChange={this.handleCodeChange}
-          value={this.state.code}
-        />
+        <Input type="textarea" rows={4} onChange={this.handleCodeChange} value={this.state.code} />
       </Modal>
     );
   }
 }
-
 
 export default UserScriptsModalView;

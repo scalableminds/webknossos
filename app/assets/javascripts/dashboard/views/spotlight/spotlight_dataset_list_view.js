@@ -13,7 +13,6 @@ class SpotlightDatasetListView extends Marionette.CollectionView {
     return this.collection.setCollectionFilter(child => child.get("isActive"));
   }
 
-
   filterBySearch(searchQuery) {
     return this.collection.setFilter(["name", "owningTeam", "description"], searchQuery);
   }
@@ -21,4 +20,3 @@ class SpotlightDatasetListView extends Marionette.CollectionView {
 SpotlightDatasetListView.initClass();
 
 export default SpotlightDatasetListView;
-

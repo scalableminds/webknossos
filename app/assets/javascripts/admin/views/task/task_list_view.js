@@ -63,7 +63,6 @@ class TaskListView extends Marionette.CompositeView {
     };
   }
 
-
   initialize() {
     this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
     this.listenTo(app.vent, "paginationView:addElement", this.createNewTask);
@@ -71,7 +70,6 @@ class TaskListView extends Marionette.CompositeView {
 
     this.collection.fetch();
   }
-
 
   createNewTask() {
     let urlParam;
@@ -89,16 +87,16 @@ class TaskListView extends Marionette.CompositeView {
     app.router.navigate(`/tasks/create${urlParam}#`, { trigger: true });
   }
 
-
   toggleAllDetails() {
     this.ui.detailsToggle.toggleClass("open");
     app.vent.trigger("taskListView:toggleDetails");
   }
 
-
   showAnonymousLinks() {
     const anonymousTaskId = Utils.getUrlParams("showAnonymousLinks");
-    if (!anonymousTaskId) { return; }
+    if (!anonymousTaskId) {
+      return;
+    }
 
     const task = this.collection.findWhere({ id: anonymousTaskId });
     if (task && task.get("directLinks")) {
@@ -107,7 +105,6 @@ class TaskListView extends Marionette.CompositeView {
       Toast.error(`Unable to find anonymous links for task ${anonymousTaskId}.`);
     }
   }
-
 
   showModal(task) {
     const modalView = new AnonymousTaskLinkModal({ model: task });
@@ -118,14 +115,15 @@ class TaskListView extends Marionette.CompositeView {
     this.modalView = modalView;
   }
 
-
   onDestroy() {
     Utils.__guard__(this.modalView, x => x.destroy());
   }
 
-
   filterBySearch(searchQuery) {
-    return this.collection.setFilter(["team", "projectName", "id", "dataSet", "created"], searchQuery);
+    return this.collection.setFilter(
+      ["team", "projectName", "id", "dataSet", "created"],
+      searchQuery,
+    );
   }
 }
 TaskListView.initClass();

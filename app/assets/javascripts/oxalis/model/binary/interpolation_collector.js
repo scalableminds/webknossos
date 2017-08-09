@@ -8,12 +8,12 @@ import type ArbitraryCubeAdapter from "oxalis/model/binary/arbitrary_cube_adapte
 import type { Vector4 } from "oxalis/constants";
 
 export type CollectedVertices = {
-  buffer: Uint8Array;
-  missingBuckets: Array<Vector4>;
+  buffer: Uint8Array,
+  missingBuckets: Array<Vector4>,
 };
 
 function templateFill(str: string, params: Array<string>): string {
-  params.forEach((param) => {
+  params.forEach(param => {
     str = str.replace(
       new RegExp(`([^a-zA-Z0-9_])${param}([^a-zA-Z0-9_])`, "gm"),
       (match, pre, post) => `${pre}<%= ${param} %>${post}`,
@@ -21,7 +21,6 @@ function templateFill(str: string, params: Array<string>): string {
   });
   return str;
 }
-
 
 // This provides interpolation mechanics. It's a lot of code. But it
 // should run fast.
@@ -166,7 +165,6 @@ output =
   ),
 );
 
-
 // This macro is used for collecting and interpolating the data.
 // It aims to be fast, therefore the code is ugly.
 // Parameters: x, y, z, buffer, j, buckets, min_x, min_y, min_z, max_x, max_y, max_z, sizeZ, sizeZY
@@ -223,14 +221,30 @@ basePointIndex =
 }) %>
 buffer[j] = trilinearOutput;\
 `,
-    ["x", "y", "z", "buffer", "j", "buckets", "min_x", "min_y", "min_z", "max_x", "max_y", "max_z", "sizeZ", "sizeZY"],
+    [
+      "x",
+      "y",
+      "z",
+      "buffer",
+      "j",
+      "buckets",
+      "min_x",
+      "min_y",
+      "min_z",
+      "max_x",
+      "max_y",
+      "max_z",
+      "sizeZ",
+      "sizeZY",
+    ],
   ),
   { imports: { trilinearMacro, subPointMacro } },
 );
 class InterpolationCollector {
   // eslint-disable-next-line no-new-func
   _bulkCollect: Function = new Function(
-    "vertices", "buckets",
+    "vertices",
+    "buckets",
     _.template(
       `\
 var buffer = new Uint8Array(vertices.length / 3);
@@ -292,12 +306,13 @@ return {
   buffer : buffer,
   missingBuckets : missingBuckets
 };
-`)({ collectLoopMacro }));
+`,
+    )({ collectLoopMacro }),
+  );
 
   bulkCollect(vertices: Array<number>, buckets: ArbitraryCubeAdapter): CollectedVertices {
     return this._bulkCollect(vertices, buckets);
   }
 }
-
 
 export default new InterpolationCollector();

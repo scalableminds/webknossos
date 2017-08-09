@@ -39,13 +39,20 @@ class AbstractTreeView extends Component {
     const { canvas } = this;
     if (canvas != null) {
       this.nodeList = AbstractTreeRenderer.drawTree(
-        canvas, activeTreeId != null ? trees[activeTreeId] : null,
-        activeNodeId, [canvas.offsetWidth, canvas.offsetHeight]);
+        canvas,
+        activeTreeId != null ? trees[activeTreeId] : null,
+        activeNodeId,
+        [canvas.offsetWidth, canvas.offsetHeight],
+      );
     }
   }, 1000);
 
-  handleClick = (event) => {
-    const id = AbstractTreeRenderer.getIdFromPos(event.nativeEvent.offsetX, event.nativeEvent.offsetY, this.nodeList);
+  handleClick = event => {
+    const id = AbstractTreeRenderer.getIdFromPos(
+      event.nativeEvent.offsetX,
+      event.nativeEvent.offsetY,
+      this.nodeList,
+    );
     if (id != null) {
       this.props.dispatch(setActiveNodeAction(id));
     }
@@ -56,7 +63,9 @@ class AbstractTreeView extends Component {
       <div>
         <canvas
           id="abstract-tree-canvas"
-          ref={(canvas) => { this.canvas = canvas; }}
+          ref={canvas => {
+            this.canvas = canvas;
+          }}
           onClick={this.handleClick}
         />
       </div>

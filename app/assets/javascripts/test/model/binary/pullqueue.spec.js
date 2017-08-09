@@ -8,7 +8,9 @@ import runAsync from "test/helpers/run-async";
 const RequestMock = {
   always: (promise, func) => promise.then(func, func),
 };
-mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
+mockRequire("oxalis/model/sagas/root_saga", function*() {
+  yield;
+});
 mockRequire("libs/request", RequestMock);
 mockRequire("libs/window", {});
 
@@ -16,7 +18,7 @@ mockRequire("libs/window", {});
 const PullQueue = mockRequire.reRequire("oxalis/model/binary/pullqueue").default;
 const { DataBucket, BucketStateEnum } = mockRequire.reRequire("oxalis/model/binary/bucket");
 
-test.beforeEach((t) => {
+test.beforeEach(t => {
   const layer = {
     url: "url",
     name: "layername",
@@ -41,10 +43,7 @@ test.beforeEach((t) => {
 
   const pullQueue = new PullQueue(cube, layer, connectionInfo, datastoreInfo);
 
-  const buckets = [
-    new DataBucket(8, [0, 0, 0, 0], null),
-    new DataBucket(8, [1, 1, 1, 1], null),
-  ];
+  const buckets = [new DataBucket(8, [0, 0, 0, 0], null), new DataBucket(8, [1, 1, 1, 1], null)];
 
   for (const bucket of buckets) {
     pullQueue.add({ bucket: bucket.zoomedAddress, priority: 0 });
@@ -55,11 +54,10 @@ test.beforeEach((t) => {
   t.context = { buckets, pullQueue, layer };
 });
 
-
-test("Successful pulling: should receive the correct data", (t) => {
+test("Successful pulling: should receive the correct data", t => {
   const { pullQueue, buckets, layer } = t.context;
   const bucketData1 = _.range(0, 32 * 32 * 32).map(i => i % 256);
-  const bucketData2 = _.range(0, 32 * 32 * 32).map(i => (2 * i) % 256);
+  const bucketData2 = _.range(0, 32 * 32 * 32).map(i => 2 * i % 256);
   const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
   layer.requestFromStore = sinon.stub();
   layer.requestFromStore.returns(Promise.resolve(responseBuffer));
@@ -80,12 +78,10 @@ function prepare(t) {
   const { layer } = t.context;
   layer.requestFromStore = sinon.stub();
   layer.requestFromStore.onFirstCall().returns(Promise.reject());
-  layer.requestFromStore.onSecondCall().returns(
-    Promise.resolve(new Uint8Array(32 * 32 * 32)),
-  );
+  layer.requestFromStore.onSecondCall().returns(Promise.resolve(new Uint8Array(32 * 32 * 32)));
 }
 
-test("Request Failure: should not request twice if not bucket dirty", (t) => {
+test("Request Failure: should not request twice if not bucket dirty", t => {
   const { pullQueue, buckets, layer } = t.context;
   prepare(t);
   pullQueue.pull();
@@ -99,7 +95,7 @@ test("Request Failure: should not request twice if not bucket dirty", (t) => {
   ]);
 });
 
-test("Request Failure: should reinsert dirty buckets", (t) => {
+test("Request Failure: should reinsert dirty buckets", t => {
   const { pullQueue, buckets, layer } = t.context;
   prepare(t);
   buckets[0].dirty = true;

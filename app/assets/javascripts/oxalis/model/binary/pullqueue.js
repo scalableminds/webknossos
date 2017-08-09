@@ -23,7 +23,6 @@ export const PullQueueConstants = {
 };
 
 class PullQueue {
-
   BATCH_SIZE: number;
   cube: DataCube;
   queue: Array<PullQueueItemType>;
@@ -34,8 +33,12 @@ class PullQueue {
   connectionInfo: BinaryDataConnectionInfo;
   datastoreInfo: DataStoreInfoType;
 
-
-  constructor(cube: DataCube, layer: Layer, connectionInfo: BinaryDataConnectionInfo, datastoreInfo: DataStoreInfoType) {
+  constructor(
+    cube: DataCube,
+    layer: Layer,
+    connectionInfo: BinaryDataConnectionInfo,
+    datastoreInfo: DataStoreInfoType,
+  ) {
     this.cube = cube;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
@@ -49,7 +52,6 @@ class PullQueue {
     // If true, buckets of all 0 will be transformed to have 255 bytes everywhere.
     this.whitenEmptyBuckets = false;
   }
-
 
   pull(): Array<Promise<void>> {
     // Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
@@ -75,7 +77,6 @@ class PullQueue {
     return promises;
   }
 
-
   async pullBatch(batch: Array<Vector4>): Promise<void> {
     // Loading a bunch of buckets
     this.batchCount++;
@@ -86,11 +87,16 @@ class PullQueue {
     try {
       const responseBuffer = await this.layer.requestFromStore(batch);
       let bucketData;
-      this.connectionInfo.log(this.layer.name, roundTripBeginTime, batch.length, responseBuffer.length);
+      this.connectionInfo.log(
+        this.layer.name,
+        roundTripBeginTime,
+        batch.length,
+        responseBuffer.length,
+      );
 
       let offset = 0;
       for (const bucketAddress of batch) {
-        bucketData = responseBuffer.subarray(offset, offset += this.cube.BUCKET_LENGTH);
+        bucketData = responseBuffer.subarray(offset, (offset += this.cube.BUCKET_LENGTH));
         const bucket = this.cube.getBucket(bucketAddress);
         this.cube.boundingBox.removeOutsideArea(bucket, bucketAddress, bucketData);
         this.maybeWhitenEmptyBucket(bucketData);
@@ -115,31 +121,28 @@ class PullQueue {
     }
   }
 
-
   clearNormalPriorities(): void {
     this.queue = _.filter(this.queue, e => e.priority === PullQueueConstants.PRIORITY_HIGHEST);
   }
-
 
   add(item: PullQueueItemType): void {
     this.queue.push(item);
   }
 
-
   addAll(items: Array<PullQueueItemType>): void {
     this.queue = this.queue.concat(items);
   }
-
 
   isNDstore(): boolean {
     return this.datastoreInfo.typ === "ndstore";
   }
 
-
   maybeWhitenEmptyBucket(bucketData: Uint8Array) {
-    if (!this.whitenEmptyBuckets) { return; }
+    if (!this.whitenEmptyBuckets) {
+      return;
+    }
 
-    const allZero = _.reduce(bucketData, ((res, e) => res && e === 0), true);
+    const allZero = _.reduce(bucketData, (res, e) => res && e === 0, true);
 
     if (allZero) {
       for (let i = 0; i < bucketData.length; i++) {
@@ -148,6 +151,5 @@ class PullQueue {
     }
   }
 }
-
 
 export default PullQueue;

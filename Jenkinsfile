@@ -7,7 +7,7 @@ ansiColor('xterm') {
 
       stage("Prepare") {
 
-        sh "sudo /var/lib/jenkins/fix_workspace.sh \$(basename \$(pwd))"
+        sh "sudo /var/lib/jenkins/fix_workspace.sh webknossos"
 
         checkout scm
         sh "rm -rf packages"
@@ -16,6 +16,7 @@ ansiColor('xterm') {
         echo "Branch: ${env.BRANCH_NAME}\nCommit: ${commit}\nAuthors: ${formatChangeSets(currentBuild.changeSets)}"
 
         env.DOCKER_CACHE_PREFIX = "~/.webknossos-build-cache"
+        env.COMPOSE_PROJECT_NAME = "webknossos_${env.BRANCH_NAME}_${commit}"
         sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
         sh "docker-compose pull sbt"
       }
@@ -181,7 +182,7 @@ def notifyBuild(String buildStatus = 'STARTED') {
     colorCode = '#CF0001'
   }
 
-  def message = "${env.JOB_NAME} #${env.BUILD_NUMBER} - ${subject} (<${env.BUILD_URL}|Open>)"
+  def message = "${env.JOB_NAME} #${env.BUILD_NUMBER} - ${subject} (<${env.RUN_DISPLAY_URL}|Open>)"
   // Send notifications
   slackSend(channel: '#webknossos-bots', color: colorCode, message: message)
 }

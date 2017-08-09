@@ -30,7 +30,9 @@ class MappingInfoView extends Component {
     cube.off("newMapping", this._forceUpdate);
   }
 
-  _forceUpdate = () => { this.forceUpdate(); };
+  _forceUpdate = () => {
+    this.forceUpdate();
+  };
 
   getCube(): Cube {
     return Model.getSegmentationBinary().cube;
@@ -38,7 +40,7 @@ class MappingInfoView extends Component {
 
   handleChangeMappingEnabled = (isEnabled: boolean) => {
     this.getCube().setMappingEnabled(isEnabled);
-  }
+  };
 
   render() {
     const cube = this.getCube();
@@ -49,26 +51,28 @@ class MappingInfoView extends Component {
     return (
       <div id="volume-mapping-info">
         <div className="well">
-          {
-            hasMapping ?
-              <div>
-                <p>ID without mapping: {idWithoutMapping}</p>
-                <p>ID with mapping: {idWithMapping}</p>
-              </div> :
-              <p>ID at current position: {idWithoutMapping}</p>
-          }
+          {hasMapping
+            ? <div>
+                <p>
+                  ID without mapping: {idWithoutMapping}
+                </p>
+                <p>
+                  ID with mapping: {idWithMapping}
+                </p>
+              </div>
+            : <p>
+                ID at current position: {idWithoutMapping}
+              </p>}
         </div>
-        {
-          hasMapping ?
-            <div>
+        {hasMapping
+          ? <div>
               <SwitchSetting
                 value={cube.currentMapping != null}
                 onChange={this.handleChangeMappingEnabled}
                 label="Enable Mapping"
               />
-            </div> :
-            null
-        }
+            </div>
+          : null}
       </div>
     );
   }

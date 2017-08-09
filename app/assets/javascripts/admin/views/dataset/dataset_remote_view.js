@@ -55,14 +55,11 @@ class DatasetRemoteView extends Marionette.View {
 
     this.prototype.className = "container";
 
-    this.prototype.regions =
-      { team: ".team" };
+    this.prototype.regions = { team: ".team" };
 
-    this.prototype.events =
-      { "submit form": "addDataset" };
+    this.prototype.events = { "submit form": "addDataset" };
 
-    this.prototype.ui =
-      { form: "form" };
+    this.prototype.ui = { form: "form" };
   }
 
   initialize() {
@@ -70,27 +67,26 @@ class DatasetRemoteView extends Marionette.View {
       collection: new TeamCollection(),
       name: "team",
       childViewOptions: {
-        modelValue() { return `${this.model.get("name")}`; },
+        modelValue() {
+          return `${this.model.get("name")}`;
+        },
       },
       data: "amIAnAdmin=true",
     });
   }
 
-
   onRender() {
     this.showChildView("team", this.teamSelectionView);
   }
-
 
   addDataset(evt) {
     evt.preventDefault();
     const { form } = this.ui;
 
     if (form[0].checkValidity()) {
-      Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore",
-        { data: FormSyphon.serialize(form) },
-      )
-      .then(
+      Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore", {
+        data: FormSyphon.serialize(form),
+      }).then(
         () => {
           Toast.success();
           app.router.navigate("/dashboard", { trigger: true });
@@ -101,6 +97,5 @@ class DatasetRemoteView extends Marionette.View {
   }
 }
 DatasetRemoteView.initClass();
-
 
 export default DatasetRemoteView;

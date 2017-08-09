@@ -2,4 +2,4 @@
 // mockRequire("libs/window", myFakeWindow);
 export const alert = typeof window === "undefined" ? console.log.bind(console) : window.alert;
 
-export default typeof window === "undefined" ? null : window;
+export default (typeof window === "undefined" ? null : window);

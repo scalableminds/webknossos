@@ -1,4 +1,5 @@
 // @flow
+/* eslint no-await-in-loop: 0 */
 import Store from "oxalis/store";
 import Deferred from "libs/deferred";
 import Utils from "libs/utils";
@@ -17,7 +18,6 @@ Store.subscribe(() => {
   }
 });
 
-
 async function go() {
   while (true) {
     await waitForUpdate.promise();
@@ -29,7 +29,6 @@ async function go() {
 }
 
 go();
-
 
 export default Object.assign({}, Store, {
   subscribe(listener: () => void): () => void {

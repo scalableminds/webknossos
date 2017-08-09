@@ -68,7 +68,7 @@ export default class Vector3Input extends React.PureComponent {
     const text = evt.target.value;
 
     // only numbers, commas and whitespace is allowed
-    const isValidInput = (/^[\d\s,]*$/g).test(text);
+    const isValidInput = /^[\d\s,]*$/g.test(text);
     const value = Utils.stringToNumberArray(text);
     const isValidFormat = value.length === 3;
 

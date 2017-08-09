@@ -1,5 +1,12 @@
 // @flow
-import type { SkeletonTracingType, VolumeTracingType, BranchPointType, CommentType, TreeType, NodeType } from "oxalis/store";
+import type {
+  SkeletonTracingType,
+  VolumeTracingType,
+  BranchPointType,
+  CommentType,
+  TreeType,
+  NodeType,
+} from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
@@ -13,7 +20,7 @@ type UpdateTreeUpdateAction = {
     name: string,
     comments: Array<CommentType>,
     branchPoints: Array<BranchPointType>,
-  }
+  },
 };
 type DeleteTreeUpdateAction = {
   name: "deleteTree",
@@ -25,7 +32,7 @@ type MoveTreeComponentUpdateAction = {
     sourceId: number,
     targetId: number,
     nodeIds: Array<number>,
-  }
+  },
 };
 type MergeTreeUpdateAction = {
   name: "mergeTree",
@@ -42,6 +49,12 @@ type UpdateNodeUpdateAction = {
   name: "updateNode",
   value: NodeWithTreeIdType,
 };
+type ToggleTreeUpdateAction = {
+  name: "toggleTree",
+  value: {
+    id: number,
+  },
+};
 type DeleteNodeUpdateAction = {
   name: "deleteNode",
   value: {
@@ -55,7 +68,7 @@ type CreateEdgeUpdateAction = {
     treeId: number,
     source: number,
     target: number,
-  }
+  },
 };
 type DeleteEdgeUpdateAction = {
   name: "deleteEdge",
@@ -63,7 +76,7 @@ type DeleteEdgeUpdateAction = {
     treeId: number,
     source: number,
     target: number,
-  }
+  },
 };
 type UpdateSkeletonTracingUpdateAction = {
   name: "updateTracing",
@@ -80,22 +93,24 @@ type UpdateVolumeTracingUpdateAction = {
     activeCell: number,
     editPosition: Vector3,
     nextCell: number,
-  }
-}
-type UpdateTracingUpdateAction = UpdateSkeletonTracingUpdateAction | UpdateVolumeTracingUpdateAction;
+  },
+};
+type UpdateTracingUpdateAction =
+  | UpdateSkeletonTracingUpdateAction
+  | UpdateVolumeTracingUpdateAction;
 
 export type UpdateAction =
-  UpdateTreeUpdateAction |
-  DeleteTreeUpdateAction |
-  MergeTreeUpdateAction |
-  MoveTreeComponentUpdateAction |
-  CreateNodeUpdateAction |
-  UpdateNodeUpdateAction |
-  DeleteNodeUpdateAction |
-  CreateEdgeUpdateAction |
-  DeleteEdgeUpdateAction |
-  UpdateTracingUpdateAction;
-
+  | UpdateTreeUpdateAction
+  | DeleteTreeUpdateAction
+  | MergeTreeUpdateAction
+  | MoveTreeComponentUpdateAction
+  | CreateNodeUpdateAction
+  | UpdateNodeUpdateAction
+  | DeleteNodeUpdateAction
+  | CreateEdgeUpdateAction
+  | DeleteEdgeUpdateAction
+  | UpdateTracingUpdateAction
+  | ToggleTreeUpdateAction;
 
 export function createTree(tree: TreeType): UpdateTreeUpdateAction {
   return {
@@ -133,6 +148,14 @@ export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
     },
   };
 }
+export function toggleTree(tree: TreeType): ToggleTreeUpdateAction {
+  return {
+    name: "toggleTree",
+    value: {
+      id: tree.treeId,
+    },
+  };
+}
 export function mergeTree(sourceTreeId: number, targetTreeId: number): MergeTreeUpdateAction {
   return {
     name: "mergeTree",
@@ -142,7 +165,11 @@ export function mergeTree(sourceTreeId: number, targetTreeId: number): MergeTree
     },
   };
 }
-export function createEdge(treeId: number, sourceNodeId: number, targetNodeId: number): CreateEdgeUpdateAction {
+export function createEdge(
+  treeId: number,
+  sourceNodeId: number,
+  targetNodeId: number,
+): CreateEdgeUpdateAction {
   return {
     name: "createEdge",
     value: {
@@ -152,7 +179,11 @@ export function createEdge(treeId: number, sourceNodeId: number, targetNodeId: n
     },
   };
 }
-export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: number): DeleteEdgeUpdateAction {
+export function deleteEdge(
+  treeId: number,
+  sourceNodeId: number,
+  targetNodeId: number,
+): DeleteEdgeUpdateAction {
   return {
     name: "deleteEdge",
     value: {
@@ -180,7 +211,12 @@ export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateActi
     value: { treeId, id: nodeId },
   };
 }
-export function updateSkeletonTracing(tracing: SkeletonTracingType, position: Vector3, rotation: Vector3, zoomLevel: number): UpdateSkeletonTracingUpdateAction {
+export function updateSkeletonTracing(
+  tracing: SkeletonTracingType,
+  position: Vector3,
+  rotation: Vector3,
+  zoomLevel: number,
+): UpdateSkeletonTracingUpdateAction {
   if (tracing.activeNodeId != null) {
     return {
       name: "updateTracing",
@@ -201,7 +237,11 @@ export function updateSkeletonTracing(tracing: SkeletonTracingType, position: Ve
     },
   };
 }
-export function moveTreeComponent(sourceTreeId: number, targetTreeId: number, nodeIds: Array<number>): MoveTreeComponentUpdateAction {
+export function moveTreeComponent(
+  sourceTreeId: number,
+  targetTreeId: number,
+  nodeIds: Array<number>,
+): MoveTreeComponentUpdateAction {
   return {
     name: "moveTreeComponent",
     value: {
@@ -211,7 +251,10 @@ export function moveTreeComponent(sourceTreeId: number, targetTreeId: number, no
     },
   };
 }
-export function updateVolumeTracing(tracing: VolumeTracingType, position: Vector3): UpdateVolumeTracingUpdateAction {
+export function updateVolumeTracing(
+  tracing: VolumeTracingType,
+  position: Vector3,
+): UpdateVolumeTracingUpdateAction {
   return {
     name: "updateTracing",
     value: {

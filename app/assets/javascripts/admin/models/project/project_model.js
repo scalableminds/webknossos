@@ -15,7 +15,6 @@ class ProjectModel extends Backbone.Model {
     };
   }
 
-
   isNew() {
     // Workaround. Since we use 'name' as the id attribute, there is no way to
     // know if a model was newly created or fetched from the server
@@ -23,14 +22,14 @@ class ProjectModel extends Backbone.Model {
     return this.isReallyNew || false;
   }
 
-
   parse(response) {
     // set some sensible defaults
-    if (!response.owner) { response.owner = this.default.owner; }
+    if (!response.owner) {
+      response.owner = this.default.owner;
+    }
     return response;
   }
 }
 ProjectModel.initClass();
-
 
 export default ProjectModel;

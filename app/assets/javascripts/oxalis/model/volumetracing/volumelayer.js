@@ -19,7 +19,7 @@ export class VoxelIterator {
   width: number;
   height: number;
   minCoord2d: Vector2;
-  get3DCoordinate: (Vector2) => Vector3;
+  get3DCoordinate: Vector2 => Vector3;
 
   static finished(): VoxelIterator {
     const iterator = new VoxelIterator([], 0, 0, [0, 0]);
@@ -27,8 +27,13 @@ export class VoxelIterator {
     return iterator;
   }
 
-  constructor(map: boolean[][], width: number, height: number,
-    minCoord2d: Vector2, get3DCoordinate: ((Vector2) => Vector3) = () => [0, 0, 0]) {
+  constructor(
+    map: boolean[][],
+    width: number,
+    height: number,
+    minCoord2d: Vector2,
+    get3DCoordinate: Vector2 => Vector3 = () => [0, 0, 0],
+  ) {
     this.map = map;
     this.width = width;
     this.height = height;
@@ -44,7 +49,9 @@ export class VoxelIterator {
     let foundNext = false;
     while (!foundNext) {
       this.x = (this.x + 1) % this.width;
-      if (this.x === 0) { this.y++; }
+      if (this.x === 0) {
+        this.y++;
+      }
       if (this.map[this.x][this.y] || this.y === this.height) {
         this.hasNext = this.y !== this.height;
         foundNext = true;
@@ -52,11 +59,9 @@ export class VoxelIterator {
     }
     return res;
   }
-
 }
 
 class VolumeLayer {
-
   plane: OrthoViewType;
   thirdDimensionValue: number;
   contourList: Array<Vector3>;
@@ -70,11 +75,9 @@ class VolumeLayer {
     this.minCoord = null;
   }
 
-
   addContour(pos: Vector3): void {
     this.updateArea(pos);
   }
-
 
   updateArea(pos: Vector3): void {
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
@@ -93,7 +96,6 @@ class VolumeLayer {
     this.maxCoord = maxCoord;
   }
 
-
   getContourList() {
     const volumeTracing = Store.getState().tracing;
     if (volumeTracing.type !== "volume") {
@@ -103,11 +105,9 @@ class VolumeLayer {
     }
   }
 
-
   getSmoothedContourList() {
-    return Drawing.smoothLine(this.getContourList(), (pos => this.updateArea(pos)));
+    return Drawing.smoothLine(this.getContourList(), pos => this.updateArea(pos));
   }
-
 
   finish(): void {
     if (!this.isEmpty()) {
@@ -115,11 +115,9 @@ class VolumeLayer {
     }
   }
 
-
   isEmpty(): boolean {
     return this.getContourList().length === 0;
   }
-
 
   getVoxelIterator(): VoxelIterator {
     if (this.isEmpty()) {
@@ -136,8 +134,8 @@ class VolumeLayer {
     }
     const maxCoord2d = this.get2DCoordinate(this.maxCoord);
 
-    const width = (maxCoord2d[0] - minCoord2d[0]) + 1;
-    const height = (maxCoord2d[1] - minCoord2d[1]) + 1;
+    const width = maxCoord2d[0] - minCoord2d[0] + 1;
+    const height = maxCoord2d[1] - minCoord2d[1] + 1;
 
     const map = new Array(width);
     for (let x = 0; x < width; x++) {
@@ -147,12 +145,11 @@ class VolumeLayer {
       }
     }
 
-    const setMap = function (x: number, y: number, value = true): void {
+    const setMap = function(x: number, y: number, value = true): void {
       x = Math.floor(x);
       y = Math.floor(y);
       map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
     };
-
 
     // The approach is to initialize the map to true, then
     // draw the outline with false, then fill everything
@@ -169,10 +166,15 @@ class VolumeLayer {
     this.fillOutsideArea(map, width, height);
     this.drawOutlineVoxels(setMap);
 
-    const iterator = new VoxelIterator(map, width, height, minCoord2d, this.get3DCoordinate.bind(this));
+    const iterator = new VoxelIterator(
+      map,
+      width,
+      height,
+      minCoord2d,
+      this.get3DCoordinate.bind(this),
+    );
     return iterator;
   }
-
 
   drawOutlineVoxels(setMap: (number, number) => void): void {
     let p1;
@@ -185,15 +187,15 @@ class VolumeLayer {
     }
   }
 
-
   fillOutsideArea(map: boolean[][], width: number, height: number): void {
-    const setMap = (x, y) => { map[x][y] = false; };
+    const setMap = (x, y) => {
+      map[x][y] = false;
+    };
     const isEmpty = (x, y) => map[x][y] === true;
 
     // Fill everything BUT the cell
     Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap);
   }
-
 
   get2DCoordinate(coord3d: Vector3): Vector2 {
     // Throw out 'thirdCoordinate' which is equal anyways
@@ -205,7 +207,6 @@ class VolumeLayer {
     }
     return [result[0], result[1]];
   }
-
 
   get3DCoordinate(coord2d: Vector2): Vector3 {
     // Put thirdCoordinate back in
@@ -224,7 +225,6 @@ class VolumeLayer {
     return res;
   }
 
-
   getQuadrantWithRespectToPoint(vertex: Vector2, point: Vector2): ?number {
     const xDiff = vertex[0] - point[0];
     const yDiff = vertex[1] - point[1];
@@ -235,27 +235,29 @@ class VolumeLayer {
     }
 
     switch (false) {
-      case xDiff > 0 || yDiff <= 0: return 1;
-      case xDiff > 0 || yDiff > 0: return 2;
-      case xDiff <= 0 || yDiff > 0: return 3;
-      case xDiff <= 0 || yDiff <= 0: return 4;
-      default: return null; // Cannot happen
+      case xDiff > 0 || yDiff <= 0:
+        return 1;
+      case xDiff > 0 || yDiff > 0:
+        return 2;
+      case xDiff <= 0 || yDiff > 0:
+        return 3;
+      case xDiff <= 0 || yDiff <= 0:
+        return 4;
+      default:
+        return null; // Cannot happen
     }
   }
 
-
   calculateDistance(p1: Vector3, p2: Vector3): number {
     const diff = [p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]];
-    return Math.sqrt((diff[0] * diff[0]) + (diff[1] * diff[1]) + (diff[2] * diff[2]));
+    return Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]);
   }
-
 
   interpolatePositions(pos1: Vector3, pos2: Vector3, f: number): Vector3 {
     const sPos1 = [pos1[0] * (1 - f), pos1[1] * (1 - f), pos1[2] * (1 - f)];
     const sPos2 = [pos2[0] * f, pos2[1] * f, pos2[2] * f];
     return [sPos1[0] + sPos2[0], sPos1[1] + sPos2[1], sPos1[2] + sPos2[2]];
   }
-
 
   getCentroid(): Vector3 {
     // Formula:
@@ -264,12 +266,12 @@ class VolumeLayer {
     let sumArea = 0;
     let sumCx = 0;
     let sumCy = 0;
-    for (const i of Utils.__range__(0, (this.getContourList().length - 1), false)) {
+    for (const i of Utils.__range__(0, this.getContourList().length - 1, false)) {
       const [x, y] = this.get2DCoordinate(this.getContourList()[i]);
       const [x1, y1] = this.get2DCoordinate(this.getContourList()[i + 1]);
-      sumArea += (x * y1) - (x1 * y);
-      sumCx += (x + x1) * ((x * y1) - (x1 * y));
-      sumCy += (y + y1) * ((x * y1) - (x1 * y));
+      sumArea += x * y1 - x1 * y;
+      sumCx += (x + x1) * (x * y1 - x1 * y);
+      sumCy += (y + y1) * (x * y1 - x1 * y);
     }
 
     const area = sumArea / 2;

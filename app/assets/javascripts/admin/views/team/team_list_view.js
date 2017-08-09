@@ -34,8 +34,7 @@ class TeamListView extends Marionette.CompositeView {
       },
     };
 
-    this.prototype.ui =
-      { modalWrapper: ".modal-wrapper" };
+    this.prototype.ui = { modalWrapper: ".modal-wrapper" };
   }
 
   initialize() {
@@ -48,11 +47,9 @@ class TeamListView extends Marionette.CompositeView {
     });
   }
 
-
   filterBySearch(filterQuery) {
     return this.collection.setFilter(["name", "owner"], filterQuery);
   }
-
 
   showModal(modalView) {
     modalView = new CreateTeamModalView({ teamCollection: this.collection });
@@ -62,6 +59,5 @@ class TeamListView extends Marionette.CompositeView {
   }
 }
 TeamListView.initClass();
-
 
 export default TeamListView;

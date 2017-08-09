@@ -2,18 +2,15 @@ import { indexOf } from "lodash";
 import Request from "../helpers/ajaxDownload";
 
 export default class TeamPage {
-
-  teamListRows = "tbody tr"
-  createTeamButton = ".add-button"
-  modal = ".modal-content"
-  confirmButton = "button.btn-primary"
-  inputTeamName = "input#inputName"
-
+  teamListRows = "tbody tr";
+  createTeamButton = ".add-button";
+  modal = ".modal-content";
+  confirmButton = "button.btn-primary";
+  inputTeamName = "input#inputName";
 
   get() {
     browser.url("/teams");
   }
-
 
   getTeamListEntryCount() {
     browser.waitForExist(this.teamListRows);
@@ -25,7 +22,6 @@ export default class TeamPage {
     return Request.json().from(url).then(teams => teams.length);
   }
 
-
   createTeam(teamName) {
     browser.waitForExist(this.createTeamButton);
     browser.click(this.createTeamButton);
@@ -34,9 +30,8 @@ export default class TeamPage {
     browser.waitForExist(this.inputTeamName);
     browser.setValue(this.inputTeamName, teamName);
     browser.click(this.confirmButton);
-    browser.pause(500);  // Wait for DOM updates
+    browser.pause(500); // Wait for DOM updates
   }
-
 
   deleteTeam(teamName) {
     // The deletion link can not be clicked directly, so find the corresponding

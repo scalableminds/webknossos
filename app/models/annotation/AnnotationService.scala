@@ -258,6 +258,7 @@ object AnnotationService
       dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
     } yield {
       //TODO RocksDB: redirect(DownloadMultipleParameters(zipFileName, downloadParams))
+      //split annotations by dataSetName, get multiple zis from the respective datastores, use util function to create zip of all zips contents
     }
 
     Future.successful(TemporaryFile("dummy", "justToKeepTheReturnType"))

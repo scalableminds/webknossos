@@ -23,7 +23,7 @@ case class Annotation(
                        dataSetName: String,
                        team: String,
                        settings: AnnotationSettings,
-                       statistics: JsObject = Json.obj(),
+                       statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
                        isActive: Boolean = true,
                        state: AnnotationState = AnnotationState.InProgress,

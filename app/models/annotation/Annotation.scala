@@ -76,7 +76,7 @@ case class Annotation(
   def toJson(user: Option[User] = None, ReadOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       taskJson <- task.flatMap(t => Task.transformToJson(t, user)).getOrElse(JsNull)
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "Could not find DataSet for Annotation"
     } yield {
       Json.obj(
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),

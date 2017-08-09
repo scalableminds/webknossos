@@ -140,28 +140,26 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         } yield taskjs
     }
 
-  val fox = Fox
-
+  //TODO: RocksDB
   def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
-    fox.failure("")
-    //TODO: RocksDB
-/*
+
     withJsonUsing(json, Reads.list(taskCompleteReads)) { parsed =>
 
       {
         for {
           tasks: List[Box[Task]] <- Fox.serialSequence(parsed) { p => createTaskWithoutAnnotationBase(p) }
         } yield {
-          val jsResults = tasks.map(task => Task.transformToJson(task, request.userOpt))
+          JsonOk("not implemented")
+          /*val jsResults = tasks.map(task => Task.transformToJson(task, request.userOpt))
           tasks.map { results =>
             val js = bulk2StatusJson(results)
             JsonOk(js, Messages("task.bulk.processed"))
-          }
+          }*/
         }
 
 
       }
-    }*/
+    }
   }
 
   def create(`type`: String = "default") = Authenticated.async { implicit request =>

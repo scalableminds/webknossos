@@ -49,7 +49,7 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
 
   override def createSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, parameters: CreateEmptyParameters): Fox[TracingReference] = {
     logger.debug("Called to create empty SkeletonTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/tracings/skeletons/createFromParams")
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/createFromParams")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("dataSetName" -> base.id.name)
       .postWithJsonResponse[CreateEmptyParameters, TracingReference](parameters)
@@ -57,7 +57,7 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
 
   override def duplicateSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, tracingReference: TracingReference): Fox[TracingReference] = {
     logger.debug("Called to duplicate SkeletonTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/tracings/skeletons/${tracingReference.id}/duplicate")
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/${tracingReference.id}/duplicate")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .getWithJsonResponse[TracingReference]
   }
@@ -65,14 +65,14 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
   override def mergeSkeletonTracings(dataStoreInfo: DataStoreInfo, base: DataSource, tracingSelectors: List[TracingSelector], readOnly: Boolean): Fox[TracingReference] = {
     logger.debug("Called to merge SkeletonTracings. Base: " + base.id + " Datastore: " + dataStoreInfo)
     val route = if (readOnly) "getMerged" else "createMergedFromIds"
-    RPC(s"${dataStoreInfo.url}/dat/tracings/skeletons/${route}")
+    RPC(s"${dataStoreInfo.url}/dat/tracings/skeleton/${route}")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .postWithJsonResponse[List[TracingSelector], TracingReference](tracingSelectors)
   }
 
   override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[TracingReference] = {
     logger.debug("Called to create VolumeTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/tracings/volumes")
+    RPC(s"${dataStoreInfo.url}/data/tracings/volume")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("dataSetName" -> base.id.name)
       .postWithJsonResponse[JsObject, TracingReference]()
@@ -83,7 +83,7 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
                            base: DataSource,
                            file: TemporaryFile): Fox[TracingReference] = {
     logger.debug("Called to upload VolumeTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/tracings/volumes")
+    RPC(s"${dataStoreInfo.url}/data/tracings/volume")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("dataSetName" -> base.id.name)
       .postWithJsonResponse[TracingReference](file.file)

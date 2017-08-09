@@ -78,7 +78,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     //TODO: RocksDB: test this
     case AnnotationType.Explorational =>
       Fox.failure("annotation.revert.skeletonOnly")
-    case AnnotationType.Task if annotation.tracingType == TracingType.skeletonTracing =>
+    case AnnotationType.Task if annotation.tracingType == TracingType.skeleton =>
       for {
         task <- annotation.task.toFox
         annotationBase <- task.annotationBase
@@ -87,7 +87,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
       } yield {
         updatedAnnotation
       }
-    case _ if annotation.tracingType != TracingType.skeletonTracing =>
+    case _ if annotation.tracingType != TracingType.skeleton =>
       Fox.failure("annotation.revert.skeletonOnly")
   }
 

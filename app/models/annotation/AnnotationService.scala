@@ -49,9 +49,9 @@ object AnnotationService
     id: String = "")(implicit ctx: DBAccessContext): Fox[Annotation] = {
 
     def createTracing(dataSource: DataSource) = tracingType match {
-      case TracingType.skeletonTracing =>
+      case TracingType.skeleton =>
         dataSet.dataStoreInfo.typ.strategy.createSkeletonTracing(dataSet.dataStoreInfo, dataSource, CreateEmptyParameters())
-      case TracingType.volumeTracing =>
+      case TracingType.volume =>
         dataSet.dataStoreInfo.typ.strategy.createVolumeTracing(dataSet.dataStoreInfo, dataSource)
     }
 

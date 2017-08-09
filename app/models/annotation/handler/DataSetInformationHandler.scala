@@ -23,7 +23,7 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
     } yield {
       Annotation(
         user.map(_._id),
-        TracingReference("none", TracingType.skeletonTracing), //TODO: rocksDB: construct empty tracing with dataSet.defaultStart etc.?
+        TracingReference("none", TracingType.skeleton), //TODO: rocksDB: construct empty tracing with dataSet.defaultStart etc.?
         dataSetName,
         team,
         AnnotationSettings.default,

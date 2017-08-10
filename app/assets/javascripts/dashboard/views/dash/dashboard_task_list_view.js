@@ -3,6 +3,7 @@
 
 import React from "react";
 import Request from "libs/request";
+import { AsyncButton } from "components/async_clickables";
 import { Spin, Table, Button, Modal } from "antd";
 import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
@@ -65,7 +66,7 @@ export default class DashboardTaskListView extends React.PureComponent {
 
   getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
 
-  finish(task: APITaskWithAnnotationType) {
+  confirmFinish(task: APITaskWithAnnotationType) {
     Modal.confirm({
       content: "Are you sure you want to permanently finish this tracing?",
       onOk: async () => {
@@ -156,7 +157,7 @@ export default class DashboardTaskListView extends React.PureComponent {
                 </li>
               </div>
             : <li>
-                <a href="#" onClick={() => this.finish(task)}>
+                <a href="#" onClick={() => this.confirmFinish(task)}>
                   <i className="fa fa-check-circle-o" />
                   Finish
                 </a>
@@ -194,11 +195,11 @@ export default class DashboardTaskListView extends React.PureComponent {
     });
   }
 
-  confirmGetNewTask() {
+  async confirmGetNewTask(): Promise<void> {
     if (this.state.unfinishedTasks.length === 0) {
-      this.getNewTask();
+      return this.getNewTask();
     } else {
-      Modal.confirm({
+      return Modal.confirm({
         content: "Are you sure you want to permanently finish this tracing?",
         onOk: () => this.getNewTask(),
       });
@@ -309,9 +310,9 @@ export default class DashboardTaskListView extends React.PureComponent {
             ? <a href={`/api/users/${this.props.userID}/annotations/download`}>
                 <Button icon="download">Download All Finished Tracings</Button>
               </a>
-            : <Button type="primary" onClick={() => this.confirmGetNewTask()}>
+            : <AsyncButton type="primary" onClick={() => this.confirmGetNewTask()}>
                 Get a New Task
-              </Button>}
+              </AsyncButton>}
           <div className="divider-vertical" />
           <Button onClick={this.toggleShowFinished}>
             Show {this.getFinishVerb()} Tasks Only

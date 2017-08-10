@@ -3,6 +3,7 @@
 
 import React from "react";
 import Request from "libs/request";
+import { AsyncLink } from "components/async_clickables";
 import { Spin, Input, Table, Button, Upload, Modal } from "antd";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
@@ -103,30 +104,29 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     });
   };
 
-  finishOrReopenTracing = (type: "finish" | "reopen", tracing: APIAnnotationType) => {
+  finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationType) => {
     const controller = jsRoutes.controllers.AnnotationController;
     const url =
       type === "finish"
         ? controller.finish(tracing.typ, tracing.id).url
         : controller.reopen(tracing.typ, tracing.id).url;
 
-    Request.receiveJSON(url).then(newTracing => {
-      Toast.message(newTracing.messages);
+    const newTracing = await Request.receiveJSON(url);
+    Toast.message(newTracing.messages);
 
-      const newTracings = this.getCurrentTracings().filter(t => t.id !== tracing.id);
+    const newTracings = this.getCurrentTracings().filter(t => t.id !== tracing.id);
 
-      if (type === "finish") {
-        this.setState({
-          unarchivedTracings: newTracings,
-          archivedTracings: [newTracing].concat(this.state.archivedTracings),
-        });
-      } else {
-        this.setState({
-          archivedTracings: newTracings,
-          unarchivedTracings: [newTracing].concat(this.state.unarchivedTracings),
-        });
-      }
-    });
+    if (type === "finish") {
+      this.setState({
+        unarchivedTracings: newTracings,
+        archivedTracings: [newTracing].concat(this.state.archivedTracings),
+      });
+    } else {
+      this.setState({
+        archivedTracings: newTracings,
+        unarchivedTracings: [newTracing].concat(this.state.unarchivedTracings),
+      });
+    }
   };
 
   handleNMLUpload = (info: {
@@ -169,20 +169,20 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
             Download
           </a>
           <br />
-          <a href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
+          <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
             <i className="fa fa-archive" />
             Archive
-          </a>
+          </AsyncLink>
           <br />
         </div>
       );
     } else {
       return (
         <div>
-          <a href="#" onClick={() => this.finishOrReopenTracing("reopen", tracing)}>
+          <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("reopen", tracing)}>
             <i className="fa fa-folder-open" />
             reopen
-          </a>
+          </AsyncLink>
           <br />
         </div>
       );

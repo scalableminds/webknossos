@@ -3,12 +3,13 @@
 
 import React from "react";
 import Request from "libs/request";
-import { Spin, Input, Table, Button } from "antd";
+import { Spin, Input, Table, Button, Upload } from "antd";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
 import update from "immutability-helper";
+import app from "app";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 
 const { Column } = Table;
@@ -31,6 +32,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     },
     searchQuery: string,
     requestCount: number,
+    isUploadingNML: boolean,
   } = {
     showArchivedTracings: false,
     archivedTracings: [],
@@ -41,6 +43,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     },
     searchQuery: "",
     requestCount: 0,
+    isUploadingNML: false,
   };
 
   componentDidMount() {
@@ -126,6 +129,22 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     });
   };
 
+  handleNMLUpload = info => {
+    const response = info.file.response;
+    if (info.file.status === "uploading") {
+      this.setState({ isUploadingNML: true });
+    }
+    if (info.file.status === "error") {
+      response.messages.map(m => Toast.error(m.error));
+    }
+    if (info.file.status === "done") {
+      response.messages.map(m => Toast.success(m.success));
+      app.router.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`, {
+        trigger: true,
+      });
+    }
+  };
+
   renderActions = (tracing: APIAnnotationType) => {
     if (tracing.typ !== "Explorational") {
       return null;
@@ -138,17 +157,17 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
         <div>
           <a href={controller.trace(typ, id).url}>
             <i className="fa fa-random" />
-            <strong>trace</strong>
+            <strong>Trace</strong>
           </a>
           <br />
           <a href={jsRoutes.controllers.AnnotationIOController.download(typ, id).url}>
             <i className="fa fa-download" />
-            download
+            Download
           </a>
           <br />
           <a href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
             <i className="fa fa-archive" />
-            archive
+            Archive
           </a>
           <br />
         </div>
@@ -262,12 +281,12 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
               ? <div>
                   <span title="Trees">
                     <i className="fa fa-sitemap" />
-                    {tracing.stats.numberOfTrees}&nbsp;
+                    {tracing.stats.numberOfTrees}
                   </span>
                   <br />
                   <span title="Nodes">
                     <i className="fa fa-bull" />
-                    {tracing.stats.numberOfNodes}&nbsp;
+                    {tracing.stats.numberOfNodes}
                   </span>
                   <br />
                   <span title="Edges">
@@ -277,12 +296,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
                 </div>
               : null}
         />
-        <Column
-          title="Type"
-          dataIndex="contentType"
-          render={(type, tracing) => `${type} - ${tracing.typ}`}
-        />
-        <Column title="Created" dataIndex="created" sorter />
+        <Column title="Type" dataIndex="contentType" />
+        <Column title="Creation Date" dataIndex="created" sorter />
         <Column
           title="Actions"
           className="nowrap"
@@ -305,34 +320,22 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
         {this.props.isAdminView
           ? null
           : <div>
-              <form
-                action={jsRoutes.controllers.AnnotationIOController.upload().url}
-                method="POST"
-                encType="multipart/form-data"
-                id="upload-and-explore-form"
-                className="form-inline inline-block"
+              <Upload
+                action="/admin/nml/upload"
+                accept=".nml, .zip"
+                name="nmlFile"
+                multiple
+                showUploadList={false}
+                onChange={this.handleNMLUpload}
               >
-                <div id="fileinput" className="fileinput fileinput-new" data-provides="fileinput">
-                  <span className="btn btn-default btn-file">
-                    <span>
-                      <i className="fa fa-upload fileinput-new" id="form-upload-icon" />
-                      <i
-                        className="fa fa-spinner fa-spin fileinput-exists"
-                        id="form-spinner-icon"
-                      />
-                      Upload Annotation
-                    </span>
-                    <input type="file" name="nmlFile" multiple accept=".nml, .zip" />
-                  </span>
-                </div>
-              </form>
-
+                <Button icon="upload" loading={this.state.isUploadingNML}>
+                  Upload Annotation
+                </Button>
+              </Upload>
               <div className="divider-vertical" />
-
               <Button onClick={this.toggleShowArchived}>
                 Show {this.state.showArchivedTracings ? "Open" : "Archived"} Tracings
               </Button>
-
               <span style={{ marginLeft: 5 }}>
                 {!this.state.showArchivedTracings
                   ? <Button onClick={this.archiveAll}>Archive All</Button>

@@ -94,8 +94,8 @@ class DatasetView extends React.PureComponent {
           ["name", "owningTeam", "description"],
           this.state.searchQuery,
         ).map(ds =>
-          <Col span={6}>
-            <SpotlightItemView dataset={ds} key={ds.name} />
+          <Col span={6} key={ds.name}>
+            <SpotlightItemView dataset={ds} />
           </Col>,
         )}
       </Row>

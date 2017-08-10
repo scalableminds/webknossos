@@ -4,10 +4,10 @@ import React from "react";
 import moment from "moment";
 import FormatUtils from "libs/format_utils";
 import Request from "libs/request";
-import c3 from "c3";
+// import c3 from "c3";
+import C3Chart from "react-c3js";
 
 function LoggedTimeList({ items }) {
-  console.log(items);
   return (
     <table className="table-striped table-hover table">
       <thead>
@@ -17,8 +17,8 @@ function LoggedTimeList({ items }) {
         </tr>
       </thead>
       <tbody>
-        {items.map((item, index) =>
-          <tr key={index}>
+        {items.map(item =>
+          <tr key={item.interval}>
             <td>
               {moment(item.interval).format("MM/YYYY")}
             </td>
@@ -45,10 +45,6 @@ export default class LoggedTimeView extends React.PureComponent {
 
   componentDidMount() {
     this.fetch();
-  }
-
-  componentDidUpdate() {
-    this.renderGraph();
   }
 
   async fetch(): Promise<void> {
@@ -81,28 +77,29 @@ export default class LoggedTimeView extends React.PureComponent {
       const dates = timeEntries.map(item => item.interval.toDate());
       const monthlyHours = timeEntries.map(item => item.time.asHours());
 
-      c3.generate({
-        bindto: "#time-graph", // doesn't work with classes
-        data: {
-          x: "date",
-          columns: [["date"].concat(dates), ["monthlyHours"].concat(monthlyHours)],
-        },
-        axis: {
-          x: {
-            type: "timeseries",
-            tick: {
-              format: "%Y %m",
+      return (
+        <C3Chart
+          data={{
+            x: "date",
+            columns: [["date"].concat(dates), ["monthlyHours"].concat(monthlyHours)],
+          }}
+          axis={{
+            x: {
+              type: "timeseries",
+              tick: {
+                format: "%Y %m",
+              },
             },
-          },
-          y: {
-            label: "minutes / month",
-          },
-        },
-        legend: {
-          show: false,
-        },
-      });
+            y: {
+              label: "minutes / month",
+            },
+          }}
+          legend={{ show: false }}
+        />
+      );
     }
+
+    return null;
   };
 
   render() {
@@ -118,7 +115,7 @@ export default class LoggedTimeView extends React.PureComponent {
                   }
                 </h4>
               : null}
-            <div id="time-graph" />
+            {this.renderGraph()}
           </div>
           <div className="col-sm-2">
             <LoggedTimeList items={this.state.timeEntries} />

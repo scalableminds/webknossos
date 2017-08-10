@@ -1666,6 +1666,12 @@ c3@^0.4.10:
   dependencies:
     d3 "~3.5.0"
 
+c3@^0.4.11:
+  version "0.4.15"
+  resolved "https://registry.yarnpkg.com/c3/-/c3-0.4.15.tgz#747c47b33739d0f92bf4b5ddcce2bffff4fd4a31"
+  dependencies:
+    d3 "~3.5.0"
+
 cache-base@^0.8.4:
   version "0.8.5"
   resolved "https://registry.yarnpkg.com/cache-base/-/cache-base-0.8.5.tgz#60ceb3504021eceec7011fd3384b7f4e95729bfa"
@@ -6366,6 +6372,12 @@ rc@^1.0.1, rc@^1.1.6, rc@^1.1.7:
     ini "~1.3.0"
     minimist "^1.2.0"
     strip-json-comments "~2.0.1"
+
+react-c3js@^0.1.19:
+  version "0.1.19"
+  resolved "https://registry.yarnpkg.com/react-c3js/-/react-c3js-0.1.19.tgz#6ab19778d9c6a8b78557e10fa974328af253e10a"
+  dependencies:
+    c3 "^0.4.11"
 
 react-dom@15.3.1:
   version "15.3.1"

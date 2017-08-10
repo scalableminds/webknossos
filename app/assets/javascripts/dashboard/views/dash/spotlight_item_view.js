@@ -78,7 +78,9 @@ Do you wish to sign up now?`;
         <form
           action={jsRoutes.controllers.AnnotationController.createExplorational().url}
           method="POST"
-          ref={form => (this.form = form)}
+          ref={form => {
+            this.form = form;
+          }}
         >
           <input type="hidden" name="dataSetName" value={dataset.name} />
           <input type="hidden" name="contentType" value={this.state.contentType} />

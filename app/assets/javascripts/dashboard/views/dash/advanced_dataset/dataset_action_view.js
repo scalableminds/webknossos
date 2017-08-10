@@ -38,7 +38,9 @@ export default class DatasetActionView extends React.PureComponent {
         <form
           action={jsRoutes.controllers.AnnotationController.createExplorational().url}
           method="POST"
-          ref={form => (this.form = form)}
+          ref={form => {
+            this.form = form;
+          }}
         >
           <input type="hidden" name="dataSetName" value={dataset.name} />
           <input type="hidden" name="contentType" value={this.state.contentType} />
@@ -64,7 +66,7 @@ export default class DatasetActionView extends React.PureComponent {
                   </a>
                 : null}
               <a href={`/datasets/${dataset.name}/view`} title="View dataset">
-                <img src="/assets/images/eye.svg" role="presentation" /> View
+                <img src="/assets/images/eye.svg" alt="eye icon" /> View
               </a>
               <a
                 href="#"
@@ -72,7 +74,7 @@ export default class DatasetActionView extends React.PureComponent {
                 id="skeletonTraceLink"
                 onClick={this.handleSkeletonTraceClick}
               >
-                <img src="/assets/images/skeleton.svg" role="presentation" /> Start Skeleton Tracing
+                <img src="/assets/images/skeleton.svg" alt="skeleton iocn" /> Start Skeleton Tracing
               </a>
               {dataset.dataStore.typ !== "ndstore"
                 ? <a
@@ -81,7 +83,7 @@ export default class DatasetActionView extends React.PureComponent {
                     id="volumeTraceLink"
                     onClick={this.handleVolumeTraceClick}
                   >
-                    <img src="/assets/images/volume.svg" role="presentation" /> Start Volume Tracing
+                    <img src="/assets/images/volume.svg" alt="volume icon" /> Start Volume Tracing
                   </a>
                 : null}
             </div>

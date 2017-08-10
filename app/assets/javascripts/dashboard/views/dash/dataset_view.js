@@ -7,7 +7,7 @@ import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import moment from "moment";
-import { Spin, Input, Button } from "antd";
+import { Spin, Input, Button, Row, Col } from "antd";
 import SpotlightItemView from "./spotlight_item_view";
 import AdvancedDatasetView from "./advanced_dataset/advanced_dataset_view";
 
@@ -88,13 +88,17 @@ class DatasetView extends React.PureComponent {
 
   renderGallery() {
     return (
-      <div className="dataset panel panel-default">
+      <Row gutter={16}>
         {Utils.filterWithSearchQuery(
           this.state.datasets.filter(ds => ds.isActive),
           ["name", "owningTeam", "description"],
           this.state.searchQuery,
-        ).map(ds => <SpotlightItemView dataset={ds} key={ds.name} />)}
-      </div>
+        ).map(ds =>
+          <Col span={6}>
+            <SpotlightItemView dataset={ds} key={ds.name} />
+          </Col>,
+        )}
+      </Row>
     );
   }
 

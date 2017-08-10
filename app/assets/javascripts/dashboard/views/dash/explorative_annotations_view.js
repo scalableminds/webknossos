@@ -129,7 +129,11 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     });
   };
 
-  handleNMLUpload = info => {
+  handleNMLUpload = (info: {
+    file: { response: Object, status: "uploading" | "error" | "done" },
+    fileList: Array<Object>,
+    event: SyntheticInputEvent,
+  }) => {
     const response = info.file.response;
     if (info.file.status === "uploading") {
       this.setState({ isUploadingNML: true });

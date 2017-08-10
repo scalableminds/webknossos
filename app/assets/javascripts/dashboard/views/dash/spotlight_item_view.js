@@ -2,9 +2,10 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import React from "react";
+import { Card } from "antd";
 import TemplateHelpers from "libs/template_helpers";
-import type { APIDatasetType } from "admin/api_flow_types";
 import app from "app";
+import type { APIDatasetType } from "admin/api_flow_types";
 
 class SpotlightItemView extends React.PureComponent {
   form: any;
@@ -41,23 +42,23 @@ Do you wish to sign up now?`;
 
   render() {
     const dataset = this.props.dataset;
-    let stuff;
+    let description;
     if (dataset.description) {
-      stuff = (
-        <p style={{whiteSpace: "pre-wrap"}}>
+      description = (
+        <p style={{ whiteSpace: "pre-wrap" }}>
           {dataset.description}
         </p>
       );
     } else {
-      stuff = dataset.hasSegmentation
+      description = dataset.hasSegmentation
         ? <p>Original data and segmentation</p>
         : <p>Original data</p>;
     }
 
     return (
-      <div className="panel-body row">
-        <div className="dataset-thumbnail col-sm-4">
-          <img className="img-rounded" src={dataset.thumbnailURL} alt="Thumbnail" />
+      <Card bodyStyle={{ padding: 0 }}>
+        <div className="dataset-thumbnail">
+          <img src={dataset.thumbnailURL} alt="Thumbnail" />
 
           <div className="dataset-thumbnail-buttons">
             <a href={`/datasets/${dataset.name}/view`} title="View dataset">
@@ -83,17 +84,16 @@ Do you wish to sign up now?`;
           <input type="hidden" name="contentType" value={this.state.contentType} />
         </form>
 
-        <div className="dataset-description col-sm-8">
+        <div className="dataset-description" style={{ padding: "10px 16px" }}>
           <h3>
             {dataset.name}
           </h3>
-
           <p>
             Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}
           </p>
-          {stuff}
+          {description}
         </div>
-      </div>
+      </Card>
     );
   }
 }

@@ -15,11 +15,12 @@ function ReadOnlyTracingReducer(state: OxalisState, action: ActionType): OxalisS
       );
 
       const readonlyTracing: ReadOnlyTracingType = {
+        annotationId: action.annotation.id,
         type: "readonly",
         restrictions,
         name: action.annotation.name,
         tracingType: "View",
-        tracingId: action.annotation.id,
+        tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertBoundingBox(action.tracing.boundingBox),
       };

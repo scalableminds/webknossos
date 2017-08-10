@@ -56,14 +56,14 @@ class DatasetActionsView extends PureComponent {
   handleCopyToAccount = async (event: SyntheticInputEvent) => {
     event.target.blur();
     const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
-      .tracingId}/duplicate`;
+      .annotationId}/duplicate`;
     app.router.loadURL(url);
   };
 
   handleFinish = async (event: SyntheticInputEvent) => {
     event.target.blur();
     const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
-      .tracingId}/finishAndRedirect`;
+      .annotationId}/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
       app.router.loadURL(url);

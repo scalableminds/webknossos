@@ -4,14 +4,14 @@ import "backbone.marionette";
 import sinon from "sinon";
 import Constants from "oxalis/constants";
 import { setupOxalis } from "test/helpers/apiHelpers";
-import VOLUMETRACING_OBJECT from "../fixtures/volumetracing_object";
+import { tracing as TRACING } from "../fixtures/volumetracing_server_objects";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 test.beforeEach(t => setupOxalis(t, "volume"));
 
 test("getActiveCellId should get the id of the active cell", t => {
   const api = t.context.api;
-  t.is(api.tracing.getActiveCellId(), VOLUMETRACING_OBJECT.content.contentData.activeCell);
+  t.is(api.tracing.getActiveCellId(), TRACING.activeCell);
 });
 
 test("setActiveCell should set the active cell id", t => {

@@ -34,6 +34,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
       }
 
       const volumeTracing: VolumeTracingType = {
+        annotationId: action.annotation.id,
         type: "volume",
         activeCellId: 0,
         lastCentroid: null,
@@ -44,7 +45,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         volumeTraceOrMoveMode: Constants.VOLUME_MODE_MOVE,
         name: action.annotation.name,
         tracingType: action.annotation.typ,
-        tracingId: action.annotation.id,
+        tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertBoundingBox(action.tracing.boundingBox),
       };

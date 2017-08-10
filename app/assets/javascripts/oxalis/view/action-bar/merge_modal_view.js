@@ -43,7 +43,7 @@ class MergeModalView extends PureComponent {
   props: {
     isVisible: boolean,
     onOk: () => void,
-    tracingId: string,
+    annotationId: string,
     tracingType: string,
   };
 
@@ -97,7 +97,7 @@ class MergeModalView extends PureComponent {
       Toast.message(info.file.response.messages);
       const url =
         `/annotations/${annotation.typ}/${annotation.id}/merge/` +
-        `${this.props.tracingType}/${this.props.tracingId}`;
+        `${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     }
   };
@@ -108,7 +108,7 @@ class MergeModalView extends PureComponent {
     if (selectedTaskType != null) {
       const url =
         `/annotations/CompoundTaskType/${selectedTaskType}/` +
-        `merge/${this.props.tracingType}/${this.props.tracingId}`;
+        `merge/${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     }
   };
@@ -119,7 +119,7 @@ class MergeModalView extends PureComponent {
     if (selectedProject != null) {
       const url =
         `/annotations/CompoundProject/${selectedProject}/merge/` +
-        `${this.props.tracingType}/${this.props.tracingId}`;
+        `${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     }
   };
@@ -131,7 +131,7 @@ class MergeModalView extends PureComponent {
     if (selectedExplorativeAnnotation != null) {
       const url =
         `/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
-        `${this.props.tracingType}/${this.props.tracingId}`;
+        `${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     }
   };
@@ -236,7 +236,7 @@ class MergeModalView extends PureComponent {
 
 function mapStateToProps(state: OxalisState) {
   return {
-    tracingId: state.tracing.tracingId,
+    annotationId: state.tracing.annotationId,
     tracingType: state.tracing.tracingType,
   };
 }

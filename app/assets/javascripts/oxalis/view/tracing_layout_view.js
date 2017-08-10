@@ -23,7 +23,7 @@ const { Header, Sider } = Layout;
 class TracingLayoutView extends React.PureComponent {
   props: {
     initialTracingType: SkeletonTracingTypeTracingType,
-    initialTracingId: string,
+    initialAnnotationId: string,
     initialControlmode: ControlModeType,
   };
 
@@ -69,7 +69,7 @@ class TracingLayoutView extends React.PureComponent {
           <div>
             <OxalisController
               initialTracingType={this.props.initialTracingType}
-              initialTracingId={this.props.initialTracingId}
+              initialAnnotationId={this.props.initialAnnotationId}
               initialControlmode={this.props.initialControlmode}
               ref={ref => {
                 app.oxalis = ref;

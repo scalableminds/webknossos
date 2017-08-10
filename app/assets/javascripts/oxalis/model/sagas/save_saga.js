@@ -57,14 +57,19 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
 export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
   const batch = yield select(state => state.save.queue);
   let compactBatch = compactUpdateActions(batch);
-  const { version, tracingType, tracingId } = yield select(state => state.tracing);
+  const { version, type, tracingId } = yield select(state => state.tracing);
+  const dataStoreUrl = yield select(state => state.dataset.dataStore.url);
   compactBatch = addVersionNumbers(compactBatch, version);
   try {
-    yield call(Request.sendJSONReceiveJSON, `/annotations/${tracingType}/${tracingId}`, {
-      method: "PUT",
-      headers: { "X-Date": timestamp },
-      data: compactBatch,
-    });
+    yield call(
+      Request.sendJSONReceiveJSON,
+      `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update`,
+      {
+        method: "POST",
+        headers: { "X-Date": timestamp },
+        data: compactBatch,
+      },
+    );
     yield put(setVersionNumberAction(version + compactBatch.length));
     yield put(setLastSaveTimestampAction());
     yield put(shiftSaveQueueAction(batch.length));
@@ -227,13 +232,14 @@ function compactDeletedTrees(updateActions: Array<UpdateAction>) {
   const deletedTreeIds = updateActions
     .filter(ua => ua.name === "deleteTree")
     .map(ua => (ua.name === "deleteTree" ? ua.value.id : -1));
-  _.remove(
+  return _.filter(
     updateActions,
     ua =>
-      (ua.name === "deleteNode" || ua.name === "deleteEdge") &&
-      deletedTreeIds.includes(ua.value.treeId),
+      !(
+        (ua.name === "deleteNode" || ua.name === "deleteEdge") &&
+        deletedTreeIds.includes(ua.value.treeId)
+      ),
   );
-  return updateActions;
 }
 
 export function compactUpdateActions(

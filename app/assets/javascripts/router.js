@@ -79,7 +79,7 @@ class Router extends BaseRouter {
   tracingView(type, id) {
     const view = new ReactBackboneWrapper(TracingLayoutView, {
       initialTracingType: type,
-      initialTracingId: id,
+      initialAnnotationId: id,
       initialControlmode: ControlModeEnum.TRACE,
     });
     view.forcePageReload = true;
@@ -89,7 +89,7 @@ class Router extends BaseRouter {
   tracingViewPublic(id) {
     const view = new ReactBackboneWrapper(TracingLayoutView, {
       initialTracingType: SkeletonTracingTypeTracingEnum.View,
-      initialTracingId: id,
+      initialAnnotationId: id,
       initialControlmode: ControlModeEnum.VIEW,
     });
     view.forcePageReload = true;

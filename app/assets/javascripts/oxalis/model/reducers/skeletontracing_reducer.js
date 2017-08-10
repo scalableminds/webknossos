@@ -45,16 +45,15 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const trees = _.keyBy(
         action.tracing.trees.map(tree =>
           update(tree, {
-            treeId: { $set: tree.id },
             nodes: { $set: _.keyBy(tree.nodes, "id") },
-            color: { $set: tree.color || ColorGenerator.distinctColorForId(tree.id) },
+            color: { $set: tree.color || ColorGenerator.distinctColorForId(tree.treeId) },
             isVisible: { $set: true },
           }),
         ),
-        "id",
+        "treeId",
       );
 
-      const activeNodeIdMaybe = Maybe.fromNullable(action.tracing.activeNode);
+      const activeNodeIdMaybe = Maybe.fromNullable(action.tracing.activeNodeId);
       let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
       cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
@@ -87,6 +86,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
 
       const skeletonTracing: SkeletonTracingType = {
+        annotationId: action.annotation.id,
         type: "skeleton",
         activeNodeId,
         cachedMaxNodeId,
@@ -95,7 +95,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         trees,
         name: action.annotation.name,
         tracingType: action.annotation.typ,
-        tracingId: action.annotation.id,
+        tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertBoundingBox(action.tracing.boundingBox),
       };

@@ -160,6 +160,7 @@ export type SkeletonTracingTypeTracingType = $Keys<typeof SkeletonTracingTypeTra
 export type VolumeTracingTypeTracingType = SkeletonTracingTypeTracingType;
 
 export type SkeletonTracingType = {
+  +annotationId: string,
   +type: "skeleton",
   +trees: TreeMapType,
   +name: string,
@@ -174,6 +175,7 @@ export type SkeletonTracingType = {
 };
 
 export type VolumeTracingType = {
+  +annotationId: string,
   +type: "volume",
   +name: string,
   +version: number,
@@ -190,6 +192,7 @@ export type VolumeTracingType = {
 };
 
 export type ReadOnlyTracingType = {
+  +annotationId: string,
   +type: "readonly",
   +name: string,
   +version: number,
@@ -273,7 +276,7 @@ export type SaveQueueEntryType = {
   version: number,
   timestamp: number,
   actions: Array<UpdateAction>,
-}
+};
 
 export type SaveStateType = {
   +isBusy: boolean,
@@ -392,6 +395,8 @@ export const defaultState: OxalisState = {
     dataLayers: [],
   },
   tracing: {
+    annotationId: "",
+    boundingBox: null,
     type: "skeleton",
     trees: {},
     name: "",

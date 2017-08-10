@@ -54,7 +54,7 @@ import update from "immutability-helper";
 import UrlManager from "oxalis/controller/url_manager";
 
 type ServerSkeletonTracingTreeType = {
-  id: number,
+  treeId: number,
   color: ?Vector3,
   name: string,
   timestamp: number,
@@ -65,11 +65,12 @@ type ServerSkeletonTracingTreeType = {
 };
 
 export type ServerSkeletonTracingType = {
-  activeNode?: number,
+  activeNodeId?: number,
   boundingBox?: BoundingBoxObjectType,
-  customLayers: Array<Object>,
+  customLayers?: Array<Object>,
   editPosition: Vector3,
   editRotation: Vector3,
+  id: string,
   trees: Array<ServerSkeletonTracingTreeType>,
   version: number,
   zoomLevel: number,
@@ -78,9 +79,10 @@ export type ServerSkeletonTracingType = {
 export type ServerVolumeTracingType = {
   activeCell?: number,
   boundingBox?: BoundingBoxObjectType,
-  customLayers: Array<Object>,
+  customLayers?: Array<Object>,
   editPosition: Vector3,
   editRotation: Vector3,
+  id: string,
   nextCell: ?number,
   version: number,
   zoomLevel: number,
@@ -133,7 +135,7 @@ export class OxalisModel {
 
   async fetch(
     tracingType: SkeletonTracingTypeTracingType,
-    tracingId: string,
+    annotationId: string,
     controlMode: ControlModeType,
     initialFetch: boolean,
   ) {
@@ -144,9 +146,9 @@ export class OxalisModel {
       // Include /readOnly part whenever it is in the pathname
       const isReadOnly = window.location.pathname.endsWith("/readOnly");
       const readOnlyPart = isReadOnly ? "readOnly/" : "";
-      infoUrl = `/annotations/${tracingType}/${tracingId}/${readOnlyPart}info`;
+      infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
     } else {
-      infoUrl = `/annotations/${tracingType}/${tracingId}/info`;
+      infoUrl = `/annotations/${tracingType}/${annotationId}/info`;
     }
 
     const annotation: ServerAnnotationType = await Request.receiveJSON(infoUrl);
@@ -160,7 +162,7 @@ export class OxalisModel {
     } else if (!dataset) {
       error = "Selected dataset doesn't exist";
     } else if (!dataset.dataSource.dataLayers) {
-      const datasetName = dataset.dataSource.id.name;
+      const datasetName = annotation.dataSetName;
       if (datasetName) {
         error = `Please, double check if you have the dataset '${datasetName}' imported.`;
       } else {
@@ -238,7 +240,7 @@ export class OxalisModel {
     const { allowedModes, preferredMode } = this.determineAllowedModes(annotation.settings);
     _.extend(annotation.settings, { allowedModes, preferredMode });
 
-    const isVolume = annotation.settings.allowedModes.includes("volume");
+    const isVolume = annotation.content.typ === "volume";
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
     if (controlMode === ControlModeEnum.TRACE) {
       if (isVolume) {
@@ -259,7 +261,7 @@ export class OxalisModel {
 
     if (initialFetch) {
       // TODO remove default value
-      Store.dispatch(setZoomStepAction(tracing.zoomLevel || 2));
+      Store.dispatch(setZoomStepAction(tracing.zoomLevel != null ? tracing.zoomLevel : 2));
     }
 
     // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode

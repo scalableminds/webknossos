@@ -39,7 +39,7 @@ import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
 class Controller extends React.PureComponent {
   props: {
     initialTracingType: SkeletonTracingTypeTracingType,
-    initialTracingId: string,
+    initialAnnotationId: string,
     initialControlmode: ControlModeType,
     // Delivered by connect()
     viewMode: ModeType,
@@ -84,7 +84,7 @@ class Controller extends React.PureComponent {
 
     Model.fetch(
       this.props.initialTracingType,
-      this.props.initialTracingId,
+      this.props.initialAnnotationId,
       this.props.initialControlmode,
       true,
     )

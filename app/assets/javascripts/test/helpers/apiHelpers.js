@@ -4,8 +4,15 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
-import SKELETONTRACING_OBJECT from "../fixtures/skeletontracing_object";
-import VOLUMETRACING_OBJECT from "../fixtures/volumetracing_object";
+import {
+  tracing as SKELETON_TRACING,
+  annotation as SKELETON_ANNOTATION,
+} from "../fixtures/skeletontracing_server_objects";
+import {
+  tracing as VOLUME_TRACING,
+  annotation as VOLUME_ANNOTATION,
+} from "../fixtures/volumetracing_server_objects";
+import DATASET from "../fixtures/dataset_server_object";
 
 const Request = {
   receiveJSON: sinon.stub(),
@@ -37,38 +44,61 @@ export const KeyboardJS = {
   unbind: _.noop,
 };
 mockRequire("keyboardjs", KeyboardJS);
-mockRequire("libs/toast", { error: _.noop });
+mockRequire("libs/toast", { error: _.noop, warning: _.noop });
 mockRequire("libs/window", window);
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);
-mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
 
 // Avoid node caching and make sure all mockRequires are applied
 const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
 const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
+const Store = mockRequire.reRequire("oxalis/store").default;
 
 const modelData = {
-  skeleton: SKELETONTRACING_OBJECT,
-  volume: VOLUMETRACING_OBJECT,
+  skeleton: {
+    tracing: SKELETON_TRACING,
+    annotation: SKELETON_ANNOTATION,
+  },
+  volume: {
+    tracing: VOLUME_TRACING,
+    annotation: VOLUME_ANNOTATION,
+  },
 };
 
-export function setupOxalis(t, mode) {
+const TRACING_TYPE = "tracingTypeValue";
+const ANNOTATION_ID = "annotationIdValue";
+
+export function setupOxalis(t, mode, apiVersion = 2) {
   UrlManager.initialState = { position: [1, 2, 3] };
   const model = new Model();
   t.context.model = model;
+  t.context.Store = Store;
 
   const webknossos = new OxalisApi(model);
 
-  Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(modelData[mode])));
+  const ANNOTATION = modelData[mode].annotation;
+  Request.receiveJSON
+    .withArgs(`/annotations/${TRACING_TYPE}/${ANNOTATION_ID}/info`)
+    .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
+  Request.receiveJSON
+    .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
+    .returns(Promise.resolve(_.cloneDeep(DATASET)));
+  Request.receiveJSON
+    .withArgs(
+      `${ANNOTATION.dataStore.url}/data/tracings/${ANNOTATION.content.typ}/${ANNOTATION.content
+        .id}`,
+    )
+    .returns(Promise.resolve(_.cloneDeep(modelData[mode].tracing)));
+  Request.receiveJSON.returns(Promise.resolve({}));
 
   return model
-    .fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
+    .fetch(TRACING_TYPE, ANNOTATION_ID, ControlModeEnum.TRACE, true)
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");
-      webknossos.apiReady(2).then(apiObject => {
+      webknossos.apiReady(apiVersion).then(apiObject => {
         t.context.api = apiObject;
       });
     })

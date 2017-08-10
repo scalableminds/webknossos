@@ -88,7 +88,7 @@ test("Data Api: getBoundingBox should throw an error if the layer name is not va
 
 test("Data Api: getBoundingBox should get the bounding box of a layer", t => {
   const api = t.context.api;
-  const correctBoundingBox = [[3840, 4220, 2304], [3968, 4351, 2688]];
+  const correctBoundingBox = [[0, 0, 0], [1024, 1024, 1024]];
   const boundingBox = api.data.getBoundingBox("color");
   t.deepEqual(boundingBox, correctBoundingBox);
 });
@@ -104,7 +104,7 @@ test("Data Api: getDataValue should get the data value for a layer, position and
   // There is another spec for pullqueue.js
   const { api, model } = t.context;
   const cube = model.getBinaryByName("segmentation").cube;
-  const position = [3840, 4220, 2304];
+  const position = [100, 100, 100];
   const zoomStep = 0;
   const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
   const bucket = cube.getOrCreateBucket(bucketAddress);

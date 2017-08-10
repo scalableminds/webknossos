@@ -4,6 +4,7 @@
  * save_actions.js
  * @flow
  */
+import Date from "libs/date";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 type PushSaveQueueActionType = {

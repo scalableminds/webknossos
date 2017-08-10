@@ -234,9 +234,9 @@ class TracingApi {
    */
   async finishAndGetNextTask() {
     const state = Store.getState();
-    const { tracingType, tracingId } = state.tracing;
+    const { tracingType, annotationId } = state.tracing;
     const task = state.task;
-    const finishUrl = `/annotations/${tracingType}/${tracingId}/finish`;
+    const finishUrl = `/annotations/${tracingType}/${annotationId}/finish`;
     const requestTaskUrl = "/user/tasks/request";
 
     await Model.save();
@@ -277,12 +277,12 @@ class TracingApi {
    */
   async restart(
     newTracingType: SkeletonTracingTypeTracingType,
-    newTracingId: string,
+    newAnnotationId: string,
     newControlMode: ControlModeType,
   ) {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
-    await Model.fetch(newTracingType, newTracingId, newControlMode, false);
+    await Model.fetch(newTracingType, newAnnotationId, newControlMode, false);
     Store.dispatch(wkReadyAction());
     UrlManager.updateUnthrottled(true);
   }

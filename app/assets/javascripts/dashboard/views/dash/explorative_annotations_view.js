@@ -23,7 +23,7 @@ type Props = {
 export default class ExplorativeAnnotationsView extends React.PureComponent {
   props: Props;
   state: {
-    showArchivedTracings: boolean,
+    shouldShowArchivedTracings: boolean,
     archivedTracings: Array<APIAnnotationType>,
     unarchivedTracings: Array<APIAnnotationType>,
     didAlreadyFetchMetaInfo: {
@@ -34,7 +34,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     requestCount: number,
     isUploadingNML: boolean,
   } = {
-    showArchivedTracings: false,
+    shouldShowArchivedTracings: false,
     archivedTracings: [],
     unarchivedTracings: [],
     didAlreadyFetchMetaInfo: {
@@ -51,7 +51,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   }
 
   isFetchNecessary(): boolean {
-    const accessor = this.state.showArchivedTracings ? "isArchived" : "isUnarchived";
+    const accessor = this.state.shouldShowArchivedTracings ? "isArchived" : "isUnarchived";
     return !this.state.didAlreadyFetchMetaInfo[accessor];
   }
 
@@ -68,7 +68,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       return;
     }
 
-    const isFinishedString = this.state.showArchivedTracings.toString();
+    const isFinishedString = this.state.shouldShowArchivedTracings.toString();
     const url = this.props.userID
       ? `/api/users/${this.props.userID}/annotations?isFinished=${isFinishedString}`
       : `/api/user/annotations?isFinished=${isFinishedString}`;
@@ -76,7 +76,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     this.enterRequest();
     const tracings = await Request.receiveJSON(url);
     this.leaveRequest();
-    if (this.state.showArchivedTracings) {
+    if (this.state.shouldShowArchivedTracings) {
       this.setState(
         update(this.state, {
           archivedTracings: { $set: tracings },
@@ -98,7 +98,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   }
 
   toggleShowArchived = () => {
-    this.setState({ showArchivedTracings: !this.state.showArchivedTracings });
+    this.setState({ shouldShowArchivedTracings: !this.state.shouldShowArchivedTracings });
     this.fetchDataMaybe();
   };
 
@@ -155,7 +155,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
 
     const controller = jsRoutes.controllers.AnnotationController;
     const { typ, id } = tracing;
-    if (!this.state.showArchivedTracings) {
+    if (!this.state.shouldShowArchivedTracings) {
       return (
         <div>
           <a href={controller.trace(typ, id).url}>
@@ -189,7 +189,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   };
 
   getCurrentTracings(): Array<APIAnnotationType> {
-    return this.state.showArchivedTracings
+    return this.state.shouldShowArchivedTracings
       ? this.state.archivedTracings
       : this.state.unarchivedTracings;
   }
@@ -210,7 +210,9 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     });
 
     this.setState({
-      [this.state.showArchivedTracings ? "archivedTracings" : "unarchivedTracings"]: newTracings,
+      [this.state.shouldShowArchivedTracings
+        ? "archivedTracings"
+        : "unarchivedTracings"]: newTracings,
     });
 
     const url = `/annotations/${tracing.typ}/${tracing.id}/name`;
@@ -337,10 +339,10 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
               </Upload>
               <div className="divider-vertical" />
               <Button onClick={this.toggleShowArchived}>
-                Show {this.state.showArchivedTracings ? "Open" : "Archived"} Tracings
+                Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Tracings
               </Button>
               <span style={{ marginLeft: 5 }}>
-                {!this.state.showArchivedTracings
+                {!this.state.shouldShowArchivedTracings
                   ? <Button onClick={this.archiveAll}>Archive All</Button>
                   : null}
               </span>

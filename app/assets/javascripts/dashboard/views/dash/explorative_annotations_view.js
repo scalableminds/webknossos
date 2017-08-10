@@ -98,8 +98,9 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   }
 
   toggleShowArchived = () => {
-    this.setState({ shouldShowArchivedTracings: !this.state.shouldShowArchivedTracings });
-    this.fetchDataMaybe();
+    this.setState({ shouldShowArchivedTracings: !this.state.shouldShowArchivedTracings }, () => {
+      this.fetchDataMaybe();
+    });
   };
 
   finishOrReopenTracing = (type: "finish" | "reopen", tracing: APIAnnotationType) => {

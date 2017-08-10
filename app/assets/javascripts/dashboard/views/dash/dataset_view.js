@@ -51,14 +51,13 @@ class DatasetView extends React.PureComponent {
     const transformedDatasets = _.sortBy(
       datasets.map(dataset => {
         if (dataset.dataSource == null) {
-          dataset.datasetSource = {};
+          dataset.datasetSource = {
+            needsImport: true,
+            baseDir: "",
+            scale: [],
+            dataLayers: [],
+          };
         }
-        _.defaults(dataset.dataSource, {
-          needsImport: true,
-          baseDir: "",
-          scale: [],
-          dataLayers: [],
-        });
 
         dataset.hasSegmentation = _.some(
           dataset.dataSource.dataLayers,

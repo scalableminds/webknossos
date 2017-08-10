@@ -6,6 +6,7 @@ import Request from "libs/request";
 import { Spin, Table, Button } from "antd";
 import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
+import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
 import TransferTaskModal from "./transfer_task_modal";
@@ -242,16 +243,28 @@ export default class DashboardTaskListView extends React.PureComponent {
           title="#"
           dataIndex="id"
           render={(__, task) => FormatUtils.formatHash(task.id)}
-          sorter
+          sorter={Utils.localeCompareBy("id")}
           className="monospace-id"
         />
-        <Column title="Type" dataIndex="type.summary" sorter />
-        <Column title="Project" dataIndex="projectName" sorter />
-        <Column title="Description" dataIndex="type.description" sorter />
+        <Column
+          title="Type"
+          dataIndex="type.summary"
+          sorter={Utils.localeCompareBy(t => t.type.summary)}
+        />
+        <Column
+          title="Project"
+          dataIndex="projectName"
+          sorter={Utils.localeCompareBy("projectName")}
+        />
+        <Column
+          title="Description"
+          dataIndex="type.description"
+          sorter={Utils.localeCompareBy(t => t.type.description)}
+        />
         <Column
           title="Modes"
           dataIndex="type.settings.allowedModes"
-          sorter
+          sorter={Utils.localeCompareBy(t => t.type.settings.allowedModes.join("-"))}
           render={modes =>
             modes.map(mode =>
               <span className="label-default label" key={mode}>
@@ -262,7 +275,7 @@ export default class DashboardTaskListView extends React.PureComponent {
         <Column
           title="Creation Date"
           dataIndex="created"
-          sorter
+          sorter={Utils.localeCompareBy("created")}
           render={created => moment(created).format("YYYY-MM-DD HH:SS")}
         />
         <Column

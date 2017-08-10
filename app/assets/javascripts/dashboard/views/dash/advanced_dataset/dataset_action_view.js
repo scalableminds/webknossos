@@ -68,21 +68,11 @@ export default class DatasetActionView extends React.PureComponent {
               <a href={`/datasets/${dataset.name}/view`} title="View dataset">
                 <img src="/assets/images/eye.svg" alt="eye icon" /> View
               </a>
-              <a
-                href="#"
-                title="Create skeleton tracing"
-                id="skeletonTraceLink"
-                onClick={this.handleSkeletonTraceClick}
-              >
+              <a href="#" title="Create skeleton tracing" onClick={this.handleSkeletonTraceClick}>
                 <img src="/assets/images/skeleton.svg" alt="skeleton iocn" /> Start Skeleton Tracing
               </a>
               {dataset.dataStore.typ !== "ndstore"
-                ? <a
-                    href="#"
-                    title="Create volume tracing"
-                    id="volumeTraceLink"
-                    onClick={this.handleVolumeTraceClick}
-                  >
+                ? <a href="#" title="Create volume tracing" onClick={this.handleVolumeTraceClick}>
                     <img src="/assets/images/volume.svg" alt="volume icon" /> Start Volume Tracing
                   </a>
                 : null}

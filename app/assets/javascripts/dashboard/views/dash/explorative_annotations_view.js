@@ -26,9 +26,9 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     showArchivedTracings: boolean,
     archivedTracings: Array<APIAnnotationType>,
     unarchivedTracings: Array<APIAnnotationType>,
-    alreadyFetchedMetaInfo: {
-      archived: boolean,
-      unarchived: boolean,
+    didAlreadyFetchMetaInfo: {
+      isArchived: boolean,
+      isUnarchived: boolean,
     },
     searchQuery: string,
     requestCount: number,
@@ -37,9 +37,9 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     showArchivedTracings: false,
     archivedTracings: [],
     unarchivedTracings: [],
-    alreadyFetchedMetaInfo: {
-      archived: false,
-      unarchived: false,
+    didAlreadyFetchMetaInfo: {
+      isArchived: false,
+      isUnarchived: false,
     },
     searchQuery: "",
     requestCount: 0,
@@ -51,8 +51,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   }
 
   isFetchNecessary(): boolean {
-    const accessor = this.state.showArchivedTracings ? "archived" : "unarchived";
-    return !this.state.alreadyFetchedMetaInfo[accessor];
+    const accessor = this.state.showArchivedTracings ? "isArchived" : "isUnarchived";
+    return !this.state.didAlreadyFetchMetaInfo[accessor];
   }
 
   enterRequest() {
@@ -80,8 +80,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       this.setState(
         update(this.state, {
           archivedTracings: { $set: tracings },
-          alreadyFetchedMetaInfo: {
-            archived: { $set: true },
+          didAlreadyFetchMetaInfo: {
+            isArchived: { $set: true },
           },
         }),
       );
@@ -89,8 +89,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       this.setState(
         update(this.state, {
           unarchivedTracings: { $set: tracings },
-          alreadyFetchedMetaInfo: {
-            unarchived: { $set: true },
+          didAlreadyFetchMetaInfo: {
+            isUnarchived: { $set: true },
           },
         }),
       );
@@ -98,9 +98,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   }
 
   toggleShowArchived = () => {
-    this.setState({ showArchivedTracings: !this.state.showArchivedTracings }, () =>
-      this.fetchDataMaybe(),
-    );
+    this.setState({ showArchivedTracings: !this.state.showArchivedTracings });
+    this.fetchDataMaybe();
   };
 
   finishOrReopenTracing = (type: "finish" | "reopen", tracing: APIAnnotationType) => {

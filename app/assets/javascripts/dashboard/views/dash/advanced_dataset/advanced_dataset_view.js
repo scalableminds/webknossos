@@ -20,9 +20,6 @@ class AdvancedDatasetView extends React.PureComponent {
   props: Props;
 
   render() {
-    const compareFunc = (attribute: string) => (a: Object, b: Object) =>
-      a[attribute].toLowerCase().localeCompare(b[attribute].toLowerCase());
-
     return (
       <div>
         <Table
@@ -41,7 +38,7 @@ class AdvancedDatasetView extends React.PureComponent {
             title="Name"
             dataIndex="name"
             key="name"
-            sorter={compareFunc("name")}
+            sorter={Utils.localeCompareBy("name")}
             render={(name, dataset: APIDatasetType) =>
               <div title={dataset.dataSource.baseDir}>
                 {dataset.name}
@@ -55,7 +52,7 @@ class AdvancedDatasetView extends React.PureComponent {
             title="Creation Date"
             dataIndex="created"
             key="created"
-            sorter={compareFunc("formattedCreated")}
+            sorter={Utils.localeCompareBy("formattedCreated")}
             render={(__, dataset: APIDatasetType) => dataset.formattedCreated}
           />
           <Column

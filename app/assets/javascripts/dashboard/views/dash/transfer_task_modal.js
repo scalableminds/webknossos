@@ -21,11 +21,11 @@ class TransferTaskModal extends React.PureComponent {
   state: {
     isLoading: boolean,
     users: Array<APIUserType>,
-    currentUserValue: string,
+    currentUserIdValue: string,
   } = {
     isLoading: false,
     users: [],
-    currentUserValue: "",
+    currentUserIdValue: "",
   };
 
   componentDidMount() {
@@ -51,7 +51,7 @@ class TransferTaskModal extends React.PureComponent {
     this.setState({ isLoading: true });
     await Request.sendJSONReceiveJSON(url, {
       data: {
-        userId: this.state.currentUserValue,
+        userId: this.state.currentUserIdValue,
       },
     });
     this.setState({ isLoading: false });
@@ -59,18 +59,20 @@ class TransferTaskModal extends React.PureComponent {
   }
 
   handleSelectChange = (event: SyntheticInputEvent) => {
-    this.setState({ currentUserValue: event.target.value });
+    this.setState({ currentUserIdValue: event.target.value });
   };
 
   renderFormContent() {
     return (
       <div>
-        <label htmlFor="transfer-user-select">{"New User's Name"}</label>
+        <label htmlFor="transfer-user-select">
+          {"New User's Name"}
+        </label>
 
         <select
           id="transfer-user-select"
           className="form-control"
-          value={this.state.currentUserValue}
+          value={this.state.currentUserIdValue}
           onChange={this.handleSelectChange}
         >
           <option key="empty" value="" />
@@ -99,7 +101,7 @@ class TransferTaskModal extends React.PureComponent {
             <Button
               type="primary"
               onClick={() => this.transfer()}
-              disabled={this.state.currentUserValue === ""}
+              disabled={this.state.currentUserIdValue === ""}
             >
               Transfer
             </Button>

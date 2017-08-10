@@ -3,7 +3,7 @@
 
 import React from "react";
 import Request from "libs/request";
-import { Spin, Input, Table, Button, Upload } from "antd";
+import { Spin, Input, Table, Button, Upload, Modal } from "antd";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
@@ -224,26 +224,26 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   }
 
   archiveAll = () => {
-    if (!confirm("Are you sure you want to archive all explorative annotations?")) {
-      return;
-    }
+    Modal.confirm({
+      content: "Are you sure you want to archive all explorative annotations?",
+      onOk: async () => {
+        const unarchivedAnnoationIds = this.state.unarchivedTracings.map(t => t.id);
+        const data = await Request.sendJSONReceiveJSON(
+          jsRoutes.controllers.AnnotationController.finishAll("Explorational").url,
+          {
+            method: "POST",
+            data: {
+              annotations: unarchivedAnnoationIds,
+            },
+          },
+        );
+        Toast.message(data.messages);
 
-    const unarchivedAnnoationIds = this.state.unarchivedTracings.map(t => t.id);
-    Request.sendJSONReceiveJSON(
-      jsRoutes.controllers.AnnotationController.finishAll("Explorational").url,
-      {
-        method: "POST",
-        data: {
-          annotations: unarchivedAnnoationIds,
-        },
+        this.setState({
+          archivedTracings: this.state.unarchivedTracings.concat(this.state.archivedTracings),
+          unarchivedTracings: [],
+        });
       },
-    ).then(data => {
-      Toast.message(data.messages);
-
-      this.setState({
-        archivedTracings: this.state.unarchivedTracings.concat(this.state.archivedTracings),
-        unarchivedTracings: [],
-      });
     });
   };
 

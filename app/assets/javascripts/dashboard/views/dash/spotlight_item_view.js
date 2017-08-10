@@ -2,7 +2,7 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import React from "react";
-import { Card } from "antd";
+import { Modal, Card } from "antd";
 import TemplateHelpers from "libs/template_helpers";
 import app from "app";
 import type { APIDatasetType } from "admin/api_flow_types";
@@ -29,14 +29,20 @@ class SpotlightItemView extends React.PureComponent {
 
   submitForm(type: string, event: Event) {
     event.preventDefault();
-    const loginNotice = `For dataset annotation, please log in or create an account. For dataset viewing, no account is required.
-Do you wish to sign up now?`;
+
     if (app.currentUser != null) {
       this.setState({ contentType: type }, () => {
         this.form.submit();
       });
-    } else if (confirm(loginNotice)) {
-      window.location.href = "/auth/register";
+    } else {
+      const loginNotice = `For dataset annotation, please log in or create an account. For dataset viewing, no account is required.
+      Do you wish to sign up now?`;
+      Modal.confirm({
+        content: loginNotice,
+        onOk: () => {
+          window.location.href = "/auth/register";
+        },
+      });
     }
   }
 

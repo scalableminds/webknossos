@@ -3,7 +3,7 @@
 
 import React from "react";
 import Request from "libs/request";
-import { Spin, Input, Table } from "antd";
+import { Spin, Input, Table, Button } from "antd";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
@@ -329,16 +329,13 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
 
               <div className="divider-vertical" />
 
-              <a href="#" className="btn btn-default" onClick={this.toggleShowArchived}>
-                <i className="fa fa-spinner fa-spin hide" />
-                Show {this.state.showArchivedTracings ? "open" : "archived"} tracings
-              </a>
+              <Button onClick={this.toggleShowArchived}>
+                Show {this.state.showArchivedTracings ? "Open" : "Archived"} Tracings
+              </Button>
 
               <span style={{ marginLeft: 5 }}>
                 {!this.state.showArchivedTracings
-                  ? <a href="#" className="btn btn-default" onClick={this.archiveAll}>
-                      Archive all
-                    </a>
+                  ? <Button onClick={this.archiveAll}>Archive All</Button>
                   : null}
               </span>
             </div>}

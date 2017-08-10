@@ -1,9 +1,8 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
 
 import React from "react";
 import Request from "libs/request";
-import { Spin, Table } from "antd";
+import { Spin, Table, Button } from "antd";
 import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import moment from "moment";
@@ -62,7 +61,7 @@ export default class DashboardTaskListView extends React.PureComponent {
     this.fetchData();
   }
 
-  getFinishVerb = () => (this.state.showFinishedTasks ? "unfinished" : "finished");
+  getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
 
   finish(task: APITaskWithAnnotationType) {
     if (!confirm("Are you sure you want to permanently finish this tracing?")) {
@@ -280,22 +279,16 @@ export default class DashboardTaskListView extends React.PureComponent {
         <h3>Tasks</h3>
         <div style={{ marginBottom: 20 }}>
           {this.props.isAdminView
-            ? <a
-                href={
-                  jsRoutes.controllers.AnnotationIOController.userDownload(this.props.userID).url
-                }
-                className="btn btn-primary"
-                title="download all finished tracings"
-              >
-                <i className="fa fa-download" />download
+            ? <a href={`/api/users/${this.props.userID}/annotations/download`}>
+                <Button icon="download">Download All Finished Tracings</Button>
               </a>
-            : <a href="#" className="btn btn-success" onClick={() => this.getNewTask()}>
-                Get a new task
-              </a>}
+            : <Button type="primary" onClick={() => this.getNewTask()}>
+                Get a New Task
+              </Button>}
           <div className="divider-vertical" />
-          <a href="#" className="btn btn-default" onClick={this.toggleShowFinished}>
-            Show {this.getFinishVerb()} tasks only
-          </a>
+          <Button onClick={this.toggleShowFinished}>
+            Show {this.getFinishVerb()} Tasks Only
+          </Button>
         </div>
 
         {this.state.isLoading

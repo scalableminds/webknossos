@@ -7,7 +7,7 @@ import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import moment from "moment";
-import { Spin, Input } from "antd";
+import { Spin, Input, Button } from "antd";
 import SpotlightItemView from "./spotlight_item_view";
 import AdvancedDatasetView from "./advanced_dataset/advanced_dataset_view";
 
@@ -108,16 +108,18 @@ class DatasetView extends React.PureComponent {
     const isGallery = this.state.currentDataViewType === "gallery";
     const adminHeader = Utils.isUserAdmin(this.props.user)
       ? <div className="pull-right">
-          <a href="/datasets/upload" className="btn btn-primary" style={{ marginRight: 5 }}>
-            <i className="fa fa-plus" />Add Dataset
+          <a href="/datasets/upload" style={{ marginRight: 5 }}>
+            <Button type="primary" icon="plus">
+              Add Dataset
+            </Button>
           </a>
           {isGallery
-            ? <a href="#" className="btn btn-default" onClick={this.showAdvancedView}>
-                <i className="fa fa-th-list" />Show advanced view
-              </a>
-            : <a href="#" className="btn btn-default" onClick={this.showGalleryView}>
-                <i className="fa fa-th" />Show gallery view
-              </a>}
+            ? <Button onClick={this.showAdvancedView} icon="bars">
+                Show Advanced View
+              </Button>
+            : <Button onClick={this.showGalleryView} icon="appstore">
+                Show Gallery View
+              </Button>}
         </div>
       : null;
 

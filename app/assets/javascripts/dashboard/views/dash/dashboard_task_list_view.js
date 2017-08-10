@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable jsx-a11y/href-no-hash */
 
 import React from "react";
 import Request from "libs/request";
@@ -122,7 +123,7 @@ export default class DashboardTaskListView extends React.PureComponent {
           <li>
             <a href={`/annotations/Task/${annotation.id}`}>
               <i className="fa fa-random" />
-              <strong>trace</strong>
+              <strong>Trace</strong>
             </a>
           </li>
           {this.props.isAdminView
@@ -130,13 +131,13 @@ export default class DashboardTaskListView extends React.PureComponent {
                 <li>
                   <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
                     <i className="fa fa-share" />
-                    transfer
+                    Transfer
                   </a>
                 </li>
                 <li>
                   <a href={`/annotations/Task/${annotation.id}/download`}>
                     <i className="fa fa-download" />
-                    download
+                    Download
                   </a>
                 </li>
                 <li>
@@ -148,7 +149,7 @@ export default class DashboardTaskListView extends React.PureComponent {
                 <li>
                   <a href="#" onClick={() => this.cancelAnnotation(annotation.id)}>
                     <i className="fa fa-trash-o" />
-                    cancel
+                    Cancel
                   </a>
                 </li>
               </div>
@@ -259,7 +260,7 @@ export default class DashboardTaskListView extends React.PureComponent {
             )}
         />
         <Column
-          title="Created"
+          title="Creation Date"
           dataIndex="created"
           sorter
           render={created => moment(created).format("YYYY-MM-DD HH:SS")}

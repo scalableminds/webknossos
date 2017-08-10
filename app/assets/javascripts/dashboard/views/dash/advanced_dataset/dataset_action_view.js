@@ -60,11 +60,11 @@ export default class DatasetActionView extends React.PureComponent {
           ? <div className="dataset-actions">
               {dataset.isEditable
                 ? <a href={`/datasets/${dataset.name}/edit`} title="Edit dataset">
-                    <i className="fa fa-pencil" /> edit
+                    <i className="fa fa-pencil" /> Edit
                   </a>
                 : null}
               <a href={`/datasets/${dataset.name}/view`} title="View dataset">
-                <img src="/assets/images/eye.svg" role="presentation" /> view
+                <img src="/assets/images/eye.svg" role="presentation" /> View
               </a>
               <a
                 href="#"
@@ -72,7 +72,7 @@ export default class DatasetActionView extends React.PureComponent {
                 id="skeletonTraceLink"
                 onClick={this.handleSkeletonTraceClick}
               >
-                <img src="/assets/images/skeleton.svg" role="presentation" /> start Skeleton Tracing
+                <img src="/assets/images/skeleton.svg" role="presentation" /> Start Skeleton Tracing
               </a>
               {dataset.dataStore.typ !== "ndstore"
                 ? <a
@@ -81,7 +81,7 @@ export default class DatasetActionView extends React.PureComponent {
                     id="volumeTraceLink"
                     onClick={this.handleVolumeTraceClick}
                   >
-                    <img src="/assets/images/volume.svg" role="presentation" /> start Volume Tracing
+                    <img src="/assets/images/volume.svg" role="presentation" /> Start Volume Tracing
                   </a>
                 : null}
             </div>

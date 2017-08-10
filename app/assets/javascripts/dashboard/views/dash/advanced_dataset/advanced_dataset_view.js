@@ -55,7 +55,7 @@ class AdvancedDatasetView extends React.PureComponent {
               </div>}
           />
           <Column
-            title="Created"
+            title="Creation Date"
             dataIndex="created"
             key="created"
             sorter={compareFunc("formattedCreated")}

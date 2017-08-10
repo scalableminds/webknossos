@@ -273,7 +273,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
               onChange={newName => this.renameTracing(tracing, newName)}
             />}
         />
-        <Column title="Data Set" dataIndex="dataSetName" sorter />
+        <Column title="Dataset" dataIndex="dataSetName" sorter />
         <Column
           title="Stats"
           render={(__, tracing) =>

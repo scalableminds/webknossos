@@ -265,20 +265,24 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
           title="#"
           dataIndex="id"
           render={(__, tracing) => FormatUtils.formatHash(tracing.id)}
-          sorter
+          sorter={Utils.localeCompareBy("id")}
           className="monospace-id"
         />
         <Column
           title="Name"
           dataIndex="name"
-          sorter
+          sorter={Utils.localeCompareBy("name")}
           render={(name, tracing) =>
             <EditableTextLabel
               value={name}
               onChange={newName => this.renameTracing(tracing, newName)}
             />}
         />
-        <Column title="Dataset" dataIndex="dataSetName" sorter />
+        <Column
+          title="Dataset"
+          dataIndex="dataSetName"
+          sorter={Utils.localeCompareBy("dataSetName")}
+        />
         <Column
           title="Stats"
           render={(__, tracing) =>
@@ -302,7 +306,11 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
               : null}
         />
         <Column title="Type" dataIndex="contentType" />
-        <Column title="Creation Date" dataIndex="created" sorter />
+        <Column
+          title="Creation Date"
+          dataIndex="created"
+          sorter={Utils.localeCompareBy("created")}
+        />
         <Column
           title="Actions"
           className="nowrap"

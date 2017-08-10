@@ -279,7 +279,7 @@ export default class DashboardTaskListView extends React.PureComponent {
       <div>
         <h3>Tasks</h3>
         <div style={{ marginBottom: 20 }}>
-          {this.props.isAdminView
+          {this.props.isAdminView && this.props.userID
             ? <a href={`/api/users/${this.props.userID}/annotations/download`}>
                 <Button icon="download">Download All Finished Tracings</Button>
               </a>

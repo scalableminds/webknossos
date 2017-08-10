@@ -137,7 +137,7 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
   // Performance improvement: create a map of the deletedNode update actions, key is the nodeId
   const deleteNodeActionsMap = _.keyBy(
     updateActions,
-    ua => (ua.name === "deleteNode" ? ua.value.id : -1),
+    ua => (ua.name === "deleteNode" ? ua.value.nodeId : -1),
   );
   // Performance improvement: create a map of the deletedEdge update actions, key is the cantor pairing
   // of sourceId and targetId
@@ -248,6 +248,7 @@ export function compactUpdateActions(
   const result = updateActionsBatches
     .map(updateActionsBatch =>
       _.chain(updateActionsBatch)
+        .cloneDeep()
         .update("actions", removeUnrelevantUpdateActions)
         .update("actions", compactMovedNodesAndEdges)
         .update("actions", compactDeletedTrees)

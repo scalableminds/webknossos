@@ -282,7 +282,7 @@ class Skeleton {
           break;
         }
         case "deleteNode":
-          this.deleteNode(update.value.treeId, update.value.id);
+          this.deleteNode(update.value.treeId, update.value.nodeId);
           break;
         case "createEdge": {
           const tree = skeletonTracing.trees[update.value.treeId];

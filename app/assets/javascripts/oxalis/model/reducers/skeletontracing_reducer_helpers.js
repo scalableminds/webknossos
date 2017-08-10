@@ -371,7 +371,8 @@ export function deleteTree(
         // just set the last tree to be the active one
         const maxTreeId = getMaximumTreeId(newTrees);
         newActiveTreeId = maxTreeId;
-        newActiveNodeId = _.first(Object.keys(newTrees[maxTreeId].nodes)) || null;
+        // Object.keys returns strings and the newActiveNodeId should be an integer
+        newActiveNodeId = +_.first(Object.keys(newTrees[maxTreeId].nodes)) || null;
       }
       const newMaxNodeId = getMaximumNodeId(newTrees);
 

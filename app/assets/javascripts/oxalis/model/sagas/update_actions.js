@@ -59,7 +59,7 @@ type DeleteNodeUpdateAction = {
   name: "deleteNode",
   value: {
     treeId: number,
-    id: number,
+    nodeId: number,
   },
 };
 type CreateEdgeUpdateAction = {
@@ -208,7 +208,7 @@ export function updateNode(treeId: number, node: NodeType): UpdateNodeUpdateActi
 export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateAction {
   return {
     name: "deleteNode",
-    value: { treeId, id: nodeId },
+    value: { treeId, nodeId },
   };
 }
 export function updateSkeletonTracing(

@@ -5,7 +5,7 @@ import React from "react";
 import Request from "libs/request";
 import TemplateHelpers from "libs/template_helpers";
 import type { APIDatasetType } from "admin/api_flow_types";
-import { Spin } from "antd";
+import { Spin, Tag } from "antd";
 
 export default class DatasetAccessListView extends React.PureComponent {
   props: {
@@ -52,13 +52,9 @@ export default class DatasetAccessListView extends React.PureComponent {
               </td>
               <td>
                 {user.teams.map(team =>
-                  <span
-                    className="label label-default"
-                    style={{ backgroundColor: TemplateHelpers.stringToColor(team.team) }}
-                    key={team.team}
-                  >
+                  <Tag color={TemplateHelpers.stringToColor(team.team)} key={team.team}>
                     {team.team}
-                  </span>,
+                  </Tag>,
                 )}
               </td>
             </tr>,

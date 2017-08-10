@@ -5,7 +5,7 @@ import React from "react";
 import TemplateHelpers from "libs/template_helpers";
 import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import Utils from "libs/utils";
-import { Table, Icon } from "antd";
+import { Table, Icon, Tag } from "antd";
 import DatasetActionView from "./dataset_action_view";
 import DatasetAccessListView from "./dataset_access_list_view";
 
@@ -46,12 +46,9 @@ class AdvancedDatasetView extends React.PureComponent {
               <div title={dataset.dataSource.baseDir}>
                 {dataset.name}
                 <br />
-                <span
-                  className="label label-default"
-                  style={{ backgroundColor: TemplateHelpers.stringToColor(dataset.dataStore.name) }}
-                >
+                <Tag color={TemplateHelpers.stringToColor(dataset.dataStore.name)}>
                   {dataset.dataStore.name}
-                </span>
+                </Tag>
               </div>}
           />
           <Column
@@ -75,14 +72,13 @@ class AdvancedDatasetView extends React.PureComponent {
             key="allowedTeams"
             render={(teams, dataset: APIDatasetType) =>
               teams.map(team =>
-                <span
-                  className="label label-default"
-                  style={{ backgroundColor: TemplateHelpers.stringToColor(team) }}
+                <Tag
+                  color={TemplateHelpers.stringToColor(team)}
                   key={`allowed_teams_${dataset.name}_${team}`}
                 >
                   {team === dataset.owningTeam ? <i className="fa fa-lock" /> : null}
                   {team}
-                </span>,
+                </Tag>,
               )}
           />
           <Column
@@ -110,12 +106,9 @@ class AdvancedDatasetView extends React.PureComponent {
             dataIndex="dataSource.dataLayers"
             render={(__, dataset) =>
               (dataset.dataSource.dataLayers || []).map(layer =>
-                <span
-                  className="label label-default"
-                  key={`${layer.category} - ${layer.elementClass}`}
-                >
+                <Tag key={`${layer.category} - ${layer.elementClass}`}>
                   {layer.category} - {layer.elementClass}
-                </span>,
+                </Tag>,
               )}
           />
 

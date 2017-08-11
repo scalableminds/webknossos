@@ -200,7 +200,7 @@ export default class DashboardTaskListView extends React.PureComponent {
       return this.getNewTask();
     } else {
       return Modal.confirm({
-        content: "Are you sure you want to permanently finish this tracing?",
+        content: "Do you really want another task?",
         onOk: () => this.getNewTask(),
       });
     }
@@ -216,6 +216,8 @@ export default class DashboardTaskListView extends React.PureComponent {
           convertAnnotationToTaskWithAnnotationType(newTaskAnnotation),
         ]),
       });
+    } catch (ex) {
+      // catch exception so that promise does not fail and the modal will close
     } finally {
       this.setState({ isLoading: false });
     }

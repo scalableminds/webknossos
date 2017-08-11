@@ -7,9 +7,12 @@ const ReactElement = React.Element;
 
 const onClick = async function() {
   this.setState({ isLoading: true });
-  await this.props.onClick();
-  if (this._isMounted) {
-    this.setState({ isLoading: false });
+  try {
+    await this.props.onClick();
+  } finally {
+    if (this._isMounted) {
+      this.setState({ isLoading: false });
+    }
   }
 };
 

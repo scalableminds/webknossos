@@ -2,9 +2,11 @@
 
 import _ from "lodash";
 import React from "react";
-import { Spin, Modal, Button } from "antd";
+import { Spin, Modal, Button, Select } from "antd";
 import Request from "libs/request";
 import type { APIUserType } from "admin/api_flow_types";
+
+const { Option } = Select;
 
 class TransferTaskModal extends React.PureComponent {
   props: {
@@ -58,31 +60,28 @@ class TransferTaskModal extends React.PureComponent {
     this.props.onChange();
   }
 
-  handleSelectChange = (event: SyntheticInputEvent) => {
-    this.setState({ currentUserIdValue: event.target.value });
+  handleSelectChange = (userId: string) => {
+    this.setState({ currentUserIdValue: userId });
   };
 
   renderFormContent() {
     return (
-      <div>
-        <label htmlFor="transfer-user-select">
-          {"New User's Name"}
-        </label>
-
-        <select
-          id="transfer-user-select"
-          className="form-control"
-          value={this.state.currentUserIdValue}
-          onChange={this.handleSelectChange}
-        >
-          <option key="empty" value="" />
-          {this.state.users.filter(u => u.id !== this.props.userID).map(user =>
-            <option key={user.id} value={user.id}>
-              {user.lastName}, {user.firstName} ({user.email})
-            </option>,
-          )}
-        </select>
-      </div>
+      <Select
+        showSearch
+        placeholder="Select a New User"
+        value={this.state.currentUserIdValue}
+        onChange={this.handleSelectChange}
+        optionFilterProp="children"
+        style={{ width: "100%" }}
+        filterOption={(input, option) =>
+          option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}
+      >
+        {this.state.users.filter(u => u.id !== this.props.userID).map(user =>
+          <Option key={user.id} value={user.id}>
+            {`${user.lastName}, ${user.firstName} ${user.email}`}
+          </Option>,
+        )}
+      </Select>
     );
   }
 

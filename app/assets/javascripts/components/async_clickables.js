@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable react/no-unused-prop-types, react/no-unused-props, react/jsx-no-bind, react/no-multi-comp  */
 import React from "react";
-import { Button } from "antd";
+import { Button, Spin } from "antd";
 
 const ReactElement = React.Element;
 
@@ -57,7 +57,7 @@ export class AsyncLink extends React.PureComponent {
     let content;
     if (this.state.isLoading) {
       const childrenWithoutIcon = this.props.children.filter(child => child.type !== "i");
-      content = [<i key="icon" className="fa fa-spinner fa-pulse fa-fw" />, childrenWithoutIcon];
+      content = [<Spin />, childrenWithoutIcon];
     } else {
       content = this.props.children;
     }

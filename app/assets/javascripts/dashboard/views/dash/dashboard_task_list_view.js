@@ -4,7 +4,7 @@
 import React from "react";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
-import { Spin, Table, Button, Modal } from "antd";
+import { Spin, Table, Button, Modal, Tag } from "antd";
 import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Utils from "libs/utils";
@@ -248,7 +248,7 @@ export default class DashboardTaskListView extends React.PureComponent {
         dataSource={this.getCurrentTasks().filter(
           task => task.annotation.state.isFinished === this.state.showFinishedTasks,
         )}
-        rowKey="name"
+        rowKey="id"
         pagination={{
           defaultPageSize: 50,
         }}
@@ -281,9 +281,9 @@ export default class DashboardTaskListView extends React.PureComponent {
           sorter={Utils.localeCompareBy(t => t.type.settings.allowedModes.join("-"))}
           render={modes =>
             modes.map(mode =>
-              <span className="label-default label" key={mode}>
+              <Tag key={mode}>
                 {mode}
-              </span>,
+              </Tag>,
             )}
         />
         <Column

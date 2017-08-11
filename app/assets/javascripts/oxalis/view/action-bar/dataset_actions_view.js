@@ -6,10 +6,10 @@ import type { OxalisState, TracingType, TaskType } from "oxalis/store";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import app from "app";
+import { Button, Dropdown, Menu, Icon } from "antd";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
-import { Button } from "antd";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 
@@ -25,11 +25,11 @@ class DatasetActionsView extends PureComponent {
   };
 
   state: {
-    shareModalOpen: boolean,
-    mergeModalOpen: boolean,
+    isShareModalOpen: boolean,
+    isMergeModalOpen: boolean,
   } = {
-    shareModalOpen: false,
-    mergeModalOpen: false,
+    isShareModalOpen: false,
+    isMergeModalOpen: false,
   };
 
   componentDidMount() {
@@ -71,11 +71,11 @@ class DatasetActionsView extends PureComponent {
   };
 
   handleShareOpen = () => {
-    this.setState({ shareModalOpen: true });
+    this.setState({ isShareModalOpen: true });
   };
 
   handleShareClose = () => {
-    this.setState({ shareModalOpen: false });
+    this.setState({ isShareModalOpen: false });
   };
 
   handleDownload = async (event: SyntheticInputEvent) => {
@@ -94,11 +94,11 @@ class DatasetActionsView extends PureComponent {
   };
 
   handleMergeOpen = () => {
-    this.setState({ mergeModalOpen: true });
+    this.setState({ isMergeModalOpen: true });
   };
 
   handleMergeClose = () => {
-    this.setState({ mergeModalOpen: false });
+    this.setState({ isMergeModalOpen: false });
   };
 
   getSaveButtonIcon() {
@@ -116,85 +116,104 @@ class DatasetActionsView extends PureComponent {
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
     const restrictions = this.props.tracing.restrictions;
 
-    const elements = [];
-    if (restrictions.allowUpdate) {
-      elements.push(
-        <Button
+    const saveButton = restrictions.allowUpdate
+      ? <Button
           key="save-button"
           type="primary"
           onClick={this.handleSave}
           icon={this.getSaveButtonIcon()}
         >
           Save
-        </Button>,
-      );
-    } else {
-      elements.push(
-        <Button key="read-only-button" type="primary" disabled>
-          Read only
-        </Button>,
-      );
-      elements.push(
-        <Button key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
-          Copy To My Account
-        </Button>,
-      );
-    }
+        </Button>
+      : [
+          <Button key="read-only-button" type="primary" disabled>
+            Read only
+          </Button>,
+          <Button key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+            Copy To My Account
+          </Button>,
+        ];
 
+    const finishAndNextTaskButton =
+      hasAdvancedOptions && restrictions.allowFinish && this.props.task
+        ? <Button key="next-button" icon="verticle-left" onClick={this.handleFinishAndGetNextTask}>
+            Finish and Get Next Task
+          </Button>
+        : null;
+
+    const elements = [];
     if (hasAdvancedOptions) {
       if (restrictions.allowFinish) {
         elements.push(
-          <Button key="finish-button" icon="check-circle-o" onClick={this.handleFinish}>
-            {archiveButtonText}
-          </Button>,
+          <Menu.Item key="finish-button">
+            <div onClick={this.handleFinish}>
+              <Icon type="check-circle-o" />
+              {archiveButtonText}
+            </div>
+          </Menu.Item>,
         );
       }
       if (restrictions.allowDownload || !this.props.tracing.downloadUrl) {
         elements.push(
-          <Button key="download-button" icon="download" onClick={this.handleDownload}>
-            Download
-          </Button>,
+          <Menu.Item key="download-button">
+            <div onClick={this.handleDownload}>
+              <Icon type="download" />
+              Download
+            </div>
+          </Menu.Item>,
         );
       }
       elements.push(
-        <Button key="share-button" icon="share-alt" onClick={this.handleShareOpen}>
-          Share
-        </Button>,
+        <Menu.Item key="share-button">
+          <div onClick={this.handleShareOpen}>
+            <Icon type="share-alt" />
+            Share
+          </div>
+        </Menu.Item>,
       );
       elements.push(
         <ShareModalView
           key="share-modal"
-          isVisible={this.state.shareModalOpen}
+          isVisible={this.state.isShareModalOpen}
           onOk={this.handleShareClose}
         />,
       );
     }
-    if (restrictions.allowFinish && this.props.task) {
-      elements.push(
-        <Button key="next-button" icon="verticle-left" onClick={this.handleFinishAndGetNextTask}>
-          Finish and Get Next Task
-        </Button>,
-      );
-    }
+
     if (isSkeletonMode) {
       elements.push(
-        <Button key="merge-button" icon="folder-open" onClick={this.handleMergeOpen}>
-          Merge Tracing
-        </Button>,
+        <Menu.Item key="merge-button">
+          <div onClick={this.handleMergeOpen}>
+            <Icon type="folder-open" />
+            Merge Tracing
+          </div>
+        </Menu.Item>,
       );
       elements.push(
         <MergeModalView
           key="merge-modal"
-          isVisible={this.state.mergeModalOpen}
+          isVisible={this.state.isMergeModalOpen}
           onOk={this.handleMergeClose}
         />,
       );
     }
 
+    const menu = (
+      <Menu>
+        {elements}
+      </Menu>
+    );
+
     return (
       <div>
         <Button.Group size="large">
-          {elements}
+          {saveButton}
+          {finishAndNextTaskButton}
+          <Dropdown overlay={menu}>
+            <Button>
+              <Icon type="down" />
+            </Button>
+          </Dropdown>
         </Button.Group>
       </div>
     );

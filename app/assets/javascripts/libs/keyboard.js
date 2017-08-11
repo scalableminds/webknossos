@@ -500,14 +500,17 @@
               // Force a keyup for non-modifier keys when command is held because they don't fire
               console.log(platform, this._locale.pressedKeys);
               if (
-                platform.match("Linux x86_64") &&
+                platform.match("Mac") &&
                 this._locale.pressedKeys.includes("super") &&
                 intersection(this._locale.getKeyNames(event.keyCode || event.key), [
-                  "cmd",
                   "shift",
                   "alt",
                   "caps",
                   "tab",
+                  "command",
+                  "windows",
+                  "win",
+                  "super",
                 ]).length === 0
               ) {
                 this._targetKeyUpBinding(event);
@@ -943,26 +946,8 @@
             }
             locale.bindKeyCode(semicolonKeyCode, ["semicolon", ";"]);
             locale.bindKeyCode(dashKeyCode, ["dash", "-"]);
-            locale.bindKeyCode(leftCommandKeyCode, [
-              "command",
-              "windows",
-              "win",
-              "super",
-              "leftcommand",
-              "leftwindows",
-              "leftwin",
-              "leftsuper",
-            ]);
-            locale.bindKeyCode(rightCommandKeyCode, [
-              "command",
-              "windows",
-              "win",
-              "super",
-              "rightcommand",
-              "rightwindows",
-              "rightwin",
-              "rightsuper",
-            ]);
+            locale.bindKeyCode(leftCommandKeyCode, ["command", "windows", "win", "super"]);
+            locale.bindKeyCode(rightCommandKeyCode, ["command", "windows", "win", "super"]);
 
             // kill keys
             locale.setKillKey("command");

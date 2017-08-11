@@ -85,6 +85,9 @@ export class InputKeyboardNoLoop {
         }
         if (!event.repeat) {
           callback(event);
+        } else {
+          event.preventDefault();
+          event.stopPropagation();
         }
       },
       _.noop,

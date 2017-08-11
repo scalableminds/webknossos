@@ -9,13 +9,24 @@ import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actio
 import messages from "messages";
 import type { OxalisState } from "oxalis/store";
 
+type ShareModalPropType = {
+  isVisible: boolean,
+  onOk: () => void,
+  setAnnotationPublic: Function,
+};
+
 class ShareModalView extends PureComponent {
-  props: {
+  props: ShareModalPropType;
+
+  state: {
     isPublic: boolean,
-    isVisible: boolean,
-    onOk: () => void,
-    setAnnotationPublic: Function,
+  } = {
+    isPublic: false,
   };
+
+  componentWillReceiveProps(newProps: ShareModalPropType) {
+    this.setState({ isPublic: newProps.isPublic });
+  }
 
   getUrl() {
     const loc = window.location;
@@ -34,13 +45,17 @@ class ShareModalView extends PureComponent {
   };
 
   handleCheckboxChange = (event: SyntheticInputEvent) => {
-    const isPublic = event.target.checked;
+    this.setState({ isPublic: event.target.checked });
+  };
 
+  handleOk = () => {
     // public tracings only work if the dataset is public too
+    const isPublic = this.state.isPublic;
     if (!this.props.isDatasetPublic && isPublic) {
       Toast.warning(messages["annotation.dataset_no_public"], true);
     }
     this.props.setAnnotationPublic(isPublic);
+    this.props.onOk();
   };
 
   render() {
@@ -48,7 +63,7 @@ class ShareModalView extends PureComponent {
       <Modal
         title="Share"
         visible={this.props.isVisible}
-        onOk={this.props.onOk}
+        onOk={this.handleOk}
         onCancel={this.props.onOk}
       >
         <Input.Group compact>
@@ -59,10 +74,11 @@ class ShareModalView extends PureComponent {
         </Input.Group>
         <Checkbox
           onChange={this.handleCheckboxChange}
-          checked={this.props.isPublic}
+          checked={this.state.isPublic}
           style={{ marginTop: 10, marginLeft: 1 }}
         >
-          Make tracing publicly viewable without a login.
+          Share the tracing publicly. Everyone with this link can access the tracing without the
+          need for a user login.
         </Checkbox>
       </Modal>
     );

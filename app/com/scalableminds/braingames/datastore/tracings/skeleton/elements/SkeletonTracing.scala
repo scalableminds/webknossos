@@ -61,7 +61,8 @@ case class SkeletonTracing(id: String,
     val updatedSource = sourceTree.copy(branchPoints = remainingBp, comments = remainingC,
                                         nodes = remainingNodes, edges = remainingEdges)
     val updatedTarget = targetTree.copy(branchPoints = movedBp ::: targetTree.branchPoints,
-                                        comments = movedC ::: targetTree.comments, nodes = movedNodes, edges = movedEdges)
+                                        comments = movedC ::: targetTree.comments, nodes = targetTree.nodes.union(movedNodes),
+                                        edges = targetTree.edges.union(movedEdges))
 
     def selectTree(tree: Tree) =
       if (tree.treeId == sourceId)

@@ -97,23 +97,23 @@ class TreesTabView extends React.Component {
     return (
       <div id="tree-list" className="flex-column">
         <ButtonGroup>
-          <Button onClick={this.props.onCreateTree}>
-            <i className="fa fa-plus" /> Create tree
+          <Button onClick={this.props.onCreateTree} title="Create Tree">
+            <i className="fa fa-plus" /> Create
           </Button>
-          <Button onClick={this.deleteTree}>
-            <i className="fa fa-trash-o" /> Delete tree
+          <Button onClick={this.deleteTree} title="Delete Tree">
+            <i className="fa fa-trash-o" /> Delete
           </Button>
-          <Button onClick={this.shuffleTreeColor} title="Change color">
+          <Button onClick={this.shuffleTreeColor} title="Change Tree Color">
             <i className="fa fa-adjust" /> Change Color
           </Button>
-          <Button onClick={this.shuffleAllTreeColors} title="Shuffle all Colors">
-            <i className="fa fa-random" /> Shuffle All Colors
+          <Button onClick={this.shuffleAllTreeColors} title="Shuffle all Tree Colors">
+            <i className="fa fa-random" /> Shuffle all Colors
           </Button>
-          <Button onClick={this.toggleAllTrees} title="Toggle visibility of all trees">
-            <i className="fa fa-toggle-on" /> Toggle trees
+          <Button onClick={this.toggleAllTrees} title="Toggle Visibility of all Trees">
+            <i className="fa fa-toggle-on" /> Toggle all
           </Button>
-          <Button onClick={this.toggleInactiveTrees} title="Toggle visibility of inactive trees">
-            <i className="fa fa-toggle-off" /> Toggle inactive trees
+          <Button onClick={this.toggleInactiveTrees} title="Toggle Visibility of inactive Trees">
+            <i className="fa fa-toggle-off" /> Toggle inactive
           </Button>
         </ButtonGroup>
         <InputGroup compact>

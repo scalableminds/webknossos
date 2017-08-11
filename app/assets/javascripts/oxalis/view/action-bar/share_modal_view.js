@@ -10,6 +10,8 @@ import messages from "messages";
 import type { OxalisState } from "oxalis/store";
 
 type ShareModalPropType = {
+  // eslint-disable-next-line react/no-unused-prop-types
+  isPublic: boolean,
   isVisible: boolean,
   onOk: () => void,
   setAnnotationPublic: Function,

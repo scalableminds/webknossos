@@ -93,7 +93,7 @@ class SpotlightItemView extends React.PureComponent {
         </form>
 
         <div className="dataset-description" style={{ padding: "10px 16px" }}>
-          <h3>
+          <h3 style={{ wordWrap: "break-word" }}>
             {dataset.name}
           </h3>
           <p>

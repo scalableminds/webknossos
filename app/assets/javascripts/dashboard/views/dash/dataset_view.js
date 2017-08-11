@@ -86,14 +86,15 @@ class DatasetView extends React.PureComponent {
   };
 
   renderGallery() {
+    const padding = 16;
     return (
-      <Row gutter={16}>
+      <Row gutter={padding}>
         {Utils.filterWithSearchQuery(
           this.state.datasets.filter(ds => ds.isActive),
           ["name", "owningTeam", "description"],
           this.state.searchQuery,
         ).map(ds =>
-          <Col span={6} key={ds.name}>
+          <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
             <SpotlightItemView dataset={ds} />
           </Col>,
         )}
@@ -109,22 +110,32 @@ class DatasetView extends React.PureComponent {
 
   render() {
     const isGallery = this.state.currentDataViewType === "gallery";
+    const margin = { marginRight: 5 };
+    const search = (
+      <Search
+        style={{ width: 200, float: "right" }}
+        onPressEnter={this.handleSearch}
+        onChange={this.handleSearch}
+      />
+    );
+
     const adminHeader = Utils.isUserAdmin(this.props.user)
       ? <div className="pull-right">
-          <a href="/datasets/upload" style={{ marginRight: 5 }}>
+          <a href="/datasets/upload" style={margin}>
             <Button type="primary" icon="plus">
               Add Dataset
             </Button>
           </a>
           {isGallery
-            ? <Button onClick={this.showAdvancedView} icon="bars">
+            ? <Button onClick={this.showAdvancedView} icon="bars" style={margin}>
                 Show Advanced View
               </Button>
-            : <Button onClick={this.showGalleryView} icon="appstore">
+            : <Button onClick={this.showGalleryView} icon="appstore" style={margin}>
                 Show Gallery View
               </Button>}
+          {search}
         </div>
-      : null;
+      : search;
 
     const content = (() => {
       if (this.state.isLoading) {
@@ -146,13 +157,7 @@ class DatasetView extends React.PureComponent {
       <div>
         {adminHeader}
         <h3>Datasets</h3>
-        <div className="clearfix" style={{ margin: "20px 0px" }}>
-          <Search
-            style={{ width: 200, float: "right" }}
-            onPressEnter={this.handleSearch}
-            onChange={this.handleSearch}
-          />
-        </div>
+        <div className="clearfix" style={{ margin: "20px 0px" }} />
         <div>
           {content}
         </div>

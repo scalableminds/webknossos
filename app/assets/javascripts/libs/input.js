@@ -61,7 +61,6 @@ function shouldIgnore(event: JQueryInputEventObject, key: KeyboardKey) {
 // Pressing a button will only fire an event once.
 export class InputKeyboardNoLoop {
   bindings: Array<KeyboardBindingPress> = [];
-  isKeyActive: Set<string> = new Set();
   isStarted: boolean = true;
 
   constructor(initialBindings: BindingMap<KeyboardHandler>) {
@@ -84,14 +83,11 @@ export class InputKeyboardNoLoop {
         if (shouldIgnore(event, key)) {
           return;
         }
-        if (!this.isKeyActive.has(key)) {
+        if (!event.repeat) {
           callback(event);
-          this.isKeyActive.add(key);
         }
       },
-      () => {
-        this.isKeyActive.delete(key);
-      },
+      _.noop,
     ];
     KeyboardJS.bind(...binding);
     return this.bindings.push(binding);

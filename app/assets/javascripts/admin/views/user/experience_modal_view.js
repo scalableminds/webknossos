@@ -1,113 +1,159 @@
+// @flow
+
 import _ from "lodash";
-import $ from "jquery";
-import ModalView from "admin/views/modal_view";
+import React from "react";
+import { Modal, Button, Input, Icon } from "antd";
+import Request from "libs/request";
+import update from "immutability-helper";
+import type { APIUserType } from "admin/api_flow_types";
 
-class ExperienceModalView extends ModalView {
-  static initClass() {
-    this.prototype.headerTemplate = "<h3>Change Experience</h3>";
-    this.prototype.bodyTemplate = _.template(`\
-<form class="form-horizontal">
-  <div class="form-group">
-    <label class="col-sm-2 control-label" for="experience-domain">Domain</label>
-    <div class="col-sm-10">
-      <input type="text" class="form-control" name="experience-domain" autocomplete="off" required autofocus>
-    </div>
-  </div>
-  <div class="form-group">
-    <label class="col-sm-2 control-label" for="experience-value">Level</label>
-    <div class="col-sm-10">
-      <input type="number" class="form-control" name="experience-value" value="0">
-    </div>
-  </div>
-</form>\
-`);
-    this.prototype.footerTemplate = _.template(`\
-<a href="#" class="increase-experience btn btn-primary">Increase Experience</a>
-<a href="#" class="set-experience btn btn-primary">Set Experience</a>
-<a href="#" class="delete-experience btn btn-primary">Delete Experience</a>
-<a href="#" class="btn btn-default" data-dismiss="modal">Cancel</a>\
-`);
+class ExperienceModalView extends React.PureComponent {
+  props: {
+    onChange: Function,
+    onCancel: Function,
+    visible: boolean,
+    selectedUserIds: Array<string>,
+    users: Array<APIUserType>,
+  };
 
-    this.prototype.events = {
-      "click .set-experience": "setExperience",
-      "click .delete-experience": "deleteExperience",
-      "click .increase-experience": "changeExperience",
-    };
+  state = {
+    domain: null,
+    level: null,
+  };
 
-    this.prototype.ui = {
-      experienceValue: "input[type=number]",
-      experienceDomain: "input[type=text]",
-    };
-  }
+  increaseExperience = (): void => {
+    this.setExperience(null, true);
+  };
 
-  initialize(options) {
-    this.userCollection = options.userCollection;
-  }
+  setExperience = (event: ?SyntheticInputEvent, shouldAddValue: boolean = false): void => {
+    const { domain, level } = this.state;
+    if (domain && level !== null) {
+      const newUserPromises = this.props.users.map(user => {
+        if (this.props.selectedUserIds.includes(user.id)) {
+          let newExperienceLevel = parseInt(level);
 
-  setExperience() {
-    if (this.isValid()) {
-      this.changeExperience(true);
-    }
-  }
+          if (shouldAddValue && user.experiences[domain]) {
+            newExperienceLevel = user.experiences[domain] + parseInt(level);
+          }
 
-  deleteExperience() {
-    if (this.isValid()) {
-      const domain = this.ui.experienceDomain.val();
-      const users = this.findUsers();
+          const newUser = update(user, {
+            experiences: { [domain]: { $set: newExperienceLevel } },
+          });
 
-      for (const user of users) {
-        const experiences = _.clone(user.get("experiences"));
-        if (_.isNumber(experiences[domain])) {
-          delete experiences[domain];
+          const url = `/api/users/${user.id}`;
+          Request.sendJSONReceiveJSON(url, {
+            data: newUser,
+          });
+
+          return this.sendUserToServer(newUser, user);
         }
+        return Promise.resolve(user);
+      });
 
-        user.save({ experiences }, { wait: true });
-
-        this.hide();
-      }
+      this.closeModal(newUserPromises);
     }
-  }
+  };
 
-  changeExperience(setOnly) {
-    if (this.isValid()) {
-      const domain = this.ui.experienceDomain.val();
-      const value = +this.ui.experienceValue.val();
-      const users = this.findUsers();
+  deleteExperience = () => {
+    if (this.state.domain) {
+      const { domain } = this.state;
+      const newUserPromises = this.props.users.map(user => {
+        if (this.props.selectedUserIds.includes(user.id)) {
+          const newExperiences = _.omit(user.experiences, domain);
+          const newUser = update(user, {
+            experiences: { $set: newExperiences },
+          });
 
-      for (const user of users) {
-        const experiences = _.clone(user.get("experiences"));
-        if (_.isNumber(experiences[domain]) && !setOnly) {
-          experiences[domain] += value;
-        } else {
-          experiences[domain] = value;
+          return this.sendUserToServer(newUser, user);
         }
-        user.save({ experiences }, { wait: true });
+        return Promise.resolve(user);
+      });
 
-        this.hide();
-      }
+      this.closeModal(newUserPromises);
     }
+  };
+
+  /**
+  * Save a user object to the server using an API call.
+  * @param newUser - A modified user object intended to be saved.
+  * @param oldUser - The original user object of `newUser`. Returned in case API call fails
+  *
+  */
+  sendUserToServer(newUser: APIUserType, oldUser: APIUserType): Promise<APIUserType> {
+    const url = `/api/users/${newUser.id}`;
+    return Request.sendJSONReceiveJSON(url, {
+      data: newUser,
+    }).then(() => Promise.resolve(newUser), () => Promise.reject(oldUser));
   }
 
-  findUsers() {
-    const users = $("tbody input[type=checkbox]:checked").map((i, element) =>
-      this.userCollection.findWhere({
-        id: $(element).val(),
-      }),
+  closeModal(usersPromises: Array<Promise<APIUserType>>): void {
+    Promise.all(usersPromises).then(
+      newUsers => {
+        this.setState({
+          domain: null,
+          level: null,
+        });
+        this.props.onChange(newUsers);
+      },
+      () => {
+        // do nothing and keep modal open
+      },
     );
-    return users;
   }
 
-  isValid() {
-    const isValid = this.ui.experienceDomain.val().trim() !== "";
-
-    // Highlight the domain textbox if it is empty
-    if (!isValid) {
-      this.ui.experienceDomain.focus();
+  render() {
+    if (!this.props.visible) {
+      return null;
     }
 
-    return isValid;
+    const { domain, level } = this.state;
+    const isDomainValid = _.isString(domain) && domain !== "";
+    const isLevelValid = !isNaN(parseInt(level));
+
+    return (
+      <Modal
+        title="Change Experiences"
+        visible={this.props.visible}
+        onCancel={this.props.onCancel}
+        footer={
+          <div>
+            <Button
+              type="primary"
+              onClick={this.increaseExperience}
+              disabled={!(isDomainValid && isLevelValid)}
+            >
+              Increase Experience
+            </Button>
+            <Button
+              type="primary"
+              onClick={this.setExperience}
+              disabled={!(isDomainValid && isLevelValid)}
+            >
+              Set Experience
+            </Button>
+            <Button type="primary" onClick={this.deleteExperience} disabled={!isDomainValid}>
+              Delete Experience
+            </Button>
+            <Button onClick={() => this.props.onCancel()}>Cancel</Button>
+          </div>
+        }
+      >
+        <Input
+          value={this.state.domain}
+          onChange={event => this.setState({ domain: event.target.value })}
+          prefix={<Icon type="tags" style={{ fontSize: 13 }} />}
+          style={{ marginBottom: 10 }}
+          placeholder="Domain"
+        />
+        <Input
+          value={this.state.level}
+          onChange={event => this.setState({ level: event.target.value })}
+          prefix={<Icon type="filter" style={{ fontSize: 13 }} />}
+          placeholder="Level"
+        />
+      </Modal>
+    );
   }
 }
-ExperienceModalView.initClass();
 
 export default ExperienceModalView;

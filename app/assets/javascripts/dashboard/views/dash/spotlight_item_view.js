@@ -62,23 +62,32 @@ class SpotlightItemView extends React.PureComponent {
     }
 
     return (
-      <Card bodyStyle={{ padding: 0 }}>
-        <div className="dataset-thumbnail">
-          <img src={dataset.thumbnailURL} alt="Thumbnail" />
-
-          <div className="dataset-thumbnail-buttons">
-            <a href={`/datasets/${dataset.name}/view`} title="View dataset">
-              <img src="/assets/images/eye.svg" alt="Eye" />
-            </a>
-            <a href="#" title="Create skeleton tracing" onClick={this.handleSkeletonTraceClick}>
-              <img src="/assets/images/skeleton.svg" alt="Skeleton" />
-            </a>
-            {dataset.dataStore.typ !== "ndstore"
-              ? <a href="#" title="Create volume tracing" onClick={this.handleVolumeTraceClick}>
-                  <img src="/assets/images/volume.svg" alt="Volume" />
-                </a>
-              : null}
-          </div>
+      <Card
+        bodyStyle={{ padding: 0 }}
+        style={{ backgroundImage: `url(${dataset.thumbnailURL})` }}
+        className="spotlight-item-card"
+      >
+        <div className="dataset-thumbnail-buttons">
+          <a href={`/datasets/${dataset.name}/view`} title="View dataset">
+            <img src="/assets/images/eye.svg" alt="Eye" />
+          </a>
+          <a href="#" title="Create skeleton tracing" onClick={this.handleSkeletonTraceClick}>
+            <img src="/assets/images/skeleton.svg" alt="Skeleton" />
+          </a>
+          {dataset.dataStore.typ !== "ndstore"
+            ? <a href="#" title="Create volume tracing" onClick={this.handleVolumeTraceClick}>
+                <img src="/assets/images/volume.svg" alt="Volume" />
+              </a>
+            : null}
+        </div>
+        <div className="dataset-description">
+          <h3>
+            {dataset.name}
+          </h3>
+          <p>
+            Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}
+          </p>
+          {description}
         </div>
 
         <form
@@ -91,16 +100,6 @@ class SpotlightItemView extends React.PureComponent {
           <input type="hidden" name="dataSetName" value={dataset.name} />
           <input type="hidden" name="contentType" value={this.state.contentType} />
         </form>
-
-        <div className="dataset-description" style={{ padding: "10px 16px" }}>
-          <h3 style={{ wordWrap: "break-word" }}>
-            {dataset.name}
-          </h3>
-          <p>
-            Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}
-          </p>
-          {description}
-        </div>
       </Card>
     );
   }

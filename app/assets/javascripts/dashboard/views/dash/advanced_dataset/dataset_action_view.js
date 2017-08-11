@@ -34,7 +34,7 @@ export default class DatasetActionView extends React.PureComponent {
   render() {
     const dataset = this.props.dataset;
     return (
-      <div className="nowrap">
+      <div>
         <form
           action={jsRoutes.controllers.AnnotationController.createExplorational().url}
           method="POST"
@@ -48,18 +48,16 @@ export default class DatasetActionView extends React.PureComponent {
         {dataset.dataSource.dataLayers == null
           ? <div>
               <a href={`/datasets/${dataset.name}/import`} className=" import-dataset">
-                <i className="fa fa-plus-circle" />import
+                <i className="fa fa-plus-circle" />Import
               </a>
 
-              <div className="import-error">
-                <span className="text-danger">
-                  {dataset.dataSource.status}
-                </span>
+              <div className="text-danger">
+                {dataset.dataSource.status}
               </div>
             </div>
           : null}
         {dataset.isActive
-          ? <div className="dataset-actions">
+          ? <div className="dataset-actions nowrap">
               {dataset.isEditable
                 ? <a href={`/datasets/${dataset.name}/edit`} title="Edit dataset">
                     <i className="fa fa-pencil" /> Edit

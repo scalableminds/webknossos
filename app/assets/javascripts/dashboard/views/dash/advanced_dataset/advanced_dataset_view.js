@@ -110,6 +110,7 @@ class AdvancedDatasetView extends React.PureComponent {
           />
 
           <Column
+            width={200}
             title="Actions"
             key="actions"
             render={(__, dataset: APIUserType) => <DatasetActionView dataset={dataset} />}

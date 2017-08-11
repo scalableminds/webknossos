@@ -57,7 +57,7 @@ export class AsyncLink extends React.PureComponent {
     let content;
     if (this.state.isLoading) {
       const childrenWithoutIcon = this.props.children.filter(child => child.type !== "i");
-      content = [<Spin />, childrenWithoutIcon];
+      content = [<Spin key="icon" />, childrenWithoutIcon];
     } else {
       content = this.props.children;
     }

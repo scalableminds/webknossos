@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 !(function(e) {
   if ("object" == typeof exports && "undefined" != typeof module) module.exports = e();
   else if ("function" == typeof define && define.amd) define([], e);
@@ -441,7 +443,6 @@
               if (!this._locale) {
                 throw new Error("Locale not set");
               }
-              console.log("down", keyCode);
               this._locale.pressKey(keyCode);
               this._applyBindings(event);
             };
@@ -453,7 +454,6 @@
               if (!this._locale) {
                 throw new Error("Locale not set");
               }
-              console.log("up", keyCode);
               this._locale.releaseKey(keyCode);
               this._clearBindings(event);
             };
@@ -931,10 +931,7 @@
             var dashKeyCode = userAgent.match("Firefox") ? 173 : 189;
             var leftCommandKeyCode;
             var rightCommandKeyCode;
-            if (
-              (platform.match("Mac") || platform.match("Linux")) &&
-              (userAgent.match("Safari") || userAgent.match("Chrome"))
-            ) {
+            if (platform.match("Mac") && (userAgent.match("Safari") || userAgent.match("Chrome"))) {
               leftCommandKeyCode = 91;
               rightCommandKeyCode = 93;
             } else if (platform.match("Mac") && userAgent.match("Opera")) {

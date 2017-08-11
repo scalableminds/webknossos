@@ -66,9 +66,11 @@ const Store = mockRequire.reRequire("oxalis/store").default;
 
 test.beforeEach(t => {
   UrlManager.initialState = { position: [1, 2, 3] };
-  const model = (t.context.model = new Model());
+  const model = new Model();
+  t.context.model = model;
 
-  const webknossos = (t.context.webknossos = new OxalisApi(model));
+  const webknossos = new OxalisApi(model);
+  t.context.webknossos = webknossos;
 
   Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
   User.prototype.fetch.returns(Promise.resolve());

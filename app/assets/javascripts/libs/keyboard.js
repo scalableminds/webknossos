@@ -498,7 +498,6 @@
             Keyboard.prototype._bugCatcher = function(event, platform) {
               // This seems to be Mac specific weirdness, so we'll target "cmd" as metaKey
               // Force a keyup for non-modifier keys when command is held because they don't fire
-              console.log(platform, this._locale.pressedKeys);
               if (
                 platform.match("Mac") &&
                 this._locale.pressedKeys.includes("super") &&

@@ -3,9 +3,11 @@
 
 import React from "react";
 import Request from "libs/request";
-import { Spin, Table, Button } from "antd";
+import { AsyncButton } from "components/async_clickables";
+import { Spin, Table, Button, Modal } from "antd";
 import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
+import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
 import TransferTaskModal from "./transfer_task_modal";
@@ -64,23 +66,24 @@ export default class DashboardTaskListView extends React.PureComponent {
 
   getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
 
-  finish(task: APITaskWithAnnotationType) {
-    if (!confirm("Are you sure you want to permanently finish this tracing?")) {
-      return;
-    }
-    const annotation = task.annotation;
-    const url = `/annotations/${annotation.typ}/${annotation.id}/finish`;
+  confirmFinish(task: APITaskWithAnnotationType) {
+    Modal.confirm({
+      content: "Are you sure you want to permanently finish this tracing?",
+      onOk: async () => {
+        const annotation = task.annotation;
+        const url = `/annotations/${annotation.typ}/${annotation.id}/finish`;
 
-    Request.receiveJSON(url).then(changedAnnotationWithTask => {
-      const changedTask = convertAnnotationToTaskWithAnnotationType(changedAnnotationWithTask);
+        const changedAnnotationWithTask = await Request.receiveJSON(url);
+        const changedTask = convertAnnotationToTaskWithAnnotationType(changedAnnotationWithTask);
 
-      const newUnfinishedTasks = this.state.unfinishedTasks.filter(t => t.id !== task.id);
-      const newFinishedTasks = [changedTask].concat(this.state.finishedTasks);
+        const newUnfinishedTasks = this.state.unfinishedTasks.filter(t => t.id !== task.id);
+        const newFinishedTasks = [changedTask].concat(this.state.finishedTasks);
 
-      this.setState({
-        unfinishedTasks: newUnfinishedTasks,
-        finishedTasks: newFinishedTasks,
-      });
+        this.setState({
+          unfinishedTasks: newUnfinishedTasks,
+          finishedTasks: newFinishedTasks,
+        });
+      },
     });
   }
 
@@ -143,7 +146,7 @@ export default class DashboardTaskListView extends React.PureComponent {
                 <li>
                   <a href="#" onClick={() => this.resetTask(annotation.id)}>
                     <i className="fa fa-undo" />
-                    reset
+                    Reset
                   </a>
                 </li>
                 <li>
@@ -154,9 +157,9 @@ export default class DashboardTaskListView extends React.PureComponent {
                 </li>
               </div>
             : <li>
-                <a href="#" onClick={() => this.finish(task)}>
+                <a href="#" onClick={() => this.confirmFinish(task)}>
                   <i className="fa fa-check-circle-o" />
-                  finish
+                  Finish
                 </a>
               </li>}
         </ul>;
@@ -172,8 +175,11 @@ export default class DashboardTaskListView extends React.PureComponent {
 
   cancelAnnotation(annotationId: string) {
     const wasFinished = this.state.showFinishedTasks;
-    if (confirm("Do you really want to cancel this annotation?")) {
-      Request.triggerRequest(`/annotations/Task/${annotationId}`, { method: "DELETE" }).then(() => {
+
+    Modal.confirm({
+      content: "Do you really want to cancel this annotation?",
+      onOk: async () => {
+        await Request.triggerRequest(`/annotations/Task/${annotationId}`, { method: "DELETE" });
         if (wasFinished) {
           this.setState({
             finishedTasks: this.state.finishedTasks.filter(t => t.annotation.id !== annotationId),
@@ -185,24 +191,33 @@ export default class DashboardTaskListView extends React.PureComponent {
             ),
           });
         }
+      },
+    });
+  }
+
+  async confirmGetNewTask(): Promise<void> {
+    if (this.state.unfinishedTasks.length === 0) {
+      return this.getNewTask();
+    } else {
+      return Modal.confirm({
+        content: "Are you sure you want to permanently finish this tracing?",
+        onOk: () => this.getNewTask(),
       });
     }
   }
 
   async getNewTask() {
-    if (this.state.unfinishedTasks.length === 0 || confirm("Do you really want another task?")) {
-      this.setState({ isLoading: true });
-      try {
-        const newTaskAnnotation = await Request.receiveJSON("/user/tasks/request");
+    this.setState({ isLoading: true });
+    try {
+      const newTaskAnnotation = await Request.receiveJSON("/user/tasks/request");
 
-        this.setState({
-          unfinishedTasks: this.state.unfinishedTasks.concat([
-            convertAnnotationToTaskWithAnnotationType(newTaskAnnotation),
-          ]),
-        });
-      } finally {
-        this.setState({ isLoading: false });
-      }
+      this.setState({
+        unfinishedTasks: this.state.unfinishedTasks.concat([
+          convertAnnotationToTaskWithAnnotationType(newTaskAnnotation),
+        ]),
+      });
+    } finally {
+      this.setState({ isLoading: false });
     }
   }
 
@@ -242,16 +257,28 @@ export default class DashboardTaskListView extends React.PureComponent {
           title="#"
           dataIndex="id"
           render={(__, task) => FormatUtils.formatHash(task.id)}
-          sorter
+          sorter={Utils.localeCompareBy("id")}
           className="monospace-id"
         />
-        <Column title="Type" dataIndex="type.summary" sorter />
-        <Column title="Project" dataIndex="projectName" sorter />
-        <Column title="Description" dataIndex="type.description" sorter />
+        <Column
+          title="Type"
+          dataIndex="type.summary"
+          sorter={Utils.localeCompareBy(t => t.type.summary)}
+        />
+        <Column
+          title="Project"
+          dataIndex="projectName"
+          sorter={Utils.localeCompareBy("projectName")}
+        />
+        <Column
+          title="Description"
+          dataIndex="type.description"
+          sorter={Utils.localeCompareBy(t => t.type.description)}
+        />
         <Column
           title="Modes"
           dataIndex="type.settings.allowedModes"
-          sorter
+          sorter={Utils.localeCompareBy(t => t.type.settings.allowedModes.join("-"))}
           render={modes =>
             modes.map(mode =>
               <span className="label-default label" key={mode}>
@@ -262,7 +289,7 @@ export default class DashboardTaskListView extends React.PureComponent {
         <Column
           title="Creation Date"
           dataIndex="created"
-          sorter
+          sorter={Utils.localeCompareBy("created")}
           render={created => moment(created).format("YYYY-MM-DD HH:SS")}
         />
         <Column
@@ -279,13 +306,13 @@ export default class DashboardTaskListView extends React.PureComponent {
       <div>
         <h3>Tasks</h3>
         <div style={{ marginBottom: 20 }}>
-          {this.props.isAdminView
+          {this.props.isAdminView && this.props.userID
             ? <a href={`/api/users/${this.props.userID}/annotations/download`}>
                 <Button icon="download">Download All Finished Tracings</Button>
               </a>
-            : <Button type="primary" onClick={() => this.getNewTask()}>
+            : <AsyncButton type="primary" onClick={() => this.confirmGetNewTask()}>
                 Get a New Task
-              </Button>}
+              </AsyncButton>}
           <div className="divider-vertical" />
           <Button onClick={this.toggleShowFinished}>
             Show {this.getFinishVerb()} Tasks Only

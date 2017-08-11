@@ -227,7 +227,11 @@ class Controller extends React.PureComponent {
         },
 
         // Undo
-        "super + z": () => Store.dispatch(undoAction()),
+        "super + z": event => {
+          event.preventDefault();
+          event.stopPropagation();
+          Store.dispatch(undoAction());
+        },
         "ctrl + z": () => Store.dispatch(undoAction()),
 
         // Redo

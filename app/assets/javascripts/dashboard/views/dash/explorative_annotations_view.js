@@ -260,7 +260,6 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
         pagination={{
           defaultPageSize: 50,
         }}
-        className="clearfix"
       >
         <Column
           title="#"
@@ -323,17 +322,20 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   }
 
   render() {
+    const marginRight = { marginRight: 8 };
+    const search = (
+      <Search
+        style={{ width: 200, float: "right" }}
+        onPressEnter={this.handleSearch}
+        onChange={this.handleSearch}
+      />
+    );
+
     return (
       <div>
-        <Search
-          style={{ width: 200, float: "right" }}
-          onPressEnter={this.handleSearch}
-          onChange={this.handleSearch}
-        />
-        <h3>Explorative Annotations</h3>
         {this.props.isAdminView
-          ? null
-          : <div>
+          ? search
+          : <div className="pull-right">
               <Upload
                 action="/admin/nml/upload"
                 accept=".nml, .zip"
@@ -347,15 +349,18 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
                 </Button>
               </Upload>
               <div className="divider-vertical" />
-              <Button onClick={this.toggleShowArchived}>
+              <Button onClick={this.toggleShowArchived} style={marginRight}>
                 Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Tracings
               </Button>
-              <span style={{ marginLeft: 5 }}>
-                {!this.state.shouldShowArchivedTracings
-                  ? <Button onClick={this.archiveAll}>Archive All</Button>
-                  : null}
-              </span>
+              {!this.state.shouldShowArchivedTracings
+                ? <Button onClick={this.archiveAll} style={marginRight}>
+                    Archive All
+                  </Button>
+                : null}
+              {search}
             </div>}
+        <h3>Explorative Annotations</h3>
+        <div className="clearfix" style={{ margin: "20px 0px" }} />
 
         {this.state.requestCount === 0
           ? this.renderTable()

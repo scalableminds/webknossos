@@ -304,13 +304,12 @@ export default class DashboardTaskListView extends React.PureComponent {
   render() {
     return (
       <div>
-        <h3>Tasks</h3>
-        <div style={{ marginBottom: 20 }}>
+        <div className="pull-right">
           {this.props.isAdminView && this.props.userID
             ? <a href={`/api/users/${this.props.userID}/annotations/download`}>
                 <Button icon="download">Download All Finished Tracings</Button>
               </a>
-            : <AsyncButton type="primary" onClick={() => this.confirmGetNewTask()}>
+            : <AsyncButton type="primary" icon="file-add" onClick={() => this.confirmGetNewTask()}>
                 Get a New Task
               </AsyncButton>}
           <div className="divider-vertical" />
@@ -318,6 +317,8 @@ export default class DashboardTaskListView extends React.PureComponent {
             Show {this.getFinishVerb()} Tasks Only
           </Button>
         </div>
+        <h3>Tasks</h3>
+        <div className="clearfix" style={{ margin: "20px 0px" }} />
 
         {this.state.isLoading
           ? <div className="text-center">

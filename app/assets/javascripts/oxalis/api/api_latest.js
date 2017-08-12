@@ -526,13 +526,14 @@ class DataApi {
   }
 
   /**
-  * Download volume tracing cuboid.
+  * Downloads a cuboid of raw data from the volume tracing layer. A new window is opened for the download -
+  * if that is not the case, please check your pop-up blocker.
   * _Volume tracing only!_
   *
   * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the volume tracing layer.
-  * api.data.downloadVolumeTracingCuboid([0,0,0], [100,200,100]);
+  * api.data.downloadRawVolumeTracingCuboid([0,0,0], [100,200,100]);
   */
-  downloadVolumeTracingCuboid(topLeft: Vector3, bottomRight: Vector3): void {
+  downloadRawVolumeTracingCuboid(topLeft: Vector3, bottomRight: Vector3): void {
     assertVolume(Store.getState().tracing);
     const dataset = Store.getState().dataset;
     const layer = this.model.getSegmentationBinary();

@@ -106,14 +106,14 @@ class TreesTabView extends React.Component {
           <Button onClick={this.shuffleTreeColor} title="Change Tree Color">
             <i className="fa fa-adjust" /> Change Color
           </Button>
-          <Button onClick={this.shuffleAllTreeColors} title="Shuffle all Tree Colors">
-            <i className="fa fa-random" /> Shuffle all Colors
+          <Button onClick={this.shuffleAllTreeColors} title="Shuffle All Tree Colors">
+            <i className="fa fa-random" /> Shuffle All Colors
           </Button>
-          <Button onClick={this.toggleAllTrees} title="Toggle Visibility of all Trees">
-            <i className="fa fa-toggle-on" /> Toggle all
+          <Button onClick={this.toggleAllTrees} title="Toggle Visibility of All Trees">
+            <i className="fa fa-toggle-on" /> Toggle All
           </Button>
-          <Button onClick={this.toggleInactiveTrees} title="Toggle Visibility of inactive Trees">
-            <i className="fa fa-toggle-off" /> Toggle inactive
+          <Button onClick={this.toggleInactiveTrees} title="Toggle Visibility of Inactive Trees">
+            <i className="fa fa-toggle-off" /> Toggle Inactive
           </Button>
         </ButtonGroup>
         <InputGroup compact>

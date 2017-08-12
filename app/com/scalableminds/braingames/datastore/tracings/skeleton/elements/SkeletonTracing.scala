@@ -10,13 +10,13 @@ import play.api.libs.json.Json
   */
 case class SkeletonTracing(id: String,
                            dataSetName: String,
-                           trees: List[Tree],
+                           override val trees: List[Tree],
                            timestamp: Long,
                            boundingBox: Option[BoundingBox],
                            activeNodeId: Option[Int],
-                           editPosition: Option[Point3D],
-                           editRotation: Option[Vector3D],
-                           zoomLevel: Option[Double],
+                           editPosition: Point3D,
+                           editRotation: Vector3D,
+                           zoomLevel: Double,
                            version: Long) extends Tracing {
 
   def addTree(newTree: Tree): SkeletonTracing =

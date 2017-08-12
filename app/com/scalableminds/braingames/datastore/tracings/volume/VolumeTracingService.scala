@@ -11,6 +11,7 @@ import com.scalableminds.braingames.binary.dataformats.wkw.{WKWBucketStreamSink,
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.datasource.{DataSource, SegmentationLayer}
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.webknossos.wrap.WKWFile
 import net.liftweb.common.{Box, Failure, Full}
@@ -37,7 +38,14 @@ class VolumeTracingService @Inject()(
       fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingLayer.defaultLargestSegmentId)
     )
 
-    val tracing = VolumeTracing(tracingLayer, fallbackLayer.map(_.name), fallbackLayer.map(_.largestSegmentId).getOrElse(0L) + 1)
+    val tracing = VolumeTracing(
+      dataSource.id.name,
+      None,
+      tracingLayer,
+      dataSource.boundingBox.center,
+      Vector3D(),
+      VolumeTracing.defaultZoomLevel,
+      fallbackLayer.map(_.name))
     tracingDataStore.volumes.putJson(tracing.id, 0, tracing)
 
     initialContent.map { file =>

@@ -38,26 +38,23 @@ case class VolumeTracingLayer(
                                elementClass: ElementClass.Value,
                                largestSegmentId: Long,
                                resolutions: List[Int] = List(1),
-                               // can be removed, after all tracing stuff has been moved to datastore
-                               mappings: Set[String] = Set.empty,
                                override val category: Category.Value = Category.segmentation
                              )(implicit val volumeDataStore: VersionedKeyValueStore) extends SegmentationLayer {
 
-  val dataFormat: DataFormat.Value = DataFormat.tracing
-
   def lengthOfUnderlyingCubes(resolution: Int): Int = DataLayer.bucketLength
 
-  val nextSegmentationId: Long = largestSegmentId + 1
+  val dataFormat: DataFormat.Value = DataFormat.tracing
 
   val bucketProvider: BucketProvider = new VolumeTracingBucketProvider(this)
+
+  val mappings: Set[String] = Set.empty
 }
 
 object VolumeTracingLayer {
 
   val defaultElementClass = ElementClass.uint32
 
-  // TODO: set to 0 eventually
-  val defaultLargestSegmentId = 1
+  val defaultLargestSegmentId = 0L
 
   implicit def volumeTracingLayerFormat(implicit volumeDataStore: VersionedKeyValueStore) = Json.format[VolumeTracingLayer]
 }

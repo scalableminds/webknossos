@@ -23,6 +23,7 @@ const window = {
     pathname: "annotationUrl",
   },
   alert: console.log.bind(console),
+  open: sinon.spy(),
 };
 const currentUser = {
   firstName: "SCM",

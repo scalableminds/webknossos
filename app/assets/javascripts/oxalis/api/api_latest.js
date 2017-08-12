@@ -533,25 +533,25 @@ class DataApi {
   * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the volume tracing layer.
   * api.data.downloadRawVolumeTracingCuboid([0,0,0], [100,200,100]);
   */
-  async downloadRawVolumeTracingCuboid(topLeft: Vector3, bottomRight: Vector3): void {
+  async downloadRawVolumeTracingCuboid(topLeft: Vector3, bottomRight: Vector3): Promise<_> {
     assertVolume(Store.getState().tracing);
     const dataset = Store.getState().dataset;
     const layer = this.model.getSegmentationBinary();
     assertExists(layer, "Segmentation layer not found!");
 
-    await layer.layer.tokenPromise.then(token => {
-      const downloadUrl =
-        `${dataset.dataStore.url}/data/datasets/${dataset.name}/layers/${layer.name}/data?resolution=0&` +
-        `token=${token}&` +
-        `x=${topLeft[0]}&` +
-        `y=${topLeft[1]}&` +
-        `z=${topLeft[2]}&` +
-        `width=${bottomRight[0] - topLeft[0]}&` +
-        `height=${bottomRight[1] - topLeft[1]}&` +
-        `depth=${bottomRight[2] - topLeft[2]}`
+    const token = await layer.layer.tokenPromise;
+    const downloadUrl =
+      `${dataset.dataStore
+        .url}/data/datasets/${dataset.name}/layers/${layer.name}/data?resolution=0&` +
+      `token=${token}&` +
+      `x=${topLeft[0]}&` +
+      `y=${topLeft[1]}&` +
+      `z=${topLeft[2]}&` +
+      `width=${bottomRight[0] - topLeft[0]}&` +
+      `height=${bottomRight[1] - topLeft[1]}&` +
+      `depth=${bottomRight[2] - topLeft[2]}`;
 
-      window.open(downloadUrl);
-    });
+    window.open(downloadUrl);
   }
 
   /**

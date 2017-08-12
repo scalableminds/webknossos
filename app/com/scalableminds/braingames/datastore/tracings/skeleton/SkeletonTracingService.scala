@@ -38,6 +38,7 @@ class SkeletonTracingService @Inject()(
   def findUpdated(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
     findVersioned(tracingId, version).flatMap(tracing => applyPendingUpdates(tracing, version))
 
+  //TODO: caching
   def save(tracing: SkeletonTracing) = tracingDataStore.skeletons.putJson(tracing.id, tracing.version, tracing)
 
   def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[Unit]] = {
@@ -48,81 +49,6 @@ class SkeletonTracingService @Inject()(
     }.toFox)
   }
 
-  def create(dataSetName: String, parameters: CreateEmptyParameters): SkeletonTracing = {
-    val id = createNewId()
-    val tracing = SkeletonTracing(
-      id = id,
-      dataSetName = dataSetName,
-      trees = createInitialTreeIfNeeded(parameters.startPosition, parameters.startRotation, parameters.insertStartAsNode, parameters.isFirstBranchPoint),
-      timestamp = System.currentTimeMillis(),
-      boundingBox = parameters.boundingBox,
-      activeNodeId = if (parameters.insertStartAsNode.getOrElse(false)) Some(1) else None,
-      editPosition = parameters.startPosition,
-      editRotation = parameters.startRotation,
-      zoomLevel = None,
-      version = 0)
-    save(tracing)
-    tracing
-  }
-
-  private def createInitialTreeIfNeeded(startPosition: Option[Point3D], startRotation: Option[Vector3D], insertStartAsNode: Option[Boolean],
-                                        isFirstBranchPoint: Option[Boolean] = None): List[Tree] = startPosition match {
-    case None => List()
-    case Some(startPositionSome) => startRotation match {
-      case None => List()
-      case Some(startRotationSome) => {
-        if (insertStartAsNode.getOrElse(false)) {
-          val node = Node(1, startPositionSome, startRotationSome)
-          val branchPoints = if (isFirstBranchPoint.getOrElse(false)) List(BranchPoint(node.id, System.currentTimeMillis)) else List()
-          List(Tree(1, Set(node), Set.empty, Some(Color.RED), Nil, Nil))
-        } else List()
-      }
-    }
-  }
-
-  def downloadNml(tracing: SkeletonTracing, dataSourceRepository: DataSourceRepository): Option[Enumerator[Array[Byte]]] = {
-    for {
-      dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName)
-    } yield {
-      Enumerator.outputStream { os =>
-        NmlWriter.toNml(tracing, os, dataSource.scale).map(_ => os.close())
-      }
-    }
-  }
-
-  def downloadMultiple(params: DownloadMultipleParameters, dataSourceRepository: DataSourceRepository): Fox[TemporaryFile] = {
-    val nmls:List[(Enumerator[Array[Byte]],String)] = for {
-      tracingParams <- params.tracings
-      tracingVersioned <- findVersioned(tracingParams.tracingId, tracingParams.version)
-      tracingUpdated <- applyPendingUpdates(tracingVersioned, tracingParams.version)
-      tracingAsNml <- downloadNml(tracingUpdated, dataSourceRepository)
-    } yield {
-      (tracingAsNml, tracingParams.outfileName)
-    }
-
-    for {
-      zip <- createZip(nmls, params.zipfileName)
-    } yield zip
-  }
-
-  private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String): Future[TemporaryFile] = {
-    val zipped = TemporaryFile(normalize(zipFileName), ".zip")
-    val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(zipped.file)))
-
-    def addToZip(nmls: List[(Enumerator[Array[Byte]],String)]): Future[Boolean] = {
-      nmls match {
-        case head :: tail =>
-          zipper.withFile(head._2 + ".nml")(NamedEnumeratorStream(head._1, "").writeTo).flatMap(_ => addToZip(tail))
-        case _            =>
-          Future.successful(true)
-      }
-    }
-
-    addToZip(nmls).map { _ =>
-      zipper.close()
-      zipped
-    }
-  }
 
   def applyPendingUpdates(tracingVersioned: VersionedKeyValuePair[SkeletonTracing], desiredVersion: Option[Long]): Box[SkeletonTracing] = {
     val tracing = tracingVersioned.value
@@ -227,6 +153,91 @@ class SkeletonTracingService @Inject()(
     merged.copy(id=newId)
   }
 
+
+
+
+  //TODO: move to wk
+  def create(dataSetName: String, parameters: CreateEmptyParameters): SkeletonTracing = {
+    val id = createNewId()
+    val tracing = SkeletonTracing(
+      id = id,
+      dataSetName = dataSetName,
+      trees = createInitialTreeIfNeeded(parameters.startPosition, parameters.startRotation, parameters.insertStartAsNode, parameters.isFirstBranchPoint),
+      timestamp = System.currentTimeMillis(),
+      boundingBox = parameters.boundingBox,
+      activeNodeId = if (parameters.insertStartAsNode.getOrElse(false)) Some(1) else None,
+      editPosition = parameters.startPosition,
+      editRotation = parameters.startRotation,
+      zoomLevel = None,
+      version = 0)
+    save(tracing)
+    tracing
+  }
+
+  //TODO: move to wk
+  private def createInitialTreeIfNeeded(startPosition: Option[Point3D], startRotation: Option[Vector3D], insertStartAsNode: Option[Boolean],
+                                        isFirstBranchPoint: Option[Boolean] = None): List[Tree] = startPosition match {
+    case None => List()
+    case Some(startPositionSome) => startRotation match {
+      case None => List()
+      case Some(startRotationSome) => {
+        if (insertStartAsNode.getOrElse(false)) {
+          val node = Node(1, startPositionSome, startRotationSome)
+          val branchPoints = if (isFirstBranchPoint.getOrElse(false)) List(BranchPoint(node.id, System.currentTimeMillis)) else List()
+          List(Tree(1, Set(node), Set.empty, Some(Color.RED), Nil, Nil))
+        } else List()
+      }
+    }
+  }
+
+  //TODO: move to wk
+  def downloadNml(tracing: SkeletonTracing, dataSourceRepository: DataSourceRepository): Option[Enumerator[Array[Byte]]] = {
+    for {
+      dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName)
+    } yield {
+      Enumerator.outputStream { os =>
+        NmlWriter.toNml(tracing, os, dataSource.scale).map(_ => os.close())
+      }
+    }
+  }
+
+  //TODO: move to wk
+  def downloadMultiple(params: DownloadMultipleParameters, dataSourceRepository: DataSourceRepository): Fox[TemporaryFile] = {
+    val nmls:List[(Enumerator[Array[Byte]],String)] = for {
+      tracingParams <- params.tracings
+      tracingVersioned <- findVersioned(tracingParams.tracingId, tracingParams.version)
+      tracingUpdated <- applyPendingUpdates(tracingVersioned, tracingParams.version)
+      tracingAsNml <- downloadNml(tracingUpdated, dataSourceRepository)
+    } yield {
+      (tracingAsNml, tracingParams.outfileName)
+    }
+
+    for {
+      zip <- createZip(nmls, params.zipfileName)
+    } yield zip
+  }
+
+  //TODO: move to wk
+  private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String): Future[TemporaryFile] = {
+    val zipped = TemporaryFile(normalize(zipFileName), ".zip")
+    val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(zipped.file)))
+
+    def addToZip(nmls: List[(Enumerator[Array[Byte]],String)]): Future[Boolean] = {
+      nmls match {
+        case head :: tail =>
+          zipper.withFile(head._2 + ".nml")(NamedEnumeratorStream(head._1, "").writeTo).flatMap(_ => addToZip(tail))
+        case _            =>
+          Future.successful(true)
+      }
+    }
+
+    addToZip(nmls).map { _ =>
+      zipper.close()
+      zipped
+    }
+  }
+
+  //TODO: move to wk
   def extractAllFromZip(zipfile: Option[File]): Box[List[SkeletonTracing]] = {
     def isFailure[T](box: Box[T]) = {
       box match {

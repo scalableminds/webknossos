@@ -24,23 +24,73 @@ class SkeletonTracingController @Inject()(
                                          val messagesApi: MessagesApi
                                        ) extends Controller {
 
-  def createFromParams(dataSetName: String) = Action(validateJson[CreateEmptyParameters]) {
+  def save = Action(validateJson[SkeletonTracing]) {
     implicit request => {
       AllowRemoteOrigin {
-        val tracing = skeletonTracingService.create(dataSetName, request.body)
+        val tracing = request.body
+        skeletonTracingService.save(tracing)
         Ok(Json.toJson(TracingReference(tracing.id, TracingType.skeleton)))
       }
     }
   }
 
-  def createFromNml(name: String) = Action(parse.tolerantText) {
+  def saveMultiple = Action(validateJson[List[SkeletonTracing]]) {
+    implicit request => {
+      AllowRemoteOrigin {
+        val tracings = request.body
+        tracings.foreach(skeletonTracingService.save)
+        val references = tracings.map(t => TracingReference(t.id, TracingType.skeleton))
+        Ok(Json.toJson(references))
+      }
+    }
+  }
+
+  def mergedFromContents(persist: Boolean) = Action(validateJson[List[SkeletonTracing]]) {
+    implicit request => {
+      AllowRemoteOrigin {
+        val tracings = request.body
+        val mergedTracing = skeletonTracingService.merge(tracings)
+        skeletonTracingService.save(mergedTracing)
+        Ok(Json.toJson(TracingReference(mergedTracing.id, TracingType.skeleton)))
+      }
+    }
+  }
+
+  def mergedFromIds(persist: Boolean) = Action.async(validateJson[List[TracingSelector]]) {
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracing <- NmlParser.parse(skeletonTracingService.createNewId(), name, request.body.trim())
+          tracings <- skeletonTracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
         } yield {
-          skeletonTracingService.save(tracing)
-          Ok(Json.toJson(TracingReference(tracing.id, TracingType.skeleton)))
+          val merged = skeletonTracingService.merge(tracings)
+          skeletonTracingService.save(merged)
+          Ok(Json.toJson(TracingReference(merged.id, TracingType.skeleton)))
+        }
+      }
+    }
+  }
+
+
+  def get(tracingId: String, version: Option[Long]) = Action.async {
+    implicit request => {
+      AllowRemoteOrigin {
+        for {
+          tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
+          updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
+        } yield {
+          Ok(Json.toJson(updatedTracing))
+        }
+      }
+    }
+  }
+
+  def getMultiple = Action.async(validateJson[List[TracingSelector]]) {
+    implicit request => {
+      AllowRemoteOrigin {
+        for {
+          tracings <- skeletonTracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
+        } yield {
+          Ok(Json.toJson(tracings))
         }
       }
     }
@@ -59,37 +109,6 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def get(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
-          updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
-        } yield {
-          Ok(Json.toJson(updatedTracing))
-        }
-      }
-    }
-  }
-
-  def download(tracingId: String, version: Option[Long], outfileName: String) = Action.async {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
-          updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
-          downloadStream <- skeletonTracingService.downloadNml(updatedTracing, dataSourceRepository)
-        } yield {
-          Ok.chunked(downloadStream).withHeaders(
-            CONTENT_TYPE ->
-              "application/octet-stream",
-            CONTENT_DISPOSITION ->
-              s"filename=${'"'}${outfileName}${'"'}.nml")
-        }
-      }
-    }
-  }
-
   def duplicate(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       AllowRemoteOrigin {
@@ -99,86 +118,6 @@ class SkeletonTracingController @Inject()(
         } yield {
           val newTracing = skeletonTracingService.duplicate(updatedTracing)
           Ok(Json.toJson(TracingReference(newTracing.id, TracingType.skeleton)))
-        }
-      }
-    }
-  }
-
-  def createMergedFromZip() = Action {
-    implicit request => {
-      AllowRemoteOrigin {
-        val zipfile = request.body.asRaw.map(_.asFile)
-        for {
-          tracings <- skeletonTracingService.extractAllFromZip(zipfile)
-        } yield {
-          val merged = skeletonTracingService.merge(tracings)
-          skeletonTracingService.save(merged)
-          Ok(Json.toJson(TracingReference(merged.id, TracingType.skeleton)))
-        }
-      }
-    }
-  }
-
-
-  def createMultipleFromZip() = Action {
-    implicit request => {
-      AllowRemoteOrigin {
-        val zipfile = request.body.asRaw.map(_.asFile)
-        for {
-          tracings: List[SkeletonTracing] <- skeletonTracingService.extractAllFromZip(zipfile)
-        } yield {
-          tracings.foreach(skeletonTracingService.save)
-          val references = tracings.map(tracing => TracingReference(tracing.id, TracingType.skeleton))
-          Ok(Json.toJson(references))
-        }
-      }
-    }
-  }
-
-  def createMultipleFromParams(dataSetName: String) = Action(validateJson[List[CreateEmptyParameters]]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        val tracings = request.body.map(params => skeletonTracingService.create(dataSetName, params))
-        val references = tracings.map(tracing => TracingReference(tracing.id, TracingType.skeleton))
-        Ok(Json.toJson(references))
-      }
-    }
-  }
-
-  def createMergedFromIds = Action.async(validateJson[List[TracingSelector]]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracings <- skeletonTracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
-        } yield {
-          val merged = skeletonTracingService.merge(tracings)
-          skeletonTracingService.save(merged)
-          Ok(Json.toJson(TracingReference(merged.id, TracingType.skeleton)))
-        }
-      }
-    }
-  }
-
-  def getMerged = Action.async(validateJson[List[TracingSelector]]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracings <- skeletonTracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
-        } yield {
-          val merged = skeletonTracingService.merge(tracings, newId="<temporary>")
-          Ok(Json.toJson(merged))
-        }
-      }
-    }
-  }
-
-  def downloadMultiple = Action.async(validateJson[DownloadMultipleParameters]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          zip <- skeletonTracingService.downloadMultiple(request.body, dataSourceRepository)
-        } yield {
-          Ok.sendFile(zip.file)
         }
       }
     }

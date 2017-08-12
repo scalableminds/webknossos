@@ -1,5 +1,7 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
+import java.util.UUID
+
 import com.scalableminds.braingames.datastore.tracings.Tracing
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.image.Color
@@ -8,7 +10,7 @@ import play.api.libs.json.Json
 /**
   * Created by f on 15.06.17.
   */
-case class SkeletonTracing(id: String,
+case class SkeletonTracing(id: String = UUID.randomUUID.toString,
                            dataSetName: String,
                            trees: List[Tree],
                            timestamp: Long,

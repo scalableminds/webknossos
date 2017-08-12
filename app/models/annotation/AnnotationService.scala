@@ -63,7 +63,7 @@ object AnnotationService
         tracing,
         dataSet.name,
         selectSuitableTeam(user, dataSet),
-        AnnotationSettings.default,
+        AnnotationSettings.defaultFor(tracingType),
         _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate))
       _ <- AnnotationDAO.insert(annotation)
     } yield {

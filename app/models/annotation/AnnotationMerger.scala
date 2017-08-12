@@ -66,7 +66,7 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
           mergedTracingReference,
           dataSetName,
           team,
-          AnnotationSettings.default,
+          AnnotationSettings.defaultFor(TracingType.skeleton),
           None,
           typ,
           true,

@@ -26,7 +26,7 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
         TracingReference("none", TracingType.skeleton), //TODO: rocksDB: construct empty tracing with dataSet.defaultStart etc.?
         dataSetName,
         team,
-        AnnotationSettings.default,
+        AnnotationSettings.defaultFor(TracingType.skeleton),
         typ = AnnotationType.View
       )
     }

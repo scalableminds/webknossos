@@ -57,9 +57,11 @@ class CameraController extends React.Component {
     const boundary = constants.VIEWPORT_WIDTH / 2 * zoom;
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.props.cameras[planeId].near = -clippingDistance;
-      this.props.cameras[planeId].left = this.props.cameras[planeId].bottom =
-        -boundary * scaleFactor;
-      this.props.cameras[planeId].right = this.props.cameras[planeId].top = boundary * scaleFactor;
+      const scaledBoundary = boundary * scaleFactor;
+      this.props.cameras[planeId].left = -scaledBoundary;
+      this.props.cameras[planeId].bottom = -scaledBoundary;
+      this.props.cameras[planeId].right = scaledBoundary;
+      this.props.cameras[planeId].top = scaledBoundary;
       this.props.cameras[planeId].updateProjectionMatrix();
     }
   }

@@ -1,4 +1,5 @@
 // @flow
+/* eslint no-await-in-loop: 0 */
 import Store from "oxalis/store";
 import Deferred from "libs/deferred";
 import Utils from "libs/utils";

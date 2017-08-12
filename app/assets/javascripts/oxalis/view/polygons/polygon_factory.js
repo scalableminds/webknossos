@@ -63,6 +63,7 @@ class PolygonFactory {
       i++;
       // If chunk size is reached, pause execution
       if (i % this.chunkSize === 0 && !position.done) {
+        // eslint-disable-next-line no-await-in-loop
         await Utils.idleFrame(10);
       }
     }

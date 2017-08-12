@@ -179,7 +179,9 @@ class ArbitraryPlane {
     this.x = Number(this.mesh.scale.x) + Number(delta);
 
     if (this.x > 0.5 && this.x < 10) {
-      this.mesh.scale.x = this.mesh.scale.y = this.mesh.scale.z = this.x;
+      this.mesh.scale.x = this.x;
+      this.mesh.scale.y = this.x;
+      this.mesh.scale.z = this.x;
     }
   }
 

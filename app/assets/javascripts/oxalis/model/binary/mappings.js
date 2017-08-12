@@ -49,7 +49,7 @@ class Mappings {
   async fetchMappings(mappingName: string): Promise<*> {
     const mapping = await this.fetchMapping(mappingName);
     if (mapping.parent != null) {
-      return await this.fetchMappings(mapping.parent);
+      return this.fetchMappings(mapping.parent);
     } else {
       return Promise.resolve();
     }

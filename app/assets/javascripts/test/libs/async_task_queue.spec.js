@@ -88,6 +88,7 @@ test("AsyncTaskQueue should retry failed tasks (1/2)", async t => {
   const handle = queue.scheduleTask(task);
   handle.catch(catcherBox.do);
   for (let i = 0; i < 3; i++) {
+    // eslint-disable-next-line no-await-in-loop
     await Utils.sleep(5);
     deferredBox.value.reject(result);
     deferredBox.value = new Deferred();
@@ -111,6 +112,7 @@ test("AsyncTaskQueue should retry failed tasks (2/2)", async t => {
 
   const handle = queue.scheduleTask(task);
   for (let i = 0; i < 2; i++) {
+    // eslint-disable-next-line no-await-in-loop
     await Utils.sleep(5);
     deferredBox.value.reject(result);
     deferredBox.value = new Deferred();

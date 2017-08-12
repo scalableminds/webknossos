@@ -2,11 +2,12 @@ package models.tracing.volume
 
 import javax.xml.stream.XMLStreamWriter
 
-import com.scalableminds.braingames.binary.helpers.RPC
+
 import com.scalableminds.braingames.binary.models.datasource.{AbstractSegmentationLayer, Category, DataLayerLike, ElementClass}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFunctionStream, ZipIO}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, GlobalDBAccess}
+import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.XMLWrites
 import models.annotation.{AnnotationContent, AnnotationContentService, AnnotationSettings}

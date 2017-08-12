@@ -73,7 +73,8 @@ class Cube {
 
     const vec = (x, y, z) => new THREE.Vector3(x, y, z);
 
-    let v = (this.cube.geometry.vertices = []);
+    this.cube.geometry.vertices = [];
+    let v = [];
     v.push(vec(min[0], min[1], min[2]));
     v.push(vec(min[0], max[1], min[2]));
     v.push(vec(max[0], max[1], min[2]));
@@ -91,21 +92,24 @@ class Cube {
     v.push(vec(min[0], max[1], max[2]));
     v.push(vec(min[0], max[1], min[2]));
 
-    v = this.crossSections[OrthoViews.PLANE_XY].geometry.vertices = [];
+    this.crossSections[OrthoViews.PLANE_XY].geometry.vertices = [];
+    v = [];
     v.push(vec(min[0], min[1], 0));
     v.push(vec(min[0], max[1], 0));
     v.push(vec(max[0], max[1], 0));
     v.push(vec(max[0], min[1], 0));
     v.push(vec(min[0], min[1], 0));
 
-    v = this.crossSections[OrthoViews.PLANE_YZ].geometry.vertices = [];
+    this.crossSections[OrthoViews.PLANE_YZ].geometry.vertices = [];
+    v = [];
     v.push(vec(0, min[1], min[2]));
     v.push(vec(0, min[1], max[2]));
     v.push(vec(0, max[1], max[2]));
     v.push(vec(0, max[1], min[2]));
     v.push(vec(0, min[1], min[2]));
 
-    v = this.crossSections[OrthoViews.PLANE_XZ].geometry.vertices = [];
+    this.crossSections[OrthoViews.PLANE_XZ].geometry.vertices = [];
+    v = [];
     v.push(vec(min[0], 0, min[2]));
     v.push(vec(min[0], 0, max[2]));
     v.push(vec(max[0], 0, max[2]));

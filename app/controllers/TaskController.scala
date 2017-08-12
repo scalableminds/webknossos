@@ -57,7 +57,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def read(taskId: String) = Authenticated.async { implicit request =>
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-      js <- Task.transformToJson(task, request.userOpt)
+      js <- Task.transformToJson(task)
     } yield {
       Ok(js)
     }
@@ -139,7 +139,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           tracingReference <- dataSet.dataStoreInfo.typ.strategy.saveSkeletonTracing(dataSet.dataStoreInfo, dataSource, tracing) ?~> "Failed to save skeleton tracing."
           taskType <- task.taskType
           _ <- AnnotationService.createAnnotationBase(task, request.user._id, tracingReference, boundingBox, taskType.settings, dataSetName, start, rotation)
-          taskjs <- Task.transformToJson(task, request.userOpt)
+          taskjs <- Task.transformToJson(task)
         } yield taskjs
     }
 
@@ -207,7 +207,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             boundingBox = boundingBox)
           _ <- AnnotationService.updateAllOfTask(updatedTask, dataSetName, taskType.settings)
           //TODO: rocksdb skeletons api. _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
-          json <- Task.transformToJson(updatedTask, request.userOpt)
+          json <- Task.transformToJson(updatedTask)
           _ <- OpenAssignmentService.updateAllOf(updatedTask, project, status.open)
         } yield {
           JsonOk(json, Messages("task.editSuccess"))
@@ -228,7 +228,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def list = Authenticated.async{ implicit request =>
     for {
       tasks <- TaskService.findAllAdministratable(request.user, limit = 10000)
-      js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t, request.userOpt))
+      js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -237,7 +237,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def listTasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
     for {
       tasks <- TaskService.findAllByTaskType(taskTypeId)
-      js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t, request.userOpt))
+      js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
     } yield {
       Ok(Json.toJson(js))
     }

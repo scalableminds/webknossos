@@ -6,6 +6,7 @@ import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => 
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.braingames.datastore.tracings.skeleton.{CreateEmptyParameters, DownloadMultipleParameters, DownloadTracingParameters}
+import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracing
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.BoxImplicits
@@ -51,10 +52,10 @@ object AnnotationService
 
     def createTracing(dataSource: DataSource) = tracingType match {
       case TracingType.skeleton =>
-        dataSet.dataStoreInfo.typ.strategy.saveSkeletonTracing(dataSet.dataStoreInfo, dataSource, SkeletonTracing(dataSetName=dataSet.name,editPosition=dataSet.defaultStart,
-          editRotation=dataSet.defaultRotation))
-      case TracingType.volume =>
-        dataSet.dataStoreInfo.typ.strategy.createVolumeTracing(dataSet.dataStoreInfo, dataSource)
+        dataSet.dataStore.saveSkeletonTracing(SkeletonTracing(dataSetName=dataSet.name,editPosition=dataSet.defaultStart,
+                                              editRotation=dataSet.defaultRotation))
+      //case TracingType.volume =>
+        //dataSet.dataStore.saveVolumeTracing(VolumeTracing())
     }
 
     for {
@@ -65,7 +66,7 @@ object AnnotationService
         tracing,
         dataSet.name,
         selectSuitableTeam(user, dataSet),
-        AnnotationSettings.default,
+        AnnotationSettings.defaultFor(tracingType),
         _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate))
       _ <- annotation.saveToDB
     } yield {
@@ -132,7 +133,7 @@ object AnnotationService
     for {
       dataSet: DataSet <- DataSetDAO.findOneBySourceName(annotationBase.dataSetName)
       dataSource <- dataSet.dataSource.toUsable.toFox
-      newTracingReference <- dataSet.dataStoreInfo.typ.strategy.duplicateSkeletonTracing(dataSet.dataStoreInfo, dataSource, annotationBase.tracingReference)
+      newTracingReference <- dataSet.dataStore.duplicateSkeletonTracing(annotationBase.tracingReference)
     } yield newTracingReference
   }
 

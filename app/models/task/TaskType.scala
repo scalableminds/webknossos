@@ -1,5 +1,6 @@
 package models.task
 
+import com.scalableminds.braingames.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
 import models.annotation.AnnotationSettings
@@ -12,13 +13,13 @@ import reactivemongo.play.json.BSONFormats._
 
 
 case class TaskType(
-  summary: String,
-  description: String,
-  team: String,
-  settings: AnnotationSettings = AnnotationSettings.default,
-  fileName: Option[String] = None,
-  isActive: Boolean = true,
-  _id: BSONObjectID = BSONObjectID.generate) {
+                     summary: String,
+                     description: String,
+                     team: String,
+                     settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
+                     fileName: Option[String] = None,
+                     isActive: Boolean = true,
+                     _id: BSONObjectID = BSONObjectID.generate) {
 
   val id = _id.stringify
 }

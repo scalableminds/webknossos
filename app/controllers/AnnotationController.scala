@@ -311,7 +311,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
         annotation.dataSetName).toFox ?~> Messages("dataSet.notFound", annotation.dataSetName)
       oldTracingReference = annotation.tracingReference
       dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
-      newTracingReference <- dataSet.dataStoreInfo.typ.strategy.duplicateSkeletonTracing(dataSet.dataStoreInfo, dataSource, oldTracingReference) ?~> "Failed to create skeleton tracing."
+      newTracingReference <- dataSet.dataStore.duplicateSkeletonTracing(oldTracingReference) ?~> "Failed to create skeleton tracing."
       clonedAnnotation <- AnnotationService.createFrom(
         user, dataSet, newTracingReference, AnnotationType.Explorational, annotation.settings, None) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation

@@ -1,5 +1,6 @@
 package models.task
 
+import com.scalableminds.braingames.datastore.tracings.TracingType
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
@@ -46,7 +47,7 @@ case class Task(
     AnnotationService.annotationsFor(this)
 
   def settings(implicit ctx: DBAccessContext) =
-    taskType.map(_.settings) getOrElse AnnotationSettings.skeletonDefault
+    taskType.map(_.settings) getOrElse AnnotationSettings.defaultFor(TracingType.skeleton)
 
   def annotationBase(implicit ctx: DBAccessContext) =
     AnnotationService.baseFor(this)

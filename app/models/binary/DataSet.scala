@@ -39,6 +39,9 @@ case class DataSet(
 
   def defaultRotation =
     Vector3D(0, 0, 0)
+
+  lazy val dataStore: DataStoreHandlingStrategy =
+    DataStoreHandlingStrategy(this)
 }
 
 object DataSet {

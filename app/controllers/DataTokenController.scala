@@ -21,10 +21,11 @@ class DataTokenController @Inject()(val messagesApi: MessagesApi) extends Contro
   private def ensureAccessToLayer(
     dataSet: DataSet,
     dataLayerName: String)(implicit ctx: DBAccessContext): Fox[Boolean] = {
-
-    dataSet.dataSource.toUsable.flatMap(_.getDataLayer(dataLayerName)).toFox
+    // TODO rocksDB
+    Fox.successful(true)
+    //dataSet.dataSource.toUsable.flatMap(_.getDataLayer(dataLayerName)).toFox
       //TODO: rocksDB .orElse(VolumeTracingDAO.findOneByVolumeTracingLayerName(dataLayerName))
-      .map(_ => true).orElse(false)
+    //  .map(_ => true).orElse(false)
   }
 
   def generateToken(dataSetNameOpt: Option[String], dataLayerName: Option[String]) = UserAwareAction.async {

@@ -178,8 +178,10 @@ class Plane {
   };
 
   setVisible = (visible: boolean): void => {
-    this.plane.visible = this.TDViewBorders.visible = visible;
-    this.crosshair[0].visible = this.crosshair[1].visible = visible && this.displayCosshair;
+    this.plane.visible = visible;
+    this.TDViewBorders.visible = visible;
+    this.crosshair[0].visible = visible && this.displayCosshair;
+    this.crosshair[1].visible = visible && this.displayCosshair;
   };
 
   setSegmentationAlpha(alpha: number): void {

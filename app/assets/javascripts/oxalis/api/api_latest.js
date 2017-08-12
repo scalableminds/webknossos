@@ -533,7 +533,7 @@ class DataApi {
   * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the volume tracing layer.
   * api.data.downloadRawVolumeTracingCuboid([0,0,0], [100,200,100]);
   */
-  async downloadRawVolumeTracingCuboid(topLeft: Vector3, bottomRight: Vector3): Promise<_> {
+  async downloadRawVolumeTracingCuboid(topLeft: Vector3, bottomRight: Vector3): Promise<void> {
     assertVolume(Store.getState().tracing);
     const dataset = Store.getState().dataset;
     const layer = this.model.getSegmentationBinary();

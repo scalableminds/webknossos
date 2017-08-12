@@ -12,14 +12,14 @@ import play.api.libs.json.Json
   */
 case class SkeletonTracing(id: String = UUID.randomUUID.toString,
                            dataSetName: String,
-                           override val trees: List[Tree],
-                           timestamp: Long,
-                           boundingBox: Option[BoundingBox],
-                           activeNodeId: Option[Int],
-                           editPosition: Point3D,
-                           editRotation: Vector3D,
-                           zoomLevel: Double,
-                           version: Long) extends Tracing {
+                           override val trees: List[Tree] = List(),
+                           timestamp: Long = System.currentTimeMillis(),
+                           boundingBox: Option[BoundingBox] = None,
+                           activeNodeId: Option[Int] = None,
+                           editPosition: Point3D = Point3D(0, 0, 0),
+                           editRotation: Vector3D = Vector3D(),
+                           zoomLevel: Double = 2.0,
+                           version: Long = 0) extends Tracing {
 
   def addTree(newTree: Tree): SkeletonTracing =
     this.copy(trees = newTree :: this.trees)

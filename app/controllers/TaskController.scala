@@ -136,7 +136,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           task <- createTaskWithoutAnnotationBase(input)
           initialTree = Tree(1, Set(Node(1, start, rotation)), Set.empty, Some(Color.RED), Nil, Nil)
           tracing = SkeletonTracing(dataSetName=dataSetName, boundingBox=boundingBox, editPosition=start, editRotation=rotation, activeNodeId=Some(1), trees=List(initialTree))
-          tracingReference <- dataSet.dataStoreInfo.typ.strategy.saveSkeletonTracing(dataSet.dataStoreInfo, dataSource, tracing) ?~> "Failed to save skeleton tracing."
+          tracingReference <- dataSet.dataStore.saveSkeletonTracing(tracing) ?~> "Failed to save skeleton tracing."
           taskType <- task.taskType
           _ <- AnnotationService.createAnnotationBase(task, request.user._id, tracingReference, boundingBox, taskType.settings, dataSetName, start, rotation)
           taskjs <- Task.transformToJson(task, request.userOpt)

@@ -83,7 +83,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
   }
 
   def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] = {
-    dataSet.dataStoreInfo.typ.strategy.importDataSource(dataSet)
+    dataSet.dataStore.importDataSource
   }
 
   def getDataLayer(dataSet: DataSet, dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] = {

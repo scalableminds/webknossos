@@ -83,7 +83,7 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
       dataSource <- dataSet.dataSource.toUsable.toFox
-      tracingReference <- dataSet.dataStoreInfo.typ.strategy.mergeSkeletonTracings(dataSet.dataStoreInfo, dataSource, originalTracingSelectors, readOnly) ?~> "Failed to merge skeleton tracings."
+      tracingReference <- dataSet.dataStore.mergeSkeletonTracings(originalTracingSelectors, readOnly) ?~> "Failed to merge skeleton tracings."
     } yield {
       tracingReference
     }

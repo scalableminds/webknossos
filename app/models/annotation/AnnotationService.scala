@@ -3,6 +3,7 @@ package models.annotation
 import java.io.{BufferedOutputStream, FileOutputStream}
 
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.braingames.datastore.tracings.skeleton.{CreateEmptyParameters, DownloadMultipleParameters, DownloadTracingParameters}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
@@ -50,7 +51,7 @@ object AnnotationService
 
     def createTracing(dataSource: DataSource) = tracingType match {
       case TracingType.skeleton =>
-        dataSet.dataStoreInfo.typ.strategy.createSkeletonTracing(dataSet.dataStoreInfo, dataSource, CreateEmptyParameters())
+        dataSet.dataStoreInfo.typ.strategy.saveSkeletonTracing(dataSet.dataStoreInfo, dataSource, SkeletonTracing(dataSetName=dataSet.name))
       case TracingType.volume =>
         dataSet.dataStoreInfo.typ.strategy.createVolumeTracing(dataSet.dataStoreInfo, dataSource)
     }

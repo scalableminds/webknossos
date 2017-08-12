@@ -7,6 +7,7 @@ import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
 import com.scalableminds.braingames.datastore.models.ImageThumbnail
 import com.scalableminds.braingames.datastore.tracings.TracingReference
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings.skeleton.{CreateEmptyParameters, TracingSelector}
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -22,8 +23,8 @@ import play.api.mvc.Codec
 
 trait DataStoreHandlingStrategy {
 
-  def createSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, parameters: CreateEmptyParameters): Fox[TracingReference] =
-    Fox.failure("DataStore doesn't support creation of SkeletonTracings.")
+  def saveSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, tracing: SkeletonTracing): Fox[TracingReference] =
+    Fox.failure("DataStore doesn't support saving SkeletonTracings.")
 
   def duplicateSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, tracingReference: TracingReference): Fox[TracingReference] =
     Fox.failure("DatStore doesn't support duplication of SkeletonTracings.")
@@ -47,12 +48,11 @@ trait DataStoreHandlingStrategy {
 //TODO: RocksDB: make this a class, create object with FromDataSetName method (maybe the apply method), returning a new instance (maybe cache the instances)
 object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLogging {
 
-  override def createSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, parameters: CreateEmptyParameters): Fox[TracingReference] = {
+  override def saveSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, tracing: SkeletonTracing): Fox[TracingReference] = {
     logger.debug("Called to create empty SkeletonTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/createFromParams")
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/save")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
-      .withQueryString("dataSetName" -> base.id.name)
-      .postWithJsonResponse[CreateEmptyParameters, TracingReference](parameters)
+      .postWithJsonResponse[SkeletonTracing, TracingReference](tracing)
   }
 
   override def duplicateSkeletonTracing(dataStoreInfo: DataStoreInfo, base: DataSource, tracingReference: TracingReference): Fox[TracingReference] = {

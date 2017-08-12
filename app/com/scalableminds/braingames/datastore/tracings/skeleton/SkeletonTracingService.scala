@@ -166,9 +166,9 @@ class SkeletonTracingService @Inject()(
       timestamp = System.currentTimeMillis(),
       boundingBox = parameters.boundingBox,
       activeNodeId = if (parameters.insertStartAsNode.getOrElse(false)) Some(1) else None,
-      editPosition = parameters.startPosition,
-      editRotation = parameters.startRotation,
-      zoomLevel = None,
+      editPosition = parameters.startPosition.getOrElse(Point3D(0, 0, 0)),
+      editRotation = parameters.startRotation.getOrElse(Vector3D()),
+      zoomLevel = 2.0,
       version = 0)
     save(tracing)
     tracing

@@ -2,6 +2,8 @@ package com.scalableminds.braingames.datastore.tracings.skeleton
 
 import java.io.OutputStream
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
+
+import com.scalableminds.braingames.datastore.tracings.Tracing
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.tools.Fox
@@ -9,6 +11,7 @@ import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import net.liftweb.common.Box
 import play.api.libs.concurrent.Execution.Implicits._
+
 import scala.concurrent.Future
 
 /**
@@ -17,16 +20,16 @@ import scala.concurrent.Future
 object NmlWriter {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNml(t: SkeletonTracing, outputStream: OutputStream, scale: Scale): Future[Box[Boolean]] = {
+  def toNml(tracing: Tracing, outputStream: OutputStream, scale: Scale): Future[Box[Unit]] = {
     implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(outputStream))
 
     Xml.withinElement("things") {
       for {
-        _ <- Xml.withinElement("parameters")(writeParametersAsXml(t, scale, writer))
-        _ <- Xml.toXML(t.trees.filterNot(_.nodes.isEmpty))
-        _ <- Xml.withinElement("branchpoints")(Xml.toXML(t.trees.flatMap(_.branchPoints).sortBy(-_.timestamp)))
-        _ <- Xml.withinElement("comments")(Xml.toXML(t.trees.flatMap(_.comments)))
-      } yield true
+        _ <- Xml.withinElement("parameters")(writeParametersAsXml(tracing, scale, writer))
+        _ <- Xml.toXML(tracing.trees.filterNot(_.nodes.isEmpty))
+        _ <- Xml.withinElement("branchpoints")(Xml.toXML(tracing.trees.flatMap(_.branchPoints).sortBy(-_.timestamp)))
+        _ <- Xml.withinElement("comments")(Xml.toXML(tracing.trees.flatMap(_.comments)))
+      } yield ()
     }.futureBox.map { result =>
       writer.writeEndDocument()
       writer.close()
@@ -34,7 +37,7 @@ object NmlWriter {
     }
   }
 
-  def writeParametersAsXml(tracing: SkeletonTracing, scale: Scale, writer: XMLStreamWriter): Fox[Boolean] = {
+  def writeParametersAsXml(tracing: Tracing, scale: Scale, writer: XMLStreamWriter): Fox[Unit] = {
     writer.writeStartElement("experiment")
     writer.writeAttribute("name", tracing.dataSetName)
     writer.writeEndElement()
@@ -51,31 +54,19 @@ object NmlWriter {
     writer.writeStartElement("time")
     writer.writeAttribute("ms", tracing.timestamp.toString)
     writer.writeEndElement()
-    for {
-      editPosition <- tracing.editPosition
-    } yield {
-      writer.writeStartElement("editPosition")
-      writer.writeAttribute("x", editPosition.x.toString)
-      writer.writeAttribute("y", editPosition.y.toString)
-      writer.writeAttribute("z", editPosition.z.toString)
-      writer.writeEndElement()
-    }
-    for {
-      editRotation <- tracing.editRotation
-    } yield {
-      writer.writeStartElement("editRotation")
-      writer.writeAttribute("xRot", editRotation.x.toString)
-      writer.writeAttribute("yRot", editRotation.y.toString)
-      writer.writeAttribute("zRot", editRotation.z.toString)
-      writer.writeEndElement()
-    }
-    for {
-      zoomLevel <- tracing.zoomLevel
-    } yield {
-      writer.writeStartElement("zoomLevel")
-      writer.writeAttribute("zoom", zoomLevel.toString)
-      writer.writeEndElement()
-    }
-    Fox.successful(true)
+    writer.writeStartElement("editPosition")
+    writer.writeAttribute("x", tracing.editPosition.x.toString)
+    writer.writeAttribute("y", tracing.editPosition.y.toString)
+    writer.writeAttribute("z", tracing.editPosition.z.toString)
+    writer.writeEndElement()
+    writer.writeStartElement("editRotation")
+    writer.writeAttribute("xRot", tracing.editRotation.x.toString)
+    writer.writeAttribute("yRot", tracing.editRotation.y.toString)
+    writer.writeAttribute("zRot", tracing.editRotation.z.toString)
+    writer.writeEndElement()
+    writer.writeStartElement("zoomLevel")
+    writer.writeAttribute("zoom", tracing.zoomLevel.toString)
+    writer.writeEndElement()
+    Fox.successful(())
   }
 }

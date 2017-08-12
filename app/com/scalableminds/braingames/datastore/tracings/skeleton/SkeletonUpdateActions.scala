@@ -72,10 +72,10 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: Op
                                        editRotation: Option[Vector3D], zoomLevel: Option[Double]) extends SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing) =
     tracing.copy(
-    activeNodeId = activeNode match {case Some(_) => activeNode case None => tracing.activeNodeId},
-    editPosition = editPosition match {case Some(_) => editPosition case None => tracing.editPosition},
-    editRotation = editRotation match {case Some(_) => editRotation case None => tracing.editRotation},
-    zoomLevel = zoomLevel match {case Some(_) => zoomLevel case None => tracing.zoomLevel})
+      activeNodeId = activeNode.map(Some(_)).getOrElse(tracing.activeNodeId),
+      editPosition = editPosition.getOrElse(tracing.editPosition),
+      editRotation = editRotation.getOrElse(tracing.editRotation),
+      zoomLevel = zoomLevel.getOrElse(tracing.zoomLevel))
 }
 
 

@@ -27,24 +27,26 @@ POST        /datasets/:dataSetName                                              
 GET         /datasets/:dataSetName                                                             @com.scalableminds.braingames.datastore.controllers.DataSourceController.explore(dataSetName: String)
 
 # Volume tracings
-POST        /tracings/volume/createEmpty                                                      @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.createEmpty(dataSetName: String)
-POST        /tracings/volume/createFromZip                                                    @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.createFromZip(dataSetName: String)
-POST        /tracings/volume/:tracingId/update                                                @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.update(tracingId: String)
-GET         /tracings/volume/:tracingId                                                       @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.get(tracingId: String, version: Option[Long])
-GET         /tracings/volume/:tracingId/download                                              @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(tracingId: String, version: Option[Long])
+POST        /tracings/volume/createFromParams                                                  @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.createFromParams(dataSetName: String)
+POST        /tracings/volume/createFromZip                                                     @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.createFromZip(dataSetName: String)
+
+GET         /tracings/volume/:tracingId                                                        @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.get(tracingId: String, version: Option[Long])
+POST        /tracings/volume/:tracingId/update                                                 @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.update(tracingId: String)
+GET         /tracings/volume/:tracingId/download                                               @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(tracingId: String, version: Option[Long])
 
 # Skeleton tracings
-POST        /tracings/skeleton/save                                                           @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.save
-POST        /tracings/skeleton/saveMultiple                                                   @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.saveMultiple
 
-POST        /tracings/skeleton/mergedFromContents                                             @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.mergedFromContents(persist: Boolean)
-POST        /tracings/skeleton/mergedFromIds                                                  @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.mergedFromIds(persist: Boolean)
+POST        /tracings/skeleton/save                                                            @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.save
+POST        /tracings/skeleton/saveMultiple                                                    @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.saveMultiple
 
-GET         /tracings/skeleton/getMultiple                                                    @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.getMultiple
+POST        /tracings/skeleton/mergedFromContents                                              @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.mergedFromContents(persist: Boolean)
+POST        /tracings/skeleton/mergedFromIds                                                   @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.mergedFromIds(persist: Boolean)
 
-GET         /tracings/skeleton/:tracingId                                                     @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.get(tracingId: String, version: Option[Long])
-POST        /tracings/skeleton/:tracingId/update                                              @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.update(tracingId: String)
-GET         /tracings/skeleton/:tracingId/duplicate                                           @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.duplicate(tracingId: String, version: Option[Long])
+GET         /tracings/skeleton/getMultiple                                                     @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.getMultiple
+
+GET         /tracings/skeleton/:tracingId                                                      @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.get(tracingId: String, version: Option[Long])
+POST        /tracings/skeleton/:tracingId/update                                               @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.update(tracingId: String)
+GET         /tracings/skeleton/:tracingId/duplicate                                            @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.duplicate(tracingId: String, version: Option[Long])
 
 # Actions
 GET         /triggers/checkInbox                                                               @com.scalableminds.braingames.datastore.controllers.DataSourceController.triggerInboxCheck()

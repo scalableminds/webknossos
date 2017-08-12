@@ -8,7 +8,7 @@ import java.io.File
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.AccessTokenService
-import com.scalableminds.braingames.datastore.tracings.TracingDataStore
+import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingReference, TracingType}
 import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateAction}
 import com.scalableminds.util.tools.Fox
 import play.api.i18n.{Messages, MessagesApi}
@@ -27,7 +27,7 @@ class VolumeTracingController @Inject()(
 
   implicit val volumeDataStore = tracingDataStore.volumeData
 
-  def createEmpty(dataSetName: String) = Action.async {
+  def createFromParams(dataSetName: String) = Action.async {
     implicit request => {
       AllowRemoteOrigin {
         create(dataSetName, None).map(tracing => Ok(Json.toJson(tracing)))
@@ -81,11 +81,11 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  private def create(dataSetName: String, initialContent: Option[File]): Fox[String] = {
+  private def create(dataSetName: String, initialContent: Option[File]): Fox[TracingReference] = {
     for {
       dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound")
     } yield {
-      volumeTracingService.create(dataSource, initialContent).id
+      TracingReference(volumeTracingService.create(dataSource, initialContent).id, TracingType.volume)
     }
   }
 }

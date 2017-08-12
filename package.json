@@ -76,7 +76,7 @@
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",
-    "antd": "^2.9.3",
+    "antd": "^2.12.5",
     "backbone": "1.3.3",
     "backbone-subviews": "^0.7.4",
     "backbone.marionette": "^3.0.0",
@@ -121,8 +121,12 @@
     "whatwg-fetch": "^1.1.0"
   },
   "ava": {
-    "files": ["./public/test-bundle/test/**/*.spec.js"],
-    "source": ["./public/test-bundle/**/*.{js,jsx}"],
+    "files": [
+      "./public/test-bundle/test/**/*.spec.js"
+    ],
+    "source": [
+      "./public/test-bundle/**/*.{js,jsx}"
+    ],
     "modules": true,
     "failFast": true,
     "failWithoutAssertions": false,

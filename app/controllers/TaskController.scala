@@ -4,7 +4,9 @@ import java.util.UUID
 import javax.inject.Inject
 
 import com.scalableminds.braingames.datastore.tracings.skeleton.CreateEmptyParameters
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{Node, SkeletonTracing, Tree}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.image.Color
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
 import models.annotation.{AnnotationService, _}
@@ -132,8 +134,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName).toFox ?~> Messages("dataSet.notFound", dataSetName)
           dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
           task <- createTaskWithoutAnnotationBase(input)
-          tracingParameters = CreateEmptyParameters(boundingBox, Some(start), Some(rotation), Some(true), Some(true))
-          tracingReference <- dataSet.dataStoreInfo.typ.strategy.createSkeletonTracing(dataSet.dataStoreInfo, dataSource, tracingParameters) ?~> "Failed to create skeleton tracing."
+          initialTree = Tree(1, Set(Node(1, start, rotation)), Set.empty, Some(Color.RED), Nil, Nil)
+          tracing = SkeletonTracing(dataSetName=dataSetName, boundingBox=boundingBox, editPosition=start, editRotation=rotation, activeNodeId=Some(1), trees=List(initialTree))
+          tracingReference <- dataSet.dataStoreInfo.typ.strategy.saveSkeletonTracing(dataSet.dataStoreInfo, dataSource, tracing) ?~> "Failed to save skeleton tracing."
           taskType <- task.taskType
           _ <- AnnotationService.createAnnotationBase(task, request.user._id, tracingReference, boundingBox, taskType.settings, dataSetName, start, rotation)
           taskjs <- Task.transformToJson(task, request.userOpt)

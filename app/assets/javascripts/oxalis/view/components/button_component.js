@@ -1,6 +1,7 @@
 // @flow
 
 import React from "react";
+import _ from "lodash";
 import { Button } from "antd";
 
 type ButtonComponentPropType = {
@@ -13,6 +14,9 @@ type ButtonComponentPropType = {
  */
 class ButtonComponent extends React.PureComponent {
   props: ButtonComponentPropType;
+  static defaultProps: ButtonComponentPropType = {
+    onClick: _.noop,
+  };
 
   handleClick = (e: Event & { currentTarget: HTMLButtonElement }) => {
     // For antd buttons e.target seems to be the span with the button description, whereas

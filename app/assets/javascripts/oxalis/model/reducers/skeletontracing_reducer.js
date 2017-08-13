@@ -359,6 +359,14 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .getOrElse(state);
         }
 
+        case "SET_TRACING": {
+          return update(state, {
+            tracing: {
+              $set: update(action.tracing, { version: { $set: skeletonTracing.version } }),
+            },
+          });
+        }
+
         case "TOGGLE_TREE": {
           const { treeId } = action;
           return getTree(skeletonTracing, treeId)

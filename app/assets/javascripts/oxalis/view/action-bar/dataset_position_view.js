@@ -10,8 +10,9 @@ import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { Button, Input } from "antd";
+import { Input } from "antd";
 import Vector3Input from "libs/vector3_input";
+import ButtonComponent from "oxalis/view/components/button_component";
 
 class DatasetPositionView extends PureComponent {
   props: {
@@ -48,9 +49,9 @@ class DatasetPositionView extends PureComponent {
       <div>
         <div>
           <Input.Group compact size="large">
-            <Button onClick={this.copyPositionToClipboard} size="large">
+            <ButtonComponent onClick={this.copyPositionToClipboard} size="large">
               Position
-            </Button>
+            </ButtonComponent>
             <Vector3Input
               value={position}
               onChange={this.handleChangePosition}
@@ -61,9 +62,9 @@ class DatasetPositionView extends PureComponent {
         {isArbitraryMode
           ? <div style={{ marginLeft: 10 }}>
               <Input.Group compact size="large">
-                <Button onClick={this.copyRotationToClipboard} size="large">
+                <ButtonComponent onClick={this.copyRotationToClipboard} size="large">
                   Rotation
-                </Button>
+                </ButtonComponent>
                 <Vector3Input
                   value={rotation}
                   onChange={this.handleChangeRotation}

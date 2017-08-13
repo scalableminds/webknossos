@@ -56,7 +56,7 @@ mockRequire("app", app);
 mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
 mockRequire("oxalis/model/user", User);
 mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
-mockRequire("keyboardjs", KeyboardJS);
+mockRequire("libs/keyboard", KeyboardJS);
 
 // Avoid node caching and make sure all mockRequires are applied
 const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;

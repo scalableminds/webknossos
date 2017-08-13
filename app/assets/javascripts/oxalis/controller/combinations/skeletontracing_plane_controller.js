@@ -153,9 +153,9 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
         getActiveNode(Store.getState().tracing).map(activeNode =>
           Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
         );
+      } else {
+        Store.dispatch(setActiveNodeAction(nodeId));
       }
-
-      Store.dispatch(setActiveNodeAction(nodeId));
     }
   };
 

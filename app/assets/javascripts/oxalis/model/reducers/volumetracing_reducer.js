@@ -28,10 +28,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
 
       // As the frontend doesn't know all cells, we have to keep track of the highest id
       // and cannot compute it
-      let maxCellId = 1;
-      if (action.tracing.nextCell != null) {
-        maxCellId = action.tracing.nextCell - 1;
-      }
+      let maxCellId = action.tracing.dataLayer.largestSegmentId;
 
       const volumeTracing: VolumeTracingType = {
         annotationId: action.annotation.id,
@@ -51,7 +48,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
       };
 
       const newState = update(state, { tracing: { $set: volumeTracing } });
-      return createCellReducer(newState, volumeTracing, action.tracing.activeCell);
+      return createCellReducer(newState, volumeTracing, action.tracing.activeSegmentId);
     }
     default:
     // pass

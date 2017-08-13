@@ -23,6 +23,7 @@ const window = {
     pathname: "annotationUrl",
   },
   alert: console.log.bind(console),
+  open: sinon.spy(),
 };
 const currentUser = {
   firstName: "SCM",
@@ -36,7 +37,7 @@ export const KeyboardJS = {
   bind: _.noop,
   unbind: _.noop,
 };
-mockRequire("keyboardjs", KeyboardJS);
+mockRequire("libs/keyboard", KeyboardJS);
 mockRequire("libs/toast", { error: _.noop });
 mockRequire("libs/window", window);
 mockRequire("libs/request", Request);

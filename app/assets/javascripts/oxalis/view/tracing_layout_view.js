@@ -14,7 +14,8 @@ import RightMenuView from "oxalis/view/right_menu_view";
 import TracingView from "oxalis/view/tracing_view";
 import UserScriptsModal from "oxalis/view/user_scripts_modal";
 import enUS from "antd/lib/locale-provider/en_US";
-import { LocaleProvider, Layout, Button, Icon } from "antd";
+import { LocaleProvider, Layout, Icon } from "antd";
+import ButtonComponent from "oxalis/view/components/button_component";
 import type { SkeletonTracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType } from "oxalis/constants";
 
@@ -78,14 +79,14 @@ class TracingLayoutView extends React.PureComponent {
 
             <Layout className="tracing-layout">
               <Header style={{ position: "fixed", width: "100%", zIndex: 210, minHeight: 48 }}>
-                <Button
+                <ButtonComponent
                   size="large"
                   onClick={this.handleSettingsCollapse}
                   style={{ float: "left", marginTop: "10px" }}
                 >
                   <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
                   Settings
-                </Button>
+                </ButtonComponent>
                 <ActionBarView />
               </Header>
               <Layout style={{ marginTop: 64 }}>

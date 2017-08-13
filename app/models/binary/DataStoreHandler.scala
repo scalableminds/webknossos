@@ -3,22 +3,21 @@
  */
 package models.binary
 
+import java.io.File
+
 import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
-import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
 import com.scalableminds.braingames.datastore.models.ImageThumbnail
 import com.scalableminds.braingames.datastore.tracings.TracingReference
+import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
-import com.scalableminds.braingames.datastore.tracings.skeleton.{CreateEmptyParameters, TracingSelector}
-import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracing
+import com.scalableminds.braingames.datastore.tracings.volume.{AbstractVolumeTracing => VolumeTracing}
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import play.api.http.Status
-import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.JsObject
 import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Codec
 
@@ -33,7 +32,7 @@ trait DataStoreHandlingStrategy {
   def mergeSkeletonTracings(tracingSelectors: List[TracingSelector], readOnly: Boolean): Fox[TracingReference] =
     Fox.failure("DataStore does't support merging of SkeletonTracings.")
 
-  def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[TemporaryFile]): Fox[TracingReference] =
+  def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File] = None): Fox[TracingReference] =
     Fox.failure("DataStore doesn't support creation of VolumeTracings.")
 
   def requestDataLayerThumbnail(dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] =
@@ -77,11 +76,23 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
       .postWithJsonResponse[List[TracingSelector], TracingReference](tracingSelectors)
   }
 
-  override def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[TemporaryFile]): Fox[TracingReference] = {
+  override def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File]): Fox[TracingReference] = {
     logger.debug("Called to create VolumeTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/tracings/volume/save")
-      .withQueryString("token" -> DataTokenService.webKnossosToken)
-      .postWithJsonResponse[JsObject, TracingReference]()
+    for {
+      tracingReference <- RPC(s"${dataStoreInfo.url}/data/tracings/volume/save")
+        .withQueryString("token" -> DataTokenService.webKnossosToken)
+        .postWithJsonResponse[VolumeTracing, TracingReference](tracing)
+      _ <- initialData match {
+        case Some(file) =>
+          RPC(s"${dataStoreInfo.url}/data/tracings/volume/${tracingReference.id}/initialData")
+            .withQueryString("token" -> DataTokenService.webKnossosToken)
+            .post(file)
+        case _ =>
+          Fox.successful()
+      }
+    } yield {
+      tracingReference
+    }
   }
 
   override def requestDataLayerThumbnail(dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] = {

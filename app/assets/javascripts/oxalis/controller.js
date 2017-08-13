@@ -26,7 +26,7 @@ import Request from "libs/request";
 import ApiLoader from "oxalis/api/api_loader";
 import api from "oxalis/api/internal_api";
 import { wkReadyAction } from "oxalis/model/actions/actions";
-import { saveNowAction } from "oxalis/model/actions/save_actions";
+import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
@@ -227,6 +227,22 @@ class Controller extends React.PureComponent {
           event.stopPropagation();
           Model.save();
         },
+
+        // Undo
+        "super + z": event => {
+          event.preventDefault();
+          event.stopPropagation();
+          Store.dispatch(undoAction());
+        },
+        "ctrl + z": () => Store.dispatch(undoAction()),
+
+        // Redo
+        "super + y": event => {
+          event.preventDefault();
+          event.stopPropagation();
+          Store.dispatch(redoAction());
+        },
+        "ctrl + y": () => Store.dispatch(redoAction()),
 
         // In the long run this should probably live in a user script
         "9": function toggleSegmentationOpacity() {

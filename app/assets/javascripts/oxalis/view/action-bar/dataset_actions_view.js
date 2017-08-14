@@ -10,6 +10,7 @@ import { Button, Dropdown, Menu, Icon } from "antd";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
+import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 
@@ -117,28 +118,32 @@ class DatasetActionsView extends PureComponent {
     const restrictions = this.props.tracing.restrictions;
 
     const saveButton = restrictions.allowUpdate
-      ? <Button
+      ? <ButtonComponent
           key="save-button"
           type="primary"
           onClick={this.handleSave}
           icon={this.getSaveButtonIcon()}
         >
           Save
-        </Button>
+        </ButtonComponent>
       : [
-          <Button key="read-only-button" type="primary" disabled>
+          <ButtonComponent key="read-only-button" type="primary" disabled>
             Read only
-          </Button>,
-          <Button key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+          </ButtonComponent>,
+          <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
             Copy To My Account
-          </Button>,
+          </ButtonComponent>,
         ];
 
     const finishAndNextTaskButton =
       hasAdvancedOptions && restrictions.allowFinish && this.props.task
-        ? <Button key="next-button" icon="verticle-left" onClick={this.handleFinishAndGetNextTask}>
+        ? <ButtonComponent
+            key="next-button"
+            icon="verticle-left"
+            onClick={this.handleFinishAndGetNextTask}
+          >
             Finish and Get Next Task
-          </Button>
+          </ButtonComponent>
         : null;
 
     const elements = [];
@@ -210,9 +215,9 @@ class DatasetActionsView extends PureComponent {
           {saveButton}
           {finishAndNextTaskButton}
           <Dropdown overlay={menu}>
-            <Button>
+            <ButtonComponent>
               <Icon type="down" />
-            </Button>
+            </ButtonComponent>
           </Dropdown>
         </Button.Group>
       </div>

@@ -395,6 +395,7 @@ export const defaultState: OxalisState = {
     trees: {},
     name: "",
     version: 0,
+    isPublic: false,
     tracingId: "",
     tracingType: "Explorational",
     activeTreeId: null,

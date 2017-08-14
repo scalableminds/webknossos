@@ -6,6 +6,6 @@ if (!global.addEventListener) {
   global.document = { addEventListener() {} };
 }
 
-const KeyboardJS = require("keyboardjs");
+const KeyboardJS = require("libs/keyboard");
 
 export default KeyboardJS;

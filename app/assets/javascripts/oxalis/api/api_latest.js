@@ -539,7 +539,7 @@ class DataApi {
     const layer = this.model.getSegmentationBinary();
     assertExists(layer, "Segmentation layer not found!");
 
-    layer.layer.doWithToken(token => {
+    return layer.layer.doWithToken(token => {
       const downloadUrl =
         `${dataset.dataStore
           .url}/data/datasets/${dataset.name}/layers/${layer.name}/data?resolution=0&` +

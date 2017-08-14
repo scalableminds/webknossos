@@ -69,7 +69,8 @@ object AnnotationService
 
     def createTracing(dataSource: DataSource) = tracingType match {
       case TracingType.skeleton =>
-        dataSet.dataStore.saveSkeletonTracing(SkeletonTracing(dataSetName = dataSource.id.name))
+        dataSet.dataStore.saveSkeletonTracing(SkeletonTracing(dataSetName=dataSet.name,editPosition=dataSet.defaultStart,
+                                              editRotation=dataSet.defaultRotation))
       case TracingType.volume =>
         dataSet.dataStore.saveVolumeTracing(createVolumeTracing(dataSource))
     }
@@ -84,7 +85,7 @@ object AnnotationService
         selectSuitableTeam(user, dataSet),
         AnnotationSettings.defaultFor(tracingType),
         _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate))
-      _ <- AnnotationDAO.insert(annotation)
+      _ <- annotation.saveToDB
     } yield {
       annotation
     }
@@ -188,9 +189,8 @@ object AnnotationService
     start: Point3D,
     rotation: Vector3D)(implicit ctx: DBAccessContext) = {
     for {
-      _ <- AnnotationDAO.insert(
-        Annotation(Some(userId), tracingReference, dataSetName, task.team, settings,
-          typ = AnnotationType.TracingBase, _task = Some(task._id))) ?~> "Failed to insert annotation."
+      _ <- Annotation(Some(userId), tracingReference, dataSetName, task.team, settings,
+          typ = AnnotationType.TracingBase, _task = Some(task._id)).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }
 
@@ -239,7 +239,7 @@ object AnnotationService
       _name = name,
       typ = annotationType)
     for {
-      _ <- AnnotationDAO.insert(annotation)
+      _ <- annotation.saveToDB
     } yield annotation
   }
 

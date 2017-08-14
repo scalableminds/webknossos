@@ -22,14 +22,18 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
       annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten).toFox
       finishedAnnotations = annotations.filter(_.state.isFinished)
       dataSetName = finishedAnnotations.head.dataSetName
-      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(project.name), readOnly = true, user.map(_._id), dataSetName, project.team, AnnotationType.CompoundProject, annotations) ?~> "project.noAnnotation"
+      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(project.name), persistTracing=false, user.map(_._id),
+        dataSetName, project.team, AnnotationType.CompoundProject, annotations) ?~> "project.noAnnotation"
     } yield mergedAnnotation
-    //TODO: rocksDB restrictions? annotation.copy(restrictions = projectAnnotationRestrictions(project))
   }
 
-  private def projectAnnotationRestrictions(project: Project) =
-    new AnnotationRestrictions {
-      override def allowAccess(user: Option[User]) =
-        user.flatMap(_.roleInTeam(project.team)).contains(Role.Admin)
+  override def restrictionsFor(projectName: String)(implicit ctx: DBAccessContext) =
+    for {
+      project <- ProjectDAO.findOneByName(projectName)
+    } yield {
+      new AnnotationRestrictions {
+        override def allowAccess(user: Option[User]) =
+          user.flatMap(_.roleInTeam(project.team)).contains(Role.Admin)
+      }
     }
 }

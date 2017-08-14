@@ -102,7 +102,7 @@ case class Task(
 object Task extends FoxImplicits {
   implicit val taskFormat = Json.format[Task]
 
-  def transformToJson(task: Task, forUser: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def transformToJson(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       dataSetName <- task.annotationBase.map(_.dataSetName)
       status <- task.status.getOrElse(CompletionStatus(-1, -1, -1))

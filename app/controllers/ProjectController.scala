@@ -109,7 +109,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         _ <- request.user.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
         tasks <- project.tasks
-        js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t, request.userOpt))
+        js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
       } yield {
         Ok(Json.toJson(js))
       }

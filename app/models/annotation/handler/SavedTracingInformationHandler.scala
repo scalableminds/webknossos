@@ -3,7 +3,7 @@ package models.annotation.handler
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.TextUtils._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{Annotation, AnnotationDAO}
+import models.annotation.{Annotation, AnnotationDAO, AnnotationRestrictions}
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -32,6 +32,14 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
       annotation <- AnnotationDAO.findOneById(annotationId) ?~> "annotation.notFound"
     } yield {
       annotation
+    }
+  }
+
+  def restrictionsFor(identifier: String)(implicit ctx: DBAccessContext) = {
+    for {
+      annotation <- provideAnnotation(identifier, None)
+    } yield {
+      AnnotationRestrictions.defaultAnnotationRestrictions(annotation)
     }
   }
 

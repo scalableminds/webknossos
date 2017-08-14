@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{Annotation, AnnotationRestrictions, AnnotationSettings, AnnotationType}
 import models.binary.DataSetDAO
 import models.user.User
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * Company: scalableminds
@@ -32,9 +33,9 @@ object DataSetInformationHandler extends AnnotationInformationHandler with FoxIm
     }
   }
 
-  override def restrictionsFor(annotation: Annotation) =
-    new AnnotationRestrictions {
+  def restrictionsFor(viewAnnotationId: String)(implicit ctx: DBAccessContext) =
+    Fox.successful(new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = true
       override def allowDownload(user: Option[User]) = false
-    }
+    })
 }

@@ -34,7 +34,6 @@ trait AnnotationInformationHandler {
     provideAnnotation(identifier, Some(request.user)).map(f)
   }
 
-  def restrictionsFor(annotation: Annotation) =
-    AnnotationRestrictions.defaultAnnotationRestrictions(annotation)
+  def restrictionsFor(identifier: String)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]
 
 }

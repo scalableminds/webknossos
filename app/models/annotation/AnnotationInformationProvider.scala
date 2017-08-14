@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType._
 import models.annotation.handler.AnnotationInformationHandler
@@ -42,8 +43,8 @@ trait AnnotationInformationProvider
     annotation._name.toFox.orElse(handler.nameForAnnotation(annotation).toFox)
   }
 
-  def restrictionsFor(annotation: Annotation) = {
-    AnnotationInformationHandler.informationHandlers(annotation.typ).restrictionsFor(annotation)
+  def restrictionsFor(annotationId: AnnotationIdentifier)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] = {
+    AnnotationInformationHandler.informationHandlers(annotationId.annotationType).restrictionsFor(annotationId.identifier)
   }
 
 }

@@ -43,7 +43,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
     withAnnotation(annotationId) { annotation =>
       for {
-        _ <- restrictionsFor(annotation).allowAccess(request.userOpt) ?~> "notAllowed" ~> BAD_REQUEST
+        restrictions <- restrictionsFor(annotationId)
+        _ <- restrictions.allowAccess(request.userOpt) ?~> "notAllowed" ~> BAD_REQUEST
         js <- annotation.toJson(request.userOpt, Some(readOnly))
       } yield {
         request.userOpt.foreach { user =>
@@ -59,7 +60,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean) = Authenticated.async { implicit request =>
     for {
-      mergedAnnotation <- AnnotationMerger.mergeTwoByIds(id, typ, mergedId, mergedTyp, readOnly)
+      mergedAnnotation <- AnnotationMerger.mergeTwoByIds(id, typ, mergedId, mergedTyp, persistTracing = !readOnly)
       _ <- mergedAnnotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
       savedAnnotation <- mergedAnnotation.saveToDB //TODO: RocksDB  should we save it if readOnly?
       json <- savedAnnotation.toJson(Some(request.user))

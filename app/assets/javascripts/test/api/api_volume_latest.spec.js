@@ -57,7 +57,6 @@ test("Data Api: labelVoxels should label a list of voxels", t => {
 test("Data Api: downloadRawVolumeTracingCuboid should open a popup with the correct URL", async t => {
   const { api } = t.context;
   const window = mockRequire.reRequire("libs/window");
-  const Request = mockRequire.reRequire("libs/request");
 
   await api.data.downloadRawVolumeTracingCuboid([1, 2, 3], [9, 8, 7]);
 

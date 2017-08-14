@@ -54,14 +54,18 @@ test("Data Api: labelVoxels should label a list of voxels", t => {
   t.not(cube.getDataValue([11, 12, 13]), 34);
 });
 
-test("Data Api: downloadRawVolumeTracingCuboid should open a popup with the correct URL", t => {
+test("Data Api: downloadRawVolumeTracingCuboid should open a popup with the correct URL", async t => {
   const { api } = t.context;
   const window = mockRequire.reRequire("libs/window");
-  
-  api.data.downloadRawVolumeTracingCuboid([1, 2, 3], [9, 8, 7]);
-  
+
+  await api.data.downloadRawVolumeTracingCuboid([1, 2, 3], [9, 8, 7]);
+
   t.true(window.open.calledOnce);
-  t.true(window.open.calledWith("http://localhost:9000/data/datasets/2012-09-28_ex145_07x2/layers/64007765-cef9-4e31-b206-dba795b5be17/data?resolution=0&x=1&y=2&z=3&width=8&height=6&depth=4"));
+  t.true(
+    window.open.calledWith(
+      "http://localhost:9000/data/datasets/2012-09-28_ex145_07x2/layers/64007765-cef9-4e31-b206-dba795b5be17/data?resolution=0&token=secure-token&x=1&y=2&z=3&width=8&height=6&depth=4",
+    ),
+  );
 });
 
 test("Calling a skeleton api function in a volume tracing should throw an error", t => {

@@ -49,9 +49,12 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         val tracings = request.body
-        val mergedTracing = skeletonTracingService.merge(tracings)
-        skeletonTracingService.save(mergedTracing)
-        Ok(Json.toJson(TracingReference(mergedTracing.id, TracingType.skeleton)))
+        val merged = skeletonTracingService.merge(tracings)
+        if (persist)
+          skeletonTracingService.save(merged)
+        else
+          skeletonTracingService.saveInTemporaryStore(merged)
+        Ok(Json.toJson(TracingReference(merged.id, TracingType.skeleton)))
       }
     }
   }
@@ -63,7 +66,10 @@ class SkeletonTracingController @Inject()(
           tracings <- skeletonTracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
         } yield {
           val merged = skeletonTracingService.merge(tracings)
-          skeletonTracingService.save(merged)
+          if (persist)
+            skeletonTracingService.save(merged)
+          else
+            skeletonTracingService.saveInTemporaryStore(merged)
           Ok(Json.toJson(TracingReference(merged.id, TracingType.skeleton)))
         }
       }
@@ -71,14 +77,13 @@ class SkeletonTracingController @Inject()(
   }
 
 
-  def get(tracingId: String, version: Option[Long]) = Action.async {
+  def get(tracingId: String, version: Option[Long]) = Action {
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
-          updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
+          tracing <- skeletonTracingService.findUpdated(tracingId, version)
         } yield {
-          Ok(Json.toJson(updatedTracing))
+          Ok(Json.toJson(tracing))
         }
       }
     }
@@ -100,7 +105,7 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracing <- skeletonTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- skeletonTracingService.findRaw(tracingId) ?~> Messages("tracing.notFound")
           _ <- skeletonTracingService.saveUpdates(tracingId, request.body)
         } yield {
           Ok
@@ -113,10 +118,9 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
-          updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
+          tracing <- skeletonTracingService.findUpdated(tracingId, version) ?~> Messages("tracing.notFound")
         } yield {
-          val newTracing = skeletonTracingService.duplicate(updatedTracing)
+          val newTracing = skeletonTracingService.duplicate(tracing)
           Ok(Json.toJson(TracingReference(newTracing.id, TracingType.skeleton)))
         }
       }

@@ -11,7 +11,7 @@ trait SkeletonUpdateAction {
   def applyOn(tracing: SkeletonTracing): SkeletonTracing
 }
 
-case class CreateTreeSkeletonAction(id: Int, color: Option[Color], timestamp: Long, name: String,
+case class CreateTreeSkeletonAction(id: Int, color: Option[Color], name: String,
                                     branchPoints: List[BranchPoint], comments: List[Comment]) extends SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing) = {
     val newTree = Tree(id, Set(), Set(), color, branchPoints, comments, name)

@@ -16,6 +16,9 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
+import play.api.cache.Cache
+import scala.concurrent.duration._
+import play.api.Play.current
 
 import scala.concurrent.Future
 import scala.io.Source
@@ -27,18 +30,30 @@ class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore
                                       ) extends FoxImplicits with TextUtils {
 
+  private val temporaryStoreTimeout = 10 minutes
+
   def createNewId(): String = UUID.randomUUID.toString
 
-  def find(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
+  def findRaw(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
     tracingDataStore.skeletons.getJson[SkeletonTracing](tracingId, version).map(_.value)
 
-  def findVersioned(tracingId: String, version: Option[Long] = None): Box[VersionedKeyValuePair[SkeletonTracing]] =
+  private def findVersioned(tracingId: String, version: Option[Long] = None): Box[VersionedKeyValuePair[SkeletonTracing]] =
     tracingDataStore.skeletons.getJson[SkeletonTracing](tracingId, version)
 
-  def findUpdated(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
-    findVersioned(tracingId, version).flatMap(tracing => applyPendingUpdates(tracing, version))
+  def findUpdated(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] = {
+    val tracing = findVersioned(tracingId, version).flatMap(tracing => applyPendingUpdates(tracing, version))
+    tracing match {
+      case Full(t) => tracing
+      case _ => getFromTemporaryStore(tracingId)
+    }
+  }
 
-  //TODO: caching
+  def getFromTemporaryStore(tracingId: String): Box[SkeletonTracing] =
+    Cache.getAs[SkeletonTracing](tracingId)
+
+  def saveInTemporaryStore(tracing: SkeletonTracing) =
+    Cache.set(tracing.id, tracing, temporaryStoreTimeout)
+
   def save(tracing: SkeletonTracing) = tracingDataStore.skeletons.putJson(tracing.id, tracing.version, tracing)
 
   def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[Unit]] = {
@@ -205,9 +220,8 @@ class SkeletonTracingService @Inject()(
   def downloadMultiple(params: DownloadMultipleParameters, dataSourceRepository: DataSourceRepository): Fox[TemporaryFile] = {
     val nmls:List[(Enumerator[Array[Byte]],String)] = for {
       tracingParams <- params.tracings
-      tracingVersioned <- findVersioned(tracingParams.tracingId, tracingParams.version)
-      tracingUpdated <- applyPendingUpdates(tracingVersioned, tracingParams.version)
-      tracingAsNml <- downloadNml(tracingUpdated, dataSourceRepository)
+      tracing <- findUpdated(tracingParams.tracingId, tracingParams.version)
+      tracingAsNml <- downloadNml(tracing, dataSourceRepository)
     } yield {
       (tracingAsNml, tracingParams.outfileName)
     }

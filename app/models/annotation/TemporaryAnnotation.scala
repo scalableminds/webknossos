@@ -44,6 +44,8 @@ case class TemporaryAnnotation(
 
   def tracingTime = None    // We currently do not tracing time on temporary annotations
 
+  def tags = Nil
+
   def muta = new TemporaryAnnotationMutations(this)
 
   def temporaryDuplicate(keepId: Boolean)(implicit ctx: DBAccessContext) = {

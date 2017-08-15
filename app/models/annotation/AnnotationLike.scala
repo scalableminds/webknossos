@@ -107,7 +107,7 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
     JsonObjectWithFilter(exclude)(
       "version" +> a.version,
       "user" +> a.user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull),
-      "created" +> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(a.created),
+      "modified" +> a.content.futureBox.map(content => DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(content.map(_.timestamp).openOr(a.created))),
       "stateLabel" +> stateLabel(a, user),
       "state" +> a.state,
       "id" +> a.id,

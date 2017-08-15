@@ -74,7 +74,7 @@ trait TracingInformationProvider
     AnnotationStore.mergeAnnotation(annotation, annotationSec, readOnly, request.user)
   }
 
-  def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]): Fox[String] = {
+  def nameAnnotation(annotation: AnnotationLike)(implicit request: UserAwareRequest[_]): Fox[String] = {
     withInformationHandler(annotation.typ) {
       handler =>
         annotation._name.toFox.orElse(handler.nameForAnnotation(annotation).toFox)

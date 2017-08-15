@@ -147,6 +147,7 @@ class DatasetActionsView extends PureComponent {
         : null;
 
     const elements = [];
+    const modals = [];
     if (hasAdvancedOptions) {
       if (restrictions.allowFinish) {
         elements.push(
@@ -176,7 +177,7 @@ class DatasetActionsView extends PureComponent {
           </div>
         </Menu.Item>,
       );
-      elements.push(
+      modals.push(
         <ShareModalView
           key="share-modal"
           isVisible={this.state.isShareModalOpen}
@@ -194,7 +195,7 @@ class DatasetActionsView extends PureComponent {
           </div>
         </Menu.Item>,
       );
-      elements.push(
+      modals.push(
         <MergeModalView
           key="merge-modal"
           isVisible={this.state.isMergeModalOpen}
@@ -214,6 +215,7 @@ class DatasetActionsView extends PureComponent {
         <Button.Group size="large">
           {saveButton}
           {finishAndNextTaskButton}
+          {modals}
           <Dropdown overlay={menu}>
             <ButtonComponent>
               <Icon type="down" />

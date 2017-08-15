@@ -3,9 +3,10 @@
  */
 package com.scalableminds.braingames.binary.storage.kvstore
 
-import net.liftweb.common.Box
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.json.{Reads, Writes}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
 
 case class VersionedKey(key: String, version: Long) {
@@ -55,12 +56,12 @@ class VersionFilterIterator[T](it: Iterator[KeyValuePair[T]], version: Option[Lo
   }
 }
 
-class VersionedKeyValueStore(underlying: KeyValueStore) {
+class VersionedKeyValueStore(underlying: KeyValueStore) extends FoxImplicits {
 
-  def get(key: String, version: Option[Long] = None): Option[VersionedKeyValuePair[Array[Byte]]] =
+  def get(key: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[Array[Byte]]] =
     scanVersions(key, version).toStream.headOption
 
-  def getJson[T : Reads](key: String, version: Option[Long] = None): Option[VersionedKeyValuePair[T]] =
+  def getJson[T : Reads](key: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[T]] =
     scanVersionsJson(key, version).toStream.headOption
 
   def scanVersions(key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] = {
@@ -83,9 +84,9 @@ class VersionedKeyValueStore(underlying: KeyValueStore) {
   def scanKeysJson[T : Reads](key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] =
     new VersionFilterIterator(underlying.scanJson(key, prefix), version)
 
-  def put(key: String, version: Long, value: Array[Byte]): Box[Unit] =
+  def put(key: String, version: Long, value: Array[Byte]): Fox[Unit] =
     underlying.put(VersionedKey(key, version).toString, value)
 
-  def putJson[T : Writes](key: String, version: Long, value: T): Box[Unit] =
+  def putJson[T : Writes](key: String, version: Long, value: T): Fox[Unit] =
     underlying.putJson(VersionedKey(key, version).toString, value)
 }

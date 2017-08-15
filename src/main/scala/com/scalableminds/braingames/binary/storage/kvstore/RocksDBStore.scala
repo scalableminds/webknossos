@@ -7,11 +7,13 @@ import java.nio.file.Path
 import java.util
 
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import org.rocksdb._
 
 import scala.collection.JavaConverters._
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class RocksDBManager(path: Path, columnFamilies: List[String]) {
@@ -71,9 +73,9 @@ class RocksDBIterator(it: RocksIterator, prefix: Option[String]) extends Iterato
   }
 }
 
-class RocksDBStore(db: RocksDB, handle: ColumnFamilyHandle) extends KeyValueStore {
+class RocksDBStore(db: RocksDB, handle: ColumnFamilyHandle) extends KeyValueStore with FoxImplicits {
 
-  def get(key: String): Box[Array[Byte]] = {
+  def get(key: String): Fox[Array[Byte]] = {
     tryo { db.get(handle, key) }.flatMap {
       case null =>
         Empty
@@ -88,7 +90,7 @@ class RocksDBStore(db: RocksDB, handle: ColumnFamilyHandle) extends KeyValueStor
     new RocksDBIterator(it, prefix)
   }
 
-  def put(key: String, value: Array[Byte]): Box[Unit] = {
+  def put(key: String, value: Array[Byte]): Fox[Unit] = {
     tryo(db.put(handle, key, value))
   }
 }

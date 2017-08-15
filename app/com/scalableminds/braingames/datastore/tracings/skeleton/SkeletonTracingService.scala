@@ -5,8 +5,8 @@ import java.io.{BufferedOutputStream, File, FileOutputStream}
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValuePair
-import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingService, TracingType}
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{BranchPoint, Node, SkeletonTracing, Tree}
+import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingService, TracingType}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
@@ -18,6 +18,7 @@ import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.Future
 import scala.io.Source
+import scala.reflect._
 
 /**
   * Created by f on 28.06.17.
@@ -28,48 +29,46 @@ class SkeletonTracingService @Inject()(
 
   implicit val tracingFormat = SkeletonTracing.jsonFormat
 
+  implicit val tag = classTag[SkeletonTracing]
+
   val tracingType = TracingType.skeleton
 
   val tracingStore = tracingDataStore.skeletons
-
-  override def findUpdated(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
-    findVersioned(tracingId, version).flatMap(tracing => applyPendingUpdates(tracing, version))
 
   def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[Unit]] = {
     Fox.combined(for {
       updateActionGroup <- updateActionGroups
     } yield {
       tracingDataStore.skeletonUpdates.putJson(tracingId, updateActionGroup.version, updateActionGroup.actions)
-    }.toFox)
+    })
   }
 
-
-  def applyPendingUpdates(tracingVersioned: VersionedKeyValuePair[SkeletonTracing], desiredVersion: Option[Long]): Box[SkeletonTracing] = {
-    val tracing = tracingVersioned.value
-    val existingVersion = tracingVersioned.version
-    val newVersion = findDesiredOrNewestPossibleVersion(desiredVersion, tracingVersioned)
-    if (newVersion > existingVersion) {
-      val pendingUpdates = findPendingUpdates(tracing.id, existingVersion, newVersion)
-      for {
-        updatedTracing <- update(tracing, pendingUpdates, newVersion)
-      } yield {
-        save(updatedTracing)
-        updatedTracing
+  override def applyPendingUpdates(tracing: SkeletonTracing, desiredVersion: Option[Long]): Fox[SkeletonTracing] = {
+    val existingVersion = tracing.version
+    findDesiredOrNewestPossibleVersion(tracing, desiredVersion).flatMap { newVersion =>
+      if (newVersion > existingVersion) {
+        val pendingUpdates = findPendingUpdates(tracing.id, existingVersion, newVersion)
+        for {
+          updatedTracing <- update(tracing, pendingUpdates, newVersion)
+        } yield {
+          save(updatedTracing)
+          updatedTracing
+        }
+      } else {
+        Full(tracing)
       }
-    } else {
-      Some(tracing)
     }
   }
 
-  private def findDesiredOrNewestPossibleVersion(desiredVersion: Option[Long], tracingVersioned: VersionedKeyValuePair[SkeletonTracing]): Long = {
+  private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracing, desiredVersion: Option[Long]): Fox[Long] = {
     (for {
-      newestUpdate <- tracingDataStore.skeletonUpdates.get(tracingVersioned.value.id)
+      newestUpdate <- tracingDataStore.skeletonUpdates.get(tracing.id)
     } yield {
       desiredVersion match {
         case None => newestUpdate.version
         case Some(desiredSome) => math.min(desiredSome, newestUpdate.version)
       }
-    }).getOrElse(tracingVersioned.version) //if there are no updates at all, assume tracing was created from NML
+    }).getOrElse(tracing.version) //if there are no updates at all, assume tracing was created from NML
   }
 
   private def findPendingUpdates(tracingId: String, existingVersion: Long, desiredVersion: Long): List[SkeletonUpdateAction] = {
@@ -90,21 +89,21 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  private def update(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction], newVersion: Long): Box[SkeletonTracing] = {
-    def updateIter(tracingBox: Box[SkeletonTracing], remainingUpdates: List[SkeletonUpdateAction]): Box[SkeletonTracing] = {
-      tracingBox match {
-        case Empty => Empty
+  private def update(tracing: SkeletonTracing, updates: List[SkeletonUpdateAction], newVersion: Long): Fox[SkeletonTracing] = {
+    def updateIter(tracingFox: Fox[SkeletonTracing], remainingUpdates: List[SkeletonUpdateAction]): Fox[SkeletonTracing] = {
+      tracingFox.futureBox.flatMap {
+        case Empty => Fox.empty
         case Full(tracing) => {
           remainingUpdates match {
-            case List() => Full(tracing)
+            case List() => Fox.successful(tracing)
             case RevertToVersionAction(sourceVersion) :: tail => {
-              val sourceTracing = findUpdated(tracing.id, Some(sourceVersion))
+              val sourceTracing = find(tracing.id, Some(sourceVersion), useCache = false, applyUpdates = false)
               updateIter(sourceTracing, tail)
             }
             case update :: tail => updateIter(Full(update.applyOn(tracing)), tail)
           }
         }
-        case _ => tracingBox
+        case _ => tracingFox
       }
     }
 
@@ -118,10 +117,9 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  def duplicate(tracing: SkeletonTracing): SkeletonTracing = {
+  def duplicate(tracing: SkeletonTracing): Fox[SkeletonTracing] = {
     val newTracing = tracing.copy(id = createNewId, timestamp = System.currentTimeMillis(), version = 0)
-    save(newTracing)
-    newTracing
+    save(newTracing).map(_ => newTracing)
   }
 
   private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
@@ -192,16 +190,17 @@ class SkeletonTracingService @Inject()(
 
   //TODO: move to wk
   def downloadMultiple(params: DownloadMultipleParameters, dataSourceRepository: DataSourceRepository): Fox[TemporaryFile] = {
-    val nmls:List[(Enumerator[Array[Byte]],String)] = for {
-      tracingParams <- params.tracings
-      tracingVersioned <- findVersioned(tracingParams.tracingId, tracingParams.version)
-      tracingUpdated <- applyPendingUpdates(tracingVersioned, tracingParams.version)
-      tracingAsNml <- downloadNml(tracingUpdated, dataSourceRepository)
-    } yield {
-      (tracingAsNml, tracingParams.outfileName)
+    val nmlsFox = params.tracings.map { tracingParams =>
+      for {
+        tracing <- find(tracingParams.tracingId, tracingParams.version, applyUpdates = true)
+        tracingAsNml <- downloadNml(tracing, dataSourceRepository)
+      } yield {
+        (tracingAsNml, tracingParams.outfileName)
+      }
     }
 
     for {
+      nmls <- Fox.combined(nmlsFox)
       zip <- createZip(nmls, params.zipfileName)
     } yield zip
   }

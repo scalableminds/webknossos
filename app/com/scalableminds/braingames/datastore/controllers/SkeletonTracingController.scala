@@ -5,15 +5,13 @@ package com.scalableminds.braingames.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
-import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.braingames.datastore.tracings.skeleton._
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
-import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class SkeletonTracingController @Inject()(
@@ -24,13 +22,14 @@ class SkeletonTracingController @Inject()(
 
   implicit val tracingFormat = SkeletonTracing.jsonFormat
 
-  def mergedFromContents(persist: Boolean) = Action(validateJson[List[SkeletonTracing]]) {
+  def mergedFromContents(persist: Boolean) = Action.async(validateJson[List[SkeletonTracing]]) {
     implicit request => {
       AllowRemoteOrigin {
         val tracings = request.body
         val mergedTracing = tracingService.merge(tracings)
-        tracingService.save(mergedTracing)
-        Ok(Json.toJson(TracingReference(mergedTracing.id, TracingType.skeleton)))
+        tracingService.save(mergedTracing, toCache = !persist).map { _ =>
+          Ok(Json.toJson(TracingReference(mergedTracing.id, TracingType.skeleton)))
+        }
       }
     }
   }
@@ -39,10 +38,10 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracings <- tracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
+          tracings <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages("tracing.notFound")
+          merged = tracingService.merge(tracings)
+          _ <- tracingService.save(merged, toCache = !persist)
         } yield {
-          val merged = tracingService.merge(tracings)
-          tracingService.save(merged)
           Ok(Json.toJson(TracingReference(merged.id, TracingType.skeleton)))
         }
       }
@@ -53,7 +52,7 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId, useCache = false) ?~> Messages("tracing.notFound")
           _ <- tracingService.saveUpdates(tracingId, request.body)
         } yield {
           Ok
@@ -66,14 +65,12 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracingVersioned <- tracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
-          updatedTracing <- tracingService.applyPendingUpdates(tracingVersioned, version)
+          tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
+          newTracing <- tracingService.duplicate(tracing)
         } yield {
-          val newTracing = tracingService.duplicate(updatedTracing)
           Ok(Json.toJson(TracingReference(newTracing.id, TracingType.skeleton)))
         }
       }
     }
   }
-
 }

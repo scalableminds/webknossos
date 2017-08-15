@@ -7,15 +7,15 @@ import java.io.File
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.braingames.binary.models.BucketPosition
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingService, TracingType}
 import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.wrap.WKWFile
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Box, Failure}
 import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.reflect._
 
 class VolumeTracingService @Inject()(
                                       tracingDataStore: TracingDataStore
@@ -24,6 +24,8 @@ class VolumeTracingService @Inject()(
   implicit val tracingFormat = VolumeTracing.volumeTracingFormat
 
   implicit val volumeDataStore = tracingDataStore.volumeData
+
+  implicit val tag = classTag[VolumeTracing]
 
   val tracingType = TracingType.volume
 
@@ -47,8 +49,8 @@ class VolumeTracingService @Inject()(
     }
   }
 
-  def update(tracing: VolumeTracing, updates: List[VolumeUpdateAction]): Box[_] = {
-    updates.foldLeft[Box[Unit]](Full(())) {
+  def update(tracing: VolumeTracing, updates: List[VolumeUpdateAction]): Fox[_] = {
+    /*updates.foldLeft[Fox[_]](Fox.successful(())) {
       case (_: Full[Unit], action: UpdateBucketVolumeAction) =>
         val resolution = math.pow(2, action.zoomStep).toInt
         val bucket = new BucketPosition(action.position.x, action.position.y, action.position.z, resolution)
@@ -57,7 +59,8 @@ class VolumeTracingService @Inject()(
         Failure("Unknown action.")
       case (f, _) =>
         f
-    }
+    }*/
+    Fox.successful(())
   }
 
   def data(tracing: VolumeTracing): Enumerator[Array[Byte]] = {

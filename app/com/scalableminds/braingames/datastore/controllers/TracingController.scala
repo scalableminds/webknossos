@@ -35,7 +35,7 @@ trait TracingController[T <: Tracing] extends Controller {
       AllowRemoteOrigin {
         // TODO how do we handle failures?
         val tracings = request.body
-        tracings.foreach(tracingService.save)
+        tracings.foreach(tracing => tracingService.save(tracing, toCache = false))
         val references = tracings.map(t => TracingReference("t.id", TracingType.skeleton))
         Ok(Json.toJson(references))
       }
@@ -46,7 +46,7 @@ trait TracingController[T <: Tracing] extends Controller {
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracing <- tracingService.findUpdated(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
           Ok(Json.toJson(tracing))
         }
@@ -57,7 +57,11 @@ trait TracingController[T <: Tracing] extends Controller {
   def getMultiple = Action.async(validateJson[List[TracingSelector]]) {
     implicit request => {
       AllowRemoteOrigin {
-        tracingService.findMultipleUpdated(request.body).map(tracings => Ok(Json.toJson(tracings)))
+        for {
+          tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
+        } yield {
+          Ok(Json.toJson(tracings))
+        }
       }
     }
   }

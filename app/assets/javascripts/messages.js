@@ -22,4 +22,6 @@ In order to restore the current window, a reload is necessary.`,
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
   "dataset.upload_success": "The dataset was uploaded successfully",
+  "annotation.dataset_no_public":
+    "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
 };

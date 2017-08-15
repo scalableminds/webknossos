@@ -23,6 +23,7 @@ const window = {
     pathname: "annotationUrl",
   },
   alert: console.log.bind(console),
+  open: sinon.spy(),
 };
 const currentUser = {
   firstName: "SCM",
@@ -36,7 +37,7 @@ export const KeyboardJS = {
   bind: _.noop,
   unbind: _.noop,
 };
-mockRequire("keyboardjs", KeyboardJS);
+mockRequire("libs/keyboard", KeyboardJS);
 mockRequire("libs/toast", { error: _.noop });
 mockRequire("libs/window", window);
 mockRequire("libs/request", Request);
@@ -62,6 +63,9 @@ export function setupOxalis(t, mode) {
   const webknossos = new OxalisApi(model);
 
   Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(modelData[mode])));
+  Request.receiveJSON
+    .withArgs("/dataToken/generate?dataSetName=2012-09-28_ex145_07x2&dataLayerName=color")
+    .returns(Promise.resolve({ token: "secure-token" }));
 
   return model
     .fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)

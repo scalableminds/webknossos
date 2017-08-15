@@ -99,6 +99,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+        isPublic: action.tracing.isPublic,
         tags: [action.tracing.typ, action.tracing.dataSetName],
       };
 
@@ -358,6 +359,14 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               ),
             )
             .getOrElse(state);
+        }
+
+        case "SET_TRACING": {
+          return update(state, {
+            tracing: {
+              $set: update(action.tracing, { version: { $set: skeletonTracing.version } }),
+            },
+          });
         }
 
         case "TOGGLE_TREE": {

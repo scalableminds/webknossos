@@ -5,6 +5,7 @@
 # The general pages
 GET           /                                                                 controllers.Application.index
 GET           /dashboard                                                        controllers.UserController.empty
+GET           /dashboard-old                                                  controllers.UserController.empty
 GET           /impressum                                                        controllers.Application.impressum
 GET           /info                                                             controllers.Application.info
 GET           /thankyou                                                         controllers.Application.thankyou

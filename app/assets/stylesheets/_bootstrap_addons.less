@@ -4,7 +4,7 @@
   display: inline-block;
   vertical-align: middle;
   height: 25px;
-  margin: 0 9px;
+  margin: 0 8px;
   border-right: 1px solid #e5e5e5;
 }
 
@@ -23,7 +23,7 @@
 }
 
 .table-double-striped > tbody {
-  & > tr:nth-child(odd) > td{
+  & > tr:nth-child(odd) > td {
     background-color: inherit;
   }
   & > tr:nth-child(even) > td {
@@ -32,12 +32,12 @@
 }
 
 .table-double-striped {
- & > tbody:nth-child(odd) > tr > td{
-  background-color: #fff;
- }
- & > tbody:nth-child(even) > tr > td{
-  background-color: #f9f9f9;
- }
+  & > tbody:nth-child(odd) > tr > td {
+    background-color: #fff;
+  }
+  & > tbody:nth-child(even) > tr > td {
+    background-color: #f9f9f9;
+  }
 }
 
 .table-nohead {
@@ -45,7 +45,8 @@
     border: none;
   }
   tbody tr:first-child {
-    td, th {
+    td,
+    th {
       border-top: none;
     }
   }
@@ -65,7 +66,6 @@ div[data-toggle='collapse'] {
   cursor: pointer;
 }
 
-
 // #####################################
 // OVERRIDE BOOTSTRAP'S DEFAULTS
 // #####################################
@@ -74,7 +74,7 @@ div[data-toggle='collapse'] {
   padding-bottom: 10px !important;
 }
 .navbar {
-  min-height: @navbar-height !important
+  min-height: @navbar-height !important;
 }
 
 .alert button.close {

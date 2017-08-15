@@ -3,14 +3,10 @@
 */
 package com.scalableminds.braingames.datastore.controllers
 
-import java.io.File
-
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
-import com.scalableminds.braingames.datastore.services.AccessTokenService
+import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracing, VolumeTracingService, VolumeUpdateActionGroup}
 import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingReference, TracingType}
-import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateAction}
-import com.scalableminds.util.tools.Fox
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -18,50 +14,33 @@ import play.api.mvc.Action
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class VolumeTracingController @Inject()(
-                                         volumeTracingService: VolumeTracingService,
-                                         dataSourceRepository: DataSourceRepository,
+                                         val tracingService: VolumeTracingService,
+                                         val dataSourceRepository: DataSourceRepository,
                                          tracingDataStore: TracingDataStore,
-                                         val accessTokenService: AccessTokenService,
                                          val messagesApi: MessagesApi
-                                       ) extends TokenSecuredController {
+                                       ) extends TracingController[VolumeTracing] {
 
-  implicit val volumeDataStore = tracingDataStore.volumeData
+  implicit val bucketStore = tracingDataStore.volumeData
 
-  def createFromParams(dataSetName: String) = Action.async {
-    implicit request => {
+  implicit val tracingFormat = VolumeTracing.volumeTracingFormat
+
+  def initialData(tracingId: String) = Action.async {
+    implicit request =>
       AllowRemoteOrigin {
-        create(dataSetName, None).map(tracing => Ok(Json.toJson(tracing)))
+        for {
+          initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          _ <- tracingService.initializeWithData(tracing, initialData)
+        } yield Ok(Json.toJson(TracingReference(tracing.id, TracingType.volume)))
       }
-    }
   }
 
-  def createFromZip(dataSetName: String) = Action.async {
-    implicit request => {
-      AllowRemoteOrigin {
-        val initialContent = request.body.asRaw.map(_.asFile)
-        create(dataSetName, initialContent).map(tracing => Ok(Json.toJson(tracing)))
-      }
-    }
-  }
-
-  def get(tracingId: String, version: Option[Long]) = Action.async {
+  def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateActionGroup]]) {
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-        } yield {
-          Ok(Json.toJson(tracing))
-        }
-      }
-    }
-  }
-
-  def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateAction]]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          _ <- volumeTracingService.update(tracing, request.body)
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          //_ <- withAuthorizedUpdate(tracing.version, request.body)(updates => volumeTracingService.update(tracing, updates.actions))
         } yield {
           Ok
         }
@@ -69,23 +48,15 @@ class VolumeTracingController @Inject()(
     }
   }
 
-  def download(tracingId: String, version: Option[Long]) = Action.async {
+  def getData(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracing <- volumeTracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
         } yield {
-          Ok.chunked(volumeTracingService.download(tracing))
+          Ok.chunked(tracingService.data(tracing))
         }
       }
-    }
-  }
-
-  private def create(dataSetName: String, initialContent: Option[File]): Fox[TracingReference] = {
-    for {
-      dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound")
-    } yield {
-      TracingReference(volumeTracingService.create(dataSource, initialContent).id, TracingType.volume)
     }
   }
 }

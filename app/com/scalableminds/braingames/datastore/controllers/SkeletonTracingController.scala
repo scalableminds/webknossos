@@ -5,7 +5,6 @@ package com.scalableminds.braingames.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
-import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.braingames.datastore.tracings.skeleton._
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
@@ -18,39 +17,19 @@ import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class SkeletonTracingController @Inject()(
-                                         webKnossosServer: WebKnossosServer,
-                                         skeletonTracingService: SkeletonTracingService,
-                                         dataSourceRepository: DataSourceRepository,
-                                         val messagesApi: MessagesApi
-                                       ) extends Controller {
+                                           val tracingService: SkeletonTracingService,
+                                           val dataSourceRepository: DataSourceRepository,
+                                           val messagesApi: MessagesApi
+                                       ) extends TracingController[SkeletonTracing] {
 
-  def save = Action(validateJson[SkeletonTracing]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        val tracing = request.body
-        skeletonTracingService.save(tracing)
-        Ok(Json.toJson(TracingReference(tracing.id, TracingType.skeleton)))
-      }
-    }
-  }
-
-  def saveMultiple = Action(validateJson[List[SkeletonTracing]]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        val tracings = request.body
-        tracings.foreach(skeletonTracingService.save)
-        val references = tracings.map(t => TracingReference(t.id, TracingType.skeleton))
-        Ok(Json.toJson(references))
-      }
-    }
-  }
+  implicit val tracingFormat = SkeletonTracing.jsonFormat
 
   def mergedFromContents(persist: Boolean) = Action(validateJson[List[SkeletonTracing]]) {
     implicit request => {
       AllowRemoteOrigin {
         val tracings = request.body
-        val mergedTracing = skeletonTracingService.merge(tracings)
-        skeletonTracingService.save(mergedTracing)
+        val mergedTracing = tracingService.merge(tracings)
+        tracingService.save(mergedTracing)
         Ok(Json.toJson(TracingReference(mergedTracing.id, TracingType.skeleton)))
       }
     }
@@ -60,37 +39,11 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracings <- skeletonTracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
+          tracings <- tracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
         } yield {
-          val merged = skeletonTracingService.merge(tracings)
-          skeletonTracingService.save(merged)
+          val merged = tracingService.merge(tracings)
+          tracingService.save(merged)
           Ok(Json.toJson(TracingReference(merged.id, TracingType.skeleton)))
-        }
-      }
-    }
-  }
-
-
-  def get(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
-          updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
-        } yield {
-          Ok(Json.toJson(updatedTracing))
-        }
-      }
-    }
-  }
-
-  def getMultiple = Action.async(validateJson[List[TracingSelector]]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracings <- skeletonTracingService.findMultipleUpdated(request.body) ?~> Messages("tracing.notFound")
-        } yield {
-          Ok(Json.toJson(tracings))
         }
       }
     }
@@ -100,8 +53,8 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracing <- skeletonTracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          _ <- skeletonTracingService.saveUpdates(tracingId, request.body)
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+          _ <- tracingService.saveUpdates(tracingId, request.body)
         } yield {
           Ok
         }
@@ -113,10 +66,10 @@ class SkeletonTracingController @Inject()(
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracingVersioned <- skeletonTracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
-          updatedTracing <- skeletonTracingService.applyPendingUpdates(tracingVersioned, version)
+          tracingVersioned <- tracingService.findVersioned(tracingId, version) ?~> Messages("tracing.notFound")
+          updatedTracing <- tracingService.applyPendingUpdates(tracingVersioned, version)
         } yield {
-          val newTracing = skeletonTracingService.duplicate(updatedTracing)
+          val newTracing = tracingService.duplicate(updatedTracing)
           Ok(Json.toJson(TracingReference(newTracing.id, TracingType.skeleton)))
         }
       }

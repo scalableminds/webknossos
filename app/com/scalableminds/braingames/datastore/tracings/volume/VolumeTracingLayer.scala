@@ -37,7 +37,7 @@ case class VolumeTracingLayer(
                                boundingBox: BoundingBox,
                                elementClass: ElementClass.Value,
                                largestSegmentId: Long,
-                               resolutions: List[Int] = List(1),
+                               val resolutions: List[Int] = List(1),
                                override val category: Category.Value = Category.segmentation
                              )(implicit val volumeDataStore: VersionedKeyValueStore) extends SegmentationLayer {
 
@@ -51,10 +51,23 @@ case class VolumeTracingLayer(
 }
 
 object VolumeTracingLayer {
+  implicit def volumeTracingLayerFormat(implicit volumeDataStore: VersionedKeyValueStore) = Json.format[VolumeTracingLayer]
+}
+
+case class AbstractVolumeTracingLayer(
+                                       name: String,
+                                       boundingBox: BoundingBox,
+                                       elementClass: ElementClass.Value,
+                                       largestSegmentId: Long,
+                                       resolutions: List[Int] = List(1),
+                                       category: Category.Value = Category.segmentation
+                                     )
+
+object AbstractVolumeTracingLayer {
 
   val defaultElementClass = ElementClass.uint32
 
   val defaultLargestSegmentId = 0L
 
-  implicit def volumeTracingLayerFormat(implicit volumeDataStore: VersionedKeyValueStore) = Json.format[VolumeTracingLayer]
+  implicit val abstractVolumeTracingLayerFormat = Json.format[AbstractVolumeTracingLayer]
 }

@@ -27,15 +27,13 @@ POST        /datasets/:dataSetName                                              
 GET         /datasets/:dataSetName                                                             @com.scalableminds.braingames.datastore.controllers.DataSourceController.explore(dataSetName: String)
 
 # Volume tracings
-POST        /tracings/volume/createFromParams                                                  @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.createFromParams(dataSetName: String)
-POST        /tracings/volume/createFromZip                                                     @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.createFromZip(dataSetName: String)
-
+POST        /tracings/volume/save                                                              @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.save
+POST        /tracings/volume/:tracingId/initialData                                            @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.initialData(tracingId: String)
 GET         /tracings/volume/:tracingId                                                        @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.get(tracingId: String, version: Option[Long])
 POST        /tracings/volume/:tracingId/update                                                 @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.update(tracingId: String)
-GET         /tracings/volume/:tracingId/download                                               @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(tracingId: String, version: Option[Long])
+GET         /tracings/volume/:tracingId/data                                                   @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.getData(tracingId: String, version: Option[Long])
 
 # Skeleton tracings
-
 POST        /tracings/skeleton/save                                                            @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.save
 POST        /tracings/skeleton/saveMultiple                                                    @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.saveMultiple
 

@@ -3,7 +3,7 @@
  */
 package com.scalableminds.braingames.datastore.tracings.volume
 
-import com.scalableminds.braingames.binary.models.datasource.{DataSource, SegmentationLayer}
+import com.scalableminds.braingames.binary.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValueStore
 import com.scalableminds.braingames.datastore.tracings.Tracing
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
@@ -18,15 +18,15 @@ case class VolumeTracing(
                           editRotation: Vector3D,
                           zoomLevel: Double,
                           fallbackLayer: Option[String],
-                          boundingBox: Option[BoundingBox] = None,
                           version: Long = 0L,
                           timestamp: Long = System.currentTimeMillis()
                         ) extends Tracing with LazyLogging {
 
   def id: String = dataLayer.name
 
-  // TODO
-  override def volumes: List[Volume] = List(Volume("data.zip"))
+  override def volumes: List[Volume] = List(Volume(s"$id.zip"))
+
+  def boundingBox: Option[BoundingBox] = None
 
   def dataLayerWithFallback(dataSource: DataSource): SegmentationLayer = {
     fallbackLayer.flatMap(dataSource.getDataLayer).map {
@@ -43,6 +43,23 @@ case class VolumeTracing(
 object VolumeTracing {
 
   implicit def volumeTracingFormat(implicit bucketStore: VersionedKeyValueStore) = Json.format[VolumeTracing]
+}
+
+case class AbstractVolumeTracing(
+                                  dataSetName: String,
+                                  dataLayer: AbstractVolumeTracingLayer,
+                                  fallbackLayer: Option[String],
+                                  editPosition: Point3D,
+                                  editRotation: Vector3D = Vector3D(),
+                                  zoomLevel: Double = AbstractVolumeTracing.defaultZoomLevel,
+                                  version: Long = 0L,
+                                  activeSegmentId: Option[Long] = None,
+                                  timestamp: Long = System.currentTimeMillis()
+                                )
+
+object AbstractVolumeTracing {
 
   val defaultZoomLevel: Double = 2.0
+
+  implicit val abstractVolumeTracingFormat = Json.format[AbstractVolumeTracing]
 }

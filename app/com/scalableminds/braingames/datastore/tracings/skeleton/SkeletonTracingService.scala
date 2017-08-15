@@ -1,12 +1,11 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
 import java.io.{BufferedOutputStream, File, FileOutputStream}
-import java.util.UUID
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValuePair
-import com.scalableminds.braingames.datastore.tracings.TracingDataStore
+import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingService, TracingType}
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{BranchPoint, Node, SkeletonTracing, Tree}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.image.Color
@@ -25,21 +24,16 @@ import scala.io.Source
   */
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore
-                                      ) extends FoxImplicits with TextUtils {
+                                      ) extends TracingService[SkeletonTracing] with FoxImplicits with TextUtils {
 
-  def createNewId(): String = UUID.randomUUID.toString
+  implicit val tracingFormat = SkeletonTracing.jsonFormat
 
-  def find(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
-    tracingDataStore.skeletons.getJson[SkeletonTracing](tracingId, version).map(_.value)
+  val tracingType = TracingType.skeleton
 
-  def findVersioned(tracingId: String, version: Option[Long] = None): Box[VersionedKeyValuePair[SkeletonTracing]] =
-    tracingDataStore.skeletons.getJson[SkeletonTracing](tracingId, version)
+  val tracingStore = tracingDataStore.skeletons
 
-  def findUpdated(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
+  override def findUpdated(tracingId: String, version: Option[Long] = None): Box[SkeletonTracing] =
     findVersioned(tracingId, version).flatMap(tracing => applyPendingUpdates(tracing, version))
-
-  //TODO: caching
-  def save(tracing: SkeletonTracing) = tracingDataStore.skeletons.putJson(tracing.id, tracing.version, tracing)
 
   def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[Unit]] = {
     Fox.combined(for {
@@ -125,7 +119,7 @@ class SkeletonTracingService @Inject()(
   }
 
   def duplicate(tracing: SkeletonTracing): SkeletonTracing = {
-    val newTracing = tracing.copy(id = createNewId(), timestamp = System.currentTimeMillis(), version = 0)
+    val newTracing = tracing.copy(id = createNewId, timestamp = System.currentTimeMillis(), version = 0)
     save(newTracing)
     newTracing
   }
@@ -143,12 +137,7 @@ class SkeletonTracingService @Inject()(
     tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBoxes, version = 0)
   }
 
-  def findMultipleUpdated(tracingSelectors: List[TracingSelector]): Fox[List[SkeletonTracing]] = {
-    val boxes = tracingSelectors.map(selector => findUpdated(selector.tracingId, selector.version))
-    Fox.combined(boxes.map(_.toFox))
-  }
-
-  def merge(tracings: List[SkeletonTracing], newId: String = createNewId()): SkeletonTracing = {
+  def merge(tracings: List[SkeletonTracing], newId: String = createNewId): SkeletonTracing = {
     val merged: SkeletonTracing = tracings.reduceLeft(mergeTwo)
     merged.copy(id=newId)
   }
@@ -158,7 +147,7 @@ class SkeletonTracingService @Inject()(
 
   //TODO: move to wk
   def create(dataSetName: String, parameters: CreateEmptyParameters): SkeletonTracing = {
-    val id = createNewId()
+    val id = createNewId
     val tracing = SkeletonTracing(
       id = id,
       dataSetName = dataSetName,
@@ -254,7 +243,7 @@ class SkeletonTracingService @Inject()(
           if (!isNml) Empty
           else {
             val nml = Source.fromInputStream(is).mkString
-            NmlParser.parse(createNewId(), filePath.getFileName.toString, nml)
+            NmlParser.parse(createNewId, filePath.getFileName.toString, nml)
           }
         }
       }

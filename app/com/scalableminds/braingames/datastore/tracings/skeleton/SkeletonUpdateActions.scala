@@ -1,11 +1,10 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
-import com.scalableminds.braingames.datastore.tracings.UpdateActionGroup
+import com.scalableminds.braingames.datastore.tracings.{UpdateAction, UpdateActionGroup}
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.util.image.Color
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements._
 import play.api.libs.json._
-
 
 trait SkeletonUpdateAction {
   def applyOn(tracing: SkeletonTracing): SkeletonTracing
@@ -152,5 +151,5 @@ object SkeletonUpdateAction {
   }
 }
 
-case class SkeletonUpdateActionGroup(version: Long, timestamp: Long, actions: List[SkeletonUpdateAction]) extends UpdateActionGroup
+case class SkeletonUpdateActionGroup(version: Long, timestamp: Long, actions: List[SkeletonUpdateAction])
 object SkeletonUpdateActionGroup {implicit val jsonFormat = Json.format[SkeletonUpdateActionGroup]}

@@ -2,15 +2,17 @@ package com.scalableminds.braingames.datastore.tracings.volume
 
 import java.util.Base64
 
+import com.scalableminds.braingames.datastore.tracings.{UpdateAction, UpdateActionGroup}
 import com.scalableminds.util.geometry.Point3D
 import play.api.libs.json._
 
 case class UpdateBucketVolumeAction(position: Point3D, bucketSize: Int, zoomStep: Int, base64Data: String) extends VolumeUpdateAction {
-  def data: Array[Byte] = Base64.getDecoder().decode(base64Data)
 
-  def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    tracing
-  }
+  lazy val data: Array[Byte] = Base64.getDecoder().decode(base64Data)
+
+  //def applyTo(tracing: VolumeTracing): VolumeTracing = {
+  //  tracing
+  //}
 }
 
 object UpdateBucketVolumeAction {
@@ -18,19 +20,16 @@ object UpdateBucketVolumeAction {
 }
 
 case class UpdateTracingVolumeAction(something: Int) extends VolumeUpdateAction {
-
-  def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    tracing
-  }
+  //def applyOn(tracing: VolumeTracing): VolumeTracing = {
+  //  tracing
+  //}
 }
 
 object UpdateTracingVolumeAction {
   implicit val updateTracingVolumeActionFormat = Json.format[UpdateTracingVolumeAction]
 }
 
-trait VolumeUpdateAction {
-  def applyOn(tracing: VolumeTracing): VolumeTracing
-}
+trait VolumeUpdateAction extends UpdateAction[VolumeTracing]
 
 object VolumeUpdateAction {
 
@@ -43,4 +42,10 @@ object VolumeUpdateAction {
       }
     }
   }
+}
+
+case class VolumeUpdateActionGroup(version: Long, timestamp: Long, actions: List[VolumeUpdateAction]) extends UpdateActionGroup[VolumeTracing]
+
+object VolumeUpdateActionGroup {
+  implicit val volumeUpdateActionGroupReads = Json.reads[VolumeUpdateActionGroup]
 }

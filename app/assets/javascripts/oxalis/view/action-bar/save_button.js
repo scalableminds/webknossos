@@ -49,7 +49,7 @@ class SaveButton extends React.PureComponent {
 
 function mapStateToProps(state: OxalisState) {
   return {
-    save: state.save,
+    save: state.save, // Used to force updates in a reactive and immediate way. Works well for skeleton tracings (but not volume)
   };
 }
 

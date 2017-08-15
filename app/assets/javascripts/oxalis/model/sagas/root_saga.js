@@ -2,7 +2,11 @@
 
 import { watchPushSettingsAsync, initializeSettingsAsync } from "oxalis/model/sagas/settings_saga";
 import { watchSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
-import { pushAnnotationAsync, saveTracingAsync } from "oxalis/model/sagas/save_saga";
+import {
+  pushAnnotationAsync,
+  saveTracingAsync,
+  collectUndoStates,
+} from "oxalis/model/sagas/save_saga";
 import {
   editVolumeLayerAsync,
   disallowVolumeTracingWarning,
@@ -29,6 +33,7 @@ function* restartableSaga(): Generator<*, *, *> {
       initializeSettingsAsync(),
       watchPushSettingsAsync(),
       watchSkeletonTracingAsync(),
+      collectUndoStates(),
       saveTracingAsync(),
       pushAnnotationAsync(),
       editVolumeLayerAsync(),

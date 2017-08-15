@@ -84,7 +84,9 @@ class DatasetActionsView extends PureComponent {
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
 
-    win.location.href = Model.tracing.downloadUrl;
+    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
+      .annotationId}/download`;
+    win.location.href = url;
     win.document.body.innerHTML = messages["download.close_window"];
   };
 

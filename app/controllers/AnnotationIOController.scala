@@ -2,9 +2,15 @@ package controllers
 
 import javax.inject.Inject
 
+import com.scalableminds.braingames.binary.helpers.DataSourceRepository
+import com.scalableminds.braingames.binary.models.datasource.DataSource
+import com.scalableminds.braingames.datastore.tracings.skeleton.NmlWriter
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
+import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{AnnotationType, _}
+import models.binary.DataSetDAO
 import models.project.{Project, ProjectDAO}
 import models.task.{Task, _}
 import models.user._
@@ -13,6 +19,7 @@ import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.mvc.MultipartFormData
 
@@ -76,6 +83,27 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 //    } else {
 //      returnError(parsedFiles)
 //    }
+  }
+
+
+  def download(typ: String, id: String) = Authenticated.async { implicit request =>
+    withAnnotation(AnnotationIdentifier(typ, id)) {
+      annotation =>
+        logger.trace(s"Requested download for tracing: $typ/$id")
+        for {
+          name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
+          _ <- annotation.restrictions.allowDownload(request.user) ?~> Messages("annotation.download.notAllowed")
+          dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> Messages("dataSet.notFound", annotation.dataSetName)
+          tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference) //TODO RocksDB: what if it is a volume tracing?
+          nmlStream = Enumerator.outputStream { os => NmlWriter.toNml(tracing, os, Scale(1,1,1)).map(_ => os.close()) } //TODO: get proper scale from dataSource
+        } yield {
+          Ok.chunked(nmlStream).withHeaders(
+            CONTENT_TYPE ->
+              "application/octet-stream",
+            CONTENT_DISPOSITION ->
+              s"filename=${'"'}${name}.nml${'"'}")
+        }
+    }
   }
 
   def projectDownload(projectName: String) = Authenticated.async { implicit request =>

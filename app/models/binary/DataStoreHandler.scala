@@ -24,6 +24,9 @@ import play.api.mvc.Codec
 
 trait DataStoreHandlingStrategy {
 
+  def getSkeletonTracing(reference: TracingReference): Fox[SkeletonTracing] =
+    Fox.failure("DataStore doesn't support getting SkeletonTracings")
+
   def saveSkeletonTracing(tracing: SkeletonTracing): Fox[TracingReference] =
     Fox.failure("DataStore doesn't support saving SkeletonTracings.")
 
@@ -54,6 +57,13 @@ object DataStoreHandlingStrategy {
 }
 
 class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) extends DataStoreHandlingStrategy with LazyLogging {
+
+  override def getSkeletonTracing(reference: TracingReference): Fox[SkeletonTracing] = {
+    logger.debug("Called to get SkeletonTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/${reference.id}")
+      .withQueryString("token" -> DataTokenService.webKnossosToken)
+      .getWithJsonResponse[SkeletonTracing]
+  }
 
   override def saveSkeletonTracing(tracing: SkeletonTracing): Fox[TracingReference] = {
     logger.debug("Called to create empty SkeletonTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)

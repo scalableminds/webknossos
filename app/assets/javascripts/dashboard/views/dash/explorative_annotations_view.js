@@ -14,6 +14,7 @@ import update from "immutability-helper";
 import app from "app";
 import TemplateHelpers from "libs/template_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -265,10 +266,10 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   renderTable() {
     return (
       <Table
-        dataSource={Utils.filterWithSearchQuery(
+        dataSource={Utils.filterWithSearchQueryAND(
           this.getCurrentTracings(),
           ["id", "name", "dataSetName", "contentType"],
-          this.state.searchQuery,
+          this.state.searchQuery + " " + this.state.tags.join(" "),
         )}
         rowKey="id"
         pagination={{
@@ -348,7 +349,10 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     const search = (
       <Search
         style={{ width: 200, float: "right" }}
-        onPressEnter={this.handleSearch}
+        onPressEnter={(event: SyntheticInputEvent) => {
+          this.addTagToSearch(event.target.value);
+          this.handleSearch(event);
+        }}
         onChange={this.handleSearch}
       />
     );

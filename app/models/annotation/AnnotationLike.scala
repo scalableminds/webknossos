@@ -94,6 +94,15 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
     }
   }
 
+  def tomsFakeTags(a: AnnotationLike): Future[JsArray] = {
+    (for {
+      dataSetName <- a.dataSetName
+      content <- a.content
+    } yield {
+      Json.arr(dataSetName, content.contentType)
+    } ).getOrElse(Json.arr())
+  }
+
   def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User], exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] = {
     JsonObjectWithFilter(exclude)(
       "version" +> a.version,
@@ -114,7 +123,7 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
       "dataSetName" +> a.dataSetName,
       "tracingTime" +> a.tracingTime,
       "isPublic" +> a.isPublic,
-      "tags" +> a.dataSetName.map(name => Json.arr(a.typ, name))
+      "tags" +> tomsFakeTags(a)
     )
   }
 }

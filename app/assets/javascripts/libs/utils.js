@@ -284,7 +284,7 @@ const Utils = {
 
   // Filters an array given a search string. Supports searching for several words as OR query.
   // Supports nested properties
-  filterWithSearchQuery<T: Object>(
+  filterWithSearchQueryOR<T: Object>(
     collection: Array<T>,
     properties: Array<string>,
     searchQuery: string,
@@ -308,6 +308,39 @@ const Utils = {
           } else {
             return false;
           }
+        }),
+      );
+    }
+  },
+
+  // Filters an array given a search string. Supports searching for several words as AND query.
+  // Supports nested properties
+  filterWithSearchQueryAND<T: Object>(
+    collection: Array<T>,
+    properties: Array<string>,
+    searchQuery: string,
+  ): Array<T> {
+    if (searchQuery === "") {
+      return collection;
+    } else {
+      const words = _.map(searchQuery.split(" "), element =>
+        element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
+      );
+      const uniques = _.filter(_.uniq(words), element => element !== "");
+      const patterns = uniques.map(pattern => new RegExp(pattern, "igm"));
+
+      return collection.filter(model =>
+        _.every(patterns, pattern => {
+          debugger;
+          return _.some(properties, fieldName => {
+            const value = model[fieldName];
+            if (value !== null) {
+              const values = Utils.getRecursiveKeysAndValues(value);
+              return _.some(values, v => v.toString().match(pattern));
+            } else {
+              return false;
+            }
+          });
         }),
       );
     }

@@ -43,11 +43,12 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         cells: {},
         restrictions,
         volumeTraceOrMoveMode: Constants.VOLUME_MODE_MOVE,
-        name: action.tracing.dataSetName,
+        name: action.tracing.name,
         tracingType: action.tracing.typ,
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+        isPublic: action.tracing.isPublic,
       };
 
       const newState = update(state, { tracing: { $set: volumeTracing } });

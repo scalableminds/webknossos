@@ -1,13 +1,23 @@
 // @flow
 /* eslint-disable import/prefer-default-export */
-type SetTracingNameActionType = {
-  type: "SET_TRACING_NAME",
+type SetAnnotationNameActionType = {
+  type: "SET_ANNOTATION_NAME",
   name: string,
 };
 
-export type AnnotationActionTypes = SetTracingNameActionType;
+type SetAnnotationPubliceActionType = {
+  type: "SET_ANNOTATION_PUBLIC",
+  isPublic: boolean,
+};
 
-export const setTracingNameAction = (name: string): SetTracingNameActionType => ({
-  type: "SET_TRACING_NAME",
+export type AnnotationActionTypes = SetAnnotationNameActionType | SetAnnotationPubliceActionType;
+
+export const setAnnotationNameAction = (name: string): SetAnnotationNameActionType => ({
+  type: "SET_ANNOTATION_NAME",
   name,
+});
+
+export const setAnnotationPublicAction = (isPublic: boolean): SetAnnotationPubliceActionType => ({
+  type: "SET_ANNOTATION_PUBLIC",
+  isPublic,
 });

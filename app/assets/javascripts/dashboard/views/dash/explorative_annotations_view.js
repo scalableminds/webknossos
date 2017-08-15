@@ -1,16 +1,18 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
+import _ from "lodash";
 import React from "react";
 import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
-import { Spin, Input, Table, Button, Upload, Modal } from "antd";
+import { Spin, Input, Table, Button, Upload, Modal, Tag } from "antd";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
 import update from "immutability-helper";
 import app from "app";
+import TemplateHelpers from "libs/template_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 
 const { Column } = Table;
@@ -34,6 +36,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     searchQuery: string,
     requestCount: number,
     isUploadingNML: boolean,
+    tags: Array<string>,
   } = {
     shouldShowArchivedTracings: false,
     archivedTracings: [],
@@ -45,6 +48,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     searchQuery: "",
     requestCount: 0,
     isUploadingNML: false,
+    tags: [],
   };
 
   componentDidMount() {
@@ -248,6 +252,16 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     });
   };
 
+  addTagToSearch = (tag: string): void => {
+    if (!this.state.tags.includes(tag)) {
+      this.setState(update(this.state, { tags: { $push: [tag] } }));
+    }
+  };
+
+  removeTagFromSearch = (tag: string): void => {
+    this.setState({ tags: this.state.tags.filter(t => t !== tag) });
+  };
+
   renderTable() {
     return (
       <Table
@@ -279,11 +293,6 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
             />}
         />
         <Column
-          title="Dataset"
-          dataIndex="dataSetName"
-          sorter={Utils.localeCompareBy("dataSetName")}
-        />
-        <Column
           title="Stats"
           render={(__, tracing) =>
             tracing.stats && tracing.contentType === "skeletonTracing"
@@ -305,7 +314,20 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
                 </div>
               : null}
         />
-        <Column title="Type" dataIndex="contentType" />
+        <Column
+          title="Tags"
+          dataIndex="tags"
+          render={tags =>
+            tags.map(tag =>
+              <Tag
+                key={tag}
+                color={TemplateHelpers.stringToColor(tag)}
+                onClick={_.partial(this.addTagToSearch, tag)}
+              >
+                {tag}
+              </Tag>,
+            )}
+        />
         <Column
           title="Creation Date"
           dataIndex="created"
@@ -361,6 +383,17 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
             </div>}
         <h3>Explorative Annotations</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
+
+        {this.state.tags.map(tag =>
+          <Tag
+            key={tag}
+            color={TemplateHelpers.stringToColor(tag)}
+            afterClose={_.partial(this.removeTagFromSearch, tag)}
+            closable
+          >
+            {tag}
+          </Tag>,
+        )}
 
         {this.state.requestCount === 0
           ? this.renderTable()

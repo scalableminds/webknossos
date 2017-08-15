@@ -171,6 +171,7 @@ export type SkeletonTracingType = {
   +cachedMaxNodeId: number,
   +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
+  +tags: Array<string>,
 };
 
 export type VolumeTracingType = {
@@ -187,6 +188,7 @@ export type VolumeTracingType = {
   +tracingType: VolumeTracingTypeTracingType,
   +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
+  +tags: Array<string>,
 };
 
 export type ReadOnlyTracingType = {
@@ -197,6 +199,7 @@ export type ReadOnlyTracingType = {
   +tracingType: "View",
   +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
+  +tags: Array<string>,
 };
 
 export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;
@@ -405,6 +408,7 @@ export const defaultState: OxalisState = {
       advancedOptionsAllowed: true,
       allowedModes: ["orthogonal", "oblique", "flight"],
     },
+    tags: [],
   },
   save: {
     queue: [],

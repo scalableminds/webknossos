@@ -463,7 +463,7 @@ class DataApi {
   }
 
   /**
-  * Returns the names of the volume tracing layer.
+  * Returns the name of the volume tracing layer.
   * _Volume tracing only!_
   */
   getVolumeTracingLayerName(): string {

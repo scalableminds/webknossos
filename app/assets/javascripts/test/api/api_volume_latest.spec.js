@@ -41,7 +41,7 @@ test("setVolumeMode should throw an error for an invalid mode", t => {
   t.throws(() => api.tracing.setVolumeMode());
 });
 
-test("Data Api: labelVoxels should label a list of voxels", t => {
+test("Data API: labelVoxels should label a list of voxels", t => {
   const { api, model } = t.context;
   const cube = model.getSegmentationBinary().cube;
   sinon.stub(model.getSegmentationBinary().layer, "requestFromStoreImpl").returns(new Uint8Array());
@@ -54,12 +54,12 @@ test("Data Api: labelVoxels should label a list of voxels", t => {
   t.not(cube.getDataValue([11, 12, 13]), 34);
 });
 
-test("Data Api: getVolumeTracingLayerName should return the name of the volume tracing layer", t => {
+test("Data API: getVolumeTracingLayerName should return the name of the volume tracing layer", t => {
   const api = t.context.api;
   t.is(api.data.getVolumeTracingLayerName(), "64007765-cef9-4e31-b206-dba795b5be17");
 });
 
-test("Data Api: downloadRawDataCuboid should open a popup with the correct URL", async t => {
+test("Data API: downloadRawDataCuboid should open a popup with the correct URL", async t => {
   const { api } = t.context;
   const window = mockRequire.reRequire("libs/window");
 

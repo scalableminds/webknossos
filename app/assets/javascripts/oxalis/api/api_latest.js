@@ -541,10 +541,9 @@ class DataApi {
   * if that is not the case, please check your pop-up blocker.
   *
   * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the "segmentation" layer.
-  * api.data.downloadRawVolumeTracingCuboid("segmentation", [0,0,0], [100,200,100]);
+  * api.data.downloadRawDataCuboid("segmentation", [0,0,0], [100,200,100]);
   */
   downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    assertVolume(Store.getState().tracing);
     const dataset = Store.getState().dataset;
     const layer = this.__getLayer(layerName);
 

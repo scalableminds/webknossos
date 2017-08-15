@@ -463,6 +463,17 @@ class DataApi {
   }
 
   /**
+  * Returns the names of the volume tracing layer.
+  * _Volume tracing only!_
+  */
+  getVolumeTracingLayerName(): string {
+    assertVolume(Store.getState().tracing);
+    const layer = this.model.getSegmentationBinary();
+    assertExists(layer, "Segmentation layer not found!");
+    return layer.name;
+  }
+
+  /**
   * Sets a mapping for a given layer.
   *
   * @example
@@ -526,18 +537,16 @@ class DataApi {
   }
 
   /**
-  * Downloads a cuboid of raw data from the volume tracing layer. A new window is opened for the download -
+  * Downloads a cuboid of raw data from a data layer. A new window is opened for the download -
   * if that is not the case, please check your pop-up blocker.
-  * _Volume tracing only!_
   *
-  * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the volume tracing layer.
-  * api.data.downloadRawVolumeTracingCuboid([0,0,0], [100,200,100]);
+  * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the "segmentation" layer.
+  * api.data.downloadRawVolumeTracingCuboid("segmentation", [0,0,0], [100,200,100]);
   */
-  downloadRawVolumeTracingCuboid(topLeft: Vector3, bottomRight: Vector3): Promise<void> {
+  downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
     assertVolume(Store.getState().tracing);
     const dataset = Store.getState().dataset;
-    const layer = this.model.getSegmentationBinary();
-    assertExists(layer, "Segmentation layer not found!");
+    const layer = this.__getLayer(layerName);
 
     return layer.layer.doWithToken(token => {
       const downloadUrl =

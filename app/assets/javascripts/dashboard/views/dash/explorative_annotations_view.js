@@ -263,13 +263,23 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     this.setState({ tags: this.state.tags.filter(t => t !== tag) });
   };
 
+  addTagToAnnotation = (annotation: APIAnnotationType, newTag: string): void => {
+    const newTracings = this.state.unarchivedTracings.map(t => {
+      if (t.id === annotation.id) {
+        return update(annotation, { tags: { $push: [newTag] } });
+      }
+      return t;
+    });
+    this.setState({ unarchivedTracings: newTracings });
+  };
+
   renderTable() {
     return (
       <Table
         dataSource={Utils.filterWithSearchQueryAND(
           this.getCurrentTracings(),
-          ["id", "name", "dataSetName", "contentType"],
-          this.state.searchQuery + " " + this.state.tags.join(" "),
+          ["id", "name", "dataSetName", "contentType", "modified", "tags"],
+          `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
         )}
         rowKey="id"
         pagination={{
@@ -318,21 +328,27 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
         <Column
           title="Tags"
           dataIndex="tags"
-          render={tags =>
-            tags.map(tag =>
-              <Tag
-                key={tag}
-                color={TemplateHelpers.stringToColor(tag)}
-                onClick={_.partial(this.addTagToSearch, tag)}
-              >
-                {tag}
-              </Tag>,
-            )}
+          render={(tags, tracing) =>
+            <div>
+              {tags.map(tag =>
+                <Tag
+                  key={tag}
+                  color={TemplateHelpers.stringToColor(tag)}
+                  onClick={_.partial(this.addTagToSearch, tag)}
+                >
+                  {tag}
+                </Tag>,
+              )}
+              <EditableTextIcon
+                icon="plus"
+                onChange={_.partial(this.addTagToAnnotation, tracing)}
+              />
+            </div>}
         />
         <Column
-          title="Creation Date"
-          dataIndex="created"
-          sorter={Utils.localeCompareBy("created")}
+          title="Modification Date"
+          dataIndex="modified"
+          sorter={Utils.localeCompareBy("modified")}
         />
         <Column
           title="Actions"
@@ -351,7 +367,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
         style={{ width: 200, float: "right" }}
         onPressEnter={(event: SyntheticInputEvent) => {
           this.addTagToSearch(event.target.value);
-          this.handleSearch(event);
+          this.setState({ searchQuery: "" });
         }}
         onChange={this.handleSearch}
       />

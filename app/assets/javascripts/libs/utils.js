@@ -330,9 +330,8 @@ const Utils = {
       const patterns = uniques.map(pattern => new RegExp(pattern, "igm"));
 
       return collection.filter(model =>
-        _.every(patterns, pattern => {
-          debugger;
-          return _.some(properties, fieldName => {
+        _.every(patterns, pattern =>
+          _.some(properties, fieldName => {
             const value = model[fieldName];
             if (value !== null) {
               const values = Utils.getRecursiveKeysAndValues(value);
@@ -340,8 +339,8 @@ const Utils = {
             } else {
               return false;
             }
-          });
-        }),
+          }),
+        ),
       );
     }
   },

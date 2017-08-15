@@ -24,8 +24,12 @@ class EditableTextIcon extends React.PureComponent {
   };
 
   handleOnChange = () => {
-    this.setState({ isEditing: false });
-    this.props.onChange(this.state.value);
+    const value = this.state.value;
+
+    if (value !== "") {
+      this.props.onChange(this.state.value);
+    }
+    this.setState({ isEditing: false, value: "" });
   };
 
   render() {
@@ -37,7 +41,8 @@ class EditableTextIcon extends React.PureComponent {
           value={this.state.value}
           onChange={this.handleInputChange}
           onPressEnter={this.handleOnChange}
-          style={{ width: "60%", margin: "0 10px" }}
+          onBlur={this.handleOnChange}
+          style={{ width: 75 }}
           size="small"
         />
       );

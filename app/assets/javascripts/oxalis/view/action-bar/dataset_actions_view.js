@@ -14,8 +14,6 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 
-const SAVED_POLLING_INTERVAL = 100;
-
 class DatasetActionsView extends PureComponent {
   props: {
     // eslint-disable-next-line react/no-unused-prop-types
@@ -33,19 +31,7 @@ class DatasetActionsView extends PureComponent {
     isMergeModalOpen: false,
   };
 
-  componentDidMount() {
-    this.savedPollingInterval = window.setInterval(this._forceUpdate, SAVED_POLLING_INTERVAL);
-  }
-
-  componentWillUnmount() {
-    window.clearInterval(this.savedPollingInterval);
-  }
-
   modalWrapper: ?HTMLDivElement = null;
-  savedPollingInterval: number = 0;
-  _forceUpdate = () => {
-    this.forceUpdate();
-  };
 
   handleSave = async (event?: SyntheticInputEvent) => {
     if (event != null) {

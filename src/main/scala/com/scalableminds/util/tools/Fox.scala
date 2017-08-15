@@ -4,6 +4,7 @@
 package com.scalableminds.util.tools
 
 import net.liftweb.common.{Box, Empty, Failure, Full}
+import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -31,10 +32,14 @@ trait FoxImplicits {
   implicit def futureOption2Fox[T](f: Future[Option[T]])(implicit ec: ExecutionContext): Fox[T] =
     new Fox(f.map(Box(_)))
 
+  implicit def jsResult2Fox[T](result: JsResult[T])(implicit ec: ExecutionContext): Fox[T] = result match {
+    case JsSuccess(value, _) => Fox.successful(value)
+    case JsError(e) => Fox.failure(s"Invalid json: $e")
+  }
+
   implicit def fox2FutureBox[T](f: Fox[T])(implicit ec: ExecutionContext): Future[Box[T]] =
     f.futureBox
 }
-
 
 object Fox{
   def apply[A](future: Future[Box[A]])(implicit ec: ExecutionContext): Fox[A]  =

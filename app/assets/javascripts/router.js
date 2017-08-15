@@ -16,6 +16,8 @@ import PaginationCollection from "admin/models/pagination_collection";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/views/dashboard_view";
+import DashboardReactView from "dashboard/views/dash/dashboard_view";
+
 import UserModel from "dashboard/models/user_model";
 import SpotlightView from "dashboard/views/spotlight/spotlight_view";
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
@@ -40,12 +42,13 @@ class Router extends BaseRouter {
       "/projects/:id/edit": "projectEdit",
       "/annotations/:type/:id(/readOnly)": "tracingView",
       "/datasets/:id/view": "tracingViewPublic",
-      "/dashboard": "dashboard",
-      "/datasets": "dashboard",
+      "/dashboard": "dashboardReact",
+      "/dashboard-old": "dashboard",
+      "/datasets": "dashboardReact",
       "/datasets/upload": "datasetAdd",
       "/datasets/:name/edit": "datasetEdit",
       "/datasets/:name/import": "datasetImport",
-      "/users/:id/details": "dashboard",
+      "/users/:id/details": "dashboardReact",
       "/taskTypes": "taskTypes",
       "/taskTypes/create": "taskTypesCreate",
       "/taskTypes/:id/edit": "taskTypesCreate",
@@ -288,6 +291,15 @@ class Router extends BaseRouter {
     });
 
     model.fetch();
+  }
+
+  dashboardReact(userID) {
+    const isAdminView = userID !== null;
+    const view = new ReactBackboneWrapper(DashboardReactView, {
+      userID,
+      isAdminView,
+    });
+    this.changeView(view);
   }
 
   spotlight() {

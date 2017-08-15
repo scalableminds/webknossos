@@ -95,7 +95,8 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
           _ <- annotation.restrictions.allowDownload(request.user) ?~> Messages("annotation.download.notAllowed")
           dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> Messages("dataSet.notFound", annotation.dataSetName)
           tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference) //TODO RocksDB: what if it is a volume tracing?
-          nmlStream = Enumerator.outputStream { os => NmlWriter.toNml(tracing, os, Scale(1,1,1)).map(_ => os.close()) } //TODO: get proper scale from dataSource
+          scale <- dataSet.dataSource.toUsable.map(_.scale)
+          nmlStream = Enumerator.outputStream { os => NmlWriter.toNml(tracing, os, scale).map(_ => os.close()) } //TODO: get proper scale from dataSource
         } yield {
           Ok.chunked(nmlStream).withHeaders(
             CONTENT_TYPE ->

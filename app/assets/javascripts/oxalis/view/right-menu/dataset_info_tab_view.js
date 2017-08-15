@@ -10,7 +10,7 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
-import { setTracingNameAction } from "oxalis/model/actions/annotation_actions";
+import { setAnnotationNameAction } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import type { OxalisState, TracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
 
@@ -21,7 +21,7 @@ type DatasetInfoTabStateProps = {
   task: ?TaskType,
 };
 
-type DatasetInfoTabProps = DatasetInfoTabStateProps & { setTracingName: string => void };
+type DatasetInfoTabProps = DatasetInfoTabStateProps & { setAnnotationName: string => void };
 
 class DatasetInfoTabView extends Component {
   props: DatasetInfoTabProps;
@@ -54,8 +54,8 @@ class DatasetInfoTabView extends Component {
     }
   }
 
-  setTracingName = (newName: string) => {
-    this.props.setTracingName(newName);
+  setAnnotationName = (newName: string) => {
+    this.props.setAnnotationName(newName);
   };
 
   render() {
@@ -75,7 +75,7 @@ class DatasetInfoTabView extends Component {
       annotationTypeLabel = (
         <span>
           Explorational Tracing :
-          <EditableTextLabel value={tracingName} onChange={this.setTracingName} />
+          <EditableTextLabel value={tracingName} onChange={this.setAnnotationName} />
         </span>
       );
     }
@@ -160,8 +160,8 @@ const mapStateToProps = (state: OxalisState): DatasetInfoTabStateProps => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  setTracingName(tracingName: string) {
-    dispatch(setTracingNameAction(tracingName));
+  setAnnotationName(tracingName: string) {
+    dispatch(setAnnotationNameAction(tracingName));
   },
 });
 

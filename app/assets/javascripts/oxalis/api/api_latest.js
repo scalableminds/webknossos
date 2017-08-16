@@ -362,7 +362,7 @@ class TracingApi {
     const curPosition = getPosition(Store.getState().flycam);
     const curRotation = getRotation(Store.getState().flycam);
 
-    if (rotation == null) rotation = curRotation;
+    if (!Array.isArray(rotation)) rotation = curRotation;
     rotation = this.getShortestRotation(curRotation, rotation);
 
     const tween = new TWEEN.Tween({

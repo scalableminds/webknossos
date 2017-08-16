@@ -25,11 +25,7 @@ import constants, { ControlModeEnum } from "oxalis/constants";
 import ApiLoader from "oxalis/api/api_loader";
 import api from "oxalis/api/internal_api";
 import { wkReadyAction } from "oxalis/model/actions/actions";
-import {
-  saveNowAction,
-  undoAction,
-  redoAction
-} from "oxalis/model/actions/save_actions";
+import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
@@ -46,7 +42,7 @@ class Controller extends React.PureComponent {
     initialTracingId: string,
     initialControlmode: ControlModeType,
     // Delivered by connect()
-    viewMode: ModeType
+    viewMode: ModeType,
   };
 
   keyboardNoLoop: InputKeyboardNoLoop;
@@ -57,9 +53,9 @@ class Controller extends React.PureComponent {
   stopListening: Function;
 
   state: {
-    ready: boolean
+    ready: boolean,
   } = {
-    ready: false
+    ready: false,
   };
 
   // Main controller, responsible for setting modes and everything
@@ -90,7 +86,7 @@ class Controller extends React.PureComponent {
       this.props.initialTracingType,
       this.props.initialTracingId,
       this.props.initialControlmode,
-      true
+      true,
     )
       .then(() => this.modelFetchDone())
       .catch(error => {
@@ -124,7 +120,7 @@ class Controller extends React.PureComponent {
 
     for (const binaryName of Object.keys(Model.binary)) {
       this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () =>
-        app.vent.trigger("rerender")
+        app.vent.trigger("rerender"),
       );
     }
 
@@ -149,7 +145,7 @@ class Controller extends React.PureComponent {
       } catch (error) {
         console.error(error);
         Toast.error(
-          `Error executing the task script "${script.name}". See console for more information.`
+          `Error executing the task script "${script.name}". See console for more information.`,
         );
       }
     }
@@ -186,9 +182,7 @@ class Controller extends React.PureComponent {
     // avoid scrolling while pressing space
     $(document).keydown((event: JQueryInputEventObject) => {
       if (
-        (event.which === 32 ||
-          event.which === 18 ||
-          (event.which >= 37 && event.which <= 40)) &&
+        (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
         !$(":focus").length
       ) {
         event.preventDefault();
@@ -201,21 +195,15 @@ class Controller extends React.PureComponent {
     if (controlMode === ControlModeEnum.TRACE) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
-        "shift + 1": () =>
-          Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
-        "shift + 2": () =>
-          Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
-        "shift + 3": () =>
-          Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE)),
+        "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
+        "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
+        "shift + 3": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE)),
 
         m: () => {
           // rotate allowed modes
-          const currentViewMode = Store.getState().temporaryConfiguration
-            .viewMode;
-          const allowedModes = Store.getState().tracing.restrictions
-            .allowedModes;
-          const index =
-            (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
+          const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
+          const allowedModes = Store.getState().tracing.restrictions.allowedModes;
+          const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },
 
@@ -251,9 +239,7 @@ class Controller extends React.PureComponent {
         "9": function toggleSegmentationOpacity() {
           // Flow cannot infer the return type of getConfiguration :(
           // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
-          const curSegAlpha = Number(
-            api.data.getConfiguration("segmentationOpacity")
-          );
+          const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
           let newSegAlpha = 0;
 
           if (curSegAlpha > 0) {
@@ -263,7 +249,7 @@ class Controller extends React.PureComponent {
           }
 
           api.data.setConfiguration("segmentationOpacity", newSegAlpha);
-        }
+        },
       });
     }
 
@@ -292,15 +278,10 @@ class Controller extends React.PureComponent {
 
     if (isArbitrary) {
       if (state.tracing.restrictions.advancedOptionsAllowed) {
-        return (
-          <ArbitraryController onRender={this.updateStats} viewMode={mode} />
-        );
+        return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
       } else {
         return (
-          <MinimalSkeletonTracingArbitraryController
-            onRender={this.updateStats}
-            viewMode={mode}
-          />
+          <MinimalSkeletonTracingArbitraryController onRender={this.updateStats} viewMode={mode} />
         );
       }
     } else if (isPlane) {
@@ -325,7 +306,7 @@ class Controller extends React.PureComponent {
 
 function mapStateToProps(state: OxalisState) {
   return {
-    viewMode: state.temporaryConfiguration.viewMode
+    viewMode: state.temporaryConfiguration.viewMode,
   };
 }
 

@@ -12,10 +12,7 @@ function handleError(name: string) {
   Toast.error(`${messages["task.user_script_retrieval_error"]} ${name}`);
 }
 
-export async function fetchGistContent(
-  url: string,
-  name: string
-): Promise<string> {
+export async function fetchGistContent(url: string, name: string): Promise<string> {
   const gistId = _.last(url.split("/"));
 
   let gist;

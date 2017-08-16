@@ -8,7 +8,7 @@ import { fetchGistContent } from "libs/gist";
 
 type UserScriptsModalViewPropsType = {
   onClose: Function,
-  visible: boolean
+  visible: boolean,
 };
 
 class UserScriptsModalView extends React.PureComponent {
@@ -20,7 +20,7 @@ class UserScriptsModalView extends React.PureComponent {
     scripts: [],
     // Needs to be undefined so the placeholder is displayed in the beginning
     selectedScript: undefined,
-    isLoading: true
+    isLoading: true,
   };
 
   componentWillMount() {
@@ -35,7 +35,7 @@ class UserScriptsModalView extends React.PureComponent {
   handleCodeChange = (event: SyntheticInputEvent) => {
     this.setState({
       code: event.target.value,
-      isCodeChanged: true
+      isCodeChanged: true,
     });
   };
 
@@ -52,7 +52,7 @@ class UserScriptsModalView extends React.PureComponent {
         isLoading: false,
         selectedScript: scriptId,
         code: content,
-        isCodeChanged: false
+        isCodeChanged: false,
       });
     }
   };
@@ -88,7 +88,7 @@ class UserScriptsModalView extends React.PureComponent {
             {this.state.scripts.map(script =>
               <Select.Option key={script.id} value={script.id}>
                 {script.name}
-              </Select.Option>
+              </Select.Option>,
             )}
           </Select>
           <Input

@@ -83,23 +83,22 @@ class WkLayer extends Layer {
     getBucketData: Vector4 => Uint8Array,
     token: string,
   ): Promise<void> {
-    const data = batch.map(bucket => {
+    const actions = batch.map(bucket => {
       const bucketData = getBucketData(BucketBuilder.bucketToZoomedAddress(bucket));
       const bucketWithData = Object.assign({}, bucket, {
         base64Data: Base64.fromByteArray(bucketData),
       });
-      return { action: "labelVolume", value: bucketWithData };
+      return { name: "updateBucket", value: bucketWithData };
     });
+    const data = [{ version: 0, timestamp: 1234, actions }];
 
-    const datasetName = this.getDatasetName();
     await Request.sendJSONReceiveJSON(
-      `${this.dataStoreInfo.url}/data/tracings/volumes/${this
-        .name}?dataSetName=${datasetName}&token=${token}`,
+      `${this.dataStoreInfo.url}/data/tracings/volume/${this.name}/update`,
       {
         method: "POST",
         data,
         timeout: REQUEST_TIMEOUT,
-        compress: true,
+        compress: false,
         doNotCatch: true,
       },
     );

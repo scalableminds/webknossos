@@ -1,13 +1,15 @@
 package models.annotation
 
+import java.io.{BufferedOutputStream, FileOutputStream}
 import java.util.UUID
 
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
-import com.scalableminds.braingames.datastore.tracings.skeleton.DownloadTracingParameters
+import com.scalableminds.braingames.datastore.tracings.skeleton.{DownloadTracingParameters, NmlWriter}
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings.volume.{AbstractVolumeTracing => VolumeTracing, AbstractVolumeTracingLayer => VolumeTracingLayer}
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
+import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
@@ -20,8 +22,10 @@ import models.user.{UsedAnnotationDAO, User}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
 
+import scala.collection.immutable
 import scala.concurrent.Future
 
 /**
@@ -269,8 +273,24 @@ object AnnotationService
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.logTime(time, _annotation)
 
-  def getTracingsAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext) = {
-    def extractTracingReferences(annotations: List[Annotation]) = annotations.map(_.tracingReference)
+
+
+
+
+
+
+
+  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
+    val tracingsNamesAndScalesAsTuples = getTracingsScalesAndNamesFor(annotations)
+
+    for {
+      tracingsAndNamesFlattened: List[(SkeletonTracing, String, Scale)] <- flattenListToListMap(tracingsNamesAndScalesAsTuples)
+      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(tuple._1, tuple._3), tuple._2))
+      zip <- createZip(nmlsAndNames, zipFileName)
+    } yield zip
+  }
+
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext) = {
 
     def getTracings(dataSetName: String, tracingReferences: List[TracingReference]) = {
       for {
@@ -281,43 +301,59 @@ object AnnotationService
       }
     }
 
+    def getScales(annotations: List[Annotation]) = {
+      val foxes = annotations.map(annotation =>
+        for {
+          dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName)
+          dataSource <- dataSet.dataSource.toUsable
+        } yield dataSource.scale)
+      Fox.combined(foxes)
+    }
+
     def getNames(annotations: List[Annotation]) = Fox.combined(annotations.map(a => SavedTracingInformationHandler.nameForAnnotation(a).toFox))
 
     val annotationsGrouped: Map[String, List[Annotation]] = annotations.groupBy(_.dataSetName)
     val tracings = annotationsGrouped.map {
-      case (dataSetName, annotations) => (getTracings(dataSetName, extractTracingReferences(annotations)), getNames(annotations))
+      case (dataSetName, annotations) => (getTracings(dataSetName, annotations.map(_.tracingReference)), getNames(annotations), getScales(annotations))
     }
-    tracings
+    tracings.toList
   }
 
-  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Future[TemporaryFile] = {
-    val tracingsAndNames: Map[Fox[List[SkeletonTracing]], Fox[List[String]]] = getTracingsAndNamesFor(annotations)
+  def flattenListToListMap(listToListMap: List[(Fox[List[SkeletonTracing]], Fox[List[String]], Fox[List[Scale]])]):
+  Fox[List[(SkeletonTracing, String, Scale)]] = {
 
-    Future.successful(TemporaryFile("dummy", "justToKeepTheReturnType"))
+    val foxOfListsTuples: List[Fox[List[(SkeletonTracing, String, Scale)]]] =
+      listToListMap.map {
+        case (tracingListFox, nameListFox, scaleListFox) => {
+          for {
+            tracingList <- tracingListFox
+            nameList <- nameListFox
+            scaleList <- scaleListFox
+          } yield {
+            (tracingList, nameList, scaleList).zipped.toList
+          }
+        }
+      }
 
-    /*
-    val zipped = TemporaryFile("annotationZips", normalize(zipFileName))
+    Fox.combined(foxOfListsTuples).map(_.flatten)
+  }
+
+  private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String): Future[TemporaryFile] = {
+    val zipped = TemporaryFile(normalize(zipFileName), ".zip")
     val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(zipped.file)))
 
-    def annotationContent(annotations: List[Annotation]): Future[Boolean] = {
-      annotations match {
+    def addToZip(nmls: List[(Enumerator[Array[Byte]],String)]): Future[Boolean] = {
+      nmls match {
         case head :: tail =>
-          head.muta.loadAnnotationContent().futureBox.flatMap {
-            case Full(fs) =>
-              zipper.withFile(fs.normalizedName)(fs.writeTo).flatMap(_ => annotationContent(tail))
-            case x        =>
-              logger.warn(s"Failed to retrieve annotation content for zip file ($zipFileName): $x")
-              annotationContent(tail)
-          }
+          zipper.withFile(head._2 + ".nml")(NamedEnumeratorStream(head._1, "").writeTo).flatMap(_ => addToZip(tail))
         case _            =>
           Future.successful(true)
       }
-      Future.successful(true)
     }
 
-    annotationContent(annotations).map { _ =>
+    addToZip(nmls).map { _ =>
       zipper.close()
       zipped
-    }*/
+    }
   }
 }

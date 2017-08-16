@@ -8,13 +8,14 @@ import com.scalableminds.braingames.datastore.tracings.skeleton.NmlWriter
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{AnnotationType, _}
 import models.binary.DataSetDAO
 import models.project.{Project, ProjectDAO}
 import models.task.{Task, _}
 import models.user._
+import net.liftweb.common.Box
 import org.apache.commons.io.FilenameUtils
 import oxalis.security.{AuthenticatedRequest, Secured, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
@@ -30,6 +31,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   extends Controller
     with Secured
     with AnnotationInformationProvider
+    with FoxImplicits
     with LazyLogging {
 
   private def nameForNMLs(fileNames: Seq[String]) =
@@ -133,13 +135,13 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   }
 
   def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext) = {
-    def createTaskZip(task: Task) = task.annotations.flatMap { annotations =>
+    def createTaskZip(task: Task): Fox[TemporaryFile] = task.annotations.flatMap { annotations =>
       val finished = annotations.filter(_.state.isFinished)
       AnnotationService.zipAnnotations(finished, task.id + "_nmls.zip")
     }
 
     for {
-      task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      task <- TaskDAO.findOneById(taskId).toFox ?~> Messages("task.notFound")
       _ <- ensureTeamAdministration(user, task.team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
     } yield Ok.sendFile(zip.file)

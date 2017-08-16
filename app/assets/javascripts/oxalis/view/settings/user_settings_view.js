@@ -29,7 +29,6 @@ import {
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import Utils from "libs/utils";
 import type {
   UserConfigurationType,
   TemporaryConfigurationType,
@@ -201,9 +200,9 @@ class UserSettingsView extends PureComponent {
         this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
       const activeTreeId =
         this.props.tracing.activeTreeId != null ? this.props.tracing.activeTreeId : "";
-      const activeNodeRadius =
-        Utils.toNullable(getActiveNode(this.props.tracing).map(activeNode => activeNode.radius)) ||
-        0;
+      const activeNodeRadius = getActiveNode(this.props.tracing)
+        .map(activeNode => activeNode.radius)
+        .getOrElse(0);
       return (
         <Panel header="Nodes & Trees" key="3">
           <NumberInputSetting

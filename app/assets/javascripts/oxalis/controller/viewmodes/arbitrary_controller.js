@@ -6,13 +6,12 @@
 import React from "react";
 import Backbone from "backbone";
 import _ from "lodash";
-import TWEEN from "tween.js";
 import { InputKeyboard, InputMouse, InputKeyboardNoLoop } from "libs/input";
 import type { ModifierKeys } from "libs/input";
 import { V3 } from "libs/mjs";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
-import type { ModeType, Vector3, Point2 } from "oxalis/constants";
+import type { ModeType, Point2 } from "oxalis/constants";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
 import {
@@ -39,8 +38,6 @@ import type { Matrix4x4 } from "libs/mjs";
 import {
   yawFlycamAction,
   pitchFlycamAction,
-  setPositionAction,
-  setRotationAction,
   zoomInAction,
   zoomOutAction,
   moveFlycamAction,
@@ -52,7 +49,6 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import SceneController from "oxalis/controller/scene_controller";
 
 const CANVAS_SELECTOR = "#render-canvas";
-const TIMETOCENTER = 200;
 
 type Props = {
   onRender: () => void,
@@ -72,7 +68,6 @@ class ArbitraryController extends React.PureComponent {
     mouse?: InputMouse,
     keyboard?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
-    keyboardOnce?: InputKeyboard,
   };
   props: Props;
   storePropertyUnsubscribers: Array<Function>;
@@ -223,7 +218,11 @@ class ArbitraryController extends React.PureComponent {
       },
 
       // Recenter active node
-      s: () => this.centerActiveNode(),
+      s: () => {
+        getActiveNode(Store.getState().tracing).map(activeNode =>
+          Store.dispatch(setActiveNodeAction(activeNode.id)),
+        );
+      },
 
       ".": () => this.nextNode(true),
       ",": () => this.nextNode(false),
@@ -232,17 +231,12 @@ class ArbitraryController extends React.PureComponent {
       r: () => {
         Store.dispatch(yawFlycamAction(Math.PI));
       },
-    });
 
-    this.input.keyboardOnce = new InputKeyboard(
       // Delete active node and recenter last node
-      {
-        "shift + space": () => {
-          Store.dispatch(deleteNodeAction());
-        },
+      "shift + space": () => {
+        Store.dispatch(deleteNodeAction());
       },
-      -1,
-    );
+    });
   }
 
   setRecord(record: boolean): void {
@@ -399,7 +393,6 @@ class ArbitraryController extends React.PureComponent {
     Utils.__guard__(this.input.mouse, x => x.destroy());
     Utils.__guard__(this.input.keyboard, x => x.destroy());
     Utils.__guard__(this.input.keyboardNoLoop, x => x.destroy());
-    Utils.__guard__(this.input.keyboardOnce, x => x.destroy());
   }
 
   setWaypoint(): void {
@@ -437,60 +430,6 @@ class ArbitraryController extends React.PureComponent {
     this.setWaypoint();
     Store.dispatch(createBranchPointAction());
     Toast.success(messages["tracing.branchpoint_set"]);
-  }
-
-  centerActiveNode(): void {
-    getActiveNode(Store.getState().tracing).map(activeNode => {
-      // animate the change to the new position and new rotation
-      const curPos = getPosition(Store.getState().flycam);
-      const newPos = activeNode.position;
-      const curRotation = getRotation(Store.getState().flycam);
-      let newRotation = activeNode.rotation;
-      newRotation = this.getShortestRotation(curRotation, newRotation);
-
-      const waypointAnimation = new TWEEN.Tween({
-        x: curPos[0],
-        y: curPos[1],
-        z: curPos[2],
-        rx: curRotation[0],
-        ry: curRotation[1],
-        rz: curRotation[2],
-      });
-      waypointAnimation.to(
-        {
-          x: newPos[0],
-          y: newPos[1],
-          z: newPos[2],
-          rx: newRotation[0],
-          ry: newRotation[1],
-          rz: newRotation[2],
-        },
-        TIMETOCENTER,
-      );
-      waypointAnimation.onUpdate(function() {
-        Store.dispatch(setPositionAction([this.x, this.y, this.z]));
-        Store.dispatch(setRotationAction([this.rx, this.ry, this.rz]));
-      });
-      waypointAnimation.start();
-    });
-  }
-
-  getShortestRotation(curRotation: Vector3, newRotation: Vector3): Vector3 {
-    // TODO
-    // interpolating Euler angles does not lead to the shortest rotation
-    // interpolate the Quaternion representation instead
-    // https://theory.org/software/qfa/writeup/node12.html
-
-    const result = [newRotation[0], newRotation[1], newRotation[2]];
-    for (let i = 0; i <= 2; i++) {
-      // a rotation about more than 180° is shorter when rotating the other direction
-      if (newRotation[i] - curRotation[i] > 180) {
-        result[i] = newRotation[i] - 360;
-      } else if (newRotation[i] - curRotation[i] < -180) {
-        result[i] = newRotation[i] + 360;
-      }
-    }
-    return result;
   }
 
   moved(): void {

@@ -48,9 +48,8 @@ import app from "app";
 import window from "libs/window";
 import Utils from "libs/utils";
 import { ControlModeEnum, OrthoViews } from "oxalis/constants";
-import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import dimensions from "oxalis/model/dimensions";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import TWEEN from "tween.js";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import UrlManager from "oxalis/controller/url_manager";
@@ -333,46 +332,63 @@ class TracingApi {
     rotate3DViewTo(OrthoViews.TDView, animate);
   };
 
+  getShortestRotation(curRotation: Vector3, newRotation: Vector3): Vector3 {
+    // TODO
+    // interpolating Euler angles does not lead to the shortest rotation
+    // interpolate the Quaternion representation instead
+    // https://theory.org/software/qfa/writeup/node12.html
+
+    const result = [newRotation[0], newRotation[1], newRotation[2]];
+    for (let i = 0; i <= 2; i++) {
+      // a rotation about more than 180° is shorter when rotating the other direction
+      if (newRotation[i] - curRotation[i] > 180) {
+        result[i] = newRotation[i] - 360;
+      } else if (newRotation[i] - curRotation[i] < -180) {
+        result[i] = newRotation[i] + 360;
+      }
+    }
+    return result;
+  }
+
   /**
    * Starts an animation to center the given position.
    *
    * @param position - Vector3
-   * @param skipDimensions - Boolean which decides whether the third dimension shall also be animated (defaults to true)
+   * @param rotation - Vector3 (optional) - Will only be noticeable in flight or oblique mode.
    * @example
    * api.tracing.centerPositionAnimated([0, 0, 0])
    */
-  centerPositionAnimated(position: Vector3, skipDimensions: boolean = true): void {
-    // Let the user still manipulate the "third dimension" during animation
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
-    const dimensionToSkip =
-      skipDimensions && activeViewport !== OrthoViews.TDView
-        ? dimensions.thirdDimensionForPlane(activeViewport)
-        : null;
+  centerPositionAnimated(position: Vector3, rotation?: Vector3): void {
+    const curPosition = getPosition(Store.getState().flycam);
+    const curRotation = getRotation(Store.getState().flycam);
 
-    const curGlobalPos = getPosition(Store.getState().flycam);
+    if (rotation == null) rotation = curRotation;
+    rotation = this.getShortestRotation(curRotation, rotation);
 
     const tween = new TWEEN.Tween({
-      globalPosX: curGlobalPos[0],
-      globalPosY: curGlobalPos[1],
-      globalPosZ: curGlobalPos[2],
+      positionX: curPosition[0],
+      positionY: curPosition[1],
+      positionZ: curPosition[2],
+      rotationX: curRotation[0],
+      rotationY: curRotation[1],
+      rotationZ: curRotation[2],
     });
     tween
       .to(
         {
-          globalPosX: position[0],
-          globalPosY: position[1],
-          globalPosZ: position[2],
+          positionX: position[0],
+          positionY: position[1],
+          positionZ: position[2],
+          rotationX: rotation[0],
+          rotationY: rotation[1],
+          rotationZ: rotation[2],
         },
         200,
       )
       .onUpdate(function() {
         // needs to be a normal (non-bound) function
-        const curPos = [this.globalPosX, this.globalPosY, this.globalPosZ];
-        if (dimensionToSkip != null) {
-          Store.dispatch(setPositionAction(curPos, dimensionToSkip));
-        } else {
-          Store.dispatch(setPositionAction(curPos));
-        }
+        Store.dispatch(setPositionAction([this.positionX, this.positionY, this.positionZ]));
+        Store.dispatch(setRotationAction([this.rotationX, this.rotationY, this.rotationZ]));
       })
       .start();
   }

@@ -91,23 +91,18 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   }
 
   def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
-    //TODO: rocksDB
-    Fox.successful(JsonOk)
-
-//    for {
-//      oldAnnotation <- findAnnotation(typ, id)
-//      _ <- isUpdateAllowed(oldAnnotation, version).toFox
-//      _ <- oldAnnotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
-//      updates <- AnnotationUpdateService.retrieveAll(typ, id, maxVersion=version) ?~> Messages("annotation.revert.findUpdatesFailed")
-//      combinedUpdate = JsArray(combineUpdates(updates))
-//      resetAnnotation <- oldAnnotation.muta.resetToBase() ?~> Messages("annotation.revert.resetToBaseFailed")
-//      updateableAnnotation <- isUpdateable(resetAnnotation) ?~> Messages("annotation.update.impossible")
-//      result <- handleUpdates(updateableAnnotation, combinedUpdate, version, System.currentTimeMillis) ?~> Messages("annotation.revert.handlingUpdatesFailed")
-//      _ <- AnnotationUpdateService.removeAll(typ, id, aboveVersion = version) ?~> Messages("annotation.revert.deleteUpdatesFailed")
-//    } yield {
-//      logger.info(s"REVERTED using update [$typ - $id, $version]: $combinedUpdate")
-//      JsonOk(result, "annotation.reverted")
-//    }
+    for {
+      annotation <- findAnnotation(typ, id)
+      _ <- isUpdateAllowed(annotation, version).toFox
+      _ <- annotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
+      dataSet <- DataSetDAO.findOneBySourceName(
+        annotation.dataSetName).toFox ?~> Messages("dataSet.notFound", annotation.dataSetName)
+      newTracingReference <- dataSet.dataStore.duplicateSkeletonTracing(annotation.tracingReference, Some(version.toString))
+      _ <- AnnotationDAO.updateTracingRefernce(annotation._id, newTracingReference)
+    } yield {
+      logger.info(s"REVERTED [$typ - $id, $version]")
+      JsonOk("annotation.reverted")
+    }
   }
 
   def reset(typ: String, id: String) = Authenticated.async { implicit request =>

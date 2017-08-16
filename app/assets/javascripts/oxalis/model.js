@@ -67,7 +67,6 @@ type ServerSkeletonTracingTreeType = {
 export type ServerSkeletonTracingType = {
   activeNodeId?: number,
   boundingBox?: BoundingBoxObjectType,
-  customLayers?: Array<Object>,
   editPosition: Vector3,
   editRotation: Vector3,
   id: string,
@@ -77,13 +76,12 @@ export type ServerSkeletonTracingType = {
 };
 
 export type ServerVolumeTracingType = {
-  activeCell?: number,
-  boundingBox?: BoundingBoxObjectType,
-  customLayers?: Array<Object>,
+  activeSegmentId?: number,
+  dataLayer: DataLayerType,
   editPosition: Vector3,
   editRotation: Vector3,
+  fallbackLayer?: string,
   id: string,
-  nextCell: ?number,
   version: number,
   zoomLevel: number,
 };
@@ -293,7 +291,7 @@ export class OxalisModel {
       }
     })();
 
-    const layers = this.getLayerInfos(tracing.customLayers).map(
+    const layers = this.getLayerInfos(tracing).map(
       layerInfo => new LayerClass(layerInfo, dataStore),
     );
 
@@ -354,29 +352,27 @@ export class OxalisModel {
     return this.binary[name];
   }
 
-  getLayerInfos(userLayers: ?Array<Object>) {
-    // Overwrite or extend layers with userLayers
+  getLayerInfos(tracing: ServerTracingType) {
+    // Overwrite or extend layers with userLayer
 
     const dataset = Store.getState().dataset;
     const layers = dataset == null ? [] : _.clone(dataset.dataLayers);
-    if (userLayers == null) {
+    if (tracing.dataLayer == null) {
       return layers;
     }
 
-    for (const userLayer of userLayers) {
-      const existingLayerIndex = _.findIndex(
-        layers,
-        layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName),
-      );
-      const existingLayer = layers[existingLayerIndex];
+    const existingLayerIndex = _.findIndex(
+      layers,
+      layer => layer.name === tracing.fallbackLayer,
+    );
+    const existingLayer = layers[existingLayerIndex];
 
-      if (existingLayer != null) {
-        layers[existingLayerIndex] = update(userLayer, {
-          $merge: { mappings: existingLayer.mappings },
-        });
-      } else {
-        layers.push(userLayer);
-      }
+    if (existingLayer != null) {
+      layers[existingLayerIndex] = update(tracing.dataLayer, {
+        $merge: { mappings: existingLayer.mappings },
+      });
+    } else {
+      layers.push(tracing.dataLayer);
     }
 
     return layers;

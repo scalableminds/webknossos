@@ -1,14 +1,13 @@
 package models.annotation
 
-import java.io.{BufferedOutputStream, FileOutputStream}
+import java.util.UUID
 
-import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
+import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
+import com.scalableminds.braingames.datastore.tracings.skeleton.DownloadTracingParameters
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
+import com.scalableminds.braingames.datastore.tracings.volume.{AbstractVolumeTracing => VolumeTracing, AbstractVolumeTracingLayer => VolumeTracingLayer}
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
-import com.scalableminds.braingames.datastore.tracings.skeleton.{CreateEmptyParameters, DownloadMultipleParameters, DownloadTracingParameters}
-import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracing
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
-import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
@@ -21,9 +20,7 @@ import models.user.{UsedAnnotationDAO, User}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 
 import scala.concurrent.Future
 
@@ -45,6 +42,26 @@ object AnnotationService
     dataSetTeams.intersect(user.teamNames).head
   }
 
+  private def createVolumeTracing(dataSource: DataSource): VolumeTracing = {
+    val fallbackLayer = dataSource.dataLayers.flatMap {
+      case layer: SegmentationLayer => Some(layer)
+      case _ => None
+    }.headOption
+
+    val tracingLayer = VolumeTracingLayer(
+      UUID.randomUUID.toString,
+      dataSource.boundingBox,
+      fallbackLayer.map(_.elementClass).getOrElse(VolumeTracingLayer.defaultElementClass),
+      fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingLayer.defaultLargestSegmentId)
+    )
+
+    VolumeTracing(
+      dataSource.id.name,
+      tracingLayer,
+      fallbackLayer.map(_.name),
+      dataSource.boundingBox.center)
+  }
+
   def createExplorationalFor(
     user: User,
     dataSet: DataSet,
@@ -55,8 +72,8 @@ object AnnotationService
       case TracingType.skeleton =>
         dataSet.dataStore.saveSkeletonTracing(SkeletonTracing(dataSetName=dataSet.name,editPosition=dataSet.defaultStart,
                                               editRotation=dataSet.defaultRotation))
-      //case TracingType.volume =>
-        //dataSet.dataStore.saveVolumeTracing(VolumeTracing())
+      case TracingType.volume =>
+        dataSet.dataStore.saveVolumeTracing(createVolumeTracing(dataSource))
     }
 
     for {

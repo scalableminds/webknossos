@@ -11,7 +11,7 @@ test.beforeEach(t => setupOxalis(t, "volume"));
 
 test("getActiveCellId should get the id of the active cell", t => {
   const api = t.context.api;
-  t.is(api.tracing.getActiveCellId(), TRACING.activeCell);
+  t.is(api.tracing.getActiveCellId(), TRACING.activeSegmentId);
 });
 
 test("setActiveCell should set the active cell id", t => {

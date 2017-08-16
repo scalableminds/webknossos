@@ -2,6 +2,7 @@ package models.annotation.handler
 
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.handler.ProjectInformationHandler.assertAllOnSameDataset
 import models.annotation.{Annotation, AnnotationMerger, AnnotationRestrictions, AnnotationType}
 import models.task.{Task, TaskDAO}
 import models.team.Role
@@ -16,6 +17,7 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
       task <- TaskDAO.findOneById(taskId) ?~> "task.notFound"
       annotations <- task.annotations
       finishedAnnotations = annotations.filter(_.state.isFinished)
+      _ <- assertAllOnSameDataset(annotations)
       dataSetName = finishedAnnotations.head.dataSetName
       mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(task.id), persistTracing=false, user.map(_._id),
         dataSetName, task.team, AnnotationType.CompoundTask, annotations) ?~> "project.noAnnotation"

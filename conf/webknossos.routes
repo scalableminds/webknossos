@@ -136,7 +136,6 @@ PUT           /api/tasks/:id                                                    
 GET           /tasks/:id/edit                                                   controllers.UserController.emptyWithWildcard(id: String)
 GET           /workload                                                         controllers.TaskController.empty
 
-GET           /api/tasks/:id/download                                           controllers.AnnotationIOController.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
 
 # Task Types
@@ -150,7 +149,6 @@ POST          /api/taskTypes                                                    
 DELETE        /api/taskTypes/:id                                                controllers.TaskTypeController.delete(id: String)
 GET           /api/taskTypes/:id/tasks                                          controllers.TaskController.listTasksForType(id: String)
 
-GET           /api/taskTypes/:id/download                                       controllers.AnnotationIOController.taskTypeDownload(id: String)
 GET           /api/taskTypes/:id                                                controllers.TaskTypeController.get(id: String)
 PUT           /api/taskTypes/:id                                                controllers.TaskTypeController.update(id: String)
 
@@ -176,7 +174,6 @@ POST          /api/projects                                                     
 GET           /api/projects/:name                                               controllers.ProjectController.read(name: String)
 DELETE        /api/projects/:name                                               controllers.ProjectController.delete(name: String)
 PUT           /api/projects/:name                                               controllers.ProjectController.update(name: String)
-GET           /api/projects/:name/download                                      controllers.AnnotationIOController.projectDownload(name: String)
 GET           /api/projects/:name/tasks                                         controllers.ProjectController.tasksForProject(name: String)
 GET           /api/projects/:name/pause                                         controllers.ProjectController.pause(name: String)
 GET           /api/projects/:name/resume                                        controllers.ProjectController.resume(name: String)

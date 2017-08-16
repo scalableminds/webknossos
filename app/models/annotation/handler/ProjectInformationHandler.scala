@@ -21,6 +21,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
       tasks <- TaskDAO.findAllByProject(project.name)
       annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten).toFox
       finishedAnnotations = annotations.filter(_.state.isFinished)
+      _ <- assertAllOnSameDataset(annotations)
       dataSetName = finishedAnnotations.head.dataSetName
       mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(project.name), persistTracing=false, user.map(_._id),
         dataSetName, project.team, AnnotationType.CompoundProject, annotations) ?~> "project.noAnnotation"

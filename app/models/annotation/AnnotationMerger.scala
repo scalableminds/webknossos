@@ -79,11 +79,10 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
   }
 
   private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetName: String, persistTracing: Boolean)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
-    val originalTracingSelectors = annotations.map(a => TracingSelector(a.tracingReference.id, None))
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
       dataSource <- dataSet.dataSource.toUsable.toFox
-      tracingReference <- dataSet.dataStore.mergeSkeletonTracings(originalTracingSelectors, persistTracing) ?~> "Failed to merge skeleton tracings."
+      tracingReference <- dataSet.dataStore.mergeSkeletonTracings(annotations.map(_.tracingReference), persistTracing) ?~> "Failed to merge skeleton tracings."
     } yield {
       tracingReference
     }

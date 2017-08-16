@@ -14,6 +14,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationType._
+import models.annotation.handler.SavedTracingInformationHandler
 import models.binary.{DataSet, DataSetDAO}
 import models.task.Task
 import models.user.{UsedAnnotationDAO, User}
@@ -251,17 +252,29 @@ object AnnotationService
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.logTime(time, _annotation)
 
-  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Future[TemporaryFile] = {
-    val downloadParams = annotations.map(annotation => DownloadTracingParameters(annotation.tracingReference.id, None, annotation.name))
-    val dataSetName = annotations(0).dataSetName //TODO RocksDB are all always on same dataset? Also: Handle empty list
+  def getTracingsAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext) = {
+    def extractTracingReferences(annotations: List[Annotation]) = annotations.map(_.tracingReference)
 
-    for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
-    } yield {
-      //TODO RocksDB: redirect(DownloadMultipleParameters(zipFileName, downloadParams))
-      //split annotations by dataSetName, get multiple zis from the respective datastores, use util function to create zip of all zips contents
+    def getTracings(dataSetName: String, tracingReferences: List[TracingReference]) = {
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
+        tracings <- dataSet.dataStore.getSkeletonTracings(tracingReferences)
+      } yield {
+        tracings
+      }
     }
+
+    def getNames(annotations: List[Annotation]) = Fox.combined(annotations.map(a => SavedTracingInformationHandler.nameForAnnotation(a).toFox))
+
+    val annotationsGrouped: Map[String, List[Annotation]] = annotations.groupBy(_.dataSetName)
+    val tracings = annotationsGrouped.map {
+      case (dataSetName, annotations) => (getTracings(dataSetName, extractTracingReferences(annotations)), getNames(annotations))
+    }
+    tracings
+  }
+
+  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Future[TemporaryFile] = {
+    val tracingsAndNames: Map[Fox[List[SkeletonTracing]], Fox[List[String]]] = getTracingsAndNamesFor(annotations)
 
     Future.successful(TemporaryFile("dummy", "justToKeepTheReturnType"))
 

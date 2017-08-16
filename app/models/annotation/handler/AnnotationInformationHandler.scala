@@ -1,6 +1,6 @@
 package models.annotation.handler
 
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Full}
 import oxalis.security.AuthenticatedRequest
 import models.annotation.{Annotation, AnnotationRestrictions, AnnotationType}
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -36,4 +36,15 @@ trait AnnotationInformationHandler {
 
   def restrictionsFor(identifier: String)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]
 
+  def assertAllOnSameDataset(annotations: List[Annotation]): Fox[Boolean] = {
+    def allOnSameDatasetIter(annotations: List[Annotation], dataSetName: String): Boolean =
+      annotations match {
+        case List() => true
+        case head :: tail => head.dataSetName == dataSetName && allOnSameDatasetIter(tail, dataSetName)
+      }
+    if (allOnSameDatasetIter(annotations, annotations.head.dataSetName))
+      Fox.successful(true)
+    else
+      Fox.failure("Cannot create compound annotation spanning multiple datasets")
+  }
 }

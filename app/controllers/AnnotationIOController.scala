@@ -7,6 +7,7 @@ import com.scalableminds.braingames.binary.models.datasource.DataSource
 import com.scalableminds.braingames.datastore.tracings.skeleton.NmlWriter
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{AnnotationType, _}
@@ -15,7 +16,7 @@ import models.project.{Project, ProjectDAO}
 import models.task.{Task, _}
 import models.user._
 import org.apache.commons.io.FilenameUtils
-import oxalis.security.Secured
+import oxalis.security.{AuthenticatedRequest, Secured, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
@@ -87,27 +88,34 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
 
   def download(typ: String, id: String) = Authenticated.async { implicit request =>
-    withAnnotation(AnnotationIdentifier(typ, id)) {
-      annotation =>
-        logger.trace(s"Requested download for tracing: $typ/$id")
-        for {
-          name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
-          _ <- annotation.restrictions.allowDownload(request.user) ?~> Messages("annotation.download.notAllowed")
-          dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> Messages("dataSet.notFound", annotation.dataSetName)
-          tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference) //TODO RocksDB: what if it is a volume tracing?
-          scale <- dataSet.dataSource.toUsable.map(_.scale)
-          nmlStream = Enumerator.outputStream { os => NmlWriter.toNml(tracing, os, scale).map(_ => os.close()) } //TODO: get proper scale from dataSource
-        } yield {
-          Ok.chunked(nmlStream).withHeaders(
-            CONTENT_TYPE ->
-              "application/octet-stream",
-            CONTENT_DISPOSITION ->
-              s"filename=${'"'}${name}.nml${'"'}")
-        }
+    logger.trace(s"Requested download for annotation: $typ/$id")
+    //TODO RocksDB: prettier dispatch?
+    if (typ == AnnotationType.View.toString) Fox.failure("Cannot download View annotation")
+    else if (typ == AnnotationType.CompoundProject.toString) downloadProject(id, request.user)
+    else if (typ == AnnotationType.CompoundTask.toString) downloadTask(id, request.user)
+    else if (typ == AnnotationType.CompoundTaskType.toString) downloadTaskType(id, request.user)
+    else downloadExplorational(id, typ, request.user)
+  }
+
+  def downloadExplorational(annotationId: String, typ: String, user: User)(implicit request: AuthenticatedRequest[_]) = {
+    for {
+      annotation <- findAnnotation(AnnotationIdentifier(typ, annotationId))
+      name <- nameForAnnotation(annotation) ?~> Messages("annotation.name.impossible")
+      _ <- annotation.restrictions.allowDownload(user) ?~> Messages("annotation.download.notAllowed")
+      dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> Messages("dataSet.notFound", annotation.dataSetName)
+      tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference) //TODO RocksDB: what if it is a volume tracing?
+      scale <- dataSet.dataSource.toUsable.map(_.scale)
+      nmlStream = Enumerator.outputStream { os => NmlWriter.toNml(tracing, os, scale).map(_ => os.close()) }
+    } yield {
+      Ok.chunked(nmlStream).withHeaders(
+        CONTENT_TYPE ->
+          "application/octet-stream",
+        CONTENT_DISPOSITION ->
+          s"filename=${'"'}${name}.nml${'"'}")
     }
   }
 
-  def projectDownload(projectName: String) = Authenticated.async { implicit request =>
+  def downloadProject(projectName: String, user: User)(implicit ctx: DBAccessContext) = {
     def createProjectZip(project: Project) =
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
@@ -117,14 +125,14 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-      _ <- request.user.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
+      _ <- user.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
       zip <- createProjectZip(project)
     } yield {
       Ok.sendFile(zip.file)
     }
   }
 
-  def taskDownload(taskId: String) = Authenticated.async { implicit request =>
+  def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext) = {
     def createTaskZip(task: Task) = task.annotations.flatMap { annotations =>
       val finished = annotations.filter(_.state.isFinished)
       AnnotationService.zipAnnotations(finished, task.id + "_nmls.zip")
@@ -132,25 +140,27 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.user, task.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(user, task.team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
     } yield Ok.sendFile(zip.file)
   }
 
-  def taskTypeDownload(taskTypeId: String) = Authenticated.async { implicit request =>
+  def downloadTaskType(taskTypeId: String, user: User)(implicit ctx: DBAccessContext) = {
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- TaskDAO.findAllByTaskType(taskType._id)
-        tracings <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
-        zip <- AnnotationService.zipAnnotations(tracings, taskType.summary + "_nmls.zip")
+        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
+        zip <- AnnotationService.zipAnnotations(annotations, taskType.summary + "_nmls.zip")
       } yield zip
 
     for {
       tasktype <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.user, tasktype.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(user, tasktype.team) ?~> Messages("notAllowed")
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
   }
+
+
 
   def userDownload(userId: String) = Authenticated.async { implicit request =>
     for {

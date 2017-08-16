@@ -37,8 +37,7 @@ trait AnnotationInformationProvider
     AnnotationStore.requestAnnotation(annotationId, request.userOpt)
   }
 
-  //TODO: RocksDB: use this for download filenames?
-  def nameAnnotation(annotation: Annotation)(implicit request: AuthenticatedRequest[_]): Fox[String] = {
+  def nameForAnnotation(annotation: Annotation)(implicit request: AuthenticatedRequest[_]): Fox[String] = {
     val handler = AnnotationInformationHandler.informationHandlers(annotation.typ)
     annotation._name.toFox.orElse(handler.nameForAnnotation(annotation).toFox)
   }

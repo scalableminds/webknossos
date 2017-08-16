@@ -113,7 +113,8 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     super.scrollPlanes(delta, type);
 
     if (type === "shift") {
-      api.tracing.setNodeRadius(delta);
+      // Different browsers send different deltas, this way the behavior is comparable
+      api.tracing.setNodeRadius(delta > 0 ? 5 : -5);
     }
   }
 

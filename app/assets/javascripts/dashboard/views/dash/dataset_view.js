@@ -89,7 +89,7 @@ class DatasetView extends React.PureComponent {
     const padding = 16;
     return (
       <Row gutter={padding}>
-        {Utils.filterWithSearchQuery(
+        {Utils.filterWithSearchQueryOR(
           this.state.datasets.filter(ds => ds.isActive),
           ["name", "owningTeam", "description"],
           this.state.searchQuery,

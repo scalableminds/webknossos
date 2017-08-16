@@ -56,6 +56,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     this.fetchDataMaybe();
   }
 
+  componentWillUnmount() {}
+
   isFetchNecessary(): boolean {
     const accessor = this.state.shouldShowArchivedTracings ? "isArchived" : "isUnarchived";
     return !this.state.didAlreadyFetchMetaInfo[accessor];
@@ -70,6 +72,17 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   }
 
   async fetchDataMaybe(): Promise<void> {
+    // restore the search query tags from the last session
+    const searchTagString = localStorage.getItem("lastDashboardSearchTags");
+    if (searchTagString) {
+      try {
+        const searchTags = JSON.parse(searchTagString);
+        this.setState({ tags: searchTags });
+      } catch (error) {
+        // pass
+      }
+    }
+
     if (!this.isFetchNecessary()) {
       return;
     }
@@ -255,12 +268,16 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
 
   addTagToSearch = (tag: string): void => {
     if (!this.state.tags.includes(tag)) {
-      this.setState(update(this.state, { tags: { $push: [tag] } }));
+      const newTags = update(this.state.tags, { $push: [tag] });
+      this.setState({ tags: newTags });
+      localStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
     }
   };
 
   removeTagFromSearch = (tag: string): void => {
-    this.setState({ tags: this.state.tags.filter(t => t !== tag) });
+    const newTags = this.state.tags.filter(t => t !== tag);
+    this.setState({ tags: newTags });
+    localStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
   };
 
   addTagToAnnotation = (annotation: APIAnnotationType, newTag: string): void => {

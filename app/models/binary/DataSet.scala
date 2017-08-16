@@ -1,35 +1,32 @@
 package models.binary
 
-import com.scalableminds.braingames.binary.models.DataSource
+import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource}
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
 import models.basics._
+import models.configuration.DataSetConfiguration
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
-import com.scalableminds.braingames.binary.models.{DataLayer, DataSource}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
-import models.annotation.AnnotationDAO._
-import models.configuration.DataSetConfiguration
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding
 import reactivemongo.api.indexes.{Index, IndexType}
 
 case class DataSet(
-  name: String,
   dataStoreInfo: DataStoreInfo,
-  dataSource: Option[DataSource],
-  sourceType: String,
-  owningTeam: String,
+  dataSource: InboxDataSource,
   allowedTeams: List[String],
   isActive: Boolean = false,
   isPublic: Boolean = false,
-  accessToken: Option[String],
   description: Option[String] = None,
   defaultConfiguration: Option[DataSetConfiguration] = None,
   created: Long = System.currentTimeMillis()) {
+
+  def name = dataSource.id.name
+
+  def owningTeam = dataSource.id.team
 
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
@@ -38,7 +35,7 @@ case class DataSet(
     user.exists(_.isAdminOf(owningTeam))
 
   def defaultStart =
-    dataSource.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))
+    dataSource.toUsable.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))
 
   def defaultRotation =
     Vector3D(0, 0, 0)
@@ -49,18 +46,16 @@ object DataSet {
 
   def dataSetPublicWrites(user: Option[User]): Writes[DataSet] =
     ((__ \ 'name).write[String] and
-      (__ \ 'dataSource).write[Option[DataSource]] and
+      (__ \ 'dataSource).write[InboxDataSource] and
       (__ \ 'dataStore).write[DataStoreInfo] and
-      (__ \ 'sourceType).write[String] and
       (__ \ 'owningTeam).write[String] and
       (__ \ 'allowedTeams).write[List[String]] and
       (__ \ 'isActive).write[Boolean] and
-      (__ \ 'accessToken).write[Option[String]] and
       (__ \ 'isPublic).write[Boolean] and
       (__ \ 'description).write[Option[String]] and
       (__ \ 'created).write[Long] and
       (__ \ "isEditable").write[Boolean]) (d =>
-      (d.name, d.dataSource, d.dataStoreInfo, d.sourceType, d.owningTeam, d.allowedTeams, d.isActive, d.accessToken, d.isPublic, d.description, d.created, d.isEditableBy(user)))
+      (d.name, d.dataSource, d.dataStoreInfo, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {
@@ -69,7 +64,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
 
   val formatter = DataSet.dataSetFormat
 
-  underlying.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("dataSource.id.name" -> IndexType.Ascending)))
 
   // Security
   override val AccessDefinitions = new DefaultAccessDefinitions {
@@ -91,10 +86,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
   }
 
   def byNameQ(name: String) =
-    Json.obj("name" -> name)
-
-  def default()(implicit ctx: DBAccessContext) =
-    findMaxBy("priority")
+    Json.obj("dataSource.id.name" -> name)
 
   def findOneBySourceName(name: String)(implicit ctx: DBAccessContext) =
     findOne(byNameQ(name))
@@ -102,7 +94,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
   def updateDataSource(
     name: String,
     dataStoreInfo: DataStoreInfo,
-    source: Option[DataSource],
+    source: InboxDataSource,
     isActive: Boolean)(implicit ctx: DBAccessContext) = {
     update(
       byNameQ(name),

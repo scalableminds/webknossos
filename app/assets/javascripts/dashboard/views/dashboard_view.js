@@ -11,7 +11,6 @@ import LoggedTimeView from "dashboard/views/logged_time_view";
 import DatasetSwitchView from "dashboard/views/dataset/dataset_switch_view";
 
 class DashboardView extends Marionette.View {
-
   viewCache: Object;
 
   static initClass() {
@@ -30,7 +29,6 @@ class DashboardView extends Marionette.View {
     <% } %>
     <li <% if (isAdminView) { %> class="active" <% } %> >
       <a href="#" id="tab-tasks" data-target="#placeholder" data-toggle="tab">Tasks</a>
-    <li <% if (isAdminView) { %> class="active" <% } %> >
     </li>
     <li>
       <a href="#" id="tab-explorative" data-target="#placeholder" data-toggle="tab">Explorative Annotations</a>
@@ -47,9 +45,7 @@ class DashboardView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.regions =
-      { tabPane: ".tab-pane" };
-
+    this.prototype.regions = { tabPane: ".tab-pane" };
 
     this.prototype.events = {
       "click #tab-datasets": "showDatasets",
@@ -62,15 +58,32 @@ class DashboardView extends Marionette.View {
   // Cannot be ES6 style function, as these are covariant by default
   templateContext = function templateContext() {
     return { isAdminView: this.options.isAdminView };
-  }
-
+  };
 
   initialize(options) {
     this.options = options;
     if (this.options.isAdminView) {
       this.listenTo(this, "render", this.showTasks);
     } else {
-      this.listenTo(this, "render", this.showDatasets);
+      const tabMethod = localStorage.getItem("lastUsedDashboardTab");
+      // $FlowFixMe
+      if (tabMethod && typeof this[tabMethod] === "function") {
+        this.listenTo(this, "render", this[tabMethod]);
+
+        setTimeout(() => {
+          const mapping = {
+            showDatasets: "#tab-datasets",
+            showTasks: "#tab-tasks",
+            showExplorative: "#tab-explorative",
+            showLoggedTime: "#tab-logged-time",
+          };
+
+          this.$("li.active").removeClass("active");
+          this.$(mapping[tabMethod]).parent().addClass("active");
+        }, 100);
+      } else {
+        this.listenTo(this, "render", this.showDatasets);
+      }
     }
 
     this.viewCache = {
@@ -81,36 +94,41 @@ class DashboardView extends Marionette.View {
     };
   }
 
-
   showDatasets() {
+    this.saveLastTab("showDatasets");
     return this.showTab("datasetSwitchView", DatasetSwitchView);
   }
 
-
   showTasks() {
+    this.saveLastTab("showTasks");
     return this.showTab("taskListView", DashboardTaskListView);
   }
 
-
   showExplorative() {
+    this.saveLastTab("showExplorative");
     return this.showTab("explorativeTracingListView", ExplorativeTracingListView);
   }
 
-
   showLoggedTime() {
+    this.saveLastTab("showLoggedTime");
     return this.showTab("loggedTimeView", LoggedTimeView);
   }
 
+  saveLastTab(tabMethod) {
+    if (!this.options.isAdminView) {
+      localStorage.setItem("lastUsedDashboardTab", tabMethod);
+    }
+  }
 
   showTab(viewName, ViewClass) {
     let view = this.viewCache[viewName];
     if (!view) {
-      view = this.viewCache[viewName] = new ViewClass(this.options);
+      view = new ViewClass(this.options);
+      this.viewCache[viewName] = view;
     }
     return this.showChildView("tabPane", view, { preventDestroy: true });
   }
 }
 DashboardView.initClass();
-
 
 export default DashboardView;

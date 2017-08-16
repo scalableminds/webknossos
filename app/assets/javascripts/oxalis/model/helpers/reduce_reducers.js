@@ -13,8 +13,5 @@ if (process.env.NODE_ENV === "production") deepFreeze = _.identity;
 
 export default function reduceReducers(...reducers: Array<Function>): Function {
   return (previous, current) =>
-    reducers.reduce(
-      (p, r) => deepFreeze(r(p, current)),
-      deepFreeze(previous),
-    );
+    reducers.reduce((p, r) => deepFreeze(r(p, current)), deepFreeze(previous));
 }

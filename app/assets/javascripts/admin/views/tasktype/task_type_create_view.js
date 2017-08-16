@@ -94,11 +94,9 @@ class TaskTypeCreateView extends Marionette.View {
 `);
     this.prototype.className = "container wide task-types-administration";
 
-    this.prototype.regions =
-      { team: ".team" };
+    this.prototype.regions = { team: ".team" };
 
-    this.prototype.events =
-      { "submit form": "submitForm" };
+    this.prototype.events = { "submit form": "submitForm" };
 
     this.prototype.ui = {
       form: "form",
@@ -108,12 +106,15 @@ class TaskTypeCreateView extends Marionette.View {
 
   templateContext() {
     return {
-      getTitle: () => this.isEditingMode ? "Update" : "Create",
-      isChecked(bool) { return bool ? "checked" : ""; },
-      isSelected(bool) { return bool ? "selected" : ""; },
+      getTitle: () => (this.isEditingMode ? "Update" : "Create"),
+      isChecked(bool) {
+        return bool ? "checked" : "";
+      },
+      isSelected(bool) {
+        return bool ? "selected" : "";
+      },
     };
   }
-
 
   initialize() {
     this.isEditingMode = _.isString(this.model.id);
@@ -124,7 +125,6 @@ class TaskTypeCreateView extends Marionette.View {
     }
   }
 
-
   submitForm(event) {
     event.preventDefault();
 
@@ -134,7 +134,9 @@ class TaskTypeCreateView extends Marionette.View {
     }
 
     const formValues = FormSyphon.serialize(this.ui.form);
-    if (formValues.settings.preferredMode === "Any") { formValues.settings.preferredMode = null; }
+    if (formValues.settings.preferredMode === "Any") {
+      formValues.settings.preferredMode = null;
+    }
 
     // Add 'required' attribute to select once it's supported
     // https://github.com/davidstutz/bootstrap-multiselect/issues/620
@@ -143,16 +145,16 @@ class TaskTypeCreateView extends Marionette.View {
       return;
     }
 
-    this.model.save(formValues).then(
-      () => app.router.navigate("/taskTypes", { trigger: true }));
+    this.model.save(formValues).then(() => app.router.navigate("/taskTypes", { trigger: true }));
   }
-
 
   onRender() {
     const teamSelectionView = new SelectionView({
       collection: new TeamCollection(),
       childViewOptions: {
-        modelValue() { return `${this.model.get("name")}`; },
+        modelValue() {
+          return `${this.model.get("name")}`;
+        },
         defaultItem: { name: this.model.get("team") },
       },
       data: "amIAnAdmin=true",
@@ -164,12 +166,10 @@ class TaskTypeCreateView extends Marionette.View {
     this.ui.multiselect.multiselect();
   }
 
-
   onBeforeDestroy() {
     this.ui.multiselect.multiselect("destroy");
   }
 }
 TaskTypeCreateView.initClass();
-
 
 export default TaskTypeCreateView;

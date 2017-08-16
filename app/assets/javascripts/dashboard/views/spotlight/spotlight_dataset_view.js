@@ -12,14 +12,14 @@ class SpotlightDatasetView extends Marionette.View {
   <div class="dataset-thumbnail col-sm-4">
     <img class="img-rounded" src="<%- thumbnailURL %>">
 
-    <div class="dataset-thumbnail-buttons">
+    <div class="dataset-thumbnail-buttons" style="position: absolute; top: 0px;">
       <a href="/datasets/<%- name %>/view" title="View dataset">
         <img src="/assets/images/eye.svg">
       </a>
       <a href="#" title="Create skeleton tracing" id="skeletonTraceLink">
         <img src="/assets/images/skeleton.svg">
       </a>
-      <% if(dataStore.typ != "ndstore" && sourceType != "webKnossosWrap"){ %>
+      <% if(dataStore.typ != "ndstore"){ %>
         <a href="#" title="Create volume tracing" id="volumeTraceLink">
           <img src="/assets/images/volume.svg">
         </a>
@@ -49,8 +49,7 @@ class SpotlightDatasetView extends Marionette.View {
 </div>\
 `);
 
-    this.prototype.templateContext =
-      { TemplateHelpers };
+    this.prototype.templateContext = { TemplateHelpers };
 
     this.prototype.ui = {
       skeletonTraceLink: "#skeletonTraceLink",
@@ -60,14 +59,12 @@ class SpotlightDatasetView extends Marionette.View {
     };
   }
 
-
   onRender() {
     this.$(".link-row > a").tooltip({ placement: "bottom" });
 
     this.ui.skeletonTraceLink.click(this.submitForm.bind(this, "skeletonTracing"));
     return this.ui.volumeTraceLink.click(this.submitForm.bind(this, "volumeTracing"));
   }
-
 
   submitForm(type, event) {
     event.preventDefault();
@@ -82,6 +79,5 @@ Do you wish to sign up now?`;
   }
 }
 SpotlightDatasetView.initClass();
-
 
 export default SpotlightDatasetView;

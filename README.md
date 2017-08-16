@@ -25,8 +25,8 @@ Or install Java manually and run:
 # Install Homebrew package manager
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-# Install git, node.js, mongoDB, sbt
-brew install git node mongodb sbt
+# Install git, node.js, mongoDB, sbt, gfind
+brew install git node mongodb sbt findutils
 npm install -g yarn
 
 # Start mongo
@@ -100,10 +100,10 @@ Make sure to open port `9000` in our firewall. This is only recommended for deve
 ## Test
 ```bash
 sbt test
-npm test
+yarn test
 ```
 
-These tests are run on our CI server. Running the tests manually in not encouraged at this point.
+These tests are run on our CI server. Running the tests manually is not encouraged at this point.
 
 ## Credits
 * scalable minds - https://scm.io/

@@ -7,6 +7,7 @@ import _ from "lodash";
 import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
 import window from "libs/window";
+import type { APIUserType } from "admin/api_flow_types";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
 
@@ -33,7 +34,7 @@ const Utils = {
 
   // sums up an array
   sum(array: Array<number>): number {
-    return array.reduce(((r, a) => r + a), 0);
+    return array.reduce((r, a) => r + a, 0);
   },
 
   roundTo(value: number, digits: number): number {
@@ -80,7 +81,7 @@ const Utils = {
 
   compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {
     // generic key comparator for array.prototype.sort
-    return function (a: T, b: T) {
+    return function(a: T, b: T) {
       if (!isSortedAscending) {
         [a, b] = [b, a];
       }
@@ -94,6 +95,23 @@ const Utils = {
     };
   },
 
+  localeCompareBy<T: Object>(
+    selector: string | (T => string),
+    isSortedAscending: boolean = true,
+  ): (T, T) => number {
+    const sortingOrder = isSortedAscending ? 1 : -1;
+
+    return (a: T, b: T): number => {
+      const valueA: string = typeof selector === "function" ? selector(a) : a[selector];
+      const valueB: string = typeof selector === "function" ? selector(b) : b[selector];
+      return (
+        valueA.localeCompare(valueB, "en", {
+          numeric: true,
+          usage: "search",
+        }) * sortingOrder
+      );
+    };
+  },
 
   stringToNumberArray(s: string): Array<number> {
     // remove leading/trailing whitespaces
@@ -114,14 +132,7 @@ const Utils = {
   },
 
   concatVector3(a: Vector3, b: Vector3): Vector6 {
-    return [
-      a[0],
-      a[1],
-      a[2],
-      b[0],
-      b[1],
-      b[2],
-    ];
+    return [a[0], a[1], a[2], b[0], b[1], b[2]];
   },
 
   numberArrayToVector3(array: Array<number>): Vector3 {
@@ -140,7 +151,6 @@ const Utils = {
     return output;
   },
 
-
   loaderTemplate(): string {
     return `\
 <div id="loader-icon">
@@ -148,7 +158,6 @@ const Utils = {
   <br>Loading
 </div>`;
   },
-
 
   isElementInViewport(el: Element): boolean {
     const rect = el.getBoundingClientRect();
@@ -161,9 +170,8 @@ const Utils = {
     );
   },
 
-
   // this is insecure and must not be used for security related functionality
-  isUserAdmin(user: any): boolean {
+  isUserModelAdmin(user: any): boolean {
     if (user == null) {
       return false;
     } else {
@@ -171,26 +179,31 @@ const Utils = {
     }
   },
 
+  isUserAdmin(user: APIUserType): boolean {
+    return _.findIndex(user.teams, team => team.role.name === "admin") >= 0;
+  },
 
   getUrlParams(paramName: string): { [key: string]: string | boolean } {
     // Parse the URL parameters as objects and return it or just a single param
-    const params = window.location.search.substring(1).split("&")
-      .reduce((result, value): void => {
-        const parts = value.split("=");
-        if (parts[0]) {
-          const key = decodeURIComponent(parts[0]);
-          if (parts[1]) {
-            result[key] = decodeURIComponent(parts[1]);
-          } else {
-            result[key] = true;
-          }
+    const params = window.location.search.substring(1).split("&").reduce((result, value): void => {
+      const parts = value.split("=");
+      if (parts[0]) {
+        const key = decodeURIComponent(parts[0]);
+        if (parts[1]) {
+          result[key] = decodeURIComponent(parts[1]);
+        } else {
+          result[key] = true;
         }
-        return result;
-      }, {});
+      }
+      return result;
+    }, {});
 
-    if (paramName) { return params[paramName]; } else { return params; }
+    if (paramName) {
+      return params[paramName];
+    } else {
+      return params;
+    }
   },
-
 
   __range__(left: number, right: number, inclusive: boolean): Array<number> {
     const range = [];
@@ -203,22 +216,24 @@ const Utils = {
     return range;
   },
 
-  __guard__<T, U>(value: ?T, transform: (T) => U) {
-    return (typeof value !== "undefined" && value !== null) ? transform(value) : undefined;
+  __guard__<T, U>(value: ?T, transform: T => U) {
+    return typeof value !== "undefined" && value !== null ? transform(value) : undefined;
   },
 
   sleep(timeout: number): Promise<void> {
-    return new Promise((resolve) => { setTimeout(resolve, timeout); });
+    return new Promise(resolve => {
+      setTimeout(resolve, timeout);
+    });
   },
 
   animationFrame(): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       window.requestAnimationFrame(resolve);
     });
   },
 
   idleFrame(timeout: ?number = null): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       if (_.isFunction(window.reqeustIdleCallback)) {
         if (timeout != null) {
           window.reqeustIdleCallback(resolve, { timeout });
@@ -231,8 +246,10 @@ const Utils = {
     });
   },
 
-
-  diffArrays<T>(stateA: Array<T>, stateB: Array<T>): { both: Array<T>, onlyA: Array<T>, onlyB: Array<T> } {
+  diffArrays<T>(
+    stateA: Array<T>,
+    stateB: Array<T>,
+  ): { both: Array<T>, onlyA: Array<T>, onlyB: Array<T> } {
     const setA = new Set(stateA);
     const both = stateB.filter(x => setA.has(x));
     const bothSet = new Set(both);
@@ -249,6 +266,51 @@ const Utils = {
   // you can't do getOrElse(null) without flow complaining
   toNullable<T>(maybe: Maybe<T>): ?T {
     return maybe.isJust ? maybe.get() : null;
+  },
+
+  getRecursiveKeysAndValues(obj: Object): Array<any> {
+    return _.flattenDeep(Utils.getRecursiveKeysAndValuesUnflat(obj));
+  },
+
+  getRecursiveKeysAndValuesUnflat(obj: Object): Array<any> {
+    if (_.isArray(obj)) {
+      return obj.map(Utils.getRecursiveKeysAndValuesUnflat);
+    } else if (_.isObject(obj)) {
+      return Object.keys(obj).map(key => [key, Utils.getRecursiveKeysAndValuesUnflat(obj[key])]);
+    } else {
+      return [obj];
+    }
+  },
+
+  // Filters an array given a search string. Supports searching for several words as OR query.
+  // Supports nested properties
+  filterWithSearchQuery<T: Object>(
+    collection: Array<T>,
+    properties: Array<string>,
+    searchQuery: string,
+  ): Array<T> {
+    if (searchQuery === "") {
+      return collection;
+    } else {
+      const words = _.map(searchQuery.split(" "), element =>
+        element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
+      );
+      const uniques = _.filter(_.uniq(words), element => element !== "");
+      const pattern = `(${uniques.join("|")})`;
+      const regexp = new RegExp(pattern, "igm");
+
+      return collection.filter(model =>
+        _.some(properties, fieldName => {
+          const value = model[fieldName];
+          if (value !== null) {
+            const values = Utils.getRecursiveKeysAndValues(value);
+            return _.some(values, v => v.toString().match(regexp));
+          } else {
+            return false;
+          }
+        }),
+      );
+    }
   },
 };
 

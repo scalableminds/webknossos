@@ -116,7 +116,6 @@ class TaskCreateFromView extends Marionette.View {
 </div>\
 `);
 
-
     this.prototype.regions = {
       taskType: ".taskType",
       team: ".team",
@@ -125,8 +124,7 @@ class TaskCreateFromView extends Marionette.View {
       subview: ".subview",
     };
 
-    this.prototype.events =
-      { submit: "submit" };
+    this.prototype.events = { submit: "submit" };
 
     this.prototype.ui = {
       form: "#createForm",
@@ -140,13 +138,14 @@ class TaskCreateFromView extends Marionette.View {
     return {
       type: this.type,
       isEditingMode: this.isEditingMode,
-      getInstanceLabel: () => this.isEditingMode ? "Remaining Instances" : "Task Instances",
+      getInstanceLabel: () => (this.isEditingMode ? "Remaining Instances" : "Task Instances"),
       boundingBoxString() {
-        if (!this.boundingBox) { return ""; }
+        if (!this.boundingBox) {
+          return "";
+        }
         const b = this.boundingBox;
         return `${b.topLeft.join(", ")}, ${b.width}, ${b.height}, ${b.depth}`;
       },
-
 
       getActionName: () => this.getActionName(),
     };
@@ -162,7 +161,6 @@ class TaskCreateFromView extends Marionette.View {
     }
   }
 
-
   getActionName() {
     if (this.isEditingMode) {
       return "Update";
@@ -170,7 +168,6 @@ class TaskCreateFromView extends Marionette.View {
       return "Create";
     }
   }
-
 
   // Submit form data as json
   submit(event) {
@@ -180,14 +177,12 @@ class TaskCreateFromView extends Marionette.View {
     this.createSubview.submit(event);
   }
 
-
   toggleSubmitButton(state) {
     if (this.ui.submitButton.prop != null) {
       this.ui.submitButton.prop("disabled", state);
       this.ui.submitButton.toggleClass("disabled", state);
     }
   }
-
 
   serializeForm() {
     const formValues = FormSyphon.serialize(this.ui.form);
@@ -199,51 +194,54 @@ class TaskCreateFromView extends Marionette.View {
     return formValues;
   }
 
-
   parseBoundingBox(string) {
-    if (_.isEmpty(string)) { return null; }
+    if (_.isEmpty(string)) {
+      return null;
+    }
 
-      // split string by comma delimiter, trim whitespace and cast to integer
-      // access from subview
+    // split string by comma delimiter, trim whitespace and cast to integer
+    // access from subview
     const intArray = Utils.stringToNumberArray(string);
 
     return {
-      topLeft: [
-        intArray[0] || 0,
-        intArray[1] || 0,
-        intArray[2] || 0,
-      ],
+      topLeft: [intArray[0] || 0, intArray[1] || 0, intArray[2] || 0],
       width: intArray[3] || 0,
       height: intArray[4] || 0,
       depth: intArray[5] || 0,
     };
   }
 
-
   showSaveSuccess(response) {
     const successCount = response.items.filter(item => item.status === 200).length;
     if (successCount === response.items.length) {
-      Toast.success(`${successCount} tasks were successfully ${this.getActionName().toLowerCase()}d.`);
-      const csvContent = response.items.map(({ success: task }) =>
-        `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`).join("\n");
+      Toast.success(
+        `${successCount} tasks were successfully ${this.getActionName().toLowerCase()}d.`,
+      );
+      const csvContent = response.items
+        .map(
+          ({ success: task }) => `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`,
+        )
+        .join("\n");
       Modal.show(`<pre>taskId,filename,position\n${csvContent}</pre>`, "Task IDs");
     } else {
-      Toast.error(`${response.items.length - successCount}/${response.items.length} tasks weren't ${this.getActionName().toLowerCase()}d.`);
+      Toast.error(
+        `${response.items.length - successCount}/${response.items
+          .length} tasks weren't ${this.getActionName().toLowerCase()}d.`,
+      );
     }
     this.toggleSubmitButton(false);
   }
 
-
   showSaveError() {
     this.toggleSubmitButton(false);
-    Toast.error(`The task could not be ${this.getActionName().toLowerCase()}d due to server errors.`);
+    Toast.error(
+      `The task could not be ${this.getActionName().toLowerCase()}d due to server errors.`,
+    );
   }
-
 
   showInvalidData() {
     Toast.error("The form data is not correct.");
   }
-
 
   /*
    Render the SelectionViews based on the stored options.
@@ -253,8 +251,12 @@ class TaskCreateFromView extends Marionette.View {
     this.taskTypeSelectionView = new SelectionView({
       collection: new TaskTypeCollection(),
       childViewOptions: {
-        modelValue() { return `${this.model.get("id")}`; },
-        modelLabel() { return `${this.model.get("summary")}`; },
+        modelValue() {
+          return `${this.model.get("id")}`;
+        },
+        modelLabel() {
+          return `${this.model.get("summary")}`;
+        },
         defaultItem: { id: this.model.get("type.id") || Utils.getUrlParams("taskType") },
       },
       data: "amIAnAdmin=true",
@@ -265,8 +267,12 @@ class TaskCreateFromView extends Marionette.View {
     this.scriptSelectionView = new SelectionView({
       collection: new ScriptCollection(),
       childViewOptions: {
-        modelValue() { return `${this.model.get("id")}`; },
-        modelLabel() { return `${this.model.get("name")}`; },
+        modelValue() {
+          return `${this.model.get("id")}`;
+        },
+        modelLabel() {
+          return `${this.model.get("name")}`;
+        },
         defaultItem: { id: defaultScriptId },
       },
       data: "amIAnAdmin=true",
@@ -277,7 +283,9 @@ class TaskCreateFromView extends Marionette.View {
     this.teamSelectionView = new SelectionView({
       collection: new TeamCollection(),
       childViewOptions: {
-        modelValue() { return `${this.model.get("name")}`; },
+        modelValue() {
+          return `${this.model.get("name")}`;
+        },
         defaultItem: { name: this.model.get("team") },
       },
       data: "amIAnAdmin=true",
@@ -287,7 +295,9 @@ class TaskCreateFromView extends Marionette.View {
     this.projectSelectionView = new SelectionView({
       collection: new ProjectCollection(),
       childViewOptions: {
-        modelValue() { return `${this.model.get("name")}`; },
+        modelValue() {
+          return `${this.model.get("name")}`;
+        },
         defaultItem: { name: this.model.get("projectName") || Utils.getUrlParams("projectName") },
       },
       data: "amIAnAdmin=true",
@@ -315,6 +325,5 @@ class TaskCreateFromView extends Marionette.View {
   }
 }
 TaskCreateFromView.initClass();
-
 
 export default TaskCreateFromView;

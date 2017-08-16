@@ -60,45 +60,41 @@ class BoundingBox {
 
   containsBucket([x, y, z, zoomStep]: Vector4): boolean {
     const { min, max } = this.getBoxForZoomStep(zoomStep);
-    return (
-      min[0] <= x && x < max[0] &&
-      min[1] <= y && y < max[1] &&
-      min[2] <= z && z < max[2]
-    );
+    return min[0] <= x && x < max[0] && min[1] <= y && y < max[1] && min[2] <= z && z < max[2];
   }
-
 
   containsFullBucket([x, y, z, zoomStep]: Vector4): boolean {
     const { min, max } = this.getBoxForZoomStep(zoomStep);
 
     return (
-      min[0] < x && x < max[0] - 1 &&
-      min[1] < y && y < max[1] - 1 &&
-      min[2] < z && z < max[2] - 1
+      min[0] < x && x < max[0] - 1 && min[1] < y && y < max[1] - 1 && min[2] < z && z < max[2] - 1
     );
   }
 
-
   removeOutsideArea(bucket: Bucket, bucketAddress: Vector4, bucketData: Uint8Array): void {
-    if (this.containsFullBucket(bucketAddress)) { return; }
+    if (this.containsFullBucket(bucketAddress)) {
+      return;
+    }
     if (bucket.type === "data") {
       bucket.isPartlyOutsideBoundingBox = true;
     }
 
-    const baseVoxel = bucketAddress.slice(0, 3)
-      .map(e => e << (BUCKET_SIZE_P + bucketAddress[3]));
+    const baseVoxel = bucketAddress.slice(0, 3).map(e => e << (BUCKET_SIZE_P + bucketAddress[3]));
 
-    for (let dx = 0; dx < (1 << BUCKET_SIZE_P); dx++) {
-      for (let dy = 0; dy < (1 << BUCKET_SIZE_P); dy++) {
-        for (let dz = 0; dz < (1 << BUCKET_SIZE_P); dz++) {
+    for (let dx = 0; dx < 1 << BUCKET_SIZE_P; dx++) {
+      for (let dy = 0; dy < 1 << BUCKET_SIZE_P; dy++) {
+        for (let dz = 0; dz < 1 << BUCKET_SIZE_P; dz++) {
           const x = baseVoxel[0] + (dx << bucketAddress[3]);
           const y = baseVoxel[1] + (dy << bucketAddress[3]);
           const z = baseVoxel[2] + (dz << bucketAddress[3]);
 
           if (
-            this.min[0] <= x && x < this.max[0] &&
-            this.min[1] <= y && y < this.max[1] &&
-            this.min[2] <= z && z < this.max[2]
+            this.min[0] <= x &&
+            x < this.max[0] &&
+            this.min[1] <= y &&
+            y < this.max[1] &&
+            this.min[2] <= z &&
+            z < this.max[2]
           ) {
             continue;
           }

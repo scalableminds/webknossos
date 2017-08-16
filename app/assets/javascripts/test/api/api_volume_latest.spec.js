@@ -2,6 +2,7 @@
 import test from "ava";
 import "backbone.marionette";
 import sinon from "sinon";
+import mockRequire from "mock-require";
 import Constants from "oxalis/constants";
 import { setupOxalis } from "test/helpers/apiHelpers";
 import VOLUMETRACING_OBJECT from "../fixtures/volumetracing_object";
@@ -9,23 +10,23 @@ import VOLUMETRACING_OBJECT from "../fixtures/volumetracing_object";
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 test.beforeEach(t => setupOxalis(t, "volume"));
 
-test("getActiveCellId should get the id of the active cell", (t) => {
+test("getActiveCellId should get the id of the active cell", t => {
   const api = t.context.api;
   t.is(api.tracing.getActiveCellId(), VOLUMETRACING_OBJECT.content.contentData.activeCell);
 });
 
-test("setActiveCell should set the active cell id", (t) => {
+test("setActiveCell should set the active cell id", t => {
   const api = t.context.api;
   api.tracing.setActiveCell(27);
   t.is(api.tracing.getActiveCellId(), 27);
 });
 
-test("getVolumeMode should get the current mode", (t) => {
+test("getVolumeMode should get the current mode", t => {
   const api = t.context.api;
   t.is(api.tracing.getVolumeMode(), Constants.VOLUME_MODE_MOVE);
 });
 
-test("setVolumeMode should set the current mode", (t) => {
+test("setVolumeMode should set the current mode", t => {
   const api = t.context.api;
   api.tracing.setVolumeMode(Constants.VOLUME_MODE_TRACE);
   t.is(api.tracing.getVolumeMode(), Constants.VOLUME_MODE_TRACE);
@@ -33,14 +34,14 @@ test("setVolumeMode should set the current mode", (t) => {
   t.is(api.tracing.getVolumeMode(), Constants.VOLUME_MODE_MOVE);
 });
 
-test("setVolumeMode should throw an error for an invalid mode", (t) => {
+test("setVolumeMode should throw an error for an invalid mode", t => {
   const api = t.context.api;
   t.throws(() => api.tracing.setVolumeMode(67));
   t.throws(() => api.tracing.setVolumeMode("myMode"));
   t.throws(() => api.tracing.setVolumeMode());
 });
 
-test("Data Api: labelVoxels should label a list of voxels", (t) => {
+test("Data API: labelVoxels should label a list of voxels", t => {
   const { api, model } = t.context;
   const cube = model.getSegmentationBinary().cube;
   sinon.stub(model.getSegmentationBinary().layer, "requestFromStoreImpl").returns(new Uint8Array());
@@ -53,7 +54,26 @@ test("Data Api: labelVoxels should label a list of voxels", (t) => {
   t.not(cube.getDataValue([11, 12, 13]), 34);
 });
 
-test("Calling a skeleton api function in a volume tracing should throw an error", (t) => {
+test("Data API: getVolumeTracingLayerName should return the name of the volume tracing layer", t => {
+  const api = t.context.api;
+  t.is(api.data.getVolumeTracingLayerName(), "64007765-cef9-4e31-b206-dba795b5be17");
+});
+
+test("Data API: downloadRawDataCuboid should open a popup with the correct URL", async t => {
+  const { api } = t.context;
+  const window = mockRequire.reRequire("libs/window");
+
+  await api.data.downloadRawDataCuboid("color", [1, 2, 3], [9, 8, 7]);
+
+  t.true(window.open.calledOnce);
+  t.true(
+    window.open.calledWith(
+      "http://localhost:9000/data/datasets/2012-09-28_ex145_07x2/layers/color/data?resolution=0&token=secure-token&x=1&y=2&z=3&width=8&height=6&depth=4",
+    ),
+  );
+});
+
+test("Calling a skeleton api function in a volume tracing should throw an error", t => {
   const api = t.context.api;
   t.throws(() => api.tracing.getActiveNodeId());
 });

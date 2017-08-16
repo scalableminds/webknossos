@@ -21,17 +21,15 @@ class ExplorativeTracingListItemView extends Marionette.View {
 </td>
 <td class="explorative-name-column hover-dynamic">
   <span class="hover-hide" id="explorative-tracing-name"><%- name %></span>
-  <form action="<%- jsRoutes.controllers.AnnotationController.nameExplorativeAnnotation(typ, id).url %>"
-    method="POST" class="hover-show hide" id="explorative-name-form">
-    <div class="input-append">
-      <input class="input-medium hover-input form-control"
-             name="name"
-             id="explorative-name-input"
-             type="text"
-             value="<%- name %>"
-             autocomplete="off">
-    </div>
-  </form>
+  <div class="hover-show hide">
+    <input
+      class="hover-input form-control"
+      name="name"
+      id="explorative-name-input"
+      type="text"
+      value="<%- name %>"
+      autocomplete="off">
+  </div>
 </td>
 <td><%- dataSetName %></td>
 
@@ -73,14 +71,12 @@ class ExplorativeTracingListItemView extends Marionette.View {
 `);
 
     this.prototype.events = {
-      "submit #explorative-name-form": "nameExplorativeAnnotation",
       "click #finish-tracing": "finishOrOpenTracing",
       "click #reopen-tracing": "finishOrOpenTracing",
-      "change @ui.explorativeNameInput": "submitForm",
+      "change @ui.explorativeNameInput": "nameExplorativeAnnotation",
     };
 
     this.prototype.ui = {
-      explorativeNameForm: "#explorative-name-form",
       explorativeNameInput: "#explorative-name-input",
     };
 
@@ -91,21 +87,12 @@ class ExplorativeTracingListItemView extends Marionette.View {
     };
   }
 
-
-  submitForm() {
-    this.ui.explorativeNameForm.submit();
-  }
-
-
   nameExplorativeAnnotation(event) {
     event.preventDefault();
-    const target = event.target;
-    const url = target.action;
+    const payload = { data: { name: event.target.value } };
+    const url = `/annotations/${this.model.get("typ")}/${this.model.get("id")}/edit`;
 
-    Request.sendUrlEncodedFormReceiveJSON(
-      url,
-      { data: $(target).serialize() },
-    ).then((response) => {
+    Request.sendJSONReceiveJSON(url, payload).then(response => {
       Toast.message(response.messages);
       const newName = this.$("input[name='name']").val();
       this.model.set("name", newName);
@@ -117,18 +104,16 @@ class ExplorativeTracingListItemView extends Marionette.View {
     state.isFinished = !state.isFinished;
   }
 
-
   finishOrOpenTracing(event) {
     event.preventDefault();
     const url = $(event.target).attr("href") || $(event.target.parentElement).attr("href");
 
-    Request.receiveJSON(url).then((response) => {
+    Request.receiveJSON(url).then(response => {
       Toast.message(response.messages);
       this.toggleState(this.model.attributes.state);
       this.model.collection.remove(this.model);
       this.options.parent.render();
-    },
-    );
+    });
   }
 }
 ExplorativeTracingListItemView.initClass();

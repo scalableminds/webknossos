@@ -11,8 +11,18 @@ import messages from "messages";
 import Toast from "libs/toast";
 import { call, put, take, select, race } from "redux-saga/effects";
 import { delay } from "redux-saga";
-import { shiftSaveQueueAction, setSaveBusyAction, setLastSaveTimestampAction, pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
-import { createTreeAction, SkeletonTracingActions } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  shiftSaveQueueAction,
+  setSaveBusyAction,
+  setLastSaveTimestampAction,
+  pushSaveQueueAction,
+  setVersionNumberAction,
+} from "oxalis/model/actions/save_actions";
+import {
+  createTreeAction,
+  SkeletonTracingSaveRelevantActions,
+  setTracingAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import { alert } from "libs/window";
@@ -24,6 +34,41 @@ import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
+const UNDO_HISTORY_SIZE = 100;
+
+export function* collectUndoStates(): Generator<*, *, *> {
+  const undoStack = [];
+  const redoStack = [];
+
+  yield take("INITIALIZE_SKELETONTRACING");
+  let prevTracing = yield select(state => state.tracing);
+  while (true) {
+    const { userAction, undo, redo } = yield race({
+      userAction: take(SkeletonTracingSaveRelevantActions),
+      undo: take("UNDO"),
+      redo: take("REDO"),
+    });
+    const curTracing = yield select(state => state.tracing);
+    if (userAction) {
+      if (curTracing !== prevTracing) {
+        // Clear the redo stack when a new action is executed
+        redoStack.splice(0);
+        undoStack.push(prevTracing);
+        if (undoStack.length > UNDO_HISTORY_SIZE) undoStack.shift();
+      }
+    } else if (undo && undoStack.length) {
+      redoStack.push(prevTracing);
+      const newTracing = undoStack.pop();
+      yield put(setTracingAction(newTracing));
+    } else if (redo && redoStack.length) {
+      undoStack.push(prevTracing);
+      const newTracing = redoStack.pop();
+      yield put(setTracingAction(newTracing));
+    }
+    // We need the updated tracing here
+    prevTracing = yield select(state => state.tracing);
+  }
+}
 
 export function* pushAnnotationAsync(): Generator<*, *, *> {
   yield take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
@@ -47,15 +92,18 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
 
 export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
   const batch = yield select(state => state.save.queue);
-  const compactBatch = compactUpdateActions(batch);
+  const compactBatch = compactUpdateActions(batch).filter(shouldUpdateActionBeSentToServer);
   const { version, tracingType, tracingId } = yield select(state => state.tracing);
   try {
-    yield call(Request.sendJSONReceiveJSON,
-      `/annotations/${tracingType}/${tracingId}?version=${version + 1}`, {
+    yield call(
+      Request.sendJSONReceiveJSON,
+      `/annotations/${tracingType}/${tracingId}?version=${version + 1}`,
+      {
         method: "PUT",
         headers: { "X-Date": timestamp },
         data: compactBatch,
-      });
+      },
+    );
     yield put(setVersionNumberAction(version + 1));
     yield put(setLastSaveTimestampAction());
     yield put(shiftSaveQueueAction(batch.length));
@@ -110,19 +158,33 @@ function compactMovedNodesAndEdges(updateActions) {
   const movedNodesAndEdges = [];
 
   // Performance improvement: create a map of the deletedNode update actions, key is the nodeId
-  const deleteNodeActionsMap = _.keyBy(updateActions, ua => ua.action === "deleteNode" ? ua.value.id : -1);
+  const deleteNodeActionsMap = _.keyBy(
+    updateActions,
+    ua => (ua.action === "deleteNode" ? ua.value.id : -1),
+  );
   // Performance improvement: create a map of the deletedEdge update actions, key is the cantor pairing
   // of sourceId and targetId
-  const deleteEdgeActionsMap = _.keyBy(updateActions, ua => ua.action === "deleteEdge" ? cantor(ua.value.source, ua.value.target) : -1);
+  const deleteEdgeActionsMap = _.keyBy(
+    updateActions,
+    ua => (ua.action === "deleteEdge" ? cantor(ua.value.source, ua.value.target) : -1),
+  );
   for (const createUA of updateActions) {
     if (createUA.action === "createNode") {
       const deleteUA = deleteNodeActionsMap[createUA.value.id];
-      if (deleteUA != null && deleteUA.action === "deleteNode" && deleteUA.value.treeId !== createUA.value.treeId) {
+      if (
+        deleteUA != null &&
+        deleteUA.action === "deleteNode" &&
+        deleteUA.value.treeId !== createUA.value.treeId
+      ) {
         movedNodesAndEdges.push([createUA, deleteUA]);
       }
     } else if (createUA.action === "createEdge") {
       const deleteUA = deleteEdgeActionsMap[cantor(createUA.value.source, createUA.value.target)];
-      if (deleteUA != null && deleteUA.action === "deleteEdge" && deleteUA.value.treeId !== createUA.value.treeId) {
+      if (
+        deleteUA != null &&
+        deleteUA.action === "deleteEdge" &&
+        deleteUA.value.treeId !== createUA.value.treeId
+      ) {
         movedNodesAndEdges.push([createUA, deleteUA]);
       }
     }
@@ -131,7 +193,8 @@ function compactMovedNodesAndEdges(updateActions) {
   // Group moved nodes and edges by their old and new treeId using the cantor pairing function
   // to create a single unique id
   const groupedMovedNodesAndEdges = _.groupBy(movedNodesAndEdges, ([createUA, deleteUA]) =>
-    cantor(createUA.value.treeId, deleteUA.value.treeId));
+    cantor(createUA.value.treeId, deleteUA.value.treeId),
+  );
 
   // Create a moveTreeComponent update action for each of the groups and insert it at the right spot
   for (const movedPairings of _.values(groupedMovedNodesAndEdges)) {
@@ -143,12 +206,12 @@ function compactMovedNodesAndEdges(updateActions) {
     // The moveTreeComponent update action needs to be placed:
     // BEFORE the possible deleteTree update action of the oldTreeId and
     // AFTER the possible createTree update action of the newTreeId
-    const deleteTreeUAIndex = compactedBatch.findIndex(ua =>
-      ua.action === "deleteTree" &&
-      ua.value.id === oldTreeId);
-    const createTreeUAIndex = compactedBatch.findIndex(ua =>
-      ua.action === "createTree" &&
-      ua.value.id === newTreeId);
+    const deleteTreeUAIndex = compactedBatch.findIndex(
+      ua => ua.action === "deleteTree" && ua.value.id === oldTreeId,
+    );
+    const createTreeUAIndex = compactedBatch.findIndex(
+      ua => ua.action === "createTree" && ua.value.id === newTreeId,
+    );
 
     if (deleteTreeUAIndex > -1 && createTreeUAIndex > -1) {
       // This should not happen, but in case it does, the moveTreeComponent update action
@@ -157,7 +220,11 @@ function compactMovedNodesAndEdges(updateActions) {
       continue;
     } else if (createTreeUAIndex > -1) {
       // Insert after the createTreeUA
-      compactedBatch.splice(createTreeUAIndex + 1, 0, moveTreeComponent(oldTreeId, newTreeId, nodeIds));
+      compactedBatch.splice(
+        createTreeUAIndex + 1,
+        0,
+        moveTreeComponent(oldTreeId, newTreeId, nodeIds),
+      );
     } else if (deleteTreeUAIndex > -1) {
       // Insert before the deleteTreeUA
       compactedBatch.splice(deleteTreeUAIndex, 0, moveTreeComponent(oldTreeId, newTreeId, nodeIds));
@@ -181,17 +248,22 @@ function compactDeletedTrees(updateActions) {
   // all corresponding deleteNode/deleteEdge update actions can simply be removed.
 
   // TODO: Remove the check in map once Flow recognizes that the result of the filter contains only deleteTree update actions
-  const deletedTreeIds = updateActions.filter(ua => ua.action === "deleteTree").map(ua => ua.action === "deleteTree" ? ua.value.id : -1);
-  _.remove(updateActions, ua =>
-    (ua.action === "deleteNode" || ua.action === "deleteEdge") && deletedTreeIds.includes(ua.value.treeId))
+  const deletedTreeIds = updateActions
+    .filter(ua => ua.action === "deleteTree")
+    .map(ua => (ua.action === "deleteTree" ? ua.value.id : -1));
+  _.remove(
+    updateActions,
+    ua =>
+      (ua.action === "deleteNode" || ua.action === "deleteEdge") &&
+      deletedTreeIds.includes(ua.value.treeId),
+  );
   return updateActions;
 }
 
-export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAction>>): Array<UpdateAction> {
-
-  const result = updateActionsBatches
-    .map(compactMovedNodesAndEdges)
-    .map(compactDeletedTrees);
+export function compactUpdateActions(
+  updateActionsBatches: Array<Array<UpdateAction>>,
+): Array<UpdateAction> {
+  const result = updateActionsBatches.map(compactMovedNodesAndEdges).map(compactDeletedTrees);
 
   // This part of the code removes all but the last updateTracing update actions
   let flatResult = _.flatten(result);
@@ -201,6 +273,10 @@ export function compactUpdateActions(updateActionsBatches: Array<Array<UpdateAct
   }
 
   return flatResult;
+}
+
+function shouldUpdateActionBeSentToServer(updateAction: UpdateAction): boolean {
+  return updateAction.action !== "toggleTree";
 }
 
 export function performDiffTracing(
@@ -234,14 +310,13 @@ export function* saveTracingAsync(): Generator<*, *, *> {
 
   while (true) {
     if (initSkeleton) {
-      yield take([...SkeletonTracingActions, ...FlycamActions]);
+      yield take([...SkeletonTracingSaveRelevantActions, ...FlycamActions, "UNDO", "REDO"]);
     } else {
       yield take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
     }
     const tracing = yield select(state => state.tracing);
     const flycam = yield select(state => state.flycam);
-    const items = Array.from(yield call(performDiffTracing,
-      prevTracing, tracing, flycam));
+    const items = Array.from(yield call(performDiffTracing, prevTracing, tracing, flycam));
     if (items.length > 0) {
       yield put(pushSaveQueueAction(items));
     }

@@ -4,8 +4,8 @@
  */
 
 class Deferred<T, U> {
-  _internalResolve: (T) => void;
-  _internalReject: (U) => void;
+  _internalResolve: T => void;
+  _internalReject: U => void;
   _internalPromise: Promise<T>;
 
   // Wrapper around `Promise` that keeps a reference to `resolve` and `reject`
@@ -20,7 +20,6 @@ class Deferred<T, U> {
   // )
   // return d.internalPromise()
   // ```
-
 
   constructor() {
     this._internalPromise = new Promise((resolve, reject) => {
@@ -45,6 +44,5 @@ class Deferred<T, U> {
     return () => this.promise();
   }
 }
-
 
 export default Deferred;

@@ -91,8 +91,6 @@ dataSet.import.directoryEmpty=Import failed because the dataset directory is emp
 dataSet.import.noLayers=Import failed because no data layers could be found
 
 dataSource.notFound=Datasource not found on datastore server
-dataSource.import.alreadyFinished=Import of the dataset already finished
-dataSource.import.alreadyInProgress=Import of the dataset already in progress
 
 dataStore.notAvailable=Datastore not available. Please try again in a few minutes.
 dataStore.list.failed=Failed to retrieve list of data stores.
@@ -169,11 +167,11 @@ annotation.transfered=Annotation got transfered
 annotation.notFound=Annotation couldn''t be found
 annotation.invalid=Invalid annotation
 annotation.finished=Annotation is archived
-annotation.allFinished=All Annotation are archived
+annotation.allFinished=All annotations are archived
 annotation.reopened=Annotation got reopened
 annotation.saved=Annotation got saved
-annotation.setName=Successfully named annotation
-annotation.invalidName=Annotation name is invalid
+annotation.edit.success=Successfully updated annotation
+annotation.edit.failed=Updating the annotation failed
 annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
 annotation.reset.success=Annotation was successfully reset
 annotation.revert.skeletonOnly=Reverting an annotation is only implemented for skeleton tracings of tasks

@@ -25,7 +25,9 @@ function* pushDatasetSettingsAsync() {
   if (app.currentUser == null) return;
   const datasetName = yield select(state => state.dataset.name);
   const payload = yield select(state => state.datasetConfiguration);
-  yield call(Request.sendJSONReceiveJSON, `/api/dataSetConfigurations/${datasetName}`, { data: payload });
+  yield call(Request.sendJSONReceiveJSON, `/api/dataSetConfigurations/${datasetName}`, {
+    data: payload,
+  });
 }
 
 export function* watchPushSettingsAsync(): Generator<*, *, *> {

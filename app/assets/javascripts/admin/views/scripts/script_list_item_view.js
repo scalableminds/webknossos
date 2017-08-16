@@ -3,10 +3,10 @@ import Marionette from "backbone.marionette";
 import window from "libs/window";
 
 class ScriptListItemView extends Marionette.View {
-
   static initClass() {
     this.prototype.tagName = "tr";
     this.prototype.template = _.template(`\
+    <td class="monospace-id"><%- id %></td>
     <td><%- name %></td>
     <td><%- owner.firstName %> <%- owner.lastName %></td>
     <td><a href="<%- gist %>" target="_blank"><%- gist %></td>\

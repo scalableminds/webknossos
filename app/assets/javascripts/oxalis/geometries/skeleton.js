@@ -9,14 +9,15 @@ import TWEEN from "tween.js";
 import Utils from "libs/utils";
 import Store from "oxalis/throttled_store";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import NodeShader, { NodeTypes, COLOR_TEXTURE_WIDTH } from "oxalis/geometries/materials/node_shader";
+import NodeShader, {
+  NodeTypes,
+  COLOR_TEXTURE_WIDTH,
+} from "oxalis/geometries/materials/node_shader";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
-import { OrthoViews } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { SkeletonTracingType, TreeType, NodeType } from "oxalis/store";
-import type { Vector3, OrthoViewType } from "oxalis/constants";
-
+import type { Vector3 } from "oxalis/constants";
 
 const MAX_CAPACITY = 1000;
 
@@ -28,12 +29,12 @@ type Buffer = {
   nextIndex: number,
   geometry: THREE.BufferGeometry,
   mesh: THREE.Mesh,
-}
+};
 
 type BufferPosition = {
   buffer: Buffer,
   index: number,
-}
+};
 
 type BufferCollection = {
   buffers: Array<Buffer>,
@@ -41,7 +42,7 @@ type BufferCollection = {
   freeList: Array<BufferPosition>,
   helper: BufferHelperType,
   material: THREE.Material,
-}
+};
 
 type BufferOperation = (position: BufferPosition) => Array<THREE.BufferAttribute>;
 
@@ -95,12 +96,12 @@ class Skeleton {
     this.rootNode = new THREE.Object3D();
     this.pickingNode = new THREE.Object3D();
 
-    getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+    getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
       this.reset(skeletonTracing);
     });
 
     Store.subscribe(() => {
-      getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) => {
+      getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
         if (skeletonTracing.tracingId !== this.prevTracing.tracingId) {
           this.reset(skeletonTracing);
         } else {
@@ -120,10 +121,10 @@ class Skeleton {
     const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
 
     this.treeColorTexture = new THREE.DataTexture(
-      new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 3),
+      new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4),
       COLOR_TEXTURE_WIDTH,
       COLOR_TEXTURE_WIDTH,
-      THREE.RGBFormat,
+      THREE.RGBAFormat,
       THREE.FloatType,
     );
 
@@ -161,8 +162,16 @@ class Skeleton {
     this.prevTracing = skeletonTracing;
   }
 
-  initializeBufferCollection(initialCapacity: number, material: THREE.Material, helper: BufferHelperType): BufferCollection {
-    const initialBuffer = this.initializeBuffer(Math.max(initialCapacity, MAX_CAPACITY), material, helper);
+  initializeBufferCollection(
+    initialCapacity: number,
+    material: THREE.Material,
+    helper: BufferHelperType,
+  ): BufferCollection {
+    const initialBuffer = this.initializeBuffer(
+      Math.max(initialCapacity, MAX_CAPACITY),
+      material,
+      helper,
+    );
 
     return {
       buffers: [initialBuffer],
@@ -204,7 +213,10 @@ class Skeleton {
       currentBuffer = this.initializeBuffer(MAX_CAPACITY, collection.material, collection.helper);
       collection.buffers.unshift(currentBuffer);
     }
-    const bufferPosition = collection.freeList.pop() || { buffer: currentBuffer, index: currentBuffer.nextIndex++ };
+    const bufferPosition = collection.freeList.pop() || {
+      buffer: currentBuffer,
+      index: currentBuffer.nextIndex++,
+    };
     collection.idToBufferPosition.set(id, bufferPosition);
 
     const changedAttributes = createFunc(bufferPosition);
@@ -288,6 +300,12 @@ class Skeleton {
         case "createTree":
           this.updateTreeColor(update.value.id, update.value.color);
           break;
+        case "toggleTree": {
+          const treeId = update.value.id;
+          const tree = skeletonTracing.trees[treeId];
+          this.updateTreeColor(treeId, tree.color, tree.isVisible);
+          break;
+        }
         case "updateTree": {
           // diff branchpoints
           const treeId = update.value.id;
@@ -295,7 +313,10 @@ class Skeleton {
           const prevTree = this.prevTracing.trees[treeId];
           const oldBranchPoints = prevTree.branchPoints.map(branchPoint => branchPoint.id);
           const newBranchPoints = tree.branchPoints.map(branchPoint => branchPoint.id);
-          const { onlyA: deletedBranchPoints, onlyB: createdBranchPoints } = Utils.diffArrays(oldBranchPoints, newBranchPoints);
+          const { onlyA: deletedBranchPoints, onlyB: createdBranchPoints } = Utils.diffArrays(
+            oldBranchPoints,
+            newBranchPoints,
+          );
 
           for (const nodeId of deletedBranchPoints) {
             this.updateNodeType(treeId, nodeId, NodeTypes.NORMAL);
@@ -306,7 +327,7 @@ class Skeleton {
           }
 
           if (tree.color !== prevTree.color) {
-            this.updateTreeColor(treeId, update.value.color);
+            this.updateTreeColor(treeId, update.value.color, tree.isVisible);
           }
           break;
         }
@@ -346,13 +367,10 @@ class Skeleton {
     nodeUniforms.viewportScale.value = scale;
     nodeUniforms.activeTreeId.value = activeTreeId;
     nodeUniforms.activeNodeId.value = activeNodeId;
-    nodeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
-    nodeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
 
     const edgeUniforms = this.edges.material.uniforms;
     edgeUniforms.activeTreeId.value = activeTreeId;
-    edgeUniforms.shouldHideInactiveTrees.value = state.temporaryConfiguration.shouldHideInactiveTrees;
-    edgeUniforms.shouldHideAllSkeletons.value = state.temporaryConfiguration.shouldHideAllSkeletons;
+
     this.edges.material.linewidth = state.userConfiguration.particleSize / 4;
     this.prevTracing = skeletonTracing;
   }
@@ -492,19 +510,14 @@ class Skeleton {
    * Updates a node/edges's color based on the tree color. Colors are stored in
    * a texture shared between the node and edge shader.
    */
-  updateTreeColor(treeId: number, color: Vector3) {
-    this.treeColorTexture.image.data.set(color, treeId * 3);
+  updateTreeColor(treeId: number, color: Vector3, isVisible: boolean = true) {
+    const rgba = this.getTreeRGBA(color, isVisible);
+    this.treeColorTexture.image.data.set(rgba, treeId * 4);
     this.treeColorTexture.needsUpdate = true;
   }
 
-  /**
-   * Updates shader uniforms depending on which of the four tracing viewports is rendered.
-   */
-  updateForCam(camera: OrthoViewType) {
-    const is3DView = camera === OrthoViews.TDView;
-
-    this.nodes.material.uniforms.is3DView.value = is3DView;
-    this.edges.material.uniforms.is3DView.value = is3DView;
+  getTreeRGBA(color: Vector3, isVisible: boolean) {
+    return color.concat(isVisible ? 1 : 0);
   }
 
   /**
@@ -525,19 +538,19 @@ class Skeleton {
    */
   animateNodeScale(from: number, to: number) {
     return new Promise((resolve, reject) => {
-      const setScaleFactor = (scale) => {
+      const setScaleFactor = scale => {
         this.nodes.material.uniforms.activeNodeScaleFactor.value = scale;
       };
 
       const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });
       tweenAnimation
-      .to({ scaleFactor: to }, 100)
-      .onUpdate(function onUpdate() {
-        setScaleFactor(this.scaleFactor);
-      })
-      .onComplete(resolve)
-      .onStop(reject)
-      .start();
+        .to({ scaleFactor: to }, 100)
+        .onUpdate(function onUpdate() {
+          setScaleFactor(this.scaleFactor);
+        })
+        .onComplete(resolve)
+        .onStop(reject)
+        .start();
     });
   }
 }

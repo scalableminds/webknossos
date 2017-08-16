@@ -23,6 +23,7 @@ const window = {
     pathname: "annotationUrl",
   },
   alert: console.log.bind(console),
+  open: sinon.spy(),
 };
 const currentUser = {
   firstName: "SCM",
@@ -36,7 +37,7 @@ export const KeyboardJS = {
   bind: _.noop,
   unbind: _.noop,
 };
-mockRequire("keyboardjs", KeyboardJS);
+mockRequire("libs/keyboard", KeyboardJS);
 mockRequire("libs/toast", { error: _.noop });
 mockRequire("libs/window", window);
 mockRequire("libs/request", Request);
@@ -56,21 +57,26 @@ const modelData = {
 
 export function setupOxalis(t, mode) {
   UrlManager.initialState = { position: [1, 2, 3] };
-  const model = t.context.model = new Model();
+  const model = new Model();
+  t.context.model = model;
 
   const webknossos = new OxalisApi(model);
 
   Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(modelData[mode])));
+  Request.receiveJSON
+    .withArgs("/dataToken/generate?dataSetName=2012-09-28_ex145_07x2&dataLayerName=color")
+    .returns(Promise.resolve({ token: "secure-token" }));
 
-  return model.fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
+  return model
+    .fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
       app.vent.trigger("webknossos:ready");
-      webknossos.apiReady(2).then((apiObject) => {
+      webknossos.apiReady(2).then(apiObject => {
         t.context.api = apiObject;
       });
     })
-    .catch((error) => {
+    .catch(error => {
       console.error("model.fetch() failed", error);
       t.fail(error.message);
     });

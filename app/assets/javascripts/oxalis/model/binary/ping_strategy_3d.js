@@ -10,10 +10,13 @@ import PolyhedronRasterizer from "oxalis/model/binary/polyhedron_rasterizer";
 import { AbstractPingStrategy } from "oxalis/model/binary/ping_strategy";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
 
-
 export class PingStrategy3d extends AbstractPingStrategy {
-
-  getExtentObject(poly0: BoundingBoxType, poly1: BoundingBoxType, zoom0: number, zoom1: number): BoundingBoxType {
+  getExtentObject(
+    poly0: BoundingBoxType,
+    poly1: BoundingBoxType,
+    zoom0: number,
+    zoom1: number,
+  ): BoundingBoxType {
     return {
       min: [
         Math.min(poly0.min[0] << zoom0, poly1.min[0] << zoom1),
@@ -29,9 +32,9 @@ export class PingStrategy3d extends AbstractPingStrategy {
   }
 
   modifyMatrixForPoly(matrix: Matrix4x4, zoomStep: number) {
-    matrix[12] >>= (5 + zoomStep);
-    matrix[13] >>= (5 + zoomStep);
-    matrix[14] >>= (5 + zoomStep);
+    matrix[12] >>= 5 + zoomStep;
+    matrix[13] >>= 5 + zoomStep;
+    matrix[14] >>= 5 + zoomStep;
     matrix[12] += 1;
     matrix[13] += 1;
     matrix[14] += 1;
@@ -44,7 +47,6 @@ export class PingStrategy3d extends AbstractPingStrategy {
 }
 
 export class DslSlowPingStrategy3d extends PingStrategy3d {
-
   pingPolyhedron: PolyhedronRasterizer.Master;
 
   velocityRangeStart = 0;
@@ -55,11 +57,7 @@ export class DslSlowPingStrategy3d extends PingStrategy3d {
 
   name = "DSL_SLOW";
 
-  pingPolyhedron = PolyhedronRasterizer.Master.squareFrustum(
-    5, 5, -0.5,
-    4, 4, 2,
-  );
-
+  pingPolyhedron = PolyhedronRasterizer.Master.squareFrustum(5, 5, -0.5, 4, 4, 2);
 
   ping(matrix: Matrix4x4, zoomStep: number): Array<PullQueueItemType> {
     const pullQueue = [];

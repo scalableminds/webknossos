@@ -8,14 +8,30 @@ import $ from "jquery";
 import * as THREE from "three";
 import _ from "lodash";
 import Store from "oxalis/store";
-import { PlaneControllerClass, mapStateToProps } from "oxalis/controller/viewmodes/plane_controller";
+import {
+  PlaneControllerClass,
+  mapStateToProps,
+} from "oxalis/controller/viewmodes/plane_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import { OrthoViews } from "oxalis/constants";
-import { setActiveNodeAction, deleteNodeAction, createTreeAction, createNodeAction, createBranchPointAction, requestDeleteBranchPointAction, mergeTreesAction } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  setActiveNodeAction,
+  deleteNodeAction,
+  createTreeAction,
+  createNodeAction,
+  createBranchPointAction,
+  requestDeleteBranchPointAction,
+  mergeTreesAction,
+  toggleAllTreesAction,
+  toggleInactiveTreesAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import { setRotationAction } from "oxalis/model/actions/flycam_actions";
-import { getPosition, getRotationOrtho, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getRotationOrtho,
+  getRequestLogZoomStep,
+} from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import { toggleTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 import api from "oxalis/api/internal_api";
@@ -29,7 +45,6 @@ const OrthoViewToNumber: OrthoViewMapType<number> = {
 };
 
 class SkeletonTracingPlaneController extends PlaneControllerClass {
-
   // See comment in Controller class on general controller architecture.
   //
   // Skeleton Tracing Plane Controller:
@@ -48,18 +63,15 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     _.defer(() => this.simulateTracing(nodesPerTree, nodesAlreadySet + 1));
   }
 
-
   start(): void {
     super.start();
     $(".skeleton-plane-controls").show();
   }
 
-
   stop(): void {
     super.stop();
     $(".skeleton-plane-controls").hide();
   }
-
 
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
@@ -70,7 +82,6 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     });
   }
 
-
   getTDViewMouseControls(): Object {
     return _.extend(super.getTDViewMouseControls(), {
       leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
@@ -78,12 +89,10 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     });
   }
 
-
   getKeyboardControls(): Object {
     return _.extend(super.getKeyboardControls(), {
-
-      "1": () => Store.dispatch(toggleTemporarySettingAction("shouldHideAllSkeletons")),
-      "2": () => Store.dispatch(toggleTemporarySettingAction("shouldHideInactiveTrees")),
+      "1": () => Store.dispatch(toggleAllTreesAction()),
+      "2": () => Store.dispatch(toggleInactiveTreesAction()),
 
       // Delete active node
       delete: () => Store.dispatch(deleteNodeAction()),
@@ -108,9 +117,14 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     }
   }
 
-
-  onClick = (position: Point2, shiftPressed: boolean, altPressed: boolean, plane: OrthoViewType): void => {
-    if (!shiftPressed) { // do nothing
+  onClick = (
+    position: Point2,
+    shiftPressed: boolean,
+    altPressed: boolean,
+    plane: OrthoViewType,
+  ): void => {
+    if (!shiftPressed) {
+      // do nothing
       return;
     }
 
@@ -136,14 +150,14 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     // otherwise we have hit the background and do nothing
     if (nodeId > 0) {
       if (altPressed) {
-        getActiveNode(Store.getState().tracing)
-          .map(activeNode => Store.dispatch(mergeTreesAction(activeNode.id, nodeId)));
+        getActiveNode(Store.getState().tracing).map(activeNode =>
+          Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
+        );
+      } else {
+        Store.dispatch(setActiveNodeAction(nodeId));
       }
-
-      Store.dispatch(setActiveNodeAction(nodeId));
     }
   };
-
 
   setWaypoint(position: Vector3, ctrlPressed: boolean): void {
     const activeViewport = Store.getState().viewModeData.plane.activeViewport;
@@ -153,11 +167,15 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     const activeNodeMaybe = getActiveNode(Store.getState().tracing);
 
     // set the new trace direction
-    activeNodeMaybe.map(activeNode => Store.dispatch(setRotationAction([
-      position[0] - activeNode.position[0],
-      position[1] - activeNode.position[1],
-      position[2] - activeNode.position[2],
-    ])));
+    activeNodeMaybe.map(activeNode =>
+      Store.dispatch(
+        setRotationAction([
+          position[0] - activeNode.position[0],
+          position[1] - activeNode.position[1],
+          position[2] - activeNode.position[2],
+        ]),
+      ),
+    );
 
     const rotation = getRotationOrtho(activeViewport);
     this.addNode(position, rotation, !ctrlPressed);
@@ -169,7 +187,6 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
       activeNodeMaybe.map(activeNode => Store.dispatch(setActiveNodeAction(activeNode.id)));
     }
   }
-
 
   addNode = (position: Vector3, rotation: Vector3, centered: boolean): void => {
     const state = Store.getState();
@@ -185,17 +202,20 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
       centered = true;
     }
 
-    Store.dispatch(createNodeAction(
-      position,
-      rotation,
-      OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
-      getRequestLogZoomStep(state),
-    ));
+    Store.dispatch(
+      createNodeAction(
+        position,
+        rotation,
+        OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
+        getRequestLogZoomStep(state),
+      ),
+    );
 
     if (centered) {
       // we created a new node, so get a new reference
-      getActiveNode(Store.getState().tracing)
-        .map(newActiveNode => api.tracing.centerPositionAnimated(newActiveNode.position));
+      getActiveNode(Store.getState().tracing).map(newActiveNode =>
+        api.tracing.centerPositionAnimated(newActiveNode.position),
+      );
     }
   };
 }

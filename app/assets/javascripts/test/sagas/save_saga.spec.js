@@ -15,7 +15,9 @@ const DateMock = {
 mockRequire("libs/date", DateMock);
 mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("app", { router: { off: _.noop, reload: _.noop } });
-mockRequire("oxalis/model/sagas/root_saga", function* () { yield; });
+mockRequire("oxalis/model/sagas/root_saga", function*() {
+  yield;
+});
 
 const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
@@ -23,7 +25,12 @@ const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
 const Request = mockRequire.reRequire("libs/request").default;
 
 const { alert } = mockRequire.reRequire("libs/window");
-const { compactUpdateActions, pushAnnotationAsync, sendRequestToServer, toggleErrorHighlighting } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
+const {
+  compactUpdateActions,
+  pushAnnotationAsync,
+  sendRequestToServer,
+  toggleErrorHighlighting,
+} = mockRequire.reRequire("oxalis/model/sagas/save_saga");
 
 const initialState = {
   dataset: {
@@ -62,7 +69,7 @@ const initialState = {
 
 const INIT_ACTIONS = ["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"];
 
-test("SaveSaga should compact multiple updateTracing update actions", (t) => {
+test("SaveSaga should compact multiple updateTracing update actions", t => {
   const updateActions = [
     UpdateActions.updateSkeletonTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
     UpdateActions.updateSkeletonTracing(initialState, [2, 3, 4], [0, 0, 1], 2),
@@ -71,11 +78,8 @@ test("SaveSaga should compact multiple updateTracing update actions", (t) => {
   t.deepEqual(compactUpdateActions([updateActions]), [updateActions[1]]);
 });
 
-test("SaveSaga should send update actions", (t) => {
-  const updateActions = [
-    UpdateActions.createEdge(1, 0, 1),
-    UpdateActions.createEdge(1, 1, 2),
-  ];
+test("SaveSaga should send update actions", t => {
+  const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
 
   const saga = pushAnnotationAsync();
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
@@ -90,11 +94,8 @@ test("SaveSaga should send update actions", (t) => {
   expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
 });
 
-test("SaveSaga should send request to server", (t) => {
-  const updateActions = [
-    UpdateActions.createEdge(1, 0, 1),
-    UpdateActions.createEdge(1, 1, 2),
-  ];
+test("SaveSaga should send request to server", t => {
+  const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
 
   const saga = sendRequestToServer(TIMESTAMP);
   saga.next();
@@ -110,11 +111,8 @@ test("SaveSaga should send request to server", (t) => {
   );
 });
 
-test("SaveSaga should retry update actions", (t) => {
-  const updateActions = [
-    UpdateActions.createEdge(1, 0, 1),
-    UpdateActions.createEdge(1, 1, 2),
-  ];
+test("SaveSaga should retry update actions", t => {
+  const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
 
   const saga = sendRequestToServer(TIMESTAMP);
   saga.next();
@@ -136,11 +134,8 @@ test("SaveSaga should retry update actions", (t) => {
   expectValueDeepEqual(t, saga.next(), call(sendRequestToServer));
 });
 
-test("SaveSaga should escalate on permanent client error update actions", (t) => {
-  const updateActions = [
-    UpdateActions.createEdge(1, 0, 1),
-    UpdateActions.createEdge(1, 1, 2),
-  ];
+test("SaveSaga should escalate on permanent client error update actions", t => {
+  const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
 
   const saga = sendRequestToServer(TIMESTAMP);
   saga.next();
@@ -161,11 +156,8 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
   t.true(saga.next().done);
 });
 
-test("SaveSaga should send update actions right away", (t) => {
-  const updateActions = [
-    UpdateActions.createEdge(1, 0, 1),
-    UpdateActions.createEdge(1, 1, 2),
-  ];
+test("SaveSaga should send update actions right away", t => {
+  const updateActions = [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)];
   const saga = pushAnnotationAsync();
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
   saga.next();
@@ -176,7 +168,7 @@ test("SaveSaga should send update actions right away", (t) => {
   saga.next();
 });
 
-test("SaveSaga should remove the correct update actions", (t) => {
+test("SaveSaga should remove the correct update actions", t => {
   const updateActions = [
     UpdateActions.updateSkeletonTracing(initialState, [1, 2, 3], [0, 0, 1], 1),
     UpdateActions.updateSkeletonTracing(initialState, [2, 3, 4], [0, 0, 1], 2),

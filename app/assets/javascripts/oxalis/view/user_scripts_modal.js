@@ -8,12 +8,11 @@ import { fetchGistContent } from "libs/gist";
 
 type UserScriptsModalViewPropsType = {
   onClose: Function,
-  visible: boolean,
+  visible: boolean
 };
 
 class UserScriptsModalView extends React.PureComponent {
-
-  props: UserScriptsModalViewPropsType
+  props: UserScriptsModalViewPropsType;
 
   state = {
     code: "",
@@ -21,8 +20,8 @@ class UserScriptsModalView extends React.PureComponent {
     scripts: [],
     // Needs to be undefined so the placeholder is displayed in the beginning
     selectedScript: undefined,
-    isLoading: true,
-  }
+    isLoading: true
+  };
 
   componentWillMount() {
     Request.receiveJSON("/api/scripts").then(scripts => {
@@ -36,24 +35,27 @@ class UserScriptsModalView extends React.PureComponent {
   handleCodeChange = (event: SyntheticInputEvent) => {
     this.setState({
       code: event.target.value,
-      isCodeChanged: true,
+      isCodeChanged: true
     });
-  }
+  };
 
   handleScriptChange = async (scriptId: string) => {
     const script = this.state.scripts.find(s => s.id === scriptId);
     if (script == null) return;
-    if (!this.state.isCodeChanged || confirm("This will replace the code you've written. Continue?")) {
+    if (
+      !this.state.isCodeChanged ||
+      confirm("This will replace the code you've written. Continue?")
+    ) {
       this.setState({ isLoading: true });
       const content = await fetchGistContent(script.gist, script.name);
       this.setState({
         isLoading: false,
         selectedScript: scriptId,
         code: content,
-        isCodeChanged: false,
+        isCodeChanged: false
       });
     }
-  }
+  };
 
   handleClick = () => {
     try {
@@ -64,7 +66,7 @@ class UserScriptsModalView extends React.PureComponent {
       console.error(error);
       return alert(error);
     }
-  }
+  };
 
   render() {
     return (
@@ -83,10 +85,11 @@ class UserScriptsModalView extends React.PureComponent {
             onChange={this.handleScriptChange}
             placeholder="Select an existing user script"
           >
-            {
-              this.state.scripts.map(script =>
-                <Select.Option key={script.id} value={script.id}>{script.name}</Select.Option>)
-            }
+            {this.state.scripts.map(script =>
+              <Select.Option key={script.id} value={script.id}>
+                {script.name}
+              </Select.Option>
+            )}
           </Select>
           <Input
             type="textarea"
@@ -99,6 +102,5 @@ class UserScriptsModalView extends React.PureComponent {
     );
   }
 }
-
 
 export default UserScriptsModalView;

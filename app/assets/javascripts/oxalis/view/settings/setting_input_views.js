@@ -3,9 +3,9 @@
  * @flow
  */
 
- /* eslint-disable react/no-multi-comp */
- /* eslint-disable react/prefer-stateless-function */
- /* eslint-disable jsx-a11y/label-has-for */
+/* eslint-disable react/no-multi-comp */
+/* eslint-disable react/prefer-stateless-function */
+/* eslint-disable jsx-a11y/label-has-for */
 
 import React from "react";
 import Utils from "libs/utils";
@@ -22,7 +22,6 @@ type NumberSliderSettingProps = {
 };
 
 export class NumberSliderSetting extends React.PureComponent {
-
   props: NumberSliderSettingProps;
   static defaultProps = {
     min: 1,
@@ -33,13 +32,17 @@ export class NumberSliderSetting extends React.PureComponent {
     if (this.props.min <= _value && _value <= this.props.max) {
       this.props.onChange(_value);
     }
-  }
+  };
   render() {
     const { value, label, max, min, step, onChange } = this.props;
 
     return (
       <Row className="settings-row">
-        <Col span={8}><label className="setting-label">{label}</label></Col>
+        <Col span={8}>
+          <label className="setting-label">
+            {label}
+          </label>
+        </Col>
         <Col span={8}>
           <Slider min={min} max={max} onChange={onChange} value={value} step={step} />
         </Col>
@@ -48,7 +51,8 @@ export class NumberSliderSetting extends React.PureComponent {
             min={min}
             max={max}
             style={{ marginLeft: 16 }}
-            value={value} onChange={this._onChange}
+            value={value}
+            onChange={this._onChange}
           />
         </Col>
       </Row>
@@ -62,7 +66,7 @@ type LogSliderSettingProps = {
   label: string,
   max: number,
   min: number,
-  roundTo?: number,
+  roundTo: number,
   disabled?: boolean,
 };
 
@@ -70,10 +74,10 @@ const LOG_SLIDER_MIN = -100;
 const LOG_SLIDER_MAX = 100;
 
 export class LogSliderSetting extends React.PureComponent {
-
   props: LogSliderSettingProps;
   static defaultProps = {
     disabled: false,
+    roundTo: 3,
   };
 
   onChangeInput = (value: number) => {
@@ -83,35 +87,42 @@ export class LogSliderSetting extends React.PureComponent {
       // reset to slider value
       this.props.onChange(this.props.value);
     }
-  }
+  };
 
   onChangeSlider = (value: number) => {
     this.props.onChange(this.calculateValue(value));
-  }
+  };
 
   calculateValue(value: number) {
     const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
-    const b = 100 * (Math.log(this.props.min) + Math.log(this.props.max)) /
+    const b =
+      100 *
+      (Math.log(this.props.min) + Math.log(this.props.max)) /
       (Math.log(this.props.min) - Math.log(this.props.max));
     return Math.exp((value - b) / a);
   }
 
-  formatTooltip = (value: number) =>
-    Utils.roundTo(this.calculateValue(value), this.props.roundTo != null ? this.props.roundTo : 3);
+  formatTooltip = (value: number) => Utils.roundTo(this.calculateValue(value), this.props.roundTo);
 
   getSliderValue = () => {
     const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
-    const b = 100 * (Math.log(this.props.min) + Math.log(this.props.max)) /
+    const b =
+      100 *
+      (Math.log(this.props.min) + Math.log(this.props.max)) /
       (Math.log(this.props.min) - Math.log(this.props.max));
     const scaleValue = a * Math.log(this.props.value) + b;
     return Math.round(scaleValue);
-  }
+  };
 
   render() {
     const { label, roundTo, value, min, max, disabled } = this.props;
     return (
       <Row className="settings-row">
-        <Col span={8}><label className="setting-label">{label}</label></Col>
+        <Col span={8}>
+          <label className="setting-label">
+            {label}
+          </label>
+        </Col>
         <Col span={8}>
           <Slider
             min={LOG_SLIDER_MIN}
@@ -127,7 +138,8 @@ export class LogSliderSetting extends React.PureComponent {
             min={min}
             max={max}
             style={{ marginLeft: 16 }}
-            value={roundTo != null ? Utils.roundTo(value, roundTo) : value} onChange={this.onChangeInput}
+            value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
+            onChange={this.onChangeInput}
             disabled={disabled}
           />
         </Col>
@@ -149,7 +161,11 @@ export class SwitchSetting extends React.PureComponent {
     const { label, onChange, value } = this.props;
     return (
       <Row className="settings-row">
-        <Col span={8}><label className="setting-label">{label}</label></Col>
+        <Col span={8}>
+          <label className="setting-label">
+            {label}
+          </label>
+        </Col>
         <Col span={16}>
           <Switch onChange={onChange} checked={value} defaultChecked={value} />
         </Col>
@@ -169,13 +185,22 @@ type NumberInputSettingProps = {
 
 export class NumberInputSetting extends React.PureComponent {
   props: NumberInputSettingProps;
+  static defaultProps = {
+    max: 100,
+    min: 1,
+    step: 1,
+  };
 
   render() {
-    const { onChange, value, label, max, min = 1, step = 1 } = this.props;
+    const { onChange, value, label, max, min, step } = this.props;
 
     return (
       <Row className="settings-row">
-        <Col span={8}><label className="setting-label">{label}</label></Col>
+        <Col span={8}>
+          <label className="setting-label">
+            {label}
+          </label>
+        </Col>
         <Col span={16}>
           <InputNumber min={min} max={max} onChange={onChange} value={value} step={step} />
         </Col>
@@ -184,7 +209,7 @@ export class NumberInputSetting extends React.PureComponent {
   }
 }
 
-type VectorInputSettingPropTypes<T:Vector6> = {
+type VectorInputSettingPropTypes<T: Vector6> = {
   label: string,
   value: T,
   onChange: (value: T) => void,
@@ -249,7 +274,7 @@ export class Vector6InputSetting extends React.PureComponent {
     const text = evt.target.value;
 
     // only numbers, commas and whitespace is allowed
-    const isValidInput = (/^[\d\s,]*$/g).test(text);
+    const isValidInput = /^[\d\s,]*$/g.test(text);
     const value = Utils.stringToNumberArray(text);
     const isValidFormat = value.length === 6;
 
@@ -268,7 +293,11 @@ export class Vector6InputSetting extends React.PureComponent {
 
     return (
       <Row className="settings-row">
-        <Col span={8}><label className="setting-label">{this.props.label}</label></Col>
+        <Col span={8}>
+          <label className="setting-label">
+            {this.props.label}
+          </label>
+        </Col>
         <Col span={16}>
           <Tooltip
             trigger={["focus"]}
@@ -301,12 +330,16 @@ export class ColorSetting extends React.PureComponent {
 
   onColorChange = (evt: SyntheticInputEvent) => {
     this.props.onChange(Utils.hexToRgb(evt.target.value));
-  }
+  };
 
   render() {
     return (
       <Row className="settings-row">
-        <Col span={8}><label className="setting-label">{this.props.label}</label></Col>
+        <Col span={8}>
+          <label className="setting-label">
+            {this.props.label}
+          </label>
+        </Col>
         <Col span={16}>
           <input type="color" onChange={this.onColorChange} value={this.props.value} />
         </Col>
@@ -324,14 +357,21 @@ type DropdownSettingProps = {
 
 export class DropdownSetting extends React.PureComponent {
   props: DropdownSettingProps;
+  static defaultProps = {
+    children: undefined,
+  };
 
   render() {
     const { onChange, label, value, children } = this.props;
     return (
       <Row className="settings-row">
-        <Col span={8}><label className="setting-label">{label}</label></Col>
+        <Col span={8}>
+          <label className="setting-label">
+            {label}
+          </label>
+        </Col>
         <Col span={16}>
-          <Select onChange={onChange} value={value.toString()} defaultValue={value.toString()} >
+          <Select onChange={onChange} value={value.toString()} defaultValue={value.toString()}>
             {children}
           </Select>
         </Col>

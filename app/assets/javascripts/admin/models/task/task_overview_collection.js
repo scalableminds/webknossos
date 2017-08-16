@@ -7,5 +7,4 @@ class TaskOverviewCollection extends Backbone.Collection {
 }
 TaskOverviewCollection.initClass();
 
-
 export default TaskOverviewCollection;

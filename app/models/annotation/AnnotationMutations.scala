@@ -71,9 +71,6 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     } yield annotation
   }
 
-  def incrementVersion()(implicit ctx: DBAccessContext) =
-    AnnotationDAO.incrementVersion(annotation._id)
-
   def resetToBase()(implicit ctx: DBAccessContext): Fox[Annotation] = annotation.typ match {
     //TODO: RocksDB: test this
     case AnnotationType.Explorational =>

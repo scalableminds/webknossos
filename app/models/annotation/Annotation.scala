@@ -214,12 +214,6 @@ object AnnotationDAO
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("isActive" -> true, "_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)
 
-  def incrementVersion(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$inc" -> Json.obj("version" -> 1)),
-      returnNew = true)
-
   def countByTaskIdAndUser(_user: BSONObjectID, _task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     count(Json.obj(
       "_task" -> _task,
@@ -298,7 +292,7 @@ object AnnotationDAO
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
-        "_content" -> tracingReference)),
+        "tracingReference" -> tracingReference)),
       returnNew = true)
 
   def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) =

@@ -136,13 +136,13 @@ class Controller extends React.PureComponent {
     this.setState({ ready: true });
   }
 
-  initTaskScript() {
+  async initTaskScript() {
     // Loads a Gist from GitHub with a user script if there is a
     // script assigned to the task
     const task = Store.getState().task;
     if (task != null && task.script != null) {
       const script = task.script;
-      const content = fetchGistContent(script.gist, script.name);
+      const content = await fetchGistContent(script.gist, script.name);
       try {
         // eslint-disable-next-line no-eval
         eval(content);

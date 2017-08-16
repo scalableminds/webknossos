@@ -144,42 +144,6 @@ class SkeletonTracingService @Inject()(
   }
 
 
-
-
-  //TODO: move to wk
-  def create(dataSetName: String, parameters: CreateEmptyParameters): SkeletonTracing = {
-    val id = createNewId
-    val tracing = SkeletonTracing(
-      id = id,
-      dataSetName = dataSetName,
-      trees = createInitialTreeIfNeeded(parameters.startPosition, parameters.startRotation, parameters.insertStartAsNode, parameters.isFirstBranchPoint),
-      timestamp = System.currentTimeMillis(),
-      boundingBox = parameters.boundingBox,
-      activeNodeId = if (parameters.insertStartAsNode.getOrElse(false)) Some(1) else None,
-      editPosition = parameters.startPosition.getOrElse(Point3D(0, 0, 0)),
-      editRotation = parameters.startRotation.getOrElse(Vector3D()),
-      zoomLevel = 2.0,
-      version = 0)
-    save(tracing)
-    tracing
-  }
-
-  //TODO: move to wk
-  private def createInitialTreeIfNeeded(startPosition: Option[Point3D], startRotation: Option[Vector3D], insertStartAsNode: Option[Boolean],
-                                        isFirstBranchPoint: Option[Boolean] = None): List[Tree] = startPosition match {
-    case None => List()
-    case Some(startPositionSome) => startRotation match {
-      case None => List()
-      case Some(startRotationSome) => {
-        if (insertStartAsNode.getOrElse(false)) {
-          val node = Node(1, startPositionSome, startRotationSome)
-          val branchPoints = if (isFirstBranchPoint.getOrElse(false)) List(BranchPoint(node.id, System.currentTimeMillis)) else List()
-          List(Tree(1, Set(node), Set.empty, Some(Color.RED), Nil, Nil))
-        } else List()
-      }
-    }
-  }
-
   //TODO: move to wk
   def downloadNml(tracing: SkeletonTracing, dataSourceRepository: DataSourceRepository): Option[Enumerator[Array[Byte]]] = {
     for {

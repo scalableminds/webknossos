@@ -143,55 +143,6 @@ class SkeletonTracingService @Inject()(
     merged.copy(id=newId)
   }
 
-
-  //TODO: move to wk
-  def downloadNml(tracing: SkeletonTracing, dataSourceRepository: DataSourceRepository): Option[Enumerator[Array[Byte]]] = {
-    for {
-      dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName)
-    } yield {
-      Enumerator.outputStream { os =>
-        NmlWriter.toNml(tracing, os, dataSource.scale).map(_ => os.close())
-      }
-    }
-  }
-
-  //TODO: move to wk
-  def downloadMultiple(params: DownloadMultipleParameters, dataSourceRepository: DataSourceRepository): Fox[TemporaryFile] = {
-    val nmlsFox = params.tracings.map { tracingParams =>
-      for {
-        tracing <- find(tracingParams.tracingId, tracingParams.version, applyUpdates = true)
-        tracingAsNml <- downloadNml(tracing, dataSourceRepository)
-      } yield {
-        (tracingAsNml, tracingParams.outfileName)
-      }
-    }
-
-    for {
-      nmls <- Fox.combined(nmlsFox)
-      zip <- createZip(nmls, params.zipfileName)
-    } yield zip
-  }
-
-  //TODO: move to wk
-  private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String): Future[TemporaryFile] = {
-    val zipped = TemporaryFile(normalize(zipFileName), ".zip")
-    val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(zipped.file)))
-
-    def addToZip(nmls: List[(Enumerator[Array[Byte]],String)]): Future[Boolean] = {
-      nmls match {
-        case head :: tail =>
-          zipper.withFile(head._2 + ".nml")(NamedEnumeratorStream(head._1, "").writeTo).flatMap(_ => addToZip(tail))
-        case _            =>
-          Future.successful(true)
-      }
-    }
-
-    addToZip(nmls).map { _ =>
-      zipper.close()
-      zipped
-    }
-  }
-
   //TODO: move to wk
   def extractAllFromZip(zipfile: Option[File]): Box[List[SkeletonTracing]] = {
     def isFailure[T](box: Box[T]) = {

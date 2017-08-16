@@ -11,6 +11,7 @@ import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import net.liftweb.common.Box
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.Future
 
@@ -19,6 +20,10 @@ import scala.concurrent.Future
   */
 object NmlWriter {
   private lazy val outputService = XMLOutputFactory.newInstance()
+
+  def toNmlStream(tracing: Tracing, scale: Scale) = {
+    Enumerator.outputStream {os => toNml(tracing, os, scale).map(_ => os.close())}
+  }
 
   def toNml(tracing: Tracing, outputStream: OutputStream, scale: Scale): Future[Box[Unit]] = {
     implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(outputStream))

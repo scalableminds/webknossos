@@ -283,7 +283,11 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   addTagToAnnotation = (annotation: APIAnnotationType, newTag: string): void => {
     const newTracings = this.state.unarchivedTracings.map(t => {
       if (t.id === annotation.id) {
-        return update(t, { tags: { $push: [newTag] } });
+        const newAnnotation = update(t, { tags: { $push: [newTag] } });
+
+        const url = `/annotations/${newAnnotation.typ}/${newAnnotation.id}/edit`;
+        Request.sendJSONReceiveJSON(url, { data: { tags: newAnnotation.tags } });
+        return newAnnotation;
       }
       return t;
     });
@@ -299,7 +303,11 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     const newTracings = this.state.unarchivedTracings.map(t => {
       if (t.id === annotation.id) {
         const newTags = _.without(t.tags, tag);
-        return update(t, { tags: { $set: newTags } });
+        const newAnnotation = update(t, { tags: { $set: newTags } });
+
+        const url = `/annotations/${newAnnotation.typ}/${newAnnotation.id}/edit`;
+        Request.sendJSONReceiveJSON(url, { data: { tags: newAnnotation.tags } });
+        return newAnnotation;
       }
       return t;
     });

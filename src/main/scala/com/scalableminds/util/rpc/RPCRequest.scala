@@ -23,6 +23,14 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
     this
   }
 
+  def withQueryStringOptional(key: String, valueOptional: Option[String]): RPCRequest = {
+    valueOptional match {
+      case Some(value: String) => { request = request.withQueryString((key, value))}
+      case _ =>
+    }
+    this
+  }
+
   def get: Fox[WSResponse] = {
     request = request
       .withMethod("GET")

@@ -20,10 +20,6 @@ class VolumeTracingController @Inject()(
                                          val messagesApi: MessagesApi
                                        ) extends TracingController[VolumeTracing] {
 
-  implicit val bucketStore = tracingDataStore.volumeData
-
-  implicit val tracingFormat = VolumeTracing.volumeTracingFormat
-
   def initialData(tracingId: String) = Action.async {
     implicit request =>
       AllowRemoteOrigin {

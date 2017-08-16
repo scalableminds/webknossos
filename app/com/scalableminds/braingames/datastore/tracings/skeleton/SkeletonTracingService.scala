@@ -15,6 +15,9 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
+import play.api.cache.Cache
+import scala.concurrent.duration._
+import play.api.Play.current
 
 import scala.concurrent.Future
 import scala.io.Source

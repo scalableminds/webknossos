@@ -3,8 +3,6 @@ package com.scalableminds.braingames.datastore.controllers
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
-import com.scalableminds.util.tools.Fox
 import play.api.i18n.Messages
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.Action
@@ -13,7 +11,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 trait TracingController[T <: Tracing] extends Controller {
 
-  implicit val tracingFormat: Format[T]
+  implicit val tracingFormat: Format[T] = tracingService.tracingFormat
 
   def dataSourceRepository: DataSourceRepository
 

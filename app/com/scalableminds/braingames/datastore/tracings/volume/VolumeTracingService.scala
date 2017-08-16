@@ -21,9 +21,9 @@ class VolumeTracingService @Inject()(
                                       tracingDataStore: TracingDataStore
                                     ) extends TracingService[VolumeTracing] with VolumeTracingBucketHelper with WKWDataFormatHelper {
 
-  implicit val tracingFormat = VolumeTracing.volumeTracingFormat
-
   implicit val volumeDataStore = tracingDataStore.volumeData
+
+  implicit val tracingFormat = VolumeTracing.volumeTracingFormat
 
   implicit val tag = classTag[VolumeTracing]
 

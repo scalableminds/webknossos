@@ -41,8 +41,7 @@ case class VolumeTracing(
 }
 
 object VolumeTracing {
-
-  implicit def volumeTracingFormat(implicit bucketStore: VersionedKeyValueStore) = Json.format[VolumeTracing]
+  implicit def volumeTracingFormat(implicit volumeDataStore: VersionedKeyValueStore) = Json.format[VolumeTracing]
 }
 
 case class AbstractVolumeTracing(

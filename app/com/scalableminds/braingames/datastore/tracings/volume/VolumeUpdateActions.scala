@@ -6,7 +6,7 @@ import com.scalableminds.braingames.datastore.tracings.{UpdateAction, UpdateActi
 import com.scalableminds.util.geometry.Point3D
 import play.api.libs.json._
 
-case class UpdateBucketVolumeAction(position: Point3D, bucketSize: Int, zoomStep: Int, base64Data: String) extends VolumeUpdateAction {
+case class UpdateBucketVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String) extends VolumeUpdateAction {
 
   lazy val data: Array[Byte] = Base64.getDecoder().decode(base64Data)
 

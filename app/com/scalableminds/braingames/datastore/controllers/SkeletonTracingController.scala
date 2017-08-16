@@ -20,8 +20,6 @@ class SkeletonTracingController @Inject()(
                                            val messagesApi: MessagesApi
                                        ) extends TracingController[SkeletonTracing] {
 
-  implicit val tracingFormat = SkeletonTracing.jsonFormat
-
   def mergedFromContents(persist: Boolean) = Action.async(validateJson[List[SkeletonTracing]]) {
     implicit request => {
       AllowRemoteOrigin {

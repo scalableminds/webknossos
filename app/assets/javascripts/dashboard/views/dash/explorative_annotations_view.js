@@ -266,7 +266,23 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   addTagToAnnotation = (annotation: APIAnnotationType, newTag: string): void => {
     const newTracings = this.state.unarchivedTracings.map(t => {
       if (t.id === annotation.id) {
-        return update(annotation, { tags: { $push: [newTag] } });
+        return update(t, { tags: { $push: [newTag] } });
+      }
+      return t;
+    });
+    this.setState({ unarchivedTracings: newTracings });
+  };
+
+  removeTagFromAnnotation = (
+    annotation: APIAnnotationType,
+    tag: string,
+    event: SyntheticInputEvent,
+  ): void => {
+    event.stopPropagation(); // prevent the onClick event
+    const newTracings = this.state.unarchivedTracings.map(t => {
+      if (t.id === annotation.id) {
+        const newTags = _.without(t.tags, tag);
+        return update(t, { tags: { $set: newTags } });
       }
       return t;
     });
@@ -278,7 +294,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       <Table
         dataSource={Utils.filterWithSearchQueryAND(
           this.getCurrentTracings(),
-          ["id", "name", "dataSetName", "contentType", "modified", "tags"],
+          ["id", "name", "modified", "tags"],
           `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
         )}
         rowKey="id"
@@ -335,6 +351,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
                   key={tag}
                   color={TemplateHelpers.stringToColor(tag)}
                   onClick={_.partial(this.addTagToSearch, tag)}
+                  onClose={_.partial(this.removeTagFromAnnotation, tracing, tag)}
+                  closable={!(tag === tracing.dataSetName || tag === tracing.contentType)}
                 >
                   {tag}
                 </Tag>,

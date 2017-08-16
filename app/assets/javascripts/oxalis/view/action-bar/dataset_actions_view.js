@@ -8,6 +8,7 @@ import { Button, Dropdown, Menu, Icon } from "antd";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
+import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import SaveButton from "oxalis/view/action-bar/save_button";
 import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
@@ -31,9 +32,11 @@ class DatasetActionsView extends PureComponent {
   state: {
     isShareModalOpen: boolean,
     isMergeModalOpen: boolean,
+    isUserScriptsModalOpen: boolean,
   } = {
     isShareModalOpen: false,
     isMergeModalOpen: false,
+    isUserScriptsModalOpen: false,
   };
 
   modalWrapper: ?HTMLDivElement = null;
@@ -90,6 +93,14 @@ class DatasetActionsView extends PureComponent {
 
   handleMergeClose = () => {
     this.setState({ isMergeModalOpen: false });
+  };
+
+  handleUserScriptsOpen = () => {
+    this.setState({ isUserScriptsModalOpen: true });
+  };
+
+  handleUserScriptsClose = () => {
+    this.setState({ isUserScriptsModalOpen: false });
   };
 
   render() {
@@ -157,6 +168,21 @@ class DatasetActionsView extends PureComponent {
           key="share-modal"
           isVisible={this.state.isShareModalOpen}
           onOk={this.handleShareClose}
+        />,
+      );
+      elements.push(
+        <Menu.Item key="user-scripts-button">
+          <div onClick={this.handleUserScriptsOpen}>
+            <Icon type="setting" />
+            Add Script
+          </div>
+        </Menu.Item>,
+      );
+      modals.push(
+        <UserScriptsModalView
+          key="user-scripts-modal"
+          isVisible={this.state.isUserScriptsModalOpen}
+          onOK={this.handleUserScriptsClose}
         />,
       );
     }

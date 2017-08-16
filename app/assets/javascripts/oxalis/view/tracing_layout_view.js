@@ -12,7 +12,6 @@ import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
 import TracingView from "oxalis/view/tracing_view";
-import UserScriptsModal from "oxalis/view/user_scripts_modal";
 import enUS from "antd/lib/locale-provider/en_US";
 import { LocaleProvider, Layout, Icon } from "antd";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -30,32 +29,11 @@ class TracingLayoutView extends React.PureComponent {
 
   state = {
     isSettingsCollapsed: true,
-    isUserScriptsModalOpen: false,
   };
-
-  componentDidMount() {
-    const addScriptLink = document.getElementById("add-script-link");
-    if (addScriptLink) {
-      addScriptLink.classList.remove("hide");
-      addScriptLink.addEventListener("click", () => this.showUserScriptsModal());
-    }
-  }
 
   componentWillUnmount() {
     window.app.oxalis = null;
   }
-
-  showUserScriptsModal = () => {
-    this.setState({
-      isUserScriptsModalOpen: true,
-    });
-  };
-
-  closeUserScriptsModal = () => {
-    this.setState({
-      isUserScriptsModalOpen: false,
-    });
-  };
 
   handleSettingsCollapse = () => {
     this.setState({
@@ -102,10 +80,6 @@ class TracingLayoutView extends React.PureComponent {
                 </Sider>
                 <div style={{ zIndex: 200, display: "flex", flex: 1 }}>
                   <div>
-                    <UserScriptsModal
-                      visible={this.state.isUserScriptsModalOpen}
-                      onClose={this.closeUserScriptsModal}
-                    />
                     <TracingView />
                   </div>
                   <div style={{ flex: "1", display: "inline-flex" }}>

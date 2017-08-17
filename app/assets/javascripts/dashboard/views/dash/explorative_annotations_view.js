@@ -234,7 +234,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
         : "unarchivedTracings"]: newTracings,
     });
 
-    const url = `/annotations/${tracing.typ}/${tracing.id}/name`;
+    const url = `/annotations/${tracing.typ}/${tracing.id}/edit`;
     const payload = { data: { name } };
 
     Request.sendJSONReceiveJSON(url, payload).then(response => {

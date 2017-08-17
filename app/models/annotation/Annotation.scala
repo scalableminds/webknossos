@@ -33,7 +33,7 @@ case class Annotation(
                        isActive: Boolean = true,
                        readOnly: Option[Boolean] = None,
                        isPublic: Boolean = false,
-                       tags: List[String] = Nil
+                       tags: Set[String] = Set.empty
                      )
 
   extends AnnotationLike with FoxImplicits {

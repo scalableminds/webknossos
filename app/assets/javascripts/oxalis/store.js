@@ -261,13 +261,16 @@ export type TemporaryConfigurationType = {
   +controlMode: ControlModeType,
 };
 
+export type ScriptType = {
+  +gist: string,
+  +name: string,
+  +id: string,
+};
+
 export type TaskType = {
   +id: number,
   +type: "string",
-  +script?: {
-    +gist: string,
-    +name: string,
-  },
+  +script?: ScriptType,
   +type: {
     +summary: string,
     +description: string,

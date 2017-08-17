@@ -13,7 +13,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object ProjectInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  //TODO: rocksDB test this
   def provideAnnotation(projectName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
   {
     for {
@@ -23,7 +22,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
       finishedAnnotations = annotations.filter(_.state.isFinished)
       _ <- assertAllOnSameDataset(annotations)
       dataSetName = finishedAnnotations.head.dataSetName
-      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(project.name), persistTracing=false, user.map(_._id),
+      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(project.id), persistTracing=false, user.map(_._id),
         dataSetName, project.team, AnnotationType.CompoundProject, annotations) ?~> "project.noAnnotation"
     } yield mergedAnnotation
   }

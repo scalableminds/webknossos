@@ -13,6 +13,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Failure
 
+import collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, Future}
@@ -28,8 +29,16 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
         val t = System.currentTimeMillis
         val className = this.getClass.getName.split("\\.").last
         val result = Await.result(loadFromUnderlying(readInstruction).futureBox, timeout)
-        NewRelic.recordResponseTimeMetric(s"Custom/BucketProvider/$className/file-response-time", System.currentTimeMillis - t)
-        NewRelic.incrementCounter(s"Custom/FileDataStore/$className/files-loaded")
+        val duration = System.currentTimeMillis - t
+        NewRelic.recordResponseTimeMetric(s"Custom/BucketProvider/$className/file-response-time", duration)
+        NewRelic.incrementCounter(s"Custom/BucketProvider/$className/files-loaded", 1)
+        if (duration > 500) {
+          NewRelic.noticeError(s"loading file in $className took too long", Map(
+            "duration" -> duration.toString,
+            "dataSource" -> readInstruction.dataSource.id.name,
+            "dataLayer" -> readInstruction.dataLayer.name,
+            "cube" -> readInstruction.cube.toString).asJava)
+        }
         result
       }.recover {
         case _: TimeoutException | _: InterruptedException =>

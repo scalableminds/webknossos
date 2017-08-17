@@ -22,7 +22,7 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller wit
         controllers.routes.javascript.AnnotationController.finish,
         controllers.routes.javascript.AnnotationController.finishAll,
         controllers.routes.javascript.AnnotationController.reopen,
-        controllers.routes.javascript.AnnotationController.nameExplorativeAnnotation,
+        controllers.routes.javascript.AnnotationController.editAnnotation,
         controllers.routes.javascript.AnnotationController.createExplorational,
         controllers.routes.javascript.AnnotationIOController.download,
         controllers.routes.javascript.AnnotationIOController.taskDownload,

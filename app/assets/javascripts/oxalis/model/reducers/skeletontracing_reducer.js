@@ -99,6 +99,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+        isPublic: action.tracing.isPublic,
       };
 
       return update(state, { tracing: { $set: skeletonTracing } });
@@ -176,12 +177,17 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
         case "SET_NODE_RADIUS": {
           const { radius, nodeId, treeId } = action;
+          const clampedRadius = Utils.clamp(
+            Constants.MIN_NODE_RADIUS,
+            radius,
+            Constants.MAX_NODE_RADIUS,
+          );
           return getNodeAndTree(skeletonTracing, nodeId, treeId)
             .map(([tree, node]) =>
               update(state, {
                 tracing: {
                   trees: {
-                    [tree.treeId]: { nodes: { [node.id]: { radius: { $set: radius } } } },
+                    [tree.treeId]: { nodes: { [node.id]: { radius: { $set: clampedRadius } } } },
                   },
                 },
               }),

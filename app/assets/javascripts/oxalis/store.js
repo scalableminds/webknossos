@@ -142,6 +142,7 @@ export type DatasetType = {
   +dataStore: DataStoreInfoType,
   +scale: Vector3,
   +dataLayers: Array<DataLayerType>,
+  +isPublic: boolean,
 };
 
 export type TreeMapType = { +[number]: TreeType };
@@ -171,6 +172,7 @@ export type SkeletonTracingType = {
   +cachedMaxNodeId: number,
   +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
+  +isPublic: boolean,
 };
 
 export type VolumeTracingType = {
@@ -187,6 +189,7 @@ export type VolumeTracingType = {
   +tracingType: VolumeTracingTypeTracingType,
   +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
+  +isPublic: boolean,
 };
 
 export type ReadOnlyTracingType = {
@@ -197,6 +200,7 @@ export type ReadOnlyTracingType = {
   +tracingType: "View",
   +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
+  +isPublic: boolean,
 };
 
 export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;
@@ -254,13 +258,16 @@ export type TemporaryConfigurationType = {
   +controlMode: ControlModeType,
 };
 
+export type ScriptType = {
+  +gist: string,
+  +name: string,
+  +id: string,
+};
+
 export type TaskType = {
   +id: number,
   +type: "string",
-  +script?: {
-    +gist: string,
-    +name: string,
-  },
+  +script?: ScriptType,
   +type: {
     +summary: string,
     +description: string,
@@ -378,6 +385,7 @@ export const defaultState: OxalisState = {
   dataset: {
     name: "Test Dataset",
     scale: [5, 5, 5],
+    isPublic: false,
     dataStore: {
       name: "localhost",
       url: "http://localhost:9000",
@@ -390,6 +398,7 @@ export const defaultState: OxalisState = {
     trees: {},
     name: "",
     version: 0,
+    isPublic: false,
     tracingId: "",
     tracingType: "Explorational",
     activeTreeId: null,

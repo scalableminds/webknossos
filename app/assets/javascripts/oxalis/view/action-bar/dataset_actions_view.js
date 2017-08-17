@@ -2,50 +2,44 @@
 import React, { PureComponent } from "react";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import type { OxalisState, TracingType, TaskType } from "oxalis/store";
 import { connect } from "react-redux";
-import type { Dispatch } from "redux";
 import app from "app";
+import { Button, Dropdown, Menu, Icon } from "antd";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
-import { Button } from "antd";
+import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
+import SaveButton from "oxalis/view/action-bar/save_button";
 import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
-
-const SAVED_POLLING_INTERVAL = 100;
+import type { Dispatch } from "redux";
+import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
 
 class DatasetActionsView extends PureComponent {
   props: {
     // eslint-disable-next-line react/no-unused-prop-types
-    tracing: TracingType,
+    tracingType: string,
+    // eslint-disable-next-line react/no-unused-prop-types
+    tracingId: string,
+    // eslint-disable-next-line react/no-unused-prop-types
+    restrictions: RestrictionsType & SettingsType,
     // eslint-disable-next-line react/no-unused-prop-types
     dispatch: Dispatch<*>,
     task: ?TaskType,
   };
 
   state: {
-    shareModalOpen: boolean,
-    mergeModalOpen: boolean,
+    isShareModalOpen: boolean,
+    isMergeModalOpen: boolean,
+    isUserScriptsModalOpen: boolean,
   } = {
-    shareModalOpen: false,
-    mergeModalOpen: false,
+    isShareModalOpen: false,
+    isMergeModalOpen: false,
+    isUserScriptsModalOpen: false,
   };
-
-  componentDidMount() {
-    this.savedPollingInterval = window.setInterval(this._forceUpdate, SAVED_POLLING_INTERVAL);
-  }
-
-  componentWillUnmount() {
-    window.clearInterval(this.savedPollingInterval);
-  }
 
   modalWrapper: ?HTMLDivElement = null;
-  savedPollingInterval: number = 0;
-  _forceUpdate = () => {
-    this.forceUpdate();
-  };
 
   handleSave = async (event?: SyntheticInputEvent) => {
     if (event != null) {
@@ -56,15 +50,13 @@ class DatasetActionsView extends PureComponent {
 
   handleCopyToAccount = async (event: SyntheticInputEvent) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
-      .tracingId}/duplicate`;
+    const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/duplicate`;
     app.router.loadURL(url);
   };
 
   handleFinish = async (event: SyntheticInputEvent) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
-      .tracingId}/finishAndRedirect`;
+    const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
       app.router.loadURL(url);
@@ -72,11 +64,11 @@ class DatasetActionsView extends PureComponent {
   };
 
   handleShareOpen = () => {
-    this.setState({ shareModalOpen: true });
+    this.setState({ isShareModalOpen: true });
   };
 
   handleShareClose = () => {
-    this.setState({ shareModalOpen: false });
+    this.setState({ isShareModalOpen: false });
   };
 
   handleDownload = async (event: SyntheticInputEvent) => {
@@ -85,7 +77,8 @@ class DatasetActionsView extends PureComponent {
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
 
-    win.location.href = Model.tracing.downloadUrl;
+    const downloadUrl = `/annotations/${this.props.tracingType}/${this.props.tracingId}/download`;
+    win.location.href = downloadUrl;
     win.document.body.innerHTML = messages["download.close_window"];
   };
 
@@ -95,111 +88,140 @@ class DatasetActionsView extends PureComponent {
   };
 
   handleMergeOpen = () => {
-    this.setState({ mergeModalOpen: true });
+    this.setState({ isMergeModalOpen: true });
   };
 
   handleMergeClose = () => {
-    this.setState({ mergeModalOpen: false });
+    this.setState({ isMergeModalOpen: false });
   };
 
-  getSaveButtonIcon() {
-    if (!Model.stateSaved()) {
-      return "hourglass";
-    } else {
-      return "check";
-    }
-  }
+  handleUserScriptsOpen = () => {
+    this.setState({ isUserScriptsModalOpen: true });
+  };
+
+  handleUserScriptsClose = () => {
+    this.setState({ isUserScriptsModalOpen: false });
+  };
 
   render() {
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
-    const hasAdvancedOptions = this.props.tracing.restrictions.advancedOptionsAllowed;
+    const hasAdvancedOptions = this.props.restrictions.advancedOptionsAllowed;
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
-    const restrictions = this.props.tracing.restrictions;
+    const restrictions = this.props.restrictions;
+
+    const saveButton = restrictions.allowUpdate
+      ? <SaveButton onClick={this.handleSave} />
+      : [
+          <ButtonComponent key="read-only-button" type="primary" disabled>
+            Read only
+          </ButtonComponent>,
+          <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+            Copy To My Account
+          </ButtonComponent>,
+        ];
+
+    const finishAndNextTaskButton =
+      hasAdvancedOptions && restrictions.allowFinish && this.props.task
+        ? <ButtonComponent
+            key="next-button"
+            icon="verticle-left"
+            onClick={this.handleFinishAndGetNextTask}
+          >
+            Finish and Get Next Task
+          </ButtonComponent>
+        : null;
 
     const elements = [];
-    if (restrictions.allowUpdate) {
-      elements.push(
-        <ButtonComponent
-          key="save-button"
-          type="primary"
-          onClick={this.handleSave}
-          icon={this.getSaveButtonIcon()}
-        >
-          Save
-        </ButtonComponent>,
-      );
-    } else {
-      elements.push(
-        <ButtonComponent key="read-only-button" type="primary" disabled>
-          Read only
-        </ButtonComponent>,
-      );
-      elements.push(
-        <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
-          Copy To My Account
-        </ButtonComponent>,
-      );
-    }
-
+    const modals = [];
     if (hasAdvancedOptions) {
       if (restrictions.allowFinish) {
         elements.push(
-          <ButtonComponent key="finish-button" icon="check-circle-o" onClick={this.handleFinish}>
-            {archiveButtonText}
-          </ButtonComponent>,
+          <Menu.Item key="finish-button">
+            <div onClick={this.handleFinish}>
+              <Icon type="check-circle-o" />
+              {archiveButtonText}
+            </div>
+          </Menu.Item>,
         );
       }
-      if (restrictions.allowDownload || !this.props.tracing.downloadUrl) {
+      if (restrictions.allowDownload) {
         elements.push(
-          <ButtonComponent key="download-button" icon="download" onClick={this.handleDownload}>
-            Download
-          </ButtonComponent>,
+          <Menu.Item key="download-button">
+            <div onClick={this.handleDownload}>
+              <Icon type="download" />
+              Download
+            </div>
+          </Menu.Item>,
         );
       }
       elements.push(
-        <ButtonComponent key="share-button" icon="share-alt" onClick={this.handleShareOpen}>
-          Share
-        </ButtonComponent>,
+        <Menu.Item key="share-button">
+          <div onClick={this.handleShareOpen}>
+            <Icon type="share-alt" />
+            Share
+          </div>
+        </Menu.Item>,
       );
-      elements.push(
+      modals.push(
         <ShareModalView
           key="share-modal"
-          isVisible={this.state.shareModalOpen}
+          isVisible={this.state.isShareModalOpen}
           onOk={this.handleShareClose}
         />,
       );
-    }
-    if (restrictions.allowFinish && this.props.task) {
       elements.push(
-        <ButtonComponent
-          key="next-button"
-          icon="verticle-left"
-          onClick={this.handleFinishAndGetNextTask}
-        >
-          Finish and Get Next Task
-        </ButtonComponent>,
+        <Menu.Item key="user-scripts-button">
+          <div onClick={this.handleUserScriptsOpen}>
+            <Icon type="setting" />
+            Add Script
+          </div>
+        </Menu.Item>,
+      );
+      modals.push(
+        <UserScriptsModalView
+          key="user-scripts-modal"
+          isVisible={this.state.isUserScriptsModalOpen}
+          onOK={this.handleUserScriptsClose}
+        />,
       );
     }
+
     if (isSkeletonMode) {
       elements.push(
-        <ButtonComponent key="merge-button" icon="folder-open" onClick={this.handleMergeOpen}>
-          Merge Tracing
-        </ButtonComponent>,
+        <Menu.Item key="merge-button">
+          <div onClick={this.handleMergeOpen}>
+            <Icon type="folder-open" />
+            Merge Tracing
+          </div>
+        </Menu.Item>,
       );
-      elements.push(
+      modals.push(
         <MergeModalView
           key="merge-modal"
-          isVisible={this.state.mergeModalOpen}
+          isVisible={this.state.isMergeModalOpen}
           onOk={this.handleMergeClose}
         />,
       );
     }
 
+    const menu = (
+      <Menu>
+        {elements}
+      </Menu>
+    );
+
     return (
       <div>
         <Button.Group size="large">
-          {elements}
+          {saveButton}
+          {finishAndNextTaskButton}
+          {modals}
+          <Dropdown overlay={menu}>
+            <ButtonComponent>
+              <Icon type="down" />
+            </ButtonComponent>
+          </Dropdown>
         </Button.Group>
       </div>
     );
@@ -208,8 +230,9 @@ class DatasetActionsView extends PureComponent {
 
 function mapStateToProps(state: OxalisState) {
   return {
-    tracing: state.tracing,
-    save: state.save,
+    tracingType: state.tracing.tracingType,
+    tracingId: state.tracing.tracingId,
+    restrictions: state.tracing.restrictions,
     task: state.task,
   };
 }

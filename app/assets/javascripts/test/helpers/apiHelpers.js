@@ -63,6 +63,9 @@ export function setupOxalis(t, mode) {
   const webknossos = new OxalisApi(model);
 
   Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(modelData[mode])));
+  Request.receiveJSON
+    .withArgs("/dataToken/generate?dataSetName=2012-09-28_ex145_07x2&dataLayerName=color")
+    .returns(Promise.resolve({ token: "secure-token" }));
 
   return model
     .fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)

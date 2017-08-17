@@ -44,6 +44,7 @@ class EditableTextIcon extends React.PureComponent {
           onBlur={this.handleOnChange}
           style={{ width: 75 }}
           size="small"
+          autoFocus
         />
       );
     } else {

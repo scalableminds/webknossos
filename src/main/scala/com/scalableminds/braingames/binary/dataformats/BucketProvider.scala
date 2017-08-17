@@ -5,6 +5,7 @@ package com.scalableminds.braingames.binary.dataformats
 
 import java.util.concurrent.TimeoutException
 
+import com.newrelic.api.agent.NewRelic
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.requests.DataReadInstruction
 import com.scalableminds.braingames.binary.storage.DataCubeCache
@@ -24,7 +25,12 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
 
     def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction): Fox[Cube] = {
       Future {
-        Await.result(loadFromUnderlying(readInstruction).futureBox, timeout)
+        val t = System.currentTimeMillis
+        val className = this.getClass.getName.split("\\.").last
+        val result = Await.result(loadFromUnderlying(readInstruction).futureBox, timeout)
+        NewRelic.recordResponseTimeMetric(s"Custom/BucketProvider/$className/file-response-time", System.currentTimeMillis - t)
+        NewRelic.incrementCounter(s"Custom/FileDataStore/$className/files-loaded")
+        result
       }.recover {
         case _: TimeoutException | _: InterruptedException =>
           logger.warn(s"Loading cube timed out. " +

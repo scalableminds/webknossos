@@ -44,7 +44,7 @@ case class TemporaryAnnotation(
 
   def tracingTime = None    // We currently do not tracing time on temporary annotations
 
-  def tags = Nil
+  def tags = Set.empty
 
   def muta = new TemporaryAnnotationMutations(this)
 

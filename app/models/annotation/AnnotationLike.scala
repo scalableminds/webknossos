@@ -82,7 +82,7 @@ trait AnnotationLike extends AnnotationStatistics {
 
   def isPublic: Boolean
 
-  def tags: List[String]
+  def tags: Set[String]
 }
 
 object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
@@ -96,13 +96,13 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
     }
   }
 
-  def createTags(a: AnnotationLike): Future[List[String]] = {
+  def createTags(a: AnnotationLike): Future[Set[String]] = {
     (for {
       dataSetName <- a.dataSetName
       content <- a.content
     } yield {
-      List(dataSetName, content.contentType)
-    }).getOrElse(Nil).map(_ ++ a.tags)
+      Set(dataSetName, content.contentType)
+    }).getOrElse(Set.empty).map(_ ++ a.tags)
   }
 
   def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User], exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] = {

@@ -4,7 +4,6 @@ import java.io.OutputStream
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 
 import com.scalableminds.braingames.datastore.tracings.Tracing
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.xml.Xml

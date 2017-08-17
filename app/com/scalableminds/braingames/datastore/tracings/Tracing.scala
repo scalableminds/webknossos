@@ -28,4 +28,6 @@ trait Tracing {
   def version: Long
 
   def timestamp: Long
+
+  override def toString = s"<tracing $id>"
 }

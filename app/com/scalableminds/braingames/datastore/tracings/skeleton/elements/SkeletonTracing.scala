@@ -118,7 +118,14 @@ case class SkeletonTracing(id: String = UUID.randomUUID.toString,
     trees.find(_.treeId == id)
       .getOrElse(throw new NoSuchElementException("Tracing does not contain tree with requested id " + id))
 
-  def hasStrayEdges = ???
+  def hasStrayEdges = {
+    this.trees.forall { tree =>
+      val nodeIds = tree.nodes.map(_.id)
+      tree.edges.forall { edge =>
+        nodeIds.contains(edge.source) && nodeIds.contains(edge.target)
+      }
+    }
+  }
 }
 
 object SkeletonTracing {

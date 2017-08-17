@@ -40,8 +40,13 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
       else
         Fox.successful(tracing)
     }.orElse {
-      if (useCache)
-        Cache.getAs[T](tracingId)
+      if (useCache) {
+        try {
+          Cache.getAs[T](tracingId)
+        } catch {
+          case e: NullPointerException => Fox.failure("Could not load temporary tracing")
+        }
+      }
       else
         Fox.empty
     }

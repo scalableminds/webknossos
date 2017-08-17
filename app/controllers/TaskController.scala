@@ -122,7 +122,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
           project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
           _ <- ensureTeamAdministration(request.user, team)
-          task = Task(taskType._id, team, experience, status.open, _project = project.name, _script = scriptId)
+          task = Task(taskType._id, team, experience, status.open, _project = project.name, _script = scriptId, editPosition=start, editRotation=rotation, boundingBox=boundingBox)
           _ <- TaskService.insert(task, project)
         } yield task
     }
@@ -204,7 +204,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             team = team,
             _script = scriptId,
             _project = Some(project.name),
-            boundingBox = boundingBox)
+            boundingBox = boundingBox,
+            editPosition = start,
+            editRotation = rotation)
           _ <- AnnotationService.updateAllOfTask(updatedTask, dataSetName, taskType.settings)
           //TODO: rocksdb skeletons api. _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
           json <- Task.transformToJson(updatedTask)

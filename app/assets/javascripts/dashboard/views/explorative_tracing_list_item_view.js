@@ -50,7 +50,7 @@ class ExplorativeTracingListItemView extends Marionette.View {
         <i class="fa fa-random"></i>
         <strong>trace</strong>
       </a><br />
-      <a href="/download">
+      <a href="/annotations/<%- typ %>/<%- id %>/download">
         <i class="fa fa-download"></i>
         download
       </a><br />

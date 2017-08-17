@@ -31,13 +31,13 @@ object AnnotationStore extends LazyLogging {
     }
   }
 
-  private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
+  private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = None /*{ //TODO: RocksDB
     val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
     if (handler.cache) {
       cachedAnnotation(id).map(_.result)
     } else
         None
-  }
+  }*/
 
   private def cachedAnnotation(annotationId: AnnotationIdentifier): Option[StoredResult] = {
     Cache.getAs[StoredResult](annotationId.toUniqueString)

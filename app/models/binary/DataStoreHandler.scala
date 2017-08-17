@@ -75,7 +75,7 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
   }
 
   override def saveSkeletonTracing(tracing: SkeletonTracing): Fox[TracingReference] = {
-    logger.debug("Called to create empty SkeletonTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
+    logger.debug("Called to save SkeletonTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/save")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .postWithJsonResponse[SkeletonTracing, TracingReference](tracing)
@@ -92,7 +92,7 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
   override def mergeSkeletonTracings(references: List[TracingReference], persistTracing: Boolean): Fox[TracingReference] = {
     logger.debug("Called to merge SkeletonTracings. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
     val route = if (persistTracing) "getMerged" else "createMergedFromIds"
-    RPC(s"${dataStoreInfo.url}/dat/tracings/skeleton/mergedFromIds")
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/mergedFromIds")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("persist" -> persistTracing.toString)
       .postWithJsonResponse[List[TracingSelector], TracingReference](references.map(r => TracingSelector(r.id)))

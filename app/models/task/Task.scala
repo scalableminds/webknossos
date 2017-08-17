@@ -1,7 +1,7 @@
 package models.task
 
 import com.scalableminds.braingames.datastore.tracings.TracingType
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
@@ -26,7 +26,9 @@ case class Task(
   @info("Assigned name") team: String,
   @info("Required experience") neededExperience: Experience = Experience.empty,
   @info("Number of required instances") instances: Int = 1,
-  @info("Bounding Box") boundingBox: Option[BoundingBox] = None,
+  @info("Bounding Box (redundant to base tracing)") boundingBox: Option[BoundingBox] = None,
+  @info("Start point edit position (redundant to base tracing)") editPosition: Point3D,
+  @info("Start point edit rotation (redundant to base tracing)") editRotation: Vector3D,
   @info("Current tracing time") tracingTime: Option[Long] = None,
   @info("Date of creation") created: DateTime = DateTime.now(),
   @info("Flag indicating deletion") isActive: Boolean = true,
@@ -123,7 +125,9 @@ object Task extends FoxImplicits {
         "script" -> scriptJs.toOption,
         "tracingTime" -> task.tracingTime,
         "creationInfo" -> task.creationInfo,
-        "boundingBox" -> task.boundingBox
+        "boundingBox" -> task.boundingBox,
+        "editPosition" -> task.editPosition,
+        "editRotation" -> task.editRotation
       )
     }
   }
@@ -202,7 +206,9 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     team: String,
     _script: Option[String],
     _project: Option[String],
-    boundingBox: Option[BoundingBox]
+    boundingBox: Option[BoundingBox],
+    editPosition: Point3D,
+    editRotation: Vector3D
   )(implicit ctx: DBAccessContext): Fox[Task] =
     findAndModify(
       Json.obj("_id" -> _task),

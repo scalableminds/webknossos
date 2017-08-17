@@ -20,7 +20,7 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
       _ <- assertAllOnSameDataset(annotations)
       dataSetName = finishedAnnotations.head.dataSetName
       mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(task.id), persistTracing=false, user.map(_._id),
-        dataSetName, task.team, AnnotationType.CompoundTask, annotations) ?~> "project.noAnnotation"
+        dataSetName, task.team, AnnotationType.CompoundTask, annotations) ?~> "Failed to merge annotations vor CompoundTask"
     } yield mergedAnnotation
 
   def restrictionsFor(taskId: String)(implicit ctx: DBAccessContext) =

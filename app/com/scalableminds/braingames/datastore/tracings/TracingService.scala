@@ -3,6 +3,7 @@ package com.scalableminds.braingames.datastore.tracings
 import java.util.UUID
 
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValueStore
+import com.scalableminds.braingames.datastore.temporarystore.TemporaryStore
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Empty, Failure, Full}
@@ -42,7 +43,7 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
     }.orElse {
       if (useCache) {
         try {
-          Cache.getAs[T](tracingId)
+          TemporaryStore.getAs[T](tracingId)
         } catch {
           case e: NullPointerException => Fox.failure("Could not load temporary tracing")
         }
@@ -64,7 +65,7 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
         Fox.failure("tracing ID is already in use.")
       case Empty =>
         if (toCache) {
-          Fox.successful(Cache.set(tracing.id, tracing, temporaryStoreTimeout))
+          Fox.successful(TemporaryStore.set(tracing.id, tracing, temporaryStoreTimeout))
         } else {
           tracingStore.putJson(tracing.id, tracing.version, tracing)
         }

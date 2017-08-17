@@ -241,10 +241,11 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   }
 
   archiveAll = () => {
+    const selectedAnnotations = this.getFilteredTracings();
     Modal.confirm({
-      content: "Are you sure you want to archive all explorative annotations?",
+      content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags.?`,
       onOk: async () => {
-        const unarchivedAnnoationIds = this.state.unarchivedTracings.map(t => t.id);
+        const unarchivedAnnoationIds = selectedAnnotations.map(t => t.id);
         const data = await Request.sendJSONReceiveJSON(
           jsRoutes.controllers.AnnotationController.finishAll("Explorational").url,
           {
@@ -257,8 +258,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
         Toast.message(data.messages);
 
         this.setState({
-          archivedTracings: this.state.unarchivedTracings.concat(this.state.archivedTracings),
-          unarchivedTracings: [],
+          archivedTracings: this.state.archivedTracings.concat(selectedAnnotations),
+          unarchivedTracings: _.without(this.state.unarchivedTracings, ...selectedAnnotations),
         });
       },
     });
@@ -312,14 +313,18 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     this.setState({ unarchivedTracings: newTracings });
   };
 
+  getFilteredTracings() {
+    return Utils.filterWithSearchQueryAND(
+      this.getCurrentTracings(),
+      ["id", "name", "modified", "tags"],
+      `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
+    );
+  }
+
   renderTable() {
     return (
       <Table
-        dataSource={Utils.filterWithSearchQueryAND(
-          this.getCurrentTracings(),
-          ["id", "name", "modified", "tags"],
-          `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
-        )}
+        dataSource={this.getFilteredTracings()}
         rowKey="id"
         pagination={{
           defaultPageSize: 50,

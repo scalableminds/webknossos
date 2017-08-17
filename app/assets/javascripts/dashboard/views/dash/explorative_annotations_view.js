@@ -56,8 +56,6 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     this.fetchDataMaybe();
   }
 
-  componentWillUnmount() {}
-
   isFetchNecessary(): boolean {
     const accessor = this.state.shouldShowArchivedTracings ? "isArchived" : "isUnarchived";
     return !this.state.didAlreadyFetchMetaInfo[accessor];

@@ -6,7 +6,6 @@ import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Spin, Table, Button, Modal, Tag } from "antd";
 import type { APITaskWithAnnotationType } from "admin/api_flow_types";
-import FormatUtils from "libs/format_utils";
 import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
@@ -258,7 +257,6 @@ export default class DashboardTaskListView extends React.PureComponent {
         <Column
           title="#"
           dataIndex="id"
-          render={(__, task) => FormatUtils.formatHash(task.id)}
           sorter={Utils.localeCompareBy("id")}
           className="monospace-id"
         />
@@ -276,6 +274,7 @@ export default class DashboardTaskListView extends React.PureComponent {
           title="Description"
           dataIndex="type.description"
           sorter={Utils.localeCompareBy(t => t.type.description)}
+          width={550}
         />
         <Column
           title="Modes"

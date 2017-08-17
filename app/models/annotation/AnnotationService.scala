@@ -166,6 +166,7 @@ object AnnotationService
         newTracing <- tracingFromBase(annotation) ?~> "Failed to create tracing from base"
         newAnnotation = annotation.copy(
           _user = Some(user._id),
+          tracingReference = newTracing,
           state = AnnotationState.InProgress,
           typ = AnnotationType.Task,
           _id = BSONObjectID.generate,

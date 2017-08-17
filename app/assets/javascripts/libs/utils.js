@@ -7,6 +7,7 @@ import _ from "lodash";
 import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
 import window from "libs/window";
+import type { APIUserType } from "admin/api_flow_types";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
 
@@ -170,12 +171,16 @@ const Utils = {
   },
 
   // this is insecure and must not be used for security related functionality
-  isUserAdmin(user: any): boolean {
+  isUserModelAdmin(user: any): boolean {
     if (user == null) {
       return false;
     } else {
       return _.findIndex(user.get("teams"), team => team.role.name === "admin") >= 0;
     }
+  },
+
+  isUserAdmin(user: APIUserType): boolean {
+    return _.findIndex(user.teams, team => team.role.name === "admin") >= 0;
   },
 
   getUrlParams(paramName: string): { [key: string]: string | boolean } {

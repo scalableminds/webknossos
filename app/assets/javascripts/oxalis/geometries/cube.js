@@ -73,48 +73,48 @@ class Cube {
 
     const vec = (x, y, z) => new THREE.Vector3(x, y, z);
 
-    this.cube.geometry.vertices = [];
-    let v = [];
-    v.push(vec(min[0], min[1], min[2]));
-    v.push(vec(min[0], max[1], min[2]));
-    v.push(vec(max[0], max[1], min[2]));
-    v.push(vec(max[0], min[1], min[2]));
-    v.push(vec(max[0], min[1], max[2]));
-    v.push(vec(max[0], max[1], max[2]));
-    v.push(vec(min[0], max[1], max[2]));
-    v.push(vec(min[0], min[1], max[2]));
-    v.push(vec(min[0], min[1], min[2]));
-    v.push(vec(max[0], min[1], min[2]));
-    v.push(vec(max[0], max[1], min[2]));
-    v.push(vec(max[0], max[1], max[2]));
-    v.push(vec(max[0], min[1], max[2]));
-    v.push(vec(min[0], min[1], max[2]));
-    v.push(vec(min[0], max[1], max[2]));
-    v.push(vec(min[0], max[1], min[2]));
+    this.cube.geometry.vertices = [
+      vec(min[0], min[1], min[2]),
+      vec(min[0], max[1], min[2]),
+      vec(max[0], max[1], min[2]),
+      vec(max[0], min[1], min[2]),
+      vec(max[0], min[1], max[2]),
+      vec(max[0], max[1], max[2]),
+      vec(min[0], max[1], max[2]),
+      vec(min[0], min[1], max[2]),
+      vec(min[0], min[1], min[2]),
+      vec(max[0], min[1], min[2]),
+      vec(max[0], max[1], min[2]),
+      vec(max[0], max[1], max[2]),
+      vec(max[0], min[1], max[2]),
+      vec(min[0], min[1], max[2]),
+      vec(min[0], max[1], max[2]),
+      vec(min[0], max[1], min[2]),
+    ];
 
-    this.crossSections[OrthoViews.PLANE_XY].geometry.vertices = [];
-    v = [];
-    v.push(vec(min[0], min[1], 0));
-    v.push(vec(min[0], max[1], 0));
-    v.push(vec(max[0], max[1], 0));
-    v.push(vec(max[0], min[1], 0));
-    v.push(vec(min[0], min[1], 0));
+    this.crossSections[OrthoViews.PLANE_XY].geometry.vertices = [
+      vec(min[0], min[1], 0),
+      vec(min[0], max[1], 0),
+      vec(max[0], max[1], 0),
+      vec(max[0], min[1], 0),
+      vec(min[0], min[1], 0),
+    ];
 
-    this.crossSections[OrthoViews.PLANE_YZ].geometry.vertices = [];
-    v = [];
-    v.push(vec(0, min[1], min[2]));
-    v.push(vec(0, min[1], max[2]));
-    v.push(vec(0, max[1], max[2]));
-    v.push(vec(0, max[1], min[2]));
-    v.push(vec(0, min[1], min[2]));
+    this.crossSections[OrthoViews.PLANE_YZ].geometry.vertices = [
+      vec(0, min[1], min[2]),
+      vec(0, min[1], max[2]),
+      vec(0, max[1], max[2]),
+      vec(0, max[1], min[2]),
+      vec(0, min[1], min[2]),
+    ];
 
-    this.crossSections[OrthoViews.PLANE_XZ].geometry.vertices = [];
-    v = [];
-    v.push(vec(min[0], 0, min[2]));
-    v.push(vec(min[0], 0, max[2]));
-    v.push(vec(max[0], 0, max[2]));
-    v.push(vec(max[0], 0, min[2]));
-    v.push(vec(min[0], 0, min[2]));
+    this.crossSections[OrthoViews.PLANE_XZ].geometry.vertices = [
+      vec(min[0], 0, min[2]),
+      vec(min[0], 0, max[2]),
+      vec(max[0], 0, max[2]),
+      vec(max[0], 0, min[2]),
+      vec(min[0], 0, min[2]),
+    ];
 
     for (const mesh of _.values(this.crossSections).concat([this.cube])) {
       mesh.geometry.computeBoundingSphere();

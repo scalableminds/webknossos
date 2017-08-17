@@ -403,6 +403,19 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     );
   }
 
+  renderSearchTags() {
+    return this.state.tags.map(tag =>
+      <Tag
+        key={tag}
+        color={TemplateHelpers.stringToColor(tag)}
+        afterClose={_.partial(this.removeTagFromSearch, tag)}
+        closable
+      >
+        {tag}
+      </Tag>,
+    );
+  }
+
   render() {
     const marginRight = { marginRight: 8 };
     const search = (
@@ -445,18 +458,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
               {search}
             </div>}
         <h3>Explorative Annotations</h3>
+        {this.renderSearchTags()}
         <div className="clearfix" style={{ margin: "20px 0px" }} />
-
-        {this.state.tags.map(tag =>
-          <Tag
-            key={tag}
-            color={TemplateHelpers.stringToColor(tag)}
-            afterClose={_.partial(this.removeTagFromSearch, tag)}
-            closable
-          >
-            {tag}
-          </Tag>,
-        )}
 
         {this.state.requestCount === 0
           ? this.renderTable()

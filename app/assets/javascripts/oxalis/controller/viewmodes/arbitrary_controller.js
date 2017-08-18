@@ -3,7 +3,7 @@
  * @flow
  */
 
-import React from "react";
+import * as React from "react";
 import Backbone from "backbone";
 import _ from "lodash";
 import TWEEN from "tween.js";
@@ -59,7 +59,7 @@ type Props = {
   viewMode: ModeType,
 };
 
-class ArbitraryController extends React.PureComponent {
+class ArbitraryController extends React.PureComponent<Props, $FlowFixMeState> {
   // See comment in Controller class on general controller architecture.
   //
   // Arbitrary Controller: Responsible for Arbitrary Modes
@@ -74,7 +74,6 @@ class ArbitraryController extends React.PureComponent {
     keyboardNoLoop?: InputKeyboardNoLoop,
     keyboardOnce?: InputKeyboard,
   };
-  props: Props;
   storePropertyUnsubscribers: Array<Function>;
 
   // Copied from backbone events (TODO: handle this better)

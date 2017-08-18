@@ -1,6 +1,6 @@
 // @flow
 /* eslint-disable react/no-unused-prop-types, react/no-unused-props, react/jsx-no-bind, react/no-multi-comp  */
-import React from "react";
+import * as React from "react";
 import { Button, Spin } from "antd";
 
 const ReactElement = React.Element;
@@ -22,8 +22,7 @@ type Props = {
 
 type State = { isLoading: boolean };
 
-export class AsyncButton extends React.PureComponent {
-  props: Props;
+export class AsyncButton extends React.PureComponent<Props, State> {
   _isMounted: boolean;
   state: State = { isLoading: false };
 
@@ -40,8 +39,7 @@ export class AsyncButton extends React.PureComponent {
   }
 }
 
-export class AsyncLink extends React.PureComponent {
-  props: Props & { children: Array<ReactElement<*>> };
+export class AsyncLink extends React.PureComponent<Props & { children: Array<React.Element<any>> }, State> {
   _isMounted: boolean;
   static defaultProps = {
     children: [],

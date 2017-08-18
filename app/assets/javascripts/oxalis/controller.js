@@ -4,7 +4,7 @@
  */
 /* globals JQueryInputEventObject:false */
 
-import React from "react";
+import * as React from "react";
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
@@ -36,15 +36,15 @@ import { fetchGistContent } from "libs/gist";
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
 
-class Controller extends React.PureComponent {
-  props: {
-    initialTracingType: SkeletonTracingTypeTracingType,
-    initialTracingId: string,
-    initialControlmode: ControlModeType,
-    // Delivered by connect()
-    viewMode: ModeType,
-  };
-
+class Controller extends React.PureComponent<{
+  initialTracingType: SkeletonTracingTypeTracingType,
+  initialTracingId: string,
+  initialControlmode: ControlModeType,
+  // Delivered by connect()
+  viewMode: ModeType,
+}, {
+  ready: boolean,
+}> {
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
 

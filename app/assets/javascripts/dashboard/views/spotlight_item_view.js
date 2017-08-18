@@ -1,17 +1,18 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import React from "react";
+import * as React from "react";
 import { Modal, Card } from "antd";
 import TemplateHelpers from "libs/template_helpers";
 import app from "app";
 import type { APIDatasetType } from "admin/api_flow_types";
 
-class SpotlightItemView extends React.PureComponent {
+class SpotlightItemView extends React.PureComponent<{
+  dataset: APIDatasetType,
+}, {
+  contentType: string,
+}> {
   form: any;
-  props: {
-    dataset: APIDatasetType,
-  };
 
   state: {
     contentType: string,

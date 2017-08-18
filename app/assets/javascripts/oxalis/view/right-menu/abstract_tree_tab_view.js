@@ -12,12 +12,10 @@ import type { NodeListItemType } from "oxalis/view/right-menu/abstract_tree_rend
 import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 
-class AbstractTreeView extends Component {
-  props: {
-    skeletonTracing: SkeletonTracingType,
-    dispatch: Dispatch<*>,
-  };
-
+class AbstractTreeView extends Component<{
+  skeletonTracing: SkeletonTracingType,
+  dispatch: Dispatch<*>,
+}> {
   canvas: ?HTMLCanvasElement;
 
   componentDidMount() {

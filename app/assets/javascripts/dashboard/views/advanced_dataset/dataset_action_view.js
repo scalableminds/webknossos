@@ -1,14 +1,15 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import React from "react";
+import * as React from "react";
 import type { APIDatasetType } from "admin/api_flow_types";
 
-export default class DatasetActionView extends React.PureComponent {
+export default class DatasetActionView extends React.PureComponent<{
+  dataset: APIDatasetType,
+}, {
+  contentType: string,
+}> {
   form: HTMLFormElement;
-  props: {
-    dataset: APIDatasetType,
-  };
 
   state: {
     contentType: string,

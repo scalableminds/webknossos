@@ -1,21 +1,19 @@
 // @flow
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import { Modal, Button, Input, Icon } from "antd";
 import Request from "libs/request";
 import update from "immutability-helper";
 import type { APIUserType } from "admin/api_flow_types";
 
-class ExperienceModalView extends React.PureComponent {
-  props: {
-    onChange: Function,
-    onCancel: Function,
-    visible: boolean,
-    selectedUserIds: Array<string>,
-    users: Array<APIUserType>,
-  };
-
+class ExperienceModalView extends React.PureComponent<{
+  onChange: Function,
+  onCancel: Function,
+  visible: boolean,
+  selectedUserIds: Array<string>,
+  users: Array<APIUserType>,
+}, $FlowFixMeState> {
   state = {
     domain: null,
     level: null,
@@ -25,7 +23,7 @@ class ExperienceModalView extends React.PureComponent {
     this.setExperience(null, true);
   };
 
-  setExperience = (event: ?SyntheticInputEvent, shouldAddValue: boolean = false): void => {
+  setExperience = (event: ?SyntheticInputEvent<>, shouldAddValue: boolean = false): void => {
     const { domain, level } = this.state;
     if (domain && level !== null) {
       const newUserPromises = this.props.users.map(user => {

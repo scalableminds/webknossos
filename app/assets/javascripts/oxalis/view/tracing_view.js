@@ -3,7 +3,7 @@
  * @flow
  */
 
-import React from "react";
+import * as React from "react";
 import classnames from "classnames";
 import { connect } from "react-redux";
 import { Switch } from "antd";
@@ -15,16 +15,14 @@ import type { OxalisState } from "oxalis/store";
 import type { ModeType } from "oxalis/constants";
 import type { Dispatch } from "redux";
 
-class TracingView extends React.PureComponent {
-  props: {
-    flightmodeRecording: boolean,
-    onChangeFlightmodeRecording: ?Function,
-    viewMode: ModeType,
-    scale: number,
-    isVolumeTracingDisallowed: boolean,
-  };
-
-  handleContextMenu(event: SyntheticInputEvent) {
+class TracingView extends React.PureComponent<{
+  flightmodeRecording: boolean,
+  onChangeFlightmodeRecording: ?Function,
+  viewMode: ModeType,
+  scale: number,
+  isVolumeTracingDisallowed: boolean,
+}> {
+  handleContextMenu(event: SyntheticInputEvent<>) {
     // hide contextmenu, while rightclicking a canvas
     event.preventDefault();
   }

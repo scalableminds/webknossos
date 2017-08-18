@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import Store from "oxalis/store";
 import {
@@ -20,8 +20,7 @@ type ListTreeItemViewProps = {
   tree: TreeType,
 };
 
-class ListTreeItemView extends React.PureComponent {
-  props: ListTreeItemViewProps;
+class ListTreeItemView extends React.PureComponent<ListTreeItemViewProps> {
   domElement: HTMLElement;
 
   componentDidUpdate() {

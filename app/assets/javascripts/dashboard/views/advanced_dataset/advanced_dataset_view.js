@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash, react/prefer-stateless-function */
 
-import React from "react";
+import * as React from "react";
 import TemplateHelpers from "libs/template_helpers";
 import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import Utils from "libs/utils";
@@ -16,9 +16,7 @@ type Props = {
   searchQuery: string,
 };
 
-class AdvancedDatasetView extends React.PureComponent {
-  props: Props;
-
+class AdvancedDatasetView extends React.PureComponent<Props> {
   render() {
     return (
       <div>

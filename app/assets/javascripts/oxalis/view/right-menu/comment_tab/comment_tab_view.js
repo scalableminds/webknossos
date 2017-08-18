@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import Maybe from "data.maybe";
 import Utils from "libs/utils";
 import { connect } from "react-redux";
@@ -29,14 +29,12 @@ type CommentTabStateType = {
   isSortedAscending: boolean,
 };
 
-class CommentTabView extends React.Component {
-  props: {
-    skeletonTracing: SkeletonTracingType,
-    setActiveNode: (nodeId: number) => void,
-    deleteComment: () => void,
-    createComment: (text: string) => void,
-  };
-
+class CommentTabView extends React.Component<{
+  skeletonTracing: SkeletonTracingType,
+  setActiveNode: (nodeId: number) => void,
+  deleteComment: () => void,
+  createComment: (text: string) => void,
+}, CommentTabStateType> {
   state: CommentTabStateType = {
     isSortedAscending: true,
   };

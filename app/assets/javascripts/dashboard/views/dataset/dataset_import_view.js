@@ -1,13 +1,22 @@
 // @flow
 
-import React from "react";
+import * as React from "react";
 import { Button, Spin, Input, Checkbox, Alert } from "antd";
 import Request from "libs/request";
 import update from "immutability-helper";
 import Toast from "libs/toast";
 import type { APIDatasetType } from "admin/api_flow_types";
 
-class DatasetImportView extends React.PureComponent {
+class DatasetImportView extends React.PureComponent<{
+  datasetName: string,
+  isEditingMode: boolean,
+}, {
+  dataLoaded: boolean,
+  dataset: ?APIDatasetType,
+  datasetJson: string,
+  isValidJSON: boolean,
+  messages: Array<{ ["info" | "warning" | "error"]: string }>,
+}> {
   state: {
     dataLoaded: boolean,
     dataset: ?APIDatasetType,
@@ -74,7 +83,7 @@ class DatasetImportView extends React.PureComponent {
     }
   };
 
-  handleChangeJson = (event: SyntheticInputEvent) => {
+  handleChangeJson = (event: SyntheticInputEvent<>) => {
     try {
       JSON.parse(event.target.value);
       this.setState({
@@ -89,11 +98,11 @@ class DatasetImportView extends React.PureComponent {
     }
   };
 
-  handleChangeDescription = (event: SyntheticInputEvent) => {
+  handleChangeDescription = (event: SyntheticInputEvent<>) => {
     this.updateDataset("description", event.target.value);
   };
 
-  handleChangeCheckbox = (event: SyntheticInputEvent) => {
+  handleChangeCheckbox = (event: SyntheticInputEvent<>) => {
     this.updateDataset("isPublic", event.target.checked);
   };
 

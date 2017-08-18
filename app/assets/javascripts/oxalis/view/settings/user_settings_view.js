@@ -56,8 +56,7 @@ type UserSettingsViewProps = {
   controlMode: ControlModeType,
 };
 
-class UserSettingsView extends PureComponent {
-  props: UserSettingsViewProps;
+class UserSettingsView extends PureComponent<UserSettingsViewProps, $FlowFixMeState> {
   onChangeUser: { [$Keys<UserConfigurationType>]: Function };
   onChangeTemporary: { [$Keys<TemporaryConfigurationType>]: Function };
 

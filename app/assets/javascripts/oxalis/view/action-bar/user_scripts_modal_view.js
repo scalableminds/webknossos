@@ -1,7 +1,7 @@
 // @flow
 
 /* eslint-disable no-eval, no-alert */
-import React from "react";
+import * as React from "react";
 import { Modal, Input, Select, Spin } from "antd";
 import Request from "libs/request";
 import { fetchGistContent } from "libs/gist";
@@ -13,9 +13,13 @@ type UserScriptsModalViewPropsType = {
   isVisible: boolean,
 };
 
-class UserScriptsModalView extends React.PureComponent {
-  props: UserScriptsModalViewPropsType;
-
+class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewPropsType, {
+  code: string,
+  isCodeChanged: boolean,
+  scripts: Array<ScriptType>,
+  selectedScript: ?string,
+  isLoading: boolean,
+}> {
   state: {
     code: string,
     isCodeChanged: boolean,
@@ -40,7 +44,7 @@ class UserScriptsModalView extends React.PureComponent {
     });
   }
 
-  handleCodeChange = (event: SyntheticInputEvent) => {
+  handleCodeChange = (event: SyntheticInputEvent<>) => {
     this.setState({
       code: event.target.value,
       isCodeChanged: true,

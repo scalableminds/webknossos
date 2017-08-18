@@ -1,5 +1,5 @@
 // @flow
-import React from "react";
+import * as React from "react";
 import { connect } from "react-redux";
 import DatasetActionsView from "oxalis/view/action-bar/dataset_actions_view";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
@@ -9,7 +9,7 @@ import Constants, { ControlModeEnum } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 
 // eslint-disable-next-line react/prefer-stateless-function
-class ActionBarView extends React.PureComponent {
+class ActionBarView extends React.PureComponent<$FlowFixMeProps> {
   render() {
     const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
     const isVolumeMode = this.props.viewMode === Constants.MODE_VOLUME;

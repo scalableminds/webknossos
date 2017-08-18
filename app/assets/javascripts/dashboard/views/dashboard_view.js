@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import React from "react";
+import * as React from "react";
 import Request from "libs/request";
 import { Spin, Tabs } from "antd";
 import type { APIUserType } from "admin/api_flow_types";
@@ -19,14 +19,10 @@ type Props = {
   isAdminView: boolean,
 };
 
-class DashboardView extends React.PureComponent {
-  props: Props;
-
-  state: {
-    activeTabKey: string,
-    user: ?APIUserType,
-  };
-
+class DashboardView extends React.PureComponent<Props, {
+  activeTabKey: string,
+  user: ?APIUserType,
+}> {
   constructor(props: Props) {
     super(props);
 

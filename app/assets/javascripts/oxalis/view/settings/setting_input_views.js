@@ -7,7 +7,7 @@
 /* eslint-disable react/prefer-stateless-function */
 /* eslint-disable jsx-a11y/label-has-for */
 
-import React from "react";
+import * as React from "react";
 import Utils from "libs/utils";
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -21,8 +21,7 @@ type NumberSliderSettingProps = {
   step: number,
 };
 
-export class NumberSliderSetting extends React.PureComponent {
-  props: NumberSliderSettingProps;
+export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
   static defaultProps = {
     min: 1,
     step: 1,
@@ -73,8 +72,7 @@ type LogSliderSettingProps = {
 const LOG_SLIDER_MIN = -100;
 const LOG_SLIDER_MAX = 100;
 
-export class LogSliderSetting extends React.PureComponent {
-  props: LogSliderSettingProps;
+export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps> {
   static defaultProps = {
     disabled: false,
     roundTo: 3,
@@ -154,9 +152,7 @@ type SwitchSettingProps = {
   label: string,
 };
 
-export class SwitchSetting extends React.PureComponent {
-  props: SwitchSettingProps;
-
+export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   render() {
     const { label, onChange, value } = this.props;
     return (
@@ -183,8 +179,7 @@ type NumberInputSettingProps = {
   step?: number,
 };
 
-export class NumberInputSetting extends React.PureComponent {
-  props: NumberInputSettingProps;
+export class NumberInputSetting extends React.PureComponent<NumberInputSettingProps> {
   static defaultProps = {
     max: 100,
     min: 1,
@@ -216,14 +211,11 @@ type VectorInputSettingPropTypes<T: Vector6> = {
   tooltipTitle: string,
 };
 
-export class Vector6InputSetting extends React.PureComponent {
-  props: VectorInputSettingPropTypes<Vector6>;
-  state: {
-    isEditing: boolean,
-    isValid: boolean,
-    text: string,
-  };
-
+export class Vector6InputSetting extends React.PureComponent<VectorInputSettingPropTypes<Vector6>, {
+  isEditing: boolean,
+  isValid: boolean,
+  text: string,
+}> {
   constructor(props: VectorInputSettingPropTypes<Vector6>) {
     super(props);
     this.state = {
@@ -270,7 +262,7 @@ export class Vector6InputSetting extends React.PureComponent {
     });
   };
 
-  handleChange = (evt: SyntheticInputEvent) => {
+  handleChange = (evt: SyntheticInputEvent<>) => {
     const text = evt.target.value;
 
     // only numbers, commas and whitespace is allowed
@@ -325,10 +317,8 @@ type ColorSettingPropTypes = {
   onChange: (value: Vector3) => void,
 };
 
-export class ColorSetting extends React.PureComponent {
-  props: ColorSettingPropTypes;
-
-  onColorChange = (evt: SyntheticInputEvent) => {
+export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
+  onColorChange = (evt: SyntheticInputEvent<>) => {
     this.props.onChange(Utils.hexToRgb(evt.target.value));
   };
 
@@ -355,8 +345,7 @@ type DropdownSettingProps = {
   children?: Array<Select.Option>,
 };
 
-export class DropdownSetting extends React.PureComponent {
-  props: DropdownSettingProps;
+export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
   static defaultProps = {
     children: undefined,
   };

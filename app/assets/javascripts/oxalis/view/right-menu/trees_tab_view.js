@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu } from "antd";
 import Window from "libs/window";
@@ -29,7 +29,7 @@ import type { OxalisState } from "oxalis/store";
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
 
-class TreesTabView extends React.Component {
+class TreesTabView extends React.Component<$FlowFixMeProps> {
   handleChangeTreeName = evt => {
     this.props.onChangeTreeName(evt.target.value);
   };

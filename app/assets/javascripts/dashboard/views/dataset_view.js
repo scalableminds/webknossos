@@ -2,7 +2,7 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import Request from "libs/request";
 import Utils from "libs/utils";
@@ -25,8 +25,12 @@ function createThumbnailURL(datasetName: string, layers: Array<APIDatasetType>):
   return "";
 }
 
-class DatasetView extends React.PureComponent {
-  props: Props;
+class DatasetView extends React.PureComponent<Props, {
+  currentDataViewType: "gallery" | "advanced",
+  datasets: Array<APIDatasetType>,
+  searchQuery: string,
+  isLoading: boolean,
+}> {
   state: {
     currentDataViewType: "gallery" | "advanced",
     datasets: Array<APIDatasetType>,
@@ -81,7 +85,7 @@ class DatasetView extends React.PureComponent {
   showAdvancedView = () => this.setState({ currentDataViewType: "advanced" });
   showGalleryView = () => this.setState({ currentDataViewType: "gallery" });
 
-  handleSearch = (event: SyntheticInputEvent): void => {
+  handleSearch = (event: SyntheticInputEvent<>): void => {
     this.setState({ searchQuery: event.target.value });
   };
 

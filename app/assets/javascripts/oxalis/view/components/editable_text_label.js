@@ -1,6 +1,6 @@
 // @flow
 
-import React from "react";
+import * as React from "react";
 import { Input, Icon } from "antd";
 
 type EditableTextLabelPropType = {
@@ -8,9 +8,10 @@ type EditableTextLabelPropType = {
   onChange: Function,
 };
 
-class EditableTextLabel extends React.PureComponent {
-  props: EditableTextLabelPropType;
-
+class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, {
+  isEditing: boolean,
+  value: string,
+}> {
   state: {
     isEditing: boolean,
     value: string,
@@ -23,7 +24,7 @@ class EditableTextLabel extends React.PureComponent {
     this.setState({ value: newProps.value });
   }
 
-  handleInputChange = (event: SyntheticInputEvent) => {
+  handleInputChange = (event: SyntheticInputEvent<>) => {
     this.setState({ value: event.target.value });
   };
 

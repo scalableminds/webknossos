@@ -3,7 +3,7 @@
  * @flow
  */
 
-import React from "react";
+import * as React from "react";
 import { connect } from "react-redux";
 import classNames from "classnames";
 import Comment from "oxalis/view/right-menu/comment_tab/comment";
@@ -20,8 +20,7 @@ type TreeCommentListProps = {
   skeletonTracing: SkeletonTracingType,
 } & OwnProps;
 
-class TreeCommentList extends React.PureComponent {
-  props: TreeCommentListProps;
+class TreeCommentList extends React.PureComponent<TreeCommentListProps, $FlowFixMeState> {
   state = {
     collapsed: false,
   };

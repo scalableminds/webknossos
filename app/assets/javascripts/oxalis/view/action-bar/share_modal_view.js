@@ -17,9 +17,9 @@ type ShareModalPropType = {
   setAnnotationPublic: Function,
 };
 
-class ShareModalView extends PureComponent {
-  props: ShareModalPropType;
-
+class ShareModalView extends PureComponent<ShareModalPropType, {
+  isPublic: boolean,
+}> {
   state: {
     isPublic: boolean,
   } = {
@@ -46,7 +46,7 @@ class ShareModalView extends PureComponent {
     Toast.success("Position copied to clipboard");
   };
 
-  handleCheckboxChange = (event: SyntheticInputEvent) => {
+  handleCheckboxChange = (event: SyntheticInputEvent<>) => {
     this.setState({ isPublic: event.target.checked });
   };
 

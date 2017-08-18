@@ -59,7 +59,7 @@ type Props = {
   viewMode: ModeType,
 };
 
-class ArbitraryController extends React.PureComponent<Props, $FlowFixMeState> {
+class ArbitraryController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
   //
   // Arbitrary Controller: Responsible for Arbitrary Modes

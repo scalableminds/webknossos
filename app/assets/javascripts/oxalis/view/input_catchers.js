@@ -9,7 +9,15 @@ import api from "oxalis/api/internal_api";
 
 const ButtonGroup = Button.Group;
 
-class InputCatchers extends React.PureComponent<$FlowFixMeProps, $FlowFixMeState> {
+type Props = {
+  scale: number,
+};
+
+type State = {
+  activeInputCatcher: string,
+};
+
+class InputCatchers extends React.PureComponent<Props, State> {
   state = {
     activeInputCatcher: "",
   };

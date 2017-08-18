@@ -20,7 +20,11 @@ type TreeCommentListProps = {
   skeletonTracing: SkeletonTracingType,
 } & OwnProps;
 
-class TreeCommentList extends React.PureComponent<TreeCommentListProps, $FlowFixMeState> {
+type State = {
+  collapsed: boolean,
+};
+
+class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
   state = {
     collapsed: false,
   };

@@ -16,7 +16,7 @@ import classNames from "classnames";
 import Checkbox from "oxalis/view/components/checkbox_component";
 
 type ListTreeItemViewProps = {
-  activeTreeId: number,
+  activeTreeId: ?number,
   tree: TreeType,
 };
 
@@ -50,7 +50,9 @@ class ListTreeItemView extends React.PureComponent<ListTreeItemViewProps> {
     return (
       <li
         ref={domElement => {
-          this.domElement = domElement;
+          if (domElement) {
+            this.domElement = domElement;
+          }
         }}
       >
         <Checkbox checked={this.props.tree.isVisible} onChange={this.handleToggleTree} />

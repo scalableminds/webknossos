@@ -3,8 +3,6 @@
 import * as React from "react";
 import { Button, Spin } from "antd";
 
-const ReactElement = React.Element;
-
 const onClick = async function() {
   this.setState({ isLoading: true });
   try {
@@ -39,7 +37,7 @@ export class AsyncButton extends React.PureComponent<Props, State> {
   }
 }
 
-export class AsyncLink extends React.PureComponent<Props & { children: Array<React.Element<any>> }, State> {
+export class AsyncLink extends React.PureComponent<Props & { children: React.Node }, State> {
   _isMounted: boolean;
   static defaultProps = {
     children: [],
@@ -57,7 +55,8 @@ export class AsyncLink extends React.PureComponent<Props & { children: Array<Rea
   render() {
     let content;
     if (this.state.isLoading) {
-      const childrenWithoutIcon = this.props.children.filter(child => child.type !== "i");
+      const children = React.Children.toArray(this.props.children);
+      const childrenWithoutIcon = children.filter(child => !child.type || child.type !== "i");
       content = [<Spin key="icon" />, childrenWithoutIcon];
     } else {
       content = this.props.children;

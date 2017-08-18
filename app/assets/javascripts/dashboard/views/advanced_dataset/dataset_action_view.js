@@ -40,7 +40,9 @@ export default class DatasetActionView extends React.PureComponent<{
           action={jsRoutes.controllers.AnnotationController.createExplorational().url}
           method="POST"
           ref={form => {
-            this.form = form;
+            if (form) {
+              this.form = form;
+            }
           }}
         >
           <input type="hidden" name="dataSetName" value={dataset.name} />

@@ -20,11 +20,17 @@ import type { ControlModeType } from "oxalis/constants";
 
 const { Header, Sider } = Layout;
 
-class TracingLayoutView extends React.PureComponent<{
+type Props = {
   initialTracingType: SkeletonTracingTypeTracingType,
   initialTracingId: string,
   initialControlmode: ControlModeType,
-}, $FlowFixMeState> {
+};
+
+type State = {
+  isSettingsCollapsed: boolean,
+};
+
+class TracingLayoutView extends React.PureComponent<Props, State> {
   state = {
     isSettingsCollapsed: true,
   };

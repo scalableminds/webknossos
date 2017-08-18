@@ -22,7 +22,7 @@ import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 class CameraController extends React.Component<{
   cameras: OrthoViewMapType<THREE.OrthographicCamera>,
   onCameraPositionChanged: () => void,
-}, $FlowFixMeState> {
+}> {
   storePropertyUnsubscribers: Array<Function>;
 
   componentDidMount() {

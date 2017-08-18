@@ -7,13 +7,20 @@ import Request from "libs/request";
 import update from "immutability-helper";
 import type { APIUserType } from "admin/api_flow_types";
 
-class ExperienceModalView extends React.PureComponent<{
+type Props = {
   onChange: Function,
   onCancel: Function,
   visible: boolean,
   selectedUserIds: Array<string>,
   users: Array<APIUserType>,
-}, $FlowFixMeState> {
+};
+
+type State = {
+  domain: ?string,
+  level: ?string,
+}
+
+class ExperienceModalView extends React.PureComponent<Props, State> {
   state = {
     domain: null,
     level: null,

@@ -59,7 +59,7 @@ type Props = OwnProps & {
   scale: Vector3,
 };
 
-class PlaneController extends React.PureComponent<Props, $FlowFixMeState> {
+class PlaneController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
   //
   // Plane Controller: Responsible for Plane Modes

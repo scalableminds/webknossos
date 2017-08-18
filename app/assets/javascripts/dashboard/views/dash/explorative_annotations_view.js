@@ -384,15 +384,20 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
                   color={TemplateHelpers.stringToColor(tag)}
                   onClick={_.partial(this.addTagToSearch, tag)}
                   onClose={_.partial(this.editTagFromAnnotation, tracing, false, tag)}
-                  closable={!(tag === tracing.dataSetName || tag === tracing.contentType)}
+                  closable={
+                    !(tag === tracing.dataSetName || tag === tracing.contentType) &&
+                    !this.state.shouldShowArchivedTracings
+                  }
                 >
                   {tag}
                 </Tag>,
               )}
-              <EditableTextIcon
-                icon="plus"
-                onChange={_.partial(this.editTagFromAnnotation, tracing, true)}
-              />
+              {this.state.shouldShowArchivedTracings
+                ? null
+                : <EditableTextIcon
+                    icon="plus"
+                    onChange={_.partial(this.editTagFromAnnotation, tracing, true)}
+                  />}
             </div>}
         />
         <Column

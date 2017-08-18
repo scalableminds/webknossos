@@ -31,7 +31,8 @@ case class Annotation(
                        tracingTime: Option[Long] = None,
                        _name: Option[String] = None,
                        _task: Option[BSONObjectID] = None,
-                       _id: BSONObjectID = BSONObjectID.generate
+                       _id: BSONObjectID = BSONObjectID.generate,
+                       isPublic: Boolean = false
                      )
   extends FoxImplicits {
 
@@ -138,7 +139,7 @@ object AnnotationDAO
               Json.obj("_user"-> user._id))
           ))
         case _ =>
-          DenyEveryone()
+          AllowIf(Json.obj("isPublic" -> true))
       }
     }
 
@@ -275,6 +276,12 @@ object AnnotationDAO
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("_name" -> name)),
+      returnNew = true)
+
+  def setIsPublic(_annotation: BSONObjectID, isPublic: Boolean)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj("isPublic" -> isPublic)),
       returnNew = true)
 
   def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =

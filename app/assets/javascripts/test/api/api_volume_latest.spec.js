@@ -2,6 +2,7 @@
 import test from "ava";
 import "backbone.marionette";
 import sinon from "sinon";
+import mockRequire from "mock-require";
 import Constants from "oxalis/constants";
 import { setupOxalis } from "test/helpers/apiHelpers";
 import { tracing as TRACING } from "../fixtures/volumetracing_server_objects";
@@ -40,7 +41,7 @@ test("setVolumeMode should throw an error for an invalid mode", t => {
   t.throws(() => api.tracing.setVolumeMode());
 });
 
-test("Data Api: labelVoxels should label a list of voxels", t => {
+test("Data API: labelVoxels should label a list of voxels", t => {
   const { api, model } = t.context;
   const cube = model.getSegmentationBinary().cube;
   sinon.stub(model.getSegmentationBinary().layer, "requestFromStoreImpl").returns(new Uint8Array());
@@ -51,6 +52,25 @@ test("Data Api: labelVoxels should label a list of voxels", t => {
   t.is(cube.getDataValue([7, 8, 9]), 34);
   // Some other voxel should not
   t.not(cube.getDataValue([11, 12, 13]), 34);
+});
+
+test("Data API: getVolumeTracingLayerName should return the name of the volume tracing layer", t => {
+  const api = t.context.api;
+  t.is(api.data.getVolumeTracingLayerName(), "64007765-cef9-4e31-b206-dba795b5be17");
+});
+
+test("Data API: downloadRawDataCuboid should open a popup with the correct URL", async t => {
+  const { api } = t.context;
+  const window = mockRequire.reRequire("libs/window");
+
+  await api.data.downloadRawDataCuboid("color", [1, 2, 3], [9, 8, 7]);
+
+  t.true(window.open.calledOnce);
+  t.true(
+    window.open.calledWith(
+      "http://localhost:9000/data/datasets/2012-09-28_ex145_07x2/layers/color/data?resolution=0&token=secure-token&x=1&y=2&z=3&width=8&height=6&depth=4",
+    ),
+  );
 });
 
 test("Calling a skeleton api function in a volume tracing should throw an error", t => {

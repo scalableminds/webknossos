@@ -193,14 +193,9 @@ class UserListView extends React.PureComponent {
             width={300}
             render={(experiences, user: APIUserType) =>
               _.map(experiences, (value, domain) =>
-                <div
-                  style={{ marginBottom: 8, display: "inline-block" }}
-                  key={`experience_${user.id}_${domain}`}
-                >
-                  <Tag>
-                    {domain} : {value}
-                  </Tag>
-                </div>,
+                <Tag key={`experience_${user.id}_${domain}`}>
+                  {domain} : {value}
+                </Tag>,
               )}
           />
           <Column
@@ -210,14 +205,12 @@ class UserListView extends React.PureComponent {
             width={300}
             render={(teams: Array<APITeamRole>, user: APIUserType) =>
               teams.map(team =>
-                <div
-                  style={{ marginBottom: 8, display: "inline-block" }}
+                <Tag
                   key={`team_role_${user.id}_${team.team}`}
+                  color={TemplateHelpers.stringToColor(team.role.name)}
                 >
-                  <Tag color={TemplateHelpers.stringToColor(team.role.name)}>
-                    {team.team}: {team.role.name}
-                  </Tag>
-                </div>,
+                  {team.team}: {team.role.name}
+                </Tag>,
               )}
           />
           <Column

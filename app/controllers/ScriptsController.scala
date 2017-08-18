@@ -49,7 +49,6 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
 
   def list = Authenticated.async { implicit request =>
     for {
-      _ <- request.user.hasAdminAccess ?~> Messages("notAllowed")
       scripts <- ScriptDAO.findAll
       js <- Future.traverse(scripts)(s => Script.scriptPublicWrites(s))
     } yield {

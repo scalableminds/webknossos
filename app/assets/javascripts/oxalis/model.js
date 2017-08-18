@@ -118,6 +118,15 @@ export type ServerAnnotationType = {
   task: TaskType,
   tracingTime: number,
   typ: SkeletonTracingTypeTracingType | VolumeTracingTypeTracingType,
+<<<<<<< HEAD
+||||||| merged common ancestors
+  user: any,
+  version: number,
+=======
+  user: any,
+  version: number,
+  isPublic: boolean,
+>>>>>>> master
 };
 
 // TODO: Non-reactive

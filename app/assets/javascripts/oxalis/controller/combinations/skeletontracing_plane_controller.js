@@ -113,7 +113,8 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     super.scrollPlanes(delta, type);
 
     if (type === "shift") {
-      api.tracing.setNodeRadius(delta);
+      // Different browsers send different deltas, this way the behavior is comparable
+      api.tracing.setNodeRadius(delta > 0 ? 5 : -5);
     }
   }
 
@@ -153,9 +154,9 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
         getActiveNode(Store.getState().tracing).map(activeNode =>
           Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
         );
+      } else {
+        Store.dispatch(setActiveNodeAction(nodeId));
       }
-
-      Store.dispatch(setActiveNodeAction(nodeId));
     }
   };
 

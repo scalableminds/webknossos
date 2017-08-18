@@ -37,7 +37,7 @@ trait AnnotationInformationProvider
     AnnotationStore.requestAnnotation(annotationId, request.userOpt)
   }
 
-  def nameForAnnotation(annotation: Annotation)(implicit request: AuthenticatedRequest[_]): Fox[String] = {
+  def nameForAnnotation(annotation: Annotation)(implicit request: UserAwareRequest[_]): Fox[String] = {
     val handler = AnnotationInformationHandler.informationHandlers(annotation.typ)
     annotation._name.toFox.orElse(handler.nameForAnnotation(annotation).toFox)
   }

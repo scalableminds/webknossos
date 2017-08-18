@@ -97,7 +97,14 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         tracingType: action.annotation.typ,
         tracingId: action.tracing.id,
         version: action.tracing.version,
+<<<<<<< HEAD
         boundingBox: convertBoundingBox(action.tracing.boundingBox),
+||||||| merged common ancestors
+        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+=======
+        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+        isPublic: action.tracing.isPublic,
+>>>>>>> master
       };
 
       return update(state, { tracing: { $set: skeletonTracing } });
@@ -175,12 +182,17 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
         case "SET_NODE_RADIUS": {
           const { radius, nodeId, treeId } = action;
+          const clampedRadius = Utils.clamp(
+            Constants.MIN_NODE_RADIUS,
+            radius,
+            Constants.MAX_NODE_RADIUS,
+          );
           return getNodeAndTree(skeletonTracing, nodeId, treeId)
             .map(([tree, node]) =>
               update(state, {
                 tracing: {
                   trees: {
-                    [tree.treeId]: { nodes: { [node.id]: { radius: { $set: radius } } } },
+                    [tree.treeId]: { nodes: { [node.id]: { radius: { $set: clampedRadius } } } },
                   },
                 },
               }),
@@ -356,6 +368,14 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               ),
             )
             .getOrElse(state);
+        }
+
+        case "SET_TRACING": {
+          return update(state, {
+            tracing: {
+              $set: update(action.tracing, { version: { $set: skeletonTracing.version } }),
+            },
+          });
         }
 
         case "TOGGLE_TREE": {

@@ -52,6 +52,9 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
   def rename(name: String)(implicit ctx: DBAccessContext) =
     AnnotationDAO.rename(annotation._id, name)
 
+  def setIsPublic(isPublic: Boolean)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.setIsPublic(annotation._id, isPublic)
+
   def cancelTask()(implicit ctx: DBAccessContext) = {
     def insertReplacement(task: Task, project: Project) = {
       project.assignmentConfiguration match {

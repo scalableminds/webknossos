@@ -45,6 +45,7 @@ import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middlewar
 import Toast from "libs/toast";
 import Request from "libs/request";
 import app from "app";
+import window from "libs/window";
 import Utils from "libs/utils";
 import { ControlModeEnum, OrthoViews } from "oxalis/constants";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -462,6 +463,17 @@ class DataApi {
   }
 
   /**
+  * Returns the name of the volume tracing layer.
+  * _Volume tracing only!_
+  */
+  getVolumeTracingLayerName(): string {
+    assertVolume(Store.getState().tracing);
+    const layer = this.model.getSegmentationBinary();
+    assertExists(layer, "Segmentation layer not found!");
+    return layer.name;
+  }
+
+  /**
   * Sets a mapping for a given layer.
   *
   * @example
@@ -522,6 +534,33 @@ class DataApi {
     }
     // Bucket has been loaded by now or was loaded already
     return layer.cube.getDataValue(position);
+  }
+
+  /**
+  * Downloads a cuboid of raw data from a data layer. A new window is opened for the download -
+  * if that is not the case, please check your pop-up blocker.
+  *
+  * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the "segmentation" layer.
+  * api.data.downloadRawDataCuboid("segmentation", [0,0,0], [100,200,100]);
+  */
+  downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
+    const dataset = Store.getState().dataset;
+    const layer = this.__getLayer(layerName);
+
+    return layer.layer.doWithToken(token => {
+      const downloadUrl =
+        `${dataset.dataStore
+          .url}/data/datasets/${dataset.name}/layers/${layer.name}/data?resolution=0&` +
+        `token=${token}&` +
+        `x=${topLeft[0]}&` +
+        `y=${topLeft[1]}&` +
+        `z=${topLeft[2]}&` +
+        `width=${bottomRight[0] - topLeft[0]}&` +
+        `height=${bottomRight[1] - topLeft[1]}&` +
+        `depth=${bottomRight[2] - topLeft[2]}`;
+
+      window.open(downloadUrl);
+    });
   }
 
   /**

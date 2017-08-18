@@ -17,6 +17,7 @@ import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsArray, JsObject, _}
+import play.api.mvc.Action
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 
@@ -70,9 +71,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def empty(typ: String, id: String) = Authenticated { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
 
   def loggedTime(typ: String, id: String) = Authenticated.async { implicit request =>
     val annotationId = AnnotationIdentifier(typ, id)
@@ -234,18 +232,28 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def nameExplorativeAnnotation(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
+  def editAnnotation(typ: String, id: String) = Authenticated.async(parse.json) { implicit request =>
+
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-      name <- (request.body \ "name").asOpt[String].toFox ?~> Messages("annotation.invalidName")
-      updatedAnnotation <- annotation.muta.rename(name)
-      updatedAsJson <- updatedAnnotation.toJson()
+      muta = annotation.muta
+      _ <- (request.body \ "name").asOpt[String].map(muta.rename).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
+      _ <- (request.body \ "isPublic").asOpt[Boolean].map(muta.setIsPublic).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
     } yield {
-      JsonOk(
-        Json.obj("annotations" -> updatedAsJson),
-        Messages("annotation.setName"))
+      JsonOk(Messages("annotation.edit.success"))
     }
   }
+
+  def empty(implicit sessionData: oxalis.view.SessionData) = {
+    views.html.main()(Html(""))
+  }
+  def empty(typ: String, id: String) = Authenticated { implicit request =>
+    Ok(views.html.main()(Html("")))
+  }
+  def traceReadOnly(typ: String, id: String) = UserAwareAction { implicit request =>
+    Ok(empty)
+  }
+
 
   def annotationsForTask(taskId: String) = Authenticated.async { implicit request =>
     for {

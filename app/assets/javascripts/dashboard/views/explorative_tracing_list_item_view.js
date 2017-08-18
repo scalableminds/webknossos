@@ -90,7 +90,7 @@ class ExplorativeTracingListItemView extends Marionette.View {
   nameExplorativeAnnotation(event) {
     event.preventDefault();
     const payload = { data: { name: event.target.value } };
-    const url = `/annotations/${this.model.get("typ")}/${this.model.get("id")}/name`;
+    const url = `/annotations/${this.model.get("typ")}/${this.model.get("id")}/edit`;
 
     Request.sendJSONReceiveJSON(url, payload).then(response => {
       Toast.message(response.messages);

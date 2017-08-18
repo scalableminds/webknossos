@@ -40,11 +40,26 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         cells: {},
         restrictions,
         volumeTraceOrMoveMode: Constants.VOLUME_MODE_MOVE,
+<<<<<<< HEAD
         name: action.annotation.name,
         tracingType: action.annotation.typ,
+||||||| merged common ancestors
+        name: action.tracing.dataSetName,
+        tracingType: action.tracing.typ,
+=======
+        name: action.tracing.name,
+        tracingType: action.tracing.typ,
+>>>>>>> master
         tracingId: action.tracing.id,
         version: action.tracing.version,
+<<<<<<< HEAD
         boundingBox: convertBoundingBox(action.tracing.boundingBox),
+||||||| merged common ancestors
+        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+=======
+        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+        isPublic: action.tracing.isPublic,
+>>>>>>> master
       };
 
       const newState = update(state, { tracing: { $set: volumeTracing } });

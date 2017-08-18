@@ -12,6 +12,9 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
 import models.annotation.{AnnotationService, _}
 import models.binary.DataSetDAO
 import models.project.{Project, ProjectDAO}
+import javax.inject.Inject
+
+import com.newrelic.api.agent.NewRelic
 import models.task._
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -25,7 +28,6 @@ import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.mvc.{AnyContent, Result}
 import play.twirl.api.Html
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
 
@@ -281,8 +283,11 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     val s = System.currentTimeMillis()
     TaskService.findAssignableFor(user).futureBox.flatMap {
       case Full(assignment) =>
+        NewRelic.recordResponseTimeMetric("Custom/TaskController/findAssignableFor", System.currentTimeMillis - s)
+        val s2 = System.currentTimeMillis
         TimeLogger.logTimeF("task request", logger.trace(_))(OpenAssignmentService.remove(assignment)).flatMap {
           removeResult =>
+          NewRelic.recordResponseTimeMetric("Custom/TaskController/removeOpenAssignment", System.currentTimeMillis - s2)
           if (removeResult.n >= 1)
             Fox.successful(assignment)
           else if (retryCount > 0)

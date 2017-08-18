@@ -20,7 +20,8 @@ import {
 } from "oxalis/model/actions/save_actions";
 import {
   createTreeAction,
-  SkeletonTracingActions,
+  SkeletonTracingSaveRelevantActions,
+  setTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
@@ -33,6 +34,41 @@ import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
+const UNDO_HISTORY_SIZE = 100;
+
+export function* collectUndoStates(): Generator<*, *, *> {
+  const undoStack = [];
+  const redoStack = [];
+
+  yield take("INITIALIZE_SKELETONTRACING");
+  let prevTracing = yield select(state => state.tracing);
+  while (true) {
+    const { userAction, undo, redo } = yield race({
+      userAction: take(SkeletonTracingSaveRelevantActions),
+      undo: take("UNDO"),
+      redo: take("REDO"),
+    });
+    const curTracing = yield select(state => state.tracing);
+    if (userAction) {
+      if (curTracing !== prevTracing) {
+        // Clear the redo stack when a new action is executed
+        redoStack.splice(0);
+        undoStack.push(prevTracing);
+        if (undoStack.length > UNDO_HISTORY_SIZE) undoStack.shift();
+      }
+    } else if (undo && undoStack.length) {
+      redoStack.push(prevTracing);
+      const newTracing = undoStack.pop();
+      yield put(setTracingAction(newTracing));
+    } else if (redo && redoStack.length) {
+      undoStack.push(prevTracing);
+      const newTracing = redoStack.pop();
+      yield put(setTracingAction(newTracing));
+    }
+    // We need the updated tracing here
+    prevTracing = yield select(state => state.tracing);
+  }
+}
 
 export function* pushAnnotationAsync(): Generator<*, *, *> {
   yield take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
@@ -299,7 +335,7 @@ export function* saveTracingAsync(): Generator<*, *, *> {
 
   while (true) {
     if (initSkeleton) {
-      yield take([...SkeletonTracingActions, ...FlycamActions]);
+      yield take([...SkeletonTracingSaveRelevantActions, ...FlycamActions, "UNDO", "REDO"]);
     } else {
       yield take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
     }

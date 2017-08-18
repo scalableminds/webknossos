@@ -22,7 +22,14 @@ function ReadOnlyTracingReducer(state: OxalisState, action: ActionType): OxalisS
         tracingType: "View",
         tracingId: action.tracing.id,
         version: action.tracing.version,
+<<<<<<< HEAD
         boundingBox: convertBoundingBox(action.tracing.boundingBox),
+||||||| merged common ancestors
+        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+=======
+        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
+        isPublic: action.tracing.isPublic,
+>>>>>>> master
       };
 
       return update(state, { tracing: { $set: readonlyTracing } });

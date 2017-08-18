@@ -3,11 +3,179 @@ import test from "ava";
 import sinon from "sinon";
 import "backbone.marionette";
 import { createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+<<<<<<< HEAD
 import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 
 // All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 // Use API_VERSION 1
 test.beforeEach(t => setupOxalis(t, "skeleton", 1));
+||||||| merged common ancestors
+import TRACING_OBJECT from "../fixtures/skeletontracing_object";
+
+function makeModelMock() {
+  class ModelMock {}
+  ModelMock.prototype.fetch = sinon.stub();
+  ModelMock.prototype.fetch.returns(Promise.resolve());
+  return ModelMock;
+}
+
+const User = makeModelMock();
+const DatasetConfiguration = makeModelMock();
+const Request = {
+  receiveJSON: sinon.stub(),
+  sendJSONReceiveJSON: sinon.stub(),
+  sendArraybufferReceiveArraybuffer: sinon.stub(),
+  always: () => Promise.resolve(),
+};
+const ErrorHandling = {
+  assertExtendContext: _.noop,
+  assertExists: _.noop,
+  assert: _.noop,
+};
+const window = {
+  location: {
+    pathname: "annotationUrl",
+  },
+  alert: console.log.bind(console),
+};
+const currentUser = {
+  firstName: "SCM",
+  lastName: "Boy",
+};
+const app = {
+  vent: Backbone.Radio.channel("global"),
+  currentUser,
+};
+const KeyboardJS = {
+  bind: _.noop,
+  unbind: _.noop,
+};
+
+mockRequire("libs/toast", { error: _.noop });
+mockRequire("libs/window", window);
+mockRequire("libs/request", Request);
+mockRequire("libs/error_handling", ErrorHandling);
+mockRequire("app", app);
+mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
+mockRequire("oxalis/model/user", User);
+mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
+mockRequire("keyboardjs", KeyboardJS);
+
+// Avoid node caching and make sure all mockRequires are applied
+const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
+const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
+const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
+const Store = mockRequire.reRequire("oxalis/store").default;
+
+test.beforeEach(t => {
+  UrlManager.initialState = { position: [1, 2, 3] };
+  const model = new Model();
+  t.context.model = model;
+
+  const webknossos = new OxalisApi(model);
+  t.context.webknossos = webknossos;
+
+  Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
+  User.prototype.fetch.returns(Promise.resolve());
+
+  return model
+    .fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
+    .then(() => {
+      // Trigger the event ourselves, as the OxalisController is not instantiated
+      app.vent.trigger("webknossos:ready");
+      webknossos.apiReady(1).then(apiObject => {
+        t.context.api = apiObject;
+      });
+    })
+    .catch(error => {
+      console.error("model.fetch() failed", error);
+      t.fail(error.message);
+    });
+});
+=======
+import TRACING_OBJECT from "../fixtures/skeletontracing_object";
+
+function makeModelMock() {
+  class ModelMock {}
+  ModelMock.prototype.fetch = sinon.stub();
+  ModelMock.prototype.fetch.returns(Promise.resolve());
+  return ModelMock;
+}
+
+const User = makeModelMock();
+const DatasetConfiguration = makeModelMock();
+const Request = {
+  receiveJSON: sinon.stub(),
+  sendJSONReceiveJSON: sinon.stub(),
+  sendArraybufferReceiveArraybuffer: sinon.stub(),
+  always: () => Promise.resolve(),
+};
+const ErrorHandling = {
+  assertExtendContext: _.noop,
+  assertExists: _.noop,
+  assert: _.noop,
+};
+const window = {
+  location: {
+    pathname: "annotationUrl",
+  },
+  alert: console.log.bind(console),
+};
+const currentUser = {
+  firstName: "SCM",
+  lastName: "Boy",
+};
+const app = {
+  vent: Backbone.Radio.channel("global"),
+  currentUser,
+};
+const KeyboardJS = {
+  bind: _.noop,
+  unbind: _.noop,
+};
+
+mockRequire("libs/toast", { error: _.noop });
+mockRequire("libs/window", window);
+mockRequire("libs/request", Request);
+mockRequire("libs/error_handling", ErrorHandling);
+mockRequire("app", app);
+mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
+mockRequire("oxalis/model/user", User);
+mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
+mockRequire("libs/keyboard", KeyboardJS);
+
+// Avoid node caching and make sure all mockRequires are applied
+const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
+const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
+const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
+const Store = mockRequire.reRequire("oxalis/store").default;
+
+test.beforeEach(t => {
+  UrlManager.initialState = { position: [1, 2, 3] };
+  const model = new Model();
+  t.context.model = model;
+
+  const webknossos = new OxalisApi(model);
+  t.context.webknossos = webknossos;
+
+  Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
+  User.prototype.fetch.returns(Promise.resolve());
+
+  return model
+    .fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
+    .then(() => {
+      // Trigger the event ourselves, as the OxalisController is not instantiated
+      app.vent.trigger("webknossos:ready");
+      webknossos.apiReady(1).then(apiObject => {
+        t.context.api = apiObject;
+      });
+    })
+    .catch(error => {
+      console.error("model.fetch() failed", error);
+      t.fail(error.message);
+    });
+});
+>>>>>>> master
 
 test("getActiveNodeId should get the active node id", t => {
   const api = t.context.api;

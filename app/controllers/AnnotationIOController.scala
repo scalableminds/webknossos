@@ -89,17 +89,25 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   }
 
 
-  def download(typ: String, id: String) = Authenticated.async { implicit request =>
+  def download(typ: String, id: String) = UserAwareAction.async { implicit request =>
     logger.trace(s"Requested download for annotation: $typ/$id")
     //TODO RocksDB: prettier dispatch?
-    if (typ == AnnotationType.View.toString) Fox.failure("Cannot download View annotation")
-    else if (typ == AnnotationType.CompoundProject.toString) downloadProject(id, request.user)
-    else if (typ == AnnotationType.CompoundTask.toString) downloadTask(id, request.user)
-    else if (typ == AnnotationType.CompoundTaskType.toString) downloadTaskType(id, request.user)
-    else downloadExplorational(id, typ, request.user)
+    request.userOpt match {
+      case Some(user) => {
+        if (typ == AnnotationType.View.toString) Fox.failure("Cannot download View annotation")
+        else if (typ == AnnotationType.CompoundProject.toString) downloadProject(id, user)
+        else if (typ == AnnotationType.CompoundTask.toString) downloadTask(id, user)
+        else if (typ == AnnotationType.CompoundTaskType.toString) downloadTaskType(id, user)
+        else downloadExplorational(id, typ, request.userOpt)
+      }
+      case None => {
+        if (typ == AnnotationType.Explorational.toString) downloadExplorational(id, typ, request.userOpt)
+        else Fox.failure("Failed to download annotation")
+      }
+    }
   }
 
-  def downloadExplorational(annotationId: String, typ: String, user: User)(implicit request: AuthenticatedRequest[_]) = {
+  def downloadExplorational(annotationId: String, typ: String, user: Option[User])(implicit request: UserAwareRequest[_]) = {
     for {
       annotation <- findAnnotation(AnnotationIdentifier(typ, annotationId))
       name <- nameForAnnotation(annotation) ?~> Messages("annotation.name.impossible")
@@ -162,6 +170,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
   }
+
 
 
 

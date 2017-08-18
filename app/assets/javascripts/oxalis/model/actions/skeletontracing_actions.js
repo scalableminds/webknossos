@@ -5,7 +5,14 @@
  * @flow
  */
 import type { Vector3 } from "oxalis/constants";
+<<<<<<< HEAD
 import type { ServerSkeletonTracingType, ServerAnnotationType } from "oxalis/model";
+||||||| merged common ancestors
+import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
+=======
+import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
+import type { SkeletonTracingType } from "oxalis/store";
+>>>>>>> master
 
 type InitializeSkeletonTracingActionType = {
   type: "INITIALIZE_SKELETONTRACING",
@@ -59,6 +66,7 @@ type CreateCommentActionType = {
   treeId: ?number,
 };
 type DeleteCommentActionType = { type: "DELETE_COMMENT", nodeId: ?number, treeId?: number };
+type SetTracingActionType = { type: "SET_TRACING", tracing: SkeletonTracingType };
 
 export type SkeletonTracingActionType =
   | InitializeSkeletonTracingActionType
@@ -83,7 +91,7 @@ export type SkeletonTracingActionType =
   | ToggleAllTreesActionType
   | ToggleInactiveTreesActionType;
 
-export const SkeletonTracingActions = [
+export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
   "CREATE_NODE",
   "DELETE_NODE",
@@ -91,7 +99,6 @@ export const SkeletonTracingActions = [
   "SET_NODE_RADIUS",
   "CREATE_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
-  "REQUEST_DELETE_BRANCHPOINT",
   "CREATE_TREE",
   "DELETE_TREE",
   "SET_ACTIVE_TREE",
@@ -101,7 +108,6 @@ export const SkeletonTracingActions = [
   "SHUFFLE_TREE_COLOR",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
-  "SET_VIEW_MODE",
 ];
 
 export const initializeSkeletonTracingAction = (
@@ -259,4 +265,9 @@ export const deleteCommentAction = (nodeId?: number, treeId?: number): DeleteCom
   type: "DELETE_COMMENT",
   nodeId,
   treeId,
+});
+
+export const setTracingAction = (tracing: SkeletonTracingType): SetTracingActionType => ({
+  type: "SET_TRACING",
+  tracing,
 });

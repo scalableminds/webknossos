@@ -43,7 +43,7 @@ object AnnotationRestrictions {
   def defaultAnnotationRestrictions(annotation: Annotation) =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
-        user.exists {
+        annotation.isPublic || user.exists {
           user =>
             annotation._user.contains(user._id) || user.roleInTeam(annotation.team).contains(Role.Admin)
         }

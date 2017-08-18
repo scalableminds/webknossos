@@ -150,8 +150,6 @@ class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with Fox
         logger.trace(s"Accessing file: ${file.toAbsolutePath}")
         val t = System.currentTimeMillis
         val r = new RandomAccessFile(file.toString, "r")
-        NewRelic.recordResponseTimeMetric("Custom/FileDataStore/files-response-time", System.currentTimeMillis - t)
-        NewRelic.incrementCounter("Custom/FileDataStore/files-loaded")
         Full(r)
       } catch {
         case e: FileNotFoundException =>

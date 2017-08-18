@@ -32,6 +32,15 @@ import type {
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
+import type {
+  APIRestrictionsType,
+  APIAllowedModeType,
+  APISettingsType,
+  APIDataStoreType,
+  APITracingTypeTracingType,
+  APIScriptType,
+  APITaskType,
+} from "admin/api_flow_types";
 
 export type CommentType = {
   +node: number,
@@ -116,29 +125,13 @@ export type SegmentationDataLayerType = DataLayerType & {
   +largestSegmentId: number,
 };
 
-export type RestrictionsType = {
-  +allowAccess: boolean,
-  +allowUpdate: boolean,
-  +allowFinish: boolean,
-  +allowDownload: boolean,
-};
+export type RestrictionsType = APIRestrictionsType;
 
-export type AllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
+export type AllowedModeType = APIAllowedModeType;
 
-export type SettingsType = {
-  +advancedOptionsAllowed: boolean,
-  +allowedModes: Array<AllowedModeType>,
-  +preferredMode: AllowedModeType,
-  +branchPointsAllowed: boolean,
-  +somaClickingAllowed: boolean,
-};
+export type SettingsType = APISettingsType;
 
-export type DataStoreInfoType = {
-  +name: string,
-  +url: string,
-  +typ: string,
-  +accessToken?: string,
-};
+export type DataStoreInfoType = APIDataStoreType;
 
 export type DatasetType = {
   +name: string,
@@ -150,18 +143,7 @@ export type DatasetType = {
 
 export type TreeMapType = { +[number]: TreeType };
 
-export const SkeletonTracingTypeTracingEnum = {
-  Explorational: "Explorational",
-  Task: "Task",
-  View: "View",
-  CompoundTask: "CompoundTask",
-  CompoundProject: "CompoundProject",
-  CompoundTaskType: "CompoundTaskType",
-};
-
-export type SkeletonTracingTypeTracingType = $Keys<typeof SkeletonTracingTypeTracingEnum>;
-
-export type VolumeTracingTypeTracingType = SkeletonTracingTypeTracingType;
+export type TracingTypeTracingType = APITracingTypeTracingType;
 
 export type SkeletonTracingType = {
   +annotationId: string,
@@ -170,7 +152,7 @@ export type SkeletonTracingType = {
   +name: string,
   +version: number,
   +tracingId: string,
-  +tracingType: SkeletonTracingTypeTracingType,
+  +tracingType: TracingTypeTracingType,
   +activeTreeId: ?number,
   +activeNodeId: ?number,
   +cachedMaxNodeId: number,
@@ -191,7 +173,7 @@ export type VolumeTracingType = {
   +contourList: Array<Vector3>,
   +cells: VolumeCellMapType,
   +tracingId: string,
-  +tracingType: VolumeTracingTypeTracingType,
+  +tracingType: TracingTypeTracingType,
   +boundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
@@ -264,23 +246,9 @@ export type TemporaryConfigurationType = {
   +controlMode: ControlModeType,
 };
 
-export type ScriptType = {
-  +gist: string,
-  +name: string,
-  +id: string,
-};
+export type ScriptType = APIScriptType;
 
-export type TaskType = {
-  +id: number,
-  +type: "string",
-  +script?: ScriptType,
-  +type: {
-    +summary: string,
-    +description: string,
-    +id: string,
-    +team: string,
-  },
-};
+export type TaskType = APITaskType;
 
 export type SaveQueueEntryType = {
   version: number,

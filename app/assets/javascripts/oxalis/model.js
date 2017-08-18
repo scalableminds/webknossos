@@ -7,18 +7,13 @@ import _ from "lodash";
 import Store from "oxalis/store";
 import type {
   BoundingBoxObjectType,
-  RestrictionsType,
   SettingsType,
   NodeType,
   EdgeType,
   CommentType,
   BranchPointType,
-  SkeletonTracingTypeTracingType,
-  VolumeTracingTypeTracingType,
-  TaskType,
-  DataStoreInfoType,
-  DataLayerType,
   SegmentationDataLayerType,
+  TracingTypeTracingType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
@@ -53,6 +48,7 @@ import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import update from "immutability-helper";
 import UrlManager from "oxalis/controller/url_manager";
+import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
 type ServerSkeletonTracingTreeType = {
   treeId: number,
@@ -90,39 +86,6 @@ export type ServerVolumeTracingType = {
 
 type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
 
-export type ServerDatasetType = {
-  dataStore: DataStoreInfoType,
-  dataSource: {
-    id: {
-      name: string,
-      team: string,
-    },
-    dataLayers: Array<DataLayerType>,
-    scale: Vector3,
-  },
-};
-
-export type ServerAnnotationType = {
-  content: {
-    id: string,
-    typ: string,
-  },
-  created: string,
-  dataSetName: string,
-  dataStore: DataStoreInfoType,
-  error?: string,
-  formattedHash: string,
-  id: string,
-  isPublic: boolean,
-  name: string,
-  restrictions: RestrictionsType,
-  settings: SettingsType,
-  stats: any,
-  task: TaskType,
-  tracingTime: number,
-  typ: SkeletonTracingTypeTracingType | VolumeTracingTypeTracingType,
-};
-
 // TODO: Non-reactive
 export class OxalisModel {
   HANDLED_ERROR = "error_was_handled";
@@ -135,7 +98,7 @@ export class OxalisModel {
   upperBoundary: Vector3;
 
   async fetch(
-    tracingType: SkeletonTracingTypeTracingType,
+    tracingType: TracingTypeTracingType,
     annotationId: string,
     controlMode: ControlModeType,
     initialFetch: boolean,
@@ -152,8 +115,8 @@ export class OxalisModel {
       infoUrl = `/annotations/${tracingType}/${annotationId}/info`;
     }
 
-    const annotation: ServerAnnotationType = await Request.receiveJSON(infoUrl);
-    const dataset: ServerDatasetType = await Request.receiveJSON(
+    const annotation: APIAnnotationType = await Request.receiveJSON(infoUrl);
+    const dataset: APIDatasetType = await Request.receiveJSON(
       `/api/datasets/${annotation.dataSetName}`,
     );
 
@@ -234,7 +197,7 @@ export class OxalisModel {
   }
 
   initializeTracing(
-    annotation: ServerAnnotationType,
+    annotation: APIAnnotationType,
     tracing: ServerTracingType,
     initialFetch: boolean,
   ) {
@@ -277,9 +240,9 @@ export class OxalisModel {
   }
 
   initializeModel(
-    annotation: ServerAnnotationType,
+    annotation: APIAnnotationType,
     tracing: ServerTracingType,
-    dataset: ServerDatasetType,
+    dataset: APIDatasetType,
   ) {
     const { dataStore } = dataset;
 

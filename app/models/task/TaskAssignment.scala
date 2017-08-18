@@ -12,6 +12,11 @@ import play.api.libs.iteratee.Enumeratee.CheckDone
 import play.api.libs.iteratee._
 
 import scala.concurrent.{ExecutionContext, Future}
+import play.api.libs.iteratee._
+import reactivemongo.bson.BSONObjectID
+
+import scala.collection.mutable
+import scala.collection.mutable.HashSet
 
 /**
  * Company: scalableminds
@@ -56,8 +61,20 @@ trait TaskAssignment extends FoxImplicits with LazyLogging{
   }
 
   def findAssignable(user: User)(implicit ctx: DBAccessContext) = {
+    val cache = mutable.HashSet[BSONObjectID]()
     val alreadyDoneFilter = filterM[OpenAssignment]{ assignment =>
-      AnnotationService.countTaskOf(user, assignment._task).futureBox.map(_.contains(0))
+      if (cache.contains(assignment._task)) {
+        Future.successful(false)
+      } else {
+        AnnotationService.countTaskOf(user, assignment._task).futureBox.map { count =>
+          if (count.contains(0)) {
+            true
+          } else {
+            cache.add(assignment._task)
+            false
+          }
+        }
+      }
     }
 
     findNextAssignment(user)(ctx) &> alreadyDoneFilter

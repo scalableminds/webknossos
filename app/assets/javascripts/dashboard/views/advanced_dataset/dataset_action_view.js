@@ -36,7 +36,7 @@ export default class DatasetActionView extends React.PureComponent {
     return (
       <div>
         <form
-          action={jsRoutes.controllers.AnnotationController.createExplorational().url}
+          action="/annotations/createExplorational"
           method="POST"
           ref={form => {
             this.form = form;

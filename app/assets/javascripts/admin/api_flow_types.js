@@ -1,3 +1,7 @@
+/**
+ * api_flow_types.js
+ * @flow
+ */
 import type { Vector3 } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
 
@@ -11,23 +15,25 @@ type APIDataSourceType = {
   +scale: Vector3,
 };
 
-export type APIDatasetType = {
+export type APIDataStoreType = {
   +name: string,
-  +dataSource: APIDataSourceType,
-  +dataStore: {
-    +name: string,
-    +url: string,
-    +typ: "webknossos-store" | "nd-store",
-  },
-  +sourceType: "wkw" | "knossos",
-  +owningTeam: "Connectomics department",
+  +url: string,
+  +typ: "webknossos-store" | "nd-store",
+  +accessToken?: string,
+};
+
+export type APIDatasetType = {
   +allowedTeams: Array<string>,
-  +isActive: boolean,
-  +accessToken: null,
-  +isPublic: boolean,
-  +description: ?string,
   +created: number,
+  +dataSource: APIDataSourceType,
+  +dataStore: APIDataStoreType,
+  +description: ?string,
+  +isActive: boolean,
   +isEditable: boolean,
+  +isPublic: boolean,
+  +name: string,
+  +owningTeam: "Connectomics department",
+  +sourceType: "wkw" | "knossos",
 };
 
 export type APITeamRoleType = {
@@ -61,34 +67,76 @@ export type APITeamType = {
   +roles: Array<APIRoleType>,
 };
 
-export type APIAnnotationType = {
-  +version: number,
-  +user: {
+export type APIRestrictionsType = {
+  +allowAccess: boolean,
+  +allowUpdate: boolean,
+  +allowFinish: boolean,
+  +allowDownload: boolean,
+};
+
+export type APIAllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
+
+export type APISettingsType = {
+  +advancedOptionsAllowed: boolean,
+  +allowedModes: Array<APIAllowedModeType>,
+  +preferredMode: APIAllowedModeType,
+  +branchPointsAllowed: boolean,
+  +somaClickingAllowed: boolean,
+};
+
+export type APIScriptType = {
+  +gist: string,
+  +name: string,
+  +id: string,
+  +owner: string,
+};
+
+export type APITaskType = {
+  +id: number,
+  +type: "string",
+  +script?: APIScriptType,
+  +type: {
+    +summary: string,
+    +description: string,
     +id: string,
-    +email: string,
-    +firstName: string,
-    +lastName: string,
-    +isAnonymous: boolean,
-    +teams: Array<APITeamRoleType>,
+    +team: string,
+  },
+};
+
+const APITracingTypeTracingEnum = {
+  Explorational: "Explorational",
+  Task: "Task",
+  View: "View",
+  CompoundTask: "CompoundTask",
+  CompoundProject: "CompoundProject",
+  CompoundTaskType: "CompoundTaskType",
+};
+
+export type APITracingTypeTracingType = $Keys<typeof APITracingTypeTracingEnum>;
+
+export type APIAnnotationType = {
+  +content: {
+    +id: string,
+    +typ: string,
   },
   +created: string,
-  +stateLabel: string,
-  +state: { +isAssigned: boolean, +isFinished: boolean, +isInProgress: boolean },
-  +id: string,
-  +name: string,
-  +typ: string,
-  +stats: { +numberOfNodes: number, +numberOfEdges: number, +numberOfTrees: number },
-  +restrictions: {
-    +allowAccess: boolean,
-    +allowUpdate: boolean,
-    +allowFinish: boolean,
-    +allowDownload: boolean,
-  },
-  +formattedHash: string,
-  +downloadUrl: string,
-  +contentType: string,
   +dataSetName: string,
-  +tracingTime: null,
+  +dataStore: APIDataStoreType,
+  +formattedHash: string,
+  +id: string,
+  +isPublic: boolean,
+  +name: string,
+  +restrictions: APIRestrictionsType,
+  +settings: APISettingsType,
+  +state: {
+    +isAssigned: boolean,
+    +isFinished: boolean,
+    +isInProgress: boolean,
+  },
+  +stats: { +numberOfNodes: number, +numberOfEdges: number, +numberOfTrees: number },
+  +task: APITaskType,
+  +tracingTime: number,
+  +typ: APITracingTypeTracingType,
 };
 
 export type APITaskWithAnnotationType = {

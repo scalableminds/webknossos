@@ -105,11 +105,10 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   };
 
   finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationType) => {
-    const controller = jsRoutes.controllers.AnnotationController;
     const url =
       type === "finish"
-        ? controller.finish(tracing.typ, tracing.id).url
-        : controller.reopen(tracing.typ, tracing.id).url;
+        ? `/annotations/${tracing.typ}/${tracing.id}/finish`
+        : `/annotations/${tracing.typ}/${tracing.id}/reopen`;
 
     const newTracing = await Request.receiveJSON(url);
     Toast.message(newTracing.messages);
@@ -154,7 +153,6 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       return null;
     }
 
-    const controller = jsRoutes.controllers.AnnotationController;
     const { typ, id } = tracing;
     if (!this.state.shouldShowArchivedTracings) {
       return (
@@ -164,7 +162,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
             <strong>Trace</strong>
           </a>
           <br />
-          <a href={jsRoutes.controllers.AnnotationIOController.download(typ, id).url}>
+          <a href={`/annotations/${typ}/${id}/download`}>
             <i className="fa fa-download" />
             Download
           </a>
@@ -229,15 +227,12 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       content: "Are you sure you want to archive all explorative annotations?",
       onOk: async () => {
         const unarchivedAnnoationIds = this.state.unarchivedTracings.map(t => t.id);
-        const data = await Request.sendJSONReceiveJSON(
-          jsRoutes.controllers.AnnotationController.finishAll("Explorational").url,
-          {
-            method: "POST",
-            data: {
-              annotations: unarchivedAnnoationIds,
-            },
+        const data = await Request.sendJSONReceiveJSON("/annotations/Explorational/finish", {
+          method: "POST",
+          data: {
+            annotations: unarchivedAnnoationIds,
           },
-        );
+        });
         Toast.message(data.messages);
 
         this.setState({

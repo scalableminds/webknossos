@@ -91,7 +91,7 @@ class SpotlightItemView extends React.PureComponent {
         </div>
 
         <form
-          action={jsRoutes.controllers.AnnotationController.createExplorational().url}
+          action="/annotations/createExplorational"
           method="POST"
           ref={form => {
             this.form = form;

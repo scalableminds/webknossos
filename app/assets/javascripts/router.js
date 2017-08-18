@@ -15,7 +15,7 @@ import ReactBackboneWrapper from "libs/react_backbone_wrapper";
 import PaginationCollection from "admin/models/pagination_collection";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
-import DashboardView from "dashboard/views/dash/dashboard_view";
+import DashboardView from "dashboard/views/dashboard_view";
 
 import SpotlightView from "dashboard/views/spotlight/spotlight_view";
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";

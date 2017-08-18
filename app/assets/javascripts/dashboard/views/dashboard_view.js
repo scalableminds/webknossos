@@ -52,12 +52,12 @@ class DashboardView extends React.PureComponent {
     });
   }
 
-  getTabs() {
+  getTabs(user: APIUserType) {
     const isAdmin = this.props.isAdminView;
     return [
       !isAdmin
         ? <TabPane tab="Datasets" key="datasets">
-            <DatasetView user={this.state.user} />
+            <DatasetView user={user} />
           </TabPane>
         : null,
       <TabPane tab="Tasks" key="tasks">
@@ -104,7 +104,7 @@ class DashboardView extends React.PureComponent {
       <div id="dashboard" className="container wide">
         {userHeader}
         <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange} style={{ marginTop: 20 }}>
-          {this.getTabs()}
+          {this.getTabs(user)}
         </Tabs>
       </div>
     );

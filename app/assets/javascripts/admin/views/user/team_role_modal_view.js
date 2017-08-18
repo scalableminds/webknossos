@@ -3,7 +3,7 @@ import React from "react";
 import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
 import Request from "libs/request";
 import update from "immutability-helper";
-import type { APITeamType, APIUserType, APITeamRoleType } from "admin/api_flow_types";
+import type { APITeamType, APIUserType, APIRoleType } from "admin/api_flow_types";
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
@@ -11,6 +11,11 @@ const RadioGroup = Radio.Group;
 const ROLES = {
   admin: "admin",
   user: "user",
+};
+
+type TeamOptionalRoleType = {
+  +team: string,
+  +role: ?APIRoleType,
 };
 
 type TeamRoleModalPropType = {
@@ -31,7 +36,7 @@ class TeamRoleModalView extends React.PureComponent {
 
   state: {
     teams: Array<APITeamType>,
-    selectedTeams: Array<APITeamRoleType>,
+    selectedTeams: Array<TeamOptionalRoleType>,
   } = {
     teams: [],
     selectedTeams: [],
@@ -127,7 +132,7 @@ class TeamRoleModalView extends React.PureComponent {
     this.setState({ selectedTeams: newSelectedTeams });
   }
 
-  getTeamComponent(team: APITeamRoleType) {
+  getTeamComponent(team: TeamOptionalRoleType) {
     return (
       <Checkbox
         value={team.team}
@@ -145,13 +150,13 @@ class TeamRoleModalView extends React.PureComponent {
     );
   }
 
-  getRoleComponent(team: APITeamRoleType) {
+  getRoleComponent(team: TeamOptionalRoleType) {
     return (
       <RadioGroup
         size="small"
-        value={team.role === null ? null : team.role.name}
+        value={team.role == null ? null : team.role.name}
         style={{ width: "100%" }}
-        disabled={team.role === null}
+        disabled={team.role == null}
         onChange={({ target: { value } }) => this.handleSelectTeamRole(team.team, value)}
       >
         <RadioButton value={ROLES.admin}>Admin</RadioButton>

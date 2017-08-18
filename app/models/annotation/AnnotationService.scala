@@ -5,10 +5,11 @@ import java.util.UUID
 
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
 import com.scalableminds.braingames.datastore.tracings.skeleton.{DownloadTracingParameters, NmlWriter}
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{Node, SkeletonTracing, Tree}
 import com.scalableminds.braingames.datastore.tracings.volume.{AbstractVolumeTracing => VolumeTracing, AbstractVolumeTracingLayer => VolumeTracingLayer}
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
+import com.scalableminds.util.image.Color
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -98,10 +99,8 @@ object AnnotationService
 
   def updateAllOfTask(
     task: Task,
-    dataSetName: String,
     settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
     for {
-      _ <- AnnotationDAO.updateDataSetNameForAllOfTask(task, dataSetName)
       _ <- AnnotationDAO.updateSettingsForAllOfTask(task, settings)
     } yield true
   }
@@ -185,48 +184,33 @@ object AnnotationService
     }
   }
 
+  def createTracingBase(dataSetName: String, boundingBox: Option[BoundingBox], startPosition: Point3D, startRotation: Vector3D) = {
+    val initialTree = Tree(1, Set(Node(1, startPosition, startRotation)), Set.empty, Some(Color.RED), Nil, Nil)
+    SkeletonTracing(dataSetName=dataSetName, boundingBox=boundingBox, editPosition=startPosition, editRotation=startRotation, activeNodeId=Some(1), trees=List(initialTree))
+  }
+
   def createAnnotationBase(
     task: Task,
     userId: BSONObjectID,
     tracingReference: TracingReference,
-    boundingBox: Option[BoundingBox],
     settings: AnnotationSettings,
     dataSetName: String,
-    start: Point3D,
-    rotation: Vector3D)(implicit ctx: DBAccessContext) = {
+    )(implicit ctx: DBAccessContext) = {
     for {
       _ <- Annotation(Some(userId), tracingReference, dataSetName, task.team, settings,
           typ = AnnotationType.TracingBase, _task = Some(task._id)).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }
 
-  //TODO: RocksDB
-/*
-  def updateAnnotationBase(task: Task, start: Point3D, rotation: Vector3D)(implicit ctx: DBAccessContext) = {
-
+  def updateAnnotationBase(task: Task, newTracingRefernce: TracingReference)(implicit ctx: DBAccessContext) = {
     for {
-      base <- task.annotationBase
-      content <- base.contentReference
+      annotationBase <- task.annotationBase
     } yield {
-      content.service.updateEditPosRot(start, rotation, content.id)
+      AnnotationDAO.updateTracingRefernce(annotationBase._id, newTracingRefernce)
     }
-  }*/
-
-  def createAnnotationBase(
-    task: Task,
-    userId: BSONObjectID,
-    boundingBox: Option[BoundingBox],
-    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
-
-    //TODO: rocksDB
-/*    SkeletonTracingService.createFrom(nml, boundingBox, settings).toFox.flatMap {
-      tracing =>
-        val content = ContentReference.createFor(tracing)
-        AnnotationDAO.insert(Annotation(
-          Some(userId), content, team = task.team, typ = AnnotationType.TracingBase, _task = Some(task._id)))
-    }*/
-    Fox.empty
   }
+
+
 
   def createFrom(
                 user: User,

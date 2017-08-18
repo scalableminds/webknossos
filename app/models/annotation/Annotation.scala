@@ -256,13 +256,6 @@ object AnnotationDAO
     )
   }
 
-  def updateDataSetNameForAllOfTask(task: Task, dataSetName: String)(implicit ctx: DBAccessContext) = {
-    update(
-      Json.obj("_task" -> task.id),
-      Json.obj("$set" -> dataSetName)
-    )
-  }
-
   def countAll(implicit ctx: DBAccessContext) =
     count(Json.obj("isActive" -> true))
 

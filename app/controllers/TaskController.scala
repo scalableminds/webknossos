@@ -129,18 +129,19 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         } yield task
     }
 
+
+
+
   def createSingleTask(input: (String, Experience, CompletionStatus, String, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]): Fox[JsObject] =
     input match {
-      case (taskTypeId, experience, status, team, projectName, scriptId, boundingBox, dataSetName, start, rotation) =>
+      case (taskTypeId, experience, status, team, projectName, scriptId, boundingBox, dataSetName, startPosition, startRotation) =>
         for {
           dataSet <- DataSetDAO.findOneBySourceName(dataSetName).toFox ?~> Messages("dataSet.notFound", dataSetName)
-          dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
           task <- createTaskWithoutAnnotationBase(input)
-          initialTree = Tree(1, Set(Node(1, start, rotation)), Set.empty, Some(Color.RED), Nil, Nil)
-          tracing = SkeletonTracing(dataSetName=dataSetName, boundingBox=boundingBox, editPosition=start, editRotation=rotation, activeNodeId=Some(1), trees=List(initialTree))
-          tracingReference <- dataSet.dataStore.saveSkeletonTracing(tracing) ?~> "Failed to save skeleton tracing."
+          tracing = AnnotationService.createTracingBase(dataSetName, boundingBox, startPosition, startRotation)
+          tracingReference <- dataSet.dataStore.saveSkeletonTracing(tracing) ?~> "Failed to save tracing base."
           taskType <- task.taskType
-          _ <- AnnotationService.createAnnotationBase(task, request.user._id, tracingReference, boundingBox, taskType.settings, dataSetName, start, rotation)
+          _ <- AnnotationService.createAnnotationBase(task, request.user._id, tracingReference, taskType.settings, dataSetName)
           taskjs <- Task.transformToJson(task)
         } yield taskjs
     }
@@ -209,8 +210,12 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             boundingBox = boundingBox,
             editPosition = start,
             editRotation = rotation)
-          _ <- AnnotationService.updateAllOfTask(updatedTask, dataSetName, taskType.settings)
-          //TODO: rocksdb skeletons api. _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
+          _ <- AnnotationService.updateAllOfTask(updatedTask, taskType.settings)
+
+          newTracingBase = AnnotationService.createTracingBase(dataSetName, boundingBox, start, rotation)
+          dataSet <- DataSetDAO.findOneBySourceName(dataSetName).toFox ?~> Messages("dataSet.notFound", dataSetName)
+          newTracingBaseReference <- dataSet.dataStore.saveSkeletonTracing(newTracingBase) ?~> "Failed to save skeleton tracing."
+           _ <- AnnotationService.updateAnnotationBase(updatedTask, newTracingBaseReference)
           json <- Task.transformToJson(updatedTask)
           _ <- OpenAssignmentService.updateAllOf(updatedTask, project, status.open)
         } yield {

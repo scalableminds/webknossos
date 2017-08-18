@@ -34,11 +34,11 @@ import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
-import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
+import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 
 class Controller extends React.PureComponent {
   props: {
-    initialTracingType: SkeletonTracingTypeTracingType,
+    initialTracingType: TracingTypeTracingType,
     initialAnnotationId: string,
     initialControlmode: ControlModeType,
     // Delivered by connect()

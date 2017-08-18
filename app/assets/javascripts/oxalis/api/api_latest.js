@@ -39,7 +39,7 @@ import type {
   DatasetConfigurationType,
   TreeMapType,
   TracingType,
-  SkeletonTracingTypeTracingType,
+  TracingTypeTracingType,
 } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
@@ -277,7 +277,7 @@ class TracingApi {
    *
    */
   async restart(
-    newTracingType: SkeletonTracingTypeTracingType,
+    newTracingType: TracingTypeTracingType,
     newAnnotationId: string,
     newControlMode: ControlModeType,
   ) {

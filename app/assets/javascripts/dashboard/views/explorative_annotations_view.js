@@ -157,7 +157,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     if (!this.state.shouldShowArchivedTracings) {
       return (
         <div>
-          <a href={controller.trace(typ, id).url}>
+          <a href={`/annotations/${typ}/${id}`}>
             <i className="fa fa-random" />
             <strong>Trace</strong>
           </a>
@@ -281,7 +281,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
         <Column
           title="Stats"
           render={(__, tracing) =>
-            tracing.stats && tracing.contentType === "skeletonTracing"
+            tracing.stats && tracing.contentType === "skeleton"
               ? <div>
                   <span title="Trees">
                     <i className="fa fa-sitemap" />

@@ -17,11 +17,11 @@ export default class DatasetActionView extends React.PureComponent {
   };
 
   handleSkeletonTraceClick = (event: Event) => {
-    this.submitForm("skeletonTracing", event);
+    this.submitForm("skeleton", event);
   };
 
   handleVolumeTraceClick = (event: Event) => {
-    this.submitForm("volumeTracing", event);
+    this.submitForm("volume", event);
   };
 
   submitForm(type: string, event: Event) {

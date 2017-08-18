@@ -36,9 +36,11 @@ export type APIDatasetType = {
   +sourceType: "wkw" | "knossos",
 };
 
+export type APIRoleType = { +name: string };
+
 export type APITeamRoleType = {
   +team: string,
-  +role: { +name: string },
+  +role: APIRoleType,
 };
 
 type ExperienceMapType = { +[string]: number };
@@ -103,7 +105,7 @@ export type APITaskType = {
   },
 };
 
-const APITracingTypeTracingEnum = {
+export const APITracingTypeTracingEnum = {
   Explorational: "Explorational",
   Task: "Task",
   View: "View",
@@ -169,3 +171,5 @@ export type APITaskWithAnnotationType = {
   +creationInfo: null,
   +annotation: APIAnnotationType,
 };
+
+export default {};

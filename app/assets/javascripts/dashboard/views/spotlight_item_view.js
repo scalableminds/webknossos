@@ -5,12 +5,12 @@ import React from "react";
 import { Modal, Card } from "antd";
 import TemplateHelpers from "libs/template_helpers";
 import app from "app";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { DatasetType } from "dashboard/views/dataset_view";
 
 class SpotlightItemView extends React.PureComponent {
   form: any;
   props: {
-    dataset: APIDatasetType,
+    dataset: DatasetType,
   };
 
   state: {
@@ -20,11 +20,11 @@ class SpotlightItemView extends React.PureComponent {
   };
 
   handleSkeletonTraceClick = (event: Event) => {
-    this.submitForm("skeletonTracing", event);
+    this.submitForm("skeleton", event);
   };
 
   handleVolumeTraceClick = (event: Event) => {
-    this.submitForm("volumeTracing", event);
+    this.submitForm("volume", event);
   };
 
   submitForm(type: string, event: Event) {

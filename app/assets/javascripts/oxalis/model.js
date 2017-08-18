@@ -18,6 +18,7 @@ import type {
   TaskType,
   DataStoreInfoType,
   DataLayerType,
+  SegmentationDataLayerType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
@@ -77,7 +78,8 @@ export type ServerSkeletonTracingType = {
 
 export type ServerVolumeTracingType = {
   activeSegmentId?: number,
-  dataLayer: DataLayerType,
+  boundingBox?: BoundingBoxObjectType,
+  dataLayer: SegmentationDataLayerType,
   editPosition: Vector3,
   editRotation: Vector3,
   fallbackLayer?: string,
@@ -111,6 +113,7 @@ export type ServerAnnotationType = {
   error?: string,
   formattedHash: string,
   id: string,
+  isPublic: boolean,
   name: string,
   restrictions: RestrictionsType,
   settings: SettingsType,
@@ -118,15 +121,6 @@ export type ServerAnnotationType = {
   task: TaskType,
   tracingTime: number,
   typ: SkeletonTracingTypeTracingType | VolumeTracingTypeTracingType,
-<<<<<<< HEAD
-||||||| merged common ancestors
-  user: any,
-  version: number,
-=======
-  user: any,
-  version: number,
-  isPublic: boolean,
->>>>>>> master
 };
 
 // TODO: Non-reactive
@@ -370,10 +364,7 @@ export class OxalisModel {
       return layers;
     }
 
-    const existingLayerIndex = _.findIndex(
-      layers,
-      layer => layer.name === tracing.fallbackLayer,
-    );
+    const existingLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
     const existingLayer = layers[existingLayerIndex];
 
     if (existingLayer != null) {

@@ -194,7 +194,7 @@ object AnnotationService
     userId: BSONObjectID,
     tracingReference: TracingReference,
     settings: AnnotationSettings,
-    dataSetName: String,
+    dataSetName: String
     )(implicit ctx: DBAccessContext) = {
     for {
       _ <- Annotation(Some(userId), tracingReference, dataSetName, task.team, settings,

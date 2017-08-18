@@ -44,16 +44,8 @@ export const KeyboardJS = {
   bind: _.noop,
   unbind: _.noop,
 };
-<<<<<<< HEAD
-mockRequire("keyboardjs", KeyboardJS);
-mockRequire("libs/toast", { error: _.noop, warning: _.noop });
-||||||| merged common ancestors
-mockRequire("keyboardjs", KeyboardJS);
-mockRequire("libs/toast", { error: _.noop });
-=======
 mockRequire("libs/keyboard", KeyboardJS);
-mockRequire("libs/toast", { error: _.noop });
->>>>>>> master
+mockRequire("libs/toast", { error: _.noop, warning: _.noop });
 mockRequire("libs/window", window);
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
@@ -87,7 +79,6 @@ export function setupOxalis(t, mode, apiVersion = 2) {
 
   const webknossos = new OxalisApi(model);
 
-<<<<<<< HEAD
   const ANNOTATION = modelData[mode].annotation;
   Request.receiveJSON
     .withArgs(`/annotations/${TRACING_TYPE}/${ANNOTATION_ID}/info`)
@@ -101,15 +92,10 @@ export function setupOxalis(t, mode, apiVersion = 2) {
         .id}`,
     )
     .returns(Promise.resolve(_.cloneDeep(modelData[mode].tracing)));
-  Request.receiveJSON.returns(Promise.resolve({}));
-||||||| merged common ancestors
-  Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(modelData[mode])));
-=======
-  Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(modelData[mode])));
   Request.receiveJSON
     .withArgs("/dataToken/generate?dataSetName=2012-09-28_ex145_07x2&dataLayerName=color")
     .returns(Promise.resolve({ token: "secure-token" }));
->>>>>>> master
+  Request.receiveJSON.returns(Promise.resolve({}));
 
   return model
     .fetch(TRACING_TYPE, ANNOTATION_ID, ControlModeEnum.TRACE, true)

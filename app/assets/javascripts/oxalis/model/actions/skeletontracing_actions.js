@@ -5,14 +5,8 @@
  * @flow
  */
 import type { Vector3 } from "oxalis/constants";
-<<<<<<< HEAD
 import type { ServerSkeletonTracingType, ServerAnnotationType } from "oxalis/model";
-||||||| merged common ancestors
-import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
-=======
-import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
 import type { SkeletonTracingType } from "oxalis/store";
->>>>>>> master
 
 type InitializeSkeletonTracingActionType = {
   type: "INITIALIZE_SKELETONTRACING",

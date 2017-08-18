@@ -108,9 +108,12 @@ export type DataLayerType = {
   +category: CategoryType,
   +boundingBox: BoundingBoxObjectType,
   +resolutions: Array<number>,
-  // +fallback: any,
   +elementClass: ElementClassType,
   +mappings: Array<MappingType>,
+};
+
+export type SegmentationDataLayerType = DataLayerType & {
+  +largestSegmentId: number,
 };
 
 export type RestrictionsType = {

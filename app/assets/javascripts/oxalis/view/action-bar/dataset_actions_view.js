@@ -21,7 +21,7 @@ class DatasetActionsView extends PureComponent {
     // eslint-disable-next-line react/no-unused-prop-types
     tracingType: string,
     // eslint-disable-next-line react/no-unused-prop-types
-    tracingId: string,
+    annotationId: string,
     // eslint-disable-next-line react/no-unused-prop-types
     restrictions: RestrictionsType & SettingsType,
     // eslint-disable-next-line react/no-unused-prop-types
@@ -50,29 +50,14 @@ class DatasetActionsView extends PureComponent {
 
   handleCopyToAccount = async (event: SyntheticInputEvent) => {
     event.target.blur();
-<<<<<<< HEAD
-    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
-      .annotationId}/duplicate`;
-||||||| merged common ancestors
-    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
-      .tracingId}/duplicate`;
-=======
-    const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/duplicate`;
->>>>>>> master
+    const url = `/annotations/${this.props.tracingType}/${this.props.annotationId}/duplicate`;
     app.router.loadURL(url);
   };
 
   handleFinish = async (event: SyntheticInputEvent) => {
     event.target.blur();
-<<<<<<< HEAD
-    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
+    const url = `/annotations/${this.props.tracingType}/${this.props
       .annotationId}/finishAndRedirect`;
-||||||| merged common ancestors
-    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
-      .tracingId}/finishAndRedirect`;
-=======
-    const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/finishAndRedirect`;
->>>>>>> master
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
       app.router.loadURL(url);
@@ -93,16 +78,9 @@ class DatasetActionsView extends PureComponent {
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
 
-<<<<<<< HEAD
-    const url = `/annotations/${this.props.tracing.tracingType}/${this.props.tracing
+    const downloadUrl = `/annotations/${this.props.tracingType}/${this.props
       .annotationId}/download`;
-    win.location.href = url;
-||||||| merged common ancestors
-    win.location.href = Model.tracing.downloadUrl;
-=======
-    const downloadUrl = `/annotations/${this.props.tracingType}/${this.props.tracingId}/download`;
     win.location.href = downloadUrl;
->>>>>>> master
     win.document.body.innerHTML = messages["download.close_window"];
   };
 
@@ -255,7 +233,7 @@ class DatasetActionsView extends PureComponent {
 function mapStateToProps(state: OxalisState) {
   return {
     tracingType: state.tracing.tracingType,
-    tracingId: state.tracing.tracingId,
+    annotationId: state.tracing.annotationId,
     restrictions: state.tracing.restrictions,
     task: state.task,
   };

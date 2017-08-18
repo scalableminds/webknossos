@@ -26,6 +26,7 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
 
   def tracingStore: VersionedKeyValueStore
 
+  // this should be longer than maxCacheTime in webknossos//AnnotationStore so that the references saved there remain valid throughout their life
   private val temporaryStoreTimeout = 10 minutes
 
   def createNewId: String =

@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import models.binary.DataSetDAO
 import javax.inject.Inject
 
+import com.newrelic.api.agent.NewRelic
 import net.liftweb.common.{Box, Failure, Full}
 import oxalis.nml.NMLService
 import play.api.libs.iteratee.Cont
@@ -263,8 +264,11 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     val s = System.currentTimeMillis()
     TaskService.findAssignableFor(user).futureBox.flatMap {
       case Full(assignment) =>
+        NewRelic.recordResponseTimeMetric("Custom/TaskController/findAssignableFor", System.currentTimeMillis - s)
+        val s2 = System.currentTimeMillis
         TimeLogger.logTimeF("task request", logger.trace(_))(OpenAssignmentService.remove(assignment)).flatMap {
           removeResult =>
+          NewRelic.recordResponseTimeMetric("Custom/TaskController/removeOpenAssignment", System.currentTimeMillis - s2)
           if (removeResult.n >= 1)
             Fox.successful(assignment)
           else if (retryCount > 0)

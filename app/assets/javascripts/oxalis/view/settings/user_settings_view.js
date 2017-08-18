@@ -27,6 +27,7 @@ import {
   LogSliderSetting,
 } from "oxalis/view/settings/setting_input_views";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import type {
   UserConfigurationType,
@@ -199,6 +200,9 @@ class UserSettingsView extends PureComponent {
         this.props.tracing.activeNodeId != null ? this.props.tracing.activeNodeId : "";
       const activeTreeId =
         this.props.tracing.activeTreeId != null ? this.props.tracing.activeTreeId : "";
+      const activeNodeRadius = getActiveNode(this.props.tracing)
+        .map(activeNode => activeNode.radius)
+        .getOrElse(0);
       return (
         <Panel header="Nodes & Trees" key="3">
           <NumberInputSetting
@@ -213,12 +217,12 @@ class UserSettingsView extends PureComponent {
           />
           <LogSliderSetting
             label="Node Radius"
-            min={1}
-            max={5000}
+            min={Constants.MIN_NODE_RADIUS}
+            max={Constants.MAX_NODE_RADIUS}
             roundTo={0}
-            value={this.props.userConfiguration.radius}
+            value={activeNodeRadius}
             onChange={this.props.onChangeRadius}
-            disabled={this.props.userConfiguration.overrideNodeRadius}
+            disabled={this.props.userConfiguration.overrideNodeRadius || activeNodeRadius === 0}
           />
           <NumberSliderSetting
             label={
@@ -226,8 +230,10 @@ class UserSettingsView extends PureComponent {
                 ? "Particle Size"
                 : "Min. Particle Size"
             }
-            max={20}
+            min={Constants.MIN_PARTICLE_SIZE}
+            max={Constants.MAX_PARTICLE_SIZE}
             step={0.1}
+            roundTo={1}
             value={this.props.userConfiguration.particleSize}
             onChange={this.onChangeUser.particleSize}
           />
@@ -377,7 +383,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(setZoomStepAction(zoomStep));
   },
   onChangeRadius(radius: any) {
-    dispatch(updateUserSettingAction("radius", radius));
     dispatch(setNodeRadiusAction(radius));
   },
 });

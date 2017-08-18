@@ -13,6 +13,7 @@ In order to restore the current window, a reload is necessary.`,
   "finish.confirm": "Are you sure you want to permanently finish this tracing?",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
+  "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "tracing.no_more_branchpoints": "No more branchpoints",
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice":

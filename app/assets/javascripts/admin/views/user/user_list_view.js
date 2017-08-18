@@ -9,7 +9,7 @@ import TeamRoleModalView from "admin/views/user/team_role_modal_view";
 import ExperienceModalView from "admin/views/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
-import type { APIUserType, APITeamRole } from "admin/api_flow_types";
+import type { APIUserType, APITeamRoleType } from "admin/api_flow_types";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -203,7 +203,7 @@ class UserListView extends React.PureComponent {
             dataIndex="teams"
             key="teams_"
             width={300}
-            render={(teams: Array<APITeamRole>, user: APIUserType) =>
+            render={(teams: Array<APITeamRoleType>, user: APIUserType) =>
               teams.map(team =>
                 <Tag
                   key={`team_role_${user.id}_${team.team}`}

@@ -23,7 +23,7 @@ class ProjectListItemView extends Marionette.View {
 <td><%- numberOfOpenAssignments %></td>
 <td><%- parseInt(expectedTime / 60000) %>m</td>
 <td class="nowrap">
-  <a href="/annotations/CompoundProject/<%- name %>" title="View all finished tracings">
+  <a href="/annotations/CompoundProject/<%- id %>" title="View all finished tracings">
     <i class="fa fa-random"></i>view
   </a><br/>
   <a href="/projects/<%- name %>/edit" title="Edit Tasks">
@@ -32,7 +32,7 @@ class ProjectListItemView extends Marionette.View {
   <a href="/projects/<%- name %>/tasks" title="View Tasks">
     <i class="fa fa-tasks"></i>tasks
   </a><br/>
-  <a href="/api/projects/<%- name %>/download" title="Download all finished tracings">
+  <a href="/api/projects/<%- id %>/download" title="Download all finished tracings">
     <i class="fa fa-download"></i>download
   </a><br/>
   <a href="#" class="delete">

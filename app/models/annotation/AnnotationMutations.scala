@@ -23,7 +23,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
 
   type AType = Annotation
 
-  def finishAnnotation(user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
+  def finishAnnotation(user: User, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     def executeFinish(annotation: Annotation): Fox[(Annotation, String)] = {
       for {
         updated <- AnnotationService.finish(annotation)
@@ -35,7 +35,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
       }
     }
 
-    if (annotation.restrictions.allowFinish(user)) {
+    if (restrictions.allowFinish(user)) {
       if (annotation.state.isInProgress)
         executeFinish(annotation)
       else

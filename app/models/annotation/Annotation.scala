@@ -49,15 +49,6 @@ case class Annotation(
 
   val tracingType = tracingReference.typ
 
-  val restrictions = buildRestrictions()
-
-  def buildRestrictions(readOnly: Option[Boolean] = None): AnnotationRestrictions = {
-    if(readOnly.getOrElse(false))
-      AnnotationRestrictions.readonlyAnnotation()
-    else
-      AnnotationRestrictions.defaultAnnotationRestrictions(this)
-  }
-
   def removeTask() = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }
@@ -73,7 +64,7 @@ case class Annotation(
     created > 1470002400000L  // 1.8.2016, 00:00:00
   }
 
-  def toJson(user: Option[User] = None, ReadOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def toJson(user: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       taskJson <- task.flatMap(t => Task.transformToJson(t)).getOrElse(JsNull)
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "Could not find DataSet for Annotation"
@@ -86,7 +77,7 @@ case class Annotation(
         "typ" -> typ,
         "task" -> taskJson,
         "stats" -> statistics,
-        "restrictions" -> AnnotationRestrictions.writeAsJson(buildRestrictions(ReadOnly), user),
+        "restrictions" -> AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), user),
         "formattedHash" -> Formatter.formatHash(id),
         "content" -> tracingReference,
         "dataSetName" -> dataSetName,
@@ -95,6 +86,13 @@ case class Annotation(
         "tracingTime" -> tracingTime
       )
     }
+  }
+
+  private def composeRestrictions(restrictions: Option[AnnotationRestrictions], readOnly: Option[Boolean]) = {
+    if (readOnly.getOrElse(false))
+      AnnotationRestrictions.readonlyAnnotation()
+    else
+      restrictions.getOrElse(AnnotationRestrictions.defaultAnnotationRestrictions(this))
   }
 }
 

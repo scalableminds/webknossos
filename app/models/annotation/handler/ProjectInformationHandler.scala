@@ -13,10 +13,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object ProjectInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  def provideAnnotation(projectName: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(projectId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
   {
     for {
-      project <- ProjectDAO.findOneByName(projectName) ?~> "project.notFound"
+      project <- ProjectDAO.findOneById(projectId) ?~> "project.notFound"
       tasks <- TaskDAO.findAllByProject(project.name)
       annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten).toFox
       finishedAnnotations = annotations.filter(_.state.isFinished)
@@ -27,9 +27,9 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
     } yield mergedAnnotation
   }
 
-  override def restrictionsFor(projectName: String)(implicit ctx: DBAccessContext) =
+  override def restrictionsFor(projectId: String)(implicit ctx: DBAccessContext) =
     for {
-      project <- ProjectDAO.findOneByName(projectName)
+      project <- ProjectDAO.findOneById(projectId)
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(user: Option[User]) =

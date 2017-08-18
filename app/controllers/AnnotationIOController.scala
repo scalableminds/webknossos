@@ -103,7 +103,8 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     for {
       annotation <- findAnnotation(AnnotationIdentifier(typ, annotationId))
       name <- nameForAnnotation(annotation) ?~> Messages("annotation.name.impossible")
-      _ <- annotation.restrictions.allowDownload(user) ?~> Messages("annotation.download.notAllowed")
+      restrictions <- restrictionsFor(AnnotationIdentifier(typ, annotationId))
+      _ <- restrictions.allowDownload(user) ?~> Messages("annotation.download.notAllowed")
       dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> Messages("dataSet.notFound", annotation.dataSetName)
       tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference) //TODO RocksDB: what if it is a volume tracing?
       scale <- dataSet.dataSource.toUsable.map(_.scale)
@@ -117,16 +118,16 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def downloadProject(projectName: String, user: User)(implicit ctx: DBAccessContext) = {
+  def downloadProject(projectId: String, user: User)(implicit ctx: DBAccessContext) = {
     def createProjectZip(project: Project) =
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
         annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
-        zip <- AnnotationService.zipAnnotations(annotations, projectName + "_nmls.zip")
+        zip <- AnnotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
       } yield zip
 
     for {
-      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
+      project <- ProjectDAO.findOneById(projectId) ?~> Messages("project.notFound", projectId)
       _ <- user.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
       zip <- createProjectZip(project)
     } yield {

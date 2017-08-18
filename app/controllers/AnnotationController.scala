@@ -45,7 +45,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       for {
         restrictions <- restrictionsFor(annotationId)
         _ <- restrictions.allowAccess(request.userOpt) ?~> "notAllowed" ~> BAD_REQUEST
-        js <- annotation.toJson(request.userOpt, Some(readOnly))
+        js <- annotation.toJson(request.userOpt, Some(restrictions), Some(readOnly))
       } yield {
         request.userOpt.foreach { user =>
           UsedAnnotationDAO.use(user, annotationId)
@@ -61,9 +61,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean) = Authenticated.async { implicit request =>
     for {
       mergedAnnotation <- AnnotationMerger.mergeTwoByIds(id, typ, mergedId, mergedTyp, persistTracing = !readOnly)
-      _ <- mergedAnnotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
+      restrictions = AnnotationRestrictions.defaultAnnotationRestrictions(mergedAnnotation)
+      _ <- restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
       savedAnnotation <- mergedAnnotation.saveToDB //TODO: RocksDB  should we save it if readOnly?
-      json <- savedAnnotation.toJson(Some(request.user))
+      json <- savedAnnotation.toJson(Some(request.user), Some(restrictions), Some(readOnly))
     } yield {
       JsonOk(json, Messages("annotation.merge.success"))
     }
@@ -77,7 +78,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     val annotationId = AnnotationIdentifier(typ, id)
     withAnnotation(annotationId) { annotation =>
       for {
-        _ <- annotation.restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
+        restrictions <- restrictionsFor(annotationId)
+        _ <- restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
         loggedTimeAsMap <- TimeSpanService.loggedTimeOfAnnotation(id, TimeSpan.groupByMonth)
       } yield {
         Ok(Json.arr(
@@ -183,7 +185,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   private def finishAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-      (updated, message) <- annotation.muta.finishAnnotation(user)
+      restrictions <- restrictionsFor(AnnotationIdentifier(typ, id))
+      (updated, message) <- annotation.muta.finishAnnotation(user, restrictions)
     } yield {
       TimeSpanService.logUserInteraction(user, Some(annotation))         // log time on a tracings end
       (updated, message)
@@ -193,7 +196,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def finish(typ: String, id: String) = Authenticated.async { implicit request =>
     for {
       (updated, message) <- finishAnnotation(typ, id, request.user)(GlobalAccessContext)
-      json <- updated.toJson(Some(request.user))
+      restrictions <- restrictionsFor(AnnotationIdentifier(typ, id))
+      json <- updated.toJson(Some(request.user), Some(restrictions))
     } yield {
       JsonOk(json, Messages(message))
     }
@@ -216,7 +220,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-      finished <- annotation.muta.finishAnnotation(request.user).futureBox
+      restrictions <- restrictionsFor(AnnotationIdentifier(id, typ))
+      finished <- annotation.muta.finishAnnotation(request.user, restrictions).futureBox
     } yield {
       finished match {
         case Full((_, message)) =>

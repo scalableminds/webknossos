@@ -43,7 +43,7 @@ import api from "oxalis/api/internal_api";
 
 function* centerActiveNode() {
   getActiveNode(yield select(state => state.tracing)).map(activeNode => {
-    api.tracing.centerPositionAnimated(activeNode.position, activeNode.rotation);
+    api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
   });
 }
 

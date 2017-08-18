@@ -55,6 +55,7 @@ import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import UrlManager from "oxalis/controller/url_manager";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
+import dimensions from "oxalis/model/dimensions";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -354,11 +355,23 @@ class TracingApi {
    * Starts an animation to center the given position.
    *
    * @param position - Vector3
+   * @param skipDimensions - Boolean which decides whether the third dimension shall also be animated (defaults to true)
    * @param rotation - Vector3 (optional) - Will only be noticeable in flight or oblique mode.
    * @example
    * api.tracing.centerPositionAnimated([0, 0, 0])
    */
-  centerPositionAnimated(position: Vector3, rotation?: Vector3): void {
+  centerPositionAnimated(
+    position: Vector3,
+    skipDimensions: boolean = true,
+    rotation?: Vector3,
+  ): void {
+    // Let the user still manipulate the "third dimension" during animation
+    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const dimensionToSkip =
+      skipDimensions && activeViewport !== OrthoViews.TDView
+        ? dimensions.thirdDimensionForPlane(activeViewport)
+        : null;
+
     const curPosition = getPosition(Store.getState().flycam);
     const curRotation = getRotation(Store.getState().flycam);
 
@@ -387,7 +400,9 @@ class TracingApi {
       )
       .onUpdate(function() {
         // needs to be a normal (non-bound) function
-        Store.dispatch(setPositionAction([this.positionX, this.positionY, this.positionZ]));
+        Store.dispatch(
+          setPositionAction([this.positionX, this.positionY, this.positionZ], dimensionToSkip),
+        );
         Store.dispatch(setRotationAction([this.rotationX, this.rotationY, this.rotationZ]));
       })
       .start();

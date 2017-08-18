@@ -166,9 +166,15 @@ function FlycamReducer(state: OxalisState, action: ActionType): OxalisState {
     case "SET_POSITION": {
       // cannot use M4x4.clone because of immutable-seamless
       const matrix = cloneMatrix(state.flycam.currentMatrix);
-      matrix[12] = action.position[0];
-      matrix[13] = action.position[1];
-      matrix[14] = action.position[2];
+      if (action.dimensionToSkip !== 0) {
+        matrix[12] = action.position[0];
+      }
+      if (action.dimensionToSkip !== 1) {
+        matrix[13] = action.position[1];
+      }
+      if (action.dimensionToSkip !== 2) {
+        matrix[14] = action.position[2];
+      }
       return update(state, { flycam: { currentMatrix: { $set: matrix } } });
     }
 

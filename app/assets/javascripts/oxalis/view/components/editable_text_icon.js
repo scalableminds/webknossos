@@ -23,11 +23,11 @@ class EditableTextIcon extends React.PureComponent {
     this.setState({ value: event.target.value });
   };
 
-  handleOnChange = () => {
+  handleInputSubmit = (event: SyntheticInputEvent) => {
     const value = this.state.value;
 
     if (value !== "") {
-      this.props.onChange(this.state.value);
+      this.props.onChange(this.state.value, event);
     }
     this.setState({ isEditing: false, value: "" });
   };
@@ -40,8 +40,8 @@ class EditableTextIcon extends React.PureComponent {
         <Input
           value={this.state.value}
           onChange={this.handleInputChange}
-          onPressEnter={this.handleOnChange}
-          onBlur={this.handleOnChange}
+          onPressEnter={this.handleInputSubmit}
+          onBlur={this.handleInputSubmit}
           style={{ width: 75 }}
           size="small"
           autoFocus

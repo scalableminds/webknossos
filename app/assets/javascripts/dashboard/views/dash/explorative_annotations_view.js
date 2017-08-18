@@ -53,6 +53,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   };
 
   componentDidMount() {
+    this.restoreSearchTags();
     this.fetchDataMaybe();
   }
 
@@ -69,7 +70,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     this.setState({ requestCount: this.state.requestCount - 1 });
   }
 
-  async fetchDataMaybe(): Promise<void> {
+  restoreSearchTags() {
     // restore the search query tags from the last session
     const searchTagString = localStorage.getItem("lastDashboardSearchTags");
     if (searchTagString) {
@@ -80,7 +81,9 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
         // pass
       }
     }
+  }
 
+  async fetchDataMaybe(): Promise<void> {
     if (!this.isFetchNecessary()) {
       return;
     }
@@ -243,18 +246,15 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   archiveAll = () => {
     const selectedAnnotations = this.getFilteredTracings();
     Modal.confirm({
-      content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags.?`,
+      content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags?`,
       onOk: async () => {
-        const unarchivedAnnoationIds = selectedAnnotations.map(t => t.id);
-        const data = await Request.sendJSONReceiveJSON(
-          jsRoutes.controllers.AnnotationController.finishAll("Explorational").url,
-          {
-            method: "POST",
-            data: {
-              annotations: unarchivedAnnoationIds,
-            },
+        const unarchivedAnnotationIds = selectedAnnotations.map(t => t.id);
+        const data = await Request.sendJSONReceiveJSON("/annotations/Explorational/finish", {
+          method: "POST",
+          data: {
+            annotations: unarchivedAnnotationIds,
           },
-        );
+        });
         Toast.message(data.messages);
 
         this.setState({
@@ -279,38 +279,41 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     localStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
   };
 
-  addTagToAnnotation = (annotation: APIAnnotationType, newTag: string): void => {
-    const newTracings = this.state.unarchivedTracings.map(t => {
-      if (t.id === annotation.id) {
-        const newAnnotation = update(t, { tags: { $push: [newTag] } });
-
-        const url = `/annotations/${newAnnotation.typ}/${newAnnotation.id}/edit`;
-        Request.sendJSONReceiveJSON(url, { data: { tags: newAnnotation.tags } });
-        return newAnnotation;
-      }
-      return t;
-    });
-    this.setState({ unarchivedTracings: newTracings });
-  };
-
-  removeTagFromAnnotation = (
+  editTagFromAnnotation = (
     annotation: APIAnnotationType,
+    shouldAddTag: boolean,
     tag: string,
     event: SyntheticInputEvent,
   ): void => {
     event.stopPropagation(); // prevent the onClick event
     const newTracings = this.state.unarchivedTracings.map(t => {
-      if (t.id === annotation.id) {
-        const newTags = _.without(t.tags, tag);
-        const newAnnotation = update(t, { tags: { $set: newTags } });
+      let newAnnotation = t;
 
+      if (t.id === annotation.id) {
+        if (shouldAddTag) {
+          // add the tag to an annotation
+          newAnnotation = update(t, { tags: { $push: [tag] } });
+        } else {
+          // remove the tag from an annotation
+          const newTags = _.without(t.tags, tag);
+          newAnnotation = update(t, { tags: { $set: newTags } });
+        }
+
+        // persist to server
         const url = `/annotations/${newAnnotation.typ}/${newAnnotation.id}/edit`;
         Request.sendJSONReceiveJSON(url, { data: { tags: newAnnotation.tags } });
-        return newAnnotation;
       }
-      return t;
+      return newAnnotation;
     });
     this.setState({ unarchivedTracings: newTracings });
+  };
+
+  handleSearchPressEnter = (event: SyntheticInputEvent) => {
+    const value = event.target.value;
+    if (value !== "") {
+      this.addTagToSearch(event.target.value);
+      this.setState({ searchQuery: "" });
+    }
   };
 
   getFilteredTracings() {
@@ -372,6 +375,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
         <Column
           title="Tags"
           dataIndex="tags"
+          width={500}
           render={(tags, tracing) =>
             <div>
               {tags.map(tag =>
@@ -379,7 +383,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
                   key={tag}
                   color={TemplateHelpers.stringToColor(tag)}
                   onClick={_.partial(this.addTagToSearch, tag)}
-                  onClose={_.partial(this.removeTagFromAnnotation, tracing, tag)}
+                  onClose={_.partial(this.editTagFromAnnotation, tracing, false, tag)}
                   closable={!(tag === tracing.dataSetName || tag === tracing.contentType)}
                 >
                   {tag}
@@ -387,7 +391,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
               )}
               <EditableTextIcon
                 icon="plus"
-                onChange={_.partial(this.addTagToAnnotation, tracing)}
+                onChange={_.partial(this.editTagFromAnnotation, tracing, true)}
               />
             </div>}
         />
@@ -424,11 +428,9 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     const search = (
       <Search
         style={{ width: 200, float: "right" }}
-        onPressEnter={(event: SyntheticInputEvent) => {
-          this.addTagToSearch(event.target.value);
-          this.setState({ searchQuery: "" });
-        }}
+        onPressEnter={this.handleSearchPressEnter}
         onChange={this.handleSearch}
+        value={this.state.searchQuery}
       />
     );
 

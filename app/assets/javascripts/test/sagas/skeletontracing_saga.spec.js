@@ -196,7 +196,7 @@ test("SkeletonTracingSaga should emit first deleteNode and then createNode updat
 
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
   t.is(updateActions[0].name, "deleteNode");
-  t.is(updateActions[0].value.id, 2);
+  t.is(updateActions[0].value.nodeId, 2);
   t.is(updateActions[0].value.treeId, 2);
   t.is(updateActions[1].name, "deleteTree");
   t.is(updateActions[1].value.id, 2);
@@ -215,7 +215,7 @@ test("SkeletonTracingSaga should emit a deleteNode update action", t => {
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.is(updateActions[0].name, "deleteNode");
-  t.is(updateActions[0].value.id, 1);
+  t.is(updateActions[0].value.nodeId, 1);
   t.is(updateActions[0].value.treeId, 1);
 });
 
@@ -228,7 +228,7 @@ test("SkeletonTracingSaga should emit a deleteEdge update action", t => {
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
 
   t.is(updateActions[0].name, "deleteNode");
-  t.is(updateActions[0].value.id, 2);
+  t.is(updateActions[0].value.nodeId, 2);
   t.is(updateActions[0].value.treeId, 1);
   t.is(updateActions[1].name, "deleteEdge");
   t.is(updateActions[1].value.treeId, 1);
@@ -312,7 +312,7 @@ test("SkeletonTracingSaga should emit update actions on merge tree", t => {
   const newState = SkeletonTracingReducer(testState, mergeTreesAction);
 
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
-  t.deepEqual(updateActions[0], { name: "deleteNode", value: { treeId: 1, id: 1 } });
+  t.deepEqual(updateActions[0], { name: "deleteNode", value: { treeId: 1, nodeId: 1 } });
   t.deepEqual(updateActions[1], { name: "deleteTree", value: { id: 1 } });
   t.is(updateActions[2].name, "createNode");
   t.is(updateActions[2].value.id, 1);
@@ -348,9 +348,9 @@ test("SkeletonTracingSaga should emit update actions on split tree", t => {
   t.is(updateActions[3].name, "createNode");
   t.is(updateActions[3].value.id, 1);
   t.is(updateActions[3].value.treeId, 4);
-  t.deepEqual(updateActions[4], { name: "deleteNode", value: { treeId: 2, id: 1 } });
-  t.deepEqual(updateActions[5], { name: "deleteNode", value: { treeId: 2, id: 3 } });
-  t.deepEqual(updateActions[6], { name: "deleteNode", value: { treeId: 2, id: 4 } });
+  t.deepEqual(updateActions[4], { name: "deleteNode", value: { treeId: 2, nodeId: 1 } });
+  t.deepEqual(updateActions[5], { name: "deleteNode", value: { treeId: 2, nodeId: 3 } });
+  t.deepEqual(updateActions[6], { name: "deleteNode", value: { treeId: 2, nodeId: 4 } });
   t.deepEqual(updateActions[7], { name: "deleteEdge", value: { treeId: 2, source: 2, target: 3 } });
   t.deepEqual(updateActions[8], { name: "deleteEdge", value: { treeId: 2, source: 3, target: 4 } });
   t.deepEqual(updateActions[9], { name: "deleteEdge", value: { treeId: 2, source: 1, target: 3 } });
@@ -572,7 +572,7 @@ test("compactUpdateActions should detect a tree split (1/3)", t => {
   // the deletion of the node and its two edges
   t.deepEqual(simplifiedFirstBatch[2], {
     name: "deleteNode",
-    value: { id: 2, treeId: 1 },
+    value: { nodeId: 2, treeId: 1 },
   });
   t.is(simplifiedFirstBatch[3].name, "deleteEdge");
   t.is(simplifiedFirstBatch[4].name, "deleteEdge");
@@ -621,7 +621,7 @@ test("compactUpdateActions should detect a tree split (2/3)", t => {
   // the deletion of the node and its three edges
   t.deepEqual(simplifiedFirstBatch[4], {
     name: "deleteNode",
-    value: { id: 2, treeId: 1 },
+    value: { nodeId: 2, treeId: 1 },
   });
   t.is(simplifiedFirstBatch[5].name, "deleteEdge");
   t.is(simplifiedFirstBatch[6].name, "deleteEdge");
@@ -669,7 +669,7 @@ test("compactUpdateActions should detect a tree split (3/3)", t => {
   // and the deletion of the node and its two edges (a)
   t.deepEqual(simplifiedFirstBatch[2], {
     name: "deleteNode",
-    value: { id: 2, treeId: 1 },
+    value: { nodeId: 2, treeId: 1 },
   });
   t.is(simplifiedFirstBatch[3].name, "deleteEdge");
   t.is(simplifiedFirstBatch[4].name, "deleteEdge");
@@ -688,7 +688,7 @@ test("compactUpdateActions should detect a tree split (3/3)", t => {
   // and the deletion of the node and its two edges (b)
   t.deepEqual(simplifiedSecondBatch[2], {
     name: "deleteNode",
-    value: { id: 4, treeId: 2 },
+    value: { nodeId: 4, treeId: 2 },
   });
   t.is(simplifiedSecondBatch[3].name, "deleteEdge");
   t.is(simplifiedSecondBatch[4].name, "deleteEdge");
@@ -775,11 +775,11 @@ test("compactUpdateActions should not detect a deleted tree if there is no delet
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
   t.deepEqual(simplifiedFirstBatch[0], {
     name: "deleteNode",
-    value: { id: 2, treeId: 2 },
+    value: { nodeId: 2, treeId: 2 },
   });
   t.deepEqual(simplifiedFirstBatch[1], {
     name: "deleteNode",
-    value: { id: 3, treeId: 2 },
+    value: { nodeId: 3, treeId: 2 },
   });
   t.is(simplifiedFirstBatch[2].name, "deleteEdge");
   t.is(simplifiedFirstBatch[3].name, "deleteEdge");

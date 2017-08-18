@@ -31,7 +31,7 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
         val result = Await.result(loadFromUnderlying(readInstruction).futureBox, timeout)
         val duration = System.currentTimeMillis - t
         NewRelic.recordResponseTimeMetric(s"Custom/BucketProvider/$className/file-response-time", duration)
-        NewRelic.incrementCounter(s"Custom/BucketProvider/$className/files-loaded", 1)
+        NewRelic.incrementCounter(s"Custom/BucketProvider/$className/files-loaded")
         if (duration > 500) {
           NewRelic.noticeError(s"loading file in $className took too long", Map(
             "duration" -> duration.toString,

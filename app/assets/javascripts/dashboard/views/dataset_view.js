@@ -17,6 +17,12 @@ type Props = {
   user: APIUserType,
 };
 
+export type DatasetType = APIDatasetType & {
+  hasSegmentation: boolean,
+  thumbnailURL: string,
+  formattedCreated: string,
+};
+
 function createThumbnailURL(datasetName: string, layers: Array<APIDatasetType>): string {
   const colorLayer = _.find(layers, { category: "color" });
   if (colorLayer) {
@@ -29,7 +35,7 @@ class DatasetView extends React.PureComponent {
   props: Props;
   state: {
     currentDataViewType: "gallery" | "advanced",
-    datasets: Array<APIDatasetType>,
+    datasets: Array<DatasetType>,
     searchQuery: string,
     isLoading: boolean,
   } = {
@@ -50,15 +56,6 @@ class DatasetView extends React.PureComponent {
 
     const transformedDatasets = _.sortBy(
       datasets.map(dataset => {
-        if (dataset.dataSource == null) {
-          dataset.datasetSource = {
-            needsImport: true,
-            baseDir: "",
-            scale: [],
-            dataLayers: [],
-          };
-        }
-
         dataset.hasSegmentation = _.some(
           dataset.dataSource.dataLayers,
           layer => layer.category === "segmentation",

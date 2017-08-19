@@ -1,168 +1,339 @@
-/**
- * dashboard_task_list_view.js
- * @flow weak
- */
+// @flow
+/* eslint-disable jsx-a11y/href-no-hash */
 
-import _ from "lodash";
-import app from "app";
+import React from "react";
+import Request from "libs/request";
+import { AsyncButton } from "components/async_clickables";
+import { Spin, Table, Button, Modal, Tag } from "antd";
+import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 import Utils from "libs/utils";
-import Marionette from "backbone.marionette";
-import SortTableBehavior from "libs/behaviors/sort_table_behavior";
-import DashboardTaskListItemView from "dashboard/views/dashboard_task_list_item_view";
-import TaskTransferModalView from "dashboard/views/task_transfer_modal_view";
-import UserTasksCollection from "dashboard/models/user_tasks_collection";
+import moment from "moment";
+import Toast from "libs/toast";
+import TransferTaskModal from "./transfer_task_modal";
 
-class DashboardTaskListView extends Marionette.CompositeView {
-  showFinishedTasks: boolean;
-  modal: TaskTransferModalView;
+const { Column } = Table;
 
-  static initClass() {
-    this.prototype.template = _.template(`\
-<h3>Tasks</h3>
-<% if (isAdminView) { %>
-  <a href="<%- jsRoutes.controllers.AnnotationIOController.userDownload(id).url %>"
-     class="btn btn-primary"
-     title="download all finished tracings">
-      <i class="fa fa-download"></i>download
-  </a>
-<% } else { %>
-  <a href="#"
-     class="btn btn-success"
-     id="new-task-button">
-     Get a new task
-  </a>
-<% } %>
-<div class="divider-vertical"></div>
-<a href="#" id="toggle-finished" class="btn btn-default">
-  Show <%- getFinishVerb() %> tasks only
-</a>
-<table class="table table-striped sortable-table">
-  <thead>
-    <tr>
-      <th data-sort="formattedHash"># </th>
-      <th data-sort="type.summary">Type </th>
-      <th data-sort="projectName">Project </th>
-      <th data-sort="type.description">Description </th>
-      <th>Modes </th>
-      <th data-sort="created">Created</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-<div class="modal-container"></div>\
-`);
+type Props = {
+  userID: ?string,
+  isAdminView: boolean,
+};
 
-    this.prototype.childViewContainer = "tbody";
-    this.prototype.childView = DashboardTaskListItemView;
+const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnotationType => {
+  const { task } = annotation;
 
-    this.prototype.ui = { modalContainer: ".modal-container" };
+  if (!task) {
+    // This should never be the case unless tasks were deleted in the DB.
+    throw Error(
+      `[Dashboard Tasks] Annotation ${annotation.id} has no task assigned. Please inform your admin.`,
+    );
+  }
 
-    this.prototype.events = {
-      "click #new-task-button": "newTask",
-      "click #transfer-task": "transferTask",
-      "click #toggle-finished": "toggleFinished",
+  if (!task.type) {
+    task.type = {
+      summary: `[deleted] ${annotation.typ}`,
+      description: "",
+      settings: { allowedModes: "" },
     };
+  }
 
-    this.prototype.behaviors = {
-      SortTableBehavior: {
-        behaviorClass: SortTableBehavior,
+  task.annotation = annotation;
+  return task;
+};
+
+export default class DashboardTaskListView extends React.PureComponent {
+  props: Props;
+  state: {
+    showFinishedTasks: boolean,
+    finishedTasks: Array<APITaskWithAnnotationType>,
+    unfinishedTasks: Array<APITaskWithAnnotationType>,
+    isLoading: boolean,
+    isTransferModalVisible: boolean,
+    currentAnnotationId: ?string,
+  } = {
+    showFinishedTasks: false,
+    finishedTasks: [],
+    unfinishedTasks: [],
+    isLoading: false,
+    isTransferModalVisible: false,
+    currentAnnotationId: null,
+  };
+
+  componentDidMount() {
+    this.fetchData();
+  }
+
+  getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
+
+  confirmFinish(task: APITaskWithAnnotationType) {
+    Modal.confirm({
+      content: "Are you sure you want to permanently finish this tracing?",
+      onOk: async () => {
+        const annotation = task.annotation;
+        const url = `/annotations/${annotation.typ}/${annotation.id}/finish`;
+
+        const changedAnnotationWithTask = await Request.receiveJSON(url);
+        const changedTask = convertAnnotationToTaskWithAnnotationType(changedAnnotationWithTask);
+
+        const newUnfinishedTasks = this.state.unfinishedTasks.filter(t => t.id !== task.id);
+        const newFinishedTasks = [changedTask].concat(this.state.finishedTasks);
+
+        this.setState({
+          unfinishedTasks: newUnfinishedTasks,
+          finishedTasks: newFinishedTasks,
+        });
       },
-    };
-  }
-
-  // Cannot be ES6 style function, as these are covariant by default
-  childViewOptions = function childViewOptions() {
-    return { isAdminView: this.options.isAdminView };
-  };
-
-  // Cannot be ES6 style function, as these are covariant by default
-  templateContext = function templateContext() {
-    return {
-      isAdminView: this.options.isAdminView,
-      getFinishVerb: () => (this.showFinishedTasks ? "unfinished" : "finished"),
-    };
-  };
-
-  initialize(options) {
-    this.options = options;
-    this.showFinishedTasks = false;
-
-    // If you know how to do this better, do it. Backbones Collection type is not compatible to Marionettes
-    // Collection type according to flow - although they actually should be...
-    this.collection = ((new UserTasksCollection([], {
-      userID: this.options.userID,
-    }): any): Marionette.Collection);
-
-    // Show a loading spinner for long running requests
-    this.listenTo(this.collection, "request", () => app.router.showLoadingSpinner());
-    this.listenTo(this.collection, "error", () => app.router.hideLoadingSpinner());
-    // Hide the spinner if the collection is empty or after rendering all elements of the (long) table
-    this.listenTo(this.collection, "sync", () => {
-      if (this.collection.length === 0) app.router.hideLoadingSpinner();
     });
-    this.listenTo(this, "add:child", () => app.router.hideLoadingSpinner());
-
-    this.collection.fetch();
-
-    this.listenTo(app.vent, "modal:destroy", this.refresh);
   }
 
-  filter(child) {
-    if (this.showFinishedTasks) {
-      return child.get("annotation.state.isFinished");
+  async fetchData(): Promise<void> {
+    this.setState({ isLoading: true });
+    const isFinished = this.state.showFinishedTasks;
+    const url = this.props.userID
+      ? `/api/users/${this.props.userID}/tasks?isFinished=${isFinished.toString()}`
+      : `/api/user/tasks?isFinished=${isFinished.toString()}`;
+    const annotationsWithTasks = await Request.receiveJSON(url);
+
+    const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
+
+    this.setState({
+      [isFinished ? "finishedTasks" : "unfinishedTasks"]: tasks,
+      isLoading: false,
+    });
+  }
+
+  toggleShowFinished = () => {
+    this.setState({ showFinishedTasks: !this.state.showFinishedTasks }, () => this.fetchData());
+  };
+
+  openTransferModal(annotationId: string) {
+    this.setState({
+      isTransferModalVisible: true,
+      currentAnnotationId: annotationId,
+    });
+  }
+
+  renderActions = (task: APITaskWithAnnotationType) => {
+    const annotation = task.annotation;
+    return task.annotation.state.isFinished
+      ? <div>
+          <i className="fa fa-check" />
+          <span> Finished</span>
+          <br />
+        </div>
+      : <ul>
+          <li>
+            <a href={`/annotations/Task/${annotation.id}`}>
+              <i className="fa fa-random" />
+              <strong>Trace</strong>
+            </a>
+          </li>
+          {this.props.isAdminView
+            ? <div>
+                <li>
+                  <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
+                    <i className="fa fa-share" />
+                    Transfer
+                  </a>
+                </li>
+                <li>
+                  <a href={`/annotations/Task/${annotation.id}/download`}>
+                    <i className="fa fa-download" />
+                    Download
+                  </a>
+                </li>
+                <li>
+                  <a href="#" onClick={() => this.resetTask(annotation.id)}>
+                    <i className="fa fa-undo" />
+                    Reset
+                  </a>
+                </li>
+                <li>
+                  <a href="#" onClick={() => this.cancelAnnotation(annotation.id)}>
+                    <i className="fa fa-trash-o" />
+                    Cancel
+                  </a>
+                </li>
+              </div>
+            : <li>
+                <a href="#" onClick={() => this.confirmFinish(task)}>
+                  <i className="fa fa-check-circle-o" />
+                  Finish
+                </a>
+              </li>}
+        </ul>;
+  };
+
+  resetTask(annotationId: string) {
+    const url = `/annotations/Task/${annotationId}/reset`;
+
+    Request.receiveJSON(url).then(jsonData => {
+      Toast.message(jsonData.messages);
+    });
+  }
+
+  cancelAnnotation(annotationId: string) {
+    const wasFinished = this.state.showFinishedTasks;
+
+    Modal.confirm({
+      content: "Do you really want to cancel this annotation?",
+      onOk: async () => {
+        await Request.triggerRequest(`/annotations/Task/${annotationId}`, { method: "DELETE" });
+        if (wasFinished) {
+          this.setState({
+            finishedTasks: this.state.finishedTasks.filter(t => t.annotation.id !== annotationId),
+          });
+        } else {
+          this.setState({
+            unfinishedTasks: this.state.unfinishedTasks.filter(
+              t => t.annotation.id !== annotationId,
+            ),
+          });
+        }
+      },
+    });
+  }
+
+  async confirmGetNewTask(): Promise<void> {
+    if (this.state.unfinishedTasks.length === 0) {
+      return this.getNewTask();
     } else {
-      return !child.get("annotation.state.isFinished");
+      return Modal.confirm({
+        content: "Do you really want another task?",
+        onOk: () => this.getNewTask(),
+      });
     }
   }
 
-  newTask(event) {
-    event.preventDefault();
+  async getNewTask() {
+    this.setState({ isLoading: true });
+    try {
+      const newTaskAnnotation = await Request.receiveJSON("/user/tasks/request");
 
-    if (
-      this.collection.filter(UserTasksCollection.prototype.unfinishedTasksFilter).length === 0 ||
-      confirm("Do you really want another task?")
-    ) {
-      // Need to make sure this.collection is a UserTasksCollection with the getNewTask
-      // method, otherwise flow complains
-      app.router.showLoadingSpinner();
-      if (this.collection instanceof UserTasksCollection) {
-        this.collection
-          .getNewTask()
-          .then(() => app.router.hideLoadingSpinner(), () => app.router.hideLoadingSpinner());
-      }
+      this.setState({
+        unfinishedTasks: this.state.unfinishedTasks.concat([
+          convertAnnotationToTaskWithAnnotationType(newTaskAnnotation),
+        ]),
+      });
+    } catch (ex) {
+      // catch exception so that promise does not fail and the modal will close
+    } finally {
+      this.setState({ isLoading: false });
     }
   }
 
-  toggleFinished() {
-    this.showFinishedTasks = !this.showFinishedTasks;
-    // Need to make sure this.collection is a UserTasksCollection with the isFinished
-    // attribute, otherwise flow complains
-    if (this.collection instanceof UserTasksCollection) {
-      this.collection.isFinished = this.showFinishedTasks;
+  handleTransferredTask() {
+    this.setState({ isTransferModalVisible: false });
+
+    const removeTransferredTask = tasks =>
+      tasks.filter(t => t.annotation.id !== this.state.currentAnnotationId);
+
+    if (this.state.showFinishedTasks) {
+      this.setState({
+        finishedTasks: removeTransferredTask(this.state.finishedTasks),
+      });
+    } else {
+      this.setState({
+        unfinishedTasks: removeTransferredTask(this.state.unfinishedTasks),
+      });
     }
-    this.refresh();
   }
 
-  transferTask(evt) {
-    evt.preventDefault();
-
-    const modalContainer = new Marionette.Region({
-      el: this.ui.modalContainer,
-    });
-    const url = evt.target.href;
-    this.modal = new TaskTransferModalView({ url });
-    modalContainer.show(this.modal);
+  getCurrentTasks() {
+    return this.state.showFinishedTasks ? this.state.finishedTasks : this.state.unfinishedTasks;
   }
 
-  refresh() {
-    this.collection.fetch().then(() => this.render());
+  renderTable() {
+    return (
+      <Table
+        dataSource={this.getCurrentTasks().filter(
+          task => task.annotation.state.isFinished === this.state.showFinishedTasks,
+        )}
+        rowKey="id"
+        pagination={{
+          defaultPageSize: 50,
+        }}
+      >
+        <Column
+          title="#"
+          dataIndex="id"
+          sorter={Utils.localeCompareBy("id")}
+          className="monospace-id"
+        />
+        <Column
+          title="Type"
+          dataIndex="type.summary"
+          sorter={Utils.localeCompareBy(t => t.type.summary)}
+        />
+        <Column
+          title="Project"
+          dataIndex="projectName"
+          sorter={Utils.localeCompareBy("projectName")}
+        />
+        <Column
+          title="Description"
+          dataIndex="type.description"
+          sorter={Utils.localeCompareBy(t => t.type.description)}
+          width={550}
+        />
+        <Column
+          title="Modes"
+          dataIndex="type.settings.allowedModes"
+          sorter={Utils.localeCompareBy(t => t.type.settings.allowedModes.join("-"))}
+          render={modes =>
+            modes.map(mode =>
+              <Tag key={mode}>
+                {mode}
+              </Tag>,
+            )}
+        />
+        <Column
+          title="Creation Date"
+          dataIndex="created"
+          sorter={Utils.localeCompareBy("created")}
+          render={created => moment(created).format("YYYY-MM-DD HH:SS")}
+        />
+        <Column
+          title="Actions"
+          className="nowrap"
+          render={(__, task) => this.renderActions(task)}
+        />
+      </Table>
+    );
   }
 
-  onDestroy() {
-    Utils.__guard__(this.modal, x => x.destroy());
+  render() {
+    return (
+      <div>
+        <div className="pull-right">
+          {this.props.isAdminView && this.props.userID
+            ? <a href={`/api/users/${this.props.userID}/annotations/download`}>
+                <Button icon="download">Download All Finished Tracings</Button>
+              </a>
+            : <AsyncButton type="primary" icon="file-add" onClick={() => this.confirmGetNewTask()}>
+                Get a New Task
+              </AsyncButton>}
+          <div className="divider-vertical" />
+          <Button onClick={this.toggleShowFinished}>
+            Show {this.getFinishVerb()} Tasks Only
+          </Button>
+        </div>
+        <h3>Tasks</h3>
+        <div className="clearfix" style={{ margin: "20px 0px" }} />
+
+        {this.state.isLoading
+          ? <div className="text-center">
+              <Spin size="large" />
+            </div>
+          : this.renderTable()}
+
+        <TransferTaskModal
+          visible={this.state.isTransferModalVisible}
+          annotationId={this.state.currentAnnotationId}
+          onCancel={() => this.setState({ isTransferModalVisible: false })}
+          onChange={() => this.handleTransferredTask()}
+          userID={this.props.userID}
+        />
+      </div>
+    );
   }
 }
-DashboardTaskListView.initClass();
-
-export default DashboardTaskListView;

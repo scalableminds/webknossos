@@ -47,6 +47,7 @@ import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontrac
 import messages from "messages";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import SceneController from "oxalis/controller/scene_controller";
+import api from "oxalis/api/internal_api";
 
 const CANVAS_SELECTOR = "#render-canvas";
 
@@ -220,7 +221,7 @@ class ArbitraryController extends React.PureComponent {
       // Recenter active node
       s: () => {
         getActiveNode(Store.getState().tracing).map(activeNode =>
-          Store.dispatch(setActiveNodeAction(activeNode.id)),
+          api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation),
         );
       },
 

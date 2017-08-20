@@ -217,7 +217,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
       getActiveNode(Store.getState().tracing).map(newActiveNode =>
         // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
         // This is important because otherwise the user cannot continue to trace until the animation is over
-        api.tracing.centerPositionAnimated(newActiveNode.position),
+        api.tracing.centerPositionAnimated(newActiveNode.position, true),
       );
     }
   };
